@@ -7290,7 +7290,6 @@ nil if the end of stream has been reached")
                           (if p
                             (recur (next p) (cons (first p) d))
                             d))]
-               (prn "defmacro here1: ")
                (list 'do
                      (list 'def (first decl) (cons `fn* (first (rest decl))))
                      #_(cons `defn decl)
