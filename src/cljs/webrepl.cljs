@@ -94,5 +94,7 @@
     (pep log "(+ 1 2)")
     (pep log "(def sqr (fn* [x] (* x x)))")
     (pep log "(sqr 8)")
+    (pep log "(defmacro unless [pred a b] `(if (not ~pred) ~a ~b))")
+    (pep log "(unless false :yep :nope)")
 
     (.focus input))))

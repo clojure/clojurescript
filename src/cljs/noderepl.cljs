@@ -36,6 +36,8 @@
   (pep "(+ 1 2)")
   (pep "(def sqr (fn* [x] (* x x)))")
   (pep "(sqr 8)")
+  (pep "(defmacro unless [pred a b] `(if (not ~pred) ~a ~b))")
+  (pep "(unless false :yep :nope)")
   (let [readline (js/require "readline")
         rl (.createInterface readline js/process.stdin js/process.stdout)]
     (.setPrompt rl (prompt))

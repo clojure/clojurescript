@@ -10,17 +10,21 @@ solved by [chouser](https://github.com/chouser).
 ### Why?
 
 * Why not?
-* Compilers aren't cool until they are self-hosting (can compile their
-  own code).
+* Compilers are only cool once they are self-hosting (can compile
+  their own code). This fork is not self-hosting yet, but that is the
+  aim.
 * You can use ClojureScript without a JVM.
 * You can have a [ClojureScript REPL web
   app](http://kanaka.github.com/clojurescript/web/jsrepl.html) that
-  runs locally (no server involved after loading the page).
+  runs locally in your browser (no server involved after loading the
+  page).
 
 ### Current Caveats
 
-* No macro support yet. This means defining a function currently
-  looks like this `(def sqr (fn* [x] (* x x)))`.
+* No compiled macro support yet. This means that you can define new
+  macros at the REPL, but the normal "precompiled" macros (like
+  defn, fn, let, loop, etc)  are not yet working. So defining
+  a function currently looks like this `(def sqr (fn* [x] (* x x)))`.
 * The code is not yet compatible with the normal Clojure ClojureScript
   compiler. To make it compatible we really need [Feature Expressions in
   Clojure](http://dev.clojure.org/display/design/Feature+Expressions)
@@ -29,10 +33,7 @@ solved by [chouser](https://github.com/chouser).
 * The :nodejs compilation target is currently broken. However, the
   `node/run.js` bootstrap script enables compiled CLJS code to be
   invoked that was not compiled with a :target.
-* The `analyzer/@namespaces` atom is needed by the compiler but it is
-  not currently generated automatically so we generated a static
-  bootstrap version in `src/cljs/bs.cljs`.
-* Other miscellaneous broken things that haven't been tracked down
+* Other miscellaneous broken things that have not been tracked down
   yet.
 
 ### Build
@@ -84,7 +85,7 @@ You can now use a combination of the `run.js` bootstrap code and
 `nodecljs.js` to compile/evaluate the `hello.cljs` file:
 
 ```
-./run.js nodecljs.cljs hello.cljs
+./run.js nodecljs.js hello.cljs
 ```
 
 
