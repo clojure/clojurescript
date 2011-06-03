@@ -6,16 +6,18 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns clojure.cljs
+(ns clojure.cljs.compiler
   )
 
-(defonce namespaces (atom {}))
+(defonce namespaces (atom '{cljs.core {:name cljs.core}
+                            cljs.user {:name cljs.user}}))
 
 (def bootjs "
 cljs = {}
+cljs.core = {}
 cljs.user = {}
-cljs.lang.truth = function(x){return x != null && x !== false;}
-cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invoke);}")
+cljs.core.truth_ = function(x){return x != null && x !== false;}
+cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}")
 
 (defn- resolve-var [env sym]
   (let [s (str sym)
@@ -38,7 +40,7 @@ cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invo
              sym))
 
          :else
-         (symbol (str (:ns env) "." (name sym))))]
+         (symbol (str (-> env :ns :name) "." (name sym))))]
     {:name nm}))
 
 (defmulti emit-constant class)
@@ -79,8 +81,8 @@ cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invo
   [{:keys [test then else env]}]
   (let [context (:context env)]
     (if (= :expr context)
-      (print (str "(cljs.lang.truth(" (emits test) ")?" (emits then) ":" (emits else) ")"))
-      (print (str "if(cljs.lang.truth(" (emits test) "))\n\t" (emits then) " else\n\t" (emits else) "\n")))))
+      (print (str "(cljs.core.truth_(" (emits test) ")?" (emits then) ":" (emits else) ")"))
+      (print (str "if(cljs.core.truth_(" (emits test) "))\n\t" (emits then) " else\n\t" (emits else) "\n")))))
 
 (defmethod emit :def
   [{:keys [name init env]}]
@@ -138,7 +140,7 @@ cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invo
 (defmethod emit :invoke
   [{:keys [f args env]}]
   (emit-wrap env
-             (print (str "cljs.lang.fnOf(" (emits f) ")("
+             (print (str "cljs.core.fnOf_(" (emits f) ")("
                          (apply str (interpose "," (map emits args)))
                          ")"))))
 
@@ -200,6 +202,7 @@ cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invo
     (let [name (:name (resolve-var (dissoc env :locals) sym))
           init-expr (when (contains? args :init) (disallowing-recur
                                                   (analyze (assoc env :context :expr) (:init args) sym)))]
+      (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
       (merge {:env env :op :def :form form
               :name name :doc (:doc args) :init init-expr}
              (when init-expr {:children [init-expr]})))))
@@ -352,11 +355,11 @@ cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invo
         :else {:op :constant :env env :form form}))))
 
 (comment
-(in-ns 'clojure.cljs)
+(in-ns 'clojure.cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
 (.eval jse bootjs)
-(def envx {:ns 'test.ns :context :return :locals '{ethel {:name ethel__123 :init nil}}})
+(def envx {:ns {:name 'test.ns} :context :return :locals '{ethel {:name ethel__123 :init nil}}})
 (analyze envx nil)
 (analyze envx 42)
 (analyze envx "foo")
@@ -374,10 +377,10 @@ cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invo
 
 (analyze envx '(ns fred :requires {yn your.ns} :macros {core clojure.core}))
 (defmacro js [form]
-  `(emit (analyze {:ns (symbol "test.ns") :context :expr :locals {}} '~form)))
+  `(emit (analyze {:ns {:name 'test.ns} :context :expr :locals {}} '~form)))
 
 (defn jseval [form]
-  (let [js (emits (analyze {:ns 'cljs.user :context :expr :locals {}}
+  (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
                           form))]
     (.eval jse (str "print(" js ")"))))
 
@@ -388,7 +391,7 @@ cljs.lang.fnOf = function(f){return (f instanceof Function?f:f.cljs$lang$Fn$invo
 (jseval 'x)
 (jseval '(if 42 1 2))
 (jseval '(fn* [x y] (if true 46 (recur 1 x))))
-(.eval jse "print(test.)")
+(.eval jse "print(test)")
 (.eval jse "undefined !== false")
 (js (def fred 42))
 
