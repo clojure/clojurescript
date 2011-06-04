@@ -156,14 +156,14 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
   (emit-wrap env (print (str (emits target) " = "(emits val)))))
 
 (defmethod emit :ns
-  [{:keys [name requires macros env]}]
+  [{:keys [name requires requires-macros env]}]
   (println (str "//goog.provide('" name "');"))
   (doseq [lib (vals requires)]
     (println (str "//goog.require('" lib "');"))))
 
 (declare analyze analyze-symbol)
 
-(def specials '#{if def fn* do let* loop recur new set! ns})
+(def specials '#{if def fn* do let* loop* recur new set! ns})
 
 (def ^:dynamic *recur-frame* nil)
 
@@ -263,7 +263,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
   [op encl-env form _]
   (analyze-let encl-env form false))
 
-(defmethod parse 'loop
+(defmethod parse 'loop*
   [op encl-env form _]
   (analyze-let encl-env form true))
 
@@ -296,15 +296,25 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
      {:env env :op :set! :target targetexpr :val valexpr :children [targetexpr valexpr]})))
 
 (defmethod parse 'ns
-  [_ env [_ name & {:keys [requires macros] :as params}] _]
-  (doseq [nsym (vals macros)]
-    (require nsym))
-  (let [deps (into requires (map (fn [[alias nsym]]
-                                   [alias (find-ns nsym)])
-                                 macros))]
-    (swap! namespaces #(-> % (assoc-in [name :name] name)
-                           (assoc-in [name :deps] deps))))
-  (merge {:env env :op :ns :name name} params))
+  [_ env [_ name & args] _]
+  (let [{requires :require requires-macros :require-macros :as params}
+        (reduce (fn [m [k & libs]]
+                  (assoc m k (into {}
+                                   (map (fn [[lib as alias]]
+                                          (assert (and alias (= :as as)) "Only [lib.ns :as alias] form supported")
+                                          [alias lib])
+                                        libs))))
+                {} args)]
+    (doseq [nsym (vals requires-macros)]
+      (require nsym))
+    (swap! namespaces #(-> %
+                           (assoc-in [name :name] name)
+                           (assoc-in [name :requires] requires)
+                           (assoc-in [name :requires-macros]
+                                     (into {} (map (fn [[alias nsym]]
+                                                     [alias (find-ns nsym)])
+                                                   requires-macros)))))
+    {:env env :op :ns :name name :requires requires :requires-macros requires-macros}))
 
 (defn parse-invoke
   [env [f & args]]
@@ -375,7 +385,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (analyze (assoc envx :context :expr) '(fn* [x y] x y x))
 (analyze (assoc envx :context :statement) '(let* [a 1 b 2] a))
 
-(analyze envx '(ns fred :requires {yn your.ns} :macros {core clojure.core}))
+(analyze envx '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (defmacro js [form]
   `(emit (analyze {:ns {:name 'test.ns} :context :expr :locals {}} '~form)))
 
@@ -385,7 +395,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (.eval jse (str "print(" js ")"))))
 
 (js (def foo (fn* [x y] (if true 46 (recur 1 x)))))
-(jseval '(ns fred :requires {yn your.ns} :macros {core clojure.core}))
+(jseval '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (js (def x 42))
 (jseval '(def x 42))
 (jseval 'x)
@@ -405,7 +415,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
             (fn* [x y] (if true 46 (recur 1 x)))
             (let* [a 1 b 2 a a] a b)
             (do "do1")
-            (loop [x 1 y 2] (if true 42 (do (recur 43 44))))
+            (loop* [x 1 y 2] (if true 42 (do (recur 43 44))))
             (my.foo 1 2 3)
             (let* [a 1 b 2 c 3] (set! y.s.d b) (new fred.Ethel a b c))
             ]]

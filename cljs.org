@@ -55,7 +55,7 @@
 * Implementation
 ** Primitives
 *** DONE def
-*** fn
+*** fn*
 **** DONE basics
 **** DONE recur
 **** TODO variable arity
@@ -71,7 +71,7 @@
 *** DONE if
 **** need to match Clojure semantics (nil/false)
 ***** must deal with undefined (group with nil/false?)
-*** DONE let
+*** DONE let*
 **** must fix local scoping problem
 ***** nested fns or renaming?
 **** let* semantics
@@ -79,7 +79,9 @@
 **** as with Java, not an expression
 **** doFn(...) -> returns last arg
 ***** must alloc array for arguments?
-*** DONE loop
+*** TODO global
+**** use 'var for this
+***** already Clojure special op
 *** DONE recur
 **** to loop
 **** to fn head
@@ -93,10 +95,13 @@
 ***** make a clojure ns? cljs.my.ns?
 ***** goog.provide('my.ns'); goog.require('your.ns');
 ***** (
-*** TODO deftype
-**** not primitive in Clojure proper
+*** TODO deftype*
 **** maps to prototype/contructor combo
-*** TODO defprotocol
+*** TODO reify*
+**** yes, for one-off protocol impls
+**** no ctor created, just put impls on object
+***** can share code with putting impls on prototype?
+*** TODO defprotocol*
 **** not primitive in Clojure proper
 **** when given ctor, modifies prototype with slot
 ***** slot is ns-qualified
@@ -137,12 +142,8 @@
 **** catch
 ***** won't have exception type
 **** finally
-*** quote?
+*** TODO quote
 *** vars?
-*** TODO reify?
-**** yes, for one-off protocol impls
-**** no ctor created, just put impls on object
-***** can share code with putting impls on prototype?
 *** case?
 *** callable non-function types?
 **** seems not possible portably
@@ -302,6 +303,41 @@
 ***** e.g. DOM etc
 ***** headless JS environment with DOM mocks?
 * Namespaces and macros
+** Macro problem?
+*** syntax quote in the reader uses Clojure namespaces
+*** hardwired to Compiler.currentNS().getMapping() Compiler.resolveSymbol(), isSpecial() etc
+*** ::keyword resolution uses Compiler.currentNS(), namespaceFor()
+*** if it expands to calls to other macros, those need to be in clojure-land
+**** maybe - they need to be the cljs-compatible versions
+***** argument for calling core clojure.core in cljs too?
+****** but we can't have 2 clojure.core namespaces during compilation
+***** translate/consider clojure.core/xxx => cljs.core/xxx during cljs compilation?
+****** doesn't work if we have separate cljs.macros
+******* some core things will be in cljs.core, some in cljs.macros
+******* put core macros on cljs/core.clj
+******* other core code in cljs/core.cljs
+******* both contain ns declarations - ok?
+*** but expansions destined for cljs compilation need to be resolved in cljs-land
+**** dummy vars in dummy namespaces?
+***** no - doesn't cover external nses, cljs aliases
+***** just fully qualify everything non-core in macroexpansions
+**** different specials set a problem
+***** e.g. global, ns, defprotocol* not specials
+****** could use var for global
+****** could make ns a special?
+******* probably not
+******* but what macro would emit that?
+***** install all cljs specials in dummy nses?
+****** no, doesn't help macros file
+*** inline defmacro in cljs?
+**** calls Clojure eval of defmacro call
+**** can expand to calls to enclosing cljs ns
+***** but expander can't call code in enclosing cljs ns
+***** convention - all macro helper fns are local fns in macro
+**** gets icky for load/require purposes, as must be loaded with cljs compiler
+***** better to keep public macros separate - can use ordinary Clojure require then
+***** local macros would be ok for same-file consumption though
+**** convention - portable libs that expose macros package them separately
 ** Want some equivalent of refer clojure.core
 *** else practically everything will be qualified
 **** e.g. core/defn - ick
