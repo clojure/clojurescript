@@ -82,6 +82,8 @@
 *** TODO global
 **** use 'var for this
 ***** already Clojure special op
+***** but wrong semantics, (var x) is *ns*-relative
+***** no true unqualified globals in Clojure
 *** DONE recur
 **** to loop
 **** to fn head
@@ -158,79 +160,83 @@
 ****** i.e. every call is 2 calls
 ******* tracing jit will inline?
 ** Translation
-| Op                       | JS                                 | Notes                                     | Questions                                            |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (def x 42)               | cljs.my.ns['x'] = 42               | Following gclosure module system          | No vars? Compilation-time representation of ns?      |
-|                          | cljs.my.ns.x = 42                  | only this one will get minified           | but this precludes special chars in names            |
-|                          |                                    |                                           | def returns var in Clojure, no var here              |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (fn [x y] ...)           | (function (x, y) {...})            | never do named function, use anon + def   | Use for closures too?                                |
-| (fn [x y] ... (recur...) |                                    | rewrite as fn + nested loop               | require analysis to transmit recur fact up           |
-|                          |                                    |                                           | rewrite when?                                        |
-|                          |                                    | block always in return context            | access to this for methods?                          |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (if test then else)      | (test ? then : else)               |                                           |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (do e1 e2 e3)            | cljs.dofn(e1,e2,e3)                | dofn returns last arg, allocs array?      | requires js bootstrap file?                          |
-|                          |                                    | no, forces all to be exprs                | no fn needed when not expr context                   |
-|                          | (function () {e1;e2;return e3;})() |                                           |                                                      |
-|                          |                                    | expr context becomes return except when   |                                                      |
-|                          |                                    | single expr                               |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (let [x 1 y 2] ...)      | (function [x,y] {...})(1, 2)       | need to create nested functions for let*  | how to detect ref to earlier?                        |
-|                          | var x__42 = 1;var y__43 = 2; ...   | var numbering                             | statement/expr dichotomy if inline?                  |
-|                          | (function []                       | could wrap in no-arg function always      | needed for expr anyhow                               |
-|                          | {var x = 1; var y = 2; ...})()     | if always wrapped, don't need numbers?    | can we do var x = 42; var x = 43?                    |
-|                          |                                    | might still when nested                   | yes, but not var x = 42 ...nesting... var x = x      |
-|                          |                                    |                                           |                                                      |
-|                          |                                    | expr always becomes return context        |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (. x y)                  | x.y or x.y()?                      | no type info to distinguish               | bigger problem, both calling and retrieving          |
-|                          |                                    |                                           | fn in slot are viable, Clojure says method wins      |
-| (. x y ...)              | x.y(...)                           |                                           |                                                      |
-|                          |                                    |                                           |                                                      |
-| (: x y)  ?               | x.y                                |                                           | make all calls, add special field accessor           |
-| x.y                      | x.y                                | . not used for classes in JS              | so not global, but scoped?                           |
-|                          |                                    | can't test from Clojure                   | but would want resolution of first segment to locals |
-|                          |                                    |                                           | what do macros use?                                  |
-|                          |                                    |                                           |                                                      |
-| (. x y _)                | ick                                |                                           | no arg == field, penalize no-arg methods?            |
-| ((. x y))                |                                    |                                           |                                                      |
-| (-> (. x y) ())          | doesn't currently work, could      |                                           |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (set! (. x y) 42)        | x.y = 42                           |                                           | whither vars and binding??                           |
-| (set! some.global.x 42)  | some.global.x = 42                 |                                           |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (loop [bindings]         | while(true){                       |                                           | wrap in function? depends on context                 |
-| ... (recur))             | ... rebind-continue                |                                           |                                                      |
-|                          | ret=xxx;break;}                    |                                           |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (deftype Foo [a b c])    | my.ns.Foo = function(a,b,c)        | turn inline defs into explicit extends    |                                                      |
-|                          | {this.a = a;...this.c=c;}          | can't access this and fields then         |                                                      |
-|                          |                                    | in locals map, bind a to this.a etc       |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (new Foo 1 2 3)          | (new Foo(1,2,3))                   |                                           |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (defprotocol P           | my.ns.foo = function(obj args)     |                                           | How to extend built-ins, default, nil, undefined     |
-| (foo [args]))            | {obj['my.ns.foo'](obj, args);}     | can't minify                              |                                                      |
-|                          |                                    |                                           |                                                      |
-|                          | obj.my$ns$foo(obj, args)           |                                           |                                                      |
-|                          | P.ns = 'my.ns'                     | this only compile-time need, but compiler |                                                      |
-|                          |                                    | not in js world, can't see it             |                                                      |
-|                          |                                    | Require fully qualified protocol names?   |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (extend Foo my.ns.P      | for each fn in map:                | if no reified protocols, extend can't be  | or use Object.defineProperty to add method to        |
-| {:foo (fn [foo]...)}     | Foo.prototype['my.ns.foo'] = fn    | a function, unless protocol quoted        | prototype? can then set enumerable to false          |
-|                          | Foo.prototype.my$ns$foo = fn       | or string                                 |                                                      |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| constants                |                                    |                                           |                                                      |
-| nil                      | null                               |                                           |                                                      |
-| "foo", true, false, 42.0 | same                               |                                           |                                                      |
-| 42                       | goog.Long?                         |                                           |                                                      |
-| 'foo                     | symbol ctor                        |                                           |                                                      |
-| :foo                     | ?                                  |                                           | how to do keyword interning?                         |
-|                          |                                    |                                           | don't want intern every reference                    |
-|--------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| Op                               | JS                                 | Notes                                     | Questions                                            |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (def x 42)                       | cljs.my.ns['x'] = 42               | Following gclosure module system          | No vars? Compilation-time representation of ns?      |
+|                                  | cljs.my.ns.x = 42                  | only this one will get minified           | but this precludes special chars in names            |
+|                                  |                                    |                                           | def returns var in Clojure, no var here              |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (fn [x y] ...)                   | (function (x, y) {...})            | never do named function, use anon + def   | Use for closures too?                                |
+| (fn [x y] ... (recur...)         |                                    | rewrite as fn + nested loop               | require analysis to transmit recur fact up           |
+|                                  |                                    |                                           | rewrite when?                                        |
+|                                  |                                    | block always in return context            | access to this for methods?                          |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (if test then else)              | (test ? then : else)               |                                           |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (do e1 e2 e3)                    | cljs.dofn(e1,e2,e3)                | dofn returns last arg, allocs array?      | requires js bootstrap file?                          |
+|                                  |                                    | no, forces all to be exprs                | no fn needed when not expr context                   |
+|                                  | (function () {e1;e2;return e3;})() |                                           |                                                      |
+|                                  |                                    | expr context becomes return except when   |                                                      |
+|                                  |                                    | single expr                               |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (let [x 1 y 2] ...)              | (function [x,y] {...})(1, 2)       | need to create nested functions for let*  | how to detect ref to earlier?                        |
+|                                  | var x__42 = 1;var y__43 = 2; ...   | var numbering                             | statement/expr dichotomy if inline?                  |
+|                                  | (function []                       | could wrap in no-arg function always      | needed for expr anyhow                               |
+|                                  | {var x = 1; var y = 2; ...})()     | if always wrapped, don't need numbers?    | can we do var x = 42; var x = 43?                    |
+|                                  |                                    | might still when nested                   | yes, but not var x = 42 ...nesting... var x = x      |
+|                                  |                                    |                                           |                                                      |
+|                                  |                                    | expr always becomes return context        |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (. x y)                          | x.y or x.y()?                      | no type info to distinguish               | bigger problem, both calling and retrieving          |
+|                                  |                                    |                                           | fn in slot are viable, Clojure says method wins      |
+| (. x y ...)                      | x.y(...)                           |                                           |                                                      |
+|                                  |                                    |                                           |                                                      |
+| (: x y)  ?                       | x.y                                |                                           | make all calls, add special field accessor           |
+| x.y                              | x.y                                | . not used for classes in JS              | so not global, but scoped?                           |
+|                                  |                                    | can't test from Clojure                   | but would want resolution of first segment to locals |
+|                                  |                                    |                                           | what do macros use?                                  |
+|                                  |                                    |                                           |                                                      |
+| (. x y _)                        | ick                                |                                           | no arg == field, penalize no-arg methods?            |
+| ((. x y))                        |                                    |                                           |                                                      |
+| (-> (. x y) ())                  | doesn't currently work, could      |                                           |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (set! (. x y) 42)                | x.y = 42                           |                                           | whither vars and binding??                           |
+| (set! some.global.x 42)          | some.global.x = 42                 |                                           |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (loop [bindings]                 | while(true){                       |                                           | wrap in function? depends on context                 |
+| ... (recur))                     | ... rebind-continue                |                                           |                                                      |
+|                                  | ret=xxx;break;}                    |                                           |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (deftype Foo [a b c])            | my.ns.Foo = function(a,b,c)        | turn inline defs into explicit extends    |                                                      |
+|                                  | {this.a = a;...this.c=c;}          | can't access this and fields then         |                                                      |
+|                                  |                                    | in locals map, bind a to this.a etc       |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (new Foo 1 2 3)                  | (new Foo(1,2,3))                   |                                           |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (defprotocol P                   | my.ns.foo = function(obj args)     |                                           | How to extend built-ins, default, nil, undefined     |
+| (foo [args]))                    | {obj['my.ns.foo'](obj, args);}     | can't minify                              |                                                      |
+|                                  |                                    |                                           |                                                      |
+|                                  | obj.my$ns$foo(obj, args)           |                                           |                                                      |
+|                                  | P.ns = 'my.ns'                     | this only compile-time need, but compiler |                                                      |
+|                                  |                                    | not in js world, can't see it             |                                                      |
+|                                  |                                    | Require fully qualified protocol names?   |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (extend Foo my.ns.P              | for each fn in map:                | if no reified protocols, extend can't be  | or use Object.defineProperty to add method to        |
+| {:foo (fn [foo]...)}             | Foo.prototype['my.ns.foo'] = fn    | a function, unless protocol quoted        | prototype? can then set enumerable to false          |
+|                                  | Foo.prototype.my$ns$foo = fn       | or string                                 |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| constants                        |                                    |                                           |                                                      |
+| nil                              | null                               |                                           |                                                      |
+| "foo", true, false, 42.0         | same                               |                                           |                                                      |
+| 42                               | goog.Long?                         |                                           |                                                      |
+| 'foo                             | symbol ctor                        |                                           |                                                      |
+| :foo                             | ?                                  |                                           | how to do keyword interning?                         |
+|                                  |                                    |                                           | don't want intern every reference                    |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
+| (ns my.ns                        |                                    |                                           |                                                      |
+| (:require [foo.bar :as fb]...)   |                                    |                                           |                                                      |
+| (:macros [my.macros :as mm]...)) | :require-macros?                   |                                           |                                                      |
+|----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
 ** Library
 *** persistent data structures?
 **** make base literals create JS base literals? (array, object-as-map)
@@ -407,6 +413,9 @@
 ***** just set of names? no map
 ***** or map to fully qualified self?
 **** deps
+***** can't merge macros and cljs ns in deps
+****** same ns might map to both
+******* i.e. cljs.core will
 ***** aliases
 ****** sym->fully-qualified-sym
 ****** is this a separate mapping vs macros and requires?
@@ -425,7 +434,7 @@
 **** if local - done
 **** if found in cljs.macros Namespace, the macro cljs.macros/foo
 **** if found in cljs.core ns, cljs.core.foo
-**** whatever 'foo maps to in (:ns env) defs
+**** whatever 'foo maps to in (-> env :ns :requires)
 **** no use of deps
 *** lookup 'foo.bar.baz - no ns, dot(s)
 **** if foo is a local, foo_nnnn.bar.baz
@@ -453,6 +462,9 @@
 *** how to refer to true globals?
 **** e.g. Object, String, goog
 **** [[https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects][JS Globals]]
-**** (global Name) primitive?
-**** means (extend (global Object) ...) needs to work
+**** (var Name)?
+***** that doesn't match Clojure, where (var x) means 'whatever x means in current ns'
+***** there are no unqualified globals in Clojure
+**** means (extend (var Object) ...) needs to work
 ***** ok if extend evaluates first arg
+***** it does in Clojure, as it is a function

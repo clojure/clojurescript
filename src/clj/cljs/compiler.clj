@@ -337,9 +337,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
   (let [mvar
         (when-not (-> env :locals sym)  ;locals hide macros
           (if-let [nstr (namespace sym)]
-            (when-let [ns (-> env :ns :requires-macros (symbol nstr))]
-              (.findInternedVar ns (symbol (name sym))))
-            (.findInternedVar (find-ns 'clojure.core) sym)))]
+            (when-let [nsym (if (= "clojure.core" nstr)
+                            'cljs.core
+                            (-> env :ns :requires-macros (symbol nstr)))]
+              (.findInternedVar (find-ns nsym) (symbol (name sym))))
+            (.findInternedVar (find-ns 'cljs.core) sym)))]
     (when (and mvar (.isMacro mvar))
       @mvar)))
 
@@ -350,7 +352,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (if (specials op)
       (parse op env form name)
       (if-let [mac (and (symbol? op) (get-expander op env))]
-        (analyze (apply mac (rest form)))
+        (analyze env (apply mac form env (rest form)))
         (parse-invoke env form)))))
 
 (defn analyze
@@ -387,13 +389,14 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (analyze envx 'your.ns.fred)
 (analyze envx '(if test then else))
 (analyze envx '(if test then))
+(analyze envx '(and fred ethel))
 (analyze (assoc envx :context :statement) '(def test "fortytwo" 42))
 (analyze (assoc envx :context :expr) '(fn* [x y] x y x))
 (analyze (assoc envx :context :statement) '(let* [a 1 b 2] a))
 
 (analyze envx '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (defmacro js [form]
-  `(emit (analyze {:ns {:name 'test.ns} :context :expr :locals {}} '~form)))
+  `(emit (analyze {:ns {:name 'test.ns} :context :statement :locals {}} '~form)))
 
 (defn jseval [form]
   (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
@@ -401,11 +404,16 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (.eval jse (str "print(" js ")"))))
 
 (js (def foo (fn* [x y] (if true 46 (recur 1 x)))))
+(js (defn foo [x y] (if true 46 (recur 1 x))))
+(jseval '(defn foo [x y] (if true 46 (recur 1 x))))
+(jseval '(foo 1 2))
+(js (and fred ethel))
 (jseval '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (js (def x 42))
 (jseval '(def x 42))
 (jseval 'x)
 (jseval '(if 42 1 2))
+(jseval '(or 1 2))
 (jseval '(fn* [x y] (if true 46 (recur 1 x))))
 (.eval jse "print(test)")
 (.eval jse "undefined !== false")
