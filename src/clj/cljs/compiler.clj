@@ -6,7 +6,7 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns clojure.cljs.compiler
+(ns cljs.compiler
   )
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
@@ -334,8 +334,14 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
       (assoc ret :op :var :info (resolve-var env sym)))))
 
 (defn get-expander [sym env]
-  (when-not (-> env :locals sym)
-    ))
+  (let [mvar
+        (when-not (-> env :locals sym)  ;locals hide macros
+          (if-let [nstr (namespace sym)]
+            (when-let [ns (-> env :ns :requires-macros (symbol nstr))]
+              (.findInternedVar ns (symbol (name sym))))
+            (.findInternedVar (find-ns 'clojure.core) sym)))]
+    (when (and mvar (.isMacro mvar))
+      @mvar)))
 
 (defn analyze-seq
   [env form name]
@@ -365,7 +371,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         :else {:op :constant :env env :form form}))))
 
 (comment
-(in-ns 'clojure.cljs.compiler)
+(in-ns 'cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
 (.eval jse bootjs)
