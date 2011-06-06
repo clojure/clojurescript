@@ -8,7 +8,7 @@
 
 (ns cljs.core
   (:refer-clojure :exclude [-> ->> .. amap and areduce assert binding bound-fn case comment cond condp
-                            declare definline definterface defmacro defmethod defmulti defn defn- defonce
+                            declare definline definterface defmethod defmulti defn defn- defonce
                             defprotocol defrecord defstruct deftype delay doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
                             if-let if-not import io! lazy-cat lazy-seq let letfn locking loop
@@ -21,8 +21,8 @@
 (defmacro import-macros [ns [& vars]]
   (core/let [ns (find-ns ns)
         vars (map #(ns-resolve ns %) vars)
-        syms (map #(-> % .sym (with-meta {:macro true})) vars)
-        defs (map (fn [sym var]
+        syms (map #(core/-> % .sym (with-meta {:macro true})) vars)
+        defs (map (core/fn [sym var]
                     `(def ~sym (deref ~var))) syms vars)]
             `(do ~@defs)
             :imported))

@@ -220,10 +220,14 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         ;;todo, merge meths, switch on arguments.length
         meth (first meths)
         params (first meth)
+        fields (-> params meta ::fields)
         ;;todo, variadics
         params (remove '#{&} params)
         body (next meth)
-        locals (reduce (fn [m name] (assoc m name {:name name})) (:locals env) params)
+        locals (:locals env)
+        locals (if name (assoc locals name {:name name}) locals)
+        locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str "this." fld))})) locals fields)
+        locals (reduce (fn [m name] (assoc m name {:name name})) locals params)
         recur-frame {:names (vec params) :flag (atom nil)}
         block (binding [*recur-frame* recur-frame]
                 (analyze-block (assoc env :context :return :locals locals) body))]
@@ -391,7 +395,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (analyze envx '(if test then))
 (analyze envx '(and fred ethel))
 (analyze (assoc envx :context :statement) '(def test "fortytwo" 42))
-(analyze (assoc envx :context :expr) '(fn* [x y] x y x))
+(analyze (assoc envx :context :expr) '(fn* ^{::fields [a b c]} [x y] a y x))
 (analyze (assoc envx :context :statement) '(let* [a 1 b 2] a))
 
 (analyze envx '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
@@ -403,7 +407,8 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
                           form))]
     (.eval jse (str "print(" js ")"))))
 
-(js (def foo (fn* [x y] (if true 46 (recur 1 x)))))
+(js (def foo (fn* ^{::fields [a b c]} [x y] (if true a (recur 1 x)))))
+(jseval '(def foo (fn* ^{::fields [a b c]} [x y] (if true a (recur 1 x)))))
 (js (defn foo [x y] (if true 46 (recur 1 x))))
 (jseval '(defn foo [x y] (if true 46 (recur 1 x))))
 (jseval '(foo 1 2))

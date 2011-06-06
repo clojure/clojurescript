@@ -99,17 +99,23 @@
 ***** (
 *** TODO deftype*
 **** maps to prototype/contructor combo
+**** deftype macro is deftype* + extend-type
+***** extend-type with ::fields meta on param vectors
 *** TODO reify*
 **** yes, for one-off protocol impls
 **** no ctor created, just put impls on object
 ***** can share code with putting impls on prototype?
 *** TODO defprotocol*
 **** not primitive in Clojure proper
-**** when given ctor, modifies prototype with slot
+**** extend, when given ctor, modifies prototype with slot
 ***** slot is ns-qualified
 ***** what about core prototypes - Object, Array et al (String, Number, Boolean, Function)?
-****** poor citizenship to modify these
+****** poor citizenship to modify these?
+****** Object different in that it is used as map
+****** nested window scope issues?
 **** protocol fns just turn (my.ns/foo x a b c) into x["my.ns/foo"](a, b ,c)
+***** foo(x, a, b, c)
+****** must pass target
 ***** better - x.my$ns$foo(a, b ,c)
 ****** can be minified
 *** defrecord?
@@ -126,7 +132,7 @@
 ***** class aliases a bigger issue, will there be more conflicts?
 ***** any interpretation will fit only one ns strategy (e.g. gclosure's, and thus ClojureScript's) 
 ***** start without this
-*** DONE dot
+*** TODO dot
 **** field/zero-arg-method distinguished how?
 ***** not, just support scoped var and be done
 *** DONE set! (assign)
@@ -207,8 +213,8 @@
 | ... (recur))                     | ... rebind-continue                |                                           |                                                      |
 |                                  | ret=xxx;break;}                    |                                           |                                                      |
 |----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (deftype Foo [a b c])            | my.ns.Foo = function(a,b,c)        | turn inline defs into explicit extends    |                                                      |
-|                                  | {this.a = a;...this.c=c;}          | can't access this and fields then         |                                                      |
+| (deftype Foo [a b c])            | my.ns.Foo = function(a,b,c)        | turn inline defs into explicit extends?   |                                                      |
+|                                  | {this.a = a;...this.c=c;}          | can't access this and fields.             |                                                      |
 |                                  |                                    | in locals map, bind a to this.a etc       |                                                      |
 |----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
 | (new Foo 1 2 3)                  | (new Foo(1,2,3))                   |                                           |                                                      |
