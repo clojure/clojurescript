@@ -24,14 +24,33 @@
         syms (map #(core/-> % .sym (with-meta {:macro true})) vars)
         defs (map (core/fn [sym var]
                     `(def ~sym (deref ~var))) syms vars)]
-            `(do ~@defs)
-            :imported))
+            `(do ~@defs
+                 :imported)))
 
 (import-macros clojure.core
  [-> ->> ..  and assert comment cond condp
-  declare defmacro  defn defn-
+  declare defn defn-
   doto
   extend-protocol extend-type fn for
   if-let if-not let letfn loop
   or
   when when-first when-let when-not while])
+
+(defmacro deftype [t fields & impls]
+  (let [adorn-params (fn [sig]
+                       (cond
+                        (symbol? sig) sig
+                        (vector? (second sig))
+                        (cons (first sig) (cons (vary-meta (second sig) assoc :cljs.core/fields fields)
+                                                 (nnext sig)))
+
+                        :else
+                        (cons (first sig) (map (fn [[params & body]]
+                                                  (cons (vary-meta params assoc :cljs.core/fields fields)
+                                                        body))
+                                                (next sig)))))]
+    (if (seq impls)
+      `(do
+         (deftype* ~t ~fields)
+         (extend-type ~t ~@(map adorn-params impls)))
+      `(deftype* ~t ~fields))))
