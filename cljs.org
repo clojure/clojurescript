@@ -89,8 +89,8 @@
 **** to fn head
 ***** can't do in single pass
 *** DONE invoke
-*** TODO macros
-*** TODO ns
+*** DONE macros
+*** DONE ns
 **** (ns my.ns (:require your.ns ...) (:macros a-clojure-ns ...))
 ***** aliases?
 **** =>
@@ -468,3 +468,12 @@
 **** means (extend (var Object) ...) needs to work
 ***** ok if extend evaluates first arg
 ***** it does in Clojure, as it is a function
+* Setup
+** V8
+svn co http://v8.googlecode.com/svn/trunk v8
+cd v8/
+scons console=readline d8
+** Closure Library
+svn checkout http://closure-library.googlecode.com/svn/trunk/ closure-library
+** Closure Compiler
+http://closure-compiler.googlecode.com/files/compiler-latest.zip
