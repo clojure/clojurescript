@@ -54,3 +54,18 @@
          (deftype* ~t ~fields)
          (extend-type ~t ~@(map adorn-params impls)))
       `(deftype* ~t ~fields))))
+
+(defmacro defprotocol [tsym & doc+methods]
+  (let [t (:name (cljs.compiler/resolve-var (dissoc &env :locals) tsym))
+        prefix (.replace (subs (str t) 0 (inc (.lastIndexOf (str t) ".")))
+                            \. \$)
+        methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
+        expand-sig (fn [slot sig]
+                     `(~sig (. ~(first sig) ~slot ~@sig)))
+        method (fn [[fname & sigs]]
+                 (let [sigs (take-while vector? sigs)
+                       slot (symbol (str prefix (name fname)))]
+                   `(defn ~fname ~@(map #(expand-sig slot %) sigs))))]
+    `(do
+       (def ~t nil)
+       ~@(map method methods))))

@@ -97,7 +97,7 @@
 ***** make a clojure ns? cljs.my.ns?
 ***** goog.provide('my.ns'); goog.require('your.ns');
 ***** (
-*** TODO deftype*
+*** DONE deftype*
 **** maps to prototype/contructor combo
 **** deftype macro is deftype* + extend-type
 ***** extend-type with ::fields meta on param vectors
@@ -105,7 +105,7 @@
 **** yes, for one-off protocol impls
 **** no ctor created, just put impls on object
 ***** can share code with putting impls on prototype?
-*** TODO defprotocol*
+*** DONE defprotocol*
 **** not primitive in Clojure proper
 **** extend, when given ctor, modifies prototype with slot
 ***** slot is ns-qualified
@@ -118,6 +118,7 @@
 ****** must pass target
 ***** better - x.my$ns$foo(a, b ,c)
 ****** can be minified
+*** TODO extend
 *** defrecord?
 **** any way to get (:foo x) => x.foo?
 ***** beware GClojure renaming
@@ -132,7 +133,7 @@
 ***** class aliases a bigger issue, will there be more conflicts?
 ***** any interpretation will fit only one ns strategy (e.g. gclosure's, and thus ClojureScript's) 
 ***** start without this
-*** TODO dot
+*** DONE dot
 **** field/zero-arg-method distinguished how?
 ***** not, just support scoped var and be done
 *** DONE set! (assign)
@@ -202,9 +203,9 @@
 |                                  |                                    | can't test from Clojure                   | but would want resolution of first segment to locals |
 |                                  |                                    |                                           | what do macros use?                                  |
 |                                  |                                    |                                           |                                                      |
-| (. x y _)                        | ick                                |                                           | no arg == field, penalize no-arg methods?            |
-| ((. x y))                        |                                    |                                           |                                                      |
-| (-> (. x y) ())                  | doesn't currently work, could      |                                           |                                                      |
+| (. x (y))                        | already defined for this case      | wasn't going to carry this into cljs, but | no arg == field, penalize no-arg methods?            |
+| ((. x y))                        | more correct, it's a slot          |                                           | rationale, it's not a method, just a slot,           |
+| (-> (. x y) ())                  | doesn't currently work, could      |                                           | but then why do the arg-taking ones work?            |
 |----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
 | (set! (. x y) 42)                | x.y = 42                           |                                           | whither vars and binding??                           |
 | (set! some.global.x 42)          | some.global.x = 42                 |                                           |                                                      |

@@ -1,0 +1,15 @@
+* ClojureScript TODO
+* Name munging
+** special chars
+*** same as clojure.lang.Compiler.munge?
+** conflicts with js reserved words
+*** [[https://developer.mozilla.org/en/JavaScript/Reference/Reserved_Words][reserved words]]
+* Multiple arity fns
+** multiple arity in defprotocol
+** follow Fn/RestFn?
+*** requires default impl
+* Math ops
+** intrinsify built-ins
+** how to make variadic?
+* Integrate gclosure lib
+** how to revision control?
