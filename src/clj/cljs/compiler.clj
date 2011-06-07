@@ -41,7 +41,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
              sym))
 
          :else
-         (symbol (str (-> env :ns :name) "." (name sym))))]
+         (symbol (str (or (-> env :ns :name) 'cljs.user) "." (name sym))))]
     {:name nm}))
 
 (defn- comma-sep [xs]
@@ -474,14 +474,30 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (js (deftype* Foo [a b c]))
 (jseval '(deftype* Foo [a b c]))
 (jseval '(. (new Foo 1 2 3) b))
+(js (. (new Foo 1 2 3) b))
 (.eval jse "print(new cljs.user.Foo(1, 42, 3).b)")
 
+(macroexpand-1 '(cljs.core/deftype Foo [a b c] Fred (fred [x] a) (fred [x y] b) (ethel [x] c) Ethel (foo [] d)))
+(-> (macroexpand-1 '(cljs.core/deftype Foo [a b c] Fred (fred [x] a) (fred [x y] b) (ethel [x] c) Ethel (foo [] d)))
+    last last last first meta)
+
+(macroexpand-1 '(cljs.core/extend-type Foo Fred (fred ([x] a) ([x y] b)) (ethel ([x] c)) Ethel (foo ([] d))))
 (js (new foo.Bar 65))
 (js (defprotocol P (bar [a]) (baz [b c])))
 (js (. x y))
 (js (. "fred" (y)))
 (js (. x y 42 43))
 (js (. x (y 42 43)))
+(js (cljs.core/deftype Foo [a b c] Fred (fred [x] a)  (ethel [x] c) Ethel (foo [] d)))
+(jseval '(cljs.core/deftype Foo [a b c] Fred (fred [x] a)  (ethel [x] c) Ethel (foo [] d)))
+(js (do
+           (defprotocol P (foo [x]))
+           (deftype T [a] P (foo [_] a))
+           (foo (new T 42))))
+(jseval '(do
+           (defprotocol P (foo [x]))
+           (deftype T [a] P (foo [_] a))
+           (foo (new T 42))))
 
 (doseq [e '[nil true false 42 "fred" fred ethel my.ns/fred your.ns.fred
             (if test then "fooelse")

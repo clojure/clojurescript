@@ -118,7 +118,7 @@
 ****** must pass target
 ***** better - x.my$ns$foo(a, b ,c)
 ****** can be minified
-*** TODO extend
+*** DONE extend-type
 *** defrecord?
 **** any way to get (:foo x) => x.foo?
 ***** beware GClojure renaming
@@ -214,7 +214,7 @@
 | ... (recur))                     | ... rebind-continue                |                                           |                                                      |
 |                                  | ret=xxx;break;}                    |                                           |                                                      |
 |----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
-| (deftype Foo [a b c])            | my.ns.Foo = function(a,b,c)        | turn inline defs into explicit extends?   |                                                      |
+| (deftype Foo [a b c])            | my.ns.Foo = function(a,b,c)        | turn inline defs into explicit extends?   | deftype inline methods split out arities             |
 |                                  | {this.a = a;...this.c=c;}          | can't access this and fields.             |                                                      |
 |                                  |                                    | in locals map, bind a to this.a etc       |                                                      |
 |----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
@@ -231,6 +231,13 @@
 | (extend Foo my.ns.P              | for each fn in map:                | if no reified protocols, extend can't be  | or use Object.defineProperty to add method to        |
 | {:foo (fn [foo]...)}             | Foo.prototype['my.ns.foo'] = fn    | a function, unless protocol quoted        | prototype? can then set enumerable to false          |
 |                                  | Foo.prototype.my$ns$foo = fn       | or string                                 |                                                      |
+|                                  |                                    | if extend is a macro or special, could    |                                                      |
+|                                  |                                    | still evaluate fn map, but then can't be  |                                                      |
+|                                  |                                    | minified                                  |                                                      |
+|                                  |                                    | evaluated extend requires maps, keywords  |                                                      |
+|                                  |                                    | high bar for bootstrap if protocols       |                                                      |
+|                                  |                                    | at bottom - extend* unevaluated?          |                                                      |
+|                                  |                                    | make extend-type primitive instead? YES   |                                                      |
 |----------------------------------+------------------------------------+-------------------------------------------+------------------------------------------------------|
 | constants                        |                                    |                                           |                                                      |
 | nil                              | null                               |                                           |                                                      |
@@ -482,5 +489,9 @@ cd v8/
 scons console=readline d8
 ** Closure Library
 svn checkout http://closure-library.googlecode.com/svn/trunk/ closure-library
+*** or download?
+[[http://code.google.com/p/closure-library/downloads/detail%3Fname%3Dclosure-library-20110323-r790.zip&can%3D1&q%3D][Zip download]]
 ** Closure Compiler
 http://closure-compiler.googlecode.com/files/compiler-latest.zip
+*** better(?):
+[[http://code.google.com/p/closure-compiler/wiki/Maven][Compiler in Maven]]

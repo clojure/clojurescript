@@ -31,34 +31,59 @@
  [-> ->> ..  and assert comment cond condp
   declare defn defn-
   doto
-  extend-protocol extend-type fn for
+  extend-protocol fn for
   if-let if-not let letfn loop
   or
   when when-first when-let when-not while])
 
+(defn- protocol-prefix [psym]
+  (str (.replace (str psym) \. \$) "$"))
+
+(defmacro extend-type [tsym & impls]
+  (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
+                   (assert ret (str "Can't resolve: " %))
+                   ret)
+        t (resolve tsym)
+        prototype-prefix (str t ".prototype.")
+        impl-map (loop [ret {} s impls]
+                   (if (seq s)
+                     (recur (assoc ret (resolve (first s)) (take-while seq? (next s)))
+                            (drop-while seq? (next s)))
+                     ret))
+        assign-impls (fn [[psym sigs]]
+                       (let [pprefix (protocol-prefix psym)]
+                         (map (fn [[f & meths]]
+                                `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
+                              sigs)))]
+    `(do ~@(mapcat assign-impls impl-map))))
+
 (defmacro deftype [t fields & impls]
   (let [adorn-params (fn [sig]
-                       (cond
-                        (symbol? sig) sig
-                        (vector? (second sig))
-                        (cons (first sig) (cons (vary-meta (second sig) assoc :cljs.core/fields fields)
-                                                 (nnext sig)))
-
-                        :else
-                        (cons (first sig) (map (fn [[params & body]]
-                                                  (cons (vary-meta params assoc :cljs.core/fields fields)
-                                                        body))
-                                                (next sig)))))]
+                       (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
+                             (nnext sig)))
+        ;;reshape for extend-type
+        dt->et (fn [specs]
+                 (loop [ret [] s specs]
+                   (if (seq s)
+                     (recur (-> ret
+                                (conj (first s))
+                                (into
+                                 (reduce (fn [v [f sigs]]
+                                           (conj v (cons f (map adorn-params sigs))))
+                                         []
+                                         (group-by first (take-while seq? (next s))))))
+                            (drop-while seq? (next s)))
+                     ret)))
+        ]
     (if (seq impls)
       `(do
          (deftype* ~t ~fields)
-         (extend-type ~t ~@(map adorn-params impls)))
+         (extend-type ~t ~@(dt->et impls)))
       `(deftype* ~t ~fields))))
 
-(defmacro defprotocol [tsym & doc+methods]
-  (let [t (:name (cljs.compiler/resolve-var (dissoc &env :locals) tsym))
-        prefix (.replace (subs (str t) 0 (inc (.lastIndexOf (str t) ".")))
-                            \. \$)
+(defmacro defprotocol [psym & doc+methods]
+  (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
+        prefix (protocol-prefix p)
         methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
         expand-sig (fn [slot sig]
                      `(~sig (. ~(first sig) ~slot ~@sig)))
@@ -67,5 +92,5 @@
                        slot (symbol (str prefix (name fname)))]
                    `(defn ~fname ~@(map #(expand-sig slot %) sigs))))]
     `(do
-       (def ~t nil)
+       (def ~p ~prefix)
        ~@(map method methods))))
