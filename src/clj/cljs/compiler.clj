@@ -6,14 +6,29 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
+(set! *warn-on-reflection* true)
+
 (ns cljs.compiler
-  )
+  (:refer-clojure :exclude [munge]))
+
+(def js-reserved #{"new" "debugger" "enum" "default" "private" "finally" "in" "import" "package" "with" "throw"
+                   "continue" "var" "for" "public" "do" "delete" "instanceof" "yield" "static" "protected" "return"
+                   "case" "implements" "typeof" "while" "void" "switch" "export" "class" "function" "extends" "else"
+                   "interface" "try" "let" "catch" "super" "if" "this" "break"})
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
+(defn munge [s]
+  (let [ms (clojure.lang.Compiler/munge (str s))
+        ms (if (js-reserved ms) (str ms "$") ms)]
+    (if (symbol? s)
+      (symbol ms)
+      ms)))
+
 ;;todo - move to core.cljs, using js
 (def bootjs "
+//goog.provide should do this for us
 cljs = {}
 cljs.core = {}
 cljs.user = {}
@@ -29,19 +44,19 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
          
          ;;todo - resolve ns aliases when we have them
          (namespace sym)
-         (symbol (str (namespace sym) "." (name sym)))
+         (symbol (str (namespace sym) "." (munge (name sym))))
 
          (.contains s ".")
-         (let [idx (.indexOf s ".")
-               prefix (symbol (subs s 0 idx))
-               suffix (subs s idx)
-               lb (-> env :locals prefix)]
-           (if lb
-             (symbol (str (:name lb) suffix))
-             sym))
+         (munge (let [idx (.indexOf s ".")
+                      prefix (symbol (subs s 0 idx))
+                      suffix (subs s idx)
+                      lb (-> env :locals prefix)]
+                  (if lb
+                    (symbol (str (:name lb) suffix))
+                    sym)))
 
          :else
-         (symbol (str (or (-> env :ns :name) 'cljs.user) "." (name sym))))]
+         (munge (symbol (str (or (-> env :ns :name) 'cljs.user) "." (name sym)))))]
     {:name nm}))
 
 (defn- comma-sep [xs]
@@ -121,11 +136,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
                   (str "var " name " = " (emits init) ";\n"))
                 bindings)]
     (when (= :expr context) (print "(function ()"))
-    (print (str "{\n" (apply str bs) "\n"))
+    (print (str (apply str bs) "\n"))
     (when loop (print "while(true){\n"))
     (emit-block (if (= :expr context) :return context) statements ret)
     (when loop (print "break;\n}\n"))
-    (print "}")
+    ;(print "}")
     (when (= :expr context) (print ")()"))))
 
 (defmethod emit :recur
@@ -168,10 +183,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (defmethod emit :deftype*
   [{:keys [t fields]}]
-  (println (str t " = (function (" (comma-sep (map str fields)) "){"))
-  (doseq [fld fields]
-    (println (str "this." fld " = " fld ";")))
-  (println "})"))
+  (let [fields (map munge fields)]
+    (println (str t " = (function (" (comma-sep (map str fields)) "){"))
+    (doseq [fld fields]
+      (println (str "this." fld " = " fld ";")))
+    (println "})")))
 
 (defmethod emit :dot
   [{:keys [target field method args env]}]
@@ -182,9 +198,13 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
                            (comma-sep (map emits args))
                            ")")))))
 
+(defmethod emit :js
+  [{:keys [code]}]
+  (print code))
+
 (declare analyze analyze-symbol)
 
-(def specials '#{if def fn* do let* loop* recur new set! ns deftype* .})
+(def specials '#{if def fn* do let* loop* recur new set! ns deftype* . js*})
 
 (def ^:dynamic *recur-frame* nil)
 
@@ -220,7 +240,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         args (apply pfn form)
         sym (:sym args)]
     (assert (not (namespace sym)) "Can't def ns-qualified name")
-    (let [name (:name (resolve-var (dissoc env :locals) sym))
+    (let [name (munge (:name (resolve-var (dissoc env :locals) sym)))
           init-expr (when (contains? args :init) (disallowing-recur
                                                   (analyze (assoc env :context :expr) (:init args) sym)))]
       (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
@@ -245,15 +265,16 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         ;;todo, variadics
         params (remove '#{&} params)
         body (next meth)
+        mname (when name (munge name))
         locals (:locals env)
-        locals (if name (assoc locals name {:name name}) locals)
-        locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str "this." fld))})) locals fields)
-        locals (reduce (fn [m name] (assoc m name {:name name})) locals params)
-        recur-frame {:names (vec params) :flag (atom nil)}
+        locals (if name (assoc locals name {:name mname}) locals)
+        locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str "this." (munge fld)))})) locals fields)
+        locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
+        recur-frame {:names (vec (map munge params)) :flag (atom nil)}
         block (binding [*recur-frame* recur-frame]
                 (analyze-block (assoc env :context :return :locals locals) body))]
     (assert (= 1 (count meths)) "Arity overloading not yet supported")
-    (merge {:env env :op :fn :name name :meths meths :params params :recurs @(:flag recur-frame)} block)))
+    (merge {:env env :op :fn :name mname :meths meths :params (map munge params) :recurs @(:flag recur-frame)} block)))
 
 (defmethod parse 'do
   [op env [_ & exprs] _]
@@ -272,7 +293,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
              (do
                (assert (not (or (namespace name) (.contains (str name) "."))) (str "Invalid local name: " name))
                (let [init-expr (analyze env init)
-                     be {:name (gensym (str name "__")) :init init-expr}]
+                     be {:name (gensym (str (munge name) "__")) :init init-expr}]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
                         (next bindings))))
@@ -344,7 +365,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (defmethod parse 'deftype*
   [_ env [_ tsym fields] _]
-  (let [t (:name (resolve-var (dissoc env :locals) tsym))]
+  (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
     {:env env :op :deftype* :t t :fields fields}))
 
@@ -355,13 +376,25 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
          targetexpr (analyze enve target)
          children [enve]]
      (if (and (symbol? (first member+)) (nil? (next member+))) ;;(. target field)
-      {:env env :op :dot :target targetexpr :field (first member+) :children children}
-      (let [[method args]
-            (if (symbol? (first member+))
-              [(first member+) (next member+)]
-              [(ffirst member+) (nfirst member+)])
-            argexprs (map #(analyze enve %) args)]
-        {:env env :op :dot :target targetexpr :method method :args argexprs :children (into children argexprs)})))))
+       {:env env :op :dot :target targetexpr :field (munge (first member+)) :children children}
+       (let [[method args]
+             (if (symbol? (first member+))
+               [(first member+) (next member+)]
+               [(ffirst member+) (nfirst member+)])
+             argexprs (map #(analyze enve %) args)]
+         {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)})))))
+
+(defmethod parse 'js*
+  [op env [_ form] _]
+  (assert (string? form))
+  (let [interp (fn interp [^String s]
+                 (let [idx (.indexOf s "~{")]
+                   (if (= -1 idx)
+                     (list s)
+                     (let [end (.indexOf s "}" idx)
+                           inner (:name (resolve-var env (symbol (subs s (+ 2 idx) end))))]
+                       (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
+    {:env env :op :js :code (apply str (interp form))}))
 
 (defn parse-invoke
   [env [f & args]]
@@ -387,8 +420,8 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
             (when-let [nsym (if (= "clojure.core" nstr)
                             'cljs.core
                             (-> env :ns :requires-macros (symbol nstr)))]
-              (.findInternedVar (find-ns nsym) (symbol (name sym))))
-            (.findInternedVar (find-ns 'cljs.core) sym)))]
+              (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) (symbol (name sym))))
+            (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym)))]
     (when (and mvar (.isMacro mvar))
       @mvar)))
 
@@ -442,6 +475,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (analyze (assoc envx :context :statement) '(let* [a 1 b 2] a))
 (analyze (assoc envx :context :statement) '(defprotocol P (bar [a]) (baz [b c])))
 (analyze (assoc envx :context :statement) '(. x y))
+(analyze envx '(fn foo [x] (let [x 42] (js* "~{x}['foobar']"))))
 
 (analyze envx '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (defmacro js [form]
@@ -453,7 +487,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     ;;(prn js)
     (.eval jse (str "print(" js ")"))))
 
-(js (def foo (fn* ^{::fields [a b c]} [x y] (if true a (recur 1 x)))))
+(js (def foo? (fn* ^{::fields [a? b c]} [x y] (if true a? (recur 1 x)))))
 (jseval '(def foo (fn* ^{::fields [a b c]} [x y] (if true a (recur 1 x)))))
 (js (defn foo [x y] (if true 46 (recur 1 x))))
 (jseval '(defn foo [x y] (if true 46 (recur 1 x))))
@@ -470,9 +504,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (.eval jse "print(cljs.user.Foo)")
 (.eval jse  "print(cljs.user.Foo = function (){\n}\n)")
 (js (def fred 42))
-(js (deftype* Foo [a b c]))
-(jseval '(deftype* Foo [a b c]))
-(jseval '(. (new Foo 1 2 3) b))
+(js (deftype* Foo [a b-foo c]))
+(jseval '(deftype* Foo [a b-foo c]))
+(jseval '(. (new Foo 1 2 3) b-foo))
 (js (. (new Foo 1 2 3) b))
 (.eval jse "print(new cljs.user.Foo(1, 42, 3).b)")
 
@@ -487,16 +521,19 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (js (. "fred" (y)))
 (js (. x y 42 43))
 (js (. x (y 42 43)))
+(js (defn foo [this] this))
 (js (cljs.core/deftype Foo [a b c] Fred (fred [x] a)  (ethel [x] c) Ethel (foo [] d)))
 (jseval '(cljs.core/deftype Foo [a b c] Fred (fred [x] a)  (ethel [x] c) Ethel (foo [] d)))
 (js (do
-           (defprotocol P (foo [x]))
-           (deftype T [a] P (foo [_] a))
-           (foo (new T 42))))
+           (defprotocol P-roto (foo? [this]))
+           (deftype T-ype [a] P-roto (foo? [this] a))
+           (foo? (new T-ype 42))))
 (jseval '(do
-           (defprotocol P (foo [x]))
-           (deftype T [a] P (foo [_] a))
-           (foo (new T 42))))
+           (defprotocol P-roto (foo? [this]))
+           (deftype T-ype [a] P-roto (foo? [this] a))
+           (foo? (new T-ype 42))))
+
+(js (def x (fn foo [x] (let [x 42] (js* "~{x}['foobar']")))))
 
 (doseq [e '[nil true false 42 "fred" fred ethel my.ns/fred your.ns.fred
             (if test then "fooelse")
@@ -509,6 +546,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
             (loop* [x 1 y 2] (if true 42 (do (recur 43 44))))
             (my.foo 1 2 3)
             (let* [a 1 b 2 c 3] (set! y.s.d b) (new fred.Ethel a b c))
+            (let [x (do 1 2 3)] x)
             ]]
   (->> e (analyze envx) emit)
   (newline))

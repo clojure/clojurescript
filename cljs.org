@@ -80,7 +80,7 @@
 **** doFn(...) -> returns last arg
 ***** must alloc array for arguments?
 *** TODO global
-**** use 'var for this
+**** use 'var for this?
 ***** already Clojure special op
 ***** but wrong semantics, (var x) is *ns*-relative
 ***** no true unqualified globals in Clojure
@@ -140,10 +140,10 @@
 **** same binding rules?
 ***** no
 **** or just allow assign to scoped 'vars'?
-*** TODO name munging
+*** DONE name munging
 **** special chars
 **** js reserved words
-*** TODO (js code-string)
+*** DONE (js* code-string)
 **** with name escaping
 *** TODO exceptions
 **** throw
@@ -151,7 +151,10 @@
 **** catch
 ***** won't have exception type
 **** finally
-*** TODO quote
+*** quote?
+*** TODO Evaluated collections
+**** Map
+**** Vector
 *** vars?
 *** case?
 *** callable non-function types?
