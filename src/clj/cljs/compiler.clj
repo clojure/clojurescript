@@ -62,8 +62,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (defn emit-block
   [context statements ret]
   (if statements
-    (let [body (str "\t" (apply str (interpose "\t" (map emits statements)))
-                    "\t" (emits ret))]
+    (let [body (str (apply str (map emits statements)) (emits ret))]
       (print body))
     (emit ret)))
 
@@ -86,7 +85,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
   (let [context (:context env)]
     (if (= :expr context)
       (print (str "(cljs.core.truth_(" (emits test) ")?" (emits then) ":" (emits else) ")"))
-      (print (str "if(cljs.core.truth_(" (emits test) "))\n\t" (emits then) " else\n\t" (emits else) "\n")))))
+      (print (str "if(cljs.core.truth_(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n")))))
 
 (defmethod emit :def
   [{:keys [name init env]}]
@@ -109,11 +108,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (defmethod emit :do
   [{:keys [statements ret env]}]
   (let [context (:context env)]
-    (when (and statements (= :expr context)) (print "(function ()"))
-    (when statements (print "{\n"))
+    (when (and statements (= :expr context)) (print "(function (){"))
+    ;(when statements (print "{\n"))
     (emit-block context statements ret)
-    (when statements (print "}"))
-    (when (and statements (= :expr context)) (print ")()"))))
+    ;(when statements (print "}"))
+    (when (and statements (= :expr context)) (print "})()"))))
 
 (defmethod emit :let
   [{:keys [bindings statements ret env loop]}]
