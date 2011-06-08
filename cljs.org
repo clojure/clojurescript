@@ -58,8 +58,8 @@
 *** fn*
 **** DONE basics
 **** DONE recur
-**** TODO variable arity
-**** TODO arity overloading
+**** DONE variable arity
+**** DONE arity overloading
 **** closures shouldn't map directly to js closures? - no, they should
 ***** they capture entire surrounding environment
 ****** hearsay, V8 already better
