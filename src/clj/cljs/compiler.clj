@@ -165,13 +165,13 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         bs (map (fn [{:keys [name init]}]
                   (str "var " name " = " (emits init) ";\n"))
                 bindings)]
-    (when (= :expr context) (print "(function ()"))
+    (when (= :expr context) (print "(function (){"))
     (print (str (apply str bs) "\n"))
     (when loop (print "while(true){\n"))
     (emit-block (if (= :expr context) :return context) statements ret)
     (when loop (print "break;\n}\n"))
     ;(print "}")
-    (when (= :expr context) (print ")()"))))
+    (when (= :expr context) (print "})()"))))
 
 (defmethod emit :recur
   [{:keys [frame exprs env]}]
@@ -588,6 +588,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
            (foo? (new T-ype 42))))
 
 (js (def x (fn foo [x] (let [x 42] (js* "~{x}['foobar']")))))
+(js (let [a 1 b 2 a b] a))
 
 (doseq [e '[nil true false 42 "fred" fred ethel my.ns/fred your.ns.fred
             (if test then "fooelse")
