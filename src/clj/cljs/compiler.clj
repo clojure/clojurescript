@@ -110,11 +110,13 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (when-not (= :expr (:context env)) (print ";\n"))))
 
 (defmethod emit :fn
-  [{:keys [name params statements ret env recurs]}]
+  [{:keys [name variadic params statements ret env recurs]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
     (emit-wrap env
                (print (str "(function " name "(" (comma-sep params) "){\n"))
+               (when variadic
+                 (println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
                (when recurs (print "while(true){\n"))
                (emit-block :return statements ret)
                (when recurs (print "break;\n}\n"))
@@ -204,7 +206,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (declare analyze analyze-symbol)
 
-(def specials '#{if def fn* do let* loop* recur new set! ns deftype* . js*})
+(def specials '#{if def fn* do let* loop* recur new set! ns deftype* . js* &})
 
 (def ^:dynamic *recur-frame* nil)
 
@@ -259,10 +261,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         ;;turn (fn [] ...) into (fn ([]...))
         meths (if (vector? (first meths)) (list meths) meths)
         ;;todo, merge meths, switch on arguments.length
+        ;;no, doing that in fn, fn* is single arity
         meth (first meths)
         params (first meth)
         fields (-> params meta ::fields)
-        ;;todo, variadics
+        variadic (some '#{&} params)
         params (remove '#{&} params)
         body (next meth)
         mname (when name (munge name))
@@ -273,8 +276,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
         block (binding [*recur-frame* recur-frame]
                 (analyze-block (assoc env :context :return :locals locals) body))]
-    (assert (= 1 (count meths)) "Arity overloading not yet supported")
-    (merge {:env env :op :fn :name mname :meths meths :params (map munge params) :recurs @(:flag recur-frame)} block)))
+    (assert (= 1 (count meths)) "Arity overloading not supported here, use fn")
+    (merge {:env env :op :fn :name mname :variadic variadic
+            :meths meths :params (map munge params) :recurs @(:flag recur-frame)} block)))
 
 (defmethod parse 'do
   [op env [_ & exprs] _]
@@ -509,6 +513,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (jseval '(. (new Foo 1 2 3) b-foo))
 (js (. (new Foo 1 2 3) b))
 (.eval jse "print(new cljs.user.Foo(1, 42, 3).b)")
+(.eval jse "(function (x, ys){return Array.prototype.slice.call(arguments, 1);})(1,2)[0]")
 
 (macroexpand-1 '(cljs.core/deftype Foo [a b c] Fred (fred [x] a) (fred [x y] b) (ethel [x] c) Ethel (foo [] d)))
 (-> (macroexpand-1 '(cljs.core/deftype Foo [a b c] Fred (fred [x] a) (fred [x y] b) (ethel [x] c) Ethel (foo [] d)))
@@ -520,8 +525,13 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (js (. x y))
 (js (. "fred" (y)))
 (js (. x y 42 43))
+(js (.. a b c d))
 (js (. x (y 42 43)))
 (js (defn foo [this] this))
+
+(js (defn foo [a b c & ys] ys))
+(js ((fn [x & ys] ys) 1 2 3 4))
+(jseval '((fn [x & ys] ys) 1 2 3 4))
 (js (cljs.core/deftype Foo [a b c] Fred (fred [x] a)  (ethel [x] c) Ethel (foo [] d)))
 (jseval '(cljs.core/deftype Foo [a b c] Fred (fred [x] a)  (ethel [x] c) Ethel (foo [] d)))
 (js (do

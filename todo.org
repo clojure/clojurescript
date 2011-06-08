@@ -1,5 +1,5 @@
 * ClojureScript TODO
-* Name munging
+* DONE Name munging
 ** special chars
 *** same as clojure.lang.Compiler.munge?
 ** conflicts with js reserved words
