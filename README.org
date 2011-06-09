@@ -1,0 +1,13 @@
+* ClojureScript
+** What: Clojure running on Javascript VMs
+** Why: Clojure rocks, Javascript reaches
+** When: Now! - a compiler exists, we need libraries and tool integration. Full day sessions 6/10 and 6/17
+** Where: In stealth mode 'here' at Clojure/core
+** How: ClojureScript -> ClojureScript-Compiler -> Javascript -> [Google-Closure-JS->JS-Compiler -> Optimized-Javascript] ->Browser/V8/Node/PhoneGap...
+** Who: You, if you're interested in:
+*** How hand-written recursive descent compilers work (the ClojureScript compiler is about 1/6 the code of the CoffeeScript compiler)
+*** Writing libraries using Clojure's latest type and polymorphism tools
+*** How Clojure works - its data structures and abstractions
+*** Extending the reach of Clojure
+*** Google's industrial-strength JS tools
+*** Investigating how powerful code-emitting tools can change the face of web and mobile development...
