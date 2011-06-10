@@ -1,0 +1,3 @@
+#!/bin/sh
+java -server -Xmx2G -Xms2G -Xmn256m -cp 'lib/*:src/clj' clojure.main
+
