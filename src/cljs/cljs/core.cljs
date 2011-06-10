@@ -230,7 +230,10 @@
       ;;(prn js)
       (.eval jse (str "print(" js ")"))))
 
-  (with-open [r (PushbackReader. (clojure.java.io/reader "src/cljs/cljs/core.cljs"))]
-    (dorun (map-indexed #(do jseval (take-while identity (repeatedly #(read r false nil))))))
-    (jseval '(ifirst (irest (cons 1 (cons 2 nil))))))
+  (with-open [r (java.io.PushbackReader. (clojure.java.io/reader "src/cljs/cljs/core.cljs"))]
+    (doseq [f (take-while identity (repeatedly (fn []  (read r false nil))))]
+      (jseval f)))
+
+  (jseval '(ifirst (irest (cons 1 (cons 2 nil)))))
+  
   )
