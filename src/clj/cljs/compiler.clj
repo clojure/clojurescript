@@ -11,6 +11,9 @@
 (ns cljs.compiler
   (:refer-clojure :exclude [munge]))
 
+(declare resolve-var)
+(require 'cljs.core)
+
 (def js-reserved #{"new" "debugger" "enum" "default" "private" "finally" "in" "import" "package" "with" "throw"
                    "continue" "var" "for" "public" "do" "delete" "instanceof" "yield" "static" "protected" "return"
                    "case" "implements" "typeof" "while" "void" "switch" "export" "class" "function" "extends" "else"

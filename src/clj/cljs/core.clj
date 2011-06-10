@@ -20,10 +20,10 @@
 
 (defmacro import-macros [ns [& vars]]
   (core/let [ns (find-ns ns)
-        vars (map #(ns-resolve ns %) vars)
-        syms (map #(core/-> % .sym (with-meta {:macro true})) vars)
-        defs (map (core/fn [sym var]
-                    `(def ~sym (deref ~var))) syms vars)]
+             vars (map #(ns-resolve ns %) vars)
+             syms (map (core/fn [^clojure.lang.Var v] (core/-> v .sym (with-meta {:macro true}))) vars)
+             defs (map (core/fn [sym var]
+                                `(def ~sym (deref ~var))) syms vars)]
             `(do ~@defs
                  :imported)))
 
