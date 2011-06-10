@@ -71,6 +71,9 @@
 (defprotocol IEquiv
   (iequiv [o other]))
 
+(defprotocol ISeqable
+  (iseq [o]))
+
 (defn first
   [coll]
   (when coll
