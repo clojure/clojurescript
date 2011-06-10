@@ -81,12 +81,36 @@
 
 (defn rest
   [coll]
-  (when col
+  (when coll
     (irest coll)))
 
-#_(defn conj
-    ([coll x]
-       (if coll (iconj coll x) '(x))))
+(defn seq
+  [coll]
+  (when coll (iseq coll)))
+
+(defn next
+  [coll]
+  (seq (rest coll)))
+
+(defn second
+  [coll]
+  (first (rest coll)))
+
+(defn ffirst
+  [coll]
+  (first (first coll)))
+
+(defn nfirst
+  [coll]
+  (next (first coll)))
+
+(defn fnext
+  [coll]
+  (first (next coll)))
+
+(defn nnext
+  [coll]
+  (next (next coll)))
 
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
@@ -115,10 +139,7 @@
 
   ISeq
   (ifirst [coll] first)
-  (irest [coll] rest)
-
-  #_ICounted
-  #_(icount [coll] (inc (count rest)))
+  (irest [coll] rest) ;; should this return empty list?
 
   ICollection
   (iconj [coll o] (new Cons nil o coll))
@@ -133,6 +154,10 @@
   "Returns a new seq where x is the first element and seq is the rest."
   [first rest]
   (new Cons nil first rest))
+
+(defn conj
+  ([coll x]
+     (if coll (iconj coll x) (cons x nil))))
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
@@ -240,8 +265,11 @@
     (doseq [f (take-while identity (repeatedly (fn []  (read r false nil))))]
       (jseval f)))
 
-  (jseval '(ifirst (irest (cons 1 (cons 2 nil)))))
+  (jseval '(seq nil))
+  (jseval '(next (cons 1 nil)))
+  (jseval '(nnext (cons (cons 1 nil) (cons 2 (cons 1 nil)))))
 
+  (jseval '(rest (conj (conj nil 1) 2)))
   ;; 3 arg case needs apply?
   (doseq [args [[1] [1 2] #_[1 2 3]]]
     (doseq [op ['+ '- '* '/ '> '>= '< '<=]]
