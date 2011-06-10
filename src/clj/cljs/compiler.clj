@@ -488,7 +488,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
 (.eval jse bootjs)
-(def envx {:ns (@namespaces 'cljs.user) :context :return :locals '{ethel {:name ethel__123 :init nil}}})
+(def envx {:ns (@namespaces 'cljs.user) :context :expr :locals '{ethel {:name ethel__123 :init nil}}})
 (analyze envx nil)
 (analyze envx 42)
 (analyze envx "foo")
@@ -510,7 +510,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (analyze envx '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (defmacro js [form]
-  `(emit (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}} '~form)))
+  `(emit (analyze {:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
 
 (defn jseval [form]
   (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
@@ -518,8 +518,18 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     ;;(prn js)
     (.eval jse (str "print(" js ")"))))
 
+(js (if a b c))
+(js (def x 42))
+(js (defn foo [a b] a))
+(js (do 1 2 3))
+(js (let [a 1 b 2 a b] a))
+
+(js (ns fred (:require [your.ns :as yn]) (:require-macros [cljs.core :as core])))
+
 (js (def foo? (fn* ^{::fields [a? b c]} [x y] (if true a? (recur 1 x)))))
-(jseval '(def foo (fn* ^{::fields [a b c]} [x y] (if true a (recur 1 x)))))
+(js (def foo (fn* ^{::fields [a b c]} [x y] (if true a (recur 1 x)))))
+(js (defn foo [x y] (if true x y)))
+(jseval '(defn foo [x y] (if true x y)))
 (js (defn foo [x y] (if true 46 (recur 1 x))))
 (jseval '(defn foo [x y] (if true 46 (recur 1 x))))
 (jseval '(foo 1 2))
@@ -578,10 +588,12 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (jseval '((fn [x & ys] ys) 1 2 3 4))
 (js (cljs.core/deftype Foo [a b c] Fred (fred [x] a) (fred [x y] a)  (ethel [x] c) Ethel (foo [] d)))
 (jseval '(cljs.core/deftype Foo [a b c] Fred (fred [x] a) (fred [x y] a)  (ethel [x] c) Ethel (foo [] d)))
+
 (js (do
-           (defprotocol P-roto (foo? [this]))
-           (deftype T-ype [a] P-roto (foo? [this] a))
-           (foo? (new T-ype 42))))
+           (defprotocol Proto (foo [this]))
+           (deftype Type [a] Proto (foo [this] a))
+           (foo (new Type 42))))
+
 (jseval '(do
            (defprotocol P-roto (foo? [this]))
            (deftype T-ype [a] P-roto (foo? [this] a))
