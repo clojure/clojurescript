@@ -1,10 +1,10 @@
-;   Copyright (c) Rich Hickey. All rights reserved.
-;   The use and distribution terms for this software are covered by the
-;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
-;   By using this software in any fashion, you are agreeing to be bound by
-;   the terms of this license.
-;   You must not remove this notice, or any other, from this software.
+                                        ;   Copyright (c) Rich Hickey. All rights reserved.
+                                        ;   The use and distribution terms for this software are covered by the
+                                        ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+                                        ;   which can be found in the file epl-v10.html at the root of this distribution.
+                                        ;   By using this software in any fashion, you are agreeing to be bound by
+                                        ;   the terms of this license.
+                                        ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core)
 
@@ -12,7 +12,7 @@
   (icount [coll] "constant time count"))
 
 #_(defprotocol IEmptyableCollection
-  (iempty [coll]))
+    (iempty [coll]))
 
 (defprotocol ICollection
   (iconj [coll o]))
@@ -85,8 +85,8 @@
     (irest coll)))
 
 #_(defn conj
-  ([coll x]
-     (if coll (iconj coll x) '(x))))
+    ([coll x]
+       (if coll (iconj coll x) '(x))))
 
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
@@ -117,14 +117,14 @@
   (ifirst [coll] first)
   (irest [coll] rest)
 
-#_ICounted
-#_(icount [coll] (inc (count rest)))
+  #_ICounted
+  #_(icount [coll] (inc (count rest)))
 
   ICollection
   (iconj [coll o] (new Cons nil o coll))
 
-;  IEmptyableCollection
-;  (iempty [coll] List.EMPTY)
+                                        ;  IEmptyableCollection
+                                        ;  (iempty [coll] List.EMPTY)
 
   ISeqable
   (iseq [coll] coll))
@@ -133,3 +133,24 @@
   "Returns a new seq where x is the first element and seq is the rest."
   [first rest]
   (new Cons nil first rest))
+
+(comment
+  (use 'cljs.compiler)
+
+  (import '[javax.script ScriptEngineManager])
+
+  (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
+  (.eval jse bootjs)
+
+  (defmacro js [form]
+    `(emit (analyze {:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
+
+  (defn jseval [form]
+    (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
+                             form))]
+      ;;(prn js)
+      (.eval jse (str "print(" js ")"))))
+
+  (with-open [r (PushbackReader. (clojure.java.io/reader "src/cljs/cljs/core.cljs"))]
+    (dorun (map-indexed #(do jseval (take-while identity (repeatedly #(read r false nil))))))
+    (jseval '(ifirst (irest (cons 1 (cons 2 nil))))))
