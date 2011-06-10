@@ -8,7 +8,7 @@
 
 (set! *warn-on-reflection* true)
 
-(ns cljs.compiler
+(ns clj.cljs.compiler
   (:refer-clojure :exclude [munge]))
 
 (def js-reserved #{"new" "debugger" "enum" "default" "private" "finally" "in" "import" "package" "with" "throw"
@@ -484,7 +484,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         :else {:op :constant :env env :form form}))))
 
 (comment
-(in-ns 'cljs.compiler)
+(in-ns 'clj.cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
 (.eval jse bootjs)
