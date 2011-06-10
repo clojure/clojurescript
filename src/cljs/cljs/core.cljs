@@ -7,3 +7,81 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core)
+
+(defprotocol ICounted
+  (icount [coll] "constant time count"))
+
+#_(defprotocol IEmptyableCollection
+  (iempty [coll]))
+
+(defprotocol ICollection
+  (iconj [coll o]))
+
+#_(defprotocol IOrdinal
+    (iindex [coll]))
+
+(defprotocol IIndexed
+  (inth [coll n])
+  (inth [coll n not-found]))
+
+(defprotocol ISeq
+  (ifirst [coll])
+  (irest [coll]))
+
+(defprotocol ILookup
+  (ilookup [o k])
+  (ilookup [o k not-found]))
+
+(defprotocol IAssociative
+  #_(icontains-key? [coll k])
+  #_(ientry-at [coll k])
+  (iassoc [coll k v]))
+
+(defprotocol IMap
+  #_(iassoc-ex [coll k v])
+  (iwithout [coll k]))
+
+(defprotocol ISet
+  (icontains? [coll v])
+  (idisjoin [coll v])
+  (iget [coll v]))
+
+(defprotocol IStack
+  (ipeek [coll])
+  (ipop [coll]))
+
+(defprotocol IVector
+  (iassoc-n [coll n val]))
+
+(defprotocol IDeref
+  (ideref [o]))
+
+(defprotocol IDerefWithTimeout
+  (ideref-with-timeout [o msec timeout-val]))
+
+(defprotocol IMeta
+  (imeta [o]))
+
+(defprotocol IWithMeta
+  (iwith-meta [o meta]))
+
+(defprotocol IReduce
+  (ireduce [seq f start]))
+
+(defn reduce
+  "f should be a function of 2 arguments. If val is not supplied,
+  returns the result of applying f to the first 2 items in coll, then
+  applying f to that result and the 3rd item, etc. If coll contains no
+  items, f must accept no arguments as well, and reduce returns the
+  result of calling f with no arguments.  If coll has only 1 item, it
+  is returned and f is not called.  If val is supplied, returns the
+  result of applying f to val and the first item in coll, then
+  applying f to that result and the 2nd item, etc. If coll contains no
+  items, returns val and f is not called."
+  ([f coll]
+     (if-let [s (seq coll)]
+       (reduce f (first s) (next s))
+       (f)))
+  ([f val coll]
+     (let [s (seq coll)]
+       (ireduce s f val))))
