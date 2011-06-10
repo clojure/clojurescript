@@ -1,0 +1,203 @@
+* ClojureScript Day #1
+* Important things to note
+** This should be a dialog, not a lecture
+*** stop me, ask questions, understand deeply
+** There are still many things I don't know or haven't decided
+*** some tasks will be research
+*** some pushback welcome
+**** I reserve BDFL rights :)
+** This is an opportunity to get involved early
+*** stay flexible to avoid pain
+** Welcome Chouser!
+*** One of my first and best users and contributors
+*** Someone whose opinions I value, and a Clojure expert
+*** Author of a Clojure book not (yet) working at Relevance!
+*** The first to walk down the ClojureScript road
+** This is a key Clojure/core (with help) deliverable
+*** We do more than maintain, we lead
+**** community should be stunned (shhh!)
+*** I'm very excited about this aspect
+**** let's knock this out of the park!
+* Intro and rationale
+** Problem statement
+*** Javascript is the only programmable technology in key target environments
+**** i.e. the browser
+**** nothing will change that for years to come
+*** Javascript has the greatest reach in other key environments
+**** i.e. mobile
+*** Javascript (the language) is not very robust
+**** Fewer good parts than bad parts
+**** Much convention and discipline required to avoid headaches
+**** Conventions differ between shops, libs
+*** Ever increasing pressure to create richer applications in these environments
+**** requiring more and larger libraries
+***** ordinary minification doesn't scale up
+**** increasing requirements complexity
+***** can't add language or environment complexity on top
+** Rationale
+*** solving this problem will give developers important leverage
+*** empower them to tackle more difficult problems
+**** with greater confidence in the robustness of their solutions
+*** inspire next-generation approaches to web and mobile development
+* Strategy
+** Compile (a subset of) Clojure to Javascript
+*** reach everywhere JS does
+** Clojure is simpler, more robust, more concise, more powerful overall than JS
+*** yet maps well to JS as implementation artifact
+** Leverage best-of-breed JS appraoches
+*** Currently, IMO that is Google's, with Closure compiler and libraries
+**** called gclosure hereafter
+*** Fortunately both open sourced
+*** Gclosure's strategy is whole-program optimization
+**** resulting application includes only code actually used
+**** this is essential to writing large (and small) applications against large and manifold libraries
+***** while allowing those libs to be written in a straightforward, non-clever manner
+** This is not just about the browser
+*** Node.js, plugins anywhere JS is accepted, any future JS-based environments
+** Non-objectives
+*** complete Closure
+**** subset, but try to make identical features identical
+**** document differences
+*** porting large applications in their entirety
+**** portability layers unifying JS and Java
+**** cross platform reach is about moving core competencies and libraries, not everything
+** Profit!
+*** ClojureScript becomes the most powerful language for generating the smallest and fastest JS applications
+**** ClojureScript runs everywhere JS runs
+*** This is Clojure's client story
+*** This is Clojure's mobile story
+*** A powerful tool for anyone willing to learn Clojure
+* Tactics
+** Don't change Clojure itself
+*** even though it might make things easier
+**** track those things we'd like to be different, and work into Clojure dev schedule
+** The ClojureScript compiler is written in Clojure
+*** The reader is Clojure's
+*** Macros are written in Clojure
+*** therefor, no compiler at runtime, *no eval*
+**** browser-hosted REPL a non-target!
+*** also, some things that are runtime-reified in Clojure (namespaces, Vars) may not be in ClojureScript
+** GClosure's strategy requires JS to be written in a particular idiom
+*** especially for the most advanced optimization
+*** ClojureScript will always generate code compliant with advanced optimizations
+*** ClojureScript will use the same packaging and dependency strategy as gclosure
+** The gclosure library is an accepted dependency
+*** but *nothing else* (other than base JS)
+**** ok, and maybe some stealing from GWT output, if we're desperate
+***** but that's really it
+*** in particular, use gclosure for all environmental conditionality
+**** we make no per-browser decisions ourselves
+** The gclosure compiler is optional, but recommended for final delivery
+*** but don't be too stupid without it
+** The compiler has an enriched primitive set (vs Clojure's)
+*** deftype
+*** defprotocol
+*** extend-type
+*** need no runtime lib
+**** allows bootstrap abstraction and data structures to be written in terms of these
+** The runtime library is completely written in ClojureScript
+*** No Javascript!
+*** js* primitive escape hatch to reach gnarly stuff that ClojureScript won't expose
+** Presumptions
+*** JS is single-threaded, forever
+**** nevertheless, we will use Clojure reference primitives (at least atom)
+* Roadmap
+** Compiler
+*** It's alive!
+*** a few more primitives to go
+*** output needs to be sussed out
+**** esp tested with gclosure compiler
+*** some niceties missing (load-file etc)
+** Libraries
+*** Many core macros imported and work
+**** testing required
+**** some missing, like binding, dotimes
+*** This space intentionally left blank (core.cljs)
+**** that's why you're here!
+**** Much work, but following trodden ground
+***** Move the core abstractions to protocols
+***** Implement the core data structures with deftype
+***** copy fn impls, tweaking as needed
+** Tooling
+*** ClojureScript written to the spec of gclosure
+*** Actual integration with tool chain TODO
+**** Deps builder
+**** Compilation with gclosure compiler
+***** drive through API for greatest control vs CLI
+**** finding/loading gclosure lib
+**** testing
+**** delivery
+*** REPL and other expected dev conveniences
+**** load (file), load-js
+* Inside the compiler 
+** I will not be the only one who knows this!
+*** only 500 lines
+** [[http://en.wikipedia.org/wiki/Recursive_descent_parser][Recursive descent parser]]
+** 2 phases
+*** analyze
+**** code data in -> AST data out
+***** all ordinary Clojure data
+**** each expr recursively analyzes nested exprs
+**** checks for correct structure
+*** emit
+**** AST data in -> print JS (via side effect to *out*)
+***** this allows with-out-str, or direct to file
+***** alternative - thread output stream, meh
+**** each expr recursively emits nested exprs
+** Both analyze and emit are polymorphic
+*** using multimethods
+*** other than a little hand-routing at top of analyze, no global switch statement
+**** extend the compiler by defining parse and emit methods
+**** add special ops to specials set
+** The threaded environment (env)
+*** most important, :context and :locals
+*** all name-introducing exprs (e.g. fn, let) augment the environment before passing to children
+** Tricky bit - :context
+*** In ClojureScript everything is an expression
+**** but not in JS
+**** optimal output requires knowledge of the context
+***** :statement, :return, :expr
+**** non-exprs in expr contexts require transformation (usually a function wrapper)
+** Primitives walkthrough
+*** if
+*** def
+*** fn*
+*** do
+*** let*
+*** loop*
+*** recur
+*** new
+*** set!
+*** ns
+*** deftype*
+*** .
+*** js*
+** Macros walkthrough
+*** macroexpansion
+*** defprototype
+*** extend-type
+*** import-macros
+*** the core/core trick
+** Evaluation model
+*** top down, form at a time
+**** just like Clojure
+**** just like JS
+** What's missing?
+*** validation that compilation ns resolved names exist in ns
+*** more correctness checking
+*** better error messages
+**** ...
+*** strategy for apply
+* What's where
+** src/clj/cljs/compiler.clj
+*** the compiler
+** src/clj/cljs/core.clj
+*** core macros
+** src/cljs/core.cljs
+*** core library
+* Todo
+** separate org file
+* Breakout and tackle tasks
+** we'll substantially be in the same file
+*** ideas for making that work?
+* Regroup and feedback
