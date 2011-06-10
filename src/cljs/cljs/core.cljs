@@ -105,3 +105,82 @@
   ([f val coll]
      (let [s (seq coll)]
        (ireduce s f val))))
+
+;;; Math - variadic forms will not work until the following implemented:
+;;; first, next, reduce
+
+(defn +
+  "Returns the sum of nums. (+) returns 0."
+  ([] 0)
+  ([x] x)
+  ([x y] (js* "(~{x}+~{y})"))
+  ([x y & more] (reduce + (+ x y) more)))
+
+(defn -
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result."
+  ([x] (js* "(-~{x})"))
+  ([x y] (js* "(~{x}-~{y})"))
+  ([x y & more] (reduce - (- x y) more)))
+
+(defn *
+  "Returns the product of nums. (*) returns 1."
+  ([] 1)
+  ([x] x)
+  ([x y] (js* "(~{x}*~{y})"))
+  ([x y & more] (reduce * (* x y) more)))
+
+(defn /
+  "If no denominators are supplied, returns 1/numerator,
+  else returns numerator divided by all of the denominators."  
+  ([x] (js* "(1/~{x})"))
+  ([x y] (js* "(~{x}/~{y})"))
+  ([x y & more] (reduce / (/ x y) more)))
+
+(defn <
+  "Returns non-nil if nums are in monotonically increasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x}<~{y})"))
+  ([x y & more]
+     (if (< x y)
+       (if (next more)
+         (recur y (first more) (next more))
+         (< y (first more)))
+       false)))
+
+(defn <=
+  "Returns non-nil if nums are in monotonically non-decreasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x}<=~{y})"))
+  ([x y & more]
+   (if (<= x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (<= y (first more)))
+     false)))
+
+(defn >
+  "Returns non-nil if nums are in monotonically decreasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x}>~{y})"))
+  ([x y & more]
+   (if (> x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (> y (first more)))
+     false)))
+
+(defn >=
+  "Returns non-nil if nums are in monotonically non-increasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x}>=~{y})"))
+  ([x y & more]
+   (if (>= x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (>= y (first more)))
+     false)))
