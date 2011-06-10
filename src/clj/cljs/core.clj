@@ -94,3 +94,60 @@
     `(do
        (def ~p ~prefix)
        ~@(map method methods))))
+
+(defprotocol ICounted
+  (icount [coll] "constant time count"))
+
+#_(defprotocol IEmptyableCollection
+  (iempty [coll]))
+
+(defprotocol ICollection
+  (iconj [coll o]))
+
+#_(defprotocol IOrdinal
+    (iindex [coll]))
+
+(defprotocol IIndexed
+  (inth [coll n])
+  (inth [coll n not-found]))
+
+(defprotocol ISeq
+  (ifirst [coll])
+  (irest [coll]))
+
+(defprotocol ILookup
+  (ilookup [o k])
+  (ilookup [o k not-found]))
+
+(defprotocol IAssociative
+  #_(icontains-key? [coll k])
+  #_(ientry-at [coll k])
+  (iassoc [coll k v]))
+
+(defprotocol IMap
+  #_(iassoc-ex [coll k v])
+  (iwithout [coll k]))
+
+(defprotocol ISet
+  (icontains? [coll v])
+  (idisjoin [coll v])
+  (iget [coll v]))
+
+(defprotocol IStack
+  (ipeek [coll])
+  (ipop [coll]))
+
+(defprotocol IVector
+  (iassoc-n [coll n val]))
+
+(defprotocol IDeref
+  (ideref [o]))
+
+(defprotocol IDerefWithTimeout
+  (ideref-with-timeout [o msec timeout-val]))
+
+(defprotocol IMeta
+  (imeta [o]))
+
+(defprotocol IWithMeta
+  (iwith-meta [o meta]))
