@@ -68,6 +68,23 @@
 (defprotocol IReduce
   (ireduce [seq f start]))
 
+(defprotocol IEquiv
+  (iequiv [o other]))
+
+(defn first
+  [coll]
+  (when coll
+    (ifirst coll)))
+
+(defn rest
+  [coll]
+  (when col
+    (irest coll)))
+
+#_(defn conj
+  ([coll x]
+     (if coll (iconj coll x) '(x))))
+
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
