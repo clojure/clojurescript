@@ -1,0 +1,30 @@
+#!/bin/sh
+
+echo "Generating sample javascript"
+mkdir compilation
+
+cat <<EOF > compilation/test.js
+function create_alert(msg) {
+    alert(msg);
+}
+EOF
+
+echo "Testing compilation"
+cd compilation
+for file in *
+do
+  if [ -f $file ] ; then
+    name=${file%\.*}
+    java -jar ../closure/compiler/compiler.jar --js $file --js_output_file $name-compiled.js
+  fi
+done
+cd ..
+
+echo "\nOriginal:"
+cat compilation/test.js
+
+echo "\nOptimized:"
+cat compilation/test-compiled.js
+
+echo "\nCleaning up"
+rm -rf compilation

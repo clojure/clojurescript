@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rm -rf closure
+rm -rf compilation
