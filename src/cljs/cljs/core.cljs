@@ -105,3 +105,31 @@
   ([f val coll]
      (let [s (seq coll)]
        (ireduce s f val))))
+
+(deftype Cons [meta first rest]
+  IWithMeta
+  (iwith-meta [coll meta] (new Cons meta first rest))
+
+  IMeta
+  (imeta [coll] meta)
+
+  ISeq
+  (ifirst [coll] first)
+  (irest [coll] rest)
+
+#_ICounted
+#_(icount [coll] (inc (count rest)))
+
+  ICollection
+  (iconj [coll o] (new Cons nil o coll))
+
+;  IEmptyableCollection
+;  (iempty [coll] List.EMPTY)
+
+  ISeqable
+  (iseq [coll] coll))
+
+(defn cons
+  "Returns a new seq where x is the first element and seq is the rest."
+  [first rest]
+  (new Cons nil first rest))
