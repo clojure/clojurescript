@@ -141,35 +141,35 @@
   "Returns the sum of nums. (+) returns 0."
   ([] 0)
   ([x] x)
-  ([x y] (js* "(~{x}+~{y})"))
+  ([x y] (js* "return ~{x} + ~{y};"))
   ([x y & more] (reduce + (+ x y) more)))
 
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
-  ([x] (js* "(-~{x})"))
-  ([x y] (js* "(~{x}-~{y})"))
+  ([x] (js* "return - ~{x};"))
+  ([x y] (js* "return ~{x} - ~{y};"))
   ([x y & more] (reduce - (- x y) more)))
 
 (defn *
   "Returns the product of nums. (*) returns 1."
   ([] 1)
   ([x] x)
-  ([x y] (js* "(~{x}*~{y})"))
+  ([x y] (js* "return ~{x} * ~{y};"))
   ([x y & more] (reduce * (* x y) more)))
 
 (defn /
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."  
-  ([x] (js* "(1/~{x})"))
-  ([x y] (js* "(~{x}/~{y})"))
+  ([x] (js* "return 1 / ~{x};"))
+  ([x y] (js* "return ~{x} / ~{y};"))
   ([x y & more] (reduce / (/ x y) more)))
 
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x}<~{y})"))
+  ([x y] (js* "return ~{x} < ~{y};"))
   ([x y & more]
      (if (< x y)
        (if (next more)
@@ -181,7 +181,7 @@
   "Returns non-nil if nums are in monotonically non-decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x}<=~{y})"))
+  ([x y] (js* "return ~{x} <= ~{y};"))
   ([x y & more]
    (if (<= x y)
      (if (next more)
@@ -193,7 +193,7 @@
   "Returns non-nil if nums are in monotonically decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x}>~{y})"))
+  ([x y] (js* "return ~{x} > ~{y};"))
   ([x y & more]
    (if (> x y)
      (if (next more)
@@ -205,7 +205,7 @@
   "Returns non-nil if nums are in monotonically non-increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x}>=~{y})"))
+  ([x y] (js* "return ~{x} >= ~{y};"))
   ([x y & more]
    (if (>= x y)
      (if (next more)
@@ -224,16 +224,31 @@
   (defmacro js [form]
     `(emit (analyze {:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
 
-  (defn jseval [form]
+  (defn jseval-prn [form]
     (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
                              form))]
       ;;(prn js)
       (.eval jse (str "print(" js ")"))))
 
+  (defn jseval [form]
+    (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
+                             form))]
+      ;;(prn js)
+      (.eval jse (str js))))
+  
   (with-open [r (java.io.PushbackReader. (clojure.java.io/reader "src/cljs/cljs/core.cljs"))]
     (doseq [f (take-while identity (repeatedly (fn []  (read r false nil))))]
       (jseval f)))
 
   (jseval '(ifirst (irest (cons 1 (cons 2 nil)))))
-  
+
+  ;; 3 arg case needs apply?
+  (doseq [args [[1] [1 2] #_[1 2 3]]]
+    (doseq [op ['+ '- '* '/ '> '>= '< '<=]]
+      (println `(~op ~@args) " => " (jseval `(~op ~@args)))))
+
+  (jseval '(+ 1 2))
+
+  (js '(+ 1 2 3))
+
   )
