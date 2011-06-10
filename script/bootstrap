@@ -1,0 +1,16 @@
+#!/bin/sh
+
+echo "Fetching Google Closure Library..."
+mkdir -p closure/library
+cd closure/library
+curl -O -s http://closure-library.googlecode.com/files/closure-library-20110323-r790.zip
+unzip -q closure-library-20110323-r790.zip
+rm closure-library-20110323-r790.zip
+cd ..
+echo "Fetching Google Closure Compiler..."
+mkdir compiler
+cd compiler
+curl -O -s http://closure-compiler.googlecode.com/files/compiler-latest.zip
+unzip -q compiler-latest.zip
+rm compiler-latest.zip
+cd ../..
