@@ -9,7 +9,8 @@
 (set! *warn-on-reflection* true)
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge]))
+  (:refer-clojure :exclude [munge])
+  (:require [clojure.java.io :as io]))
 
 (declare resolve-var)
 (require 'cljs.core)
@@ -22,6 +23,8 @@
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
+(def ^:dynamic *cljs-ns* 'cljs.user)
+
 (defn munge [s]
   (let [ms (clojure.lang.Compiler/munge (str s))
         ms (if (js-reserved ms) (str ms "$") ms)]
@@ -30,7 +33,7 @@
       ms)))
 
 ;;todo - move to core.cljs, using js
-(def bootjs "
+(def ^String bootjs "
 //goog.provide should do this for us
 cljs = {}
 cljs.core = {}
@@ -74,7 +77,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (defmulti emit :op)
 
-(defn emits [expr]
+(defn ^String emits [expr]
   (with-out-str (emit expr)))
 
 (defn emit-block
@@ -208,7 +211,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (defmethod emit :ns
   [{:keys [name requires requires-macros env]}]
-  (println (str "//goog.provide('" name "');"))
+  (println (str "goog.provide('" name "');"))
   (when-not (= name 'cljs.core)
     (println (str "//goog.require('cljs.core');")))
   (doseq [lib (vals requires)]
@@ -385,7 +388,8 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
                                           [alias lib])
                                         libs))))
                 {} args)]
-    ;;(require 'cljs.core)
+    (set! *cljs-ns* name)
+    (require 'cljs.core)
     (doseq [nsym (vals requires-macros)]
       (require nsym))
     (swap! namespaces #(-> %
@@ -486,11 +490,54 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         (and (seq? form) (seq form)) (analyze-seq env form name)
         :else {:op :constant :env env :form form}))))
 
+(defn repl-env
+  "Returns a fresh JS environment, suitable for passing to repl.
+  Hang on to return for use across repl calls."
+  []
+  (let [jse (-> (javax.script.ScriptEngineManager.) (.getEngineByName "JavaScript"))
+        base (io/resource "goog/base.js")]
+    (assert base "Can't find goog/base.js in classpath")
+    (with-open [r (io/reader base)]
+      (.eval jse r))
+    (.eval jse bootjs)
+    {:jse jse}))
+
+(defn repl
+  [repl-env]
+  (prn "Type: " :cljs/quit " to quit")
+  (binding [*cljs-ns* 'cljs.user]
+    (let [env {:context :statement :locals {}}]
+      (loop []
+        (print (str "ClojureScript:" *cljs-ns* "> "))
+        (flush)
+        (let [form (read)]
+          (cond
+           (= form :cljs/quit) :quit
+           
+           (and (seq? form) (= (first form) 'in-ns))
+           (do (set! *cljs-ns* (second (second form))) (recur))
+
+           :else
+           (let [ret (try
+                       (let [ast (analyze (assoc env :ns (@namespaces *cljs-ns*)) form)
+                             js (emits ast)
+                             ret (.eval ^javax.script.ScriptEngine (:jse repl-env) js)]
+                         ret)
+                       (catch Throwable ex
+                         (.printStackTrace ex)))]
+             (prn ret)
+             (recur))))))))
+
 (comment
+
+(require '[cljs.compiler :as comp])
+(def jse (comp/repl-env))  
+(comp/repl jse)
+
 (in-ns 'cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
-(.eval jse bootjs)
+(.eval jse cljs.compiler/bootjs)
 (def envx {:ns (@namespaces 'cljs.user) :context :expr :locals '{ethel {:name ethel__123 :init nil}}})
 (analyze envx nil)
 (analyze envx 42)
@@ -513,7 +560,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (analyze envx '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (defmacro js [form]
-  `(emit (analyze {:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
+  `(emit analyze ({:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
 
 (defn jseval [form]
   (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
