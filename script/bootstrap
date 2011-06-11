@@ -1,6 +1,6 @@
 #!/bin/sh
 
-mkdir lib
+mkdir -p lib
 echo "Fetching Google Closure Library..."
 mkdir -p closure/library
 cd closure/library
@@ -9,7 +9,7 @@ unzip -q closure-library-20110323-r790.zip
 rm closure-library-20110323-r790.zip
 cd ..
 echo "Fetching Google Closure Compiler..."
-mkdir compiler
+mkdir -p compiler
 cd compiler
 curl -O -s http://closure-compiler.googlecode.com/files/compiler-latest.zip
 unzip -q compiler-latest.zip
