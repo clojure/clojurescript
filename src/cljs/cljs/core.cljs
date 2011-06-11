@@ -74,19 +74,8 @@
 (defprotocol ISeqable
   (iseq [o]))
 
-(defn first
-  "Returns the first item in the collection. Calls seq on its
-  argument. If coll is nil, returns nil."
-  [coll]
-  (when coll
-    (ifirst coll)))
-
-(defn rest
-  "Returns a possibly empty seq of the items after the first. Calls seq on its
-  argument."
-  [coll]
-  (when coll
-    (irest coll)))
+(defn nil? [x]
+  (js* "return ~{x} === null"))
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -94,7 +83,22 @@
   Strings, native Java arrays (of reference types) and any objects
   that implement Iterable."
   [coll]
-  (when coll (iseq coll)))
+  (when coll
+    (iseq coll)))
+
+(defn first
+  "Returns the first item in the collection. Calls seq on its
+  argument. If coll is nil, returns nil."
+  [coll]
+  (when coll
+    (ifirst (seq coll))))
+
+(defn rest
+  "Returns a possibly empty seq of the items after the first. Calls seq on its
+  argument."
+  [coll]
+  (when coll
+    (irest (seq coll))))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
@@ -145,6 +149,116 @@
      (let [s (seq coll)]
        (ireduce s f val))))
 
+(defn reverse
+  "Returns a seq of the items in coll in reverse order. Not lazy."
+  [coll]
+  ; when we have reduce: (reduce conj () coll)
+  (loop [in coll, out ()]
+    (if (seq in)
+      (recur (rest in) (conj out (first in)))
+      out)))
+
+(defn aget [array i]
+  (js* "return ~{array}[~{i}]"))
+
+(defn- lazy-seq-value [lazy-seq]
+  (let [x lazy-seq.x]
+    (if lazy-seq.realized
+      x
+      (do
+        (set! lazy-seq.x (x))
+        (set! lazy-seq.realized true)
+        lazy-seq.x))))
+
+(deftype LazySeq [meta realized x]
+  IWithMeta
+  (iwith-meta [coll meta] (new LazySeq meta realized x))
+
+  IMeta
+  (imeta [coll] meta)
+
+  ISeq
+  (ifirst [coll] (first (lazy-seq-value coll)))
+  (irest [coll] (rest (lazy-seq-value coll)))
+
+  ICollection
+  (iconj [coll o] (cons o coll))
+
+; IEmptyableCollection
+; (iempty [coll] coll)
+
+  ISeqable
+  (iseq [coll] (seq (lazy-seq-value coll))))
+
+(defn array-seq [array i]
+  (lazy-seq
+    (when (< i (. array length))
+      (cons (aget array i) (array-seq array (inc i))))))
+
+(extend-type goog.global.Array
+  ISeqable
+  (iseq [array] (array-seq array 0)))
+
+(deftype List [meta first rest count]
+  IWithMeta
+  (iwith-meta [coll meta] (new List meta first rest count))
+
+  IMeta
+  (imeta [coll] meta)
+
+  ISeq
+  (ifirst [coll] first)
+  (irest [coll] (if (nil? rest) (new EmptyList meta) rest))
+
+  IStack
+  (ipeek [coll] first)
+  (ipop [coll] (irest coll))
+
+  ICollection
+  (iconj [coll o] (new List meta o coll (inc count)))
+
+; IEmptyableCollection
+; (iempty [coll] coll)
+
+  ISeqable
+  (iseq [coll] coll)
+
+  ICounted
+  (icount [coll] count))
+
+(deftype EmptyList [meta]
+  IWithMeta
+  (iwith-meta [coll meta] (new EmptyList meta))
+
+  IMeta
+  (imeta [coll] meta)
+
+  ISeq
+  (ifirst [coll] nil)
+  (irest [coll] nil)
+
+  IStack
+  (ipeek [coll] nil)
+  (ipop [coll] #_(throw "Can't pop empty list"))
+
+  ICollection
+  (iconj [coll o] (new List meta o nil 1))
+
+; IEmptyableCollection
+; (iempty [coll] coll)
+
+  ISeqable
+  (iseq [coll] nil)
+
+  ICounted
+  (icount [coll] 0))
+
+(set! cljs.user.List.EMPTY (new EmptyList nil))
+
+(defn list [& items]
+  ; when we have reduce: (reduce conj () (reverse items))
+  (reverse (reverse items)))
+
 (deftype Cons [meta first rest]
   IWithMeta
   (iwith-meta [coll meta] (new Cons meta first rest))
@@ -154,13 +268,13 @@
 
   ISeq
   (ifirst [coll] first)
-  (irest [coll] rest) ;; should this return empty list?
+  (irest [coll] (if (nil? rest) () rest))
 
   ICollection
   (iconj [coll o] (new Cons nil o coll))
 
-                                        ;  IEmptyableCollection
-                                        ;  (iempty [coll] List.EMPTY)
+; IEmptyableCollection
+; (iempty [coll] List.EMPTY)
 
   ISeqable
   (iseq [coll] coll))
@@ -260,6 +374,10 @@
        (>= y (first more)))
      false)))
 
+(defn inc
+  "Returns a number one greater than num."
+  [x] (+ x 1))
+
 (comment
   (use 'cljs.compiler)
 
@@ -267,25 +385,26 @@
 
   (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
   (.eval jse bootjs)
+  (.eval jse (clojure.java.io/reader "closure/library/closure/goog/base.js"))
 
-  (defmacro js [form]
-    `(emit (analyze {:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
+  (defmacro js [form & [ns]]
+    `(emit (analyze {:ns (@namespaces '~(or ns 'cljs.user)) :context :statement :locals {}} '~form)))
 
-  (defn jseval-prn [form]
-    (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
+  (defn jseval-prn [form & [ns]]
+    (let [js (emits (analyze {:ns (@namespaces (or ns 'cljs.user)) :context :expr :locals {}}
                              form))]
       ;;(prn js)
       (.eval jse (str "print(" js ")"))))
 
-  (defn jseval [form]
-    (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
+  (defn jseval [form & [ns]]
+    (let [js (emits (analyze {:ns (@namespaces (or ns 'cljs.user)) :context :expr :locals {}}
                              form))]
       ;;(prn js)
       (.eval jse (str js))))
   
   (with-open [r (java.io.PushbackReader. (clojure.java.io/reader "src/cljs/cljs/core.cljs"))]
-    (doseq [f (take-while identity (repeatedly (fn []  (read r false nil))))]
-      (jseval f)))
+    (doseq [f (take-while identity (repeatedly (fn [] (read r false nil))))]
+      (jseval f 'cljs.user)))
 
   (jseval '(seq nil))
   (jseval '(next (cons 1 nil)))
