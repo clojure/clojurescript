@@ -72,6 +72,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (defmethod emit-constant String [x] (pr x))
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
 
+(defmethod emit-constant clojure.lang.PersistentList$EmptyList [x]
+  (print 'cljs.user.List.EMPTY))
+
 (defmulti emit :op)
 
 (defn emits [expr]
