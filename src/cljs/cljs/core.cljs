@@ -75,40 +75,55 @@
   (iseq [o]))
 
 (defn first
+  "Returns the first item in the collection. Calls seq on its
+  argument. If coll is nil, returns nil."
   [coll]
   (when coll
     (ifirst coll)))
 
 (defn rest
+  "Returns a possibly empty seq of the items after the first. Calls seq on its
+  argument."
   [coll]
   (when coll
     (irest coll)))
 
 (defn seq
+  "Returns a seq on the collection. If the collection is
+  empty, returns nil.  (seq nil) returns nil. seq also works on
+  Strings, native Java arrays (of reference types) and any objects
+  that implement Iterable."
   [coll]
   (when coll (iseq coll)))
 
 (defn next
+  "Returns a seq of the items after the first. Calls seq on its
+  argument.  If there are no more items, returns nil"
   [coll]
   (seq (rest coll)))
 
 (defn second
+  "Same as (first (next x))"
   [coll]
   (first (rest coll)))
 
 (defn ffirst
+  "Same as (first (first x))"
   [coll]
   (first (first coll)))
 
 (defn nfirst
+  "Same as (next (first x))"
   [coll]
   (next (first coll)))
 
 (defn fnext
+  "Same as (first (next x))"
   [coll]
   (first (next coll)))
 
 (defn nnext
+  "Same as (next (next x))"
   [coll]
   (next (next coll)))
 
@@ -156,8 +171,15 @@
   (new Cons nil first rest))
 
 (defn conj
+  "conj[oin]. Returns a new collection with the xs
+  'added'. (conj nil item) returns (item).  The 'addition' may
+  happen at different 'places' depending on the concrete type."
   ([coll x]
-     (if coll (iconj coll x) (cons x nil))))
+     (if coll (iconj coll x) (cons x nil)))
+  ([coll x & xs]
+     (if xs
+       (recur (iconj coll x) (first xs) (next xs))
+       (iconj coll x))))
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
