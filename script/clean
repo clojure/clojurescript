@@ -2,3 +2,4 @@
 
 rm -rf closure
 rm -rf compilation
+rm -f lib/goog.jar

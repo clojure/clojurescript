@@ -2,4 +2,5 @@
 .idea
 /.DS_Store
 /classes
+/lib
 closure

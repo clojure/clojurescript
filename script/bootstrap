@@ -1,5 +1,6 @@
 #!/bin/sh
 
+mkdir lib
 echo "Fetching Google Closure Library..."
 mkdir -p closure/library
 cd closure/library
@@ -14,3 +15,5 @@ curl -O -s http://closure-compiler.googlecode.com/files/compiler-latest.zip
 unzip -q compiler-latest.zip
 rm compiler-latest.zip
 cd ../..
+echo "Building goog.jar..."
+jar cf ./lib/goog.jar -C closure/library/closure/ goog
