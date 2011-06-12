@@ -378,6 +378,10 @@
   "Returns a number one greater than num."
   [x] (+ x 1))
 
+(defn dec
+  "Returns a number one less than num."
+  [x] (- x 1))
+
 (comment
   (use 'cljs.compiler)
 
