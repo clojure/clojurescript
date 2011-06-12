@@ -9,7 +9,7 @@
 (set! *warn-on-reflection* true)
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge])
+  (:refer-clojure :exclude [munge load-file])
   (:require [clojure.java.io :as io]))
 
 (declare resolve-var)
@@ -35,9 +35,11 @@
 ;;todo - move to core.cljs, using js
 (def ^String bootjs "
 //goog.provide should do this for us
-cljs = {}
-cljs.core = {}
-cljs.user = {}
+//cljs = {}
+//cljs.core = {}
+//cljs.user = {}
+goog.provide('cljs.core');
+goog.provide('cljs.user');
 cljs.core.truth_ = function(x){return x != null && x !== false;}
 cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}")
 
@@ -493,6 +495,38 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         (and (seq? form) (seq form)) (analyze-seq env form name)
         :else {:op :constant :env env :form form}))))
 
+(defn eval1
+  [^javax.script.ScriptEngine jse env form]
+  (try
+    (let [ast (analyze env form)
+          js (emits ast)]
+      (try
+        (let [ret (.eval jse js)]
+          ret)
+        (catch Throwable ex
+          ;;we eat ns errors because we know goog.provide() will throw when reloaded
+          ;;TODO - file bug with google, this is bs error
+          ;;this is what you get when you try to 'teach new developers' via errors (goog/base.js 104)
+          (when-not (and (seq? form) (= 'ns (first form)))
+            (prn "Error evaluating:" form :as js)
+            (println (str ex))))))
+    (catch Throwable ex
+      (println (str ex)))))
+
+(defn load-file
+  [jse f]
+  (binding [*cljs-ns* 'cljs.user]
+    (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+          res (if (= \/ (first f)) f (io/resource f))]
+      (assert res (str "Can't find " f " in classpath"))
+      (with-open [r (io/reader res)]
+        (let [pbr (clojure.lang.LineNumberingPushbackReader. r)
+              eof (Object.)]
+          (loop [r (read pbr false eof false)]
+            (when-not (identical? eof r)
+              (eval1 jse env r)
+              (recur (read pbr false eof false)))))))))
+
 (defn repl-env
   "Returns a fresh JS environment, suitable for passing to repl.
   Hang on to return for use across repl calls."
@@ -500,16 +534,20 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
   (let [jse (-> (javax.script.ScriptEngineManager.) (.getEngineByName "JavaScript"))
         base (io/resource "goog/base.js")]
     (assert base "Can't find goog/base.js in classpath")
+    (.put jse javax.script.ScriptEngine/FILENAME "goog/base.js")
     (with-open [r (io/reader base)]
       (.eval jse r))
     (.eval jse bootjs)
     {:jse jse}))
 
 (defn repl
+  "Note - repl will reload core.cljs every time, even if supplied old repl-env"
   [repl-env]
   (prn "Type: " :cljs/quit " to quit")
   (binding [*cljs-ns* 'cljs.user]
-    (let [env {:context :statement :locals {}}]
+    (let [jse (:jse repl-env)
+          env {:context :statement :locals {}}]
+      (load-file (:jse repl-env) "cljs/core.cljs")
       (loop []
         (print (str "ClojureScript:" *cljs-ns* "> "))
         (flush)
@@ -518,25 +556,28 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
            (= form :cljs/quit) :quit
            
            (and (seq? form) (= (first form) 'in-ns))
-           (do (set! *cljs-ns* (second (second form))) (recur))
+           (do (set! *cljs-ns* (second (second form))) (newline) (recur))
 
+           (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
+           (do (load-file jse (second form)) (newline) (recur))
+           
            :else
-           (let [ret (try
-                       (let [ast (analyze (assoc env :ns (@namespaces *cljs-ns*)) form)
-                             js (emits ast)
-                             ret (.eval ^javax.script.ScriptEngine (:jse repl-env) js)]
-                         ret)
-                       (catch Throwable ex
-                         (.printStackTrace ex)))]
+           (let [ret (eval1 jse (assoc env :ns (@namespaces *cljs-ns*)) form)]
              (prn ret)
              (recur))))))))
 
 (comment
 
+;;the new way - use the REPL!!
 (require '[cljs.compiler :as comp])
 (def jse (comp/repl-env))  
 (comp/repl jse)
+(+ 1 2)
+(in-ns 'cljs.core)
+;;hack on core
 
+
+;;OLD way, don't you want to use the REPL? 
 (in-ns 'cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
