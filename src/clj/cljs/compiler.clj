@@ -9,7 +9,7 @@
 (set! *warn-on-reflection* true)
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge load-file])
+  (:refer-clojure :exclude [munge load-file macroexpand-1])
   (:require [clojure.java.io :as io]))
 
 (declare resolve-var)
@@ -210,9 +210,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (defmethod emit :new
   [{:keys [ctor args env]}]
   (emit-wrap env
-             (print (str "new " (emits ctor) "("
+             (print (str "(new " (emits ctor) "("
                          (comma-sep (map emits args))
-                         ")"))))
+                         "))"))))
 
 (defmethod emit :set!
   [{:keys [target val env]}]
@@ -474,15 +474,31 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (when (and mvar (.isMacro mvar))
       @mvar)))
 
+(defn macroexpand-1 [env form]
+  (let [op (first form)]
+    (if (specials op)
+      form
+      (if-let [mac (and (symbol? op) (get-expander op env))]
+        (apply mac form env (rest form))
+        (if (symbol? op)
+          (let [opname (name op)]
+            (cond
+             (= (first opname) \.) (let [[target & args] (next form)]
+                                     (list* '. target (symbol (subs opname 1)) args))
+             (= (last opname) \.) (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
+             :else form))
+          form)))))
+
 (defn analyze-seq
   [env form name]
   (let [op (first form)]
     (assert (not (nil? op)) "Can't call nil")
-    (if (specials op)
-      (parse op env form name)
-      (if-let [mac (and (symbol? op) (get-expander op env))]
-        (analyze env (apply mac form env (rest form)))
-        (parse-invoke env form)))))
+    (let [mform (macroexpand-1 env form)]
+      (if (identical? form mform)
+        (if (specials op)
+          (parse op env form name)
+          (parse-invoke env form))
+        (analyze env mform name)))))
 
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
