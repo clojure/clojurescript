@@ -253,7 +253,7 @@
   ICounted
   (icount [coll] 0))
 
-(set! cljs.user.List.EMPTY (new EmptyList nil))
+(set! cljs.core.List.EMPTY (new EmptyList nil))
 
 (defn list [& items]
   ; when we have reduce: (reduce conj () (reverse items))

@@ -64,7 +64,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
                     sym)))
 
          :else
-         (munge (symbol (str (or (-> env :ns :name) 'cljs.user) "." (name sym)))))]
+         (munge (symbol (str
+                         (if (get (:defs (@namespaces 'cljs.core)) sym)
+                           'cljs.core
+                           (-> env :ns :name))
+                         "." (name sym)))))]
     {:name nm}))
 
 (defn- comma-sep [xs]
@@ -78,7 +82,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
 
 (defmethod emit-constant clojure.lang.PersistentList$EmptyList [x]
-  (print 'cljs.user.List.EMPTY))
+  (print 'cljs.core.List.EMPTY))
 
 (defmulti emit :op)
 
@@ -460,9 +464,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
   (let [mvar
         (when-not (-> env :locals sym)  ;locals hide macros
           (if-let [nstr (namespace sym)]
-            (when-let [nsym (if (= "clojure.core" nstr)
-                            'cljs.core
-                            (-> env :ns :requires-macros (symbol nstr)))]
+            (when-let [nsym (cond
+                             (= "clojure.core" nstr) 'cljs.core
+                             (.contains nstr ".") (symbol nstr)
+                             :else
+                             (-> env :ns :requires-macros (get (symbol nstr))))]
               (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) (symbol (name sym))))
             (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym)))]
     (when (and mvar (.isMacro mvar))
@@ -523,9 +529,10 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         (let [pbr (clojure.lang.LineNumberingPushbackReader. r)
               eof (Object.)]
           (loop [r (read pbr false eof false)]
-            (when-not (identical? eof r)
-              (eval1 jse env r)
-              (recur (read pbr false eof false)))))))))
+            (let [env (assoc env :ns (@namespaces *cljs-ns*))]
+              (when-not (identical? eof r)
+                (eval1 jse env r)
+                (recur (read pbr false eof false))))))))))
 
 (defn repl-env
   "Returns a fresh JS environment, suitable for passing to repl.
