@@ -468,8 +468,29 @@
   "Returns a number one less than num."
   [x] (- x 1))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; predicates and logic ;;;;;;;;;;;;;;;;
+
+(defn not
+  "Returns true if x is logical false, false otherwise."
+  [x] (if x false true))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
-;; at the moment only comp has the necessary pieces in place
+
+(defn identity [x] x)
+
+(defn complement
+  "Takes a fn f and returns a fn that takes the same arguments as f,
+  has the same effects, if any, and returns the opposite truth value."
+  [f] 
+  (fn 
+    ([] (not (f)))
+    ([x] (not (f x)))
+    ([x y] (not (f x y)))
+    ([x y & zs] (not (apply f x y zs)))))
+
+(defn constantly
+  "Returns a function that takes any number of arguments and returns x."
+  [x] (fn [& args] x))
 
 (defn comp
   "Takes a set of functions and returns a fn that is the composition
