@@ -1,3 +1,6 @@
+This repo has moved. Please use https://github.com/relevance/clojurescript
+==========================================================================
+
 * ClojureScript
 ** What: Clojure running on Javascript VMs
 ** Why: Clojure rocks, Javascript reaches
