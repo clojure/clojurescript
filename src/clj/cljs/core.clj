@@ -96,5 +96,5 @@
        ~@(map method methods))))
 
 (defmacro lazy-seq [& body]
-  `(new cljs.user.LazySeq nil false (fn [] ~@body)))
+  `(new cljs.core.LazySeq nil false (fn [] ~@body)))
 
