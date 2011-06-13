@@ -14,7 +14,8 @@
                             if-let if-not import io! lazy-cat lazy-seq let letfn locking loop
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
-                            with-loading-context with-local-vars with-open with-out-str with-precision with-redefs]))
+                            with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
+                            satisfies?]))
 
 (alias 'core 'clojure.core)
 
@@ -52,9 +53,10 @@
                      ret))
         assign-impls (fn [[psym sigs]]
                        (let [pprefix (protocol-prefix psym)]
-                         (map (fn [[f & meths]]
-                                `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
-                              sigs)))]
+                         (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
+                               (map (fn [[f & meths]]
+                                      `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
+                                    sigs))))]
     `(do ~@(mapcat assign-impls impl-map))))
 
 (defmacro deftype [t fields & impls]
@@ -92,9 +94,15 @@
                        slot (symbol (str prefix (name fname)))]
                    `(defn ~fname ~@(map #(expand-sig slot %) sigs))))]
     `(do
-       (def ~p ~prefix)
+       (def ~psym ~prefix)
        ~@(map method methods))))
 
+(defmacro satisfies?
+  [psym x]
+  (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
+        prefix (protocol-prefix p)]
+    `(if (. ~x ~(symbol prefix)) true false)))
+
 (defmacro lazy-seq [& body]
-  `(new cljs.user.LazySeq nil false (fn [] ~@body)))
+  `(new cljs.core.LazySeq nil false (fn [] ~@body)))
 
