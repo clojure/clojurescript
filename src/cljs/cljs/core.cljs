@@ -158,8 +158,18 @@
       (recur (rest in) (conj out (first in)))
       out)))
 
+(defn- array-clone [array-like]
+  #_(goog.array.clone array-like)
+  (js* "return Array.prototype.slice.call(~{array-like});"))
+
+(defn array [& items]
+  (array-clone items))
+
 (defn aget [array i]
   (js* "return ~{array}[~{i}]"))
+
+(defn aset [array i val]
+  (js* "return ~{array}[~{i}] = ~{val}"))
 
 (defn- lazy-seq-value [lazy-seq]
   (let [x lazy-seq.x]
@@ -192,7 +202,7 @@
 
 (defn array-seq [array i]
   (lazy-seq
-    (when (< i (. array length))
+    (when (< i (.length array))
       (cons (aget array i) (array-seq array (inc i))))))
 
 (extend-type goog.global.Array
@@ -283,6 +293,82 @@
   "Returns a new seq where x is the first element and seq is the rest."
   [first rest]
   (new Cons nil first rest))
+
+; should use: count, nth
+(defn- vector-seq [vector i]
+  (lazy-seq
+    (when (< i (icount vector))
+      (cons (inth vector i) (vector-seq vector (inc i))))))
+
+(deftype Vector [meta array]
+  IWithMeta
+  (iwith-meta [coll meta] (Vector. meta array))
+
+  IMeta
+  (imeta [coll] meta)
+
+  IStack
+  (ipeek [coll]
+    (let [count (.length array)]
+      (when (> count 0)
+        (aget array (dec count)))))
+  (ipop [coll]
+    (if (> (.length array) 0)
+      (let [new-array (array-clone array)]
+        (. new-array (pop))
+        (Vector. meta new-array))
+      #_(throw "Can't pop empty vector")))
+
+  ICollection
+  (iconj [coll o]
+    (let [new-array (array-clone array)]
+      (.push new-array o)
+      (Vector. meta new-array)))
+
+; IEmptyableCollection
+; (iempty [coll] coll)
+
+  ISeqable
+  (iseq [coll]
+    (when (> (.length array) 0)
+      (vector-seq coll 0)))
+
+  ICounted
+  (icount [coll] (.length array))
+
+  IIndexed
+  ; Must also check lower bound, (<= 0 n)
+  (inth [coll n]
+    (if (< n (.length array))
+      (aget array n)
+      #_(throw (str "No item " n " in vector of length " (.length array)))))
+  (inth [coll n not-found]
+    (if (< n (.length array))
+      (aget array n)
+      not-found))
+
+  ILookup
+  (ilookup [coll k] (inth coll k))
+  (ilookup [coll k not-found] (inth coll k not-found))
+
+  IAssociative
+  (iassoc [coll k v]
+    (let [new-array (array-clone array)]
+      (aset new-array k v)
+      (Vector. meta new-array)))
+
+  IVector
+  (iassoc-n [coll n val] (iassoc coll n val)))
+
+(set! cljs.core.Vector.EMPTY (Vector. nil (array)))
+
+(defn vec [obj]
+  (loop [in obj, out cljs.core.Vector.EMPTY]
+    (if (seq in)
+      (recur (rest in) (conj out (first in)))
+      out)))
+
+(defn vector [& args] (vec args))
 
 (defn conj
   "conj[oin]. Returns a new collection with the xs
