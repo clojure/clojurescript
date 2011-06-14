@@ -18,7 +18,7 @@
 - run script/bootstrap
 - copy clojure.jar into /lib
 - script/repl will start a properly-classpathed repl
-* Starting the clojusrescript repl
+* Starting the clojurescript repl
 - (require '[cljs.compiler :as comp])
 - (def jse (comp/repl-env))  
 - (comp/repl jse)
