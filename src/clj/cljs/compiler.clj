@@ -84,6 +84,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (defmethod emit-constant clojure.lang.PersistentList$EmptyList [x]
   (print 'cljs.core.List.EMPTY))
 
+(defmethod emit-constant clojure.lang.PersistentVector [x]
+  (print "cljs.core.vec([" (comma-sep x) "])"))
+
 (defmulti emit :op)
 
 (defn ^String emits [expr]
