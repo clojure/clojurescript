@@ -182,7 +182,7 @@
 
 (deftype LazySeq [meta realized x]
   IWithMeta
-  (-with-meta [coll meta] (new LazySeq meta realized x))
+  (-with-meta [coll meta] (LazySeq. meta realized x))
 
   IMeta
   (-meta [coll] meta)
@@ -211,21 +211,21 @@
 
 (deftype List [meta first rest count]
   IWithMeta
-  (-with-meta [coll meta] (new List meta first rest count))
+  (-with-meta [coll meta] (List. meta first rest count))
 
   IMeta
   (-meta [coll] meta)
 
   ISeq
   (-first [coll] first)
-  (-rest [coll] (if (nil? rest) (new EmptyList meta) rest))
+  (-rest [coll] (if (nil? rest) (EmptyList. meta) rest))
 
   IStack
   (-peek [coll] first)
   (-pop [coll] (irest coll))
 
   ICollection
-  (-conj [coll o] (new List meta o coll (inc count)))
+  (-conj [coll o] (List. meta o coll (inc count)))
 
 ; IEmptyableCollection
 ; (iempty [coll] coll)
@@ -238,7 +238,7 @@
 
 (deftype EmptyList [meta]
   IWithMeta
-  (-with-meta [coll meta] (new EmptyList meta))
+  (-with-meta [coll meta] (EmptyList. meta))
 
   IMeta
   (-meta [coll] meta)
@@ -252,7 +252,7 @@
   (-pop [coll] #_(throw "Can't pop empty list"))
 
   ICollection
-  (-conj [coll o] (new List meta o nil 1))
+  (-conj [coll o] (List. meta o nil 1))
 
 ; IEmptyableCollection
 ; (iempty [coll] coll)
@@ -263,7 +263,7 @@
   ICounted
   (-count [coll] 0))
 
-(set! cljs.core.List.EMPTY (new EmptyList nil))
+(set! cljs.core.List.EMPTY (EmptyList. nil))
 
 (defn list [& items]
   ; when we have reduce: (reduce conj () (reverse items))
@@ -271,7 +271,7 @@
 
 (deftype Cons [meta first rest]
   IWithMeta
-  (-with-meta [coll meta] (new Cons meta first rest))
+  (-with-meta [coll meta] (Cons. meta first rest))
 
   IMeta
   (-meta [coll] meta)
@@ -281,7 +281,7 @@
   (-rest [coll] (if (nil? rest) () rest))
 
   ICollection
-  (-conj [coll o] (new Cons nil o coll))
+  (-conj [coll o] (Cons. nil o coll))
 
 ; IEmptyableCollection
 ; (iempty [coll] List.EMPTY)
@@ -292,7 +292,7 @@
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
   [first rest]
-  (new Cons nil first rest))
+  (Cons. nil first rest))
 
 ; should use: count, nth
 (defn- vector-seq [vector i]
