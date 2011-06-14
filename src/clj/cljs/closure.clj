@@ -14,5 +14,5 @@
   (let [in (str "/tmp/" (random-string 4))
         out (str in "-compiled.js")]
     (spit in code)
-    (shell/sh "java" "-jar" "/home/abedra/src/opensource/clojurescript/closure/compiler/compiler.jar" "--js" in "--js_output_file" out)
+    (shell/sh "java" "-jar" "closure/compiler/compiler.jar" "--js" in "--js_output_file" out)
     (pprint (slurp out))))
