@@ -24,7 +24,7 @@
 - (comp/repl jse)
 * Reading list
 - If you are interested in participating, please read:
-  - [[Closure-Definitive-Guide-Michael-Bolin]]
+  - [[http://www.amazon.com/Closure-Definitive-Guide-Michael-Bolin/dp/1449381871][Closure-Definitive-Guide-Michael-Bolin]]
 - and maybe:
   - [[http://www.amazon.com/JavaScript-Good-Parts-Douglas-Crockford/dp/0596517742][JavaScript-Good-Parts-Douglas-Crockford]]
   - [[http://www.amazon.com/Performance-JavaScript-Faster-Application-Interfaces/dp/059680279X][Performance-JavaScript-Faster-Application-Interfaces]]
