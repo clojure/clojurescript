@@ -161,14 +161,22 @@
      (let [s (seq coll)]
        (-reduce s f val))))
 
+; simple reduce, to be removed when IReduce is working
+(defn reduce
+  ([f coll]
+    (if-let [s (seq coll)]
+      (reduce f (first s) (next s))
+      (f)))
+  ([f val coll]
+    (loop [val val, coll (seq coll)]
+      (if coll
+        (recur (f val (first coll)) (next coll))
+        val))))
+
 (defn reverse
   "Returns a seq of the items in coll in reverse order. Not lazy."
   [coll]
-  ; when we have reduce: (reduce conj () coll)
-  (loop [in coll, out ()]
-    (if (seq in)
-      (recur (rest in) (conj out (first in)))
-      out)))
+  (reduce conj () coll))
 
 (defn- array-clone [array-like]
   #_(goog.array.clone array-like)
@@ -291,8 +299,7 @@
 (set! cljs.core.List.EMPTY (EmptyList. nil))
 
 (defn list [& items]
-  ; when we have reduce: (reduce conj () (reverse items))
-  (reverse (reverse items)))
+  (reduce conj () (reverse items)))
 
 (deftype Cons [meta first rest]
   IWithMeta
@@ -408,10 +415,7 @@
 (set! cljs.core.Vector.EMPTY (Vector. nil (array)))
 
 (defn vec [coll]
-  (loop [in (seq coll), out cljs.core.Vector.EMPTY]
-    (if in
-      (recur (next in) (conj out (first in)))
-      out)))
+  (reduce conj [] coll))
 
 (defn vector [& args] (vec args))
 
