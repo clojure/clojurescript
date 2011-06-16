@@ -120,6 +120,12 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
       (print (str "(cljs.core.truth_(" (emits test) ")?" (emits then) ":" (emits else) ")"))
       (print (str "if(cljs.core.truth_(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n")))))
 
+(defmethod emit :throw
+  [{:keys [throw env]}]
+  (if (= :expr (:context env))
+    (print (str "(throw " (emits throw) ")"))
+    (print (str "throw " (emits throw) ";\n"))))
+
 (defmethod emit :def
   [{:keys [name init env]}]
   (when init
@@ -252,7 +258,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (declare analyze analyze-symbol)
 
-(def specials '#{if def fn* do let* loop* recur new set! ns deftype* . js* &})
+(def specials '#{if def fn* do let* loop* throw recur new set! ns deftype* . js* &})
 
 (def ^:dynamic *recur-frame* nil)
 
@@ -279,6 +285,13 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     {:env env :op :if :form form
      :test test-expr :then then-expr :else else-expr
      :children [test-expr then-expr else-expr]}))
+
+(defmethod parse 'throw
+  [op env [_ throw :as form] name]
+  (let [throw-expr (disallowing-recur (analyze (assoc env :context :expr) throw))]
+    {:env env :op :throw :form form
+     :throw throw-expr
+     :children [throw-expr]}))
 
 (defmethod parse 'def
   [op env form name]
