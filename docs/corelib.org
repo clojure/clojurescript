@@ -1,0 +1,584 @@
+* DONE *
+* *'
+* TODO *1
+* TODO *2
+* TODO *3
+* *agent*
+* *allow-unresolved-vars*
+* *assert*
+* *clojure-version*
+* *command-line-args*
+* *compile-files*
+* *compile-path*
+* TODO *e
+* *err*
+* *file*
+* *flush-on-newline*
+* *fn-loader*
+* *in*
+* *math-context*
+* *ns*
+* *out*
+* *print-dup*
+* *print-length*
+* *print-level*
+* *print-meta*
+* *print-readably*
+* *read-eval*
+* *source-path*
+* TODO *unchecked-math*
+does what?
+* *use-context-classloader*
+* *verbose-defrecords*
+* *warn-on-reflection*
+* DONE +
+* +'
+* DONE -
+* -'
+* DONE ->
+* DONE ->>
+* ->ArrayChunk
+* ->Vec
+* ->VecNode
+* ->VecSeq
+* -cache-protocol-fn
+* -reset-methods
+* DONE ..
+* DONE /
+* DONE <
+* DONE <=
+* TODO =
+* TODO ==
+* DONE >
+* DONE >=
+* EMPTY-NODE
+* accessor
+* TODO aclone
+* add-classpath
+* add-watch
+* agent
+* agent-error
+* agent-errors
+* DONE aget
+* TODO alength
+* TODO alias
+* all-ns
+* alter
+* TODO alter-meta!
+* alter-var-root
+* TODO amap
+* ancestors
+* DONE and
+* TODO apply
+* TODO areduce
+* TODO array-map
+* DONE aset
+* aset-boolean
+* aset-byte
+* aset-char
+* aset-double
+* aset-float
+* aset-int
+* aset-long
+* aset-short
+* TODO assert
+* TODO assoc
+* TODO assoc!
+* TODO assoc-in
+* TODO associative?
+* TODO atom
+* await
+* await-for
+* await1
+* bases
+* bean
+* bigdec
+* TODO bigint
+* biginteger
+* TODO binding
+* TODO bit-and
+* TODO bit-and-not
+* TODO bit-clear
+* TODO bit-flip
+* TODO bit-not
+* TODO bit-or
+* TODO bit-set
+* TODO bit-shift-left
+* TODO bit-shift-right
+* TODO bit-test
+* TODO bit-xor
+* TODO boolean
+* boolean-array
+* booleans
+* bound-fn
+* bound-fn*
+* bound?
+* TODO butlast
+* TODO byte
+* byte-array
+* bytes
+* TODO case
+* cast
+* char
+* char-array
+* char-escape-string
+* char-name-string
+* char?
+* chars
+* chunk
+* chunk-append
+* chunk-buffer
+* chunk-cons
+* chunk-first
+* chunk-next
+* chunk-rest
+* chunked-seq?
+* class
+* class?
+* clear-agent-errors
+* clojure-version
+* TODO coll?
+* DONE comment
+* commute
+* DONE comp
+* TODO comparator
+* TODO compare
+* TODO compare-and-set!
+* compile
+* TODO complement
+* DONE concat
+* DONE cond
+* DONE condp
+* DONE conj
+* conj!
+* DONE cons
+* DONE constantly
+* construct-proxy
+* TODO contains?
+* TODO count
+* TODO counted?
+* create-ns
+* create-struct
+* TODO cycle
+* DONE dec
+* dec'
+* decimal?
+* DONE declare
+* definline
+* definterface
+* DONE defmacro
+* TODO defmethod
+* TODO defmulti
+* DONE defn
+* DONE defn-
+* defonce
+* DONE defprotocol
+* TODO defrecord
+* defstruct
+* DONE deftype
+* TODO delay
+* TODO delay?
+* deliver
+* TODO denominator
+* TODO deref
+* TODO derive
+* TODO descendants
+* DONE destructure
+For macros only, uses clojure.core version
+* TODO disj
+* disj!
+* TODO dissoc
+* dissoc!
+* TODO distinct
+* TODO distinct?
+* TODO doall
+* TODO dorun
+* TODO doseq
+* dosync
+* TODO dotimes
+* DONE doto
+* TODO double
+* TODO double-array
+* TODO doubles
+* TODO drop
+* TODO drop-last
+* TODO drop-while
+* TODO empty
+* TODO empty?
+* ensure
+* enumeration-seq
+* error-handler
+* error-mode
+* eval
+* TODO even?
+* TODO every-pred
+* TODO every?
+* TODO extend
+maybe not?
+* TODO extend-protocol
+macro currently expands into extend call
+* DONE extend-type
+* extenders
+* extends?
+* TODO false?
+* DONE ffirst
+* file-seq
+* TODO filter
+* TODO find
+* TODO find-keyword
+* find-ns
+* find-protocol-impl
+* find-protocol-method
+* find-var
+* DONE first
+* TODO flatten
+* float
+* float-array
+* float?
+* floats
+* flush
+* DONE fn
+* TODO fn?
+* DONE fnext
+* TODO fnil
+* DONE for
+* TODO force
+* format
+* TODO frequencies
+* future
+* future-call
+* future-cancel
+* future-cancelled?
+* future-done?
+* future?
+* gen-class
+* gen-interface
+* TODO gensym
+* TODO get
+* TODO get-in
+* TODO get-method
+* get-proxy-class
+* get-thread-bindings
+* TODO get-validator
+* TODO group-by
+* TODO hash
+* TODO hash-combine
+* TODO hash-map
+* TODO hash-set
+* TODO identical?
+* TODO identity
+* DONE if-let
+* DONE if-not
+* TODO ifn?
+* import
+* DONE in-ns
+* DONE inc
+* inc'
+* init-proxy
+* TODO instance?
+does what?
+* int
+* int-array
+* TODO integer?
+* TODO interleave
+* intern
+* TODO interpose
+* TODO into
+* TODO into-array
+* ints
+* io!
+* TODO isa?
+does what?
+* TODO iterate
+* iterator-seq
+* DONE juxt
+* TODO keep
+* TODO keep-indexed
+* TODO key
+* TODO keys
+* TODO keyword
+* TODO keyword?
+* TODO last
+* TODO lazy-cat
+* DONE lazy-seq
+* DONE let
+* DONE letfn
+** TODO needs compiler letfn*
+* line-seq
+* DONE list
+* TODO list*
+* TODO list?
+* load
+* DONE load-file
+* load-reader
+* load-string
+* loaded-libs
+* locking
+* TODO long
+* TODO long-array
+* TODO longs
+* DONE loop
+* macroexpand
+* macroexpand-1
+* TODO make-array
+* TODO make-hierarchy
+* TODO map
+* TODO map-indexed
+* TODO map?
+* TODO mapcat
+* TODO max
+* TODO max-key
+* memfn
+* TODO memoize
+* TODO merge
+* TODO merge-with
+* TODO meta
+* method-sig
+* TODO methods
+* TODO min
+* TODO min-key
+* TODO mod
+* munge
+* TODO name
+* TODO namespace
+* namespace-munge
+* TODO neg?
+* newline
+* DONE next
+* DONE nfirst
+* DONE nil?
+* DONE nnext
+* DONE not
+* TODO not-any?
+* TODO not-empty
+* TODO not-every?
+* TODO not=
+* DONE ns
+* ns-aliases
+* ns-imports
+* ns-interns
+* ns-map
+* ns-name
+* ns-publics
+* ns-refers
+* ns-resolve
+* ns-unalias
+* ns-unmap
+* TODO nth
+* TODO nthnext
+* TODO num
+* TODO number?
+* TODO numerator
+* TODO object-array
+* TODO odd?
+* DONE or
+* TODO parents
+* DONE partial
+* TODO partition
+* TODO partition-all
+* TODO partition-by
+* pcalls
+* TODO peek
+* persistent!
+* pmap
+* TODO pop
+* pop!
+* pop-thread-bindings
+* TODO pos?
+* TODO pr
+dunno about printing
+* TODO pr-str
+* TODO prefer-method
+* TODO prefers
+* primitives-classnames
+* TODO print
+* print-ctor
+* TODO print-dup
+* TODO print-method
+* TODO print-simple
+* TODO print-str
+* printf
+* TODO println
+* TODO println-str
+* TODO prn
+* TODO prn-str
+* promise
+* proxy
+* proxy-call-with-super
+* proxy-mappings
+* proxy-name
+* proxy-super
+* push-thread-bindings
+* pvalues
+* TODO quot
+* TODO rand
+* TODO rand-int
+* TODO rand-nth
+* TODO range
+* TODO ratio?
+* TODO rational?
+* TODO rationalize
+* TODO re-find
+dunno about regex
+* TODO re-groups
+* TODO re-matcher
+* TODO re-matches
+* TODO re-pattern
+* TODO re-seq
+* read
+* read-line
+* read-string
+* TODO realized?
+* DONE reduce
+* TODO reductions
+* ref
+* ref-history-count
+* ref-max-history
+* ref-min-history
+* ref-set
+* refer
+* refer-clojure
+* TODO reify
+also specify - make a particular object extend a protocol
+* release-pending-sends
+* TODO rem
+* TODO remove
+* TODO remove-all-methods
+* TODO remove-method
+* remove-ns
+* remove-watch
+* TODO repeat
+* TODO repeatedly
+* TODO replace
+* TODO replicate
+* TODO require
+ticket #8
+* TODO reset!
+* reset-meta!
+* resolve
+* DONE rest
+* restart-agent
+* resultset-seq
+* DONE reverse
+* TODO reversible?
+* TODO rseq
+* TODO rsubseq
+* DONE satisfies?
+as macro
+* DONE second
+* TODO select-keys
+* send
+* send-off
+* DONE seq
+* TODO seq?
+* seque
+* TODO sequence
+* TODO sequential?
+* TODO set
+* set-error-handler!
+* set-error-mode!
+* set-validator!
+* TODO set?
+* short
+* short-array
+* shorts
+* TODO shuffle
+* shutdown-agents
+* slurp
+* TODO some
+* TODO some-fn
+* TODO sort
+* TODO sort-by
+* TODO sorted-map
+* TODO sorted-map-by
+* TODO sorted-set
+* TODO sorted-set-by
+* TODO sorted?
+* TODO special-symbol?
+* spit
+* TODO split-at
+* TODO split-with
+* TODO str
+* TODO string?
+* struct
+* struct-map
+* TODO subs
+* TODO subseq
+* TODO subvec
+* TODO supers
+* TODO swap!
+* TODO symbol
+* TODO symbol?
+* sync
+* TODO take
+* TODO take-last
+* TODO take-nth
+* TODO take-while
+* test
+* the-ns
+* thread-bound?
+* TODO time
+* TODO to-array
+* TODO to-array-2d
+* TODO trampoline
+* transient
+* TODO tree-seq
+* TODO true?
+* TODO type
+does what?
+* TODO unchecked-add
+* TODO unchecked-add-int
+* TODO unchecked-byte
+* TODO unchecked-char
+* TODO unchecked-dec
+* TODO unchecked-dec-int
+* TODO unchecked-divide-int
+* TODO unchecked-double
+* TODO unchecked-float
+* TODO unchecked-inc
+* TODO unchecked-inc-int
+* TODO unchecked-int
+* TODO unchecked-long
+* TODO unchecked-multiply
+* TODO unchecked-multiply-int
+* TODO unchecked-negate
+* TODO unchecked-negate-int
+* TODO unchecked-remainder-int
+* TODO unchecked-short
+* TODO unchecked-subtract
+* TODO unchecked-subtract-int
+* TODO underive
+* unquote
+* unquote-splicing
+* TODO update-in
+* update-proxy
+* use
+* TODO val
+* TODO vals
+* var-get
+* var-set
+* var?
+* TODO vary-meta
+* DONE vec
+* DONE vector
+* vector-of
+* TODO vector?
+* DONE when
+* DONE when-first
+* DONE when-let
+* DONE when-not
+* DONE while
+* with-bindings
+* with-bindings*
+* with-in-str
+* with-loading-context
+* TODO with-local-vars
+* TODO with-meta
+* with-open
+* with-out-str
+* with-precision
+* with-redefs
+* with-redefs-fn
+* TODO xml-seq
+* TODO zero?
+* TODO zipmap
