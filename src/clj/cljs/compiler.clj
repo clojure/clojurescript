@@ -87,6 +87,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (defmethod emit-constant clojure.lang.PersistentVector [x]
   (print "cljs.core.vec([" (comma-sep x) "])"))
 
+(defmethod emit-constant clojure.lang.PersistentArrayMap [x]
+  (print "cljs.core.hash_map(" (comma-sep (apply concat x)) ")"))
+
 (defmulti emit :op)
 
 (defn ^String emits [expr]
@@ -134,9 +137,11 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (when-not (= :expr (:context env)) (print ";\n"))))
 
 (defn emit-fn-method
-  [{:keys [name variadic params statements ret env recurs]}]
+  [{:keys [gthis name variadic params statements ret env recurs]}]
   (emit-wrap env
              (print (str "(function " name "(" (comma-sep params) "){\n"))
+             (when gthis
+               (println (str "var " gthis " = this;")))
              (when variadic
                (println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
              (when recurs (print "while(true){\n"))
@@ -377,12 +382,13 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         variadic (some '#{&} params)
         params (remove '#{&} params)
         body (next meth)
-        locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str "this." (munge fld)))})) locals fields)
+        gthis (and fields (gensym "this__"))
+        locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
         locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
         block (binding [*recur-frame* recur-frame]
                 (analyze-block (assoc env :context :return :locals locals) body))]
-    (merge {:env env :variadic variadic :params (map munge params) :recurs @(:flag recur-frame)} block)))
+    (merge {:env env :variadic variadic :params (map munge params) :gthis gthis :recurs @(:flag recur-frame)} block)))
 
 (defmethod parse 'fn*
   [op env [_ & args] name]
@@ -677,6 +683,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 (in-ns 'cljs.core)
 ;;hack on core
 
+
+(deftype Foo [a] IMeta (-meta [_] (fn [] a)))
+((-meta (Foo. 42)))
 
 ;;OLD way, don't you want to use the REPL? 
 (in-ns 'cljs.compiler)

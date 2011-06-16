@@ -71,11 +71,23 @@
 (defprotocol IEquiv
   (-equiv [o other]))
 
+(defprotocol IHash
+  (-hash [o]))
+
 (defprotocol ISeqable
   (-seq [o]))
 
+(defn js-obj []
+  (js* "return {}"))
+
+(defn js-delete [obj key]
+  (js* "delete ~{obj}[~{key}]"))
+
+(defn js-equals [x y]
+  (js* "return ~{x} === ~{y}"))
+
 (defn nil? [x]
-  (js* "return ~{x} === null"))
+  (js-equals x nil))
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -149,14 +161,22 @@
      (let [s (seq coll)]
        (-reduce s f val))))
 
+; simple reduce, to be removed when IReduce is working
+(defn reduce
+  ([f coll]
+    (if-let [s (seq coll)]
+      (reduce f (first s) (next s))
+      (f)))
+  ([f val coll]
+    (loop [val val, coll (seq coll)]
+      (if coll
+        (recur (f val (first coll)) (next coll))
+        val))))
+
 (defn reverse
   "Returns a seq of the items in coll in reverse order. Not lazy."
   [coll]
-  ; when we have reduce: (reduce conj () coll)
-  (loop [in coll, out ()]
-    (if (seq in)
-      (recur (rest in) (conj out (first in)))
-      out)))
+  (reduce conj () coll))
 
 (defn- array-clone [array-like]
   #_(goog.array.clone array-like)
@@ -170,6 +190,19 @@
 
 (defn aset [array i val]
   (js* "return ~{array}[~{i}] = ~{val}"))
+
+(extend-protocol IEquiv
+  goog.global.String
+  (-equiv [o other] (js-equals o other))
+
+  goog.global.Number
+  (-equiv [o other] (js-equals o other))
+
+  goog.global.Date ; treat dates as values
+  (-equiv [o other] (js-equals (.toString o ()) (.toString other ()))))
+
+(defn = [x y]
+  (-equiv x y))
 
 (defn- lazy-seq-value [lazy-seq]
   (let [x lazy-seq.x]
@@ -266,8 +299,7 @@
 (set! cljs.core.List.EMPTY (EmptyList. nil))
 
 (defn list [& items]
-  ; when we have reduce: (reduce conj () (reverse items))
-  (reverse (reverse items)))
+  (reduce conj () (reverse items)))
 
 (deftype Cons [meta first rest]
   IWithMeta
@@ -368,7 +400,7 @@
       not-found))
 
   ILookup
-  (-lookup [coll k] (inth coll k))
+  (-lookup [coll k] (-nth coll k nil))
   (-lookup [coll k not-found] (-nth coll k not-found))
 
   IAssociative
@@ -382,13 +414,97 @@
 
 (set! cljs.core.Vector.EMPTY (Vector. nil (array)))
 
-(defn vec [obj]
-  (loop [in obj, out cljs.core.Vector.EMPTY]
-    (if (seq in)
-      (recur (rest in) (conj out (first in)))
-      out)))
+(defn vec [coll]
+  (reduce conj [] coll))
 
 (defn vector [& args] (vec args))
+
+(defn- hash-map-seq [hash-map i]
+  (lazy-seq
+    (when (< i (.length (.keys hash-map)))
+      (cons
+        (vector (aget (.keys hash-map) i)
+                (-lookup hash-map (aget (.keys hash-map) i)))
+        (hash-map-seq hash-map (inc i))))))
+
+; Keys is an array of all keys of this map, in no particular order.
+; Any string key is stored along with its value in strobj. If a string key is
+; assoc'ed when that same key already exists in strobj, the old value is
+; overwritten.
+; Any non-string key is hashed and the result used as a property name of
+; hashobj. Each values in hashobj is actually a bucket in order to handle hash
+; collisions. A bucket is an array of alternating keys (not their hashes) and
+; vals.
+(deftype HashMap [meta keys strobj hashobj]
+  IWithMeta
+  (-with-meta [coll meta] (HashMap. meta keys strobj hashobj))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
+
+; IEmptyableCollection
+; (iempty [coll] coll)
+
+  ISeqable
+  (-seq [coll]
+    (when (> (.length keys) 0)
+      (hash-map-seq coll 0)))
+
+  ICounted
+  (-count [coll] (.length keys))
+
+  ILookup
+  (-lookup [coll k] (-lookkup coll k nil))
+  (-lookup [coll k not-found]
+    (if (goog.isString k)
+      (if (.hasOwnProperty strobj k)
+        (aget strobj k)
+        not-found)
+      "tbd-non-string-key"))
+
+  IAssociative
+  (-assoc [coll k v]
+    (if (goog.isString k)
+      (let [new-strobj (goog.cloneObject strobj) ; should use goog.object.clone
+            overwrite? (.hasOwnProperty new-strobj k)]
+        (aset new-strobj k v)
+        (if overwrite?
+          (HashMap. meta keys new-strobj hashobj)
+          (let [new-keys (array-clone keys)] ; append
+            (.push new-keys k)
+            (HashMap. meta new-keys new-strobj hashobj))))
+      "tbd-non-string-key"))
+  
+  IMap
+  (-without [coll k]
+    (if (goog.isString k)
+      (if (not (.hasOwnProperty strobj k))
+        coll ; key not found, return coll unchanged
+        (let [new-keys (array-clone keys)
+              new-strobj (goog.cloneObject strobj)
+              new-count (dec (.length keys))]
+          (loop [i 0] ; look for k in keys
+            (if (not (= k (aget new-keys i)))
+              (recur (inc i))
+              (loop [i i] ; shift subsequent keys down one step
+                (when (< i new-count)
+                  (aset new-keys i (aget new-keys (inc i)))
+                  (recur (inc i))))))
+          (set! new-keys.length new-count) ; fix up keys length
+          (js-delete new-strobj k)         ; fix up strobj
+          (HashMap. meta new-keys new-strobj hashobj)))
+      "tbd-non-string-key")))
+
+(set! cljs.core.HashMap.EMPTY (HashMap. nil (array) (js-obj) (js-obj)))
+
+(defn hash-map [& keyvals]
+  (loop [in (seq keyvals), out cljs.core.HashMap.EMPTY]
+    (if in
+      (recur (nnext in) (-assoc out (first in) (second in)))
+      out)))
 
 (defn conj
   "conj[oin]. Returns a new collection with the xs
