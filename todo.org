@@ -1,23 +1,28 @@
 * The near term tasks
 * Compiler
-** throw/try/catch/finally
+** TODO throw/try/catch/finally
 * Data structures
-** keyword
+** TODO keyword
 *** requires interning strategy
 **** possibly compiler support for same
-** symbol?
-** cons cell/list
-** map
+*** string starting with noncharacter code
+**** \uFFFE and \uFFFF are guaranteed noncharacters
+**** use as prefix for keywords and symbols
+**** must test in predicates string? symbol? keyword?
+** TODO symbol
+*** string starting with noncharacter code
+** DONE cons cell/list
+** DONE map
 *** first cut COW, string uniqueness required
-** vector
+** DONE vector
 *** first cut, COW, internal array
-** numbers
+** TODO numbers
 *** js native number is our double
 *** goog.math.Long?
 **** building Long objects defeats fixnum support in JS VMs
 **** but they are 32-bit - some type bits
 * Abstractions
-** Clojure's interfaces
+** TODO Clojure's interfaces
 *** we don't need all of them
 Associative
 Counted
@@ -65,21 +70,20 @@ Settable
 Sorted
 ** Naming convention for protocols?
 *** IBlah
-*** BlahP
-** equality and hashing
+** TODO equality and hashing
 *** investigate gclosure and GWT
-** seqable
-** collection
-** counted
-** seq
-** lookup
-** associative
-** indexed
-** map
-** set
-** vector
-** deref
-** metadata
+** TODO seqable
+** TODO collection
+** TODO counted
+** DONE seq
+** TODO lookup
+** TODO associative
+** TODO indexed
+** TODO map
+** TODO set
+** TODO vector
+** TODO deref
+** TODO metadata
 * Runtime Lib
 ** key missing macros
 *** binding
@@ -98,7 +102,7 @@ Sorted
 *** gclosure compiler
 *** V8
 **** optional for now?
-** REPL
+** DONE REPL
 *** there's a ticket for this
 ** Integration of gclosure library
 *** how do we reference/load?
