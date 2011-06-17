@@ -21,16 +21,14 @@
     (-index [coll]))
 
 (defprotocol IIndexed
-  (-nth [coll n])
-  (-nth [coll n not-found]))
+  (-nth [coll n] [coll n not-found]) )
 
 (defprotocol ISeq
   (-first [coll])
   (-rest [coll]))
 
 (defprotocol ILookup
-  (-lookup [o k])
-  (-lookup [o k not-found]))
+  (-lookup [o k] [o k not-found]))
 
 (defprotocol IAssociative
   #_(-contains-key? [coll k])
@@ -67,8 +65,7 @@
   (-with-meta [o meta]))
 
 (defprotocol IReduce
-  (-reduce [coll f])
-  (-reduce [coll f start]))
+  (-reduce [coll f] [coll f start]))
 
 (defprotocol IEquiv
   (-equiv [o other]))
@@ -355,33 +352,58 @@
 
 (extend-protocol IIndexed
   goog.global.String
-  (-nth [string n] (if (< n (-count string)) (.charAt string n)))
-  (-nth [string n not-found]
-    (if (< n (-count string)) (.charAt string n)
-        not-found))
+  (-nth
+    ([string n]
+       (if (< n (-count string)) (.charAt string n)))
+    ([string n not-found]
+       (if (< n (-count string)) (.charAt string n)
+           not_found)))
 
   goog.global.Array
-  (-nth [array n] (if (< n (-count array)) (aget array n)))
-  (-nth [array n not-found]
-    (if (< n (-count array)) (aget array n)
-        not-found)))
+  (-nth
+    ([array n]
+       (if (< n (-count array)) (aget array n)))
+    ([array n not_found]
+       (if (< n (-count array)) (aget array n)
+           not_found))))
 
 (extend-protocol ILookup
   goog.global.String
-  (-lookup [string k] (-nth string k))
-  (-lookup [string k not-found] (-nth string k not-found))
-
+  (-lookup
+    ([string k]
+       (-nth string k))
+    ([string k not_found]
+       (-nth string k not_found)))
+  
   goog.global.Array
-  (-lookup [array k] (-nth array k))
-  (-lookup [array k not-found] (-nth array k not-found)))
+  (-lookup
+    ([array k]
+       (-nth array k))
+    ([array k not-found]
+       (-nth array k not-found))))
 
-;; (extend-protocol IReduce
-;;   goog.global.Array
-;;   (-reduce [array f]
-;;     (loop [val (-nth array 0), n 1)]
-;;       (if (< n (-count array))
-;;         (recur (f val (-nth array n)) (inc n))
-;;         val)))
+(defn- ci-reduce
+  "Accepts any collection which satisfies the ICount and IIndexed protocols and
+reduces them without incurring seq initialization"
+  ([cicoll f val n]
+     (loop [val val, n n]
+         (if (< n (-count cicoll))
+           (recur (f val (-nth cicoll n)) (inc n))
+           val))))
+
+(extend-protocol IReduce
+  goog.global.String
+  (-reduce
+    ([string f]
+       (ci-reduce string f (-nth string 0) 1))
+    ([string f start]
+       (ci-reduce string f start 0)))
+  goog.global.Array
+  (-reduce
+    ([array f]
+       (ci-reduce array f (-nth array 0) 1))
+    ([array f start]
+       (ci-reduce array f start 0))))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
@@ -897,3 +919,4 @@
 (defn disj
   [coll v]
   (when coll (-disjoin coll v)))
+
