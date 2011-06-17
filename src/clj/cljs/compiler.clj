@@ -87,6 +87,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit-constant Double [x] (print x))
 (defmethod emit-constant String [x] (pr x))
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
+(defmethod emit-constant Character [x] (pr (str x)))
 
 (defmethod emit-constant clojure.lang.PersistentList$EmptyList [x]
   (print 'cljs.core.List.EMPTY))
