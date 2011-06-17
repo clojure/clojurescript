@@ -415,7 +415,7 @@
 (set! cljs.core.Vector.EMPTY (Vector. nil (array)))
 
 (defn vec [coll]
-  (reduce conj [] coll))
+  (reduce conj Vector.EMPTY coll)) ; using [] here causes infinite recursion
 
 (defn vector [& args] (vec args))
 
