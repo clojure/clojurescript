@@ -113,7 +113,7 @@ does what?
 * bound-fn
 * bound-fn*
 * bound?
-* TODO butlast
+* DONE butlast
 * TODO byte
 * byte-array
 * bytes

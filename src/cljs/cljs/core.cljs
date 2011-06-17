@@ -89,6 +89,8 @@
 (defn nil? [x]
   (identical? x nil))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
+
 (defn seq
   "Returns a seq on the collection. If the collection is
   empty, returns nil.  (seq nil) returns nil. seq also works on
@@ -177,6 +179,14 @@
   "Returns a seq of the items in coll in reverse order. Not lazy."
   [coll]
   (reduce conj () coll))
+
+(defn butlast [s]
+  (loop [ret [] s s]
+    (if (next s)
+      (recur (conj ret (first s)) (next s))
+      (seq ret))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn- array-clone [array-like]
   #_(goog.array.clone array-like)
