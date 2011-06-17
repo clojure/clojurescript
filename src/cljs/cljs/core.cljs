@@ -849,6 +849,6 @@
   [coll v]
   (when coll (-contains? coll v)))
 
-(defn disjoin
+(defn disj
   [coll v]
   (when coll (-disjoin coll v)))
