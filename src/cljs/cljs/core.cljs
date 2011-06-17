@@ -67,7 +67,8 @@
   (-with-meta [o meta]))
 
 (defprotocol IReduce
-  (-reduce [seq f start]))
+  (-reduce [coll f])
+  (-reduce [coll f start]))
 
 (defprotocol IEquiv
   (-equiv [o other]))
@@ -354,10 +355,33 @@
 
 (extend-protocol IIndexed
   goog.global.String
-  (-nth [string n] (.charAt string n))
+  (-nth [string n] (if (< n (-count string)) (.charAt string n)))
+  (-nth [string n not-found]
+    (if (< n (-count string)) (.charAt string n)
+        not-found))
 
   goog.global.Array
-  (-nth [array n] (aget array n)))
+  (-nth [array n] (if (< n (-count array)) (aget array n)))
+  (-nth [array n not-found]
+    (if (< n (-count array)) (aget array n)
+        not-found)))
+
+(extend-protocol ILookup
+  goog.global.String
+  (-lookup [string k] (-nth string k))
+  (-lookup [string k not-found] (-nth string k not-found))
+
+  goog.global.Array
+  (-lookup [array k] (-nth array k))
+  (-lookup [array k not-found] (-nth array k not-found)))
+
+;; (extend-protocol IReduce
+;;   goog.global.Array
+;;   (-reduce [array f]
+;;     (loop [val (-nth array 0), n 1)]
+;;       (if (< n (-count array))
+;;         (recur (f val (-nth array n)) (inc n))
+;;         val)))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
