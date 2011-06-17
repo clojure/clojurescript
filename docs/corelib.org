@@ -145,7 +145,7 @@ does what?
 * TODO compare
 * TODO compare-and-set!
 * compile
-* TODO complement
+* DONE complement
 * DONE concat
 * DONE cond
 * DONE condp
@@ -266,7 +266,7 @@ macro currently expands into extend call
 * TODO hash-map
 * TODO hash-set
 * TODO identical?
-* TODO identity
+* DONE identity
 * DONE if-let
 * DONE if-not
 * TODO ifn?
