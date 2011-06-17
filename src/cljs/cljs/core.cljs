@@ -188,6 +188,98 @@
       (recur (conj ret (first s)) (next s))
       (seq ret))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; sequence fns ;;;;;;;;;;;;;;
+
+(defn count
+  "Returns the number of items in the collection. (count nil) returns
+  0.  Also works on strings, arrays, and Maps"
+  [coll]
+  (if (not (nil? coll))
+    (if (satisfies? ICounted coll)
+      (-count coll)
+      (loop [s (seq coll) n 0]
+	(if (first s)
+	  (recur (rest s) (inc n))
+	  n)))
+    0))
+
+(defn nth
+  "Returns the value at the index. get returns nil if index out of
+  bounds, nth throws an exception unless not-found is supplied.  nth
+  also works for strings, arrays, regex Matchers and Lists, and,
+  in O(n) time, for sequences."
+  ([coll n]
+     (when-not (nil? coll)
+       (-nth coll n)))
+  ([coll n not-found]
+     (when-not (nil? coll)
+       (-nth coll n not-found))))
+
+(defn get
+  "Returns the value mapped to key, not-found or nil if key not present."
+  ([o k]
+     (when-not (nil? o)
+       (-lookup o k)))
+  ([o k not-found]
+     (when-not (nil? o)
+       (-lookup o k not-found))))
+
+(defn assoc
+  "assoc[iate]. When applied to a map, returns a new map of the
+   same (hashed/sorted) type, that contains the mapping of key(s) to
+   val(s). When applied to a vector, returns a new vector that
+   contains val at index. Note - index must be <= (count vector)."
+  [coll k v]
+  (when-not (nil? coll)
+    (-assoc coll k v)))
+
+(defn dissoc
+  "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
+  that does not contain a mapping for key(s)."
+  [coll k]
+  (when-not (nil? coll)
+    (-dissoc coll k)))
+
+(defn with-meta
+  "Returns an object of the same type and value as obj, with
+  map m as its metadata."
+  [o meta]
+  (when-not (nil? o) (-with-meta o meta)))
+
+(defn meta
+  "Returns the metadata of obj, returns nil if there is no metadata."
+  [o]
+  (when-not (nil? o) (-meta o)))
+
+(defn peek
+  "For a list or queue, same as first, for a vector, same as, but much
+  more efficient than, last. If the collection is empty, returns nil."
+  [coll]
+  (when-not (nil? coll) (-peek coll)))
+
+(defn pop
+  "For a list or queue, returns a new list/queue without the first
+  item, for a vector, returns a new vector without the last item. If
+  the collection is empty, throws an exception.  Note - not the same
+  as next/butlast."
+  [coll]
+  (when-not (nil? coll) (-pop coll)))
+
+(defn contains?
+  "Returns true if key is present in the given collection, otherwise
+  returns false.  Note that for numerically indexed collections like
+  vectors and arrays, this tests if the numeric key is within the
+  range of indexes. 'contains?' operates constant or logarithmic time;
+  it will not perform a linear search for a value.  See also 'some'."
+  [coll v]
+  (when-not (nil? coll) (-contains? coll v)))
+
+(defn disj
+  "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
+  does not contain key(s)."
+  [coll v]
+  (when-not (nil? coll) (-disjoin coll v)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn- array-clone [array-like]
@@ -855,68 +947,3 @@ reduces them without incurring seq initialization"
                    (recur (dec n) (rest s))
                    s)))]
     (lazy-seq (step n coll))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; sequence fns ;;;;;;;;;;;;;;
-
-(defn count
-  [coll]
-  (if coll
-    (if (satisfies? ICounted coll)
-      (-count coll)
-      (loop [s (seq coll) n 0]
-	(if (first s)
-	  (recur (rest s) (inc n))
-	  n)
-	#_(count (seq coll))))
-    0))
-
-(defn nth
-  ([coll n]
-     (when coll
-       (-nth coll n)))
-  ([coll n not-found]
-     (when coll
-       (-nth coll n not-found))))
-
-(defn get
-  ([o k]
-     (when o
-       (-lookup o k)))
-  ([o k not-found]
-     (when o
-       (-lookup o k not-found))))
-
-(defn assoc
-  [coll k v]
-  (when coll
-    (-assoc coll k v)))
-
-(defn dissoc
-  [coll k]
-  (when coll
-    (-dissoc coll k)))
-
-(defn with-meta
-  [o meta]
-  (when o (-with-meta o meta)))
-
-(defn meta
-  [o]
-  (when o (-meta o)))
-
-(defn peek
-  [coll]
-  (when coll (-peek coll)))
-
-(defn pop
-  [coll]
-  (when coll (-pop coll)))
-
-(defn contains?
-  [coll v]
-  (when coll (-contains? coll v)))
-
-(defn disj
-  [coll v]
-  (when coll (-disjoin coll v)))
-

@@ -1,0 +1,5 @@
+#!/bin/sh
+java -server -Xmx2G -Xms2G -Xmn256m -cp 'lib/*:src/clj:src/cljs' clojure.main -e \
+"(require '[cljs.compiler :as comp])
+(def jse (comp/repl-env))
+(comp/repl jse)"
