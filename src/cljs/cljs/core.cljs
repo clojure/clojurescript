@@ -44,7 +44,8 @@
 (defprotocol ISet
   (-contains? [coll v])
   (-disjoin [coll v])
-  (-get [coll v]))
+  #_(-get [coll v])
+  )
 
 (defprotocol IStack
   (-peek [coll])
@@ -54,7 +55,7 @@
   (-assoc-n [coll n val]))
 
 (defprotocol IDeref
-  (-deref [o]))
+ (-deref [o]))
 
 (defprotocol IDerefWithTimeout
   (-deref-with-timeout [o msec timeout-val]))
@@ -436,7 +437,8 @@
 (extend-protocol IHash
   goog.global.Number (-hash [o] o))
 
-(defn hash [o] (-hash o))
+(defn hash [o]
+  (when o (-hash o)))
 
 (defn- scan-array [incr k array]
   (let [len (.length array)]
@@ -785,3 +787,66 @@
                    s)))]
     (lazy-seq (step n coll))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; sequence fns ;;;;;;;;;;;;;;
+
+(defn count
+  [coll]
+  (if coll
+    (if (satisfies? ICounted coll)
+      (-count coll)
+      (loop [s (seq coll) n 0]
+	(if (first s)
+	  (recur (rest s) (inc n))
+	  n)
+	#_(count (seq coll))))
+    0))
+
+(defn nth
+  ([coll n]
+     (when coll
+       (-nth coll n)))
+  ([coll n not-found]
+     (when coll
+       (-nth coll n not-found))))
+
+(defn get
+  ([o k]
+     (when o
+       (-lookup o k)))
+  ([o k not-found]
+     (when o
+       (-lookup o k not-found))))
+
+(defn assoc
+  [coll k v]
+  (when coll
+    (-assoc coll k v)))
+
+(defn dissoc
+  [coll k]
+  (when coll
+    (-dissoc coll k)))
+
+(defn with-meta
+  [o meta]
+  (when o (-with-meta o meta)))
+
+(defn meta
+  [o]
+  (when o (-meta o)))
+
+(defn peek
+  [coll]
+  (when coll (-peek coll)))
+
+(defn pop
+  [coll]
+  (when coll (-pop coll)))
+
+(defn contains?
+  [coll v]
+  (when coll (-contains? coll v)))
+
+(defn disjoin
+  [coll v]
+  (when coll (-disjoin coll v)))
