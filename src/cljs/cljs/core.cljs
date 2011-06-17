@@ -359,15 +359,6 @@
   goog.global.Array
   (-nth [array n] (aget array n)))
 
-(extend-protocol ISeq
-  goog.global.String
-  (-first [string] (-first (-seq string)))
-  (-rest [string] (-rest (-seq string)))
-
-  goog.global.Array
-  (-first [array] (-first (-seq array)))
-  (-rest [array] (-rest (-seq array))))
-
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
   [first rest]
