@@ -9,11 +9,12 @@
 (set! *warn-on-reflection* true)
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge load-file macroexpand-1])
-  (:require [clojure.java.io :as io]))
+  (:refer-clojure :exclude [munge load-file loaded-libs require macroexpand-1])
+  (:require [clojure.java.io :as io]
+            [clojure.string :as string]))
 
 (declare resolve-var)
-(require 'cljs.core)
+(clojure.core/require 'cljs.core)
 
 (def js-reserved #{"new" "debugger" "enum" "default" "private" "finally" "in" "import" "package" "with" "throw"
                    "continue" "var" "for" "public" "do" "delete" "instanceof" "yield" "static" "protected" "return"
@@ -41,7 +42,14 @@
 goog.provide('cljs.core');
 goog.provide('cljs.user');
 cljs.core.truth_ = function(x){return x != null && x !== false;}
-cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}")
+cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}
+cljs.core.original_goog_require = goog.require;
+goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\",\"require\").invoke(goog.global.cljs_javascript_engine, rule);}
+")
+
+(defn resolve-ns-alias [env name]
+  (let [sym (symbol name)]
+    (get (:requires (:ns env)) sym sym)))
 
 (defn resolve-var [env sym]
   (let [s (str sym)
@@ -50,9 +58,8 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         (cond
          lb (:name lb)
          
-         ;;todo - resolve ns aliases when we have them
          (namespace sym)
-         (symbol (str (namespace sym) "." (munge (name sym))))
+         (symbol (str (resolve-ns-alias env (namespace sym)) "." (munge (name sym))))
 
          (.contains s ".")
          (munge (let [idx (.indexOf s ".")
@@ -264,9 +271,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
   [{:keys [name requires requires-macros env]}]
   (println (str "goog.provide('" name "');"))
   (when-not (= name 'cljs.core)
-    (println (str "//goog.require('cljs.core');")))
+    (println (str "goog.require('cljs.core');")))
   (doseq [lib (vals requires)]
-    (println (str "//goog.require('" lib "');"))))
+    (println (str "goog.require('" lib "');"))))
 
 (defmethod emit :deftype*
   [{:keys [t fields]}]
@@ -486,9 +493,9 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
                                         libs))))
                 {} args)]
     (set! *cljs-ns* name)
-    (require 'cljs.core)
+    (clojure.core/require 'cljs.core)
     (doseq [nsym (vals requires-macros)]
-      (require nsym))
+      (clojure.core/require nsym))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :requires] requires)
@@ -623,20 +630,38 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (catch Throwable ex
       (println (str ex)))))
 
+(defn load-stream [jse stream]
+  (with-open [r (io/reader stream)]
+    (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+          pbr (clojure.lang.LineNumberingPushbackReader. r)
+          eof (Object.)]
+      (loop [r (read pbr false eof false)]
+        (let [env (assoc env :ns (@namespaces *cljs-ns*))]
+          (when-not (identical? eof r)
+            (eval1 jse env r)
+            (recur (read pbr false eof false))))))))
+
 (defn load-file
   [jse f]
   (binding [*cljs-ns* 'cljs.user]
-    (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-          res (if (= \/ (first f)) f (io/resource f))]
+    (let [res (if (= \/ (first f)) f (io/resource f))]
       (assert res (str "Can't find " f " in classpath"))
-      (with-open [r (io/reader res)]
-        (let [pbr (clojure.lang.LineNumberingPushbackReader. r)
-              eof (Object.)]
-          (loop [r (read pbr false eof false)]
-            (let [env (assoc env :ns (@namespaces *cljs-ns*))]
-              (when-not (identical? eof r)
-                (eval1 jse env r)
-                (recur (read pbr false eof false))))))))))
+      (load-stream jse res))))
+
+(def loaded-libs (atom #{}))
+
+(defn require [^javax.script.ScriptEngine jse rule]
+  (when-not (contains? @loaded-libs rule)
+    (let [path (string/replace (munge rule) \. java.io.File/separatorChar)
+          cljs-path (str path ".cljs")
+          js-path (str path ".js")]
+      (if-let [res (io/resource cljs-path)]
+        (binding [*cljs-ns* 'cljs.user]
+          (load-stream jse res))
+        (if-let [res (io/resource js-path)]
+          (.eval jse (io/reader res))
+          (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
+      (swap! loaded-libs conj rule))))
 
 (defn repl-env
   "Returns a fresh JS environment, suitable for passing to repl.
@@ -646,6 +671,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
         base (io/resource "goog/base.js")]
     (assert base "Can't find goog/base.js in classpath")
     (.put jse javax.script.ScriptEngine/FILENAME "goog/base.js")
+    (.put jse "cljs_javascript_engine" jse)
     (with-open [r (io/reader base)]
       (.eval jse r))
     (.eval jse bootjs)
