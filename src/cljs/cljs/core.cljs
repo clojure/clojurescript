@@ -89,6 +89,7 @@
 (defn nil? [x]
   (identical? x nil))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
 (defn seq
@@ -667,6 +668,9 @@
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
 
+(defn pos? [n]
+  (< 0 n))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
 
 (defn identity [x] x)
@@ -768,4 +772,16 @@
          ([x y] (reduce #(conj %1 (%2 x y)) [] fs))
          ([x y z] (reduce #(conj %1 (%2 x y z)) [] fs))
          ([x y z & args] (reduce #(conj %1 (apply %2 x y z args)) [] fs))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fun seq fns ;;;;;;;;;;;;;;;;
+
+(defn drop
+  "Returns a lazy sequence of all but the first n items in coll."
+  [n coll]
+  (let [step (fn [n coll]
+               (let [s (seq coll)]
+                 (if (and (pos? n) s)
+                   (recur (dec n) (rest s))
+                   s)))]
+    (lazy-seq (step n coll))))
 

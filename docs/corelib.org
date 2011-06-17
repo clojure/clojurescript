@@ -200,7 +200,7 @@ For macros only, uses clojure.core version
 * TODO double
 * TODO double-array
 * TODO doubles
-* TODO drop
+* DONE drop
 * TODO drop-last
 * TODO drop-while
 * TODO empty
