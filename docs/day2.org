@@ -1,0 +1,44 @@
+* ClojureScript Day #2
+* Welcome Thortech!
+** Eric, Frank and Tom
+*** Long time cohorts
+* Tips
+** Don't define things in terms of undefined things
+*** someone else will just trip over later
+** Test
+*** nil
+** Encapsulate use of -methods in a single place
+** Where's the global namespace?
+* Where are we at
+* Where are we going
+** [[file:corelib.org][Core lib punchlist]]
+** [[file:~/dev/clojurescript/todo.org][To do]]
+** [[https://github.com/relevance/clojurescript/issues][Tickets]]
+* Release 1
+** Make goog-compatible libs work
+** Data structures
+*** work but are not optimal for large instances
+*** persistent guarantees
+** seq library
+** associative library
+** indexed library
+** atoms
+** binding
+** great tooling
+*** push button
+** reader?
+*** print-read
+** regex
+* Release 2
+** DOM manipulation
+** Can I use jQuery?
+** bitops
+** multimethods
+** hierarchy
+** reader + record support
+** unchecked
+** bitops
+** print
+** eventing value add
+** DOM value add
+** UI value add
