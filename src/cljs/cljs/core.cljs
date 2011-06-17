@@ -39,7 +39,7 @@
 
 (defprotocol IMap
   #_(-assoc-ex [coll k v])
-  (-without [coll k]))
+  (-dissoc [coll k]))
 
 (defprotocol ISet
   (-contains? [coll v])
@@ -419,13 +419,18 @@
 
 (defn vector [& args] (vec args))
 
-(defn- hash-map-seq [hash-map i]
-  (lazy-seq
-    (when (< i (.length (.keys hash-map)))
-      (cons
-        (vector (aget (.keys hash-map) i)
-                (-lookup hash-map (aget (.keys hash-map) i)))
-        (hash-map-seq hash-map (inc i))))))
+(extend-protocol IHash
+  goog.global.Number (-hash [o] o))
+
+(defn hash [o] (-hash o))
+
+(defn- scan-array [incr k array]
+  (let [len (.length array)]
+    (loop [i 0]
+      (when (< i len)
+        (if (= k (aget array i))
+          i
+          (recur (+ i incr)))))))
 
 ; Keys is an array of all keys of this map, in no particular order.
 ; Any string key is stored along with its value in strobj. If a string key is
@@ -451,19 +456,32 @@
   ISeqable
   (-seq [coll]
     (when (> (.length keys) 0)
-      (hash-map-seq coll 0)))
+      (let [hash-map-seq
+             (fn hash-map-seq [i]
+               (lazy-seq
+                 (when (< i (.length keys))
+                   (cons
+                     (vector (aget keys i) (-lookup coll (aget keys i)))
+                     (hash-map-seq (inc i))))))]
+        (hash-map-seq 0))))
 
   ICounted
   (-count [coll] (.length keys))
 
   ILookup
-  (-lookup [coll k] (-lookkup coll k nil))
+  (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
     (if (goog.isString k)
       (if (.hasOwnProperty strobj k)
         (aget strobj k)
         not-found)
-      "tbd-non-string-key"))
+      ; non-string key
+      (let [h (hash k)
+            bucket (aget hashobj h)
+            i (when bucket (scan-array 2 k bucket))]
+        (if i
+          (aget bucket (inc i))
+          not-found))))
 
   IAssociative
   (-assoc [coll k v]
@@ -476,27 +494,53 @@
           (let [new-keys (array-clone keys)] ; append
             (.push new-keys k)
             (HashMap. meta new-keys new-strobj hashobj))))
-      "tbd-non-string-key"))
+      ; non-string key
+      (let [h (hash k)
+            bucket (aget hashobj h)]
+        (if bucket
+          (let [new-bucket (array-clone bucket)
+                new-hashobj (goog.cloneObject hashobj)]
+            (aset new-hashobj h new-bucket)
+            (if-let [i (scan-array 2 k new-bucket)]
+              (do
+                (aset new-bucket (inc i) v) ; found key, replace
+                (HashMap. meta keys strobj new-hashobj))
+              (let [new-keys (array-clone keys)] ; did not find key, append
+                (.push new-keys k)
+                (.push new-bucket k v)
+                (HashMap. meta new-keys strobj new-hashobj))))
+          (let [new-keys (array-clone keys)
+                new-hashobj (goog.cloneObject hashobj)]
+            (.push new-keys k)
+            (aset new-hashobj h (array k v))
+            (HashMap. meta new-keys strobj new-hashobj))))))
   
   IMap
-  (-without [coll k]
+  (-dissoc [coll k]
     (if (goog.isString k)
       (if (not (.hasOwnProperty strobj k))
         coll ; key not found, return coll unchanged
         (let [new-keys (array-clone keys)
               new-strobj (goog.cloneObject strobj)
               new-count (dec (.length keys))]
-          (loop [i 0] ; look for k in keys
-            (if (not (= k (aget new-keys i)))
-              (recur (inc i))
-              (loop [i i] ; shift subsequent keys down one step
-                (when (< i new-count)
-                  (aset new-keys i (aget new-keys (inc i)))
-                  (recur (inc i))))))
-          (set! new-keys.length new-count) ; fix up keys length
-          (js-delete new-strobj k)         ; fix up strobj
+          (.splice new-keys (scan-array 1 k new-keys) 1)
+          (js-delete new-strobj k)
           (HashMap. meta new-keys new-strobj hashobj)))
-      "tbd-non-string-key")))
+      ; non-string key
+      (let [h (hash k)
+            bucket (aget hashobj h)
+            i (when bucket (scan-array 2 k bucket))]
+        (if (not i)
+          coll ; key not found, return coll unchanged
+          (let [new-keys (array-clone keys)
+                new-hashobj (goog.cloneObject hashobj)]
+            (if (> 3 (.length bucket))
+              (js-delete new-hashobj h)
+              (let [new-bucket (array-clone bucket)]
+                (.splice new-bucket i 2)
+                (aset new-hashobj h new-bucket)))
+            (.splice new-keys (scan-array 1 k new-keys) 1)
+            (HashMap. meta new-keys strobj new-hashobj)))))))
 
 (set! cljs.core.HashMap.EMPTY (HashMap. nil (array) (js-obj) (js-obj)))
 
