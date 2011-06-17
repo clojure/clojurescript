@@ -96,6 +96,7 @@ Sorted
 *** handle variadic
 ** core.cljs!
 *** crank through core.clj
+*** see [[file:docs/corelib.org][docs/corelib.org]]
 * Tools
 ** getting set up story
 *** gclosure library

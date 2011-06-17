@@ -275,7 +275,7 @@ macro currently expands into extend call
 * DONE inc
 * inc'
 * init-proxy
-* TODO instance?
+* DONE instance?
 does what?
 * int
 * int-array
