@@ -102,15 +102,15 @@
   "Returns the first item in the collection. Calls seq on its
   argument. If coll is nil, returns nil."
   [coll]
-  (when coll
-    (-first (seq coll))))
+  (when-let [s (seq coll)]
+    (-first s)))
 
 (defn rest
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (when coll
-    (-rest (seq coll))))
+  (when-let [s (seq coll)]
+    (-rest s)))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
@@ -415,7 +415,7 @@
 (set! cljs.core.Vector.EMPTY (Vector. nil (array)))
 
 (defn vec [coll]
-  (reduce conj Vector.EMPTY coll)) ; using [] here causes infinite recursion
+  (reduce conj cljs.core.Vector.EMPTY coll)) ; using [] here causes infinite recursion
 
 (defn vector [& args] (vec args))
 
