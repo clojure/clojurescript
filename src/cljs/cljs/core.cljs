@@ -196,7 +196,7 @@
   "Returns the number of items in the collection. (count nil) returns
   0.  Also works on strings, arrays, and Maps"
   [coll]
-  (if coll
+  (if (not (nil? coll))
     (if (satisfies? ICounted coll)
       (-count coll)
       (loop [s (seq coll) n 0]
