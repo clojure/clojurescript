@@ -60,7 +60,7 @@ does what?
 * agent-error
 * agent-errors
 * DONE aget
-* TODO alength
+* DONE alength
 * TODO alias
 * all-ns
 * alter
@@ -82,7 +82,7 @@ does what?
 * aset-long
 * aset-short
 * TODO assert
-* TODO assoc
+* DONE assoc
 * TODO assoc!
 * TODO assoc-in
 * TODO associative?
@@ -113,7 +113,7 @@ does what?
 * bound-fn
 * bound-fn*
 * bound?
-* TODO butlast
+* DONE butlast
 * TODO byte
 * byte-array
 * bytes
@@ -145,7 +145,7 @@ does what?
 * TODO compare
 * TODO compare-and-set!
 * compile
-* TODO complement
+* DONE complement
 * DONE concat
 * DONE cond
 * DONE condp
@@ -154,8 +154,8 @@ does what?
 * DONE cons
 * DONE constantly
 * construct-proxy
-* TODO contains?
-* TODO count
+* DONE contains?
+* DONE count
 * TODO counted?
 * create-ns
 * create-struct
@@ -185,9 +185,9 @@ does what?
 * TODO descendants
 * DONE destructure
 For macros only, uses clojure.core version
-* TODO disj
+* DONE disj
 * disj!
-* TODO dissoc
+* DONE dissoc
 * dissoc!
 * TODO distinct
 * TODO distinct?
@@ -200,7 +200,7 @@ For macros only, uses clojure.core version
 * TODO double
 * TODO double-array
 * TODO doubles
-* TODO drop
+* DONE drop
 * TODO drop-last
 * TODO drop-while
 * TODO empty
@@ -254,7 +254,7 @@ macro currently expands into extend call
 * gen-class
 * gen-interface
 * TODO gensym
-* TODO get
+* DONE get
 * TODO get-in
 * TODO get-method
 * get-proxy-class
@@ -266,7 +266,7 @@ macro currently expands into extend call
 * TODO hash-map
 * TODO hash-set
 * TODO identical?
-* TODO identity
+* DONE identity
 * DONE if-let
 * DONE if-not
 * TODO ifn?
@@ -275,7 +275,7 @@ macro currently expands into extend call
 * DONE inc
 * inc'
 * init-proxy
-* TODO instance?
+* DONE instance?
 does what?
 * int
 * int-array
@@ -332,7 +332,7 @@ does what?
 * TODO memoize
 * TODO merge
 * TODO merge-with
-* TODO meta
+* DONE meta
 * method-sig
 * TODO methods
 * TODO min
@@ -364,7 +364,7 @@ does what?
 * ns-resolve
 * ns-unalias
 * ns-unmap
-* TODO nth
+* DONE nth
 * TODO nthnext
 * TODO num
 * TODO number?
@@ -378,10 +378,10 @@ does what?
 * TODO partition-all
 * TODO partition-by
 * pcalls
-* TODO peek
+* DONE peek
 * persistent!
 * pmap
-* TODO pop
+* DONE pop
 * pop!
 * pop-thread-bindings
 * TODO pos?
@@ -573,7 +573,7 @@ does what?
 * with-in-str
 * with-loading-context
 * TODO with-local-vars
-* TODO with-meta
+* DONE with-meta
 * with-open
 * with-out-str
 * with-precision

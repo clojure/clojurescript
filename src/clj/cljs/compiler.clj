@@ -291,7 +291,7 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
 
 (declare analyze analyze-symbol)
 
-(def specials '#{if def fn* do let* loop* throw try recur new set! ns deftype* . js* &})
+(def specials '#{if def fn* do let* loop* throw try recur new set! ns deftype* . js* & quote})
 
 (def ^:dynamic *recur-frame* nil)
 
@@ -452,6 +452,10 @@ cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$inv
     (assoc {:env env :op :recur}
       :frame *recur-frame*
       :exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs))))))
+
+(defmethod parse 'quote
+  [_ env [_ x] _]
+  {:op :constant :env env :form x})
 
 (defmethod parse 'new
   [_ env [_ ctor & args] _]

@@ -44,7 +44,8 @@
 (defprotocol ISet
   (-contains? [coll v])
   (-disjoin [coll v])
-  (-get [coll v]))
+  #_(-get [coll v])
+  )
 
 (defprotocol IStack
   (-peek [coll])
@@ -54,7 +55,7 @@
   (-assoc-n [coll n val]))
 
 (defprotocol IDeref
-  (-deref [o]))
+ (-deref [o]))
 
 (defprotocol IDerefWithTimeout
   (-deref-with-timeout [o msec timeout-val]))
@@ -83,11 +84,16 @@
 (defn js-delete [obj key]
   (js* "delete ~{obj}[~{key}]"))
 
-(defn js-equals [x y]
+(defn identical? [x y]
   (js* "return ~{x} === ~{y}"))
 
 (defn nil? [x]
-  (js-equals x nil))
+  (identical? x nil))
+
+(defn instance? [t o]
+  (js* "return ~{o} instanceof ~{t};"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -178,6 +184,14 @@
   [coll]
   (reduce conj () coll))
 
+(defn butlast [s]
+  (loop [ret [] s s]
+    (if (next s)
+      (recur (conj ret (first s)) (next s))
+      (seq ret))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
+
 (defn- array-clone [array-like]
   #_(goog.array.clone array-like)
   (js* "return Array.prototype.slice.call(~{array-like});"))
@@ -191,15 +205,18 @@
 (defn aset [array i val]
   (js* "return ~{array}[~{i}] = ~{val}"))
 
+(defn alength [array]
+  (js* "return ~{array}.length"))
+
 (extend-protocol IEquiv
   goog.global.String
-  (-equiv [o other] (js-equals o other))
+  (-equiv [o other] (identical? o other))
 
   goog.global.Number
-  (-equiv [o other] (js-equals o other))
+  (-equiv [o other] (identical? o other))
 
   goog.global.Date ; treat dates as values
-  (-equiv [o other] (js-equals (.toString o ()) (.toString other ()))))
+  (-equiv [o other] (identical? (.toString o ()) (.toString other ()))))
 
 (defn = [x y]
   (-equiv x y))
@@ -452,7 +469,8 @@
 (extend-protocol IHash
   goog.global.Number (-hash [o] o))
 
-(defn hash [o] (-hash o))
+(defn hash [o]
+  (when o (-hash o)))
 
 (defn- scan-array [incr k array]
   (let [len (.length array)]
@@ -684,6 +702,9 @@
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
 
+(defn pos? [n]
+  (< 0 n))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
 
 (defn identity [x] x)
@@ -786,47 +807,78 @@
          ([x y z] (reduce #(conj %1 (%2 x y z)) [] fs))
          ([x y z & args] (reduce #(conj %1 (apply %2 x y z args)) [] fs))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fun seq fns ;;;;;;;;;;;;;;;;
 
-(comment
-  (use 'cljs.compiler)
+(defn drop
+  "Returns a lazy sequence of all but the first n items in coll."
+  [n coll]
+  (let [step (fn [n coll]
+               (let [s (seq coll)]
+                 (if (and (pos? n) s)
+                   (recur (dec n) (rest s))
+                   s)))]
+    (lazy-seq (step n coll))))
 
-  (import '[javax.script ScriptEngineManager])
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; sequence fns ;;;;;;;;;;;;;;
 
-  (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
-  (.eval jse bootjs)
-  (.eval jse (clojure.java.io/reader "closure/library/closure/goog/base.js"))
+(defn count
+  [coll]
+  (if coll
+    (if (satisfies? ICounted coll)
+      (-count coll)
+      (loop [s (seq coll) n 0]
+	(if (first s)
+	  (recur (rest s) (inc n))
+	  n)
+	#_(count (seq coll))))
+    0))
 
-  (defmacro js [form & [ns]]
-    `(emit (analyze {:ns (@namespaces '~(or ns 'cljs.user)) :context :statement :locals {}} '~form)))
+(defn nth
+  ([coll n]
+     (when coll
+       (-nth coll n)))
+  ([coll n not-found]
+     (when coll
+       (-nth coll n not-found))))
 
-  (defn jseval-prn [form & [ns]]
-    (let [js (emits (analyze {:ns (@namespaces (or ns 'cljs.user)) :context :expr :locals {}}
-                             form))]
-      ;;(prn js)
-      (.eval jse (str "print(" js ")"))))
+(defn get
+  ([o k]
+     (when o
+       (-lookup o k)))
+  ([o k not-found]
+     (when o
+       (-lookup o k not-found))))
 
-  (defn jseval [form & [ns]]
-    (let [js (emits (analyze {:ns (@namespaces (or ns 'cljs.user)) :context :expr :locals {}}
-                             form))]
-      ;;(prn js)
-      (.eval jse (str js))))
-  
-  (with-open [r (java.io.PushbackReader. (clojure.java.io/reader "src/cljs/cljs/core.cljs"))]
-    (doseq [f (take-while identity (repeatedly (fn [] (read r false nil))))]
-      (jseval f 'cljs.user)))
+(defn assoc
+  [coll k v]
+  (when coll
+    (-assoc coll k v)))
 
-  (jseval '(seq nil))
-  (jseval '(next (cons 1 nil)))
-  (jseval '(nnext (cons (cons 1 nil) (cons 2 (cons 1 nil)))))
+(defn dissoc
+  [coll k]
+  (when coll
+    (-dissoc coll k)))
 
-  (jseval '(rest (conj (conj nil 1) 2)))
-  ;; 3 arg case needs apply?
-  (doseq [args [[1] [1 2] #_[1 2 3]]]
-    (doseq [op ['+ '- '* '/ '> '>= '< '<=]]
-      (println `(~op ~@args) " => " (jseval `(~op ~@args)))))
+(defn with-meta
+  [o meta]
+  (when o (-with-meta o meta)))
 
-  (jseval '(+ 1 2))
+(defn meta
+  [o]
+  (when o (-meta o)))
 
-  (js '(+ 1 2 3))
+(defn peek
+  [coll]
+  (when coll (-peek coll)))
 
-  )
+(defn pop
+  [coll]
+  (when coll (-pop coll)))
+
+(defn contains?
+  [coll v]
+  (when coll (-contains? coll v)))
+
+(defn disj
+  [coll v]
+  (when coll (-disjoin coll v)))
