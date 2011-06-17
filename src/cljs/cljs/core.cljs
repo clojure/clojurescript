@@ -191,6 +191,9 @@
 (defn aset [array i val]
   (js* "return ~{array}[~{i}] = ~{val}"))
 
+(defn alength [array]
+  (js* "return ~{array}.length"))
+
 (extend-protocol IEquiv
   goog.global.String
   (-equiv [o other] (identical? o other))

@@ -60,7 +60,7 @@ does what?
 * agent-error
 * agent-errors
 * DONE aget
-* TODO alength
+* DONE alength
 * TODO alias
 * all-ns
 * alter
