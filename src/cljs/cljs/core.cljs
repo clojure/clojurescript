@@ -89,6 +89,8 @@
 (defn nil? [x]
   (identical? x nil))
 
+(defn instance? [t o]
+  (js* "return ~{o} instanceof ~{t};"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
