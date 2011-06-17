@@ -655,7 +655,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (when-not (contains? @loaded-libs rule)
     (let [path (string/replace (munge rule) \. java.io.File/separatorChar)
           cljs-path (str path ".cljs")
-          js-path (str path ".js")]
+          js-path (str "goog/" (.eval jse (str "goog.dependencies_.nameToPath['" rule "']")))]
       (if-let [res (io/resource cljs-path)]
         (binding [*cljs-ns* 'cljs.user]
           (load-stream jse res))
@@ -669,13 +669,18 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   Hang on to return for use across repl calls."
   []
   (let [jse (-> (javax.script.ScriptEngineManager.) (.getEngineByName "JavaScript"))
-        base (io/resource "goog/base.js")]
+        base (io/resource "goog/base.js")
+        deps (io/resource "goog/deps.js")]
     (assert base "Can't find goog/base.js in classpath")
+    (assert deps "Can't find goog/deps.js in classpath")
     (.put jse javax.script.ScriptEngine/FILENAME "goog/base.js")
     (.put jse "cljs_javascript_engine" jse)
     (with-open [r (io/reader base)]
       (.eval jse r))
     (.eval jse bootjs)
+    ;; Load deps.js line-by-line to avoid 64K method limit
+    (doseq [line (line-seq (io/reader deps))]
+      (.eval jse line))
     {:jse jse}))
 
 (defn repl
