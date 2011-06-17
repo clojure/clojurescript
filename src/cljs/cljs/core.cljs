@@ -234,13 +234,20 @@
   (-seq [coll] (seq (lazy-seq-value coll))))
 
 (defn array-seq [array i]
-  (lazy-seq
-    (when (< i (.length array))
-      (cons (aget array i) (array-seq array (inc i))))))
+  (prim-seq array i))
 
-(extend-type goog.global.Array
-  ISeqable
+(defn prim-seq [prim i]
+  (lazy-seq
+    (when (< i (-count prim))
+      (cons (-nth prim i) (prim-seq prim (inc i))))))
+
+(extend-protocol ISeqable
+  goog.global.String
+  (-seq [string] (prim-seq string 0))
+  
+  goog.global.Array
   (-seq [array] (array-seq array 0)))
+
 
 (deftype List [meta first rest count]
   IWithMeta
@@ -320,6 +327,29 @@
 
   ISeqable
   (-seq [coll] coll))
+
+(extend-protocol ICounted
+  goog.global.String
+  (-count [s] (.length s))
+
+  goog.global.Array
+  (-count [a] (.length a)))
+
+(extend-protocol IIndexed
+  goog.global.String
+  (-nth [string n] (.charAt string n))
+
+  goog.global.Array
+  (-nth [array n] (aget array n)))
+
+(extend-protocol ISeq
+  goog.global.String
+  (-first [string] (-first (-seq string)))
+  (-rest [string] (-rest (-seq string)))
+
+  goog.global.Array
+  (-first [array] (-first (-seq array)))
+  (-rest [array] (-rest (-seq array))))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
