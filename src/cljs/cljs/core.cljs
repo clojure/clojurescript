@@ -83,11 +83,11 @@
 (defn js-delete [obj key]
   (js* "delete ~{obj}[~{key}]"))
 
-(defn js-equals [x y]
+(defn identical? [x y]
   (js* "return ~{x} === ~{y}"))
 
 (defn nil? [x]
-  (js-equals x nil))
+  (identical? x nil))
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -193,13 +193,13 @@
 
 (extend-protocol IEquiv
   goog.global.String
-  (-equiv [o other] (js-equals o other))
+  (-equiv [o other] (identical? o other))
 
   goog.global.Number
-  (-equiv [o other] (js-equals o other))
+  (-equiv [o other] (identical? o other))
 
   goog.global.Date ; treat dates as values
-  (-equiv [o other] (js-equals (.toString o ()) (.toString other ()))))
+  (-equiv [o other] (identical? (.toString o ()) (.toString other ()))))
 
 (defn = [x y]
   (-equiv x y))
