@@ -622,7 +622,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (if-let [mac (and (symbol? op) (get-expander op env))]
         (apply mac form env (rest form))
         (if (symbol? op)
-          (let [opname (name op)]
+          (let [opname (str op)]
             (cond
              (= (first opname) \.) (let [[target & args] (next form)]
                                      (list* '. target (symbol (subs opname 1)) args))
