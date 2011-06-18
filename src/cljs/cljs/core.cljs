@@ -95,6 +95,19 @@
 (defn instance? [t o]
   (js* "return ~{o} instanceof ~{t};"))
 
+(defn string? [x]
+  (and (goog.isString x)
+       (not (or (= (.charAt x 0) \uFDD0)
+                (= (.charAt x 0) \uFDD1)))))
+
+(defn keyword? [x]
+  (and (goog.isString x)
+       (= (.charAt x 0) \uFDD0)))
+
+(defn symbol? [x]
+  (and (goog.isString x)
+       (= (.charAt x 0) \uFDD1)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
 (defn seq
@@ -378,6 +391,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
+(defn to-array
+  "Naive impl of to-array as a start."
+  [s]
+  (let [ary (array)]
+    (loop [s s]
+      (if (seq s)
+        (do (. ary push (first s))
+            (recur (next s)))
+        ary))))
+
 (defn- array-clone [array-like]
   #_(goog.array.clone array-like)
   (js* "return Array.prototype.slice.call(~{array-like});"))
@@ -628,6 +651,83 @@ reduces them without incurring seq initialization"
                        (when zs
                          (cat (first zs) (next zs)))))))]
        (cat (concat x y) zs))))
+
+(defn- bounded-count [s n]
+  (loop [s s i n sum 0]
+    (if (and (pos? i)
+             (seq s))
+      (recur (next s)
+             (dec i)
+             (inc sum))
+      sum)))
+
+(defn spread
+  [arglist]
+  (cond
+   (nil? arglist) nil
+   (nil? (next arglist)) (seq (first arglist))
+   :else (cons (first arglist)
+               (spread (next arglist)))))
+
+(defn list*
+  "Creates a new list containing the items prepended to the rest, the
+  last of which will be treated as a sequence."
+  ([args] (seq args))
+  ([a args] (cons a args))
+  ([a b args] (cons a (cons b args)))
+  ([a b c args] (cons a (cons b (cons c args))))
+  ([a b c d & more]
+     (cons a (cons b (cons c (cons d (spread more)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
+
+(defn apply
+  "Applies fn f to the argument list formed by prepending intervening arguments to args.
+  First cut.  Not lazy.  Needs to use emitted toApply."
+  ([f args]
+     (let [fixed-arity (. f maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f x args]
+     (let [args (list* x args)
+           fixed-arity (. f maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f x y args]
+     (let [args (list* x y args)
+           fixed-arity (. f maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f x y z args]
+     (let [args (list* x y z args)
+           fixed-arity (. f maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f a b c d & args]
+     (let [args (cons a (cons b (cons c (cons d (spread args)))))
+           fixed-arity (. f maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args))))))
 
 ; should use: count, nth
 (defn- vector-seq [vector i]

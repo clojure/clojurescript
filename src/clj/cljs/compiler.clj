@@ -89,6 +89,14 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
 (defmethod emit-constant Character [x] (pr (str x)))
 
+(defmethod emit-constant clojure.lang.Keyword [x] (pr (str \uFDD0 \: (name x))))
+
+(defmethod emit-constant clojure.lang.Symbol [x]
+           (pr (str \uFDD1 \'
+                    (if (namespace x)
+                      (str (namespace x) "/") "")
+                    (name x))))
+
 (defn- emit-meta-constant [x string]
   (if (meta x)
     (do
@@ -181,23 +189,36 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str " = " (emits init)))
     (when-not (= :expr (:context env)) (print ";\n"))))
 
+(defn ^:dynamic emit-fn-prefix [name max-fixed-arity]
+  (println
+   (str "(function (f) {\n"
+        "  f.maxFixedArity = " max-fixed-arity ";\n"
+        "  return f;\n"
+        "})(")))
+
+(defn ^:dynamic emit-fn-postfix [name max-fixed-arity]
+  (println ")"))
+
 (defn emit-fn-method
   [{:keys [gthis name variadic params statements ret env recurs]}]
-  (emit-wrap env
-             (print (str "(function " name "(" (comma-sep params) "){\n"))
-             (when gthis
-               (println (str "var " gthis " = this;")))
-             (when variadic
-               (println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
-             (when recurs (print "while(true){\n"))
-             (emit-block :return statements ret)
-             (when recurs (print "break;\n}\n"))
-             (print "})")))
+  (binding [emit-fn-prefix  (constantly nil)
+            emit-fn-postfix (constantly nil)]
+    (emit-wrap env
+               (print (str "(function " name "(" (comma-sep params) "){\n"))
+               (when gthis
+                 (println (str "var " gthis " = this;")))
+               (when variadic
+                 (println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
+               (when recurs (print "while(true){\n"))
+               (emit-block :return statements ret)
+               (when recurs (print "break;\n}\n"))
+               (print "})"))))
 
 (defmethod emit :fn
-  [{:keys [name env methods]}]
+  [{:keys [name env methods max-fixed-arity]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
+    (emit-fn-prefix name max-fixed-arity)
     (if (= 1 (count methods))
       (emit-fn-method (assoc (first methods) :name name))
       (let [name (or name (gensym))
@@ -220,9 +241,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                                                          (str "," (comma-sep (take pcnt maxparams)))) ");")))))
         (println "}")
         (println "throw('Invalid arity: ' + arguments.length);")
-        (println "}")
+        (println "};")
         (println (str "return " name ";"))
-        (println "})()")))))
+        (println "})()")))
+    (emit-fn-postfix name max-fixed-arity)))
 
 (defmethod emit :do
   [{:keys [statements ret env]}]
@@ -426,6 +448,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         fields (-> params meta ::fields)
         variadic (some '#{&} params)
         params (remove '#{&} params)
+        fixed-arity (count (if variadic (butlast params) params))
         body (next meth)
         gthis (and fields (gensym "this__"))
         locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
@@ -433,7 +456,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
         block (binding [*recur-frame* recur-frame]
                 (analyze-block (assoc env :context :return :locals locals) body))]
-    (merge {:env env :variadic variadic :params (map munge params) :gthis gthis :recurs @(:flag recur-frame)} block)))
+    (merge {:env env :variadic variadic :params (map munge params) :fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block)))
 
 (defmethod parse 'fn*
   [op env [_ & args] name]
@@ -446,10 +469,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         locals (:locals env)
         locals (if name (assoc locals name {:name mname}) locals)
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
-        methods (map #(analyze-fn-method menv locals %) meths)]
+        methods (map #(analyze-fn-method menv locals %) meths)
+        max-fixed-arity (apply max (map :fixed-arity methods))]
     ;;(assert (= 1 (count methods)) "Arity overloading not yet supported")
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :name mname :methods methods}))
+    {:env env :op :fn :name mname :methods methods :max-fixed-arity max-fixed-arity}))
 
 (defmethod parse 'do
   [op env [_ & exprs] _]
@@ -614,7 +638,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (if-let [mac (and (symbol? op) (get-expander op env))]
         (apply mac form env (rest form))
         (if (symbol? op)
-          (let [opname (name op)]
+          (let [opname (str op)]
             (cond
              (= (first opname) \.) (let [[target & args] (next form)]
                                      (list* '. target (symbol (subs opname 1)) args))
