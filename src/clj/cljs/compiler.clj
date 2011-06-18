@@ -633,7 +633,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           (parse-invoke env form))
         (analyze env mform name)))))
 
-(declare analyze-wrap-map)
+(declare analyze-wrap-meta)
 
 (defn analyze-map
   [env form name]
