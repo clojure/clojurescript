@@ -7,6 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core)
+(goog.require "goog.string.StringBuffer")
 
 (defprotocol ICounted
   (-count [coll] "constant time count"))
@@ -75,6 +76,9 @@
 
 (defprotocol ISeqable
   (-seq [o]))
+
+(defprotocol IPrintable
+  (-pr-seq [o opts]))
 
 (defn js-obj []
   (js* "return {}"))
@@ -430,7 +434,10 @@
 ; (iempty [coll] coll)
 
   ISeqable
-  (-seq [coll] (seq (lazy-seq-value coll))))
+  (-seq [coll] (seq (lazy-seq-value coll)))
+
+  IPrintable
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
 
 (defn array-seq [array i]
   (prim-seq array i))
@@ -446,7 +453,6 @@
   
   goog.global.Array
   (-seq [array] (array-seq array 0)))
-
 
 (deftype List [meta first rest count]
   IWithMeta
@@ -473,7 +479,10 @@
   (-seq [coll] coll)
 
   ICounted
-  (-count [coll] count))
+  (-count [coll] count)
+
+  IPrintable
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
 
 (deftype EmptyList [meta]
   IWithMeta
@@ -500,7 +509,10 @@
   (-seq [coll] nil)
 
   ICounted
-  (-count [coll] 0))
+  (-count [coll] 0)
+
+  IPrintable
+  (-pr-seq [coll opts] (list "()")))
 
 (set! cljs.core.List.EMPTY (EmptyList. nil))
 
@@ -525,7 +537,10 @@
 ; (iempty [coll] List.EMPTY)
 
   ISeqable
-  (-seq [coll] coll))
+  (-seq [coll] coll)
+
+  IPrintable
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
 
 (extend-protocol ICounted
   goog.global.String
@@ -678,7 +693,10 @@ reduces them without incurring seq initialization"
       (Vector. meta new-array)))
 
   IVector
-  (-assoc-n [coll n val] (-assoc coll n val)))
+  (-assoc-n [coll n val] (-assoc coll n val))
+
+  IPrintable
+  (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll)))
 
 (set! cljs.core.Vector.EMPTY (Vector. nil (array)))
 
@@ -809,7 +827,12 @@ reduces them without incurring seq initialization"
                 (.splice new-bucket i 2)
                 (aset new-hashobj h new-bucket)))
             (.splice new-keys (scan-array 1 k new-keys) 1)
-            (HashMap. meta new-keys strobj new-hashobj)))))))
+            (HashMap. meta new-keys strobj new-hashobj))))))
+
+  IPrintable
+  (-pr-seq [coll opts]
+    (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
+      (pr-sequential pr-pair "{" ", " "}" opts coll))))
 
 (set! cljs.core.HashMap.EMPTY (HashMap. nil (array) (js-obj) (js-obj)))
 
@@ -1039,3 +1062,87 @@ reduces them without incurring seq initialization"
                    (recur (dec n) (rest s))
                    s)))]
     (lazy-seq (step n coll))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
+
+(defn pr-sequential [print-one begin sep end opts coll]
+  (concat [begin]
+          (flatten1
+            (interpose [sep] (map #(print-one % opts) coll)))
+          [end]))
+
+(extend-protocol IPrintable
+  goog.global.Number (-pr-seq [n opts] (list (.toString n 10)))
+  goog.global.String (-pr-seq [str opts]
+                        (if (get opts "readably")
+                          (list (goog.string.quote str))
+                          (list str)))
+  goog.global.Boolean (-pr-seq [bool opts] (list (.toString bool ())))
+  goog.global.Array (-pr-seq [a opts]
+                      (pr-sequential pr-seq "#<Array [" ", " "]>" opts a)))
+
+; This should be different in different runtime envorionments. For example
+; when in the browser, could use console.debug instead of print.
+(defn string-print [x]
+  (goog.global.print x)
+  nil)
+
+(defn- pr-seq [obj opts]
+  (cond
+    (nil? obj) (list "nil")
+    (identical? undefined obj) (list "#<undefined>")
+    (satisfies? IPrintable obj) (-pr-seq obj opts)
+    :else (list "#<" (.toString obj ()) ">")))
+
+(defn pr-str-with-opts
+  "Prints a single object to a string, observing all the
+  options given in opts"
+  [obj opts]
+  (let [sb (goog.string.StringBuffer.)]
+    (loop [coll (seq (pr-seq obj opts))]
+      (when coll
+        (.append sb (first coll))
+        (recur (next coll))))
+    (.toString sb ())))
+
+(defn pr-with-opts
+  "Prints a single object using string-print, observing all
+  the options given in opts"
+  [obj opts]
+  (loop [coll (seq (pr-seq obj opts))]
+    (when coll
+      (string-print (first coll))
+      ; TODO: flush-on-newline should be keyword
+      (when (and (get opts "flush-on-newline") (= "\n" (first coll)))
+        #_(flush))
+      (recur (next coll)))))
+
+(defn newline [opts]
+  (string-print "\n")) ; flush?
+
+; These should all be variadic.  Where oh where has my apply gone?
+(defn pr-str
+  "pr to a string, returning it. Fundamental entrypoint to IPrintable."
+  [obj]
+  (pr-str-with-opts obj {"readably" true}))
+
+(defn pr
+  "Prints the object(s) using string-print.  Prints the
+  object(s), separated by spaces if there is more than one.
+  By default, pr and prn print in a way that objects can be
+  read by the reader"
+  [obj]
+  (pr-with-opts obj {"readably" true}))
+
+(defn println
+  "Prints the object(s) using string-print.
+  print and println produce output for human consumption."
+  [obj]
+  (pr-with-opts obj {"readably" false})
+  (newline))
+
+(defn prn
+  "Same as pr followed by (newline)."
+  [obj]
+  (pr-with-opts obj {"readably" true})
+  (newline))
