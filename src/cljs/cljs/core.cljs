@@ -295,6 +295,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
+(defn to-array
+  "Naive impl of to-array as a start."
+  [s]
+  (let [ary (array)]
+    (loop [s s]
+      (if (seq s)
+        (do (. ary push (first s))
+            (recur (next s)))
+        ary))))
+
 (defn- array-clone [array-like]
   #_(goog.array.clone array-like)
   (js* "return Array.prototype.slice.call(~{array-like});"))
@@ -534,6 +544,33 @@ reduces them without incurring seq initialization"
                        (when zs
                          (cat (first zs) (next zs)))))))]
        (cat (concat x y) zs))))
+
+(defn- bounded-count [s n]
+  (loop [s s i n sum 0]
+    (if (and (pos? i)
+             (seq s))
+      (recur (next s)
+             (dec i)
+             (inc sum))
+      sum)))
+
+(defn spread
+  [arglist]
+  (cond
+   (nil? arglist) nil
+   (nil? (next arglist)) (seq (first arglist))
+   :else (cons (first arglist)
+               (spread (next arglist)))))
+
+(defn list*
+  "Creates a new list containing the items prepended to the rest, the
+  last of which will be treated as a sequence."
+  ([args] (seq args))
+  ([a args] (cons a args))
+  ([a b args] (cons a (cons b args)))
+  ([a b c args] (cons a (cons b (cons c args))))
+  ([a b c d & more]
+     (cons a (cons b (cons c (cons d (spread more)))))))
 
 ; should use: count, nth
 (defn- vector-seq [vector i]
