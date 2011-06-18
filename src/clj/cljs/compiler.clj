@@ -769,8 +769,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
            (do (load-file jse (second form)) (newline) (recur))
            
            :else
-           (let [ret (eval1 jse (assoc env :ns (@namespaces *cljs-ns*)) form)]
-             (prn ret)
+           (let [ret (eval1 jse
+                            (assoc env :ns (@namespaces *cljs-ns*))
+                            (list 'cljs.core.prn form))]
              (recur))))))))
 
 (comment
