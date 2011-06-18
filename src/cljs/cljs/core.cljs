@@ -91,6 +91,19 @@
 (defn instance? [t o]
   (js* "return ~{o} instanceof ~{t};"))
 
+(defn string? [x]
+  (and (goog.isString x)
+       (not (or (= (.charAt x 0) \uFDD0)
+                (= (.charAt x 0) \uFDD1)))))
+
+(defn keyword? [x]
+  (and (goog.isString x)
+       (= (.charAt x 0) \uFDD0)))
+
+(defn symbol? [x]
+  (and (goog.isString x)
+       (= (.charAt x 0) \uFDD1)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
 (defn seq
