@@ -306,7 +306,7 @@ does what?
 ** TODO needs compiler letfn*
 * line-seq
 * DONE list
-* TODO list*
+* DONE list*
 * TODO list?
 * load
 * DONE load-file
@@ -518,7 +518,7 @@ as macro
 * the-ns
 * thread-bound?
 * TODO time
-* TODO to-array
+* DONE to-array
 * TODO to-array-2d
 * TODO trampoline
 * transient
