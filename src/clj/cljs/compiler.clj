@@ -89,14 +89,35 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
 (defmethod emit-constant Character [x] (pr (str x)))
 
+(defn- emit-meta-constant [x string]
+  (if (meta x)
+    (do
+      (print (str "cljs.core.with_meta(" string ","))
+      (emit-constant (meta x))
+      (print ")"))
+    (print string)))
+
 (defmethod emit-constant clojure.lang.PersistentList$EmptyList [x]
-  (print 'cljs.core.List.EMPTY))
+  (emit-meta-constant x "cljs.core.List.EMPTY"))
 
-(defmethod emit-constant clojure.lang.PersistentVector [x]
-  (print "cljs.core.vec([" (comma-sep x) "])"))
+(defmethod emit-constant clojure.lang.PersistentList [x]
+  (emit-meta-constant x
+    (str "cljs.core.list("
+         (comma-sep (map #(with-out-str (emit-constant %)) x))
+         ")")))
 
-(defmethod emit-constant clojure.lang.PersistentArrayMap [x]
-  (print "cljs.core.hash_map(" (comma-sep (apply concat x)) ")"))
+(defmethod emit-constant clojure.lang.IPersistentVector [x]
+  (emit-meta-constant x
+    (str "(new cljs.core.Vector(null, ["
+         (comma-sep (map #(with-out-str (emit-constant %)) x))
+         "]))")))
+
+(defmethod emit-constant clojure.lang.IPersistentMap [x]
+  (emit-meta-constant x
+    (str "cljs.core.hash_map("
+         (comma-sep (map #(with-out-str (emit-constant %))
+                         (apply concat x)))
+         ")")))
 
 (defmulti emit :op)
 
@@ -119,6 +140,22 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :var
   [{:keys [info env] :as arg}]
   (emit-wrap env (print (:name info))))
+
+(defmethod emit :meta
+  [{:keys [expr meta env]}]
+  (emit-wrap env
+    (print (str "cljs.core.with_meta(" (emits expr) "," (emits meta) ")"))))
+
+(defmethod emit :map
+  [{:keys [children env]}]
+  (emit-wrap env
+    (print (str "cljs.core.hash_map(" (comma-sep (map emits children)) ")"))))
+
+(defmethod emit :vector
+  [{:keys [children env]}]
+  (emit-wrap env
+    (print (str "(new cljs.core.Vector(null, ["
+                (comma-sep (map emits children)) "]))"))))
 
 (defmethod emit :constant
   [{:keys [form env]}]
@@ -596,6 +633,31 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           (parse-invoke env form))
         (analyze env mform name)))))
 
+(declare analyze-wrap-map)
+
+(defn analyze-map
+  [env form name]
+  (let [expr-env (assoc env :context :expr)
+        items (disallowing-recur
+                (map #(analyze expr-env % name) (apply concat form)))]
+    (analyze-wrap-meta {:op :map :env env :form form :children items} name)))
+
+(defn analyze-vector
+  [env form name]
+  (let [expr-env (assoc env :context :expr)
+        items (disallowing-recur (map #(analyze expr-env % name) form))]
+    (analyze-wrap-meta {:op :vector :env env :form form :children items} name)))
+
+(defn analyze-wrap-meta [expr name]
+  (let [form (:form expr)]
+    (if (meta form)
+      (let [env (:env expr) ; take on expr's context ourselves
+            expr (assoc-in expr [:env :context] :expr) ; change expr to :expr
+            meta-expr (analyze-map (:env expr) (meta form) name)]
+        {:op :meta :env env :form form :children [meta-expr expr]
+         :meta meta-expr :expr expr})
+      expr)))
+
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
   (one of :statement, :expr, :return), :ns (a symbol naming the
@@ -611,6 +673,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
        (cond
         (symbol? form) (analyze-symbol env form)
         (and (seq? form) (seq form)) (analyze-seq env form name)
+        (map? form) (analyze-map env form name)
+        (vector? form) (analyze-vector env form name)
         :else {:op :constant :env env :form form}))))
 
 (defn eval1
@@ -750,7 +814,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (analyze envx '(ns fred (:require [your.ns :as yn]) (:require-macros [clojure.core :as core])))
 (defmacro js [form]
-  `(emit analyze ({:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
+  `(emit (analyze {:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
 
 (defn jseval [form]
   (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
