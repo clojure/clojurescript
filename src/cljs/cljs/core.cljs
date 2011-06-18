@@ -147,6 +147,98 @@
   [coll]
   (next (next coll)))
 
+(defn take
+  "Returns a lazy sequence of the first n items in coll, or all items if
+  there are fewer than n."
+  [n coll]
+  (lazy-seq
+   (when (pos? n)
+     (when-let [s (seq coll)]
+      (cons (first s) (take (dec n) (rest s)))))))
+
+(defn drop
+  "Returns a lazy sequence of all but the first n items in coll."
+  [n coll]
+  (let [step (fn [n coll]
+               (let [s (seq coll)]
+                 (if (and (pos? n) s)
+                   (recur (dec n) (rest s))
+                   s)))]
+    (lazy-seq (step n coll))))
+
+(defn repeat
+  "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
+  ([x] (lazy-seq (cons x (repeat x))))
+  ([n x] (take n (repeat x))))
+
+(defn interleave
+  "Returns a lazy seq of the first item in each coll, then the second etc."
+  ([c1 c2]
+     (lazy-seq
+      (let [s1 (seq c1) s2 (seq c2)]
+        (when (and s1 s2)
+          (cons (first s1) (cons (first s2)
+                                 (interleave (rest s1) (rest s2))))))))
+  ([c1 c2 & colls]
+     (lazy-seq
+      (let [ss (map seq (conj colls c2 c1))]
+        (when (every? identity ss)
+          (concat (map first ss) (apply interleave (map rest ss))))))))
+
+(defn interpose
+  "Returns a lazy seq of the elements of coll separated by sep"
+  [sep coll] (drop 1 (interleave (repeat sep) coll)))
+
+(defn map
+  "Returns a lazy sequence consisting of the result of applying f to the
+  set of first items of each coll, followed by applying f to the set
+  of second items in each coll, until any one of the colls is
+  exhausted.  Any remaining items in other colls are ignored. Function
+  f should accept number-of-colls arguments."
+  ([f coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (cons (f (first s)) (map f (rest s))))))
+  ([f c1 c2]
+   (lazy-seq
+    (let [s1 (seq c1) s2 (seq c2)]
+      (when (and s1 s2)
+        (cons (f (first s1) (first s2))
+              (map f (rest s1) (rest s2)))))))
+  ([f c1 c2 c3]
+   (lazy-seq
+    (let [s1 (seq c1) s2 (seq c2) s3 (seq c3)]
+      (when (and  s1 s2 s3)
+        (cons (f (first s1) (first s2) (first s3))
+              (map f (rest s1) (rest s2) (rest s3)))))))
+  ([f c1 c2 c3 & colls]
+   (let [step (fn step [cs]
+                 (lazy-seq
+                  (let [ss (map seq cs)]
+                    (when (every? identity ss)
+                      (cons (map first ss) (step (map rest ss)))))))]
+     (map #(apply f %) (step (conj colls c3 c2 c1))))))
+
+(defn- flatten1
+  "Take a collection of collections, and return a lazy seq
+  of items from the inner collection"
+  [colls]
+  (let [cat (fn cat [coll colls]
+              (lazy-seq
+                (if-let [coll (seq coll)]
+                  (cons (first coll) (cat (rest coll) colls))
+                  (when (seq colls)
+                    (cat (first colls) (rest colls))))))]
+    (cat nil colls)))
+
+(defn mapcat
+  "Returns the result of applying concat to the result of applying map
+  to f and colls.  Thus function f should return a collection."
+  ([f coll]
+    (flatten1 (map f coll)))
+  ([f coll & colls]
+    (flatten1 (apply map f coll colls))))
+
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
