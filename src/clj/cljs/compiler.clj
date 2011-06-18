@@ -743,7 +743,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (.eval jse r))
     (.eval jse bootjs)
     ;; Load deps.js line-by-line to avoid 64K method limit
-    (doseq [line (line-seq (io/reader deps))]
+    (doseq [^String line (line-seq (io/reader deps))]
       (.eval jse line))
     {:jse jse}))
 
