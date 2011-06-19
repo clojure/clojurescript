@@ -84,6 +84,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmulti emit-constant class)
 (defmethod emit-constant nil [x] (print "null"))
 (defmethod emit-constant Long [x] (print x))
+(defmethod emit-constant Integer [x] (print x)) ; reader puts Integers in metadata
 (defmethod emit-constant Double [x] (print x))
 (defmethod emit-constant String [x] (pr x))
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))

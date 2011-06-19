@@ -1237,8 +1237,14 @@ reduces them without incurring seq initialization"
   (cond
     (nil? obj) (list "nil")
     (identical? undefined obj) (list "#<undefined>")
-    (satisfies? IPrintable obj) (-pr-seq obj opts)
-    :else (list "#<" (str obj) ">")))
+    :else (concat
+            (when (and (get opts :meta)
+                       (satisfies? IMeta obj)
+                       (meta obj))
+              (concat ["^"] (pr-seq (meta obj) opts) [" "]))
+            (if (satisfies? IPrintable obj)
+              (-pr-seq obj opts)
+              (list "#<" (str obj) ">")))))
 
 (defn pr-str-with-opts
   "Prints a single object to a string, observing all the
