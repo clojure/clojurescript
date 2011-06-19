@@ -1230,6 +1230,9 @@ reduces them without incurring seq initialization"
   (goog.global.print x)
   nil)
 
+(defn flush [] ;stub
+  nil)
+
 (defn- pr-seq [obj opts]
   (cond
     (nil? obj) (list "nil")
@@ -1255,19 +1258,29 @@ reduces them without incurring seq initialization"
   (loop [coll (seq (pr-seq obj opts))]
     (when coll
       (string-print (first coll))
-      ; TODO: flush-on-newline should be keyword
-      (when (and (get opts "flush-on-newline") (= "\n" (first coll)))
-        #_(flush))
       (recur (next coll)))))
 
 (defn newline [opts]
-  (string-print "\n")) ; flush?
+  (string-print "\n")
+  (when (get opts :flush-on-newline)
+    (flush)))
+
+(def *flush-on-newline* true)
+(def *print-readably* true)
+(def *print-meta* false)
+(def *print-dup* false)
+
+(defn- pr-opts []
+  {:flush-on-newline *flush-on-newline*
+   :readably *print-readably*
+   :meta *print-meta*
+   :dup *print-dup*})
 
 ; These should all be variadic.  Where oh where has my apply gone?
 (defn pr-str
   "pr to a string, returning it. Fundamental entrypoint to IPrintable."
   [obj]
-  (pr-str-with-opts obj {:readably true}))
+  (pr-str-with-opts obj (pr-opts)))
 
 (defn pr
   "Prints the object(s) using string-print.  Prints the
@@ -1275,17 +1288,17 @@ reduces them without incurring seq initialization"
   By default, pr and prn print in a way that objects can be
   read by the reader"
   [obj]
-  (pr-with-opts obj {:readably true}))
+  (pr-with-opts obj (pr-opts)))
 
 (defn println
   "Prints the object(s) using string-print.
   print and println produce output for human consumption."
   [obj]
-  (pr-with-opts obj {:readably false})
-  (newline))
+  (pr-with-opts obj (assoc (pr-opts) :readably false))
+  (newline (pr-opts)))
 
 (defn prn
   "Same as pr followed by (newline)."
   [obj]
-  (pr-with-opts obj {:readably true})
-  (newline))
+  (pr-with-opts obj (pr-opts))
+  (newline (pr-opts)))
