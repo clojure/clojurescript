@@ -108,6 +108,39 @@
   (and (goog.isString x)
        (= (.charAt x 0) \uFDD1)))
 
+(defn str
+  "With no args, returns the empty string. With one arg x, returns
+  x.toString().  (str nil) returns the empty string. With more than
+  one arg, returns the concatenation of the str values of the args."
+  ([] "")
+  ([x] (if (nil? x) "" (. x (toString))))
+  ([x & ys] (reduce + (map str (cons x ys)))))
+
+(defn subs
+  "Returns the substring of s beginning at start inclusive, and ending
+  at end (defaults to length of string), exclusive."
+  ([s start] (.substring s start))
+  ([s start end] (.substring s start end)))
+
+(defn name [x]
+  "Returns the name String of a string, symbol or keyword."
+  (cond
+    (string? x) x
+    (or (keyword? x) (symbol? x))
+      (let [i (.lastIndexOf x "/")]
+        (if (< i 0)
+          (subs x 2)
+          (subs x (inc i))))
+    :else nil #_(throw (str "Doesn't support name: " x))))
+
+(defn namespace [x]
+  "Returns the namespace String of a symbol or keyword, or nil if not present."
+  (if (or (keyword? x) (symbol? x))
+    (let [i (.lastIndexOf x "/")]
+      (when (> i -1)
+        (subs x 2 i)))
+    :else nil #_(throw (str "Doesn't support namespace: " x))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
 (defn seq
@@ -425,7 +458,7 @@
   (-equiv [o other] (identical? o other))
 
   goog.global.Date ; treat dates as values
-  (-equiv [o other] (identical? (.toString o ()) (.toString other ()))))
+  (-equiv [o other] (identical? (str o) (str other))))
 
 (defn = [x y]
   (-equiv x y))
@@ -1172,12 +1205,22 @@ reduces them without incurring seq initialization"
           [end]))
 
 (extend-protocol IPrintable
-  goog.global.Number (-pr-seq [n opts] (list (.toString n 10)))
-  goog.global.String (-pr-seq [str opts]
-                        (if (get opts "readably")
-                          (list (goog.string.quote str))
-                          (list str)))
-  goog.global.Boolean (-pr-seq [bool opts] (list (.toString bool ())))
+  goog.global.Boolean (-pr-seq [bool opts] (list (str bool)))
+  goog.global.Number (-pr-seq [n opts] (list (str n)))
+  goog.global.String (-pr-seq [obj opts]
+                        (cond
+                          (keyword? obj)
+                            (list (str ":"
+                                       (when-let [nspc (namespace obj)]
+                                         (str nspc "/"))
+                                       (name obj)))
+                          (symbol? obj)
+                            (list (str (when-let [nspc (namespace obj)]
+                                         (str nspc "/"))
+                                       (name obj)))
+                          (get opts :readably)
+                            (list (goog.string.quote obj))
+                          :else (list obj)))
   goog.global.Array (-pr-seq [a opts]
                       (pr-sequential pr-seq "#<Array [" ", " "]>" opts a)))
 
@@ -1192,7 +1235,7 @@ reduces them without incurring seq initialization"
     (nil? obj) (list "nil")
     (identical? undefined obj) (list "#<undefined>")
     (satisfies? IPrintable obj) (-pr-seq obj opts)
-    :else (list "#<" (.toString obj ()) ">")))
+    :else (list "#<" (str obj) ">")))
 
 (defn pr-str-with-opts
   "Prints a single object to a string, observing all the
@@ -1203,7 +1246,7 @@ reduces them without incurring seq initialization"
       (when coll
         (.append sb (first coll))
         (recur (next coll))))
-    (.toString sb ())))
+    (str sb)))
 
 (defn pr-with-opts
   "Prints a single object using string-print, observing all
@@ -1224,7 +1267,7 @@ reduces them without incurring seq initialization"
 (defn pr-str
   "pr to a string, returning it. Fundamental entrypoint to IPrintable."
   [obj]
-  (pr-str-with-opts obj {"readably" true}))
+  (pr-str-with-opts obj {:readably true}))
 
 (defn pr
   "Prints the object(s) using string-print.  Prints the
@@ -1232,17 +1275,17 @@ reduces them without incurring seq initialization"
   By default, pr and prn print in a way that objects can be
   read by the reader"
   [obj]
-  (pr-with-opts obj {"readably" true}))
+  (pr-with-opts obj {:readably true}))
 
 (defn println
   "Prints the object(s) using string-print.
   print and println produce output for human consumption."
   [obj]
-  (pr-with-opts obj {"readably" false})
+  (pr-with-opts obj {:readably false})
   (newline))
 
 (defn prn
   "Same as pr followed by (newline)."
   [obj]
-  (pr-with-opts obj {"readably" true})
+  (pr-with-opts obj {:readably true})
   (newline))
