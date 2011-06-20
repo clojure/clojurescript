@@ -77,6 +77,9 @@
 (defprotocol ISeqable
   (-seq [o]))
 
+(defprotocol ISequential
+  "Marker interface indicating a persistent collection of sequential items")
+
 (defprotocol IPrintable
   (-pr-seq [o opts]))
 
@@ -330,6 +333,34 @@
       (recur (conj ret (first s)) (next s))
       (seq ret))))
 
+(defn every?
+  "Returns true if (pred x) is logical true for every x in coll, else
+  false."
+  [pred coll]
+  (cond
+   (nil? (seq coll)) true
+   (pred (first coll)) (recur pred (next coll))
+   :else false))
+
+(defn not-every?
+  "Returns false if (pred x) is logical true for every x in
+  coll, else true."
+  [pred coll] (not (every pred coll)))
+
+(defn some
+  "Returns the first logical true value of (pred x) for any x in coll,
+  else nil.  One common idiom is to use a set as pred, for example
+  this will return :fred if :fred is in the sequence, otherwise nil:
+  (some #{:fred} coll)"
+  [pred coll]
+    (when (seq coll)
+      (or (pred (first coll)) (recur pred (next coll)))))
+
+(defn not-any?
+  "Returns false if (pred x) is logical true for any x in coll,
+  else true."
+  [pred coll] (not (some pred coll)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; sequence fns ;;;;;;;;;;;;;;
 
 (defn count
@@ -422,6 +453,39 @@
   [coll v]
   (when-not (nil? coll) (-disjoin coll v)))
 
+(defn empty?
+  "Returns true if coll has no items - same as (not (seq coll)).
+  Please use the idiom (seq x) rather than (not (empty? x))"
+  [coll] (not (seq coll)))
+
+(defn coll?
+  "Returns true if x satisfies ICollection"
+  [x] (satisfies? ICollection x))
+
+(defn set?
+  "Returns true if x satisfies ISet"
+  [x] (satisfies? ISet x))
+
+(defn associative?
+ "Returns true if coll implements Associative"
+  [x] (satisfies? IAssociative x))
+
+(defn sequential?
+  "Returns true if coll satisfies ISequential"
+  [x] (satisfies? ISequential x))
+
+(defn counted?
+  "Returns true if coll implements count in constant time"
+  [x] (satisfies? ICounted x))
+
+(defn map?
+  "Return true if x satisfies IMap"
+  [x] (satisfies? IMap x))
+
+(defn vector?
+  "Return true if x satisfies IVector"
+  [x] (satisfies? IVector x))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn to-array
@@ -450,6 +514,8 @@
 (defn alength [array]
   (js* "return ~{array}.length"))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; equality ;;;;;;;;;;;;;;
+
 (extend-protocol IEquiv
   goog.global.String
   (-equiv [o other] (identical? o other))
@@ -462,6 +528,30 @@
 
 (defn = [x y]
   (-equiv x y))
+
+(defn- equiv-sequential
+  "Assumes y is sequential. Returns true if x equals y, otherwise
+  returns false."
+  [x y]
+  (truth_
+    (when (sequential? y)
+      (if (and (counted? x) (counted? y))
+        (when (= (count x) (count y))
+          (every? identity (map = x y)))
+        (every? identity (map = x y))))))
+
+(defn- equiv-map
+  "Assumes y is a map. Returns true if x equals y, otherwise returns
+  false."
+  [x y]
+  (truth_
+    (when (map? y)
+      ; assume all maps are counted
+      (when (= (count x) (count y))
+        (every? identity
+                (map (fn [xkv] (= (second xkv) (get y (first xkv)))) x))))))
+
+;;; LazySeq ;;;
 
 (defn- lazy-seq-value [lazy-seq]
   (let [x lazy-seq.x]
@@ -489,11 +579,17 @@
 ; IEmptyableCollection
 ; (iempty [coll] coll)
 
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
   ISeqable
   (-seq [coll] (seq (lazy-seq-value coll)))
 
   IPrintable
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
 
 (defn array-seq [array i]
   (prim-seq array i))
@@ -531,6 +627,10 @@
 ; IEmptyableCollection
 ; (iempty [coll] coll)
 
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
   ISeqable
   (-seq [coll] coll)
 
@@ -560,6 +660,10 @@
 
 ; IEmptyableCollection
 ; (iempty [coll] coll)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
 
   ISeqable
   (-seq [coll] nil)
@@ -591,6 +695,10 @@
 
 ; IEmptyableCollection
 ; (iempty [coll] List.EMPTY)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
 
   ISeqable
   (-seq [coll] coll)
@@ -792,6 +900,10 @@ reduces them without incurring seq initialization"
 ; IEmptyableCollection
 ; (iempty [coll] coll)
 
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
   ISeqable
   (-seq [coll]
     (when (> (.length array) 0)
@@ -873,6 +985,9 @@ reduces them without incurring seq initialization"
 
 ; IEmptyableCollection
 ; (iempty [coll] coll)
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
 
   ISeqable
   (-seq [coll]

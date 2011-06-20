@@ -47,7 +47,7 @@ does what?
 * DONE /
 * DONE <
 * DONE <=
-* TODO =
+* DONE =
 * TODO ==
 * DONE >
 * DONE >=
@@ -85,7 +85,7 @@ does what?
 * DONE assoc
 * TODO assoc!
 * TODO assoc-in
-* TODO associative?
+* DONE associative?
 * TODO atom
 * await
 * await-for
@@ -107,7 +107,7 @@ does what?
 * TODO bit-shift-right
 * TODO bit-test
 * TODO bit-xor
-* TODO boolean
+* DONE boolean
 * boolean-array
 * booleans
 * bound-fn
@@ -137,7 +137,7 @@ does what?
 * class?
 * clear-agent-errors
 * clojure-version
-* TODO coll?
+* DONE coll?
 * DONE comment
 * commute
 * DONE comp
@@ -156,7 +156,7 @@ does what?
 * construct-proxy
 * DONE contains?
 * DONE count
-* TODO counted?
+* DONE counted?
 * create-ns
 * create-struct
 * TODO cycle
@@ -204,7 +204,7 @@ For macros only, uses clojure.core version
 * TODO drop-last
 * TODO drop-while
 * TODO empty
-* TODO empty?
+* DONE empty?
 * ensure
 * enumeration-seq
 * error-handler
@@ -280,9 +280,9 @@ does what?
 * int
 * int-array
 * TODO integer?
-* TODO interleave
+* DONE interleave
 * intern
-* TODO interpose
+* DONE interpose
 * TODO into
 * TODO into-array
 * ints
@@ -322,10 +322,10 @@ does what?
 * macroexpand-1
 * TODO make-array
 * TODO make-hierarchy
-* TODO map
+* DONE map
 * TODO map-indexed
-* TODO map?
-* TODO mapcat
+* DONE map?
+* DONE mapcat
 * TODO max
 * TODO max-key
 * memfn
@@ -339,8 +339,8 @@ does what?
 * TODO min-key
 * TODO mod
 * munge
-* TODO name
-* TODO namespace
+* DONE name
+* DONE namespace
 * namespace-munge
 * TODO neg?
 * newline
@@ -385,9 +385,9 @@ does what?
 * pop!
 * pop-thread-bindings
 * TODO pos?
-* TODO pr
+* DONE pr
 dunno about printing
-* TODO pr-str
+* DONE pr-str
 * TODO prefer-method
 * TODO prefers
 * primitives-classnames
@@ -398,9 +398,9 @@ dunno about printing
 * TODO print-simple
 * TODO print-str
 * printf
-* TODO println
+* DONE println
 * TODO println-str
-* TODO prn
+* DONE prn
 * TODO prn-str
 * promise
 * proxy
@@ -447,7 +447,7 @@ also specify - make a particular object extend a protocol
 * TODO remove-method
 * remove-ns
 * remove-watch
-* TODO repeat
+* DONE repeat
 * TODO repeatedly
 * TODO replace
 * TODO replicate
@@ -473,12 +473,12 @@ as macro
 * TODO seq?
 * seque
 * TODO sequence
-* TODO sequential?
+* DONE sequential?
 * TODO set
 * set-error-handler!
 * set-error-mode!
 * set-validator!
-* TODO set?
+* DONE set?
 * short
 * short-array
 * shorts
@@ -498,11 +498,11 @@ as macro
 * spit
 * TODO split-at
 * TODO split-with
-* TODO str
+* DONE str
 * TODO string?
 * struct
 * struct-map
-* TODO subs
+* DONE subs
 * TODO subseq
 * TODO subvec
 * TODO supers
@@ -510,7 +510,7 @@ as macro
 * TODO symbol
 * TODO symbol?
 * sync
-* TODO take
+* DONE take
 * TODO take-last
 * TODO take-nth
 * TODO take-while
@@ -562,7 +562,7 @@ does what?
 * DONE vec
 * DONE vector
 * vector-of
-* TODO vector?
+* DONE vector?
 * DONE when
 * DONE when-first
 * DONE when-let
