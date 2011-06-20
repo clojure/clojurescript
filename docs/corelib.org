@@ -231,7 +231,7 @@ macro currently expands into extend call
 * find-protocol-method
 * find-var
 * DONE first
-* TODO flatten
+* DONE flatten
 * float
 * float-array
 * float?
@@ -283,7 +283,7 @@ does what?
 * DONE interleave
 * intern
 * DONE interpose
-* TODO into
+* DONE into
 * TODO into-array
 * ints
 * io!

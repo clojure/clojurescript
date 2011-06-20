@@ -1390,6 +1390,12 @@ reduces them without incurring seq initialization"
   (filter #(not (sequential? %))
           (rest (tree-seq sequential? seq x))))
 
+(defn into
+  "Returns a new coll consisting of to-coll with all of the items of
+  from-coll conjoined."
+  [to from]
+  (reduce -conj to from))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
 (defn pr-sequential [print-one begin sep end opts coll]
