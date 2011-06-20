@@ -343,6 +343,17 @@
      (let [s (seq coll)]
        (-reduce s f val))))
 
+(defn filter
+  "Returns a lazy sequence of the items in coll for which
+  (pred item) returns true. pred must be free of side-effects."
+  ([pred coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (let [f (first s) r (rest s)]
+        (if (pred f)
+          (cons f (filter pred r))
+          (filter pred r)))))))
+
 ; simple reduce, to be removed when IReduce is working
 (defn reduce
   ([f coll]
