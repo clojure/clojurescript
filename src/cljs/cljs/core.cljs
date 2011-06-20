@@ -918,13 +918,12 @@ reduces them without incurring seq initialization"
   (-count [coll] (.length array))
 
   IIndexed
-  ; Must also check lower bound, (<= 0 n)
   (-nth [coll n]
-    (if (< n (.length array))
+    (if (and (<= 0 n) (< n (.length array)))
       (aget array n)
       #_(throw (str "No item " n " in vector of length " (.length array)))))
   (-nth [coll n not-found]
-    (if (< n (.length array))
+    (if (and (<= 0 n) (< n (.length array)))
       (aget array n)
       not-found))
 
