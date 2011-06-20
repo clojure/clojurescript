@@ -444,7 +444,8 @@
      (when-not (nil? coll)
        (-nth coll n)))
   ([coll n not-found]
-     (when-not (nil? coll)
+     (if (nil? coll)
+       not-found
        (-nth coll n not-found))))
 
 (defn get
@@ -453,7 +454,8 @@
      (when-not (nil? o)
        (-lookup o k)))
   ([o k not-found]
-     (when-not (nil? o)
+     (if (nil? o)
+       not-found
        (-lookup o k not-found))))
 
 (defn assoc
