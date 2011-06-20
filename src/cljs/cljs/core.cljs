@@ -22,7 +22,7 @@
     (-index [coll]))
 
 (defprotocol IIndexed
-  (-nth [coll n] [coll n not-found]) )
+  (-nth [coll n] [coll n not-found]))
 
 (defprotocol ISeq
   (-first [coll])
@@ -43,8 +43,7 @@
 (defprotocol ISet
   (-contains? [coll v])
   (-disjoin [coll v])
-  #_(-get [coll v])
-  )
+  #_(-get [coll v]))
 
 (defprotocol IStack
   (-peek [coll])
@@ -219,10 +218,44 @@
                    s)))]
     (lazy-seq (step n coll))))
 
+(defn drop-last
+  "Return a lazy sequence of all but the last n (default 1) items in coll"
+  ([s] (drop-last 1 s))
+  ([n s] (map (fn [x _] x) s (drop n s))))
+
+(defn take-last
+  "Returns a seq of the last n items in coll.  Depending on the type
+  of coll may be no better than linear time.  For vectors, see also subvec."
+  [n coll]
+  (loop [s (seq coll), lead (seq (drop n coll))]
+    (if lead
+      (recur (next s) (next lead))
+      s)))
+
+(defn drop-while
+  "Returns a lazy sequence of the items in coll starting from the first
+  item for which (pred item) returns nil."
+  [pred coll]
+  (let [step (fn [pred coll]
+               (let [s (seq coll)]
+                 (if (and s (pred (first s)))
+                   (recur pred (rest s))
+                   s)))]
+    (lazy-seq (step pred coll))))
+
 (defn repeat
   "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
   ([x] (lazy-seq (cons x (repeat x))))
   ([n x] (take n (repeat x))))
+
+(defn replicate
+  "Returns a lazy seq of n xs."
+  [n x] (take n (repeat x)))
+
+(defn iterate
+  "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of side-effects"
+  {:added "1.0"}
+  [f x] (cons x (lazy-seq (iterate f (f x)))))
 
 (defn interleave
   "Returns a lazy seq of the first item in each coll, then the second etc."
@@ -405,6 +438,18 @@
   [coll k v]
   (when-not (nil? coll)
     (-assoc coll k v)))
+
+(defn zipmap
+  "Returns a map with the keys mapped to the corresponding vals."
+  [keys vals]
+    (loop [map {}
+           ks (seq keys)
+           vs (seq vals)]
+      (if (and ks vs)
+        (recur (assoc map (first ks) (first vs))
+               (next ks)
+               (next vs))
+        map)))
 
 (defn dissoc
   "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
