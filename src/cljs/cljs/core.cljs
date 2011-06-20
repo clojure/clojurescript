@@ -762,11 +762,7 @@ reduces them without incurring seq initialization"
            (. f apply f (to-array args))) ;; applyTo
          (. f apply f (to-array args))))))
 
-; should use: count, nth
-(defn- vector-seq [vector i]
-  (lazy-seq
-    (when (< i (-count vector))
-      (cons (-nth vector i) (vector-seq vector (inc i))))))
+;;; Vector
 
 (deftype Vector [meta array]
   IWithMeta
@@ -799,7 +795,12 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (> (.length array) 0)
-      (vector-seq coll 0)))
+      (let [vector-seq
+             (fn vector-seq [i]
+               (lazy-seq
+                 (when (< i (.length array))
+                   (cons (aget array i) (vector-seq (inc i))))))]
+        (vector-seq 0))))
 
   ICounted
   (-count [coll] (.length array))
