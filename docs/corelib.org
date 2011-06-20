@@ -223,7 +223,7 @@ macro currently expands into extend call
 * TODO false?
 * DONE ffirst
 * file-seq
-* TODO filter
+* DONE filter
 * TODO find
 * TODO find-keyword
 * find-ns
