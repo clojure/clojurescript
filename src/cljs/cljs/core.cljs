@@ -518,7 +518,7 @@
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   [coll v]
-  (when-not (nil? coll) (-contains? coll v)))
+  (if (nil? coll) false (-contains? coll v)))
 
 (defn disj
   "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
