@@ -1382,6 +1382,14 @@ reduces them without incurring seq initialization"
                    s)))]
     (lazy-seq (step n coll))))
 
+(defn flatten
+  "Takes any nested combination of sequential things (lists, vectors,
+  etc.) and returns their contents as a single, flat sequence.
+  (flatten nil) returns nil."
+  [x]
+  (filter #(not (sequential? %))
+          (rest (tree-seq sequential? seq x))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
 (defn pr-sequential [print-one begin sep end opts coll]

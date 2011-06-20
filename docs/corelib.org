@@ -522,7 +522,7 @@ as macro
 * TODO to-array-2d
 * TODO trampoline
 * transient
-* TODO tree-seq
+* DONE tree-seq
 * TODO true?
 * TODO type
 does what?
