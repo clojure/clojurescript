@@ -8,6 +8,7 @@
 
 (ns cljs.core)
 (goog.require "goog.string.StringBuffer")
+(goog.require "goog.object")
 
 (defprotocol ICounted
   (-count [coll] "constant time count"))
@@ -1094,7 +1095,7 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll k v]
     (if (goog.isString k)
-      (let [new-strobj (goog.cloneObject strobj) ; should use goog.object.clone
+      (let [new-strobj (goog.object.clone strobj)
             overwrite? (.hasOwnProperty new-strobj k)]
         (aset new-strobj k v)
         (if overwrite?
@@ -1107,7 +1108,7 @@ reduces them without incurring seq initialization"
             bucket (aget hashobj h)]
         (if bucket
           (let [new-bucket (array-clone bucket)
-                new-hashobj (goog.cloneObject hashobj)]
+                new-hashobj (goog.object.clone hashobj)]
             (aset new-hashobj h new-bucket)
             (if-let [i (scan-array 2 k new-bucket)]
               (do
@@ -1118,7 +1119,7 @@ reduces them without incurring seq initialization"
                 (.push new-bucket k v)
                 (HashMap. meta new-keys strobj new-hashobj))))
           (let [new-keys (array-clone keys)
-                new-hashobj (goog.cloneObject hashobj)]
+                new-hashobj (goog.object.clone hashobj)]
             (.push new-keys k)
             (aset new-hashobj h (array k v))
             (HashMap. meta new-keys strobj new-hashobj))))))
@@ -1129,7 +1130,7 @@ reduces them without incurring seq initialization"
       (if (not (.hasOwnProperty strobj k))
         coll ; key not found, return coll unchanged
         (let [new-keys (array-clone keys)
-              new-strobj (goog.cloneObject strobj)
+              new-strobj (goog.object.clone strobj)
               new-count (dec (.length keys))]
           (.splice new-keys (scan-array 1 k new-keys) 1)
           (js-delete new-strobj k)
@@ -1141,7 +1142,7 @@ reduces them without incurring seq initialization"
         (if (not i)
           coll ; key not found, return coll unchanged
           (let [new-keys (array-clone keys)
-                new-hashobj (goog.cloneObject hashobj)]
+                new-hashobj (goog.object.clone hashobj)]
             (if (> 3 (.length bucket))
               (js-delete new-hashobj h)
               (let [new-bucket (array-clone bucket)]
