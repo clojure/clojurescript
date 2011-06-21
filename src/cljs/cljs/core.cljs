@@ -657,6 +657,9 @@
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
 
+  IHash
+  (-hash [coll] (hash-coll coll))
+
   ISeqable
   (-seq [coll] (seq (lazy-seq-value coll)))
 
@@ -705,6 +708,9 @@
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
 
+  IHash
+  (-hash [coll] (hash-coll coll))
+
   ISeqable
   (-seq [coll] coll)
 
@@ -738,6 +744,9 @@
   ISequential
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
 
   ISeqable
   (-seq [coll] nil)
@@ -773,6 +782,9 @@
   ISequential
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
 
   ISeqable
   (-seq [coll] coll)
@@ -978,6 +990,9 @@ reduces them without incurring seq initialization"
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
 
+  IHash
+  (-hash [coll] (hash-coll coll))
+
   ISeqable
   (-seq [coll]
     (when (> (.length array) 0)
@@ -1028,7 +1043,18 @@ reduces them without incurring seq initialization"
   goog.global.Number (-hash [o] o))
 
 (defn hash [o]
-  (when o (-hash o)))
+  (if o
+    (-hash o)
+    0))
+
+(defn hash-combine [seed hash]
+  ; a la boost
+  (bit-xor (+ hash 0x9e3779b9
+              (bit-shift-left seed 6)
+              (bit-shift-right seed 2))))
+
+(defn- hash-coll [coll]
+  (reduce hash-combine (map hash coll)))
 
 (defn- scan-array [incr k array]
   (let [len (.length array)]
@@ -1061,6 +1087,9 @@ reduces them without incurring seq initialization"
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
 
   ISeqable
   (-seq [coll]
