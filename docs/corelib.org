@@ -48,7 +48,7 @@ does what?
 * DONE <
 * DONE <=
 * DONE =
-* TODO ==
+* DONE ==
 * DONE >
 * DONE >=
 * EMPTY-NODE
@@ -580,5 +580,5 @@ does what?
 * with-redefs
 * with-redefs-fn
 * TODO xml-seq
-* TODO zero?
+* DONE zero?
 * TODO zipmap

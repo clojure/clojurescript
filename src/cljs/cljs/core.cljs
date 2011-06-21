@@ -1303,6 +1303,18 @@ reduces them without incurring seq initialization"
   "Bitwise shift right"
   [x n] (js* "return ~{x} >> ~{n}"))
 
+(defn ==
+  "Returns non-nil if nums all have the equivalent
+  value (type-independent), otherwise false"
+  ([x] true)
+  ([x y] (-equiv x y))
+  ([x y & more]
+   (if (== x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (== y (first more)))
+     false)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; predicates and logic ;;;;;;;;;;;;;;;;
 
 (defn not
@@ -1311,6 +1323,9 @@ reduces them without incurring seq initialization"
 
 (defn pos? [n]
   (< 0 n))
+
+(defn zero? [n]
+  (== 0 n))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
 
