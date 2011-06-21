@@ -69,7 +69,7 @@ does what?
 * TODO amap
 * ancestors
 * DONE and
-* TODO apply
+* DONE apply
 * TODO areduce
 * TODO array-map
 * DONE aset
@@ -103,10 +103,10 @@ does what?
 * TODO bit-not
 * TODO bit-or
 * TODO bit-set
-* TODO bit-shift-left
-* TODO bit-shift-right
+* DONE bit-shift-left
+* DONE bit-shift-right
 * TODO bit-test
-* TODO bit-xor
+* DONE bit-xor
 * DONE boolean
 * boolean-array
 * booleans
@@ -201,8 +201,8 @@ For macros only, uses clojure.core version
 * TODO double-array
 * TODO doubles
 * DONE drop
-* TODO drop-last
-* TODO drop-while
+* DONE drop-last
+* DONE drop-while
 * TODO empty
 * DONE empty?
 * ensure
@@ -212,7 +212,7 @@ For macros only, uses clojure.core version
 * eval
 * TODO even?
 * TODO every-pred
-* TODO every?
+* DONE every?
 * TODO extend
 maybe not?
 * TODO extend-protocol
@@ -261,11 +261,11 @@ macro currently expands into extend call
 * get-thread-bindings
 * TODO get-validator
 * TODO group-by
-* TODO hash
-* TODO hash-combine
-* TODO hash-map
+* DONE hash
+* DONE hash-combine
+* DONE hash-map
 * TODO hash-set
-* TODO identical?
+* DONE identical?
 * DONE identity
 * DONE if-let
 * DONE if-not
@@ -289,7 +289,7 @@ does what?
 * io!
 * TODO isa?
 does what?
-* TODO iterate
+* DONE iterate
 * iterator-seq
 * DONE juxt
 * TODO keep
@@ -297,7 +297,7 @@ does what?
 * TODO key
 * TODO keys
 * TODO keyword
-* TODO keyword?
+* DONE keyword?
 * TODO last
 * TODO lazy-cat
 * DONE lazy-seq
@@ -349,9 +349,9 @@ does what?
 * DONE nil?
 * DONE nnext
 * DONE not
-* TODO not-any?
+* DONE not-any?
 * TODO not-empty
-* TODO not-every?
+* DONE not-every?
 * TODO not=
 * DONE ns
 * ns-aliases
@@ -384,7 +384,7 @@ does what?
 * DONE pop
 * pop!
 * pop-thread-bindings
-* TODO pos?
+* DONE pos?
 * DONE pr
 dunno about printing
 * DONE pr-str
@@ -450,7 +450,7 @@ also specify - make a particular object extend a protocol
 * DONE repeat
 * TODO repeatedly
 * TODO replace
-* TODO replicate
+* DONE replicate
 * TODO require
 ticket #8
 * TODO reset!
@@ -485,7 +485,7 @@ as macro
 * TODO shuffle
 * shutdown-agents
 * slurp
-* TODO some
+* DONE some
 * TODO some-fn
 * TODO sort
 * TODO sort-by
@@ -499,7 +499,7 @@ as macro
 * TODO split-at
 * TODO split-with
 * DONE str
-* TODO string?
+* DONE string?
 * struct
 * struct-map
 * DONE subs
@@ -508,10 +508,10 @@ as macro
 * TODO supers
 * TODO swap!
 * TODO symbol
-* TODO symbol?
+* DONE symbol?
 * sync
 * DONE take
-* TODO take-last
+* DONE take-last
 * TODO take-nth
 * TODO take-while
 * test
@@ -581,4 +581,4 @@ does what?
 * with-redefs-fn
 * TODO xml-seq
 * DONE zero?
-* TODO zipmap
+* DONE zipmap

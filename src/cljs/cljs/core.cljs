@@ -1187,7 +1187,10 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.HashMap.EMPTY (HashMap. nil (array) (js-obj) (js-obj)))
 
-(defn hash-map [& keyvals]
+(defn hash-map
+  "keyval => key val
+  Returns a new hash map with supplied mappings."
+  [& keyvals]
   (loop [in (seq keyvals), out cljs.core.HashMap.EMPTY]
     (if in
       (recur (nnext in) (-assoc out (first in) (second in)))
@@ -1321,8 +1324,9 @@ reduces them without incurring seq initialization"
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
 
-(defn pos? [n]
-  (< 0 n))
+(defn pos?
+  "Returns true if num is greater than zero, else false"
+  [n] (< 0 n))
 
 (defn zero? [n]
   (== 0 n))
@@ -1430,16 +1434,6 @@ reduces them without incurring seq initialization"
          ([x y z & args] (reduce #(conj %1 (apply %2 x y z args)) [] fs))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fun seq fns ;;;;;;;;;;;;;;;;
-
-(defn drop
-  "Returns a lazy sequence of all but the first n items in coll."
-  [n coll]
-  (let [step (fn [n coll]
-               (let [s (seq coll)]
-                 (if (and (pos? n) s)
-                   (recur (dec n) (rest s))
-                   s)))]
-    (lazy-seq (step n coll))))
 
 (defn flatten
   "Takes any nested combination of sequential things (lists, vectors,
