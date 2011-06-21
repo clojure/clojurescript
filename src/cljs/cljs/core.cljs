@@ -591,17 +591,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; equality ;;;;;;;;;;;;;;
 
 (extend-protocol IEquiv
-  goog.global.String
-  (-equiv [o other] (identical? o other))
-
-  goog.global.Number
-  (-equiv [o other] (identical? o other))
-
   goog.global.Date ; treat dates as values
   (-equiv [o other] (identical? (str o) (str other))))
 
 (defn = [x y]
-  (-equiv x y))
+  (if (satisfies? IEquiv x)
+    (-equiv x y)
+    (identical? x y)))
 
 (defn- equiv-sequential
   "Assumes y is sequential. Returns true if x equals y, otherwise
@@ -614,6 +610,12 @@
           (every? identity (map = x y)))
         (every? identity (map = x y))))))
 
+; could use reify
+(deftype NeverEquiv []
+  IEquiv
+  (-equiv [o other] false))
+(def ^:private never-equiv (NeverEquiv.))
+
 (defn- equiv-map
   "Assumes y is a map. Returns true if x equals y, otherwise returns
   false."
@@ -623,7 +625,9 @@
       ; assume all maps are counted
       (when (= (count x) (count y))
         (every? identity
-                (map (fn [xkv] (= (second xkv) (get y (first xkv)))) x))))))
+                (map (fn [xkv] (= (get y (first xkv) never-equiv)
+                                  (second xkv)))
+                     x))))))
 
 ;;; LazySeq ;;;
 

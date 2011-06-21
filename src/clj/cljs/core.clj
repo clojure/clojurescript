@@ -101,7 +101,10 @@
   [psym x]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
-    `(if (. ~x ~(symbol prefix)) true false)))
+    `(let [x# ~x]
+       (if (cljs.core.nil? x#)
+         false
+         (if (. x# ~(symbol prefix)) true false)))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))
