@@ -1262,6 +1262,18 @@ reduces them without incurring seq initialization"
   "Returns a number one less than num."
   [x] (- x 1))
 
+(defn bit-xor
+  "Bitwise exclusive or"
+  [x y] (js* "return ~{x} ^ ~{n}"))
+
+(defn bit-shift-left
+  "Bitwise shift left"
+  [x n] (js* "return ~{x} << ~{n}"))
+
+(defn bit-shift-right
+  "Bitwise shift right"
+  [x n] (js* "return ~{x} >> ~{n}"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; predicates and logic ;;;;;;;;;;;;;;;;
 
 (defn not
