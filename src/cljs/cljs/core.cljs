@@ -1066,6 +1066,8 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
+(set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs)))
+
 (defn vec [coll]
   (reduce conj cljs.core.Vector/EMPTY coll)) ; using [] here causes infinite recursion
 
@@ -1165,6 +1167,8 @@ reduces them without incurring seq initialization"
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
       (pr-sequential pr-pair "{" ", " "}" opts coll))))
 
+(set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj)))
+
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Each key is hashed and the result used as a property name of
 ; hashobj. Each values in hashobj is actually a bucket in order to handle hash
@@ -1249,6 +1253,13 @@ reduces them without incurring seq initialization"
       (pr-sequential pr-pair "{" ", " "}" opts coll))))
 
 (set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj)))
+
+(set! cljs.core.HashMap/fromArrays (fn [ks vs]
+  (let [len (.length ks)]
+    (loop [i 0, out cljs.core.HashMap/EMPTY]
+      (if (< i len)
+        (recur (inc i) (assoc out (aget ks i) (aget vs i)))
+        out)))))
 
 (defn hash-map
   "keyval => key val

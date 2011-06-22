@@ -163,15 +163,26 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str "cljs.core.with_meta(" (emits expr) "," (emits meta) ")"))))
 
 (defmethod emit :map
-  [{:keys [children env]}]
+  [{:keys [children env simple-keys? keys vals]}]
   (emit-wrap env
-    (print (str "cljs.core.hash_map(" (comma-sep (map emits children)) ")"))))
+    (if simple-keys?
+      (print (str "cljs.core.ObjMap.fromObject(["
+                  (comma-sep (map emits keys)) ; keys
+                  "],{"
+                  (comma-sep (map (fn [k v] (str (emits k) ":" (emits v)))
+                                  keys vals)) ; js obj
+                  "})"))
+      (print (str "cljs.core.HashMap.fromArrays(["
+                  (comma-sep (map emits keys))
+                  "],["
+                  (comma-sep (map emits vals))
+                  "])")))))
 
 (defmethod emit :vector
   [{:keys [children env]}]
   (emit-wrap env
-    (print (str "(new cljs.core.Vector(null, ["
-                (comma-sep (map emits children)) "]))"))))
+    (print (str "cljs.core.Vector.fromArray(["
+                (comma-sep (map emits children)) "])"))))
 
 (defmethod emit :constant
   [{:keys [form env]}]
@@ -688,14 +699,18 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defn analyze-map
   [env form name]
   (let [expr-env (assoc env :context :expr)
-        items (disallowing-recur
-                (map #(analyze expr-env % name) (apply concat form)))]
-    (analyze-wrap-meta {:op :map :env env :form form :children items} name)))
+        simple-keys? (every? #(or (string? %) (keyword? %) (symbol? %))
+                             (keys form))
+        ks (disallowing-recur (vec (map #(analyze expr-env % name) (keys form))))
+        vs (disallowing-recur (vec (map #(analyze expr-env % name) (vals form))))]
+    (analyze-wrap-meta {:op :map :env env :form form :children (vec (concat ks vs))
+                        :keys ks :vals vs :simple-keys? simple-keys?}
+                       name)))
 
 (defn analyze-vector
   [env form name]
   (let [expr-env (assoc env :context :expr)
-        items (disallowing-recur (map #(analyze expr-env % name) form))]
+        items (disallowing-recur (vec (map #(analyze expr-env % name) form)))]
     (analyze-wrap-meta {:op :vector :env env :form form :children items} name)))
 
 (defn analyze-wrap-meta [expr name]
