@@ -97,6 +97,11 @@
 (defn js-obj []
   (js* "return {}"))
 
+(defn js-keys [obj]
+  (let [keys (array)]
+    (goog.object/forEach obj (fn [_ key _] (.push keys key)))
+    keys))
+
 (defn js-delete [obj key]
   (js* "delete ~{obj}[~{key}]"))
 
@@ -453,8 +458,8 @@
     (if (satisfies? ICounted coll)
       (-count coll)
       (loop [s (seq coll) n 0]
-	(if (first s)
-	  (recur (rest s) (inc n))
+	(if s
+	  (recur (next s) (inc n))
 	  n)))
     0))
 
@@ -1067,6 +1072,7 @@ reduces them without incurring seq initialization"
 (defn vector [& args] (vec args))
 
 (extend-protocol IHash
+  goog.global.String (-hash [o] (goog.string/hashCode o))
   goog.global.Number (-hash [o] o))
 
 (defn hash [o]
@@ -1091,17 +1097,14 @@ reduces them without incurring seq initialization"
           i
           (recur (+ i incr)))))))
 
-; Keys is an array of all keys of this map, in no particular order.
-; Any string key is stored along with its value in strobj. If a string key is
-; assoc'ed when that same key already exists in strobj, the old value is
-; overwritten.
-; Any non-string key is hashed and the result used as a property name of
-; hashobj. Each values in hashobj is actually a bucket in order to handle hash
-; collisions. A bucket is an array of alternating keys (not their hashes) and
-; vals.
-(deftype HashMap [meta keys strobj hashobj]
+; The keys field is an array of all keys of this map, in no particular
+; order. Any string, keyword, or symbol key is used as a property name
+; to store the value in strobj.  If a key is assoc'ed when that same
+; key already exists in strobj, the old value is overwritten. If a
+; non-string key is assoc'ed, return a HashMap object instead.
+(deftype ObjMap [meta keys strobj]
   IWithMeta
-  (-with-meta [coll meta] (HashMap. meta keys strobj hashobj))
+  (-with-meta [coll meta] (ObjMap. meta keys strobj))
 
   IMeta
   (-meta [coll] meta)
@@ -1120,15 +1123,8 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (> (.length keys) 0)
-      (let [hash-map-seq
-             (fn hash-map-seq [i]
-               (lazy-seq
-                 (when (< i (.length keys))
-                   (cons
-                     (vector (aget keys i) (-lookup coll (aget keys i)))
-                     (hash-map-seq (inc i))))))]
-        (hash-map-seq 0))))
+    (when (pos? (.length keys))
+      (map #(vector % (aget strobj %)) keys)))
 
   ICounted
   (-count [coll] (.length keys))
@@ -1136,17 +1132,9 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (if (goog/isString k)
-      (if (.hasOwnProperty strobj k)
-        (aget strobj k)
-        not-found)
-      ; non-string key
-      (let [h (hash k)
-            bucket (aget hashobj h)
-            i (when bucket (scan-array 2 k bucket))]
-        (if i
-          (aget bucket (inc i))
-          not-found))))
+    (if (and (goog/isString k) (.hasOwnProperty strobj k))
+      (aget strobj k)
+      not-found))
 
   IAssociative
   (-assoc [coll k v]
@@ -1155,64 +1143,112 @@ reduces them without incurring seq initialization"
             overwrite? (.hasOwnProperty new-strobj k)]
         (aset new-strobj k v)
         (if overwrite?
-          (HashMap. meta keys new-strobj hashobj)
+          (ObjMap. meta keys new-strobj)     ; overwrite
           (let [new-keys (array-clone keys)] ; append
             (.push new-keys k)
-            (HashMap. meta new-keys new-strobj hashobj))))
-      ; non-string key
-      (let [h (hash k)
-            bucket (aget hashobj h)]
-        (if bucket
-          (let [new-bucket (array-clone bucket)
-                new-hashobj (goog.object/clone hashobj)]
-            (aset new-hashobj h new-bucket)
-            (if-let [i (scan-array 2 k new-bucket)]
-              (do
-                (aset new-bucket (inc i) v) ; found key, replace
-                (HashMap. meta keys strobj new-hashobj))
-              (let [new-keys (array-clone keys)] ; did not find key, append
-                (.push new-keys k)
-                (.push new-bucket k v)
-                (HashMap. meta new-keys strobj new-hashobj))))
-          (let [new-keys (array-clone keys)
-                new-hashobj (goog.object/clone hashobj)]
-            (.push new-keys k)
-            (aset new-hashobj h (array k v))
-            (HashMap. meta new-keys strobj new-hashobj))))))
-  
+            (ObjMap. meta new-keys new-strobj))))
+      ; non-string key. game over.
+      (with-meta (into (hash-map k v) (seq coll)) meta)))
+
   IMap
   (-dissoc [coll k]
-    (if (goog.isString k)
-      (if (not (.hasOwnProperty strobj k))
-        coll ; key not found, return coll unchanged
-        (let [new-keys (array-clone keys)
-              new-strobj (goog.object/clone strobj)
-              new-count (dec (.length keys))]
-          (.splice new-keys (scan-array 1 k new-keys) 1)
-          (js-delete new-strobj k)
-          (HashMap. meta new-keys new-strobj hashobj)))
-      ; non-string key
-      (let [h (hash k)
-            bucket (aget hashobj h)
-            i (when bucket (scan-array 2 k bucket))]
-        (if (not i)
-          coll ; key not found, return coll unchanged
-          (let [new-keys (array-clone keys)
-                new-hashobj (goog.object/clone hashobj)]
-            (if (> 3 (.length bucket))
-              (js-delete new-hashobj h)
-              (let [new-bucket (array-clone bucket)]
-                (.splice new-bucket i 2)
-                (aset new-hashobj h new-bucket)))
-            (.splice new-keys (scan-array 1 k new-keys) 1)
-            (HashMap. meta new-keys strobj new-hashobj))))))
+    (if (and (goog/isString k) (.hasOwnProperty strobj k))
+      (let [new-keys (array-clone keys)
+            new-strobj (goog.object/clone strobj)]
+        (.splice new-keys (scan-array 1 k new-keys) 1)
+        (js-delete new-strobj k)
+        (HashMap. meta new-keys new-strobj hashobj))
+      coll)) ; key not found, return coll unchanged
 
   IPrintable
   (-pr-seq [coll opts]
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
       (pr-sequential pr-pair "{" ", " "}" opts coll))))
 
-(set! cljs.core.HashMap/EMPTY (HashMap. nil (array) (js-obj) (js-obj)))
+; The keys field is an array of all keys of this map, in no particular
+; order. Each key is hashed and the result used as a property name of
+; hashobj. Each values in hashobj is actually a bucket in order to handle hash
+; collisions. A bucket is an array of alternating keys (not their hashes) and
+; vals.
+(deftype HashMap [meta count hashobj]
+  IWithMeta
+  (-with-meta [coll meta] (HashMap. meta count hashobj))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
+
+; IEmptyableCollection
+; (iempty [coll] coll)
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? count)
+      (let [hashes (js-keys hashobj)]
+        (mapcat #(map vec (partition 2 (aget hashobj %)))
+                hashes))))
+
+  ICounted
+  (-count [coll] count)
+
+  ILookup
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found]
+    (let [h (hash k)
+          bucket (aget hashobj h)
+          i (when bucket (scan-array 2 k bucket))]
+      (if i
+        (aget bucket (inc i))
+        not-found)))
+
+  IAssociative
+  (-assoc [coll k v]
+    (let [h (hash k)
+          bucket (aget hashobj h)]
+      (if bucket
+        (let [new-bucket (array-clone bucket)
+              new-hashobj (goog.object/clone hashobj)]
+          (aset new-hashobj h new-bucket)
+          (if-let [i (scan-array 2 k new-bucket)]
+            (do ; found key, replace
+              (aset new-bucket (inc i) v)
+              (HashMap. meta count new-hashobj))
+            (do ; did not find key, append
+              (.push new-bucket k v)
+              (HashMap. meta (inc count) new-hashobj))))
+        (let [new-hashobj (goog.object/clone hashobj)] ; did not find bucket
+          (aset new-hashobj h (array k v))
+          (HashMap. meta (inc count) new-hashobj)))))
+  
+  IMap
+  (-dissoc [coll k]
+    (let [h (hash k)
+          bucket (aget hashobj h)
+          i (when bucket (scan-array 2 k bucket))]
+      (if (not i)
+        coll ; key not found, return coll unchanged
+        (let [new-hashobj (goog.object/clone hashobj)]
+          (if (> 3 (.length bucket))
+            (js-delete new-hashobj h)
+            (let [new-bucket (array-clone bucket)]
+              (.splice new-bucket i 2)
+              (aset new-hashobj h new-bucket)))
+          (HashMap. meta (dec count) new-hashobj)))))
+
+  IPrintable
+  (-pr-seq [coll opts]
+    (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
+      (pr-sequential pr-pair "{" ", " "}" opts coll))))
+
+(set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj)))
 
 (defn hash-map
   "keyval => key val
@@ -1220,7 +1256,7 @@ reduces them without incurring seq initialization"
   [& keyvals]
   (loop [in (seq keyvals), out cljs.core.HashMap/EMPTY]
     (if in
-      (recur (nnext in) (-assoc out (first in) (second in)))
+      (recur (nnext in) (assoc out (first in) (second in)))
       out)))
 
 (defn conj
@@ -1476,6 +1512,28 @@ reduces them without incurring seq initialization"
   [to from]
   (reduce -conj to from))
 
+(defn partition
+  "Returns a lazy sequence of lists of n items each, at offsets step
+  apart. If step is not supplied, defaults to n, i.e. the partitions
+  do not overlap. If a pad collection is supplied, use its elements as
+  necessary to complete last partition upto n items. In case there are
+  not enough padding elements, return a partition with less than n items."
+  ([n coll]
+     (partition n n coll))
+  ([n step coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (let [p (take n s)]
+           (when (= n (count p))
+             (cons p (partition n step (drop step s))))))))
+  ([n step pad coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (let [p (take n s)]
+           (if (= n (count p))
+             (cons p (partition n step pad (drop step s)))
+             (list (take n (concat p pad)))))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
 (defn pr-sequential [print-one begin sep end opts coll]
@@ -1603,6 +1661,8 @@ reduces them without incurring seq initialization"
   (assert (= (list 3 2 1) [3 2 1]))
   (assert (= [3 2 1] (seq (array 3 2 1))))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
+  (assert (= (hash-map :foo 5)
+             (assoc (cljs.core.ObjMap. (array) (js-obj)) :foo 5)))
 
   (assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
              (pr-str [1 {:a 2 :b 42} (array 3 4)])))
