@@ -115,6 +115,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
          (comma-sep (map #(with-out-str (emit-constant %)) x))
          ")")))
 
+(defmethod emit-constant clojure.lang.Cons [x]
+  (emit-meta-constant x
+    (str "cljs.core.list("
+         (comma-sep (map #(with-out-str (emit-constant %)) x))
+         ")")))
+
 (defmethod emit-constant clojure.lang.IPersistentVector [x]
   (emit-meta-constant x
     (str "(new cljs.core.Vector(null, ["

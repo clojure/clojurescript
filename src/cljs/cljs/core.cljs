@@ -1575,3 +1575,25 @@ reduces them without incurring seq initialization"
   [obj]
   (pr-with-opts obj (pr-opts))
   (newline (pr-opts)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
+
+(defn test-stuff []
+  (assert (= "baz" (name 'foo/bar/baz)))
+  (assert (= "foo/bar" (namespace 'foo/bar/baz)))
+  (assert (= "baz" (name :foo/bar/baz)))
+  ;(assert (= "foo/bar" (namespace :foo/bar/baz)))
+
+  (assert (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
+  (assert (= :a (nth [:a :b :c :d] 0)))
+  (assert (not (= {:a :b :c nil} {:a :b :d nil})))
+  (assert (= (list 3 2 1) [3 2 1]))
+  (assert (= [3 2 1] (seq (array 3 2 1))))
+  (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
+
+  (assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
+             (pr-str [1 {:a 2 :b 42} (array 3 4)])))
+  (assert (= "symbol\"'string"
+             (pr-str (str 'symbol \" \' "string"))))
+  (assert (not (= "one" "two")))
+)
