@@ -363,8 +363,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                            ")")))))
 
 (defmethod emit :js
-  [{:keys [code]}]
-  (print code))
+  [{:keys [env code segs args]}]
+  (emit-wrap env
+             (if code
+               (print code)
+               (print (apply str (interleave (concat segs (repeat nil))
+                                             (concat (map emits args) [nil])))))))
 
 (declare analyze analyze-symbol)
 
@@ -599,16 +603,28 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
          {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)})))))
 
 (defmethod parse 'js*
-  [op env [_ form] _]
+  [op env [_ form & args] _]
   (assert (string? form))
-  (let [interp (fn interp [^String s]
+  (if args
+    (disallowing-recur
+     (let [seg (fn seg [^String s]
                  (let [idx (.indexOf s "~{")]
                    (if (= -1 idx)
                      (list s)
-                     (let [end (.indexOf s "}" idx)
-                           inner (:name (resolve-var env (symbol (subs s (+ 2 idx) end))))]
-                       (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
-    {:env env :op :js :code (apply str (interp form))}))
+                     (let [end (.indexOf s "}" idx)]
+                       (cons (subs s 0 idx) (seg (subs s (inc end))))))))
+           enve (assoc env :context :expr)
+           argexprs (vec (map #(analyze enve %) args))]
+       (prn args)
+       {:env env :op :js :segs (seg form) :args argexprs :children argexprs}))
+    (let [interp (fn interp [^String s]
+                   (let [idx (.indexOf s "~{")]
+                     (if (= -1 idx)
+                       (list s)
+                       (let [end (.indexOf s "}" idx)
+                             inner (:name (resolve-var env (symbol (subs s (+ 2 idx) end))))]
+                         (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
+      {:env env :op :js :code (apply str (interp form))})))
 
 (defn parse-invoke
   [env [f & args]]

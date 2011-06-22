@@ -15,7 +15,9 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies?]))
+                            satisfies?
+
+                            aget]))
 
 (alias 'core 'clojure.core)
 
@@ -108,4 +110,7 @@
 
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))
+
+(defmacro aget [a i]
+  (list 'js* "(~{}[~{}])" a i))
 
