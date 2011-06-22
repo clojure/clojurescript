@@ -347,6 +347,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :deftype*
   [{:keys [t fields]}]
   (let [fields (map munge fields)]
+    (println "\n/**\n* @constructor\n*/")
     (println (str t " = (function (" (comma-sep (map str fields)) "){"))
     (doseq [fld fields]
       (println (str "this." fld " = " fld ";")))
