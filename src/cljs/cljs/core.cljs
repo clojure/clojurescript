@@ -244,6 +244,12 @@
                    s)))]
     (lazy-seq (step pred coll))))
 
+(defn cycle
+  "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
+  [coll] (lazy-seq 
+          (when-let [s (seq coll)] 
+              (concat s (cycle s)))))
+
 (defn repeat
   "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
   ([x] (lazy-seq (cons x (repeat x))))

@@ -159,7 +159,7 @@ does what?
 * DONE counted?
 * create-ns
 * create-struct
-* TODO cycle
+* DONE cycle
 * DONE dec
 * dec'
 * decimal?
