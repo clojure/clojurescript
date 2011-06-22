@@ -8,8 +8,7 @@
 
 (ns cljs.core
   (:require [goog.string :as gstring]
-            [goog.object :as gobject]
-            [goog.string.StringBuffer :as gsb]))
+            [goog.object :as gobject]))
 
 (defprotocol ICounted
   (-count [coll] "constant time count"))
@@ -615,6 +614,7 @@
 (deftype NeverEquiv []
   IEquiv
   (-equiv [o other] false))
+
 (def ^:private never-equiv (NeverEquiv.))
 
 (defn- equiv-map
@@ -1508,7 +1508,7 @@ reduces them without incurring seq initialization"
   "Prints a single object to a string, observing all the
   options given in opts"
   [obj opts]
-  (let [sb (goog.string.StringBuffer.)]
+  (let [sb (gstring/StringBuffer.)]
     (loop [coll (seq (pr-seq obj opts))]
       (when coll
         (.append sb (first coll))
