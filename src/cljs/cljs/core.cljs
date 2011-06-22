@@ -8,6 +8,7 @@
 
 (ns cljs.core
   (:require [goog.string :as gstring]
+            [goog.string.StringBuffer :as gstringbuf]
             [goog.object :as gobject]))
 
 (defn truth_
@@ -1603,9 +1604,9 @@ reduces them without incurring seq initialization"
   (assert (= [3 2 1] (seq (array 3 2 1))))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
 
-  #_(assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
+  (assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
              (pr-str [1 {:a 2 :b 42} (array 3 4)])))
-  #_(assert (= "symbol\"'string"
+  (assert (= "symbol\"'string"
              (pr-str (str 'symbol \" \' "string"))))
   (assert (not (= "one" "two")))
   :ok
