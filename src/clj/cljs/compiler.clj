@@ -19,7 +19,7 @@
 (def js-reserved #{"new" "debugger" "enum" "default" "private" "finally" "in" "import" "package" "with" "throw"
                    "continue" "var" "for" "public" "do" "delete" "instanceof" "yield" "static" "protected" "return"
                    "case" "implements" "typeof" "while" "void" "switch" "export" "class" "function" "extends" "else"
-                   "interface" "try" "let" "catch" "super" "if" "this" "break"})
+                   "interface" "try" "let" "catch" "super" "if" "this" "break" "boolean"})
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
@@ -40,7 +40,7 @@ cljs = {}
 cljs.lang = {}
 //cljs.user = {}
 //goog.provide('cljs.core');
-//goog.provide('cljs.user');
+goog.provide('cljs.user');
 cljs.lang.truth_ = function(x){return x != null && x !== false;}
 cljs.lang.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}
 cljs.lang.original_goog_require = goog.require;
@@ -75,7 +75,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                          (if (get (:defs (@namespaces 'cljs.core)) sym)
                            'cljs.core
                            (-> env :ns :name))
-                         "." (name sym)))))]
+                         "." (munge (name sym))))))]
     {:name nm}))
 
 (defn- comma-sep [xs]
@@ -709,6 +709,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           js (emits ast)]
       (try
         (let [ret (.eval jse js)]
+          ;;(prn js)
           ret)
         (catch Throwable ex
           ;;we eat ns errors because we know goog.provide() will throw when reloaded
