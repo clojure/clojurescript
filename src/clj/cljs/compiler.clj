@@ -627,9 +627,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                              (.contains nstr ".") (symbol nstr)
                              :else
                              (-> env :ns :requires-macros (get (symbol nstr))))]
-              (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) (symbol (name sym))))
+              (and (find-ns nsym) (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) (symbol (name sym)))))
             (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym)))]
-    (when (and mvar (.isMacro mvar))
+    (when (and mvar (.isMacro ^clojure.lang.Var mvar))
       @mvar)))
 
 (defn macroexpand-1 [env form]
@@ -716,8 +716,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           ;;this is what you get when you try to 'teach new developers' via errors (goog/base.js 104)
           (when-not (and (seq? form) (= 'ns (first form)))
             (prn "Error evaluating:" form :as js)
-            (println (str ex))))))
+            (.printStackTrace ex)
+            #_(println (str ex))))))
     (catch Throwable ex
+      (.printStackTrace ex)
       (println (str ex)))))
 
 (defn load-stream [jse stream]
@@ -796,7 +798,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
            :else
            (let [ret (eval1 jse
                             (assoc env :ns (@namespaces *cljs-ns*))
-                            (list 'cljs.core.prn form))]
+                            ;form
+                            (list 'cljs.core.prn form)
+                            ;(list 'goog.global.print form)
+                            )]
+             ;(newline) (flush)
+             ;(println (if (nil? ret) nil (str ret)))
              (recur))))))))
 
 (comment

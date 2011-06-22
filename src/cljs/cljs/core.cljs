@@ -6,9 +6,13 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns cljs.core)
-(goog.require "goog.string.StringBuffer")
-(goog.require "goog.object")
+(ns cljs.core
+  (:require [goog.string :as gstring]
+           ; [goog.object :as gobject] ;;this doesn't let us say goog.object/clone - why?
+            [goog.string.StringBuffer :as gsb]))
+
+;(goog.require "goog.string.StringBuffer")
+(goog.require "goog.object") ;;this shouldn't be needed here
 
 (defprotocol ICounted
   (-count [coll] "constant time count"))
@@ -99,16 +103,16 @@
   (js* "return ~{o} instanceof ~{t};"))
 
 (defn string? [x]
-  (and (goog.isString x)
+  (and (goog/isString x)
        (not (or (= (.charAt x 0) \uFDD0)
                 (= (.charAt x 0) \uFDD1)))))
 
 (defn keyword? [x]
-  (and (goog.isString x)
+  (and (goog/isString x)
        (= (.charAt x 0) \uFDD0)))
 
 (defn symbol? [x]
-  (and (goog.isString x)
+  (and (goog/isString x)
        (= (.charAt x 0) \uFDD1)))
 
 (defn str
@@ -632,13 +636,13 @@
 ;;; LazySeq ;;;
 
 (defn- lazy-seq-value [lazy-seq]
-  (let [x lazy-seq.x]
-    (if lazy-seq.realized
+  (let [x (.x lazy-seq)]
+    (if (.realized lazy-seq)
       x
       (do
         (set! lazy-seq.x (x))
         (set! lazy-seq.realized true)
-        lazy-seq.x))))
+        (.x lazy-seq)))))
 
 (deftype LazySeq [meta realized x]
   IWithMeta
@@ -761,7 +765,7 @@
   IPrintable
   (-pr-seq [coll opts] (list "()")))
 
-(set! cljs.core.List.EMPTY (EmptyList. nil))
+(set! cljs.core.List/EMPTY (EmptyList. nil))
 
 (defn list [& items]
   (reduce conj () (reverse items)))
@@ -1036,10 +1040,10 @@ reduces them without incurring seq initialization"
   IPrintable
   (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll)))
 
-(set! cljs.core.Vector.EMPTY (Vector. nil (array)))
+(set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
 (defn vec [coll]
-  (reduce conj cljs.core.Vector.EMPTY coll)) ; using [] here causes infinite recursion
+  (reduce conj cljs.core.Vector/EMPTY coll)) ; using [] here causes infinite recursion
 
 (defn vector [& args] (vec args))
 
@@ -1113,7 +1117,7 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (if (goog.isString k)
+    (if (goog/isString k)
       (if (.hasOwnProperty strobj k)
         (aget strobj k)
         not-found)
@@ -1127,8 +1131,8 @@ reduces them without incurring seq initialization"
 
   IAssociative
   (-assoc [coll k v]
-    (if (goog.isString k)
-      (let [new-strobj (goog.object.clone strobj)
+    (if (goog/isString k)
+      (let [new-strobj (goog.object/clone strobj)
             overwrite? (.hasOwnProperty new-strobj k)]
         (aset new-strobj k v)
         (if overwrite?
@@ -1141,7 +1145,7 @@ reduces them without incurring seq initialization"
             bucket (aget hashobj h)]
         (if bucket
           (let [new-bucket (array-clone bucket)
-                new-hashobj (goog.object.clone hashobj)]
+                new-hashobj (goog.object/clone hashobj)]
             (aset new-hashobj h new-bucket)
             (if-let [i (scan-array 2 k new-bucket)]
               (do
@@ -1152,7 +1156,7 @@ reduces them without incurring seq initialization"
                 (.push new-bucket k v)
                 (HashMap. meta new-keys strobj new-hashobj))))
           (let [new-keys (array-clone keys)
-                new-hashobj (goog.object.clone hashobj)]
+                new-hashobj (goog.object/clone hashobj)]
             (.push new-keys k)
             (aset new-hashobj h (array k v))
             (HashMap. meta new-keys strobj new-hashobj))))))
@@ -1163,7 +1167,7 @@ reduces them without incurring seq initialization"
       (if (not (.hasOwnProperty strobj k))
         coll ; key not found, return coll unchanged
         (let [new-keys (array-clone keys)
-              new-strobj (goog.object.clone strobj)
+              new-strobj (goog.object/clone strobj)
               new-count (dec (.length keys))]
           (.splice new-keys (scan-array 1 k new-keys) 1)
           (js-delete new-strobj k)
@@ -1175,7 +1179,7 @@ reduces them without incurring seq initialization"
         (if (not i)
           coll ; key not found, return coll unchanged
           (let [new-keys (array-clone keys)
-                new-hashobj (goog.object.clone hashobj)]
+                new-hashobj (goog.object/clone hashobj)]
             (if (> 3 (.length bucket))
               (js-delete new-hashobj h)
               (let [new-bucket (array-clone bucket)]
@@ -1189,13 +1193,13 @@ reduces them without incurring seq initialization"
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
       (pr-sequential pr-pair "{" ", " "}" opts coll))))
 
-(set! cljs.core.HashMap.EMPTY (HashMap. nil (array) (js-obj) (js-obj)))
+(set! cljs.core.HashMap/EMPTY (HashMap. nil (array) (js-obj) (js-obj)))
 
 (defn hash-map
   "keyval => key val
   Returns a new hash map with supplied mappings."
   [& keyvals]
-  (loop [in (seq keyvals), out cljs.core.HashMap.EMPTY]
+  (loop [in (seq keyvals), out cljs.core.HashMap/EMPTY]
     (if in
       (recur (nnext in) (-assoc out (first in) (second in)))
       out)))
@@ -1484,7 +1488,7 @@ reduces them without incurring seq initialization"
 ; This should be different in different runtime envorionments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
-  (goog.global.print x)
+  (goog.global/print x)
   nil)
 
 (defn flush [] ;stub
