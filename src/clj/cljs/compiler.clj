@@ -363,8 +363,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                            ")")))))
 
 (defmethod emit :js
-  [{:keys [code]}]
-  (print code))
+  [{:keys [env code]}]
+  (emit-wrap env
+             (print code)))
 
 (declare analyze analyze-symbol)
 

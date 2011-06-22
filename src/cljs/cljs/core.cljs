@@ -13,12 +13,12 @@
 (defn truth_
   "Internal - do not use!"
   [x]
-  (js* "return ~{x} != null && ~{x} !== false;"))
+  (js* "(~{x} != null && ~{x} !== false)"))
 
 (defn fn_of_
   "Internal - do not use!"
   [f]
-  (js* "return (~{f} instanceof Function?~{f}:~{f}.cljs$core$Fn$invoke);"))
+  (js* "(~{f} instanceof Function?~{f}:~{f}.cljs$core$Fn$invoke);"))
 
 (defprotocol ICounted
   (-count [coll] "constant time count"))
@@ -94,19 +94,19 @@
   (-pr-seq [o opts]))
 
 (defn js-obj []
-  (js* "return {}"))
+  (js* "{}"))
 
 (defn js-delete [obj key]
   (js* "delete ~{obj}[~{key}]"))
 
 (defn identical? [x y]
-  (js* "return ~{x} === ~{y}"))
+  (js* "(~{x} === ~{y})"))
 
 (defn nil? [x]
   (identical? x nil))
 
 (defn instance? [t o]
-  (js* "return ~{o} instanceof ~{t};"))
+  (js* "(~{o} instanceof ~{t})"))
 
 (defn boolean [x]
   (if x true false))
@@ -595,19 +595,19 @@
 
 (defn- array-clone [array-like]
   #_(goog.array.clone array-like)
-  (js* "return Array.prototype.slice.call(~{array-like});"))
+  (js* "Array.prototype.slice.call(~{array-like})"))
 
 (defn array [& items]
   (array-clone items))
 
 (defn aget [array i]
-  (js* "return ~{array}[~{i}]"))
+  (js* "~{array}[~{i}]"))
 
 (defn aset [array i val]
-  (js* "return ~{array}[~{i}] = ~{val}"))
+  (js* "(~{array}[~{i}] = ~{val})"))
 
 (defn alength [array]
-  (js* "return ~{array}.length"))
+  (js* "~{array}.length"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; equality ;;;;;;;;;;;;;;
 
@@ -1240,35 +1240,35 @@ reduces them without incurring seq initialization"
   "Returns the sum of nums. (+) returns 0."
   ([] 0)
   ([x] x)
-  ([x y] (js* "return ~{x} + ~{y};"))
+  ([x y] (js* "(~{x} + ~{y})"))
   ([x y & more] (reduce + (+ x y) more)))
 
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
-  ([x] (js* "return - ~{x};"))
-  ([x y] (js* "return ~{x} - ~{y};"))
+  ([x] (js* "(- ~{x})"))
+  ([x y] (js* "(~{x} - ~{y})"))
   ([x y & more] (reduce - (- x y) more)))
 
 (defn *
   "Returns the product of nums. (*) returns 1."
   ([] 1)
   ([x] x)
-  ([x y] (js* "return ~{x} * ~{y};"))
+  ([x y] (js* "(~{x} * ~{y})"))
   ([x y & more] (reduce * (* x y) more)))
 
 (defn /
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."  
-  ([x] (js* "return 1 / ~{x};"))
-  ([x y] (js* "return ~{x} / ~{y};"))
+  ([x] (js* "(1 / ~{x})"))
+  ([x y] (js* "(~{x} / ~{y})"))
   ([x y & more] (reduce / (/ x y) more)))
 
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "return ~{x} < ~{y};"))
+  ([x y] (js* "(~{x} < ~{y})"))
   ([x y & more]
      (if (< x y)
        (if (next more)
@@ -1280,7 +1280,7 @@ reduces them without incurring seq initialization"
   "Returns non-nil if nums are in monotonically non-decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "return ~{x} <= ~{y};"))
+  ([x y] (js* "(~{x} <= ~{y})"))
   ([x y & more]
    (if (<= x y)
      (if (next more)
@@ -1292,7 +1292,7 @@ reduces them without incurring seq initialization"
   "Returns non-nil if nums are in monotonically decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "return ~{x} > ~{y};"))
+  ([x y] (js* "(~{x} > ~{y})"))
   ([x y & more]
    (if (> x y)
      (if (next more)
@@ -1304,7 +1304,7 @@ reduces them without incurring seq initialization"
   "Returns non-nil if nums are in monotonically non-increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "return ~{x} >= ~{y};"))
+  ([x y] (js* "(~{x} >= ~{y})"))
   ([x y & more]
    (if (>= x y)
      (if (next more)
@@ -1322,15 +1322,15 @@ reduces them without incurring seq initialization"
 
 (defn bit-xor
   "Bitwise exclusive or"
-  [x y] (js* "return ~{x} ^ ~{n}"))
+  [x y] (js* "(~{x} ^ ~{n})"))
 
 (defn bit-shift-left
   "Bitwise shift left"
-  [x n] (js* "return ~{x} << ~{n}"))
+  [x n] (js* "(~{x} << ~{n})"))
 
 (defn bit-shift-right
   "Bitwise shift right"
-  [x n] (js* "return ~{x} >> ~{n}"))
+  [x n] (js* "(~{x} >> ~{n})"))
 
 (defn ==
   "Returns non-nil if nums all have the equivalent
