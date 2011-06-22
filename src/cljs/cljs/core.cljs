@@ -8,11 +8,8 @@
 
 (ns cljs.core
   (:require [goog.string :as gstring]
-           ; [goog.object :as gobject] ;;this doesn't let us say goog.object/clone - why?
+            [goog.object :as gobject]
             [goog.string.StringBuffer :as gsb]))
-
-;(goog.require "goog.string.StringBuffer")
-(goog.require "goog.object") ;;this shouldn't be needed here
 
 (defprotocol ICounted
   (-count [coll] "constant time count"))

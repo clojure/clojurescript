@@ -9,12 +9,12 @@
 (set! *warn-on-reflection* true)
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge load-file loaded-libs require macroexpand-1])
+  (:refer-clojure :exclude [munge load-file loaded-libs macroexpand-1])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]))
 
 (declare resolve-var)
-(clojure.core/require 'cljs.core)
+(require 'cljs.core)
 
 (def js-reserved #{"new" "debugger" "enum" "default" "private" "finally" "in" "import" "package" "with" "throw"
                    "continue" "var" "for" "public" "do" "delete" "instanceof" "yield" "static" "protected" "return"
@@ -36,15 +36,15 @@
 ;;todo - move to core.cljs, using js
 (def ^String bootjs "
 //goog.provide should do this for us
-//cljs = {}
-//cljs.core = {}
+cljs = {}
+cljs.lang = {}
 //cljs.user = {}
-goog.provide('cljs.core');
-goog.provide('cljs.user');
-cljs.core.truth_ = function(x){return x != null && x !== false;}
-cljs.core.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}
-cljs.core.original_goog_require = goog.require;
-goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\",\"require\").invoke(goog.global.cljs_javascript_engine, rule);}
+//goog.provide('cljs.core');
+//goog.provide('cljs.user');
+cljs.lang.truth_ = function(x){return x != null && x !== false;}
+cljs.lang.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}
+cljs.lang.original_goog_require = goog.require;
+goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\",\"goog-require\").invoke(goog.global.cljs_javascript_engine, rule);}
 ")
 
 (defn resolve-ns-alias [env name]
@@ -174,8 +174,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   [{:keys [test then else env]}]
   (let [context (:context env)]
     (if (= :expr context)
-      (print (str "(cljs.core.truth_(" (emits test) ")?" (emits then) ":" (emits else) ")"))
-      (print (str "if(cljs.core.truth_(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n")))))
+      (print (str "(cljs.lang.truth_(" (emits test) ")?" (emits then) ":" (emits else) ")"))
+      (print (str "if(cljs.lang.truth_(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n")))))
 
 (defmethod emit :throw
   [{:keys [throw env]}]
@@ -313,7 +313,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :invoke
   [{:keys [f args env]}]
   (emit-wrap env
-             (print (str "cljs.core.fnOf_(" (emits f) ")("
+             (print (str "cljs.lang.fnOf_(" (emits f) ")("
                          (comma-sep (map emits args))
                          ")"))))
 
@@ -556,7 +556,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                                         libs))))
                 {} args)]
     (set! *cljs-ns* name)
-    (clojure.core/require 'cljs.core)
+    (require 'cljs.core)
     (doseq [nsym (vals requires-macros)]
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
@@ -714,7 +714,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           ;;we eat ns errors because we know goog.provide() will throw when reloaded
           ;;TODO - file bug with google, this is bs error
           ;;this is what you get when you try to 'teach new developers' via errors (goog/base.js 104)
-          (when-not (and (seq? form) (= 'ns (first form)))
+          (when-not false ;;(and (seq? form) (= 'ns (first form)))
             (prn "Error evaluating:" form :as js)
             (.printStackTrace ex)
             #_(println (str ex))))))
@@ -742,7 +742,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (def loaded-libs (atom #{}))
 
-(defn require [^javax.script.ScriptEngine jse rule]
+(defn goog-require [^javax.script.ScriptEngine jse rule]
   (when-not (contains? @loaded-libs rule)
     (let [path (string/replace (munge rule) \. java.io.File/separatorChar)
           cljs-path (str path ".cljs")

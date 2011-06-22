@@ -102,7 +102,7 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (cljs.core.nil? x#)
+       (if (cljs.core/nil? x#)
          false
          (if (. x# ~(symbol prefix)) true false)))))
 
