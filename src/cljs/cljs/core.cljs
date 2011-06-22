@@ -10,6 +10,16 @@
   (:require [goog.string :as gstring]
             [goog.object :as gobject]))
 
+(defn truth_
+  "Internal - do not use!"
+  [x]
+  (js* "return ~{x} != null && ~{x} !== false;"))
+
+(defn fn_of_
+  "Internal - do not use!"
+  [f]
+  (js* "return (~{f} instanceof Function?~{f}:~{f}.cljs$core$Fn$invoke);"))
+
 (defprotocol ICounted
   (-count [coll] "constant time count"))
 
@@ -128,8 +138,9 @@
   ([s start] (.substring s start))
   ([s start end] (.substring s start end)))
 
-(defn name [x]
+(defn name
   "Returns the name String of a string, symbol or keyword."
+  [x]
   (cond
     (string? x) x
     (or (keyword? x) (symbol? x))
@@ -139,8 +150,9 @@
           (subs x (inc i))))
     :else nil #_(throw (str "Doesn't support name: " x))))
 
-(defn namespace [x]
+(defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
+  [x]
   (if (or (keyword? x) (symbol? x))
     (let [i (.lastIndexOf x "/")]
       (when (> i -1)
@@ -1591,9 +1603,10 @@ reduces them without incurring seq initialization"
   (assert (= [3 2 1] (seq (array 3 2 1))))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
 
-  (assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
+  #_(assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
              (pr-str [1 {:a 2 :b 42} (array 3 4)])))
-  (assert (= "symbol\"'string"
+  #_(assert (= "symbol\"'string"
              (pr-str (str 'symbol \" \' "string"))))
   (assert (not (= "one" "two")))
+  :ok
 )
