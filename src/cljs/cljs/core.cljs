@@ -98,6 +98,9 @@
 (defn instance? [t o]
   (js* "return ~{o} instanceof ~{t};"))
 
+(defn boolean [x]
+  (if x true false))
+
 (defn string? [x]
   (and (goog/isString x)
        (not (or (= (.charAt x 0) \uFDD0)
@@ -609,7 +612,7 @@
   "Assumes y is sequential. Returns true if x equals y, otherwise
   returns false."
   [x y]
-  (truth_
+  (boolean
     (when (sequential? y)
       (if (and (counted? x) (counted? y))
         (when (= (count x) (count y))
@@ -627,7 +630,7 @@
   "Assumes y is a map. Returns true if x equals y, otherwise returns
   false."
   [x y]
-  (truth_
+  (boolean
     (when (map? y)
       ; assume all maps are counted
       (when (= (count x) (count y))
