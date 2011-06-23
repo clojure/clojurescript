@@ -235,10 +235,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                (print "})"))))
 
 (defmethod emit :fn
-  [{:keys [name env methods max-fixed-arity]}]
+  [{:keys [name env methods max-fixed-arity variadic]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
-    (emit-fn-prefix name max-fixed-arity)
+    (when variadic
+      (emit-fn-prefix name max-fixed-arity))
     (if (= 1 (count methods))
       (emit-fn-method (assoc (first methods) :name name))
       (let [name (or name (gensym))
@@ -264,7 +265,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println "};")
         (println (str "return " name ";"))
         (println "})()")))
-    (emit-fn-postfix name max-fixed-arity)))
+    (when variadic
+      (emit-fn-postfix name max-fixed-arity))))
 
 (defmethod emit :do
   [{:keys [statements ret env]}]
@@ -498,7 +500,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         max-fixed-arity (apply max (map :fixed-arity methods))]
     ;;(assert (= 1 (count methods)) "Arity overloading not yet supported")
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :name mname :methods methods :max-fixed-arity max-fixed-arity}))
+    {:env env :op :fn :name mname :methods methods :variadic (some :variadic methods) :max-fixed-arity max-fixed-arity}))
 
 (defmethod parse 'do
   [op env [_ & exprs] _]
@@ -626,7 +628,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                        (cons (subs s 0 idx) (seg (subs s (inc end))))))))
            enve (assoc env :context :expr)
            argexprs (vec (map #(analyze enve %) args))]
-       (prn args)
        {:env env :op :js :segs (seg form) :args argexprs :children argexprs}))
     (let [interp (fn interp [^String s]
                    (let [idx (.indexOf s "~{")]
