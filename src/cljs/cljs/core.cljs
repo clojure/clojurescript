@@ -99,7 +99,7 @@
 
 (defn js-keys [obj]
   (let [keys (array)]
-    (goog.object/forEach obj (fn [_ key _] (.push keys key)))
+    (goog.object/forEach obj (fn [val key obj] (.push keys key)))
     keys))
 
 (defn js-delete [obj key]
