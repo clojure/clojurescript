@@ -17,7 +17,7 @@
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies?
 
-                            aget]))
+                            aget aset]))
 
 (alias 'core 'clojure.core)
 
@@ -39,27 +39,53 @@
   or
   when when-first when-let when-not while])
 
+(defmacro aget [a i]
+  (list 'js* "(~{}[~{}])" a i))
+
+(defmacro aset [a i v]
+  (list 'js* "(~{}[~{}] = ~{})" a i v))
+
 (defn- protocol-prefix [psym]
   (str (.replace (str psym) \. \$) "$"))
+
+(def #^:private base-type
+     {nil "null"
+      'object "object"
+      'string "string"
+      'number "number"
+      'array "array"
+      'function "function"
+      'boolean "boolean"
+      'default "_"})
 
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (str "Can't resolve: " %))
                    ret)
-        t (resolve tsym)
-        prototype-prefix (str t ".prototype.")
         impl-map (loop [ret {} s impls]
                    (if (seq s)
                      (recur (assoc ret (resolve (first s)) (take-while seq? (next s)))
                             (drop-while seq? (next s)))
-                     ret))
-        assign-impls (fn [[psym sigs]]
-                       (let [pprefix (protocol-prefix psym)]
-                         (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
-                               (map (fn [[f & meths]]
-                                      `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
-                                    sigs))))]
-    `(do ~@(mapcat assign-impls impl-map))))
+                     ret))]
+    (if (base-type tsym)
+      (let [t (base-type tsym)
+            assign-impls (fn [[psym sigs]]
+                           (let [pfn-prefix (subs (str psym) 0 (inc (.lastIndexOf (str psym) ".")))]
+                             (cons `(aset ~psym ~t true)
+                                   (map (fn [[f & meths]]
+                                          `(aset ~(symbol (str pfn-prefix f)) ~t (fn* ~@meths)))
+                                        sigs))))]
+        `(do ~@(mapcat assign-impls impl-map)))
+      (let [t (resolve tsym)
+            prototype-prefix (str t ".prototype.")
+            
+            assign-impls (fn [[psym sigs]]
+                           (let [pprefix (protocol-prefix psym)]
+                             (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
+                                   (map (fn [[f & meths]]
+                                          `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
+                                        sigs))))]
+        `(do ~@(mapcat assign-impls impl-map))))))
 
 (defmacro deftype [t fields & impls]
   (let [adorn-params (fn [sig]
@@ -77,8 +103,7 @@
                                          []
                                          (group-by first (take-while seq? (next s))))))
                             (drop-while seq? (next s)))
-                     ret)))
-        ]
+                     ret)))]
     (if (seq impls)
       `(do
          (deftype* ~t ~fields)
@@ -89,14 +114,20 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)
         methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
-        expand-sig (fn [slot sig]
-                     `(~sig (. ~(first sig) ~slot ~@sig)))
+        expand-sig (fn [fname slot sig]
+                     `(~sig
+                       (if (and ~(first sig) (. ~(first sig) ~slot))
+                         (. ~(first sig) ~slot ~@sig)
+                         ((or 
+                           (aget ~fname (goog.typeOf ~(first sig)))
+                           (aget ~fname "_"))
+                          ~@sig))))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
                        slot (symbol (str prefix (name fname)))]
-                   `(defn ~fname ~@(map #(expand-sig slot %) sigs))))]
+                   `(defn ~fname ~@(map #(expand-sig fname slot %) sigs))))]
     `(do
-       (def ~psym ~prefix)
+       (def ~psym (~'js* "{}"))
        ~@(map method methods))))
 
 (defmacro satisfies?
@@ -104,15 +135,12 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (cljs.core/nil? x#)
-         false
-         (if (. x# ~(symbol prefix)) true false)))))
+       (if (and x# (. x# ~(symbol prefix)))
+         true
+         (cljs.core/type_satisfies_ ~psym x#)))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))
-
-(defmacro aget [a i]
-  (list 'js* "(~{}[~{}])" a i))
 
 (defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to

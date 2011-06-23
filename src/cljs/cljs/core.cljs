@@ -21,6 +21,14 @@
   [f]
   (js* "(~{f} instanceof Function?~{f}:~{f}.cljs$core$Fn$invoke);"))
 
+(defn type_satisfies_
+  "Internal - do not use!"
+  [p x]
+  (or
+   (aget p (goog.typeOf x))
+   (aget p "_")
+   false))
+
 (defprotocol ICounted
   (-count [coll] "constant time count"))
 

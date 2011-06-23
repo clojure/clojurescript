@@ -844,12 +844,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
            :else
            (let [ret (eval1 jse
                             (assoc env :ns (@namespaces *cljs-ns*))
-                            ;form
+                            ;;form
                             (list 'cljs.core.prn form)
                             ;(list 'goog.global.print form)
                             )]
              ;(newline) (flush)
-             ;(println (if (nil? ret) nil (str ret)))
+             ;;(prn (if (nil? ret) nil ret))
              (recur))))))))
 
 (comment
@@ -861,7 +861,22 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 ;having problems?, try verbose mode
 (comp/repl jse :verbose true)
 
-(+ 1 2)
+(+ 1 2 3)
+(extend-type number ISeq (-seq [x] x))
+(seq 42)
+;(aset cljs.core.ISeq "number" true)
+;(aget cljs.core.ISeq "number")
+(satisfies? ISeq 42)
+(extend-type nil ISeq (-seq [x] x))
+(satisfies? ISeq nil)
+(seq nil)
+
+(extend-type default ISeq (-seq [x] x))
+(satisfies? ISeq true)
+(seq true)
+
+(test-stuff)
+
 (in-ns 'cljs.core)
 ;;hack on core
 
