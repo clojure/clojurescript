@@ -1,0 +1,22 @@
+#!/bin/sh
+
+java -server -Xmx2G -Xms2G -Xmn256m -cp 'lib/*:src/clj:src/cljs' clojure.main - > core.js <<CLJ
+(require :reload '[cljs.compiler :as comp] '[cljs.core])
+(binding [comp/*cljs-verbose* true]
+  (comp/load-file (:jse (comp/repl-env)) "cljs/core.cljs"))
+CLJ
+
+java -jar closure/compiler/compiler.jar \
+  --compilation_level=ADVANCED_OPTIMIZATIONS \
+  --warning_level=VERBOSE \
+  --formatting=PRETTY_PRINT \
+  --jscomp_off=undefinedVars \
+  --jscomp_off=missingProperties \
+  --js closure/library/closure/goog/base.js \
+  --js closure/library/closure/goog/string/string.js \
+  --js closure/library/closure/goog/useragent/jscript.js \
+  --js closure/library/closure/goog/string/stringbuffer.js \
+  --js closure/library/closure/goog/object/object.js \
+  --js core.js \
+  > coreadvanced.js
+
