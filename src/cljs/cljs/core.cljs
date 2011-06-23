@@ -119,6 +119,9 @@
 (defn nil? [x]
   (identical? x nil))
 
+(defn undefined? [x]
+  (js* "(void 0 === ~{x})"))
+
 (defn instance? [t o]
   (js* "(~{o} instanceof ~{t})"))
 
@@ -440,7 +443,7 @@
 (defn not-every?
   "Returns false if (pred x) is logical true for every x in
   coll, else true."
-  [pred coll] (not (every pred coll)))
+  [pred coll] (not (every? pred coll)))
 
 (defn some
   "Returns the first logical true value of (pred x) for any x in coll,
@@ -736,7 +739,7 @@
 
   IStack
   (-peek [coll] first)
-  (-pop [coll] (irest coll))
+  (-pop [coll] (-rest coll))
 
   ICollection
   (-conj [coll o] (List. meta o coll (inc count)))
@@ -846,7 +849,7 @@
        (if (< n (-count string)) (.charAt string n)))
     ([string n not-found]
        (if (< n (-count string)) (.charAt string n)
-           not_found)))
+           not-found)))
 
   goog.global.Array
   (-nth
@@ -1378,7 +1381,7 @@ reduces them without incurring seq initialization"
 
 (defn bit-xor
   "Bitwise exclusive or"
-  [x y] (js* "(~{x} ^ ~{n})"))
+  [x y] (js* "(~{x} ^ ~{y})"))
 
 (defn bit-shift-left
   "Bitwise shift left"
@@ -1671,7 +1674,7 @@ reduces them without incurring seq initialization"
 (defn- pr-seq [obj opts]
   (cond
     (nil? obj) (list "nil")
-    (identical? undefined obj) (list "#<undefined>")
+    (undefined? obj) (list "#<undefined>")
     :else (concat
             (when (and (get opts :meta)
                        (satisfies? IMeta obj)
