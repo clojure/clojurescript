@@ -211,7 +211,7 @@ For macros only, uses clojure.core version
 * error-mode
 * eval
 * TODO even?
-* TODO every-pred
+* DONE every-pred
 * DONE every?
 * TODO extend
 maybe not?
@@ -486,7 +486,7 @@ as macro
 * shutdown-agents
 * slurp
 * DONE some
-* TODO some-fn
+* DONE some-fn
 * TODO sort
 * TODO sort-by
 * TODO sorted-map
