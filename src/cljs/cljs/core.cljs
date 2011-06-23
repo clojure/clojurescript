@@ -1159,7 +1159,7 @@ reduces them without incurring seq initialization"
             new-strobj (goog.object/clone strobj)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
-        (HashMap. meta new-keys new-strobj hashobj))
+        (ObjMap. meta new-keys new-strobj))
       coll)) ; key not found, return coll unchanged
 
   IPrintable
@@ -1672,8 +1672,9 @@ reduces them without incurring seq initialization"
   (assert (= (list 3 2 1) [3 2 1]))
   (assert (= [3 2 1] (seq (array 3 2 1))))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
+  (assert (= {:a :b} (dissoc {:a :b :c :d} :c)))
   (assert (= (hash-map :foo 5)
-             (assoc (cljs.core.ObjMap. (array) (js-obj)) :foo 5)))
+             (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5)))
 
   (assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
              (pr-str [1 {:a 2 :b 42} (array 3 4)])))
