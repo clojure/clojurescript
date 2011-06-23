@@ -114,3 +114,16 @@
 (defmacro aget [a i]
   (list 'js* "(~{}[~{}])" a i))
 
+(defmacro assert
+  "Evaluates expr and throws an exception if it does not evaluate to
+  logical true."
+  ([x]
+     (when *assert*
+       `(when-not ~x
+          (throw (cljs.core/str
+                   "Assert failed: " (cljs.core/pr-str '~x))))))
+  ([x message]
+     (when *assert*
+       `(when-not ~x
+          (throw (cljs.core/str
+                   "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
