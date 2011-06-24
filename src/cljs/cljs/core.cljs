@@ -144,6 +144,9 @@
   (and (goog/isString x)
        (= (.charAt x 0) \uFDD1)))
 
+(defn fn? [f]
+  (goog/isFunction f))
+
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
