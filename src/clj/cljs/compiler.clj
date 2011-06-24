@@ -91,7 +91,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
 (defmethod emit-constant Character [x] (pr (str x)))
 
-(defmethod emit-constant clojure.lang.Keyword [x] (pr (str \uFDD0 \: (name x))))
+(defmethod emit-constant clojure.lang.Keyword [x]
+           (pr (str \uFDD0 \'
+                    (if (namespace x)
+                      (str (namespace x) "/") "")
+                    (name x))))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
            (pr (str \uFDD1 \'
