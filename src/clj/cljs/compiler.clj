@@ -228,7 +228,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                (when gthis
                  (println (str "var " gthis " = this;")))
                (when variadic
-                 (println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
+                 (println (str (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
+                 #_(println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
                (when recurs (print "while(true){\n"))
                (emit-block :return statements ret)
                (when recurs (print "break;\n}\n"))
@@ -872,6 +873,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 ;having problems?, try verbose mode
 (comp/repl repl-env :verbose true)
 
+(test-stuff)
 (+ 1 2 3)
 (extend-type number ISeq (-seq [x] x))
 (seq 42)
@@ -887,6 +889,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (seq true)
 
 (test-stuff)
+
+(array-seq [])
+(defn f [& etc] etc)
+(f)
 
 (in-ns 'cljs.core)
 ;;hack on core

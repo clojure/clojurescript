@@ -614,8 +614,8 @@
   #_(goog.array.clone array-like)
   (js* "Array.prototype.slice.call(~{array-like})"))
 
-(defn array [& items]
-  (array-clone items))
+(defn array [var-args];; [& items]
+  (js* "Array.prototype.slice.call(arguments)"))
 
 (defn aget [array i]
   (js* "~{array}[~{i}]"))
@@ -715,9 +715,10 @@
   (prim-seq array i))
 
 (defn prim-seq [prim i]
-  (lazy-seq
-    (when (< i (-count prim))
-      (cons (-nth prim i) (prim-seq prim (inc i))))))
+  (when-not (= 0 (-count prim))
+    (lazy-seq
+     (when (< i (-count prim))
+       (cons (-nth prim i) (prim-seq prim (inc i)))))))
 
 (extend-protocol ISeqable
   string
