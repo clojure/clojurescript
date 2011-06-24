@@ -744,15 +744,21 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         :else {:op :constant :env env :form form}))))
 
 (defn eval1
-  [^javax.script.ScriptEngine jse env form]
+  [repl-env env form]
   (try
     (let [ast (analyze env form)
-          js (emits ast)]
+          js (emits ast)
+          jse ^javax.script.ScriptEngine (:jse repl-env)]
       (try
         (when *cljs-verbose*
             (print js))
-        (let [ret (.eval jse js)]
-          ret)
+        (let [filename (.get jse javax.script.ScriptEngine/FILENAME)
+              linenum (or (:line (meta form)) Integer/MIN_VALUE)
+              ctx (sun.org.mozilla.javascript.internal.Context/enter)]
+          (try
+            (.evaluateString ctx (:global repl-env) js filename linenum nil)
+          (finally
+            (sun.org.mozilla.javascript.internal.Context/exit))))
         (catch Throwable ex
           ;;we eat ns errors because we know goog.provide() will throw when reloaded
           ;;TODO - file bug with google, this is bs error
@@ -765,7 +771,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (.printStackTrace ex)
       (println (str ex)))))
 
-(defn load-stream [jse stream]
+(defn load-stream [repl-env stream]
   (with-open [r (io/reader stream)]
     (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
           pbr (clojure.lang.LineNumberingPushbackReader. r)
@@ -773,26 +779,28 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (loop [r (read pbr false eof false)]
         (let [env (assoc env :ns (@namespaces *cljs-ns*))]
           (when-not (identical? eof r)
-            (eval1 jse env r)
+            (eval1 repl-env env r)
             (recur (read pbr false eof false))))))))
 
 (defn load-file
-  [jse f]
+  [repl-env f]
   (binding [*cljs-ns* 'cljs.user]
     (let [res (if (= \/ (first f)) f (io/resource f))]
       (assert res (str "Can't find " f " in classpath"))
-      (load-stream jse res))))
+      (.put (:jse repl-env) javax.script.ScriptEngine/FILENAME f)
+      (load-stream repl-env res))))
 
 (def loaded-libs (atom #{}))
 
-(defn goog-require [^javax.script.ScriptEngine jse rule]
+(defn goog-require [repl-env rule]
   (when-not (contains? @loaded-libs rule)
-    (let [path (string/replace (munge rule) \. java.io.File/separatorChar)
+    (let [jse ^javax.script.ScriptEngine (:jse repl-env)
+          path (string/replace (munge rule) \. java.io.File/separatorChar)
           cljs-path (str path ".cljs")
           js-path (str "goog/" (.eval jse (str "goog.dependencies_.nameToPath['" rule "']")))]
       (if-let [res (io/resource cljs-path)]
         (binding [*cljs-ns* 'cljs.user]
-          (load-stream jse res))
+          (load-stream repl-env res))
         (if-let [res (io/resource js-path)]
           (.eval jse (io/reader res))
           (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
@@ -804,18 +812,19 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   []
   (let [jse (-> (javax.script.ScriptEngineManager.) (.getEngineByName "JavaScript"))
         base (io/resource "goog/base.js")
-        deps (io/resource "goog/deps.js")]
+        deps (io/resource "goog/deps.js")
+        new-repl-env {:jse jse :global (.eval jse "this")}]
     (assert base "Can't find goog/base.js in classpath")
     (assert deps "Can't find goog/deps.js in classpath")
     (.put jse javax.script.ScriptEngine/FILENAME "goog/base.js")
-    (.put jse "cljs_javascript_engine" jse)
+    (.put jse "cljs_javascript_engine" new-repl-env)
     (with-open [r (io/reader base)]
       (.eval jse r))
     (.eval jse bootjs)
     ;; Load deps.js line-by-line to avoid 64K method limit
     (doseq [^String line (line-seq (io/reader deps))]
       (.eval jse line))
-    {:jse jse}))
+    new-repl-env))
 
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
@@ -823,11 +832,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (prn "Type: " :cljs/quit " to quit")
   (binding [*cljs-ns* 'cljs.user
             *cljs-verbose* verbose]
-    (let [jse (:jse repl-env)
-          env {:context :statement :locals {}}]
-      (load-file (:jse repl-env) "cljs/core.cljs")
-      (eval1 jse (assoc env :ns (@namespaces *cljs-ns*))
+    (let [env {:context :statement :locals {}}]
+      (load-file repl-env "cljs/core.cljs")
+      (eval1 repl-env (assoc env :ns (@namespaces *cljs-ns*))
              '(ns cljs.user))
+      (.put (:jse repl-env) javax.script.ScriptEngine/FILENAME "<cljs repl>")
       (loop []
         (print (str "ClojureScript:" *cljs-ns* "> "))
         (flush)
@@ -839,10 +848,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
            (do (set! *cljs-ns* (second (second form))) (newline) (recur))
 
            (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
-           (do (load-file jse (second form)) (newline) (recur))
+           (do (load-file repl-env (second form)) (newline) (recur))
            
            :else
-           (let [ret (eval1 jse
+           (let [ret (eval1 repl-env
                             (assoc env :ns (@namespaces *cljs-ns*))
                             ;;form
                             (list 'cljs.core.prn form)
@@ -856,10 +865,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 ;;the new way - use the REPL!!
 (require '[cljs.compiler :as comp])
-(def jse (comp/repl-env))
-(comp/repl jse)
+(def repl-env (comp/repl-env))
+(comp/repl repl-env)
 ;having problems?, try verbose mode
-(comp/repl jse :verbose true)
+(comp/repl repl-env :verbose true)
 
 (+ 1 2 3)
 (extend-type number ISeq (-seq [x] x))
