@@ -32,8 +32,8 @@
 (defprotocol ICounted
   (-count [coll] "constant time count"))
 
-#_(defprotocol IEmptyableCollection
-    (-empty [coll]))
+(defprotocol IEmptyableCollection
+  (-empty [coll]))
 
 (defprotocol ICollection
   (-conj [coll o]))
@@ -693,8 +693,8 @@
   ICollection
   (-conj [coll o] (cons o coll))
 
-; IEmptyableCollection
-; (iempty [coll] coll)
+  IEmptyableCollection
+  (-iempty [coll] coll)
 
   ISequential
   IEquiv
@@ -744,8 +744,8 @@
   ICollection
   (-conj [coll o] (List. meta o coll (inc count)))
 
-; IEmptyableCollection
-; (iempty [coll] coll)
+  IEmptyableCollection
+  (-iempty [coll] coll)
 
   ISequential
   IEquiv
@@ -781,8 +781,8 @@
   ICollection
   (-conj [coll o] (List. meta o nil 1))
 
-; IEmptyableCollection
-; (iempty [coll] coll)
+  IEmptyableCollection
+  (-iempty [coll] coll)
 
   ISequential
   IEquiv
@@ -819,8 +819,8 @@
   ICollection
   (-conj [coll o] (Cons. nil o coll))
 
-; IEmptyableCollection
-; (iempty [coll] List.EMPTY)
+  IEmptyableCollection
+  (-iempty [coll] (EmptyList. nil))
 
   ISequential
   IEquiv
@@ -1026,8 +1026,8 @@ reduces them without incurring seq initialization"
       (.push new-array o)
       (Vector. meta new-array)))
 
-; IEmptyableCollection
-; (iempty [coll] coll)
+  IEmptyableCollection
+  (-iempty [coll] coll)
 
   ISequential
   IEquiv
@@ -1125,8 +1125,8 @@ reduces them without incurring seq initialization"
   ICollection
   (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
 
-; IEmptyableCollection
-; (iempty [coll] coll)
+  IEmptyableCollection
+  (-iempty [coll] coll)
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -1195,8 +1195,8 @@ reduces them without incurring seq initialization"
   ICollection
   (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
 
-; IEmptyableCollection
-; (iempty [coll] coll)
+  IEmptyableCollection
+  (-iempty [coll] coll)
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
