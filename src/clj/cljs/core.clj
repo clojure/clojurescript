@@ -155,3 +155,28 @@
        `(when-not ~x
           (throw (cljs.core/str
                    "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
+
+(defmacro binding
+  "binding => var-symbol init-expr
+
+  Creates new bindings for the (already-existing) vars, with the
+  supplied initial values, executes the exprs in an implicit do, then
+  re-establishes the bindings that existed before.  The new bindings
+  are made in parallel (unlike let); all init-exprs are evaluated
+  before the vars are bound to their new values."
+  [bindings & body]
+  (let [names (take-nth 2 bindings)
+        vals (take-nth 2 (drop 1 bindings))
+        tempnames (map gensym names)
+        binds (map vector names vals)
+        resets (reverse (map vector names tempnames))]
+    `(let [~@(interleave tempnames names)]
+       (try
+        ~@(map
+           (fn [[k v]] (list 'set! k v))
+           binds)
+        ~@body
+        (finally
+         ~@(map
+            (fn [[k v]] (list 'set! k v))
+            resets))))))
