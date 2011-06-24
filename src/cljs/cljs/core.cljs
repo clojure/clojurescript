@@ -628,9 +628,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; equality ;;;;;;;;;;;;;;
 
-(extend-protocol IEquiv
-  goog.global.Date ; treat dates as values
-  (-equiv [o other] (identical? (str o) (str other))))
 
 (defn = [x y]
   (if (satisfies? IEquiv x)
@@ -720,12 +717,110 @@
      (when (< i (-count prim))
        (cons (-nth prim i) (prim-seq prim (inc i)))))))
 
-(extend-protocol ISeqable
-  string
+(defn- ci-reduce
+  "Accepts any collection which satisfies the ICount and IIndexed protocols and
+reduces them without incurring seq initialization"
+  ([cicoll f val n]
+     (loop [val val, n n]
+         (if (< n (-count cicoll))
+           (recur (f val (-nth cicoll n)) (inc n))
+           val))))
+
+(extend-type goog.global.Date
+  IEquiv
+  (-equiv [o other] (identical? (str o) (str other))))
+
+(extend-type boolean
+  IPrintable
+  (-pr-seq [bool opts] (list (str bool))))
+
+(extend-type number
+  IHash
+  (-hash [o] o)
+
+  IPrintable
+  (-pr-seq [n opts] (list (str n))))
+
+(extend-type string
+  IHash
+  (-hash [o] (goog.string/hashCode o))
+
+  ISeqable
   (-seq [string] (prim-seq string 0))
   
-  array
-  (-seq [array] (array-seq array 0)))
+  ICounted
+  (-count [s] (.length s))
+
+  IIndexed
+  (-nth
+    ([string n]
+       (if (< n (-count string)) (.charAt string n)))
+    ([string n not-found]
+       (if (< n (-count string)) (.charAt string n)
+           not-found)))
+
+  ILookup
+  (-lookup
+    ([string k]
+       (-nth string k))
+    ([string k not_found]
+       (-nth string k not_found)))
+
+  IReduce
+  (-reduce
+    ([string f]
+       (ci-reduce string f (-nth string 0) 1))
+    ([string f start]
+       (ci-reduce string f start 0)))
+
+  IPrintable
+  (-pr-seq [obj opts]
+    (cond
+     (keyword? obj)
+     (list (str ":"
+                (when-let [nspc (namespace obj)]
+                  (str nspc "/"))
+                (name obj)))
+     (symbol? obj)
+     (list (str (when-let [nspc (namespace obj)]
+                  (str nspc "/"))
+                (name obj)))
+     (get opts :readably)
+     (list (goog.string.quote obj))
+     :else (list obj))))
+
+(extend-type array
+  ISeqable
+  (-seq [array] (array-seq array 0))
+
+  ICounted
+  (-count [a] (.length a))
+
+  IIndexed
+  (-nth
+    ([array n]
+       if (< n (-count array)) (aget array n))
+    ([array n not_found]
+       (if (< n (-count array)) (aget array n)
+           not_found)))
+
+  ILookup
+  (-lookup
+    ([array k]
+       (-nth array k))
+    ([array k not-found]
+       (-nth array k not-found)))
+
+  IReduce
+  (-reduce
+    ([array f]
+       (ci-reduce array f (-nth array 0) 1))
+    ([array f start]
+       (ci-reduce array f start 0)))
+
+  IPrintable
+  (-pr-seq [a opts]
+    (pr-sequential pr-seq "#<Array [" ", " "]>" opts a)))
 
 (deftype List [meta first rest count]
   IWithMeta
@@ -835,68 +930,6 @@
 
   IPrintable
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
-
-(extend-protocol ICounted
-  string
-  (-count [s] (.length s))
-
-  array
-  (-count [a] (.length a)))
-
-(extend-protocol IIndexed
-  string
-  (-nth
-    ([string n]
-       (if (< n (-count string)) (.charAt string n)))
-    ([string n not-found]
-       (if (< n (-count string)) (.charAt string n)
-           not-found)))
-
-  array
-  (-nth
-    ([array n]
-       (if (< n (-count array)) (aget array n)))
-    ([array n not_found]
-       (if (< n (-count array)) (aget array n)
-           not_found))))
-
-(extend-protocol ILookup
-  string
-  (-lookup
-    ([string k]
-       (-nth string k))
-    ([string k not_found]
-       (-nth string k not_found)))
-  
-  array
-  (-lookup
-    ([array k]
-       (-nth array k))
-    ([array k not-found]
-       (-nth array k not-found))))
-
-(defn- ci-reduce
-  "Accepts any collection which satisfies the ICount and IIndexed protocols and
-reduces them without incurring seq initialization"
-  ([cicoll f val n]
-     (loop [val val, n n]
-         (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
-           val))))
-
-(extend-protocol IReduce
-  string
-  (-reduce
-    ([string f]
-       (ci-reduce string f (-nth string 0) 1))
-    ([string f start]
-       (ci-reduce string f start 0)))
-  array
-  (-reduce
-    ([array f]
-       (ci-reduce array f (-nth array 0) 1))
-    ([array f start]
-       (ci-reduce array f start 0))))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
@@ -1084,10 +1117,6 @@ reduces them without incurring seq initialization"
   (reduce conj cljs.core.Vector/EMPTY coll)) ; using [] here causes infinite recursion
 
 (defn vector [& args] (vec args))
-
-(extend-protocol IHash
-  string (-hash [o] (goog.string/hashCode o))
-  goog.global.Number (-hash [o] o))
 
 (defn hash [o]
   (if o
@@ -1643,26 +1672,6 @@ reduces them without incurring seq initialization"
             (interpose [sep] (map #(print-one % opts) coll)))
           [end]))
 
-(extend-protocol IPrintable
-  goog.global.Boolean (-pr-seq [bool opts] (list (str bool)))
-  goog.global.Number (-pr-seq [n opts] (list (str n)))
-  string (-pr-seq [obj opts]
-                        (cond
-                          (keyword? obj)
-                            (list (str ":"
-                                       (when-let [nspc (namespace obj)]
-                                         (str nspc "/"))
-                                       (name obj)))
-                          (symbol? obj)
-                            (list (str (when-let [nspc (namespace obj)]
-                                         (str nspc "/"))
-                                       (name obj)))
-                          (get opts :readably)
-                            (list (goog.string.quote obj))
-                          :else (list obj)))
-  array (-pr-seq [a opts]
-                      (pr-sequential pr-seq "#<Array [" ", " "]>" opts a)))
-
 ; This should be different in different runtime envorionments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
@@ -1766,8 +1775,8 @@ reduces them without incurring seq initialization"
   (assert (= (hash-map :foo 5)
              (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5)))
 
-  (assert (= "[1 {:a 2, :b 42} #<Array [3, 4]>]"
-             (pr-str [1 {:a 2 :b 42} (array 3 4)])))
+  (assert (= "[1 true {:a 2, :b 42} #<Array [3, 4]>]"
+             (pr-str [1 true {:a 2 :b 42} (array 3 4)])))
   (assert (= "symbol\"'string"
              (pr-str (str 'symbol \" \' "string"))))
   (assert (not (= "one" "two")))
