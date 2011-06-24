@@ -1483,6 +1483,14 @@ reduces them without incurring seq initialization"
 (defn zero? [n]
   (== 0 n))
 
+(defn false?
+  "Returns true if x is the value false, false otherwise."
+  [x] (js* "~{x} === false"))
+
+(defn true?
+  "Returns true if x is the value true, false otherwise."
+  [x] (js* "~{x} === true"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
 
 (defn identity [x] x)
@@ -1883,5 +1891,12 @@ reduces them without incurring seq initialization"
                 (bit-test 1000 3)
                 (bit-test 16713 11)
                 (bit-test 1024 10)]))
+  (assert (= [true false true false false false]
+             [(true? true)
+              (true? false)
+              (false? false)
+              (false? true)
+              (true? undefined)
+              (false? undefined)]))
   :ok
 )
