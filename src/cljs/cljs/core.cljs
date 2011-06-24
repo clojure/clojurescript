@@ -1413,6 +1413,43 @@ reduces them without incurring seq initialization"
   "Bitwise exclusive or"
   [x y] (js* "(~{x} ^ ~{y})"))
 
+(defn bit-and
+  "Bitwise and"
+  [x y] (js* "(~{x} & ~{y})"))
+
+(defn bit-or
+  "Bitwise or"
+  [x y] (js* "(~{x} | ~{y})"))
+
+(defn bit-and-not
+  "Bitwise and"
+  [x y] (js* "(~{x} & ~~{y})"))
+
+(defn bit-clear
+  "Clear bit at index n"
+  [x n]
+  (js* "(~{x} & ~(1 << ~{n}))"))
+
+(defn bit-flip
+  "Flip bit at index n"
+  [x n]
+  (js* "(~{x} ^ (1 << ~{n}))"))
+
+(defn bit-not
+  "Bitwise complement"
+  [x] (js* "(~~{x})"))
+
+(defn bit-set
+  "Set bit at index n"
+  [x n]
+  (js* "(~{x} | (1 << ~{n}))"))
+
+(defn bit-test
+  "Test bit at index n"
+  [x n]
+  (js* "((~{x} & (1 << ~{n})) != 0)"))
+
+
 (defn bit-shift-left
   "Bitwise shift left"
   [x n] (js* "(~{x} << ~{n})"))
@@ -1798,5 +1835,53 @@ reduces them without incurring seq initialization"
   (assert (= "cafrogbd" (let
                             [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
                         (-reduce "abcd" jumble "frog"))))
+  (assert (= [0 0 1 0 1]
+               [(bit-and 1 0)
+                (bit-and 0 0)
+                (bit-and 1 1)
+                (bit-and 42 1)
+                (bit-and 41 1)]))
+  (assert (= [1 0 1 43 41]
+               [(bit-or 1 0)
+                (bit-or 0 0)
+                (bit-or 1 1)
+                (bit-or 42 1)
+                (bit-or 41 1)]))
+  (assert (= [1 0 0 42 40]
+               [(bit-and-not 1 0)
+                (bit-and-not 0 0)
+                (bit-and-not 1 1)
+                (bit-and-not 42 1)
+                (bit-and-not 41 1)]))
+  (assert (= [0 2 968 16649 0]
+               [(bit-clear 1 0)
+                (bit-clear 2 0)
+                (bit-clear 1000 5)
+                (bit-clear 16713 6)
+                (bit-clear 1024 10)]))
+  (assert (= [0 0 992 18761 0]
+               [(bit-flip 1 0)
+                (bit-flip 2 1)
+                (bit-flip 1000 3)
+                (bit-flip 16713 11)
+                (bit-flip 1024 10)]))
+  (assert (= [-2 -3 999 -16714 -1025]
+               [(bit-not 1)
+                (bit-not 2)
+                (bit-not -1000)
+                (bit-not 16713)
+                (bit-not 1024)]))
+  (assert (= [1 2 1000 18761 1024]
+               [(bit-set 1 0)
+                (bit-set 2 1)
+                (bit-set 1000 3)
+                (bit-set 16713 11)
+                (bit-set 1024 10)]))
+  (assert (= [true true true false true]
+               [(bit-test 1 0)
+                (bit-test 2 1)
+                (bit-test 1000 3)
+                (bit-test 16713 11)
+                (bit-test 1024 10)]))
   :ok
 )
