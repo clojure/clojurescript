@@ -1688,7 +1688,7 @@ reduces them without incurring seq initialization"
   "Prints a single object to a string, observing all the
   options given in opts"
   [obj opts]
-  (let [sb (gstring/StringBuffers.)]
+  (let [sb (gstring/StringBuffer.)]
     (loop [coll (seq (pr-seq obj opts))]
       (when coll
         (.append sb (first coll))

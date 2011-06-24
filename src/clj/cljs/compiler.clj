@@ -787,7 +787,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (binding [*cljs-ns* 'cljs.user]
     (let [res (if (= \/ (first f)) f (io/resource f))]
       (assert res (str "Can't find " f " in classpath"))
-      (.put (:jse repl-env) javax.script.ScriptEngine/FILENAME f)
+      (.put ^javax.script.ScriptEngine (:jse repl-env)
+            javax.script.ScriptEngine/FILENAME f)
       (load-stream repl-env res))))
 
 (def loaded-libs (atom #{}))
@@ -836,7 +837,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (load-file repl-env "cljs/core.cljs")
       (eval1 repl-env (assoc env :ns (@namespaces *cljs-ns*))
              '(ns cljs.user))
-      (.put (:jse repl-env) javax.script.ScriptEngine/FILENAME "<cljs repl>")
+      (.put ^javax.script.ScriptEngine (:jse repl-env)
+            javax.script.ScriptEngine/FILENAME "<cljs repl>")
       (loop []
         (print (str "ClojureScript:" *cljs-ns* "> "))
         (flush)
