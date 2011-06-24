@@ -890,7 +890,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
        (binding [*out* out
                  *cljs-ns* 'cljs.user]
          (doseq [form (forms-seq src)]
-           (emit (analyze {} form)))))))
+           (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}]
+             (emit (analyze env form))))))))
 
 (comment
   ;; flex compile-file
