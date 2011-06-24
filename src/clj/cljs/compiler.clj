@@ -60,7 +60,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
          lb (:name lb)
          
          (namespace sym)
-         (symbol (str (resolve-ns-alias env (namespace sym)) "." (munge (name sym))))
+         (let [ns (namespace sym)
+               ns (if (= "clojure.core" ns) "cljs.core" ns)]
+           (symbol (str (resolve-ns-alias env ns) "." (munge (name sym)))))
 
          (.contains s ".")
          (munge (let [idx (.indexOf s ".")
@@ -886,12 +888,13 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
      (let [dest (clojure.string/replace src #".cljs$" ".js")]
        (compile-file src dest)))
   ([src dest]
-     (with-open [out ^java.io.Writer (io/make-writer (io/file dest) {})]
-       (binding [*out* out
-                 *cljs-ns* 'cljs.user]
-         (doseq [form (forms-seq src)]
-           (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}]
-             (emit (analyze env form))))))))
+     (let [forms (forms-seq src)]
+       (with-open [out ^java.io.Writer (io/make-writer (io/file dest) {})]
+         (binding [*out* out
+                   *cljs-ns* 'cljs.user]
+           (doseq [form forms]
+             (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}]
+               (emit (analyze env form)))))))))
 
 (comment
   ;; flex compile-file

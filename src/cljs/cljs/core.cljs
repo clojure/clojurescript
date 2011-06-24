@@ -125,6 +125,9 @@
 (defn instance? [t o]
   (js* "(~{o} instanceof ~{t})"))
 
+(defn seq? [s]
+  (satisfies? ISeq s))
+
 (defn boolean [x]
   (if x true false))
 
