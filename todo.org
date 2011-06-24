@@ -1,15 +1,16 @@
+#+TODO: TODO IN-PROGRESS REVIEW DONE
 * The near term tasks
 * Compiler
-** TODO throw/try/catch/finally
+** IN-PROGRESS throw/try/catch/finally			    :@stuarthalloway:
 * Data structures
-** TODO keyword
+** IN-PROGRESS keyword						    :@levand:
 *** requires interning strategy
 **** possibly compiler support for same
 *** string starting with noncharacter code
 **** \uFFFE and \uFFFF are guaranteed noncharacters
 **** use as prefix for keywords and symbols
 **** must test in predicates string? symbol? keyword?
-** TODO symbol
+** IN-PROGRESS symbol						    :@levand:
 *** string starting with noncharacter code
 ** DONE cons cell/list
 ** DONE map
