@@ -899,8 +899,8 @@ reduces them without incurring seq initialization"
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
-  [first rest]
-  (Cons. nil first rest))
+  [x seq]
+  (Cons. nil x seq))
 
 (defn concat
   "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
