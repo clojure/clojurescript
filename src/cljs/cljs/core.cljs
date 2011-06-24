@@ -1797,6 +1797,104 @@ reduces them without incurring seq initialization"
   (pr-with-opts obj (pr-opts))
   (newline (pr-opts)))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
+
+(deftype Atom [state meta validator]
+  IEquiv
+  (-equiv [o other] (identical? o other))
+
+  IDeref
+  (-deref [_] state)
+
+  IMeta
+  (-meta [_] meta))
+
+(defn atom
+  "Creates and returns an Atom with an initial value of x and zero or
+  more options (in any order):
+
+  :meta metadata-map
+
+  :validator validate-fn
+
+  If metadata-map is supplied, it will be come the metadata on the
+  atom. validate-fn must be nil or a side-effect-free fn of one
+  argument, which will be passed the intended new state on any state
+  change. If the new state is unacceptable, the validate-fn should
+  return false or throw an exception."
+  ([x] (Atom. x nil nil))
+  ([x & {:keys [meta validator]}] (Atom. x meta validator)))
+
+(defn reset!
+  "Sets the value of atom to newval without regard for the
+  current value. Returns newval."
+  [a newval]
+  (when-let [v (.validator a)]
+    (when-not (v newval)
+      (throw "Validator rejected reference state")))
+  (set! a.state newval))
+
+(defn swap!
+  "Atomically swaps the value of atom to be:
+  (apply f current-value-of-atom args). Note that f may be called
+  multiple times, and thus should be free of side effects.  Returns
+  the value that was swapped in."
+  ([a f]
+     (reset! a (f (.state a))))
+  ([a f & args]
+     (reset! a (apply f (.state a) args))))
+
+(defn compare-and-set!
+  "Atomically sets the value of atom to newval if and only if the
+  current value of the atom is identical to oldval. Returns true if
+  set happened, else false."
+  [a oldval newval]
+  (if (= a.state oldval)
+    (do (reset! a newval) true)
+    false))
+
+;; generic to all refs
+;; (but currently hard-coded to atom!)
+
+(defn deref
+  [o]
+  (-deref o))
+
+(defn set-validator!
+  "Sets the validator-fn for a var/ref/agent/atom. validator-fn must be nil or a
+  side-effect-free fn of one argument, which will be passed the intended
+  new state on any state change. If the new state is unacceptable, the
+  validator-fn should return false or throw an exception. If the current state (root
+  value if var) is not acceptable to the new validator, an exception
+  will be thrown and the validator will not be changed."
+  [iref val]
+  (set! iref.validator val))
+
+(defn get-validator
+  "Gets the validator-fn for a var/ref/agent/atom."
+  [iref]
+  (.validator iref))
+
+(defn alter-meta!
+  "Atomically sets the metadata for a namespace/var/ref/agent/atom to be:
+
+  (apply f its-current-meta args)
+
+  f must be free of side-effects"
+  [iref f & args]
+  (set! iref.meta (apply f (.meta iref) args)))
+
+(defn reset-meta!
+  "Atomically resets the metadata for a namespace/var/ref/agent/atom"
+  [iref m]
+  (set! iref.meta m))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fixtures ;;;;;;;;;;;;;;;;
+
+(def fixture1 1)
+(def fixture2 2)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
 (defn test-stuff []
@@ -1837,7 +1935,7 @@ reduces them without incurring seq initialization"
                       (-reduce "abcd" jumble))))
   (assert (= "cafrogbd" (let
                             [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
-                        (-reduce "abcd" jumble "frog"))))
+                          (-reduce "abcd" jumble "frog"))))
   (assert (= [0 0 1 0 1]
                [(bit-and 1 0)
                 (bit-and 0 0)
@@ -1886,5 +1984,18 @@ reduces them without incurring seq initialization"
                 (bit-test 1000 3)
                 (bit-test 16713 11)
                 (bit-test 1024 10)]))
+  (assert (= 1 (try 1)))
+  (let [a (atom 0)]
+    (assert (= 0 (deref a)))
+    (assert (= 1 (swap! a inc)))
+    (assert (= false (compare-and-set! a 0 42)))
+    (assert (= true (compare-and-set! a 1 7)))
+    (assert (nil? (meta a)))
+    (assert (nil? (get-validator a))))
+  (let [a (atom [1] :validator coll? :meta {:a 1})]
+    (assert (= coll? (get-validator a)))
+    (assert (= {:a 1} (meta a)))
+    (alter-meta! a assoc :b 2)
+    (assert (= {:a 1 :b 2} (meta a))))
   :ok
 )
