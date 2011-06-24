@@ -720,10 +720,10 @@
       (cons (-nth prim i) (prim-seq prim (inc i))))))
 
 (extend-protocol ISeqable
-  goog.global.String
+  string
   (-seq [string] (prim-seq string 0))
   
-  goog.global.Array
+  array
   (-seq [array] (array-seq array 0)))
 
 (deftype List [meta first rest count]
@@ -836,14 +836,14 @@
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
 
 (extend-protocol ICounted
-  goog.global.String
+  string
   (-count [s] (.length s))
 
-  goog.global.Array
+  array
   (-count [a] (.length a)))
 
 (extend-protocol IIndexed
-  goog.global.String
+  string
   (-nth
     ([string n]
        (if (< n (-count string)) (.charAt string n)))
@@ -851,7 +851,7 @@
        (if (< n (-count string)) (.charAt string n)
            not-found)))
 
-  goog.global.Array
+  array
   (-nth
     ([array n]
        (if (< n (-count array)) (aget array n)))
@@ -860,14 +860,14 @@
            not_found))))
 
 (extend-protocol ILookup
-  goog.global.String
+  string
   (-lookup
     ([string k]
        (-nth string k))
     ([string k not_found]
        (-nth string k not_found)))
   
-  goog.global.Array
+  array
   (-lookup
     ([array k]
        (-nth array k))
@@ -884,13 +884,13 @@ reduces them without incurring seq initialization"
            val))))
 
 (extend-protocol IReduce
-  goog.global.String
+  string
   (-reduce
     ([string f]
        (ci-reduce string f (-nth string 0) 1))
     ([string f start]
        (ci-reduce string f start 0)))
-  goog.global.Array
+  array
   (-reduce
     ([array f]
        (ci-reduce array f (-nth array 0) 1))
@@ -1085,7 +1085,7 @@ reduces them without incurring seq initialization"
 (defn vector [& args] (vec args))
 
 (extend-protocol IHash
-  goog.global.String (-hash [o] (goog.string/hashCode o))
+  string (-hash [o] (goog.string/hashCode o))
   goog.global.Number (-hash [o] o))
 
 (defn hash [o]
@@ -1645,7 +1645,7 @@ reduces them without incurring seq initialization"
 (extend-protocol IPrintable
   goog.global.Boolean (-pr-seq [bool opts] (list (str bool)))
   goog.global.Number (-pr-seq [n opts] (list (str n)))
-  goog.global.String (-pr-seq [obj opts]
+  string (-pr-seq [obj opts]
                         (cond
                           (keyword? obj)
                             (list (str ":"
@@ -1659,7 +1659,7 @@ reduces them without incurring seq initialization"
                           (get opts :readably)
                             (list (goog.string.quote obj))
                           :else (list obj)))
-  goog.global.Array (-pr-seq [a opts]
+  array (-pr-seq [a opts]
                       (pr-sequential pr-seq "#<Array [" ", " "]>" opts a)))
 
 ; This should be different in different runtime envorionments. For example
@@ -1770,5 +1770,23 @@ reduces them without incurring seq initialization"
   (assert (= "symbol\"'string"
              (pr-str (str 'symbol \" \' "string"))))
   (assert (not (= "one" "two")))
+  (assert (= 3 (-count "abc")))
+  (assert (= 4 (-count (array 1 2 3 4))))
+  (assert (= "c" (-nth "abc" 2)))
+  (assert (= "quux" (-nth "abc" 3 "quux")))
+  (assert (= 1 (-nth (array 1 2 3 4) 0)))
+  (assert (= "val" (-nth (array 1 2 3 4) 4 "val")))
+  (assert (= "b" (-lookup "abc" 1)))
+  (assert (= "harriet" (-lookup "abcd" 4 "harriet")))
+  (assert (= 4 (-lookup (array 1 2 3 4) 3)))
+  (assert (= "zot" (-lookup (array 1 2 3 4) 4 "zot")))
+  (assert (= 10 (-reduce (array 1 2 3 4) +)))
+  (assert (= 20 (-reduce (array 1 2 3 4) + 10)))
+  (assert (= "cabd" (let
+                        [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
+                      (-reduce "abcd" jumble))))
+  (assert (= "cafrogbd" (let
+                            [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
+                        (-reduce "abcd" jumble "frog"))))
   :ok
 )
