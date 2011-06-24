@@ -215,38 +215,24 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str " = " (emits init)))
     (when-not (= :expr (:context env)) (print ";\n"))))
 
-(defn ^:dynamic emit-fn-prefix [name max-fixed-arity]
-  (println
-   (str "(function (f) {\n"
-        "  f.maxFixedArity = " max-fixed-arity ";\n"
-        "  return f;\n"
-        "})(")))
-
-(defn ^:dynamic emit-fn-postfix [name max-fixed-arity]
-  (println ")"))
-
 (defn emit-fn-method
   [{:keys [gthis name variadic params statements ret env recurs]}]
-  (binding [emit-fn-prefix  (constantly nil)
-            emit-fn-postfix (constantly nil)]
-    (emit-wrap env
-               (print (str "(function " name "(" (comma-sep params) "){\n"))
-               (when gthis
-                 (println (str "var " gthis " = this;")))
-               (when variadic
-                 (println (str (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
-                 #_(println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
-               (when recurs (print "while(true){\n"))
-               (emit-block :return statements ret)
-               (when recurs (print "break;\n}\n"))
-               (print "})"))))
+  (emit-wrap env
+             (print (str "(function " name "(" (comma-sep params) "){\n"))
+             (when gthis
+               (println (str "var " gthis " = this;")))
+             (when variadic
+               (println (str (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
+               #_(println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
+             (when recurs (print "while(true){\n"))
+             (emit-block :return statements ret)
+             (when recurs (print "break;\n}\n"))
+             (print "})")))
 
 (defmethod emit :fn
   [{:keys [name env methods max-fixed-arity variadic]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
-    (when variadic
-      (emit-fn-prefix name max-fixed-arity))
     (if (= 1 (count methods))
       (emit-fn-method (assoc (first methods) :name name))
       (let [name (or name (gensym))
@@ -270,10 +256,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println "}")
         (println "throw('Invalid arity: ' + arguments.length);")
         (println "};")
+        (when variadic
+          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity)))
         (println (str "return " name ";"))
-        (println "})()")))
-    (when variadic
-      (emit-fn-postfix name max-fixed-arity))))
+        (println "})()")))))
 
 (defmethod emit :do
   [{:keys [statements ret env]}]
