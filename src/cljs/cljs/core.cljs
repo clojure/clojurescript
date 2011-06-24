@@ -798,7 +798,7 @@ reduces them without incurring seq initialization"
   IIndexed
   (-nth
     ([array n]
-       if (< n (-count array)) (aget array n))
+       (if (< n (-count array)) (aget array n)))
     ([array n not_found]
        (if (< n (-count array)) (aget array n)
            not_found)))
