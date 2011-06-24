@@ -222,8 +222,7 @@
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (when-let [s (seq coll)]
-    (-rest s)))
+  (-rest (seq coll)))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
@@ -489,14 +488,7 @@
   "Returns the number of items in the collection. (count nil) returns
   0.  Also works on strings, arrays, and Maps"
   [coll]
-  (if (not (nil? coll))
-    (if (satisfies? ICounted coll)
-      (-count coll)
-      (loop [s (seq coll) n 0]
-	(if s
-	  (recur (next s) (inc n))
-	  n)))
-    0))
+  (-count coll))
 
 (defn nth
   "Returns the value at the index. get returns nil if index out of
@@ -504,22 +496,16 @@
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (when-not (nil? coll)
-       (-nth coll n)))
+     (-nth coll n))
   ([coll n not-found]
-     (if (nil? coll)
-       not-found
-       (-nth coll n not-found))))
+     (-nth coll n not-found)))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
   ([o k]
-     (when-not (nil? o)
-       (-lookup o k)))
+     (-lookup o k))
   ([o k not-found]
-     (if (nil? o)
-       not-found
-       (-lookup o k not-found))))
+     (-lookup o k not-found)))
 
 (defn assoc
   "assoc[iate]. When applied to a map, returns a new map of the
@@ -527,8 +513,7 @@
    val(s). When applied to a vector, returns a new vector that
    contains val at index. Note - index must be <= (count vector)."
   [coll k v]
-  (when-not (nil? coll)
-    (-assoc coll k v)))
+  (-assoc coll k v))
 
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."
@@ -546,25 +531,24 @@
   "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
   that does not contain a mapping for key(s)."
   [coll k]
-  (when-not (nil? coll)
-    (-dissoc coll k)))
+  (-dissoc coll k))
 
 (defn with-meta
   "Returns an object of the same type and value as obj, with
   map m as its metadata."
   [o meta]
-  (when-not (nil? o) (-with-meta o meta)))
+  (-with-meta o meta))
 
 (defn meta
   "Returns the metadata of obj, returns nil if there is no metadata."
   [o]
-  (when-not (nil? o) (-meta o)))
+  (-meta o))
 
 (defn peek
   "For a list or queue, same as first, for a vector, same as, but much
   more efficient than, last. If the collection is empty, returns nil."
   [coll]
-  (when-not (nil? coll) (-peek coll)))
+  (-peek coll))
 
 (defn pop
   "For a list or queue, returns a new list/queue without the first
@@ -572,7 +556,7 @@
   the collection is empty, throws an exception.  Note - not the same
   as next/butlast."
   [coll]
-  (when-not (nil? coll) (-pop coll)))
+  (-pop coll))
 
 (defn contains?
   "Returns true if key is present in the given collection, otherwise
@@ -581,13 +565,13 @@
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   [coll v]
-  (if (nil? coll) false (-contains? coll v)))
+  (-contains? coll v))
 
 (defn disj
   "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
   does not contain key(s)."
   [coll v]
-  (when-not (nil? coll) (-disjoin coll v)))
+  (-disjoin coll v))
 
 (defn empty?
   "Returns true if coll has no items - same as (not (seq coll)).
@@ -749,6 +733,58 @@ reduces them without incurring seq initialization"
          (if (< n (-count cicoll))
            (recur (f val (-nth cicoll n)) (inc n))
            val))))
+
+(extend-type nil
+  ICounted
+  (-count [coll] 0)
+
+  IEmptyableCollection
+  (-empty [coll] nil)
+
+  ICollection
+  (-conj [coll o] (list o))
+
+  IIndexed
+  (-nth
+   ([coll n] nil)
+   ([coll n not-found] not-found))
+
+  ISeq
+  (-first [coll] nil)
+  (-rest [coll] (list))
+
+  ILookup
+  (-lookup
+   ([o k] nil)
+   ([o k not-found] not-found))
+
+  IAssociative
+  (-assoc [coll k v] (hash-map k v))
+
+  IMap
+  (-dissoc [coll k] nil)
+
+  ISet
+  (-contains? [coll v] false)
+  (-disjoin [coll v] nil)
+
+  IStack
+  (-peek [coll] nil)
+  (-pop [coll] nil)
+
+  IMeta
+  (-meta [o] nil)
+
+  IWithMeta
+  (-with-meta [o meta] nil))
+
+(extend-type default
+  ICounted
+  (-count [coll]
+    (loop [s (seq coll) n 0]
+      (if s
+	(recur (next s) (inc n))
+	n))))
 
 (extend-type goog.global.Date
   IEquiv
@@ -1345,6 +1381,7 @@ reduces them without incurring seq initialization"
      (if xs
        (recur (conj coll x) (first xs) (next xs))
        (conj coll x))))
+
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
