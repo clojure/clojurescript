@@ -270,7 +270,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     ;(when statements (print "}"))
     (when (and statements (= :expr context)) (print "})()"))))
 
-(defmethod emit :try
+(defmethod emit :try*
   [{:keys [env try catch name finally]}]
   (let [context (:context env)
         subcontext (if (= :expr context) :return context)]
@@ -378,7 +378,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (declare analyze analyze-symbol)
 
-(def specials '#{if def fn* do let* loop* throw try recur new set! ns deftype* . js* & quote})
+(def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* . js* & quote})
 
 (def ^:dynamic *recur-frame* nil)
 
@@ -413,38 +413,39 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
      :throw throw-expr
      :children [throw-expr]}))
 
-(defmethod parse 'try
+(defmethod parse 'try*
   [op env [_ & body :as form] name]
   (let [body (vec body)
-        subenv (update-in env [:context] #(if (= :expr %) :return %))
+        catchenv (update-in env [:context] #(if (= :expr %) :return %))
         tail (peek body)
         fblock (when (and (list? tail) (= 'finally (first tail)))
                   (rest tail))
         finally (when fblock
-                  (analyze-block subenv fblock))
+                  (analyze-block
+                   (assoc env :context :statement)
+                   fblock))
         body (if finally (pop body) body)
         tail (peek body)
         cblock (when (and (list? tail)
                           (= 'catch (first tail)))
                  (rest tail))
         name (first cblock)
-        locals (:locals subenv)
+        locals (:locals catchenv)
         mname (when name (munge name))
         locals (if name
                  (assoc locals name {:name mname})
                  locals)
         catch (when cblock
-                (analyze-block (assoc subenv :locals locals) (rest cblock)))
+                (analyze-block (assoc catchenv :locals locals) (rest cblock)))
         body (if name (pop body) body)
         try (when body
-              (analyze-block (if (or name finally) subenv env) body))]
+              (analyze-block (if (or name finally) catchenv env) body))]
     (when name (assert (not (namespace name)) "Can't qualify symbol in catch"))
     {:env env :op :try :form form
      :try try
      :finally finally
      :name mname
      :catch catch
-     ;; TODO: is this a decent rep for children?
      :children [try {:name mname} catch finally]}))
 
 (defmethod parse 'def

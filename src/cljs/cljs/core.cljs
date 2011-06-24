@@ -2005,7 +2005,6 @@ reduces them without incurring seq initialization"
               (false? true)
               (true? undefined)
               (false? undefined)]))
-  (assert (= 1 (try 1)))
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))
@@ -2018,5 +2017,14 @@ reduces them without incurring seq initialization"
     (assert (= {:a 1} (meta a)))
     (alter-meta! a assoc :b 2)
     (assert (= {:a 1 :b 2} (meta a))))
+  (let [a (atom nil)]
+    (assert (= 1 (try* 1)))
+    (assert (= 1 (try* 1 (finally 2))))
+    (assert (= 2 (try* 1 (throw 3) (catch e 2))))
+    (assert (= 3 (try* 1 (throw 3) (catch e e))))
+    (assert (= 3 (try* 1 (throw 3) (catch e e) (finally 4))))
+    (assert (= 2 (try* 1 (throw 3) (catch e e 1 2))))
+    (assert (= 1 (try* 1 (finally (reset! a 42)))))
+    (assert (= 42 (deref a))))
   :ok
 )
