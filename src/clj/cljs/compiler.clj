@@ -60,7 +60,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
          lb (:name lb)
          
          (namespace sym)
-         (symbol (str (resolve-ns-alias env (namespace sym)) "." (munge (name sym))))
+         (let [ns (namespace sym)
+               ns (if (= "clojure.core" ns) "cljs.core" ns)]
+           (symbol (str (resolve-ns-alias env ns) "." (munge (name sym)))))
 
          (.contains s ".")
          (munge (let [idx (.indexOf s ".")

@@ -470,7 +470,7 @@ as macro
 * send
 * send-off
 * DONE seq
-* TODO seq?
+* DONE seq?
 * seque
 * TODO sequence
 * DONE sequential?
