@@ -158,6 +158,21 @@
   ([x] (if (nil? x) "" (. x (toString))))
   ([x & ys] (reduce + (map str (cons x ys)))))
 
+(defn symbol
+  "Returns a Symbol with the given namespace and name."
+  ([name] (cond (symbol? name) name
+                (keyword? name) (str "\uFDD1" "'" (subs name 2))
+                :else (str "\uFDD1" "'" name)))
+  ([ns name] (symbol (str ns "/" name))))
+
+(defn keyword
+  "Returns a Keyword with the given namespace and name.  Do not use :
+  in the keyword strings, it will be added automatically."
+  ([name] (cond (keyword? name) name
+                (symbol? name) (str "\uFDD0" "'" (subs name 2))
+                :else (str "\uFDD0" "'" name)))
+  ([ns name] (keyword (str ns "/" name))))
+
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending
   at end (defaults to length of string), exclusive."
@@ -1903,6 +1918,18 @@ reduces them without incurring seq initialization"
   "Atomically resets the metadata for a namespace/var/ref/agent/atom"
   [iref m]
   (set! iref.meta m))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; gensym ;;;;;;;;;;;;;;;;
+;; Internal - do not use!
+(def gensym_counter (atom 0))
+
+(defn gensym
+  "Returns a new symbol with a unique name. If a prefix string is
+  supplied, the name is prefix# where # is some unique number. If
+  prefix is not supplied, the prefix is 'G__'."
+  ([] (gensym "G__"))
+  ([prefix-string]     
+     (symbol (str prefix-string (swap! gensym_counter inc)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fixtures ;;;;;;;;;;;;;;;;
 
