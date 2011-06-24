@@ -863,6 +863,39 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
              ;;(prn (if (nil? ret) nil ret))
              (recur))))))))
 
+(defn forms-seq
+  "Seq of forms in a Clojure or ClojureScript file."
+  ([f]
+     (forms-seq f (java.io.PushbackReader. (io/reader f))))
+  ([f ^java.io.PushbackReader rdr]
+     (if-let [form (read rdr nil nil)]
+       (lazy-seq (cons form (forms-seq f rdr)))
+       (.close rdr))))
+
+(defn compile-file
+  "Compiles src to a file of the same name, but
+   with a .js extension, in the src file's directory.
+
+   With dest argument, write file to provided location."
+  ([src]
+     (let [dest (clojure.string/replace src #".cljs$" ".js")]
+       (compile-file src dest)))
+  ([src dest]
+     (with-open [out ^java.io.Writer (io/make-writer (io/file dest) {})]
+       (binding [*out* out
+                 *cljs-ns* 'cljs.user]
+         (doseq [form (forms-seq src)]
+           (emit (analyze {} form)))))))
+
+(comment
+  ;; flex compile-file
+  (do
+    (compile-file "/tmp/hello.cljs" "/tmp/something.js")
+    (slurp "/tmp/hello.js")
+
+    (compile-file "/tmp/somescript.cljs")
+    (slurp "/tmp/somescript.js")))
+
 (comment
 
 ;;the new way - use the REPL!!
