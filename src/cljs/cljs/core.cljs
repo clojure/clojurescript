@@ -144,6 +144,9 @@
   (and (goog/isString x)
        (= (.charAt x 0) \uFDD1)))
 
+(defn number? [n]
+  (goog/isNumber n))
+
 (defn fn? [f]
   (goog/isFunction f))
 
