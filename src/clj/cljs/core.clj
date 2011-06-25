@@ -142,20 +142,6 @@
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))
 
-(defmacro assert
-  "Evaluates expr and throws an exception if it does not evaluate to
-  logical true."
-  ([x]
-     (when *assert*
-       `(when-not ~x
-          (throw (cljs.core/str
-                   "Assert failed: " (cljs.core/pr-str '~x))))))
-  ([x message]
-     (when *assert*
-       `(when-not ~x
-          (throw (cljs.core/str
-                   "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
-
 (defmacro binding
   "binding => var-symbol init-expr
 
@@ -180,3 +166,49 @@
          ~@(map
             (fn [[k v]] (list 'set! k v))
             resets))))))
+
+(defmacro try
+  "(try expr* catch-clause* finally-clause?)
+
+   Special Form
+
+   catch-clause => (catch protoname name expr*)
+   finally-clause => (finally expr*)
+
+  Catches and handles JavaScript exceptions."
+  [& forms]
+  (let [catch? #(and (list? %) (= (first %) 'catch))
+        [body catches] (split-with (complement catch?) forms)
+        [catches fin] (split-with catch? catches)
+        e (gensym "e")]
+    (assert (every? #(> (count %) 2) catches) "catch block must specify a prototype and a name")
+    (if (seq catches)
+      `(~'try*
+        ~@body
+        (catch ~e
+            (cond
+             ~@(mapcat
+                (fn [[_ type name & cb]]
+                  `[(instance? ~type ~e) (let [~name ~e] ~@cb)])
+                catches)
+             :else (throw e#)))
+        ~@fin)
+      `(~'try*
+        ~@body
+        ~@fin))))
+
+(defmacro assert
+  "Evaluates expr and throws an exception if it does not evaluate to
+  logical true."
+  ([x]
+     (when *assert*
+       `(when-not ~x
+          (throw (cljs.core/str
+                   "Assert failed: " (cljs.core/pr-str '~x))))))
+  ([x message]
+     (when *assert*
+       `(when-not ~x
+          (throw (cljs.core/str
+                   "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
+
+
