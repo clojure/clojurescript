@@ -418,7 +418,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (let [body (vec body)
         catchenv (update-in env [:context] #(if (= :expr %) :return %))
         tail (peek body)
-        fblock (when (and (list? tail) (= 'finally (first tail)))
+        fblock (when (and (seq? tail) (= 'finally (first tail)))
                   (rest tail))
         finally (when fblock
                   (analyze-block
@@ -426,7 +426,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                    fblock))
         body (if finally (pop body) body)
         tail (peek body)
-        cblock (when (and (list? tail)
+        cblock (when (and (seq? tail)
                           (= 'catch (first tail)))
                  (rest tail))
         name (first cblock)
@@ -441,7 +441,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         try (when body
               (analyze-block (if (or name finally) catchenv env) body))]
     (when name (assert (not (namespace name)) "Can't qualify symbol in catch"))
-    {:env env :op :try :form form
+    {:env env :op :try* :form form
      :try try
      :finally finally
      :name mname

@@ -2090,5 +2090,12 @@ reduces them without incurring seq initialization"
     (assert (= 2 (try* 1 (throw 3) (catch e e 1 2))))
     (assert (= 1 (try* 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
+  (let [a (atom nil)]
+    (assert (= 1 (try 1)))
+    (assert (= 1 (try 1 (finally 2))))
+    (assert (= 2 (try 1 (throw (goog.global.Error.)) (catch goog.global.Error e 2))))
+    (assert (= 2 (try 1 (throw (goog.global.Error.)) (catch goog.global.Error e 1 2))))
+    (assert (= 1 (try 1 (finally (reset! a 42)))))
+    (assert (= 42 (deref a))))
   :ok
 )
