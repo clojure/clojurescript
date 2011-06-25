@@ -699,7 +699,7 @@
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-iempty [coll] coll)
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   ISequential
   IEquiv
@@ -901,7 +901,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (List. meta o coll (inc count)))
 
   IEmptyableCollection
-  (-iempty [coll] coll)
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   ISequential
   IEquiv
@@ -938,7 +938,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (List. meta o nil 1))
 
   IEmptyableCollection
-  (-iempty [coll] coll)
+  (-empty [coll] coll)
 
   ISequential
   IEquiv
@@ -976,7 +976,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (Cons. nil o coll))
 
   IEmptyableCollection
-  (-iempty [coll] (EmptyList. nil))
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   ISequential
   IEquiv
@@ -1121,7 +1121,7 @@ reduces them without incurring seq initialization"
       (Vector. meta new-array)))
 
   IEmptyableCollection
-  (-iempty [coll] coll)
+  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
 
   ISequential
   IEquiv
@@ -1216,7 +1216,7 @@ reduces them without incurring seq initialization"
   (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
 
   IEmptyableCollection
-  (-iempty [coll] coll)
+  (-empty [coll] (with-meta cljs.core.ObjMap/EMPTY meta))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -1268,6 +1268,8 @@ reduces them without incurring seq initialization"
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
       (pr-sequential pr-pair "{" ", " "}" opts coll))))
 
+(set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj)))
+
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj)))
 
 ; The keys field is an array of all keys of this map, in no particular
@@ -1286,7 +1288,7 @@ reduces them without incurring seq initialization"
   (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
 
   IEmptyableCollection
-  (-iempty [coll] coll)
+  (-empty [coll] (with-meta cljs.core.HashMap/EMPTY meta))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -1382,6 +1384,11 @@ reduces them without incurring seq initialization"
        (recur (conj coll x) (first xs) (next xs))
        (conj coll x))))
 
+(defn empty
+  "Returns an empty collection of the same category as coll, or nil"
+  [coll]
+  (when (coll? coll)
+    (-empty coll)))
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
@@ -2082,5 +2089,34 @@ reduces them without incurring seq initialization"
     (assert (= {:a 1} (meta a)))
     (alter-meta! a assoc :b 2)
     (assert (= {:a 1 :b 2} (meta a))))
+  (assert (nil? (empty nil)))
+  (let [e-lazy-seq (empty (with-meta (lazy-seq (cons :a nil)) {:b :c}))]
+    (assert (seq? e-lazy-seq))
+    (assert (empty? e-lazy-seq))
+    (assert (= {:b :c} (meta e-lazy-seq))))
+  (let [e-list (empty '^{:b :c} (1 2 3))]
+    (assert (seq? e-list))
+    (assert (empty? e-list))
+    (assert (= :c (get (meta e-list) :b))))
+  (let [e-elist (empty '^{:b :c} ())]
+    (assert (seq? e-elist))
+    (assert (empty? e-elist))
+    (assert (= :c (get (meta e-elist) :b))))
+  (let [e-cons (empty (with-meta (cons :a nil) {:b :c}))]
+    (assert (seq? e-cons))
+    (assert (empty? e-cons))
+    (assert (= {:b :c} (meta e-cons))))
+  (let [e-vec (empty ^{:b :c} [:a :d :g])]
+    (assert (vector? e-vec))
+    (assert (empty? e-vec))
+    (assert (= {:b :c} (meta e-vec))))
+  (let [e-omap (empty ^{:b :c} {:a :d :g :h})]
+    (assert (map? e-omap))
+    (assert (empty? e-omap))
+    (assert (= {:b :c} (meta e-omap))))
+  (let [e-hmap (empty ^{:b :c} {[1 2] :d :g :h})]
+    (assert (map? e-hmap))
+    (assert (empty? e-hmap))
+    (assert (= {:b :c} (meta e-hmap))))
   :ok
 )
