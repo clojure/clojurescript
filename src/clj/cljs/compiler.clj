@@ -13,6 +13,8 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]))
 
+(def ^:dynamic *warn-on-undeclared* false)
+
 (declare resolve-var)
 (require 'cljs.core)
 
@@ -80,6 +82,19 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                            (-> env :ns :name))
                          "." (munge (name sym))))))]
     {:name nm}))
+
+(defn confirm-var [env varname]
+  (when *warn-on-undeclared*
+    (let [v (name (:name varname))
+          crnt-ns (-> env :ns :name)
+          li (.lastIndexOf v ".")
+          prefix (subs v 0 (max 0 li))]
+      (when (= prefix (name crnt-ns))
+        (let [suffix (subs v (inc li))]
+          (when-not (-> @namespaces crnt-ns :defs (get (symbol suffix)))
+            (binding [*out* *err*]
+              (println "WARNING: Use of undeclared Var" v)))))))
+  varname)
 
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
@@ -628,7 +643,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                      (if (= -1 idx)
                        (list s)
                        (let [end (.indexOf s "}" idx)
-                             inner (:name (resolve-var env (symbol (subs s (+ 2 idx) end))))]
+                             inner (:name (confirm-var env (resolve-var env (symbol (subs s (+ 2 idx) end)))))]
                          (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
       {:env env :op :js :code (apply str (interp form))})))
 
@@ -647,7 +662,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         lb (-> env :locals sym)]
     (if lb
       (assoc ret :op :var :info lb)
-      (assoc ret :op :var :info (resolve-var env sym)))))
+      (assoc ret :op :var :info (confirm-var env (resolve-var env sym))))))
 
 (defn get-expander [sym env]
   (let [mvar
