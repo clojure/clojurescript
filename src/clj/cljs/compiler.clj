@@ -226,6 +226,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :def
   [{:keys [name init env]}]
   (when init
+    (when (:jsdoc init)
+      (println "/**")
+      (doseq [e (:jsdoc init)]
+        (when e
+          (println "*" e)))
+      (println "*/"))
     (print name)
     (print (str " = " (emits init)))
     (when-not (= :expr (:context env)) (print ";\n"))))
@@ -233,7 +239,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defn emit-fn-method
   [{:keys [gthis name variadic params statements ret env recurs]}]
   (emit-wrap env
-             (print (str "(function " name "(" (comma-sep params) "){\n"))
+             (print (str "(function " name "(" (comma-sep
+                                                (if variadic
+                                                  (concat (butlast params) ['var_args])
+                                                  params)) "){\n"))
              (when gthis
                (println (str "var " gthis " = this;")))
              (when variadic
@@ -258,7 +267,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println (str "var " name " = null;"))
         (doseq [[n meth] ms]
           (println (str "var " n " = " (with-out-str (emit-fn-method meth)) ";")))
-        (println (str name " = function(" (comma-sep maxparams) "){"))
+        (println (str name " = function(" (comma-sep (if variadic
+                                                       (concat (butlast maxparams) ['var_args])
+                                                       maxparams)) "){"))
+        (when variadic
+          (println (str "var " (last maxparams) " = var_args;")))
         (println "switch(arguments.length){")
         (doseq [[n meth] ms]
           (if (:variadic meth)
@@ -506,10 +519,13 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         locals (if name (assoc locals name {:name mname}) locals)
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
         methods (map #(analyze-fn-method menv locals %) meths)
-        max-fixed-arity (apply max (map :fixed-arity methods))]
+        max-fixed-arity (apply max (map :fixed-arity methods))
+        variadic (some :variadic methods)]
     ;;(assert (= 1 (count methods)) "Arity overloading not yet supported")
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :name mname :methods methods :variadic (some :variadic methods) :max-fixed-arity max-fixed-arity}))
+    {:env env :op :fn :name mname :methods methods :variadic variadic
+     :jsdoc [(when variadic "@param {...*} var_args")]
+     :max-fixed-arity max-fixed-arity}))
 
 (defmethod parse 'do
   [op env [_ & exprs] _]
