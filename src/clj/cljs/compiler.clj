@@ -13,8 +13,6 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]))
 
-(def ^:dynamic *warn-on-undeclared* false)
-
 (declare resolve-var)
 (require 'cljs.core)
 
@@ -28,6 +26,7 @@
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-verbose* false)
+(def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defn munge [s]
   (let [ms (clojure.lang.Compiler/munge (str s))
@@ -50,9 +49,53 @@
 goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\",\"goog-require\").invoke(goog.global.cljs_javascript_engine, rule);}
 ")
 
+(defn confirm-var-exists [env prefix suffix]
+  (when *cljs-warn-on-undeclared*
+    (let [crnt-ns (-> env :ns :name)]
+      (when (= prefix crnt-ns)
+        (when-not (-> @namespaces crnt-ns :defs suffix)
+          (binding [*out* *err*]
+            (println
+              (str "WARNING: Use of undeclared Var " prefix "/" suffix
+                   (when (:line env)
+                     (str " at line " (:line env)))))))))))
+
 (defn resolve-ns-alias [env name]
   (let [sym (symbol name)]
     (get (:requires (:ns env)) sym sym)))
+
+(defn resolve-existing-var [env sym]
+  (let [s (str sym)
+        lb (-> env :locals sym)
+        nm
+        (cond
+         lb (:name lb)
+
+         (namespace sym)
+         (let [ns (namespace sym)
+               ns (if (= "clojure.core" ns) "cljs.core" ns)
+               full-ns (resolve-ns-alias env ns)]
+           (confirm-var-exists env full-ns (symbol (name sym)))
+           (symbol (str full-ns "." (munge (name sym)))))
+
+         (.contains s ".")
+         (munge (let [idx (.indexOf s ".")
+                      prefix (symbol (subs s 0 idx))
+                      suffix (subs s idx)
+                      lb (-> env :locals prefix)]
+                  (if lb
+                    (symbol (str (:name lb) suffix))
+                    (do
+                      (confirm-var-exists env prefix (symbol suffix))
+                      sym))))
+
+         :else
+         (let [full-ns (if (get (:defs (@namespaces 'cljs.core)) sym)
+                         'cljs.core
+                         (-> env :ns :name))]
+           (confirm-var-exists env full-ns sym)
+           (munge (symbol (str full-ns "." (munge (name sym)))))))]
+    {:name nm}))
 
 (defn resolve-var [env sym]
   (let [s (str sym)
@@ -82,19 +125,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                            (-> env :ns :name))
                          "." (munge (name sym))))))]
     {:name nm}))
-
-(defn confirm-var [env varname]
-  (when *warn-on-undeclared*
-    (let [v (name (:name varname))
-          crnt-ns (-> env :ns :name)
-          li (.lastIndexOf v ".")
-          prefix (subs v 0 (max 0 li))]
-      (when (= prefix (name crnt-ns))
-        (let [suffix (subs v (inc li))]
-          (when-not (-> @namespaces crnt-ns :defs (get (symbol suffix)))
-            (binding [*out* *err*]
-              (println "WARNING: Use of undeclared Var" v)))))))
-  varname)
 
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
@@ -659,7 +689,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                      (if (= -1 idx)
                        (list s)
                        (let [end (.indexOf s "}" idx)
-                             inner (:name (confirm-var env (resolve-var env (symbol (subs s (+ 2 idx) end)))))]
+                             inner (:name (resolve-existing-var env (symbol (subs s (+ 2 idx) end))))]
                          (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
       {:env env :op :js :code (apply str (interp form))})))
 
@@ -678,7 +708,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         lb (-> env :locals sym)]
     (if lb
       (assoc ret :op :var :info lb)
-      (assoc ret :op :var :info (confirm-var env (resolve-var env sym))))))
+      (assoc ret :op :var :info (resolve-existing-var env sym)))))
 
 (defn get-expander [sym env]
   (let [mvar
@@ -711,14 +741,15 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defn analyze-seq
   [env form name]
-  (let [op (first form)]
-    (assert (not (nil? op)) "Can't call nil")
-    (let [mform (macroexpand-1 env form)]
-      (if (identical? form mform)
-        (if (specials op)
-          (parse op env form name)
-          (parse-invoke env form))
-        (analyze env mform name)))))
+  (let [env (assoc env :line (-> form meta :line))]
+    (let [op (first form)]
+      (assert (not (nil? op)) "Can't call nil")
+      (let [mform (macroexpand-1 env form)]
+        (if (identical? form mform)
+          (if (specials op)
+            (parse op env form name)
+            (parse-invoke env form))
+          (analyze env mform name))))))
 
 (declare analyze-wrap-meta)
 
@@ -854,10 +885,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
-  [repl-env & {:keys [verbose]}]
+  [repl-env & {:keys [verbose warn-on-undeclared]}]
   (prn "Type: " :cljs/quit " to quit")
   (binding [*cljs-ns* 'cljs.user
-            *cljs-verbose* verbose]
+            *cljs-verbose* verbose
+            *cljs-warn-on-undeclared* warn-on-undeclared]
     (let [env {:context :statement :locals {}}]
       (load-file repl-env "cljs/core.cljs")
       (eval1 repl-env (assoc env :ns (@namespaces *cljs-ns*))
@@ -931,6 +963,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (comp/repl repl-env)
 ;having problems?, try verbose mode
 (comp/repl repl-env :verbose true)
+;don't forget to check for uses of undeclared vars
+(comp/repl repl-env :warn-on-undeclared true)
 
 (test-stuff)
 (+ 1 2 3)
