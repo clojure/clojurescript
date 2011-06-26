@@ -181,7 +181,12 @@
   (-meta [_] nil)
 
   IWithMeta
-  (-with-meta [_ meta] nil))
+  (-with-meta [_ meta] nil)
+
+  IReduce
+  (-reduce
+    ([_ f] (f))
+    ([_ f start] start)))
 
 (extend-type goog.global.Date
   IEquiv
@@ -202,6 +207,27 @@
 (defn- lt- [x y]
   (js* "(~{x} < ~{y})"))
 
+(defn- ci-reduce
+  "Accepts any collection which satisfies the ICount and IIndexed protocols and
+reduces them without incurring seq initialization"
+  ([cicoll f]
+     (if (= 0 (-count cicoll))
+       (f)
+       (loop [val (-nth cicoll 0), n 1]
+         (if (lt- n (-count cicoll))
+           (recur (f val (-nth cicoll n)) (inc n))
+           val))))
+  ([cicoll f val]
+     (loop [val val, n 0]
+         (if (lt- n (-count cicoll))
+           (recur (f val (-nth cicoll n)) (inc n))
+           val)))
+  ([cicoll f val idx]
+     (loop [val val, n idx]
+         (if (lt- n (-count cicoll))
+           (recur (f val (-nth cicoll n)) (inc n))
+           val))))
+
 (deftype IndexedSeq [a i]
   ISeqable
   (-seq [this] this)
@@ -212,7 +238,13 @@
 
   ISequential
   IEquiv
-  (-equiv [coll other] (equiv-sequential coll other)))
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IReduce
+  (-reduce [_ f]
+    (ci-reduce a f (aget a i) (inc i)))
+  (-reduce [_ f start]
+    (ci-reduce a f start i)))
 
 (defn prim-seq [prim i]
   (when-not (= 0 (-count prim))
@@ -220,15 +252,6 @@
 
 (defn array-seq [array i]
   (prim-seq array i))
-
-(defn- ci-reduce
-  "Accepts any collection which satisfies the ICount and IIndexed protocols and
-reduces them without incurring seq initialization"
-  ([cicoll f val n]
-     (loop [val val, n n]
-         (if (lt- n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
-           val))))
 
 (extend-type array
   ISeqable
@@ -255,9 +278,9 @@ reduces them without incurring seq initialization"
   IReduce
   (-reduce
     ([array f]
-       (ci-reduce array f (aget array 0) 1))
+       (ci-reduce array f))
     ([array f start]
-       (ci-reduce array f start 0)))
+       (ci-reduce array f start)))
   )
 
 (defn seq
@@ -516,7 +539,7 @@ reduces them without incurring seq initialization"
   [coll]
   (next (next coll)))
 
-#_(defn reduce
+(defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
   applying f to that result and the 3rd item, etc. If coll contains no
@@ -527,15 +550,12 @@ reduces them without incurring seq initialization"
   applying f to that result and the 2nd item, etc. If coll contains no
   items, returns val and f is not called."
   ([f coll]
-     (if-let [s (seq coll)]
-       (reduce f (first s) (next s))
-       (f)))
+     (-reduce coll f))
   ([f val coll]
-     (let [s (seq coll)]
-       (-reduce s f val))))
+     (-reduce coll f val)))
 
-; simple reduce, to be removed when IReduce is working
-(defn reduce
+; simple reduce based on seqs, used as default
+(defn- seq-reduce
   ([f coll]
     (if-let [s (seq coll)]
       (reduce f (first s) (next s))
@@ -545,6 +565,14 @@ reduces them without incurring seq initialization"
       (if coll
         (recur (f val (first coll)) (next coll))
         val))))
+
+(extend-type default
+  IReduce
+  (-reduce
+    ([coll f]
+       (seq-reduce f coll))
+    ([coll f start]
+       (seq-reduce f start coll))))
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
@@ -908,9 +936,9 @@ reduces them without incurring seq initialization"
   IReduce
   (-reduce
     ([string f]
-       (ci-reduce string f (-nth string 0) 1))
+       (ci-reduce string f))
     ([string f start]
-       (ci-reduce string f start 0))))
+       (ci-reduce string f start))))
 
 ; could use reify
 ;;; LazySeq ;;;
@@ -1503,6 +1531,11 @@ reduces them without incurring seq initialization"
   IVector
   (-assoc-n [coll n val] (-assoc coll n val))
 
+  IReduce
+  (-reduce [v f]
+    (ci-reduce array f))
+  (-reduce [v f start]
+    (ci-reduce array start))
   )
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
