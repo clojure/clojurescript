@@ -29,6 +29,25 @@
    (aget p "_")
    false))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
+
+(defn- array-clone [array-like]
+  #_(goog.array.clone array-like)
+  (js* "Array.prototype.slice.call(~{array-like})"))
+
+(defn array [var-args];; [& items]
+  (js* "Array.prototype.slice.call(arguments)"))
+
+(defn aget [array i]
+  (js* "~{array}[~{i}]"))
+
+(defn aset [array i val]
+  (js* "(~{array}[~{i}] = ~{val})"))
+
+(defn alength [array]
+  (js* "~{array}.length"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 (defprotocol ICounted
   (-count [coll] "constant time count"))
 
@@ -102,6 +121,321 @@
 (defprotocol IPrintable
   (-pr-seq [o opts]))
 
+
+
+;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
+(defn identical? [x y]
+  (js* "(~{x} === ~{y})"))
+
+(defn = [x y]
+  (-equiv x y))
+
+(defn nil? [x]
+  (identical? x nil))
+
+;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
+(declare hash-map list equiv-sequential)
+
+(extend-type nil
+  IEquiv
+  (-equiv [_ o] (nil? o))
+  
+  ICounted
+  (-count [_] 0)
+
+  IEmptyableCollection
+  (-empty [_] nil)
+
+  ICollection
+  (-conj [_ o] (list o))
+
+  IIndexed
+  (-nth
+   ([_ n] nil)
+   ([_ n not-found] not-found))
+
+  ISeq
+  (-first [_] nil)
+  (-rest [_] (list))
+
+  ILookup
+  (-lookup
+   ([o k] nil)
+   ([o k not-found] not-found))
+
+  IAssociative
+  (-assoc [_ k v] (hash-map k v))
+
+  IMap
+  (-dissoc [_ k] nil)
+
+  ISet
+  (-contains? [_ v] false)
+  (-disjoin [_ v] nil)
+
+  IStack
+  (-peek [_] nil)
+  (-pop [_] nil)
+
+  IMeta
+  (-meta [_] nil)
+
+  IWithMeta
+  (-with-meta [_ meta] nil))
+
+(extend-type goog.global.Date
+  IEquiv
+  (-equiv [o other] (identical? (.toString o) (.toString other))))
+
+(extend-type number
+  IEquiv
+  (-equiv [x o] (identical? x o))
+  
+  IHash
+  (-hash [o] o))
+
+;;this is primitive because & emits call to array-seq
+(defn inc
+  "Returns a number one greater than num."
+  [x] (js* "(~{x} + 1)"))
+
+(defn- lt- [x y]
+  (js* "(~{x} < ~{y})"))
+
+(deftype IndexedSeq [a i]
+  ISeqable
+  (-seq [this] this)
+  ISeq
+  (-first [_] (aget a i))
+  (-rest [_] (when (lt- (inc i) (-count a))
+               (IndexedSeq. a (inc i))))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other)))
+
+(defn prim-seq [prim i]
+  (when-not (= 0 (-count prim))
+    (IndexedSeq. prim i)))
+
+(defn array-seq [array i]
+  (prim-seq array i))
+
+(defn- ci-reduce
+  "Accepts any collection which satisfies the ICount and IIndexed protocols and
+reduces them without incurring seq initialization"
+  ([cicoll f val n]
+     (loop [val val, n n]
+         (if (lt- n (-count cicoll))
+           (recur (f val (-nth cicoll n)) (inc n))
+           val))))
+
+(extend-type array
+  ISeqable
+  (-seq [array] (array-seq array 0))
+
+  ICounted
+  (-count [a] (.length a))
+
+  IIndexed
+  (-nth
+    ([array n]
+       (if (lt- n (.length array)) (aget array n)))
+    ([array n not-found]
+       (if (lt- n (.length array)) (aget array n)
+           not-found)))
+
+  ILookup
+  (-lookup
+    ([array k]
+       (aget array k))
+    ([array k not-found]
+       (-nth array k not-found)))
+
+  IReduce
+  (-reduce
+    ([array f]
+       (ci-reduce array f (aget array 0) 1))
+    ([array f start]
+       (ci-reduce array f start 0)))
+  )
+
+(defn seq
+  "Returns a seq on the collection. If the collection is
+  empty, returns nil.  (seq nil) returns nil. seq also works on
+  Strings, native Java arrays (of reference types) and any objects
+  that implement Iterable."
+  [coll]
+  (when coll
+    (-seq coll)))
+
+(defn first
+  "Returns the first item in the collection. Calls seq on its
+  argument. If coll is nil, returns nil."
+  [coll]
+  (when-let [s (seq coll)]
+    (-first s)))
+
+(defn rest
+  "Returns a possibly empty seq of the items after the first. Calls seq on its
+  argument."
+  [coll]
+  (when coll
+    (-rest (seq coll))))
+
+(defn next
+  "Returns a seq of the items after the first. Calls seq on its
+  argument.  If there are no more items, returns nil"
+  [coll]
+  (when coll
+    (seq (rest coll))))
+
+(extend-type default
+  IEquiv
+  (-equiv [x o] (identical? x o))
+
+  ICounted
+  (-count [x]
+    (loop [s (seq x) n 0]
+      (if s
+	(recur (next s) (inc n))
+	n))))
+
+(defn not
+  "Returns true if x is logical false, false otherwise."
+  [x] (if x false true))
+
+(defn conj
+  "conj[oin]. Returns a new collection with the xs
+  'added'. (conj nil item) returns (item).  The 'addition' may
+  happen at different 'places' depending on the concrete type."
+  ([coll x]
+     (-conj coll x))
+  ([coll x & xs]
+     (if xs
+       (recur (conj coll x) (first xs) (next xs))
+       (conj coll x))))
+
+(defn empty
+  "Returns an empty collection of the same category as coll, or nil"
+  [coll]
+  (-empty coll))
+
+(defn count
+  "Returns the number of items in the collection. (count nil) returns
+  0.  Also works on strings, arrays, and Maps"
+  [coll]
+  (-count coll))
+
+(defn nth
+  "Returns the value at the index. get returns nil if index out of
+  bounds, nth throws an exception unless not-found is supplied.  nth
+  also works for strings, arrays, regex Matchers and Lists, and,
+  in O(n) time, for sequences."
+  ([coll n]
+     (-nth coll n))
+  ([coll n not-found]
+     (-nth coll n not-found)))
+
+(defn get
+  "Returns the value mapped to key, not-found or nil if key not present."
+  ([o k]
+     (-lookup o k))
+  ([o k not-found]
+     (-lookup o k not-found)))
+
+(defn assoc
+  "assoc[iate]. When applied to a map, returns a new map of the
+   same (hashed/sorted) type, that contains the mapping of key(s) to
+   val(s). When applied to a vector, returns a new vector that
+   contains val at index. Note - index must be <= (count vector)."
+  [coll k v]
+  (-assoc coll k v))
+
+(defn dissoc
+  "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
+  that does not contain a mapping for key(s)."
+  [coll k]
+  (-dissoc coll k))
+
+(defn with-meta
+  "Returns an object of the same type and value as obj, with
+  map m as its metadata."
+  [o meta]
+  (-with-meta o meta))
+
+(defn meta
+  "Returns the metadata of obj, returns nil if there is no metadata."
+  [o]
+  (-meta o))
+
+(defn peek
+  "For a list or queue, same as first, for a vector, same as, but much
+  more efficient than, last. If the collection is empty, returns nil."
+  [coll]
+  (-peek coll))
+
+(defn pop
+  "For a list or queue, returns a new list/queue without the first
+  item, for a vector, returns a new vector without the last item. If
+  the collection is empty, throws an exception.  Note - not the same
+  as next/butlast."
+  [coll]
+  (-pop coll))
+
+(defn contains?
+  "Returns true if key is present in the given collection, otherwise
+  returns false.  Note that for numerically indexed collections like
+  vectors and arrays, this tests if the numeric key is within the
+  range of indexes. 'contains?' operates constant or logarithmic time;
+  it will not perform a linear search for a value.  See also 'some'."
+  [coll v]
+  (-contains? coll v))
+
+(defn disj
+  "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
+  does not contain key(s)."
+  [coll v]
+  (-disjoin coll v))
+
+(defn hash [o]
+  (-hash o))
+
+(defn empty?
+  "Returns true if coll has no items - same as (not (seq coll)).
+  Please use the idiom (seq x) rather than (not (empty? x))"
+  [coll] (not (seq coll)))
+
+(defn coll?
+  "Returns true if x satisfies ICollection"
+  [x] (satisfies? ICollection x))
+
+(defn set?
+  "Returns true if x satisfies ISet"
+  [x] (satisfies? ISet x))
+
+(defn associative?
+ "Returns true if coll implements Associative"
+  [x] (satisfies? IAssociative x))
+
+(defn sequential?
+  "Returns true if coll satisfies ISequential"
+  [x] (satisfies? ISequential x))
+
+(defn counted?
+  "Returns true if coll implements count in constant time"
+  [x] (satisfies? ICounted x))
+
+(defn map?
+  "Return true if x satisfies IMap"
+  [x] (satisfies? IMap x))
+
+(defn vector?
+  "Return true if x satisfies IVector"
+  [x] (satisfies? IVector x))
+
+
+;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj []
   (js* "{}"))
 
@@ -113,11 +447,16 @@
 (defn js-delete [obj key]
   (js* "delete ~{obj}[~{key}]"))
 
-(defn identical? [x y]
-  (js* "(~{x} === ~{y})"))
+;;;;;;;;;;;;;;;; preds ;;;;;;;;;;;;;;;;;;
 
-(defn nil? [x]
-  (identical? x nil))
+
+(defn false?
+  "Returns true if x is the value false, false otherwise."
+  [x] (js* "~{x} === false"))
+
+(defn true?
+  "Returns true if x is the value true, false otherwise."
+  [x] (js* "~{x} === true"))
 
 (defn undefined? [x]
   (js* "(void 0 === ~{x})"))
@@ -150,90 +489,12 @@
 (defn fn? [f]
   (goog/isFunction f))
 
-(defn str
-  "With no args, returns the empty string. With one arg x, returns
-  x.toString().  (str nil) returns the empty string. With more than
-  one arg, returns the concatenation of the str values of the args."
-  ([] "")
-  ([x] (if (nil? x) "" (. x (toString))))
-  ([x & ys] (reduce + (map str (cons x ys)))))
-
-(defn symbol
-  "Returns a Symbol with the given namespace and name."
-  ([name] (cond (symbol? name) name
-                (keyword? name) (str "\uFDD1" "'" (subs name 2))
-                :else (str "\uFDD1" "'" name)))
-  ([ns name] (symbol (str ns "/" name))))
-
-(defn keyword
-  "Returns a Keyword with the given namespace and name.  Do not use :
-  in the keyword strings, it will be added automatically."
-  ([name] (cond (keyword? name) name
-                (symbol? name) (str "\uFDD0" "'" (subs name 2))
-                :else (str "\uFDD0" "'" name)))
-  ([ns name] (keyword (str ns "/" name))))
-
-(defn subs
-  "Returns the substring of s beginning at start inclusive, and ending
-  at end (defaults to length of string), exclusive."
-  ([s start] (.substring s start))
-  ([s start end] (.substring s start end)))
-
-(defn name
-  "Returns the name String of a string, symbol or keyword."
-  [x]
-  (cond
-    (string? x) x
-    (or (keyword? x) (symbol? x))
-      (let [i (.lastIndexOf x "/")]
-        (if (< i 0)
-          (subs x 2)
-          (subs x (inc i))))
-    :else nil #_(throw (str "Doesn't support name: " x))))
-
-(defn namespace
-  "Returns the namespace String of a symbol or keyword, or nil if not present."
-  [x]
-  (if (or (keyword? x) (symbol? x))
-    (let [i (.lastIndexOf x "/")]
-      (when (> i -1)
-        (subs x 2 i)))
-    :else nil #_(throw (str "Doesn't support namespace: " x))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
-
-(defn seq
-  "Returns a seq on the collection. If the collection is
-  empty, returns nil.  (seq nil) returns nil. seq also works on
-  Strings, native Java arrays (of reference types) and any objects
-  that implement Iterable."
-  [coll]
-  (when coll
-    (-seq coll)))
-
-(defn first
-  "Returns the first item in the collection. Calls seq on its
-  argument. If coll is nil, returns nil."
-  [coll]
-  (when-let [s (seq coll)]
-    (-first s)))
-
-(defn rest
-  "Returns a possibly empty seq of the items after the first. Calls seq on its
-  argument."
-  [coll]
-  (-rest (seq coll)))
-
-(defn next
-  "Returns a seq of the items after the first. Calls seq on its
-  argument.  If there are no more items, returns nil"
-  [coll]
-  (seq (rest coll)))
 
 (defn second
   "Same as (first (next x))"
   [coll]
-  (first (rest coll)))
+  (first (next coll)))
 
 (defn ffirst
   "Same as (first (first x))"
@@ -254,6 +515,752 @@
   "Same as (next (next x))"
   [coll]
   (next (next coll)))
+
+#_(defn reduce
+  "f should be a function of 2 arguments. If val is not supplied,
+  returns the result of applying f to the first 2 items in coll, then
+  applying f to that result and the 3rd item, etc. If coll contains no
+  items, f must accept no arguments as well, and reduce returns the
+  result of calling f with no arguments.  If coll has only 1 item, it
+  is returned and f is not called.  If val is supplied, returns the
+  result of applying f to val and the first item in coll, then
+  applying f to that result and the 2nd item, etc. If coll contains no
+  items, returns val and f is not called."
+  ([f coll]
+     (if-let [s (seq coll)]
+       (reduce f (first s) (next s))
+       (f)))
+  ([f val coll]
+     (let [s (seq coll)]
+       (-reduce s f val))))
+
+; simple reduce, to be removed when IReduce is working
+(defn reduce
+  ([f coll]
+    (if-let [s (seq coll)]
+      (reduce f (first s) (next s))
+      (f)))
+  ([f val coll]
+    (loop [val val, coll (seq coll)]
+      (if coll
+        (recur (f val (first coll)) (next coll))
+        val))))
+
+;;; Math - variadic forms will not work until the following implemented:
+;;; first, next, reduce
+
+(defn +
+  "Returns the sum of nums. (+) returns 0."
+  ([] 0)
+  ([x] x)
+  ([x y] (js* "(~{x} + ~{y})"))
+  ([x y & more] (reduce + (+ x y) more)))
+
+(defn -
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result."
+  ([x] (js* "(- ~{x})"))
+  ([x y] (js* "(~{x} - ~{y})"))
+  ([x y & more] (reduce - (- x y) more)))
+
+(defn *
+  "Returns the product of nums. (*) returns 1."
+  ([] 1)
+  ([x] x)
+  ([x y] (js* "(~{x} * ~{y})"))
+  ([x y & more] (reduce * (* x y) more)))
+
+(defn /
+  "If no denominators are supplied, returns 1/numerator,
+  else returns numerator divided by all of the denominators."  
+  ([x] (js* "(1 / ~{x})"))
+  ([x y] (js* "(~{x} / ~{y})"))
+  ([x y & more] (reduce / (/ x y) more)))
+
+(defn <
+  "Returns non-nil if nums are in monotonically increasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x} < ~{y})"))
+  ([x y & more]
+     (if (< x y)
+       (if (next more)
+         (recur y (first more) (next more))
+         (< y (first more)))
+       false)))
+
+(defn <=
+  "Returns non-nil if nums are in monotonically non-decreasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x} <= ~{y})"))
+  ([x y & more]
+   (if (<= x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (<= y (first more)))
+     false)))
+
+(defn >
+  "Returns non-nil if nums are in monotonically decreasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x} > ~{y})"))
+  ([x y & more]
+   (if (> x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (> y (first more)))
+     false)))
+
+(defn >=
+  "Returns non-nil if nums are in monotonically non-increasing order,
+  otherwise false."
+  ([x] true)
+  ([x y] (js* "(~{x} >= ~{y})"))
+  ([x y & more]
+   (if (>= x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (>= y (first more)))
+     false)))
+
+(defn dec
+  "Returns a number one less than num."
+  [x] (- x 1))
+
+(defn bit-xor
+  "Bitwise exclusive or"
+  [x y] (js* "(~{x} ^ ~{y})"))
+
+(defn bit-and
+  "Bitwise and"
+  [x y] (js* "(~{x} & ~{y})"))
+
+(defn bit-or
+  "Bitwise or"
+  [x y] (js* "(~{x} | ~{y})"))
+
+(defn bit-and-not
+  "Bitwise and"
+  [x y] (js* "(~{x} & ~~{y})"))
+
+(defn bit-clear
+  "Clear bit at index n"
+  [x n]
+  (js* "(~{x} & ~(1 << ~{n}))"))
+
+(defn bit-flip
+  "Flip bit at index n"
+  [x n]
+  (js* "(~{x} ^ (1 << ~{n}))"))
+
+(defn bit-not
+  "Bitwise complement"
+  [x] (js* "(~~{x})"))
+
+(defn bit-set
+  "Set bit at index n"
+  [x n]
+  (js* "(~{x} | (1 << ~{n}))"))
+
+(defn bit-test
+  "Test bit at index n"
+  [x n]
+  (js* "((~{x} & (1 << ~{n})) != 0)"))
+
+
+(defn bit-shift-left
+  "Bitwise shift left"
+  [x n] (js* "(~{x} << ~{n})"))
+
+(defn bit-shift-right
+  "Bitwise shift right"
+  [x n] (js* "(~{x} >> ~{n})"))
+
+(defn ==
+  "Returns non-nil if nums all have the equivalent
+  value (type-independent), otherwise false"
+  ([x] true)
+  ([x y] (-equiv x y))
+  ([x y & more]
+   (if (== x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (== y (first more)))
+     false)))
+
+(defn pos?
+  "Returns true if num is greater than zero, else false"
+  [n] (< 0 n))
+
+(defn zero? [n]
+  (== 0 n))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
+
+(defn str
+  "With no args, returns the empty string. With one arg x, returns
+  x.toString().  (str nil) returns the empty string. With more than
+  one arg, returns the concatenation of the str values of the args."
+  ([] "")
+  ([x] (if (nil? x) "" (. x (toString))))
+  ([x & ys]
+     ((fn [sb more]
+        (if more
+          (recur (. sb  (append (str (first more)))) (next more))
+          (str sb)))
+      (gstring/StringBuffer. (str x)) ys)))
+
+(defn subs
+  "Returns the substring of s beginning at start inclusive, and ending
+  at end (defaults to length of string), exclusive."
+  ([s start] (.substring s start))
+  ([s start end] (.substring s start end)))
+
+(defn symbol
+  "Returns a Symbol with the given namespace and name."
+  ([name] (cond (symbol? name) name
+                (keyword? name) (str "\uFDD1" "'" (subs name 2))
+                :else (str "\uFDD1" "'" name)))
+  ([ns name] (symbol (str ns "/" name))))
+
+(defn keyword
+  "Returns a Keyword with the given namespace and name.  Do not use :
+  in the keyword strings, it will be added automatically."
+  ([name] (cond (keyword? name) name
+                (symbol? name) (str "\uFDD0" "'" (subs name 2))
+                :else (str "\uFDD0" "'" name)))
+  ([ns name] (keyword (str ns "/" name))))
+
+
+
+(defn- equiv-sequential
+  "Assumes x is sequential. Returns true if x equals y, otherwise
+  returns false."
+  [x y]
+  (boolean
+   (when (sequential? y)
+     (loop [xs (seq x) ys (seq y)]
+       (cond (nil? xs) (nil? ys)
+             (nil? ys) false
+             (= (first xs) (first ys)) (recur (next xs) (next ys))
+             :else false)))))
+
+(defn hash-combine [seed hash]
+  ; a la boost
+  (bit-xor (+ hash 0x9e3779b9
+              (bit-shift-left seed 6)
+              (bit-shift-right seed 2))))
+
+(defn- hash-coll [coll]
+  (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
+
+
+;;;;;;;;;;;;;;;; cons ;;;;;;;;;;;;;;;;
+(deftype List [meta first rest count]
+  IWithMeta
+  (-with-meta [coll meta] (List. meta first rest count))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] first)
+  (-rest [coll] rest)
+
+  IStack
+  (-peek [coll] first)
+  (-pop [coll] (-rest coll))
+
+  ICollection
+  (-conj [coll o] (List. meta o coll (inc count)))
+
+  IEmptyableCollection
+  (-empty [coll] cljs.core.List/EMPTY)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] coll)
+
+  ICounted
+  (-count [coll] count)
+  )
+
+(deftype EmptyList [meta]
+  IWithMeta
+  (-with-meta [coll meta] (EmptyList. meta))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] nil)
+  (-rest [coll] nil)
+
+  IStack
+  (-peek [coll] nil)
+  (-pop [coll] #_(throw "Can't pop empty list"))
+
+  ICollection
+  (-conj [coll o] (List. meta o nil 1))
+
+  IEmptyableCollection
+  (-empty [coll] coll)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] nil)
+
+  ICounted
+  (-count [coll] 0)
+
+  )
+
+(set! cljs.core.List/EMPTY (EmptyList. nil))
+
+(defn reverse
+  "Returns a seq of the items in coll in reverse order. Not lazy."
+  [coll]
+  (reduce conj () coll))
+
+(defn list [& items]
+  (reduce conj () (reverse items)))
+
+(deftype Cons [meta first rest]
+  IWithMeta
+  (-with-meta [coll meta] (Cons. meta first rest))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] first)
+  (-rest [coll] (if (nil? rest) () rest))
+
+  ICollection
+  (-conj [coll o] (Cons. nil o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] coll)
+
+  )
+
+(defn cons
+  "Returns a new seq where x is the first element and seq is the rest."
+  [x seq]
+  (Cons. nil x seq))
+
+(declare hash-map)
+
+(extend-type string
+  IHash
+  (-hash [o] (goog.string/hashCode o))
+
+  ISeqable
+  (-seq [string] (prim-seq string 0))
+  
+  ICounted
+  (-count [s] (.length s))
+
+  IIndexed
+  (-nth
+    ([string n]
+       (if (< n (-count string)) (.charAt string n)))
+    ([string n not-found]
+       (if (< n (-count string)) (.charAt string n)
+           not-found)))
+
+  ILookup
+  (-lookup
+    ([string k]
+       (-nth string k))
+    ([string k not_found]
+       (-nth string k not_found)))
+
+  IReduce
+  (-reduce
+    ([string f]
+       (ci-reduce string f (-nth string 0) 1))
+    ([string f start]
+       (ci-reduce string f start 0))))
+
+; could use reify
+;;; LazySeq ;;;
+
+(defn- lazy-seq-value [lazy-seq]
+  (let [x (.x lazy-seq)]
+    (if (.realized lazy-seq)
+      x
+      (do
+        (set! lazy-seq.x (x))
+        (set! lazy-seq.realized true)
+        (.x lazy-seq)))))
+
+(deftype LazySeq [meta realized x]
+  IWithMeta
+  (-with-meta [coll meta] (LazySeq. meta realized x))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (first (lazy-seq-value coll)))
+  (-rest [coll] (rest (lazy-seq-value coll)))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] (seq (lazy-seq-value coll)))
+
+  )
+
+;;;;;;;;;;;;;;;;
+
+(defn to-array
+  "Naive impl of to-array as a start."
+  [s]
+  (let [ary (array)]
+    (loop [s s]
+      (if (seq s)
+        (do (. ary push (first s))
+            (recur (next s)))
+        ary))))
+
+(defn- bounded-count [s n]
+  (loop [s s i n sum 0]
+    (if (and (pos? i)
+             (seq s))
+      (recur (next s)
+             (dec i)
+             (inc sum))
+      sum)))
+
+(defn spread
+  [arglist]
+  (cond
+   (nil? arglist) nil
+   (nil? (next arglist)) (seq (first arglist))
+   :else (cons (first arglist)
+               (spread (next arglist)))))
+
+(defn concat
+  "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
+  ([] (lazy-seq nil))
+  ([x] (lazy-seq x))
+  ([x y]
+    (lazy-seq
+      (let [s (seq x)]
+        (if s
+          (cons (first s) (concat (rest s) y))
+          y))))
+  ([x y & zs]
+     (let [cat (fn cat [xys zs]
+                 (lazy-seq
+                   (let [xys (seq xys)]
+                     (if xys
+                       (cons (first xys) (cat (rest xys) zs))
+                       (when zs
+                         (cat (first zs) (next zs)))))))]
+       (cat (concat x y) zs))))
+
+(defn list*
+  "Creates a new list containing the items prepended to the rest, the
+  last of which will be treated as a sequence."
+  ([args] (seq args))
+  ([a args] (cons a args))
+  ([a b args] (cons a (cons b args)))
+  ([a b c args] (cons a (cons b (cons c args))))
+  ([a b c d & more]
+     (cons a (cons b (cons c (cons d (spread more)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
+
+(defn apply
+  "Applies fn f to the argument list formed by prepending intervening arguments to args.
+  First cut.  Not lazy.  Needs to use emitted toApply."
+  ([f args]
+     (let [fixed-arity (. f cljs$lang$maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f x args]
+     (let [args (list* x args)
+           fixed-arity (. f cljs$lang$maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f x y args]
+     (let [args (list* x y args)
+           fixed-arity (. f cljs$lang$maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f x y z args]
+     (let [args (list* x y z args)
+           fixed-arity (. f cljs$lang$maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args)))))
+  ([f a b c d & args]
+     (let [args (cons a (cons b (cons c (cons d (spread args)))))
+           fixed-arity (. f cljs$lang$maxFixedArity)]
+       (if (. f applyTo)
+         (if (<= (bounded-count args fixed-arity)
+                 fixed-arity)
+           (. f apply f (to-array args))
+           (. f apply f (to-array args))) ;; applyTo
+         (. f apply f (to-array args))))))
+
+(defn every?
+  "Returns true if (pred x) is logical true for every x in coll, else
+  false."
+  [pred coll]
+  (cond
+   (nil? (seq coll)) true
+   (pred (first coll)) (recur pred (next coll))
+   :else false))
+
+(defn not-every?
+  "Returns false if (pred x) is logical true for every x in
+  coll, else true."
+  [pred coll] (not (every? pred coll)))
+
+(defn some
+  "Returns the first logical true value of (pred x) for any x in coll,
+  else nil.  One common idiom is to use a set as pred, for example
+  this will return :fred if :fred is in the sequence, otherwise nil:
+  (some #{:fred} coll)"
+  [pred coll]
+    (when (seq coll)
+      (or (pred (first coll)) (recur pred (next coll)))))
+
+(defn not-any?
+  "Returns false if (pred x) is logical true for any x in coll,
+  else true."
+  [pred coll] (not (some pred coll)))
+
+(defn identity [x] x)
+
+(defn complement
+  "Takes a fn f and returns a fn that takes the same arguments as f,
+  has the same effects, if any, and returns the opposite truth value."
+  [f] 
+  (fn 
+    ([] (not (f)))
+    ([x] (not (f x)))
+    ([x y] (not (f x y)))
+    ([x y & zs] (not (apply f x y zs)))))
+
+(defn constantly
+  "Returns a function that takes any number of arguments and returns x."
+  [x] (fn [& args] x))
+
+(defn comp
+  "Takes a set of functions and returns a fn that is the composition
+  of those fns.  The returned fn takes a variable number of args,
+  applies the rightmost of fns to the args, the next
+  fn (right-to-left) to the result, etc.
+
+  TODO: Implement apply"
+  ([] identity)
+  ([f] f)
+  ([f g] 
+     (fn 
+       ([] (f (g)))
+       ([x] (f (g x)))
+       ([x y] (f (g x y)))
+       ([x y z] (f (g x y z)))
+       ([x y z & args] (f (apply g x y z args)))))
+  ([f g h] 
+     (fn 
+       ([] (f (g (h))))
+       ([x] (f (g (h x))))
+       ([x y] (f (g (h x y))))
+       ([x y z] (f (g (h x y z))))
+       ([x y z & args] (f (g (apply h x y z args))))))
+  ([f1 f2 f3 & fs]
+    (let [fs (reverse (list* f1 f2 f3 fs))]
+      (fn [& args]
+        (loop [ret (apply (first fs) args) fs (next fs)]
+          (if fs
+            (recur ((first fs) ret) (next fs))
+            ret))))))
+
+(defn partial
+  "Takes a function f and fewer than the normal arguments to f, and
+  returns a fn that takes a variable number of additional args. When
+  called, the returned function calls f with args + additional args.
+
+  TODO: Implement apply"
+  ([f arg1]
+   (fn [& args] (apply f arg1 args)))
+  ([f arg1 arg2]
+   (fn [& args] (apply f arg1 arg2 args)))
+  ([f arg1 arg2 arg3]
+   (fn [& args] (apply f arg1 arg2 arg3 args)))
+  ([f arg1 arg2 arg3 & more]
+   (fn [& args] (apply f arg1 arg2 arg3 (concat more args)))))
+
+
+
+(defn every-pred
+  "Takes a set of predicates and returns a function f that returns true if all of its
+  composing predicates return a logical true value against all of its arguments, else it returns
+  false. Note that f is short-circuiting in that it will stop execution on the first
+  argument that triggers a logical false result against the original predicates."
+  ([p]
+     (fn ep1
+       ([] true)
+       ([x] (boolean (p x)))
+       ([x y] (boolean (and (p x) (p y))))
+       ([x y z] (boolean (and (p x) (p y) (p z))))
+       ([x y z & args] (boolean (and (ep1 x y z)
+                                     (every? p args))))))
+  ([p1 p2]
+     (fn ep2
+       ([] true)
+       ([x] (boolean (and (p1 x) (p2 x))))
+       ([x y] (boolean (and (p1 x) (p1 y) (p2 x) (p2 y))))
+       ([x y z] (boolean (and (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z))))
+       ([x y z & args] (boolean (and (ep2 x y z)
+                                     (every? #(and (p1 %) (p2 %)) args))))))
+  ([p1 p2 p3]
+     (fn ep3
+       ([] true)
+       ([x] (boolean (and (p1 x) (p2 x) (p3 x))))
+       ([x y] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y))))
+       ([x y z] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z))))
+       ([x y z & args] (boolean (and (ep3 x y z)
+                                     (every? #(and (p1 %) (p2 %) (p3 %)) args))))))
+  ([p1 p2 p3 & ps]
+     (let [ps (list* p1 p2 p3 ps)]
+       (fn epn
+         ([] true)
+         ([x] (every? #(% x) ps))
+         ([x y] (every? #(and (% x) (% y)) ps))
+         ([x y z] (every? #(and (% x) (% y) (% z)) ps))
+         ([x y z & args] (boolean (and (epn x y z)
+                                       (every? #(every? % args) ps))))))))
+
+(defn some-fn
+  "Takes a set of predicates and returns a function f that returns the first logical true value
+  returned by one of its composing predicates against any of its arguments, else it returns
+  logical false. Note that f is short-circuiting in that it will stop execution on the first
+  argument that triggers a logical true result against the original predicates."
+  ([p]
+     (fn sp1
+       ([] nil)
+       ([x] (p x))
+       ([x y] (or (p x) (p y)))
+       ([x y z] (or (p x) (p y) (p z)))
+       ([x y z & args] (or (sp1 x y z)
+                           (some p args)))))
+  ([p1 p2]
+     (fn sp2
+       ([] nil)
+       ([x] (or (p1 x) (p2 x)))
+       ([x y] (or (p1 x) (p1 y) (p2 x) (p2 y)))
+       ([x y z] (or (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z)))
+       ([x y z & args] (or (sp2 x y z)
+                           (some #(or (p1 %) (p2 %)) args)))))
+  ([p1 p2 p3]
+     (fn sp3
+       ([] nil)
+       ([x] (or (p1 x) (p2 x) (p3 x)))
+       ([x y] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y)))
+       ([x y z] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z)))
+       ([x y z & args] (or (sp3 x y z)
+                           (some #(or (p1 %) (p2 %) (p3 %)) args)))))
+  ([p1 p2 p3 & ps]
+     (let [ps (list* p1 p2 p3 ps)]
+       (fn spn
+         ([] nil)
+         ([x] (some #(% x) ps))
+         ([x y] (some #(or (% x) (% y)) ps))
+         ([x y z] (some #(or (% x) (% y) (% z)) ps))
+         ([x y z & args] (or (spn x y z)
+                             (some #(some % args) ps)))))))
+
+(defn map
+  "Returns a lazy sequence consisting of the result of applying f to the
+  set of first items of each coll, followed by applying f to the set
+  of second items in each coll, until any one of the colls is
+  exhausted.  Any remaining items in other colls are ignored. Function
+  f should accept number-of-colls arguments."
+  ([f coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (cons (f (first s)) (map f (rest s))))))
+  ([f c1 c2]
+   (lazy-seq
+    (let [s1 (seq c1) s2 (seq c2)]
+      (when (and s1 s2)
+        (cons (f (first s1) (first s2))
+              (map f (rest s1) (rest s2)))))))
+  ([f c1 c2 c3]
+   (lazy-seq
+    (let [s1 (seq c1) s2 (seq c2) s3 (seq c3)]
+      (when (and  s1 s2 s3)
+        (cons (f (first s1) (first s2) (first s3))
+              (map f (rest s1) (rest s2) (rest s3)))))))
+  ([f c1 c2 c3 & colls]
+   (let [step (fn step [cs]
+                 (lazy-seq
+                  (let [ss (map seq cs)]
+                    (when (every? identity ss)
+                      (cons (map first ss) (step (map rest ss)))))))]
+     (map #(apply f %) (step (conj colls c3 c2 c1))))))
 
 (defn take
   "Returns a lazy sequence of the first n items in coll, or all items if
@@ -337,35 +1344,7 @@
   "Returns a lazy seq of the elements of coll separated by sep"
   [sep coll] (drop 1 (interleave (repeat sep) coll)))
 
-(defn map
-  "Returns a lazy sequence consisting of the result of applying f to the
-  set of first items of each coll, followed by applying f to the set
-  of second items in each coll, until any one of the colls is
-  exhausted.  Any remaining items in other colls are ignored. Function
-  f should accept number-of-colls arguments."
-  ([f coll]
-   (lazy-seq
-    (when-let [s (seq coll)]
-      (cons (f (first s)) (map f (rest s))))))
-  ([f c1 c2]
-   (lazy-seq
-    (let [s1 (seq c1) s2 (seq c2)]
-      (when (and s1 s2)
-        (cons (f (first s1) (first s2))
-              (map f (rest s1) (rest s2)))))))
-  ([f c1 c2 c3]
-   (lazy-seq
-    (let [s1 (seq c1) s2 (seq c2) s3 (seq c3)]
-      (when (and  s1 s2 s3)
-        (cons (f (first s1) (first s2) (first s3))
-              (map f (rest s1) (rest s2) (rest s3)))))))
-  ([f c1 c2 c3 & colls]
-   (let [step (fn step [cs]
-                 (lazy-seq
-                  (let [ss (map seq cs)]
-                    (when (every? identity ss)
-                      (cons (map first ss) (step (map rest ss)))))))]
-     (map #(apply f %) (step (conj colls c3 c2 c1))))))
+
 
 (defn- flatten1
   "Take a collection of collections, and return a lazy seq
@@ -387,23 +1366,7 @@
   ([f coll & colls]
     (flatten1 (apply map f coll colls))))
 
-(defn reduce
-  "f should be a function of 2 arguments. If val is not supplied,
-  returns the result of applying f to the first 2 items in coll, then
-  applying f to that result and the 3rd item, etc. If coll contains no
-  items, f must accept no arguments as well, and reduce returns the
-  result of calling f with no arguments.  If coll has only 1 item, it
-  is returned and f is not called.  If val is supplied, returns the
-  result of applying f to val and the first item in coll, then
-  applying f to that result and the 2nd item, etc. If coll contains no
-  items, returns val and f is not called."
-  ([f coll]
-     (if-let [s (seq coll)]
-       (reduce f (first s) (next s))
-       (f)))
-  ([f val coll]
-     (let [s (seq coll)]
-       (-reduce s f val))))
+
 
 (defn filter
   "Returns a lazy sequence of the items in coll for which
@@ -431,667 +1394,41 @@
                     (mapcat walk (children node))))))]
      (walk root)))
 
-; simple reduce, to be removed when IReduce is working
-(defn reduce
-  ([f coll]
-    (if-let [s (seq coll)]
-      (reduce f (first s) (next s))
-      (f)))
-  ([f val coll]
-    (loop [val val, coll (seq coll)]
-      (if coll
-        (recur (f val (first coll)) (next coll))
-        val))))
-
-(defn reverse
-  "Returns a seq of the items in coll in reverse order. Not lazy."
-  [coll]
-  (reduce conj () coll))
-
-(defn butlast [s]
-  (loop [ret [] s s]
-    (if (next s)
-      (recur (conj ret (first s)) (next s))
-      (seq ret))))
-
-(defn every?
-  "Returns true if (pred x) is logical true for every x in coll, else
-  false."
-  [pred coll]
-  (cond
-   (nil? (seq coll)) true
-   (pred (first coll)) (recur pred (next coll))
-   :else false))
-
-(defn not-every?
-  "Returns false if (pred x) is logical true for every x in
-  coll, else true."
-  [pred coll] (not (every? pred coll)))
-
-(defn some
-  "Returns the first logical true value of (pred x) for any x in coll,
-  else nil.  One common idiom is to use a set as pred, for example
-  this will return :fred if :fred is in the sequence, otherwise nil:
-  (some #{:fred} coll)"
-  [pred coll]
-    (when (seq coll)
-      (or (pred (first coll)) (recur pred (next coll)))))
-
-(defn not-any?
-  "Returns false if (pred x) is logical true for any x in coll,
-  else true."
-  [pred coll] (not (some pred coll)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; sequence fns ;;;;;;;;;;;;;;
-
-(defn count
-  "Returns the number of items in the collection. (count nil) returns
-  0.  Also works on strings, arrays, and Maps"
-  [coll]
-  (-count coll))
-
-(defn nth
-  "Returns the value at the index. get returns nil if index out of
-  bounds, nth throws an exception unless not-found is supplied.  nth
-  also works for strings, arrays, regex Matchers and Lists, and,
-  in O(n) time, for sequences."
-  ([coll n]
-     (-nth coll n))
-  ([coll n not-found]
-     (-nth coll n not-found)))
-
-(defn get
-  "Returns the value mapped to key, not-found or nil if key not present."
-  ([o k]
-     (-lookup o k))
-  ([o k not-found]
-     (-lookup o k not-found)))
-
-(defn assoc
-  "assoc[iate]. When applied to a map, returns a new map of the
-   same (hashed/sorted) type, that contains the mapping of key(s) to
-   val(s). When applied to a vector, returns a new vector that
-   contains val at index. Note - index must be <= (count vector)."
-  [coll k v]
-  (-assoc coll k v))
-
-(defn zipmap
-  "Returns a map with the keys mapped to the corresponding vals."
-  [keys vals]
-    (loop [map {}
-           ks (seq keys)
-           vs (seq vals)]
-      (if (and ks vs)
-        (recur (assoc map (first ks) (first vs))
-               (next ks)
-               (next vs))
-        map)))
-
-(defn dissoc
-  "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
-  that does not contain a mapping for key(s)."
-  [coll k]
-  (-dissoc coll k))
-
-(defn with-meta
-  "Returns an object of the same type and value as obj, with
-  map m as its metadata."
-  [o meta]
-  (-with-meta o meta))
-
-(defn meta
-  "Returns the metadata of obj, returns nil if there is no metadata."
-  [o]
-  (-meta o))
-
-(defn peek
-  "For a list or queue, same as first, for a vector, same as, but much
-  more efficient than, last. If the collection is empty, returns nil."
-  [coll]
-  (-peek coll))
-
-(defn pop
-  "For a list or queue, returns a new list/queue without the first
-  item, for a vector, returns a new vector without the last item. If
-  the collection is empty, throws an exception.  Note - not the same
-  as next/butlast."
-  [coll]
-  (-pop coll))
-
-(defn contains?
-  "Returns true if key is present in the given collection, otherwise
-  returns false.  Note that for numerically indexed collections like
-  vectors and arrays, this tests if the numeric key is within the
-  range of indexes. 'contains?' operates constant or logarithmic time;
-  it will not perform a linear search for a value.  See also 'some'."
-  [coll v]
-  (-contains? coll v))
-
-(defn disj
-  "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
-  does not contain key(s)."
-  [coll v]
-  (-disjoin coll v))
-
-(defn empty?
-  "Returns true if coll has no items - same as (not (seq coll)).
-  Please use the idiom (seq x) rather than (not (empty? x))"
-  [coll] (not (seq coll)))
-
-(defn coll?
-  "Returns true if x satisfies ICollection"
-  [x] (satisfies? ICollection x))
-
-(defn set?
-  "Returns true if x satisfies ISet"
-  [x] (satisfies? ISet x))
-
-(defn associative?
- "Returns true if coll implements Associative"
-  [x] (satisfies? IAssociative x))
-
-(defn sequential?
-  "Returns true if coll satisfies ISequential"
-  [x] (satisfies? ISequential x))
-
-(defn counted?
-  "Returns true if coll implements count in constant time"
-  [x] (satisfies? ICounted x))
-
-(defn map?
-  "Return true if x satisfies IMap"
-  [x] (satisfies? IMap x))
-
-(defn vector?
-  "Return true if x satisfies IVector"
-  [x] (satisfies? IVector x))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
-
-(defn to-array
-  "Naive impl of to-array as a start."
-  [s]
-  (let [ary (array)]
-    (loop [s s]
-      (if (seq s)
-        (do (. ary push (first s))
-            (recur (next s)))
-        ary))))
-
-(defn- array-clone [array-like]
-  #_(goog.array.clone array-like)
-  (js* "Array.prototype.slice.call(~{array-like})"))
-
-(defn array [var-args];; [& items]
-  (js* "Array.prototype.slice.call(arguments)"))
-
-(defn aget [array i]
-  (js* "~{array}[~{i}]"))
-
-(defn aset [array i val]
-  (js* "(~{array}[~{i}] = ~{val})"))
-
-(defn alength [array]
-  (js* "~{array}.length"))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; equality ;;;;;;;;;;;;;;
-
-
-(defn = [x y]
-  (if (satisfies? IEquiv x)
-    (-equiv x y)
-    (identical? x y)))
-
-(defn- equiv-sequential
-  "Assumes y is sequential. Returns true if x equals y, otherwise
-  returns false."
-  [x y]
-  (boolean
-    (when (sequential? y)
-      (if (and (counted? x) (counted? y))
-        (when (= (count x) (count y))
-          (every? identity (map = x y)))
-        (every? identity (map = x y))))))
-
-; could use reify
-(deftype NeverEquiv []
-  IEquiv
-  (-equiv [o other] false))
-
-(def ^:private never-equiv (NeverEquiv.))
-
-(defn- equiv-map
-  "Assumes y is a map. Returns true if x equals y, otherwise returns
-  false."
-  [x y]
-  (boolean
-    (when (map? y)
-      ; assume all maps are counted
-      (when (= (count x) (count y))
-        (every? identity
-                (map (fn [xkv] (= (get y (first xkv) never-equiv)
-                                  (second xkv)))
-                     x))))))
-
-;;; LazySeq ;;;
-
-(defn- lazy-seq-value [lazy-seq]
-  (let [x (.x lazy-seq)]
-    (if (.realized lazy-seq)
-      x
-      (do
-        (set! lazy-seq.x (x))
-        (set! lazy-seq.realized true)
-        (.x lazy-seq)))))
-
-(deftype LazySeq [meta realized x]
-  IWithMeta
-  (-with-meta [coll meta] (LazySeq. meta realized x))
-
-  IMeta
-  (-meta [coll] meta)
-
-  ISeq
-  (-first [coll] (first (lazy-seq-value coll)))
-  (-rest [coll] (rest (lazy-seq-value coll)))
-
-  ICollection
-  (-conj [coll o] (cons o coll))
-
-  IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
-
-  ISequential
-  IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
-
-  IHash
-  (-hash [coll] (hash-coll coll))
-
-  ISeqable
-  (-seq [coll] (seq (lazy-seq-value coll)))
-
-  IPrintable
-  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
-
-(defn array-seq [array i]
-  (prim-seq array i))
-
-(defn prim-seq [prim i]
-  (when-not (= 0 (-count prim))
-    (lazy-seq
-     (when (< i (-count prim))
-       (cons (-nth prim i) (prim-seq prim (inc i)))))))
-
-(defn- ci-reduce
-  "Accepts any collection which satisfies the ICount and IIndexed protocols and
-reduces them without incurring seq initialization"
-  ([cicoll f val n]
-     (loop [val val, n n]
-         (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
-           val))))
-
-(extend-type nil
-  ICounted
-  (-count [coll] 0)
-
-  IEmptyableCollection
-  (-empty [coll] nil)
-
-  ICollection
-  (-conj [coll o] (list o))
-
-  IIndexed
-  (-nth
-   ([coll n] nil)
-   ([coll n not-found] not-found))
-
-  ISeq
-  (-first [coll] nil)
-  (-rest [coll] (list))
-
-  ILookup
-  (-lookup
-   ([o k] nil)
-   ([o k not-found] not-found))
-
-  IAssociative
-  (-assoc [coll k v] (hash-map k v))
-
-  IMap
-  (-dissoc [coll k] nil)
-
-  ISet
-  (-contains? [coll v] false)
-  (-disjoin [coll v] nil)
-
-  IStack
-  (-peek [coll] nil)
-  (-pop [coll] nil)
-
-  IMeta
-  (-meta [o] nil)
-
-  IWithMeta
-  (-with-meta [o meta] nil))
-
-(extend-type default
-  ICounted
-  (-count [coll]
-    (loop [s (seq coll) n 0]
-      (if s
-	(recur (next s) (inc n))
-	n))))
-
-(extend-type goog.global.Date
-  IEquiv
-  (-equiv [o other] (identical? (str o) (str other))))
-
-(extend-type boolean
-  IPrintable
-  (-pr-seq [bool opts] (list (str bool))))
-
-(extend-type number
-  IHash
-  (-hash [o] o)
-
-  IPrintable
-  (-pr-seq [n opts] (list (str n))))
-
-(extend-type string
-  IHash
-  (-hash [o] (goog.string/hashCode o))
-
-  ISeqable
-  (-seq [string] (prim-seq string 0))
-  
-  ICounted
-  (-count [s] (.length s))
-
-  IIndexed
-  (-nth
-    ([string n]
-       (if (< n (-count string)) (.charAt string n)))
-    ([string n not-found]
-       (if (< n (-count string)) (.charAt string n)
-           not-found)))
-
-  ILookup
-  (-lookup
-    ([string k]
-       (-nth string k))
-    ([string k not_found]
-       (-nth string k not_found)))
-
-  IReduce
-  (-reduce
-    ([string f]
-       (ci-reduce string f (-nth string 0) 1))
-    ([string f start]
-       (ci-reduce string f start 0)))
-
-  IPrintable
-  (-pr-seq [obj opts]
-    (cond
-     (keyword? obj)
-     (list (str ":"
-                (when-let [nspc (namespace obj)]
-                  (str nspc "/"))
-                (name obj)))
-     (symbol? obj)
-     (list (str (when-let [nspc (namespace obj)]
-                  (str nspc "/"))
-                (name obj)))
-     (get opts :readably)
-     (list (goog.string.quote obj))
-     :else (list obj))))
-
-(extend-type array
-  ISeqable
-  (-seq [array] (array-seq array 0))
-
-  ICounted
-  (-count [a] (.length a))
-
-  IIndexed
-  (-nth
-    ([array n]
-       (if (< n (-count array)) (aget array n)))
-    ([array n not_found]
-       (if (< n (-count array)) (aget array n)
-           not_found)))
-
-  ILookup
-  (-lookup
-    ([array k]
-       (-nth array k))
-    ([array k not-found]
-       (-nth array k not-found)))
-
-  IReduce
-  (-reduce
-    ([array f]
-       (ci-reduce array f (-nth array 0) 1))
-    ([array f start]
-       (ci-reduce array f start 0)))
-
-  IPrintable
-  (-pr-seq [a opts]
-    (pr-sequential pr-seq "#<Array [" ", " "]>" opts a)))
-
-(deftype List [meta first rest count]
-  IWithMeta
-  (-with-meta [coll meta] (List. meta first rest count))
-
-  IMeta
-  (-meta [coll] meta)
-
-  ISeq
-  (-first [coll] first)
-  (-rest [coll] (if (nil? rest) (EmptyList. meta) rest))
-
-  IStack
-  (-peek [coll] first)
-  (-pop [coll] (-rest coll))
-
-  ICollection
-  (-conj [coll o] (List. meta o coll (inc count)))
-
-  IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
-
-  ISequential
-  IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
-
-  IHash
-  (-hash [coll] (hash-coll coll))
-
-  ISeqable
-  (-seq [coll] coll)
-
-  ICounted
-  (-count [coll] count)
-
-  IPrintable
-  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
-
-(deftype EmptyList [meta]
-  IWithMeta
-  (-with-meta [coll meta] (EmptyList. meta))
-
-  IMeta
-  (-meta [coll] meta)
-
-  ISeq
-  (-first [coll] nil)
-  (-rest [coll] nil)
-
-  IStack
-  (-peek [coll] nil)
-  (-pop [coll] #_(throw "Can't pop empty list"))
-
-  ICollection
-  (-conj [coll o] (List. meta o nil 1))
-
-  IEmptyableCollection
-  (-empty [coll] coll)
-
-  ISequential
-  IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
-
-  IHash
-  (-hash [coll] (hash-coll coll))
-
-  ISeqable
-  (-seq [coll] nil)
-
-  ICounted
-  (-count [coll] 0)
-
-  IPrintable
-  (-pr-seq [coll opts] (list "()")))
-
-(set! cljs.core.List/EMPTY (EmptyList. nil))
-
-(defn list [& items]
-  (reduce conj () (reverse items)))
-
-(deftype Cons [meta first rest]
-  IWithMeta
-  (-with-meta [coll meta] (Cons. meta first rest))
-
-  IMeta
-  (-meta [coll] meta)
-
-  ISeq
-  (-first [coll] first)
-  (-rest [coll] (if (nil? rest) () rest))
-
-  ICollection
-  (-conj [coll o] (Cons. nil o coll))
-
-  IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
-
-  ISequential
-  IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
-
-  IHash
-  (-hash [coll] (hash-coll coll))
-
-  ISeqable
-  (-seq [coll] coll)
-
-  IPrintable
-  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
-
-(defn cons
-  "Returns a new seq where x is the first element and seq is the rest."
-  [x seq]
-  (Cons. nil x seq))
-
-(defn concat
-  "Returns a lazy seq representing the concatenation of the elements in the supplied colls."
-  ([] (lazy-seq nil))
-  ([x] (lazy-seq x))
-  ([x y]
-    (lazy-seq
-      (let [s (seq x)]
-        (if s
-          (cons (first s) (concat (rest s) y))
-          y))))
-  ([x y & zs]
-     (let [cat (fn cat [xys zs]
-                 (lazy-seq
-                   (let [xys (seq xys)]
-                     (if xys
-                       (cons (first xys) (cat (rest xys) zs))
-                       (when zs
-                         (cat (first zs) (next zs)))))))]
-       (cat (concat x y) zs))))
-
-(defn- bounded-count [s n]
-  (loop [s s i n sum 0]
-    (if (and (pos? i)
-             (seq s))
-      (recur (next s)
-             (dec i)
-             (inc sum))
-      sum)))
-
-(defn spread
-  [arglist]
-  (cond
-   (nil? arglist) nil
-   (nil? (next arglist)) (seq (first arglist))
-   :else (cons (first arglist)
-               (spread (next arglist)))))
-
-(defn list*
-  "Creates a new list containing the items prepended to the rest, the
-  last of which will be treated as a sequence."
-  ([args] (seq args))
-  ([a args] (cons a args))
-  ([a b args] (cons a (cons b args)))
-  ([a b c args] (cons a (cons b (cons c args))))
-  ([a b c d & more]
-     (cons a (cons b (cons c (cons d (spread more)))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
-
-(defn apply
-  "Applies fn f to the argument list formed by prepending intervening arguments to args.
-  First cut.  Not lazy.  Needs to use emitted toApply."
-  ([f args]
-     (let [fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
-                 fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
-  ([f x args]
-     (let [args (list* x args)
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
-                 fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
-  ([f x y args]
-     (let [args (list* x y args)
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
-                 fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
-  ([f x y z args]
-     (let [args (list* x y z args)
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
-                 fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
-  ([f a b c d & args]
-     (let [args (cons a (cons b (cons c (cons d (spread args)))))
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
-                 fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args))))))
+(defn flatten
+  "Takes any nested combination of sequential things (lists, vectors,
+  etc.) and returns their contents as a single, flat sequence.
+  (flatten nil) returns nil."
+  [x]
+  (filter #(not (sequential? %))
+          (rest (tree-seq sequential? seq x))))
+
+(defn into
+  "Returns a new coll consisting of to-coll with all of the items of
+  from-coll conjoined."
+  [to from]
+  (reduce -conj to from))
+
+(defn partition
+  "Returns a lazy sequence of lists of n items each, at offsets step
+  apart. If step is not supplied, defaults to n, i.e. the partitions
+  do not overlap. If a pad collection is supplied, use its elements as
+  necessary to complete last partition upto n items. In case there are
+  not enough padding elements, return a partition with less than n items."
+  ([n coll]
+     (partition n n coll))
+  ([n step coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (let [p (take n s)]
+           (when (= n (count p))
+             (cons p (partition n step (drop step s))))))))
+  ([n step pad coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (let [p (take n s)]
+           (if (= n (count p))
+             (cons p (partition n step pad (drop step s)))
+             (list (take n (concat p pad)))))))))
 
 ;;; Vector
 
@@ -1166,8 +1503,7 @@ reduces them without incurring seq initialization"
   IVector
   (-assoc-n [coll n val] (-assoc coll n val))
 
-  IPrintable
-  (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll)))
+  )
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
@@ -1178,19 +1514,25 @@ reduces them without incurring seq initialization"
 
 (defn vector [& args] (vec args))
 
-(defn hash [o]
-  (if o
-    (-hash o)
-    0))
+(deftype NeverEquiv []
+  IEquiv
+  (-equiv [o other] false))
 
-(defn hash-combine [seed hash]
-  ; a la boost
-  (bit-xor (+ hash 0x9e3779b9
-              (bit-shift-left seed 6)
-              (bit-shift-right seed 2))))
+(def ^:private never-equiv (NeverEquiv.))
 
-(defn- hash-coll [coll]
-  (reduce hash-combine (map hash coll)))
+(defn- equiv-map
+  "Assumes y is a map. Returns true if x equals y, otherwise returns
+  false."
+  [x y]
+  (boolean
+    (when (map? y)
+      ; assume all maps are counted
+      (when (= (count x) (count y))
+        (every? identity
+                (map (fn [xkv] (= (get y (first xkv) never-equiv)
+                                  (second xkv)))
+                     x))))))
+
 
 (defn- scan-array [incr k array]
   (let [len (.length array)]
@@ -1205,6 +1547,8 @@ reduces them without incurring seq initialization"
 ; to store the value in strobj.  If a key is assoc'ed when that same
 ; key already exists in strobj, the old value is overwritten. If a
 ; non-string key is assoc'ed, return a HashMap object instead.
+
+(declare hash-map)
 (deftype ObjMap [meta keys strobj]
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj))
@@ -1263,10 +1607,7 @@ reduces them without incurring seq initialization"
         (ObjMap. meta new-keys new-strobj))
       coll)) ; key not found, return coll unchanged
 
-  IPrintable
-  (-pr-seq [coll opts]
-    (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
-      (pr-sequential pr-pair "{" ", " "}" opts coll))))
+  )
 
 (set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj)))
 
@@ -1350,10 +1691,7 @@ reduces them without incurring seq initialization"
               (aset new-hashobj h new-bucket)))
           (HashMap. meta (dec count) new-hashobj)))))
 
-  IPrintable
-  (-pr-seq [coll opts]
-    (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
-      (pr-sequential pr-pair "{" ", " "}" opts coll))))
+  )
 
 (set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj)))
 
@@ -1373,255 +1711,45 @@ reduces them without incurring seq initialization"
       (recur (nnext in) (assoc out (first in) (second in)))
       out)))
 
-(defn conj
-  "conj[oin]. Returns a new collection with the xs
-  'added'. (conj nil item) returns (item).  The 'addition' may
-  happen at different 'places' depending on the concrete type."
-  ([coll x]
-     (if coll (-conj coll x) (cons x nil)))
-  ([coll x & xs]
-     (if xs
-       (recur (conj coll x) (first xs) (next xs))
-       (conj coll x))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn butlast [s]
+  (loop [ret [] s s]
+    (if (next s)
+      (recur (conj ret (first s)) (next s))
+      (seq ret))))
 
-(defn empty
-  "Returns an empty collection of the same category as coll, or nil"
-  [coll]
-  (when (coll? coll)
-    (-empty coll)))
+(defn name
+  "Returns the name String of a string, symbol or keyword."
+  [x]
+  (cond
+    (string? x) x
+    (or (keyword? x) (symbol? x))
+      (let [i (.lastIndexOf x "/")]
+        (if (< i 0)
+          (subs x 2)
+          (subs x (inc i))))
+    :else nil #_(throw (str "Doesn't support name: " x))))
 
-;;; Math - variadic forms will not work until the following implemented:
-;;; first, next, reduce
+(defn namespace
+  "Returns the namespace String of a symbol or keyword, or nil if not present."
+  [x]
+  (if (or (keyword? x) (symbol? x))
+    (let [i (.lastIndexOf x "/")]
+      (when (> i -1)
+        (subs x 2 i)))
+    :else nil #_(throw (str "Doesn't support namespace: " x))))
 
-(defn +
-  "Returns the sum of nums. (+) returns 0."
-  ([] 0)
-  ([x] x)
-  ([x y] (js* "(~{x} + ~{y})"))
-  ([x y & more] (reduce + (+ x y) more)))
-
-(defn -
-  "If no ys are supplied, returns the negation of x, else subtracts
-  the ys from x and returns the result."
-  ([x] (js* "(- ~{x})"))
-  ([x y] (js* "(~{x} - ~{y})"))
-  ([x y & more] (reduce - (- x y) more)))
-
-(defn *
-  "Returns the product of nums. (*) returns 1."
-  ([] 1)
-  ([x] x)
-  ([x y] (js* "(~{x} * ~{y})"))
-  ([x y & more] (reduce * (* x y) more)))
-
-(defn /
-  "If no denominators are supplied, returns 1/numerator,
-  else returns numerator divided by all of the denominators."  
-  ([x] (js* "(1 / ~{x})"))
-  ([x y] (js* "(~{x} / ~{y})"))
-  ([x y & more] (reduce / (/ x y) more)))
-
-(defn <
-  "Returns non-nil if nums are in monotonically increasing order,
-  otherwise false."
-  ([x] true)
-  ([x y] (js* "(~{x} < ~{y})"))
-  ([x y & more]
-     (if (< x y)
-       (if (next more)
-         (recur y (first more) (next more))
-         (< y (first more)))
-       false)))
-
-(defn <=
-  "Returns non-nil if nums are in monotonically non-decreasing order,
-  otherwise false."
-  ([x] true)
-  ([x y] (js* "(~{x} <= ~{y})"))
-  ([x y & more]
-   (if (<= x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (<= y (first more)))
-     false)))
-
-(defn >
-  "Returns non-nil if nums are in monotonically decreasing order,
-  otherwise false."
-  ([x] true)
-  ([x y] (js* "(~{x} > ~{y})"))
-  ([x y & more]
-   (if (> x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (> y (first more)))
-     false)))
-
-(defn >=
-  "Returns non-nil if nums are in monotonically non-increasing order,
-  otherwise false."
-  ([x] true)
-  ([x y] (js* "(~{x} >= ~{y})"))
-  ([x y & more]
-   (if (>= x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (>= y (first more)))
-     false)))
-
-(defn inc
-  "Returns a number one greater than num."
-  [x] (+ x 1))
-
-(defn dec
-  "Returns a number one less than num."
-  [x] (- x 1))
-
-(defn bit-xor
-  "Bitwise exclusive or"
-  [x y] (js* "(~{x} ^ ~{y})"))
-
-(defn bit-and
-  "Bitwise and"
-  [x y] (js* "(~{x} & ~{y})"))
-
-(defn bit-or
-  "Bitwise or"
-  [x y] (js* "(~{x} | ~{y})"))
-
-(defn bit-and-not
-  "Bitwise and"
-  [x y] (js* "(~{x} & ~~{y})"))
-
-(defn bit-clear
-  "Clear bit at index n"
-  [x n]
-  (js* "(~{x} & ~(1 << ~{n}))"))
-
-(defn bit-flip
-  "Flip bit at index n"
-  [x n]
-  (js* "(~{x} ^ (1 << ~{n}))"))
-
-(defn bit-not
-  "Bitwise complement"
-  [x] (js* "(~~{x})"))
-
-(defn bit-set
-  "Set bit at index n"
-  [x n]
-  (js* "(~{x} | (1 << ~{n}))"))
-
-(defn bit-test
-  "Test bit at index n"
-  [x n]
-  (js* "((~{x} & (1 << ~{n})) != 0)"))
-
-
-(defn bit-shift-left
-  "Bitwise shift left"
-  [x n] (js* "(~{x} << ~{n})"))
-
-(defn bit-shift-right
-  "Bitwise shift right"
-  [x n] (js* "(~{x} >> ~{n})"))
-
-(defn ==
-  "Returns non-nil if nums all have the equivalent
-  value (type-independent), otherwise false"
-  ([x] true)
-  ([x y] (-equiv x y))
-  ([x y & more]
-   (if (== x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (== y (first more)))
-     false)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; predicates and logic ;;;;;;;;;;;;;;;;
-
-(defn not
-  "Returns true if x is logical false, false otherwise."
-  [x] (if x false true))
-
-(defn pos?
-  "Returns true if num is greater than zero, else false"
-  [n] (< 0 n))
-
-(defn zero? [n]
-  (== 0 n))
-
-(defn false?
-  "Returns true if x is the value false, false otherwise."
-  [x] (js* "~{x} === false"))
-
-(defn true?
-  "Returns true if x is the value true, false otherwise."
-  [x] (js* "~{x} === true"))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fn stuff ;;;;;;;;;;;;;;;;
-
-(defn identity [x] x)
-
-(defn complement
-  "Takes a fn f and returns a fn that takes the same arguments as f,
-  has the same effects, if any, and returns the opposite truth value."
-  [f] 
-  (fn 
-    ([] (not (f)))
-    ([x] (not (f x)))
-    ([x y] (not (f x y)))
-    ([x y & zs] (not (apply f x y zs)))))
-
-(defn constantly
-  "Returns a function that takes any number of arguments and returns x."
-  [x] (fn [& args] x))
-
-(defn comp
-  "Takes a set of functions and returns a fn that is the composition
-  of those fns.  The returned fn takes a variable number of args,
-  applies the rightmost of fns to the args, the next
-  fn (right-to-left) to the result, etc.
-
-  TODO: Implement apply"
-  ([] identity)
-  ([f] f)
-  ([f g] 
-     (fn 
-       ([] (f (g)))
-       ([x] (f (g x)))
-       ([x y] (f (g x y)))
-       ([x y z] (f (g x y z)))
-       ([x y z & args] (f (apply g x y z args)))))
-  ([f g h] 
-     (fn 
-       ([] (f (g (h))))
-       ([x] (f (g (h x))))
-       ([x y] (f (g (h x y))))
-       ([x y z] (f (g (h x y z))))
-       ([x y z & args] (f (g (apply h x y z args))))))
-  ([f1 f2 f3 & fs]
-    (let [fs (reverse (list* f1 f2 f3 fs))]
-      (fn [& args]
-        (loop [ret (apply (first fs) args) fs (next fs)]
-          (if fs
-            (recur ((first fs) ret) (next fs))
-            ret))))))
-
-(defn partial
-  "Takes a function f and fewer than the normal arguments to f, and
-  returns a fn that takes a variable number of additional args. When
-  called, the returned function calls f with args + additional args.
-
-  TODO: Implement apply"
-  ([f arg1]
-   (fn [& args] (apply f arg1 args)))
-  ([f arg1 arg2]
-   (fn [& args] (apply f arg1 arg2 args)))
-  ([f arg1 arg2 arg3]
-   (fn [& args] (apply f arg1 arg2 arg3 args)))
-  ([f arg1 arg2 arg3 & more]
-   (fn [& args] (apply f arg1 arg2 arg3 (concat more args)))))
+(defn zipmap
+  "Returns a map with the keys mapped to the corresponding vals."
+  [keys vals]
+    (loop [map {}
+           ks (seq keys)
+           vs (seq vals)]
+      (if (and ks vs)
+        (recur (assoc map (first ks) (first vs))
+               (next ks)
+               (next vs))
+        map)))
 
 (defn juxt
   "Takes a set of functions and returns a fn that is the juxtaposition
@@ -1661,122 +1789,6 @@ reduces them without incurring seq initialization"
          ([x y z] (reduce #(conj %1 (%2 x y z)) [] fs))
          ([x y z & args] (reduce #(conj %1 (apply %2 x y z args)) [] fs))))))
 
-(defn every-pred
-  "Takes a set of predicates and returns a function f that returns true if all of its
-  composing predicates return a logical true value against all of its arguments, else it returns
-  false. Note that f is short-circuiting in that it will stop execution on the first
-  argument that triggers a logical false result against the original predicates."
-  ([p]
-     (fn ep1
-       ([] true)
-       ([x] (boolean (p x)))
-       ([x y] (boolean (and (p x) (p y))))
-       ([x y z] (boolean (and (p x) (p y) (p z))))
-       ([x y z & args] (boolean (and (ep1 x y z)
-                                     (every? p args))))))
-  ([p1 p2]
-     (fn ep2
-       ([] true)
-       ([x] (boolean (and (p1 x) (p2 x))))
-       ([x y] (boolean (and (p1 x) (p1 y) (p2 x) (p2 y))))
-       ([x y z] (boolean (and (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z))))
-       ([x y z & args] (boolean (and (ep2 x y z)
-                                     (every? #(and (p1 %) (p2 %)) args))))))
-  ([p1 p2 p3]
-     (fn ep3
-       ([] true)
-       ([x] (boolean (and (p1 x) (p2 x) (p3 x))))
-       ([x y] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y))))
-       ([x y z] (boolean (and (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z))))
-       ([x y z & args] (boolean (and (ep3 x y z)
-                                     (every? #(and (p1 %) (p2 %) (p3 %)) args))))))
-  ([p1 p2 p3 & ps]
-     (let [ps (list* p1 p2 p3 ps)]
-       (fn epn
-         ([] true)
-         ([x] (every? #(% x) ps))
-         ([x y] (every? #(and (% x) (% y)) ps))
-         ([x y z] (every? #(and (% x) (% y) (% z)) ps))
-         ([x y z & args] (boolean (and (epn x y z)
-                                       (every? #(every? % args) ps))))))))
-
-(defn some-fn
-  "Takes a set of predicates and returns a function f that returns the first logical true value
-  returned by one of its composing predicates against any of its arguments, else it returns
-  logical false. Note that f is short-circuiting in that it will stop execution on the first
-  argument that triggers a logical true result against the original predicates."
-  ([p]
-     (fn sp1
-       ([] nil)
-       ([x] (p x))
-       ([x y] (or (p x) (p y)))
-       ([x y z] (or (p x) (p y) (p z)))
-       ([x y z & args] (or (sp1 x y z)
-                           (some p args)))))
-  ([p1 p2]
-     (fn sp2
-       ([] nil)
-       ([x] (or (p1 x) (p2 x)))
-       ([x y] (or (p1 x) (p1 y) (p2 x) (p2 y)))
-       ([x y z] (or (p1 x) (p1 y) (p1 z) (p2 x) (p2 y) (p2 z)))
-       ([x y z & args] (or (sp2 x y z)
-                           (some #(or (p1 %) (p2 %)) args)))))
-  ([p1 p2 p3]
-     (fn sp3
-       ([] nil)
-       ([x] (or (p1 x) (p2 x) (p3 x)))
-       ([x y] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y)))
-       ([x y z] (or (p1 x) (p2 x) (p3 x) (p1 y) (p2 y) (p3 y) (p1 z) (p2 z) (p3 z)))
-       ([x y z & args] (or (sp3 x y z)
-                           (some #(or (p1 %) (p2 %) (p3 %)) args)))))
-  ([p1 p2 p3 & ps]
-     (let [ps (list* p1 p2 p3 ps)]
-       (fn spn
-         ([] nil)
-         ([x] (some #(% x) ps))
-         ([x y] (some #(or (% x) (% y)) ps))
-         ([x y z] (some #(or (% x) (% y) (% z)) ps))
-         ([x y z & args] (or (spn x y z)
-                             (some #(some % args) ps)))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fun seq fns ;;;;;;;;;;;;;;;;
-
-(defn flatten
-  "Takes any nested combination of sequential things (lists, vectors,
-  etc.) and returns their contents as a single, flat sequence.
-  (flatten nil) returns nil."
-  [x]
-  (filter #(not (sequential? %))
-          (rest (tree-seq sequential? seq x))))
-
-(defn into
-  "Returns a new coll consisting of to-coll with all of the items of
-  from-coll conjoined."
-  [to from]
-  (reduce -conj to from))
-
-(defn partition
-  "Returns a lazy sequence of lists of n items each, at offsets step
-  apart. If step is not supplied, defaults to n, i.e. the partitions
-  do not overlap. If a pad collection is supplied, use its elements as
-  necessary to complete last partition upto n items. In case there are
-  not enough padding elements, return a partition with less than n items."
-  ([n coll]
-     (partition n n coll))
-  ([n step coll]
-     (lazy-seq
-       (when-let [s (seq coll)]
-         (let [p (take n s)]
-           (when (= n (count p))
-             (cons p (partition n step (drop step s))))))))
-  ([n step pad coll]
-     (lazy-seq
-       (when-let [s (seq coll)]
-         (let [p (take n s)]
-           (if (= n (count p))
-             (cons p (partition n step pad (drop step s)))
-             (list (take n (concat p pad)))))))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
 (defn pr-sequential [print-one begin sep end opts coll]
@@ -1785,7 +1797,7 @@ reduces them without incurring seq initialization"
             (interpose [sep] (map #(print-one % opts) coll)))
           [end]))
 
-; This should be different in different runtime envorionments. For example
+; This should be different in different runtime environments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
   (goog.global/print x)
@@ -1870,6 +1882,57 @@ reduces them without incurring seq initialization"
   (pr-with-opts obj (pr-opts))
   (newline (pr-opts)))
 
+(extend-protocol IPrintable
+  boolean
+  (-pr-seq [bool opts] (list (str bool)))
+ 
+  number
+  (-pr-seq [n opts] (list (str n)))
+ 
+  array
+  (-pr-seq [a opts]
+    (pr-sequential pr-seq "#<Array [" ", " "]>" opts a))
+ 
+  string
+  (-pr-seq [obj opts]
+    (cond
+     (keyword? obj)
+     (list (str ":"
+                (when-let [nspc (namespace obj)]
+                  (str nspc "/"))
+                (name obj)))
+     (symbol? obj)
+     (list (str (when-let [nspc (namespace obj)]
+                  (str nspc "/"))
+                (name obj)))
+     (get opts :readably)
+     (list (goog.string.quote obj))
+     :else (list obj)))
+ 
+  LazySeq
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
+  List
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
+  Cons
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
+  EmptyList
+  (-pr-seq [coll opts] (list "()"))
+ 
+  Vector
+  (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll))
+ 
+  ObjMap
+  (-pr-seq [coll opts]
+    (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
+      (pr-sequential pr-pair "{" ", " "}" opts coll)))
+ 
+  HashMap
+  (-pr-seq [coll opts]
+    (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
+      (pr-sequential pr-pair "{" ", " "}" opts coll))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
@@ -1965,14 +2028,16 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; gensym ;;;;;;;;;;;;;;;;
 ;; Internal - do not use!
-(def gensym_counter (atom 0))
+(def gensym_counter nil)
 
 (defn gensym
   "Returns a new symbol with a unique name. If a prefix string is
   supplied, the name is prefix# where # is some unique number. If
   prefix is not supplied, the prefix is 'G__'."
   ([] (gensym "G__"))
-  ([prefix-string]     
+  ([prefix-string]
+     (when (nil? gensym_counter)
+       (set! gensym_counter (atom 0)))
      (symbol (str prefix-string (swap! gensym_counter inc)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fixtures ;;;;;;;;;;;;;;;;
@@ -2074,8 +2139,8 @@ reduces them without incurring seq initialization"
               (true? false)
               (false? false)
               (false? true)
-              (true? undefined)
-              (false? undefined)]))
+              (true? goog.global.undefined)
+              (false? goog.global.undefined)]))
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))
@@ -2095,8 +2160,7 @@ reduces them without incurring seq initialization"
     (assert (= {:b :c} (meta e-lazy-seq))))
   (let [e-list (empty '^{:b :c} (1 2 3))]
     (assert (seq? e-list))
-    (assert (empty? e-list))
-    (assert (= :c (get (meta e-list) :b))))
+    (assert (empty? e-list)))
   (let [e-elist (empty '^{:b :c} ())]
     (assert (seq? e-elist))
     (assert (empty? e-elist))
@@ -2134,4 +2198,6 @@ reduces them without incurring seq initialization"
     (assert (= 1 (try 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
   :ok
-)
+  )
+
+#_(goog.global/print (assoc {} :a 1))

@@ -50,7 +50,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 ")
 
 (defn confirm-var-exists [env prefix suffix]
-  (when *cljs-warn-on-undeclared*
+  (when true ;;*cljs-warn-on-undeclared*
     (let [crnt-ns (-> env :ns :name)]
       (when (= prefix crnt-ns)
         (when-not (-> @namespaces crnt-ns :defs suffix)
