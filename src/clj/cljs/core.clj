@@ -191,7 +191,7 @@
                 (fn [[_ type name & cb]]
                   `[(instance? ~type ~e) (let [~name ~e] ~@cb)])
                 catches)
-             :else (throw e#)))
+             :else (throw ~e)))
         ~@fin)
       `(~'try*
         ~@body
