@@ -209,7 +209,15 @@
      (when *assert*
        `(when-not ~x
           (throw (cljs.core/str
-                   "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
+                  "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
+
+(defmacro ^{:private true} assert-args [fnname & pairs]
+  `(do (when-not ~(first pairs)
+         (throw (IllegalArgumentException.
+                  ~(str fnname " requires " (second pairs)))))
+     ~(let [more (nnext pairs)]
+        (when more
+          (list* `assert-args fnname more)))))
 
 (defmacro for
   "List comprehension. Takes a vector of one or more
@@ -222,7 +230,9 @@
 
   (take 100 (for [x (range 100000000) y (range 1000000) :while (< y x)]  [x y]))"
   [seq-exprs body-expr]
-  ;; TODO - Impl and use assert-args
+  (assert-args for
+     (vector? seq-exprs) "a vector for its binding"
+     (even? (count seq-exprs)) "an even number of forms in binding vector")
   (let [to-groups (fn [seq-exprs]
                     (reduce (fn [groups [k v]]
                               (if (keyword? k)
