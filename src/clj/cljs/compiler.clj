@@ -930,22 +930,47 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
        (lazy-seq (cons form (forms-seq f rdr)))
        (.close rdr))))
 
-(defn compile-file
-  "Compiles src to a file of the same name, but
-   with a .js extension, in the src file's directory.
+(defn- rename-to-js
+  "Change the file extension from .cljs to .js. Takes a File or a
+  String. Always returns a String."
+  [file-str]
+  (clojure.string/replace file-str #".cljs$" ".js"))
 
-   With dest argument, write file to provided location."
+(defn compile-file
+  "Compiles src to a file of the same name, but with a .js extension,
+   in the src file's directory.
+
+   With dest argument, write file to provided location. If the dest
+   argument is a file outside the source tree, missing parent
+   directories will be created.
+
+   Both src and dest may be either a String or a File.
+
+   Returns a map containing the namespace and dependencies for this
+   file."
   ([src]
-     (let [dest (clojure.string/replace src #".cljs$" ".js")]
+     (let [dest (rename-to-js src)] 
        (compile-file src dest)))
   ([src dest]
-     (let [forms (forms-seq src)]
-       (with-open [out ^java.io.Writer (io/make-writer (io/file dest) {})]
-         (binding [*out* out
-                   *cljs-ns* 'cljs.user]
-           (doseq [form forms]
-             (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}]
-               (emit (analyze env form)))))))))
+     (let [src-file (io/file src)
+           dest-file (io/file dest)]
+       (do (when (not (:defs (get @namespaces 'cljs.core)))
+             (load-file (repl-env) "cljs/core.cljs"))
+           (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
+           (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
+             (binding [*out* out
+                       *cljs-ns* 'cljs.user]
+               (loop [forms (forms-seq src-file)
+                      ns-name nil
+                      deps nil]
+                 (if (seq forms)
+                   (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+                         ast (analyze env (first forms))]
+                     (do (emit ast)
+                         (if (= (:op ast) :ns)
+                           (recur (rest forms) (:name ast) (:requires ast))
+                           (recur (rest forms) ns-name deps))))
+                   {:ns (or ns-name 'cljs.user) :requires (vals deps)}))))))))
 
 (comment
   ;; flex compile-file
@@ -955,6 +980,52 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
     (compile-file "/tmp/somescript.cljs")
     (slurp "/tmp/somescript.js")))
+
+(defn- path-seq
+  [file-str]
+  (string/split file-str (re-pattern java.io.File/separator)))
+
+(defn to-path
+  [parts]
+  (apply str (interpose java.io.File/separator parts)))
+
+(defn to-target-file
+  "Given the source root directory, the output target directory and
+  file under the source root, produce the target file."
+  [^java.io.File dir ^String target ^java.io.File file]
+  (let [dir-path (path-seq (.getAbsolutePath dir))
+        file-path (path-seq (.getAbsolutePath file))
+        relative-path (drop (count dir-path) file-path)
+        parents (butlast relative-path)
+        parent-file (java.io.File. ^String (to-path (cons target parents)))]
+    (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
+
+(defn compile-root
+  "Looks recursively in src-dir for .cljs files and compiles them to
+   .js files. If target-dir is provided, output will go into this
+   directory mirroring the source directory structure. Returns a list
+   of maps containing information about each file which was compiled."
+  ([src-dir]
+     (compile-root src-dir "out"))
+  ([src-dir target-dir]
+     (let [src-dir-file (io/file src-dir)
+           cljs-files (filter #(.endsWith (.getName ^java.io.File %) ".cljs") (file-seq src-dir-file))]
+       (loop [cljs-files cljs-files
+              output-files []]
+         (if (seq cljs-files)
+           (let [cljs-file (first cljs-files)
+                 output-file ^java.io.File (to-target-file src-dir-file target-dir cljs-file)
+                 ns-info (compile-file cljs-file output-file)]
+             (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
+           output-files)))))
+
+(comment
+  ;; compile-root
+  ;; If you have a standard project layout with all file in src
+  (compile-root "src")
+  ;; will produce a mirrored directory structure under "out" but all
+  ;; files will be compiled to js.
+  )
 
 (comment
 
