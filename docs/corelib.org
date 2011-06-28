@@ -365,7 +365,7 @@ does what?
 * ns-unalias
 * ns-unmap
 * DONE nth
-* TODO nthnext
+* DONE nthnext
 * TODO num
 * DONE number?
 * TODO numerator

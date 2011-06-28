@@ -1458,6 +1458,14 @@ reduces them without incurring seq initialization"
              (cons p (partition n step pad (drop step s)))
              (list (take n (concat p pad)))))))))
 
+(defn nthnext
+  "Returns the nth next of coll, (seq coll) when n is 0."
+  [coll n]
+  (loop [n n xs (seq coll)]
+    (if (and xs (pos? n))
+      (recur (dec n) (next xs))
+      xs)))
+
 ;;; Vector
 
 (deftype Vector [meta array]
@@ -2237,6 +2245,13 @@ reduces them without incurring seq initialization"
     (assert (= 2 (try 1 (throw (goog.global.Error.)) (catch goog.global.Error e 1 2))))
     (assert (= 1 (try 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
+  (assert (= [3] (nthnext [1 2 3] 2)))
+  (let [v [1 2 3]]
+    (assert (= v (for [e v] e)))
+    (assert (= [[1 1] [2 4] [3 9]] (for [e v :let [m (* e e)]] [e m])))
+    (assert (= [1 2] (for [e v :while (< e 3)] e)))
+    (assert (= [3] (for [e v :when (> e 2)] e)))
+    (assert (= [[1 1] [2 4]] (for [e v :while (< e 3) :let [m (* e e)]] [e m]))))
   :ok
   )
 

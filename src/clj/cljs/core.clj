@@ -211,4 +211,49 @@
           (throw (cljs.core/str
                    "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
 
+(defmacro for
+  "List comprehension. Takes a vector of one or more
+   binding-form/collection-expr pairs, each followed by zero or more
+   modifiers, and yields a lazy sequence of evaluations of expr.
+   Collections are iterated in a nested fashion, rightmost fastest,
+   and nested coll-exprs can refer to bindings created in prior
+   binding-forms.  Supported modifiers are: :let [binding-form expr ...],
+   :while test, :when test.
 
+  (take 100 (for [x (range 100000000) y (range 1000000) :while (< y x)]  [x y]))"
+  [seq-exprs body-expr]
+  ;; TODO - Impl and use assert-args
+  (let [to-groups (fn [seq-exprs]
+                    (reduce (fn [groups [k v]]
+                              (if (keyword? k)
+                                (conj (pop groups) (conj (peek groups) [k v]))
+                                (conj groups [k v])))
+                            [] (partition 2 seq-exprs)))
+        err (fn [& msg] (throw (apply str msg)))
+        emit-bind (fn emit-bind [[[bind expr & mod-pairs]
+                                  & [[_ next-expr] :as next-groups]]]
+                    (let [giter (gensym "iter__")
+                          gxs (gensym "s__")
+                          do-mod (fn do-mod [[[k v :as pair] & etc]]
+                                   (cond
+                                     (= k :let) `(let ~v ~(do-mod etc))
+                                     (= k :while) `(when ~v ~(do-mod etc))
+                                     (= k :when) `(if ~v
+                                                    ~(do-mod etc)
+                                                    (recur (rest ~gxs)))
+                                     (keyword? k) (err "Invalid 'for' keyword " k)
+                                     next-groups
+                                      `(let [iterys# ~(emit-bind next-groups)
+                                             fs# (seq (iterys# ~next-expr))]
+                                         (if fs#
+                                           (concat fs# (~giter (rest ~gxs)))
+                                           (recur (rest ~gxs))))
+                                     :else `(cons ~body-expr
+                                                  (~giter (rest ~gxs)))))]
+                      `(fn ~giter [~gxs]
+                         (lazy-seq
+                           (loop [~gxs ~gxs]
+                             (when-first [~bind ~gxs]
+                               ~(do-mod mod-pairs)))))))]
+    `(let [iter# ~(emit-bind (to-groups seq-exprs))]
+       (iter# ~(second seq-exprs)))))
