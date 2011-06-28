@@ -2011,8 +2011,14 @@ reduces them without incurring seq initialization"
   the value that was swapped in."
   ([a f]
      (reset! a (f (.state a))))
-  ([a f & args]
-     (reset! a (apply f (.state a) args))))
+  ([a f x]
+     (reset! a (f (.state a) x)))
+  ([a f x y]
+     (reset! a (f (.state a) x y)))  
+  ([a f x y z]
+     (reset! a (f (.state a) x y z)))
+  ([a f x y z & more]
+     (reset! a (apply f (.state a) x y z more))))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
@@ -2181,6 +2187,11 @@ reduces them without incurring seq initialization"
     (assert (= true (compare-and-set! a 1 7)))
     (assert (nil? (meta a)))
     (assert (nil? (get-validator a))))
+  (let [a (atom 0)]
+    (assert (= 1 (swap! a + 1)))
+    (assert (= 4 (swap! a + 1 2)))
+    (assert (= 10 (swap! a + 1 2 3)))
+    (assert (= 20 (swap! a + 1 2 3 4))))
   (let [a (atom [1] :validator coll? :meta {:a 1})]
     (assert (= coll? (get-validator a)))
     (assert (= {:a 1} (meta a)))
