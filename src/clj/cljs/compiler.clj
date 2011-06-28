@@ -346,10 +346,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
               (emit-block subcontext statements ret)))      
           (print "}"))
         (when finally
-          (print "finally {")
           (let [{:keys [statements ret]} finally]
-            (emit-block subcontext statements ret))
-          (print "}"))
+            (assert (not= :constant (:op ret)) "finally block cannot contain constant")
+            (print "finally {")
+            (emit-block subcontext statements ret)
+            (print "}")))
         (when (= :expr context) (print "})()")))
       (let [{:keys [statements ret]} try]
         (when (and statements (= :expr context)) (print "(function (){"))
