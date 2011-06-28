@@ -64,7 +64,7 @@ does what?
 * TODO alias
 * all-ns
 * alter
-* TODO alter-meta!
+* DONE alter-meta!
 * alter-var-root
 * TODO amap
 * ancestors
@@ -86,7 +86,7 @@ does what?
 * TODO assoc!
 * TODO assoc-in
 * DONE associative?
-* TODO atom
+* DONE atom
 * await
 * await-for
 * await1
@@ -96,16 +96,16 @@ does what?
 * TODO bigint
 * biginteger
 * TODO binding
-* TODO bit-and
-* TODO bit-and-not
-* TODO bit-clear
-* TODO bit-flip
-* TODO bit-not
-* TODO bit-or
-* TODO bit-set
+* DONE bit-and
+* DONE bit-and-not
+* DONE bit-clear
+* DONE bit-flip
+* DONE bit-not
+* DONE bit-or
+* DONE bit-set
 * DONE bit-shift-left
 * DONE bit-shift-right
-* TODO bit-test
+* DONE bit-test
 * DONE bit-xor
 * DONE boolean
 * boolean-array
@@ -143,7 +143,7 @@ does what?
 * DONE comp
 * TODO comparator
 * TODO compare
-* TODO compare-and-set!
+* DONE compare-and-set!
 * compile
 * DONE complement
 * DONE concat
@@ -180,7 +180,7 @@ does what?
 * TODO delay?
 * deliver
 * TODO denominator
-* TODO deref
+* DONE deref
 * TODO derive
 * TODO descendants
 * DONE destructure
@@ -203,7 +203,7 @@ For macros only, uses clojure.core version
 * DONE drop
 * DONE drop-last
 * DONE drop-while
-* TODO empty
+* DONE empty
 * DONE empty?
 * ensure
 * enumeration-seq
@@ -220,7 +220,7 @@ macro currently expands into extend call
 * DONE extend-type
 * extenders
 * extends?
-* TODO false?
+* DONE false?
 * DONE ffirst
 * file-seq
 * DONE filter
@@ -238,7 +238,7 @@ macro currently expands into extend call
 * floats
 * flush
 * DONE fn
-* TODO fn?
+* DONE fn?
 * DONE fnext
 * TODO fnil
 * DONE for
@@ -253,13 +253,13 @@ macro currently expands into extend call
 * future?
 * gen-class
 * gen-interface
-* TODO gensym
+* DONE gensym
 * DONE get
 * TODO get-in
 * TODO get-method
 * get-proxy-class
 * get-thread-bindings
-* TODO get-validator
+* DONE get-validator
 * TODO group-by
 * DONE hash
 * DONE hash-combine
@@ -296,7 +296,7 @@ does what?
 * TODO keep-indexed
 * TODO key
 * TODO keys
-* TODO keyword
+* DONE keyword
 * DONE keyword?
 * TODO last
 * TODO lazy-cat
@@ -367,14 +367,14 @@ does what?
 * DONE nth
 * TODO nthnext
 * TODO num
-* TODO number?
+* DONE number?
 * TODO numerator
 * TODO object-array
 * TODO odd?
 * DONE or
 * TODO parents
 * DONE partial
-* TODO partition
+* DONE partition
 * TODO partition-all
 * TODO partition-by
 * pcalls
@@ -453,7 +453,7 @@ also specify - make a particular object extend a protocol
 * DONE replicate
 * TODO require
 ticket #8
-* TODO reset!
+* DONE reset!
 * reset-meta!
 * resolve
 * DONE rest
@@ -506,8 +506,8 @@ as macro
 * TODO subseq
 * TODO subvec
 * TODO supers
-* TODO swap!
-* TODO symbol
+* DONE swap!
+* DONE symbol
 * DONE symbol?
 * sync
 * DONE take
@@ -523,7 +523,7 @@ as macro
 * TODO trampoline
 * transient
 * DONE tree-seq
-* TODO true?
+* DONE true?
 * TODO type
 does what?
 * TODO unchecked-add
