@@ -8,6 +8,10 @@ To run it...
 3) Run 
 
         cljsc src > hello.js 
+   
+   or
+
+        cljsc src --compilation_level=ADVANCED_OPTIMIZATIONS > hello.js
 
    in this directory.
 4) Open hello.html and enjoy!
