@@ -520,9 +520,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (let [name (munge (:name (resolve-var (dissoc env :locals) sym)))
           init-expr (when (contains? args :init) (disallowing-recur
                                                   (analyze (assoc env :context :expr) (:init args) sym)))
-          export-as (when (contains? (meta sym) :export)
-                      (let [export-val (-> sym meta :export)]
-                        (if (string? export-val) export-val name)))]
+          export-as (when-let [export-val (-> sym meta :export)]
+                      (if (= true export-val) name export-val))]
       (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
       (merge {:env env :op :def :form form
               :name name :doc (:doc args) :init init-expr}
