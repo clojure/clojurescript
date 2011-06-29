@@ -254,7 +254,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str "throw " (emits throw) ";\n"))))
 
 (defmethod emit :def
-  [{:keys [name init env]}]
+  [{:keys [name init env export]}]
   (when init
     (when (:jsdoc init)
       (println "/**")
@@ -264,7 +264,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (println "*/"))
     (print name)
     (print (str " = " (emits init)))
-    (when-not (= :expr (:context env)) (print ";\n"))))
+    (when-not (= :expr (:context env)) (print ";\n"))
+    (when export
+      (println (str "goog.exportSymbol('" export "', " name ");")))))
 
 (defn emit-fn-method
   [{:keys [gthis name variadic params statements ret env recurs]}]
@@ -517,11 +519,15 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (assert (not (namespace sym)) "Can't def ns-qualified name")
     (let [name (munge (:name (resolve-var (dissoc env :locals) sym)))
           init-expr (when (contains? args :init) (disallowing-recur
-                                                  (analyze (assoc env :context :expr) (:init args) sym)))]
+                                                  (analyze (assoc env :context :expr) (:init args) sym)))
+          export-as (when (contains? (meta sym) :export)
+                      (let [export-val (-> sym meta :export)]
+                        (if (string? export-val) export-val name)))]
       (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
       (merge {:env env :op :def :form form
               :name name :doc (:doc args) :init init-expr}
-             (when init-expr {:children [init-expr]})))))
+             (when init-expr {:children [init-expr]})
+             (when export-as {:export export-as})))))
 
 (defn- analyze-fn-method [env locals meth]
   (let [params (first meth)
