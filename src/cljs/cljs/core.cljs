@@ -1090,6 +1090,13 @@ reduces them without incurring seq initialization"
            (. f apply f (to-array args))) ;; applyTo
          (. f apply f (to-array args))))))
 
+(defn not=
+  "Same as (not (= obj1 obj2))"
+  ([x] false)
+  ([x y] (not (= x y)))
+  ([x y & more]
+   (not (apply = x y more))))
+
 (defn every?
   "Returns true if (pred x) is logical true for every x in coll, else
   false."
@@ -2252,6 +2259,10 @@ reduces them without incurring seq initialization"
     (assert (= [1 2] (for [e v :while (< e 3)] e)))
     (assert (= [3] (for [e v :when (> e 2)] e)))
     (assert (= [[1 1] [2 4]] (for [e v :while (< e 3) :let [m (* e e)]] [e m]))))
+  (assert (not= 1 2))
+  (assert (not (not= 1 1)))
+;;  (assert (distinct? 1 2 3))
+;;  (assert (not (distinct? 1 2 3 3)))
   :ok
   )
 
