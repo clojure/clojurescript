@@ -512,8 +512,8 @@ as macro
 * sync
 * DONE take
 * DONE take-last
-* TODO take-nth
-* TODO take-while
+* DONE take-nth
+* DONE take-while
 * test
 * the-ns
 * thread-bound?

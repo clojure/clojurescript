@@ -1836,6 +1836,13 @@ reduces them without incurring seq initialization"
        (when (pred (first s))
          (cons (first s) (take-while pred (rest s)))))))
 
+(defn take-nth
+  "Returns a lazy seq of every nth item in coll."
+  [n coll]
+    (lazy-seq
+     (when-let [s (seq coll)]
+       (cons (first s) (take-nth n (drop n s))))))
+
 (defn partition-by
   "Applies f to each value in coll, splitting it each time f returns
    a new value.  Returns a lazy seq of partitions."
@@ -2320,6 +2327,7 @@ reduces them without incurring seq initialization"
   (assert (= [true true] (take-while true? [true true 2 3 4])))
   (assert (= [[true true] [false false false] [true true]]
              (partition-by true? [true true false false false true true])))
+  (assert (= [0 2 4 6 8 10] (take-nth 2 [0 1 2 3 4 5 6 7 8 9 10])))
   :ok
   )
 
