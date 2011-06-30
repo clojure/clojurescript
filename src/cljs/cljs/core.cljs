@@ -1803,6 +1803,20 @@ reduces them without incurring seq initialization"
                (next vs))
         map)))
 
+(defn max-key
+  "Returns the x for which (k x), a number, is greatest."
+  ([k x] x)
+  ([k x y] (if (> (k x) (k y)) x y))
+  ([k x y & more]
+   (reduce #(max-key k %1 %2) (max-key k x y) more)))
+
+(defn min-key
+  "Returns the x for which (k x), a number, is least."
+  ([k x] x)
+  ([k x y] (if (< (k x) (k y)) x y))
+  ([k x y & more]
+   (reduce #(min-key k %1 %2) (min-key k x y) more)))
+
 (defn juxt
   "Takes a set of functions and returns a fn that is the juxtaposition
   of those fns.  The returned fn takes a variable number of args, and
@@ -2265,8 +2279,10 @@ reduces them without incurring seq initialization"
     (assert (= [[1 1] [2 4]] (for [e v :while (< e 3) :let [m (* e e)]] [e m]))))
   (assert (not= 1 2))
   (assert (not (not= 1 1)))
-;;  (assert (distinct? 1 2 3))
-;;  (assert (not (distinct? 1 2 3 3)))
+  (assert (not (not-empty [])))
+  (assert (boolean (not-empty [1 2 3])))
+  (assert (= "joel" (min-key count "joel" "tom servo" "crooooooooow")))
+  (assert (= "crooooooooow" (max-key count "joel" "tom servo" "crooooooooow")))
   :ok
   )
 

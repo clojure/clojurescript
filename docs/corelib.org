@@ -327,7 +327,7 @@ does what?
 * DONE map?
 * DONE mapcat
 * TODO max
-* TODO max-key
+* DONE max-key
 * memfn
 * TODO memoize
 * TODO merge
@@ -336,7 +336,7 @@ does what?
 * method-sig
 * TODO methods
 * TODO min
-* TODO min-key
+* DONE min-key
 * TODO mod
 * munge
 * DONE name
