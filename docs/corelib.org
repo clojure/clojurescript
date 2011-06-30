@@ -375,8 +375,8 @@ does what?
 * TODO parents
 * DONE partial
 * DONE partition
-* TODO partition-all
-* TODO partition-by
+* DONE partition-all
+* DONE partition-by
 * pcalls
 * DONE peek
 * persistent!

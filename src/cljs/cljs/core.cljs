@@ -1815,7 +1815,37 @@ reduces them without incurring seq initialization"
   ([k x] x)
   ([k x y] (if (< (k x) (k y)) x y))
   ([k x y & more]
-   (reduce #(min-key k %1 %2) (min-key k x y) more)))
+     (reduce #(min-key k %1 %2) (min-key k x y) more)))
+
+(defn partition-all
+  "Returns a lazy sequence of lists like partition, but may include
+  partitions with fewer than n items at the end."
+  ([n coll]
+     (partition-all n n coll))
+  ([n step coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (cons (take n s) (partition-all n step (drop step s)))))))
+
+(defn take-while
+  "Returns a lazy sequence of successive items from coll while
+  (pred item) returns true. pred must be free of side-effects."
+  [pred coll]
+  (lazy-seq
+   (when-let [s (seq coll)]
+       (when (pred (first s))
+         (cons (first s) (take-while pred (rest s)))))))
+
+(defn partition-by
+  "Applies f to each value in coll, splitting it each time f returns
+   a new value.  Returns a lazy seq of partitions."
+  [f coll]
+  (lazy-seq
+   (when-let [s (seq coll)]
+     (let [fst (first s)
+           fv (f fst)
+           run (cons fst (take-while #(= fv (f %)) (next s)))]
+       (cons run (partition-by f (seq (drop (count run) s))))))))
 
 (defn juxt
   "Takes a set of functions and returns a fn that is the juxtaposition
@@ -2283,6 +2313,13 @@ reduces them without incurring seq initialization"
   (assert (boolean (not-empty [1 2 3])))
   (assert (= "joel" (min-key count "joel" "tom servo" "crooooooooow")))
   (assert (= "crooooooooow" (max-key count "joel" "tom servo" "crooooooooow")))
+  (assert (= (partition-all 4 [1 2 3 4 5 6 7 8 9])
+             [[1 2 3 4] [5 6 7 8] [9]]))
+  (assert (= (partition-all 4 2 [1 2 3 4 5 6 7 8 9])
+             [[1 2 3 4] [3 4 5 6] [5 6 7 8] [7 8 9] [9]]))
+  (assert (= [true true] (take-while true? [true true 2 3 4])))
+  (assert (= [[true true] [false false false] [true true]]
+             (partition-by true? [true true false false false true true])))
   :ok
   )
 
