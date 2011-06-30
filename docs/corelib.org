@@ -350,9 +350,9 @@ does what?
 * DONE nnext
 * DONE not
 * DONE not-any?
-* TODO not-empty
+* DONE not-empty
 * DONE not-every?
-* TODO not=
+* DONE not=
 * DONE ns
 * ns-aliases
 * ns-imports

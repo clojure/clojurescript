@@ -1097,6 +1097,10 @@ reduces them without incurring seq initialization"
   ([x y & more]
    (not (apply = x y more))))
 
+(defn not-empty
+  "If coll is empty, returns nil, else coll"
+  [coll] (when (seq coll) coll))
+
 (defn every?
   "Returns true if (pred x) is logical true for every x in coll, else
   false."
