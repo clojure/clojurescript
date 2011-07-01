@@ -303,7 +303,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (when (< 1 (count params))
       (print ")"))
     (println ";")
-    (println (str "return " name ".call(" (string/join ", " (cons "null" params)) ");"))
+    (println (str "return " name ".call(" (string/join ", " (cons 'this params)) ");"))
     (print "})")))
 
 (defmethod emit :fn
