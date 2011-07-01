@@ -657,6 +657,20 @@ reduces them without incurring seq initialization"
   "Returns a number one less than num."
   [x] (- x 1))
 
+(defn max
+  "Returns the greatest of the nums."
+  ([x] x)
+  ([x y] (js* "((~{x} > ~{y}) ? x : y)"))
+  ([x y & more]
+   (reduce max (max x y) more)))
+
+(defn min
+  "Returns the least of the nums."
+  ([x] x)
+  ([x y] (js* "((~{x} < ~{y}) ? x : y)"))
+  ([x y & more]
+   (reduce min (min x y) more)))
+
 (defn bit-xor
   "Bitwise exclusive or"
   [x y] (js* "(~{x} ^ ~{y})"))
@@ -1054,41 +1068,52 @@ reduces them without incurring seq initialization"
            (. f apply f (to-array args))) ;; applyTo
          (. f apply f (to-array args)))))
   ([f x args]
-     (let [args (list* x args)
+     (let [arglist (list* x args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist)))))
   ([f x y args]
-     (let [args (list* x y args)
+     (let [arglist (list* x y args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist)))))
   ([f x y z args]
-     (let [args (list* x y z args)
+     (let [arglist (list* x y z args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist)))))
   ([f a b c d & args]
-     (let [args (cons a (cons b (cons c (cons d (spread args)))))
+     (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args))))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist))))))
+
+(defn not=
+  "Same as (not (= obj1 obj2))"
+  ([x] false)
+  ([x y] (not (= x y)))
+  ([x y & more]
+   (not (apply = x y more))))
+
+(defn not-empty
+  "If coll is empty, returns nil, else coll"
+  [coll] (when (seq coll) coll))
 
 (defn every?
   "Returns true if (pred x) is logical true for every x in coll, else
@@ -1792,6 +1817,57 @@ reduces them without incurring seq initialization"
                (next vs))
         map)))
 
+(defn max-key
+  "Returns the x for which (k x), a number, is greatest."
+  ([k x] x)
+  ([k x y] (if (> (k x) (k y)) x y))
+  ([k x y & more]
+   (reduce #(max-key k %1 %2) (max-key k x y) more)))
+
+(defn min-key
+  "Returns the x for which (k x), a number, is least."
+  ([k x] x)
+  ([k x y] (if (< (k x) (k y)) x y))
+  ([k x y & more]
+     (reduce #(min-key k %1 %2) (min-key k x y) more)))
+
+(defn partition-all
+  "Returns a lazy sequence of lists like partition, but may include
+  partitions with fewer than n items at the end."
+  ([n coll]
+     (partition-all n n coll))
+  ([n step coll]
+     (lazy-seq
+      (when-let [s (seq coll)]
+        (cons (take n s) (partition-all n step (drop step s)))))))
+
+(defn take-while
+  "Returns a lazy sequence of successive items from coll while
+  (pred item) returns true. pred must be free of side-effects."
+  [pred coll]
+  (lazy-seq
+   (when-let [s (seq coll)]
+       (when (pred (first s))
+         (cons (first s) (take-while pred (rest s)))))))
+
+(defn take-nth
+  "Returns a lazy seq of every nth item in coll."
+  [n coll]
+    (lazy-seq
+     (when-let [s (seq coll)]
+       (cons (first s) (take-nth n (drop n s))))))
+
+(defn partition-by
+  "Applies f to each value in coll, splitting it each time f returns
+   a new value.  Returns a lazy seq of partitions."
+  [f coll]
+  (lazy-seq
+   (when-let [s (seq coll)]
+     (let [fst (first s)
+           fv (f fst)
+           run (cons fst (take-while #(= fv (f %)) (next s)))]
+       (cons run (partition-by f (seq (drop (count run) s))))))))
+
 (defn juxt
   "Takes a set of functions and returns a fn that is the juxtaposition
   of those fns.  The returned fn takes a variable number of args, and
@@ -2252,6 +2328,34 @@ reduces them without incurring seq initialization"
     (assert (= [1 2] (for [e v :while (< e 3)] e)))
     (assert (= [3] (for [e v :when (> e 2)] e)))
     (assert (= [[1 1] [2 4]] (for [e v :while (< e 3) :let [m (* e e)]] [e m]))))
+  (assert (not= 1 2))
+  (assert (not (not= 1 1)))
+  (assert (not (not-empty [])))
+  (assert (boolean (not-empty [1 2 3])))
+  (assert (= "joel" (min-key count "joel" "tom servo" "crooooooooow")))
+  (assert (= "crooooooooow" (max-key count "joel" "tom servo" "crooooooooow")))
+  (assert (= (partition-all 4 [1 2 3 4 5 6 7 8 9])
+             [[1 2 3 4] [5 6 7 8] [9]]))
+  (assert (= (partition-all 4 2 [1 2 3 4 5 6 7 8 9])
+             [[1 2 3 4] [3 4 5 6] [5 6 7 8] [7 8 9] [9]]))
+  (assert (= [true true] (take-while true? [true true 2 3 4])))
+  (assert (= [[true true] [false false false] [true true]]
+             (partition-by true? [true true false false false true true])))
+  (assert (= [0 2 4 6 8 10] (take-nth 2 [0 1 2 3 4 5 6 7 8 9 10])))
+  (let [a10 (partial + 10)
+        a20 (partial + 10 10)
+        a21 (partial + 10 10 1)
+        a22 (partial + 10 5  4 3)
+        a23 (partial + 10 5  4 3 1)]
+    (assert (= 110 (a10 100)))
+    (assert (= 120 (a20 100)))
+    (assert (= 121 (a21 100)))
+    (assert (= 122 (a22 100)))
+    (assert (= 123 (a23 100))))
+  (assert (= 5 (max 1 2 3 4 5)))
+  (assert (= 5.5 (max 1 2 3 4 5 5.5)))
+  (assert (= 1 (min 5 4 3 2 1)))
+  (assert (= 0.5 (min 5 4 3 0.5 2 1)))
   :ok
   )
 

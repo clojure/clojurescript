@@ -278,7 +278,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
              (when gthis
                (println (str "var " gthis " = this;")))
              (when variadic
-               (println (str (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
+               (println (str "var " (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
                #_(println (str (last params) " = Array.prototype.slice.call(arguments, " (dec (count params)) ");")))
              (when recurs (print "while(true){\n"))
              (emit-block :return statements ret)

@@ -95,7 +95,7 @@ does what?
 * bigdec
 * TODO bigint
 * biginteger
-* TODO binding
+* DONE binding
 * DONE bit-and
 * DONE bit-and-not
 * DONE bit-clear
@@ -327,7 +327,7 @@ does what?
 * DONE map?
 * DONE mapcat
 * TODO max
-* TODO max-key
+* DONE max-key
 * memfn
 * TODO memoize
 * TODO merge
@@ -336,7 +336,7 @@ does what?
 * method-sig
 * TODO methods
 * TODO min
-* TODO min-key
+* DONE min-key
 * TODO mod
 * munge
 * DONE name
@@ -350,9 +350,9 @@ does what?
 * DONE nnext
 * DONE not
 * DONE not-any?
-* TODO not-empty
+* DONE not-empty
 * DONE not-every?
-* TODO not=
+* DONE not=
 * DONE ns
 * ns-aliases
 * ns-imports
@@ -375,8 +375,8 @@ does what?
 * TODO parents
 * DONE partial
 * DONE partition
-* TODO partition-all
-* TODO partition-by
+* DONE partition-all
+* DONE partition-by
 * pcalls
 * DONE peek
 * persistent!
@@ -512,8 +512,8 @@ as macro
 * sync
 * DONE take
 * DONE take-last
-* TODO take-nth
-* TODO take-while
+* DONE take-nth
+* DONE take-while
 * test
 * the-ns
 * thread-bound?
