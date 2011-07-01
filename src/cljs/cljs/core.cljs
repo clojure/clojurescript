@@ -457,7 +457,6 @@ reduces them without incurring seq initialization"
   "Return true if x satisfies IVector"
   [x] (satisfies? IVector x))
 
-
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj []
   (js* "{}"))
@@ -738,6 +737,10 @@ reduces them without incurring seq initialization"
 
 (defn zero? [n]
   (== 0 n))
+
+(defn neg?
+  "Returns true if num is less than zero, else false"
+  [x] (js* "(~{x} < 0)"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
 
