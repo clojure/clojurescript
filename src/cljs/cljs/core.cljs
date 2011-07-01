@@ -71,7 +71,7 @@
   (-lookup [o k] [o k not-found]))
 
 (defprotocol IAssociative
-  #_(-contains-key? [coll k])
+  (-contains-key? [coll k])
   #_(-entry-at [coll k])
   (-assoc [coll k v]))
 
@@ -81,8 +81,7 @@
 
 (defprotocol ISet
   (-contains? [coll v])
-  (-disjoin [coll v])
-  #_(-get [coll v]))
+  (-disjoin [coll v]))
 
 (defprotocol IStack
   (-peek [coll])
@@ -186,7 +185,10 @@
   IReduce
   (-reduce
     ([_ f] (f))
-    ([_ f start] start)))
+    ([_ f start] start))
+
+  IHash
+  (-hash [o] 0))
 
 (extend-type goog.global.Date
   IEquiv
@@ -1614,6 +1616,14 @@ reduces them without incurring seq initialization"
 ; key already exists in strobj, the old value is overwritten. If a
 ; non-string key is assoc'ed, return a HashMap object instead.
 
+(defn- obj-map-contains-key?
+  ([k strobj]
+     (obj-map-contains-key? k strobj true false))
+  ([k strobj true-val false-val]
+     (if (and (goog/isString k) (.hasOwnProperty strobj k))
+       true-val
+       false-val)))
+
 (declare hash-map)
 (deftype ObjMap [meta keys strobj]
   IWithMeta
@@ -1645,9 +1655,7 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (if (and (goog/isString k) (.hasOwnProperty strobj k))
-      (aget strobj k)
-      not-found))
+    (obj-map-contains-key? k strobj (aget strobj k) not-found))
 
   IAssociative
   (-assoc [coll k v]
@@ -1662,6 +1670,8 @@ reduces them without incurring seq initialization"
             (ObjMap. meta new-keys new-strobj))))
       ; non-string key. game over.
       (with-meta (into (hash-map k v) (seq coll)) meta)))
+  (-contains-key? [coll k]
+    (obj-map-contains-key? k strobj))
 
   IMap
   (-dissoc [coll k]
@@ -1716,8 +1726,7 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (let [h (hash k)
-          bucket (aget hashobj h)
+    (let [bucket (aget hashobj (hash k))
           i (when bucket (scan-array 2 k bucket))]
       (if i
         (aget bucket (inc i))
@@ -1732,15 +1741,21 @@ reduces them without incurring seq initialization"
               new-hashobj (goog.object/clone hashobj)]
           (aset new-hashobj h new-bucket)
           (if-let [i (scan-array 2 k new-bucket)]
-            (do ; found key, replace
+            (do                         ; found key, replace
               (aset new-bucket (inc i) v)
               (HashMap. meta count new-hashobj))
-            (do ; did not find key, append
+            (do                         ; did not find key, append
               (.push new-bucket k v)
               (HashMap. meta (inc count) new-hashobj))))
         (let [new-hashobj (goog.object/clone hashobj)] ; did not find bucket
           (aset new-hashobj h (array k v))
           (HashMap. meta (inc count) new-hashobj)))))
+  (-contains-key? [coll k]
+    (let [bucket (aget hashobj (hash k))
+          i (when bucket (scan-array 2 k bucket))]
+      (if i
+        true
+        false)))
   
   IMap
   (-dissoc [coll k]
@@ -1775,6 +1790,77 @@ reduces them without incurring seq initialization"
   (loop [in (seq keyvals), out cljs.core.HashMap/EMPTY]
     (if in
       (recur (nnext in) (assoc out (first in) (second in)))
+      out)))
+
+(defn keys
+  "Returns a sequence of the map's keys."
+  [hash-map]
+  (seq (map first hash-map)))
+
+(defn vals
+  "Returns a sequence of the map's values."
+  [hash-map]
+  (seq (map second hash-map)))
+
+;;; Set
+
+(deftype Set [meta hash-map]
+  IWithMeta
+  (-with-meta [coll meta] (Set. meta hash-map))
+  
+  IMeta
+  (-meta [coll] meta)
+  
+  ICollection
+  (-conj [coll o]
+    (Set. meta (assoc hash-map o nil)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.Set/EMPTY meta))
+
+  IEquiv
+  (-equiv [coll other]
+    (and
+     (set? other)
+     (= (count coll) (count other))
+     (reduce #(and %1 (-contains? coll %2))
+             true
+             (seq other))))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] (keys hash-map))
+
+  ICounted
+  (-count [coll] (count (seq coll)))
+
+  ILookup
+  (-lookup [coll v]
+    (-lookup coll v nil))
+  (-lookup [coll v not-found]
+    (if (-contains? coll v)
+      v
+      not-found))
+
+  ISet
+  (-contains? [coll v]
+    (-contains-key? hash-map v))
+  (-disjoin [coll v]
+    (Set. meta (dissoc hash-map v)))
+
+)
+
+(set! cljs.core.Set/EMPTY (Set. nil (hash-map)))
+
+(defn set
+  "Returns a set of the distinct elements of coll."
+  [coll]
+  (loop [in (seq coll)
+         out cljs.core.Set/EMPTY]
+    (if-not (empty? in)
+      (recur (rest in) (conj out (first in)))
       out)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2049,7 +2135,10 @@ reduces them without incurring seq initialization"
   HashMap
   (-pr-seq [coll opts]
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
-      (pr-sequential pr-pair "{" ", " "}" opts coll))))
+      (pr-sequential pr-pair "{" ", " "}" opts coll)))
+
+  Set
+  (-pr-seq [coll opts] (pr-sequential pr-seq "#{" " " "}" opts coll)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
@@ -2356,6 +2445,23 @@ reduces them without incurring seq initialization"
   (assert (= 5.5 (max 1 2 3 4 5 5.5)))
   (assert (= 1 (min 5 4 3 2 1)))
   (assert (= 0.5 (min 5 4 3 0.5 2 1)))
+  (assert (set))
+  (assert (= #{} (set)))
+  (assert (= #{"foo"} (set ["foo"])))
+  (assert (= #{1 2 3} #{1 3 2}))
+  (assert (= #{#{1 2 3} [4 5 6] {7 8} 9 10}
+             #{10 [4 5 6] {7 8} #{1 2 3}}))
+  (assert (not (= #{nil [] {} 0 #{}} #{})))
+  (assert (= (count #{nil [] {} 0 #{}} 5)))
+  (assert (= (conj #{1}) #{1}))
+  (assert (= (conj #{1} 2) #{2 1}))
+  (assert (= #{} (-empty #{1 2 3 4})))
+  (assert (= (reduce + #{1 2 3 4 5} 15)))
+  (assert (= 4 (get #{1 2 3 4} 4)))
+  (assert (-contains? #{1 2 3 4} 4))
+  (assert (-contains? #{[] nil 0 {} #{}}))
+  (assert (-contains? #{[1 2 3]} [1 2 3]))
+  (assert (not (-contains? (-disjoin #{1 2 3} 3) 3)))
   :ok
   )
 

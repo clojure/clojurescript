@@ -186,6 +186,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                          (apply concat x)))
          ")")))
 
+(defmethod emit-constant clojure.lang.PersistentHashSet [x]
+  (emit-meta-constant x
+    (str "cljs.core.set(["
+         (comma-sep (map #(with-out-str (emit-constant %)) x))
+         "])")))
+
 (defmulti emit :op)
 
 (defn ^String emits [expr]
