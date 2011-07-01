@@ -1048,47 +1048,47 @@ reduces them without incurring seq initialization"
   ([f args]
      (let [fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist)))))
   ([f x args]
-     (let [args (list* x args)
+     (let [arglist (list* x args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist)))))
   ([f x y args]
-     (let [args (list* x y args)
+     (let [arglist (list* x y args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist)))))
   ([f x y z args]
-     (let [args (list* x y z args)
+     (let [arglist (list* x y z args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist)))))
   ([f a b c d & args]
-     (let [args (cons a (cons b (cons c (cons d (spread args)))))
+     (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args))))))
+           (. f apply f (to-array arglist))
+           (. f apply f (to-array arglist))) ;; applyTo
+         (. f apply f (to-array arglist))))))
 
 (defn not=
   "Same as (not (= obj1 obj2))"
