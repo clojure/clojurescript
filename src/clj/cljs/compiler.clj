@@ -316,7 +316,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             maxparams (apply max-key count (map :params methods))
             mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
             ms (sort-by #(-> % second :params count) (seq mmap))]
-        (println "(function() {")
+        (if (= :return (:context env))
+          (println "return (function(){")
+          (println "(function(){"))
         (println (str "var " name " = null;"))
         (doseq [[n meth] ms]
           (println (str "var " n " = " (with-out-str (emit-fn-method meth)) ";")))
@@ -581,7 +583,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         meths (if (vector? (first meths)) (list meths) meths)
         mname (when name (munge name))
         locals (:locals env)
-        locals (if name (assoc locals name {:name mname}) locals)
+        locals (if name (assoc locals name {:name mname}) locals)        
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
         methods (map #(analyze-fn-method menv locals %) meths)
         max-fixed-arity (apply max (map :fixed-arity methods))
@@ -1036,11 +1038,32 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         parent-file (java.io.File. ^String (to-path (cons target parents)))]
     (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
 
+(defn dependency-order-visit
+  [state ns-name]
+  (let [file (get state ns-name)]
+    (if (:visited file)
+      state
+      (let [state (assoc-in state [ns-name :visited] true)
+            deps (:requires file)
+            state (reduce dependency-order-visit state deps)]
+        (assoc state :order (conj (:order state) file))))))
+
+(defn dependency-order
+  "Given a list of maps like
+
+   [{:ns a :requires (a c)} ...]
+
+   sort the list into dependency order."
+  [coll]
+  (let [state (reduce (fn [m next] (assoc m (:ns next) next)) {} coll)]
+    (:order (reduce dependency-order-visit (assoc state :order []) (map :ns coll)))))
+
 (defn compile-root
   "Looks recursively in src-dir for .cljs files and compiles them to
    .js files. If target-dir is provided, output will go into this
    directory mirroring the source directory structure. Returns a list
-   of maps containing information about each file which was compiled."
+   of maps containing information about each file which was compiled
+   in dependency order."
   ([src-dir]
      (compile-root src-dir "out"))
   ([src-dir target-dir]
@@ -1053,7 +1076,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                  output-file ^java.io.File (to-target-file src-dir-file target-dir cljs-file)
                  ns-info (compile-file cljs-file output-file)]
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
-           output-files)))))
+           (dependency-order output-files))))))
 
 (comment
   ;; compile-root
