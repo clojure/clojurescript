@@ -316,6 +316,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             maxparams (apply max-key count (map :params methods))
             mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
             ms (sort-by #(-> % second :params count) (seq mmap))]
+        (when (= :return (:context env))
+          (print "return "))
         (println "(function() {")
         (println (str "var " name " = null;"))
         (doseq [[n meth] ms]
@@ -417,7 +419,14 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :invoke
   [{:keys [f args env]}]
   (emit-wrap env
-             (print (str "cljs.core.fn_of_(" (emits f) ")("
+             #_(print (str "(" (emits f) ".cljs$core$Fn$invoke ? ("
+                         (emits f) ".cljs$core$Fn$invoke("
+                         (comma-sep (map emits args))
+                         ")):(" (emits f) "(" (comma-sep (map emits args)) ")))"))
+             (print (str "(" (emits f) ".cljs$core$Fn$invoke || " (emits f) ")("
+                         (comma-sep (map emits args))
+                         ")"))
+             #_(print (str "cljs.core.fn_of_(" (emits f) ")("
                          (comma-sep (map emits args))
                          ")"))))
 
