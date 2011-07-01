@@ -19,7 +19,7 @@
 (defn fn_of_
   "Internal - do not use!"
   [f]
-  (js* "(~{f} instanceof Function?~{f}:~{f}.cljs$core$Fn$invoke);"))
+  (js* "(~{f}.cljs$core$Fn$invoke || ~{f});"))
 
 (defn type_satisfies_
   "Internal - do not use!"
