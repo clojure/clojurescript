@@ -657,6 +657,20 @@ reduces them without incurring seq initialization"
   "Returns a number one less than num."
   [x] (- x 1))
 
+(defn max
+  "Returns the greatest of the nums."
+  ([x] x)
+  ([x y] (js* "((~{x} > ~{y}) ? x : y)"))
+  ([x y & more]
+   (reduce max (max x y) more)))
+
+(defn min
+  "Returns the least of the nums."
+  ([x] x)
+  ([x y] (js* "((~{x} < ~{y}) ? x : y)"))
+  ([x y & more]
+   (reduce min (min x y) more)))
+
 (defn bit-xor
   "Bitwise exclusive or"
   [x y] (js* "(~{x} ^ ~{y})"))
@@ -2338,6 +2352,10 @@ reduces them without incurring seq initialization"
     (assert (= 121 (a21 100)))
     (assert (= 122 (a22 100)))
     (assert (= 123 (a23 100))))
+  (assert (= 5 (max 1 2 3 4 5)))
+  (assert (= 5.5 (max 1 2 3 4 5 5.5)))
+  (assert (= 1 (min 5 4 3 2 1)))
+  (assert (= 0.5 (min 5 4 3 0.5 2 1)))
   :ok
   )
 
