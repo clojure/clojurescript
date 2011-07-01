@@ -1062,7 +1062,7 @@ reduces them without incurring seq initialization"
   ([f args]
      (let [fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f applyTo)
-         (if (<= (bounded-count arglist fixed-arity)
+         (if (<= (bounded-count args fixed-arity)
                  fixed-arity)
            (. f apply f (to-array args))
            (. f apply f (to-array args))) ;; applyTo
