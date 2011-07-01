@@ -2328,6 +2328,16 @@ reduces them without incurring seq initialization"
   (assert (= [[true true] [false false false] [true true]]
              (partition-by true? [true true false false false true true])))
   (assert (= [0 2 4 6 8 10] (take-nth 2 [0 1 2 3 4 5 6 7 8 9 10])))
+  (let [a10 (partial + 10)
+        a20 (partial + 10 10)
+        a21 (partial + 10 10 1)
+        a22 (partial + 10 5  4 3)
+        a23 (partial + 10 5  4 3 1)]
+    (assert (= 110 (a10 100)))
+    (assert (= 120 (a20 100)))
+    (assert (= 121 (a21 100)))
+    (assert (= 122 (a22 100)))
+    (assert (= 123 (a23 100))))
   :ok
   )
 
