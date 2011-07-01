@@ -959,23 +959,25 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   ([src dest]
      (let [src-file (io/file src)
            dest-file (io/file dest)]
-       (do (when (not (:defs (get @namespaces 'cljs.core)))
-             (load-file (repl-env) "cljs/core.cljs"))
-           (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
-           (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
-             (binding [*out* out
-                       *cljs-ns* 'cljs.user]
-               (loop [forms (forms-seq src-file)
-                      ns-name nil
-                      deps nil]
-                 (if (seq forms)
-                   (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-                         ast (analyze env (first forms))]
-                     (do (emit ast)
-                         (if (= (:op ast) :ns)
-                           (recur (rest forms) (:name ast) (:requires ast))
-                           (recur (rest forms) ns-name deps))))
-                   {:ns (or ns-name 'cljs.user) :requires (vals deps)}))))))))
+       (if (.exists src-file)
+         (do (when-not (:defs (get @namespaces 'cljs.core))
+               (load-file (repl-env) "cljs/core.cljs"))
+             (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
+             (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
+               (binding [*out* out
+                         *cljs-ns* 'cljs.user]
+                 (loop [forms (forms-seq src-file)
+                        ns-name nil
+                        deps nil]
+                   (if (seq forms)
+                     (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+                           ast (analyze env (first forms))]
+                       (do (emit ast)
+                           (if (= (:op ast) :ns)
+                             (recur (rest forms) (:name ast) (:requires ast))
+                             (recur (rest forms) ns-name deps))))
+                     {:ns (or ns-name 'cljs.user) :requires (vals deps)})))))
+         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
   ;; flex compile-file
