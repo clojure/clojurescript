@@ -35,27 +35,10 @@
            required-goog)
    ["--js" (cljs-home-relative cljs-home "core.js")]))
 
-(defn- dfs-visit
-  [state ns-name]
-  (let [file (get state ns-name)]
-    (if (:visited file)
-      state
-      (let [state (assoc-in state [ns-name :visited] true)
-            deps (:requires file)
-            state (reduce dfs-visit state deps)]
-        (assoc state :order (conj (:order state) file))))))
-
-(defn sort-by-dep
-  "Perform a depth-first search of the dependency graph returning a
-  list of file names in dependency order."
-  [files]
-  (let [state (reduce #(assoc %1 (:ns %2) %2) {} files)]
-    (map :file-name (:order (reduce dfs-visit (assoc state :order []) (map :ns files))))))
-
 (defn- to-args
   "Create a list of js args for gclosure compiler."
   [file-info]
-  (map #(str "--js=" %) (sort-by-dep file-info)))
+  (map #(str "--js=" (:file-name %)) file-info))
 
 (defn- non-gclosure-arg?
   [^String arg]
