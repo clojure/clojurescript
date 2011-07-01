@@ -95,7 +95,7 @@ does what?
 * bigdec
 * TODO bigint
 * biginteger
-* TODO binding
+* DONE binding
 * DONE bit-and
 * DONE bit-and-not
 * DONE bit-clear

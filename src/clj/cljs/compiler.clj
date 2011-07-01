@@ -285,6 +285,27 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
              (when recurs (print "break;\n}\n"))
              (print "})")))
 
+(defn emit-apply-to
+  [{:keys [name params env]}]
+  (let [arglist (gensym "arglist__")]
+    (println (str "(function (" arglist "){"))
+    (doseq [[i param] (map-indexed vector (butlast params))]
+      (print (str "var " param " = cljs.core.first("))
+      (dotimes [_ i] (print "cljs.core.next("))
+      (print (str arglist ")"))
+      (dotimes [_ i] (print ")"))
+      (println ";"))
+    (when (< 1 (count params))
+      (print (str "var " (last params) " = cljs.core.rest(")))
+    (dotimes [_ (- (count params) 2)] (print "cljs.core.next("))
+    (print arglist)
+    (dotimes [_ (- (count params) 2)] (print ")"))
+    (when (< 1 (count params))
+      (print ")"))
+    (println ";")
+    (println (str "return " name ".call(" (string/join ", " (cons "null" params)) ");"))
+    (print "})")))
+
 (defmethod emit :fn
   [{:keys [name env methods max-fixed-arity variadic]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
@@ -295,6 +316,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             maxparams (apply max-key count (map :params methods))
             mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
             ms (sort-by #(-> % second :params count) (seq mmap))]
+        (when (= :return (:context env))
+          (print "return "))
         (println "(function() {")
         (println (str "var " name " = null;"))
         (doseq [[n meth] ms]
@@ -317,7 +340,15 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println "throw('Invalid arity: ' + arguments.length);")
         (println "};")
         (when variadic
-          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity)))
+          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity))
+          (println (str name ".cljs$lang$applyTo = "
+                        (with-out-str
+                          (emit-apply-to
+                           (some (fn [[n meth]]
+                                   (when (:variadic meth)
+                                     (assoc meth :name n)))
+                                 ms)))
+                        ";")))
         (println (str "return " name ";"))
         (println "})()")))))
 
@@ -388,7 +419,14 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :invoke
   [{:keys [f args env]}]
   (emit-wrap env
-             (print (str "cljs.core.fn_of_(" (emits f) ")("
+             #_(print (str "(" (emits f) ".cljs$core$Fn$invoke ? ("
+                         (emits f) ".cljs$core$Fn$invoke("
+                         (comma-sep (map emits args))
+                         ")):(" (emits f) "(" (comma-sep (map emits args)) ")))"))
+             (print (str "(" (emits f) ".cljs$core$Fn$invoke || " (emits f) ")("
+                         (comma-sep (map emits args))
+                         ")"))
+             #_(print (str "cljs.core.fn_of_(" (emits f) ")("
                          (comma-sep (map emits args))
                          ")"))))
 
@@ -959,23 +997,25 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   ([src dest]
      (let [src-file (io/file src)
            dest-file (io/file dest)]
-       (do (when (not (:defs (get @namespaces 'cljs.core)))
-             (load-file (repl-env) "cljs/core.cljs"))
-           (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
-           (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
-             (binding [*out* out
-                       *cljs-ns* 'cljs.user]
-               (loop [forms (forms-seq src-file)
-                      ns-name nil
-                      deps nil]
-                 (if (seq forms)
-                   (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-                         ast (analyze env (first forms))]
-                     (do (emit ast)
-                         (if (= (:op ast) :ns)
-                           (recur (rest forms) (:name ast) (:requires ast))
-                           (recur (rest forms) ns-name deps))))
-                   {:ns (or ns-name 'cljs.user) :requires (vals deps)}))))))))
+       (if (.exists src-file)
+         (do (when-not (:defs (get @namespaces 'cljs.core))
+               (load-file (repl-env) "cljs/core.cljs"))
+             (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
+             (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
+               (binding [*out* out
+                         *cljs-ns* 'cljs.user]
+                 (loop [forms (forms-seq src-file)
+                        ns-name nil
+                        deps nil]
+                   (if (seq forms)
+                     (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+                           ast (analyze env (first forms))]
+                       (do (emit ast)
+                           (if (= (:op ast) :ns)
+                             (recur (rest forms) (:name ast) (:requires ast))
+                             (recur (rest forms) ns-name deps))))
+                     {:ns (or ns-name 'cljs.user) :requires (vals deps)})))))
+         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
   ;; flex compile-file
