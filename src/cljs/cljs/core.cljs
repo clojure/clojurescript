@@ -2396,6 +2396,11 @@ reduces them without incurring seq initialization"
   (assert (= 5.5 (max 1 2 3 4 5 5.5)))
   (assert (= 1 (min 5 4 3 2 1)))
   (assert (= 0.5 (min 5 4 3 0.5 2 1)))
+  (assert (neg? -1))
+  (assert (not (neg? 1)))
+  (assert (neg? -1.765))
+  (assert (not (neg? 0)))
+  
   :ok
   )
 
