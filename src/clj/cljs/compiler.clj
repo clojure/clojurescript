@@ -316,7 +316,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             maxparams (apply max-key count (map :params methods))
             mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
             ms (sort-by #(-> % second :params count) (seq mmap))]
-        (println "(function() {")
+        (if (= :return (:context env))
+          (println "return (function(){")
+          (println "(function(){"))
         (println (str "var " name " = null;"))
         (doseq [[n meth] ms]
           (println (str "var " n " = " (with-out-str (emit-fn-method meth)) ";")))
@@ -581,7 +583,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         meths (if (vector? (first meths)) (list meths) meths)
         mname (when name (munge name))
         locals (:locals env)
-        locals (if name (assoc locals name {:name mname}) locals)
+        locals (if name (assoc locals name {:name mname}) locals)        
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
         methods (map #(analyze-fn-method menv locals %) meths)
         max-fixed-arity (apply max (map :fixed-arity methods))
