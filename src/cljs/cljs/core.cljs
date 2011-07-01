@@ -1477,6 +1477,24 @@ reduces them without incurring seq initialization"
       (recur (dec n) (next xs))
       xs)))
 
+(defn re-find
+  "Returns the first regex match, if any, of string to pattern, using
+  RegExp.exec(string)."
+  [re s]
+  (let [matches (.exec re s)]
+    (when-not (nil? matches) (nth matches 0))))
+
+(defn re-seq
+  "Returns a sequence of successive matches of pattern in string,
+  using String.match(regex)."
+  [re s]
+  (seq (.match s re)))
+
+(defn re-pattern
+  "Returns an instance of RegExp which has compiled the provided string."
+  [s]
+  (.compile (goog.global.RegExp.) s "g"))
+
 ;;; Vector
 
 (deftype Vector [meta array]
