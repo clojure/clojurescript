@@ -19,7 +19,7 @@
 (defn fn_of_
   "Internal - do not use!"
   [f]
-  (js* "(~{f} instanceof Function?~{f}:~{f}.cljs$core$Fn$invoke);"))
+  (js* "(~{f}.cljs$core$Fn$invoke || ~{f});"))
 
 (defn type_satisfies_
   "Internal - do not use!"
@@ -459,7 +459,6 @@ reduces them without incurring seq initialization"
   "Return true if x satisfies IVector"
   [x] (satisfies? IVector x))
 
-
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj []
   (js* "{}"))
@@ -740,6 +739,10 @@ reduces them without incurring seq initialization"
 
 (defn zero? [n]
   (== 0 n))
+
+(defn neg?
+  "Returns true if num is less than zero, else false"
+  [x] (js* "(~{x} < 0)"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
 
@@ -1063,48 +1066,48 @@ reduces them without incurring seq initialization"
   First cut.  Not lazy.  Needs to use emitted toApply."
   ([f args]
      (let [fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
+       (if (. f cljs$lang$applyTo)
          (if (<= (bounded-count args fixed-arity)
                  fixed-arity)
            (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
+           (. f cljs$lang$applyTo args))
          (. f apply f (to-array args)))))
   ([f x args]
-     (let [args (list* x args)
+     (let [arglist (list* x args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+       (if (. f cljs$lang$applyTo)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f cljs$lang$applyTo arglist))
+         (. f apply f (to-array arglist)))))
   ([f x y args]
-     (let [args (list* x y args)
+     (let [arglist (list* x y args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+       (if (. f cljs$lang$applyTo)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f cljs$lang$applyTo arglist))
+         (. f apply f (to-array arglist)))))
   ([f x y z args]
-     (let [args (list* x y z args)
+     (let [arglist (list* x y z args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+       (if (. f cljs$lang$applyTo)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args)))))
+           (. f apply f (to-array arglist))
+           (. f cljs$lang$applyTo arglist))
+         (. f apply f (to-array arglist)))))
   ([f a b c d & args]
-     (let [args (cons a (cons b (cons c (cons d (spread args)))))
+     (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
-         (if (<= (bounded-count args fixed-arity)
+       (if (. f cljs$lang$applyTo)
+         (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
-         (. f apply f (to-array args))))))
+           (. f apply f (to-array arglist))
+           (. f cljs$lang$applyTo arglist))
+         (. f apply f (to-array arglist))))))
 
 (defn not=
   "Same as (not (= obj1 obj2))"
@@ -2353,6 +2356,23 @@ reduces them without incurring seq initialization"
               (false? true)
               (true? goog.global.undefined)
               (false? goog.global.undefined)]))
+  ;; apply
+  (assert (= 0 (apply + nil)))
+  (assert (= 0 (apply + (list))))
+  (assert (= 1 (apply + (list 1))))
+  (assert (= 3 (apply + 1 (list 2))))
+  (assert (= 7 (apply + 1 2 (list 4))))
+  (assert (= 15 (apply + 1 2 4 (list 8))))
+  (assert (= 31 (apply + 1 2 4 8 (list 16))))
+  (assert (= 63 (apply + 1 2 4 8 16 (list 32))))
+  (assert (= 127 (apply + 1 2 4 8 16 (list 32 64))))
+  (assert (= 4950 (apply + (take 100 (iterate inc 0)))))
+  ;; apply with infinite sequence
+  ;; (assert (= 3 (apply (fn [& args]
+  ;;                       (+ (nth args 0)
+  ;;                          (nth args 1)
+  ;;                          (nth args 2)))
+  ;;                     (iterate inc 0))))
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))
@@ -2441,6 +2461,26 @@ reduces them without incurring seq initialization"
     (assert (= 121 (a21 100)))
     (assert (= 122 (a22 100)))
     (assert (= 123 (a23 100))))
+  (let [n2 (comp first rest)
+        n3 (comp first rest rest)
+        n4 (comp first rest rest rest)
+        n5 (comp first rest rest rest rest)
+        n6 (comp first rest rest rest rest rest)]
+    (assert (= 2 (n2 [1 2 3 4 5 6 7])))
+    (assert (= 3 (n3 [1 2 3 4 5 6 7])))
+    (assert (= 4 (n4 [1 2 3 4 5 6 7])))
+    (assert (= 5 (n5 [1 2 3 4 5 6 7])))
+    (assert (= 6 (n6 [1 2 3 4 5 6 7]))))
+  (let [sf (some-fn number? keyword? symbol?)]
+    (assert (sf :foo 1))
+    (assert (sf :foo))
+    (assert (sf 'bar 1))
+    (assert (not (sf [] ()))))
+  (let [ep (every-pred number? zero?)]
+    (assert (ep 0 0 0))
+    (assert (not (ep 1 2 3 0))))
+  (assert ((complement number?) :foo))
+  (assert (= [1 [2 3] [1 2 3]] ((juxt first rest seq) [1 2 3])))
   (assert (= 5 (max 1 2 3 4 5)))
   (assert (= 5.5 (max 1 2 3 4 5 5.5)))
   (assert (= 1 (min 5 4 3 2 1)))
@@ -2462,6 +2502,10 @@ reduces them without incurring seq initialization"
   (assert (-contains? #{[] nil 0 {} #{}}))
   (assert (-contains? #{[1 2 3]} [1 2 3]))
   (assert (not (-contains? (-disjoin #{1 2 3} 3) 3)))
+  (assert (neg? -1))
+  (assert (not (neg? 1)))
+  (assert (neg? -1.765))
+  (assert (not (neg? 0)))
   :ok
   )
 
