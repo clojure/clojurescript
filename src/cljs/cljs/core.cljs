@@ -1061,47 +1061,47 @@ reduces them without incurring seq initialization"
   First cut.  Not lazy.  Needs to use emitted toApply."
   ([f args]
      (let [fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
+       (if (. f cljs$lang$applyTo)
          (if (<= (bounded-count args fixed-arity)
                  fixed-arity)
            (. f apply f (to-array args))
-           (. f apply f (to-array args))) ;; applyTo
+           (. f cljs$lang$applyTo args))
          (. f apply f (to-array args)))))
   ([f x args]
      (let [arglist (list* x args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
+       (if (. f cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
-           (. f apply f (to-array arglist))) ;; applyTo
+           (. f cljs$lang$applyTo arglist))
          (. f apply f (to-array arglist)))))
   ([f x y args]
      (let [arglist (list* x y args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
+       (if (. f cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
-           (. f apply f (to-array arglist))) ;; applyTo
+           (. f cljs$lang$applyTo arglist))
          (. f apply f (to-array arglist)))))
   ([f x y z args]
      (let [arglist (list* x y z args)
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
+       (if (. f cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
-           (. f apply f (to-array arglist))) ;; applyTo
+           (. f cljs$lang$applyTo arglist))
          (. f apply f (to-array arglist)))))
   ([f a b c d & args]
      (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f applyTo)
+       (if (. f cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
-           (. f apply f (to-array arglist))) ;; applyTo
+           (. f cljs$lang$applyTo arglist))
          (. f apply f (to-array arglist))))))
 
 (defn not=
@@ -2264,6 +2264,23 @@ reduces them without incurring seq initialization"
               (false? true)
               (true? goog.global.undefined)
               (false? goog.global.undefined)]))
+  ;; apply
+  (assert (= 0 (apply + nil)))
+  (assert (= 0 (apply + (list))))
+  (assert (= 1 (apply + (list 1))))
+  (assert (= 3 (apply + 1 (list 2))))
+  (assert (= 7 (apply + 1 2 (list 4))))
+  (assert (= 15 (apply + 1 2 4 (list 8))))
+  (assert (= 31 (apply + 1 2 4 8 (list 16))))
+  (assert (= 63 (apply + 1 2 4 8 16 (list 32))))
+  (assert (= 127 (apply + 1 2 4 8 16 (list 32 64))))
+  (assert (= 4950 (apply + (take 100 (iterate inc 0)))))
+  ;; apply with infinite sequence
+  ;; (assert (= 3 (apply (fn [& args]
+  ;;                       (+ (nth args 0)
+  ;;                          (nth args 1)
+  ;;                          (nth args 2)))
+  ;;                     (iterate inc 0))))
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))

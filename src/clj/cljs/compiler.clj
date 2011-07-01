@@ -285,6 +285,27 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
              (when recurs (print "break;\n}\n"))
              (print "})")))
 
+(defn emit-apply-to
+  [{:keys [name params env]}]
+  (let [arglist (gensym "arglist__")]
+    (println (str "(function (" arglist "){"))
+    (doseq [[i param] (map-indexed vector (butlast params))]
+      (print (str "var " param " = cljs.core.first("))
+      (dotimes [_ i] (print "cljs.core.next("))
+      (print (str arglist ")"))
+      (dotimes [_ i] (print ")"))
+      (println ";"))
+    (when (< 1 (count params))
+      (print (str "var " (last params) " = cljs.core.rest(")))
+    (dotimes [_ (- (count params) 2)] (print "cljs.core.next("))
+    (print arglist)
+    (dotimes [_ (- (count params) 2)] (print ")"))
+    (when (< 1 (count params))
+      (print ")"))
+    (println ";")
+    (println (str "return " name ".call(" (string/join ", " (cons "null" params)) ");"))
+    (print "})")))
+
 (defmethod emit :fn
   [{:keys [name env methods max-fixed-arity variadic]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
@@ -317,7 +338,15 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println "throw('Invalid arity: ' + arguments.length);")
         (println "};")
         (when variadic
-          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity)))
+          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity))
+          (println (str name ".cljs$lang$applyTo = "
+                        (with-out-str
+                          (emit-apply-to
+                           (some (fn [[n meth]]
+                                   (when (:variadic meth)
+                                     (assoc meth :name n)))
+                                 ms)))
+                        ";")))
         (println (str "return " name ";"))
         (println "})()")))))
 
