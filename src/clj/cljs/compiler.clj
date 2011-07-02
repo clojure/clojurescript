@@ -241,6 +241,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str "cljs.core.Vector.fromArray(["
                 (comma-sep (map emits children)) "])"))))
 
+(defmethod emit :set
+  [{:keys [children env]}]
+  (emit-wrap env
+    (print (str "cljs.core.set(["
+                (comma-sep (map emits children)) "])"))))
+
 (defmethod emit :constant
   [{:keys [form env]}]
   (when-not (= :statement (:context env))
@@ -831,6 +837,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         items (disallowing-recur (vec (map #(analyze expr-env % name) form)))]
     (analyze-wrap-meta {:op :vector :env env :form form :children items} name)))
 
+(defn analyze-set
+  [env form name]
+  (let [expr-env (assoc env :context :expr)
+        items (disallowing-recur (vec (map #(analyze expr-env % name) form)))]
+    (analyze-wrap-meta {:op :set :env env :form form :children items} name)))
+
 (defn analyze-wrap-meta [expr name]
   (let [form (:form expr)]
     (if (meta form)
@@ -858,6 +870,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (and (seq? form) (seq form)) (analyze-seq env form name)
         (map? form) (analyze-map env form name)
         (vector? form) (analyze-vector env form name)
+        (set? form) (analyze-set env form name)
         :else {:op :constant :env env :form form}))))
 
 (defn eval1
