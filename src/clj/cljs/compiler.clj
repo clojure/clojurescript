@@ -481,7 +481,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                (print (apply str (interleave (concat segs (repeat nil))
                                              (concat (map emits args) [nil])))))))
 
-(declare analyze analyze-symbol)
+(declare analyze analyze-symbol analyze-seq)
 
 (def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* . js* & quote})
 
@@ -668,12 +668,19 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod parse 'set!
   [_ env [_ target val] _]
-  (assert (symbol? target) "set! target must be a symbol naming var")
-  (assert (nil? (-> env :locals target)) "Can't set! local var")
   (disallowing-recur
    (let [enve (assoc env :context :expr)
-         targetexpr (analyze-symbol enve target)
+         targetexpr (if (symbol? target)
+                      (do
+                        (assert (nil? (-> env :locals target))
+                                "Can't set! local var")
+                        (analyze-symbol enve target))
+                      (when (seq? target)
+                        (let [targetexpr (analyze-seq enve target nil)]
+                          (when (:field targetexpr)
+                            targetexpr))))
          valexpr (analyze enve val)]
+     (assert targetexpr "set! target must be a field or a symbol naming a var")
      {:env env :op :set! :target targetexpr :val valexpr :children [targetexpr valexpr]})))
 
 (defmethod parse 'ns
