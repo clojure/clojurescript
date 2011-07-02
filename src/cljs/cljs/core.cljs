@@ -967,8 +967,8 @@ reduces them without incurring seq initialization"
     (if (.realized lazy-seq)
       x
       (do
-        (set! lazy-seq.x (x))
-        (set! lazy-seq.realized true)
+        (set! (.x lazy-seq) (x))
+        (set! (.realized lazy-seq) true)
         (.x lazy-seq)))))
 
 (deftype LazySeq [meta realized x]
@@ -2176,7 +2176,7 @@ reduces them without incurring seq initialization"
   (when-let [v (.validator a)]
     (when-not (v newval)
       (throw "Validator rejected reference state")))
-  (set! a.state newval))
+  (set! (.state a) newval))
 
 (defn swap!
   "Atomically swaps the value of atom to be:
@@ -2218,7 +2218,7 @@ reduces them without incurring seq initialization"
   value if var) is not acceptable to the new validator, an exception
   will be thrown and the validator will not be changed."
   [iref val]
-  (set! iref.validator val))
+  (set! (.validator iref) val))
 
 (defn get-validator
   "Gets the validator-fn for a var/ref/agent/atom."
@@ -2232,12 +2232,12 @@ reduces them without incurring seq initialization"
 
   f must be free of side-effects"
   [iref f & args]
-  (set! iref.meta (apply f (.meta iref) args)))
+  (set! (.meta iref) (apply f (.meta iref) args)))
 
 (defn reset-meta!
   "Atomically resets the metadata for a namespace/var/ref/agent/atom"
   [iref m]
-  (set! iref.meta m))
+  (set! (.meta iref) m))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; gensym ;;;;;;;;;;;;;;;;
 ;; Internal - do not use!
@@ -2483,6 +2483,9 @@ reduces them without incurring seq initialization"
   (assert (= 5.5 (max 1 2 3 4 5 5.5)))
   (assert (= 1 (min 5 4 3 2 1)))
   (assert (= 0.5 (min 5 4 3 0.5 2 1)))
+  (let [x (array 1 2 3)]
+    (set! (.foo x) :hello)
+    (assert (= (.foo x) :hello)))
   (assert (set))
   (assert (= #{} (set)))
   (assert (= #{"foo"} (set ["foo"])))
