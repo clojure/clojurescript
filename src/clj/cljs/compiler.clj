@@ -253,15 +253,25 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str "(function(){throw " (emits throw) "})()"))
     (print (str "throw " (emits throw) ";\n"))))
 
+(defn emit-comment
+  "Emit a nicely formatted comment string."
+  [doc jsdoc]
+  (let [docs (when doc [doc])
+        docs (if jsdoc (concat docs jsdoc) docs)
+        docs (remove nil? docs)]
+    (letfn [(print-comment-lines [e] (doseq [next-line (string/split-lines e)]
+                                       (println "*" (string/trim next-line))))]
+      (when (seq docs)
+        (println "/**")
+        (doseq [e docs]
+          (when e
+            (print-comment-lines e)))
+        (println "*/")))))
+
 (defmethod emit :def
-  [{:keys [name init env export]}]
+  [{:keys [name init env doc export]}]
   (when init
-    (when (:jsdoc init)
-      (println "/**")
-      (doseq [e (:jsdoc init)]
-        (when e
-          (println "*" e)))
-      (println "*/"))
+    (emit-comment doc (:jsdoc init))
     (print name)
     (print (str " = " (emits init)))
     (when-not (= :expr (:context env)) (print ";\n"))
@@ -550,10 +560,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           init-expr (when (contains? args :init) (disallowing-recur
                                                   (analyze (assoc env :context :expr) (:init args) sym)))
           export-as (when-let [export-val (-> sym meta :export)]
-                      (if (= true export-val) name export-val))]
+                      (if (= true export-val) name export-val))
+          doc (or (:doc args) (-> sym meta :doc))]
       (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
       (merge {:env env :op :def :form form
-              :name name :doc (:doc args) :init init-expr}
+              :name name :doc doc :init init-expr}
              (when init-expr {:children [init-expr]})
              (when export-as {:export export-as})))))
 
