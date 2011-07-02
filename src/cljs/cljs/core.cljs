@@ -2111,9 +2111,7 @@ reduces them without incurring seq initialization"
      (list (str (when-let [nspc (namespace obj)]
                   (str nspc "/"))
                 (name obj)))
-     (get opts :readably)
-     (list (goog.string.quote obj))
-     :else (list obj)))
+     :else (list (goog.string.quote obj))))
  
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
