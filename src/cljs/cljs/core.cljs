@@ -1826,9 +1826,8 @@ reduces them without incurring seq initialization"
     (and
      (set? other)
      (= (count coll) (count other))
-     (reduce #(and %1 (-contains? coll %2))
-             true
-             (seq other))))
+     (every? #(-contains? coll %)
+             other)))
 
   IHash
   (-hash [coll] (hash-coll coll))
