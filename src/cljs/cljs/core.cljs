@@ -800,9 +800,9 @@ reduces them without incurring seq initialization"
 
 (defn hash-combine [seed hash]
   ; a la boost
-  (bit-xor (+ hash 0x9e3779b9
-              (bit-shift-left seed 6)
-              (bit-shift-right seed 2))))
+  (bit-xor seed (+ hash 0x9e3779b9
+                   (bit-shift-left seed 6)
+                   (bit-shift-right seed 2))))
 
 (defn- hash-coll [coll]
   (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
