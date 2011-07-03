@@ -186,6 +186,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                          (apply concat x)))
          ")")))
 
+(defmethod emit-constant clojure.lang.PersistentHashSet [x]
+  (emit-meta-constant x
+    (str "cljs.core.set(["
+         (comma-sep (map #(with-out-str (emit-constant %)) x))
+         "])")))
+
 (defmulti emit :op)
 
 (defn ^String emits [expr]
@@ -235,6 +241,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str "cljs.core.Vector.fromArray(["
                 (comma-sep (map emits children)) "])"))))
 
+(defmethod emit :set
+  [{:keys [children env]}]
+  (emit-wrap env
+    (print (str "cljs.core.set(["
+                (comma-sep (map emits children)) "])"))))
+
 (defmethod emit :constant
   [{:keys [form env]}]
   (when-not (= :statement (:context env))
@@ -253,15 +265,25 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (print (str "(function(){throw " (emits throw) "})()"))
     (print (str "throw " (emits throw) ";\n"))))
 
+(defn emit-comment
+  "Emit a nicely formatted comment string."
+  [doc jsdoc]
+  (let [docs (when doc [doc])
+        docs (if jsdoc (concat docs jsdoc) docs)
+        docs (remove nil? docs)]
+    (letfn [(print-comment-lines [e] (doseq [next-line (string/split-lines e)]
+                                       (println "*" (string/trim next-line))))]
+      (when (seq docs)
+        (println "/**")
+        (doseq [e docs]
+          (when e
+            (print-comment-lines e)))
+        (println "*/")))))
+
 (defmethod emit :def
-  [{:keys [name init env export]}]
+  [{:keys [name init env doc export]}]
   (when init
-    (when (:jsdoc init)
-      (println "/**")
-      (doseq [e (:jsdoc init)]
-        (when e
-          (println "*" e)))
-      (println "*/"))
+    (emit-comment doc (:jsdoc init))
     (print name)
     (print (str " = " (emits init)))
     (when-not (= :expr (:context env)) (print ";\n"))
@@ -285,6 +307,27 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
              (when recurs (print "break;\n}\n"))
              (print "})")))
 
+(defn emit-apply-to
+  [{:keys [name params env]}]
+  (let [arglist (gensym "arglist__")]
+    (println (str "(function (" arglist "){"))
+    (doseq [[i param] (map-indexed vector (butlast params))]
+      (print (str "var " param " = cljs.core.first("))
+      (dotimes [_ i] (print "cljs.core.next("))
+      (print (str arglist ")"))
+      (dotimes [_ i] (print ")"))
+      (println ";"))
+    (when (< 1 (count params))
+      (print (str "var " (last params) " = cljs.core.rest(")))
+    (dotimes [_ (- (count params) 2)] (print "cljs.core.next("))
+    (print arglist)
+    (dotimes [_ (- (count params) 2)] (print ")"))
+    (when (< 1 (count params))
+      (print ")"))
+    (println ";")
+    (println (str "return " name ".call(" (string/join ", " (cons "null" params)) ");"))
+    (print "})")))
+
 (defmethod emit :fn
   [{:keys [name env methods max-fixed-arity variadic]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
@@ -295,6 +338,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             maxparams (apply max-key count (map :params methods))
             mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
             ms (sort-by #(-> % second :params count) (seq mmap))]
+        (when (= :return (:context env))
+          (print "return "))
         (println "(function() {")
         (println (str "var " name " = null;"))
         (doseq [[n meth] ms]
@@ -317,7 +362,15 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println "throw('Invalid arity: ' + arguments.length);")
         (println "};")
         (when variadic
-          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity)))
+          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity))
+          (println (str name ".cljs$lang$applyTo = "
+                        (with-out-str
+                          (emit-apply-to
+                           (some (fn [[n meth]]
+                                   (when (:variadic meth)
+                                     (assoc meth :name n)))
+                                 ms)))
+                        ";")))
         (println (str "return " name ";"))
         (println "})()")))))
 
@@ -388,7 +441,14 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :invoke
   [{:keys [f args env]}]
   (emit-wrap env
-             (print (str "cljs.core.fn_of_(" (emits f) ")("
+             #_(print (str "(" (emits f) ".cljs$core$Fn$invoke ? ("
+                         (emits f) ".cljs$core$Fn$invoke("
+                         (comma-sep (map emits args))
+                         ")):(" (emits f) "(" (comma-sep (map emits args)) ")))"))
+             (print (str "(" (emits f) ".cljs$core$Fn$invoke || " (emits f) ")("
+                         (comma-sep (map emits args))
+                         ")"))
+             #_(print (str "cljs.core.fn_of_(" (emits f) ")("
                          (comma-sep (map emits args))
                          ")"))))
 
@@ -437,7 +497,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                (print (apply str (interleave (concat segs (repeat nil))
                                              (concat (map emits args) [nil])))))))
 
-(declare analyze analyze-symbol)
+(declare analyze analyze-symbol analyze-seq)
 
 (def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* . js* & quote})
 
@@ -521,10 +581,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           init-expr (when (contains? args :init) (disallowing-recur
                                                   (analyze (assoc env :context :expr) (:init args) sym)))
           export-as (when-let [export-val (-> sym meta :export)]
-                      (if (= true export-val) name export-val))]
+                      (if (= true export-val) name export-val))
+          doc (or (:doc args) (-> sym meta :doc))]
       (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
       (merge {:env env :op :def :form form
-              :name name :doc (:doc args) :init init-expr}
+              :name name :doc doc :init init-expr}
              (when init-expr {:children [init-expr]})
              (when export-as {:export export-as})))))
 
@@ -624,12 +685,19 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod parse 'set!
   [_ env [_ target val] _]
-  (assert (symbol? target) "set! target must be a symbol naming var")
-  (assert (nil? (-> env :locals target)) "Can't set! local var")
   (disallowing-recur
    (let [enve (assoc env :context :expr)
-         targetexpr (analyze-symbol enve target)
+         targetexpr (if (symbol? target)
+                      (do
+                        (assert (nil? (-> env :locals target))
+                                "Can't set! local var")
+                        (analyze-symbol enve target))
+                      (when (seq? target)
+                        (let [targetexpr (analyze-seq enve target nil)]
+                          (when (:field targetexpr)
+                            targetexpr))))
          valexpr (analyze enve val)]
+     (assert targetexpr "set! target must be a field or a symbol naming a var")
      {:env env :op :set! :target targetexpr :val valexpr :children [targetexpr valexpr]})))
 
 (defmethod parse 'ns
@@ -776,6 +844,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         items (disallowing-recur (vec (map #(analyze expr-env % name) form)))]
     (analyze-wrap-meta {:op :vector :env env :form form :children items} name)))
 
+(defn analyze-set
+  [env form name]
+  (let [expr-env (assoc env :context :expr)
+        items (disallowing-recur (vec (map #(analyze expr-env % name) form)))]
+    (analyze-wrap-meta {:op :set :env env :form form :children items} name)))
+
 (defn analyze-wrap-meta [expr name]
   (let [form (:form expr)]
     (if (meta form)
@@ -803,6 +877,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (and (seq? form) (seq form)) (analyze-seq env form name)
         (map? form) (analyze-map env form name)
         (vector? form) (analyze-vector env form name)
+        (set? form) (analyze-set env form name)
         :else {:op :constant :env env :form form}))))
 
 (defn eval1
@@ -959,23 +1034,25 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   ([src dest]
      (let [src-file (io/file src)
            dest-file (io/file dest)]
-       (do (when (not (:defs (get @namespaces 'cljs.core)))
-             (load-file (repl-env) "cljs/core.cljs"))
-           (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
-           (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
-             (binding [*out* out
-                       *cljs-ns* 'cljs.user]
-               (loop [forms (forms-seq src-file)
-                      ns-name nil
-                      deps nil]
-                 (if (seq forms)
-                   (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-                         ast (analyze env (first forms))]
-                     (do (emit ast)
-                         (if (= (:op ast) :ns)
-                           (recur (rest forms) (:name ast) (:requires ast))
-                           (recur (rest forms) ns-name deps))))
-                   {:ns (or ns-name 'cljs.user) :requires (vals deps)}))))))))
+       (if (.exists src-file)
+         (do (when-not (:defs (get @namespaces 'cljs.core))
+               (load-file (repl-env) "cljs/core.cljs"))
+             (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
+             (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
+               (binding [*out* out
+                         *cljs-ns* 'cljs.user]
+                 (loop [forms (forms-seq src-file)
+                        ns-name nil
+                        deps nil]
+                   (if (seq forms)
+                     (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+                           ast (analyze env (first forms))]
+                       (do (emit ast)
+                           (if (= (:op ast) :ns)
+                             (recur (rest forms) (:name ast) (:requires ast))
+                             (recur (rest forms) ns-name deps))))
+                     {:ns (or ns-name 'cljs.user) :requires (vals deps)})))))
+         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
   ;; flex compile-file
@@ -1005,11 +1082,32 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         parent-file (java.io.File. ^String (to-path (cons target parents)))]
     (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
 
+(defn dependency-order-visit
+  [state ns-name]
+  (let [file (get state ns-name)]
+    (if (:visited file)
+      state
+      (let [state (assoc-in state [ns-name :visited] true)
+            deps (:requires file)
+            state (reduce dependency-order-visit state deps)]
+        (assoc state :order (conj (:order state) file))))))
+
+(defn dependency-order
+  "Given a list of maps like
+
+   [{:ns a :requires (a c)} ...]
+
+   sort the list into dependency order."
+  [coll]
+  (let [state (reduce (fn [m next] (assoc m (:ns next) next)) {} coll)]
+    (:order (reduce dependency-order-visit (assoc state :order []) (map :ns coll)))))
+
 (defn compile-root
   "Looks recursively in src-dir for .cljs files and compiles them to
    .js files. If target-dir is provided, output will go into this
    directory mirroring the source directory structure. Returns a list
-   of maps containing information about each file which was compiled."
+   of maps containing information about each file which was compiled
+   in dependency order."
   ([src-dir]
      (compile-root src-dir "out"))
   ([src-dir target-dir]
@@ -1022,7 +1120,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                  output-file ^java.io.File (to-target-file src-dir-file target-dir cljs-file)
                  ns-info (compile-file cljs-file output-file)]
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
-           output-files)))))
+           (dependency-order output-files))))))
 
 (comment
   ;; compile-root
