@@ -280,8 +280,7 @@ reduces them without incurring seq initialization"
     ([array f]
        (ci-reduce array f))
     ([array f start]
-       (ci-reduce array f start)))
-  )
+       (ci-reduce array f start))))
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -823,8 +822,7 @@ reduces them without incurring seq initialization"
   (-seq [coll] coll)
 
   ICounted
-  (-count [coll] count)
-  )
+  (-count [coll] count))
 
 (deftype EmptyList [meta]
   IWithMeta
@@ -858,9 +856,7 @@ reduces them without incurring seq initialization"
   (-seq [coll] nil)
 
   ICounted
-  (-count [coll] 0)
-
-  )
+  (-count [coll] 0))
 
 (set! cljs.core.List/EMPTY (EmptyList. nil))
 
@@ -897,9 +893,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (hash-coll coll))
 
   ISeqable
-  (-seq [coll] coll)
-
-  )
+  (-seq [coll] coll))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
