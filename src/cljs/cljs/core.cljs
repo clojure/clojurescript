@@ -1646,7 +1646,12 @@ reduces them without incurring seq initialization"
   (-meta [coll] meta)
 
   ICollection
-  (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
+  (-conj [coll entry]
+    (if (map? entry)
+      (reduce -conj
+              coll
+              entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.ObjMap/EMPTY meta))
@@ -1715,7 +1720,12 @@ reduces them without incurring seq initialization"
   (-meta [coll] meta)
 
   ICollection
-  (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
+  (-conj [coll entry]
+    (if (map? entry)
+      (reduce -conj
+              coll
+              entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.HashMap/EMPTY meta))
