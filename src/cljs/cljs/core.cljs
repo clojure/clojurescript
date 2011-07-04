@@ -120,8 +120,6 @@
 (defprotocol IPrintable
   (-pr-seq [o opts]))
 
-
-
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn identical? [x y]
   (js* "(~{x} === ~{y})"))
@@ -1433,8 +1431,6 @@ reduces them without incurring seq initialization"
     (flatten1 (map f coll)))
   ([f coll & colls]
     (flatten1 (apply map f coll colls))))
-
-
 
 (defn filter
   "Returns a lazy sequence of the items in coll for which
