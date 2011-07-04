@@ -1447,6 +1447,12 @@ reduces them without incurring seq initialization"
           (cons f (filter pred r))
           (filter pred r)))))))
 
+(defn remove
+  "Returns a lazy sequence of the items in coll for which
+  (pred item) returns false. pred must be free of side-effects."
+  [pred coll]
+  (filter (complement pred) coll))
+
 (defn tree-seq
   "Returns a lazy sequence of the nodes in a tree, via a depth-first walk.
    branch? must be a fn of one arg that returns true if passed a node
@@ -1824,6 +1830,28 @@ reduces them without incurring seq initialization"
   "Returns a sequence of the map's values."
   [hash-map]
   (seq (map second hash-map)))
+
+(defn merge
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first.  If a key occurs in more than one map, the mapping from
+  the latter (left-to-right) will be the mapping in the result."
+  [& maps]
+  (when (some identity maps)
+    (reduce #(conj (or %1 {}) %2) maps)))
+
+(defn select-keys
+  "Returns a map containing only those entries in map whose key is in keys"
+  [map keyseq]
+    (loop [ret {} keys (seq keyseq)]
+      (if keys
+        (let [key   (first keys)
+              entry (get map key)]
+          (recur
+           (if entry
+             (assoc ret key entry)
+             ret)
+           (next keys)))
+        ret)))
 
 ;;; Set
 
