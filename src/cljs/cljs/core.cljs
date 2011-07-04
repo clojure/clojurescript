@@ -512,6 +512,12 @@ reduces them without incurring seq initialization"
 (defn fn? [f]
   (goog/isFunction f))
 
+(defn integer?
+  "Returns true if n is an integer.  Warning: returns true on underflow condition."
+  [n]
+  (and (number? n)
+       (js* "(~{n} == ~{n}.toFixed())")))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
 (defn second
@@ -1141,6 +1147,16 @@ reduces them without incurring seq initialization"
   "Returns false if (pred x) is logical true for any x in coll,
   else true."
   [pred coll] (not (some pred coll)))
+
+(defn even?
+  "Returns true if n is even, throws an exception if n is not an integer"
+   [n] (if (integer? n)
+        (zero? (bit-and n 1))
+        (throw (str "Argument must be an integer: " n))))
+
+(defn odd?
+  "Returns true if n is odd, throws an exception if n is not an integer"
+  [n] (not (even? n)))
 
 (defn identity [x] x)
 
@@ -2500,6 +2516,13 @@ reduces them without incurring seq initialization"
   (assert (not (neg? 1)))
   (assert (neg? -1.765))
   (assert (not (neg? 0)))
+  (assert (= [true false true false true false true false]
+             (map integer?
+                  [1 1.00001 0x7e7 [] (- 88 1001991881) :foo 0 "0"])))
+  (assert (= [true false true false true false]
+             (map odd? [1 2 3 4 -1 0])))
+  (assert (= [true false true false true true]
+             (map even? [2 3 4 5 -2 0])))
   :ok
   )
 
