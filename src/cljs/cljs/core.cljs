@@ -309,8 +309,7 @@ reduces them without incurring seq initialization"
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (when coll
-    (-rest (seq coll))))
+  (-rest (seq coll)))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
@@ -2321,6 +2320,8 @@ reduces them without incurring seq initialization"
   (assert (not (= {:a :b :c nil} {:a :b :d nil})))
   (assert (= (list 3 2 1) [3 2 1]))
   (assert (= [3 2 1] (seq (array 3 2 1))))
+  (assert (= () (rest nil)))
+  (assert (= () (rest [1])))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
   (assert (= {:a :b} (dissoc {:a :b :c :d} :c)))
   (assert (= (hash-map :foo 5)
