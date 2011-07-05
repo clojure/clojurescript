@@ -32,19 +32,25 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn- array-clone [array-like]
+  "Returns a javascript array, cloned from the passed in array"
   #_(goog.array.clone array-like)
   (js* "Array.prototype.slice.call(~{array-like})"))
 
 (defn array [var-args];; [& items]
+  "Creates a new javascript array."
   (js* "Array.prototype.slice.call(arguments)"))
 
 (defn aget [array i]
+  "Returns the value at the index/indices."
   (js* "~{array}[~{i}]"))
 
 (defn aset [array i val]
+  "Sets the value at the index/indices."
   (js* "(~{array}[~{i}] = ~{val})"))
 
 (defn alength [array]
+  "Returns the length of the Java array. Works on arrays of all
+  types."
   (js* "~{array}.length"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
@@ -122,12 +128,14 @@
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn identical? [x y]
+  "Tests if 2 arguments are the same object"
   (js* "(~{x} === ~{y})"))
 
 (defn = [x y]
   (-equiv x y))
 
 (defn nil? [x]
+  "Returns true if x is nil, false otherwise."
   (identical? x nil))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
