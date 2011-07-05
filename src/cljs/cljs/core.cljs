@@ -241,8 +241,9 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
   ISeq
   (-first [_] (aget a i))
-  (-rest [_] (when (lt- (inc i) (-count a))
-               (IndexedSeq. a (inc i))))
+  (-rest [_] (if (lt- (inc i) (-count a))
+               (IndexedSeq. a (inc i))
+               (list)))
 
   ISequential
   IEquiv
@@ -2322,6 +2323,7 @@ reduces them without incurring seq initialization"
   (assert (= [3 2 1] (seq (array 3 2 1))))
   (assert (= () (rest nil)))
   (assert (= () (rest [1])))
+  (assert (= () (rest (array 1))))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
   (assert (= {:a :b} (dissoc {:a :b :c :d} :c)))
   (assert (= (hash-map :foo 5)
