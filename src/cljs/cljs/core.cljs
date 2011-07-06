@@ -85,9 +85,11 @@
   #_(-assoc-ex [coll k v])
   (-dissoc [coll k]))
 
-(defprotocol ISet
-  (-contains? [coll v])
+(defprotocol ISet  
   (-disjoin [coll v]))
+
+(defprotocol IKeyed
+  (-contains? [coll v]))
 
 (defprotocol IStack
   (-peek [coll])
@@ -174,8 +176,10 @@
   IMap
   (-dissoc [_ k] nil)
 
-  ISet
+  IKeyed
   (-contains? [_ v] false)
+  
+  ISet
   (-disjoin [_ v] nil)
 
   IStack
@@ -289,7 +293,12 @@ reduces them without incurring seq initialization"
     ([array f]
        (ci-reduce array f))
     ([array f start]
-       (ci-reduce array f start))))
+       (ci-reduce array f start)))
+
+  IKeyed
+  (-contains? [array n]
+     (and (js* "(~{n} >= 0)")
+          (js* "(~{n} < ~{array}.length)"))))
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -1591,8 +1600,12 @@ reduces them without incurring seq initialization"
   (-reduce [v f]
     (ci-reduce array f))
   (-reduce [v f start]
-    (ci-reduce array start))
-  )
+           (ci-reduce array start))
+
+  IKeyed
+  (-contains? [coll n]
+     (and (>= n 0)
+          (< n (.length array)))))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
@@ -1699,6 +1712,10 @@ reduces them without incurring seq initialization"
   (-contains-key? [coll k]
     (obj-map-contains-key? k strobj))
 
+  IKeyed
+  (-contains? [coll k]
+    (-contains-key? coll k))
+  
   IMap
   (-dissoc [coll k]
     (if (and (goog/isString k) (.hasOwnProperty strobj k))
@@ -1787,6 +1804,10 @@ reduces them without incurring seq initialization"
       (if i
         true
         false)))
+
+  IKeyed
+  (-contains? [coll k]
+    (-contains-key? coll k))
   
   IMap
   (-dissoc [coll k]
@@ -1896,9 +1917,11 @@ reduces them without incurring seq initialization"
       v
       not-found))
 
-  ISet
+  IKeyed
   (-contains? [coll v]
     (-contains-key? hash-map v))
+  
+  ISet
   (-disjoin [coll v]
     (Set. meta (dissoc hash-map v)))
 
@@ -2566,6 +2589,15 @@ reduces them without incurring seq initialization"
              (map odd? [1 2 3 4 -1 0])))
   (assert (= [true false true false true true]
              (map even? [2 3 4 5 -2 0])))
+  (assert (contains? {:a 1 :b 2} :a))
+  (assert (not (contains? {:a 1 :b 2} :z)))
+  (assert (contains? [5 6 7] 1))
+  (assert (contains? [5 6 7] 2))
+  (assert (not (contains? [5 6 7] 3)))
+  (assert (contains? (to-array [5 6 7]) 1))
+  (assert (contains? (to-array [5 6 7]) 2))
+  (assert (not (contains? (to-array [5 6 7]) 3)))
+  (assert (not (contains? nil 42)))
   :ok
   )
 
