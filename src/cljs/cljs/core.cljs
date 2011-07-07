@@ -520,6 +520,22 @@ reduces them without incurring seq initialization"
   [coll v]
   (boolean (-lookup coll v)))
 
+(defn distinct?
+  "Returns true if no two of the arguments are ="
+  ([x] true)
+  ([x y] (not (= x y)))
+  ([x y & more]
+     (if (not (= x y))
+     (loop [s #{x y} xs more]
+       (let [x (first xs)
+             etc (next xs)]
+         (if xs
+           (if (contains? s x)
+             false
+             (recur (conj s x) etc))
+           true)))
+     false)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
 (defn second
@@ -2572,6 +2588,8 @@ reduces them without incurring seq initialization"
   (assert (not (contains? nil 42)))
   (assert (contains? "f" 0))
   (assert (not (contains? "f" 55)))
+  (assert (distinct? 1 2 3))
+  (assert (not (distinct? 1 2 3 1)))
   :ok
   )
 
