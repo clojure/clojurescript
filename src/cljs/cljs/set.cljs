@@ -18,7 +18,6 @@
 
 (defn union
   "Return a set that is the union of the input sets"
-  {:added "1.0"}
   ([] #{})
   ([s1] s1)
   ([s1 s2]
@@ -31,7 +30,6 @@
 
 (defn intersection
   "Return a set that is the intersection of the input sets"
-  {:added "1.0"}
   ([s1] s1)
   ([s1 s2]
      (if (< (count s2) (count s1))
@@ -47,7 +45,6 @@
 
 (defn difference
   "Return a set that is the first set without elements of the remaining sets"
-  {:added "1.0"}
   ([s1] s1)
   ([s1 s2] 
      (if (< (count s1) (count s2))
@@ -63,20 +60,17 @@
 
 (defn select
   "Returns a set of the elements for which pred is true"
-  {:added "1.0"}
   [pred xset]
     (reduce (fn [s k] (if (pred k) s (disj s k)))
             xset xset))
 
 (defn project
   "Returns a rel of the elements of xrel with only the keys in ks"
-  {:added "1.0"}
   [xrel ks]
     (set (map #(select-keys % ks) xrel)))
 
 (defn rename-keys
   "Returns the map with the keys in kmap renamed to the vals in kmap"
-  {:added "1.0"}
   [map kmap]
     (reduce 
      (fn [m [old new]]
@@ -88,14 +82,12 @@
 
 (defn rename
   "Returns a rel of the maps in xrel with the keys in kmap renamed to the vals in kmap"
-  {:added "1.0"}
   [xrel kmap]
     (set (map #(rename-keys % kmap) xrel)))
 
 (defn index
   "Returns a map of the distinct values of ks in the xrel mapped to a
   set of the maps in xrel with the corresponding values of ks."
-  {:added "1.0"}
   [xrel ks]
     (reduce
      (fn [m x]
@@ -105,14 +97,12 @@
    
 (defn map-invert
   "Returns the map with the vals mapped to the keys."
-  {:added "1.0"}
   [m] (reduce (fn [m [k v]] (assoc m v k)) {} m))
 
 (defn join
   "When passed 2 rels, returns the rel corresponding to the natural
   join. When passed an additional keymap, joins on the corresponding
   keys."
-  {:added "1.0"}
   ([xrel yrel] ;natural join
    (if (and (seq xrel) (seq yrel))
      (let [ks (intersection (set (keys (first xrel))) (set (keys (first yrel))))
@@ -141,16 +131,12 @@
 
 (defn subset? 
   "Is set1 a subset of set2?"
-  {:added "1.2",
-   :tag Boolean}
   [set1 set2]
   (and (<= (count set1) (count set2))
        (every? #(contains? set2 %) set1)))
 
 (defn superset? 
   "Is set1 a superset of set2?"
-  {:added "1.2",
-   :tag Boolean}
   [set1 set2]
   (and (>= (count set1) (count set2))
        (every? #(contains? set1 %) set2)))
@@ -172,6 +158,5 @@
 (difference #{:a :b :c} #{:c :d :e})
 (intersection #{:a :b :c} #{:c :d :e})
 
-(index ys [:b])
-)
+(index ys [:b]))
 
