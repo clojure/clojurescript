@@ -88,9 +88,6 @@
 (defprotocol ISet  
   (-disjoin [coll v]))
 
-(defprotocol IKeyed
-  (-contains? [coll v]))
-
 (defprotocol IStack
   (-peek [coll])
   (-pop [coll]))
@@ -176,9 +173,6 @@
   IMap
   (-dissoc [_ k] nil)
 
-  IKeyed
-  (-contains? [_ v] false)
-  
   ISet
   (-disjoin [_ v] nil)
 
@@ -293,12 +287,7 @@ reduces them without incurring seq initialization"
     ([array f]
        (ci-reduce array f))
     ([array f start]
-       (ci-reduce array f start)))
-
-  IKeyed
-  (-contains? [array n]
-     (and (js* "(~{n} >= 0)")
-          (js* "(~{n} < ~{array}.length)"))))
+       (ci-reduce array f start))))
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -420,15 +409,6 @@ reduces them without incurring seq initialization"
   [coll]
   (-pop coll))
 
-(defn contains?
-  "Returns true if key is present in the given collection, otherwise
-  returns false.  Note that for numerically indexed collections like
-  vectors and arrays, this tests if the numeric key is within the
-  range of indexes. 'contains?' operates constant or logarithmic time;
-  it will not perform a linear search for a value.  See also 'some'."
-  [coll v]
-  (-contains? coll v))
-
 (defn disj
   "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
   does not contain key(s)."
@@ -530,6 +510,15 @@ reduces them without incurring seq initialization"
   [n]
   (and (number? n)
        (js* "(~{n} == ~{n}.toFixed())")))
+
+(defn contains?
+  "Returns true if key is present in the given collection, otherwise
+  returns false.  Note that for numerically indexed collections like
+  vectors and arrays, this tests if the numeric key is within the
+  range of indexes. 'contains?' operates constant or logarithmic time;
+  it will not perform a linear search for a value.  See also 'some'."
+  [coll v]
+  (boolean (-lookup coll v)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
@@ -1600,12 +1589,7 @@ reduces them without incurring seq initialization"
   (-reduce [v f]
     (ci-reduce array f))
   (-reduce [v f start]
-           (ci-reduce array start))
-
-  IKeyed
-  (-contains? [coll n]
-     (and (>= n 0)
-          (< n (.length array)))))
+           (ci-reduce array start)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
@@ -1712,10 +1696,6 @@ reduces them without incurring seq initialization"
   (-contains-key? [coll k]
     (obj-map-contains-key? k strobj))
 
-  IKeyed
-  (-contains? [coll k]
-    (-contains-key? coll k))
-  
   IMap
   (-dissoc [coll k]
     (if (and (goog/isString k) (.hasOwnProperty strobj k))
@@ -1804,10 +1784,6 @@ reduces them without incurring seq initialization"
       (if i
         true
         false)))
-
-  IKeyed
-  (-contains? [coll k]
-    (-contains-key? coll k))
   
   IMap
   (-dissoc [coll k]
@@ -1897,7 +1873,7 @@ reduces them without incurring seq initialization"
     (and
      (set? other)
      (= (count coll) (count other))
-     (every? #(-contains? coll %)
+     (every? #(contains? coll %)
              other)))
 
   IHash
@@ -1913,14 +1889,10 @@ reduces them without incurring seq initialization"
   (-lookup [coll v]
     (-lookup coll v nil))
   (-lookup [coll v not-found]
-    (if (-contains? coll v)
+    (if (-contains-key? hash-map v)
       v
       not-found))
 
-  IKeyed
-  (-contains? [coll v]
-    (-contains-key? hash-map v))
-  
   ISet
   (-disjoin [coll v]
     (Set. meta (dissoc hash-map v)))
@@ -2574,10 +2546,10 @@ reduces them without incurring seq initialization"
   (assert (= #{} (-empty #{1 2 3 4})))
   (assert (= (reduce + #{1 2 3 4 5}) 15))
   (assert (= 4 (get #{1 2 3 4} 4)))
-  (assert (-contains? #{1 2 3 4} 4))
-  (assert (-contains? #{[] nil 0 {} #{}} {}))
-  (assert (-contains? #{[1 2 3]} [1 2 3]))
-  (assert (not (-contains? (-disjoin #{1 2 3} 3) 3)))
+  (assert (contains? #{1 2 3 4} 4))
+  (assert (contains? #{[] nil 0 {} #{}} {}))
+  (assert (contains? #{[1 2 3]} [1 2 3]))
+  (assert (not (contains? (-disjoin #{1 2 3} 3) 3)))
   (assert (neg? -1))
   (assert (not (neg? 1)))
   (assert (neg? -1.765))
@@ -2598,6 +2570,8 @@ reduces them without incurring seq initialization"
   (assert (contains? (to-array [5 6 7]) 2))
   (assert (not (contains? (to-array [5 6 7]) 3)))
   (assert (not (contains? nil 42)))
+  (assert (contains? "f" 0))
+  (assert (not (contains? "f" 55)))
   :ok
   )
 
