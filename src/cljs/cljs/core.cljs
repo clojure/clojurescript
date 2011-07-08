@@ -32,19 +32,25 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn- array-clone [array-like]
+  "Returns a javascript array, cloned from the passed in array"
   #_(goog.array.clone array-like)
   (js* "Array.prototype.slice.call(~{array-like})"))
 
 (defn array [var-args];; [& items]
+  "Creates a new javascript array."
   (js* "Array.prototype.slice.call(arguments)"))
 
 (defn aget [array i]
+  "Returns the value at the index/indices."
   (js* "~{array}[~{i}]"))
 
 (defn aset [array i val]
+  "Sets the value at the index/indices."
   (js* "(~{array}[~{i}] = ~{val})"))
 
 (defn alength [array]
+  "Returns the length of the Java array. Works on arrays of all
+  types."
   (js* "~{array}.length"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
@@ -79,8 +85,7 @@
   #_(-assoc-ex [coll k v])
   (-dissoc [coll k]))
 
-(defprotocol ISet
-  (-contains? [coll v])
+(defprotocol ISet  
   (-disjoin [coll v]))
 
 (defprotocol IStack
@@ -120,16 +125,16 @@
 (defprotocol IPrintable
   (-pr-seq [o opts]))
 
-
-
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn identical? [x y]
+  "Tests if 2 arguments are the same object"
   (js* "(~{x} === ~{y})"))
 
 (defn = [x y]
   (-equiv x y))
 
 (defn nil? [x]
+  "Returns true if x is nil, false otherwise."
   (identical? x nil))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
@@ -169,7 +174,6 @@
   (-dissoc [_ k] nil)
 
   ISet
-  (-contains? [_ v] false)
   (-disjoin [_ v] nil)
 
   IStack
@@ -235,8 +239,9 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
   ISeq
   (-first [_] (aget a i))
-  (-rest [_] (when (lt- (inc i) (-count a))
-               (IndexedSeq. a (inc i))))
+  (-rest [_] (if (lt- (inc i) (-count a))
+               (IndexedSeq. a (inc i))
+               (list)))
 
   ISequential
   IEquiv
@@ -287,8 +292,7 @@ reduces them without incurring seq initialization"
 (defn seq
   "Returns a seq on the collection. If the collection is
   empty, returns nil.  (seq nil) returns nil. seq also works on
-  Strings, native Java arrays (of reference types) and any objects
-  that implement Iterable."
+  Strings."
   [coll]
   (when coll
     (-seq coll)))
@@ -304,8 +308,7 @@ reduces them without incurring seq initialization"
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (when coll
-    (-rest (seq coll))))
+  (-rest (seq coll)))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
@@ -372,7 +375,7 @@ reduces them without incurring seq initialization"
   "assoc[iate]. When applied to a map, returns a new map of the
    same (hashed/sorted) type, that contains the mapping of key(s) to
    val(s). When applied to a vector, returns a new vector that
-   contains val at index. Note - index must be <= (count vector)."
+   contains val at index."
   [coll k v]
   (-assoc coll k v))
 
@@ -401,20 +404,10 @@ reduces them without incurring seq initialization"
 
 (defn pop
   "For a list or queue, returns a new list/queue without the first
-  item, for a vector, returns a new vector without the last item. If
-  the collection is empty, throws an exception.  Note - not the same
-  as next/butlast."
+  item, for a vector, returns a new vector without the last item.
+  Note - not the same as next/butlast."
   [coll]
   (-pop coll))
-
-(defn contains?
-  "Returns true if key is present in the given collection, otherwise
-  returns false.  Note that for numerically indexed collections like
-  vectors and arrays, this tests if the numeric key is within the
-  range of indexes. 'contains?' operates constant or logarithmic time;
-  it will not perform a linear search for a value.  See also 'some'."
-  [coll v]
-  (-contains? coll v))
 
 (defn disj
   "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
@@ -511,6 +504,37 @@ reduces them without incurring seq initialization"
 
 (defn fn? [f]
   (goog/isFunction f))
+
+(defn integer?
+  "Returns true if n is an integer.  Warning: returns true on underflow condition."
+  [n]
+  (and (number? n)
+       (js* "(~{n} == ~{n}.toFixed())")))
+
+(defn contains?
+  "Returns true if key is present in the given collection, otherwise
+  returns false.  Note that for numerically indexed collections like
+  vectors and arrays, this tests if the numeric key is within the
+  range of indexes. 'contains?' operates constant or logarithmic time;
+  it will not perform a linear search for a value.  See also 'some'."
+  [coll v]
+  (boolean (-lookup coll v)))
+
+(defn distinct?
+  "Returns true if no two of the arguments are ="
+  ([x] true)
+  ([x y] (not (= x y)))
+  ([x y & more]
+     (if (not (= x y))
+     (loop [s #{x y} xs more]
+       (let [x (first xs)
+             etc (next xs)]
+         (if xs
+           (if (contains? s x)
+             false
+             (recur (conj s x) etc))
+           true)))
+     false)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
@@ -1142,6 +1166,16 @@ reduces them without incurring seq initialization"
   else true."
   [pred coll] (not (some pred coll)))
 
+(defn even?
+  "Returns true if n is even, throws an exception if n is not an integer"
+   [n] (if (integer? n)
+        (zero? (bit-and n 1))
+        (throw (str "Argument must be an integer: " n))))
+
+(defn odd?
+  "Returns true if n is odd, throws an exception if n is not an integer"
+  [n] (not (even? n)))
+
 (defn identity [x] x)
 
 (defn complement
@@ -1418,8 +1452,6 @@ reduces them without incurring seq initialization"
   ([f coll & colls]
     (flatten1 (apply map f coll colls))))
 
-
-
 (defn filter
   "Returns a lazy sequence of the items in coll for which
   (pred item) returns true. pred must be free of side-effects."
@@ -1430,6 +1462,12 @@ reduces them without incurring seq initialization"
         (if (pred f)
           (cons f (filter pred r))
           (filter pred r)))))))
+
+(defn remove
+  "Returns a lazy sequence of the items in coll for which
+  (pred item) returns false. pred must be free of side-effects."
+  [pred coll]
+  (filter (complement pred) coll))
 
 (defn tree-seq
   "Returns a lazy sequence of the nodes in a tree, via a depth-first walk.
@@ -1567,8 +1605,7 @@ reduces them without incurring seq initialization"
   (-reduce [v f]
     (ci-reduce array f))
   (-reduce [v f start]
-    (ci-reduce array start))
-  )
+           (ci-reduce array start)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
@@ -1630,7 +1667,12 @@ reduces them without incurring seq initialization"
   (-meta [coll] meta)
 
   ICollection
-  (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
+  (-conj [coll entry]
+    (if (map? entry)
+      (reduce -conj
+              coll
+              entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.ObjMap/EMPTY meta))
@@ -1699,7 +1741,12 @@ reduces them without incurring seq initialization"
   (-meta [coll] meta)
 
   ICollection
-  (-conj [coll entry] (-assoc coll (-nth entry 0) (-nth entry 1)))
+  (-conj [coll entry]
+    (if (map? entry)
+      (reduce -conj
+              coll
+              entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.HashMap/EMPTY meta))
@@ -1799,6 +1846,28 @@ reduces them without incurring seq initialization"
   [hash-map]
   (seq (map second hash-map)))
 
+(defn merge
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first.  If a key occurs in more than one map, the mapping from
+  the latter (left-to-right) will be the mapping in the result."
+  [& maps]
+  (when (some identity maps)
+    (reduce #(conj (or %1 {}) %2) maps)))
+
+(defn select-keys
+  "Returns a map containing only those entries in map whose key is in keys"
+  [map keyseq]
+    (loop [ret {} keys (seq keyseq)]
+      (if keys
+        (let [key   (first keys)
+              entry (get map key)]
+          (recur
+           (if entry
+             (assoc ret key entry)
+             ret)
+           (next keys)))
+        ret)))
+
 ;;; Set
 
 (deftype Set [meta hash-map]
@@ -1820,7 +1889,7 @@ reduces them without incurring seq initialization"
     (and
      (set? other)
      (= (count coll) (count other))
-     (every? #(-contains? coll %)
+     (every? #(contains? coll %)
              other)))
 
   IHash
@@ -1836,13 +1905,11 @@ reduces them without incurring seq initialization"
   (-lookup [coll v]
     (-lookup coll v nil))
   (-lookup [coll v not-found]
-    (if (-contains? coll v)
+    (if (-contains-key? hash-map v)
       v
       not-found))
 
   ISet
-  (-contains? [coll v]
-    (-contains-key? hash-map v))
   (-disjoin [coll v]
     (Set. meta (dissoc hash-map v)))
 
@@ -2264,6 +2331,9 @@ reduces them without incurring seq initialization"
   (assert (not (= {:a :b :c nil} {:a :b :d nil})))
   (assert (= (list 3 2 1) [3 2 1]))
   (assert (= [3 2 1] (seq (array 3 2 1))))
+  (assert (= () (rest nil)))
+  (assert (= () (rest [1])))
+  (assert (= () (rest (array 1))))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))
   (assert (= {:a :b} (dissoc {:a :b :c :d} :c)))
   (assert (= (hash-map :foo 5)
@@ -2492,14 +2562,34 @@ reduces them without incurring seq initialization"
   (assert (= #{} (-empty #{1 2 3 4})))
   (assert (= (reduce + #{1 2 3 4 5}) 15))
   (assert (= 4 (get #{1 2 3 4} 4)))
-  (assert (-contains? #{1 2 3 4} 4))
-  (assert (-contains? #{[] nil 0 {} #{}} {}))
-  (assert (-contains? #{[1 2 3]} [1 2 3]))
-  (assert (not (-contains? (-disjoin #{1 2 3} 3) 3)))
+  (assert (contains? #{1 2 3 4} 4))
+  (assert (contains? #{[] nil 0 {} #{}} {}))
+  (assert (contains? #{[1 2 3]} [1 2 3]))
+  (assert (not (contains? (-disjoin #{1 2 3} 3) 3)))
   (assert (neg? -1))
   (assert (not (neg? 1)))
   (assert (neg? -1.765))
   (assert (not (neg? 0)))
+  (assert (= [true false true false true false true false]
+             (map integer?
+                  [1 1.00001 0x7e7 [] (- 88 1001991881) :foo 0 "0"])))
+  (assert (= [true false true false true false]
+             (map odd? [1 2 3 4 -1 0])))
+  (assert (= [true false true false true true]
+             (map even? [2 3 4 5 -2 0])))
+  (assert (contains? {:a 1 :b 2} :a))
+  (assert (not (contains? {:a 1 :b 2} :z)))
+  (assert (contains? [5 6 7] 1))
+  (assert (contains? [5 6 7] 2))
+  (assert (not (contains? [5 6 7] 3)))
+  (assert (contains? (to-array [5 6 7]) 1))
+  (assert (contains? (to-array [5 6 7]) 2))
+  (assert (not (contains? (to-array [5 6 7]) 3)))
+  (assert (not (contains? nil 42)))
+  (assert (contains? "f" 0))
+  (assert (not (contains? "f" 55)))
+  (assert (distinct? 1 2 3))
+  (assert (not (distinct? 1 2 3 1)))
   :ok
   )
 

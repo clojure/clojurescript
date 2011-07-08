@@ -210,7 +210,7 @@ For macros only, uses clojure.core version
 * error-handler
 * error-mode
 * eval
-* TODO even?
+* DONE even?
 * DONE every-pred
 * DONE every?
 * TODO extend
@@ -279,7 +279,7 @@ macro currently expands into extend call
 does what?
 * int
 * int-array
-* TODO integer?
+* DONE integer?
 * DONE interleave
 * intern
 * DONE interpose
@@ -370,7 +370,7 @@ does what?
 * DONE number?
 * TODO numerator
 * TODO object-array
-* TODO odd?
+* DONE odd?
 * DONE or
 * TODO parents
 * DONE partial
