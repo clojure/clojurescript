@@ -4,7 +4,12 @@
   </head>
   <body>
     <h1>Hello ClojureScript!</h1>
+    <!-- In unoptimized mode, additional script tags are required -->
+    <script type="text/javascript" src="../../out/goog/base.js"></script>
     <script type="text/javascript" src="hello.js"></script>
+    <script>
+      goog.require('hello.core');
+    </script>
     <script>
       alert(greet("ClojureScript"));
       alert("The sum of [1,2,3,4,5,6,7,8,9] is: " + hello.core.sum([1,2,3,4,5,6,7,8,9]));
