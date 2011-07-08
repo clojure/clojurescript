@@ -1010,7 +1010,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
        (lazy-seq (cons form (forms-seq f rdr)))
        (.close rdr))))
 
-(defn- rename-to-js
+(defn rename-to-js
   "Change the file extension from .cljs to .js. Takes a File or a
   String. Always returns a String."
   [file-str]
@@ -1043,15 +1043,15 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                          *cljs-ns* 'cljs.user]
                  (loop [forms (forms-seq src-file)
                         ns-name nil
-                        deps nil]
+                        deps {'cljs.core 'cljs.core}]
                    (if (seq forms)
                      (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
                            ast (analyze env (first forms))]
                        (do (emit ast)
                            (if (= (:op ast) :ns)
-                             (recur (rest forms) (:name ast) (:requires ast))
+                             (recur (rest forms) (:name ast) (merge deps (:requires ast)))
                              (recur (rest forms) ns-name deps))))
-                     {:ns (or ns-name 'cljs.user) :requires (vals deps)})))))
+                     {:ns (or ns-name 'cljs.user) :requires (vals deps) :file dest-file})))))
          (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
@@ -1063,7 +1063,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (compile-file "/tmp/somescript.cljs")
     (slurp "/tmp/somescript.js")))
 
-(defn- path-seq
+(defn path-seq
   [file-str]
   (string/split file-str (re-pattern java.io.File/separator)))
 
@@ -1085,7 +1085,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defn dependency-order-visit
   [state ns-name]
   (let [file (get state ns-name)]
-    (if (:visited file)
+    (if (or (:visited file) (nil? file))
       state
       (let [state (assoc-in state [ns-name :visited] true)
             deps (:requires file)
