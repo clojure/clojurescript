@@ -1528,24 +1528,6 @@ reduces them without incurring seq initialization"
       (recur (dec n) (next xs))
       xs)))
 
-(defn re-find
-  "Returns the first regex match, if any, of string to pattern, using
-  RegExp.exec(string)."
-  [re s]
-  (let [matches (.exec re s)]
-    (when-not (nil? matches) (nth matches 0))))
-
-(defn re-seq
-  "Returns a sequence of successive matches of pattern in string,
-  using String.match(regex)."
-  [re s]
-  (seq (.match s re)))
-
-(defn re-pattern
-  "Returns an instance of RegExp which has compiled the provided string."
-  [s]
-  (.compile (goog.global.RegExp.) s "g"))
-
 ;;; Vector
 
 (deftype Vector [meta array]
@@ -2072,6 +2054,43 @@ reduces them without incurring seq initialization"
          ([x y] (reduce #(conj %1 (%2 x y)) [] fs))
          ([x y z] (reduce #(conj %1 (%2 x y z)) [] fs))
          ([x y z & args] (reduce #(conj %1 (apply %2 x y z args)) [] fs))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;; Regular Expressions ;;;;;;;;;;
+
+(defn re-matches
+  "Returns the result of (re-find re s) if re fully matches s."
+  [re s]
+  (let [matches (.exec re s)]
+    (when (= (first matches) s)
+      (if (= (count matches) 1)
+        (first matches)
+        (vec matches)))))
+
+(defn re-find
+  "Returns the first regex match, if any, of s to re, using
+  re.exec(s). Returns a vector, containing first the matching
+  substring, then any capturing groups if the regular expression contains
+  capturing groups."
+  [re s]
+  (let [matches (.exec re s)]
+    (when-not (nil? matches)
+      (if (= (count matches) 1)
+        (first matches)
+        (vec matches)))))
+
+(defn re-seq
+  "Returns a lazy sequence of successive matches of re in s."
+  [re s]
+  (let [match-data (re-find re s)
+        match-idx (.search s re)
+        match-str (if (coll? match-data) (first match-data) match-data)
+        post-match (subs s (+ match-idx (count match-str)))]
+    (when match-data (lazy-seq (cons match-data (re-seq re post-match))))))
+
+(defn re-pattern
+  "Returns an instance of RegExp which has compiled the provided string."
+  [s]
+  (.compile (goog.global.RegExp.) s))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
@@ -2608,6 +2627,16 @@ reduces them without incurring seq initialization"
   (assert (not (contains? "f" 55)))
   (assert (distinct? 1 2 3))
   (assert (not (distinct? 1 2 3 1)))
+
+  ;regexps
+  (assert (= (str (re-pattern "f(.)o")) (str (js* "/f(.)o/"))))
+  (assert (= (re-find (re-pattern "foo") "foo bar foo baz foo zot") "foo"))
+  (assert (= (re-find (re-pattern "f(.)o") "foo bar foo baz foo zot") ["foo" "o"]))
+  (assert (= (re-matches (re-pattern "foo") "foo") "foo"))
+  (assert (= (re-matches (re-pattern "foo") "foo bar foo baz foo zot") nil))
+  (assert (= (re-matches (re-pattern "foo.*") "foo bar foo baz foo zot") "foo bar foo baz foo zot"))
+  (assert (= (re-seq (re-pattern "foo") "foo bar foo baz foo zot") (list "foo" "foo" "foo")))
+  (assert (= (re-seq (re-pattern "f(.)o") "foo bar foo baz foo zot") (list ["foo" "o"] ["foo" "o"] ["foo" "o"])))
   :ok
   )
 
