@@ -12,12 +12,13 @@
   "Compile ClojureScript to JavaScript with optimizations from Google
    Closure Compiler producing runnable JavaScript.
 
+   The classpath must contain compiler.jar and cljs/core.js as well as
+   any other compiled ClojureScript files that you will need, all of
+   which must be under cljs/.
+
    Use the 'build' function for end-to-end compilation.
 
    build = compile -> add-dependencies -> optimize -> output
-
-   See comments for example usage. core.js and the Closure
-   compiler.jar must be on the classpath.
 
    Two protocols are defined: IJavaScript and Compilable. The
    Compilable protocol is satisfied by something which can return one
@@ -25,8 +26,9 @@
 
    With IJavaScriipt objects in hand, calling add-dependencies will
    produce a sequence of IJavaScript objects which includes all
-   required dependencies from the Closure library plus cljs.core, in
-   dependency order. This function replaces the closurebuilder tool.
+   required dependencies from the Closure library and ClojureScript,
+   in dependency order. This function replaces the closurebuilder
+   tool.
 
    The optimize function converts one or more IJavaScripts into a
    single string of JavaScript source code using the Closure Compiler
@@ -51,6 +53,10 @@
            com.google.javascript.jscomp.Result
            com.google.javascript.jscomp.JSError
            com.google.javascript.jscomp.CommandLineRunner))
+
+;; The prefix under which compiled ClojureScript files may be found on
+;; the classpath.
+(def cljs-classpath-root "cljs/")
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
@@ -195,7 +201,7 @@ the JAR file."
   (-provides [this] (:provides (parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (parse-js-ns (string/split-lines this))))
   (-source [this] this)
-
+  
   clojure.lang.IPersistentMap
   (-url [this] (:url this))
   (-provides [this] (:provides this))
@@ -217,10 +223,6 @@ the JAR file."
 
 ;; Compile
 ;; =======
-
-;; TODO: Most of the code below assumes that core is the only file in
-;; ClojureScript. There are others and this will need to be changed to
-;; load them both as cljs source and as compiled JavaScript.
 
 (defmacro with-core
   "Ensure that core.cljs has been loaded."
@@ -272,8 +274,8 @@ the JAR file."
   
   clojure.lang.PersistentList
   (-compile [this opts]
-            (compile-form-seq [this]))
-
+    (compile-form-seq [this]))
+  
   String
   (-compile [this opts] (-compile (io/file this) opts))
   
@@ -299,8 +301,8 @@ the JAR file."
 ;; Dependencies
 ;; ============
 ;;
-;; Find dependencies from goog js files on the classpath. Eliminates
-;; the need for closurebuilder.
+;; Find all dependencies from files on the classpath. Eliminates the
+;; need for closurebuilder.
 
 (defn build-index
   "Index a list of dependencies by namespace and file name. There can
@@ -318,9 +320,34 @@ the JAR file."
           {}
           deps))
 
+(defn all-goog-js
+  "Return the list of all Google Closure library JavaScript files."
+  []
+  (for [g (filter #(.endsWith (.getName %) "goog.jar") (classpath-jarfiles))
+        file (filenames-in-jar g)
+        :when (.endsWith file ".js")]
+    file))
+
+(defn all-cljs-js
+  "Return the list of all ClojureScript JavaScript files. First try to
+  get them from a directory on the classpath. Then, and only then,
+  look in jar files."
+  []
+  (letfn [(compiled-cljs? [d f] (and (.startsWith f (str (.getPath d) File/separator cljs-classpath-root))
+                                      (.endsWith f ".js")))
+          (remove-dot-prefix [s] (if (.startsWith s (str "." File/separator))
+                                   (.substring s (count (str "." File/separator)))
+                                   s))]
+    (let [compiled-cljs (for [dir (remove jar-file? (classpath))
+                              path (map #(.getPath %) (file-seq dir))
+                              :when (compiled-cljs? dir path)]
+                          (remove-dot-prefix path))]
+      (if (seq compiled-cljs)
+        compiled-cljs
+        (for [j (classpath-jarfiles) f (filenames-in-jar j) :when (.startsWith f cljs-classpath-root)] f)))))
+
 (defn dependency-index*
-  "Create an indexed list of all namespaces in the Closure library
-  plus cljs.core."
+  "Create an index of dependencies by namespace and file name."
   []
   (letfn [(graph-node [res]
                       (-> (io/resource res)
@@ -328,12 +355,7 @@ the JAR file."
                           line-seq
                           parse-js-ns
                           (assoc :file res)))]
-    (let [goog (->> (classpath-jarfiles)
-                    (filter #(.endsWith (.getName %) "goog.jar"))
-                    first
-                    filenames-in-jar
-                    (filter #(.endsWith % ".js")))
-          all-nodes (map graph-node (conj goog "core.js"))]
+    (let [all-nodes (map graph-node (concat (all-goog-js) (all-cljs-js)))]
       (build-index all-nodes))))
 
 (def dependency-index (memoize dependency-index*))
@@ -366,8 +388,8 @@ the JAR file."
 
 (defn add-dependencies
   "Given one or more IJavaScript objects in dependency order, produce
-  a new sequence of IJavaScript objects which includes all dependencies
-  from the Closure library, plus cljs.core, in dependency order."
+  a new sequence of IJavaScript objects which includes the input list
+  plus all dependencies in dependency order."
   [& inputs]
   (let [required (dependencies (mapcat -requires inputs))
         index (dependency-index)]
@@ -491,9 +513,9 @@ the JAR file."
   (apply str (interpose "\n" (map #(add-dep-string opts %) sources))))
 
 (comment
-  (path-relative-to (io/file "out/goog/base.js") {:url (io/resource "core.js")})
-  (add-dep-string {} {:url (io/resource "core.js") :requires ["goog.string"] :provides ["cljs.core"]})
-  (deps-file {} [{:url (io/resource "core.js") :requires ["goog.string"] :provides ["cljs.core"]}])  
+  (path-relative-to (io/file "out/goog/base.js") {:url (io/resource "cljs/core.js")})
+  (add-dep-string {} {:url (io/resource "cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]})
+  (deps-file {} [{:url (io/resource "cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
   )
 
 (defn output-one-file [{:keys [output-to]} js]
@@ -508,7 +530,7 @@ the JAR file."
   directory."
   [js]
   (if-let [url ^URL (-url js)]
-    (last (string/split (.getFile url) #"/goog.jar!/"))
+    (last (string/split (.getFile url) #"\.jar!/"))
     (str (random-string 5) ".js")))
 
 (defn write-javascript
