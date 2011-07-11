@@ -137,6 +137,8 @@
   "Returns true if x is nil, false otherwise."
   (identical? x nil))
 
+(def ^:private lookup-sentinel (goog.global.Object.))
+
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
@@ -518,7 +520,9 @@ reduces them without incurring seq initialization"
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   [coll v]
-  (boolean (-lookup coll v)))
+  (if (identical? (-lookup coll v lookup-sentinel) lookup-sentinel)
+    false
+    true))
 
 (defn distinct?
   "Returns true if no two of the arguments are ="
