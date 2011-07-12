@@ -441,15 +441,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit :invoke
   [{:keys [f args env]}]
   (emit-wrap env
-             #_(print (str "(" (emits f) ".cljs$core$Fn$invoke ? ("
-                         (emits f) ".cljs$core$Fn$invoke("
-                         (comma-sep (map emits args))
-                         ")):(" (emits f) "(" (comma-sep (map emits args)) ")))"))
-             (print (str "(" (emits f) ".cljs$core$Fn$invoke || " (emits f) ")("
-                         (comma-sep (map emits args))
-                         ")"))
-             #_(print (str "cljs.core.fn_of_(" (emits f) ")("
-                         (comma-sep (map emits args))
+             (print (str (emits f) ".call("
+                         (comma-sep (cons "null" (map emits args)))
                          ")"))))
 
 (defmethod emit :new
@@ -1146,6 +1139,13 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (test-stuff)
 (+ 1 2 3)
+([ 1 2 3 4] 2)
+({:a 1 :b 2} :a)
+({1 1 2 2} 1)
+(#{1 2 3} 2)
+(:b {:a 1 :b 2})
+('b '{:a 1 b 2})
+
 (extend-type number ISeq (-seq [x] x))
 (seq 42)
 ;(aset cljs.core.ISeq "number" true)
@@ -1312,5 +1312,4 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             (let [x (do 1 2 3)] x)
             ]]
   (->> e (analyze envx) emit)
-  (newline))
-)
+  (newline)))

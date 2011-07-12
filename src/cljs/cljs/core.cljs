@@ -16,11 +16,6 @@
   [x]
   (js* "(~{x} != null && ~{x} !== false)"))
 
-(defn fn_of_
-  "Internal - do not use!"
-  [f]
-  (js* "(~{f}.cljs$core$Fn$invoke || ~{f});"))
-
 (defn type_satisfies_
   "Internal - do not use!"
   [p x]
@@ -31,26 +26,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
-(defn- array-clone [array-like]
+(defn- array-clone
   "Returns a javascript array, cloned from the passed in array"
+  [array-like]
   #_(goog.array.clone array-like)
   (js* "Array.prototype.slice.call(~{array-like})"))
 
-(defn array [var-args];; [& items]
-  "Creates a new javascript array."
+(defn array
+  "Creates a new javascript array.
+@param {...*} var_args" ;;array is a special case, don't emulate this doc string  
+  [var-args]            ;; [& items]
   (js* "Array.prototype.slice.call(arguments)"))
 
-(defn aget [array i]
-  "Returns the value at the index/indices."
+(defn aget
+  "Returns the value at the index."
+  [array i]
   (js* "~{array}[~{i}]"))
 
-(defn aset [array i val]
-  "Sets the value at the index/indices."
+(defn aset
+  "Sets the value at the index."
+  [array i val]
   (js* "(~{array}[~{i}] = ~{val})"))
 
-(defn alength [array]
-  "Returns the length of the Java array. Works on arrays of all
-  types."
+(defn alength
+  "Returns the length of the Java array. Works on arrays of all types."
+  [array]
   (js* "~{array}.length"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
@@ -136,6 +136,8 @@
 (defn nil? [x]
   "Returns true if x is nil, false otherwise."
   (identical? x nil))
+
+(def ^:private lookup-sentinel (goog.global.Object.))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
@@ -518,7 +520,9 @@ reduces them without incurring seq initialization"
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   [coll v]
-  (boolean (-lookup coll v)))
+  (if (identical? (-lookup coll v lookup-sentinel) lookup-sentinel)
+    false
+    true))
 
 (defn distinct?
   "Returns true if no two of the arguments are ="
@@ -976,6 +980,12 @@ reduces them without incurring seq initialization"
        (ci-reduce string f))
     ([string f start]
        (ci-reduce string f start))))
+
+;;hrm
+(set! goog.global.String.prototype.call
+      (fn
+        ([_ coll] (get coll (js* "this")))
+        ([_ coll not-found] (get coll (js* "this") not-found))))
 
 ; could use reify
 ;;; LazySeq ;;;
@@ -1611,6 +1621,11 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs)))
 
+(set! cljs.core.Vector.prototype.call
+      (fn
+        ([_ k] (-lookup (js* "this") k))
+        ([_ k not-found] (-lookup (js* "this") k not-found))))
+
 (defn vec [coll]
   (reduce conj cljs.core.Vector/EMPTY coll)) ; using [] here causes infinite recursion
 
@@ -1728,6 +1743,11 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj)))
 
+(set! cljs.core.ObjMap.prototype.call
+      (fn
+        ([_ k] (-lookup (js* "this") k))
+        ([_ k not-found] (-lookup (js* "this") k not-found))))
+
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Each key is hashed and the result used as a property name of
 ; hashobj. Each values in hashobj is actually a bucket in order to handle hash
@@ -1827,6 +1847,11 @@ reduces them without incurring seq initialization"
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
 
+(set! cljs.core.HashMap.prototype.call
+      (fn
+        ([_ k] (-lookup (js* "this") k))
+        ([_ k not-found] (-lookup (js* "this") k not-found))))
+
 (defn hash-map
   "keyval => key val
   Returns a new hash map with supplied mappings."
@@ -1916,6 +1941,11 @@ reduces them without incurring seq initialization"
 )
 
 (set! cljs.core.Set/EMPTY (Set. nil (hash-map)))
+
+(set! cljs.core.Set.prototype.call
+      (fn
+        ([_ k] (-lookup (js* "this") k))
+        ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn set
   "Returns a set of the distinct elements of coll."
@@ -2103,7 +2133,7 @@ reduces them without incurring seq initialization"
 ; This should be different in different runtime environments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
-  (goog.global/print x)
+  (js* "print(~{x})")
   nil)
 
 (defn flush [] ;stub
@@ -2586,8 +2616,11 @@ reduces them without incurring seq initialization"
   (let [x (array 1 2 3)]
     (set! (.foo x) :hello)
     (assert (= (.foo x) :hello)))
-  (assert (set))
-  (assert (= #{} (set)))
+
+  ;;these are broken (set takes a collection), please fix
+  ;(assert (set))
+  ;(assert (= #{} (set)))
+
   (assert (= #{"foo"} (set ["foo"])))
   (assert (= #{1 2 3} #{1 3 2}))
   (assert (= #{#{1 2 3} [4 5 6] {7 8} 9 10}
