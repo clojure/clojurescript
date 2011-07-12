@@ -373,7 +373,7 @@
                                                            (string/split-lines (slurp out-file)))]
                                               (javascript-file (to-url out-file)
                                                                (:provides ns-info)
-                                                               (:requries ns-info)))
+                                                               (:requires ns-info)))
                          :else (-compile (io/resource file)
                                          (merge opts {:output-file js-file})))]
     (do (swap! compiled-cljs (fn [old] (assoc old ns javascript)))
