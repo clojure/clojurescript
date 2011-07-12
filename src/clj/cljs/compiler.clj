@@ -1043,15 +1043,18 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                          *cljs-ns* 'cljs.user]
                  (loop [forms (forms-seq src-file)
                         ns-name nil
-                        deps {'cljs.core 'cljs.core}]
+                        deps nil]
                    (if (seq forms)
                      (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
                            ast (analyze env (first forms))]
                        (do (emit ast)
                            (if (= (:op ast) :ns)
-                             (recur (rest forms) (:name ast) (merge deps (:requires ast)))
+                             (recur (rest forms) (:name ast) (:requires ast))
                              (recur (rest forms) ns-name deps))))
-                     {:ns (or ns-name 'cljs.user) :requires (vals deps) :file dest-file})))))
+                     {:ns (or ns-name 'cljs.user)
+                      :provides [ns-name]
+                      :requires (if (= ns-name 'cljs.core) (vals deps) (conj (vals deps) 'cljs.core))
+                      :file dest-file})))))
          (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
