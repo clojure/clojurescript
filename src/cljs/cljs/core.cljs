@@ -427,11 +427,17 @@ reduces them without incurring seq initialization"
 
 (defn coll?
   "Returns true if x satisfies ICollection"
-  [x] (satisfies? ICollection x))
+  [x]
+  (if (nil? x)
+    false
+    (satisfies? ICollection x)))
 
 (defn set?
   "Returns true if x satisfies ISet"
-  [x] (satisfies? ISet x))
+  [x]
+  (if (nil? x)
+    false
+    (satisfies? ISet x)))
 
 (defn associative?
  "Returns true if coll implements Associative"
@@ -447,7 +453,10 @@ reduces them without incurring seq initialization"
 
 (defn map?
   "Return true if x satisfies IMap"
-  [x] (satisfies? IMap x))
+  [x]
+  (if (nil? x)
+    false
+    (satisfies? IMap x)))
 
 (defn vector?
   "Return true if x satisfies IVector"
@@ -482,8 +491,12 @@ reduces them without incurring seq initialization"
 (defn instance? [t o]
   (js* "(~{o} instanceof ~{t})"))
 
-(defn seq? [s]
-  (satisfies? ISeq s))
+(defn seq?
+  "Return true if s satisfies ISeq"
+  [s]
+  (if (nil? s)
+    false
+    (satisfies? ISeq s)))
 
 (defn boolean [x]
   (if x true false))
