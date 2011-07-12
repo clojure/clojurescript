@@ -2683,6 +2683,19 @@ reduces them without incurring seq initialization"
   (assert (= (re-matches (re-pattern "foo.*") "foo bar foo baz foo zot") "foo bar foo baz foo zot"))
   (assert (= (re-seq (re-pattern "foo") "foo bar foo baz foo zot") (list "foo" "foo" "foo")))
   (assert (= (re-seq (re-pattern "f(.)o") "foo bar foo baz foo zot") (list ["foo" "o"] ["foo" "o"] ["foo" "o"])))
+
+  ;; destructuring
+  (assert (= [2 1] (let [[a b] [1 2]] [b a])))
+  (assert (= #{1 2} (let [[a b] [1 2]] #{a b})))
+  (assert (= [1 2] (let [{a :a b :b} {:a 1 :b 2}] [a b])))
+  (assert (= [1 2] (let [{:keys [a b]} {:a 1 :b 2}] [a b])))
+  (assert (= [1 2 [1 2]] (let [[a b :as v] [1 2]] [a b v])))
+  (assert (= [1 42] (let [{:keys [a b] :or {b 42}} {:a 1}] [a b])))
+  (assert (= [1 nil] (let [{:keys [a b] :or {c 42}} {:a 1}] [a b])))
+  ;; broken destructuring
+  ; (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
+  ; (assert (= {1 2} (let [[a b] [1 2]] {a b})))
+  ; (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
   :ok
   )
 
