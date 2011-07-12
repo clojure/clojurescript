@@ -6,15 +6,11 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(set! *warn-on-reflection* true)
-
 (ns cljs.closure
   "Compile ClojureScript to JavaScript with optimizations from Google
    Closure Compiler producing runnable JavaScript.
 
-   The classpath must contain compiler.jar and cljs/core.js as well as
-   any other compiled ClojureScript files that you will need, all of
-   which must be under cljs/.
+   The Closure Compiler (compiler.jar) must be on the classpath.
 
    Use the 'build' function for end-to-end compilation.
 
@@ -53,10 +49,6 @@
            com.google.javascript.jscomp.Result
            com.google.javascript.jscomp.JSError
            com.google.javascript.jscomp.CommandLineRunner))
-
-;; The prefix under which compiled ClojureScript files may be found on
-;; the classpath.
-(def cljs-classpath-root "cljs/")
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
@@ -243,16 +235,23 @@ the JAR file."
         (doseq [form forms]
           (comp/emit (comp/analyze (empty-env) form)))))))
 
-(defn compile-file
-  "Compile a single cljs file in memory returning the JavaScript
-  source as a String. The IJavaScript protocol is extended to String so
-  this result is suitable to be passed to anything that expects to see
-  IJavaScript."
-  [^File file]
-  (compile-form-seq (comp/forms-seq file)))
-
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
+
+(defn compile-file
+  "Compile a single cljs file. If no output-file is specified, returns
+  a string of compiled JavaScript. With an output-file option, the
+  compiled JavaScript will written to this location and the function
+  returns a JavaScriptFile. In either case the return value satisfies
+  IJavaScript."
+  [^File file {:keys [output-file] :as opts}]
+  (if output-file
+    (let [out-file (io/file (output-directory opts) output-file)
+          ns-info (comp/compile-file file out-file)]
+      (javascript-file (to-url (:file ns-info))
+                       (:provides ns-info)
+                       (:requires ns-info)))
+    (compile-form-seq (comp/forms-seq file))))
 
 (defn compile-dir
   "Recursively compile all cljs files under the given source
@@ -264,13 +263,40 @@ the JAR file."
            (javascript-file (to-url file) [ns] requires))
          compiled-info)))
 
+(defn mkdirs
+  "Create all parent directories the the passed file."
+  [f]
+  (.mkdirs (.getParentFile (.getCanonicalFile f))))
+
+(defn path-from-jarfile
+  "Given the URL of a file within a jar, return the path of the file
+  from the root of the jar."
+  [^URL url]
+  (last (string/split (.getFile url) #"\.jar!/")))
+
+(defn jar-file-to-disk
+  "Copy a file contained within a jar to disk. Return the created file."
+  [url out-dir]
+  (let [out-file (io/file out-dir (path-from-jarfile url)) 
+        content (slurp (io/reader url))]
+    (do (mkdirs out-file)
+        (spit out-file content)
+        out-file)))
+
 (extend-protocol Compilable
 
   File
   (-compile [this opts]
     (if (.isDirectory this)
       (compile-dir this opts)
-      (compile-file this)))
+      (compile-file this opts)))
+
+  URL
+  (-compile [this opts]
+    (case (.getProtocol this)
+      "file" (-compile (.getFile this) opts)
+      "jar" (let [out-file (jar-file-to-disk this (output-directory opts))]
+              (-compile out-file opts))))
   
   clojure.lang.PersistentList
   (-compile [this opts]
@@ -286,6 +312,8 @@ the JAR file."
 (comment
   ;; compile a file in memory
   (-compile "samples/hello/src/hello/core.cljs" {})
+  ;; compile a file to disk - see file @ 'out/cljs/set.js'
+  (-compile (io/resource "cljs/set.cljs") {:output-file "cljs/set.js"})
   ;; compile a project
   (-compile (io/file "samples/hello/src") {})
   ;; compile a project with a custom output directory
@@ -302,7 +330,8 @@ the JAR file."
 ;; ============
 ;;
 ;; Find all dependencies from files on the classpath. Eliminates the
-;; need for closurebuilder.
+;; need for closurebuilder. cljs dependencies will be compiled as
+;; needed.
 
 (defn build-index
   "Index a list of dependencies by namespace and file name. There can
@@ -328,24 +357,6 @@ the JAR file."
         :when (.endsWith file ".js")]
     file))
 
-(defn all-cljs-js
-  "Return the list of all ClojureScript JavaScript files. First try to
-  get them from a directory on the classpath. Then, and only then,
-  look in jar files."
-  []
-  (letfn [(compiled-cljs? [d f] (and (.startsWith f (str (.getPath d) File/separator cljs-classpath-root))
-                                      (.endsWith f ".js")))
-          (remove-dot-prefix [s] (if (.startsWith s (str "." File/separator))
-                                   (.substring s (count (str "." File/separator)))
-                                   s))]
-    (let [compiled-cljs (for [dir (remove jar-file? (classpath))
-                              path (map #(.getPath %) (file-seq dir))
-                              :when (compiled-cljs? dir path)]
-                          (remove-dot-prefix path))]
-      (if (seq compiled-cljs)
-        compiled-cljs
-        (for [j (classpath-jarfiles) f (filenames-in-jar j) :when (.startsWith f cljs-classpath-root)] f)))))
-
 (defn dependency-index*
   "Create an index of dependencies by namespace and file name."
   []
@@ -355,7 +366,7 @@ the JAR file."
                           line-seq
                           parse-js-ns
                           (assoc :file res)))]
-    (let [all-nodes (map graph-node (concat (all-goog-js) (all-cljs-js)))]
+    (let [all-nodes (map graph-node (all-goog-js))]
       (build-index all-nodes))))
 
 (def dependency-index (memoize dependency-index*))
@@ -364,7 +375,7 @@ the JAR file."
   "Topologically sort a collection of dependencies."
   [coll]
   (let [state (build-index coll)]
-    (:order (reduce comp/dependency-order-visit (assoc state :order []) (keys state)))))
+    (distinct (:order (reduce comp/dependency-order-visit (assoc state :order []) (keys state))))))
 
 (defn dependencies
   "Given a sequence of Closure namespace strings, return the list of
@@ -377,32 +388,83 @@ the JAR file."
       (if (seq requires)
         (let [node (get index (first requires))]
           (recur (concat (rest requires) (:requires node)) (conj deps node)))
-        (cons "goog/base.js" (map :file (distinct (dependency-order deps))))))))
+        (cons "goog/base.js" (map :file (dependency-order deps)))))))
 
 (comment
   ;; find dependencies
-  (dependencies ["cljs.core"])
   (dependencies ["goog.array"])
-  (dependencies ["cljs.core" "goog.array"])
+  )
+
+(def compiled-cljs (atom {}))
+
+(defn get-compiled-cljs
+  "If not already compiled, compile the given cljs namespace. Return
+  an IJavaScript for this file. Compiled output will be written to the
+  working directory."
+  [opts ns]
+  (let [file (str (string/replace ns "." "/") ".cljs")
+        js-file (comp/rename-to-js file)
+        out-file (io/file (output-directory opts) js-file)
+        javascript (if (and (.exists out-file) (get @compiled-cljs ns))
+                     (get @compiled-cljs ns)
+                     (-compile (io/resource file)
+                               (merge opts {:output-file js-file})))]
+    (do (swap! compiled-cljs (fn [old] (assoc old ns javascript)))
+        javascript)))
+
+(defn cljs-dependencies
+  "Given a list of all required namespaces, return a list of
+  IJavaScripts which are the cljs dependencies in dependency
+  order. The returned list will not only include the explicitly
+  required files but any transative depedencies as well. JavaScript
+  files will be compiled to the working directory if they do not
+  already exist."
+  [opts requires]
+  (letfn [(cljs-deps [coll] (filter #(.startsWith % "cljs.") coll))]
+    (loop [requires (cljs-deps requires)
+           deps {}]
+      (if (seq requires)
+        (let [next-ns (first requires)
+              js (get-compiled-cljs opts next-ns)
+              new-requires (remove #(or (contains? deps %)
+                                        (contains? (set requires) %))
+                                   (cljs-deps (-requires js)))]
+          (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
+        (dependency-order (vals deps))))))
+
+(comment
+  ;; only get cljs deps
+  (cljs-dependencies {} ["goog.string" "cljs.core"])
+  ;; get transative deps
+  (cljs-dependencies {} ["cljs.string"])
+  ;; don't get cljs.core twice
+  (cljs-dependencies {} ["cljs.core" "cljs.string"])
   )
 
 (defn add-dependencies
   "Given one or more IJavaScript objects in dependency order, produce
   a new sequence of IJavaScript objects which includes the input list
   plus all dependencies in dependency order."
-  [& inputs]
-  (let [required (dependencies (mapcat -requires inputs))
+  [opts & inputs]
+  (let [requires (mapcat -requires inputs)
+        required-cljs (cljs-dependencies opts requires)
+        required (dependencies (concat (mapcat -requires required-cljs) requires))
         index (dependency-index)]
     (concat (map #(javascript-file (io/resource %)
                                    (:provides (get index %))
                                    (:requires (get index %))) required)
+            required-cljs
             inputs)))
 
 (comment
   ;; add dependencies to literal js
-  (add-dependencies "goog.provide('test.app');\ngoog.require('goog.array');")
+  (add-dependencies {} "goog.provide('test.app');\ngoog.require('cljs.core');")
+  (add-dependencies {} "goog.provide('test.app');\ngoog.require('goog.array');")
+  (add-dependencies {} (str "goog.provide('test.app');\n"
+                            "goog.require('goog.array');\n"
+                            "goog.require('cljs.set');"))
   ;; add dependencies to a JavaScriptFile record
-  (add-dependencies (javascript-file (to-url "samples/hello/src/hello/core.cljs")
+  (add-dependencies {} (javascript-file (to-url "samples/hello/src/hello/core.cljs")
                                      ["hello.core"]
                                      ["goog.array"]))
   )
@@ -450,7 +512,7 @@ the JAR file."
   
   ;; optimize a project
   (println (->> (-compile "samples/hello/src" {})
-                (apply add-dependencies)
+                (apply add-dependencies {})
                 (apply optimize {:optimizations :simple :flags #{:pretty-print}})))
   )
 
@@ -471,7 +533,7 @@ the JAR file."
 ;; If inputs are optimized then the output string will be the complete
 ;; application with all dependencies included.
 ;;
-;; For unoptimized output the string will be a Closure deps file
+;; For unoptimized output, the string will be a Closure deps file
 ;; describing where the JavaScript files are on disk and their
 ;; dependencies. All JavaScript files will be located in the working
 ;; directory, including any dependencies from the Closure library.
@@ -513,13 +575,15 @@ the JAR file."
   (apply str (interpose "\n" (map #(add-dep-string opts %) sources))))
 
 (comment
-  (path-relative-to (io/file "out/goog/base.js") {:url (io/resource "cljs/core.js")})
-  (add-dep-string {} {:url (io/resource "cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]})
-  (deps-file {} [{:url (io/resource "cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
+  (path-relative-to (io/file "out/goog/base.js") {:url (io/resource "out/cljs/core.js")})
+  (add-dep-string {} {:url (io/resource "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]})
+  (deps-file {} [{:url (io/resource "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
   )
 
 (defn output-one-file [{:keys [output-to]} js]
-  (if output-to (spit output-to js) js))
+  (cond (nil? output-to) js
+        (string? output-to) (spit output-to js)
+        :else (println js)))
 
 (defn output-deps-file [opts sources]
   (output-one-file opts (deps-file opts sources)))
@@ -530,7 +594,7 @@ the JAR file."
   directory."
   [js]
   (if-let [url ^URL (-url js)]
-    (last (string/split (.getFile url) #"\.jar!/"))
+    (path-from-jarfile url)
     (str (random-string 5) ".js")))
 
 (defn write-javascript
@@ -541,7 +605,7 @@ the JAR file."
         out-name (output-path js)
         out-file (io/file out-dir out-name)]
     (do (when-not (.exists out-file)
-          (do (.mkdirs (.getParentFile (.getCanonicalFile out-file)))
+          (do (mkdirs out-file)
               (spit out-file (-source js))))
         {:url (to-url out-file) :requires (-requires js) :provides (-provides js)
          :library (when (.startsWith out-name "goog/") :goog)})))
@@ -563,7 +627,7 @@ the JAR file."
                   {:url (io/resource "goog/base.js")
                    :source (slurp (io/reader (io/resource "goog/base.js")))})
   ;; doesn't write a file that is already on disk
-  (source-on-disk {} {:url (io/resource "core.js")})
+  (source-on-disk {} {:url (io/resource "cljs/core.cljs")})
   )
 
 (defn output-unoptimized [opts & sources]
@@ -577,8 +641,9 @@ the JAR file."
   ;; output unoptimized alone
   (output-unoptimized {} "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
   ;; output unoptimized with all dependencies
-  (apply output-unoptimized {} (add-dependencies
-                                "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n"))
+  (apply output-unoptimized {}
+         (add-dependencies {}
+                           "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n"))
   ;; output unoptimized and write deps file to 'out/test.js'
   (output-unoptimized {:output-to "out/test.js"}
                       "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
@@ -589,8 +654,8 @@ the JAR file."
   [source opts]
   (let [compiled (-compile source opts)
         js-sources (if (coll? compiled)
-                     (apply add-dependencies compiled)
-                     (add-dependencies compiled))]
+                     (apply add-dependencies opts compiled)
+                     (add-dependencies opts compiled))]
     (if (:optimizations opts)
       (->> js-sources
            (apply optimize opts)
@@ -603,14 +668,15 @@ the JAR file."
                     (defn ^{:export greet} greet [n] (str "Hola " n))
                     (defn ^:export sum [xs] 42)]
                   {:optimizations :simple :flags #{:pretty-print}}))
-  
+
+
   ;; build a project with optimizations
   (build "samples/hello/src" {:optimizations :advanced})
   (build "samples/hello/src" {:optimizations :advanced :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello.html' to see the result in action
-
+  
   ;; build a project without optimizations
-  (build "samples/hello/src" {:output-to "samples/hello/hello.js"})
+  (build "samples/hello/src" {:output-dir "samples/hello/out" :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello-dev.html' to see the result in action
   ;; notice how each script was loaded individually
   
@@ -618,6 +684,6 @@ the JAR file."
   (build '[(ns hello.core)
            (defn ^{:export greet} greet [n] (str "Hola " n))
            (defn ^:export sum [xs] 42)]
-         {:output-to "samples/hello/hello.js"})
+         {:output-dir "samples/hello/out" :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello-dev.html' to see the result in action
   )
