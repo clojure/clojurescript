@@ -1,12 +1,7 @@
 #!/bin/sh
 
-# Compile all cljs files into a single JavaScript file. Takes one or
-# two arguments followed by any number of gclosure compiler arguments.
-# The first argument is the directory containing the cljs sources to
-# compile. It is required. An optional second argument specifies the
-# name of the output directory where js files will be created. core.js
-# and all closure library dependencies used by core.js are included by
-# default (see cljsc.clj).
+# Compile a single cljs file or a directory of cljs files into a
+# single JavaScript file.
 
 CLJSC_CP=''
 for next in lib/*: closure/compiler/*: src/clj: src/cljs; do
@@ -15,13 +10,12 @@ done
 
 if test $# -eq 0
 then
-  echo "Usage: cljsc <root-dir>"
-  echo "       cljsc <root-dir> <js-output-dir>"
-  echo "       cljsc <root-dir> <js-output-dir> <gclosure-args>"
+  echo "Usage: cljsc <file-or-dir>"
+  echo "       cljsc <file-or-dir> {:optimizations :advanced}"
 else
   java -server -Xmx2G -Xms2G -Xmn256m \
     -cp $CLJSC_CP \
-    clojure.main $CLOJURESCRIPT_HOME/bin/cljsc.clj $CLOJURESCRIPT_HOME $*
+    clojure.main $CLOJURESCRIPT_HOME/bin/cljsc.clj $*
 fi
 
 
