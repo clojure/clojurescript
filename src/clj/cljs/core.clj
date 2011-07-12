@@ -131,13 +131,16 @@
        ~@(map method methods))))
 
 (defmacro satisfies?
+  "Returns true if x satisfies the protocol"
   [psym x]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (and x# (. x# ~(symbol prefix)))
-         true
-         (cljs.core/type_satisfies_ ~psym x#)))))
+       (if (cljs.core/nil? x#)
+	 false
+	 (if (and x# (. x# ~(symbol prefix)))
+	   true
+	   (cljs.core/type_satisfies_ ~psym x#))))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))
