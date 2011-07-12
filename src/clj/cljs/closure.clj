@@ -405,10 +405,14 @@ the JAR file."
   (let [file (str (string/replace ns "." "/") ".cljs")
         js-file (comp/rename-to-js file)
         out-file (io/file (output-directory opts) js-file)
-        javascript (if (and (.exists out-file) (get @compiled-cljs ns))
-                     (get @compiled-cljs ns)
-                     (-compile (io/resource file)
-                               (merge opts {:output-file js-file})))]
+        javascript (cond (and (.exists out-file) (get @compiled-cljs ns)) (get @compiled-cljs ns)
+                         (.exists out-file) (let [ns-info (parse-js-ns
+                                                           (string/split-lines (slurp out-file)))]
+                                              (javascript-file (to-url out-file)
+                                                               (:provides ns-info)
+                                                               (:requries ns-info)))
+                         :else (-compile (io/resource file)
+                                         (merge opts {:output-file js-file})))]
     (do (swap! compiled-cljs (fn [old] (assoc old ns javascript)))
         javascript)))
 
