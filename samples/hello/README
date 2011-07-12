@@ -1,18 +1,36 @@
 Simple ClojureScript Project Example.
 
-To run it...
+One-time Setup
+==============
 
-1) Make sure your clojurescript directory has the gclosure stuff in it and core.js.
-2) Add CLOJURESCRIPT_HOME environment variable.
-3) Add $CLOJURESCRIPT_HOME/bin to your PATH.
-3) Run 
+- Create a CLOJURESCRIPT_HOME environment variable which points to the
+  ClojureScript root directory.
 
-        cljsc src > hello.js 
-   
-   or
+- If you have not already done so, execute 
 
-        cljsc src --compilation_level=ADVANCED_OPTIMIZATIONS > hello.js
+    $CLOJURESCRIPT_HOME/script/bootstrap
 
-   in this directory.
-4) Open hello.html and enjoy!
+- Copy a Clojure 1.3 jar into $CLOJURESCRIPT_HOME/lib. 
+
+- Add $CLOJURESCRIPT_HOME/bin to your PATH.
+
+Run in Development Mode
+=======================
+
+Development mode allows for each file to be loaded in a separate script tag so
+that errors can be easily tracked to the offending file.
+
+        cljsc src > hello.js
+
+After running the above command, open hello-dev.html. Notice that each required
+JavaScript file has been loaded in its most readable form. 
+
+Run Optimized JavaScript
+========================
+
+Once an application is ready for production, a single optimized file can be produced.
+
+    cljsc src {:optimizations :advanced} > hello.js
+
+After running the above command, open hello.html to view the result.
 
