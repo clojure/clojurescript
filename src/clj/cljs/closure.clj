@@ -58,39 +58,6 @@
 (defn random-string [length]
   (apply str (take length (repeatedly random-char))))
 
-;; from clojure.contrib.jar
-
-(defn jar-file?
-  "Returns true if file is a normal file with a .jar or .JAR extension."
-  [^File file]
-  (and (.isFile file)
-       (or (.endsWith (.getName file) ".jar")
-           (.endsWith (.getName file) ".JAR"))))
-
-(defn filenames-in-jar
-  "Returns a sequence of Strings naming the non-directory entries in
-the JAR file."
-  [^JarFile jar-file]
-  (map #(.getName %)
-       (filter #(not (.isDirectory %))
-               (enumeration-seq (.entries jar-file)))))
-
-;; from clojure.contrib.classpath
-
-(defn classpath
-  "Returns a sequence of File objects of the elements on CLASSPATH."
-  []
-  (map #(File. %)
-       (.split (System/getProperty "java.class.path")
-               (System/getProperty "path.separator"))))
-
-(defn classpath-jarfiles
-  "Returns a sequence of JarFile objects for the JAR files on classpath."
-  []
-  (map #(JarFile. %) (filter jar-file? (classpath))))
-
-;; End of functions from clojure.contrib
-
 ;; Closure API
 ;; ===========
 
@@ -349,25 +316,21 @@ the JAR file."
           {}
           deps))
 
-(defn all-goog-js
-  "Return the list of all Google Closure library JavaScript files."
-  []
-  (for [g (filter #(.endsWith (.getName %) "goog.jar") (classpath-jarfiles))
-        file (filenames-in-jar g)
-        :when (.endsWith file ".js")]
-    file))
-
 (defn dependency-index*
   "Create an index of dependencies by namespace and file name."
   []
-  (letfn [(graph-node [res]
-                      (-> (io/resource res)
-                          io/reader
-                          line-seq
-                          parse-js-ns
-                          (assoc :file res)))]
-    (let [all-nodes (map graph-node (all-goog-js))]
-      (build-index all-nodes))))
+  (letfn [(parse-list [s] (when (> (count s) 0)
+                            (-> (.substring s 1 (dec (count s)))
+                                (string/split #"'\s*,\s*'"))))]
+    (let [all-goog (->> (line-seq (io/reader (io/resource "goog/deps.js")))
+                        (map #(re-matches #"^goog\.addDependency\('(.*)',\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
+                        (remove nil?)
+                        (map #(drop 1 %))
+                        (remove #(.startsWith (first %) "../../third_party"))
+                        (map #(hash-map :file (str "goog/"(first %))
+                                        :provides (parse-list (second %))
+                                        :requires (parse-list (last %)))))]
+      (build-index all-goog))))
 
 (def dependency-index (memoize dependency-index*))
 
