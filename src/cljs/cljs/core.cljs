@@ -2748,6 +2748,34 @@ reduces them without incurring seq initialization"
   ; (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
   ; (assert (= {1 2} (let [[a b] [1 2]] {a b})))
   ; (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
+
+  ;; update-in
+  (assert (= {:foo {:bar {:baz 1}}}
+             (update-in {:foo {:bar {:baz 0}}} [:foo :bar :baz] inc)))
+  (assert (= {:foo 1 :bar 2 :baz 10}
+             (update-in {:foo 1 :bar 2 :baz 3} [:baz] + 7)))
+  (assert (= [{:foo 1, :bar 2} {:foo 1, :bar 3}]
+               (update-in [{:foo 1 :bar 2}, {:foo 1 :bar 2}] [1 :bar] inc)))
+  (assert (= [{:foo {:bar 2}} {:foo {:bar 3}}]
+               (update-in [{:foo {:bar 2}}, {:foo {:bar 2}}] [1 :foo :bar] inc)))
+
+  ;; assoc-in
+  (assert (= {:foo {:bar {:baz 100}}}
+             (assoc-in {:foo {:bar {:baz 0}}} [:foo :bar :baz] 100)))
+  (assert (= {:foo 1 :bar 2 :baz 100}
+             (assoc-in {:foo 1 :bar 2 :baz 3} [:baz] 100)))
+  (assert (= [{:foo [{:bar 2} {:baz 3}]} {:foo [{:bar 2} {:baz 100}]}]
+             (assoc-in [{:foo [{:bar 2} {:baz 3}]}, {:foo [{:bar 2} {:baz 3}]}]
+                       [1 :foo 1 :baz] 100)))
+  (assert (= [{:foo 1, :bar 2} {:foo 1, :bar 100}]
+             (assoc-in [{:foo 1 :bar 2}, {:foo 1 :bar 2}] [1 :bar] 100)))
+
+  ;; get-in
+  (assert (= 1 (get-in {:foo 1 :bar 2} [:foo])))
+  (assert (= 2 (get-in {:foo {:bar 2}} [:foo :bar])))
+  (assert (= 1 (get-in [{:foo 1}, {:foo 2}] [0 :foo])))
+  (assert (= 4 (get-in [{:foo 1 :bar [{:baz 1}, {:buzz 2}]}, {:foo 3 :bar [{:baz 3}, {:buzz 4}]}]
+                       [1 :bar 1 :buzz])))
   :ok
   )
 
