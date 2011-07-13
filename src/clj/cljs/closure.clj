@@ -88,6 +88,9 @@
                     :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
         compiler-options (doto (CompilerOptions.)
                            (.setCodingConvention (ClosureCodingConvention.)))]
+    (when (:pretty-print opts)
+      (set! (.printInputDelimiter compiler-options) true)
+      (set! (.prettyPrint compiler-options) true))
     (do (.setOptionsForCompilationLevel level compiler-options)
         (set-options opts compiler-options)
         compiler-options)))
@@ -622,7 +625,10 @@
   (let [compiled (-compile source opts)
         js-sources (if (coll? compiled)
                      (apply add-dependencies opts compiled)
-                     (add-dependencies opts compiled))]
+                     (add-dependencies opts compiled))
+        js-sources (if (= :cli (:target opts))
+                     (concat js-sources [(-compile "src/cljs/cljs/nodecli.cljs" opts)])
+                     js-sources)]
     (if (:optimizations opts)
       (->> js-sources
            (apply optimize opts)

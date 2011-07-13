@@ -24,6 +24,12 @@
    (aget p "_")
    false))
 
+(def
+  ^{:doc "When compiled for a command-line target, whatever
+  function *main-fn* is set to will be called with the command-line
+  argv as arguments"}
+  *main-cli-fn* nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn- array-clone
@@ -194,7 +200,7 @@
   IHash
   (-hash [o] 0))
 
-(extend-type goog.global.Date
+#_(extend-type goog.global.Date
   IEquiv
   (-equiv [o other] (identical? (.toString o) (.toString other))))
 
@@ -1014,7 +1020,7 @@ reduces them without incurring seq initialization"
        (ci-reduce string f start))))
 
 ;;hrm
-(set! goog.global.String.prototype.call
+#_(set! (-> goog.global (aget "String") .prototype .call)
       (fn
         ([_ coll] (get coll (js* "this")))
         ([_ coll not-found] (get coll (js* "this") not-found))))
@@ -2197,7 +2203,7 @@ reduces them without incurring seq initialization"
 ; This should be different in different runtime environments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
-  (js* "print(~{x})")
+  (goog.global/print x)
   nil)
 
 (defn flush [] ;stub
