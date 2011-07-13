@@ -1563,6 +1563,25 @@ reduces them without incurring seq initialization"
              (cons p (partition n step pad (drop step s)))
              (list (take n (concat p pad)))))))))
 
+(defn get-in
+  "Returns the value in a nested associative structure,
+  where ks is a sequence of ke(ys. Returns nil if the key is not present,
+  or the not-found value if supplied."
+  {:added "1.2"
+   :static true}
+  ([m ks]
+     (reduce get m ks))
+  ([m ks not-found]
+     (loop [sentinel lookup-sentinel
+            m m
+            ks (seq ks)]
+       (if ks
+         (let [m (get m (first ks) sentinel)]
+           (if (identical? sentinel m)
+             not-found
+             (recur sentinel m (next ks))))
+         m))))
+
 (defn assoc-in
   "Associates a value in a nested associative structure, where ks is a
   sequence of keys and v is the new value and returns a new nested structure.
@@ -1659,9 +1678,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-    (ci-reduce array f))
+	   (ci-reduce v f))
   (-reduce [v f start]
-           (ci-reduce array start)))
+	   (ci-reduce v f start)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
