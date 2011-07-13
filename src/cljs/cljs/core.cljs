@@ -137,8 +137,6 @@
   "Returns true if x is nil, false otherwise."
   (identical? x nil))
 
-(def ^:private lookup-sentinel (goog.global.Object.))
-
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
@@ -476,6 +474,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;; preds ;;;;;;;;;;;;;;;;;;
 
+(def ^:private lookup-sentinel (js-obj))
 
 (defn false?
   "Returns true if x is the value false, false otherwise."
