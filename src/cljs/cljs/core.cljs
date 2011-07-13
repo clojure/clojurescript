@@ -1678,9 +1678,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-	   (ci-reduce v f))
+	   (ci-reduce array f))
   (-reduce [v f start]
-	   (ci-reduce v f start)))
+	   (ci-reduce array f start)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
@@ -2744,8 +2744,8 @@ reduces them without incurring seq initialization"
   (assert (= [1 2 [1 2]] (let [[a b :as v] [1 2]] [a b v])))
   (assert (= [1 42] (let [{:keys [a b] :or {b 42}} {:a 1}] [a b])))
   (assert (= [1 nil] (let [{:keys [a b] :or {c 42}} {:a 1}] [a b])))
+  (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
   ;; broken destructuring
-  ; (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
   ; (assert (= {1 2} (let [[a b] [1 2]] {a b})))
   ; (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
 
