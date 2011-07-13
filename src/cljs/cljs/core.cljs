@@ -788,6 +788,26 @@ reduces them without incurring seq initialization"
 
 
 
+(defn nthnext
+  "Returns the nth next of coll, (seq coll) when n is 0."
+  [coll n]
+  (loop [n n xs (seq coll)]
+    (if (and xs (pos? n))
+      (recur (dec n) (next xs))
+      xs)))
+
+(extend-type default
+  IIndexed
+  (-nth
+   ([coll n]
+      (if-let [xs (nthnext coll n)]
+        (first xs)
+        (throw "Index out of bounds")))
+   ([coll n not-found]
+      (if-let [xs (nthnext coll n)]
+        (first xs)
+        not-found))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
@@ -1542,14 +1562,6 @@ reduces them without incurring seq initialization"
            (if (= n (count p))
              (cons p (partition n step pad (drop step s)))
              (list (take n (concat p pad)))))))))
-
-(defn nthnext
-  "Returns the nth next of coll, (seq coll) when n is 0."
-  [coll n]
-  (loop [n n xs (seq coll)]
-    (if (and xs (pos? n))
-      (recur (dec n) (next xs))
-      xs)))
 
 ;;; Vector
 
