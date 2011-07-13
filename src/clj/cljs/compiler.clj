@@ -823,7 +823,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defn analyze-map
   [env form name]
   (let [expr-env (assoc env :context :expr)
-        simple-keys? (every? #(or (string? %) (keyword? %) (symbol? %))
+        simple-keys? (every? #(or (string? %) (keyword? %))
                              (keys form))
         ks (disallowing-recur (vec (map #(analyze expr-env % name) (keys form))))
         vs (disallowing-recur (vec (map #(analyze expr-env % name) (vals form))))]
