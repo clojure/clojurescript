@@ -1678,9 +1678,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-	   (ci-reduce v f))
+	   (ci-reduce array f))
   (-reduce [v f start]
-	   (ci-reduce v f start)))
+	   (ci-reduce array f start)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
