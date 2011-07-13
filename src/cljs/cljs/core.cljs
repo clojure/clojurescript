@@ -787,6 +787,26 @@ reduces them without incurring seq initialization"
 
 
 
+(defn nthnext
+  "Returns the nth next of coll, (seq coll) when n is 0."
+  [coll n]
+  (loop [n n xs (seq coll)]
+    (if (and xs (pos? n))
+      (recur (dec n) (next xs))
+      xs)))
+
+(extend-type default
+  IIndexed
+  (-nth
+   ([coll n]
+      (if-let [xs (nthnext coll n)]
+        (first xs)
+        (throw "Index out of bounds")))
+   ([coll n not-found]
+      (if-let [xs (nthnext coll n)]
+        (first xs)
+        not-found))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
@@ -1542,13 +1562,45 @@ reduces them without incurring seq initialization"
              (cons p (partition n step pad (drop step s)))
              (list (take n (concat p pad)))))))))
 
-(defn nthnext
-  "Returns the nth next of coll, (seq coll) when n is 0."
-  [coll n]
-  (loop [n n xs (seq coll)]
-    (if (and xs (pos? n))
-      (recur (dec n) (next xs))
-      xs)))
+(defn get-in
+  "Returns the value in a nested associative structure,
+  where ks is a sequence of ke(ys. Returns nil if the key is not present,
+  or the not-found value if supplied."
+  {:added "1.2"
+   :static true}
+  ([m ks]
+     (reduce get m ks))
+  ([m ks not-found]
+     (loop [sentinel lookup-sentinel
+            m m
+            ks (seq ks)]
+       (if ks
+         (let [m (get m (first ks) sentinel)]
+           (if (identical? sentinel m)
+             not-found
+             (recur sentinel m (next ks))))
+         m))))
+
+(defn assoc-in
+  "Associates a value in a nested associative structure, where ks is a
+  sequence of keys and v is the new value and returns a new nested structure.
+  If any levels do not exist, hash-maps will be created."
+  [m [k & ks] v]
+  (if ks
+    (assoc m k (assoc-in (get m k) ks v))
+    (assoc m k v)))
+
+(defn update-in
+  "'Updates' a value in a nested associative structure, where ks is a
+  sequence of keys and f is a function that will take the old value
+  and any supplied args and return the new value, and returns a new
+  nested structure.  If any levels do not exist, hash-maps will be
+  created."
+  ([m [k & ks] f & args]
+   (if ks
+     (assoc m k (apply update-in (get m k) ks f args))
+     (assoc m k (apply f (get m k) args)))))
+
 
 ;;; Vector
 
@@ -1625,9 +1677,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-    (ci-reduce array f))
+	   (ci-reduce array f))
   (-reduce [v f start]
-           (ci-reduce array start)))
+	   (ci-reduce array f start)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
@@ -2691,10 +2743,38 @@ reduces them without incurring seq initialization"
   (assert (= [1 2 [1 2]] (let [[a b :as v] [1 2]] [a b v])))
   (assert (= [1 42] (let [{:keys [a b] :or {b 42}} {:a 1}] [a b])))
   (assert (= [1 nil] (let [{:keys [a b] :or {c 42}} {:a 1}] [a b])))
+  (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
   ;; broken destructuring
-  ; (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
   ; (assert (= {1 2} (let [[a b] [1 2]] {a b})))
   ; (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
+
+  ;; update-in
+  (assert (= {:foo {:bar {:baz 1}}}
+             (update-in {:foo {:bar {:baz 0}}} [:foo :bar :baz] inc)))
+  (assert (= {:foo 1 :bar 2 :baz 10}
+             (update-in {:foo 1 :bar 2 :baz 3} [:baz] + 7)))
+  (assert (= [{:foo 1, :bar 2} {:foo 1, :bar 3}]
+               (update-in [{:foo 1 :bar 2}, {:foo 1 :bar 2}] [1 :bar] inc)))
+  (assert (= [{:foo {:bar 2}} {:foo {:bar 3}}]
+               (update-in [{:foo {:bar 2}}, {:foo {:bar 2}}] [1 :foo :bar] inc)))
+
+  ;; assoc-in
+  (assert (= {:foo {:bar {:baz 100}}}
+             (assoc-in {:foo {:bar {:baz 0}}} [:foo :bar :baz] 100)))
+  (assert (= {:foo 1 :bar 2 :baz 100}
+             (assoc-in {:foo 1 :bar 2 :baz 3} [:baz] 100)))
+  (assert (= [{:foo [{:bar 2} {:baz 3}]} {:foo [{:bar 2} {:baz 100}]}]
+             (assoc-in [{:foo [{:bar 2} {:baz 3}]}, {:foo [{:bar 2} {:baz 3}]}]
+                       [1 :foo 1 :baz] 100)))
+  (assert (= [{:foo 1, :bar 2} {:foo 1, :bar 100}]
+             (assoc-in [{:foo 1 :bar 2}, {:foo 1 :bar 2}] [1 :bar] 100)))
+
+  ;; get-in
+  (assert (= 1 (get-in {:foo 1 :bar 2} [:foo])))
+  (assert (= 2 (get-in {:foo {:bar 2}} [:foo :bar])))
+  (assert (= 1 (get-in [{:foo 1}, {:foo 2}] [0 :foo])))
+  (assert (= 4 (get-in [{:foo 1 :bar [{:baz 1}, {:buzz 2}]}, {:foo 3 :bar [{:baz 3}, {:buzz 4}]}]
+                       [1 :bar 1 :buzz])))
   :ok
   )
 
