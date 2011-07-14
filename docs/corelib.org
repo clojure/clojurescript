@@ -53,7 +53,7 @@ does what?
 * DONE >=
 * EMPTY-NODE
 * accessor
-* TODO aclone
+* DONE aclone
 * add-classpath
 * add-watch
 * agent
@@ -66,11 +66,11 @@ does what?
 * alter
 * DONE alter-meta!
 * alter-var-root
-* TODO amap
+* DONE amap
 * ancestors
 * DONE and
 * DONE apply
-* TODO areduce
+* DONE areduce
 * TODO array-map
 * DONE aset
 * aset-boolean

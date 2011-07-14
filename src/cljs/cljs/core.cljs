@@ -26,7 +26,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
-(defn- array-clone
+(defn aclone
   "Returns a javascript array, cloned from the passed in array"
   [array-like]
   #_(goog.array.clone array-like)
@@ -1618,14 +1618,14 @@ reduces them without incurring seq initialization"
         (aget array (dec count)))))
   (-pop [coll]
     (if (> (.length array) 0)
-      (let [new-array (array-clone array)]
+      (let [new-array (aclone array)]
         (. new-array (pop))
         (Vector. meta new-array))
       #_(throw "Can't pop empty vector")))
 
   ICollection
   (-conj [coll o]
-    (let [new-array (array-clone array)]
+    (let [new-array (aclone array)]
       (.push new-array o)
       (Vector. meta new-array)))
 
@@ -1668,7 +1668,7 @@ reduces them without incurring seq initialization"
 
   IAssociative
   (-assoc [coll k v]
-    (let [new-array (array-clone array)]
+    (let [new-array (aclone array)]
       (aset new-array k v)
       (Vector. meta new-array)))
 
@@ -1783,7 +1783,7 @@ reduces them without incurring seq initialization"
         (aset new-strobj k v)
         (if overwrite?
           (ObjMap. meta keys new-strobj)     ; overwrite
-          (let [new-keys (array-clone keys)] ; append
+          (let [new-keys (aclone keys)] ; append
             (.push new-keys k)
             (ObjMap. meta new-keys new-strobj))))
       ; non-string key. game over.
@@ -1794,7 +1794,7 @@ reduces them without incurring seq initialization"
   IMap
   (-dissoc [coll k]
     (if (and (goog/isString k) (.hasOwnProperty strobj k))
-      (let [new-keys (array-clone keys)
+      (let [new-keys (aclone keys)
             new-strobj (goog.object/clone strobj)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
@@ -1865,7 +1865,7 @@ reduces them without incurring seq initialization"
     (let [h (hash k)
           bucket (aget hashobj h)]
       (if bucket
-        (let [new-bucket (array-clone bucket)
+        (let [new-bucket (aclone bucket)
               new-hashobj (goog.object/clone hashobj)]
           (aset new-hashobj h new-bucket)
           (if-let [i (scan-array 2 k new-bucket)]
@@ -1895,7 +1895,7 @@ reduces them without incurring seq initialization"
         (let [new-hashobj (goog.object/clone hashobj)]
           (if (> 3 (.length bucket))
             (js-delete new-hashobj h)
-            (let [new-bucket (array-clone bucket)]
+            (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
               (aset new-hashobj h new-bucket)))
           (HashMap. meta (dec count) new-hashobj)))))
@@ -2775,7 +2775,16 @@ reduces them without incurring seq initialization"
   (assert (= 1 (get-in [{:foo 1}, {:foo 2}] [0 :foo])))
   (assert (= 4 (get-in [{:foo 1 :bar [{:baz 1}, {:buzz 2}]}, {:foo 3 :bar [{:baz 3}, {:buzz 4}]}]
                        [1 :bar 1 :buzz])))
+
+  ;; arrays
+  (let [a (to-array [1 2 3])]
+    (assert (= [10 20 30] (seq (amap a i ret (* 10 (aget a i))))))
+    (assert (= 6 (areduce a i ret 0 (+ ret (aget a i)))))
+    (assert (= (seq a) (seq (to-array [1 2 3]))))
+    (assert (= 42 (aset a 0 42)))
+    (assert (not= (seq a) (seq (to-array [1 2 3])))))
   :ok
   )
 
 #_(goog.global/print (assoc {} :a 1))
+

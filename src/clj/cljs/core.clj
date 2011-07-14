@@ -268,3 +268,29 @@
                                ~(do-mod mod-pairs)))))))]
     `(let [iter# ~(emit-bind (to-groups seq-exprs))]
        (iter# ~(second seq-exprs)))))
+
+(defmacro amap
+  "Maps an expression across an array a, using an index named idx, and
+  return value named ret, initialized to a clone of a, then setting 
+  each element of ret to the evaluation of expr, returning the new 
+  array ret."
+  [a idx ret expr]
+  `(let [a# ~a
+         ~ret (aclone a#)]
+     (loop  [~idx 0]
+       (if (< ~idx  (alength a#))
+         (do
+           (aset ~ret ~idx ~expr)
+           (recur (inc ~idx)))
+         ~ret))))
+
+(defmacro areduce
+  "Reduces an expression across an array a, using an index named idx,
+  and return value named ret, initialized to init, setting ret to the 
+  evaluation of expr at each step, returning ret."
+  [a idx ret init expr]
+  `(let [a# ~a]
+     (loop  [~idx 0 ~ret ~init]
+       (if (< ~idx  (alength a#))
+         (recur (inc ~idx) ~expr)
+         ~ret))))
