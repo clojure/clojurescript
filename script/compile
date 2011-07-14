@@ -17,6 +17,9 @@ java -jar closure/compiler/compiler.jar \
   --js closure/library/closure/goog/useragent/jscript.js \
   --js closure/library/closure/goog/string/stringbuffer.js \
   --js closure/library/closure/goog/object/object.js \
+  --js closure/library/closure/goog/debug/error.js \
+  --js closure/library/closure/goog/asserts/asserts.js \
+  --js closure/library/closure/goog/array/array.js \
   --js core.js \
   > coresimple.js
 
@@ -31,6 +34,9 @@ java -jar closure/compiler/compiler.jar \
   --js closure/library/closure/goog/useragent/jscript.js \
   --js closure/library/closure/goog/string/stringbuffer.js \
   --js closure/library/closure/goog/object/object.js \
+  --js closure/library/closure/goog/debug/error.js \
+  --js closure/library/closure/goog/asserts/asserts.js \
+  --js closure/library/closure/goog/array/array.js \
   --js core.js \
   > coreadvanced.js
 
