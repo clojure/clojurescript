@@ -9,7 +9,8 @@
 (ns cljs.core
   (:require [goog.string :as gstring]
             [goog.string.StringBuffer :as gstringbuf]
-            [goog.object :as gobject]))
+            [goog.object :as gobject]
+            [goog.array :as garray]))
 
 (defn truth_
   "Internal - do not use!"
@@ -553,6 +554,51 @@ reduces them without incurring seq initialization"
      false)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
+
+(defn compare
+  "Comparator. Returns a negative number, zero, or a positive number
+  when x is logically 'less than', 'equal to', or 'greater than'
+  y. Uses google.array.defaultCompare."
+  [x y] (garray/defaultCompare x y))
+
+(defn ^:private fn->comparator
+  "Given a fn that might be boolean valued or a comparator,
+   return a fn that is a comparator."
+  [f]
+  (if (= f compare)
+    compare
+    (fn [x y]
+      (let [r (f x y)]
+        (if (number? r)
+          r
+          (if r
+            -1
+            (if (f y x) 1 0)))))))
+
+(declare to-array)
+(defn sort
+  "Returns a sorted sequence of the items in coll. Comp can be
+   boolean-valued comparison funcion, or a -/0/+ valued comparator.
+   Comp defaults to compare."
+  ([coll]
+   (sort compare coll))
+  ([comp coll]
+   (if (seq coll)
+     (let [a (to-array coll)]
+       ;; matching Clojure's stable sort, though docs don't promise it
+       (garray/stableSort a (fn->comparator comp))
+       (seq a))
+     ())))
+
+(defn sort-by
+  "Returns a sorted sequence of the items in coll, where the sort
+   order is determined by comparing (keyfn item).  Comp can be
+   boolean-valued comparison funcion, or a -/0/+ valued comparator.
+   Comp defaults to compare."
+  ([keyfn coll]
+   (sort-by keyfn compare coll))
+  ([keyfn comp coll]
+     (sort (fn [x y] ((fn->comparator comp) (keyfn x) (keyfn y))) coll)))
 
 (defn second
   "Same as (first (next x))"
@@ -2775,6 +2821,15 @@ reduces them without incurring seq initialization"
   (assert (= 1 (get-in [{:foo 1}, {:foo 2}] [0 :foo])))
   (assert (= 4 (get-in [{:foo 1 :bar [{:baz 1}, {:buzz 2}]}, {:foo 3 :bar [{:baz 3}, {:buzz 4}]}]
                        [1 :bar 1 :buzz])))
+
+  ;; sort
+  (assert (= [1 2 3 4 5] (sort [5 3 1 4 2])))
+  (assert (= [1 2 3 4 5] (sort < [5 3 1 4 2])))
+  (assert (= [5 4 3 2 1] (sort > [5 3 1 4 2])))
+
+  ;; sort-by
+  (assert (= ["a" [ 1 2] "foo"] (sort-by count ["foo" "a" [1 2]])))
+  (assert (= ["foo" "a" [ 1 2]] (sort-by count > ["foo" "a" [1 2]])))  
   :ok
   )
 
