@@ -81,10 +81,10 @@ does what?
 * aset-int
 * aset-long
 * aset-short
-* TODO assert
+* DONE assert
 * DONE assoc
 * TODO assoc!
-* TODO assoc-in
+* DONE assoc-in
 * DONE associative?
 * DONE atom
 * await
@@ -214,8 +214,8 @@ For macros only, uses clojure.core version
 * DONE every-pred
 * DONE every?
 * TODO extend
-maybe not?
-* TODO extend-protocol
+  maybe not?
+* DONE extend-protocol
 macro currently expands into extend call
 * DONE extend-type
 * extenders
@@ -326,23 +326,23 @@ does what?
 * TODO map-indexed
 * DONE map?
 * DONE mapcat
-* TODO max
+* DONE max
 * DONE max-key
 * memfn
 * TODO memoize
-* TODO merge
+* DONE merge
 * TODO merge-with
 * DONE meta
 * method-sig
 * TODO methods
-* TODO min
+* DONE min
 * DONE min-key
 * TODO mod
 * munge
 * DONE name
 * DONE namespace
 * namespace-munge
-* TODO neg?
+* DONE neg?
 * newline
 * DONE next
 * DONE nfirst
