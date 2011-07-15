@@ -299,6 +299,17 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defn emit-fn-method
   [{:keys [gthis name variadic params statements ret env recurs max-fixed-arity]}]
   (emit-wrap env
+             (print (str "(function " name "(" (comma-sep params) "){\n"))
+             (when gthis
+               (println (str "var " gthis " = this;")))
+             (when recurs (print "while(true){\n"))
+             (emit-block :return statements ret)
+             (when recurs (print "break;\n}\n"))
+             (print "})")))
+
+(defn emit-variadic-fn-method
+  [{:keys [gthis name variadic params statements ret env recurs max-fixed-arity]}]
+  (emit-wrap env
              (print (str "(function " name "(" (comma-sep
                                                 (if variadic
                                                   (concat (butlast params) ['var_args])
@@ -339,7 +350,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
     (if (= 1 (count methods))
-      (emit-fn-method (assoc (first methods) :name name))
+      (if variadic
+        (emit-variadic-fn-method (assoc (first methods) :name name))
+        (emit-fn-method (assoc (first methods) :name name)))
       (let [name (or name (gensym))
             maxparams (apply max-key count (map :params methods))
             mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
@@ -349,7 +362,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println "(function() {")
         (println (str "var " name " = null;"))
         (doseq [[n meth] ms]
-          (println (str "var " n " = " (with-out-str (emit-fn-method meth)) ";")))
+          (println (str "var " n " = " (with-out-str (if variadic
+                                                       (emit-variadic-fn-method meth)
+                                                       (emit-fn-method meth))) ";")))
         (println (str name " = function(" (comma-sep (if variadic
                                                        (concat (butlast maxparams) ['var_args])
                                                        maxparams)) "){"))

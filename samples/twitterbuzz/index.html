@@ -22,6 +22,14 @@
 	<!--[if lt IE 9]>
 	<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
   <![endif]-->
+  
+  <!-- In unoptimized mode, additional script tags are required -->
+  <script type="text/javascript" src="out/goog/base.js"></script>
+  <script type="text/javascript" src="twitterbuzz.js"></script>
+  <script type="text/javascript">
+    goog.require('twitterbuzz.core');
+  </script>
+  
 </head>
 <body>
   <header>
