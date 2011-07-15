@@ -8,7 +8,7 @@
 
 (ns ^{:doc "Set operations such as union/intersection."
        :author "Rich Hickey"}
-       cljs.set)
+       clojure.set)
 
 (defn- bubble-max-key [k coll]
   "Move a maximal element of coll according to fn k (which returns a number) 

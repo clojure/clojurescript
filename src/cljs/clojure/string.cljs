@@ -1,4 +1,4 @@
-(ns cljs.string
+(ns clojure.string
   ;; TODO pending refer-clojure exclude support
   #_(:refer-clojure :exclude [replace reverse])
   (:require [goog.string :as gstring]
