@@ -7,8 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.reader
-  (:require [goog.string :as gstring
-             goog.string.StringBuffer :as gsb]))
+  (:require [goog.string :as gstring]))
 
 (defprotocol PushbackReader
   (read-char [reader] "Returns the next char from the Reader,
@@ -56,15 +55,24 @@ nil if the end of stream has been reached")
                        (unread next-ch)
                        next-ch)))))
 
-(defn- string-prefix?
-  "Checks whether the character starts a string"
-  [ch])
-
 (declare read macros dispatch-macros)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn macro-terminating? [ch]
+  (and (not= ch "#") (not= ch \') (contains? macros ch)))
+
+(defn read-token
+  [rdr initch]
+  (loop [sb (gstring/StringBuffer. initch)
+         ch (read-char rdr)]
+    (if (or (nil? ch)
+            (whitespace? ch)
+            (macro-terminating? ch))
+      (do (unread rdr ch) (.toString sb))
+      (recur (do (.append sb ch) sb) (read-char rdr)))))
 
 (defn- skip-line
   "Advances the reader to the end of a line. Returns the reader"
@@ -112,6 +120,28 @@ nil if the end of stream has been reached")
    (re-matches ratio-pattern s) (match-ratio s)
    (re-matches float-pattern s) (match-float s)
    :default (throw (str "Invalid number format [" s "]"))))
+
+(def escape-char-map {\t "\t"
+                      \r "\r"
+                      \n "\n"
+                      \\ \\
+                      \" \"
+                      \b "\b"
+                      \f "\f"})
+
+(defn read-unicode-char
+  [reader initch]
+  (throw "Unicode characters not supported by reader (yet)"))
+
+(defn escape-char
+  [buffer reader]
+  (let [ch (read-char reader)
+        mapresult (get escape-char-map ch)]
+    (if mapresult
+      mapresult
+      (if (or (= \u ch) (numeric? ch))
+        (read-unicode-char reader ch)
+        (throw (str "Unsupported escape charater: \\" ch))))))
 
 (defn read-past
   "Read until first character that doesn't match pred, returning
@@ -176,43 +206,41 @@ nil if the end of stream has been reached")
   [rdr _]
   (set (read-delimited-list "}" rdr true)))
 
-(def macros
-  { \" read-string
-    \; read-comment
-    \' not-implemented
-    \@ not-implemented
-    \^ read-meta
-    \` not-implemented
-    \~ not-implemented
-    \( read-list
-    \) read-unmatched-delimiter
-    \[ read-vector
-    \] read-unmatched-delimiter
-    \{ read-map
-    \} read-unmatched-delimiter
-    \\ read-char
-    \% not-implemented
-    \# read-dispatch
-    })
-
-(def dispatch-macros
-  {"{" read-set})
-
 (defn read-number
   [reader initch]
   (loop [buffer (gstring/StringBuffer. initch)
          ch (read-char reader)]
-    (if (or (nil? ch) (whitespace? ch) (macro? ch))
+    (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
       (do
         (unread reader ch)
         (match-number (.toString buffer)))
-      (recur buffer (read-char reader)))))
+      (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-string
-  [reader initch])
+  [reader _]
+  (loop [buffer (gstring/StringBuffer.)
+         ch (read-char reader)]
+    (cond
+     (nil? ch) (throw "EOF while reading string")
+     (= "\\" ch) (recur (escape-char buffer reader) (read-char reader))
+     (= \" ch) (.toString buffer)
+     :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-symbol
-  [reader initch is-recursive])
+  [reader initch]
+  (let [token (read-token reader initch)]
+    (if (gstring/contains token "/")
+      (symbol (subs token 0 (.indexOf token "/"))
+              (subs (inc (.indexOf token "/")) (.length token)))
+      (symbol token))))
+
+(defn read-keyword
+  [reader initch]
+  (let [token (read-token reader (read-char reader))]
+    (if (gstring/contains token "/")
+      (keyword (subs token 0 (.indexOf token "/"))
+              (subs (inc (.indexOf token "/")) (.length token)))
+      (keyword token))))
 
 (defn desugar-meta
   [f]
@@ -221,6 +249,11 @@ nil if the end of stream has been reached")
    (string? f) {:tag f}
    (keyword? f) {f true}
    :else f))
+
+(defn wrapping-reader
+  [sym]
+  (fn [rdr _]
+    (list sym (read rdr true nil true))))
 
 (defn read-meta
   [rdr _]
@@ -232,15 +265,28 @@ nil if the end of stream has been reached")
         (with-meta o (merge (meta o) m))
         (throw "Metadata can only be applied to IWithMetas")))))
 
-#_(defn read-token
-  [rdr initch]
-  (let [sb (gsb/StringBuffer. initch)]
-    (loop [ch (read-char rdr)]
-      (if (or (nil? ch)
-              (whitespace? ch)
-              (macro-terminating? ch))
-        (do (unread rdr ch) s)
-        (recur (.append sb ch))))))
+(def macros
+     { \" read-string
+       \: read-keyword
+       \; not-implemented ;; never hit this
+       \' (wrapping-reader 'quote)
+       \@ (wrapping-reader 'deref)
+       \^ read-meta
+       \` not-implemented
+       \~ not-implemented
+       \( read-list
+       \) read-unmatched-delimiter
+       \[ read-vector
+       \] read-unmatched-delimiter
+       \{ read-map
+       \} read-unmatched-delimiter
+       \\ read-char
+       \% not-implemented
+       \# read-dispatch
+       })
+
+(def dispatch-macros
+  {"{" read-set})
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
