@@ -71,7 +71,7 @@ nil if the end of stream has been reached")
     (if (or (nil? ch)
             (whitespace? ch)
             (macro-terminating? ch))
-      (do (unread rdr ch) (.toString sb))
+      (do (unread rdr ch) (. sb (toString)))
       (recur (do (.append sb ch) sb) (read-char rdr)))))
 
 (defn- skip-line
@@ -213,7 +213,7 @@ nil if the end of stream has been reached")
     (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
       (do
         (unread reader ch)
-        (match-number (.toString buffer)))
+        (match-number (. buffer (toString))))
       (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-string
@@ -223,7 +223,7 @@ nil if the end of stream has been reached")
     (cond
      (nil? ch) (throw "EOF while reading string")
      (= "\\" ch) (recur (escape-char buffer reader) (read-char reader))
-     (= \" ch) (.toString buffer)
+     (= \" ch) (. buffer (toString))
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-symbol
