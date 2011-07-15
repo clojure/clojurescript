@@ -41,30 +41,30 @@ nil if the end of stream has been reached")
   [ch]
   (gstring/isNumeric ch))
 
-(defn- comment?
-  "Checks whether the reader is at the beginning of a comment"
-  [reader]
-  (= \; (peek reader)))
+(defn- comment-prefix?
+  "Checks whether the character begins a comment."
+  [ch]
+  (= \; ch))
 
 (defn- number-literal?
-  "Checks whether the reader is at the first digit of a number"
+  "Checks whether the reader is at the start of a number literal"
   [reader]
   (let [ch (peek reader)]
     (or (numeric? ch)
         (and (or (= \+ ch) (= \- ch))
              (numeric? (peek reader 2))))))
 
-(defn- string-literal?
-  "Checks whether the reader is at the first character of a string literal"
-  [reader])
+(defn- string-prefix?
+  "Checks whether the character starts a string"
+  [ch])
 
-(defn- vector-literal?
-  "Checks whether the reader is at the first character of a vector literal"
-  [reader])
+(defn- vector-prefix ?
+  "Checks whether the char is the start of a vector literal"
+  [ch])
 
 (defn- map-literal?
-  "Checks whether the reader is at the first character of a map literal"
-  [reader])
+  "Checks whether the char is the start of a map literal"
+  [ch])
 
 (declare read)
 
@@ -95,15 +95,16 @@ nil if the end of stream has been reached")
   "Reads the first object from a PushbackReader. Returns the object read.
 Returns nil if the reader did not contain any forms."
   [reader]
-  (if (not (nil? (peek reader)))
-    (cond
-     (whitespace? (peek reader)) (do (read-char reader) (recur reader))
-     (comment? reader) (recur (skip-line reader))
-     (number-literal? reader) (read-number reader)
-     (string-literal? reader) (read-string reader)
-     (vector-literal? reader) (read-vector reader)
-     (map-literal? reader) (read-map reader)
-     :default (read-symbol reader))))
+  (let [ch (peek reader)] 
+    (if (not (nil? ch))
+      (cond
+       (whitespace? ch) (do (read-char reader) (recur reader))
+       (comment-prefix? ch) (recur (skip-line reader))
+       (number-literal? reader) (read-number reader)
+       (string-prefix? ch) (read-string reader)
+       (vector-prefix? ch) (read-vector reader)
+       (map-prefix? ch) (read-map reader)
+       :default (read-symbol reader)))))
 
 (defn read-all
   "Reads a lazy sequence of objects from a reader."
