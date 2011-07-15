@@ -7,8 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.reader
-  (:require [goog.string :as gstring
-             goog.string.StringBuffer :as gsb]))
+  (:require [goog.string :as gstring]))
 
 (defprotocol PushbackReader
   (read-char [reader] "Returns the next char from the Reader,
@@ -63,16 +62,16 @@ nil if the end of stream has been reached")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn macro-terminating? [ch]
-  (and (not= ch "#") (not= ch "\'") (contains? macros ch)))
+  (and (not= ch "#") (not= ch \') (contains? macros ch)))
 
 (defn read-token
   [rdr initch]
-  (loop [sb (gsb/StringBuffer. initch)
+  (loop [sb (gstring/StringBuffer. initch)
          ch (read-char rdr)]
     (if (or (nil? ch)
             (whitespace? ch)
             (macro-terminating? ch))
-      (do (unread rdr ch) (.toString gsb))
+      (do (unread rdr ch) (.toString sb))
       (recur (do (.append sb ch) sb) (read-char rdr)))))
 
 (defn- skip-line
@@ -209,7 +208,7 @@ nil if the end of stream has been reached")
 
 (defn read-number
   [reader initch]
-  (loop [buffer (gsb/StringBuffer. initch)
+  (loop [buffer (gstring/StringBuffer. initch)
          ch (read-char reader)]
     (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
       (do
@@ -219,7 +218,7 @@ nil if the end of stream has been reached")
 
 (defn read-string
   [reader _]
-  (loop [buffer (gsb/StringBuffer.)
+  (loop [buffer (gstring/StringBuffer.)
          ch (read-char reader)]
     (cond
      (nil? ch) (throw "EOF while reading string")
