@@ -626,7 +626,7 @@
         js-sources (if (coll? compiled)
                      (apply add-dependencies opts compiled)
                      (add-dependencies opts compiled))
-        js-sources (if (= :cli (:target opts))
+        js-sources (if (= :nodejs (:target opts))
                      (concat js-sources [(-compile "src/cljs/cljs/nodecli.cljs" opts)])
                      js-sources)]
     (if (:optimizations opts)

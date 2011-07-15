@@ -1,7 +1,7 @@
 (ns nodehello)
 
 (defn -main [& args]
-  (println (apply str (map [\ "world" "hello"] [2 0 1]))))
+  (println (apply str (map [\space "world" "hello"] [2 0 1]))))
 
 (set! *main-cli-fn* -main)
 
@@ -10,7 +10,7 @@
 
 CLOJURESCRIPT_HOME=".../clojurescript/" \
   bin/cljsc samples/nodehello.cljs \
-  {:optimizations :advanced :pretty-print true :target :cli} \
+  {:optimizations :advanced :pretty-print true :target :nodejs} \
   > out/nodehello.js
 
 ; Then run using:
