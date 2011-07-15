@@ -200,7 +200,7 @@
   IHash
   (-hash [o] 0))
 
-#_(extend-type goog.global.Date
+(extend-type goog.global.Date
   IEquiv
   (-equiv [o other] (identical? (.toString o) (.toString other))))
 
@@ -1020,7 +1020,7 @@ reduces them without incurring seq initialization"
        (ci-reduce string f start))))
 
 ;;hrm
-#_(set! (-> goog.global (aget "String") .prototype .call)
+(set! (-> goog.global (aget "String") .prototype .call)
       (fn
         ([_ coll] (get coll (js* "this")))
         ([_ coll not-found] (get coll (js* "this") not-found))))

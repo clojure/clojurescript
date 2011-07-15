@@ -10,7 +10,7 @@
 
 CLOJURESCRIPT_HOME=".../clojurescript/" \
   bin/cljsc samples/nodehello.cljs \
-  {:optimizations :advanced :pretty-print true :target :nodejs} \
+  {:optimizations :simple :pretty-print true :target :nodejs} \
   > out/nodehello.js
 
 ; Then run using:
