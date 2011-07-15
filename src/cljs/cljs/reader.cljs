@@ -176,28 +176,6 @@ nil if the end of stream has been reached")
   [rdr _]
   (set (read-delimited-list "}" rdr true)))
 
-(def macros
-  { \" read-string
-    \; read-comment
-    \' not-implemented
-    \@ not-implemented
-    \^ read-meta
-    \` not-implemented
-    \~ not-implemented
-    \( read-list
-    \) read-unmatched-delimiter
-    \[ read-vector
-    \] read-unmatched-delimiter
-    \{ read-map
-    \} read-unmatched-delimiter
-    \\ read-char
-    \% not-implemented
-    \# read-dispatch
-    })
-
-(def dispatch-macros
-  {"{" read-set})
-
 (defn read-number
   [reader initch]
   (loop [buffer (gstring/StringBuffer. initch)
@@ -241,6 +219,28 @@ nil if the end of stream has been reached")
               (macro-terminating? ch))
         (do (unread rdr ch) s)
         (recur (.append sb ch))))))
+
+(def macros
+  { \" read-string
+    \; not-implemented ;; never hit this
+    \' not-implemented
+    \@ not-implemented
+    \^ read-meta
+    \` not-implemented
+    \~ not-implemented
+    \( read-list
+    \) read-unmatched-delimiter
+    \[ read-vector
+    \] read-unmatched-delimiter
+    \{ read-map
+    \} read-unmatched-delimiter
+    \\ read-char
+    \% not-implemented
+    \# read-dispatch
+    })
+
+(def dispatch-macros
+  {"{" read-set})
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
