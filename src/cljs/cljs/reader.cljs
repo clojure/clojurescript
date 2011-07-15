@@ -10,71 +10,88 @@
   (:require [goog.string :as gstring
              goog.string.StringBuffer :as gstringbuf]))
 
+(defprotocol PushbackReader
+  (read-char [reader] "Returns the next char from the Reader,
+nil if the end of stream has been reached")
+  (unread [reader ch] "Push back a single character on to the stream")
+  (peek [reader] [reader n] "Returns the first (or nth) character of the reader without advancing the reader position"))
+
+(deftype StringPushbackReader [state]
+  PushbackReader
+  (read-char [reader] (let [original @state]
+                      (reset! state (subs 1 original))
+                      (first original)))
+  (unread [reader ch] (reset! state (str ch @state)))
+  (peek [reader] (first @state))
+  (peek [reader n] (nth @state n)))
+
+(defn push-back-reader [s]
+  "Creates a StringPushbackReader from a given string"
+  (StringPushbackReader. (atom s)))
+
 (defn- whitespace?
-  "Checks whether the character at the index is Clojurescript whitespace"
-  [s idx]
-  (let [ch (.charAt s idx)]
+  "Checks whether the reader is on a whitespace character."
+  [reader]
+  (let [ch (peek reader)]
     (or (gstring/isBreakingWhitespace ch) (= \, ch))))
 
 (defn- comment?
-  "Checks whether the character at the index begins a comment"
-  [s idx]
-  (= \; (.charAt s idx)))
+  "Checks whether the reader is at the beginning of a comment"
+  [reader]
+  (= \; (peek reader)))
 
 (defn- number-literal?
-  "Checks whether a character at the index is the first digit of a number"
-  [s idx]
-  (let [ch (.charAt s idx)]
+  "Checks whether the reader is at the first digit of a number"
+  [reader]
+  (let [ch (peek reader)]
     (or (gstring/isNumeric ch)
         (and (or (= \+ ch) (= \- ch))
-             (gstring/isNumeric (.charAt s (inc idx)))))))
+             (gstring/isNumeric (peek reader 2))))))
 
 (defn- string-literal?
-  "Checks whether the character at the index is the first character of a string literal"
-  [s idx])
+  "Checks whether the reader is at the first character of a string literal"
+  [reader])
 
 (defn- vector-literal?
-  "Checks whether the character at the index is the first character of a vector literal"
-  [s idx])
+  "Checks whether the reader is at the first character of a vector literal"
+  [reader])
 
 (defn- map-literal?
-  "Checks whether the character at the index is the first character of a map literal"
-  [s idx])
+  "Checks whether the reader is at the first character of a map literal"
+  [reader])
 
 (declare read)
 
 (defn read-number
-  [s idx])
+  [reader])
 
 (defn read-string
-  [s idx])
+  [reader])
 
 (defn read-vector
-  [s idx])
+  [reader])
 
 (defn read-map
-  [s idx])
+  [reader])
 
 (defn read-symbol
-  [s idx])
-
-(defn read-first
-  "Reads the first object from a string, starting at the specified index.
-Returns a tuple of the object read and the last index read.
-Returns nil of the string did not contain any forms."
-  [s idx]
-  (if (< idx (.length s))
-    (cond
-     (whitespace? s idx) (recur s (inc idx))
-     (number-literal? s idx) (read-number s idx)
-     (string-literal? s idx) (read-string s idx)
-     (vector-literal? s idx) (read-vector s idx)
-     (map-literal? s idx) (read-map s idx)
-     :default (read-symbol s idx))))
+  [reader])
 
 (defn read
-  "Reads a lazy sequence of objects from a string, starting at the specified index.
-Reads to the end of the string."
-  [s idx]
-  (let [obj (read-first s idx)]
-    (lazy-seq (cons (first obj) (read s (second obj))))))
+  "Reads the first object from a PushbackReader. Returns the object read.
+Returns nil if the reader did not contain any forms."
+  [reader]
+  (if (not (nil? (peek reader)))
+    (cond
+     (whitespace? reader) (do (read-char reader) (recur reader))
+     (comment? reader) nil ;; TODO: burn through until end of comment
+     (number-literal? reader) (read-number reader)
+     (string-literal? reader) (read-string reader)
+     (vector-literal? reader) (read-vector reader)
+     (map-literal? reader) (read-map reader)
+     :default (read-symbol reader))))
+
+(defn read-all
+  "Reads a lazy sequence of objects from a reader."
+  [reader]
+  (lazy-seq (cons (read reader) (read-all reader))))
