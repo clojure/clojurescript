@@ -2353,6 +2353,9 @@ reduces them without incurring seq initialization"
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
+  IndexedSeq
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+  
   List
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
@@ -2388,7 +2391,11 @@ reduces them without incurring seq initialization"
   (-deref [_] state)
 
   IMeta
-  (-meta [_] meta))
+  (-meta [_] meta)
+
+  IPrintable
+  (-pr-seq [a opts]
+    (concat  ["#<Atom: "] (-pr-seq state opts) ">")))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
