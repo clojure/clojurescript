@@ -47,6 +47,11 @@ nil if the end of stream has been reached")
   [ch]
   (= \; ch))
 
+(defn- meta-prefix?
+  "Checks whether the character begins metadata"
+  [ch]
+  (= \^ ch))
+
 (defn- number-literal?
   "Checks whether the reader is at the start of a number literal"
   [reader ch]
@@ -148,6 +153,24 @@ nil if the end of stream has been reached")
 (defn read-symbol
   [reader initch is-recursive])
 
+(defn desugar-meta
+  [f]
+  (cond
+   (symbol? f) {:tag f}
+   (string? f) {:tag f}
+   (keyword? f) {f true}
+   :else f))
+
+(defn read-meta
+  [rdr _]
+  (let [m (desugar-meta (read rdr true nil true))]
+    (when-not (map? m)
+      (throw "Metadata must be Symbol,Keyword,String or Map"))
+    (let [o (read rdr true nil true)]
+      (if (satisfies? IWithMeta o)
+        (with-meta o (merge (meta o) m))
+        (throw "Metadata can only be applied to IWithMetas")))))
+
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
 Returns sentinel if the reader did not contain any forms."
@@ -162,6 +185,7 @@ Returns sentinel if the reader did not contain any forms."
      (list-prefix? ch) (read-list reader ch)
      (vector-prefix? ch) (read-vector reader ch)
      (map-prefix? ch) (read-map reader ch)
+     (meta-prefix? ch) (read-meta reader ch)
      :default (read-symbol reader ch))))
 
 
