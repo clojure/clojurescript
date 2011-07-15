@@ -64,6 +64,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (let [sym (symbol name)]
     (get (:requires (:ns env)) sym sym)))
 
+(defn core-name?
+  "Is sym visible from core in the current compilation namespace?"
+  [env sym]
+  (and (get (:defs (@namespaces 'cljs.core)) sym)
+       (not (contains? (-> env :ns :excludes) sym))))
+
 (defn resolve-existing-var [env sym]
   (let [s (str sym)
         lb (-> env :locals sym)
@@ -90,7 +96,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                       sym))))
 
          :else
-         (let [full-ns (if (get (:defs (@namespaces 'cljs.core)) sym)
+         (let [full-ns (if (core-name? env sym)
                          'cljs.core
                          (-> env :ns :name))]
            (confirm-var-exists env full-ns sym)
@@ -120,7 +126,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
          :else
          (munge (symbol (str
-                         (if (get (:defs (@namespaces 'cljs.core)) sym)
+                         (if (core-name? env sym)
                            'cljs.core
                            (-> env :ns :name))
                          "." (munge (name sym))))))]
@@ -695,26 +701,36 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod parse 'ns
   [_ env [_ name & args] _]
-  (let [{requires :require requires-macros :require-macros :as params}
+  (let [excludes
+        (reduce (fn [s [k exclude xs]]
+                  (if (= k :refer-clojure)
+                    (do
+                      (assert (= exclude :exclude) "Only [:refer-clojure :exclude [names]] form supported")
+                      (into s xs))
+                    s))
+                #{} args)
+        {requires :require requires-macros :require-macros :as params}
         (reduce (fn [m [k & libs]]
                   (assoc m k (into {}
                                    (map (fn [[lib as alias]]
                                           (assert (and alias (= :as as)) "Only [lib.ns :as alias] form supported")
                                           [alias lib])
                                         libs))))
-                {} args)]
+                {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (set! *cljs-ns* name)
     (require 'cljs.core)
     (doseq [nsym (vals requires-macros)]
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
+                           (assoc-in [name :excludes] excludes)
                            (assoc-in [name :requires] requires)
                            (assoc-in [name :requires-macros]
                                      (into {} (map (fn [[alias nsym]]
                                                      [alias (find-ns nsym)])
                                                    requires-macros)))))
-    {:env env :op :ns :name name :requires requires :requires-macros requires-macros}))
+    {:env env :op :ns :name name :requires requires
+     :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
   [_ env [_ tsym fields] _]
