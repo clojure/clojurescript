@@ -13,17 +13,16 @@
 (defprotocol PushbackReader
   (read-char [reader] "Returns the next char from the Reader,
 nil if the end of stream has been reached")
-  (unread [reader ch] "Push back a single character on to the stream")
-  (peek [reader] [reader n] "Returns the first (or nth) character of the reader without advancing the reader position"))
+  (unread [reader ch] "Push back a single character on to the stream"))
 
+;; This implementation is quite inefficient. It can be improved by using an index into the original string
+;; and using a seperate buffer to store pushed data.
 (deftype StringPushbackReader [state]
   PushbackReader
   (read-char [reader] (let [original @state]
                       (reset! state (subs 1 original))
                       (first original)))
-  (unread [reader ch] (reset! state (str ch @state)))
-  (peek [reader] (first @state))
-  (peek [reader n] (nth @state n)))
+  (unread [reader ch] (reset! state (str ch @state))))
 
 (defn push-back-reader [s]
   "Creates a StringPushbackReader from a given string"
@@ -48,17 +47,22 @@ nil if the end of stream has been reached")
 
 (defn- number-literal?
   "Checks whether the reader is at the start of a number literal"
-  [reader]
-  (let [ch (peek reader)]
-    (or (numeric? ch)
-        (and (or (= \+ ch) (= \- ch))
-             (numeric? (peek reader 2))))))
+  [reader ch]
+  (or (numeric? ch)
+      (and (or (= \+ ch) (= \- ch))
+           (numeric? (let [next-ch (read-char reader)]
+                       (unread next-ch)
+                       next-ch)))))
 
 (defn- string-prefix?
   "Checks whether the character starts a string"
   [ch])
 
-(defn- vector-prefix ?
+(defn- list-prefix?
+  "Checks whether the char is the start of a list literal"
+  [ch])
+
+(defn- vector-prefix?
   "Checks whether the char is the start of a vector literal"
   [ch])
 
@@ -72,39 +76,47 @@ nil if the end of stream has been reached")
   "Advances the reader to the end of a line. Returns the reader"
   [reader]
   (let [ch (read-char reader)]
-    (if (or (= ch \n) (= ch r) (nil? ch))
+    (if (or (= ch \n) (= ch \r) (nil? ch))
       reader
       (recur reader))))
 
 (defn read-number
-  [reader])
+  [reader initch])
 
 (defn read-string
-  [reader])
+  [reader initch])
+
+
+(defn read-list
+  [reader initch is-recursive])
 
 (defn read-vector
-  [reader])
+  [reader initch is-recursive])
 
 (defn read-map
-  [reader])
+  [reader initch is-recursive])
 
 (defn read-symbol
-  [reader])
+  [reader initch is-recursive])
+
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
-Returns nil if the reader did not contain any forms."
-  [reader]
-  (let [ch (peek reader)] 
+Returns sentinel if the reader did not contain any forms."
+  [reader eof-is-error sentinel is-recursive]
+  (let [ch read-char] 
     (if (not (nil? ch))
       (cond
-       (whitespace? ch) (do (read-char reader) (recur reader))
+       (whitespace? ch) (recur reader)
        (comment-prefix? ch) (recur (skip-line reader))
-       (number-literal? reader) (read-number reader)
-       (string-prefix? ch) (read-string reader)
-       (vector-prefix? ch) (read-vector reader)
-       (map-prefix? ch) (read-map reader)
-       :default (read-symbol reader)))))
+       (number-literal? reader) (read-number reader ch)
+       (string-prefix? ch) (read-string reader ch)
+       (list-prefix? ch) (read-list reader ch is-recursive)
+       (vector-prefix? ch) (read-vector reader ch is-recursive)
+       (map-prefix? ch) (read-map reader ch is-recursive)
+       :default (read-symbol reader ch)))
+    sentinel))
+
 
 (defn read-all
   "Reads a lazy sequence of objects from a reader."
