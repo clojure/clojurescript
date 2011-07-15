@@ -1,0 +1,67 @@
+/* TwitterBuzz: A ClojureScript Demo */
+
+/* Default Tags */
+h1 { font-size: 24px; }
+h2 { font-size: 20px; }
+p { font-size: 12px; }
+
+/* General Structure */
+section#header-inner, footer, section#status-bar, section#main {
+  width: 960px;
+  margin: 0 auto;
+}
+
+/* Header */
+header {
+  height: 80px;
+  border-bottom: 1px solid #ccc;
+}
+
+#header-inner h1 {
+  padding-top: 30px;
+}
+
+/* Status Bar */
+section#status-bar-wrap {
+  padding: 10px 0;
+  height: 30px;
+  border-bottom: 1px solid #ccc;
+}
+
+section#status-bar {
+}
+
+section#status-bar span.tweet-status {
+  float: right;
+  padding: 4px 7px 4px 7px;
+  margin-right: 10px;
+  border: 1px solid #ddd;
+  background-color: #e7e7e7;
+}
+section#status-bar a.reset-search {
+  float: right;
+  padding-top: 5px;
+}
+
+/* Main Body */
+#main-wrap {
+  border-bottom: 1px solid #ccc;
+}
+
+#network {
+  width: 680px;
+  height: 680px;
+  padding: 10px 10px 0 0;
+  float: left;
+}
+
+#leaderboard {
+  width: 239px;
+  height: 680px;
+  float: left;
+  border-left: 1px solid #ccc;
+  padding: 10px;
+}
+
+/* Utilities */
+.clear {clear: both;}
