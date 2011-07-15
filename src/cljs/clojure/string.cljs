@@ -1,6 +1,5 @@
-(ns cljs.string
-  ;; TODO pending refer-clojure exclude support
-  #_(:refer-clojure :exclude [replace reverse])
+(ns clojure.string
+  (:refer-clojure :exclude [replace reverse])
   (:require [goog.string :as gstring]
             [goog.string.StringBuffer :as gstringbuf]))
 
@@ -8,8 +7,7 @@
   [coll]
   (reduce conj () coll))
 
-;; TODO rename to reverse
-(defn str-reverse
+(defn reverse
   "Returns s with its characters reversed."
   [s]
   (let [sb (gstring/StringBuffer.)]

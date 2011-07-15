@@ -142,7 +142,7 @@ does what?
 * commute
 * DONE comp
 * TODO comparator
-* TODO compare
+* DONE compare
 * DONE compare-and-set!
 * compile
 * DONE complement
@@ -190,7 +190,7 @@ For macros only, uses clojure.core version
 * DONE dissoc
 * dissoc!
 * TODO distinct
-* TODO distinct?
+* DONE distinct?
 * TODO doall
 * TODO dorun
 * TODO doseq
@@ -255,7 +255,7 @@ macro currently expands into extend call
 * gen-interface
 * DONE gensym
 * DONE get
-* TODO get-in
+* DONE get-in
 * TODO get-method
 * get-proxy-class
 * get-thread-bindings
@@ -295,7 +295,7 @@ does what?
 * TODO keep
 * TODO keep-indexed
 * TODO key
-* TODO keys
+* DONE keys
 * DONE keyword
 * DONE keyword?
 * TODO last
@@ -418,13 +418,13 @@ dunno about printing
 * TODO ratio?
 * TODO rational?
 * TODO rationalize
-* TODO re-find
+* DONE re-find
 dunno about regex
-* TODO re-groups
-* TODO re-matcher
-* TODO re-matches
-* TODO re-pattern
-* TODO re-seq
+* re-groups
+* re-matcher
+* DONE re-matches
+* DONE re-pattern
+* DONE re-seq
 * read
 * read-line
 * read-string
@@ -442,7 +442,7 @@ dunno about regex
 also specify - make a particular object extend a protocol
 * release-pending-sends
 * TODO rem
-* TODO remove
+* DONE remove
 * TODO remove-all-methods
 * TODO remove-method
 * remove-ns
@@ -466,7 +466,7 @@ ticket #8
 * DONE satisfies?
 as macro
 * DONE second
-* TODO select-keys
+* DONE select-keys
 * send
 * send-off
 * DONE seq
@@ -474,7 +474,7 @@ as macro
 * seque
 * TODO sequence
 * DONE sequential?
-* TODO set
+* DONE set
 * set-error-handler!
 * set-error-mode!
 * set-validator!
@@ -487,8 +487,8 @@ as macro
 * slurp
 * DONE some
 * DONE some-fn
-* TODO sort
-* TODO sort-by
+* DONE sort
+* DONE sort-by
 * TODO sorted-map
 * TODO sorted-map-by
 * TODO sorted-set
@@ -550,11 +550,11 @@ does what?
 * TODO underive
 * unquote
 * unquote-splicing
-* TODO update-in
+* DONE update-in
 * update-proxy
 * use
 * TODO val
-* TODO vals
+* DONE vals
 * var-get
 * var-set
 * var?

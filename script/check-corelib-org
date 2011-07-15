@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "These TODO items in docs/corelib.org may be done:" 1>&2
+(sed -n 's/.* TODO \(.*\)$/\1/p' docs/corelib.org; sed -n 's/^(defn \(\S*\).*/\1/p' src/cljs/cljs/core.cljs) | sort | uniq -d
