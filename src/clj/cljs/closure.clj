@@ -643,11 +643,11 @@
    The deps file for the current project will include third-party
    libraries."
   [opts & sources]
-  (let [disk-sources (map #(source-on-disk opts %) sources)
-        goog-deps-url (io/resource "goog/deps.js")]
-    (do (write-javascript opts {:url goog-deps-url
-                                :source (deps-file opts (filter #(= (:group %) :goog) disk-sources))})
-        (output-deps-file opts (remove #(= (:group %) :goog) disk-sources)))))
+  (let [disk-sources (map #(source-on-disk opts %) sources)]
+    (let [goog-deps (io/file (output-directory opts) "goog/deps.js")]
+      (do (mkdirs goog-deps)
+          (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
+          (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
 (comment
   
