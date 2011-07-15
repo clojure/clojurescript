@@ -1,0 +1,110 @@
+* Title
+** Clojure...
+*** Rocks
+** Javascript...
+*** Reaches
+** Announcing Clojure on Javascript
+*** ClojureScript
+* Problem statement
+** Javascript is the only programmable technology in key target environments
+*** i.e. the browser
+*** nothing will change that for years to come
+** and has the greatest reach in other key environments
+*** i.e. mobile
+** Javascript (the language) is not very robust
+*** Fewer good parts than bad parts
+*** Much convention and discipline required to avoid headaches
+*** Conventions differ between shops, libs
+** Ever increasing pressure to create richer applications in these environments
+*** requiring more, and larger, libraries
+**** ordinary minification doesn't scale up
+*** increasing requirements complexity
+**** can't add language or environment complexity on top
+* Rationale
+** Clojure is simpler, more powerful and more robust than JS
+** JS VMs getting faster and more sophisticated
+** Putting Clojure on JS empowers developers
+* Strategy
+** Compile (a substantial subset of) Clojure to Javascript source
+** Leverage best-of-breed JS approaches
+** Look beyond the browser
+** Non-objectives
+*** Complete Clojure
+*** Portable large applications
+*** Browser REPL demos etc
+** Target is production applications
+* Tactics
+** Clojure in Clojure
+*** Written in Clojure and itself
+** Clojure on Closure
+*** Google's JS toolkit
+* Demo
+** REPL
+** Compilation
+** Web app
+** CLI app?
+* Where we are at
+** What's there?
+*** Compiler
+*** REPL
+*** All the primitives
+*** Arity overloading
+*** Macros
+*** Seqs, maps, vectors, sets
+**** and supporting library
+**** callable maps, vectors, sets
+*** Symbols and keywords
+*** deftypes and protocols
+*** all the core abstractions as protocols
+*** destructuring
+*** 2500 lines of core libs!
+*** clojure.string and .set
+*** reader?
+** What's not (yet)?
+*** Full collection persistence
+*** Multimethods
+*** Hierarchy
+*** Rich numerics
+*** Testing framework
+*** Misc core lib
+** What won't be?
+*** things related to threads
+*** eval and runtime compilation
+*** structs, proxy, Java type stuff
+*** Runtime reification of:
+**** Vars
+**** Namespaces
+**** Protocols
+** On the fence
+*** optimizations
+**** chunks, transients
+*** agents (on webworkers?)
+*** unchecked
+** What's different
+*** no runtime Vars
+** It's alpha
+* Where we are going
+** This is Clojure's client story
+** This is Clojure's mobile story
+** This is Clojure's CLI scripting story
+* The Team - Clojure/core and friends
+** Aaron Bedra
+** Alan Dipert
+** Alex Redington
+** Bobby Calderwood
+** Brenton Ashworth
+** Chris Houser
+** Devin Walters
+** Eric Thorsen
+** Frank Failla
+** Michael Fogus
+** Jonathan Clagett
+** Jess Martin
+** Luke VanderHart
+** Chris Redinger
+** Stuart Halloway
+** Stuart Sierra
+** Tom Hickey
+* Participating
+** The Friday invite
+
