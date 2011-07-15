@@ -80,12 +80,58 @@ nil if the end of stream has been reached")
       reader
       (recur reader))))
 
+
+(def int-pattern (re-pattern "([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?"))
+(def ratio-pattern (re-pattern "([-+]?[0-9]+)/([0-9]+)"))
+(def float-pattern (re-pattern "([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?"))
+
+(defn- match-int
+  [s]
+  (let [[substr groups] (re-find int-pattern s)]
+    (if (nth groups 2)
+      0
+      (let [negate (if (= "-" (nth groups 1)) -1 1) 
+            [[n radix]] (cond
+                         (nth groups 3) [(nth groups 3) 10]
+                         (nth groups 4) [(nth groups 4) 16]
+                         (nth groups 5) [(nth groups 5) 8]
+                         (nth groups 7) [(nth groups 7) (goog.global/parseInt (nth groups 7))] 
+                         :default [nil nil])]
+        (if (nil? n)
+          nil
+          (* negate (goog.global/parseInt n radix)))))))
+
+(defn- match-ratio
+  [s]
+  (let [[substr groups] (re-find ratio-pattern s)
+        numinator (nth groups 1)
+        denominator (nth groups 2)]
+    (/ (goog.global/parseInt numinator) (goog.global/parseInt denominator))))
+
+(defn- match-float
+  [s]
+  (goog.global/parseFloat s))
+
+(defn- match-number
+  [s]
+  (cond
+   (re-matches int-pattern s) (match-int s)
+   (re-matches ratio-pattern s) (match-ratio s)
+   (re-matches float-pattern s) (match-float s)
+   :default (throw (str "Invalid number format [" s "]"))))
+
 (defn read-number
-  [reader initch])
+  [reader initch]
+  (loop [buffer (gstring/StringBuffer. initch)
+         ch (read-char reader)]
+    (if (or (nil? ch) (whitespace? ch) (macro? ch))
+      (do
+        (unread reader ch)
+        (match-number (.toString buffer)))
+      (recur buffer (read-char reader)))))
 
 (defn read-string
   [reader initch])
-
 
 (defn read-list
   [reader initch is-recursive])
@@ -116,7 +162,6 @@ Returns sentinel if the reader did not contain any forms."
        (map-prefix? ch) (read-map reader ch is-recursive)
        :default (read-symbol reader ch)))
     sentinel))
-
 
 (defn read-all
   "Reads a lazy sequence of objects from a reader."
