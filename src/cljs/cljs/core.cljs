@@ -2495,6 +2495,47 @@ reduces them without incurring seq initialization"
 (def fixture1 1)
 (def fixture2 2)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
+
+(deftype Delay [f state]
+  IDeref
+  (-deref [_]
+    (when-not @state
+      (swap! state f))
+    @state))
+
+(defn delay
+  "Takes a body of expressions and yields a Delay object that will
+  invoke the body only the first time it is forced (with force or deref/@), and
+  will cache the result and return it on all subsequent force
+  calls."
+  [& body]
+  (Delay. (fn [] (apply identity body)) (atom nil)))
+
+(defn delay?
+  "returns true if x is a Delay created with delay"
+  [x] (instance? cljs.core.Delay x))
+
+(defn force
+  "If x is a Delay, returns the (possibly cached) value of its expression, else returns x"
+  [x]
+  (if (delay? x)
+    (deref x)
+    x))
+
+(comment
+
+  (def _ (delay (str (goog.global.Date.))))
+  (str (goog.global.Date.))
+  (deref _)
+  (deref _)
+
+  (delay? _)
+  (delay "foo")
+  (force _)
+
+  )
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
 (defn test-stuff []
