@@ -251,6 +251,11 @@ nil if the end of stream has been reached")
    (keyword? f) {f true}
    :else f))
 
+(defn wrapping-reader
+  [sym]
+  (fn [rdr _]
+    (list sym (read rdr true nil true))))
+
 (defn read-meta
   [rdr _]
   (let [m (desugar-meta (read rdr true nil true))]
@@ -265,8 +270,8 @@ nil if the end of stream has been reached")
      { \" read-string
        \: read-keyword
        \; not-implemented ;; never hit this
-       \' not-implemented
-       \@ not-implemented
+       \' (wrapping-reader 'quote)
+       \@ (wrapping-reader 'deref)
        \^ read-meta
        \` not-implemented
        \~ not-implemented
