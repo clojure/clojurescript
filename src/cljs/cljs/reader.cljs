@@ -62,6 +62,14 @@ nil if the end of stream has been reached")
 
 (declare read)
 
+(defn- skip-line
+  "Advances the reader to the end of a line. Returns the reader"
+  [reader]
+  (let [ch (read-char reader)]
+    (if (or (= ch \n) (= ch r) (nil? ch))
+      reader
+      (recur reader))))
+
 (defn read-number
   [reader])
 
@@ -84,7 +92,7 @@ Returns nil if the reader did not contain any forms."
   (if (not (nil? (peek reader)))
     (cond
      (whitespace? reader) (do (read-char reader) (recur reader))
-     (comment? reader) nil ;; TODO: burn through until end of comment
+     (comment? reader) (recur (skip-line reader))
      (number-literal? reader) (read-number reader)
      (string-literal? reader) (read-string reader)
      (vector-literal? reader) (read-vector reader)
