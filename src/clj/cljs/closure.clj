@@ -619,6 +619,11 @@
                       "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
   )
 
+(defn add-header [{:keys [hashbang target]} js]
+  (if (= :nodejs target)
+    (str "#!" (or hashbang "/usr/bin/nodejs") "\n" js)
+    js))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
@@ -632,6 +637,7 @@
     (if (:optimizations opts)
       (->> js-sources
            (apply optimize opts)
+           (add-header opts)
            (output-one-file opts))
       (apply output-unoptimized opts js-sources))))
 
