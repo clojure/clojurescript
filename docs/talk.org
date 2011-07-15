@@ -1,7 +1,7 @@
 * Title
-** Clojure...
+** Clojure
 *** Rocks
-** Javascript...
+** Javascript
 *** Reaches
 ** Announcing Clojure on Javascript
 *** ClojureScript
@@ -21,7 +21,7 @@
 *** increasing requirements complexity
 **** can't add language or environment complexity on top
 * Rationale
-** Clojure is simpler, more powerful and more robust than JS
+** Clojure is arguably simpler, more powerful and more robust than JS
 ** JS VMs getting faster and more sophisticated
 ** Putting Clojure on JS empowers developers
 * Strategy
@@ -34,10 +34,13 @@
 *** Browser REPL demos etc
 ** Target is production applications
 * Tactics
-** Clojure in Clojure
+** Clojure[Script] in Clojure
 *** Written in Clojure and itself
 ** Clojure on Closure
 *** Google's JS toolkit
+* Clojure[Script] in Clojure
+* Google Closure
+** some subset of my gclosure lightning talk
 * Demo
 ** REPL
 ** Compilation
@@ -60,8 +63,11 @@
 *** 2500 lines of core libs!
 *** clojure.string and .set
 *** reader?
+*** Full participation with Google Closure library
+**** ns mechanism maps to provide/require
 ** What's not (yet)?
 *** Full collection persistence
+*** defrecord
 *** Multimethods
 *** Hierarchy
 *** Rich numerics
@@ -75,19 +81,22 @@
 **** Vars
 **** Namespaces
 **** Protocols
-** On the fence
+**** etc
+** TBD
 *** optimizations
 **** chunks, transients
 *** agents (on webworkers?)
 *** unchecked
 ** What's different
 *** no runtime Vars
+*** some in-function subsetting
+**** e.g. satisfies? is a macro, can't be mapped/applied
 ** It's alpha
 * Where we are going
 ** This is Clojure's client story
 ** This is Clojure's mobile story
 ** This is Clojure's CLI scripting story
-* The Team - Clojure/core and friends
+* The Team thus far - Clojure/core and friends
 ** Aaron Bedra
 ** Alan Dipert
 ** Alex Redington
@@ -106,5 +115,7 @@
 ** Stuart Sierra
 ** Tom Hickey
 * Participating
+** This is a Clojure dev project
+*** all with Clojure CAs welcome to participate
 ** The Friday invite
 
