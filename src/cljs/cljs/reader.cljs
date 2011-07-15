@@ -29,11 +29,17 @@ nil if the end of stream has been reached")
   "Creates a StringPushbackReader from a given string"
   (StringPushbackReader. (atom s)))
 
+;; Helper functions
+
 (defn- whitespace?
-  "Checks whether the reader is on a whitespace character."
-  [reader]
-  (let [ch (peek reader)]
-    (or (gstring/isBreakingWhitespace ch) (= \, ch))))
+  "Checks whether a given character is whitespace"
+  [ch]
+  (or (gstring/isBreakingWhitespace ch) (= \, ch)))
+
+(defn- numeric?
+  "Checks whether a given character is numeric"
+  [ch]
+  (gstring/isNumeric ch))
 
 (defn- comment?
   "Checks whether the reader is at the beginning of a comment"
@@ -44,9 +50,9 @@ nil if the end of stream has been reached")
   "Checks whether the reader is at the first digit of a number"
   [reader]
   (let [ch (peek reader)]
-    (or (gstring/isNumeric ch)
+    (or (numeric? ch)
         (and (or (= \+ ch) (= \- ch))
-             (gstring/isNumeric (peek reader 2))))))
+             (numeric? (peek reader 2))))))
 
 (defn- string-literal?
   "Checks whether the reader is at the first character of a string literal"
@@ -91,7 +97,7 @@ Returns nil if the reader did not contain any forms."
   [reader]
   (if (not (nil? (peek reader)))
     (cond
-     (whitespace? reader) (do (read-char reader) (recur reader))
+     (whitespace? (peek reader)) (do (read-char reader) (recur reader))
      (comment? reader) (recur (skip-line reader))
      (number-literal? reader) (read-number reader)
      (string-literal? reader) (read-string reader)
