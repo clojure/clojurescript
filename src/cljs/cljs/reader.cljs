@@ -301,8 +301,3 @@ Returns sentinel if the reader did not contain any forms."
      (macros ch) ((macros ch) reader ch)
      (number-literal? reader ch) (read-number reader ch)
      :default (read-symbol reader ch))))
-
-(defn read-all
-  "Reads a lazy sequence of objects from a reader."
-  [reader]
-  (lazy-seq (cons (read reader) (read-all reader))))
