@@ -56,16 +56,24 @@ nil if the end of stream has been reached")
                        (unread next-ch)
                        next-ch)))))
 
-(defn- string-prefix?
-  "Checks whether the character starts a string"
-  [ch]
-  (= "\"" ch))
-
 (declare read macros dispatch-macros)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn macro-terminating? [ch]
+  (and (not= ch "#") (not= ch "\'") (contains? macros ch)))
+
+(defn read-token
+  [rdr initch]
+  (loop [sb (gsb/StringBuffer. initch)
+         ch (read-char rdr)]
+    (if (or (nil? ch)
+            (whitespace? ch)
+            (macro-terminating? ch))
+      (do (unread rdr ch) (.toString gsb))
+      (recur (do (.append sb ch) sb) (read-char rdr)))))
 
 (defn- skip-line
   "Advances the reader to the end of a line. Returns the reader"
@@ -201,9 +209,9 @@ nil if the end of stream has been reached")
 
 (defn read-number
   [reader initch]
-  (loop [buffer (gstring/StringBuffer. initch)
+  (loop [buffer (gsb/StringBuffer. initch)
          ch (read-char reader)]
-    (if (or (nil? ch) (whitespace? ch) (macro? ch))
+    (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
       (do
         (unread reader ch)
         (match-number (.toString buffer)))
@@ -211,7 +219,7 @@ nil if the end of stream has been reached")
 
 (defn read-string
   [reader _]
-  (loop [buffer (gstring/StringBuffer.)
+  (loop [buffer (gsb/StringBuffer.)
          ch (read-char reader)]
     (cond
      (nil? ch) (throw "EOF while reading string")
@@ -220,7 +228,20 @@ nil if the end of stream has been reached")
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-symbol
-  [reader initch is-recursive])
+  [reader initch]
+  (let [token (read-token reader initch)]
+    (if (gstring/contains token "/")
+      (symbol (subs token 0 (.indexOf token "/"))
+              (subs (inc (.indexOf token "/")) (.length token)))
+      (symbol token))))
+
+(defn read-keyword
+  [reader initch]
+  (let [token (read-token reader (read-char reader))]
+    (if (gstring/contains token "/")
+      (keyword (subs token 0 (.indexOf token "/"))
+              (subs (inc (.indexOf token "/")) (.length token)))
+      (keyword token))))
 
 (defn desugar-meta
   [f]
@@ -240,34 +261,25 @@ nil if the end of stream has been reached")
         (with-meta o (merge (meta o) m))
         (throw "Metadata can only be applied to IWithMetas")))))
 
-#_(defn read-token
-  [rdr initch]
-  (let [sb (gsb/StringBuffer. initch)]
-    (loop [ch (read-char rdr)]
-      (if (or (nil? ch)
-              (whitespace? ch)
-              (macro-terminating? ch))
-        (do (unread rdr ch) s)
-        (recur (.append sb ch))))))
-
 (def macros
-  { \" read-string
-    \; not-implemented ;; never hit this
-    \' not-implemented
-    \@ not-implemented
-    \^ read-meta
-    \` not-implemented
-    \~ not-implemented
-    \( read-list
-    \) read-unmatched-delimiter
-    \[ read-vector
-    \] read-unmatched-delimiter
-    \{ read-map
-    \} read-unmatched-delimiter
-    \\ read-char
-    \% not-implemented
-    \# read-dispatch
-    })
+     { \" read-string
+       \: read-keyword
+       \; not-implemented ;; never hit this
+       \' not-implemented
+       \@ not-implemented
+       \^ read-meta
+       \` not-implemented
+       \~ not-implemented
+       \( read-list
+       \) read-unmatched-delimiter
+       \[ read-vector
+       \] read-unmatched-delimiter
+       \{ read-map
+       \} read-unmatched-delimiter
+       \\ read-char
+       \% not-implemented
+       \# read-dispatch
+       })
 
 (def dispatch-macros
   {"{" read-set})
