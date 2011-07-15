@@ -133,6 +133,28 @@ nil if the end of stream has been reached")
    (re-matches float-pattern s) (match-float s)
    :default (throw (str "Invalid number format [" s "]"))))
 
+(def escape-char-map {\t "\t"
+                      \r "\r"
+                      \n "\n"
+                      \\ \\
+                      \" \"
+                      \b "\b"
+                      \f "\f"})
+
+(defn read-unicode-char
+  [reader initch]
+  (throw "Unicode characters not supported by reader (yet)"))
+
+(defn escape-char
+  [buffer reader]
+  (let [ch (read-char reader)
+        mapresult (get escape-char-map ch)]
+    (if mapresult
+      mapresult
+      (if (or (= \u ch) (numeric? ch))
+        (read-unicode-char reader ch)
+        (throw (str "Unsupported escape charater: \\" ch))))))
+
 (defn read-past
   "Read until first character that doesn't match pred, returning
    char."
@@ -191,10 +213,17 @@ nil if the end of stream has been reached")
       (do
         (unread reader ch)
         (match-number (.toString buffer)))
-      (recur buffer (read-char reader)))))
+      (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-string
-  [reader initch])
+  [reader _]
+  (loop [buffer (gstring/StringBuffer.)
+         ch (read-char reader)]
+    (cond
+     (nil? ch) (throw "EOF while reading string")
+     (= "\\" ch) (recur (escape-char buffer reader) (read-char reader))
+     (= \" ch) (.toString buffer)
+     :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-symbol
   [reader initch is-recursive])
