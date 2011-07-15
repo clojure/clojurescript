@@ -8,7 +8,7 @@
 
 (ns cljs.reader
   (:require [goog.string :as gstring
-             goog.string.StringBuffer :as gstringbuf]))
+             goog.string.StringBuffer :as gsb]))
 
 (defprotocol PushbackReader
   (read-char [reader] "Returns the next char from the Reader,
@@ -47,11 +47,6 @@ nil if the end of stream has been reached")
   [ch]
   (= \; ch))
 
-(defn- meta-prefix?
-  "Checks whether the character begins metadata"
-  [ch]
-  (= \^ ch))
-
 (defn- number-literal?
   "Checks whether the reader is at the start of a number literal"
   [reader ch]
@@ -65,22 +60,7 @@ nil if the end of stream has been reached")
   "Checks whether the character starts a string"
   [ch])
 
-(defn- list-prefix?
-  "Checks whether the char is the start of a list literal"
-  [ch]
-  (= ch "("))
-
-(defn- vector-prefix?
-  "Checks whether the char is the start of a vector literal"
-  [ch]
-  (= ch "["))
-
-(defn- map-prefix?
-  "Checks whether the char is the start of a map literal"
-  [ch]
-  (= ch "{"))
-
-(declare read rmacros)
+(declare read macros dispatch-macros)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read helpers
@@ -105,12 +85,12 @@ nil if the end of stream has been reached")
 
 (defn read-delimited-list
   [delim rdr recursive?]
-  (loop [a ()]
+  (loop [a []]
     (let [ch (read-past whitespace? rdr)]
       (when-not ch (throw "EOF"))
       (if (= delim ch)
         a
-        (if-let [macrofn (get rmacros ch)]
+        (if-let [macrofn (get dispatch-macros ch)]
           (let [mret (macrofn rdr ch)]
             (recur (if (= mret rdr) a (conj a mret))))
           (do
@@ -122,13 +102,29 @@ nil if the end of stream has been reached")
 ;; data structure readers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn not-implemented
+  [rdr ch]
+  (throw (str "Reader for " ch " not implemented yet")))
+
+(defn read-dispatch
+  [rdr _]
+  (let [ch (read-char rdr)
+        dm (get dispatch-macros ch)]
+    (if dm
+      (dm rdr _)
+      (throw (str "No dispatch macro for " ch)))))
+
+(defn read-unmatched-delimiter
+  [rdr ch]
+  (throw (str "Unmached delimiter " ch)))
+
 (defn read-list
   [rdr _]
-  (read-delimited-list ")" rdr true))
+  (apply list (read-delimited-list ")" rdr true)))
 
 (defn read-vector
   [rdr _]
-  (vec (read-delimited-list "]" rdr true)))
+  (read-delimited-list "]" rdr true))
 
 (defn read-map
   [rdr _]
@@ -141,7 +137,26 @@ nil if the end of stream has been reached")
   [rdr _]
   (set (read-delimited-list "}" rdr true)))
 
-(def rmacros
+(def macros
+  { \" read-string
+    \; read-comment
+    \' not-implemented
+    \@ not-implemented
+    \^ read-meta
+    \` not-implemented
+    \~ not-implemented
+    \( read-list
+    \) read-unmatched-delimiter
+    \[ read-vector
+    \] read-unmatched-delimiter
+    \{ read-map
+    \} read-unmatched-delimiter
+    \\ read-char
+    \% not-implemented
+    \# read-dispatch
+    })
+
+(def dispatch-macros
   {"{" read-set})
 
 (defn read-number
@@ -171,6 +186,16 @@ nil if the end of stream has been reached")
         (with-meta o (merge (meta o) m))
         (throw "Metadata can only be applied to IWithMetas")))))
 
+#_(defn read-token
+  [rdr initch]
+  (let [sb (gsb/StringBuffer. initch)]
+    (loop [ch (read-char rdr)]
+      (if (or (nil? ch)
+              (whitespace? ch)
+              (macro-terminating? ch))
+        (do (unread rdr ch) s)
+        (recur (.append sb ch))))))
+
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
 Returns sentinel if the reader did not contain any forms."
@@ -180,12 +205,7 @@ Returns sentinel if the reader did not contain any forms."
      (nil? ch) sentinel
      (whitespace? ch) (recur reader eof-is-error sentinel is-recursive)
      (comment-prefix? ch) (recur (skip-line reader) eof-is-error sentinel is-recursive)
-     (number-literal? reader) (read-number reader ch)
-     (string-prefix? ch) (read-string reader ch)
-     (list-prefix? ch) (read-list reader ch)
-     (vector-prefix? ch) (read-vector reader ch)
-     (map-prefix? ch) (read-map reader ch)
-     (meta-prefix? ch) (read-meta reader ch)
+     (macros ch) ((macros ch) reader ch)
      :default (read-symbol reader ch))))
 
 
