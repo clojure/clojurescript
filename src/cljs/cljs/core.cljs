@@ -2497,12 +2497,20 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
 
+(defprotocol IRealized
+  (-realized? [d]))
+
 (deftype Delay [f state]
+  
   IDeref
   (-deref [_]
     (when-not @state
       (swap! state f))
-    @state))
+    @state)
+
+  IRealized
+  (-realized? [d]
+    (not (nil? @state))))
 
 (defn delay
   "Takes a body of expressions and yields a Delay object that will
@@ -2523,13 +2531,19 @@ reduces them without incurring seq initialization"
     (deref x)
     x))
 
+(defn realized? [d]
+  "If d is a Delay, will return true if the delay fn has been realized, returns false if it has not,
+  returns nil if d is not a Delay"
+  (-realized? d))
+
 (comment
 
   (def _ (delay (str (goog.global.Date.))))
+  (realized? _)
   (str (goog.global.Date.))
   (deref _)
+  (realized? _)
   (deref _)
-
   (delay? _)
   (delay "foo")
   (force _)
