@@ -15,6 +15,7 @@
 
 (defn show [x]
   (.info log (debug/expose x)))
+;; remove this logging code once we can see results on the page
 
 (def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
 
@@ -23,8 +24,28 @@
          payload
          callback))
 
+;; From Chouser - We need something like this in core.
+(defn js-obj-seq [o]
+  (for [k (js-keys o)] [(keyword k) (aget o k)]))
+
+(defn obj->map
+  "Convert a JavaScript object into a Clojure map."
+  [o]
+  (into {} (js-obj-seq o)))
+
+(def state (atom {:max-id 1 :functions []}))
+
 (defn my-callback [json]
-  (show json))
+  (let [result-map (obj->map json)
+        max-id (:max_id result-map)
+        tweets (filter #(> (:id %) (:max-id @state))
+                       (map obj->map (:results result-map)))]
+    ;; tweets should always be the newest tweets.
+    (do (show (str (count tweets)))
+        (swap! state (fn [old] (assoc old :max-id max-id)))
+        (show (str (:max-id @state)))
+        ;; Call registered functions here
+        )))
 
 (retrieve (.strobj {"q" "clojure"}) my-callback)
 
