@@ -632,7 +632,7 @@
                      (apply add-dependencies opts compiled)
                      (add-dependencies opts compiled))
         js-sources (if (= :nodejs (:target opts))
-                     (concat js-sources [(-compile "src/cljs/cljs/nodecli.cljs" opts)])
+                     (concat js-sources [(-compile (io/resource "cljs/nodecli.cljs") opts)])
                      js-sources)]
     (if (:optimizations opts)
       (->> js-sources
@@ -647,7 +647,6 @@
                     (defn ^{:export greet} greet [n] (str "Hola " n))
                     (defn ^:export sum [xs] 42)]
                   {:optimizations :simple :flags #{:pretty-print}}))
-
 
   ;; build a project with optimizations
   (build "samples/hello/src" {:optimizations :advanced})
