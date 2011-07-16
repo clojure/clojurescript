@@ -627,7 +627,10 @@
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
-  (let [compiled (-compile source opts)
+  (let [opts (if (= :nodejs (:target opts))
+               (merge {:optimizations :simple} opts)
+               opts)
+        compiled (-compile source opts)
         js-sources (if (coll? compiled)
                      (apply add-dependencies opts compiled)
                      (add-dependencies opts compiled))
