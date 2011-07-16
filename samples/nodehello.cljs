@@ -9,8 +9,7 @@
 ; Compile this using a command line like:
 
 CLOJURESCRIPT_HOME=".../clojurescript/" \
-  bin/cljsc samples/nodehello.cljs \
-  {:optimizations :simple :pretty-print true :target :nodejs} \
+  bin/cljsc samples/nodehello.cljs {:target :nodejs} \
   > out/nodehello.js
 
 ; Then run using:

@@ -75,9 +75,11 @@
 (defn set-options
   "TODO: Add any other options that we would like to support."
   [opts ^CompilerOptions compiler-options]
-  (doseq [flag (:flags opts)]
-    (case flag
-          :pretty-print (set! (. compiler-options prettyPrint) true))))
+  (when (contains? opts :pretty-print)
+    (set! (.prettyPrint compiler-options) (:pretty-print opts)))
+  (when (contains? opts :print-input-delimiter)
+    (set! (.printInputDelimiter compiler-options)
+      (:print-input-delimiter opts))))
 
 (defn make-options
   "Create a CompilerOptions object and set options from opts map."
@@ -88,9 +90,6 @@
                     :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
         compiler-options (doto (CompilerOptions.)
                            (.setCodingConvention (ClosureCodingConvention.)))]
-    (when (:pretty-print opts)
-      (set! (.printInputDelimiter compiler-options) true)
-      (set! (.prettyPrint compiler-options) true))
     (do (.setOptionsForCompilationLevel level compiler-options)
         (set-options opts compiler-options)
         compiler-options)))
@@ -483,7 +482,7 @@
   ;; optimize a project
   (println (->> (-compile "samples/hello/src" {})
                 (apply add-dependencies {})
-                (apply optimize {:optimizations :simple :flags #{:pretty-print}})))
+                (apply optimize {:optimizations :simple :pretty-print yes})))
   )
 
 ;; Output
