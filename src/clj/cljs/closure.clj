@@ -105,7 +105,12 @@
 
   TODO: Implement options described above."
   [opts]
-  (CommandLineRunner/getDefaultExterns))
+  (let [default (CommandLineRunner/getDefaultExterns)]
+    (if (= :nodejs (:target opts))
+      (let [path "cljs/nodejs_externs.js"]
+        (cons (js-source-file path (io/input-stream (io/resource path)))
+              default)) 
+      default)))
 
 (defn ^com.google.javascript.jscomp.Compiler make-closure-compiler []
   (let [compiler (com.google.javascript.jscomp.Compiler.)]
