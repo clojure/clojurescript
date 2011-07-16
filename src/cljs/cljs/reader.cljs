@@ -7,8 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.reader
-  (:require [goog.string :as gstring
-             goog.string.StringBuffer :as gsb]))
+  (:require [goog.string :as gstring]))
 
 (defprotocol PushbackReader
   (read-char [reader] "Returns the next char from the Reader,
@@ -49,23 +48,31 @@ nil if the end of stream has been reached")
 
 (defn- number-literal?
   "Checks whether the reader is at the start of a number literal"
-  [reader ch]
-  (or (numeric? ch)
-      (and (or (= \+ ch) (= \- ch))
+  [reader initch]
+  (or (numeric? initch)
+      (and (or (= \+ initch) (= \- initch))
            (numeric? (let [next-ch (read-char reader)]
                        (unread next-ch)
                        next-ch)))))
-
-(defn- string-prefix?
-  "Checks whether the character starts a string"
-  [ch]
-  (= "\"" ch))
 
 (declare read macros dispatch-macros)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn macro-terminating? [ch]
+  (and (not= ch "#") (not= ch \') (contains? macros ch)))
+
+(defn read-token
+  [rdr initch]
+  (loop [sb (gstring/StringBuffer. initch)
+         ch (read-char rdr)]
+    (if (or (nil? ch)
+            (whitespace? ch)
+            (macro-terminating? ch))
+      (do (unread rdr ch) (. sb (toString)))
+      (recur (do (.append sb ch) sb) (read-char rdr)))))
 
 (defn- skip-line
   "Advances the reader to the end of a line. Returns the reader"
@@ -81,23 +88,24 @@ nil if the end of stream has been reached")
 
 (defn- match-int
   [s]
-  (let [[substr groups] (re-find int-pattern s)]
+  (let [groups (re-find int-pattern s)]
     (if (nth groups 2)
       0
       (let [negate (if (= "-" (nth groups 1)) -1 1) 
-            [[n radix]] (cond
-                         (nth groups 3) [(nth groups 3) 10]
-                         (nth groups 4) [(nth groups 4) 16]
-                         (nth groups 5) [(nth groups 5) 8]
-                         (nth groups 7) [(nth groups 7) (goog.global/parseInt (nth groups 7))] 
-                         :default [nil nil])]
+            [n radix] (cond
+                       (nth groups 3) [(nth groups 3) 10]
+                       (nth groups 4) [(nth groups 4) 16]
+                       (nth groups 5) [(nth groups 5) 8]
+                       (nth groups 7) [(nth groups 7) (goog.global/parseInt (nth groups 7))] 
+                       :default [nil nil])]
         (if (nil? n)
           nil
           (* negate (goog.global/parseInt n radix)))))))
 
+
 (defn- match-ratio
   [s]
-  (let [[substr groups] (re-find ratio-pattern s)
+  (let [groups (re-find ratio-pattern s)
         numinator (nth groups 1)
         denominator (nth groups 2)]
     (/ (goog.global/parseInt numinator) (goog.global/parseInt denominator))))
@@ -203,10 +211,10 @@ nil if the end of stream has been reached")
   [reader initch]
   (loop [buffer (gstring/StringBuffer. initch)
          ch (read-char reader)]
-    (if (or (nil? ch) (whitespace? ch) (macro? ch))
+    (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
       (do
         (unread reader ch)
-        (match-number (.toString buffer)))
+        (match-number (. buffer (toString))))
       (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-string
@@ -216,11 +224,24 @@ nil if the end of stream has been reached")
     (cond
      (nil? ch) (throw "EOF while reading string")
      (= "\\" ch) (recur (escape-char buffer reader) (read-char reader))
-     (= \" ch) (.toString buffer)
+     (= \" ch) (. buffer (toString))
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-symbol
-  [reader initch is-recursive])
+  [reader initch]
+  (let [token (read-token reader initch)]
+    (if (gstring/contains token "/")
+      (symbol (subs token 0 (.indexOf token "/"))
+              (subs (inc (.indexOf token "/")) (.length token)))
+      (symbol token))))
+
+(defn read-keyword
+  [reader initch]
+  (let [token (read-token reader (read-char reader))]
+    (if (gstring/contains token "/")
+      (keyword (subs token 0 (.indexOf token "/"))
+              (subs (inc (.indexOf token "/")) (.length token)))
+      (keyword token))))
 
 (defn desugar-meta
   [f]
@@ -229,6 +250,11 @@ nil if the end of stream has been reached")
    (string? f) {:tag f}
    (keyword? f) {f true}
    :else f))
+
+(defn wrapping-reader
+  [sym]
+  (fn [rdr _]
+    (list sym (read rdr true nil true))))
 
 (defn read-meta
   [rdr _]
@@ -240,34 +266,25 @@ nil if the end of stream has been reached")
         (with-meta o (merge (meta o) m))
         (throw "Metadata can only be applied to IWithMetas")))))
 
-#_(defn read-token
-  [rdr initch]
-  (let [sb (gsb/StringBuffer. initch)]
-    (loop [ch (read-char rdr)]
-      (if (or (nil? ch)
-              (whitespace? ch)
-              (macro-terminating? ch))
-        (do (unread rdr ch) s)
-        (recur (.append sb ch))))))
-
 (def macros
-  { \" read-string
-    \; not-implemented ;; never hit this
-    \' not-implemented
-    \@ not-implemented
-    \^ read-meta
-    \` not-implemented
-    \~ not-implemented
-    \( read-list
-    \) read-unmatched-delimiter
-    \[ read-vector
-    \] read-unmatched-delimiter
-    \{ read-map
-    \} read-unmatched-delimiter
-    \\ read-char
-    \% not-implemented
-    \# read-dispatch
-    })
+     { \" read-string
+       \: read-keyword
+       \; not-implemented ;; never hit this
+       \' (wrapping-reader 'quote)
+       \@ (wrapping-reader 'deref)
+       \^ read-meta
+       \` not-implemented
+       \~ not-implemented
+       \( read-list
+       \) read-unmatched-delimiter
+       \[ read-vector
+       \] read-unmatched-delimiter
+       \{ read-map
+       \} read-unmatched-delimiter
+       \\ read-char
+       \% not-implemented
+       \# read-dispatch
+       })
 
 (def dispatch-macros
   {"{" read-set})
@@ -276,15 +293,11 @@ nil if the end of stream has been reached")
   "Reads the first object from a PushbackReader. Returns the object read.
 Returns sentinel if the reader did not contain any forms."
   [reader eof-is-error sentinel is-recursive]
-  (let [ch (read-char reader)] 
+  (let [ch (read-char reader)]
     (cond
      (nil? ch) sentinel
      (whitespace? ch) (recur reader eof-is-error sentinel is-recursive)
      (comment-prefix? ch) (recur (skip-line reader) eof-is-error sentinel is-recursive)
      (macros ch) ((macros ch) reader ch)
+     (number-literal? reader ch) (read-number reader ch)
      :default (read-symbol reader ch))))
-
-(defn read-all
-  "Reads a lazy sequence of objects from a reader."
-  [reader]
-  (lazy-seq (cons (read reader) (read-all reader))))
