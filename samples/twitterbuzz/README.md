@@ -1,12 +1,10 @@
-ClojureScript "TwitterBuzz" Demo
+# ClojureScript "TwitterBuzz" Demo
 
-One-time Setup
-==============
+## One-time Setup
 
 See https://github.com/clojurescript/clojurescript/wiki/Quick-Start
 
-Run in Development Mode
-=======================
+## Run in Development Mode
 
 Compile the demo:
 
@@ -14,12 +12,11 @@ Compile the demo:
 
 After running the above command, open index.html.
 
-Compile in Development Mode with the REPL (Faster)
-==================================================
+## Compile in Development Mode with the REPL (Faster)
 
 * Run `script/repl`
   * To run it from Emacs, `C-x d` and nav to the `clojurescript` directory
-  * `M-x set-variable inferior-lisp-program
+  * `M-x set-variable inferior-lisp-program`
     * Set to `"script/repl"`
   * `M-x run-lisp`
 
@@ -34,7 +31,6 @@ The reason we set the `:output-dir` is because the `index.html` script tag is sp
 
 * See `cljs.closure` source for more compilation examples.
 
-Run in Production Mode
-======================
+## Run in Production Mode
 
 See https://github.com/clojurescript/clojurescript/wiki/Quick-Start for instructions on how to compile with 'advanced' mode.
