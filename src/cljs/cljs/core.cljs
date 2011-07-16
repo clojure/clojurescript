@@ -126,6 +126,9 @@
 (defprotocol IPrintable
   (-pr-seq [o opts]))
 
+(defprotocol IRealized
+  (-realized? [d]))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn identical? [x y]
   "Tests if 2 arguments are the same object"
@@ -2525,9 +2528,6 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
 
-(defprotocol IRealized
-  (-realized? [d]))
-
 (deftype Delay [f state]
   
   IDeref
@@ -2559,10 +2559,11 @@ reduces them without incurring seq initialization"
     (deref x)
     x))
 
-(defn realized? [d]
+(defn realized?
   "If d is a Delay, will return true if the delay fn has been realized, returns false if it has not,
   returns nil if d is not a Delay"
-  (-realized? d))
+  [d]
+    (-realized? d))
 
 (comment
 
