@@ -61,7 +61,9 @@
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (str "Can't resolve: " %))
-                   ret)
+                   (if (.startsWith (name ret) "goog.global.")
+                     (symbol (subs (name ret) 12))
+                     ret))
         impl-map (loop [ret {} s impls]
                    (if (seq s)
                      (recur (assoc ret (resolve (first s)) (take-while seq? (next s)))

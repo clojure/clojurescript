@@ -62,9 +62,11 @@
 *** destructuring
 *** 2500 lines of core libs!
 *** clojure.string and .set
+*** regex
 *** reader?
 *** Full participation with Google Closure library
 **** ns mechanism maps to provide/require
+*** compile-file and compile-project
 ** What's not (yet)?
 *** Full collection persistence
 *** defrecord
@@ -118,4 +120,5 @@
 ** This is a Clojure dev project
 *** all with Clojure CAs welcome to participate
 ** The Friday invite
+** The Conj
 
