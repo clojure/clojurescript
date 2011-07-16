@@ -279,8 +279,8 @@
 (comment
   ;; compile a file in memory
   (-compile "samples/hello/src/hello/core.cljs" {})
-  ;; compile a file to disk - see file @ 'out/cljs/set.js'
-  (-compile (io/resource "cljs/set.cljs") {:output-file "cljs/set.js"})
+  ;; compile a file to disk - see file @ 'out/clojure/set.js'
+  (-compile (io/resource "clojure/set.cljs") {:output-file "clojure/set.js"})
   ;; compile a project
   (-compile (io/file "samples/hello/src") {})
   ;; compile a project with a custom output directory
@@ -434,9 +434,9 @@
   ;; only get cljs deps
   (cljs-dependencies {} ["goog.string" "cljs.core"])
   ;; get transative deps
-  (cljs-dependencies {} ["cljs.string"])
+  (cljs-dependencies {} ["clojure.string"])
   ;; don't get cljs.core twice
-  (cljs-dependencies {} ["cljs.core" "cljs.string"])
+  (cljs-dependencies {} ["cljs.core" "clojure.string"])
   )
 
 (defn add-dependencies
@@ -460,7 +460,7 @@
   (add-dependencies {} "goog.provide('test.app');\ngoog.require('goog.array');")
   (add-dependencies {} (str "goog.provide('test.app');\n"
                             "goog.require('goog.array');\n"
-                            "goog.require('cljs.set');"))
+                            "goog.require('clojure.set');"))
   ;; add dependencies with external lib
   (add-dependencies {:libs ["closure/library/third_party/closure"]}
                     (str "goog.provide('test.app');\n"
@@ -643,11 +643,11 @@
    The deps file for the current project will include third-party
    libraries."
   [opts & sources]
-  (let [disk-sources (map #(source-on-disk opts %) sources)
-        goog-deps-url (io/resource "goog/deps.js")]
-    (do (write-javascript opts {:url goog-deps-url
-                                :source (deps-file opts (filter #(= (:group %) :goog) disk-sources))})
-        (output-deps-file opts (remove #(= (:group %) :goog) disk-sources)))))
+  (let [disk-sources (map #(source-on-disk opts %) sources)]
+    (let [goog-deps (io/file (output-directory opts) "goog/deps.js")]
+      (do (mkdirs goog-deps)
+          (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
+          (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
 (comment
   
