@@ -1,5 +1,20 @@
 (ns twitterbuzz.core
-  (:require [goog.net.Jsonp :as jsonp]))
+  (:require [goog.net.Jsonp :as jsonp]
+            [goog.debug :as debug]
+            [goog.debug.FancyWindow :as fancy]
+            [goog.debug.Logger :as logger]))
+
+;; Temporary way to see results
+(def debug-window
+  (let [w (goog.debug.FancyWindow. "Twitterbuzz")
+        _ (.setEnabled w true)
+        _ (.init w)]
+    w))
+
+(def log (logger/getLogger "Twitterbuzz Logger"))
+
+(defn show [x]
+  (.info log (debug/expose x)))
 
 (def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
 
@@ -9,7 +24,7 @@
          callback))
 
 (defn my-callback [json]
-  (log json))
+  (show json))
 
 (retrieve (.strobj {"q" "clojure"}) my-callback)
 
