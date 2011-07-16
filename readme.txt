@@ -16,4 +16,6 @@ To compile a cljs script: ./bin/cljsc <path to .cljs file>
 
 Sample applications found in ./sample
 
-More information can be found on the ClojureScript wiki located at http://github.com/clojure/clojurescript/wiki/
+A "Quick Start" guide is available at https://github.com/clojure/clojurescript/wiki/Quick-Start
+
+More information can be found on the ClojureScript wiki located at https://github.com/clojure/clojurescript/wiki/
