@@ -2226,6 +2226,33 @@ reduces them without incurring seq initialization"
          ([x y z] (reduce #(conj %1 (%2 x y z)) [] fs))
          ([x y z & args] (reduce #(conj %1 (apply %2 x y z args)) [] fs))))))
 
+(defn dorun
+  "When lazy sequences are produced via functions that have side
+  effects, any effects other than those needed to produce the first
+  element in the seq do not occur until the seq is consumed. dorun can
+  be used to force any effects. Walks through the successive nexts of
+  the seq, does not retain the head and returns nil."
+  ([coll]
+   (when (seq coll)
+     (recur (next coll))))
+  ([n coll]
+   (when (and (seq coll) (pos? n))
+     (recur (dec n) (next coll)))))
+
+(defn doall
+  "When lazy sequences are produced via functions that have side
+  effects, any effects other than those needed to produce the first
+  element in the seq do not occur until the seq is consumed. doall can
+  be used to force any effects. Walks through the successive nexts of
+  the seq, retains the head and returns it, thus causing the entire
+  seq to reside in memory at one time."
+  ([coll]
+   (dorun coll)
+   coll)
+  ([n coll]
+   (dorun n coll)
+   coll))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;; Regular Expressions ;;;;;;;;;;
 
 (defn re-matches

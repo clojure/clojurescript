@@ -191,8 +191,8 @@ For macros only, uses clojure.core version
 * dissoc!
 * TODO distinct
 * DONE distinct?
-* TODO doall
-* TODO dorun
+* DONE doall
+* DONE dorun
 * TODO doseq
 * dosync
 * TODO dotimes
