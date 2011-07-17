@@ -61,7 +61,9 @@
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (str "Can't resolve: " %))
-                   ret)
+                   (if (.startsWith (name ret) "goog.global.")
+                     (symbol (subs (name ret) 12))
+                     ret))
         impl-map (loop [ret {} s impls]
                    (if (seq s)
                      (recur (assoc ret (resolve (first s)) (take-while seq? (next s)))
@@ -268,3 +270,43 @@
                                ~(do-mod mod-pairs)))))))]
     `(let [iter# ~(emit-bind (to-groups seq-exprs))]
        (iter# ~(second seq-exprs)))))
+
+(defmacro amap
+  "Maps an expression across an array a, using an index named idx, and
+  return value named ret, initialized to a clone of a, then setting 
+  each element of ret to the evaluation of expr, returning the new 
+  array ret."
+  [a idx ret expr]
+  `(let [a# ~a
+         ~ret (aclone a#)]
+     (loop  [~idx 0]
+       (if (< ~idx  (alength a#))
+         (do
+           (aset ~ret ~idx ~expr)
+           (recur (inc ~idx)))
+         ~ret))))
+
+(defmacro areduce
+  "Reduces an expression across an array a, using an index named idx,
+  and return value named ret, initialized to init, setting ret to the 
+  evaluation of expr at each step, returning ret."
+  [a idx ret init expr]
+  `(let [a# ~a]
+     (loop  [~idx 0 ~ret ~init]
+       (if (< ~idx  (alength a#))
+         (recur (inc ~idx) ~expr)
+         ~ret))))
+
+(defmacro dotimes
+  "bindings => name n
+
+  Repeatedly executes body (presumably for side-effects) with name
+  bound to integers from 0 through n-1."
+  [bindings & body]
+  (let [i (first bindings)
+        n (second bindings)]
+    `(let [n# ~n]
+       (loop [~i 0]
+         (when (< ~i n#)
+           ~@body
+           (recur (inc ~i)))))))

@@ -286,8 +286,8 @@
 (comment
   ;; compile a file in memory
   (-compile "samples/hello/src/hello/core.cljs" {})
-  ;; compile a file to disk - see file @ 'out/cljs/set.js'
-  (-compile (io/resource "cljs/set.cljs") {:output-file "cljs/set.js"})
+  ;; compile a file to disk - see file @ 'out/clojure/set.js'
+  (-compile (io/resource "clojure/set.cljs") {:output-file "clojure/set.js"})
   ;; compile a project
   (-compile (io/file "samples/hello/src") {})
   ;; compile a project with a custom output directory
@@ -323,23 +323,48 @@
           {}
           deps))
 
-(defn dependency-index*
-  "Create an index of dependencies by namespace and file name."
+(defn load-library*
+  "Given a path to a JavaScript library, which is a directory
+  containing Javascript files, return a list of maps
+  containing :provides, :requires, :file and :url."
+  [path]
+  (letfn [(graph-node [f]
+            (-> (io/reader f)
+                line-seq
+                parse-js-ns
+                (assoc :file (.getPath f) :url (to-url f))))]
+    (let [js-sources (filter #(.endsWith (.getName %) ".js") (file-seq (io/file path)))]
+      (remove #(not (seq (:provides %))) (map graph-node js-sources)))))
+
+(def load-library (memoize load-library*))
+
+(defn library-dependencies [{:keys [libs]}]
+  (mapcat load-library libs))
+
+(comment
+  ;; load one library
+  (load-library* "closure/library/third_party/closure")
+  ;; load all library dependencies
+  (library-dependencies {:libs ["closure/library/third_party/closure"]})
+  )
+
+(defn goog-dependencies*
+  "Create an index of Google dependencies by namespace and file name."
   []
   (letfn [(parse-list [s] (when (> (count s) 0)
                             (-> (.substring s 1 (dec (count s)))
                                 (string/split #"'\s*,\s*'"))))]
-    (let [all-goog (->> (line-seq (io/reader (io/resource "goog/deps.js")))
-                        (map #(re-matches #"^goog\.addDependency\('(.*)',\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
-                        (remove nil?)
-                        (map #(drop 1 %))
-                        (remove #(.startsWith (first %) "../../third_party"))
-                        (map #(hash-map :file (str "goog/"(first %))
-                                        :provides (parse-list (second %))
-                                        :requires (parse-list (last %)))))]
-      (build-index all-goog))))
+    (->> (line-seq (io/reader (io/resource "goog/deps.js")))
+         (map #(re-matches #"^goog\.addDependency\('(.*)',\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
+         (remove nil?)
+         (map #(drop 1 %))
+         (remove #(.startsWith (first %) "../../third_party"))
+         (map #(hash-map :file (str "goog/"(first %))
+                         :provides (parse-list (second %))
+                         :requires (parse-list (last %))
+                         :group :goog)))))
 
-(def dependency-index (memoize dependency-index*))
+(def goog-dependencies (memoize goog-dependencies*))
 
 (defn dependency-order
   "Topologically sort a collection of dependencies."
@@ -347,22 +372,34 @@
   (let [state (build-index coll)]
     (distinct (:order (reduce comp/dependency-order-visit (assoc state :order []) (keys state))))))
 
+(defn js-dependency-index
+  "Returns the index for all JavaScript dependencies. Lookup by
+  namespace or file name."
+  [opts]
+  (build-index (concat (goog-dependencies) (library-dependencies opts))))
+
 (defn dependencies
   "Given a sequence of Closure namespace strings, return the list of
-  all dependencies in dependency order. The returned list will contain
-  file names relative to the classpath suitable to be passed to io/resource."
-  [requires]
-  (let [index (dependency-index)]
+  all dependencies in dependency order. The returned list includes all
+  Google and third-party library dependencies.
+
+  Third-party libraries are configured using the :libs option where
+  the value is a list of directories containing third-party
+  libraries."
+  [opts requires]
+  (let [index (js-dependency-index opts)]
     (loop [requires requires
            deps []]
       (if (seq requires)
         (let [node (get index (first requires))]
           (recur (concat (rest requires) (:requires node)) (conj deps node)))
-        (cons "goog/base.js" (map :file (dependency-order deps)))))))
+        (cons (get index "goog/base.js") (dependency-order deps))))))
 
 (comment
   ;; find dependencies
-  (dependencies ["goog.array"])
+  (dependencies {}  ["goog.array"])
+  ;; find dependencies in an external library
+  (dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"])
   )
 
 (def compiled-cljs (atom {}))
@@ -394,25 +431,26 @@
   files will be compiled to the working directory if they do not
   already exist."
   [opts requires]
-  (letfn [(cljs-deps [coll] (filter #(.startsWith % "cljs.") coll))]
-    (loop [requires (cljs-deps requires)
-           deps {}]
-      (if (seq requires)
-        (let [next-ns (first requires)
-              js (get-compiled-cljs opts next-ns)
-              new-requires (remove #(or (contains? deps %)
-                                        (contains? (set requires) %))
-                                   (cljs-deps (-requires js)))]
-          (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
-        (dependency-order (vals deps))))))
+  (let [index (js-dependency-index opts)]
+    (letfn [(cljs-deps [coll] (filter #(not (contains? index %)) coll))]
+     (loop [requires (cljs-deps requires)
+            deps {}]
+       (if (seq requires)
+         (let [next-ns (first requires)
+               js (get-compiled-cljs opts next-ns)
+               new-requires (remove #(or (contains? deps %)
+                                         (contains? (set requires) %))
+                                    (cljs-deps (-requires js)))]
+           (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
+         (dependency-order (vals deps)))))))
 
 (comment
   ;; only get cljs deps
   (cljs-dependencies {} ["goog.string" "cljs.core"])
   ;; get transative deps
-  (cljs-dependencies {} ["cljs.string"])
+  (cljs-dependencies {} ["clojure.string"])
   ;; don't get cljs.core twice
-  (cljs-dependencies {} ["cljs.core" "cljs.string"])
+  (cljs-dependencies {} ["cljs.core" "clojure.string"])
   )
 
 (defn add-dependencies
@@ -422,13 +460,14 @@
   [opts & inputs]
   (let [requires (mapcat -requires inputs)
         required-cljs (cljs-dependencies opts requires)
-        required (dependencies (concat (mapcat -requires required-cljs) requires))
-        index (dependency-index)]
-    (concat (map #(javascript-file (io/resource %)
-                                   (:provides (get index %))
-                                   (:requires (get index %))) required)
-            required-cljs
-            inputs)))
+        required (dependencies opts (concat (mapcat -requires required-cljs) requires))]
+    (distinct
+     (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
+                                        (:provides %)
+                                        (:requires %))
+                       (assoc :group (:group %))) required)
+             required-cljs
+             inputs))))
 
 (comment
   ;; add dependencies to literal js
@@ -436,7 +475,12 @@
   (add-dependencies {} "goog.provide('test.app');\ngoog.require('goog.array');")
   (add-dependencies {} (str "goog.provide('test.app');\n"
                             "goog.require('goog.array');\n"
-                            "goog.require('cljs.set');"))
+                            "goog.require('clojure.set');"))
+  ;; add dependencies with external lib
+  (add-dependencies {:libs ["closure/library/third_party/closure"]}
+                    (str "goog.provide('test.app');\n"
+                         "goog.require('goog.array');\n"
+                         "goog.require('goog.dom.query');"))
   ;; add dependencies to a JavaScriptFile record
   (add-dependencies {} (javascript-file (to-url "samples/hello/src/hello/core.cljs")
                                      ["hello.core"]
@@ -529,14 +573,16 @@
         count-base (count base-path)
         common (count (take-while true? (map #(= %1 %2) base-path input-path)))
         prefix (repeat (- count-base common 1) "..")]
-    (comp/to-path (concat prefix (drop common input-path)))))
+    (if (= count-base common)
+      (last input-path) ;; same file
+      (comp/to-path (concat prefix (drop common input-path))))))
 
 (defn add-dep-string
   "Return a goog.addDependency string for an input."
   [opts input]
   (letfn [(ns-list [coll] (when (seq coll) (apply str (interpose ", " (map #(str "'" % "'") coll)))))]
     (str "goog.addDependency(\""
-         (path-relative-to (io/file (output-directory opts)"goog/base.js") input)
+         (path-relative-to (io/file (output-directory opts) "goog/base.js") input)
          "\", ["
          (ns-list (-provides input))
          "], ["
@@ -549,9 +595,9 @@
   (apply str (interpose "\n" (map #(add-dep-string opts %) sources))))
 
 (comment
-  (path-relative-to (io/file "out/goog/base.js") {:url (io/resource "out/cljs/core.js")})
-  (add-dep-string {} {:url (io/resource "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]})
-  (deps-file {} [{:url (io/resource "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
+  (path-relative-to (io/file "out/goog/base.js") {:url (to-url "out/cljs/core.js")})
+  (add-dep-string {} {:url (to-url "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]})
+  (deps-file {} [{:url (to-url "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
   )
 
 (defn output-one-file [{:keys [output-to]} js]
@@ -571,6 +617,7 @@
     (path-from-jarfile url)
     (str (random-string 5) ".js")))
 
+
 (defn write-javascript
   "Write a JavaScript file to disk. Only write if the file does not
   already exist. Return IJavaScript for the file on disk."
@@ -581,8 +628,7 @@
     (do (when-not (.exists out-file)
           (do (mkdirs out-file)
               (spit out-file (-source js))))
-        {:url (to-url out-file) :requires (-requires js) :provides (-provides js)
-         :library (when (.startsWith out-name "goog/") :goog)})))
+        {:url (to-url out-file) :requires (-requires js) :provides (-provides js) :group (:group js)})))
 
 (defn source-on-disk
   "Ensure that the given JavaScript exists on disk. Write in memory
@@ -604,11 +650,19 @@
   (source-on-disk {} {:url (io/resource "cljs/core.cljs")})
   )
 
-(defn output-unoptimized [opts & sources]
-  (let [disk-sources (map #(source-on-disk opts %) sources)
-        goog-deps-url (io/resource "goog/deps.js")]
-    (do (write-javascript opts {:url goog-deps-url :source (slurp (io/reader goog-deps-url))})
-        (output-deps-file opts (remove #(= (:library %) :goog) disk-sources)))))
+(defn output-unoptimized
+  "Ensure that all JavaScript source files are on disk (not in jars),
+   write the goog deps file including only the libraries that are being
+   used and write the deps file for the current project.
+
+   The deps file for the current project will include third-party
+   libraries."
+  [opts & sources]
+  (let [disk-sources (map #(source-on-disk opts %) sources)]
+    (let [goog-deps (io/file (output-directory opts) "goog/deps.js")]
+      (do (mkdirs goog-deps)
+          (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
+          (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
 (comment
   
@@ -618,6 +672,10 @@
   (apply output-unoptimized {}
          (add-dependencies {}
                            "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n"))
+  ;; output unoptimized with external library
+  (apply output-unoptimized {}
+         (add-dependencies {:libs ["closure/library/third_party/closure"]}
+                           "goog.provide('test');\ngoog.require('cljs.core');\ngoog.require('goog.dom.query');\n"))
   ;; output unoptimized and write deps file to 'out/test.js'
   (output-unoptimized {:output-to "out/test.js"}
                       "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")

@@ -10,8 +10,6 @@ One-time Setup
 
     $CLOJURESCRIPT_HOME/script/bootstrap
 
-- Copy a Clojure 1.3 jar into $CLOJURESCRIPT_HOME/lib. 
-
 - Add $CLOJURESCRIPT_HOME/bin to your PATH.
 
 Run in Development Mode
