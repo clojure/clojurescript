@@ -23,13 +23,6 @@
 	<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
   <![endif]-->
   
-  <!-- In unoptimized mode, additional script tags are required -->
-  <script type="text/javascript" src="out/goog/base.js"></script>
-  <script type="text/javascript" src="twitterbuzz.js"></script>
-  <script type="text/javascript">
-    goog.require('twitterbuzz.core');
-  </script>
-  
 </head>
 <body>
   <header>
@@ -43,7 +36,7 @@
       <input id="twitter-search-tag" value="clojure" type="text" />
       <input id="twitter-search-button" value="Track" type="submit" />
       <a href="#" class="reset-search">Reset</a>
-      <span class="tweet-status">Not Connected</span>
+      <span id="tweet-status" class="tweet-status">Not Connected</span>
     </section>
   </section>
 
@@ -59,6 +52,14 @@
       <div class="clear"></div>
     </section>
   </section>
+
+  <!-- In unoptimized mode, additional script tags are required -->
+  <script type="text/javascript" src="out/goog/base.js"></script>
+  <script type="text/javascript" src="twitterbuzz.js"></script>
+  <script type="text/javascript">
+    goog.require('twitterbuzz.core');
+  </script>
+
 </body>
 </html>
 
