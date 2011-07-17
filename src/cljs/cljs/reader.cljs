@@ -14,18 +14,22 @@
 nil if the end of stream has been reached")
   (unread [reader ch] "Push back a single character on to the stream"))
 
-;; This implementation is quite inefficient. It can be improved by using an index into the original string
-;; and using a seperate buffer to store pushed data.
-(deftype StringPushbackReader [state]
+; Using two atoms is less idomatic, but saves the repeat overhead of map creation
+(deftype StringPushbackReader [s index-atom buffer-atom]
   PushbackReader
-  (read-char [reader] (let [original @state]
-                      (reset! state (subs original 1))
-                      (first original)))
-  (unread [reader ch] (reset! state (str ch @state))))
+  (read-char [reader]
+             (if (empty? @buffer-atom)
+               (let [idx @index-atom]
+                 (swap! index-atom inc)
+                 (nth s idx))
+               (let [buf @buffer-atom]
+                 (swap! buffer-atom rest)
+                 (first buf))))
+  (unread [reader ch] (swap! buffer-atom #(cons ch %))))
 
 (defn push-back-reader [s]
   "Creates a StringPushbackReader from a given string"
-  (StringPushbackReader. (atom s)))
+  (StringPushbackReader. s (atom 0) (atom nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; predicates
