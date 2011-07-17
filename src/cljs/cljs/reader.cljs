@@ -65,6 +65,11 @@ nil if the end of stream has been reached")
 ;; read helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; later will do e.g. line numbers...
+(defn reader-error
+  [rdr & msg]
+  (throw (apply str msg)))
+
 (defn macro-terminating? [ch]
   (and (not= ch "#") (not= ch \') (contains? macros ch)))
 
@@ -78,13 +83,14 @@ nil if the end of stream has been reached")
       (do (unread rdr ch) (. sb (toString)))
       (recur (do (.append sb ch) sb) (read-char rdr)))))
 
-(defn- skip-line
+(defn skip-line
   "Advances the reader to the end of a line. Returns the reader"
-  [reader]
-  (let [ch (read-char reader)]
-    (if (or (= ch \n) (= ch \r) (nil? ch))
-      reader
-      (recur reader))))
+  [reader _]
+  (loop []
+    (let [ch (read-char reader)]
+      (if (or (= ch \n) (= ch \r) (nil? ch))
+        reader
+        (recur)))))
 
 (def int-pattern (re-pattern "([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?"))
 (def ratio-pattern (re-pattern "([-+]?[0-9]+)/([0-9]+)"))
@@ -123,8 +129,7 @@ nil if the end of stream has been reached")
   (cond
    (re-matches int-pattern s) (match-int s)
    (re-matches ratio-pattern s) (match-ratio s)
-   (re-matches float-pattern s) (match-float s)
-   :default (throw (str "Invalid number format [" s "]"))))
+   (re-matches float-pattern s) (match-float s)))
 
 (def escape-char-map {\t "\t"
                       \r "\r"
@@ -136,7 +141,7 @@ nil if the end of stream has been reached")
 
 (defn read-unicode-char
   [reader initch]
-  (throw "Unicode characters not supported by reader (yet)"))
+  (reader-error reader "Unicode characters not supported by reader (yet)"))
 
 (defn escape-char
   [buffer reader]
@@ -146,7 +151,7 @@ nil if the end of stream has been reached")
       mapresult
       (if (or (= \u ch) (numeric? ch))
         (read-unicode-char reader ch)
-        (throw (str "Unsupported escape charater: \\" ch))))))
+        (reader-error reader "Unsupported escape charater: \\" ch)))))
 
 (defn read-past
   "Read until first character that doesn't match pred, returning
@@ -161,7 +166,7 @@ nil if the end of stream has been reached")
   [delim rdr recursive?]
   (loop [a []]
     (let [ch (read-past whitespace? rdr)]
-      (when-not ch (throw "EOF"))
+      (when-not ch (reader-error rdr "EOF"))
       (if (= delim ch)
         a
         (if-let [macrofn (get macros ch)]
@@ -178,7 +183,7 @@ nil if the end of stream has been reached")
 
 (defn not-implemented
   [rdr ch]
-  (throw (str "Reader for " ch " not implemented yet")))
+  (reader-error rdr "Reader for " ch " not implemented yet"))
 
 (defn read-dispatch
   [rdr _]
@@ -186,15 +191,17 @@ nil if the end of stream has been reached")
         dm (get dispatch-macros ch)]
     (if dm
       (dm rdr _)
-      (throw (str "No dispatch macro for " ch)))))
+      (reader-error rdr "No dispatch macro for " ch))))
 
 (defn read-unmatched-delimiter
   [rdr ch]
-  (throw (str "Unmached delimiter " ch)))
+  (reader-error rdr "Unmached delimiter " ch))
 
 (defn read-list
   [rdr _]
   (apply list (read-delimited-list ")" rdr true)))
+
+(def read-comment skip-line)
 
 (defn read-vector
   [rdr _]
@@ -204,12 +211,8 @@ nil if the end of stream has been reached")
   [rdr _]
   (let [l (read-delimited-list "}" rdr true)]
     (when (odd? (count l))
-      (throw "Map literal must contain an even number of forms"))
+      (reader-error rdr "Map literal must contain an even number of forms"))
     (apply hash-map l)))
-
-(defn read-set
-  [rdr _]
-  (set (read-delimited-list "}" rdr true)))
 
 (defn read-number
   [reader initch]
@@ -218,7 +221,8 @@ nil if the end of stream has been reached")
     (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
       (do
         (unread reader ch)
-        (match-number (. buffer (toString))))
+        (or (match-number (. buffer (toString)))
+            (reader-error reader "Invalid number format [" s "]")))
       (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-string
@@ -226,7 +230,7 @@ nil if the end of stream has been reached")
   (loop [buffer (gstring/StringBuffer.)
          ch (read-char reader)]
     (cond
-     (nil? ch) (throw "EOF while reading string")
+     (nil? ch) (reader-error reader "EOF while reading string")
      (= "\\" ch) (recur (escape-char buffer reader) (read-char reader))
      (= \" ch) (. buffer (toString))
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
@@ -260,15 +264,33 @@ nil if the end of stream has been reached")
   (fn [rdr _]
     (list sym (read rdr true nil true))))
 
+(defn throwing-reader
+  [msg]
+  (fn [rdr _]
+    (reader-error rdr msg)))
+
 (defn read-meta
   [rdr _]
   (let [m (desugar-meta (read rdr true nil true))]
     (when-not (map? m)
-      (throw "Metadata must be Symbol,Keyword,String or Map"))
+      (reader-error rdr "Metadata must be Symbol,Keyword,String or Map"))
     (let [o (read rdr true nil true)]
       (if (satisfies? IWithMeta o)
         (with-meta o (merge (meta o) m))
-        (throw "Metadata can only be applied to IWithMetas")))))
+        (reader-error rdr "Metadata can only be applied to IWithMetas")))))
+
+(defn read-set
+  [rdr _]
+  (set (read-delimited-list "}" rdr true)))
+
+(defn read-regex
+  [rdr ch]
+  (-> (read-string rdr ch) re-pattern))
+
+(defn read-discard
+  [rdr _]
+  (read rdr true nil true)
+  rdr)
 
 (def macros
      { \" read-string
@@ -290,18 +312,28 @@ nil if the end of stream has been reached")
        \# read-dispatch
        })
 
+;; omitted by design: var reader, eval reader
 (def dispatch-macros
-  {"{" read-set})
+  {"{" read-set
+   "<" (throwing-reader "Unreadable form")
+   "\"" read-regex
+   "!" read-comment
+   "_" read-discard})
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
-Returns sentinel if the reader did not contain any forms."
+   If EOF, throws if eof-is-error is true. Otherwise returns sentinel."
   [reader eof-is-error sentinel is-recursive]
   (let [ch (read-char reader)]
     (cond
-     (nil? ch) sentinel
+     (nil? ch) (if eof-is-error (reader-error reader "EOF") sentinel)
      (whitespace? ch) (recur reader eof-is-error sentinel is-recursive)
-     (comment-prefix? ch) (recur (skip-line reader) eof-is-error sentinel is-recursive)
-     (macros ch) ((macros ch) reader ch)
-     (number-literal? reader ch) (read-number reader ch)
-     :default (read-symbol reader ch))))
+     (comment-prefix? ch) (recur (read-comment reader ch) eof-is-error sentinel is-recursive)
+     :else (let [res
+                 (cond
+                  (macros ch) ((macros ch) reader ch)
+                  (number-literal? reader ch) (read-number reader ch)
+                  :else (read-symbol reader ch))]
+     (if (= res reader)
+       (recur reader eof-is-error sentinel is-recursive)
+       res)))))
