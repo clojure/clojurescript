@@ -635,12 +635,13 @@
                (merge {:optimizations :simple} opts)
                opts)
         compiled (-compile source opts)
+        compiled (concat
+                   (if (coll? compiled) compiled [compiled])
+                   (when (= :nodejs (:target opts))
+                     [(-compile (io/resource "cljs/nodejscli.cljs") opts)]))
         js-sources (if (coll? compiled)
                      (apply add-dependencies opts compiled)
-                     (add-dependencies opts compiled))
-        js-sources (if (= :nodejs (:target opts))
-                     (concat js-sources [(-compile (io/resource "cljs/nodecli.cljs") opts)])
-                     js-sources)]
+                     (add-dependencies opts compiled))]
     (if (:optimizations opts)
       (->> js-sources
            (apply optimize opts)
