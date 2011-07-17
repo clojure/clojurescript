@@ -365,6 +365,12 @@
   (let [state (build-index coll)]
     (distinct (:order (reduce comp/dependency-order-visit (assoc state :order []) (keys state))))))
 
+(defn js-dependency-index
+  "Returns the index for all JavaScript dependencies. Lookup by
+  namespace or file name."
+  [opts]
+  (build-index (concat (goog-dependencies) (library-dependencies opts))))
+
 (defn dependencies
   "Given a sequence of Closure namespace strings, return the list of
   all dependencies in dependency order. The returned list includes all
@@ -374,7 +380,7 @@
   the value is a list of directories containing third-party
   libraries."
   [opts requires]
-  (let [index (build-index (concat (goog-dependencies) (library-dependencies opts)))]
+  (let [index (js-dependency-index opts)]
     (loop [requires requires
            deps []]
       (if (seq requires)
@@ -418,17 +424,18 @@
   files will be compiled to the working directory if they do not
   already exist."
   [opts requires]
-  (letfn [(cljs-deps [coll] (filter #(.startsWith % "cljs.") coll))]
-    (loop [requires (cljs-deps requires)
-           deps {}]
-      (if (seq requires)
-        (let [next-ns (first requires)
-              js (get-compiled-cljs opts next-ns)
-              new-requires (remove #(or (contains? deps %)
-                                        (contains? (set requires) %))
-                                   (cljs-deps (-requires js)))]
-          (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
-        (dependency-order (vals deps))))))
+  (let [index (js-dependency-index opts)]
+    (letfn [(cljs-deps [coll] (filter #(not (contains? index %)) coll))]
+     (loop [requires (cljs-deps requires)
+            deps {}]
+       (if (seq requires)
+         (let [next-ns (first requires)
+               js (get-compiled-cljs opts next-ns)
+               new-requires (remove #(or (contains? deps %)
+                                         (contains? (set requires) %))
+                                    (cljs-deps (-requires js)))]
+           (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
+         (dependency-order (vals deps)))))))
 
 (comment
   ;; only get cljs deps
@@ -447,12 +454,13 @@
   (let [requires (mapcat -requires inputs)
         required-cljs (cljs-dependencies opts requires)
         required (dependencies opts (concat (mapcat -requires required-cljs) requires))]
-    (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
-                                       (:provides %)
-                                       (:requires %))
-                      (assoc :group (:group %))) required)
-            required-cljs
-            inputs)))
+    (distinct
+     (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
+                                        (:provides %)
+                                        (:requires %))
+                       (assoc :group (:group %))) required)
+             required-cljs
+             inputs))))
 
 (comment
   ;; add dependencies to literal js
