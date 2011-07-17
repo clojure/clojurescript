@@ -3,7 +3,7 @@
 # Compile a single cljs file or a directory of cljs files into a
 # single JavaScript file.
 
-if [ "$CLOJURESCRIPT_HOME" == "" ]; then
+if [ "$CLOJURESCRIPT_HOME" = "" ]; then
   CLOJURESCRIPT_HOME="."
 fi
 
