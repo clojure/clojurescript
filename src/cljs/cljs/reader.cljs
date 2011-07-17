@@ -164,7 +164,7 @@ nil if the end of stream has been reached")
       (when-not ch (throw "EOF"))
       (if (= delim ch)
         a
-        (if-let [macrofn (get dispatch-macros ch)]
+        (if-let [macrofn (get macros ch)]
           (let [mret (macrofn rdr ch)]
             (recur (if (= mret rdr) a (conj a mret))))
           (do
