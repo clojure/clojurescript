@@ -634,6 +634,13 @@ reduces them without incurring seq initialization"
   [coll]
   (next (next coll)))
 
+(defn last
+  "Return the last item in coll, in linear time"
+  [s]
+  (if (next s)
+    (recur (next s))
+    (first s)))
+
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
@@ -3001,6 +3008,10 @@ reduces them without incurring seq initialization"
   (assert (= [[{:a 1, :b 2} {:a 1, :b 2}]]
                (js->clj [[{:a 1, :b 2} {:a 1, :b 2}]])))
 
+  ;; last
+  (assert (= nil (last nil)))
+  (assert (= 3 (last [1 2 3])))
+  
   :ok
   )
 
