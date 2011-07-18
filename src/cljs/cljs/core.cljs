@@ -2664,6 +2664,20 @@ reduces them without incurring seq initialization"
              :else x))]
     (f x)))
 
+(defn memoize
+  "Returns a memoized version of a referentially transparent function. The
+  memoized version of the function keeps a cache of the mapping from arguments
+  to results and, when calls with the same arguments are repeated often, has
+  higher performance at the expense of higher memory use."
+  [f]
+  (let [mem (atom {})]
+    (fn [& args]
+      (if-let [v (get @mem args)]
+        v
+        (let [ret (apply f args)]
+          (swap! mem assoc args ret)
+          ret)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
 (defn ^:export test-stuff []
@@ -3060,9 +3074,9 @@ reduces them without incurring seq initialization"
 
   ;; delay
   ;;  FF: can't run this in v8, need to find the correct way to call getTime
-  ;; (let [d (delay (js* "(new goog.global.Date().getTime())"))]
+  ;; (let [d (delay (. (goog.global.Date.) (getTime)))]
   ;;   (assert (false? (realized? d)))
-  ;;   (let [d2 (js* "(new goog.global.Date().getTime())")]
+  ;;   (let [d2 (. (goog.global.Date.) (getTime))]
   ;;     (assert (> d2 (deref d))))
   ;;   (assert (true? (realized? d)))
   ;;   (let [d3 (deref d)]
@@ -3081,6 +3095,11 @@ reduces them without incurring seq initialization"
   (assert (= #{1 2} (disj #{1 2 3} 3)))
   (assert (= #{1} (disj #{1 2 3} 2 3)))
 
+  ;; memoize
+  (let [f (memoize (fn [] (. (goog.global.Date.) (getTime))))]
+    (f)
+    (assert (= (f) (f))))
+  
   :ok
   )
 
