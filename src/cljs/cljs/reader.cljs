@@ -221,8 +221,9 @@ nil if the end of stream has been reached")
     (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
       (do
         (unread reader ch)
-        (or (match-number (. buffer (toString)))
-            (reader-error reader "Invalid number format [" s "]")))
+        (let [s (. buffer (toString))]
+          (or (match-number s)
+              (reader-error reader "Invalid number format [" s "]"))))
       (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (defn read-string
