@@ -1,6 +1,14 @@
 #!/bin/sh
 
 mkdir -p lib
+
+echo "Fetching Clojure..."
+curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.3.0-beta1/clojure-1.3.0-beta1.zip
+unzip -q clojure-1.3.0-beta1.zip
+cp clojure-1.3.0-beta1/clojure-1.3.0-beta1.jar lib/clojure.jar
+rm -rf clojure-1.3.0-beta1/
+rm clojure-1.3.0-beta1.zip
+
 echo "Fetching Google Closure Library..."
 mkdir -p closure/library
 cd closure/library
@@ -8,6 +16,7 @@ curl -O -s http://closure-library.googlecode.com/files/closure-library-20110323-
 unzip -q closure-library-20110323-r790.zip
 rm closure-library-20110323-r790.zip
 cd ..
+
 echo "Fetching Google Closure Compiler..."
 mkdir -p compiler
 cd compiler

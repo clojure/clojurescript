@@ -75,9 +75,11 @@
 (defn set-options
   "TODO: Add any other options that we would like to support."
   [opts ^CompilerOptions compiler-options]
-  (doseq [flag (:flags opts)]
-    (case flag
-          :pretty-print (set! (. compiler-options prettyPrint) true))))
+  (when (contains? opts :pretty-print)
+    (set! (.prettyPrint compiler-options) (:pretty-print opts)))
+  (when (contains? opts :print-input-delimiter)
+    (set! (.printInputDelimiter compiler-options)
+      (:print-input-delimiter opts))))
 
 (defn make-options
   "Create a CompilerOptions object and set options from opts map."
@@ -103,7 +105,12 @@
 
   TODO: Implement options described above."
   [opts]
-  (CommandLineRunner/getDefaultExterns))
+  (let [default (CommandLineRunner/getDefaultExterns)]
+    (if (= :nodejs (:target opts))
+      (let [path "cljs/nodejs_externs.js"]
+        (cons (js-source-file path (io/input-stream (io/resource path)))
+              default)) 
+      default)))
 
 (defn ^com.google.javascript.jscomp.Compiler make-closure-compiler []
   (let [compiler (com.google.javascript.jscomp.Compiler.)]
@@ -365,6 +372,12 @@
   (let [state (build-index coll)]
     (distinct (:order (reduce comp/dependency-order-visit (assoc state :order []) (keys state))))))
 
+(defn js-dependency-index
+  "Returns the index for all JavaScript dependencies. Lookup by
+  namespace or file name."
+  [opts]
+  (build-index (concat (goog-dependencies) (library-dependencies opts))))
+
 (defn dependencies
   "Given a sequence of Closure namespace strings, return the list of
   all dependencies in dependency order. The returned list includes all
@@ -374,7 +387,7 @@
   the value is a list of directories containing third-party
   libraries."
   [opts requires]
-  (let [index (build-index (concat (goog-dependencies) (library-dependencies opts)))]
+  (let [index (js-dependency-index opts)]
     (loop [requires requires
            deps []]
       (if (seq requires)
@@ -418,17 +431,18 @@
   files will be compiled to the working directory if they do not
   already exist."
   [opts requires]
-  (letfn [(cljs-deps [coll] (filter #(.startsWith % "cljs.") coll))]
-    (loop [requires (cljs-deps requires)
-           deps {}]
-      (if (seq requires)
-        (let [next-ns (first requires)
-              js (get-compiled-cljs opts next-ns)
-              new-requires (remove #(or (contains? deps %)
-                                        (contains? (set requires) %))
-                                   (cljs-deps (-requires js)))]
-          (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
-        (dependency-order (vals deps))))))
+  (let [index (js-dependency-index opts)]
+    (letfn [(cljs-deps [coll] (filter #(not (contains? index %)) coll))]
+     (loop [requires (cljs-deps requires)
+            deps {}]
+       (if (seq requires)
+         (let [next-ns (first requires)
+               js (get-compiled-cljs opts next-ns)
+               new-requires (remove #(or (contains? deps %)
+                                         (contains? (set requires) %))
+                                    (cljs-deps (-requires js)))]
+           (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
+         (dependency-order (vals deps)))))))
 
 (comment
   ;; only get cljs deps
@@ -447,12 +461,13 @@
   (let [requires (mapcat -requires inputs)
         required-cljs (cljs-dependencies opts requires)
         required (dependencies opts (concat (mapcat -requires required-cljs) requires))]
-    (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
-                                       (:provides %)
-                                       (:requires %))
-                      (assoc :group (:group %))) required)
-            required-cljs
-            inputs)))
+    (distinct
+     (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
+                                        (:provides %)
+                                        (:requires %))
+                       (assoc :group (:group %))) required)
+             required-cljs
+             inputs))))
 
 (comment
   ;; add dependencies to literal js
@@ -516,7 +531,7 @@
   ;; optimize a project
   (println (->> (-compile "samples/hello/src" {})
                 (apply add-dependencies {})
-                (apply optimize {:optimizations :simple :flags #{:pretty-print}})))
+                (apply optimize {:optimizations :simple :pretty-print yes})))
   )
 
 ;; Output
@@ -643,11 +658,11 @@
    The deps file for the current project will include third-party
    libraries."
   [opts & sources]
-  (let [disk-sources (map #(source-on-disk opts %) sources)
-        goog-deps-url (io/resource "goog/deps.js")]
-    (do (write-javascript opts {:url goog-deps-url
-                                :source (deps-file opts (filter #(= (:group %) :goog) disk-sources))})
-        (output-deps-file opts (remove #(= (:group %) :goog) disk-sources)))))
+  (let [disk-sources (map #(source-on-disk opts %) sources)]
+    (let [goog-deps (io/file (output-directory opts) "goog/deps.js")]
+      (do (mkdirs goog-deps)
+          (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
+          (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
 (comment
   
@@ -666,16 +681,29 @@
                       "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
   )
 
+(defn add-header [{:keys [hashbang target]} js]
+  (if (= :nodejs target)
+    (str "#!" (or hashbang "/usr/bin/nodejs") "\n" js)
+    js))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
-  (let [compiled (-compile source opts)
+  (let [opts (if (= :nodejs (:target opts))
+               (merge {:optimizations :simple} opts)
+               opts)
+        compiled (-compile source opts)
+        compiled (concat
+                   (if (coll? compiled) compiled [compiled])
+                   (when (= :nodejs (:target opts))
+                     [(-compile (io/resource "cljs/nodejscli.cljs") opts)]))
         js-sources (if (coll? compiled)
                      (apply add-dependencies opts compiled)
                      (add-dependencies opts compiled))]
     (if (:optimizations opts)
       (->> js-sources
            (apply optimize opts)
+           (add-header opts)
            (output-one-file opts))
       (apply output-unoptimized opts js-sources))))
 

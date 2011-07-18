@@ -1,5 +1,16 @@
 (ns twitterbuzz.graph)
 
+;; code review from SDH:
+;;
+;; 1. I think inc-or-nil could be replaced by fnil
+;; 2. update-retweet-count looks broken
+;;    `when` instead of `if` in function to be reduced over
+;; 3. conversion from string keys to keywords should be
+;;    done already before we get here
+;; 4. fns like top-tweets should not take an n arg
+;;    consumers can always take what they want
+;; 5. namespace and file name do not match
+
 (defn inc-or-1
   "Returns 1 if x is nil, (inc x) otherwise"
   [x]

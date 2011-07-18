@@ -23,13 +23,6 @@
 	<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
   <![endif]-->
   
-  <!-- In unoptimized mode, additional script tags are required -->
-  <script type="text/javascript" src="out/goog/base.js"></script>
-  <script type="text/javascript" src="twitterbuzz.js"></script>
-  <script type="text/javascript">
-    goog.require('twitterbuzz.core');
-  </script>
-  
 </head>
 <body>
   <header>
@@ -43,22 +36,44 @@
       <input id="twitter-search-tag" value="clojure" type="text" />
       <input id="twitter-search-button" value="Track" type="submit" />
       <a href="#" class="reset-search">Reset</a>
-      <span class="tweet-status">Not Connected</span>
+      <span id="tweet-status" class="tweet-status">Not Connected</span>
     </section>
   </section>
 
   <section id="main-wrap">
     <section id="main">
+
       <section id="network">
         <h2>Network</h2>
       </section>
 
       <section id="leaderboard">
         <h2>Leaderboard</h2>
+        <div id="leaderboard-content">
+        </div>
       </section>
+
+      <section id="timeline">
+        <h2>Timeline</h2>
+        <div id="timeline-content">
+        </div>
+      </section>
+
       <div class="clear"></div>
     </section>
+    
+    <div class="clear"></div>
+    </section>
   </section>
+
+  <!-- In unoptimized mode, additional script tags are required -->
+  <script type="text/javascript" src="out/goog/base.js"></script>
+  <script type="text/javascript" src="twitterbuzz.js"></script>
+  <script type="text/javascript">
+    goog.require('twitterbuzz.core');
+    goog.require('twitterbuzz.timeline');
+  </script>
+
 </body>
 </html>
 
