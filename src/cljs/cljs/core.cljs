@@ -1461,19 +1461,6 @@ reduces them without incurring seq initialization"
          ([x y z & args] (or (spn x y z)
                              (some #(some % args) ps)))))))
 
-(defn dotimes
-  "bindings => name n
-
-  Repeatedly executes body (presumably for side-effects) with name
-  bound to integers from 0 through n-1."
-  [bindings & body]
-  (let [i (first bindings)
-        n (second bindings)]
-    (loop [i 0]
-      (when (< i n)
-	(apply identity body)
-	(recur (inc i))))))
-
 (defn map
   "Returns a lazy sequence consisting of the result of applying f to the
   set of first items of each coll, followed by applying f to the set
@@ -3070,11 +3057,6 @@ reduces them without incurring seq initialization"
   ;; last
   (assert (= nil (last nil)))
   (assert (= 3 (last [1 2 3])))
-
-  ;; dotimes
-  (let [s (atom 0)]
-    (dotimes [n 10] (swap! s inc))
-    (assert (= 10 @s)))
 
   ;; delay
   ;;  FF: can't run this in v8, need to find the correct way to call getTime
