@@ -1469,19 +1469,6 @@ reduces them without incurring seq initialization"
          ([x y z & args] (or (spn x y z)
                              (some #(some % args) ps)))))))
 
-(defn dotimes
-  "bindings => name n
-
-  Repeatedly executes body (presumably for side-effects) with name
-  bound to integers from 0 through n-1."
-  [bindings & body]
-  (let [i (first bindings)
-        n (second bindings)]
-    (loop [i 0]
-      (when (< i n)
-	(apply identity body)
-	(recur (inc i))))))
-
 (defn map
   "Returns a lazy sequence consisting of the result of applying f to the
   set of first items of each coll, followed by applying f to the set
@@ -3078,9 +3065,10 @@ reduces them without incurring seq initialization"
   (assert (= 3 (last [1 2 3])))
 
   ;; dotimes
-  (let [s (atom 0)]
-    (dotimes [n 10] (swap! s inc))
-    (assert (= 10 @s)))
+  (let [s (atom [])]
+    (dotimes [n 5]
+      (swap! s conj n))
+    (assert (= [0 1 2 3 4] @s)))
 
   ;; doseq
   (let [v [1 2 3 4 5]
