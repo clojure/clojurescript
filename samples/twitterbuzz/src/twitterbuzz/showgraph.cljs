@@ -1,11 +1,18 @@
 (ns twitterbuzz.showgraph
   (:require [twitterbuzz.core :as buzz]
+            [twitterbuzz.anneal :as ann]
+            [twitterbuzz.layout :as layout]
             [goog.dom :as dom]
+            [goog.events :as events]
+            [goog.fx.Animation :as anim]
             [goog.graphics :as graphics]))
 
 ; Drawing configuration
-(def avatar-size 0.15) ; used for both x and y dimensions of avatars
+(def avatar-size 0.07) ; used for both x and y dimensions of avatars
 (def edge-widths [0 0.001 0.005 0.010 0.020]) ; More mentions == thicker edges
+
+; BAD HACK: don't change globals like this -- find a better way:
+(set! anim/TIMEOUT 500)
 
 (def edge-strokes
   (vec (map #(graphics/Stroke. % "#009") edge-widths)))
@@ -43,8 +50,25 @@
   {"jboner" {:x 0.3 :y 0.8} "sbtourist" {:x 0.3 :y 0.2} "djspiewak" {:x 0.5 :y 0.5}}
   {"jboner" {:x 0.2 :y 0.7} "sbtourist" {:x 0.4 :y 0.1} "djspiewak" {:x 0.7 :y 0.4}})))
 
-(defn update-graph [tweets]
-  (draw-graph {:locs (peek @test-graph), :mentions test-users})
-  (swap! test-graph pop))
+(def animation (atom nil))
 
-(buzz/register update-graph)
+;(set! cljs.core/string-print (fn [x] (js* "console.log(~{x})")))
+
+(set! (.cycle animation)
+  (fn [t]
+    (draw-graph (:best (first @animation)))
+    (swap! animation rest)))
+
+(events/listen
+  (dom/getElement "network")
+  (array events/EventType.CLICK)
+  (fn [_]
+    (reset! animation
+      (ann/anneal
+        layout/score
+        (ann/linear-cooling 1000)
+        layout/permute-move
+        ann/standard-prob
+        (layout/init-state test-users)))
+    (anim/registerAnimation animation)))
+
