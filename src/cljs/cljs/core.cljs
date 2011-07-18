@@ -2301,7 +2301,7 @@ reduces them without incurring seq initialization"
 ; This should be different in different runtime environments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
-  (goog.global/print x)
+  (js* "print(~{x})")
   nil)
 
 (defn flush [] ;stub
