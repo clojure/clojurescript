@@ -798,6 +798,22 @@ reduces them without incurring seq initialization"
   ([x y & more]
    (reduce min (min x y) more)))
 
+(defn- fix [q]
+  (if (>= q 0)
+    (js* "(Math.floor(~{q}))")
+    (js* "(Math.ceil(~{q}))")))
+
+(defn mod [n d]
+  (js* "(~{n} % ~{d})"))
+
+(defn quot [n d]
+  (let [rem (mod n d)]
+    (fix (js* "((~{n} - ~{rem}) / ~{d})"))))
+
+(defn rem [n d]
+  (let [q (quot n d)]
+    (js* "(~{n} - (~{d} * ~{q}))")))
+
 (defn bit-xor
   "Bitwise exclusive or"
   [x y] (js* "(~{x} ^ ~{y})"))
@@ -3119,6 +3135,43 @@ reduces them without incurring seq initialization"
   (assert (= (find {:a 1} nil) nil))
   (assert (= (find {:a 1 :b 2} nil) nil))
   (assert (= (find [1 2 3] 0) [0 1]))
+
+  ;; mod,quot,rem
+  (assert (= (quot 4 2) 2))
+  (assert (= (quot 3 2) 1))
+  (assert (= (quot 6 4) 1))
+  (assert (= (quot 0 5) 0))
+  (assert (= (quot 42 5) 8))
+  (assert (= (quot 42 -5) -8))
+  (assert (= (quot -42 -5) 8))
+  (assert (= (quot 9 3) 3))
+  (assert (= (quot 9 -3) -3))
+  (assert (= (quot -9 3) -3))
+  (assert (= (quot 2 -5) 0))
+  (assert (= (quot -2 5) 0))
+  (assert (= (quot 0 3) 0))
+  (assert (= (quot 0 -3) 0))
+
+  (assert (= (mod 4 2) 0))
+  (assert (= (mod 3 2) 1))
+  (assert (= (mod 6 4) 2))
+  (assert (= (mod 0 5) 0))
+  (assert (= (mod 4.5 2.0) 0.5))
+  (assert (= (mod 42 5) 2))
+  (assert (= (mod 9 3) 0))
+  (assert (= (mod 9 -3) 0))
+  (assert (= (mod -9 3) 0))
+  (assert (= (mod -9 -3) 0))
+  (assert (= (mod 0 3) 0))
+  (assert (= (mod 3216478362187432 432143214) 120355456))
+
+  (assert (= (rem 4 2) 0))
+  (assert (= (rem 0 5) 0))
+  (assert (= (rem 4.5 2.0) 0.5))
+  (assert (= (rem 42 5) 2))
+  (assert (= (rem 2 5) 2))
+  (assert (= (rem 2 -5) 2))
+  (assert (= (rem 0 3) 0))
   
   :ok
   )
