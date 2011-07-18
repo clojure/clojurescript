@@ -4,16 +4,6 @@
             [goog.events :as events]
             [goog.dom :as dom]))
 
-;; From Chouser
-(defn js-obj-seq [o]
-  (for [k (js-keys o)] [(keyword k) (aget o k)]))
-
-(defn obj->map
-  "Convert a JavaScript object into a Clojure map. Can we have
-  something like this in core?"
-  [o]
-  (into {} (js-obj-seq o)))
-
 (def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
 
 (defn retrieve [payload callback]
@@ -29,11 +19,11 @@
         (recur (rest fns) tweets))))
 
 (defn my-callback [json]
-  (let [result-map (obj->map json)
+  (let [result-map (js->clj json :keywordize-keys true)
         new-max (:max_id result-map)
         old-max (:max-id @state) ;; the filter won't work if you inline this
         tweets (filter #(> (:id %) old-max)
-                       (map obj->map (:results result-map)))]
+                       (:results result-map))]
     (do  (swap! state (fn [old] (assoc old :max-id new-max)))
          (send-tweets (:functions @state) tweets))))
 
