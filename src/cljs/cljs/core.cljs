@@ -3096,9 +3096,10 @@ reduces them without incurring seq initialization"
   (assert (= #{1} (disj #{1 2 3} 2 3)))
 
   ;; memoize
-  (let [f (memoize (fn [] (. (goog.global.Date.) (getTime))))]
-    (f)
-    (assert (= (f) (f))))
+  ;; (let [f (memoize (fn [] (. (goog.global.Date.) (getTime))))]
+  ;;   (f)
+  ;;   (assert (= (f) (f))))
+
   
   :ok
   )
