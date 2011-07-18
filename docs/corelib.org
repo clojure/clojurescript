@@ -298,7 +298,7 @@ does what?
 * DONE keys
 * DONE keyword
 * DONE keyword?
-* TODO last
+* DONE last
 * TODO lazy-cat
 * DONE lazy-seq
 * DONE let
