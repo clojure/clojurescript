@@ -411,7 +411,7 @@ dunno about printing
 * push-thread-bindings
 * pvalues
 * TODO quot
-* TODO rand
+* DONE rand
 * TODO rand-int
 * TODO rand-nth
 * TODO range

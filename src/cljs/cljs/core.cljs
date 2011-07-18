@@ -2678,6 +2678,12 @@ reduces them without incurring seq initialization"
           (swap! mem assoc args ret)
           ret)))))
 
+(defn rand
+  "Returns a random floating point number between 0 (inclusive) and
+  n (default 1) (exclusive)."
+  ([] (js* "Math.random()"))
+  ([n] (js* "Math.random() * ~{n}")))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
 (defn ^:export test-stuff []
@@ -3096,10 +3102,9 @@ reduces them without incurring seq initialization"
   (assert (= #{1} (disj #{1 2 3} 2 3)))
 
   ;; memoize
-  ;; (let [f (memoize (fn [] (. (goog.global.Date.) (getTime))))]
-  ;;   (f)
-  ;;   (assert (= (f) (f))))
-
+  (let [f (memoize (fn [] (rand)))]
+    (f)
+    (assert (= (f) (f))))
   
   :ok
   )
