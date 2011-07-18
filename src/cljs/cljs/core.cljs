@@ -2425,11 +2425,12 @@ reduces them without incurring seq initialization"
   [& objs]
   (pr-with-opts objs (pr-opts)))
 
-(defn print
+(def ^{:doc
   "Prints the object(s) using string-print.
-  print and println produce output for human consumption."
-  [& objs]
-  (pr-with-opts objs (assoc (pr-opts) :readably false)))
+  print and println produce output for human consumption."}
+  print
+  (fn cljs-core-print [& objs]
+    (pr-with-opts objs (assoc (pr-opts) :readably false))))
 
 (defn println
   "Same as print followed by (newline)"
