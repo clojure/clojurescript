@@ -386,14 +386,25 @@ reduces them without incurring seq initialization"
    same (hashed/sorted) type, that contains the mapping of key(s) to
    val(s). When applied to a vector, returns a new vector that
    contains val at index."
-  [coll k v]
-  (-assoc coll k v))
+  ([coll k v]
+     (-assoc coll k v))
+  ([coll k v & kvs]
+     (let [ret (assoc coll k v)]
+       (if kvs
+         (recur ret (first kvs) (second kvs) (nnext kvs))
+         ret))))
 
 (defn dissoc
   "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
   that does not contain a mapping for key(s)."
-  [coll k]
-  (-dissoc coll k))
+  ([coll] coll)
+  ([coll k]
+     (-dissoc coll k))
+  ([coll k & ks]
+     (let [ret (dissoc coll k)]
+       (if ks
+         (recur ret (first ks) (next ks))
+         ret))))
 
 (defn with-meta
   "Returns an object of the same type and value as obj, with
@@ -422,8 +433,14 @@ reduces them without incurring seq initialization"
 (defn disj
   "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
   does not contain key(s)."
-  [coll v]
-  (-disjoin coll v))
+  ([coll] coll)
+  ([coll k]
+     (-disjoin coll k))
+  ([coll k & ks]
+     (let [ret (disj coll k)]
+       (if ks
+         (recur ret (first ks) (next ks))
+         ret))))
 
 (defn hash [o]
   (-hash o))
@@ -3011,6 +3028,19 @@ reduces them without incurring seq initialization"
   ;; last
   (assert (= nil (last nil)))
   (assert (= 3 (last [1 2 3])))
+
+  ;; assoc
+  (assert (= {1 2 3 4} (assoc {} 1 2 3 4)))
+  (assert (= {1 2} (assoc {} 1 2)))
+
+  ;; dissoc
+  (assert (= {} (dissoc {1 2 3 4} 1 3)))
+  (assert (= {1 2} (dissoc {1 2 3 4} 3)))
+
+  ;; disj
+  (assert (= #{1 2 3} (disj #{1 2 3})))
+  (assert (= #{1 2} (disj #{1 2 3} 3)))
+  (assert (= #{1} (disj #{1 2 3} 2 3)))
   
   :ok
   )
