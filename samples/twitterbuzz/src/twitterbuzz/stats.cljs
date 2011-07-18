@@ -19,7 +19,8 @@
     (if (nil? rt-id) m (update-in m [rt-id] (fnil inc 0)))))
 
 (defn top-tweets
-  "Returns the ids of top n most retweeted tweets out of tweet seq ts"
+  "Returns the ids of the most retweeted tweets out of tweet seq ts in descending
+  order"
   [ts]
   (let [retweet-counts (reduce update-retweet-count {} ts)
         tweet-ids (keys retweet-counts)]
