@@ -39,4 +39,4 @@
             (do (add-timeline-tweet (first tweets))
                 (recur (rest tweets))))))))
 
-(core/register update-timeline)
+(core/register :new-tweets update-timeline)
