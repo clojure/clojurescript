@@ -327,6 +327,38 @@ reduces them without incurring seq initialization"
   (when coll
     (seq (rest coll))))
 
+(defn second
+  "Same as (first (next x))"
+  [coll]
+  (first (next coll)))
+
+(defn ffirst
+  "Same as (first (first x))"
+  [coll]
+  (first (first coll)))
+
+(defn nfirst
+  "Same as (next (first x))"
+  [coll]
+  (next (first coll)))
+
+(defn fnext
+  "Same as (first (next x))"
+  [coll]
+  (first (next coll)))
+
+(defn nnext
+  "Same as (next (next x))"
+  [coll]
+  (next (next coll)))
+
+(defn last
+  "Return the last item in coll, in linear time"
+  [s]
+  (if (next s)
+    (recur (next s))
+    (first s)))
+
 (extend-type default
   IEquiv
   (-equiv [x o] (identical? x o))
@@ -625,38 +657,6 @@ reduces them without incurring seq initialization"
    (sort-by keyfn compare coll))
   ([keyfn comp coll]
      (sort (fn [x y] ((fn->comparator comp) (keyfn x) (keyfn y))) coll)))
-
-(defn second
-  "Same as (first (next x))"
-  [coll]
-  (first (next coll)))
-
-(defn ffirst
-  "Same as (first (first x))"
-  [coll]
-  (first (first coll)))
-
-(defn nfirst
-  "Same as (next (first x))"
-  [coll]
-  (next (first coll)))
-
-(defn fnext
-  "Same as (first (next x))"
-  [coll]
-  (first (next coll)))
-
-(defn nnext
-  "Same as (next (next x))"
-  [coll]
-  (next (next coll)))
-
-(defn last
-  "Return the last item in coll, in linear time"
-  [s]
-  (if (next s)
-    (recur (next s))
-    (first s)))
 
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
