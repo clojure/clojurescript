@@ -16,35 +16,35 @@
   (doto (graphics/createGraphics "100%" "100%" 1.0 1.0)
     (.render (dom/getElement "network"))))
 
-(defn draw-graph [users nodes]
+(defn draw-graph [{:keys [locs mentions]}]
+  (. g (clear))
+
   ; Draw mention edges
-  (doseq [[username {:keys [mentions]}] users
-          :when (get nodes username)
-          [mention-name mention-count] mentions]
-    (when-let [{x2 :x, y2 :y} (get nodes mention-name)]
-      (let [{x1 :x, y1 :y} (get nodes username)]
-        (.drawPath g
-                   (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
-                   (get edge-strokes mention-count max-stroke) nil))))
+  (doseq [[username {x1 :x, y1 :y}] locs
+          [mention-name mention-count] (:mentions (get mentions username))]
+    (when-let [{x2 :x, y2 :y} (get locs mention-name)]
+      (.drawPath g
+                 (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
+                 (get edge-strokes mention-count max-stroke) nil)))
 
   ; Draw avatar nodes
   (let [offset (/ avatar-size 2)]
-    (doseq [[username {:keys [x y]}] nodes]
+    (doseq [[username {:keys [x y]}] locs]
       (.drawImage g (- x offset) (- y offset) avatar-size avatar-size
-                  (-> users (get username) :image-url)))))
+                  (:image-url (get mentions username))))))
 
 ; This is temporary.  The graph data should flow somehow from the
 ; tweets.  For now, just hardcode some:
+(def test-users {"djspiewak" {:image-url "http://a0.twimg.com/profile_images/746976711/angular-final_normal.jpg", :last-tweet "Does Clojure have a Sinatra clone?", :mentions {}}, "tobsn" {:image-url "http://a2.twimg.com/profile_images/1364411587/yr40_normal.png", :last-tweet "Creating a Query DSL using Clojure and MongoDB http://tob.sn/qgCxkm #mongodb", :mentions {}}, "CzarneckiD" {:image-url "http://a3.twimg.com/profile_images/1156755747/head_trees_normal.jpg", :last-tweet "@greymouser I need to start writing some Clojure I guess :)", :mentions {"greymouser" 2}}, "sbtourist" {:image-url "http://a0.twimg.com/profile_images/72494229/Cryer_Black_normal.jpg", :last-tweet "Clooj, a lightweight Clojure IDE: http://t.co/OSCjr9X", :mentions {"djspiewak" 2}}, "jboner" {:image-url "http://a2.twimg.com/profile_images/1395654712/jonas_bw_small_normal.JPG", :last-tweet "RT @sbtourist: Clooj, a lightweight Clojure IDE: http://t.co/OSCjr9X", :mentions {"sbtourist" 2, "djspiewak" 2, "romanroe" 2}}})
+
+(def test-graph (atom (list
+  {"jboner" {:x 0.2 :y 0.8} "djspiewak" {:x 0.3 :y 0.2}}
+  {"jboner" {:x 0.4 :y 0.7} "djspiewak" {:x 0.4 :y 0.3}}
+  {"jboner" {:x 0.3 :y 0.8} "sbtourist" {:x 0.3 :y 0.2} "djspiewak" {:x 0.5 :y 0.5}}
+  {"jboner" {:x 0.2 :y 0.7} "sbtourist" {:x 0.4 :y 0.1} "djspiewak" {:x 0.7 :y 0.4}})))
+
 (defn update-graph [tweets]
-  (draw-graph
-    {"bob"
-    {:image-url "http://a1.twimg.com/profile_images/1324487726/dr_bunsen_honeydew_normal.jpg"
-     :mentions {"susan" 3 "joe" 2}
-     :last-tweet "Clojure on JavaScript. Wow!"}
-  "susan"
-    {:image-url "http://a1.twimg.com/profile_images/1324487726/dr_bunsen_honeydew_normal.jpg"
-     :mentions {"joe" 5}
-     :last-tweet "ClojureScript doesn't have TCO! I'll never use it."}}
-    {"bob" {:x 0.2 :y 0.7} "susan" {:x 0.4 :y 0.1}}))
+  (draw-graph {:locs (peek @test-graph), :mentions test-users})
+  (swap! test-graph pop))
 
 (buzz/register update-graph)
