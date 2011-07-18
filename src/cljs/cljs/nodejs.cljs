@@ -1,3 +1,6 @@
+; Projects compiled with :target :nodejs can 'require' this namespace
+; to get the nodejs globals loaded into cljs.nodejs and get
+; ClojureScript's 'print' set up correctly.
 (ns cljs.nodejs)
 
 ; Define namespaced references to Node's externed globals:
