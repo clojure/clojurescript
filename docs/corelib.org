@@ -176,8 +176,8 @@ does what?
 * TODO defrecord
 * defstruct
 * DONE deftype
-* TODO delay
-* TODO delay?
+* DONE delay
+* DONE delay?
 * deliver
 * TODO denominator
 * DONE deref
@@ -195,7 +195,7 @@ For macros only, uses clojure.core version
 * DONE dorun
 * TODO doseq
 * dosync
-* TODO dotimes
+* DONE dotimes
 * DONE doto
 * TODO double
 * TODO double-array
@@ -242,7 +242,7 @@ macro currently expands into extend call
 * DONE fnext
 * TODO fnil
 * DONE for
-* TODO force
+* DONE force
 * format
 * TODO frequencies
 * future
@@ -428,7 +428,7 @@ dunno about regex
 * read
 * read-line
 * read-string
-* TODO realized?
+* DONE realized?
 * DONE reduce
 * TODO reductions
 * ref
