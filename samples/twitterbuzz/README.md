@@ -14,6 +14,10 @@ After running the above command, open index.html.
 
 ## Compile in Development Mode with the REPL (Faster)
 
+Copy the Google Closure Compiler to lib/:
+
+       cp closure/compiler/compiler.jar lib/
+  
 * Run `script/repl`
   * To run it from Emacs, `C-x d` and nav to the `clojurescript` directory
   * `M-x set-variable inferior-lisp-program`
@@ -33,4 +37,4 @@ The reason we set the `:output-dir` is because the `index.html` script tag is sp
 
 ## Run in Production Mode
 
-See https://github.com/clojurescript/clojurescript/wiki/Quick-Start for instructions on how to compile with 'advanced' mode.
+See https://github.com/clojure/clojurescript/wiki/Quick-Start for instructions on how to compile with 'advanced' mode.
