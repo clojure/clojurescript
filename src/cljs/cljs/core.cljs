@@ -132,7 +132,7 @@
 (defprotocol IPrintable
   (-pr-seq [o opts]))
 
-(defprotocol IRealized
+(defprotocol IPending
   (-realized? [d]))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
@@ -2592,7 +2592,7 @@ reduces them without incurring seq initialization"
       (swap! state f))
     @state)
 
-  IRealized
+  IPending
   (-realized? [d]
     (not (nil? @state))))
 
@@ -2616,10 +2616,9 @@ reduces them without incurring seq initialization"
     x))
 
 (defn realized?
-  "If d is a Delay, will return true if the delay fn has been realized, returns false if it has not,
-  returns nil if d is not a Delay"
+  "Returns true if a value has been produced for a promise, delay, future or lazy sequence."
   [d]
-    (-realized? d))
+  (-realized? d))
 
 (defn js->clj
   "Recursively transforms JavaScript arrays into ClojureScript
@@ -2639,20 +2638,6 @@ reduces them without incurring seq initialization"
                                            (thisfn (aget x k))]))
              :else x))]
     (f x)))
-
-(comment
-
-  (def _ (delay (str (goog.global.Date.))))
-  (realized? _)
-  (str (goog.global.Date.))
-  (deref _)
-  (realized? _)
-  (deref _)
-  (delay? _)
-  (delay "foo")
-  (force _)
-
-  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
@@ -3025,11 +3010,21 @@ reduces them without incurring seq initialization"
   (assert (= nil (last nil)))
   (assert (= 3 (last [1 2 3])))
 
-  ;;dotimes
+  ;; dotimes
   (let [s (atom 0)]
     (dotimes [n 10] (swap! s inc))
     (assert (= 10 @s)))
 
+  ;; delay
+  ;;  FF: can't run this in v8, need to find the correct way to call getTime
+  ;; (let [d (delay (js* "(new goog.global.Date().getTime())"))]
+  ;;   (assert (false? (realized? d)))
+  ;;   (let [d2 (js* "(new goog.global.Date().getTime())")]
+  ;;     (assert (> d2 (deref d))))
+  ;;   (assert (true? (realized? d)))
+  ;;   (let [d3 (deref d)]
+  ;;     (assert (= (deref d) d3))))
+  
   :ok
   )
 
