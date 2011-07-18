@@ -2345,24 +2345,28 @@ reduces them without incurring seq initialization"
               (list "#<" (str obj) ">")))))
 
 (defn pr-str-with-opts
-  "Prints a single object to a string, observing all the
+  "Prints a sequence of objects to a string, observing all the
   options given in opts"
-  [obj opts]
-  (let [sb (gstring/StringBuffer.)]
-    (loop [coll (seq (pr-seq obj opts))]
-      (when coll
-        (.append sb (first coll))
-        (recur (next coll))))
+  [objs opts]
+  (let [first-obj (first objs)
+        sb (gstring/StringBuffer.)]
+    (doseq [obj objs]
+      (when-not (identical? obj first-obj)
+        (.append sb " "))
+      (doseq [string (pr-seq obj opts)]
+        (.append sb string)))
     (str sb)))
 
 (defn pr-with-opts
-  "Prints a single object using string-print, observing all
+  "Prints a sequence of objects using string-print, observing all
   the options given in opts"
-  [obj opts]
-  (loop [coll (seq (pr-seq obj opts))]
-    (when coll
-      (string-print (first coll))
-      (recur (next coll)))))
+  [objs opts]
+  (let [first-obj (first objs)]
+    (doseq [obj objs]
+      (when-not (identical? obj first-obj)
+        (string-print " "))
+      (doseq [string (pr-seq obj opts)]
+        (string-print string)))))
 
 (defn newline [opts]
   (string-print "\n")
@@ -2380,31 +2384,35 @@ reduces them without incurring seq initialization"
    :meta *print-meta*
    :dup *print-dup*})
 
-; These should all be variadic.  Where oh where has my apply gone?
 (defn pr-str
   "pr to a string, returning it. Fundamental entrypoint to IPrintable."
-  [obj]
-  (pr-str-with-opts obj (pr-opts)))
+  [& objs]
+  (pr-str-with-opts objs (pr-opts)))
 
 (defn pr
   "Prints the object(s) using string-print.  Prints the
   object(s), separated by spaces if there is more than one.
   By default, pr and prn print in a way that objects can be
   read by the reader"
-  [obj]
-  (pr-with-opts obj (pr-opts)))
+  [& objs]
+  (pr-with-opts objs (pr-opts)))
 
-(defn println
+(defn print
   "Prints the object(s) using string-print.
   print and println produce output for human consumption."
-  [obj]
-  (pr-with-opts obj (assoc (pr-opts) :readably false))
+  [& objs]
+  (pr-with-opts objs (assoc (pr-opts) :readably false)))
+
+(defn println
+  "Same as print followed by (newline)"
+  [& objs]
+  (pr-with-opts objs (assoc (pr-opts) :readably false))
   (newline (pr-opts)))
 
 (defn prn
   "Same as pr followed by (newline)."
-  [obj]
-  (pr-with-opts obj (pr-opts))
+  [& objs]
+  (pr-with-opts objs (pr-opts))
   (newline (pr-opts)))
 
 (extend-protocol IPrintable
