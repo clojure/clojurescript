@@ -595,6 +595,14 @@ reduces them without incurring seq initialization"
     false
     true))
 
+(defn find
+  "Returns the map entry for key, or nil if key not present."
+  [coll k]
+  (when (and coll
+             (associative? coll)
+             (contains? coll k))
+    [k (-lookup coll k)]))
+
 (defn distinct?
   "Returns true if no two of the arguments are ="
   ([x] true)
@@ -3099,6 +3107,17 @@ reduces them without incurring seq initialization"
   (assert (= #{1 2} (disj #{1 2 3} 3)))
   (assert (= #{1} (disj #{1 2 3} 2 3)))
 
+  (assert (= (find {} :a) nil))
+  (assert (= (find {:a 1} :a) [:a 1]))
+  (assert (= (find {:a 1} :b) nil))
+  (assert (= (find {:a 1 :b 2} :a) [:a 1]))
+  (assert (= (find {:a 1 :b 2} :b) [:b 2]))
+  (assert (= (find {:a 1 :b 2} :c) nil))
+  (assert (= (find {} nil) nil))
+  (assert (= (find {:a 1} nil) nil))
+  (assert (= (find {:a 1 :b 2} nil) nil))
+  (assert (= (find [1 2 3] 0) [0 1]))
+  
   :ok
   )
 

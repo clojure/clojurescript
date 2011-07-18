@@ -224,7 +224,7 @@ macro currently expands into extend call
 * DONE ffirst
 * file-seq
 * DONE filter
-* TODO find
+* DONE find
 * TODO find-keyword
 * find-ns
 * find-protocol-impl
