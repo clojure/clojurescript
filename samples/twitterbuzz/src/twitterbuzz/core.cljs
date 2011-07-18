@@ -11,7 +11,7 @@
          payload
          callback))
 
-(def state (atom {:max-id 1 :functions []}))
+(def state (atom {:max-id 1 :functions [] :tweet-count 0}))
 
 (defn send-tweets [fns tweets]
   (when (seq fns)
@@ -24,7 +24,11 @@
         old-max (:max-id @state) ;; the filter won't work if you inline this
         tweets (filter #(> (:id %) old-max)
                        (:results result-map))]
-    (do  (swap! state (fn [old] (assoc old :max-id new-max)))
+    (do  (swap! state (fn [old] (-> old
+                                   (assoc :max-id new-max)
+                                   (assoc :tweet-count (+ (:tweet-count old) (count tweets)))
+                                   ;; this doesn't work
+                                   #_(update-in :tweet-count #(+ % (count tweets))))))
          (send-tweets (:functions @state) tweets))))
 
 (defn register
@@ -46,51 +50,7 @@
   []
   (let [timer (goog.Timer. 24000)]
     (do (listener)
-        (.start timer nil) ;; doesn't work as (.start timer)
+        (. timer (start))
         (events/listen timer goog.Timer/TICK listener))))
-
-;; Rendering Stuff - Replace with something cool
-;; =============================================
-
-(defn dom-element [element attrs]
-  (dom/createDom element
-                 (.strobj (reduce (fn [m [k v]]
-                                    (assoc m k v))
-                                  {}
-                                  (map #(vector (name %1) %2) (keys attrs) (vals attrs))))))
-
-(defn html [s]
-  (dom/htmlToDocumentFragment s))
-
-(defn add-leaderboard-tweet [tweet]
-  (let [parent (dom/getElement "leaderboard")
-        child (dom-element "div" {:class "tweet"})
-        user (dom-element "div" {:class "user-name"})
-        text (dom-element "div" {:class "tweet-text"})
-        pic (dom-element "img" {:src (:profile_image_url tweet) :class "profile-pic"})]
-    (do (dom/setTextContent text (:text tweet))
-        (dom/setTextContent user (:from_user tweet))
-        (dom/appendChild child pic)
-        (dom/appendChild child user)
-        (dom/appendChild child text)
-        (dom/appendChild parent child))))
-
-(defn clear-leaderboard []
-  (let [parent (dom/getElement "leaderboard")
-        title (dom/getFirstElementChild parent)]
-    (do (dom/removeChildren parent)
-        (dom/appendChild parent title))))
-
-;; Example function - waiting for tweets.
-(defn update-view-fn [tweets]
-  (let [status (dom/getElement "tweet-status")]
-    (do (clear-leaderboard)
-        (dom/setTextContent status (str (count tweets) " tweets"))
-        (loop [tweets tweets]
-          (when (seq tweets)
-            (do (add-leaderboard-tweet (first tweets))
-                (recur (rest tweets))))))))
-
-(register update-view-fn)
 
 (poll)
