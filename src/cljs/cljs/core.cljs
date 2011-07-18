@@ -2134,6 +2134,19 @@ reduces them without incurring seq initialization"
       (recur (rest in) (conj out (first in)))
       out)))
 
+(defn distinct
+  "Returns a lazy sequence of the elements of coll with duplicates removed"
+  [coll]
+  (let [step (fn step [xs seen]
+               (lazy-seq
+                ((fn [[f :as xs] seen]
+                   (when-let [s (seq xs)]
+                     (if (contains? seen f) 
+                       (recur (rest s) seen)
+                       (cons f (step (rest s) (conj seen f))))))
+                 xs seen)))]
+    (step coll #{})))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn butlast [s]
   (loop [ret [] s s]
@@ -2953,6 +2966,29 @@ reduces them without incurring seq initialization"
   (assert (distinct? 1 2 3))
   (assert (not (distinct? 1 2 3 1)))
 
+  ;; distinct
+  (assert (= (distinct ()) ()))
+  (assert (= (distinct '(1)) '(1)))
+  (assert (= (distinct '(1 2 3 1 1 1)) '(1 2 3)))
+  (assert (= (distinct [1 1 1 2]) '(1 2)))
+  (assert (= (distinct [1 2 1 2]) '(1 2)))
+  (assert (= (distinct "a") ["a"]))
+  (assert (= (distinct "abcabab") ["a" "b" "c"]))
+  (assert (= (distinct ["abc" "abc"]) ["abc"]))
+  (assert (= (distinct [nil nil]) [nil]))
+  (assert (= (distinct [0.0 0.0]) [0.0]))
+  (assert (= (distinct ['sym 'sym]) '[sym]))
+  (assert (= (distinct [:kw :kw]) [:kw]))
+  (assert (= (distinct [42 42]) [42]))
+  (assert (= (distinct [[] []]) [[]]))
+  (assert (= (distinct ['(1 2) '(1 2)]) '[(1 2)]))
+  (assert (= (distinct [() ()]) [()]))
+  (assert (= (distinct [[1 2] [1 2]]) [[1 2]]))
+  (assert (= (distinct [{:a 1 :b 2} {:a 1 :b 2}]) [{:a 1 :b 2}]))
+  (assert (= (distinct [{} {}]) [{}]))
+  (assert (= (distinct [#{1 2} #{1 2}]) [#{1 2}]))
+  (assert (= (distinct [#{} #{}]) [#{}]))
+
                                         ;regexps
   ;;these fail in v8 - why?
   ;(assert (= (str (re-pattern "f(.)o")) (str (js* "/f(.)o/"))))
@@ -3062,7 +3098,7 @@ reduces them without incurring seq initialization"
   (assert (= #{1 2 3} (disj #{1 2 3})))
   (assert (= #{1 2} (disj #{1 2 3} 3)))
   (assert (= #{1} (disj #{1 2 3} 2 3)))
-  
+
   :ok
   )
 

@@ -189,11 +189,11 @@ For macros only, uses clojure.core version
 * disj!
 * DONE dissoc
 * dissoc!
-* TODO distinct
+* DONE distinct
 * DONE distinct?
 * DONE doall
 * DONE dorun
-* TODO doseq
+* DONE doseq
 * dosync
 * DONE dotimes
 * DONE doto
