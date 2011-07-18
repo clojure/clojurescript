@@ -327,6 +327,38 @@ reduces them without incurring seq initialization"
   (when coll
     (seq (rest coll))))
 
+(defn second
+  "Same as (first (next x))"
+  [coll]
+  (first (next coll)))
+
+(defn ffirst
+  "Same as (first (first x))"
+  [coll]
+  (first (first coll)))
+
+(defn nfirst
+  "Same as (next (first x))"
+  [coll]
+  (next (first coll)))
+
+(defn fnext
+  "Same as (first (next x))"
+  [coll]
+  (first (next coll)))
+
+(defn nnext
+  "Same as (next (next x))"
+  [coll]
+  (next (next coll)))
+
+(defn last
+  "Return the last item in coll, in linear time"
+  [s]
+  (if (next s)
+    (recur (next s))
+    (first s)))
+
 (extend-type default
   IEquiv
   (-equiv [x o] (identical? x o))
@@ -386,14 +418,25 @@ reduces them without incurring seq initialization"
    same (hashed/sorted) type, that contains the mapping of key(s) to
    val(s). When applied to a vector, returns a new vector that
    contains val at index."
-  [coll k v]
-  (-assoc coll k v))
+  ([coll k v]
+     (-assoc coll k v))
+  ([coll k v & kvs]
+     (let [ret (assoc coll k v)]
+       (if kvs
+         (recur ret (first kvs) (second kvs) (nnext kvs))
+         ret))))
 
 (defn dissoc
   "dissoc[iate]. Returns a new map of the same (hashed/sorted) type,
   that does not contain a mapping for key(s)."
-  [coll k]
-  (-dissoc coll k))
+  ([coll] coll)
+  ([coll k]
+     (-dissoc coll k))
+  ([coll k & ks]
+     (let [ret (dissoc coll k)]
+       (if ks
+         (recur ret (first ks) (next ks))
+         ret))))
 
 (defn with-meta
   "Returns an object of the same type and value as obj, with
@@ -422,8 +465,14 @@ reduces them without incurring seq initialization"
 (defn disj
   "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
   does not contain key(s)."
-  [coll v]
-  (-disjoin coll v))
+  ([coll] coll)
+  ([coll k]
+     (-disjoin coll k))
+  ([coll k & ks]
+     (let [ret (disj coll k)]
+       (if ks
+         (recur ret (first ks) (next ks))
+         ret))))
 
 (defn hash [o]
   (-hash o))
@@ -608,38 +657,6 @@ reduces them without incurring seq initialization"
    (sort-by keyfn compare coll))
   ([keyfn comp coll]
      (sort (fn [x y] ((fn->comparator comp) (keyfn x) (keyfn y))) coll)))
-
-(defn second
-  "Same as (first (next x))"
-  [coll]
-  (first (next coll)))
-
-(defn ffirst
-  "Same as (first (first x))"
-  [coll]
-  (first (first coll)))
-
-(defn nfirst
-  "Same as (next (first x))"
-  [coll]
-  (next (first coll)))
-
-(defn fnext
-  "Same as (first (next x))"
-  [coll]
-  (first (next coll)))
-
-(defn nnext
-  "Same as (next (next x))"
-  [coll]
-  (next (next coll)))
-
-(defn last
-  "Return the last item in coll, in linear time"
-  [s]
-  (if (next s)
-    (recur (next s))
-    (first s)))
 
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
@@ -2341,24 +2358,28 @@ reduces them without incurring seq initialization"
               (list "#<" (str obj) ">")))))
 
 (defn pr-str-with-opts
-  "Prints a single object to a string, observing all the
+  "Prints a sequence of objects to a string, observing all the
   options given in opts"
-  [obj opts]
-  (let [sb (gstring/StringBuffer.)]
-    (loop [coll (seq (pr-seq obj opts))]
-      (when coll
-        (.append sb (first coll))
-        (recur (next coll))))
+  [objs opts]
+  (let [first-obj (first objs)
+        sb (gstring/StringBuffer.)]
+    (doseq [obj objs]
+      (when-not (identical? obj first-obj)
+        (.append sb " "))
+      (doseq [string (pr-seq obj opts)]
+        (.append sb string)))
     (str sb)))
 
 (defn pr-with-opts
-  "Prints a single object using string-print, observing all
+  "Prints a sequence of objects using string-print, observing all
   the options given in opts"
-  [obj opts]
-  (loop [coll (seq (pr-seq obj opts))]
-    (when coll
-      (string-print (first coll))
-      (recur (next coll)))))
+  [objs opts]
+  (let [first-obj (first objs)]
+    (doseq [obj objs]
+      (when-not (identical? obj first-obj)
+        (string-print " "))
+      (doseq [string (pr-seq obj opts)]
+        (string-print string)))))
 
 (defn newline [opts]
   (string-print "\n")
@@ -2376,31 +2397,35 @@ reduces them without incurring seq initialization"
    :meta *print-meta*
    :dup *print-dup*})
 
-; These should all be variadic.  Where oh where has my apply gone?
 (defn pr-str
   "pr to a string, returning it. Fundamental entrypoint to IPrintable."
-  [obj]
-  (pr-str-with-opts obj (pr-opts)))
+  [& objs]
+  (pr-str-with-opts objs (pr-opts)))
 
 (defn pr
   "Prints the object(s) using string-print.  Prints the
   object(s), separated by spaces if there is more than one.
   By default, pr and prn print in a way that objects can be
   read by the reader"
-  [obj]
-  (pr-with-opts obj (pr-opts)))
+  [& objs]
+  (pr-with-opts objs (pr-opts)))
 
-(defn println
+(defn print
   "Prints the object(s) using string-print.
   print and println produce output for human consumption."
-  [obj]
-  (pr-with-opts obj (assoc (pr-opts) :readably false))
+  [& objs]
+  (pr-with-opts objs (assoc (pr-opts) :readably false)))
+
+(defn println
+  "Same as print followed by (newline)"
+  [& objs]
+  (pr-with-opts objs (assoc (pr-opts) :readably false))
   (newline (pr-opts)))
 
 (defn prn
   "Same as pr followed by (newline)."
-  [obj]
-  (pr-with-opts obj (pr-opts))
+  [& objs]
+  (pr-with-opts objs (pr-opts))
   (newline (pr-opts)))
 
 (extend-protocol IPrintable
@@ -3024,6 +3049,19 @@ reduces them without incurring seq initialization"
   ;;   (assert (true? (realized? d)))
   ;;   (let [d3 (deref d)]
   ;;     (assert (= (deref d) d3))))
+
+  ;; assoc
+  (assert (= {1 2 3 4} (assoc {} 1 2 3 4)))
+  (assert (= {1 2} (assoc {} 1 2)))
+
+  ;; dissoc
+  (assert (= {} (dissoc {1 2 3 4} 1 3)))
+  (assert (= {1 2} (dissoc {1 2 3 4} 3)))
+
+  ;; disj
+  (assert (= #{1 2 3} (disj #{1 2 3})))
+  (assert (= #{1 2} (disj #{1 2 3} 3)))
+  (assert (= #{1} (disj #{1 2 3} 2 3)))
   
   :ok
   )
