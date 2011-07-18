@@ -2930,16 +2930,15 @@ reduces them without incurring seq initialization"
     (set! (.foo x) :hello)
     (assert (= (.foo x) :hello)))
 
-  ;;these are broken (set takes a collection), please fix
-  ;(assert (set))
-  ;(assert (= #{} (set)))
+  (assert (set []))
+  (assert (= #{} (set [])))
 
   (assert (= #{"foo"} (set ["foo"])))
   (assert (= #{1 2 3} #{1 3 2}))
   (assert (= #{#{1 2 3} [4 5 6] {7 8} 9 10}
              #{10 9 [4 5 6] {7 8} #{1 2 3}}))
   (assert (not (= #{nil [] {} 0 #{}} #{})))
-  ;(assert (= (count #{nil [] {} 0 #{}}) 5)) ; fails because (coll? nil) is true
+  (assert (= (count #{nil [] {} 0 #{}}) 5))
   (assert (= (conj #{1} 1) #{1}))
   (assert (= (conj #{1} 2) #{2 1}))
   (assert (= #{} (-empty #{1 2 3 4})))
@@ -3017,9 +3016,8 @@ reduces them without incurring seq initialization"
   (assert (= [1 42] (let [{:keys [a b] :or {b 42}} {:a 1}] [a b])))
   (assert (= [1 nil] (let [{:keys [a b] :or {c 42}} {:a 1}] [a b])))
   (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
-  ;; broken destructuring
-  ; (assert (= {1 2} (let [[a b] [1 2]] {a b})))
-  ; (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
+  (assert (= {1 2} (let [[a b] [1 2]] {a b})))
+  (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
 
   ;; update-in
   (assert (= {:foo {:bar {:baz 1}}}
@@ -3084,6 +3082,12 @@ reduces them without incurring seq initialization"
     (dotimes [n 10] (swap! s inc))
     (assert (= 10 @s)))
 
+  ;; doseq
+  (let [v [1 2 3 4 5]
+        s (atom ())]
+    (doseq [n v] (swap! s conj n))
+    (assert (= @s (reverse v))))
+  
   ;; delay
   ;;  FF: can't run this in v8, need to find the correct way to call getTime
   ;; (let [d (delay (js* "(new goog.global.Date().getTime())"))]
@@ -3097,6 +3101,7 @@ reduces them without incurring seq initialization"
   ;; assoc
   (assert (= {1 2 3 4} (assoc {} 1 2 3 4)))
   (assert (= {1 2} (assoc {} 1 2)))
+  (assert (= [42 2] (assoc [1 2] 0 42)))
 
   ;; dissoc
   (assert (= {} (dissoc {1 2 3 4} 1 3)))
@@ -3107,6 +3112,7 @@ reduces them without incurring seq initialization"
   (assert (= #{1 2} (disj #{1 2 3} 3)))
   (assert (= #{1} (disj #{1 2 3} 2 3)))
 
+  ;; find
   (assert (= (find {} :a) nil))
   (assert (= (find {:a 1} :a) [:a 1]))
   (assert (= (find {:a 1} :b) nil))
