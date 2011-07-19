@@ -32,6 +32,14 @@
     {:locs (zipmap connected (repeatedly #(random-loc)))
      :mentions mentions-data}))
 
+(defn roots [mentions-data]
+  (let [parents (reduce (fn [ret [k {:keys [mentions]}]]
+                          (if (pos? (count mentions))
+                            (conj ret k)
+                            ret))
+                        #{} mentions-data)]
+    (reduce disj parents (mapcat :mentions (vals mentions-data)))))
+
 (defn score [{:keys [locs mentions]}]
   (let [metric (fn [d w] (sqr (- 1 (* d w))))
         score-user (fn [[k {:keys [mentions]}]]
@@ -67,7 +75,7 @@
      :mentions mentions}))
 
 (comment
-;;(def test-data paste data from file here)
+(def test-data {})
 
 (def init (init-state test-data))
 

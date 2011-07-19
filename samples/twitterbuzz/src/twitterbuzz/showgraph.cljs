@@ -11,9 +11,9 @@
             [goog.graphics :as graphics]))
 
 ; Drawing configuration
-(def avatar-size 48) ; used for both x and y dimensions of avatars
+(def avatar-size 32) ; used for both x and y dimensions of avatars
 (def edge-widths [0 1 2 3 4]) ; More mentions == thicker edges
-(def anneal-skipping 100)
+(def anneal-skipping 10)
 (def cooling 1000)
 ; fail whale
 ;(def default-avatar "http://farm3.static.flickr.com/2562/4140195522_e207b97280_s.jpg")
