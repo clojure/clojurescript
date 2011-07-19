@@ -49,14 +49,22 @@ section#status-bar a.reset-search {
 }
 
 #network {
-  width: 680px;
-  height: 680px;
+  width: 500px;
+  height: 500px;
   padding: 10px 10px 0 0;
   float: left;
 }
 
 #leaderboard {
-  width: 239px;
+  width: 200px;
+  height: 680px;
+  float: left;
+  border-left: 1px solid #ccc;
+  padding: 10px;
+}
+
+#timeline {
+  width: 200px;
   height: 680px;
   float: left;
   border-left: 1px solid #ccc;

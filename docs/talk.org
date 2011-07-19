@@ -38,19 +38,14 @@
 *** Written in Clojure and itself
 ** Clojure on Closure
 *** Google's JS toolkit
-* Clojure[Script] in Clojure
-* Google Closure
+** Clojure[Script] in Clojure
+** Google Closure
 ** some subset of my gclosure lightning talk
-* Demo
-** REPL
-** Compilation
-** Web app
-** CLI app?
 * Where we are at
 ** What's there?
 *** Compiler
 *** REPL
-*** All the primitives
+*** All the primitives (that make sense)
 *** Arity overloading
 *** Macros
 *** Seqs, maps, vectors, sets
@@ -121,4 +116,11 @@
 *** all with Clojure CAs welcome to participate
 ** The Friday invite
 ** The Conj
+* Demo
+** REPL
+** Compilation
+** Web app
+** CLI app?
+* Q & A
+
 

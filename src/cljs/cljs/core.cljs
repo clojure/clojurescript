@@ -596,6 +596,14 @@ reduces them without incurring seq initialization"
     false
     true))
 
+(defn find
+  "Returns the map entry for key, or nil if key not present."
+  [coll k]
+  (when (and coll
+             (associative? coll)
+             (contains? coll k))
+    [k (-lookup coll k)]))
+
 (defn distinct?
   "Returns true if no two of the arguments are ="
   ([x] true)
@@ -790,6 +798,22 @@ reduces them without incurring seq initialization"
   ([x y] (js* "((~{x} < ~{y}) ? x : y)"))
   ([x y & more]
    (reduce min (min x y) more)))
+
+(defn- fix [q]
+  (if (>= q 0)
+    (js* "(Math.floor(~{q}))")
+    (js* "(Math.ceil(~{q}))")))
+
+(defn mod [n d]
+  (js* "(~{n} % ~{d})"))
+
+(defn quot [n d]
+  (let [rem (mod n d)]
+    (fix (js* "((~{n} - ~{rem}) / ~{d})"))))
+
+(defn rem [n d]
+  (let [q (quot n d)]
+    (js* "(~{n} - (~{d} * ~{q}))")))
 
 (defn bit-xor
   "Bitwise exclusive or"
@@ -1550,6 +1574,13 @@ reduces them without incurring seq initialization"
 (defn replicate
   "Returns a lazy seq of n xs."
   [n x] (take n (repeat x)))
+
+(defn repeatedly
+  "Takes a function of no args, presumably with side effects, and
+  returns an infinite (or length n if supplied) lazy sequence of calls
+  to it"
+  ([f] (lazy-seq (cons (f) (repeatedly f))))
+  ([n f] (take n (repeatedly f))))
 
 (defn iterate
   "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of side-effects"
@@ -2411,11 +2442,12 @@ reduces them without incurring seq initialization"
   [& objs]
   (pr-with-opts objs (pr-opts)))
 
-(defn print
+(def ^{:doc
   "Prints the object(s) using string-print.
-  print and println produce output for human consumption."
-  [& objs]
-  (pr-with-opts objs (assoc (pr-opts) :readably false)))
+  print and println produce output for human consumption."}
+  print
+  (fn cljs-core-print [& objs]
+    (pr-with-opts objs (assoc (pr-opts) :readably false))))
 
 (defn println
   "Same as print followed by (newline)"
@@ -2941,16 +2973,15 @@ reduces them without incurring seq initialization"
     (set! (.foo x) :hello)
     (assert (= (.foo x) :hello)))
 
-  ;;these are broken (set takes a collection), please fix
-  ;(assert (set))
-  ;(assert (= #{} (set)))
+  (assert (set []))
+  (assert (= #{} (set [])))
 
   (assert (= #{"foo"} (set ["foo"])))
   (assert (= #{1 2 3} #{1 3 2}))
   (assert (= #{#{1 2 3} [4 5 6] {7 8} 9 10}
              #{10 9 [4 5 6] {7 8} #{1 2 3}}))
   (assert (not (= #{nil [] {} 0 #{}} #{})))
-  ;(assert (= (count #{nil [] {} 0 #{}}) 5)) ; fails because (coll? nil) is true
+  (assert (= (count #{nil [] {} 0 #{}}) 5))
   (assert (= (conj #{1} 1) #{1}))
   (assert (= (conj #{1} 2) #{2 1}))
   (assert (= #{} (-empty #{1 2 3 4})))
@@ -3028,9 +3059,8 @@ reduces them without incurring seq initialization"
   (assert (= [1 42] (let [{:keys [a b] :or {b 42}} {:a 1}] [a b])))
   (assert (= [1 nil] (let [{:keys [a b] :or {c 42}} {:a 1}] [a b])))
   (assert (= [2 1] (let [[a b] '(1 2)] [b a])))
-  ;; broken destructuring
-  ; (assert (= {1 2} (let [[a b] [1 2]] {a b})))
-  ; (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
+  (assert (= {1 2} (let [[a b] [1 2]] {a b})))
+  (assert (= [2 1] (let [[a b] (seq [1 2])] [b a])))
 
   ;; update-in
   (assert (= {:foo {:bar {:baz 1}}}
@@ -3090,6 +3120,18 @@ reduces them without incurring seq initialization"
   (assert (= nil (last nil)))
   (assert (= 3 (last [1 2 3])))
 
+  ;; dotimes
+  (let [s (atom [])]
+    (dotimes [n 5]
+      (swap! s conj n))
+    (assert (= [0 1 2 3 4] @s)))
+
+  ;; doseq
+  (let [v [1 2 3 4 5]
+        s (atom ())]
+    (doseq [n v] (swap! s conj n))
+    (assert (= @s (reverse v))))
+  
   ;; delay
   ;; (let [d (delay (. (goog.global.Date.) (getTime)))]
   ;;   (assert (false? (realized? d)))
@@ -3102,6 +3144,7 @@ reduces them without incurring seq initialization"
   ;; assoc
   (assert (= {1 2 3 4} (assoc {} 1 2 3 4)))
   (assert (= {1 2} (assoc {} 1 2)))
+  (assert (= [42 2] (assoc [1 2] 0 42)))
 
   ;; dissoc
   (assert (= {} (dissoc {1 2 3 4} 1 3)))
@@ -3116,6 +3159,55 @@ reduces them without incurring seq initialization"
   (let [f (memoize (fn [] (rand)))]
     (f)
     (assert (= (f) (f))))
+  
+  ;; find
+  (assert (= (find {} :a) nil))
+  (assert (= (find {:a 1} :a) [:a 1]))
+  (assert (= (find {:a 1} :b) nil))
+  (assert (= (find {:a 1 :b 2} :a) [:a 1]))
+  (assert (= (find {:a 1 :b 2} :b) [:b 2]))
+  (assert (= (find {:a 1 :b 2} :c) nil))
+  (assert (= (find {} nil) nil))
+  (assert (= (find {:a 1} nil) nil))
+  (assert (= (find {:a 1 :b 2} nil) nil))
+  (assert (= (find [1 2 3] 0) [0 1]))
+
+  ;; mod,quot,rem
+  (assert (= (quot 4 2) 2))
+  (assert (= (quot 3 2) 1))
+  (assert (= (quot 6 4) 1))
+  (assert (= (quot 0 5) 0))
+  (assert (= (quot 42 5) 8))
+  (assert (= (quot 42 -5) -8))
+  (assert (= (quot -42 -5) 8))
+  (assert (= (quot 9 3) 3))
+  (assert (= (quot 9 -3) -3))
+  (assert (= (quot -9 3) -3))
+  (assert (= (quot 2 -5) 0))
+  (assert (= (quot -2 5) 0))
+  (assert (= (quot 0 3) 0))
+  (assert (= (quot 0 -3) 0))
+
+  (assert (= (mod 4 2) 0))
+  (assert (= (mod 3 2) 1))
+  (assert (= (mod 6 4) 2))
+  (assert (= (mod 0 5) 0))
+  (assert (= (mod 4.5 2.0) 0.5))
+  (assert (= (mod 42 5) 2))
+  (assert (= (mod 9 3) 0))
+  (assert (= (mod 9 -3) 0))
+  (assert (= (mod -9 3) 0))
+  (assert (= (mod -9 -3) 0))
+  (assert (= (mod 0 3) 0))
+  (assert (= (mod 3216478362187432 432143214) 120355456))
+
+  (assert (= (rem 4 2) 0))
+  (assert (= (rem 0 5) 0))
+  (assert (= (rem 4.5 2.0) 0.5))
+  (assert (= (rem 42 5) 2))
+  (assert (= (rem 2 5) 2))
+  (assert (= (rem 2 -5) 2))
+  (assert (= (rem 0 3) 0))
   
   :ok
   )

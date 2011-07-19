@@ -42,14 +42,27 @@
 
   <section id="main-wrap">
     <section id="main">
+
       <section id="network">
         <h2>Network</h2>
       </section>
 
       <section id="leaderboard">
         <h2>Leaderboard</h2>
+        <div id="leaderboard-content">
+        </div>
       </section>
+
+      <section id="timeline">
+        <h2>Timeline</h2>
+        <div id="timeline-content">
+        </div>
+      </section>
+
       <div class="clear"></div>
+    </section>
+    
+    <div class="clear"></div>
     </section>
   </section>
 
@@ -58,6 +71,9 @@
   <script type="text/javascript" src="twitterbuzz.js"></script>
   <script type="text/javascript">
     goog.require('twitterbuzz.core');
+    goog.require('twitterbuzz.timeline');
+    goog.require('twitterbuzz.leaderboard');
+    goog.require('twitterbuzz.showgraph');
   </script>
 
 </body>

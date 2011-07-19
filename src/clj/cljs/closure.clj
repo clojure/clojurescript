@@ -392,7 +392,7 @@
            deps []]
       (if (seq requires)
         (let [node (get index (first requires))]
-          (recur (concat (rest requires) (:requires node)) (conj deps node)))
+          (recur (into (next requires) (:requires node)) (conj deps node)))
         (cons (get index "goog/base.js") (dependency-order deps))))))
 
 (comment

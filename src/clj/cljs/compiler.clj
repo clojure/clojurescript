@@ -813,12 +813,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (let [mvar
         (when-not (-> env :locals sym)  ;locals hide macros
           (if-let [nstr (namespace sym)]
-            (when-let [nsym (cond
-                             (= "clojure.core" nstr) 'cljs.core
-                             (.contains nstr ".") (symbol nstr)
-                             :else
-                             (-> env :ns :requires-macros (get (symbol nstr))))]
-              (and (find-ns nsym) (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) (symbol (name sym)))))
+            (when-let [ns (cond
+                           (= "clojure.core" nstr) (find-ns 'cljs.core)
+                           (.contains nstr ".") (find-ns (symbol nstr))
+                           :else
+                           (-> env :ns :requires-macros (get (symbol nstr))))]
+              (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
             (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym)))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
       @mvar)))
