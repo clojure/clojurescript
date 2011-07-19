@@ -10,8 +10,7 @@
   (:require [goog.string :as gstring]
             [goog.string.StringBuffer :as gstringbuf]
             [goog.object :as gobject]
-            [goog.array :as garray]
-	    [goog.math :as math]))
+            [goog.array :as garray]))
 
 (defn truth_
   "Internal - do not use!"
@@ -2715,11 +2714,11 @@ reduces them without incurring seq initialization"
   "Returns a random floating point number between 0 (inclusive) and
   n (default 1) (exclusive)."
   ([] (rand 1))
-  ([n] (math/uniformRandom 0 n)))
+  ([n] (js* "Math.random() * ~{n}")))
 
 (defn rand-int
   "Returns a random integer between 0 (inclusive) and n (exclusive)."
-  [n] (math/randomInt n))
+  [n] (js* "Math.floor(Math.random() * ~{n})"))
 
 (defn rand-nth
   "Return a random element of the (sequential) collection. Will have
@@ -2727,6 +2726,8 @@ reduces them without incurring seq initialization"
   collection."
   [coll]
   (nth coll (rand-int (count coll))))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
@@ -3208,8 +3209,17 @@ reduces them without incurring seq initialization"
   (assert (= (rem 2 5) 2))
   (assert (= (rem 2 -5) 2))
   (assert (= (rem 0 3) 0))
+
+  ;; group-by
+  (let [d (group-by second {:a 1 :b 2 :c 1 :d 4 :e 1 :f 2})]
+    (assert (= 3 (count (get d 1))))
+    (assert (= 2 (count (get d 2))))
+    (assert (= 1 (count (get d 4)))))
   
   :ok
   )
 
 #_(goog.global/print (assoc {} :a 1))
+
+
+
