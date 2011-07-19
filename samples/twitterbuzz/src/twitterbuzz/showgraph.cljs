@@ -11,10 +11,14 @@
             [goog.graphics :as graphics]))
 
 ; Drawing configuration
-(def avatar-size 0.07) ; used for both x and y dimensions of avatars
-(def edge-widths [0 0.001 0.005 0.010 0.020]) ; More mentions == thicker edges
+(def avatar-size 48) ; used for both x and y dimensions of avatars
+(def edge-widths [0 1 2 3 4]) ; More mentions == thicker edges
 (def anneal-skipping 100)
 (def cooling 1000)
+; fail whale
+;(def default-avatar "http://farm3.static.flickr.com/2562/4140195522_e207b97280_s.jpg")
+; google+ silhouette
+(def default-avatar "http://ssl.gstatic.com/s2/profiles/images/silhouette48.png")
 (defn debug [_])
 ;(defn debug [a] (str "t: " (:t a) " score: " (:best-score a)))
 
@@ -27,31 +31,43 @@
 (def max-stroke (peek edge-strokes))
 
 (def g
-  (doto (graphics/createGraphics "100%" "100%" 1.0 1.0)
+  (doto (graphics/createGraphics "100%" "100%")
     (.render (dom/getElement "network"))))
 
-(def font (graphics/Font. 0.03 "Arial"))
-(def stroke (graphics/Stroke. 0.001 "#f00"))
+(def font (graphics/Font. 12 "Arial"))
+(def stroke (graphics/Stroke. 1 "#f00"))
 (def fill (graphics/SolidFill. "#f00"))
+
+(defn unit-to-pixel [unit-arg canvas-size]
+  (+ (* unit-arg (- canvas-size avatar-size)) (/ avatar-size 2)))
 
 (defn draw-graph [{:keys [locs mentions]} text]
   (. g (clear))
 
-  ; Draw mention edges
-  (doseq [[username {x1 :x, y1 :y}] locs
-          [mention-name mention-count] (:mentions (get mentions username))]
-    (when-let [{x2 :x, y2 :y} (get locs mention-name)]
-      (.drawPath g
-                 (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
-                 (get edge-strokes mention-count max-stroke) nil)))
+  (let [canvas-size (. g (getPixelSize))]
 
-  ; Draw avatar nodes
-  (let [offset (/ avatar-size 2)]
+    ; Draw mention edges
+    (doseq [[username {ux1 :x, uy1 :y}] locs
+            :let [x1 (unit-to-pixel ux1 (.width canvas-size))
+                  y1 (unit-to-pixel uy1 (.height canvas-size))]
+            [mention-name mention-count] (:mentions (get mentions username))]
+      (when-let [{ux2 :x, uy2 :y} (get locs mention-name)]
+        (let [x2 (unit-to-pixel ux2 (.width canvas-size))
+              y2 (unit-to-pixel uy2 (.height canvas-size))]
+          (.drawPath g
+                    (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
+                    (get edge-strokes mention-count max-stroke) nil))))
+
+    ; Draw avatar nodes
     (doseq [[username {:keys [x y]}] locs]
-      (.drawImage g (- x offset) (- y offset) avatar-size avatar-size
-                  (:image-url (get mentions username)))))
+      (.drawImage g
+                  (- (unit-to-pixel x (.width canvas-size))  (/ avatar-size 2))
+                  (- (unit-to-pixel y (.height canvas-size)) (/ avatar-size 2))
+                  avatar-size avatar-size
+                  (get (get mentions username) :image-url default-avatar)))
 
-  (when text (.drawTextOnLine g text 0 0.02 0 1 "left" font stroke fill)))
+    (when text (.drawTextOnLine g text 0 20 0 (.height canvas-size)
+                                "left" font stroke fill))))
 
 ; This is temporary.  The graph data should flow somehow from the
 ; tweets.  For now, just hardcode some:
@@ -62,8 +78,11 @@
 (set! (.cycle animation)
   (fn [t]
     (let [a (first @animation)]
-      (draw-graph (:best a) (debug a)))
-    (swap! animation #(drop anneal-skipping %))))
+      (draw-graph (:best a) (debug a))
+      (swap! animation #(drop anneal-skipping %))
+      (when (= (:best a) (:best (first @animation)))
+        ; no better graph in the last 'anneal-skipping' steps, so quit trying.
+        (anim/unregisterAnimation animation)))))
 
 (events/listen
   (dom/getElement "network")
