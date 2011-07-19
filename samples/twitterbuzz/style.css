@@ -12,68 +12,86 @@ p { font-size: 12px; }
 
 /* General Structure */
 section#header-inner, footer, section#status-bar, section#main {
-  width: 960px;
+  /* width: 960px; */
   margin: 0 auto;
+  padding: 0 20px;
+  min-width: 960px;
 }
 
 /* Header */
 header {
   height: 80px;
   border-bottom: 1px solid #ccc;
+  position: relative;
 }
 
 #header-inner h1 {
   padding-top: 30px;
 }
 
+#clojure {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    margin: 0;
+    padding: 0;
+}
+
 /* Status Bar */
-section#status-bar-wrap {
+#status-bar-wrap {
   padding: 10px 0;
   height: 30px;
   border-bottom: 1px solid #ccc;
 }
 
-section#status-bar {
+#status-bar {
 }
 
-section#status-bar span.tweet-status {
+#status-bar span.tweet-status {
   float: right;
   padding: 4px 7px 4px 7px;
   margin-right: 10px;
   border: 1px solid #ddd;
   background-color: #e7e7e7;
 }
-section#status-bar a.reset-search {
+#status-bar a.reset-search {
   float: right;
   padding-top: 5px;
 }
 
 /* Main Body */
 #main-wrap {
-  border-bottom: 1px solid #ccc;
+  /*border-bottom: 1px solid #ccc;*/
+  position: absolute;
+  top: 132px;
+  bottom: 0;
+  overflow: hidden;
+  min-height: 540px;
+  width: 100%;
 }
 
 #main {
-  height: 700px;
+  height: 100%;
   position: relative;
 }
 
 #network {
-  width: 540px;
   height: 100%;
+  min-width: 540px;
+  left: 20px;
+  right: 400px;
   /*padding: 10px 10px 0 0;*/
   float: left;
-  position: relative;
+  position: absolute;
 }
 
 #leaderboard {
   width: 380px;
   height: 100px;
-  float: left;
   border-left: 1px solid #ccc;
   /*padding: 10px;*/
-  position: relative;
-  margin-left: 20px;
+  position: absolute;
+  right: 0;
 }
 
 #timeline {
@@ -83,7 +101,7 @@ section#status-bar a.reset-search {
   border-left: 1px solid #ccc;
   padding: 0;
   position: absolute;
-  left: 560px;
+  right: 0;
   overflow: hidden;
 }
 
