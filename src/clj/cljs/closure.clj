@@ -334,7 +334,7 @@
                 parse-js-ns
                 (assoc :file (.getPath f) :url (to-url f))))]
     (let [js-sources (filter #(.endsWith (.getName %) ".js") (file-seq (io/file path)))]
-      (remove #(not (seq (:provides %))) (map graph-node js-sources)))))
+      (filter #(seq (:provides %)) (map graph-node js-sources)))))
 
 (def load-library (memoize load-library*))
 
@@ -432,7 +432,7 @@
   already exist."
   [opts requires]
   (let [index (js-dependency-index opts)]
-    (letfn [(cljs-deps [coll] (filter #(not (contains? index %)) coll))]
+    (letfn [(cljs-deps [coll] (remove #(contains? index %) coll))]
      (loop [requires (cljs-deps requires)
             deps {}]
        (if (seq requires)
@@ -441,7 +441,7 @@
                new-requires (remove #(or (contains? deps %)
                                          (contains? (set requires) %))
                                     (cljs-deps (-requires js)))]
-           (recur (concat (rest requires) new-requires) (assoc deps next-ns js)))
+           (recur (into (rest requires) new-requires) (assoc deps next-ns js)))
          (dependency-order (vals deps)))))))
 
 (comment
@@ -531,7 +531,7 @@
   ;; optimize a project
   (println (->> (-compile "samples/hello/src" {})
                 (apply add-dependencies {})
-                (apply optimize {:optimizations :simple :pretty-print yes})))
+                (apply optimize {:optimizations :simple :pretty-print true})))
   )
 
 ;; Output
@@ -712,7 +712,7 @@
   (println (build '[(ns hello.core)
                     (defn ^{:export greet} greet [n] (str "Hola " n))
                     (defn ^:export sum [xs] 42)]
-                  {:optimizations :simple :flags #{:pretty-print}}))
+                  {:optimizations :simple :pretty-print true}))
 
   ;; build a project with optimizations
   (build "samples/hello/src" {:optimizations :advanced})
