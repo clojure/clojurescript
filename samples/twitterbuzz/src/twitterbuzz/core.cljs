@@ -125,7 +125,8 @@
         (events/listen timer goog.Timer/TICK do-timer))))
 
 (defn do-track-button-clicked []
-  (send-event :track-clicked))
+  (do (do-timer)
+      (send-event :track-clicked)))
 
 (defn do-refresh-button-clicked []
   (send-event :refresh-clicked))
