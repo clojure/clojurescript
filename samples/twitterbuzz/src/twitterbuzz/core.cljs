@@ -113,7 +113,9 @@
   (.value (dom/getElement "twitter-search-tag")))
 
 (defn do-timer []
-  (retrieve (.strobj {"q" (search-tag)}) my-callback))
+  (let [tag (search-tag)]
+    (when (not (empty? tag))
+      (retrieve (.strobj {"q" tag "rpp" 100}) my-callback))))
 
 (defn poll
   "Request new data from twitter once every 24 seconds. This will put
