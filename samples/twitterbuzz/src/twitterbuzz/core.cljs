@@ -14,12 +14,21 @@
 
 (def state (atom {:max-id 1
                   :graph {}
-                  :new-tweets-listeners []
-                  :graph-update-listeners []
+                  :listeners {:new-tweets []
+                              :graph-update []
+                              :track-clicked []
+                              :refresh-clicked []}
                   :tweet-count 0}))
 
-(defn add-listener [k f]
-  (swap! state (fn [old] (assoc old k (conj (k old) f)))))
+(defn add-listener [old-state k f]
+  (let [l (-> old-state :listeners k)]
+    (assoc-in old-state [:listeners k] (conj l f))))
+
+(defn register
+  "Register a function to be called when new data arrives specifying
+  the event to receive updates for. Events can be :new-tweets or :graph-update."
+  [event f]
+  (swap! state add-listener event f))
 
 (def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
 
@@ -28,9 +37,12 @@
          payload
          callback))
 
-(defn send-tweets [fns tweets]
-  (doseq [f fns]
-    (f tweets)))
+(defn send-event
+  ([event]
+     (send-event event nil))
+  ([event message]
+     (doseq [f (-> @state :listeners event)]
+       (f message))))
 
 (defn matches [p s]
   (seq (js* "~{s}.match(new RegExp(~{p}, 'g'))")))
@@ -80,22 +92,15 @@
         tweets (filter #(> (:id %) old-max)
                        (:results result-map))]
     (do  (swap! state update-state new-max tweets)
-         (send-tweets (:new-tweets-listeners @state) tweets)
-         (send-tweets (:graph-update-listeners @state) (:graph @state)))))
-
-(defn register
-  "Register a function to be called when new data arrives specifying
-  the event to receive updates for. Events can be :new-tweets or :graph-update."
-  [event f]
-  (cond (= event :new-tweets) (add-listener :new-tweets-listeners f)
-        (= event :graph-update) (add-listener :graph-update-listeners f)))
+         (send-event :new-tweets tweets)
+         (send-event :graph-update (:graph @state)))))
 
 (defn search-tag
   "Get the current tag value from the page."
   []
   (.value (dom/getElement "twitter-search-tag")))
 
-(defn listener []
+(defn do-timer []
   (retrieve (.strobj {"q" (search-tag)}) my-callback))
 
 (defn poll
@@ -103,10 +108,27 @@
   you at the 150 request/hour rate limit. We can speed it up for the demo."
   []
   (let [timer (goog.Timer. 24000)]
-    (do (listener)
+    (do (do-timer)
         (. timer (start))
-        (events/listen timer goog.Timer/TICK listener))))
+        (events/listen timer goog.Timer/TICK do-timer))))
 
+(defn do-track-button-clicked []
+  (send-event :track-clicked))
+
+(defn do-refresh-button-clicked []
+  (send-event :refresh-clicked))
+
+(defn start-app []
+  (events/listen (dom/getElement "twitter-search-button")
+                 "click"
+                 do-track-button-clicked)
+  (events/listen (dom/getElement "refresh-button")
+                 "click"
+                 do-refresh-button-clicked))
+
+;; this should be rolled up into one and the polling should only start
+;; when the track button is clicked.
+(start-app)
 (poll)
 
 (comment
