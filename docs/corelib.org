@@ -260,7 +260,7 @@ macro currently expands into extend call
 * get-proxy-class
 * get-thread-bindings
 * DONE get-validator
-* TODO group-by
+* DONE group-by
 * DONE hash
 * DONE hash-combine
 * DONE hash-map
