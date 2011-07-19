@@ -32,8 +32,11 @@
   (doseq [f fns]
     (f tweets)))
 
+(defn matches [p s]
+  (seq (js* "~{s}.match(new RegExp(~{p}, 'g'))")))
+
 (defn parse-mentions [tweet]
-  (map second (re-seq (re-pattern "@(\\w*)") (:text tweet))))
+  (map #(apply str (drop 1 %)) (matches "@\\w*" (:text tweet))))
 
 (defn add-mentions
   "Add the user to the mentions map for each user she mentions."
@@ -108,7 +111,7 @@
 
 (comment
 
-  (parse-mentions {:text "What's up @sue and @larry"})
+  (parse-mentions {:text "What's up @sue: and @larry"})
   
   (add-mentions {} "jim" ["sue"])
   (add-mentions {"sue" {}} "jim" ["sue"])
