@@ -12,13 +12,16 @@
             [goog.events :as events]
             [goog.dom :as dom]))
 
-(def state (atom {:max-id 1
-                  :graph {}
-                  :listeners {:new-tweets []
-                              :graph-update []
-                              :track-clicked []
-                              :refresh-clicked []}
-                  :tweet-count 0}))
+(def initial-state {:max-id 1
+                    :graph {}
+                    :listeners {:new-tweets []
+                                :graph-update []
+                                :track-clicked []
+                                :refresh-clicked []}
+                    :tweet-count 0
+                    :search-tag nil})
+
+(def state (atom initial-state))
 
 (defn add-listener [old-state k f]
   (let [l (-> old-state :listeners k)]
@@ -31,6 +34,11 @@
   (swap! state add-listener event f))
 
 (def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
+
+(defn search-tag
+  "Get the current tag value from the page."
+  []
+  (.value (dom/getElement "twitter-search-tag")))
 
 (defn retrieve [payload callback]
   (.send (goog.net.Jsonp. twitter-uri)
@@ -107,15 +115,9 @@
          (send-event :new-tweets tweets)
          (send-event :graph-update (:graph @state)))))
 
-(defn search-tag
-  "Get the current tag value from the page."
-  []
-  (.value (dom/getElement "twitter-search-tag")))
-
 (defn do-timer []
-  (let [tag (search-tag)]
-    (when (not (empty? tag))
-      (retrieve (.strobj {"q" tag "rpp" 100}) my-callback))))
+  (if-let [tag (:search-tag @state)]
+    (retrieve (.strobj {"q" tag "rpp" 100}) my-callback)))
 
 (defn poll
   "Request new data from twitter once every 24 seconds. This will put
@@ -127,24 +129,24 @@
         (events/listen timer goog.Timer/TICK do-timer))))
 
 (defn do-track-button-clicked []
-  (do (do-timer)
+  (do (let [listeners (:listeners @state)]
+        (reset! state (assoc initial-state :listeners listeners :search-tag (search-tag))))
+      (do-timer)
       (send-event :track-clicked)))
 
 (defn do-refresh-button-clicked []
   (send-event :refresh-clicked))
 
 (defn start-app []
-  (events/listen (dom/getElement "twitter-search-button")
-                 "click"
-                 do-track-button-clicked)
-  (events/listen (dom/getElement "refresh-button")
-                 "click"
-                 do-refresh-button-clicked))
+  (do (poll)
+      (events/listen (dom/getElement "twitter-search-button")
+                     "click"
+                     do-track-button-clicked)
+      (events/listen (dom/getElement "refresh-button")
+                     "click"
+                     do-refresh-button-clicked)))
 
-;; this should be rolled up into one and the polling should only start
-;; when the track button is clicked.
 (start-app)
-(poll)
 
 (comment
 
