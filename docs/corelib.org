@@ -412,8 +412,8 @@ dunno about printing
 * pvalues
 * TODO quot
 * DONE rand
-* TODO rand-int
-* TODO rand-nth
+* DONE rand-int
+* DONE rand-nth
 * TODO range
 * TODO ratio?
 * TODO rational?

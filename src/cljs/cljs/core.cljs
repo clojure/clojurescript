@@ -10,7 +10,8 @@
   (:require [goog.string :as gstring]
             [goog.string.StringBuffer :as gstringbuf]
             [goog.object :as gobject]
-            [goog.array :as garray]))
+            [goog.array :as garray]
+	    [goog.math :as math]))
 
 (defn truth_
   "Internal - do not use!"
@@ -2681,8 +2682,19 @@ reduces them without incurring seq initialization"
 (defn rand
   "Returns a random floating point number between 0 (inclusive) and
   n (default 1) (exclusive)."
-  ([] (js* "Math.random()"))
-  ([n] (js* "Math.random() * ~{n}")))
+  ([] (rand 1))
+  ([n] (math/uniformRandom 0 n)))
+
+(defn rand-int
+  "Returns a random integer between 0 (inclusive) and n (exclusive)."
+  [n] (math/randomInt n))
+
+(defn rand-nth
+  "Return a random element of the (sequential) collection. Will have
+  the same performance characteristics as nth for the given
+  collection."
+  [coll]
+  (nth coll (rand-int (count coll))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
@@ -3079,7 +3091,6 @@ reduces them without incurring seq initialization"
   (assert (= 3 (last [1 2 3])))
 
   ;; delay
-  ;;  FF: can't run this in v8, need to find the correct way to call getTime
   ;; (let [d (delay (. (goog.global.Date.) (getTime)))]
   ;;   (assert (false? (realized? d)))
   ;;   (let [d2 (. (goog.global.Date.) (getTime))]
