@@ -36,9 +36,4 @@
         (doseq [tweet tweets]
           (add-timeline-tweet tweet)))))
 
-(defn refresh [_]
-  (let [parent (dom/getElement "timeline-content")]
-    (do (dom/removeChildren parent))))
-
 (core/register :new-tweets update-timeline)
-(core/register :refresh-clicked refresh)
