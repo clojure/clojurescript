@@ -117,20 +117,24 @@ header {
 #leaderboard .tweet {
     float: left;
     z-index: 100;
-    margin: 10px;
+    margin: 4px;
 }
 
 #leaderboard .tweet-details {
     position: absolute;
     top: 66px;
     left: 0;
-    background-color: #fff;
+    background-color: #e6f3f8;
     z-index: 100;
     display: none;
     padding: 10px;
+    width: 360px;
+    border-bottom: 1px solid #9cbbc6;
 }
 #leaderboard .profile-pic {
-    border: 4px solid #999;
+    width: 48px;
+    height: 48px;
+    border: 10px solid #fff;
 }
 #leaderboard .user-name {
     font-weight: bold;
@@ -139,7 +143,7 @@ header {
     display: block;
 }
 #leaderboard .tweet:hover .profile-pic {
-    border-color: #fff;
+    border-color: #e6f3f8;
 }
 
 /* Timeline */
