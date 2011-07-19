@@ -34,9 +34,7 @@
 (defn update-timeline [tweets]
   (let [status (dom/getElement "tweet-status")]
     (do (dom/setTextContent status (str (:tweet-count @core/state) " tweets"))
-        (loop [tweets tweets]
-          (when (seq tweets)
-            (do (add-timeline-tweet (first tweets))
-                (recur (rest tweets))))))))
+        (doseq [tweet tweets]
+          (add-timeline-tweet tweet)))))
 
 (core/register :new-tweets update-timeline)
