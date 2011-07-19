@@ -35,16 +35,14 @@
     (.render (dom/getElement "network"))))
 
 (def font (graphics/Font. 12 "Arial"))
-(def stroke (graphics/Stroke. 1 "#f00"))
 (def fill (graphics/SolidFill. "#f00"))
 
 (defn unit-to-pixel [unit-arg canvas-size]
   (+ (* unit-arg (- canvas-size avatar-size)) (/ avatar-size 2)))
 
 (defn draw-graph [{:keys [locs mentions]} text]
-  (. g (clear))
-
   (let [canvas-size (. g (getPixelSize))]
+    (. g (clear))
 
     ; Draw mention edges
     (doseq [[username {ux1 :x, uy1 :y}] locs
@@ -66,12 +64,15 @@
                   avatar-size avatar-size
                   (get (get mentions username) :image-url default-avatar)))
 
-    (when text (.drawTextOnLine g text 0 20 0 (.height canvas-size)
-                                "left" font stroke fill))))
+    (let [text (if (empty? locs)
+                 "No locations to graph"
+                 text)]
+      (when text
+        (.drawTextOnLine g text 5 20 (.width canvas-size) 20
+                        "left" font nil fill)))))
 
-; This is temporary.  The graph data should flow somehow from the
-; tweets.  For now, just hardcode some:
-(def test-users {"djspiewak" {:image-url "http://a0.twimg.com/profile_images/746976711/angular-final_normal.jpg", :last-tweet "Does Clojure have a Sinatra clone?", :mentions {}}, "tobsn" {:image-url "http://a2.twimg.com/profile_images/1364411587/yr40_normal.png", :last-tweet "Creating a Query DSL using Clojure and MongoDB http://tob.sn/qgCxkm #mongodb", :mentions {}}, "CzarneckiD" {:image-url "http://a3.twimg.com/profile_images/1156755747/head_trees_normal.jpg", :last-tweet "@greymouser I need to start writing some Clojure I guess :)", :mentions {"greymouser" 2}}, "sbtourist" {:image-url "http://a0.twimg.com/profile_images/72494229/Cryer_Black_normal.jpg", :last-tweet "Clooj, a lightweight Clojure IDE: http://t.co/OSCjr9X", :mentions {"djspiewak" 2}}, "jboner" {:image-url "http://a2.twimg.com/profile_images/1395654712/jonas_bw_small_normal.JPG", :last-tweet "RT @sbtourist: Clooj, a lightweight Clojure IDE: http://t.co/OSCjr9X", :mentions {"sbtourist" 2, "djspiewak" 2, "romanroe" 2}}})
+(def users (atom nil))
+(buzz/register :graph-update #(reset! users %))
 
 (def animation (atom nil))
 
@@ -84,16 +85,17 @@
         ; no better graph in the last 'anneal-skipping' steps, so quit trying.
         (anim/unregisterAnimation animation)))))
 
-(events/listen
-  (dom/getElement "network")
-  (array events/EventType.CLICK)
-  (fn [_]
-    (reset! animation
-      (ann/anneal
-        layout/score
-        (ann/linear-cooling cooling)
-        layout/permute-move
-        ann/standard-prob
-        (layout/init-state test-users)))
-    (anim/registerAnimation animation)))
+(defn start-anneal []
+  (reset! animation
+    (ann/anneal
+      layout/score
+      (ann/linear-cooling cooling)
+      layout/permute-move
+      ann/standard-prob
+      (layout/init-state @users)))
+  (anim/registerAnimation animation))
 
+(events/listen
+  (dom/getElement "network") (array events/EventType.CLICK) start-anneal)
+(buzz/register :track-clicked start-anneal)
+(buzz/register :refresh-clicked start-anneal)
