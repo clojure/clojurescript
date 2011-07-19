@@ -23,8 +23,14 @@
   (sqrt (+ (sqr (- x2 x1)) (sqr (- y2 y1)))))
 
 (defn init-state [mentions-data]
-  {:locs (zipmap (keys mentions-data) (repeatedly #(random-loc)))
-   :mentions mentions-data})
+  (let [connected (reduce (fn [ret [k {:keys [mentions]}]]
+                            (if (pos? (count mentions))
+                              (into (conj ret k) (keys mentions))
+                              ret))
+                          #{} mentions-data)
+        mentions-data (select-keys mentions-data connected)]
+    {:locs (zipmap connected (repeatedly #(random-loc)))
+     :mentions mentions-data}))
 
 (defn score [{:keys [locs mentions]}]
   (let [metric (fn [d w] (sqr (- 1 (* d w))))
@@ -50,9 +56,12 @@
      :mentions mentions}))
 
 (defn permute-move [{:keys [locs mentions]} t]
-  (let [adj #(min 1.0 (max 0 (+ % (- (* (ann/random) 0.2) 0.1))))
-        move (fn [{:keys [x y]}]
-               {:x (adj x) :y (adj y)})
+  (let [adj #(min 1.0 (max 0 (+ % (- (* (ann/random) 0.1) 0.05))))
+        move (fn [{:keys [x y] :as loc}]
+               (if true ;;(> (ann/random) 0.8)
+                 {:x (adj x)
+                  :y (adj y)}
+                 loc))
         xys (vec (vals locs))]
     {:locs (zipmap (keys locs) (map move (vals locs)))
      :mentions mentions}))
