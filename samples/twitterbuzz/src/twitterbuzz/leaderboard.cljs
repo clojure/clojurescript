@@ -14,6 +14,7 @@
         user-info (second node)
         parent (dom/getElement "leaderboard-content")
         child (dom-element "div" {:class "tweet"})
+        details (dom-element "div" {:class "tweet-details"})
         user-e (dom-element "div" {:class "user-name"})
         text (dom-element "div" {:class "tweet-text"})
         pic (dom-element "img" {:src (:image-url user-info) :class "profile-pic"})
@@ -22,21 +23,22 @@
         (dom/setTextContent user-e user)
         (dom/setTextContent num-mentions (str (buzz/num-mentions user-info)))
         (dom/appendChild child pic)
-        (dom/appendChild child user-e)
-        (dom/appendChild child text)
-        (dom/appendChild child num-mentions)
+	(dom/appendChild child details)
+        (dom/appendChild details user-e)
+        (dom/appendChild details text)
+        (dom/appendChild details num-mentions)
         (dom/appendChild parent child 0))))
 
 (defn clear-leaderboard []
   (let [parent (dom/getElement "leaderboard-content")]
     (do (dom/removeChildren parent))))
 
-(defn top-n [n nodes]
+(defn leaders [nodes]
   (reverse (sort-by #(buzz/num-mentions (second %)) nodes)))
 
 (defn update-leaderboard [graph]
   (do (clear-leaderboard)
-      (doseq [next-node (top-n 10 (seq graph))]
+      (doseq [next-node (take 5 (leaders (seq graph)))]
         (add-leaderboard-node next-node))))
 
 (buzz/register :graph-update update-leaderboard)
