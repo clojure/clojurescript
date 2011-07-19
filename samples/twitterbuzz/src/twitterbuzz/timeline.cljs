@@ -23,7 +23,7 @@
         user (dom-element :div {:class "user-name"})
         text (dom-element :div {:class "tweet-text"})
         pic (dom-element :img {:src (:profile_image_url tweet) :class "profile-pic"})]
-    (do (dom/setTextContent text (:text tweet))
+    (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:text tweet)) 0) ;;(dom/setTextContent text (:text tweet))
         (dom/setTextContent user (:from_user tweet))
         (dom/appendChild child pic)
         (dom/appendChild child user)

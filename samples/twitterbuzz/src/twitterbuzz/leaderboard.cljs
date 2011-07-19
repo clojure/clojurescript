@@ -19,7 +19,7 @@
         text (dom-element "div" {:class "tweet-text"})
         pic (dom-element "img" {:src (:image-url user-info) :class "profile-pic"})
         num-mentions (dom-element "div")]
-    (do (dom/setTextContent text (:last-tweet user-info))
+    (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:last-tweet user-info)) 0) ;; (dom/setTextContent text (:last-tweet user-info))
         (dom/setTextContent user-e user)
         (dom/setTextContent num-mentions (str (buzz/num-mentions user-info)))
         (dom/appendChild child pic)
