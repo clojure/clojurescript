@@ -29,9 +29,8 @@
          callback))
 
 (defn send-tweets [fns tweets]
-  (when (seq fns)
-    (do ((first fns) tweets)
-        (recur (rest fns) tweets))))
+  (doseq [f fns]
+    (f tweets)))
 
 (defn parse-mentions [tweet]
   (map second (re-seq (re-pattern "@(\\w*)") (:text tweet))))
