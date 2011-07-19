@@ -1,18 +1,17 @@
+;   Copyright (c) Rich Hickey. All rights reserved.
+;   The use and distribution terms for this software are covered by the
+;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;   which can be found in the file epl-v10.html at the root of this distribution.
+;   By using this software in any fashion, you are agreeing to be bound by
+;   the terms of this license.
+;   You must not remove this notice, or any other, from this software.
+
 (ns twitterbuzz.timeline
   (:require [twitterbuzz.core :as core]
             [goog.dom :as dom]))
 
-;; This is a working example. Please improve in any way to that you
-;; can.
-
-;; TODO: Only show a certain number of tweets. Remove tweets from the
-;; end of the list when this number is exceeded.
-
-;; may want to put common dom helper functions somewhere else so they
-;; can be used by all the views.
-
 (defn dom-element [element attrs]
-  (dom/createDom element
+  (dom/createDom (name element)
                  (.strobj (reduce (fn [m [k v]]
                                     (assoc m k v))
                                   {}
@@ -20,10 +19,10 @@
 
 (defn add-timeline-tweet [tweet]
   (let [parent (dom/getElement "timeline-content")
-        child (dom-element "div" {:class "tweet"})
-        user (dom-element "div" {:class "user-name"})
-        text (dom-element "div" {:class "tweet-text"})
-        pic (dom-element "img" {:src (:profile_image_url tweet) :class "profile-pic"})]
+        child (dom-element :div {:class "tweet"})
+        user (dom-element :div {:class "user-name"})
+        text (dom-element :div {:class "tweet-text"})
+        pic (dom-element :img {:src (:profile_image_url tweet) :class "profile-pic"})]
     (do (dom/setTextContent text (:text tweet))
         (dom/setTextContent user (:from_user tweet))
         (dom/appendChild child pic)
@@ -37,4 +36,9 @@
         (doseq [tweet tweets]
           (add-timeline-tweet tweet)))))
 
+(defn refresh [_]
+  (let [parent (dom/getElement "timeline-content")]
+    (do (dom/removeChildren parent))))
+
 (core/register :new-tweets update-timeline)
+(core/register :refresh-clicked refresh)
