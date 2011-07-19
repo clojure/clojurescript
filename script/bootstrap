@@ -26,3 +26,6 @@ rm compiler-latest.zip
 cd ../..
 echo "Building goog.jar..."
 jar cf ./lib/goog.jar -C closure/library/closure/ goog
+
+echo "Copying closure/compiler/compiler.jar to lib/..."
+cp closure/compiler/compiler.jar lib
