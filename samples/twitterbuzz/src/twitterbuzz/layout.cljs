@@ -44,7 +44,7 @@
 (defn radial
   [mentions-data]
   (let [mentions #(rad/get-mentions mentions-data %)
-        weights (rad/branch-weights
+        weights (rad/weights
                  (into #{} (mapcat mentions (keys mentions-data)))
                  mentions)]
     {:mentions mentions-data

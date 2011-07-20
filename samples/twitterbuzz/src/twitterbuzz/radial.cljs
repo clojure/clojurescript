@@ -29,24 +29,22 @@
                (into (disj check c) (remove kids (child-fn c))))
         kids))))
 
-(defn branch-weights
-  "Return a map of node to its weight (number of descendants),
-   using child-fn to get the set of children for a node.
-   Recursive, assumes no cycles."
+(defn weight
+  "Weight of noce, given child-fn (mapping of node to set
+   of kids)."
+  [node child-fn]
+  (if-let [kids (seq (child-fn node))]
+    (reduce + (map #(weight % child-fn) kids))
+    1))
+
+(defn weights
+  "Return a map of node to its weight,
+   using child-fn to get the set of children for a node."
   [nodes child-fn]
-  (loop [weights {}
-         known #{}
-         remaining (set nodes)]
-    (let [nodes (remove (fn [n] (seq (set/difference (child-fn n) known))) remaining)]
-      (if (seq nodes)
-        (recur (into weights (map
-                              (fn [n] [n (+ 1
-                                           #_(count (child-fn n))
-                                           (reduce + (map weights (child-fn n))))])
-                              nodes))
-               (into known nodes)
-               (set/difference remaining nodes))
-        weights))))
+  (reduce
+   (fn [m n] (assoc m n (weight n child-fn)))
+   {}
+   nodes))
 
 (defn layout
   "Returns a map of node => :radius, :slice, :angle.
@@ -68,7 +66,7 @@
              (recur
               (merge
                m
-               {node {:radius radius :slice s :angle (math/average c1 c2)}}
+               {node {:radius radius :slice s :angle (/ (+ c1 c2) 2)}}
                (when-let [children (seq (remove seen (child-fn node)))]
                  (layout children weight-fn child-fn (inc radius) c1 c2 seen)))
               c2
