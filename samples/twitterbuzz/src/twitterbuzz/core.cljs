@@ -10,6 +10,7 @@
   (:require [goog.net.Jsonp :as jsonp]
             [goog.Timer :as timer]
             [goog.events :as events]
+            [goog.events.EventType :as event-type]
             [goog.dom :as dom]))
 
 (def initial-state {:max-id 1
@@ -135,6 +136,9 @@
   (do (poll)
       (events/listen (dom/getElement "twitter-search-button")
                      "click"
+                     do-track-button-clicked)
+      (events/listen (dom/getElement "twitter-search-tag")
+                     event-type/CHANGE
                      do-track-button-clicked)))
 
 (start-app)
