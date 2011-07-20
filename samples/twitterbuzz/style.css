@@ -85,6 +85,17 @@ header {
   position: absolute;
 }
 
+#avatar-hover {
+  position: absolute;
+  width: 280px;
+  background: #fff;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  border-radius: 3px;
+}
+
 #leaderboard {
   width: 280px;
   height: 100px;
@@ -159,7 +170,7 @@ header {
     padding-left: 10px;
 }
 
-#timeline .tweet {
+.tweetbox .tweet {
     clear: both;
     padding: 10px;
     border-bottom: 1px solid #b3b3b3;
@@ -167,7 +178,7 @@ header {
     font-size: 12px;
 }
 
-#timeline .profile-pic {
+.tweetbox .profile-pic {
     width: 48px;
     height: 48px;
     float: left;
@@ -176,12 +187,12 @@ header {
     -webkit-border-radius: 3px;
     border-radius: 3px;
 }
-#timeline .user-name {
+.tweetbox .user-name {
     font-weight: bold;
 }
-#timeline .tweet-text {
+.tweetbox .tweet-text {
 }
-#timeline .user-name, #timeline .tweet-text {
+.tweetbox .user-name, .tweetbox .tweet-text {
     margin-left: 58px;
 }
 

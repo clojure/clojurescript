@@ -1,10 +1,11 @@
 (ns twitterbuzz.showgraph
   (:require [twitterbuzz.core :as buzz]
-            [twitterbuzz.anneal :as ann]
             [twitterbuzz.layout :as layout]
             [goog.dom :as dom]
             [goog.events :as events]
-            [goog.fx.Animation :as anim]
+            [goog.style :as style]
+            [goog.math.Coordinate :as Coordinate]
+            [goog.ui.HoverCard :as HoverCard]
             [goog.graphics.Font :as Font]
             [goog.graphics.Stroke :as Stroke]
             [goog.graphics.SolidFill :as SolidFill]
@@ -12,8 +13,6 @@
 
 ; Drawing configuration
 (def avatar-size 32) ; used for both x and y dimensions of avatars
-(def anneal-skipping 10)
-(def cooling 1000)
 ; fail whale
 ;(def default-avatar "http://farm3.static.flickr.com/2562/4140195522_e207b97280_s.jpg")
 ; google+ silhouette
@@ -39,8 +38,43 @@
 (defn log [& args]
   (js* "console.log(~{})" (apply pr-str args)))
 
+(def avatar-hover
+  (doto
+    (goog.ui/HoverCard. (js-obj)) ; svg IMAGE tags don't work here
+    (.setElement (dom/getElement "avatar-hover"))))
+
+(defn append-tweet [parent tweet]
+  (let [child (buzz/dom-element :div {:class "tweet"})
+        user (buzz/dom-element :div {:class "user-name"})
+        text (buzz/dom-element :div {:class "tweet-text"})
+        pic (buzz/dom-element :img {:src (:profile_image_url tweet) :class "profile-pic"})]
+    (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:text tweet)) 0) ;;(dom/setTextContent text (:text tweet))
+        (dom/setTextContent user (:from_user tweet))
+        (dom/appendChild child pic)
+        (dom/appendChild child user)
+        (dom/appendChild child text)
+        (dom/insertChildAt parent child 0))))
+
+(defn hide-tooltip [event]
+  (.setVisible avatar-hover false))
+
+(defn attach-tooltip [img canvas-offset px py tweet]
+  (events/listen img events/EventType.MOUSEOUT hide-tooltip)
+  (events/listen
+    img events/EventType.MOUSEOVER
+    (fn [event]
+        (hide-tooltip)
+        (.setPosition avatar-hover
+                    (goog.ui/Tooltip.CursorTooltipPosition.
+                        (Coordinate/sum (goog.math/Coordinate. px py)
+                                        canvas-offset)))
+        (dom/removeChildren (dom/getElement "avatar-hover-body"))
+        (append-tweet (dom/getElement "avatar-hover-body") tweet)
+        (.triggerForElement avatar-hover img))))
+
 (defn draw-graph [{:keys [locs mentions]} text]
-  (let [canvas-size (. g (getPixelSize))]
+  (let [canvas-size (. g (getPixelSize))
+        canvas-offset (style/getPageOffset (dom/getElement "network"))]
     (. g (clear))
 
     ; Draw mention edges
@@ -58,11 +92,15 @@
     ; Draw avatar nodes
     (doseq [[username {:keys [x y] :as foo}] locs]
       ;(log (pr-str foo))
-      (.drawImage g
-                  (- (unit-to-pixel x (.width canvas-size))  (/ avatar-size 2))
-                  (- (unit-to-pixel y (.height canvas-size)) (/ avatar-size 2))
-                  avatar-size avatar-size
-                  (get (get mentions username) :image-url default-avatar)))
+      (let [px (- (unit-to-pixel x (.width canvas-size))  (/ avatar-size 2))
+            py (- (unit-to-pixel y (.height canvas-size)) (/ avatar-size 2))
+            user (get mentions username)
+            image-url (get user :image-url default-avatar)
+            img (.drawImage g px py avatar-size avatar-size image-url)]
+        (attach-tooltip img canvas-offset px py
+                        {:profile_image_url image-url
+                         :text (:last-tweet user)
+                         :from_user username})))
 
     (let [text (if (empty? locs)
                  "No locations to graph"
@@ -71,9 +109,13 @@
         (.drawTextOnLine g text 5 20 (.width canvas-size) 20
                         "left" font nil fill)))))
 
-(buzz/register :graph-update #(draw-graph (layout/radial %) nil))
+(def graph-data (atom nil))
 
-(def animation (atom nil))
+(buzz/register :graph-update
+  (fn [data]
+    (reset! graph-data data)
+    (draw-graph (layout/radial data) nil)))
 
-;(events/listen (dom/getElement "network") events/EventType.CLICK start-anneal)
+(events/listen (dom/getElement "network") events/EventType.CLICK
+               #(draw-graph (layout/radial @graph-data)))
 (buzz/register :track-clicked #(. g (clear)))
