@@ -77,4 +77,3 @@
 
 ;(events/listen (dom/getElement "network") events/EventType.CLICK start-anneal)
 (buzz/register :track-clicked #(. g (clear)))
-;(buzz/register :refresh-clicked start-anneal)
