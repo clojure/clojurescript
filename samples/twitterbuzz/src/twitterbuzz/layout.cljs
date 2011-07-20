@@ -45,7 +45,7 @@
   [mentions-data]
   (let [mentions #(rad/get-mentions mentions-data %)
         weights (rad/weights
-                 (into #{} (mapcat mentions (keys mentions-data)))
+                 (into (set (roots mentions-data)) (mapcat mentions (keys mentions-data)))
                  mentions)]
     {:mentions mentions-data
      :locs (-> (rad/layout (roots mentions-data) weights mentions)

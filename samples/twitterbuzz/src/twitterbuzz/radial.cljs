@@ -55,7 +55,8 @@
      (layout nodes weight-fn child-fn 1 0 360 #{}))
   ([nodes weight-fn child-fn radius a1 a2 seen]
      (let [slice (- a2 a1)
-           total-weight (reduce + (map weight-fn nodes))
+           total-weight (reduce + (map #(or (weight-fn %)
+                                            (throw (str "No weight for " %))) nodes))
            seen (into seen nodes)]
        (loop [m {}
               c1 a1
