@@ -26,7 +26,7 @@
 (defn update-timeline [tweets]
   (let [status (dom/getElement "tweet-status")]
     (do (dom/setTextContent status (str (:tweet-count @buzz/state) " tweets"))
-        (doseq [tweet tweets]
+        (doseq [tweet (reverse tweets)]
           (add-timeline-tweet tweet)))))
 
 (buzz/register :track-clicked #(buzz/remove-children "timeline-content"))
