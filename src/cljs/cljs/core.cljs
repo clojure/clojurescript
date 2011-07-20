@@ -2698,7 +2698,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
-(defn ^:export test-stuff []
+(defn ^{:export false} test-stuff []
   (assert (= 2 (:b {:a 1 :b 2})))
   (assert (= 2 ('b '{:a 1 b 2})))
   (assert (= 2 ({:a 1 :b 2} :b)))
