@@ -16,8 +16,7 @@
                     :graph {}
                     :listeners {:new-tweets []
                                 :graph-update []
-                                :track-clicked []
-                                :refresh-clicked []}
+                                :track-clicked []}
                     :tweet-count 0
                     :search-tag nil})
 
@@ -132,17 +131,11 @@
       (do-timer)
       (send-event :track-clicked)))
 
-(defn do-refresh-button-clicked []
-  (send-event :refresh-clicked))
-
 (defn start-app []
   (do (poll)
       (events/listen (dom/getElement "twitter-search-button")
                      "click"
-                     do-track-button-clicked)
-      (events/listen (dom/getElement "refresh-button")
-                     "click"
-                     do-refresh-button-clicked)))
+                     do-track-button-clicked)))
 
 (start-app)
 
