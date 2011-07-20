@@ -12,7 +12,6 @@
 
 ; Drawing configuration
 (def avatar-size 32) ; used for both x and y dimensions of avatars
-(def edge-widths [0 1 2 3 4]) ; More mentions == thicker edges
 (def anneal-skipping 10)
 (def cooling 1000)
 ; fail whale
@@ -25,10 +24,7 @@
 ; BAD HACK: don't change globals like this -- find a better way:
 ;(set! anim/TIMEOUT 500)
 
-(def edge-strokes
-  (vec (map #(graphics/Stroke. % "#009") edge-widths)))
-
-(def max-stroke (peek edge-strokes))
+(def edge-stroke (graphics/Stroke. 1 "#009"))
 
 (def g
   (doto (graphics/createGraphics "100%" "100%")
@@ -57,7 +53,7 @@
               y2 (unit-to-pixel uy2 (.height canvas-size))]
           (.drawPath g
                     (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
-                    (get edge-strokes mention-count max-stroke) nil))))
+                    edge-stroke nil))))
 
     ; Draw avatar nodes
     (doseq [[username {:keys [x y] :as foo}] locs]
