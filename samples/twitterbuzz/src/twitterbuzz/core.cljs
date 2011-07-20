@@ -101,7 +101,7 @@
   (-> old-state
       (assoc :max-id max-id)
       (update-in [:tweet-count] #(+ % (count tweets)))
-      (assoc :graph (update-graph (:graph old-state) tweets))))
+      (assoc :graph (update-graph (:graph old-state) (reverse tweets)))))
 
 (defn my-callback [json]
   (let [result-map (js->clj json :keywordize-keys true)
