@@ -7,12 +7,13 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns twitterbuzz.radial
-  (:require [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [goog.math :as math]))
 
 (defn get-mentions
-  "Returns the set of mentions for k in data"
-  [data k]
-  (-> (get-in data [k :mentions])
+  "Returns the set of mentions for k in mentions-data"
+  [mentions-data k]
+  (-> (get-in mentions-data [k :mentions])
       keys
       set))
 
@@ -30,7 +31,8 @@
 
 (defn branch-weights
   "Return a map of node to its weight (number of descendants),
-   using child-fn to get the set of children for a node."
+   using child-fn to get the set of children for a node.
+   Recursive, assumes no cycles."
   [nodes child-fn]
   (loop [weights {}
          known #{}
@@ -39,11 +41,52 @@
       (if (seq nodes)
         (recur (into weights (map
                               (fn [n] [n (+ 1
-                                           (count (child-fn n))
+                                           #_(count (child-fn n))
                                            (reduce + (map weights (child-fn n))))])
                               nodes))
                (into known nodes)
                (set/difference remaining nodes))
         weights))))
+
+(defn layout
+  "Returns a map of node => :radius, :slice, :angle.
+
+    weight-fn: one arg fn of node returning weight
+    child-fn:  one arg fn of node returning set of nodes"
+  ([nodes weight-fn child-fn]
+     (layout nodes weight-fn child-fn 1 0 360 #{}))
+  ([nodes weight-fn child-fn radius a1 a2 seen]
+     (let [slice (- a2 a1)
+           total-weight (reduce + (map weight-fn nodes))
+           seen (into seen nodes)]
+       (loop [m {}
+              c1 a1
+              [node & more] (seq nodes)]
+         (if node
+           (let [s (* slice (/ (weight-fn node) total-weight))
+                 c2 (+ c1 s)]
+             (recur
+              (merge
+               m
+               {node {:radius radius :slice s :angle (math/average c1 c2)}}
+               (when-let [children (seq (remove seen (child-fn node)))]
+                 (layout children weight-fn child-fn (inc radius) c1 c2 seen)))
+              c2
+              more))
+           m)))))
+
+(defn polar->cartesian
+  "Convert polar coordinates (from layout) into
+   cartesian coordinates on the unit square, assuming the
+   square will display max-rings rings."
+  [polar-map max-rings]
+  (reduce
+   (fn [m [k {:keys [radius angle]}]]
+     (let [r (/ radius (+ 0.5 max-rings) 2)]
+       (assoc m k {:x (+ 0.5 (math/angleDx angle r))
+                   :y (+ 0.5 (math/angleDy angle r))})))
+   {}
+   polar-map))
+
 
 

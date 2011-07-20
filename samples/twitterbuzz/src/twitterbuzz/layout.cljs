@@ -8,6 +8,7 @@
 
 (ns twitterbuzz.layout
   (:require [twitterbuzz.anneal :as ann]
+            [twitterbuzz.radial :as rad]
             [goog.math :as math]))
 
 (defn random-loc []
@@ -39,6 +40,16 @@
                             ret))
                         #{} mentions-data)]
     (reduce disj parents (mapcat :mentions (vals mentions-data)))))
+
+(defn radial
+  [mentions-data]
+  (let [mentions #(rad/get-mentions mentions-data %)
+        weights (rad/branch-weights
+                 (into #{} (mapcat mentions (keys mentions-data)))
+                 mentions)]
+    {:mentions mentions-data
+     :locs (-> (rad/layout (roots mentions-data) weights mentions)
+               (rad/polar->cartesian 5))}))
 
 (defn score [{:keys [locs mentions]}]
   (let [metric (fn [d w] (sqr (- 1 (* d w))))
