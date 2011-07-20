@@ -40,6 +40,9 @@
 (defn unit-to-pixel [unit-arg canvas-size]
   (+ (* unit-arg (- canvas-size avatar-size)) (/ avatar-size 2)))
 
+(defn log [& args]
+  (js* "console.log(~{})" (apply pr-str args)))
+
 (defn draw-graph [{:keys [locs mentions]} text]
   (let [canvas-size (. g (getPixelSize))]
     (. g (clear))
@@ -57,7 +60,8 @@
                     (get edge-strokes mention-count max-stroke) nil))))
 
     ; Draw avatar nodes
-    (doseq [[username {:keys [x y]}] locs]
+    (doseq [[username {:keys [x y] :as foo}] locs]
+      ;(log (pr-str foo))
       (.drawImage g
                   (- (unit-to-pixel x (.width canvas-size))  (/ avatar-size 2))
                   (- (unit-to-pixel y (.height canvas-size)) (/ avatar-size 2))
@@ -71,31 +75,10 @@
         (.drawTextOnLine g text 5 20 (.width canvas-size) 20
                         "left" font nil fill)))))
 
-(def users (atom nil))
-(buzz/register :graph-update #(reset! users %))
+(buzz/register :graph-update #(draw-graph (layout/radial %) nil))
 
 (def animation (atom nil))
 
-(set! (.cycle animation)
-  (fn [t]
-    (let [a (first @animation)]
-      (draw-graph (:best a) (debug a))
-      (swap! animation #(drop anneal-skipping %))
-      (when (= (:best a) (:best (first @animation)))
-        ; no better graph in the last 'anneal-skipping' steps, so quit trying.
-        (anim/unregisterAnimation animation)))))
-
-(defn start-anneal []
-  (reset! animation
-    (ann/anneal
-      layout/score
-      (ann/linear-cooling cooling)
-      layout/permute-move
-      ann/standard-prob
-      (layout/init-state @users)))
-  (anim/registerAnimation animation))
-
-(events/listen
-  (dom/getElement "network") (array events/EventType.CLICK) start-anneal)
-(buzz/register :track-clicked start-anneal)
-(buzz/register :refresh-clicked start-anneal)
+;(events/listen (dom/getElement "network") events/EventType.CLICK start-anneal)
+;(buzz/register :track-clicked start-anneal)
+;(buzz/register :refresh-clicked start-anneal)
