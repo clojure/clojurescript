@@ -62,12 +62,13 @@
   "Add the user to the mentions map for first user she mentions,
   clearing the mentions map of user"
   [graph user mentions]
-  (when-let [mention (first mentions)]
+  (if-let [mention (first mentions)]
     (let [graph (assoc graph mention (get graph mention {}))
           node (get graph mention)
           mentions-map (get node :mentions {})
           graph (assoc-in graph [mention :mentions user] (inc (get mentions-map user 0)))]
-      (assoc-in graph [user :mentions] {}))))
+      (assoc-in graph [user :mentions] {}))
+    graph))
 
 ;;old
 #_(defn add-mentions

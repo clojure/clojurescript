@@ -56,7 +56,7 @@
 *** all the core abstractions as protocols
 *** destructuring
 *** 2500 lines of core libs!
-*** clojure.string and .set
+*** clojure.string and .set .walk .zip
 *** regex
 *** reader?
 *** Full participation with Google Closure library
