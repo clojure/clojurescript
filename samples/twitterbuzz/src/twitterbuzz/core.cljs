@@ -179,3 +179,18 @@
   
   )
 
+(defn dom-element
+  "Create a dom element using a keyword for the element name and a map
+  for the attributes."
+  [element attrs]
+  (dom/createDom (name element)
+                 (.strobj (reduce (fn [m [k v]]
+                                    (assoc m k v))
+                                  {}
+                                  (map #(vector (name %1) %2) (keys attrs) (vals attrs))))))
+
+(defn remove-children
+  "Remove all children from the element with the passed id."
+  [id]
+  (let [parent (dom/getElement (name id))]
+    (do (dom/removeChildren parent))))

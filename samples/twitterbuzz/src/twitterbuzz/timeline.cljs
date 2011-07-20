@@ -7,22 +7,15 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns twitterbuzz.timeline
-  (:require [twitterbuzz.core :as core]
+  (:require [twitterbuzz.core :as buzz]
             [goog.dom :as dom]))
-
-(defn dom-element [element attrs]
-  (dom/createDom (name element)
-                 (.strobj (reduce (fn [m [k v]]
-                                    (assoc m k v))
-                                  {}
-                                  (map #(vector (name %1) %2) (keys attrs) (vals attrs))))))
 
 (defn add-timeline-tweet [tweet]
   (let [parent (dom/getElement "timeline-content")
-        child (dom-element :div {:class "tweet"})
-        user (dom-element :div {:class "user-name"})
-        text (dom-element :div {:class "tweet-text"})
-        pic (dom-element :img {:src (:profile_image_url tweet) :class "profile-pic"})]
+        child (buzz/dom-element :div {:class "tweet"})
+        user (buzz/dom-element :div {:class "user-name"})
+        text (buzz/dom-element :div {:class "tweet-text"})
+        pic (buzz/dom-element :img {:src (:profile_image_url tweet) :class "profile-pic"})]
     (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:text tweet)) 0) ;;(dom/setTextContent text (:text tweet))
         (dom/setTextContent user (:from_user tweet))
         (dom/appendChild child pic)
@@ -32,8 +25,9 @@
 
 (defn update-timeline [tweets]
   (let [status (dom/getElement "tweet-status")]
-    (do (dom/setTextContent status (str (:tweet-count @core/state) " tweets"))
+    (do (dom/setTextContent status (str (:tweet-count @buzz/state) " tweets"))
         (doseq [tweet tweets]
           (add-timeline-tweet tweet)))))
 
-(core/register :new-tweets update-timeline)
+(buzz/register :track-clicked #(buzz/remove-children "timeline-content"))
+(buzz/register :new-tweets update-timeline)
