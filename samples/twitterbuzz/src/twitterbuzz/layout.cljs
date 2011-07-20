@@ -49,7 +49,7 @@
                  mentions)]
     {:mentions mentions-data
      :locs (-> (rad/layout (roots mentions-data) weights mentions)
-               (rad/polar->cartesian 5))}))
+               (rad/polar->cartesian 3))}))
 
 (defn score [{:keys [locs mentions]}]
   (let [metric (fn [d w] (sqr (- 1 (* d w))))
