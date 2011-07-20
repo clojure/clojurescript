@@ -39,7 +39,7 @@
                             (conj ret k)
                             ret))
                         #{} mentions-data)]
-    (reduce disj parents (mapcat :mentions (vals mentions-data)))))
+    (reduce disj parents (mapcat #(keys (:mentions %)) (vals mentions-data)))))
 
 (defn radial
   [mentions-data]

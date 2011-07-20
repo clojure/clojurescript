@@ -10,11 +10,15 @@
 Docs: http://clojurescript.org
 Feedback: http://groups.google.com/group/clojure
 
-To run a cljs REPL:  ./script/repljs
+If you are operating from a fresh source base, you must run the bootstrapping script:
 
-To compile a cljs script: ./bin/cljsc <path to .cljs file>
+    ./script/bootstrap
 
-Sample applications found in ./sample
+To run a cljs REPL:  
+
+    ./script/repljs
+
+Sample applications are found in the ./samples directory
 
 A "Quick Start" guide is available at https://github.com/clojure/clojurescript/wiki/Quick-Start
 
