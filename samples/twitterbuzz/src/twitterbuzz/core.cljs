@@ -85,14 +85,11 @@
 (defn update-graph [graph tweet-maps]
   (reduce (fn [acc tweet]
             (let [user (:from_user tweet)
-                  mentions (parse-mentions tweet)]
-              (-> (if-let [existing-node (get acc user)]
-                    (assoc acc user
-                           (assoc existing-node :last-tweet (:text tweet)))
-                    (assoc acc user
-                           {:image-url (:profile_image_url tweet)
-                            :last-tweet (:text tweet)
-                            :mentions {}}))
+                  mentions (parse-mentions tweet)
+                  node (get acc user {:mentions {}})]
+              (-> (assoc acc user
+                         (assoc node :last-tweet (:text tweet)
+                                     :image-url (:profile_image_url tweet)))
                   (add-mentions user mentions))))
           graph
           (map #(select-keys % [:text :from_user :profile_image_url]) tweet-maps)))
