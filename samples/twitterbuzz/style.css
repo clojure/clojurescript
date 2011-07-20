@@ -77,16 +77,16 @@ header {
 
 #network {
   height: 100%;
-  min-width: 540px;
+  min-width: 640px;
   left: 20px;
-  right: 400px;
+  right: 300px;
   /*padding: 10px 10px 0 0;*/
   float: left;
   position: absolute;
 }
 
 #leaderboard {
-  width: 380px;
+  width: 280px;
   height: 100px;
   border-left: 1px solid #ccc;
   /*padding: 10px;*/
@@ -95,7 +95,7 @@ header {
 }
 
 #timeline {
-  width: 380px;
+  width: 280px;
   top: 100px;
   bottom: 0;
   border-left: 1px solid #ccc;
@@ -117,24 +117,24 @@ header {
 #leaderboard .tweet {
     float: left;
     z-index: 100;
-    margin: 4px;
+    margin: 0;
 }
 
 #leaderboard .tweet-details {
     position: absolute;
-    top: 66px;
+    top: 56px;
     left: 0;
     background-color: #e6f3f8;
     z-index: 100;
     display: none;
     padding: 10px;
-    width: 360px;
+    width: 260px;
     border-bottom: 1px solid #9cbbc6;
 }
 #leaderboard .profile-pic {
     width: 48px;
     height: 48px;
-    border: 10px solid #fff;
+    border: 4px solid #fff;
 }
 #leaderboard .user-name {
     font-weight: bold;
@@ -151,7 +151,7 @@ header {
   position: absolute;
   top: 30px;
   bottom: 0;
-  width: 380px;
+  width: 280px;
   overflow: auto;
 }
 
@@ -164,6 +164,7 @@ header {
     padding: 10px;
     border-bottom: 1px solid #b3b3b3;
     overflow: auto;
+    font-size: 12px;
 }
 
 #timeline .profile-pic {
