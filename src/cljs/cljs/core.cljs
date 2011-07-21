@@ -1879,11 +1879,11 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll entry]
-    (if (map? entry)
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
       (reduce -conj
               coll
-              entry)
-      (-assoc coll (-nth entry 0) (-nth entry 1))))
+              entry)))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.ObjMap/EMPTY meta))
@@ -1958,11 +1958,11 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll entry]
-    (if (map? entry)
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
       (reduce -conj
               coll
-              entry)
-      (-assoc coll (-nth entry 0) (-nth entry 1))))
+              entry)))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.HashMap/EMPTY meta))
@@ -2740,7 +2740,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
-(defn ^:export test-stuff []
+(defn ^{:export false} test-stuff []
   (assert (= 2 (:b {:a 1 :b 2})))
   (assert (= 2 ('b '{:a 1 b 2})))
   (assert (= 2 ({:a 1 :b 2} :b)))
@@ -3224,6 +3224,9 @@ reduces them without incurring seq initialization"
     (assert (= 3 (count (get d 1))))
     (assert (= 2 (count (get d 2))))
     (assert (= 1 (count (get d 4)))))
+
+  (assert (= {1 2 3 4 5 6} (merge {1 2} {3 4} {5 6})))
+  (assert (= {1 2 3 4} (merge {1 2} {3 4} nil)))
   
   :ok
   )

@@ -7,15 +7,19 @@
  * 	 the terms of this license.
  *   You must not remove this notice, or any other, from this software.
 
-Docs: http://clojurescript.org
+Docs: https://github.com/clojure/clojurescript/wiki
 Feedback: http://groups.google.com/group/clojure
 
-To run a cljs REPL:  ./script/repljs
+If you are operating from a fresh source base, you must run the bootstrapping script:
 
-To compile a cljs script: ./bin/cljsc <path to .cljs file>
+    ./script/bootstrap
 
-Sample applications found in ./sample
+To run a cljs REPL:  
+
+    ./script/repljs
+
+Sample applications are found in the ./samples directory
 
 A "Quick Start" guide is available at https://github.com/clojure/clojurescript/wiki/Quick-Start
 
-More information can be found on the ClojureScript wiki located at https://github.com/clojure/clojurescript/wiki/
+

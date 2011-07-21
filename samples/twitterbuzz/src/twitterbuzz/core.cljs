@@ -10,33 +10,68 @@
   (:require [goog.net.Jsonp :as jsonp]
             [goog.Timer :as timer]
             [goog.events :as events]
+            [goog.events.EventType :as event-type]
             [goog.dom :as dom]))
 
-(def state (atom {:max-id 1
-                  :graph {}
-                  :new-tweets-listeners []
-                  :graph-update-listeners []
-                  :tweet-count 0}))
+(def initial-state {:max-id 1
+                    :graph {}
+                    :listeners {:new-tweets []
+                                :graph-update []
+                                :track-clicked []}
+                    :tweet-count 0
+                    :search-tag nil})
 
-(defn add-listener [k f]
-  (swap! state (fn [old] (assoc old k (conj (k old) f)))))
+(def state (atom initial-state))
+
+(defn add-listener [old-state k f]
+  (let [l (-> old-state :listeners k)]
+    (assoc-in old-state [:listeners k] (conj l f))))
+
+(defn register
+  "Register a function to be called when new data arrives specifying
+  the event to receive updates for. Events can be :new-tweets or :graph-update."
+  [event f]
+  (swap! state add-listener event f))
 
 (def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
+
+(defn search-tag
+  "Get the current tag value from the page."
+  []
+  (.value (dom/getElement "twitter-search-tag")))
 
 (defn retrieve [payload callback]
   (.send (goog.net.Jsonp. twitter-uri)
          payload
          callback))
 
-(defn send-tweets [fns tweets]
-  (when (seq fns)
-    (do ((first fns) tweets)
-        (recur (rest fns) tweets))))
+(defn send-event
+  ([event]
+     (send-event event nil))
+  ([event message]
+     (doseq [f (-> @state :listeners event)]
+       (f message))))
+
+(defn matches [p s]
+  (seq (js* "~{s}.match(new RegExp(~{p}, 'g'))")))
 
 (defn parse-mentions [tweet]
-  (map second (re-seq (re-pattern "@(\\w*)") (:text tweet))))
+  (map #(apply str (drop 1 %)) (matches "@\\w*" (:text tweet))))
 
 (defn add-mentions
+  "Add the user to the mentions map for first user she mentions,
+  clearing the mentions map of user"
+  [graph user mentions]
+  (if-let [mention (first mentions)]
+    (let [graph (assoc graph mention (get graph mention {}))
+          node (get graph mention)
+          mentions-map (get node :mentions {})
+          graph (assoc-in graph [mention :mentions user] (inc (get mentions-map user 0)))]
+      (assoc-in graph [user :mentions] {}))
+    graph))
+
+;;old
+#_(defn add-mentions
   "Add the user to the mentions map for each user she mentions."
   [graph user mentions]
   (reduce (fn [acc next-mention]
@@ -50,14 +85,11 @@
 (defn update-graph [graph tweet-maps]
   (reduce (fn [acc tweet]
             (let [user (:from_user tweet)
-                  mentions (parse-mentions tweet)]
-              (-> (if-let [existing-node (get acc user)]
-                    (assoc acc user
-                           (assoc existing-node :last-tweet (:text tweet)))
-                    (assoc acc user
-                           {:image-url (:profile_image_url tweet)
-                            :last-tweet (:text tweet)
-                            :mentions {}}))
+                  mentions (parse-mentions tweet)
+                  node (get acc user {:mentions {}})]
+              (-> (assoc acc user
+                         (assoc node :last-tweet (:text tweet)
+                                     :image-url (:profile_image_url tweet)))
                   (add-mentions user mentions))))
           graph
           (map #(select-keys % [:text :from_user :profile_image_url]) tweet-maps)))
@@ -69,7 +101,7 @@
   (-> old-state
       (assoc :max-id max-id)
       (update-in [:tweet-count] #(+ % (count tweets)))
-      (assoc :graph (update-graph (:graph old-state) tweets))))
+      (assoc :graph (update-graph (:graph old-state) (reverse tweets)))))
 
 (defn my-callback [json]
   (let [result-map (js->clj json :keywordize-keys true)
@@ -78,38 +110,42 @@
         tweets (filter #(> (:id %) old-max)
                        (:results result-map))]
     (do  (swap! state update-state new-max tweets)
-         (send-tweets (:new-tweets-listeners @state) tweets)
-         (send-tweets (:graph-update-listeners @state) (:graph @state)))))
+         (send-event :new-tweets tweets)
+         (send-event :graph-update (:graph @state)))))
 
-(defn register
-  "Register a function to be called when new data arrives specifying
-  the event to receive updates for. Events can be :new-tweets or :graph-update."
-  [event f]
-  (cond (= event :new-tweets) (add-listener :new-tweets-listeners f)
-        (= event :graph-update) (add-listener :graph-update-listeners f)))
-
-(defn search-tag
-  "Get the current tag value from the page."
-  []
-  (.value (dom/getElement "twitter-search-tag")))
-
-(defn listener []
-  (retrieve (.strobj {"q" (search-tag)}) my-callback))
+(defn do-timer []
+  (if-let [tag (:search-tag @state)]
+    (retrieve (.strobj {"q" tag "rpp" 100}) my-callback)))
 
 (defn poll
   "Request new data from twitter once every 24 seconds. This will put
   you at the 150 request/hour rate limit. We can speed it up for the demo."
   []
   (let [timer (goog.Timer. 24000)]
-    (do (listener)
+    (do (do-timer)
         (. timer (start))
-        (events/listen timer goog.Timer/TICK listener))))
+        (events/listen timer goog.Timer/TICK do-timer))))
 
-(poll)
+(defn do-track-button-clicked []
+  (do (let [listeners (:listeners @state)]
+        (reset! state (assoc initial-state :listeners listeners :search-tag (search-tag))))
+      (do-timer)
+      (send-event :track-clicked)))
+
+(defn start-app []
+  (do (poll)
+      (events/listen (dom/getElement "twitter-search-button")
+                     "click"
+                     do-track-button-clicked)
+      (events/listen (dom/getElement "twitter-search-tag")
+                     event-type/CHANGE
+                     do-track-button-clicked)))
+
+(start-app)
 
 (comment
 
-  (parse-mentions {:text "What's up @sue and @larry"})
+  (parse-mentions {:text "What's up @sue: and @larry"})
   
   (add-mentions {} "jim" ["sue"])
   (add-mentions {"sue" {}} "jim" ["sue"])
@@ -137,3 +173,18 @@
   
   )
 
+(defn dom-element
+  "Create a dom element using a keyword for the element name and a map
+  for the attributes."
+  [element attrs]
+  (dom/createDom (name element)
+                 (.strobj (reduce (fn [m [k v]]
+                                    (assoc m k v))
+                                  {}
+                                  (map #(vector (name %1) %2) (keys attrs) (vals attrs))))))
+
+(defn remove-children
+  "Remove all children from the element with the passed id."
+  [id]
+  (let [parent (dom/getElement (name id))]
+    (do (dom/removeChildren parent))))

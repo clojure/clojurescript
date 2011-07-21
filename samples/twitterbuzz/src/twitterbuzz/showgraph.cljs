@@ -1,74 +1,121 @@
 (ns twitterbuzz.showgraph
   (:require [twitterbuzz.core :as buzz]
-            [twitterbuzz.anneal :as ann]
             [twitterbuzz.layout :as layout]
             [goog.dom :as dom]
             [goog.events :as events]
-            [goog.fx.Animation :as anim]
+            [goog.style :as style]
+            [goog.math.Coordinate :as Coordinate]
+            [goog.ui.HoverCard :as HoverCard]
+            [goog.graphics.Font :as Font]
+            [goog.graphics.Stroke :as Stroke]
+            [goog.graphics.SolidFill :as SolidFill]
             [goog.graphics :as graphics]))
 
 ; Drawing configuration
-(def avatar-size 0.07) ; used for both x and y dimensions of avatars
-(def edge-widths [0 0.001 0.005 0.010 0.020]) ; More mentions == thicker edges
+(def avatar-size 32) ; used for both x and y dimensions of avatars
+; fail whale
+;(def default-avatar "http://farm3.static.flickr.com/2562/4140195522_e207b97280_s.jpg")
+; google+ silhouette
+(def default-avatar "http://ssl.gstatic.com/s2/profiles/images/silhouette48.png")
+(defn debug [_])
+;(defn debug [a] (str "t: " (:t a) " score: " (:best-score a)))
 
 ; BAD HACK: don't change globals like this -- find a better way:
-(set! anim/TIMEOUT 500)
+;(set! anim/TIMEOUT 500)
 
-(def edge-strokes
-  (vec (map #(graphics/Stroke. % "#009") edge-widths)))
-
-(def max-stroke (peek edge-strokes))
+(def edge-stroke (graphics/Stroke. 1 "#009"))
 
 (def g
-  (doto (graphics/createGraphics "100%" "100%" 1.0 1.0)
+  (doto (graphics/createGraphics "100%" "100%")
     (.render (dom/getElement "network"))))
 
-(defn draw-graph [{:keys [locs mentions]}]
-  (. g (clear))
+(def font (graphics/Font. 12 "Arial"))
+(def fill (graphics/SolidFill. "#f00"))
 
-  ; Draw mention edges
-  (doseq [[username {x1 :x, y1 :y}] locs
-          [mention-name mention-count] (:mentions (get mentions username))]
-    (when-let [{x2 :x, y2 :y} (get locs mention-name)]
-      (.drawPath g
-                 (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
-                 (get edge-strokes mention-count max-stroke) nil)))
+(defn unit-to-pixel [unit-arg canvas-size]
+  (+ (* unit-arg (- canvas-size avatar-size)) (/ avatar-size 2)))
 
-  ; Draw avatar nodes
-  (let [offset (/ avatar-size 2)]
-    (doseq [[username {:keys [x y]}] locs]
-      (.drawImage g (- x offset) (- y offset) avatar-size avatar-size
-                  (:image-url (get mentions username))))))
+(defn log [& args]
+  (js* "console.log(~{})" (apply pr-str args)))
 
-; This is temporary.  The graph data should flow somehow from the
-; tweets.  For now, just hardcode some:
-(def test-users {"djspiewak" {:image-url "http://a0.twimg.com/profile_images/746976711/angular-final_normal.jpg", :last-tweet "Does Clojure have a Sinatra clone?", :mentions {}}, "tobsn" {:image-url "http://a2.twimg.com/profile_images/1364411587/yr40_normal.png", :last-tweet "Creating a Query DSL using Clojure and MongoDB http://tob.sn/qgCxkm #mongodb", :mentions {}}, "CzarneckiD" {:image-url "http://a3.twimg.com/profile_images/1156755747/head_trees_normal.jpg", :last-tweet "@greymouser I need to start writing some Clojure I guess :)", :mentions {"greymouser" 2}}, "sbtourist" {:image-url "http://a0.twimg.com/profile_images/72494229/Cryer_Black_normal.jpg", :last-tweet "Clooj, a lightweight Clojure IDE: http://t.co/OSCjr9X", :mentions {"djspiewak" 2}}, "jboner" {:image-url "http://a2.twimg.com/profile_images/1395654712/jonas_bw_small_normal.JPG", :last-tweet "RT @sbtourist: Clooj, a lightweight Clojure IDE: http://t.co/OSCjr9X", :mentions {"sbtourist" 2, "djspiewak" 2, "romanroe" 2}}})
+(def avatar-hover
+  (doto
+    (goog.ui/HoverCard. (js-obj)) ; svg IMAGE tags don't work here
+    (.setElement (dom/getElement "avatar-hover"))))
 
-(def test-graph (atom (list
-  {"jboner" {:x 0.2 :y 0.8} "djspiewak" {:x 0.3 :y 0.2}}
-  {"jboner" {:x 0.4 :y 0.7} "djspiewak" {:x 0.4 :y 0.3}}
-  {"jboner" {:x 0.3 :y 0.8} "sbtourist" {:x 0.3 :y 0.2} "djspiewak" {:x 0.5 :y 0.5}}
-  {"jboner" {:x 0.2 :y 0.7} "sbtourist" {:x 0.4 :y 0.1} "djspiewak" {:x 0.7 :y 0.4}})))
+(defn append-tweet [parent tweet]
+  (let [child (buzz/dom-element :div {:class "tweet"})
+        user (buzz/dom-element :div {:class "user-name"})
+        text (buzz/dom-element :div {:class "tweet-text"})
+        pic (buzz/dom-element :img {:src (:profile_image_url tweet) :class "profile-pic"})]
+    (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:text tweet)) 0) ;;(dom/setTextContent text (:text tweet))
+        (dom/setTextContent user (:from_user tweet))
+        (dom/appendChild child pic)
+        (dom/appendChild child user)
+        (dom/appendChild child text)
+        (dom/insertChildAt parent child 0))))
 
-(def animation (atom nil))
+(defn hide-tooltip [event]
+  (.setVisible avatar-hover false))
 
-;(set! cljs.core/string-print (fn [x] (js* "console.log(~{x})")))
+(defn attach-tooltip [img canvas-offset px py tweet]
+  (events/listen img events/EventType.MOUSEOUT hide-tooltip)
+  (events/listen
+    img events/EventType.MOUSEOVER
+    (fn [event]
+        (hide-tooltip)
+        (.setPosition avatar-hover
+                    (goog.ui/Tooltip.CursorTooltipPosition.
+                        (Coordinate/sum (goog.math/Coordinate. px py)
+                                        canvas-offset)))
+        (dom/removeChildren (dom/getElement "avatar-hover-body"))
+        (append-tweet (dom/getElement "avatar-hover-body") tweet)
+        (.triggerForElement avatar-hover img))))
 
-(set! (.cycle animation)
-  (fn [t]
-    (draw-graph (:best (first @animation)))
-    (swap! animation rest)))
+(defn draw-graph [{:keys [locs mentions]} text]
+  (let [canvas-size (. g (getPixelSize))
+        canvas-offset (style/getPageOffset (dom/getElement "network"))]
+    (. g (clear))
 
-(events/listen
-  (dom/getElement "network")
-  (array events/EventType.CLICK)
-  (fn [_]
-    (reset! animation
-      (ann/anneal
-        layout/score
-        (ann/linear-cooling 1000)
-        layout/permute-move
-        ann/standard-prob
-        (layout/init-state test-users)))
-    (anim/registerAnimation animation)))
+    ; Draw mention edges
+    (doseq [[username {ux1 :x, uy1 :y}] locs
+            :let [x1 (unit-to-pixel ux1 (.width canvas-size))
+                  y1 (unit-to-pixel uy1 (.height canvas-size))]
+            [mention-name mention-count] (:mentions (get mentions username))]
+      (when-let [{ux2 :x, uy2 :y} (get locs mention-name)]
+        (let [x2 (unit-to-pixel ux2 (.width canvas-size))
+              y2 (unit-to-pixel uy2 (.height canvas-size))]
+          (.drawPath g
+                    (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
+                    edge-stroke nil))))
 
+    ; Draw avatar nodes
+    (doseq [[username {:keys [x y] :as foo}] locs]
+      ;(log (pr-str foo))
+      (let [px (- (unit-to-pixel x (.width canvas-size))  (/ avatar-size 2))
+            py (- (unit-to-pixel y (.height canvas-size)) (/ avatar-size 2))
+            user (get mentions username)
+            image-url (get user :image-url default-avatar)
+            img (.drawImage g px py avatar-size avatar-size image-url)]
+        (attach-tooltip img canvas-offset px py
+                        {:profile_image_url image-url
+                         :text (:last-tweet user)
+                         :from_user username})))
+
+    (let [text (if (empty? locs)
+                 "No locations to graph"
+                 text)]
+      (when text
+        (.drawTextOnLine g text 5 20 (.width canvas-size) 20
+                        "left" font nil fill)))))
+
+(def graph-data (atom nil))
+
+(buzz/register :graph-update
+  (fn [data]
+    (reset! graph-data data)
+    (draw-graph (layout/radial data) nil)))
+
+(events/listen (dom/getElement "network") events/EventType.CLICK
+               #(draw-graph (layout/radial @graph-data)))
+(buzz/register :track-clicked #(. g (clear)))

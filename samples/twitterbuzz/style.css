@@ -1,75 +1,289 @@
 /* TwitterBuzz: A ClojureScript Demo */
 
 /* Default Tags */
+body { 
+  font-family: Helvetica Neue, Arial, Lucida Grande, sans-serif;
+  font-size: 13px;
+  line-height: 1.3;
+}
 h1 { font-size: 24px; }
 h2 { font-size: 20px; }
 p { font-size: 12px; }
 
 /* General Structure */
 section#header-inner, footer, section#status-bar, section#main {
-  width: 960px;
+  /* width: 960px; */
   margin: 0 auto;
+  padding: 0 20px;
+  min-width: 960px;
 }
 
 /* Header */
 header {
   height: 80px;
   border-bottom: 1px solid #ccc;
+  position: relative;
 }
 
 #header-inner h1 {
   padding-top: 30px;
 }
 
+#clojure {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    margin: 0;
+    padding: 0;
+}
+
 /* Status Bar */
-section#status-bar-wrap {
+#status-bar-wrap {
   padding: 10px 0;
   height: 30px;
   border-bottom: 1px solid #ccc;
 }
 
-section#status-bar {
+#status-bar {
 }
 
-section#status-bar span.tweet-status {
+#status-bar span.tweet-status {
   float: right;
   padding: 4px 7px 4px 7px;
   margin-right: 10px;
   border: 1px solid #ddd;
   background-color: #e7e7e7;
 }
-section#status-bar a.reset-search {
+#status-bar a.reset-search {
   float: right;
   padding-top: 5px;
 }
 
 /* Main Body */
 #main-wrap {
-  border-bottom: 1px solid #ccc;
+  /*border-bottom: 1px solid #ccc;*/
+  position: absolute;
+  top: 132px;
+  bottom: 0;
+  overflow: hidden;
+  min-height: 540px;
+  width: 100%;
+}
+
+#main {
+  height: 100%;
+  position: relative;
 }
 
 #network {
-  width: 500px;
-  height: 500px;
-  padding: 10px 10px 0 0;
+  height: 100%;
+  min-width: 640px;
+  left: 20px;
+  right: 300px;
+  /*padding: 10px 10px 0 0;*/
   float: left;
+  position: absolute;
+}
+
+#avatar-hover {
+  position: absolute;
+  width: 280px;
+  background: #fff;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  border-radius: 3px;
 }
 
 #leaderboard {
-  width: 200px;
-  height: 680px;
-  float: left;
+  width: 280px;
+  height: 100px;
   border-left: 1px solid #ccc;
-  padding: 10px;
+  /*padding: 10px;*/
+  position: absolute;
+  right: 0;
 }
 
 #timeline {
-  width: 200px;
-  height: 680px;
-  float: left;
+  width: 280px;
+  top: 100px;
+  bottom: 0;
   border-left: 1px solid #ccc;
-  padding: 10px;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  overflow: hidden;
 }
+
+/* Leaderboard */
+#leaderboard-content {
+    position: relative;
+}
+
+#leaderboard h2 {
+    padding-left: 10px;
+}
+
+#leaderboard .tweet {
+    float: left;
+    z-index: 100;
+    margin: 0;
+}
+
+#leaderboard .tweet-details {
+    position: absolute;
+    top: 56px;
+    left: 0;
+    background-color: #e6f3f8;
+    z-index: 100;
+    display: none;
+    padding: 10px;
+    width: 260px;
+    border-bottom: 1px solid #9cbbc6;
+}
+#leaderboard .profile-pic {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #fff;
+}
+#leaderboard .user-name {
+    font-weight: bold;
+}
+#leaderboard .tweet:hover .tweet-details {
+    display: block;
+}
+#leaderboard .tweet:hover .profile-pic {
+    border-color: #e6f3f8;
+}
+
+/* Timeline */
+#timeline-content {
+  position: absolute;
+  top: 30px;
+  bottom: 0;
+  width: 280px;
+  overflow: auto;
+}
+
+#timeline h2 {
+    padding-left: 10px;
+}
+
+.tweetbox .tweet {
+    clear: both;
+    padding: 10px;
+    border-bottom: 1px solid #b3b3b3;
+    overflow: auto;
+    font-size: 12px;
+}
+
+.tweetbox .profile-pic {
+    width: 48px;
+    height: 48px;
+    float: left;
+    margin-top: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+}
+.tweetbox .user-name {
+    font-weight: bold;
+}
+.tweetbox .tweet-text {
+}
+.tweetbox .user-name, .tweetbox .tweet-text {
+    margin-left: 58px;
+}
+
+/* form elements */
+input.search {
+    font-size: 18px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    color: #456ccf;
+    padding: 3px 5px;
+    outline: 0;
+    margin: 0;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+}
+input.search:hover, input.search:focus {
+    border-color: #999;
+}
+
+
+/* buttons via http://webdesignerwall.com/tutorials/css3-gradient-buttons */
+/* button 
+---------------------------------------------- */
+.button {
+	display: inline-block;
+	zoom: 1; /* zoom and *display = ie7 hack for display:inline-block */
+	*display: inline;
+	vertical-align: baseline;
+	margin: 0 2px;
+	outline: none;
+	cursor: pointer;
+	text-align: center;
+	text-decoration: none;
+        font: 14px/100% Helvetica Neue, Arial, Lucida Grande, sans-serif;
+	padding: .5em 2em .55em;
+	text-shadow: 0 1px 1px rgba(0,0,0,.3);
+	-webkit-border-radius: .5em; 
+	-moz-border-radius: .5em;
+	border-radius: .5em;
+	-webkit-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+	-moz-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+	box-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+.button:hover {
+	text-decoration: none;
+}
+.button:active {
+	position: relative;
+	top: 1px;
+}
+ 
+.bigrounded {
+	-webkit-border-radius: 2em;
+	-moz-border-radius: 2em;
+	border-radius: 2em;
+}
+.medium {
+	font-size: 12px;
+	padding: .4em 1.5em .42em;
+}
+.small {
+	font-size: 11px;
+	padding: .2em 1em .275em;
+}
+ 
+/* color styles 
+---------------------------------------------- */
+
+/* green */
+.green {
+	color: #e8f0de;
+	border: solid 1px #538312;
+	background: #64991e;
+	background: -webkit-gradient(linear, left top, left bottom, from(#7db72f), to(#4e7d0e));
+	background: -moz-linear-gradient(top,  #7db72f,  #4e7d0e);
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#7db72f', endColorstr='#4e7d0e');
+}
+.green:hover {
+	background: #538018;
+	background: -webkit-gradient(linear, left top, left bottom, from(#6b9d28), to(#436b0c));
+	background: -moz-linear-gradient(top,  #6b9d28,  #436b0c);
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#6b9d28', endColorstr='#436b0c');
+}
+.green:active {
+	color: #e8f0de;/*#a9c08c*/
+	background: -webkit-gradient(linear, left top, left bottom, from(#4e7d0e), to(#7db72f));
+	background: -moz-linear-gradient(top,  #4e7d0e,  #7db72f);
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#4e7d0e', endColorstr='#7db72f');
+}
+
 
 /* Utilities */
 .clear {clear: both;}

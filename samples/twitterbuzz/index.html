@@ -14,7 +14,6 @@
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	
-	<link rel="shortcut icon" href="/favicon.ico">
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 	<link rel="stylesheet" href="reset.css">
 	<link rel="stylesheet" href="style.css">
@@ -28,14 +27,14 @@
   <header>
     <section id="header-inner">
       <h1>TwitterBuzz: A ClojureScript Demo</h1>
+      <h2 id="clojure"><img src="http://clojure.org/space/showimage/clojure-icon-50x50.png" width="50" height="50" alt="Clojure"></h2>
     </section>
   </header>
 
   <section id="status-bar-wrap">
     <section id="status-bar">
-      <input id="twitter-search-tag" value="clojure" type="text" />
-      <input id="twitter-search-button" value="Track" type="submit" />
-      <a href="#" class="reset-search">Reset</a>
+      <input id="twitter-search-tag" value="" type="text" class="search" results="5" autosave="clojure" placeholder="Enter keywords..." autofocus />
+      <button id="twitter-search-button" type="submit" class="button green">Track</button>
       <span id="tweet-status" class="tweet-status">Not Connected</span>
     </section>
   </section>
@@ -44,7 +43,6 @@
     <section id="main">
 
       <section id="network">
-        <h2>Network</h2>
       </section>
 
       <section id="leaderboard">
@@ -53,7 +51,7 @@
         </div>
       </section>
 
-      <section id="timeline">
+      <section id="timeline" class="tweetbox">
         <h2>Timeline</h2>
         <div id="timeline-content">
         </div>
@@ -63,7 +61,10 @@
     </section>
     
     <div class="clear"></div>
-    </section>
+  </section>
+
+  <section id="avatar-hover" style="display: none">
+    <div id="avatar-hover-body" class="tweetbox"></div>
   </section>
 
   <!-- In unoptimized mode, additional script tags are required -->
