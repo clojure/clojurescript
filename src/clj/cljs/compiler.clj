@@ -916,11 +916,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             (print js))
         (let [filename (.get jse javax.script.ScriptEngine/FILENAME)
               linenum (or (:line (meta form)) Integer/MIN_VALUE)
-              ctx (sun.org.mozilla.javascript.internal.Context/enter)]
+              ctx (sun.org.mozilla.javascript.Context/enter)]
           (try
             (.evaluateString ctx (:global repl-env) js filename linenum nil)
           (finally
-            (sun.org.mozilla.javascript.internal.Context/exit))))
+            (sun.org.mozilla.javascript.Context/exit))))
         (catch Throwable ex
           ;;we eat ns errors because we know goog.provide() will throw when reloaded
           ;;TODO - file bug with google, this is bs error
