@@ -2368,13 +2368,14 @@ reduces them without incurring seq initialization"
         post-match (subs s (+ match-idx (count match-str)))]
     (when match-data (lazy-seq (cons match-data (re-seq re post-match))))))
 
-;;; doesn't work in advanced mode - but might work with js*
-;;; error: 'goog not defined'
+;;; goog.global.RegExp needs special handling for reasons not yet
+;;; known.  This works in advanced mode, though.  See
+;;; http://code.google.com/p/closure-library/source/browse/trunk/closure/goog/debug/reflect.js?r=701#99
+;;; for a potential lead.
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
   [s]
-  (doto (goog.global.RegExp. s)
-    (.compile)))
+  (doto (js* "goog.global['RegExp'](~{s})") (.compile)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
