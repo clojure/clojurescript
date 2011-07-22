@@ -4,7 +4,7 @@
 # single JavaScript file.
 
 if [ "$CLOJURESCRIPT_HOME" = "" ]; then
-  CLOJURESCRIPT_HOME="."
+  CLOJURESCRIPT_HOME="`dirname $0`/.."
 fi
 
 CLJSC_CP=''
