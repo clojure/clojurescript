@@ -800,19 +800,34 @@ reduces them without incurring seq initialization"
 
 (defn- fix [q]
   (if (>= q 0)
-    (js* "(Math.floor(~{q}))")
-    (js* "(Math.ceil(~{q}))")))
+    (Math/floor q)
+    (Math/ceil q)))
 
-(defn mod [n d]
+(defn mod
+  "Modulus of num and div. Truncates toward negative infinity."
+  [n d]
   (js* "(~{n} % ~{d})"))
 
-(defn quot [n d]
+(defn quot
+  "quot[ient] of dividing numerator by denominator."
+  [n d]
   (let [rem (mod n d)]
     (fix (js* "((~{n} - ~{rem}) / ~{d})"))))
 
-(defn rem [n d]
+(defn rem
+  "remainder of dividing numerator by denominator."
+  [n d]
   (let [q (quot n d)]
     (js* "(~{n} - (~{d} * ~{q}))")))
+
+(defn rand
+  "Returns a random floating point number between 0 (inclusive) and n (default 1) (exclusive)."
+  ([]  (Math/random))
+  ([n] (* n (rand))))
+
+(defn rand-int
+  "Returns a random integer between 0 (inclusive) and n (exclusive)."
+  [n] (fix (rand n)))
 
 (defn bit-xor
   "Bitwise exclusive or"
