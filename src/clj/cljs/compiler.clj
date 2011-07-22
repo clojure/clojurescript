@@ -346,54 +346,63 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
              (print "})")))
 
 (defmethod emit :fn
-  [{:keys [name env methods max-fixed-arity variadic]}]
+  [{:keys [name env methods max-fixed-arity variadic recur-frames]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
-    (if (= 1 (count methods))
-      (if variadic
-        (emit-variadic-fn-method (assoc (first methods) :name name))
-        (emit-fn-method (assoc (first methods) :name name)))
-      (let [name (or name (gensym))
-            maxparams (apply max-key count (map :params methods))
-            mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
-            ms (sort-by #(-> % second :params count) (seq mmap))]
+    (let [loop-locals (seq (mapcat :names (filter #(and % @(:flag %)) recur-frames)))]
+      (when loop-locals
         (when (= :return (:context env))
-          (print "return "))
-        (println "(function() {")
-        (println (str "var " name " = null;"))
-        (doseq [[n meth] ms]
-          (println (str "var " n " = " (with-out-str (if (:variadic meth)
-                                                       (emit-variadic-fn-method meth)
-                                                       (emit-fn-method meth))) ";")))
-        (println (str name " = function(" (comma-sep (if variadic
-                                                       (concat (butlast maxparams) ['var_args])
-                                                       maxparams)) "){"))
-        (when variadic
-          (println (str "var " (last maxparams) " = var_args;")))
-        (println "switch(arguments.length){")
-        (doseq [[n meth] ms]
-          (if (:variadic meth)
-            (do (println "default:")
-                (println (str "return " n ".apply(this,arguments);")))
-            (let [pcnt (count (:params meth))]
-              (println "case " pcnt ":")
-              (println (str "return " n ".call(this" (if (zero? pcnt) nil
-                                                         (str "," (comma-sep (take pcnt maxparams)))) ");")))))
-        (println "}")
-        (println "throw('Invalid arity: ' + arguments.length);")
-        (println "};")
-        (when variadic
-          (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity ";"))
-          (println (str name ".cljs$lang$applyTo = "
-                        (with-out-str
-                          (emit-apply-to
-                           (some (fn [[n meth]]
-                                   (when (:variadic meth)
-                                     (assoc meth :name n)))
-                                 ms)))
-                        ";")))
-        (println (str "return " name ";"))
-        (println "})()")))))
+            (print "return "))
+        (println (str "((function (" (comma-sep loop-locals) "){"))
+        (when-not (= :return (:context env))
+            (print "return ")))
+      (if (= 1 (count methods))
+        (if variadic
+          (emit-variadic-fn-method (assoc (first methods) :name name))
+          (emit-fn-method (assoc (first methods) :name name)))
+        (let [name (or name (gensym))
+              maxparams (apply max-key count (map :params methods))
+              mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
+              ms (sort-by #(-> % second :params count) (seq mmap))]
+          (when (= :return (:context env))
+            (print "return "))
+          (println "(function() {")
+          (println (str "var " name " = null;"))
+          (doseq [[n meth] ms]
+            (println (str "var " n " = " (with-out-str (if (:variadic meth)
+                                                         (emit-variadic-fn-method meth)
+                                                         (emit-fn-method meth))) ";")))
+          (println (str name " = function(" (comma-sep (if variadic
+                                                         (concat (butlast maxparams) ['var_args])
+                                                         maxparams)) "){"))
+          (when variadic
+            (println (str "var " (last maxparams) " = var_args;")))
+          (println "switch(arguments.length){")
+          (doseq [[n meth] ms]
+            (if (:variadic meth)
+              (do (println "default:")
+                  (println (str "return " n ".apply(this,arguments);")))
+              (let [pcnt (count (:params meth))]
+                (println "case " pcnt ":")
+                (println (str "return " n ".call(this" (if (zero? pcnt) nil
+                                                           (str "," (comma-sep (take pcnt maxparams)))) ");")))))
+          (println "}")
+          (println "throw('Invalid arity: ' + arguments.length);")
+          (println "};")
+          (when variadic
+            (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity ";"))
+            (println (str name ".cljs$lang$applyTo = "
+                          (with-out-str
+                            (emit-apply-to
+                             (some (fn [[n meth]]
+                                     (when (:variadic meth)
+                                       (assoc meth :name n)))
+                                   ms)))
+                          ";")))
+          (println (str "return " name ";"))
+          (println "})()")))
+      (when loop-locals
+        (println (str ";})(" (comma-sep loop-locals) "))"))))))
 
 (defmethod emit :do
   [{:keys [statements ret env]}]
@@ -635,7 +644,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         variadic (boolean (some :variadic methods))]
     ;;(assert (= 1 (count methods)) "Arity overloading not yet supported")
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :name mname :methods methods :variadic variadic
+    {:env env :op :fn :name mname :methods methods :variadic variadic :recur-frames *recur-frames*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity}))
 

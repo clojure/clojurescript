@@ -2756,6 +2756,14 @@ reduces them without incurring seq initialization"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
 
 (defn ^{:export false} test-stuff []
+  (assert (= [4 3 2 1 0] (loop [i 0 j ()]
+                 (if (< i 5)
+                   (recur (inc i) (conj j (fn [] i)))
+                   (map #(%) j)))))
+
+  (assert (= [[1 1] [1 2] [1 3] [2 1] [2 2] [2 3]]
+             (map #(%) (for [i [1 2] j [1 2 3]] (fn [] [i j])))))
+  
   (assert (= 2 (:b {:a 1 :b 2})))
   (assert (= 2 ('b '{:a 1 b 2})))
   (assert (= 2 ({:a 1 :b 2} :b)))
