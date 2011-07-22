@@ -144,6 +144,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
 (defmethod emit-constant Character [x] (pr (str x)))
 
+(defmethod emit-constant java.util.regex.Pattern [x]
+  (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
+    (print (str \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
+
 (defmethod emit-constant clojure.lang.Keyword [x]
            (pr (str \uFDD0 \'
                     (if (namespace x)
