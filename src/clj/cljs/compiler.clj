@@ -515,10 +515,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* . js* & quote})
 
-(def ^:dynamic *recur-frame* nil)
+(def ^:dynamic *recur-frames* nil)
 
 (defmacro disallowing-recur [& body]
-  `(binding [*recur-frame* nil] ~@body))
+  `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
 
 (defn analyze-block
   "returns {:statements .. :ret .. :children ..}"
@@ -614,7 +614,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
         locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
-        block (binding [*recur-frame* recur-frame]
+        block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                 (analyze-block (assoc env :context :return :locals locals) body))]
     
     (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block)))
@@ -663,7 +663,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
              [bes env])))
         recur-frame (when is-loop {:names (vec (map :name bes)) :flag (atom nil)})
         {:keys [statements ret children]}
-        (binding [*recur-frame* (or recur-frame *recur-frame*)]
+        (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)]
           (analyze-block (assoc env :context (if (= :expr context) :return context)) exprs))]
     {:env encl-env :op :let :loop is-loop
      :bindings bes :statements statements :ret ret :form form :children (into [children] (map :init bes))}))
@@ -678,12 +678,13 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod parse 'recur
   [op env [_ & exprs] _]
-  (let [context (:context env)]
-    (assert *recur-frame* "Can't recur here")
-    (assert (= (count exprs) (count (:names *recur-frame*))) "recur argument count mismatch")
-    (reset! (:flag *recur-frame*) true)
+  (let [context (:context env)
+        frame (first *recur-frames*)]
+    (assert frame "Can't recur here")
+    (assert (= (count exprs) (count (:names frame))) "recur argument count mismatch")
+    (reset! (:flag frame) true)
     (assoc {:env env :op :recur}
-      :frame *recur-frame*
+      :frame frame
       :exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs))))))
 
 (defmethod parse 'quote
