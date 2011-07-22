@@ -33,7 +33,8 @@
   [event f]
   (swap! state add-listener event f))
 
-(def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
+;; (def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
+(def twitter-uri (goog.Uri. "http://dipert.org/search.json.php"))
 
 (defn search-tag
   "Get the current tag value from the page."
@@ -53,7 +54,7 @@
        (f message))))
 
 (defn matches [p s]
-  (seq (js* "~{s}.match(new RegExp(~{p}, 'g'))")))
+  (.match s (goog.global.RegExp. p "g")))
 
 (defn parse-mentions [tweet]
   (map #(apply str (drop 1 %)) (matches "@\\w*" (:text tweet))))

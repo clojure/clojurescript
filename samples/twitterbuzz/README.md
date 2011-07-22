@@ -8,7 +8,7 @@ See https://github.com/clojure/clojurescript/wiki/Quick-Start
 
 Compile the demo:
 
-        cljsc src > twitterbuzz.js
+    cljsc src > twitterbuzz.js
 
 After running the above command, open index.html.
 
@@ -22,15 +22,21 @@ After running the above command, open index.html.
 
 * Once the REPL is running, evaluate:
 
-        (use 'cljs.closure)
-        (def opts {:output-to "samples/twitterbuzz/twitterbuzz.js" :output-dir "samples/twitterbuzz/out"})
+    (use 'cljs.closure)
+    (def opts {:output-to "samples/twitterbuzz/twitterbuzz.js" :output-dir "samples/twitterbuzz/out"})
 
-        (build "samples/twitterbuzz/src" opts)
+    (build "samples/twitterbuzz/src" opts)
 
 The reason we set the `:output-dir` is because the `index.html` script tag is specifically pointing to that directory.
 
 * See `cljs.closure` source for more compilation examples.
 
-## Run in Production Mode
+## Compile in Advanced Mode
 
-See https://github.com/clojure/clojurescript/wiki/Quick-Start for instructions on how to compile with 'advanced' mode.
+`cljsc` can be run with a Clojure map of compiler options.  To compile using `cljsc` and Closure Compiler's "advanced" optimization setting:
+
+    cljsc src '{:optimizations :advanced}' > twitterbuzz.js
+    
+Because advanced mode results in only one `.js` file, `twitterbuzz.js`, only one `<script>` include tag is required.  To see the app as compiled in advanced mode, open `index-advanced.html`.
+
+See https://github.com/clojure/clojurescript/wiki/Quick-Start for more information about compiling in advanced mode.

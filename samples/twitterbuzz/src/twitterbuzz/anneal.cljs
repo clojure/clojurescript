@@ -9,13 +9,13 @@
 (ns twitterbuzz.anneal)
 
 (defn exp [x]
-  (js* "Math.exp(~{x})"))
+  (goog.global.Math/exp x))
 
 (defn abs [x]
-  (js* "Math.abs(~{x})"))
+  (goog.global.Math/abs x))
 
 (defn random []
-  (js* "Math.random()"))
+  (goog.global.Math/random))
 
 (defn standard-prob [e e1 temp]
   (if (< e1 e)
