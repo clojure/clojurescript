@@ -52,11 +52,8 @@
      (doseq [f (-> @state :listeners event)]
        (f message))))
 
-(defn matches [p s]
-  (.match s (goog.global.RegExp. p "g")))
-
 (defn parse-mentions [tweet]
-  (map #(apply str (drop 1 %)) (matches "@\\w*" (:text tweet))))
+  (map #(apply str (drop 1 %)) (re-seq (re-pattern "@\\w*") (:text tweet))))
 
 (defn add-mentions
   "Add the user to the mentions map for first user she mentions,
