@@ -2368,15 +2368,13 @@ reduces them without incurring seq initialization"
         post-match (subs s (+ match-idx (count match-str)))]
     (when match-data (lazy-seq (cons match-data (re-seq re post-match))))))
 
-;;; needs doto
 ;;; doesn't work in advanced mode - but might work with js*
 ;;; error: 'goog not defined'
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
   [s]
-  (let [re (goog.global.RegExp. s)]
-    (.compile re)
-    re))
+  (doto (goog.global.RegExp. s)
+    (.compile)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
