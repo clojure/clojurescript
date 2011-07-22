@@ -204,7 +204,7 @@
   IHash
   (-hash [o] 0))
 
-(extend-type goog.global.Date
+(extend-type js/Date
   IEquiv
   (-equiv [o other] (identical? (.toString o) (.toString other))))
 
@@ -1132,11 +1132,10 @@ reduces them without incurring seq initialization"
        (ci-reduce string f start))))
 
 ;;hrm
-(defn- string-call_
-  ([_ coll] (get coll (js* "this.toString()")))
-  ([_ coll not-found] (get coll (js* "this.toString()") not-found)))
-
-(js* "String.prototype.call = ~{}" string-call_)
+(set! js/String.prototype.call
+      (fn
+        ([_ coll] (get coll (js* "this.toString()")))
+        ([_ coll not-found] (get coll (js* "this.toString()") not-found))))
 
 ; could use reify
 ;;; LazySeq ;;;
@@ -2368,14 +2367,10 @@ reduces them without incurring seq initialization"
         post-match (subs s (+ match-idx (count match-str)))]
     (when match-data (lazy-seq (cons match-data (re-seq re post-match))))))
 
-;;; goog.global.RegExp needs special handling for reasons not yet
-;;; known.  This works in advanced mode, though.  See
-;;; http://code.google.com/p/closure-library/source/browse/trunk/closure/goog/debug/reflect.js?r=701#99
-;;; for a potential lead.
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
   [s]
-  (doto (js* "goog.global['RegExp'](~{s})") (.compile)))
+  (doto (js/RegExp. s) (.compile ())))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
@@ -2388,7 +2383,7 @@ reduces them without incurring seq initialization"
 ; This should be different in different runtime environments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
-  (js* "print(~{x})")
+  (js/print x)
   nil)
 
 (defn flush [] ;stub
@@ -2870,8 +2865,8 @@ reduces them without incurring seq initialization"
               (true? false)
               (false? false)
               (false? true)
-              (true? goog.global.undefined)
-              (false? goog.global.undefined)]))
+              (true? js/undefined)
+              (false? js/undefined)]))
   ;; apply
   (assert (= 0 (apply + nil)))
   (assert (= 0 (apply + (list))))
@@ -2943,11 +2938,10 @@ reduces them without incurring seq initialization"
     (assert (= 1 (try* 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
 
-  ;;this fails in v8 advanced mode - we need to trim off goog.global in catch
-  #_(let [a (atom nil)]
+  (let [a (atom nil)]
     (assert (= 1 (try 1)))
-    (assert (= 2 (try 1 (throw (goog.global.Error.)) (catch goog.global.Error e 2))))
-    (assert (= 2 (try 1 (throw (goog.global.Error.)) (catch goog.global.Error e 1 2))))
+    (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 2))))
+    (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 1 2))))
     (assert (= 1 (try 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
   
@@ -3170,9 +3164,9 @@ reduces them without incurring seq initialization"
     (assert (= @s (reverse v))))
   
   ;; delay
-  ;; (let [d (delay (. (goog.global.Date.) (getTime)))]
+  ;; (let [d (delay (. (js/Date.) (getTime)))]
   ;;   (assert (false? (realized? d)))
-  ;;   (let [d2 (. (goog.global.Date.) (getTime))]
+  ;;   (let [d2 (. (js/Date.) (getTime))]
   ;;     (assert (> d2 (deref d))))
   ;;   (assert (true? (realized? d)))
   ;;   (let [d3 (deref d)]
@@ -3258,7 +3252,7 @@ reduces them without incurring seq initialization"
   :ok
   )
 
-#_(goog.global/print (assoc {} :a 1))
+#_(js/print (assoc {} :a 1))
 
 
 

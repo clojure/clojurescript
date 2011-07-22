@@ -29,7 +29,12 @@
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defn munge [s]
-  (let [ms (clojure.lang.Compiler/munge (str s))
+  (let [ss (str s)
+        ms (if (.contains ss "]")
+             (let [idx (inc (.lastIndexOf ss "]"))]
+               (str (subs ss 0 idx)
+                    (clojure.lang.Compiler/munge (subs ss idx))))
+             (clojure.lang.Compiler/munge ss))
         ms (if (js-reserved ms) (str ms "$") ms)]
     (if (symbol? s)
       (symbol ms)
@@ -70,67 +75,76 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (and (get (:defs (@namespaces 'cljs.core)) sym)
        (not (contains? (-> env :ns :excludes) sym))))
 
+(defn js-var [sym]
+  (let [parts (string/split (name sym) #"\.")
+        step (fn [part] (str "['" part "']"))]
+    (apply str "goog.global" (map step parts))))
+
 (defn resolve-existing-var [env sym]
-  (let [s (str sym)
-        lb (-> env :locals sym)
-        nm
-        (cond
-         lb (:name lb)
+  (if (= (namespace sym) "js")
+    {:name (js-var sym)}
+    (let [s (str sym)
+          lb (-> env :locals sym)
+          nm
+          (cond
+           lb (:name lb)
 
-         (namespace sym)
-         (let [ns (namespace sym)
-               ns (if (= "clojure.core" ns) "cljs.core" ns)
-               full-ns (resolve-ns-alias env ns)]
-           (confirm-var-exists env full-ns (symbol (name sym)))
-           (symbol (str full-ns "." (munge (name sym)))))
+           (namespace sym)
+           (let [ns (namespace sym)
+                 ns (if (= "clojure.core" ns) "cljs.core" ns)
+                 full-ns (resolve-ns-alias env ns)]
+             (confirm-var-exists env full-ns (symbol (name sym)))
+             (symbol (str full-ns "." (munge (name sym)))))
 
-         (.contains s ".")
-         (munge (let [idx (.indexOf s ".")
-                      prefix (symbol (subs s 0 idx))
-                      suffix (subs s idx)
-                      lb (-> env :locals prefix)]
-                  (if lb
-                    (symbol (str (:name lb) suffix))
-                    (do
-                      (confirm-var-exists env prefix (symbol suffix))
-                      sym))))
+           (.contains s ".")
+           (munge (let [idx (.indexOf s ".")
+                        prefix (symbol (subs s 0 idx))
+                        suffix (subs s idx)
+                        lb (-> env :locals prefix)]
+                    (if lb
+                      (symbol (str (:name lb) suffix))
+                      (do
+                        (confirm-var-exists env prefix (symbol suffix))
+                        sym))))
 
-         :else
-         (let [full-ns (if (core-name? env sym)
-                         'cljs.core
-                         (-> env :ns :name))]
-           (confirm-var-exists env full-ns sym)
-           (munge (symbol (str full-ns "." (munge (name sym)))))))]
-    {:name nm}))
+           :else
+           (let [full-ns (if (core-name? env sym)
+                           'cljs.core
+                           (-> env :ns :name))]
+             (confirm-var-exists env full-ns sym)
+             (munge (symbol (str full-ns "." (munge (name sym)))))))]
+      {:name nm})))
 
 (defn resolve-var [env sym]
-  (let [s (str sym)
-        lb (-> env :locals sym)
-        nm 
-        (cond
-         lb (:name lb)
+  (if (= (namespace sym) "js")
+    {:name (js-var sym)}
+    (let [s (str sym)
+          lb (-> env :locals sym)
+          nm 
+          (cond
+           lb (:name lb)
          
-         (namespace sym)
-         (let [ns (namespace sym)
-               ns (if (= "clojure.core" ns) "cljs.core" ns)]
-           (symbol (str (resolve-ns-alias env ns) "." (munge (name sym)))))
+           (namespace sym)
+           (let [ns (namespace sym)
+                 ns (if (= "clojure.core" ns) "cljs.core" ns)]
+             (symbol (str (resolve-ns-alias env ns) "." (munge (name sym)))))
 
-         (.contains s ".")
-         (munge (let [idx (.indexOf s ".")
-                      prefix (symbol (subs s 0 idx))
-                      suffix (subs s idx)
-                      lb (-> env :locals prefix)]
-                  (if lb
-                    (symbol (str (:name lb) suffix))
-                    sym)))
+           (.contains s ".")
+           (munge (let [idx (.indexOf s ".")
+                        prefix (symbol (subs s 0 idx))
+                        suffix (subs s idx)
+                        lb (-> env :locals prefix)]
+                    (if lb
+                      (symbol (str (:name lb) suffix))
+                      sym)))
 
-         :else
-         (munge (symbol (str
-                         (if (core-name? env sym)
-                           'cljs.core
-                           (-> env :ns :name))
-                         "." (munge (name sym))))))]
-    {:name nm}))
+           :else
+           (munge (symbol (str
+                           (if (core-name? env sym)
+                             'cljs.core
+                             (-> env :ns :name))
+                           "." (munge (name sym))))))]
+      {:name nm})))
 
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
