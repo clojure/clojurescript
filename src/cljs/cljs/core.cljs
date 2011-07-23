@@ -215,6 +215,10 @@
   IHash
   (-hash [o] o))
 
+(extend-type function
+  IHash
+  (-hash [o] (goog.getUid o)))
+
 ;;this is primitive because & emits call to array-seq
 (defn inc
   "Returns a number one greater than num."
