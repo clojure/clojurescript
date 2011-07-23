@@ -2370,7 +2370,9 @@ reduces them without incurring seq initialization"
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
   [s]
-  (doto (js/RegExp. s) (.compile ())))
+  (let [re (js/RegExp. s)]
+    (. re (compile))
+    re))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
