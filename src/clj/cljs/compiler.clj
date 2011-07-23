@@ -236,7 +236,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
-  (emit-wrap env (print (:name info))))
+  (emit-wrap env (print (munge (:name info)))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
@@ -506,11 +506,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod emit :ns
   [{:keys [name requires requires-macros env]}]
-  (println (str "goog.provide('" name "');"))
+  (println (str "goog.provide('" (munge name) "');"))
   (when-not (= name 'cljs.core)
     (println (str "goog.require('cljs.core');")))
   (doseq [lib (vals requires)]
-    (println (str "goog.require('" lib "');"))))
+    (println (str "goog.require('" (munge lib) "');"))))
 
 (defmethod emit :deftype*
   [{:keys [t fields]}]
