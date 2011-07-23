@@ -11,6 +11,7 @@
             [goog.Timer :as timer]
             [goog.events :as events]
             [goog.events.EventType :as event-type]
+            [goog.dom.classes :as classes]
             [goog.dom :as dom]))
 
 (def initial-state {:max-id 1
@@ -40,10 +41,11 @@
   []
   (.value (dom/getElement "twitter-search-tag")))
 
-(defn retrieve [payload callback]
+(defn retrieve [payload callback error-callback]
   (.send (goog.net.Jsonp. twitter-uri)
          payload
-         callback))
+         callback
+         error-callback))
 
 (defn send-event
   ([event]
@@ -110,9 +112,18 @@
          (send-event :new-tweets tweets)
          (send-event :graph-update (:graph @state)))))
 
+(defn set-tweet-status [css-class message]
+  (let [ts (dom/getElement "tweet-status")]
+    (dom/setTextContent ts message)
+    (classes/set ts (name css-class))))
+
+(defn error-callback [error]
+  (set-tweet-status :error "Twitter error"))
+
 (defn do-timer []
-  (if-let [tag (:search-tag @state)]
-    (retrieve (.strobj {"q" tag "rpp" 100}) my-callback)))
+  (when-let [tag (:search-tag @state)]
+    (set-tweet-status :okay "Fetching tweets")
+    (retrieve (.strobj {"q" tag "rpp" 100}) my-callback error-callback)))
 
 (defn poll
   "Request new data from twitter once every 24 seconds. This will put

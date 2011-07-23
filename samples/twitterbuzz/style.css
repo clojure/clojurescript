@@ -47,12 +47,20 @@ header {
 #status-bar {
 }
 
-#status-bar span.tweet-status {
+#tweet-status {
   float: right;
   padding: 4px 7px 4px 7px;
   margin-right: 10px;
   border: 1px solid #ddd;
   background-color: #e7e7e7;
+}
+#status-bar .okay {
+  border-color: #ddd;
+  background-color: #e7e7e7;
+}
+#status-bar .error {
+  border-color: #e00;
+  background-color: #c00;
 }
 #status-bar a.reset-search {
   float: right;
