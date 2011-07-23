@@ -3258,3 +3258,197 @@ reduces them without incurring seq initialization"
 
 
 
+;; FF
+(defn not-empty
+  "If coll is empty, returns nil, else coll"
+  [coll] (when (seq coll) coll))
+
+(defn make-hierarchy
+  "Creates a hierarchy object for use with derive, isa? etc."
+  [] {:parents {} :descendants {} :ancestors {}})
+
+(def ^{:private true}
+  global-hierarchy (atom (make-hierarchy)))
+
+(defn isa?
+  "Returns true if (= child parent), or child is directly or indirectly derived from
+  parent, either via a Java type inheritance relationship or a
+  relationship established via derive. h must be a hierarchy obtained
+  from make-hierarchy, if not supplied defaults to the global
+  hierarchy"
+  ([child parent] (isa? @global-hierarchy child parent))
+  ([h child parent]
+   (or (= child parent)
+       (contains? ((:ancestors h) child) parent)
+       (and (some #(contains? ((:ancestors h) %) parent)))
+       (and (vector? parent) (vector? child)
+            (= (count parent) (count child))
+            (loop [ret true i 0]
+              (if (or (not ret) (= i (count parent)))
+                ret
+                (recur (isa? h (child i) (parent i)) (inc i))))))))
+
+(defn parents
+  "Returns the immediate parents of tag, either via a Java type
+  inheritance relationship or a relationship established via derive. h
+  must be a hierarchy obtained from make-hierarchy, if not supplied
+  defaults to the global hierarchy"
+  ([tag] (parents @global-hierarchy tag))
+  ([h tag] (not-empty (get (:parents h) tag))))
+
+(defn ancestors
+  "Returns the immediate and indirect parents of tag, either via a Java type
+  inheritance relationship or a relationship established via derive. h
+  must be a hierarchy obtained from make-hierarchy, if not supplied
+  defaults to the global hierarchy"
+  ([tag] (ancestors @global-hierarchy tag))
+  ([h tag] (not-empty (get (:ancestors h) tag))))
+
+(defn descendants
+  "Returns the immediate and indirect children of tag, through a
+  relationship established via derive. h must be a hierarchy obtained
+  from make-hierarchy, if not supplied defaults to the global
+  hierarchy. Note: does not work on Java type inheritance
+  relationships."
+  ([tag] (descendants @global-hierarchy tag))
+  ([h tag] (not-empty (get (:descendants h) tag))))
+
+(defn derive
+  "Establishes a parent/child relationship between parent and
+  tag. Parent must be a namespace-qualified symbol or keyword and
+  child can be either a namespace-qualified symbol or keyword or a
+  class. h must be a hierarchy obtained from make-hierarchy, if not
+  supplied defaults to, and modifies, the global hierarchy."
+  ([tag parent]
+   (assert (namespace parent))
+   ;; (assert (or (class? tag) (and (instance? cljs.core.Named tag) (namespace tag))))
+   (swap! global-hierarchy derive tag parent) nil)
+  ([h tag parent]
+   (assert (not= tag parent))
+   ;; (assert (or (class? tag) (instance? cljs.core.Named tag)))
+   ;; (assert (instance? cljs.core.INamed tag))
+   ;; (assert (instance? cljs.core.INamed parent))
+
+   (let [tp (:parents h)
+         td (:descendants h)
+         ta (:ancestors h)
+         tf (fn [m source sources target targets]
+              (reduce (fn [ret k]
+                        (assoc ret k
+                               (reduce conj (get targets k #{}) (cons target (targets target)))))
+                      m (cons source (sources source))))]
+     (or
+      (when-not (contains? (tp tag) parent)
+        (when (contains? (ta tag) parent)
+          (throw (str tag "already has" parent "as ancestor")))
+        (when (contains? (ta parent) tag)
+          (throw (str "Cyclic derivation:" parent "has" tag "as ancestor")))
+        {:parents (assoc (:parents h) tag (conj (get tp tag #{}) parent))
+         :ancestors (tf (:ancestors h) tag td parent ta)
+         :descendants (tf (:descendants h) parent ta tag td)})
+      h))))
+
+(defn underive
+  "Removes a parent/child relationship between parent and
+  tag. h must be a hierarchy obtained from make-hierarchy, if not
+  supplied defaults to, and modifies, the global hierarchy."
+  ([tag parent]
+     ;; (alter-var-root #'global-hierarchy underive tag parent)
+     (swap! global-hierarchy derive tag parent)  nil)
+  ([h tag parent]
+    (let [parentMap (:parents h)
+	  childsParents (if (parentMap tag)
+			  (disj (parentMap tag) parent) #{})
+	  newParents (if (not-empty childsParents)
+		       (assoc parentMap tag childsParents)
+		       (dissoc parentMap tag))
+	  deriv-seq (flatten (map #(cons (first %) (interpose (first %) (second %)))
+				       (seq newParents)))]
+      (if (contains? (parentMap tag) parent)
+	(reduce #(apply derive %1 %2) (make-hierarchy)
+		(partition 2 deriv-seq))
+	h))))
+
+
+(defprotocol IMultiFn
+  (-reset [])
+  (-add-method [dispatch-val method])
+  (-remove-method [dispatch-val])
+  (-prefer-method [dispatch-val dispatch-val-y])
+  (-get-method [dispatch-val])
+  ;;(-invoke [& args])
+  )
+
+(defn- reset-cache
+  [method-cache method-table cached-hierarchy hierarchy]
+  (swap! method-cache (fn [_] method-table))
+  (swap! cached-hierarchy (fn [_] (deref hierarchy))))
+
+(defn- prefers
+  [x y prefer-table]
+  (let [xprefs (@prefer-table x)]
+    (or
+     (when (and xprefs (xprefs y))
+      true)
+     (loop [ps (parents y)]
+       (when (pos? (count ps))
+	 (when (prefers x (first ps))
+	   true)
+	 (recur (rest ps))))
+     (loop [ps (parents x)]
+       (when (pos? (count ps))
+	 (when (prefers (first ps) y)
+	   true)
+	 (recur (rest ps)))))
+    false))
+
+(defn- dominates
+  [x y prefer-table]
+  (or (prefers x y prefer-table) (isa? x y)))
+
+(defn- find-and-cache-best-method
+  [dispatch-val method-table name cached-hierarchy hierarchy method-cache]
+  (let [best-entry (reduce (fn [be e]
+			     (when (isa? dispatch-val (first e))
+			       (when (or (nil? be)
+					 (dominates (first e) (first be)))
+				 (when-not (dominates (first be) (first e))
+				   (throw (str "Multiple methods in multimethod '" name "' match dispatch value: " dispatch-val " -> " (first e)" and " (first be) ", and neither is preferred")))
+				 e)))
+			   nil @method-table)]
+    (when best-entry
+      (if (= @cached-hierarchy @hierarchy)
+	(do
+	  (swap! method-cache assoc dispatch-val (second best-entry))
+	  (second best-entry))
+	(do
+	  (reset-cache method-cache method-table cached-hierarchy hierarchy)
+	  (find-and-cache-best-method dispatch-val method-table name cached-hierarchy hierarchy method-cache)))
+      )))
+
+(deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
+		  method-table prefer-table method-cache cached-hierarchy]
+  IMultiFn
+  (-reset []
+    (swap! method-table (fn [_] {}))
+    (swap! method-cache (fn [_] {}))
+    (swap! prefer-table (fn [_] {}))
+    (swap! cached-hierarchy (fn [_] nil)))
+  (-add-method [dispatch-val method]
+    (prn "add-method")
+    (swap! method-table assoc dispatch-val method)
+    (reset-cache method-cache method-table cached-hierarchy hierarchy))
+  (-remove-method [dispatch-val]
+    (swap! method-table dissoc dispatch-val)
+    (reset-cache method-cache method-table cached-hierarchy hierarchy))
+  (-get-method [dispatch-val]
+    (when-not (= @cached-hierarchy @hierarchy)
+      (reset-cache method-cache method-table cached-hierarchy hierarchy))
+    (if-let [target-fn (@method-cache dispatch-val)]
+      target-fn
+      (if-let [target-fn (find-and-cache-best-method dispatch-val method-table name
+						 cached-hierarchy hierarchy method-cache)]
+	target-fn
+	(@method-table default-dispatch-val)))
+    )
+  )
