@@ -2270,6 +2270,30 @@ reduces them without incurring seq initialization"
            run (cons fst (take-while #(= fv (f %)) (next s)))]
        (cons run (partition-by f (seq (drop (count run) s))))))))
 
+(defn frequencies
+  "Returns a map from distinct items in coll to the number of times
+  they appear."
+  [coll]
+  (reduce
+   (fn [counts x]
+     (assoc counts x (inc (get counts x 0))))
+   {}
+   coll))
+
+(defn reductions
+  "Returns a lazy seq of the intermediate values of the reduction (as
+  per reduce) of coll by f, starting with init."
+  ([f coll]
+     (lazy-seq
+      (if-let [s (seq coll)]
+        (reductions f (first s) (rest s))
+        (list (f)))))
+  ([f init coll]
+     (cons init
+           (lazy-seq
+            (when-let [s (seq coll)]
+              (reductions f (f init (first s)) (rest s)))))))
+
 (defn juxt
   "Takes a set of functions and returns a fn that is the juxtaposition
   of those fns.  The returned fn takes a variable number of args, and
@@ -3248,7 +3272,12 @@ reduces them without incurring seq initialization"
 
   (assert (= {1 2 3 4 5 6} (merge {1 2} {3 4} {5 6})))
   (assert (= {1 2 3 4} (merge {1 2} {3 4} nil)))
+
+  ;; frequencies
+  (assert (= {:a 3 :b 2} (frequencies [:a :b :a :b :a])))
   
+  ;; reductions
+  (assert (= [1 3 6 10 15] (reductions + [1 2 3 4 5])))
   :ok
   )
 
