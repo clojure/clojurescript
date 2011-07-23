@@ -981,6 +981,21 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             javax.script.ScriptEngine/FILENAME f)
       (load-stream repl-env res))))
 
+(defn analyze-file
+  [f]
+  (binding [*cljs-ns* 'cljs.user]
+    (let [res (if (= \/ (first f)) f (io/resource f))]
+      (assert res (str "Can't find " f " in classpath"))
+      (with-open [r (io/reader res)]
+        (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+              pbr (clojure.lang.LineNumberingPushbackReader. r)
+              eof (Object.)]
+          (loop [r (read pbr false eof false)]
+            (let [env (assoc env :ns (@namespaces *cljs-ns*))]
+              (when-not (identical? eof r)
+                (analyze env r)
+                (recur (read pbr false eof false))))))))))
+
 (def loaded-libs (atom #{}))
 
 (defn goog-require [repl-env rule]
@@ -1089,7 +1104,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
            dest-file (io/file dest)]
        (if (.exists src-file)
          (do (when-not (:defs (get @namespaces 'cljs.core))
-               (load-file (repl-env) "cljs/core.cljs"))
+               (analyze-file "cljs/core.cljs"))
              (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
              (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
                (binding [*out* out

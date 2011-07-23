@@ -194,7 +194,7 @@
   "Ensure that core.cljs has been loaded."
   [& body]
   `(do (when-not (:defs (get @comp/namespaces 'cljs.core))
-         (comp/load-file (comp/repl-env) "cljs/core.cljs"))
+         (comp/analyze-file "cljs/core.cljs"))
        ~@body))
 
 (defn empty-env []
