@@ -405,23 +405,27 @@
 (def compiled-cljs (atom {}))
 
 (defn get-compiled-cljs
-  "If not already compiled, compile the given cljs namespace. Return
+  "If not already compiled, compile the given cljs file. Return
   an IJavaScript for this file. Compiled output will be written to the
   working directory."
-  [opts ns]
-  (let [file (str (string/replace ns "." "/") ".cljs")
-        js-file (comp/rename-to-js file)
+  [opts {:keys [relative-path uri]}]
+  (let [js-file (comp/rename-to-js relative-path)
         out-file (io/file (output-directory opts) js-file)
-        javascript (cond (and (.exists out-file) (get @compiled-cljs ns)) (get @compiled-cljs ns)
+        javascript (cond (and (.exists out-file) (get @compiled-cljs relative-path))
+                         (get @compiled-cljs relative-path)
                          (.exists out-file) (let [ns-info (parse-js-ns
                                                            (string/split-lines (slurp out-file)))]
                                               (javascript-file (to-url out-file)
                                                                (:provides ns-info)
                                                                (:requires ns-info)))
-                         :else (-compile (io/resource file)
-                                         (merge opts {:output-file js-file})))]
-    (do (swap! compiled-cljs (fn [old] (assoc old ns javascript)))
+                         :else (-compile uri (merge opts {:output-file js-file})))]
+    (do (swap! compiled-cljs (fn [old] (assoc old relative-path javascript)))
         javascript)))
+
+(defn ns->file-name [s]
+  (let [ns (name s)
+        path (string/replace (munge ns) \. java.io.File/separatorChar)]
+    (str path ".cljs")))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
@@ -429,20 +433,27 @@
   order. The returned list will not only include the explicitly
   required files but any transative depedencies as well. JavaScript
   files will be compiled to the working directory if they do not
-  already exist."
+  already exist.
+
+  Only load dependencies from the classpath."
   [opts requires]
   (let [index (js-dependency-index opts)]
-    (letfn [(cljs-deps [coll] (remove #(contains? index %) coll))]
-     (loop [requires (cljs-deps requires)
-            deps {}]
-       (if (seq requires)
-         (let [next-ns (first requires)
-               js (get-compiled-cljs opts next-ns)
-               new-requires (remove #(or (contains? deps %)
-                                         (contains? (set requires) %))
-                                    (cljs-deps (-requires js)))]
-           (recur (into (rest requires) new-requires) (assoc deps next-ns js)))
-         (dependency-order (vals deps)))))))
+    (letfn [(cljs-deps [coll]
+              (->> coll
+                   (remove #(contains? index %))
+                   (map #(let [f (ns->file-name %)] (hash-map :relative-path f :uri (io/resource f))))
+                   (remove #(nil? (:uri %)))))]
+      (loop [required-files (cljs-deps requires)
+             visited (set required-files)
+             js-deps []]
+        (if (seq required-files)
+          (let [next-file (first required-files)
+                js (get-compiled-cljs opts next-file)
+                transative (remove #(contains? visited %) (cljs-deps (-requires js)))]
+            (recur (into (rest required-files) transative)
+                   (conj visited transative)
+                   (conj js-deps js)))
+          (dependency-order js-deps))))))
 
 (comment
   ;; only get cljs deps
@@ -580,7 +591,7 @@
 (defn add-dep-string
   "Return a goog.addDependency string for an input."
   [opts input]
-  (letfn [(ns-list [coll] (when (seq coll) (apply str (interpose ", " (map #(str "'" % "'") coll)))))]
+  (letfn [(ns-list [coll] (when (seq coll) (apply str (interpose ", " (map #(str "'" (munge %) "'") coll)))))]
     (str "goog.addDependency(\""
          (path-relative-to (io/file (output-directory opts) "goog/base.js") input)
          "\", ["
