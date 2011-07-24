@@ -3267,7 +3267,8 @@ reduces them without incurring seq initialization"
   "Creates a hierarchy object for use with derive, isa? etc."
   [] {:parents {} :descendants {} :ancestors {}})
 
-(def ^{:private true}
+(def
+  ;;^{:private true}
   global-hierarchy (atom (make-hierarchy)))
 
 (defn isa?
@@ -3370,18 +3371,11 @@ reduces them without incurring seq initialization"
 	h))))
 
 
-(defprotocol IMultiFn
-  (-reset [])
-  (-add-method [dispatch-val method])
-  (-remove-method [dispatch-val])
-  (-prefer-method [dispatch-val dispatch-val-y])
-  (-get-method [dispatch-val])
-  ;;(-invoke [& args])
-  )
+
 
 (defn- reset-cache
   [method-cache method-table cached-hierarchy hierarchy]
-  (swap! method-cache (fn [_] method-table))
+  (swap! method-cache (fn [_] (deref method-table)))
   (swap! cached-hierarchy (fn [_] (deref hierarchy))))
 
 (defn- prefers
@@ -3426,29 +3420,58 @@ reduces them without incurring seq initialization"
 	  (find-and-cache-best-method dispatch-val method-table name cached-hierarchy hierarchy method-cache)))
       )))
 
+(defprotocol IMultiFn
+  (-reset [mf])
+  (-add-method [mf dispatch-val method])
+  (-remove-method [mf dispatch-val])
+  (-prefer-method [mf dispatch-val dispatch-val-y])
+  (-get-method [mf dispatch-val])
+  (-invoke [mf arg1]))
+
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
-		  method-table prefer-table method-cache cached-hierarchy]
+    		  method-table prefer-table method-cache cached-hierarchy]
   IMultiFn
-  (-reset []
-    (swap! method-table (fn [_] {}))
-    (swap! method-cache (fn [_] {}))
-    (swap! prefer-table (fn [_] {}))
-    (swap! cached-hierarchy (fn [_] nil)))
-  (-add-method [dispatch-val method]
-    (prn "add-method")
+  (-reset [mf]
+    (swap! method-table (fn [mf] {}))
+    (swap! method-cache (fn [mf] {}))
+    (swap! prefer-table (fn [mf] {}))
+    (swap! cached-hierarchy (fn [mf] nil))
+    mf)
+
+  (-add-method [mf dispatch-val method]
     (swap! method-table assoc dispatch-val method)
-    (reset-cache method-cache method-table cached-hierarchy hierarchy))
-  (-remove-method [dispatch-val]
+    (reset-cache method-cache method-table cached-hierarchy hierarchy)
+    mf)
+
+  (-remove-method [mf dispatch-val]
     (swap! method-table dissoc dispatch-val)
-    (reset-cache method-cache method-table cached-hierarchy hierarchy))
-  (-get-method [dispatch-val]
+    (reset-cache method-cache method-table cached-hierarchy hierarchy)
+    mf)
+
+  (-get-method [mf dispatch-val]
     (when-not (= @cached-hierarchy @hierarchy)
       (reset-cache method-cache method-table cached-hierarchy hierarchy))
     (if-let [target-fn (@method-cache dispatch-val)]
       target-fn
       (if-let [target-fn (find-and-cache-best-method dispatch-val method-table name
-						 cached-hierarchy hierarchy method-cache)]
-	target-fn
-	(@method-table default-dispatch-val)))
-    )
+      						     cached-hierarchy hierarchy method-cache)]
+      	target-fn
+      	(@method-table default-dispatch-val))))
+  
+  (-prefer-method [mf dispatch-val-x dispatch-val-y]
+    (when (prefers dispatch-val-x dispatch-val-y prefer-table)
+      (throw (str "Preference conflict in multimethod '" name "': " dispatch-val-y " is already preferred to " dispatch-val-x)))
+    (swap! prefer-table assoc dispatch-val-y (conj (get @prefer-table dispatch-val-x #{}) dispatch-val-y))
+    (reset-cache method-cache method-table cached-hierarchy hierarchy))
+  
+  (-invoke [mf arg1]
+    (let [dispatch-val (dispatch-fn arg1)
+	  target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+      	(throw (str "No method in multimethod '" name "' for dispatch value: " dispatch-val)))
+      (prn target-fn arg1)
+      (target-fn arg1)
+      ))
   )
+
+

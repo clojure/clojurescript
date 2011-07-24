@@ -345,3 +345,54 @@
          (when (< ~i n#)
            ~@body
            (recur (inc ~i)))))))
+
+(defmacro defmulti
+  "Creates a new multimethod with the associated dispatch function.
+  The docstring and attribute-map are optional.
+
+  Options are key-value pairs and may be one of:
+    :default    the default dispatch value, defaults to :default
+    :hierarchy  the isa? hierarchy to use for dispatching
+                defaults to the global hierarchy"
+  [mm-name & options]
+  (let [docstring   (if (string? (first options))
+                      (first options)
+                      nil)
+        options     (if (string? (first options))
+                      (next options)
+                      options)
+        m           (if (map? (first options))
+                      (first options)
+                      {})
+        options     (if (map? (first options))
+                      (next options)
+                      options)
+        dispatch-fn (first options)
+        options     (next options)
+        m           (if docstring
+                      (assoc m :doc docstring)
+                      m)
+        m           (if (meta mm-name)
+                      (conj (meta mm-name) m)
+                      m)]
+    (when (= (count options) 1)
+      (throw "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)"))
+    (let [options   (apply hash-map options)
+          default   (get options :default :default)
+          ;; hierarchy (get options :hierarchy #'cljs.core.global-hierarchy)
+	  ]
+      ;;(check-valid-options options :default :hierarchy)
+      `(def ~(with-meta mm-name m)
+	 (let [method-table# (atom {})
+	       prefer-table# (atom {})
+	       method-cache# (atom {})
+	       cached-hierarchy# (atom {})
+	       hierarchy# (get ~options :hierarchy cljs.core/global-hierarchy)
+	       ]
+	   (cljs.core.MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
+			       method-table# prefer-table# method-cache# cached-hierarchy#))))))
+
+(defmacro defmethod
+  "Creates and installs a new method of multimethod associated with dispatch-value. "
+  [multifn dispatch-val & fn-tail]
+  `(-add-method ~(with-meta multifn {:tag 'cljs.core.MultiFn}) ~dispatch-val (fn ~@fn-tail)))
