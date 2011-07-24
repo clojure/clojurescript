@@ -16,10 +16,19 @@
 (declare resolve-var)
 (require 'cljs.core)
 
-(def js-reserved #{"new" "debugger" "enum" "default" "private" "finally" "in" "import" "package" "with" "throw"
-                   "continue" "var" "for" "public" "do" "delete" "instanceof" "yield" "static" "protected" "return"
-                   "case" "implements" "typeof" "while" "void" "switch" "export" "class" "function" "extends" "else"
-                   "interface" "try" "let" "catch" "super" "if" "this" "break" "boolean"})
+(def js-reserved
+  #{"abstract" "boolean" "break" "byte" "case"
+    "catch" "char" "class" "const" "continue"
+    "debugger" "default" "delete" "do" "double"
+    "else" "enum" "export" "extends" "final"
+    "finally" "float" "for" "function" "goto" "if"
+    "implements" "import" "in" "instanceof" "int"
+    "interface" "let" "long" "native" "new"
+    "package" "private" "protected" "public"
+    "return" "short" "static" "super" "switch"
+    "synchronized" "this" "throw" "throws"
+    "transient" "try" "typeof" "var" "void"
+    "volatile" "while" "with" "yield"})
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
@@ -29,7 +38,12 @@
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defn munge [s]
-  (let [ms (clojure.lang.Compiler/munge (str s))
+  (let [ss (str s)
+        ms (if (.contains ss "]")
+             (let [idx (inc (.lastIndexOf ss "]"))]
+               (str (subs ss 0 idx)
+                    (clojure.lang.Compiler/munge (subs ss idx))))
+             (clojure.lang.Compiler/munge ss))
         ms (if (js-reserved ms) (str ms "$") ms)]
     (if (symbol? s)
       (symbol ms)
@@ -70,67 +84,76 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (and (get (:defs (@namespaces 'cljs.core)) sym)
        (not (contains? (-> env :ns :excludes) sym))))
 
+(defn js-var [sym]
+  (let [parts (string/split (name sym) #"\.")
+        step (fn [part] (str "['" part "']"))]
+    (apply str "goog.global" (map step parts))))
+
 (defn resolve-existing-var [env sym]
-  (let [s (str sym)
-        lb (-> env :locals sym)
-        nm
-        (cond
-         lb (:name lb)
+  (if (= (namespace sym) "js")
+    {:name (js-var sym)}
+    (let [s (str sym)
+          lb (-> env :locals sym)
+          nm
+          (cond
+           lb (:name lb)
 
-         (namespace sym)
-         (let [ns (namespace sym)
-               ns (if (= "clojure.core" ns) "cljs.core" ns)
-               full-ns (resolve-ns-alias env ns)]
-           (confirm-var-exists env full-ns (symbol (name sym)))
-           (symbol (str full-ns "." (munge (name sym)))))
+           (namespace sym)
+           (let [ns (namespace sym)
+                 ns (if (= "clojure.core" ns) "cljs.core" ns)
+                 full-ns (resolve-ns-alias env ns)]
+             (confirm-var-exists env full-ns (symbol (name sym)))
+             (symbol (str full-ns "." (munge (name sym)))))
 
-         (.contains s ".")
-         (munge (let [idx (.indexOf s ".")
-                      prefix (symbol (subs s 0 idx))
-                      suffix (subs s idx)
-                      lb (-> env :locals prefix)]
-                  (if lb
-                    (symbol (str (:name lb) suffix))
-                    (do
-                      (confirm-var-exists env prefix (symbol suffix))
-                      sym))))
+           (.contains s ".")
+           (munge (let [idx (.indexOf s ".")
+                        prefix (symbol (subs s 0 idx))
+                        suffix (subs s idx)
+                        lb (-> env :locals prefix)]
+                    (if lb
+                      (symbol (str (:name lb) suffix))
+                      (do
+                        (confirm-var-exists env prefix (symbol suffix))
+                        sym))))
 
-         :else
-         (let [full-ns (if (core-name? env sym)
-                         'cljs.core
-                         (-> env :ns :name))]
-           (confirm-var-exists env full-ns sym)
-           (munge (symbol (str full-ns "." (munge (name sym)))))))]
-    {:name nm}))
+           :else
+           (let [full-ns (if (core-name? env sym)
+                           'cljs.core
+                           (-> env :ns :name))]
+             (confirm-var-exists env full-ns sym)
+             (munge (symbol (str full-ns "." (munge (name sym)))))))]
+      {:name nm})))
 
 (defn resolve-var [env sym]
-  (let [s (str sym)
-        lb (-> env :locals sym)
-        nm 
-        (cond
-         lb (:name lb)
+  (if (= (namespace sym) "js")
+    {:name (js-var sym)}
+    (let [s (str sym)
+          lb (-> env :locals sym)
+          nm 
+          (cond
+           lb (:name lb)
          
-         (namespace sym)
-         (let [ns (namespace sym)
-               ns (if (= "clojure.core" ns) "cljs.core" ns)]
-           (symbol (str (resolve-ns-alias env ns) "." (munge (name sym)))))
+           (namespace sym)
+           (let [ns (namespace sym)
+                 ns (if (= "clojure.core" ns) "cljs.core" ns)]
+             (symbol (str (resolve-ns-alias env ns) "." (munge (name sym)))))
 
-         (.contains s ".")
-         (munge (let [idx (.indexOf s ".")
-                      prefix (symbol (subs s 0 idx))
-                      suffix (subs s idx)
-                      lb (-> env :locals prefix)]
-                  (if lb
-                    (symbol (str (:name lb) suffix))
-                    sym)))
+           (.contains s ".")
+           (munge (let [idx (.indexOf s ".")
+                        prefix (symbol (subs s 0 idx))
+                        suffix (subs s idx)
+                        lb (-> env :locals prefix)]
+                    (if lb
+                      (symbol (str (:name lb) suffix))
+                      sym)))
 
-         :else
-         (munge (symbol (str
-                         (if (core-name? env sym)
-                           'cljs.core
-                           (-> env :ns :name))
-                         "." (munge (name sym))))))]
-    {:name nm}))
+           :else
+           (munge (symbol (str
+                           (if (core-name? env sym)
+                             'cljs.core
+                             (-> env :ns :name))
+                           "." (munge (name sym))))))]
+      {:name nm})))
 
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
@@ -143,6 +166,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defmethod emit-constant String [x] (pr x))
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
 (defmethod emit-constant Character [x] (pr (str x)))
+
+(defmethod emit-constant java.util.regex.Pattern [x]
+  (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
+    (print (str \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
 
 (defmethod emit-constant clojure.lang.Keyword [x]
            (pr (str \uFDD0 \'
@@ -218,7 +245,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
-  (emit-wrap env (print (:name info))))
+  (emit-wrap env (print (munge (:name info)))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
@@ -488,11 +515,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defmethod emit :ns
   [{:keys [name requires requires-macros env]}]
-  (println (str "goog.provide('" name "');"))
+  (println (str "goog.provide('" (munge name) "');"))
   (when-not (= name 'cljs.core)
     (println (str "goog.require('cljs.core');")))
   (doseq [lib (vals requires)]
-    (println (str "goog.require('" lib "');"))))
+    (println (str "goog.require('" (munge lib) "');"))))
 
 (defmethod emit :deftype*
   [{:keys [t fields]}]
@@ -963,6 +990,21 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
             javax.script.ScriptEngine/FILENAME f)
       (load-stream repl-env res))))
 
+(defn analyze-file
+  [f]
+  (binding [*cljs-ns* 'cljs.user]
+    (let [res (if (= \/ (first f)) f (io/resource f))]
+      (assert res (str "Can't find " f " in classpath"))
+      (with-open [r (io/reader res)]
+        (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+              pbr (clojure.lang.LineNumberingPushbackReader. r)
+              eof (Object.)]
+          (loop [r (read pbr false eof false)]
+            (let [env (assoc env :ns (@namespaces *cljs-ns*))]
+              (when-not (identical? eof r)
+                (analyze env r)
+                (recur (read pbr false eof false))))))))))
+
 (def loaded-libs (atom #{}))
 
 (defn goog-require [repl-env rule]
@@ -1071,7 +1113,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
            dest-file (io/file dest)]
        (if (.exists src-file)
          (do (when-not (:defs (get @namespaces 'cljs.core))
-               (load-file (repl-env) "cljs/core.cljs"))
+               (analyze-file "cljs/core.cljs"))
              (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
              (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
                (binding [*out* out

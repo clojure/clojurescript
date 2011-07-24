@@ -240,11 +240,11 @@ macro currently expands into extend call
 * DONE fn
 * DONE fn?
 * DONE fnext
-* TODO fnil
+* DONE fnil
 * DONE for
 * DONE force
 * format
-* TODO frequencies
+* DONE frequencies
 * future
 * future-call
 * future-cancel
@@ -430,7 +430,7 @@ dunno about regex
 * read-string
 * DONE realized?
 * DONE reduce
-* TODO reductions
+* DONE reductions
 * ref
 * ref-history-count
 * ref-max-history

@@ -106,11 +106,11 @@ nil if the end of stream has been reached")
                        (nth groups 3) [(nth groups 3) 10]
                        (nth groups 4) [(nth groups 4) 16]
                        (nth groups 5) [(nth groups 5) 8]
-                       (nth groups 7) [(nth groups 7) (goog.global/parseInt (nth groups 7))] 
+                       (nth groups 7) [(nth groups 7) (js/parseInt (nth groups 7))] 
                        :default [nil nil])]
         (if (nil? n)
           nil
-          (* negate (goog.global/parseInt n radix)))))))
+          (* negate (js/parseInt n radix)))))))
 
 
 (defn- match-ratio
@@ -118,11 +118,11 @@ nil if the end of stream has been reached")
   (let [groups (re-find ratio-pattern s)
         numinator (nth groups 1)
         denominator (nth groups 2)]
-    (/ (goog.global/parseInt numinator) (goog.global/parseInt denominator))))
+    (/ (js/parseInt numinator) (js/parseInt denominator))))
 
 (defn- match-float
   [s]
-  (goog.global/parseFloat s))
+  (js/parseFloat s))
 
 (defn- match-number
   [s]

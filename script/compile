@@ -10,7 +10,6 @@ java -jar closure/compiler/compiler.jar \
   --compilation_level=SIMPLE_OPTIMIZATIONS \
   --warning_level=VERBOSE \
   --formatting=PRETTY_PRINT \
-  --jscomp_off=undefinedVars \
   --jscomp_off=missingProperties \
   --js closure/library/closure/goog/base.js \
   --js closure/library/closure/goog/string/string.js \
@@ -27,7 +26,6 @@ java -jar closure/compiler/compiler.jar \
   --compilation_level=ADVANCED_OPTIMIZATIONS \
   --warning_level=VERBOSE \
   --formatting=PRETTY_PRINT \
-  --jscomp_off=undefinedVars \
   --jscomp_off=missingProperties \
   --js closure/library/closure/goog/base.js \
   --js closure/library/closure/goog/string/string.js \

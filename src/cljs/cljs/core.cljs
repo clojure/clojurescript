@@ -204,7 +204,7 @@
   IHash
   (-hash [o] 0))
 
-(extend-type goog.global.Date
+(extend-type js/Date
   IEquiv
   (-equiv [o other] (identical? (.toString o) (.toString other))))
 
@@ -214,6 +214,10 @@
   
   IHash
   (-hash [o] o))
+
+(extend-type function
+  IHash
+  (-hash [o] (goog.getUid o)))
 
 ;;this is primitive because & emits call to array-seq
 (defn inc
@@ -1132,11 +1136,10 @@ reduces them without incurring seq initialization"
        (ci-reduce string f start))))
 
 ;;hrm
-(defn- string-call_
-  ([_ coll] (get coll (js* "this.toString()")))
-  ([_ coll not-found] (get coll (js* "this.toString()") not-found)))
-
-(js* "String.prototype.call = ~{}" string-call_)
+(set! js/String.prototype.call
+      (fn
+        ([_ coll] (get coll (js* "this.toString()")))
+        ([_ coll not-found] (get coll (js* "this.toString()") not-found))))
 
 ; could use reify
 ;;; LazySeq ;;;
@@ -2271,6 +2274,30 @@ reduces them without incurring seq initialization"
            run (cons fst (take-while #(= fv (f %)) (next s)))]
        (cons run (partition-by f (seq (drop (count run) s))))))))
 
+(defn frequencies
+  "Returns a map from distinct items in coll to the number of times
+  they appear."
+  [coll]
+  (reduce
+   (fn [counts x]
+     (assoc counts x (inc (get counts x 0))))
+   {}
+   coll))
+
+(defn reductions
+  "Returns a lazy seq of the intermediate values of the reduction (as
+  per reduce) of coll by f, starting with init."
+  ([f coll]
+     (lazy-seq
+      (if-let [s (seq coll)]
+        (reductions f (first s) (rest s))
+        (list (f)))))
+  ([f init coll]
+     (cons init
+           (lazy-seq
+            (when-let [s (seq coll)]
+              (reductions f (f init (first s)) (rest s)))))))
+
 (defn juxt
   "Takes a set of functions and returns a fn that is the juxtaposition
   of those fns.  The returned fn takes a variable number of args, and
@@ -2371,7 +2398,7 @@ reduces them without incurring seq initialization"
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
   [s]
-  (.compile (goog.global.RegExp.) s))
+  (js/RegExp. s))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
@@ -2384,7 +2411,7 @@ reduces them without incurring seq initialization"
 ; This should be different in different runtime environments. For example
 ; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
-  (js* "print(~{x})")
+  (js/print x)
   nil)
 
 (defn flush [] ;stub
@@ -2866,8 +2893,8 @@ reduces them without incurring seq initialization"
               (true? false)
               (false? false)
               (false? true)
-              (true? goog.global.undefined)
-              (false? goog.global.undefined)]))
+              (true? js/undefined)
+              (false? js/undefined)]))
   ;; apply
   (assert (= 0 (apply + nil)))
   (assert (= 0 (apply + (list))))
@@ -2939,11 +2966,10 @@ reduces them without incurring seq initialization"
     (assert (= 1 (try* 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
 
-  ;;this fails in v8 advanced mode - we need to trim off goog.global in catch
-  #_(let [a (atom nil)]
+  (let [a (atom nil)]
     (assert (= 1 (try 1)))
-    (assert (= 2 (try 1 (throw (goog.global.Error.)) (catch goog.global.Error e 2))))
-    (assert (= 2 (try 1 (throw (goog.global.Error.)) (catch goog.global.Error e 1 2))))
+    (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 2))))
+    (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 1 2))))
     (assert (= 1 (try 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
   
@@ -3166,9 +3192,9 @@ reduces them without incurring seq initialization"
     (assert (= @s (reverse v))))
   
   ;; delay
-  ;; (let [d (delay (. (goog.global.Date.) (getTime)))]
+  ;; (let [d (delay (. (js/Date.) (getTime)))]
   ;;   (assert (false? (realized? d)))
-  ;;   (let [d2 (. (goog.global.Date.) (getTime))]
+  ;;   (let [d2 (. (js/Date.) (getTime))]
   ;;     (assert (> d2 (deref d))))
   ;;   (assert (true? (realized? d)))
   ;;   (let [d3 (deref d)]
@@ -3250,11 +3276,16 @@ reduces them without incurring seq initialization"
 
   (assert (= {1 2 3 4 5 6} (merge {1 2} {3 4} {5 6})))
   (assert (= {1 2 3 4} (merge {1 2} {3 4} nil)))
+
+  ;; frequencies
+  (assert (= {:a 3 :b 2} (frequencies [:a :b :a :b :a])))
   
+  ;; reductions
+  (assert (= [1 3 6 10 15] (reductions + [1 2 3 4 5])))
   :ok
   )
 
-#_(goog.global/print (assoc {} :a 1))
+#_(js/print (assoc {} :a 1))
 
 
 

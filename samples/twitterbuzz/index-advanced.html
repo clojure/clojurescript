@@ -35,7 +35,7 @@
     <section id="status-bar">
       <input id="twitter-search-tag" value="" type="text" class="search" results="5" autosave="clojure" placeholder="Enter keywords..." autofocus />
       <button id="twitter-search-button" type="submit" class="button green">Track</button>
-      <span id="tweet-status">Not Connected</span>
+      <span id="tweet-status" class="tweet-status">Not Connected</span>
     </section>
   </section>
 
@@ -67,15 +67,7 @@
     <div id="avatar-hover-body" class="tweetbox"></div>
   </section>
 
-  <!-- In unoptimized mode, additional script tags are required -->
-  <script type="text/javascript" src="out/goog/base.js"></script>
   <script type="text/javascript" src="twitterbuzz.js"></script>
-  <script type="text/javascript">
-    goog.require('twitterbuzz.core');
-    goog.require('twitterbuzz.timeline');
-    goog.require('twitterbuzz.leaderboard');
-    goog.require('twitterbuzz.showgraph');
-  </script>
 
 </body>
 </html>
