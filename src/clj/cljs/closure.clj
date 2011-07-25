@@ -20,7 +20,7 @@
    Compilable protocol is satisfied by something which can return one
    or more IJavaScripts.
 
-   With IJavaScriipt objects in hand, calling add-dependencies will
+   With IJavaScript objects in hand, calling add-dependencies will
    produce a sequence of IJavaScript objects which includes all
    required dependencies from the Closure library and ClojureScript,
    in dependency order. This function replaces the closurebuilder
