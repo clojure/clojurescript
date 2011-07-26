@@ -1145,7 +1145,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defn path-seq
   [file-str]
-  (string/split file-str (re-pattern java.io.File/separator)))
+  (->> java.io.File/separator
+       java.util.regex.Pattern/quote
+       re-pattern
+       (string/split file-str)))
 
 (defn to-path
   [parts]
