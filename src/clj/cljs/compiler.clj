@@ -1151,8 +1151,10 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
        (string/split file-str)))
 
 (defn to-path
-  [parts]
-  (apply str (interpose java.io.File/separator parts)))
+  ([parts]
+     (to-path parts java.io.File/separator))
+  ([parts sep]
+     (apply str (interpose sep parts))))
 
 (defn to-target-file
   "Given the source root directory, the output target directory and
