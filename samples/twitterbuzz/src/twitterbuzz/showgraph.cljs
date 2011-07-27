@@ -100,7 +100,7 @@
         (attach-tooltip img canvas-offset px py
                         {:profile_image_url image-url
                          :text (:last-tweet user)
-                         :from_user username})))
+                         :from_user (:username user)})))
 
     (let [text (if (empty? locs)
                  "No locations to graph"
