@@ -34,7 +34,7 @@
   [event f]
   (swap! state add-listener event f))
 
-(def twitter-uri (goog.Uri. "http://twitter.com/search.json"))
+(def twitter-uri (goog.Uri. "http://search.twitter.com/search.json"))
 
 (defn search-tag
   "Get the current tag value from the page."
