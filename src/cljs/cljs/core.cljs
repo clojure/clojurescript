@@ -3412,7 +3412,7 @@ reduces them without incurring seq initialization"
   (let [xprefs (@prefer-table x)]
     (or
      (when (and xprefs (xprefs y))
-      true)
+       true)
      (loop [ps (parents y)]
        (when (pos? (count ps))
 	 (when (prefers x (first ps) prefer-table)
@@ -3422,8 +3422,8 @@ reduces them without incurring seq initialization"
        (when (pos? (count ps))
 	 (when (prefers (first ps) y prefer-table)
 	   true)
-	 (recur (rest ps)))))
-    false))
+	 (recur (rest ps))))
+     false)))
 
 (defn- dominates
   [x y prefer-table]
