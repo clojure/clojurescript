@@ -1249,7 +1249,7 @@ reduces them without incurring seq initialization"
   ([f args]
      (let [fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f cljs$lang$applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count args (inc fixed-arity))
                  fixed-arity)
            (. f apply f (to-array args))
            (. f cljs$lang$applyTo args))
@@ -2906,12 +2906,20 @@ reduces them without incurring seq initialization"
   (assert (= 63 (apply + 1 2 4 8 16 (list 32))))
   (assert (= 127 (apply + 1 2 4 8 16 (list 32 64))))
   (assert (= 4950 (apply + (take 100 (iterate inc 0)))))
+  (assert (= () (apply list [])))
+  (assert (= [1 2 3] (apply list [1 2 3])))
   ;; apply with infinite sequence
-  ;; (assert (= 3 (apply (fn [& args]
-  ;;                       (+ (nth args 0)
-  ;;                          (nth args 1)
-  ;;                          (nth args 2)))
-  ;;                     (iterate inc 0))))
+  (assert (= 3 (apply (fn [& args]
+                        (+ (nth args 0)
+                           (nth args 1)
+                           (nth args 2)))
+                      (iterate inc 0))))
+  (assert (= [0 1 2 3 4] (take 5 (apply (fn [& m] m) (iterate inc 0)))))
+  (assert (= [1 2 3 4 5] (take 5 (apply (fn [x & m] m) (iterate inc 0)))))
+  (assert (= [2 3 4 5 6] (take 5 (apply (fn [x y & m] m) (iterate inc 0)))))
+  (assert (= [3 4 5 6 7] (take 5 (apply (fn [x y z & m] m) (iterate inc 0)))))
+  (assert (= [4 5 6 7 8] (take 5 (apply (fn [x y z a & m] m) (iterate inc 0)))))
+  (assert (= [5 6 7 8 9] (take 5 (apply (fn [x y z a b & m] m) (iterate inc 0)))))
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))
