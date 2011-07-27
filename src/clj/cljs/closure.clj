@@ -268,7 +268,7 @@
   URL
   (-compile [this opts]
     (case (.getProtocol this)
-      "file" (-compile (.getFile this) opts)
+      "file" (-compile (io/file this) opts)
       "jar" (let [out-file (jar-file-to-disk this (output-directory opts))]
               (-compile out-file opts))))
   
@@ -422,11 +422,6 @@
     (do (swap! compiled-cljs (fn [old] (assoc old relative-path javascript)))
         javascript)))
 
-(defn ns->file-name [s]
-  (let [ns (name s)
-        path (string/replace (munge ns) \. java.io.File/separatorChar)]
-    (str path ".cljs")))
-
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
   IJavaScripts which are the cljs dependencies in dependency
@@ -438,10 +433,11 @@
   Only load dependencies from the classpath."
   [opts requires]
   (let [index (js-dependency-index opts)]
-    (letfn [(cljs-deps [coll]
+    (letfn [(ns->cp [s] (str (string/replace (munge s) \. \/) ".cljs"))
+            (cljs-deps [coll]
               (->> coll
                    (remove #(contains? index %))
-                   (map #(let [f (ns->file-name %)] (hash-map :relative-path f :uri (io/resource f))))
+                   (map #(let [f (ns->cp %)] (hash-map :relative-path f :uri (io/resource f))))
                    (remove #(nil? (:uri %)))))]
       (loop [required-files (cljs-deps requires)
              visited (set required-files)
@@ -580,13 +576,13 @@
   "Generate a string which is the path to input relative to base."
   [^File base input]
   (let [base-path (comp/path-seq (.getCanonicalPath base))
-        input-path (comp/path-seq (.getFile ^URL (-url input)))
+        input-path (comp/path-seq (.getCanonicalPath (io/file ^URL (-url input))))
         count-base (count base-path)
         common (count (take-while true? (map #(= %1 %2) base-path input-path)))
         prefix (repeat (- count-base common 1) "..")]
     (if (= count-base common)
       (last input-path) ;; same file
-      (comp/to-path (concat prefix (drop common input-path))))))
+      (comp/to-path (concat prefix (drop common input-path)) "/"))))
 
 (defn add-dep-string
   "Return a goog.addDependency string for an input."
