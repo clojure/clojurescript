@@ -326,7 +326,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (defn emit-apply-to
   [{:keys [name params env]}]
   (let [arglist (gensym "arglist__")
-        n "delegate"]
+        delegate-name (str name "__delegate")]
     (println (str "(function (" arglist "){"))
     (doseq [[i param] (map-indexed vector (butlast params))]
       (print (str "var " param " = cljs.core.first("))
@@ -341,12 +341,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (print arglist)
         (dotimes [_ (- (count params) 2)] (print ")"))
         (println ");")
-        (println (str "return " n ".call(" (string/join ", " (cons "null" params)) ");")))
+        (println (str "return " delegate-name ".call(" (string/join ", " (cons "null" params)) ");")))
       (do
         (print (str "var " (last params) " = "))
         (print "cljs.core.seq(" arglist ");")
         (println ";")
-        (println (str "return " n ".call(" (string/join ", " (cons "null" params)) ");"))))
+        (println (str "return " delegate-name ".call(" (string/join ", " (cons "null" params)) ");"))))
     (print "})")))
 
 (defn emit-fn-method
@@ -364,27 +364,26 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   [{:keys [gthis name variadic params statements ret env recurs max-fixed-arity] :as f}]
   (emit-wrap env
              (let [name (or name (gensym))
-                   n "delegate"]
+                   delegate-name (str name "__delegate")]
                (println "(function() { ")
-               (println (str "var delegate = function " ,,, "(" (comma-sep params) "){"))
+               (println (str "var " delegate-name " = function (" (comma-sep params) "){"))
                (when recurs (print "while(true){\n"))
                (emit-block :return statements ret)
                (when recurs (print "break;\n}\n"))
                (println "};")
 
-               (print (str "var " name " = function " ,,, "(" (comma-sep
-                                                               (if variadic
-                                                                 (concat (butlast params) ['var_args])
-                                                                 params)) "){\n"))
+               (print (str "var " name " = function (" (comma-sep
+                                                        (if variadic
+                                                          (concat (butlast params) ['var_args])
+                                                          params)) "){\n"))
                (when gthis
                  (println (str "var " gthis " = this;")))
                (when variadic
                  (println (str "var " (last params) " = null;"))
                  (println (str "if (goog.isDef(var_args)) {"))
                  (println (str "  " (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
-                 (println (str "} "))
-                 )
-               (println (str "return " n ".call(" (string/join ", " (cons "null" params)) ");"))
+                 (println (str "} ")))
+               (println (str "return " delegate-name ".call(" (string/join ", " (cons "null" params)) ");"))
                (println "};")
 
                (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity ";"))
