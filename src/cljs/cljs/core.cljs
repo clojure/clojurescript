@@ -3289,7 +3289,7 @@ reduces them without incurring seq initialization"
 
 
 
-;; FF
+;; FF multimethods
 (defn not-empty
   "If coll is empty, returns nil, else coll"
   [coll] (when (seq coll) coll))
@@ -3401,9 +3401,6 @@ reduces them without incurring seq initialization"
 		(partition 2 deriv-seq))
 	h))))
 
-
-
-
 (defn- reset-cache
   [method-cache method-table cached-hierarchy hierarchy]
   (swap! method-cache (fn [_] (deref method-table)))
@@ -3457,7 +3454,21 @@ reduces them without incurring seq initialization"
   (-remove-method [mf dispatch-val])
   (-prefer-method [mf dispatch-val dispatch-val-y])
   (-get-method [mf dispatch-val])
-  (-invoke [mf arg1]))
+  (-methods [mf])
+  (-prefers [mf])
+
+  (-invoke [mf args])
+)
+
+;;-invoke [mf arg1 argseq]
+(defn- do-invoke
+  [mf dispatch-fn & args]
+  (let [fargs (flatten args)
+	dispatch-val (apply dispatch-fn fargs)
+	target-fn (-get-method mf dispatch-val)]
+    (when-not target-fn
+      (throw (str "No method in multimethod '" name "' for dispatch value: " dispatch-val)))
+    (apply target-fn fargs)))
 
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
     		  method-table prefer-table method-cache cached-hierarchy]
@@ -3494,15 +3505,42 @@ reduces them without incurring seq initialization"
       (throw (str "Preference conflict in multimethod '" name "': " dispatch-val-y " is already preferred to " dispatch-val-x)))
     (swap! prefer-table assoc dispatch-val-y (conj (get @prefer-table dispatch-val-x #{}) dispatch-val-y))
     (reset-cache method-cache method-table cached-hierarchy hierarchy))
-  
-  (-invoke [mf arg1]
-    (let [dispatch-val (dispatch-fn arg1)
-	  target-fn (-get-method mf dispatch-val)]
-      (when-not target-fn
-      	(throw (str "No method in multimethod '" name "' for dispatch value: " dispatch-val)))
-      (prn target-fn arg1)
-      (target-fn arg1)
-      ))
+
+  (-methods [mf] @method-table)
+  (-prefers [mf] @prefer-table)
+
+  (-invoke [mf args] (do-invoke mf dispatch-fn args))
+
   )
 
+(set! cljs.core.MultiFn.prototype.call
+      (fn [_ & args] (-invoke (js* "this") args)))
 
+(defn remove-all-methods
+  "Removes all of the methods of multimethod."
+ [multifn]
+ (-reset multifn))
+
+(defn remove-method
+  "Removes the method of multimethod associated with dispatch-value."
+ [multifn dispatch-val]
+ (-remove-method multifn dispatch-val))
+
+(defn prefer-method
+  "Causes the multimethod to prefer matches of dispatch-val-x over dispatch-val-y 
+   when there is a conflict"
+  [multifn dispatch-val-x dispatch-val-y]
+  (-prefer-method multifn dispatch-val-x dispatch-val-y))
+
+(defn methods
+  "Given a multimethod, returns a map of dispatch values -> dispatch fns"
+  [multifn] (-methods multifn))
+
+(defn get-method
+  "Given a multimethod and a dispatch value, returns the dispatch fn
+  that would apply to that value, or nil if none apply and no default"
+  [multifn dispatch-val] (-get-method multifn dispatch-val))
+
+(defn prefers
+  "Given a multimethod, returns a map of preferred value -> set of other values"
+  [multifn] (-prefers multifn))
