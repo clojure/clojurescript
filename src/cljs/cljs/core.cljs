@@ -3299,7 +3299,7 @@ reduces them without incurring seq initialization"
   [] {:parents {} :descendants {} :ancestors {}})
 
 (def
-  ;;^{:private true}
+  ^{:private true}
   global-hierarchy (atom (make-hierarchy)))
 
 (defn isa?
@@ -3310,15 +3310,17 @@ reduces them without incurring seq initialization"
   hierarchy"
   ([child parent] (isa? @global-hierarchy child parent))
   ([h child parent]
-   (or (= child parent)
-       (contains? ((:ancestors h) child) parent)
-       (and (some #(contains? ((:ancestors h) %) parent)))
-       (and (vector? parent) (vector? child)
-            (= (count parent) (count child))
-            (loop [ret true i 0]
-              (if (or (not ret) (= i (count parent)))
-                ret
-                (recur (isa? h (child i) (parent i)) (inc i))))))))
+     (or (= child parent)
+	 ;; (and (class? parent) (class? child)
+         ;;    (. ^Class parent isAssignableFrom child))
+	 (contains? ((:ancestors h) child) parent)
+	 ;;(and (class? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
+	 (and (vector? parent) (vector? child)
+	      (= (count parent) (count child))
+	      (loop [ret true i 0]
+		(if (or (not ret) (= i (count parent)))
+		  ret
+		  (recur (isa? h (child i) (parent i)) (inc i))))))))
 
 (defn parents
   "Returns the immediate parents of tag, either via a Java type
@@ -3360,7 +3362,6 @@ reduces them without incurring seq initialization"
    ;; (assert (or (class? tag) (instance? cljs.core.Named tag)))
    ;; (assert (instance? cljs.core.INamed tag))
    ;; (assert (instance? cljs.core.INamed parent))
-
    (let [tp (:parents h)
          td (:descendants h)
          ta (:ancestors h)
@@ -3386,7 +3387,7 @@ reduces them without incurring seq initialization"
   supplied defaults to, and modifies, the global hierarchy."
   ([tag parent]
      ;; (alter-var-root #'global-hierarchy underive tag parent)
-     (swap! global-hierarchy derive tag parent)  nil)
+     (swap! global-hierarchy derive tag parent) nil)
   ([h tag parent]
     (let [parentMap (:parents h)
 	  childsParents (if (parentMap tag)
@@ -3414,12 +3415,12 @@ reduces them without incurring seq initialization"
       true)
      (loop [ps (parents y)]
        (when (pos? (count ps))
-	 (when (prefers x (first ps))
+	 (when (prefers x (first ps) prefer-table)
 	   true)
 	 (recur (rest ps))))
      (loop [ps (parents x)]
        (when (pos? (count ps))
-	 (when (prefers (first ps) y)
+	 (when (prefers (first ps) y prefer-table)
 	   true)
 	 (recur (rest ps)))))
     false))
@@ -3429,12 +3430,12 @@ reduces them without incurring seq initialization"
   (or (prefers x y prefer-table) (isa? x y)))
 
 (defn- find-and-cache-best-method
-  [dispatch-val method-table name cached-hierarchy hierarchy method-cache]
+  [dispatch-val method-table prefer-table name cached-hierarchy hierarchy method-cache]
   (let [best-entry (reduce (fn [be e]
 			     (when (isa? dispatch-val (first e))
 			       (when (or (nil? be)
-					 (dominates (first e) (first be)))
-				 (when-not (dominates (first be) (first e))
+					 (dominates (first e) (first be) prefer-table))
+				 (when-not (dominates (first be) (first e) prefer-table)
 				   (throw (str "Multiple methods in multimethod '" name "' match dispatch value: " dispatch-val " -> " (first e)" and " (first be) ", and neither is preferred")))
 				 e)))
 			   nil @method-table)]
@@ -3445,8 +3446,8 @@ reduces them without incurring seq initialization"
 	  (second best-entry))
 	(do
 	  (reset-cache method-cache method-table cached-hierarchy hierarchy)
-	  (find-and-cache-best-method dispatch-val method-table name cached-hierarchy hierarchy method-cache)))
-      )))
+	  (find-and-cache-best-method dispatch-val method-table prefer-table
+				      name cached-hierarchy hierarchy method-cache))))))
 
 (defprotocol IMultiFn
   (-reset [mf])
@@ -3456,11 +3457,8 @@ reduces them without incurring seq initialization"
   (-get-method [mf dispatch-val])
   (-methods [mf])
   (-prefers [mf])
+  (-invoke [mf args]))
 
-  (-invoke [mf args])
-)
-
-;;-invoke [mf arg1 argseq]
 (defn- do-invoke
   [mf dispatch-fn & args]
   (let [fargs (flatten args)
@@ -3495,7 +3493,7 @@ reduces them without incurring seq initialization"
       (reset-cache method-cache method-table cached-hierarchy hierarchy))
     (if-let [target-fn (@method-cache dispatch-val)]
       target-fn
-      (if-let [target-fn (find-and-cache-best-method dispatch-val method-table name
+      (if-let [target-fn (find-and-cache-best-method dispatch-val method-table prefer-table name
       						     cached-hierarchy hierarchy method-cache)]
       	target-fn
       	(@method-table default-dispatch-val))))
@@ -3509,9 +3507,7 @@ reduces them without incurring seq initialization"
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
 
-  (-invoke [mf args] (do-invoke mf dispatch-fn args))
-
-  )
+  (-invoke [mf args] (do-invoke mf dispatch-fn args)))
 
 (set! cljs.core.MultiFn.prototype.call
       (fn [_ & args] (-invoke (js* "this") args)))
