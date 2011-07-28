@@ -337,7 +337,7 @@ does what?
 * TODO methods
 * DONE min
 * DONE min-key
-* TODO mod
+* DONE mod
 * munge
 * DONE name
 * DONE namespace
@@ -410,7 +410,7 @@ dunno about printing
 * proxy-super
 * push-thread-bindings
 * pvalues
-* TODO quot
+* DONE quot
 * DONE rand
 * DONE rand-int
 * DONE rand-nth
@@ -441,15 +441,15 @@ dunno about regex
 * TODO reify
 also specify - make a particular object extend a protocol
 * release-pending-sends
-* TODO rem
+* DONE rem
 * DONE remove
 * TODO remove-all-methods
 * TODO remove-method
 * remove-ns
 * remove-watch
 * DONE repeat
-* TODO repeatedly
-* TODO replace
+* DONE repeatedly
+* DONE replace
 * DONE replicate
 * TODO require
 ticket #8
