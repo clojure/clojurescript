@@ -3706,8 +3706,50 @@ reduces them without incurring seq initialization"
 
   (-invoke [mf args] (do-invoke mf dispatch-fn args)))
 
+(defn- multimethod-invoker
+  ;;[_ & args] (-invoke (js* "this") args)
+  
+  ([_ a1] (-invoke (js* "this") [a1]))
+  ([_ a1 a2] (-invoke (js* "this") [a1 a2]))
+  ([_ a1 a2 a3] (-invoke (js* "this") [a1 a2 a3]))
+  ([_ a1 a2 a3 a4] (-invoke (js* "this") [a1 a2 a3 a4]))
+  ([_ a1 a2 a3 a4 a5] (-invoke (js* "this") [a1 a2 a3 a4 a5]))
+  ([_ a1 a2 a3 a4 a5 a6] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6]))
+  ([_ a1 a2 a3 a4 a5 a6 a7] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10]))
+
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15]))  
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17]))  
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19]))
+  ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]
+     (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]))
+  
+  ;; ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20 & args]
+  ;;    (-invoke (js* "this") (concat [_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]
+  ;; 				   args)))
+  )
+
 (set! cljs.core.MultiFn.prototype.call
-      (fn [_ & args] (-invoke (js* "this") args)))
+      multimethod-invoker
+      ;;(fn [_ & args] (-invoke (js* "this") args))
+      )
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
@@ -3785,20 +3827,21 @@ reduces them without incurring seq initialization"
   (defmethod foo :default [& args] :default-return)
   (assert (= :a-return (foo :a)))
   (assert (= :default-return (foo 1)))
- 
-  (defmulti area :Shape)
-  (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
-  (defn circle [radius] {:Shape :Circle :radius radius})
-  (defmethod area :Rect [r]
-    (* (:wd r) (:ht r)))
-  (defmethod area :Circle [c]
-    (*  Math/PI (* (:radius c) (:radius c))))
-  (defmethod area :default [x] :oops)
-  (def r (rect 4 13))
-  (def c (circle 12))
 
-  (assert (= 52 (area r)))
-  ;;(assert (= 452.3893421169302 (area c)))
-  ;;(assert (= :oops (area {})))
+
+  ;; (defmulti area :Shape)
+  ;; (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
+  ;; (defn circle [radius] {:Shape :Circle :radius radius})
+  ;; (defmethod area :Rect [r]
+  ;;   (* (:wd r) (:ht r)))
+  ;; (defmethod area :Circle [c]
+  ;;   (*  Math/PI (* (:radius c) (:radius c))))
+  ;; (defmethod area :default [x] :oops)
+  ;; (def r (rect 4 13))
+  ;; (def c (circle 12))
+
+  ;; (assert (= 52 (area r)))
+  ;; ;;(assert (= 452.3893421169302 (area c)))
+  ;; (assert (= :oops (area {})))
     
   )
