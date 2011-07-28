@@ -3728,7 +3728,6 @@ reduces them without incurring seq initialization"
 ;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8]))
 ;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9]))
 ;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10]))
-
 ;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11]
 ;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11]))
 ;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12]
@@ -3748,8 +3747,7 @@ reduces them without incurring seq initialization"
 ;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19]
 ;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19]))
 ;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]))
-  
+;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]))  
 ;;   ;; ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20 & args]
 ;;   ;;    (-invoke (js* "this") (concat [_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]
 ;;   ;; 				   args)))
@@ -3826,9 +3824,12 @@ reduces them without incurring seq initialization"
   ;;  [:user/rect :user/rect] -> [:user/rect :user/shape]
   ;;  and [:user/shape :user/rect],
   ;;  and neither is preferred
- 
+
+  (assert (zero? (count (prefers bar))))
   (prefer-method bar [::rect ::shape] [::shape ::rect])
+  (assert (= 1 (count (prefers bar))))
   (assert (= :rect-shape (bar ::rect ::rect)))
+  (assert (= :rect-shape (apply (-get-method bar [::rect ::shape]) [::rect ::shape])))
 
   ;; general tests
   (defmulti foo (fn [& args] (first args)))
@@ -3852,5 +3853,10 @@ reduces them without incurring seq initialization"
   ;; (assert (= 52 (area r)))
   ;; ;;(assert (= 452.3893421169302 (area c)))
   ;; (assert (= :oops (area {})))
-    
+
+  (assert (= 2 (count (methods bar))))
+  (remove-method bar [[:rect ::shape]])
+  (assert (= 1 (count (methods bar))))
+  (remove (zero? (count (methods bar))))
+  
   )
