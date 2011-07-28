@@ -383,7 +383,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                  (println (str "if (goog.isDef(var_args)) {"))
                  (println (str "  " (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
                  (println (str "} ")))
-               (println (str "return " delegate-name ".call(" (string/join ", " (cons "null" params)) ");"))
+               (println (str "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");"))
                (println "};")
 
                (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity ";"))
