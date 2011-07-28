@@ -323,7 +323,7 @@ does what?
 * TODO make-array
 * TODO make-hierarchy
 * DONE map
-* TODO map-indexed
+* DONE map-indexed
 * DONE map?
 * DONE mapcat
 * DONE max

@@ -1425,6 +1425,19 @@ reduces them without incurring seq initialization"
      ([a b c] (f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c)))
      ([a b c & ds] (apply f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c) ds)))))
 
+(defn map-indexed
+  "Returns a lazy sequence consisting of the result of applying f to 0
+  and the first item of coll, followed by applying f to 1 and the second
+  item in coll, etc, until coll is exhausted. Thus function f should
+  accept 2 arguments, index and item."
+  [f coll]
+  (let [mapi (fn mpi [idx coll]
+               (lazy-seq
+                (when-let [s (seq coll)]
+                  (cons (f idx (first s))
+                        (mpi (inc idx) (rest s))))))]
+    (mapi 0 coll)))
+
 (defn keep
   "Returns a lazy sequence of the non-nil results of (f item). Note,
   this means false return values will be included.  f must be free of
@@ -3363,6 +3376,10 @@ reduces them without incurring seq initialization"
   ;; keep-indexed
   (assert (= [1 3 5 7 9] (keep-indexed #(if (odd? %1) %2) [0 1 2 3 4 5 6 7 8 9 10])))
   (assert (= [2 4 5] (keep-indexed #(if (pos? %2) %1) [-9 0 29 -7 45 3 -8])))
+
+  ;; map-indexed
+  (assert (= ([0 :a] [1 :b] [2 :c]) (map-indexed #(vector % %2) [:a :b :c])))
+
   
   :ok
   )
