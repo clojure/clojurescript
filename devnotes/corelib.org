@@ -331,7 +331,7 @@ does what?
 * memfn
 * DONE memoize
 * DONE merge
-* TODO merge-with
+* DONE merge-with
 * DONE meta
 * method-sig
 * TODO methods

@@ -2132,6 +2132,22 @@ reduces them without incurring seq initialization"
   (when (some identity maps)
     (reduce #(conj (or %1 {}) %2) maps)))
 
+(defn merge-with
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first.  If a key occurs in more than one map, the mapping(s)
+  from the latter (left-to-right) will be combined with the mapping in
+  the result by calling (f val-in-result val-in-latter)."
+  [f & maps]
+  (when (some identity maps)
+    (let [merge-entry (fn [m e]
+			(let [k (first e) v (second e)]
+			  (if (contains? m k)
+			    (assoc m k (f (get m k) v))
+			    (assoc m k v))))
+          merge2 (fn [m1 m2]
+		   (reduce merge-entry (or m1 {}) (seq m2)))]
+      (reduce merge2 maps))))
+
 (defn select-keys
   "Returns a map containing only those entries in map whose key is in keys"
   [map keyseq]
@@ -3380,7 +3396,26 @@ reduces them without incurring seq initialization"
   ;; map-indexed
   (assert (= ([0 :a] [1 :b] [2 :c]) (map-indexed #(vector % %2) [:a :b :c])))
 
-  
+  ;; merge-with
+  (assert (= {"Foo" ("foo" "FOO" "fOo"), "Bar" ("bar" "BAR" "BAr"), "Baz" ["baz"], "Qux" ["qux" "quux"]}
+             (merge-with concat
+		  {"Foo" ["foo" "FOO"]
+		   "Bar" ["bar" "BAR"]
+                   "Baz" ["baz"]}
+		  {"Foo" ["fOo"]
+		   "Bar" ["BAr"]
+                   "Qux" ["qux" "quux"]})))
+  (assert (= {:a 111, :b 102, :c 13}
+             (merge-with +
+                         {:a 1 :b 2 :c 3}
+                         {:a 10 :c 10}
+                         {:a 100 :b 100})))
+
+  (assert (= {:a 3, :b 102, :c 13}
+             (apply merge-with [+
+                                {:a 1 :b 100}
+                                {:a 1 :b 2 :c 3}
+                                {:a 1 :c 10}])))
   :ok
   )
 
