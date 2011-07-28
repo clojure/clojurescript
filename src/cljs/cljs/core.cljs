@@ -1292,6 +1292,12 @@ reduces them without incurring seq initialization"
            (. f cljs$lang$applyTo arglist))
          (. f apply f (to-array arglist))))))
 
+(defn vary-meta
+ "Returns an object of the same type and value as obj, with
+  (apply f (meta obj) args) as its metadata."
+ [obj f & args]
+ (with-meta obj (apply f (meta obj) args)))
+
 (defn not=
   "Same as (not (= obj1 obj2))"
   ([x] false)
@@ -3470,7 +3476,10 @@ reduces them without incurring seq initialization"
 
   ;; trampoline
   (assert (= 10000 (trampoline (fn f [n] (if (>= n 10000) n #(f (inc n)))) 0)))
-  
+
+  ;; vary-meta
+  (assert (= {:a 1} (meta (vary-meta [] assoc :a 1))))
+  (assert (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
   :ok
   )
 
