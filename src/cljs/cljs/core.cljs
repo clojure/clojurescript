@@ -1437,6 +1437,20 @@ reduces them without incurring seq initialization"
           (keep f (rest s))
           (cons x (keep f (rest s)))))))))
 
+(defn keep-indexed
+  "Returns a lazy sequence of the non-nil results of (f index item). Note,
+  this means false return values will be included.  f must be free of
+  side-effects."
+  ([f coll]
+     (let [keepi (fn kpi [idx coll]
+                   (lazy-seq
+                    (when-let [s (seq coll)]
+                      (let [x (f idx (first s))]
+                        (if (nil? x)
+                          (kpi (inc idx) (rest s))
+                          (cons x (kpi (inc idx) (rest s))))))))]
+       (keepi 0 coll))))
+
 (defn every-pred
   "Takes a set of predicates and returns a function f that returns true if all of its
   composing predicates return a logical true value against all of its arguments, else it returns
@@ -3345,6 +3359,11 @@ reduces them without incurring seq initialization"
   ;; keep
   (assert (= [1 3 5 7 9] (keep #(if (odd? %) %) [1 2 3 4 5 6 7 8 9 10])))
   (assert (= [2 4 6 8 10] (keep #(if (even? %) %) [1 2 3 4 5 6 7 8 9 10])))
+
+  ;; keep-indexed
+  (assert (= [1 3 5 7 9] (keep-indexed #(if (odd? %1) %2) [0 1 2 3 4 5 6 7 8 9 10])))
+  (assert (= [2 4 5] (keep-indexed #(if (pos? %2) %1) [-9 0 29 -7 45 3 -8])))
+  
   :ok
   )
 

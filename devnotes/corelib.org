@@ -293,7 +293,7 @@ does what?
 * iterator-seq
 * DONE juxt
 * DONE keep
-* TODO keep-indexed
+* DONE keep-indexed
 * TODO key
 * DONE keys
 * DONE keyword
