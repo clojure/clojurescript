@@ -451,7 +451,8 @@ reduces them without incurring seq initialization"
 (defn meta
   "Returns the metadata of obj, returns nil if there is no metadata."
   [o]
-  (-meta o))
+  (when (satisfies? IMeta o)
+    (-meta o)))
 
 (defn peek
   "For a list or queue, same as first, for a vector, same as, but much
@@ -3192,13 +3193,13 @@ reduces them without incurring seq initialization"
     (assert (= @s (reverse v))))
   
   ;; delay
-  ;; (let [d (delay (. (js/Date.) (getTime)))]
-  ;;   (assert (false? (realized? d)))
-  ;;   (let [d2 (. (js/Date.) (getTime))]
-  ;;     (assert (> d2 (deref d))))
-  ;;   (assert (true? (realized? d)))
-  ;;   (let [d3 (deref d)]
-  ;;     (assert (= (deref d) d3))))
+  (let [d (delay (. (js/Date.) (getTime)))]
+    (assert (false? (realized? d)))
+    (let [d2 (. (js/Date.) (getTime))]
+      (assert (> d2 (deref d))))
+    (assert (true? (realized? d)))
+    (let [d3 (deref d)]
+      (assert (= (deref d) d3))))
 
   ;; assoc
   (assert (= {1 2 3 4} (assoc {} 1 2 3 4)))
@@ -3407,7 +3408,7 @@ reduces them without incurring seq initialization"
   (swap! method-cache (fn [_] (deref method-table)))
   (swap! cached-hierarchy (fn [_] (deref hierarchy))))
 
-(defn- prefers
+(defn- prefers*
   [x y prefer-table]
   (let [xprefs (@prefer-table x)]
     (or
@@ -3415,29 +3416,32 @@ reduces them without incurring seq initialization"
        true)
      (loop [ps (parents y)]
        (when (pos? (count ps))
-	 (when (prefers x (first ps) prefer-table)
+	 (when (prefers* x (first ps) prefer-table)
 	   true)
 	 (recur (rest ps))))
      (loop [ps (parents x)]
        (when (pos? (count ps))
-	 (when (prefers (first ps) y prefer-table)
+	 (when (prefers* (first ps) y prefer-table)
 	   true)
 	 (recur (rest ps))))
      false)))
 
 (defn- dominates
   [x y prefer-table]
-  (or (prefers x y prefer-table) (isa? x y)))
+  (or (prefers* x y prefer-table) (isa? x y)))
 
 (defn- find-and-cache-best-method
-  [dispatch-val method-table prefer-table name cached-hierarchy hierarchy method-cache]
-  (let [best-entry (reduce (fn [be e]
-			     (when (isa? dispatch-val (first e))
-			       (when (or (nil? be)
-					 (dominates (first e) (first be) prefer-table))
-				 (when-not (dominates (first be) (first e) prefer-table)
-				   (throw (str "Multiple methods in multimethod '" name "' match dispatch value: " dispatch-val " -> " (first e)" and " (first be) ", and neither is preferred")))
-				 e)))
+  [name dispatch-val method-table prefer-table cached-hierarchy hierarchy method-cache]
+  (let [best-entry (reduce (fn [be [k _ :as e]]
+			     (when (isa? dispatch-val k)
+			       (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
+					   e
+					   be)]
+				 (when-not (dominates (first be2) k prefer-table)
+				   (throw (str "Multiple methods in multimethod '" name
+					       "' match dispatch value: " dispatch-val " -> " k
+					       " and " (first be2) ", and neither is preferred")))
+				 be2)))
 			   nil @method-table)]
     (when best-entry
       (if (= @cached-hierarchy @hierarchy)
@@ -3446,8 +3450,8 @@ reduces them without incurring seq initialization"
 	  (second best-entry))
 	(do
 	  (reset-cache method-cache method-table cached-hierarchy hierarchy)
-	  (find-and-cache-best-method dispatch-val method-table prefer-table
-				      name cached-hierarchy hierarchy method-cache))))))
+	  (find-and-cache-best-method name dispatch-val method-table prefer-table
+				      cached-hierarchy hierarchy method-cache))))))
 
 (defprotocol IMultiFn
   (-reset [mf])
@@ -3493,15 +3497,20 @@ reduces them without incurring seq initialization"
       (reset-cache method-cache method-table cached-hierarchy hierarchy))
     (if-let [target-fn (@method-cache dispatch-val)]
       target-fn
-      (if-let [target-fn (find-and-cache-best-method dispatch-val method-table prefer-table name
+      (if-let [target-fn (find-and-cache-best-method name dispatch-val method-table prefer-table
       						     cached-hierarchy hierarchy method-cache)]
-      	target-fn
-      	(@method-table default-dispatch-val))))
+	target-fn
+	(@method-table default-dispatch-val))))
   
   (-prefer-method [mf dispatch-val-x dispatch-val-y]
-    (when (prefers dispatch-val-x dispatch-val-y prefer-table)
-      (throw (str "Preference conflict in multimethod '" name "': " dispatch-val-y " is already preferred to " dispatch-val-x)))
-    (swap! prefer-table assoc dispatch-val-y (conj (get @prefer-table dispatch-val-x #{}) dispatch-val-y))
+    (when (prefers* dispatch-val-x dispatch-val-y prefer-table)
+      (throw (str "Preference conflict in multimethod '" name "': " dispatch-val-y
+		  " is already preferred to " dispatch-val-x)))
+    (swap! prefer-table
+	   (fn [old]
+	     (assoc old dispatch-val-x
+		    (conj (get old dispatch-val-x #{})
+			  dispatch-val-y))))
     (reset-cache method-cache method-table cached-hierarchy hierarchy))
 
   (-methods [mf] @method-table)
@@ -3540,3 +3549,68 @@ reduces them without incurring seq initialization"
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   [multifn] (-prefers multifn))
+
+
+(defn- test-multimethods
+  []
+  (swap! global-hierarchy make-hierarchy)
+
+  ;; hierarchy tests
+  (derive ::rect ::shape)
+  (derive ::square ::rect)
+
+  (assert (= #{:user/shape} (parents ::rect)))
+  (assert (= #{:user/rect :user/shape} (ancestors ::square)))
+  (assert (= #{:user/rect :user/square} (descendants ::shape)))
+  (assert (true? (isa? 42 42)))
+  (assert (true? (isa? ::square ::shape)))
+
+  (derive cljs.core.ObjMap ::collection)
+  (derive cljs.core.Set ::collection)
+  (assert (true? (isa? cljs.core.ObjMap ::collection)))
+  (assert (true? (isa? cljs.core.Set ::collection)))
+  (assert (false? (isa? cljs.core.IndexedSeq ::collection)))
+  ;; ?? (isa? String Object)
+  (assert (true? (isa? [::square ::rect] [::shape ::shape])))
+  ;; ?? (ancestors java.util.ArrayList)
+  
+  ;; ?? isa? based dispatch tests
+
+  ;; prefer-method test
+  (defmulti bar (fn [x y] [x y]))
+  (defmethod bar [::rect ::shape] [x y] :rect-shape)
+  (defmethod bar [::shape ::rect] [x y] :shape-rect)
+  
+  ;;(bar ::rect ::rect)
+  ;; -> java.lang.IllegalArgumentException:
+  ;;  Multiple methods match dispatch value:
+  ;;  [:user/rect :user/rect] -> [:user/rect :user/shape]
+  ;;  and [:user/shape :user/rect],
+  ;;  and neither is preferred
+ 
+  (prefer-method bar [::rect ::shape] [::shape ::rect])
+  (assert (= :rect-shape (bar ::rect ::rect)))
+
+  ;; general tests
+  (defmulti foo (fn [& args] (first args)))
+  (defmethod foo :a [& args] :a-return)
+  (defmethod foo :default [& args] :default-return)
+  (assert (= :a-return (foo :a)))
+  (assert (= :default-return (foo 1)))
+ 
+  (defmulti area :Shape)
+  (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
+  (defn circle [radius] {:Shape :Circle :radius radius})
+  (defmethod area :Rect [r]
+    (* (:wd r) (:ht r)))
+  (defmethod area :Circle [c]
+    (*  Math/PI (* (:radius c) (:radius c))))
+  (defmethod area :default [x] :oops)
+  (def r (rect 4 13))
+  (def c (circle 12))
+
+  (assert (= 52 (area r)))
+  ;;(assert (= 452.3893421169302 (area c)))
+  ;;(assert (= :oops (area {})))
+    
+  )

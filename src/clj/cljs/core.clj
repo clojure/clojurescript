@@ -344,6 +344,16 @@
            ~@body
            (recur (inc ~i)))))))
 
+(defn ^:private check-valid-options
+  "Throws an exception if the given option map contains keys not listed
+  as valid, else returns nil."
+  [options & valid-keys]
+  (when (seq (apply disj (apply hash-set (keys options)) valid-keys))
+    (throw
+     (apply str "Only these options are valid: "
+	    (first valid-keys)
+	    (map #(str ", " %) (rest valid-keys))))))
+
 (defmacro defmulti
   "Creates a new multimethod with the associated dispatch function.
   The docstring and attribute-map are optional.
@@ -379,7 +389,7 @@
           default   (get options :default :default)
           ;; hierarchy (get options :hierarchy #'cljs.core.global-hierarchy)
 	  ]
-      ;;(check-valid-options options :default :hierarchy)
+      (check-valid-options options :default :hierarchy)
       `(def ~(with-meta mm-name m)
 	 (let [method-table# (atom {})
 	       prefer-table# (atom {})
