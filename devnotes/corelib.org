@@ -520,7 +520,7 @@ as macro
 * TODO time
 * DONE to-array
 * TODO to-array-2d
-* TODO trampoline
+* DONE trampoline
 * transient
 * DONE tree-seq
 * DONE true?

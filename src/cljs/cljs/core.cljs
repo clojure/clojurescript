@@ -2831,6 +2831,22 @@ reduces them without incurring seq initialization"
           (swap! mem assoc args ret)
           ret)))))
 
+(defn trampoline
+  "trampoline can be used to convert algorithms requiring mutual
+  recursion without stack consumption. Calls f with supplied args, if
+  any. If f returns a fn, calls that fn with no arguments, and
+  continues to repeat, until the return value is not a fn, then
+  returns that non-fn value. Note that if you want to return a fn as a
+  final value, you must wrap it in some data structure and unpack it
+  after trampoline returns."
+  ([f]
+     (let [ret (f)]
+       (if (fn? ret)
+         (recur ret)
+         ret)))
+  ([f & args]
+     (trampoline #(apply f args))))
+
 (defn rand
   "Returns a random floating point number between 0 (inclusive) and
   n (default 1) (exclusive)."
@@ -3450,6 +3466,10 @@ reduces them without incurring seq initialization"
 
   ;; split-with
   (assert (= [[1 2 3] [4 5]] (split-with (partial >= 3) [1 2 3 4 5])))
+
+  ;; trampoline
+  (assert (= 10000 (trampoline (fn f [n] (if (>= n 10000) n #(f (inc n)))) 0)))
+  
   :ok
   )
 
