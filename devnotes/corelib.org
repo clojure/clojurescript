@@ -496,8 +496,8 @@ as macro
 * TODO sorted?
 * TODO special-symbol?
 * spit
-* TODO split-at
-* TODO split-with
+* DONE split-at
+* DONE split-with
 * DONE str
 * DONE string?
 * struct

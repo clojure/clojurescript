@@ -1620,7 +1620,12 @@ reduces them without incurring seq initialization"
   "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
   [coll] (lazy-seq 
           (when-let [s (seq coll)] 
-              (concat s (cycle s)))))
+            (concat s (cycle s)))))
+
+(defn split-at
+  "Returns a vector of [(take n coll) (drop n coll)]"
+  [n coll]
+  [(take n coll) (drop n coll)])
 
 (defn repeat
   "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
@@ -2322,15 +2327,20 @@ reduces them without incurring seq initialization"
   [pred coll]
   (lazy-seq
    (when-let [s (seq coll)]
-       (when (pred (first s))
-         (cons (first s) (take-while pred (rest s)))))))
+     (when (pred (first s))
+       (cons (first s) (take-while pred (rest s)))))))
 
 (defn take-nth
   "Returns a lazy seq of every nth item in coll."
   [n coll]
-    (lazy-seq
-     (when-let [s (seq coll)]
-       (cons (first s) (take-nth n (drop n s))))))
+  (lazy-seq
+   (when-let [s (seq coll)]
+     (cons (first s) (take-nth n (drop n s))))))
+
+(defn split-with
+  "Returns a vector of [(take-while pred coll) (drop-while pred coll)]"
+  [pred coll]
+  [(take-while pred coll) (drop-while pred coll)])
 
 (defn partition-by
   "Applies f to each value in coll, splitting it each time f returns
@@ -3408,10 +3418,10 @@ reduces them without incurring seq initialization"
   (assert (= [2 4 5] (keep-indexed #(if (pos? %2) %1) [-9 0 29 -7 45 3 -8])))
 
   ;; map-indexed
-  (assert (= ([0 :a] [1 :b] [2 :c]) (map-indexed #(vector % %2) [:a :b :c])))
+  (assert (= [[0 :a] [1 :b] [2 :c]] (map-indexed #(vector % %2) [:a :b :c])))
 
   ;; merge-with
-  (assert (= {"Foo" ("foo" "FOO" "fOo"), "Bar" ("bar" "BAR" "BAr"), "Baz" ["baz"], "Qux" ["qux" "quux"]}
+  (assert (= '{"Foo" ("foo" "FOO" "fOo"), "Bar" ("bar" "BAR" "BAr"), "Baz" ["baz"], "Qux" ["qux" "quux"]}
              (merge-with concat
 		  {"Foo" ["foo" "FOO"]
 		   "Bar" ["bar" "BAR"]
@@ -3433,7 +3443,13 @@ reduces them without incurring seq initialization"
 
   (assert (= '[a c e] (replace '[a b c d e] [0 2 4])))
   (assert (= [:one :zero :two :zero]
-             (replace {0 :zero 1 :one 2 :two} '(0 1 2 0))))
+             (replace {0 :zero 1 :one 2 :two} '(1 0 2 0))))
+
+  ;; split-at
+  (assert (= [[1 2] [3 4 5]] (split-at 2 [1 2 3 4 5])))
+
+  ;; split-with
+  (assert (= [[1 2 3] [4 5]] (split-with (partial >= 3) [1 2 3 4 5])))
   :ok
   )
 
