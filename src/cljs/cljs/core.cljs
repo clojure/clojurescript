@@ -1250,7 +1250,7 @@ reduces them without incurring seq initialization"
   ([f args]
      (let [fixed-arity (. f cljs$lang$maxFixedArity)]
        (if (. f cljs$lang$applyTo)
-         (if (<= (bounded-count args fixed-arity)
+         (if (<= (bounded-count args (inc fixed-arity))
                  fixed-arity)
            (. f apply f (to-array args))
            (. f cljs$lang$applyTo args))
@@ -1426,6 +1426,45 @@ reduces them without incurring seq initialization"
      ([a b c] (f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c)))
      ([a b c & ds] (apply f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c) ds)))))
 
+(defn map-indexed
+  "Returns a lazy sequence consisting of the result of applying f to 0
+  and the first item of coll, followed by applying f to 1 and the second
+  item in coll, etc, until coll is exhausted. Thus function f should
+  accept 2 arguments, index and item."
+  [f coll]
+  (let [mapi (fn mpi [idx coll]
+               (lazy-seq
+                (when-let [s (seq coll)]
+                  (cons (f idx (first s))
+                        (mpi (inc idx) (rest s))))))]
+    (mapi 0 coll)))
+
+(defn keep
+  "Returns a lazy sequence of the non-nil results of (f item). Note,
+  this means false return values will be included.  f must be free of
+  side-effects."
+  ([f coll]
+   (lazy-seq
+    (when-let [s (seq coll)]
+      (let [x (f (first s))]
+        (if (nil? x)
+          (keep f (rest s))
+          (cons x (keep f (rest s)))))))))
+
+(defn keep-indexed
+  "Returns a lazy sequence of the non-nil results of (f index item). Note,
+  this means false return values will be included.  f must be free of
+  side-effects."
+  ([f coll]
+     (let [keepi (fn kpi [idx coll]
+                   (lazy-seq
+                    (when-let [s (seq coll)]
+                      (let [x (f idx (first s))]
+                        (if (nil? x)
+                          (kpi (inc idx) (rest s))
+                          (cons x (kpi (inc idx) (rest s))))))))]
+       (keepi 0 coll))))
+
 (defn every-pred
   "Takes a set of predicates and returns a function f that returns true if all of its
   composing predicates return a logical true value against all of its arguments, else it returns
@@ -1582,7 +1621,12 @@ reduces them without incurring seq initialization"
   "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
   [coll] (lazy-seq 
           (when-let [s (seq coll)] 
-              (concat s (cycle s)))))
+            (concat s (cycle s)))))
+
+(defn split-at
+  "Returns a vector of [(take n coll) (drop n coll)]"
+  [n coll]
+  [(take n coll) (drop n coll)])
 
 (defn repeat
   "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
@@ -2094,6 +2138,22 @@ reduces them without incurring seq initialization"
   (when (some identity maps)
     (reduce #(conj (or %1 {}) %2) maps)))
 
+(defn merge-with
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first.  If a key occurs in more than one map, the mapping(s)
+  from the latter (left-to-right) will be combined with the mapping in
+  the result by calling (f val-in-result val-in-latter)."
+  [f & maps]
+  (when (some identity maps)
+    (let [merge-entry (fn [m e]
+			(let [k (first e) v (second e)]
+			  (if (contains? m k)
+			    (assoc m k (f (get m k) v))
+			    (assoc m k v))))
+          merge2 (fn [m1 m2]
+		   (reduce merge-entry (or m1 {}) (seq m2)))]
+      (reduce merge2 maps))))
+
 (defn select-keys
   "Returns a map containing only those entries in map whose key is in keys"
   [map keyseq]
@@ -2170,6 +2230,20 @@ reduces them without incurring seq initialization"
     (if-not (empty? in)
       (recur (rest in) (conj out (first in)))
       out)))
+
+(defn replace
+  "Given a map of replacement pairs and a vector/collection, returns a
+  vector/seq with any elements = a key in smap replaced with the
+  corresponding val in smap"
+  [smap coll]
+  (if (vector? coll)
+    (let [n (count coll)]
+      (reduce (fn [v i]
+                (if-let [e (find smap (nth v i))]
+                  (assoc v i (second e))
+                  v))
+              coll (take n (iterate inc 0))))
+    (map #(if-let [e (find smap %)] (second e) %) coll)))
 
 (defn distinct
   "Returns a lazy sequence of the elements of coll with duplicates removed"
@@ -2254,15 +2328,20 @@ reduces them without incurring seq initialization"
   [pred coll]
   (lazy-seq
    (when-let [s (seq coll)]
-       (when (pred (first s))
-         (cons (first s) (take-while pred (rest s)))))))
+     (when (pred (first s))
+       (cons (first s) (take-while pred (rest s)))))))
 
 (defn take-nth
   "Returns a lazy seq of every nth item in coll."
   [n coll]
-    (lazy-seq
-     (when-let [s (seq coll)]
-       (cons (first s) (take-nth n (drop n s))))))
+  (lazy-seq
+   (when-let [s (seq coll)]
+     (cons (first s) (take-nth n (drop n s))))))
+
+(defn split-with
+  "Returns a vector of [(take-while pred coll) (drop-while pred coll)]"
+  [pred coll]
+  [(take-while pred coll) (drop-while pred coll)])
 
 (defn partition-by
   "Applies f to each value in coll, splitting it each time f returns
@@ -2753,6 +2832,22 @@ reduces them without incurring seq initialization"
           (swap! mem assoc args ret)
           ret)))))
 
+(defn trampoline
+  "trampoline can be used to convert algorithms requiring mutual
+  recursion without stack consumption. Calls f with supplied args, if
+  any. If f returns a fn, calls that fn with no arguments, and
+  continues to repeat, until the return value is not a fn, then
+  returns that non-fn value. Note that if you want to return a fn as a
+  final value, you must wrap it in some data structure and unpack it
+  after trampoline returns."
+  ([f]
+     (let [ret (f)]
+       (if (fn? ret)
+         (recur ret)
+         ret)))
+  ([f & args]
+     (trampoline #(apply f args))))
+
 (defn rand
   "Returns a random floating point number between 0 (inclusive) and
   n (default 1) (exclusive)."
@@ -2907,12 +3002,59 @@ reduces them without incurring seq initialization"
   (assert (= 63 (apply + 1 2 4 8 16 (list 32))))
   (assert (= 127 (apply + 1 2 4 8 16 (list 32 64))))
   (assert (= 4950 (apply + (take 100 (iterate inc 0)))))
+  (assert (= () (apply list [])))
+  (assert (= [1 2 3] (apply list [1 2 3])))
+  (assert (= 6 (apply apply [+ [1 2 3]])))
   ;; apply with infinite sequence
-  ;; (assert (= 3 (apply (fn [& args]
-  ;;                       (+ (nth args 0)
-  ;;                          (nth args 1)
-  ;;                          (nth args 2)))
-  ;;                     (iterate inc 0))))
+  (assert (= 3 (apply (fn [& args]
+                        (+ (nth args 0)
+                           (nth args 1)
+                           (nth args 2)))
+                      (iterate inc 0))))
+  (assert (= [0 1 2 3 4] (take 5 (apply (fn [& m] m) (iterate inc 0)))))
+  (assert (= [1 2 3 4 5] (take 5 (apply (fn [x & m] m) (iterate inc 0)))))
+  (assert (= [2 3 4 5 6] (take 5 (apply (fn [x y & m] m) (iterate inc 0)))))
+  (assert (= [3 4 5 6 7] (take 5 (apply (fn [x y z & m] m) (iterate inc 0)))))
+  (assert (= [4 5 6 7 8] (take 5 (apply (fn [x y z a & m] m) (iterate inc 0)))))
+  (assert (= [5 6 7 8 9] (take 5 (apply (fn [x y z a b & m] m) (iterate inc 0)))))
+  ;; apply arity tests
+  (let [single-arity-non-variadic (fn [x y z] [z y x])
+        multiple-arity-non-variadic (fn ([x] x) ([x y] [y x]) ([x y z] [z y x]))
+        single-arity-variadic-fixedargs (fn [x y & more] [more y x])
+        single-arity-variadic-nofixedargs (fn [& more] more)
+        multiple-arity-variadic (fn ([x] x) ([x y] [y x]) ([x y & more] [more y x]))]
+    (assert (= [3 2 1] (apply single-arity-non-variadic [1 2 3])))
+    (assert (= [3 2 1] (apply single-arity-non-variadic 1 [2 3])))
+    (assert (= [3 2 1] (apply single-arity-non-variadic 1 2 [3])))
+    (assert (= 42 (apply multiple-arity-non-variadic [42])))
+    (assert (= [2 1] (apply multiple-arity-non-variadic [1 2])))
+    (assert (= [2 1] (apply multiple-arity-non-variadic 1 [2])))
+    (assert (= [3 2 1] (apply multiple-arity-non-variadic [1 2 3])))
+    (assert (= [3 2 1] (apply multiple-arity-non-variadic 1 [2 3])))
+    (assert (= [3 2 1] (apply multiple-arity-non-variadic 1 2 [3])))
+    (assert (= [[3 4 5] 2 1] (apply single-arity-variadic-fixedargs [1 2 3 4 5])))
+    (assert (= [[3 4 5] 2 1] (apply single-arity-variadic-fixedargs 1 [2 3 4 5])))
+    (assert (= [[3 4 5] 2 1] (apply single-arity-variadic-fixedargs 1 2 [3 4 5])))
+    (assert (= [[3 4 5] 2 1] (apply single-arity-variadic-fixedargs 1 2 3 [4 5])))
+    (assert (= [[3 4 5] 2 1] (apply single-arity-variadic-fixedargs 1 2 3 4 [5])))
+    (assert (= [3 4 5] (take 3 (first (apply single-arity-variadic-fixedargs (iterate inc 1))))))
+    (assert (= [2 1] (rest (apply single-arity-variadic-fixedargs (iterate inc 1)))))
+    (assert (= [1 2 3 4 5] (apply single-arity-variadic-nofixedargs [1 2 3 4 5])))
+    (assert (= [1 2 3 4 5] (apply single-arity-variadic-nofixedargs 1 [2 3 4 5])))
+    (assert (= [1 2 3 4 5] (apply single-arity-variadic-nofixedargs 1 2 [3 4 5])))
+    (assert (= [1 2 3 4 5] (apply single-arity-variadic-nofixedargs 1 2 3 [4 5])))
+    (assert (= [1 2 3 4 5] (apply single-arity-variadic-nofixedargs 1 2 3 4 [5])))
+    (assert (= [1 2 3 4 5] (take 5 (apply single-arity-variadic-nofixedargs (iterate inc 1)))))
+    (assert (= 42 (apply multiple-arity-variadic [42])))
+    (assert (= [2 1] (apply multiple-arity-variadic [1 2])))
+    (assert (= [2 1] (apply multiple-arity-variadic 1 [2])))
+    (assert (= [[3 4 5] 2 1] (apply multiple-arity-variadic [1 2 3 4 5])))
+    (assert (= [[3 4 5] 2 1] (apply multiple-arity-variadic 1 [2 3 4 5])))
+    (assert (= [[3 4 5] 2 1] (apply multiple-arity-variadic 1 2 [3 4 5])))
+    (assert (= [[3 4 5] 2 1] (apply multiple-arity-variadic 1 2 3 [4 5])))
+    (assert (= [[3 4 5] 2 1] (apply multiple-arity-variadic 1 2 3 4 [5])))
+    (assert (= [3 4 5] (take 3 (first (apply multiple-arity-variadic (iterate inc 1))))))
+    (assert (= [2 1] (rest (apply multiple-arity-variadic (iterate inc 1))))))
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))
@@ -3283,6 +3425,52 @@ reduces them without incurring seq initialization"
   
   ;; reductions
   (assert (= [1 3 6 10 15] (reductions + [1 2 3 4 5])))
+
+  ;; keep
+  (assert (= [1 3 5 7 9] (keep #(if (odd? %) %) [1 2 3 4 5 6 7 8 9 10])))
+  (assert (= [2 4 6 8 10] (keep #(if (even? %) %) [1 2 3 4 5 6 7 8 9 10])))
+
+  ;; keep-indexed
+  (assert (= [1 3 5 7 9] (keep-indexed #(if (odd? %1) %2) [0 1 2 3 4 5 6 7 8 9 10])))
+  (assert (= [2 4 5] (keep-indexed #(if (pos? %2) %1) [-9 0 29 -7 45 3 -8])))
+
+  ;; map-indexed
+  (assert (= [[0 :a] [1 :b] [2 :c]] (map-indexed #(vector % %2) [:a :b :c])))
+
+  ;; merge-with
+  (assert (= '{"Foo" ("foo" "FOO" "fOo"), "Bar" ("bar" "BAR" "BAr"), "Baz" ["baz"], "Qux" ["qux" "quux"]}
+             (merge-with concat
+		  {"Foo" ["foo" "FOO"]
+		   "Bar" ["bar" "BAR"]
+                   "Baz" ["baz"]}
+		  {"Foo" ["fOo"]
+		   "Bar" ["BAr"]
+                   "Qux" ["qux" "quux"]})))
+  (assert (= {:a 111, :b 102, :c 13}
+             (merge-with +
+                         {:a 1 :b 2 :c 3}
+                         {:a 10 :c 10}
+                         {:a 100 :b 100})))
+
+  (assert (= {:a 3, :b 102, :c 13}
+             (apply merge-with [+
+                                {:a 1 :b 100}
+                                {:a 1 :b 2 :c 3}
+                                {:a 1 :c 10}])))
+
+  (assert (= '[a c e] (replace '[a b c d e] [0 2 4])))
+  (assert (= [:one :zero :two :zero]
+             (replace {0 :zero 1 :one 2 :two} '(1 0 2 0))))
+
+  ;; split-at
+  (assert (= [[1 2] [3 4 5]] (split-at 2 [1 2 3 4 5])))
+
+  ;; split-with
+  (assert (= [[1 2 3] [4 5]] (split-with (partial >= 3) [1 2 3 4 5])))
+
+  ;; trampoline
+  (assert (= 10000 (trampoline (fn f [n] (if (>= n 10000) n #(f (inc n)))) 0)))
+  
   :ok
   )
 

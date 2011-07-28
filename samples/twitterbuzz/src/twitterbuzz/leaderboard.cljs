@@ -11,8 +11,7 @@
             [goog.dom :as dom]))
 
 (defn add-leaderboard-node [node]
-  (let [user (first node)
-        user-info (second node)
+  (let [user-info (second node)
         parent (dom/getElement "leaderboard-content")
         child (buzz/dom-element :div {:class "tweet"})
         details (buzz/dom-element :div {:class "tweet-details"})
@@ -21,7 +20,7 @@
         pic (buzz/dom-element :img {:src (:image-url user-info) :class "profile-pic"})
         num-mentions (buzz/dom-element "div")]
     (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:last-tweet user-info)) 0) ;; (dom/setTextContent text (:last-tweet user-info))
-        (dom/setTextContent user-e user)
+        (dom/setTextContent user-e (:username user-info))
         (dom/setTextContent num-mentions (str (buzz/num-mentions user-info)))
         (dom/appendChild child pic)
 	(dom/appendChild child details)

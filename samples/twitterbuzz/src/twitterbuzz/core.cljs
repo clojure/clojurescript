@@ -7,12 +7,16 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns twitterbuzz.core
-  (:require [goog.net.Jsonp :as jsonp]
+  (:require [clojure.string :as string]
+            [goog.net.Jsonp :as jsonp]
             [goog.Timer :as timer]
             [goog.events :as events]
             [goog.events.EventType :as event-type]
             [goog.dom.classes :as classes]
             [goog.dom :as dom]))
+
+(def results-per-page 100)
+(def missing-limit 20)
 
 (def initial-state {:max-id 1
                     :graph {}
@@ -20,7 +24,8 @@
                                 :graph-update []
                                 :track-clicked []}
                     :tweet-count 0
-                    :search-tag nil})
+                    :search-tag nil
+                    :ignore-mentions #{}})
 
 (def state (atom initial-state))
 
@@ -55,40 +60,30 @@
        (f message))))
 
 (defn parse-mentions [tweet]
-  (map #(apply str (drop 1 %)) (re-seq (re-pattern "@\\w*") (:text tweet))))
+  (map #(string/lower-case (apply str (drop 1 %)))
+       (re-seq (re-pattern "@\\w+") (:text tweet))))
 
 (defn add-mentions
   "Add the user to the mentions map for first user she mentions,
   clearing the mentions map of user"
   [graph user mentions]
   (if-let [mention (first mentions)]
-    (let [graph (assoc graph mention (get graph mention {}))
+    (let [graph (assoc graph mention (get graph mention {:username mention}))
           node (get graph mention)
           mentions-map (get node :mentions {})
           graph (assoc-in graph [mention :mentions user] (inc (get mentions-map user 0)))]
       (assoc-in graph [user :mentions] {}))
     graph))
 
-;;old
-#_(defn add-mentions
-  "Add the user to the mentions map for each user she mentions."
-  [graph user mentions]
-  (reduce (fn [acc next-mention]
-            (if-let [node (get graph next-mention)]
-              (let [mentions-map (get node :mentions {})]
-                (assoc-in acc [next-mention :mentions user] (inc (get mentions-map user 0))))
-              graph))
-          graph
-          mentions))
-
 (defn update-graph [graph tweet-maps]
   (reduce (fn [acc tweet]
-            (let [user (:from_user tweet)
+            (let [user (string/lower-case (:from_user tweet))
                   mentions (parse-mentions tweet)
                   node (get acc user {:mentions {}})]
               (-> (assoc acc user
                          (assoc node :last-tweet (:text tweet)
-                                     :image-url (:profile_image_url tweet)))
+                                     :image-url (:profile_image_url tweet)
+                                     :username (:from_user tweet)))
                   (add-mentions user mentions))))
           graph
           (map #(select-keys % [:text :from_user :profile_image_url]) tweet-maps)))
@@ -102,7 +97,7 @@
       (update-in [:tweet-count] #(+ % (count tweets)))
       (assoc :graph (update-graph (:graph old-state) (reverse tweets)))))
 
-(defn my-callback [json]
+(defn new-tweets-callback [json]
   (let [result-map (js->clj json :keywordize-keys true)
         new-max (:max_id result-map)
         old-max (:max-id @state) ;; the filter won't work if you inline this
@@ -120,10 +115,77 @@
 (defn error-callback [error]
   (set-tweet-status :error "Twitter error"))
 
+(defn add-missing-tweets
+  "Add missing data to the graph."
+  [graph tweets]
+  (let [new-tweets (reduce (fn [acc next-tweet]
+                             (assoc acc (string/lower-case (:from_user next-tweet))
+                                    next-tweet))
+                           {}
+                           (sort-by :id tweets))]
+    (reduce (fn [acc [node-name {:keys [from_user text profile_image_url]}]]
+              (if-let [old-tweet (get graph node-name)]
+                (if (:last-tweet old-tweet)
+                  acc
+                  (assoc acc node-name
+                         (merge old-tweet {:last-tweet text
+                                           :image-url profile_image_url
+                                           :username from_user})))
+                acc))
+            graph
+            new-tweets)))
+
+(defn ignored
+  "Given a list of the usernames for missing tweets and the tweets
+   which are the result of a query for this missing data, return a set of
+   twitter usernames which will be ignored moving forward."
+  [missing tweets]
+  (when (< (count tweets) results-per-page)
+    (let [users (set (map #(string/lower-case (:from_user %)) tweets))
+          missing (map string/lower-case missing)]
+      (reduce (fn [acc next-missing]
+                (if (contains? users next-missing)
+                  acc
+                  (conj acc next-missing)))
+              #{}
+              missing))))
+
+(defn add-missing-callback
+  "Update the graph and the ignore-accounts list when data is received
+  from a missing user query."
+  [missing json]
+  (let [response (js->clj json :keywordize-keys true)
+        tweets (:results response)]
+    (if-let [error (:error response)]
+      (set-tweet-status :error error)
+      (do (swap! state (fn [old-state]
+                         (assoc old-state
+                           :graph (add-missing-tweets (:graph old-state) tweets)
+                           :ignore-mentions (into (:ignore-mentions old-state)
+                                                  (ignored missing tweets)))))
+          (send-event :new-tweets [])
+          (send-event :graph-update (:graph @state))))))
+
+(defn missing-tweets
+  "Return a list of usernames with missing tweets in the graph."
+  [graph]
+  (->> (map second graph)
+       (remove :last-tweet)
+       (map :username)
+       (remove empty?)
+       (remove (:ignore-mentions @state))))
+
 (defn do-timer []
-  (when-let [tag (:search-tag @state)]
-    (set-tweet-status :okay "Fetching tweets")
-    (retrieve (.strobj {"q" tag "rpp" 100}) my-callback error-callback)))
+  (let [missing (missing-tweets (:graph @state))]
+    (if (seq missing)
+      (let [q (apply str (interpose " OR " (map #(str "from:" %) (take missing-limit missing))))]
+        (set-tweet-status :okay "Fetching mentioned tweets")
+        (retrieve (.strobj {"q" q "rpp" results-per-page})
+                  #(add-missing-callback missing %) error-callback))
+      (when-let [tag (:search-tag @state)]
+        (set-tweet-status :okay "Fetching tweets")
+        (retrieve (.strobj {"q" tag "rpp" results-per-page})
+                  new-tweets-callback error-callback)))))
 
 (defn poll
   "Request new data from twitter once every 24 seconds. This will put
@@ -153,13 +215,13 @@
 
 (comment
 
-  (parse-mentions {:text "What's up @sue: and @larry"})
+  (parse-mentions {:text "What's up @sue: and @Larry"})
   
   (add-mentions {} "jim" ["sue"])
   (add-mentions {"sue" {}} "jim" ["sue"])
   
   (def tweets [{:profile_image_url "url1"
-                :from_user "jim"
+                :from_user "Jim"
                 :text "I like cookies!"}
                {:profile_image_url "url2"
                 :from_user "sue"
@@ -169,10 +231,14 @@
                 :text "You shouldn't eat so many cookies @sue"}
                {:profile_image_url "url4"
                 :from_user "sam"
-                :text "@bob that was a cruel thing to say to @sue."}])
+                :text "@Bob that was a cruel thing to say to @Sue."}
+               {:profile_image_url "url5"
+                :from_user "ted"
+                :text "@foo is awesome!"}])
   
   (def graph (update-graph {} tweets))
-  
+  (count graph)
+
   (num-mentions (get graph "sue"))
   (num-mentions (get graph "bob"))
   (num-mentions (get graph "sam"))
