@@ -1,0 +1,13 @@
+Definitely a work-in-progress.
+
+To run tests before you commit:
+
+    script/test
+
+To add tests:
+
+   * Create test fiels in the test/cljs directory.
+   * Write fns that throw an exception on failure.
+   * Call those fns from test/cljs/cljs/test_runner.cljs
+
+
