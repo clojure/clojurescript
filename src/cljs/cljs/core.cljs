@@ -3479,6 +3479,13 @@ reduces them without incurring seq initialization"
   ;; vary-meta
   (assert (= {:a 1} (meta (vary-meta [] assoc :a 1))))
   (assert (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
+
+  ;; recur scoping
+  (assert (= [1 2 3]
+             (let [q (atom [])]
+               (doseq [v [1 2 3]]
+                 (swap! q conj (fn [] v))) (map #(%) @q))))
+
   :ok
   )
 

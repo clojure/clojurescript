@@ -349,15 +349,27 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (println (str "return " delegate-name ".call(" (string/join ", " (cons "null" params)) ");"))))
     (print "})")))
 
+(defn emit-recur-block
+  [context statements ret]
+  (let [result (gensym)
+        cont (gensym)]
+    (print (str "var " result "," cont ";" result "=" cont "=new Object();\n"))
+    (print (str "while(" result "===" cont "){\n"))
+    (print (str result "=(function(continue_val){\n"))
+    (emit-block context statements ret)
+    (print (str "})(" cont ");}\n"))
+    (when (= :return context)
+      (print (str "return " result ";\n")))))
+
 (defn emit-fn-method
   [{:keys [gthis name variadic params statements ret env recurs max-fixed-arity]}]
   (emit-wrap env
              (print (str "(function " name "(" (comma-sep params) "){\n"))
              (when gthis
                (println (str "var " gthis " = this;")))
-             (when recurs (print "while(true){\n"))
-             (emit-block :return statements ret)
-             (when recurs (print "break;\n}\n"))
+             (if recurs
+               (emit-recur-block :return statements ret)
+               (emit-block :return statements ret))
              (print "})")))
 
 (defn emit-variadic-fn-method
@@ -367,9 +379,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                    delegate-name (str name "__delegate")]
                (println "(function() { ")
                (println (str "var " delegate-name " = function (" (comma-sep params) "){"))
-               (when recurs (print "while(true){\n"))
-               (emit-block :return statements ret)
-               (when recurs (print "break;\n}\n"))
+               (if recurs
+                 (emit-recur-block :return statements ret)
+                 (emit-block :return statements ret))
                (println "};")
 
                (print (str "var " name " = function (" (comma-sep
@@ -492,9 +504,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                 bindings)]
     (when (= :expr context) (print "(function (){"))
     (print (str (apply str bs) "\n"))
-    (when loop (print "while(true){\n"))
-    (emit-block (if (= :expr context) :return context) statements ret)
-    (when loop (print "break;\n}\n"))
+    (if loop
+      (emit-recur-block (if (= :expr context) :return context) statements ret)
+      (emit-block (if (= :expr context) :return context) statements ret))
     ;(print "}")
     (when (= :expr context) (print "})()"))))
 
@@ -507,7 +519,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (print (str "var " (temps i) " = " (emits (exprs i)) ";\n")))
     (dotimes [i (count exprs)]
       (print (str (names i) " = " (temps i) ";\n")))
-    (print "continue;\n")
+    (print "return continue_val;\n")
     (print "}\n")))
 
 (defmethod emit :invoke
