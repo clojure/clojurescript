@@ -341,12 +341,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (print arglist)
         (dotimes [_ (- (count params) 2)] (print ")"))
         (println ");")
-        (println (str "return " delegate-name ".call(" (string/join ", " (cons "null" params)) ");")))
+        (println (str "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");")))
       (do
         (print (str "var " (last params) " = "))
         (print "cljs.core.seq(" arglist ");")
         (println ";")
-        (println (str "return " delegate-name ".call(" (string/join ", " (cons "null" params)) ");"))))
+        (println (str "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");"))))
     (print "})")))
 
 (defn emit-fn-method
