@@ -28,7 +28,7 @@
     "return" "short" "static" "super" "switch"
     "synchronized" "this" "throw" "throws"
     "transient" "try" "typeof" "var" "void"
-    "volatile" "while" "with" "yield"})
+    "volatile" "while" "with" "yield" "methods"})
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
