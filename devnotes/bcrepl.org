@@ -1,0 +1,13 @@
+* ClojureScript browser connected REPL
+** send cljs compiler output to the browser to be evaluated
+** send results back to the command line process to be printed
+** side effects happen in the browser
+** abstract communication away using goog library
+*** Goog abstraction for websockets? Ideal!
+*** Polling? It will work everywhere.
+*** Ideally an abstraction over both that prefers websockets but doesn't fail and doesn't complain loudly.
+** evaluation daemon for the browser
+** launch browser
+** transparent update of bound symbols? We should test.
+** brepl has its own solution for deps, we'd like to tie into the ClojureScript dependency story
+** require mechanisms are out; the source that forms the repl's environment will need to be updated and the page reloaded
