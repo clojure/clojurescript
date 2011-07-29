@@ -2903,10 +2903,6 @@ reduces them without incurring seq initialization"
        (assoc ret k (conj (get ret k []) x))))
    {} coll))
 
-(defn not-empty
-  "If coll is empty, returns nil, else coll"
-  [coll] (when (seq coll) coll))
-
 (defn make-hierarchy
   "Creates a hierarchy object for use with derive, isa? etc."
   [] {:parents {} :descendants {} :ancestors {}})

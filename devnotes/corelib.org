@@ -67,7 +67,7 @@ does what?
 * DONE alter-meta!
 * alter-var-root
 * DONE amap
-* ancestors
+* DONE ancestors
 * DONE and
 * DONE apply
 * DONE areduce
@@ -167,8 +167,8 @@ does what?
 * definline
 * definterface
 * DONE defmacro
-* TODO defmethod
-* TODO defmulti
+* DONE defmethod
+* DONE defmulti
 * DONE defn
 * DONE defn-
 * defonce
@@ -181,8 +181,8 @@ does what?
 * deliver
 * TODO denominator
 * DONE deref
-* TODO derive
-* TODO descendants
+* DONE derive
+* DONE descendants
 * DONE destructure
 For macros only, uses clojure.core version
 * DONE disj
@@ -256,7 +256,7 @@ macro currently expands into extend call
 * DONE gensym
 * DONE get
 * DONE get-in
-* TODO get-method
+* DONE get-method
 * get-proxy-class
 * get-thread-bindings
 * DONE get-validator
@@ -287,7 +287,7 @@ does what?
 * TODO into-array
 * ints
 * io!
-* TODO isa?
+* DONE isa?
 does what?
 * DONE iterate
 * iterator-seq
@@ -321,7 +321,7 @@ does what?
 * macroexpand
 * macroexpand-1
 * TODO make-array
-* TODO make-hierarchy
+* DONE make-hierarchy
 * DONE map
 * DONE map-indexed
 * DONE map?
@@ -334,7 +334,7 @@ does what?
 * DONE merge-with
 * DONE meta
 * method-sig
-* TODO methods
+* DONE methods
 * DONE min
 * DONE min-key
 * DONE mod
@@ -372,7 +372,7 @@ does what?
 * TODO object-array
 * DONE odd?
 * DONE or
-* TODO parents
+* DONE parents
 * DONE partial
 * DONE partition
 * DONE partition-all
@@ -388,8 +388,8 @@ does what?
 * DONE pr
 dunno about printing
 * DONE pr-str
-* TODO prefer-method
-* TODO prefers
+* DONE prefer-method
+* DONE prefers
 * primitives-classnames
 * TODO print
 * print-ctor
@@ -443,8 +443,8 @@ also specify - make a particular object extend a protocol
 * release-pending-sends
 * DONE rem
 * DONE remove
-* TODO remove-all-methods
-* TODO remove-method
+* DONE remove-all-methods
+* DONE remove-method
 * remove-ns
 * remove-watch
 * DONE repeat
@@ -547,7 +547,7 @@ does what?
 * TODO unchecked-short
 * TODO unchecked-subtract
 * TODO unchecked-subtract-int
-* TODO underive
+* DONE underive
 * unquote
 * unquote-splicing
 * DONE update-in
