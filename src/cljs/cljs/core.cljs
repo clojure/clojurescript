@@ -1138,8 +1138,17 @@ reduces them without incurring seq initialization"
 ;;hrm
 (set! js/String.prototype.call
       (fn
-        ([_ coll] (get coll (js* "this.toString()")))
-        ([_ coll not-found] (get coll (js* "this.toString()") not-found))))
+        ([_ coll]
+           (get coll (js* "this.toString()")))
+        ([_ coll not-found]
+           (get coll (js* "this.toString()") not-found))))
+
+(set! js/String.prototype.apply
+      (fn
+        [_ args]
+        (if (< (count args) 2)
+          (.call (js* "this") nil (aget args 0))
+          (.call (js* "this") nil (aget args 0) (aget args 1)))))
 
 ; could use reify
 ;;; LazySeq ;;;
@@ -2892,8 +2901,3 @@ reduces them without incurring seq initialization"
      (let [k (f x)]
        (assoc ret k (conj (get ret k []) x))))
    {} coll))
-
-
-
-
-
