@@ -345,22 +345,4 @@ nil if the end of stream has been reached")
   (let [r (push-back-reader s)]
     (read r true nil false)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
-
-(defn test-reader
-  []
-  (assert (= 1 (read-string "1")))
-  (assert (= 2 (read-string "#_nope 2")))
-  (assert (= [3 4] (read-string "[3 4]")))
-  (assert (= "foo" (read-string "\"foo\"")))
-  (assert (= :hello (read-string ":hello")))
-  (assert (= 'goodbye (read-string "goodbye")))
-  (assert (= #{1 2 3} (read-string "#{1 2 3}")))
-  (assert (= '(7 8 9) (read-string "(7 8 9)")))
-  (assert (= '(deref foo) (read-string "@foo")))
-  (assert (= '(quote bar) (read-string "'bar")))
-  (assert (= \a (read-string "\\a")))
-  (assert (= {:tag 'String} (meta (read-string "^String {:a 1}"))))
-  (assert (= [:a 'b #{'c {:d [:e :f :g]}}]
-             (read-string "[:a b #{c {:d [:e :f :g]}}]"))))
   

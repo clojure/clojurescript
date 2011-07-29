@@ -1,0 +1,14 @@
+mkdir -p out
+
+bin/cljsc test  > out/core-test.js
+bin/cljsc test {:optimizations :advanced} > out/core-advanced-test.js
+
+if [ "$V8_HOME" == "" ]; then
+  echo "V8_HOME not set, skipping V8 tests"
+else
+  ${V8_HOME}/d8 out/core-advanced-test.js
+  # TODO: figure out path problem when not in advanced mode
+  # ${V8_HOME}/d8 out/core-test.js
+fi
+
+# TODO : run tests with rhino if available
