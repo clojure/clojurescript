@@ -2903,9 +2903,6 @@ reduces them without incurring seq initialization"
        (assoc ret k (conj (get ret k []) x))))
    {} coll))
 
-
-
-;; FF multimethods
 (defn not-empty
   "If coll is empty, returns nil, else coll"
   [coll] (when (seq coll) coll))
@@ -3133,46 +3130,7 @@ reduces them without incurring seq initialization"
 
   (-invoke [mf args] (do-invoke mf dispatch-fn args)))
 
-;; (defn- multimethod-invoker
-;;   ;;[_ & args] (-invoke (js* "this") args)
-  
-;;   ([_ a1] (-invoke (js* "this") [a1]))
-;;   ([_ a1 a2] (-invoke (js* "this") [a1 a2]))
-;;   ([_ a1 a2 a3] (-invoke (js* "this") [a1 a2 a3]))
-;;   ([_ a1 a2 a3 a4] (-invoke (js* "this") [a1 a2 a3 a4]))
-;;   ([_ a1 a2 a3 a4 a5] (-invoke (js* "this") [a1 a2 a3 a4 a5]))
-;;   ([_ a1 a2 a3 a4 a5 a6] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15]))  
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17]))  
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19]))
-;;   ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]
-;;      (-invoke (js* "this") [a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]))  
-;;   ;; ([_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20 & args]
-;;   ;;    (-invoke (js* "this") (concat [_ a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16 a17 a18 a19 a20]
-;;   ;; 				   args)))
-;;   )
-
 (set! cljs.core.MultiFn.prototype.call
-      ;;multimethod-invoker
       (fn [_ & args] (-invoke (js* "this") args))
       )
 
@@ -3204,77 +3162,3 @@ reduces them without incurring seq initialization"
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   [multifn] (-prefers multifn))
-
-
-(defn- test-multimethods
-  []
-  (swap! global-hierarchy make-hierarchy)
-
-  ;; hierarchy tests
-  (derive ::rect ::shape)
-  (derive ::square ::rect)
-
-  (assert (= #{:user/shape} (parents ::rect)))
-  (assert (= #{:user/rect :user/shape} (ancestors ::square)))
-  (assert (= #{:user/rect :user/square} (descendants ::shape)))
-  (assert (true? (isa? 42 42)))
-  (assert (true? (isa? ::square ::shape)))
-
-  (derive cljs.core.ObjMap ::collection)
-  (derive cljs.core.Set ::collection)
-  (assert (true? (isa? cljs.core.ObjMap ::collection)))
-  (assert (true? (isa? cljs.core.Set ::collection)))
-  (assert (false? (isa? cljs.core.IndexedSeq ::collection)))
-  ;; ?? (isa? String Object)
-  (assert (true? (isa? [::square ::rect] [::shape ::shape])))
-  ;; ?? (ancestors java.util.ArrayList)
-  
-  ;; ?? isa? based dispatch tests
-
-  ;; prefer-method test
-  (defmulti bar (fn [x y] [x y]))
-  (defmethod bar [::rect ::shape] [x y] :rect-shape)
-  (defmethod bar [::shape ::rect] [x y] :shape-rect)
-  
-  ;;(bar ::rect ::rect)
-  ;; -> java.lang.IllegalArgumentException:
-  ;;  Multiple methods match dispatch value:
-  ;;  [:user/rect :user/rect] -> [:user/rect :user/shape]
-  ;;  and [:user/shape :user/rect],
-  ;;  and neither is preferred
-
-  (assert (zero? (count (prefers bar))))
-  (prefer-method bar [::rect ::shape] [::shape ::rect])
-  (assert (= 1 (count (prefers bar))))
-  (assert (= :rect-shape (bar ::rect ::rect)))
-  (assert (= :rect-shape (apply (-get-method bar [::rect ::shape]) [::rect ::shape])))
-
-  ;; general tests
-  (defmulti foo (fn [& args] (first args)))
-  (defmethod foo :a [& args] :a-return)
-  (defmethod foo :default [& args] :default-return)
-  (assert (= :a-return (foo :a)))
-  (assert (= :default-return (foo 1)))
-
-  (defmulti area :Shape)
-  (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
-  (defn circle [radius] {:Shape :Circle :radius radius})
-  (defmethod area :Rect [r]
-    (* (:wd r) (:ht r)))
-  (defmethod area :Circle [c]
-    (*  Math/PI (* (:radius c) (:radius c))))
-  (defmethod area :default [x] :oops)
-  (def r (rect 4 13))
-  (def c (circle 12))
-
-  (assert (= 52 (area r)))
-  ;;(assert (= 452.3893421169302 (area c)))
-  (assert (= :oops (area {})))
-
-  (assert (= 2 (count (methods bar))))
-  (remove-method bar [::rect ::shape])
-  (assert (= 1 (count (methods bar))))
-  (remove-all-methods bar)
-  (assert (zero? (count (methods bar))))
-  
-  )
