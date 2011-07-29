@@ -12,6 +12,12 @@ for next in lib/*: closure/compiler/*: src/clj: src/cljs; do
   CLJSC_CP=$CLJSC_CP$CLOJURESCRIPT_HOME'/'$next
 done
 
+if [[ `uname` == CYGWIN* ]]; then
+    CLOJURESCRIPT_HOME=`cygpath --path --windows "$CLOJURESCRIPT_HOME"`
+    CLJSC_CP=`cygpath --path --windows "$CLJSC_CP"`
+fi
+
+
 if test $# -eq 0
 then
   echo "Usage: cljsc <file-or-dir>"

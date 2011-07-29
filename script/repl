@@ -1,3 +1,8 @@
 #!/bin/sh
-java -server -Xmx2G -Xms2G -Xmn256m -cp 'lib/*:src/clj:src/cljs' clojure.main
+CLASSPATH='lib/*:src/clj:src/cljs'
+if [[ `uname` == CYGWIN* ]]; then
+  CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
+fi
+
+java -server -Xmx2G -Xms2G -Xmn256m -cp $CLASSPATH clojure.main
 

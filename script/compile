@@ -1,6 +1,10 @@
 #!/bin/sh
+CLASSPATH='lib/*:src/clj:src/cljs'
+if [[ `uname` == CYGWIN* ]]; then
+  CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
+fi
 
-java -server -Xmx2G -Xms2G -Xmn256m -cp 'lib/*:src/clj:src/cljs' clojure.main - > core.js <<CLJ
+java -server -Xmx2G -Xms2G -Xmn256m -cp $CLASSPATH clojure.main - > core.js <<CLJ
 (require :reload '[cljs.compiler :as comp] '[cljs.core])
 (binding [comp/*cljs-verbose* true]
   (comp/load-file (comp/repl-env) "cljs/core.cljs"))
