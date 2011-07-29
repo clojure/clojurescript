@@ -2336,6 +2336,18 @@ reduces them without incurring seq initialization"
      (when (pred (first s))
        (cons (first s) (take-while pred (rest s)))))))
 
+(defn range
+  "Returns a lazy seq of nums from start (inclusive) to end
+  (exclusive), by step, where start defaults to 0, step to 1, and end
+  to infinity."
+  ([] (iterate inc 0))
+  ([end] (range 0 end 1))
+  ([start end] (range start end 1))
+  ([start end step]
+    (take-while
+      (fn [n] (< n end))
+      (iterate (fn [x] (+ x step)) start))))
+
 (defn take-nth
   "Returns a lazy seq of every nth item in coll."
   [n coll]
@@ -3415,6 +3427,12 @@ reduces them without incurring seq initialization"
   (assert (= (rem 2 5) 2))
   (assert (= (rem 2 -5) 2))
   (assert (= (rem 0 3) 0))
+
+  ;; range
+  (assert (= (range 10) (list 0 1 2 3 4 5 6 7 8 9)))
+  (assert (= (range 10 20) (list 10 11 12 13 14 15 16 17 18 19)))
+  (assert (= (range 10 20 2) (list 10 12 14 16 18)))
+  (assert (= (take 20 (range)) (list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19)))
 
   ;; group-by
   (let [d (group-by second {:a 1 :b 2 :c 1 :d 4 :e 1 :f 2})]
