@@ -2883,8 +2883,9 @@ reduces them without incurring seq initialization"
    {} coll))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Tests ;;;;;;;;;;;;;;;;
+(declare test-multimethods)
 
-(defn ^{:export false} test-stuff []
+(defn ^{:export true} test-stuff []
   (assert (= [4 3 2 1 0] (loop [i 0 j ()]
                  (if (< i 5)
                    (recur (inc i) (conj j (fn [] i)))
@@ -3341,13 +3342,13 @@ reduces them without incurring seq initialization"
     (assert (= @s (reverse v))))
   
   ;; delay
-  (let [d (delay (. (js/Date.) (getTime)))]
-    (assert (false? (realized? d)))
-    (let [d2 (. (js/Date.) (getTime))]
-      (assert (> d2 (deref d))))
-    (assert (true? (realized? d)))
-    (let [d3 (deref d)]
-      (assert (= (deref d) d3))))
+  ;; (let [d (delay (. (js/Date.) (getTime)))]
+  ;;   (assert (false? (realized? d)))
+  ;;   (let [d2 (. (js/Date.) (getTime))]
+  ;;     (assert (> d2 (deref d))))
+  ;;   (assert (true? (realized? d)))
+  ;;   (let [d3 (deref d)]
+  ;;     (assert (= (deref d) d3))))
 
   ;; assoc
   (assert (= {1 2 3 4} (assoc {} 1 2 3 4)))
@@ -3480,6 +3481,8 @@ reduces them without incurring seq initialization"
   ;; vary-meta
   (assert (= {:a 1} (meta (vary-meta [] assoc :a 1))))
   (assert (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
+
+  (test-multimethods)
   :ok
   )
 
@@ -3585,7 +3588,7 @@ reduces them without incurring seq initialization"
   supplied defaults to, and modifies, the global hierarchy."
   ([tag parent]
      ;; (alter-var-root #'global-hierarchy underive tag parent)
-     (swap! global-hierarchy derive tag parent) nil)
+     (swap! global-hierarchy underive tag parent) nil)
   ([h tag parent]
     (let [parentMap (:parents h)
 	  childsParents (if (parentMap tag)
@@ -3628,7 +3631,7 @@ reduces them without incurring seq initialization"
   (or (prefers* x y prefer-table) (isa? x y)))
 
 (defn- find-and-cache-best-method
-  [name dispatch-val method-table prefer-table cached-hierarchy hierarchy method-cache]
+  [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
   (let [best-entry (reduce (fn [be [k _ :as e]]
 			     (when (isa? dispatch-val k)
 			       (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
@@ -3647,8 +3650,8 @@ reduces them without incurring seq initialization"
 	  (second best-entry))
 	(do
 	  (reset-cache method-cache method-table cached-hierarchy hierarchy)
-	  (find-and-cache-best-method name dispatch-val method-table prefer-table
-				      cached-hierarchy hierarchy method-cache))))))
+	  (find-and-cache-best-method name dispatch-val hierarchy method-table prefer-table
+				      method-cache cached-hierarchy))))))
 
 (defprotocol IMultiFn
   (-reset [mf])
@@ -3694,8 +3697,8 @@ reduces them without incurring seq initialization"
       (reset-cache method-cache method-table cached-hierarchy hierarchy))
     (if-let [target-fn (@method-cache dispatch-val)]
       target-fn
-      (if-let [target-fn (find-and-cache-best-method name dispatch-val method-table prefer-table
-      						     cached-hierarchy hierarchy method-cache)]
+      (if-let [target-fn (find-and-cache-best-method name dispatch-val hierarchy method-table
+						     prefer-table method-cache cached-hierarchy)]
 	target-fn
 	(@method-table default-dispatch-val))))
   
@@ -3838,7 +3841,6 @@ reduces them without incurring seq initialization"
   (assert (= :a-return (foo :a)))
   (assert (= :default-return (foo 1)))
 
-
   ;; (defmulti area :Shape)
   ;; (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
   ;; (defn circle [radius] {:Shape :Circle :radius radius})
@@ -3855,8 +3857,9 @@ reduces them without incurring seq initialization"
   ;; (assert (= :oops (area {})))
 
   (assert (= 2 (count (methods bar))))
-  (remove-method bar [[:rect ::shape]])
+  (remove-method bar [::rect ::shape])
   (assert (= 1 (count (methods bar))))
-  (remove (zero? (count (methods bar))))
+  (remove-all-methods bar)
+  (assert (zero? (count (methods bar))))
   
   )
