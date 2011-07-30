@@ -8,7 +8,7 @@ if [ "$CLOJURESCRIPT_HOME" = "" ]; then
 fi
 
 CLJSC_CP=''
-for next in lib/*: closure/compiler/*: src/clj: src/cljs; do
+for next in lib/*: src/clj: src/cljs; do
   CLJSC_CP=$CLJSC_CP$CLOJURESCRIPT_HOME'/'$next
 done
 
@@ -17,7 +17,5 @@ then
   echo "Usage: cljsc <file-or-dir>"
   echo "       cljsc <file-or-dir> {:optimizations :advanced}"
 else
-  java -server -Xmx2G -Xms2G -Xmn256m \
-    -cp $CLJSC_CP \
-    clojure.main $CLOJURESCRIPT_HOME/bin/cljsc.clj $*
+  java -server -cp $CLJSC_CP clojure.main $CLOJURESCRIPT_HOME/bin/cljsc.clj $*
 fi
