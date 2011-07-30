@@ -7,35 +7,35 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns twitterbuzz.core
-  (:require [clojure.string :as string]
+  (:require [twitterbuzz.dom-helpers :as dom]
+            [clojure.string :as string]
             [goog.net.Jsonp :as jsonp]
             [goog.Timer :as timer]
             [goog.events :as events]
             [goog.events.EventType :as event-type]
-            [goog.dom.classes :as classes]
-            [goog.dom :as dom]))
+            [goog.dom.classes :as classes]))
 
 (def results-per-page 100)
-(def missing-limit 20)
+(def max-missing-query 20)
 
-(def initial-state {:max-id 1
+(def initial-state {:max-id 0
                     :graph {}
-                    :listeners {:new-tweets []
-                                :graph-update []
-                                :track-clicked []}
+                    :listeners {}
                     :tweet-count 0
                     :search-tag nil
                     :ignore-mentions #{}})
 
 (def state (atom initial-state))
 
-(defn add-listener [old-state k f]
-  (let [l (-> old-state :listeners k)]
-    (assoc-in old-state [:listeners k] (conj l f))))
+(defn add-listener
+  "Add a listener to the graph."
+  [graph k f]
+  (let [l (-> graph :listeners k)]
+    (assoc-in graph [:listeners k] (conj l f))))
 
 (defn register
   "Register a function to be called when new data arrives specifying
-  the event to receive updates for. Events can be :new-tweets or :graph-update."
+  the event to receive updates for."
   [event f]
   (swap! state add-listener event f))
 
@@ -44,28 +44,36 @@
 (defn search-tag
   "Get the current tag value from the page."
   []
-  (.value (dom/getElement "twitter-search-tag")))
+  (.value (dom/get-element :twitter-search-tag)))
 
-(defn retrieve [payload callback error-callback]
+(defn retrieve
+  "Send request to twitter."
+  [payload callback error-callback]
   (.send (goog.net.Jsonp. twitter-uri)
          payload
          callback
          error-callback))
 
 (defn send-event
+  "For the given event, call every listener for that event, passing the
+   message."
   ([event]
      (send-event event nil))
   ([event message]
      (doseq [f (-> @state :listeners event)]
        (f message))))
 
-(defn parse-mentions [tweet]
+(defn parse-mentions
+  "Given a map representing a single tweet, return all mentions that
+  are found within the tweet text. Twitter usernames are not case
+  sensitive so mentioned usernames are always returned in lower case."
+  [tweet]
   (map #(string/lower-case (apply str (drop 1 %)))
        (re-seq (re-pattern "@\\w+") (:text tweet))))
 
 (defn add-mentions
   "Add the user to the mentions map for first user she mentions,
-  clearing the mentions map of user"
+  clearing the mentions map of user."
   [graph user mentions]
   (if-let [mention (first mentions)]
     (let [graph (assoc graph mention (get graph mention {:username mention}))
@@ -75,7 +83,10 @@
       (assoc-in graph [user :mentions] {}))
     graph))
 
-(defn update-graph [graph tweet-maps]
+(defn update-graph
+  "Given a graph and a sequence of new tweets in chronological order,
+  update the graph."
+  [graph tweet-maps]
   (reduce (fn [acc tweet]
             (let [user (string/lower-case (:from_user tweet))
                   mentions (parse-mentions tweet)
@@ -91,26 +102,31 @@
 (defn num-mentions [user]
   (reduce + (vals (:mentions user))))
 
-(defn update-state [old-state max-id tweets]
+(defn update-state
+  "Given an old state, maximum id and a new sequence of tweets, return
+  an updated state."
+  [old-state max-id tweets]
   (-> old-state
       (assoc :max-id max-id)
       (update-in [:tweet-count] #(+ % (count tweets)))
       (assoc :graph (update-graph (:graph old-state) (reverse tweets)))))
 
-(defn new-tweets-callback [json]
-  (let [result-map (js->clj json :keywordize-keys true)
-        new-max (:max_id result-map)
-        old-max (:max-id @state) ;; the filter won't work if you inline this
-        tweets (filter #(> (:id %) old-max)
-                       (:results result-map))]
-    (do  (swap! state update-state new-max tweets)
-         (send-event :new-tweets tweets)
-         (send-event :graph-update (:graph @state)))))
+(defn new-tweets [max-id tweets]
+  (filter #(> (:id %) max-id) tweets))
+
+(defn new-tweets-callback
+  "Given a json object, update the state with any new information and
+  fire events."
+  [json]
+  (let [{:keys [max_id results]} (js->clj json :keywordize-keys true)
+        tweets (new-tweets (:max-id @state) results)]
+    (do (swap! state update-state max_id tweets)
+        (send-event :new-tweets tweets)
+        (send-event :graph-update (:graph @state)))))
 
 (defn set-tweet-status [css-class message]
-  (let [ts (dom/getElement "tweet-status")]
-    (dom/setTextContent ts message)
-    (classes/set ts (name css-class))))
+  (doto (dom/set-text :tweet-status message)
+    (classes/set (name css-class))))
 
 (defn error-callback [error]
   (set-tweet-status :error "Twitter error"))
@@ -138,7 +154,10 @@
 (defn ignored
   "Given a list of the usernames for missing tweets and the tweets
    which are the result of a query for this missing data, return a set of
-   twitter usernames which will be ignored moving forward."
+   twitter usernames which will be ignored moving forward.
+
+   Names may be ignored because the twitter user does not exist or
+  just doesn't tweet."
   [missing tweets]
   (when (< (count tweets) results-per-page)
     (let [users (set (map #(string/lower-case (:from_user %)) tweets))
@@ -151,7 +170,7 @@
               missing))))
 
 (defn add-missing-callback
-  "Update the graph and the ignore-accounts list when data is received
+  "Update the graph and the ignore-mentions list when data is received
   from a missing user query."
   [missing json]
   (let [response (js->clj json :keywordize-keys true)
@@ -175,39 +194,63 @@
        (remove empty?)
        (remove (:ignore-mentions @state))))
 
-(defn do-timer []
+;; TODO: replace call to .strobj with whatever we come up with for
+;; creating js objects from Clojure maps.
+
+(defn fetch-mentioned-tweets
+  "Query twitter for usernames which are currently missing data in the
+  graph. Limit this query to max-missing-query names."
+  [missing]
+  (let [q (apply str (interpose " OR " (map #(str "from:" %)
+                                            (take max-missing-query missing))))]
+    (set-tweet-status :okay "Fetching mentioned tweets")
+    (retrieve (.strobj {"q" q "rpp" results-per-page})
+              #(add-missing-callback missing %)
+              error-callback)))
+
+(defn fetch-new-tweets
+  "Use the current search tag to fetch new tweets from twitter."
+  []
+  (when-let [tag (:search-tag @state)]
+    (set-tweet-status :okay "Fetching tweets")
+    (retrieve (.strobj {"q" tag "rpp" results-per-page})
+              new-tweets-callback
+              error-callback)))
+
+(defn fetch-tweets
+  "If there are missing tweets then fetch them, if not fetch new tweets."
+  []
   (let [missing (missing-tweets (:graph @state))]
     (if (seq missing)
-      (let [q (apply str (interpose " OR " (map #(str "from:" %) (take missing-limit missing))))]
-        (set-tweet-status :okay "Fetching mentioned tweets")
-        (retrieve (.strobj {"q" q "rpp" results-per-page})
-                  #(add-missing-callback missing %) error-callback))
-      (when-let [tag (:search-tag @state)]
-        (set-tweet-status :okay "Fetching tweets")
-        (retrieve (.strobj {"q" tag "rpp" results-per-page})
-                  new-tweets-callback error-callback)))))
+      (fetch-mentioned-tweets missing)
+      (fetch-new-tweets))))
 
 (defn poll
   "Request new data from twitter once every 24 seconds. This will put
   you at the 150 request/hour rate limit. We can speed it up for the demo."
   []
   (let [timer (goog.Timer. 24000)]
-    (do (do-timer)
+    (do (fetch-tweets)
         (. timer (start))
-        (events/listen timer goog.Timer/TICK do-timer))))
+        (events/listen timer goog.Timer/TICK fetch-tweets))))
 
-(defn do-track-button-clicked []
+(defn do-track-button-clicked
+  "When the track button is clicked, reset to the initial state
+  keeping only the event listeners."
+  []
   (do (let [listeners (:listeners @state)]
         (reset! state (assoc initial-state :listeners listeners :search-tag (search-tag))))
-      (do-timer)
+      (fetch-tweets)
       (send-event :track-clicked)))
 
-(defn start-app []
+(defn start-app
+  "Start polling and listen for UI events."
+  []
   (do (poll)
-      (events/listen (dom/getElement "twitter-search-button")
+      (events/listen (dom/get-element :twitter-search-button)
                      "click"
                      do-track-button-clicked)
-      (events/listen (dom/getElement "twitter-search-tag")
+      (events/listen (dom/get-element :twitter-search-tag)
                      event-type/CHANGE
                      do-track-button-clicked)))
 
@@ -246,19 +289,3 @@
   (take 1 (reverse (sort-by #(num-mentions (second %)) (seq graph))))
   
   )
-
-(defn dom-element
-  "Create a dom element using a keyword for the element name and a map
-  for the attributes."
-  [element attrs]
-  (dom/createDom (name element)
-                 (.strobj (reduce (fn [m [k v]]
-                                    (assoc m k v))
-                                  {}
-                                  (map #(vector (name %1) %2) (keys attrs) (vals attrs))))))
-
-(defn remove-children
-  "Remove all children from the element with the passed id."
-  [id]
-  (let [parent (dom/getElement (name id))]
-    (do (dom/removeChildren parent))))

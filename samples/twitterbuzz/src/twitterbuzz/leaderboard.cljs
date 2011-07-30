@@ -8,34 +8,33 @@
 
 (ns twitterbuzz.leaderboard
   (:require [twitterbuzz.core :as buzz]
-            [goog.dom :as dom]))
+            [twitterbuzz.dom-helpers :as dom]))
 
-(defn add-leaderboard-node [node]
-  (let [user-info (second node)
-        parent (dom/getElement "leaderboard-content")
-        child (buzz/dom-element :div {:class "tweet"})
-        details (buzz/dom-element :div {:class "tweet-details"})
-        user-e (buzz/dom-element :div {:class "user-name"})
-        text (buzz/dom-element :div {:class "tweet-text"})
-        pic (buzz/dom-element :img {:src (:image-url user-info) :class "profile-pic"})
-        num-mentions (buzz/dom-element "div")]
-    (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:last-tweet user-info)) 0) ;; (dom/setTextContent text (:last-tweet user-info))
-        (dom/setTextContent user-e (:username user-info))
-        (dom/setTextContent num-mentions (str (buzz/num-mentions user-info)))
-        (dom/appendChild child pic)
-	(dom/appendChild child details)
-        (dom/appendChild details user-e)
-        (dom/appendChild details text)
-        (dom/appendChild details num-mentions)
-        (dom/appendChild parent child 0))))
+(defn leaderboard-element
+  "Create a leaderboard element from a user map."
+  [user]
+  (dom/build [:div {:class "tweet"}
+              [:img {:src (:image-url user) :class "profile-pic"}]
+              [:div {:class "tweet-details"}
+               [:div {:class "user-name"} (:username user)]
+               [:div {:class "tweet-text"} (dom/html (:last-tweet user))]
+               [:div {} (str (buzz/num-mentions user))]]]))
 
-(defn leaders [nodes]
+(defn leaders
+  "Given a map of users, return a sequence of users in order of the
+  greatest to least number of mentions."
+  [nodes]
   (reverse (sort-by #(buzz/num-mentions (second %)) nodes)))
 
-(defn update-leaderboard [graph]
-  (do (buzz/remove-children "leaderboard-content")
+(defn update-leaderboard
+  "Put the top 5 mentioned users in the leaderboard."
+  [graph]
+  (do (dom/remove-children :leaderboard-content)
       (doseq [next-node (take 5 (leaders (seq graph)))]
-        (add-leaderboard-node next-node))))
+        (dom/append (dom/get-element :leaderboard-content)
+                    (leaderboard-element (second next-node))))))
 
-(buzz/register :track-clicked #(buzz/remove-children "leaderboard-content"))
+;; Register event listeners.
+
+(buzz/register :track-clicked #(dom/remove-children :leaderboard-content))
 (buzz/register :graph-update update-leaderboard)

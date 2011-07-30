@@ -8,25 +8,32 @@
 
 (ns twitterbuzz.timeline
   (:require [twitterbuzz.core :as buzz]
-            [goog.dom :as dom]))
+            [twitterbuzz.dom-helpers :as dom]))
 
-(defn add-timeline-tweet [tweet]
-  (let [parent (dom/getElement "timeline-content")
-        child (buzz/dom-element :div {:class "tweet"})
-        user (buzz/dom-element :div {:class "user-name"})
-        text (buzz/dom-element :div {:class "tweet-text"})
-        pic (buzz/dom-element :img {:src (:profile_image_url tweet) :class "profile-pic"})]
-    (do (dom/insertChildAt text (dom/htmlToDocumentFragment (:text tweet)) 0) ;;(dom/setTextContent text (:text tweet))
-        (dom/setTextContent user (:from_user tweet))
-        (dom/appendChild child pic)
-        (dom/appendChild child user)
-        (dom/appendChild child text)
-        (dom/insertChildAt parent child 0))))
+(defn timeline-element
+  "Return a timeline dom element for the given tweet."
+  [tweet]
+  (dom/build [:div {:class "tweet"}
+              [:img {:src (:profile_image_url tweet) :class "profile-pic"}]
+              [:div {:class "user-name"} (:from_user tweet)]
+              [:div {:class "tweet-text"} (dom/html (:text tweet))]]))
 
-(defn update-timeline [tweets]
-  (do (buzz/set-tweet-status :okay (str (:tweet-count @buzz/state) " tweets"))
-      (doseq [tweet (reverse tweets)]
-        (add-timeline-tweet tweet))))
+(defn update-status
+  "Set the current tweet count in the status box."
+  [_]
+  (buzz/set-tweet-status :okay (str (:tweet-count @buzz/state) " tweets")))
 
-(buzz/register :track-clicked #(buzz/remove-children "timeline-content"))
+(defn update-timeline
+  "Given a list of tweets in chronological order, add them to the top
+  of the list view."
+  [tweets]
+  (doseq [tweet (reverse tweets)]
+    (dom/insert-at (dom/get-element :timeline-content)
+                   (timeline-element tweet)
+                   0)))
+
+;; Register event listeners.
+
+(buzz/register :track-clicked #(dom/remove-children :timeline-content))
 (buzz/register :new-tweets update-timeline)
+(buzz/register :new-tweets update-status)
