@@ -1,78 +1,5 @@
 (ns cljs.core-test)
 
-(defn- test-multimethods
-  []
-  (swap! global-hierarchy make-hierarchy)
-
-  ;; hierarchy tests
-  (derive ::rect ::shape)
-  (derive ::square ::rect)
-
-  (assert (= #{:user/shape} (parents ::rect)))
-  (assert (= #{:user/rect :user/shape} (ancestors ::square)))
-  (assert (= #{:user/rect :user/square} (descendants ::shape)))
-  (assert (true? (isa? 42 42)))
-  (assert (true? (isa? ::square ::shape)))
-
-  (derive cljs.core.ObjMap ::collection)
-  (derive cljs.core.Set ::collection)
-  (assert (true? (isa? cljs.core.ObjMap ::collection)))
-  (assert (true? (isa? cljs.core.Set ::collection)))
-  (assert (false? (isa? cljs.core.IndexedSeq ::collection)))
-  ;; ?? (isa? String Object)
-  (assert (true? (isa? [::square ::rect] [::shape ::shape])))
-  ;; ?? (ancestors java.util.ArrayList)
-  
-  ;; ?? isa? based dispatch tests
-
-  ;; prefer-method test
-  (defmulti bar (fn [x y] [x y]))
-  (defmethod bar [::rect ::shape] [x y] :rect-shape)
-  (defmethod bar [::shape ::rect] [x y] :shape-rect)
-  
-  ;;(bar ::rect ::rect)
-  ;; -> java.lang.IllegalArgumentException:
-  ;;  Multiple methods match dispatch value:
-  ;;  [:user/rect :user/rect] -> [:user/rect :user/shape]
-  ;;  and [:user/shape :user/rect],
-  ;;  and neither is preferred
-
-  (assert (zero? (count (prefers bar))))
-  (prefer-method bar [::rect ::shape] [::shape ::rect])
-  (assert (= 1 (count (prefers bar))))
-  (assert (= :rect-shape (bar ::rect ::rect)))
-  (assert (= :rect-shape (apply (-get-method bar [::rect ::shape]) [::rect ::shape])))
-
-  ;; general tests
-  (defmulti foo (fn [& args] (first args)))
-  (defmethod foo :a [& args] :a-return)
-  (defmethod foo :default [& args] :default-return)
-  (assert (= :a-return (foo :a)))
-  (assert (= :default-return (foo 1)))
-
-  (defmulti area :Shape)
-  (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
-  (defn circle [radius] {:Shape :Circle :radius radius})
-  (defmethod area :Rect [r]
-    (* (:wd r) (:ht r)))
-  (defmethod area :Circle [c]
-    (*  Math/PI (* (:radius c) (:radius c))))
-  (defmethod area :default [x] :oops)
-  (def r (rect 4 13))
-  (def c (circle 12))
-
-  (assert (= 52 (area r)))
-  ;;(assert (= 452.3893421169302 (area c)))
-  (assert (= :oops (area {})))
-
-  (assert (= 2 (count (methods bar))))
-  (remove-method bar [::rect ::shape])
-  (assert (= 1 (count (methods bar))))
-  (remove-all-methods bar)
-  (assert (zero? (count (methods bar))))
-  
-  )
-
 (defn test-stuff []
   (assert (= [4 3 2 1 0] (loop [i 0 j ()]
                  (if (< i 5)
@@ -677,7 +604,84 @@
   (assert (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
 
   ;; multi-methods
-  (test-multimethods)
+  (swap! global-hierarchy make-hierarchy)
+
+  ;; hierarchy tests
+  (derive ::rect ::shape)
+  (derive ::square ::rect)
+
+  (assert (= #{:user/shape} (parents ::rect)))
+  (assert (= #{:user/rect :user/shape} (ancestors ::square)))
+  (assert (= #{:user/rect :user/square} (descendants ::shape)))
+  (assert (true? (isa? 42 42)))
+  (assert (true? (isa? ::square ::shape)))
+
+  (derive cljs.core.ObjMap ::collection)
+  (derive cljs.core.Set ::collection)
+  (assert (true? (isa? cljs.core.ObjMap ::collection)))
+  (assert (true? (isa? cljs.core.Set ::collection)))
+  (assert (false? (isa? cljs.core.IndexedSeq ::collection)))
+  ;; ?? (isa? String Object)
+  (assert (true? (isa? [::square ::rect] [::shape ::shape])))
+  ;; ?? (ancestors java.util.ArrayList)
+  
+  ;; ?? isa? based dispatch tests
+
+  ;; prefer-method test
+  (defmulti bar (fn [x y] [x y]))
+  (defmethod bar [::rect ::shape] [x y] :rect-shape)
+  (defmethod bar [::shape ::rect] [x y] :shape-rect)
+  
+  ;;(bar ::rect ::rect)
+  ;; -> java.lang.IllegalArgumentException:
+  ;;  Multiple methods match dispatch value:
+  ;;  [:user/rect :user/rect] -> [:user/rect :user/shape]
+  ;;  and [:user/shape :user/rect],
+  ;;  and neither is preferred
+
+  (assert (zero? (count (prefers bar))))
+  (prefer-method bar [::rect ::shape] [::shape ::rect])
+  (assert (= 1 (count (prefers bar))))
+  (assert (= :rect-shape (bar ::rect ::rect)))
+  (assert (= :rect-shape (apply (-get-method bar [::rect ::shape]) [::rect ::shape])))
+
+  ;; nested data structures tests
+  (defmulti nested-dispatch (fn [m] (-> m :a :b)))
+  (defmethod nested-dispatch :c [m] :nested-a)
+  (defmethod nested-dispatch :default [m] :nested-default)
+  (assert (= :nested-a (nested-dispatch {:a {:b :c}})))
+
+  (defmulti nested-dispatch2 ffirst)
+  (defmethod nested-dispatch2 :a [m] :nested-a)
+  (defmethod nested-dispatch2 :default [m] :nested-default)
+  (assert (= :nested-a (nested-dispatch2 [[:a :b]])))
+  
+  ;; general tests
+  (defmulti foo (fn [& args] (first args)))
+  (defmethod foo :a [& args] :a-return)
+  (defmethod foo :default [& args] :default-return)
+  (assert (= :a-return (foo :a)))
+  (assert (= :default-return (foo 1)))
+
+  (defmulti area :Shape)
+  (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
+  (defn circle [radius] {:Shape :Circle :radius radius})
+  (defmethod area :Rect [r]
+    (* (:wd r) (:ht r)))
+  (defmethod area :Circle [c]
+    (*  Math/PI (* (:radius c) (:radius c))))
+  (defmethod area :default [x] :oops)
+  (def r (rect 4 13))
+  (def c (circle 12))
+  (assert (= 52 (area r)))
+  (assert (= :oops (area {})))
+
+  ;; remove method tests
+  (assert (= 2 (count (methods bar))))
+  (remove-method bar [::rect ::shape])
+  (assert (= 1 (count (methods bar))))
+  (remove-all-methods bar)
+  (assert (zero? (count (methods bar))))
   
   :ok
   )

@@ -3072,13 +3072,12 @@ reduces them without incurring seq initialization"
   (-invoke [mf args]))
 
 (defn- do-invoke
-  [mf dispatch-fn & args]
-  (let [fargs (flatten args)
-	dispatch-val (apply dispatch-fn fargs)
+  [mf dispatch-fn args]
+  (let [dispatch-val (apply dispatch-fn args)
 	target-fn (-get-method mf dispatch-val)]
     (when-not target-fn
       (throw (str "No method in multimethod '" name "' for dispatch value: " dispatch-val)))
-    (apply target-fn fargs)))
+    (apply target-fn args)))
 
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
     		  method-table prefer-table method-cache cached-hierarchy]
@@ -3127,8 +3126,7 @@ reduces them without incurring seq initialization"
   (-invoke [mf args] (do-invoke mf dispatch-fn args)))
 
 (set! cljs.core.MultiFn.prototype.call
-      (fn [_ & args] (-invoke (js* "this") args))
-      )
+      (fn [_ & args] (-invoke (js* "this") args)))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
