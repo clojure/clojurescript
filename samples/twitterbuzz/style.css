@@ -26,7 +26,11 @@ header {
 }
 
 #header-inner h1 {
-  padding-top: 30px;
+  padding-top: 20px;
+}
+
+#header-inner div {
+  padding-left: 10px;
 }
 
 #clojure {
