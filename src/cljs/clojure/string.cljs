@@ -25,14 +25,11 @@
         (recur (next coll))))
     (. sb (toString))))
 
-;; TODO all replace* functions pending regexp support
-#_(defn- replace-by
-    [s re f]
-    )
+(defn- replace-by
+    [s re f])
 
-#_(defn replace
-    "Replaces all instance of match with replacement in s.
-
+(defn replace
+  "Replaces all instance of match with replacement in s.
    match/replacement can be:
 
    string / string
@@ -40,17 +37,16 @@
    pattern / (string or function of match).
 
    See also replace-first."
-    [s match replacement])
+  [s match replacement])
 
-#_(defn- replace-first-by
+(defn- replace-first-by
     [s re f])
 
-#_(defn- replace-first-char
+(defn- replace-first-char
     [s match replace])
 
-#_(defn replace-first
-    "Replaces the first instance of match with replacement in s.
-
+(defn replace-first
+  "Replaces the first instance of match with replacement in s.
    match/replacement can be:
 
    char / char
@@ -58,7 +54,8 @@
    pattern / (string or function of match).
 
    See also replace-all."
-    [s match replacement])
+  [s match replacement]
+  (.replace s match replacement))
 
 (defn join
   "Returns a string of all elements in coll, as returned by (seq coll),
@@ -87,46 +84,64 @@
     (str (upper-case (subs s 0 1))
          (lower-case (subs s 1)))))
 
-;; TODO pending regexp support
-#_(defn split
-    "Splits string on a regular expression.  Optional argument limit is
+(defn split
+  "Splits string on a regular expression. Optional argument limit is
   the maximum number of splits. Not lazy. Returns vector of the splits."
-    ([s re])
-    ([s re limit]))
+  ([s re]
+     (vec (.split (str s) re)))
+  ([s re limit]
+     (vec (.split (str s) re limit))))
 
-#_(defn split-lines
-  "Splits s on \\n or \\r\\n."
+(defn split-lines
+  "Splits s on \n or \r\n."
+  [s]
+  (split (str s) #"\n|\r\n"))
+
+(defn trim
+    "Removes whitespace from both ends of string."
+    [s]
+    (gstring/trim s))
+
+(defn triml
+    "Removes whitespace from the left side of string."
+    [s]
+    (gstring/trimLeft s))
+
+(defn trimr
+    "Removes whitespace from the right side of string."
+    [s]
+    (gstring/trimRight s))
+
+(defn trim-newline
+  "Removes all trailing newline \\n or return \\r characters from
+  string.  Similar to Perl's chomp."
   [s])
 
-;; TODO all whitespace related functions pending regexp support
-#_(def whitespace)
+;; TODO: see if you can follow the imp in string. It may be better.
 
-#_(defn triml
-    "Removes whitespace from the left side of string."
-    [s])
-
-#_(defn trimr
-    "Removes whitespace from the right side of string."
-    [s])
-
-#_(defn trim
-    "Removes whitespace from both ends of string."
-    [s])
-
-#_(defn trim-newline
-    "Removes all trailing newline \\n or return \\r characters from
-  string.  Similar to Perl's chomp."
-    [s])
+(defn blank?
+  "True is s is nil, empty, or contains only whitespace."
+  [s]
+  (let [s (str s)]
+    (if (or
+         (not s)
+         (= "" s)
+         (re-matches #"\s+" s))
+      true
+      false)))
 
 #_(defn blank?
-    "True if s is nil, empty, or contains only whitespace."
-    [s]
-    (if s
-      (loop [index (int 0)]
-        (if (= (.length s))
-          true
-          (if )))
-      true))
+  "True if s is nil, empty, or contains only whitespace."
+  {:added "1.2"}
+  [^CharSequence s]
+  (if s
+    (loop [index (int 0)]
+      (if (= (.length s) index)
+        true
+        (if (Character/isWhitespace (.charAt s index))
+          (recur (inc index))
+          false)))
+    true))
 
 (defn escape
   "Return a new string, using cmap to escape each character ch

@@ -363,16 +363,15 @@
   (assert (= (distinct [#{1 2} #{1 2}]) [#{1 2}]))
   (assert (= (distinct [#{} #{}]) [#{}]))
 
-                                        ;regexps
-  ;;these fail in v8 - why?
-  ;(assert (= (str (re-pattern "f(.)o")) (str (js* "/f(.)o/"))))
-  ;(assert (= (re-find (re-pattern "foo") "foo bar foo baz foo zot") "foo"))
-  ;(assert (= (re-find (re-pattern "f(.)o") "foo bar foo baz foo zot") ["foo" "o"]))
-  ;(assert (= (re-matches (re-pattern "foo") "foo") "foo"))
-  ;(assert (= (re-matches (re-pattern "foo") "foo bar foo baz foo zot") nil))
-  ;(assert (= (re-matches (re-pattern "foo.*") "foo bar foo baz foo zot") "foo bar foo baz foo zot"))
-  ;(assert (= (re-seq (re-pattern "foo") "foo bar foo baz foo zot") (list "foo" "foo" "foo")))
-  ;(assert (= (re-seq (re-pattern "f(.)o") "foo bar foo baz foo zot") (list ["foo" "o"] ["foo" "o"] ["foo" "o"])))
+  ;;regexps
+  (assert (= (str (re-pattern "f(.)o")) (str (js* "/f(.)o/"))))
+  (assert (= (re-find (re-pattern "foo") "foo bar foo baz foo zot") "foo"))
+  (assert (= (re-find (re-pattern "f(.)o") "foo bar foo baz foo zot") ["foo" "o"]))
+  (assert (= (re-matches (re-pattern "foo") "foo") "foo"))
+  (assert (= (re-matches (re-pattern "foo") "foo bar foo baz foo zot") nil))
+  (assert (= (re-matches (re-pattern "foo.*") "foo bar foo baz foo zot") "foo bar foo baz foo zot"))
+  (assert (= (re-seq (re-pattern "foo") "foo bar foo baz foo zot") (list "foo" "foo" "foo")))
+  (assert (= (re-seq (re-pattern "f(.)o") "foo bar foo baz foo zot") (list ["foo" "o"] ["foo" "o"] ["foo" "o"])))
 
   ;; destructuring
   (assert (= [2 1] (let [[a b] [1 2]] [b a])))
