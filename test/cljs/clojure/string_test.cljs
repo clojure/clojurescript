@@ -5,6 +5,10 @@
   []
   ;; reverse
   (assert (= "tab" (s/reverse "bat")))
+  ;; replace
+  (assert (= "faabar" (s/replace "foobar" \o \a)))
+  (assert (= "barbarbar" (s/replace "foobarfoo" "foo" "bar")))
+  (assert (= "FOObarFOO" (s/replace "foobarfoo" #"foo" s/upper-case)))
   ;; join
   (assert (= "" (s/join nil)))
   (assert (= "" (s/join [])))
@@ -63,15 +67,7 @@
 (comment
 
 (deftest t-replace
-  (is (= "faabar" (s/replace "foobar" \o \a)))
-  (is (= "barbarbar" (s/replace "foobarfoo" "foo" "bar")))
-  (is (= "FOObarFOO" (s/replace "foobarfoo" #"foo" s/upper-case))))
-
-(deftest t-trim-newline
-  (is (= "foo" (s/trim-newline "foo\n")))
-  (is (= "foo" (s/trim-newline "foo\r\n")))
-  (is (= "foo" (s/trim-newline "foo")))
-  (is (= "" (s/trim-newline ""))))
+)
 
 (deftest nil-handling
   (are [f args] (thrown? NullPointerException (apply f args))

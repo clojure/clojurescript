@@ -25,35 +25,24 @@
         (recur (next coll))))
     (. sb (toString))))
 
-(defn- replace-by
-    [s re f])
-
 (defn replace
   "Replaces all instance of match with replacement in s.
    match/replacement can be:
 
    string / string
-   char / char
-   pattern / (string or function of match).
-
-   See also replace-first."
-  [s match replacement])
-
-(defn- replace-first-by
-    [s re f])
-
-(defn- replace-first-char
-    [s match replace])
+   pattern / (string or function of match)."
+  [s match replacement]
+  (cond (string? match) (.replace s (js/RegExp. match "g") replacement)
+        ;; TODO: Hack - is there are better way to identify a RegExp
+        (.hasOwnProperty match "source") (.replace s (js/RegExp. (.source match) "g") replacement)
+        :else (throw (str "Invalid match arg: " match))))
 
 (defn replace-first
   "Replaces the first instance of match with replacement in s.
    match/replacement can be:
 
-   char / char
    string / string
-   pattern / (string or function of match).
-
-   See also replace-all."
+   pattern / (string or function of match)."
   [s match replacement]
   (.replace s match replacement))
 
@@ -83,6 +72,9 @@
     (upper-case s)
     (str (upper-case (subs s 0 1))
          (lower-case (subs s 1)))))
+
+;; TODO: the three arg version does not have the same behavior has JVM
+;; Clojure. see tests.
 
 (defn split
   "Splits string on a regular expression. Optional argument limit is
