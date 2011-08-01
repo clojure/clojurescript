@@ -1,6 +1,6 @@
 mkdir -p out
 
-bin/cljsc test  > out/core-test.js
+#bin/cljsc test > out/core-test.js
 bin/cljsc test {:optimizations :advanced} > out/core-advanced-test.js
 
 if [ "$V8_HOME" == "" ]; then

@@ -18,47 +18,37 @@
 (defn reverse
   "Returns s with its characters reversed."
   [s]
-  (let [sb (gstring/StringBuffer.)]
-    (loop [coll (seq-reverse (seq (.split s "")))]
-      (when coll
-        (.append sb (first coll))
-        (recur (next coll))))
-    (. sb (toString))))
+  (if (= (.length s) 0)
+    ""
+    (let [sb (goog.string.StringBuffer.)]
+      (loop [coll (seq-reverse (seq (.split s "")))]
+        (when coll
+          (.append sb (first coll))
+          (recur (next coll))))
+      (. sb (toString)))))
 
-;; TODO all replace* functions pending regexp support
-#_(defn- replace-by
-    [s re f]
-    )
-
-#_(defn replace
-    "Replaces all instance of match with replacement in s.
-
+(defn replace
+  "Replaces all instance of match with replacement in s.
    match/replacement can be:
 
    string / string
-   char / char
-   pattern / (string or function of match).
+   pattern / (string or function of match)."
+  [s match replacement]
+  (cond (string? match)
+        (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
+        ;; TODO: Is there are better way to identify a RegExp?
+        (.hasOwnProperty match "source")
+        (.replace s (js/RegExp. (.source match) "g") replacement)
+        :else (throw (str "Invalid match arg: " match))))
 
-   See also replace-first."
-    [s match replacement])
-
-#_(defn- replace-first-by
-    [s re f])
-
-#_(defn- replace-first-char
-    [s match replace])
-
-#_(defn replace-first
-    "Replaces the first instance of match with replacement in s.
-
+(defn replace-first
+  "Replaces the first instance of match with replacement in s.
    match/replacement can be:
 
-   char / char
    string / string
-   pattern / (string or function of match).
-
-   See also replace-all."
-    [s match replacement])
+   pattern / (string or function of match)."
+  [s match replacement]
+  (.replace s match replacement))
 
 (defn join
   "Returns a string of all elements in coll, as returned by (seq coll),
@@ -87,46 +77,77 @@
     (str (upper-case (subs s 0 1))
          (lower-case (subs s 1)))))
 
-;; TODO pending regexp support
-#_(defn split
-    "Splits string on a regular expression.  Optional argument limit is
+;; The JavaScript split function takes a limit argument but the return
+;; value is not the same as the Java split function.
+;;
+;; Java: (.split "a-b-c" #"-" 2) => ["a" "b-c"]
+;; JavaScript: (.split "a-b-c" #"-" 2) => ["a" "b"]
+;;
+;; For consistency, the three arg version has been implemented to
+;; mimic Java's behavior.
+
+(defn split
+  "Splits string on a regular expression. Optional argument limit is
   the maximum number of splits. Not lazy. Returns vector of the splits."
-    ([s re])
-    ([s re limit]))
+  ([s re]
+     (vec (.split (str s) re)))
+  ([s re limit]
+     (if (< limit 1)
+       (vec (.split (str s) re))
+       (loop [s s
+              limit limit
+              parts []]
+         (if (= limit 1)
+           (conj parts s)
+           (if-let [m (re-find re s)]
+             (let [index (.indexOf s m)]
+               (recur (.substring s (+ index (count m)))
+                      (dec limit)
+                      (conj parts (.substring s 0 index))))
+             (conj parts s)))))))
 
-#_(defn split-lines
-  "Splits s on \\n or \\r\\n."
-  [s])
+(defn split-lines
+  "Splits s on \n or \r\n."
+  [s]
+  (split (str s) #"\n|\r\n"))
 
-;; TODO all whitespace related functions pending regexp support
-#_(def whitespace)
-
-#_(defn triml
-    "Removes whitespace from the left side of string."
-    [s])
-
-#_(defn trimr
-    "Removes whitespace from the right side of string."
-    [s])
-
-#_(defn trim
+(defn trim
     "Removes whitespace from both ends of string."
-    [s])
-
-#_(defn trim-newline
-    "Removes all trailing newline \\n or return \\r characters from
-  string.  Similar to Perl's chomp."
-    [s])
-
-#_(defn blank?
-    "True if s is nil, empty, or contains only whitespace."
     [s]
-    (if s
-      (loop [index (int 0)]
-        (if (= (.length s))
-          true
-          (if )))
-      true))
+    (gstring/trim s))
+
+(defn triml
+    "Removes whitespace from the left side of string."
+    [s]
+    (gstring/trimLeft s))
+
+(defn trimr
+    "Removes whitespace from the right side of string."
+    [s]
+    (gstring/trimRight s))
+
+(defn trim-newline
+  "Removes all trailing newline \\n or return \\r characters from
+  string.  Similar to Perl's chomp."
+  [s]
+  (loop [index (.length s)]
+    (if (zero? index)
+      ""
+      (let [ch (get s (dec index))]
+        (if (or (= ch \newline) (= ch \return))
+          (recur (dec index))
+          (.substring s 0 index))))))
+
+(defn blank?
+  "True is s is nil, empty, or contains only whitespace."
+  [s]
+  (let [s (str s)]
+    (if (or
+         (not s)
+         (= "" s)
+         (re-matches #"\s+" s))
+      true
+      false)))
 
 (defn escape
   "Return a new string, using cmap to escape each character ch
