@@ -9,6 +9,7 @@
 (ns twitterbuzz.core
   (:require [twitterbuzz.dom-helpers :as dom]
             [clojure.string :as string]
+            [goog.string :as gstring]
             [goog.net.Jsonp :as jsonp]
             [goog.Timer :as timer]
             [goog.events :as events]
@@ -255,6 +256,20 @@
                      do-track-button-clicked)))
 
 (start-app)
+
+(defn link [url s]
+  (str "<a href='" url "' target='_twitterbuzz'>" s "</a>"))
+
+(defn markup
+  "Add markup to tweet text to activate links."
+  [s]
+  (let [markup-f (fn [s] (let [w (string/trim s)]
+                          (cond (gstring/startsWith w "http://")
+                                (link w w)
+                                (gstring/startsWith w "@")
+                                (link (str "http://twitter.com/#!/" (re-find #"\w+" w)) w)
+                                :else s)))]
+    (string/join " " (map markup-f (string/split s #"[ ]")))))
 
 (comment
 

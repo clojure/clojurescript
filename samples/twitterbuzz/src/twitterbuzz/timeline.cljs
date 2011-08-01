@@ -16,7 +16,7 @@
   (dom/build [:div {:class "tweet"}
               [:img {:src (:profile_image_url tweet) :class "profile-pic"}]
               [:div {:class "user-name"} (:from_user tweet)]
-              [:div {:class "tweet-text"} (dom/html (:text tweet))]]))
+              [:div {:class "tweet-text"} (dom/html (buzz/markup (:text tweet)))]]))
 
 (defn update-status
   "Set the current tweet count in the status box."

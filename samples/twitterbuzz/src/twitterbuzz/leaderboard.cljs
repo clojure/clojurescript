@@ -17,7 +17,7 @@
               [:img {:src (:image-url user) :class "profile-pic"}]
               [:div {:class "tweet-details"}
                [:div {:class "user-name"} (:username user)]
-               [:div {:class "tweet-text"} (dom/html (:last-tweet user))]
+               [:div {:class "tweet-text"} (dom/html (buzz/markup (:last-tweet user)))]
                [:div {} (str (buzz/num-mentions user))]]]))
 
 (defn leaders
