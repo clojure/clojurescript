@@ -52,6 +52,12 @@
   (assert (= " foo" (s/trimr " foo ")))
   (assert (= "" (s/trimr "   ")))
   (assert (= "foo" (s/trim "  foo  \r\n")))
+  ;; trim-newline
+  (assert (= "foo" (s/trim-newline "foo\n")))
+  (assert (= "foo" (s/trim-newline "foo\r\n")))
+  (assert (= "foo" (s/trim-newline "foo")))
+  (assert (= "foo\r " (s/trim-newline "foo\r ")))
+  (assert (= "" (s/trim-newline "")))
   :ok)
 
 (comment

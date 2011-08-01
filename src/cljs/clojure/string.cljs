@@ -115,9 +115,14 @@
 (defn trim-newline
   "Removes all trailing newline \\n or return \\r characters from
   string.  Similar to Perl's chomp."
-  [s])
-
-;; TODO: see if you can follow the imp in string. It may be better.
+  [s]
+  (loop [index (.length s)]
+    (if (zero? index)
+      ""
+      (let [ch (get s (dec index))]
+        (if (or (= ch \newline) (= ch \return))
+          (recur (dec index))
+          (.substring s 0 index))))))
 
 (defn blank?
   "True is s is nil, empty, or contains only whitespace."
@@ -129,19 +134,6 @@
          (re-matches #"\s+" s))
       true
       false)))
-
-#_(defn blank?
-  "True if s is nil, empty, or contains only whitespace."
-  {:added "1.2"}
-  [^CharSequence s]
-  (if s
-    (loop [index (int 0)]
-      (if (= (.length s) index)
-        true
-        (if (Character/isWhitespace (.charAt s index))
-          (recur (inc index))
-          false)))
-    true))
 
 (defn escape
   "Return a new string, using cmap to escape each character ch
