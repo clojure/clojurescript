@@ -20,7 +20,7 @@
   [s]
   (if (= (.length s) 0)
     ""
-    (let [sb (goog.string.StringBuffer.)]
+    (let [sb (gstring/StringBuffer.)]
       (loop [coll (seq-reverse (seq (.split s "")))]
         (when coll
           (.append sb (first coll))
