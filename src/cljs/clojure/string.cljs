@@ -18,12 +18,14 @@
 (defn reverse
   "Returns s with its characters reversed."
   [s]
-  (let [sb (gstring/StringBuffer.)]
-    (loop [coll (seq-reverse (seq (.split s "")))]
-      (when coll
-        (.append sb (first coll))
-        (recur (next coll))))
-    (. sb (toString))))
+  (if (= (.length s) 0)
+    ""
+    (let [sb (goog.string.StringBuffer.)]
+      (loop [coll (seq-reverse (seq (.split s "")))]
+        (when coll
+          (.append sb (first coll))
+          (recur (next coll))))
+      (. sb (toString)))))
 
 (defn replace
   "Replaces all instance of match with replacement in s.
@@ -32,9 +34,11 @@
    string / string
    pattern / (string or function of match)."
   [s match replacement]
-  (cond (string? match) (.replace s (js/RegExp. match "g") replacement)
-        ;; TODO: Hack - is there are better way to identify a RegExp
-        (.hasOwnProperty match "source") (.replace s (js/RegExp. (.source match) "g") replacement)
+  (cond (string? match)
+        (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
+        ;; TODO: Is there are better way to identify a RegExp?
+        (.hasOwnProperty match "source")
+        (.replace s (js/RegExp. (.source match) "g") replacement)
         :else (throw (str "Invalid match arg: " match))))
 
 (defn replace-first
@@ -73,8 +77,14 @@
     (str (upper-case (subs s 0 1))
          (lower-case (subs s 1)))))
 
-;; TODO: the three arg version does not have the same behavior has JVM
-;; Clojure. see tests.
+;; The JavaScript split function takes a limit argument but the return
+;; value is not the same as the Java split function.
+;;
+;; Java: (.split "a-b-c" #"-" 2) => ["a" "b-c"]
+;; JavaScript: (.split "a-b-c" #"-" 2) => ["a" "b"]
+;;
+;; For consistency, the three arg version has been implemented to
+;; mimic Java's behavior.
 
 (defn split
   "Splits string on a regular expression. Optional argument limit is
@@ -82,7 +92,19 @@
   ([s re]
      (vec (.split (str s) re)))
   ([s re limit]
-     (vec (.split (str s) re limit))))
+     (if (< limit 1)
+       (vec (.split (str s) re))
+       (loop [s s
+              limit limit
+              parts []]
+         (if (= limit 1)
+           (conj parts s)
+           (if-let [m (re-find re s)]
+             (let [index (.indexOf s m)]
+               (recur (.substring s (+ index (count m)))
+                      (dec limit)
+                      (conj parts (.substring s 0 index))))
+             (conj parts s)))))))
 
 (defn split-lines
   "Splits s on \n or \r\n."

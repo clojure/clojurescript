@@ -4,11 +4,13 @@
 (defn test-string
   []
   ;; reverse
+  (assert (= "" (s/reverse "")))
   (assert (= "tab" (s/reverse "bat")))
   ;; replace
   (assert (= "faabar" (s/replace "foobar" \o \a)))
   (assert (= "barbarbar" (s/replace "foobarfoo" "foo" "bar")))
   (assert (= "FOObarFOO" (s/replace "foobarfoo" #"foo" s/upper-case)))
+  (assert (= "barbar)foo" (s/replace "foo(bar)foo" "foo(" "bar")))
   ;; join
   (assert (= "" (s/join nil)))
   (assert (= "" (s/join [])))
@@ -23,10 +25,15 @@
   (assert (= "Foobar" (s/capitalize "foobar")))
   (assert (= "Foobar" (s/capitalize "FOOBAR")))
   ;; split
-  (assert (= ["a" "b"] (s/split "a-b" (re-pattern "-"))))
-  ;; this returns ["a" "b"] split is different in JavaScript
-  ;;(assert (= ["a" "b-c"] (s/split "a-b-c" (re-pattern "-") 2)))
-  (assert (vector? (s/split "abc" (re-pattern "-"))))
+  (assert (= ["a" "b"] (s/split "a-b" #"-")))
+  (assert (= ["a" "b" "c"] (s/split "a-b-c" #"-" -1)))
+  (assert (= ["a" "b" "c"] (s/split "a-b-c" #"-" 0)))
+  (assert (= ["a-b-c"] (s/split "a-b-c" #"-" 1)))
+  (assert (= ["a" "b-c"] (s/split "a-b-c" #"-" 2)))
+  (assert (= ["a" "b" "c"] (s/split "a-b-c" #"-" 3)))
+  (assert (= ["a" "b" "c"] (s/split "a-b-c" #"-" 4)))
+  (assert (vector? (s/split "abc" #"-")))
+  (assert (= ["a-b-c"] (s/split "a-b-c" #"x" 2)))
   ;; split-lines
   (let [result (s/split-lines "one\ntwo\r\nthree")]
     (assert (= ["one" "two" "three"] result))
@@ -66,9 +73,6 @@
 
 (comment
 
-(deftest t-replace
-)
-
 (deftest nil-handling
   (are [f args] (thrown? NullPointerException (apply f args))
        s/reverse [nil]
@@ -105,6 +109,4 @@
        true s/blank? [" "]
        ["a" "b"] s/split-lines ["a\nb"]
        "fa la la" s/escape ["fo lo lo" {\o \a}]))
-
-
 )
