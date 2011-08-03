@@ -6,32 +6,76 @@
         (dom/appendChild parent child))
       parent))
 
-(defn)
+(defprotocol DOMBuilder
+  (-element [this] [this attrs-or-children] [this attrs children]))
+
+(defn text-node
+  [s]
+  (dom/createTextNode (str s)))
+
+(defn log [& args]
+  (.log js/console (apply pr-str args)))
+
+(defn log-obj [obj]
+  (.log js/console obj))
+
+(declare element)
+(extend-protocol DOMBuilder
+
+  string
+  (-element
+    ([this]
+       (log "string (-element [" this "])")
+       (cond (keyword? this) (dom/createElement (name this))
+             :else           (text-node this)))
+    
+    ([this attrs-or-children]
+       (let [attrs (first attrs-or-children)]
+         (log "string (-element [" this " " attrs "])")
+         (if (map? attrs)
+           (-element this attrs (rest attrs-or-children))
+           (-element this nil attrs-or-children))))
+
+    ([this attrs children]
+       (let [str-attrs (if (and (map? attrs) (seq attrs))
+                         (.strobj (reduce (fn [m [k v]]
+                                            (log "m = " m)
+                                            (log "k = " k)
+                                            (log "v = " v)
+                                            (when (or (keyword? k)
+                                                      (string? k))
+                                              (assoc m (name k) v)))
+                                          {}
+                                          attrs))
+                         nil)]
+         (log-obj str-attrs)
+         (apply dom/createDom
+                (name this)
+                str-attrs
+                (apply -element children)))))
+
+  Vector
+  (-element
+    [this]
+    (log "Vector (-element [" this "])")
+    (let [tag      (first this)
+          attrs    (second this)
+          children (drop 2 this)]
+      (if (map? attrs)
+        (-element tag attrs children)
+        (-element tag nil (rest this)))))
+
+  js/Element
+  (-element [this] this))
 
 (defn element
-  "Create a dom element using a keyword for the element name and a map
-  for the attributes."
-  [tag attrs & children]
-  (dom/createDom (name tag)
-                 (.strobj (reduce (fn [m [k v]]
-                                    (assoc m k v))
-                                  {}
-                                  (map #(vector (name %1) %2)
-                                       (keys attrs)
-                                       (vals attrs))))
-                 children)
-  #_(let [parent (dom/createDom (name tag)
-                              (.strobj (reduce (fn [m [k v]]
-                                                 (assoc m k v))
-                                               {}
-                                               (map #(vector (name %1) %2)
-                                                    (keys attrs)
-                                                    (vals attrs)))))
-        [parent children] (if (string? (first children))
-                            [(doto (element tag attrs) (dom/setTextContent (first children)))
-                             (rest children)]
-                            [parent children])]
-    (apply append parent children)))
+  ([tag-or-text]
+     (-element tag-or-text))
+  ([tag & children]
+     (let [attrs (first children)]
+       (if (map? attrs)
+         (-element tag attrs (rest children))
+         (-element tag nil children)))))
 
 (defn remove-children
   "Remove all children from the element with the passed id."
@@ -42,10 +86,6 @@
 (defn get-element [id]
   (dom/getElement (name id)))
 
-(defn text-node
-  [s]
-  (dom/createTextNode (str s)))
-
 (defn html [s]
   (dom/htmlToDocumentFragment s))
 
@@ -53,18 +93,6 @@
   (or (keyword? x)
       (map? x)
       (string? x)))
-
-(defn build
-  "Build up a dom element from nested vectors."
-  [x]
-  (if (vector? x)
-    (let [[parent children] (if (keyword? (first x))
-                              [(apply element (take-while element-arg? x))
-                               (drop-while element-arg? x)]
-                              [(first x) (rest x)])
-          children (map build children)]
-      (apply append parent children))
-    x))
 
 (defn insert-at [parent child index]
   (dom/insertChildAt parent child index))

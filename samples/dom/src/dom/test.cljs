@@ -26,12 +26,21 @@
               (fn [e]
                 (let [i (swap! success-count inc)
                       e (dom/element :li
-                                     {}
-                                     (dom/text-node "It worked!"))]
+                                     {:id "testing"
+                                      :class "test me out please"}
+                                     "It worked!")]
                   (log-obj e)
                   (log i)
                   (dom/append destination
                               e))))
+
+(log-obj (dom/element "Text node"))
+(log-obj (dom/element :li))
+(log-obj (dom/element [:ul [:li :li :li]]))
+(log-obj (dom/element :li {:class "foo"}))
+(log-obj (dom/element :li {:class "bar"} "text node"))
+(log-obj (dom/element :li {} [:ul {} [:li :li :li]]))
+(log-obj (dom/element [:li {:class "baz"} [:li {:class "quux"}]]))
 
 (log-obj source)
 (log-listener-count)
