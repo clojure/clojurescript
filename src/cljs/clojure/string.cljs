@@ -18,14 +18,7 @@
 (defn reverse
   "Returns s with its characters reversed."
   [s]
-  (if (= (.length s) 0)
-    ""
-    (let [sb (gstring/StringBuffer.)]
-      (loop [coll (seq-reverse (seq (.split s "")))]
-        (when coll
-          (.append sb (first coll))
-          (recur (next coll))))
-      (. sb (toString)))))
+  (.. s (split "") (reverse) (join "")))
 
 (defn replace
   "Replaces all instance of match with replacement in s.
