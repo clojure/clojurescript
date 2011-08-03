@@ -9,10 +9,6 @@
 (defprotocol DOMBuilder
   (-element [this] [this attrs-or-children] [this attrs children]))
 
-(defn text-node
-  [s]
-  (dom/createTextNode (str s)))
-
 (defn log [& args]
   (.log js/console (apply pr-str args)))
 
@@ -26,8 +22,8 @@
   (-element
     ([this]
        (log "string (-element " this ")")
-       (cond (keyword? this) (dom/createElement (name this))
-             :else           (text-node this)))
+       (cond (keyword? this) (dom/createElement  (name this))
+             :else           (dom/createTextNode (name s))))
 
     ([this attrs-or-children]
        (log "string (-element " this " " attrs-or-children ")")

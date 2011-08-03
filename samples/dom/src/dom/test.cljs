@@ -15,7 +15,7 @@
 (def destination (dom/get-element "destination"))
 
 (dom/append source
-            (dom/text-node "Testing me out"))
+            (dom/element "Testing me out"))
 
 (def success-count (atom 0))
 
