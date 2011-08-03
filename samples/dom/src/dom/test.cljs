@@ -36,9 +36,10 @@
 
 (log-obj (dom/element "Text node"))
 (log-obj (dom/element :li))
-(log-obj (dom/element [:ul [:li :li :li]]))
 (log-obj (dom/element :li {:class "foo"}))
 (log-obj (dom/element :li {:class "bar"} "text node"))
+(log-obj (dom/element [:ul [:li :li :li]]))
+(log-obj (dom/element :ul [:li :li :li]))
 (log-obj (dom/element :li {} [:ul {} [:li :li :li]]))
 (log-obj (dom/element [:li {:class "baz"} [:li {:class "quux"}]]))
 

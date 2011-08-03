@@ -25,18 +25,19 @@
   string
   (-element
     ([this]
-       (log "string (-element [" this "])")
+       (log "string (-element " this ")")
        (cond (keyword? this) (dom/createElement (name this))
              :else           (text-node this)))
-    
+
     ([this attrs-or-children]
+       (log "string (-element " this " " attrs-or-children ")")
        (let [attrs (first attrs-or-children)]
-         (log "string (-element [" this " " attrs "])")
          (if (map? attrs)
            (-element this attrs (rest attrs-or-children))
            (-element this nil attrs-or-children))))
 
     ([this attrs children]
+       (log "string (-element " this " " attrs " " children ")")
        (let [str-attrs (if (and (map? attrs) (seq attrs))
                          (.strobj (reduce (fn [m [k v]]
                                             (log "m = " m)
@@ -49,15 +50,18 @@
                                           attrs))
                          nil)]
          (log-obj str-attrs)
-         (apply dom/createDom
-                (name this)
-                str-attrs
-                (apply -element children)))))
+         (if (seq children)
+           (apply dom/createDom
+                  (name this)
+                  str-attrs
+                  (map -element children))
+           (dom/createDom (name this)
+                          str-attrs)))))
 
   Vector
   (-element
     [this]
-    (log "Vector (-element [" this "])")
+    (log "Vector (-element " this ")")
     (let [tag      (first this)
           attrs    (second this)
           children (drop 2 this)]
@@ -66,12 +70,16 @@
         (-element tag nil (rest this)))))
 
   js/Element
-  (-element [this] this))
+  (-element [this]
+    (log "js/Element (-element " this ")")
+    this))
 
 (defn element
   ([tag-or-text]
+     (log "(element " tag-or-text ")")
      (-element tag-or-text))
   ([tag & children]
+     (log "(element " tag " " children ")")
      (let [attrs (first children)]
        (if (map? attrs)
          (-element tag attrs (rest children))
