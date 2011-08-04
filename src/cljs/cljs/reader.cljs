@@ -56,7 +56,7 @@ nil if the end of stream has been reached")
   (or (numeric? initch)
       (and (or (= \+ initch) (= \- initch))
            (numeric? (let [next-ch (read-char reader)]
-                       (unread next-ch)
+                       (unread reader next-ch)
                        next-ch)))))
 
 (declare read macros dispatch-macros)
