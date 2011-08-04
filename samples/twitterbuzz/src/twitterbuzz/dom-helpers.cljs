@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns twitterbuzz.dom-helpers
-  (:require [goog.dom :as dom]))
+  (:require [clojure.string :as string]
+            [goog.dom :as dom]))
 
 (defn get-element
   "Return the element with the passed id."
@@ -29,6 +30,17 @@
   (let [e (if (keyword? e) (get-element e) e)]
     (doto e (dom/setTextContent s))))
 
+(defn normalize-args [tag args]
+  (let [parts (string/split tag #"(\.|#)")
+        [tag attrs] [(first parts)
+                     (apply hash-map (map #(cond (= % ".") :class
+                                                 (= % "#") :id
+                                                 :else %)
+                                          (rest parts)))]]
+    (if (map? (first args))
+      [tag (merge attrs (first args)) (rest args)]
+      [tag attrs args])))
+
 ;; TODO: replace call to .strobj with whatever we come up with for
 ;; creating js objects from Clojure maps.
 
@@ -37,8 +49,9 @@
   for the attributes. Append all children to parent. If the first
   child is a string then the string will be set as the text content of
   the parent and all remaining children will be appended."
-  [tag attrs & children]
-  (let [parent (dom/createDom (name tag)
+  [tag & args]
+  (let [[tag attrs children] (normalize-args tag args)
+        parent (dom/createDom (name tag)
                               (.strobj (reduce (fn [m [k v]]
                                                  (assoc m k v))
                                                {}

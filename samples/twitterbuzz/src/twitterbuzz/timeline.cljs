@@ -13,10 +13,10 @@
 (defn timeline-element
   "Return a timeline dom element for the given tweet."
   [tweet]
-  (dom/build [:div {:class "tweet"}
-              [:img {:src (:profile_image_url tweet) :class "profile-pic"}]
-              [:div {:class "user-name"} (:from_user tweet)]
-              [:div {:class "tweet-text"} (dom/html (buzz/markup (:text tweet)))]]))
+  (dom/build [:div.tweet
+              [:img.profile-pic {:src (:profile_image_url tweet)}]
+              [:div.user-name (:from_user tweet)]
+              [:div.tweet-text (dom/html (buzz/markup (:text tweet)))]]))
 
 (defn update-status
   "Set the current tweet count in the status box."
