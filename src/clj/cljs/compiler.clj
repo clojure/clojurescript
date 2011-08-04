@@ -1108,18 +1108,49 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   [file-str]
   (clojure.string/replace file-str #".cljs$" ".js"))
 
+(defn mkdirs
+  "Create all parent directories for the passed file."
+  [^java.io.File f]
+  (.mkdirs (.getParentFile (.getCanonicalFile f))))
+
+(defn compile-file* [src dest]
+  (with-open [out ^java.io.Writer (io/make-writer dest {})]
+    (binding [*out* out
+              *cljs-ns* 'cljs.user]
+      (loop [forms (forms-seq src)
+             ns-name nil
+             deps nil]
+        (if (seq forms)
+          (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+                ast (analyze env (first forms))]
+            (do (emit ast)
+                (if (= (:op ast) :ns)
+                  (recur (rest forms) (:name ast) (:requires ast))
+                  (recur (rest forms) ns-name deps))))
+          {:ns (or ns-name 'cljs.user)
+           :provides [ns-name]
+           :requires (if (= ns-name 'cljs.core) (vals deps) (conj (vals deps) 'cljs.core))
+           :file dest})))))
+
+(defn requires-compilation?
+  "Return true if the src file requires compilation."
+  [^java.io.File src ^java.io.File dest]
+  (or (not (.exists dest))
+      (> (.lastModified src) (.lastModified dest))))
+
 (defn compile-file
   "Compiles src to a file of the same name, but with a .js extension,
    in the src file's directory.
 
    With dest argument, write file to provided location. If the dest
    argument is a file outside the source tree, missing parent
-   directories will be created.
+   directories will be created. The src file will only be compiled if
+   the dest file has an older modification time.
 
    Both src and dest may be either a String or a File.
 
-   Returns a map containing the namespace and dependencies for this
-   file."
+   Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
+   If the file was not compiled returns only {:file ...}"
   ([src]
      (let [dest (rename-to-js src)] 
        (compile-file src dest)))
@@ -1127,26 +1158,12 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
      (let [src-file (io/file src)
            dest-file (io/file dest)]
        (if (.exists src-file)
-         (do (when-not (:defs (get @namespaces 'cljs.core))
-               (analyze-file "cljs/core.cljs"))
-             (.mkdirs (.getParentFile (.getCanonicalFile dest-file)))
-             (with-open [out ^java.io.Writer (io/make-writer dest-file {})]
-               (binding [*out* out
-                         *cljs-ns* 'cljs.user]
-                 (loop [forms (forms-seq src-file)
-                        ns-name nil
-                        deps nil]
-                   (if (seq forms)
-                     (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-                           ast (analyze env (first forms))]
-                       (do (emit ast)
-                           (if (= (:op ast) :ns)
-                             (recur (rest forms) (:name ast) (:requires ast))
-                             (recur (rest forms) ns-name deps))))
-                     {:ns (or ns-name 'cljs.user)
-                      :provides [ns-name]
-                      :requires (if (= ns-name 'cljs.core) (vals deps) (conj (vals deps) 'cljs.core))
-                      :file dest-file})))))
+         (if (requires-compilation? src-file dest-file)
+           (do (when-not (:defs (get @namespaces 'cljs.core))
+                 (analyze-file "cljs/core.cljs"))
+               (mkdirs dest-file)
+               (compile-file* src-file dest-file))
+           {:file dest-file})
          (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
@@ -1182,26 +1199,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         parent-file (java.io.File. ^String (to-path (cons target parents)))]
     (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
 
-(defn dependency-order-visit
-  [state ns-name]
-  (let [file (get state ns-name)]
-    (if (or (:visited file) (nil? file))
-      state
-      (let [state (assoc-in state [ns-name :visited] true)
-            deps (:requires file)
-            state (reduce dependency-order-visit state deps)]
-        (assoc state :order (conj (:order state) file))))))
-
-(defn dependency-order
-  "Given a list of maps like
-
-   [{:ns a :requires (a c)} ...]
-
-   sort the list into dependency order."
-  [coll]
-  (let [state (reduce (fn [m next] (assoc m (:ns next) next)) {} coll)]
-    (:order (reduce dependency-order-visit (assoc state :order []) (map :ns coll)))))
-
 (defn compile-root
   "Looks recursively in src-dir for .cljs files and compiles them to
    .js files. If target-dir is provided, output will go into this
@@ -1220,7 +1217,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                  output-file ^java.io.File (to-target-file src-dir-file target-dir cljs-file)
                  ns-info (compile-file cljs-file output-file)]
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
-           (dependency-order output-files))))))
+           output-files)))))
 
 (comment
   ;; compile-root
