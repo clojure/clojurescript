@@ -187,12 +187,17 @@
 (defn javascript-file [^URL url provides requires]
   (JavaScriptFile. url (map name provides) (map name requires)))
 
+(defn map->javascript-file [m]
+  (javascript-file (to-url (:file m))
+                   (:provides m)
+                   (:requires m)))
+
 (defn read-js
   "Read a JavaScript file returning a map of file information."
   [f]
   (let [source (slurp f)
         m (parse-js-ns (string/split-lines source))]
-    (assoc m :file f :source source)))
+    (map->javascript-file (assoc m :file f))))
 
 (defprotocol Compilable
   (-compile [this opts] "Returns one or more IJavaScripts."))
