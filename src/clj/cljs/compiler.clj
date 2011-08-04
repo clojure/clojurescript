@@ -1113,24 +1113,32 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   [^java.io.File f]
   (.mkdirs (.getParentFile (.getCanonicalFile f))))
 
+(defmacro with-core-cljs
+  "Ensure that core.cljs has been loaded."
+  [& body]
+  `(do (when-not (:defs (get @namespaces 'cljs.core))
+         (analyze-file "cljs/core.cljs"))
+       ~@body))
+
 (defn compile-file* [src dest]
-  (with-open [out ^java.io.Writer (io/make-writer dest {})]
-    (binding [*out* out
-              *cljs-ns* 'cljs.user]
-      (loop [forms (forms-seq src)
-             ns-name nil
-             deps nil]
-        (if (seq forms)
-          (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-                ast (analyze env (first forms))]
-            (do (emit ast)
-                (if (= (:op ast) :ns)
-                  (recur (rest forms) (:name ast) (:requires ast))
-                  (recur (rest forms) ns-name deps))))
-          {:ns (or ns-name 'cljs.user)
-           :provides [ns-name]
-           :requires (if (= ns-name 'cljs.core) (vals deps) (conj (vals deps) 'cljs.core))
-           :file dest})))))
+  (with-core-cljs
+    (with-open [out ^java.io.Writer (io/make-writer dest {})]
+      (binding [*out* out
+                *cljs-ns* 'cljs.user]
+        (loop [forms (forms-seq src)
+               ns-name nil
+               deps nil]
+          (if (seq forms)
+            (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+                  ast (analyze env (first forms))]
+              (do (emit ast)
+                  (if (= (:op ast) :ns)
+                    (recur (rest forms) (:name ast) (:requires ast))
+                    (recur (rest forms) ns-name deps))))
+            {:ns (or ns-name 'cljs.user)
+             :provides [ns-name]
+             :requires (if (= ns-name 'cljs.core) (vals deps) (conj (vals deps) 'cljs.core))
+             :file dest}))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."
@@ -1159,9 +1167,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
            dest-file (io/file dest)]
        (if (.exists src-file)
          (if (requires-compilation? src-file dest-file)
-           (do (when-not (:defs (get @namespaces 'cljs.core))
-                 (analyze-file "cljs/core.cljs"))
-               (mkdirs dest-file)
+           (do (mkdirs dest-file)
                (compile-file* src-file dest-file))
            {:file dest-file})
          (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))

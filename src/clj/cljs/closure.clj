@@ -237,20 +237,13 @@
 ;; Compile
 ;; =======
 
-(defmacro with-core
-  "Ensure that core.cljs has been loaded."
-  [& body]
-  `(do (when-not (:defs (get @comp/namespaces 'cljs.core))
-         (comp/analyze-file "cljs/core.cljs"))
-       ~@body))
-
 (defn empty-env []
   {:ns (@comp/namespaces comp/*cljs-ns*) :context :statement :locals {}})
 
 (defn compile-form-seq
   "Compile a sequence of forms to a JavaScript source string."
   [forms]
-  (with-core
+  (comp/with-core-cljs
     (with-out-str
       (binding [comp/*cljs-ns* 'cljs.user]
         (doseq [form forms]
