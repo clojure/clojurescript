@@ -169,10 +169,13 @@
   (-source [this] this)
   
   clojure.lang.IPersistentMap
-  (-url [this] (:url this))
-  (-provides [this] (:provides this))
-  (-requires [this] (:requires this))
-  (-source [this] (:source this)))
+  (-url [this] (or (:url this)
+                   (to-url (:file this))))
+  (-provides [this] (map name (:provides this)))
+  (-requires [this] (map name (:requires this)))
+  (-source [this] (if-let [s (:source this)]
+                    s
+                    (slurp (io/reader (-url this))))))
 
 (defrecord JavaScriptFile [^URL url provides requires]
   IJavaScript
@@ -184,8 +187,47 @@
 (defn javascript-file [^URL url provides requires]
   (JavaScriptFile. url (map name provides) (map name requires)))
 
+(defn read-js
+  "Read a JavaScript file returning a map of file information."
+  [f]
+  (let [source (slurp f)
+        m (parse-js-ns (string/split-lines source))]
+    (assoc m :file f :source source)))
+
 (defprotocol Compilable
   (-compile [this opts] "Returns one or more IJavaScripts."))
+
+(defn build-index
+  "Index a list of dependencies by namespace and file name. There can
+  be zero or more namespaces provided per file."
+  [deps]
+  (reduce (fn [m next]
+            (let [provides (:provides next)]
+              (-> (if (seq provides)
+                    (reduce (fn [m* provide]
+                              (assoc m* provide next))
+                            m
+                            provides)
+                    m)
+                  (assoc (:file next) next))))
+          {}
+          deps))
+
+(defn dependency-order-visit
+  [state ns-name]
+  (let [file (get state ns-name)]
+    (if (or (:visited file) (nil? file))
+      state
+      (let [state (assoc-in state [ns-name :visited] true)
+            deps (:requires file)
+            state (reduce dependency-order-visit state deps)]
+        (assoc state :order (conj (:order state) file))))))
+
+(defn dependency-order
+  "Topologically sort a collection of dependencies."
+  [coll]
+  (let [state (build-index coll)]
+    (distinct (:order (reduce dependency-order-visit (assoc state :order []) (keys state))))))
 
 ;; Compile
 ;; =======
@@ -212,6 +254,23 @@
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
 
+(def compiled-cljs (atom {}))
+
+(defn compiled-file
+  "Given a map with at least a :file key, return a map with
+   {:file .. :provides .. :requires ..}.
+
+   Compiled files are cached so they will only be read once."
+  [m]
+  (let [path (.getAbsolutePath (:file m))
+        js (if (:provides m)
+             m
+             (if-let [js (get @compiled-cljs path)]
+               js
+               (read-js (:file m))))]
+    (do (swap! compiled-cljs (fn [old] (assoc old path js)))
+        js)))
+
 (defn compile-file
   "Compile a single cljs file. If no output-file is specified, returns
   a string of compiled JavaScript. With an output-file option, the
@@ -219,28 +278,17 @@
   returns a JavaScriptFile. In either case the return value satisfies
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
-  (if output-file
-    (let [out-file (io/file (output-directory opts) output-file)
-          ns-info (comp/compile-file file out-file)]
-      (javascript-file (to-url (:file ns-info))
-                       (:provides ns-info)
-                       (:requires ns-info)))
-    (compile-form-seq (comp/forms-seq file))))
+  (let [out-file (io/file (output-directory opts) output-file)]
+    (compiled-file (comp/compile-file file out-file))))
 
 (defn compile-dir
   "Recursively compile all cljs files under the given source
   directory. Return a list of JavaScriptFiles in dependency order."
   [^File src-dir opts]
-  (let [out-dir (output-directory opts)
-        compiled-info (comp/compile-root src-dir out-dir)]
-    (map (fn [{:keys [file ns requires]}]
-           (javascript-file (to-url file) [ns] requires))
-         compiled-info)))
-
-(defn mkdirs
-  "Create all parent directories the the passed file."
-  [f]
-  (.mkdirs (.getParentFile (.getCanonicalFile f))))
+  (let [out-dir (output-directory opts)]
+    (dependency-order
+     (map compiled-file
+          (comp/compile-root src-dir out-dir)))))
 
 (defn path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
@@ -253,9 +301,19 @@
   [url out-dir]
   (let [out-file (io/file out-dir (path-from-jarfile url)) 
         content (slurp (io/reader url))]
-    (do (mkdirs out-file)
+    (do (comp/mkdirs out-file)
         (spit out-file content)
         out-file)))
+
+(defn compile-from-jar
+  "Compile a file from a jar."
+  [this {:keys [output-file] :as opts}]
+  (or (when output-file
+        (let [out-file (io/file (output-directory opts) output-file)]
+          (when (.exists out-file)
+            (compiled-file {:file out-file}))))
+      (let [file-on-disk (jar-file-to-disk this (output-directory opts))]
+        (-compile file-on-disk opts))))
 
 (extend-protocol Compilable
 
@@ -269,8 +327,7 @@
   (-compile [this opts]
     (case (.getProtocol this)
       "file" (-compile (io/file this) opts)
-      "jar" (let [out-file (jar-file-to-disk this (output-directory opts))]
-              (-compile out-file opts))))
+      "jar" (compile-from-jar this opts)))
   
   clojure.lang.PersistentList
   (-compile [this opts]
@@ -306,22 +363,6 @@
 ;; Find all dependencies from files on the classpath. Eliminates the
 ;; need for closurebuilder. cljs dependencies will be compiled as
 ;; needed.
-
-(defn build-index
-  "Index a list of dependencies by namespace and file name. There can
-  be zero or more namespaces provided per file."
-  [deps]
-  (reduce (fn [m next]
-            (let [provides (:provides next)]
-              (-> (if (seq provides)
-                    (reduce (fn [m* provide]
-                              (assoc m* provide next))
-                            m
-                            provides)
-                    m)
-                  (assoc (:file next) next))))
-          {}
-          deps))
 
 (defn load-library*
   "Given a path to a JavaScript library, which is a directory
@@ -366,12 +407,6 @@
 
 (def goog-dependencies (memoize goog-dependencies*))
 
-(defn dependency-order
-  "Topologically sort a collection of dependencies."
-  [coll]
-  (let [state (build-index coll)]
-    (distinct (:order (reduce comp/dependency-order-visit (assoc state :order []) (keys state))))))
-
 (defn js-dependency-index
   "Returns the index for all JavaScript dependencies. Lookup by
   namespace or file name."
@@ -389,10 +424,14 @@
   [opts requires]
   (let [index (js-dependency-index opts)]
     (loop [requires requires
-           deps []]
+           visited requires
+           deps #{}]
       (if (seq requires)
-        (let [node (get index (first requires))]
-          (recur (into (next requires) (:requires node)) (conj deps node)))
+        (let [node (get index (first requires))
+              new-req (remove #(contains? visited %) (:requires node))]
+          (recur (into (rest requires) new-req)
+                 (into visited new-req)
+                 (conj deps node)))
         (cons (get index "goog/base.js") (dependency-order deps))))))
 
 (comment
@@ -402,31 +441,18 @@
   (dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"])
   )
 
-(def compiled-cljs (atom {}))
-
 (defn get-compiled-cljs
-  "If not already compiled, compile the given cljs file. Return
-  an IJavaScript for this file. Compiled output will be written to the
-  working directory."
+  "Return an IJavaScript for this file. Compiled output will be
+   written to the working directory."
   [opts {:keys [relative-path uri]}]
-  (let [js-file (comp/rename-to-js relative-path)
-        out-file (io/file (output-directory opts) js-file)
-        javascript (cond (and (.exists out-file) (get @compiled-cljs relative-path))
-                         (get @compiled-cljs relative-path)
-                         (.exists out-file) (let [ns-info (parse-js-ns
-                                                           (string/split-lines (slurp out-file)))]
-                                              (javascript-file (to-url out-file)
-                                                               (:provides ns-info)
-                                                               (:requires ns-info)))
-                         :else (-compile uri (merge opts {:output-file js-file})))]
-    (do (swap! compiled-cljs (fn [old] (assoc old relative-path javascript)))
-        javascript)))
+  (let [js-file (comp/rename-to-js relative-path)]
+    (-compile uri (merge opts {:output-file js-file}))))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
   IJavaScripts which are the cljs dependencies in dependency
   order. The returned list will not only include the explicitly
-  required files but any transative depedencies as well. JavaScript
+  required files but any transitive depedencies as well. JavaScript
   files will be compiled to the working directory if they do not
   already exist.
 
@@ -441,20 +467,20 @@
                    (remove #(nil? (:uri %)))))]
       (loop [required-files (cljs-deps requires)
              visited (set required-files)
-             js-deps []]
+             js-deps #{}]
         (if (seq required-files)
           (let [next-file (first required-files)
                 js (get-compiled-cljs opts next-file)
-                transative (remove #(contains? visited %) (cljs-deps (-requires js)))]
-            (recur (into (rest required-files) transative)
-                   (conj visited transative)
+                new-req (remove #(contains? visited %) (cljs-deps (-requires js)))]
+            (recur (into (rest required-files) new-req)
+                   (into visited new-req)
                    (conj js-deps js)))
           (dependency-order js-deps))))))
 
 (comment
   ;; only get cljs deps
   (cljs-dependencies {} ["goog.string" "cljs.core"])
-  ;; get transative deps
+  ;; get transitive deps
   (cljs-dependencies {} ["clojure.string"])
   ;; don't get cljs.core twice
   (cljs-dependencies {} ["cljs.core" "clojure.string"])
@@ -467,14 +493,13 @@
   [opts & inputs]
   (let [requires (mapcat -requires inputs)
         required-cljs (cljs-dependencies opts requires)
-        required (dependencies opts (concat (mapcat -requires required-cljs) requires))]
-    (distinct
-     (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
-                                        (:provides %)
-                                        (:requires %))
-                       (assoc :group (:group %))) required)
-             required-cljs
-             inputs))))
+        required (dependencies opts (set (concat (mapcat -requires required-cljs) requires)))]
+    (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
+                                       (:provides %)
+                                       (:requires %))
+                      (assoc :group (:group %))) required)
+            required-cljs
+            inputs)))
 
 (comment
   ;; add dependencies to literal js
@@ -633,7 +658,7 @@
         out-name (output-path js)
         out-file (io/file out-dir out-name)]
     (do (when-not (.exists out-file)
-          (do (mkdirs out-file)
+          (do (comp/mkdirs out-file)
               (spit out-file (-source js))))
         {:url (to-url out-file) :requires (-requires js) :provides (-provides js) :group (:group js)})))
 
@@ -667,7 +692,7 @@
   [opts & sources]
   (let [disk-sources (map #(source-on-disk opts %) sources)]
     (let [goog-deps (io/file (output-directory opts) "goog/deps.js")]
-      (do (mkdirs goog-deps)
+      (do (comp/mkdirs goog-deps)
           (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
           (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
