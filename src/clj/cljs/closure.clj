@@ -413,7 +413,7 @@
   [opts]
   (build-index (concat (goog-dependencies) (library-dependencies opts))))
 
-(defn dependencies
+(defn js-dependencies
   "Given a sequence of Closure namespace strings, return the list of
   all dependencies in dependency order. The returned list includes all
   Google and third-party library dependencies.
@@ -436,9 +436,9 @@
 
 (comment
   ;; find dependencies
-  (dependencies {}  ["goog.array"])
+  (js-dependencies {} ["goog.array"])
   ;; find dependencies in an external library
-  (dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"])
+  (js-dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"])
   )
 
 (defn get-compiled-cljs
@@ -493,11 +493,11 @@
   [opts & inputs]
   (let [requires (mapcat -requires inputs)
         required-cljs (cljs-dependencies opts requires)
-        required (dependencies opts (set (concat (mapcat -requires required-cljs) requires)))]
+        required-js (js-dependencies opts (set (concat (mapcat -requires required-cljs) requires)))]
     (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
                                        (:provides %)
                                        (:requires %))
-                      (assoc :group (:group %))) required)
+                      (assoc :group (:group %))) required-js)
             required-cljs
             inputs)))
 
