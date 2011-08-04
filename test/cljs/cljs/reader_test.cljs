@@ -5,6 +5,8 @@
   []
   (assert (= 1 (reader/read-string "1")))
   (assert (= 2 (reader/read-string "#_nope 2")))
+  (assert (= -1 (reader/read-string "-1")))
+  (assert (= -1.5 (reader/read-string "-1.5")))
   (assert (= [3 4] (reader/read-string "[3 4]")))
   (assert (= "foo" (reader/read-string "\"foo\"")))
   (assert (= :hello (reader/read-string ":hello")))
