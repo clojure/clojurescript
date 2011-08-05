@@ -2,9 +2,8 @@
   (:require [goog.dom :as dom]))
 
 (defn append [parent & children]
-  (do (doseq [child children]
-        (dom/appendChild parent child))
-      parent))
+  (apply dom/append parent children)
+  parent)
 
 (defprotocol DOMBuilder
   (-element [this] [this attrs-or-children] [this attrs children]))
