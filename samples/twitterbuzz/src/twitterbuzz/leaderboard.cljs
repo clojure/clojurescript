@@ -13,12 +13,12 @@
 (defn leaderboard-element
   "Create a leaderboard element from a user map."
   [user]
-  (dom/build [:div {:class "tweet"}
-              [:img {:src (:image-url user) :class "profile-pic"}]
-              [:div {:class "tweet-details"}
-               [:div {:class "user-name"} (:username user)]
-               [:div {:class "tweet-text"} (dom/html (buzz/markup (:last-tweet user)))]
-               [:div {} (str (buzz/num-mentions user))]]]))
+  (dom/build [:div.tweet
+              [:img.profile-pic {:src (:image-url user)}]
+              [:div.tweet-details
+               [:div.user-name (:username user)]
+               [:div.tweet-text (dom/html (buzz/markup (:last-tweet user)))]
+               [:div (str (buzz/num-mentions user))]]]))
 
 (defn leaders
   "Given a map of users, return a sequence of users in order of the
