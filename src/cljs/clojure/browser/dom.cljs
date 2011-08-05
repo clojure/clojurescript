@@ -1,8 +1,8 @@
 (ns clojure.browser.dom
-  (:require [goog.dom :as dom]))
+  (:require [goog.dom :as gdom]))
 
 (defn append [parent & children]
-  (apply dom/append parent children)
+  (apply gdom/append parent children)
   parent)
 
 (defprotocol DOMBuilder
@@ -14,15 +14,14 @@
 (defn log-obj [obj]
   (.log js/console obj))
 
-(declare element)
 (extend-protocol DOMBuilder
 
   string
   (-element
     ([this]
        (log "string (-element " this ")")
-       (cond (keyword? this) (dom/createElement  (name this))
-             :else           (dom/createTextNode (name s))))
+       (cond (keyword? this) (gdom/createElement  (name this))
+             :else           (gdom/createTextNode (name this))))
 
     ([this attrs-or-children]
        (log "string (-element " this " " attrs-or-children ")")
@@ -46,11 +45,11 @@
                          nil)]
          (log-obj str-attrs)
          (if (seq children)
-           (apply dom/createDom
+           (apply gdom/createDom
                   (name this)
                   str-attrs
                   (map -element children))
-           (dom/createDom (name this)
+           (gdom/createDom (name this)
                           str-attrs)))))
 
   Vector
@@ -83,19 +82,14 @@
 (defn remove-children
   "Remove all children from the element with the passed id."
   [id]
-  (let [parent (dom/getElement (name id))]
-    (do (dom/removeChildren parent))))
+  (let [parent (gdom/getElement (name id))]
+    (do (gdom/removeChildren parent))))
 
 (defn get-element [id]
-  (dom/getElement (name id)))
+  (gdom/getElement (name id)))
 
 (defn html [s]
-  (dom/htmlToDocumentFragment s))
-
-(defn element-arg? [x]
-  (or (keyword? x)
-      (map? x)
-      (string? x)))
+  (gdom/htmlToDocumentFragment s))
 
 (defn insert-at [parent child index]
-  (dom/insertChildAt parent child index))
+  (gdom/insertChildAt parent child index))
