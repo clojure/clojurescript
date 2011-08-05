@@ -12,16 +12,19 @@
            java.io.InputStreamReader
            java.io.OutputStreamWriter
            java.net.Socket
-           java.net.ServerSocket))
+           java.net.ServerSocket)
+  (:require [clojure.string :as str]))
 
 (defonce server-state (atom {:socket nil
                              :port nil
-                             :connection nil
-                             :next-message nil}))
+                             :connection nil}))
+
+(defonce pending-forms (atom []))
 
 (defn send-and-close
   "Send this message on the connection and close it."
   [conn message]
+  (println "the message is: " message)
   (with-open [writer (BufferedWriter.
                       (OutputStreamWriter. (.getOutputStream conn)))]
     (do (.write writer message)
@@ -29,26 +32,32 @@
         (.flush writer)
         (.close conn))))
 
-(defn return [message]
-  (println message))
-
-(defn evaluate
-  "If a connection is available then send this form, if not then
-  put the message in the next-message slot."
+(defn send-for-eval
+  "If a connection is available then send this form."
   [message]
-  (if-let [conn (:connection @server-state)]
-    (send-and-close conn message)
-    (swap! server-state (fn [old] (assoc old :next-message message)))))
+  (when-let [conn (:connection @server-state)]
+    (println "sending for eval")
+    (send-and-close conn message)))
 
-(defn send-message
-  "Check to see if there is a message to send and if there is send
-  it."
-  []
-  (let [conn (:connection @server-state)]
-    (when (and conn (not (.isClosed conn)))
-      (when-let [message (:next-message @server-state)]
-        (do (send-and-close conn message)
-            (swap! server-state (fn [old] (assoc old :next-message nil))))))))
+(defn process-form []
+  (when-let [first-form (ffirst @pending-forms)]
+    (println "first-form: " first-form)
+    (send-for-eval first-form)))
+
+(defn return [return-value]
+  (let [[[_ first-promise]] @pending-forms]
+    (swap! pending-forms drop 1)
+    (deliver first-promise return-value)
+    (process-form)))
+
+(defn send-forms [forms]
+  (let [pending (reset! pending-forms
+                        (map #(vector % (promise)) forms))]
+    (println "pending forms: " pending)
+    (process-form)
+    ;; TODO: (map second pending) should be consumed by a real REPL
+    (doseq [return-value (map second pending)]
+      (println @return-value))))
 
 ;; POST /login.jsp HTTP/1.1
 ;; Host: www.mysite.com
@@ -58,28 +67,51 @@
 ;;
 ;; userid=joe&password=guessme
 
-#_(defn read-post [line reader]
-  (loop [next-line (.readLine reader)
-         content-length 0
-         request [line]]
-    (if next-line
-      (recur (.readLine reader) (conj request next-line))
-      request)))
+(comment
+
+  (parse-headers
+   ["Host: www.mysite.com"
+    "User-Agent: Mozilla/4.0"
+    "Content-Length: 27"
+    "Content-Type: application/x-www-form-urlencoded"])
+)
+
+(defn parse-headers [header-lines]
+  (apply hash-map
+   (mapcat
+    (fn [line]
+      (let [[k v] (str/split line #":" 2)]
+        [(keyword (str/lower-case k)) (str/triml v)]))
+    header-lines)))
+
+;;; assumes first line already consumed
+(defn read-headers [rdr]
+  (loop [next-line (.readLine rdr)
+         header-lines []]
+    (if (= "" next-line)
+      header-lines                      ;we're done reading headers
+      (recur (.readLine rdr) (conj header-lines next-line)))))
+
+(defn read-post [rdr]
+  (let [headers (parse-headers (read-headers rdr))
+        content-length (Integer/parseInt (:content-length headers))
+        content (char-array content-length)]
+    (io! (.read rdr content 0 content-length)
+         (String. content))))
 
 (defn read-request [reader]
   (let [line (.readLine reader)]
-    line
-    #_(if (.startsWith line "POST")
-      (read-post line reader)
+    (if (.startsWith line "POST")
+      (read-post reader)
       line)))
 
 (defn- handle-connection
   [conn]
   (let [reader (BufferedReader. (InputStreamReader. (.getInputStream conn)))]
     (if-let [message (read-request reader)]
-      (do (return message)
-          (swap! server-state (fn [old] (assoc old :connection conn)))
-          (send-message)))))
+      (do (when (not= message "ready")
+            (return message))
+          (swap! server-state (fn [old] (assoc old :connection conn)))))))
 
 (defn- server-loop
   [server-socket]
@@ -100,3 +132,8 @@
   []
   (.close (:socket @server-state)))
 
+;;; (in-ns 'cljs.browser-repl)
+;;; (start-server 9000)
+;;; curl -v -d "ready" http://127.0.0.1:9000
+;;; (send-forms ["test"])
+;;; curl -v -d "test-result" http://127.0.0.1:9000
