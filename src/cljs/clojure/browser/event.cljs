@@ -25,7 +25,7 @@
     (.handleEvent this event)))
 
 (defprotocol EventTarget
-  (-listen      [this type fn] [this type fn capture?])
+  (listen      [this type fn] [this type fn capture?])
   (-listen-once [this type fn] [this type fn capture?])
   (-unlisten    [this type fn] [this type fn capture?])
 
@@ -39,24 +39,34 @@
 
   (-dispatch-event [this event]))
 
-(extend-type goog.events.EventTarget
-  EventTarget
+(extend-protocol EventTarget
 
-  (-listen
+  goog.events.EventTarget
+  (listen
     ([this type fn]
-       (-listen this type fn false))
+       (listen this type fn false))
     ([this type fn capture?]
        (.addEventListener this
                           (get event-types type type)
                           fn
-                          capture?))))
+                          capture?)))
 
-(defn listen
+  js/Element
+  (listen
+    ([this type fn]
+       (listen this type fn false))
+    ([this type fn capture?]
+       (goog.events/listen this
+                           (get event-types type type)
+                           fn
+                           capture?))))
+
+#_(defn listen
   ([src type fn]
      (listen src type fn false))
   ([src type fn capture?]
      (if (satisfies? src EventTarget)
-       (-listen src type fn capture?)
+       (listen src type fn capture?)
        (goog.events/listen src
                            (get event-types type type)
                            fn

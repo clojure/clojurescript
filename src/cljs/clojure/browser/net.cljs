@@ -14,34 +14,52 @@
 
 (def *timeout* 10000)
 
+(def event-types
+  (into {}
+        (map
+         (fn [[k v]]
+           [(keyword (. k (toLowerCase)))
+            v])
+         (merge
+          (js->clj goog.net.EventType)))))
+
 (defprotocol IConnection
   (transmit
-    [connection]
-    [connection method]
-    [connection method content]
-    [connection method]
-    [connection method timeout])
-  (close [connection]))
+    [this]
+    [this method]
+    [this method content]
+    [this method content headers]
+    [this method content headers timeout])
+  (close [this]))
 
-(deftype XhrConnection [url]
-  goog.net.XhrIo
+(deftype XhrConnection [url xhrio]
 
   IConnection
-  (transmit [connection]
-    (transmit connection "GET"  "" {} *timeout*))
-  (transmit [connection method]
-    (transmit connection method "" {} *timeout*))
-  (transmit [connection method content]
-    (transmit connection method content {} *timeout*))
-  (transmit [connection method content headers]
-    (transmit connection method content headers *timeout*))
-  (transmit [connection method content headers timeout]
-    (.setTimeoutInterval connection timeout)
-    (.send connection (:url connection) method content headers))
+  (transmit [this]
+    (transmit this "GET"  nil nil *timeout*))
+  (transmit [this method]
+    (transmit this method nil nil *timeout*))
+  (transmit [this method content]
+    (transmit this method content nil *timeout*))
+  (transmit [this method content headers]
+    (transmit this method content headers *timeout*))
+  (transmit [this method content headers timeout]
+    (.setTimeoutInterval xhrio timeout)
+    (.send xhrio url method content headers))
+  (close [this] nil)
 
-  (close [connection] nil))
+  event/EventTarget
+  (listen
+    [this type fn]
+    (event/listen this type fn false))
+  (listen
+    [this type fn capture?]
+    (.addEventListener xhrio
+                       (get event-types type type)
+                       fn
+                       capture?)))
 
 (defn open
   "Returns a connection"
   [url]
-  (XhrConnection. url))
+  (XhrConnection. url (goog.net.XhrIo.)))
