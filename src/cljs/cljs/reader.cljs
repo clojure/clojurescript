@@ -236,13 +236,18 @@ nil if the end of stream has been reached")
      (= \" ch) (. buffer (toString))
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
+(def special-symbols
+  {"nil" nil
+   "true" true
+   "false" false})
+
 (defn read-symbol
   [reader initch]
   (let [token (read-token reader initch)]
     (if (gstring/contains token "/")
       (symbol (subs token 0 (.indexOf token "/"))
               (subs (inc (.indexOf token "/")) (.length token)))
-      (symbol token))))
+      (get special-symbols token (symbol token)))))
 
 (defn read-keyword
   [reader initch]
