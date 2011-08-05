@@ -20,7 +20,9 @@
 (defn process-block
   "Process a single block of JavaScript received from the server"
   [connection block]
-  (net/transmit connection "POST" (pr-str (js* "eval(~{block})"))))
+  (net/transmit connection
+                "POST"
+                (pr-str (js* "eval(~{block})"))))
 
 (defn start-repl
   "Start the REPL loop"
