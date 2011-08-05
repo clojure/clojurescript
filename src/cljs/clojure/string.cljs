@@ -36,7 +36,6 @@
   [s match replacement]
   (cond (string? match)
         (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
-        ;; TODO: Is there are better way to identify a RegExp?
         (.hasOwnProperty match "source")
         (.replace s (js/RegExp. (.source match) "g") replacement)
         :else (throw (str "Invalid match arg: " match))))
@@ -109,7 +108,7 @@
 (defn split-lines
   "Splits s on \n or \r\n."
   [s]
-  (split (str s) #"\n|\r\n"))
+  (split s #"\n|\r\n"))
 
 (defn trim
     "Removes whitespace from both ends of string."
@@ -166,20 +165,3 @@
             (.append buffer (str replacement))
             (.append buffer ch))
           (recur (inc index)))))))
-
-(comment
-
-  ;; TODO pending regexp support
-  (defn escape1
-    "Is this a better implementation for JavaScript?"
-    [s cmap]
-    (loop [ret s
-           cm cmap]
-      (let [[ch replacement] (first cmap)
-            ret (.replace ret
-                          (re-pattern (str "/" ch "/g"))
-                          (str replacement))]
-        (if (next cm)
-          (recur ret (rest cm))
-          ret)))))
-
