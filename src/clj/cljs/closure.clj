@@ -262,7 +262,7 @@
   [m]
   (let [path (.getAbsolutePath (:file m))
         js (if (:provides m)
-             m
+             (map->javascript-file m)
              (if-let [js (get @compiled-cljs path)]
                js
                (read-js (:file m))))]
