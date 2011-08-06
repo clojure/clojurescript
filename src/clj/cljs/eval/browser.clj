@@ -52,14 +52,23 @@
   (swap! server-state (fn [old] (assoc old :return-value-fn f))))
 
 (defn send-and-close
-  "Use the passed connection to send a form to the browser."
+  "Use the passed connection to send a form to the browser. Send a
+  proper HTTP response."
   [conn form]
-  (with-open [writer (BufferedWriter.
-                      (OutputStreamWriter. (.getOutputStream conn)))]
-    (do (.write writer form)
-        (.write writer "\r\n") ;; remove this
-        (.flush writer)
-        (.close conn))))
+  (let [utf-8-form (.getBytes form "UTF-8")
+        content-length (count utf-8-form)
+        headers (map #(.getBytes (str % "\r\n"))
+                     ["HTTP/1.1 200 OK"
+                      "Server: ClojureScript REPL"
+                      "Content-Type: text/html; charset=utf_8"
+                      (str "Content-Length: " content-length)
+                      ""])]
+    (with-open [os (.getOutputStream conn)]
+      (do (doseq [header headers]
+            (.write os header 0 (count header)))
+          (.write os utf-8-form 0 content-length)
+          (.flush os)
+          (.close conn)))))
 
 (defn send-for-eval
   "Given a form and a return value function, send the form to the
