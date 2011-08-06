@@ -6,21 +6,15 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns cljs.browser-repl
-  (:require [clojure.string :as str]
-            [cljs.compiler :as comp])
+(ns cljs.eval.browser
+  (:require [clojure.string :as str])
   (:import java.io.BufferedReader
            java.io.BufferedWriter
            java.io.InputStreamReader
            java.io.OutputStreamWriter
            java.net.Socket
-           java.net.ServerSocket))
-
-;; The main purpose of this namespace is to implement the server side
-;; of the browser-connected repl. This server will push data to the
-;; browser to be evaluated and receive return values. Server push is
-;; implemented through long polling. Requests sent from the browser
-;; are expected to be HTTP Post requests.
+           java.net.ServerSocket
+           cljs.repl.IEvaluator))
 
 (defonce server-state (atom {:socket nil
                              :connection nil
@@ -155,16 +149,8 @@
                    (fn [val] (deliver return-value val)))
     @return-value))
 
-;; An initial cut at a protocol for repl evaluation. This will be
-;; changed and moved somewhere else before it is finished.
-
-(defprotocol ReplEvalEnvironment
-  (setup [this])
-  (evaluate [this form])
-  (tear-down [this]))
-
-(defrecord BrowserEvalEnvironment [port]
-  ReplEvalEnvironment
+(defrecord BrowserEvaluator [port]
+  IEvaluator
   (setup [this]
     (start-server port))
   (evaluate [this form]
@@ -173,35 +159,18 @@
     (do (stop-server)
         (reset! server-state {}))))
 
-(defn browser-eval-env [port]
-  (BrowserEvalEnvironment. port))
-
-(defn repl
-  "This is a simplified REPL (with all compilation removed) for
-   driving the above code. In the end we will have a common REPL front
-   end and different backend evaluation environments."
-  [repl-env]
-  (prn "Type: " :cljs/quit " to quit")
-  (setup repl-env)
-  (loop []
-    (print (str "ClojureScript:> "))
-    (flush)
-    (let [form (read)]
-      (cond (= form :cljs/quit) :quit
-            :else (let [ret (evaluate repl-env (str form))]
-                    (prn ret)
-                    (recur)))))
-  (tear-down repl-env))
+(defn create-eval-env [port]
+  (BrowserEvaluator. port))
 
 (comment
-
+  
   ;; Try it out
   
-  (use 'cljs.browser-repl)
-  (def repl-env (browser-eval-env 9000))
+  (require '[cljs.repl :as repl])
+  (require '[cljs.eval.browser :as eval-env])
+  (def repl-env (create-eval-env 9000))
   (repl repl-env)
   ;; curl -v -d "ready" http://127.0.0.1:9000
   ClojureScript:> (+ 1 1)
   ;; curl -v -d "2" http://127.0.0.1:9000
   )
-
