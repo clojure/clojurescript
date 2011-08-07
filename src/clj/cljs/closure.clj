@@ -276,8 +276,10 @@
   returns a JavaScriptFile. In either case the return value satisfies
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
-  (let [out-file (io/file (output-directory opts) output-file)]
-    (compiled-file (comp/compile-file file out-file))))
+  (if output-file
+    (let [out-file (io/file (output-directory opts) output-file)]
+      (compiled-file (comp/compile-file file out-file)))
+    (compile-form-seq (comp/forms-seq file))))
 
 (defn compile-dir
   "Recursively compile all cljs files under the given source
