@@ -9,4 +9,12 @@
 (defn log-obj [obj]
   (.log js/console obj))
 
-(repl/start-repl "http://localhost:3000/javascript")
+#_(repl/start-repl "http://localhost:3000/javascript")
+
+(defn start-repl []
+  (repl/start-repl "http://localhost:9000"))
+
+(js/setTimeout start-repl 1000)
+
+
+
