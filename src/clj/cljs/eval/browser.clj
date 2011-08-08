@@ -174,9 +174,9 @@
 (comment
   
   ;; Try it out
-  
-  (require '[cljs.repl :as repl])
-  (require '[cljs.eval.browser :as eval-env])
+
+  (use 'cljs.repl)
+  (use 'cljs.eval.browser)
   (def repl-env (create-eval-env 9000))
   (repl repl-env)
   ;; curl -v -d "ready" http://127.0.0.1:9000
