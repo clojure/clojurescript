@@ -1146,10 +1146,10 @@ reduces them without incurring seq initialization"
 
 (set! js/String.prototype.apply
       (fn
-        [_ args]
+        [s args]
         (if (< (count args) 2)
-          (.call (js* "this") nil (aget args 0))
-          (.call (js* "this") nil (aget args 0) (aget args 1)))))
+          (get (aget args 0) s)
+          (get (aget args 0) s (aget args 1)))))
 
 ; could use reify
 ;;; LazySeq ;;;
