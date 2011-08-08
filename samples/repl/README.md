@@ -36,3 +36,10 @@ JavaScript.
     ClojureScript:> "var a = 3; 1 + a;"
     "var a = 3; 1 + a;"
     "4"
+
+This currently only works in Safari. 
+
+Chrome error is:
+
+XMLHttpRequest cannot load http://localhost:9000/. Origin null is not allowed by Access-Control-Allow-Origin.
+
