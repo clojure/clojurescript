@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.eval.browser
-  (:require [clojure.string :as str])
+  (:require [clojure.string :as str]
+            [cljs.compiler :as comp])
   (:import java.io.BufferedReader
            java.io.BufferedWriter
            java.io.InputStreamReader
@@ -156,29 +157,33 @@
   (let [return-value (promise)]
     (send-for-eval form
                    (fn [val] (deliver return-value val)))
-    @return-value))
+    (let [ret @return-value]
+      ;; TODO: Check for errors.
+      {:type :return
+       :value ret})))
 
 (defrecord BrowserEvaluator [port]
   IEvaluator
-  (setup [this]
-    (start-server port))
-  (evaluate [this form]
-    (browser-eval form))
-  (tear-down [this]
+  (-setup [this]
+    (comp/with-core-cljs (start-server port)))
+  (-evaluate [this line js]
+    (browser-eval js))
+  (-put [this k v]
+    nil)
+  (-tear-down [this]
     (do (stop-server)
         (reset! server-state {}))))
 
-(defn create-eval-env [port]
+(defn repl-env [port]
   (BrowserEvaluator. port))
 
 (comment
   
-  ;; Try it out
-
-  (use 'cljs.repl)
-  (use 'cljs.eval.browser)
-  (def repl-env (create-eval-env 9000))
-  (repl repl-env)
+  (require '[cljs.repl :as repl])
+  (require '[cljs.eval.browser :as browser])
+  (def env (browser/repl-env 9000))
+  (repl/repl env)
+  ;; simulate the browser with curl
   ;; curl -v -d "ready" http://127.0.0.1:9000
   ClojureScript:> (+ 1 1)
   ;; curl -v -d "2" http://127.0.0.1:9000
