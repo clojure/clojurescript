@@ -1,83 +1,60 @@
-(ns clojure.browser.event
+                                        ;   Copyright (c) Rich Hickey. All rights reserved.
+                                        ;   The use and distribution terms for this software are covered by the
+                                        ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+                                        ;   which can be found in the file epl-v10.html at the root of this distribution.
+                                        ;   By using this software in any fashion, you are agreeing to be bound by
+                                        ;   the terms of this license.
+                                        ;   You must not remove this notice, or any other, from this software.
+
+(ns ^{:doc "This namespace contains functions to work with DOM events.  It is based on the Google Closure Library event system."
+      :author "Bobby Calderwood"}
+  clojure.browser.event
   (:require [goog.events :as events]
             [goog.events.EventTarget :as gevent-target]
-            [goog.events.EventType   :as gevent-type]
-            [goog.events.Listener    :as gevent-listener]))
+            [goog.events.EventType   :as gevent-type]))
 
-(def event-types
-  (into {}
-        (map
-         (fn [[k v]]
-           [(keyword (. k (toLowerCase)))
-            v])
-         (merge
-          (js->clj goog.events.EventType)))))
+(defprotocol EventType
+  (event-types [this]))
 
-(defprotocol EventListener
-  (handle-event  [this event])
-  (fire-listener [this event]))
-
-(extend-type goog.events.Listener
-  EventListener
-  (fire-listener [this event]
-    (goog.events/fireListener this event))
-  (handle-event [this event]
-    (.handleEvent this event)))
-
-(defprotocol EventTarget
-  (listen      [this type fn] [this type fn capture?])
-  (-listen-once [this type fn] [this type fn capture?])
-  (-unlisten    [this type fn] [this type fn capture?])
-
-  (-listen-with-wrapper   [this wrapper fn] [this wrapper fn capture?])
-  (-unlisten-with-wrapper [this wrapper fn] [this wrapper fn capture?])
-
-  (-all-listeners [this type capture?])
-  (-get-listener      [this type fn] [this type fn capture?])
-
-  (-parent-event-target [this])
-
-  (-dispatch-event [this event]))
-
-(extend-protocol EventTarget
+(extend-protocol EventType
 
   goog.events.EventTarget
-  (listen
-    ([this type fn]
-       (listen this type fn false))
-    ([this type fn capture?]
-       (.addEventListener this
-                          (get event-types type type)
-                          fn
-                          capture?)))
+  (event-types
+    [this]
+    (into {}
+          (map
+           (fn [[k v]]
+             [(keyword (. k (toLowerCase)))
+              v])
+           (merge
+            (js->clj goog.events.EventType)))))
 
   js/Element
-  (listen
-    ([this type fn]
-       (listen this type fn false))
-    ([this type fn capture?]
-       (goog.events/listen this
-                           (get event-types type type)
-                           fn
-                           capture?))))
+  (event-types
+    [this]
+    (into {}
+          (map
+           (fn [[k v]]
+             [(keyword (. k (toLowerCase)))
+              v])
+           (merge
+            (js->clj goog.events.EventType))))))
 
-#_(defn listen
+(defn listen
   ([src type fn]
      (listen src type fn false))
   ([src type fn capture?]
-     (if (satisfies? src EventTarget)
-       (listen src type fn capture?)
-       (goog.events/listen src
-                           (get event-types type type)
-                           fn
-                           capture?))))
+     (goog.events/listen src
+                         (get (event-types src) type type)
+                         fn
+                         capture?)))
 
 (defn listen-once
   ([src type fn]
      (listen-once src type fn false))
   ([src type fn capture?]
      (goog.events/listenOnce src
-                             (get event-types type type)
+                             (get (event-types src) type type)
                              fn
                              capture?)))
 
@@ -86,7 +63,7 @@
      (unlisten src type fn false))
   ([src type fn capture?]
      (goog.events/unlisten src
-                           (get event-types type type)
+                           (get (event-types src) type type)
                            fn
                            capture?)))
 
