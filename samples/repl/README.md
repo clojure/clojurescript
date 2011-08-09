@@ -20,26 +20,35 @@ Build client code as shown above.
 
 Start the REPL:
 
-    (use 'cljs.repl)
-    (use 'cljs.eval.browser)
-    (def repl-env (create-eval-env 9000))
-    (repl repl-env)
+    (require '[cljs.repl :as repl])
+    (require '[cljs.eval.browser :as browser])
+    (def env (browser/repl-env 9000))
+    (repl/repl env)
 
-Open the index.html page in samples/repl/resources/public/index.html
+Open the index.html page in
+samples/repl/resources/public/index.html. Compilation is working so
+you can now type ClojureScript forms at the REPL and they will be evaluated
+in the browser.
 
-This repl is not currently compiling anything so you will need to type
-JavaScript.
+    ClojureScript:cljs.user> (+ 1 1)
+    (+ 1 1)
+    2
+    ClojureScript:cljs.user> {:a :b}
+    {:a :b}
+    {:a :b}
+    ClojureScript:cljs.user> (reduce + [1 2 3 4 5])
+    (reduce + [1 2 3 4 5])
+    15
+    ClojureScript:cljs.user> (js/alert "hello world")
+    (js/alert "hello world")
+    nil
 
-    ClojureScript:> "1 + 1;"
-    "1 + 1;"
-    "2"
-    ClojureScript:> "var a = 3; 1 + a;"
-    "var a = 3; 1 + a;"
-    "4"
-
-This currently only works in Safari. 
+This currently only works in Safari.
 
 Chrome error is:
 
-XMLHttpRequest cannot load http://localhost:9000/. Origin null is not allowed by Access-Control-Allow-Origin.
+XMLHttpRequest cannot load http://localhost:9000/. Origin null is not
+allowed by Access-Control-Allow-Origin.
+
+We may need to have the REPL server serve the host page?
 

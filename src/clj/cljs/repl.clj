@@ -7,28 +7,87 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl
-  (:require [cljs.compiler :as comp]))
+  (:refer-clojure :exclude [load-file])
+  (:require [clojure.string :as string]
+            [clojure.java.io :as io]
+            [cljs.compiler :as comp]))
 
-;; All of this is a work in progress.
+(def ^:dynamic *cljs-verbose* false)
+(def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defprotocol IEvaluator
-  (setup [this])
-  (evaluate [this form])
-  (tear-down [this]))
+  (-setup [this])
+  (-evaluate [this line js])
+  (-put [this k f])
+  (-tear-down [this]))
+
+(defn evaluate-form
+  [repl-env env form]
+  (try
+    (let [ast (comp/analyze env form)
+          js (comp/emits ast)]
+      (when *cljs-verbose*
+        (print js))
+      (let [ret (-evaluate repl-env (:line (meta form)) js)]
+        (if (= (:type ret) :error)
+          ;;we eat ns errors because we know goog.provide() will throw when reloaded
+          ;;TODO - file bug with google, this is bs error
+          ;;this is what you get when you try to 'teach new developers'
+          ;;via errors (goog/base.js 104)
+          (when-not (and (seq? form) (= 'ns (first form)))
+            (prn "Error evaluating:" form :as js)
+            (println (:stacktrace ret)))
+          (:value ret))))
+    (catch Throwable ex
+      (.printStackTrace ex)
+      (println (str ex)))))
+
+(defn load-stream [repl-env stream]
+  (with-open [r (io/reader stream)]
+    (let [env {:ns (@comp/namespaces comp/*cljs-ns*) :context :statement :locals {}}
+          pbr (clojure.lang.LineNumberingPushbackReader. r)
+          eof (Object.)]
+      (loop [r (read pbr false eof false)]
+        (let [env (assoc env :ns (@comp/namespaces comp/*cljs-ns*))]
+          (when-not (identical? eof r)
+            (evaluate-form repl-env env r)
+            (recur (read pbr false eof false))))))))
+
+(defn load-file
+  [repl-env f]
+  (binding [comp/*cljs-ns* 'cljs.user]
+    (let [res (if (= \/ (first f)) f (io/resource f))]
+      (assert res (str "Can't find " f " in classpath"))
+      (-put repl-env :filename f)
+      (load-stream repl-env res))))
 
 (defn repl
-  "This is just a stub REPL which does no compilation. It is currently
-  being used for testing."
-  [repl-env]
+  "Note - repl will reload core.cljs every time, even if supplied old repl-env"
+  [repl-env & {:keys [verbose warn-on-undeclared]}]
   (prn "Type: " :cljs/quit " to quit")
-  (setup repl-env)
-  (loop []
-    (print (str "ClojureScript:> "))
-    (flush)
-    (let [form (read)]
-      (cond (= form :cljs/quit) :quit
-            :else (let [ret (evaluate repl-env (str form))]
-                    (prn ret)
-                    (recur)))))
-  (tear-down repl-env))
+  (binding [comp/*cljs-ns* 'cljs.user
+            *cljs-verbose* verbose
+            *cljs-warn-on-undeclared* warn-on-undeclared]
+    (let [env {:context :statement :locals {}}]
+      (-setup repl-env)
+      (loop []
+        (print (str "ClojureScript:" comp/*cljs-ns* "> "))
+        (flush)
+        (let [form (read)]
+          (cond
+           (= form :cljs/quit) :quit
+           
+           (and (seq? form) (= (first form) 'in-ns))
+           (do (set! comp/*cljs-ns* (second (second form))) (newline) (recur))
+
+           (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
+           (do (load-file repl-env (second form)) (newline) (recur))
+           
+           :else
+           (let [ret (evaluate-form repl-env
+                                    (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
+                                    (list 'cljs.core.pr-str form))]
+             (prn (if (empty? ret) nil (read-string ret)))
+             (recur)))))
+      (-tear-down repl-env))))
 
