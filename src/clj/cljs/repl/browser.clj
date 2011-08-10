@@ -6,7 +6,7 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns cljs.eval.browser
+(ns cljs.repl.browser
   (:require [clojure.string :as str]
             [cljs.compiler :as comp])
   (:import java.io.BufferedReader
@@ -180,7 +180,7 @@
 (comment
   
   (require '[cljs.repl :as repl])
-  (require '[cljs.eval.browser :as browser])
+  (require '[cljs.repl.browser :as browser])
   (def env (browser/repl-env 9000))
   (repl/repl env)
   ;; simulate the browser with curl

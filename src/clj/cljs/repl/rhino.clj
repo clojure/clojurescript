@@ -6,7 +6,7 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns cljs.eval.rhino
+(ns cljs.repl.rhino
   (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
@@ -110,7 +110,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 (comment
 
   (require '[cljs.repl :as repl])
-  (require '[cljs.eval.rhino :as rhino])
+  (require '[cljs.repl.rhino :as rhino])
   (def env (rhino/repl-env))
   (repl/repl env)
   (+ 1 1)
