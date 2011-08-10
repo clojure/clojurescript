@@ -86,8 +86,11 @@
            :else
            (let [ret (evaluate-form repl-env
                                     (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
-                                    (list 'cljs.core.pr-str form))]
-             (prn (if (empty? ret) nil (read-string ret)))
+                                    (if (and (seq? form) (= 'ns (first form)))
+                                      form
+                                      (list 'cljs.core.pr-str form)))]
+             (try (prn (if (empty? ret) nil (read-string ret)))
+                  (catch Exception e (prn nil)))
              (recur)))))
       (-tear-down repl-env))))
 

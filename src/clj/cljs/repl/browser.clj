@@ -8,7 +8,9 @@
 
 (ns cljs.repl.browser
   (:require [clojure.string :as str]
-            [cljs.compiler :as comp])
+            [clojure.java.io :as io]
+            [cljs.compiler :as comp]
+            [cljs.repl :as repl])
   (:import java.io.BufferedReader
            java.io.BufferedWriter
            java.io.InputStreamReader
@@ -52,14 +54,20 @@
   [f]
   (swap! server-state (fn [old] (assoc old :return-value-fn f))))
 
+(defn status-line [status]
+  (case status
+    200 "HTTP/1.1 200 OK"
+    404 "HTTP/1.1 404 Not Found"
+    "HTTP/1.1 500 Error"))
+
 (defn send-and-close
   "Use the passed connection to send a form to the browser. Send a
   proper HTTP response."
-  [conn form]
+  [conn status form]
   (let [utf-8-form (.getBytes form "UTF-8")
         content-length (count utf-8-form)
         headers (map #(.getBytes (str % "\r\n"))
-                     ["HTTP/1.1 200 OK"
+                     [(status-line status)
                       "Server: ClojureScript REPL"
                       "Content-Type: text/html; charset=utf_8"
                       (str "Content-Length: " content-length)
@@ -71,13 +79,20 @@
           (.flush os)
           (.close conn)))))
 
+(defn send-404 [conn path]
+  (send-and-close conn 404
+                  (str "<html><body>"
+                       "<h2>Page not found</h2>"
+                       "No page " path " found on this server."
+                       "</body></html>")))
+
 (defn send-for-eval
   "Given a form and a return value function, send the form to the
   browser for evaluation. The return value function will be called
   when the return value is received."
   [form return-value-fn]
   (do (set-return-value-fn return-value-fn)
-      (send-and-close @(connection) form)))
+      (send-and-close @(connection) 200 form)))
 
 (defn return-value
   "Called by the server when a return value is received."
@@ -112,40 +127,61 @@
       header-lines                      ;we're done reading headers
       (recur (.readLine rdr) (conj header-lines next-line)))))
 
-(defn read-post [rdr]
-  (let [headers (parse-headers (read-headers rdr))
+(defn read-post [line rdr]
+  (let [[_ path _] (str/split line #" ")
+        headers (parse-headers (read-headers rdr))
         content-length (Integer/parseInt (:content-length headers))
         content (char-array content-length)]
     (io! (.read rdr content 0 content-length)
-         (String. content))))
+         {:method :post
+          :path path
+          :headers headers
+          :content (String. content)})))
 
-(defn read-request [reader]
-  (let [line (.readLine reader)]
-    (if (.startsWith line "POST")
-      (read-post reader)
-      line)))
+(defn read-get [line rdr]
+  (let [[_ path _] (str/split line #" ")
+        headers (parse-headers (read-headers rdr))]
+    {:method :get
+     :path path
+     :headers headers}))
+
+(defn read-request [rdr]
+  (let [line (.readLine rdr)]
+    (cond (.startsWith line "POST") (read-post line rdr)
+          (.startsWith line "GET") (read-get line rdr)
+          :else {:method :unknown :content line})))
+
+(defn handle-get [root conn request]
+  (let [file (io/file (str root (:path request)))]
+    (if (.exists file)
+      (send-and-close conn 200 (slurp file))
+      (send-404 conn (:path request)))))
 
 (defn- handle-connection
-  [conn]
+  [root conn]
   (let [rdr (BufferedReader. (InputStreamReader. (.getInputStream conn)))]
-    (if-let [message (read-request rdr)]
-      (do (when (not= message "ready")
-            (return-value message))
-          (set-connection conn)))))
+    (if-let [request (read-request rdr)]
+      (case (:method request)
+        :get (handle-get root conn request)
+        :post (do (when-not (= (:content request) "ready")
+                    (return-value (:content request)))
+                  (set-connection conn))
+        (.close conn))
+      (.close conn))))
 
 (defn- server-loop
-  [server-socket]
+  [root server-socket]
   (let [conn (.accept server-socket)]
     (do (.setKeepAlive conn true)
-        (future (handle-connection conn))
-        (recur server-socket))))
+        (future (handle-connection root conn))
+        (recur root server-socket))))
 
 (defn start-server
   "Start the server on the specified port."
-  [port]
+  [root port]
   (do (println "Starting Server on Port:" port)
       (let [ss (ServerSocket. port)]
-        (future (server-loop ss))
+        (future (server-loop root ss))
         (swap! server-state (fn [old] {:socket ss :port port})))))
 
 (defn stop-server
@@ -162,10 +198,10 @@
       {:type :return
        :value ret})))
 
-(defrecord BrowserEvaluator [port]
+(defrecord BrowserEvaluator [root port]
   IEvaluator
   (-setup [this]
-    (comp/with-core-cljs (start-server port)))
+    (comp/with-core-cljs (start-server root port)))
   (-evaluate [this line js]
     (browser-eval js))
   (-put [this k v]
@@ -174,17 +210,27 @@
     (do (stop-server)
         (reset! server-state {}))))
 
-(defn repl-env [port]
-  (BrowserEvaluator. port))
+(defn repl-env [root port]
+  (BrowserEvaluator. root port))
 
 (comment
   
   (require '[cljs.repl :as repl])
   (require '[cljs.repl.browser :as browser])
-  (def env (browser/repl-env 9000))
+  (def env (browser/repl-env "samples/repl2" 9000))
   (repl/repl env)
   ;; simulate the browser with curl
   ;; curl -v -d "ready" http://127.0.0.1:9000
   ClojureScript:> (+ 1 1)
   ;; curl -v -d "2" http://127.0.0.1:9000
+
+  ;; TODO: You need to figure out when to send a (ns cljs.user) form
+  ;; to the browser.
+
+  (let [env {:context :statement :locals {}}]
+    (repl/evaluate-form this
+                        (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
+                        '(ns cljs.user)))
+  
+
   )

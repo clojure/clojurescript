@@ -120,6 +120,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (:a {:a :b})
   (reduce + [1 2 3 4 5])
   (throw (java.lang.Exception. "hello"))
+  (load-file "clojure/string.cljs")
+  (clojure.string/triml "   hello")
+  (clojure.string/reverse "   hello")
   :cljs/quit
   (exit)
   
