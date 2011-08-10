@@ -82,6 +82,9 @@
 
            (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
            (do (load-file repl-env (second form)) (newline) (recur))
+
+           (= form :namespaces)
+           (do (prn @comp/namespaces) (newline) (recur))
            
            :else
            (let [ret (evaluate-form repl-env
@@ -89,8 +92,11 @@
                                     (if (and (seq? form) (= 'ns (first form)))
                                       form
                                       (list 'cljs.core.pr-str form)))]
-             (try (prn (if (empty? ret) nil (read-string ret)))
-                  (catch Exception e (prn nil)))
+             (try (prn (read-string ret))
+                  (catch Exception e
+                    (if (string? ret)
+                      (println ret)
+                      (prn nil))))
              (recur)))))
       (-tear-down repl-env))))
 
