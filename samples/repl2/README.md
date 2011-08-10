@@ -1,6 +1,6 @@
 # Long-Polling browser-connected REPL
 
-This sample applition demonstrates how to use the long-polling
+This sample application demonstrates how to use the long-polling
 browser-connected REPL. This is a work in progress and may not be
 the final approach that we take.
 
@@ -14,33 +14,35 @@ To build the project, launch a Clojure repl and:
     
 # Connect to REPL
 
-Start the REPL:
+Start the REPL using the browser as the evaluator:
 
     (require '[cljs.repl :as repl])
     (require '[cljs.repl.browser :as browser])
     (def env (browser/repl-env "samples/repl2" 9000))
     (repl/repl env)
 
-Open a web browser and connect to http://localhost:9000/index.html. In
-the REPL do the following.
+Open a web browser and connect to
+http://localhost:9000/index.html. Here are some things that are known
+to work:
 
-    ClojureScript:cljs.user> (+ 1 1)
+    ;; Evaluate some basic forms.
     (+ 1 1)
-    2
-    ClojureScript:cljs.user> {:a :b}
     {:a :b}
-    {:a :b}
-    ClojureScript:cljs.user> (reduce + [1 2 3 4 5])
+    "hello"
     (reduce + [1 2 3 4 5])
-    15
-    ClojureScript:cljs.user> (js/alert "hello world")
     (js/alert "hello world")
-    nil
-    ClojureScript:cljs.user> (load-file "clojure/string.cljs")
-    (load-file "clojure/string.cljs")
     
-    ClojureScript:cljs.user> (clojure.string/reverse "Hello")
+    ;; Load a file, and use it.
+    (load-file "clojure/string.cljs")
     (clojure.string/reverse "Hello")
-    "olleH"
+    
+    ;; Define functions and call them.
+    (ns cljs.user)
+    (defn sum [coll] (reduce + coll))
+    (sum [2 2 2 2])
+    
+    ;; Create dom elements.
+    (ns dom.testing (:require [clojure.browser.dom :as dom]))
+    (dom/append (dom/get-element "content")
+                (dom/element "Hello World!"))
 
-If you try this, expect a lot of things to be broken. This is a prototype.
