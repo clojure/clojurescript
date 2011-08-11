@@ -2346,19 +2346,12 @@ reduces them without incurring seq initialization"
   (-meta [rng] meta)
 
   ISeq
-  (-first [rng]
-    (let [comp (if (and (< start end)
-                        (pos? step))
-                 <= >=)]
-      (if (comp start end)
-        start
-        nil)))
+  (-first [rng] start)
 
   (-rest [rng]
-    (let [comp (if (pos? step) < >)]
-      (if (comp (+ start step) end)
-        (Range. meta (+ start step) end step)
-        (list))))
+    (if-not (nil? (-seq rng))
+      (Range. meta (+ start step) end step)
+      (list)))
 
   ICollection
   (-conj [rng o] (cons o rng))
@@ -2375,23 +2368,18 @@ reduces them without incurring seq initialization"
 
   ICounted
   (-count [rng]
-    (cond
-     (= start end)                              0
-     (and (< end start) (pos? step))            0
-     (and (> end start  (neg? step)))           0
-     (and (> start end) (= step 0))             (throw "Cannot reduce infinite sequence")
-     (and (= start 0) (< start end) (= step 1)) (- end start)
-     (= step 0)                                 1
-     :else                                      (goog.global.Math.ceil
-                                                 (/ (- end start) step))))
+    (cond (nil? (-seq rng)) 0
+          (and (> start end) (= step 0)) (throw "Cannot count infinite sequence")
+          (and (= start 0) (< start end) (= step 1)) (- end start)
+          :else (js/Math.ceil (/ (- end start) step))))
 
   IIndexed
   (-nth [rng n]
     (if (< n (-count rng))
       (+ start (* n step))
-      (if (and (> start end) (= step 0))
+      (if (and (> start end) (= step 0)) ;; (range 10 0 0) ;=> (10 10 10 ...)
         start
-        (throw (str "Index out of bounds!")))))
+        (throw "Index out of bounds"))))
   (-nth [rng n not-found]
     (if (< n (-count rng))
       (+ start (* n step))
@@ -2401,7 +2389,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [rng]
-    (let [comp (if (pos? step) <= >=)]
+    (let [comp (if (pos? step) < >)]
       (if (comp start end)
         rng)))
 
@@ -2409,54 +2397,20 @@ reduces them without incurring seq initialization"
   (-reduce [rng f]
     (if-not (and (> start end) (= step 0))
       (ci-reduce rng f)
-      (throw (str "Cannot reduce infinite sequence: (range " start " " end " " step ")"))))
+      (throw "Cannot reduce infinite sequence")))
   (-reduce [rng f s]
     (if-not (and (> start end) (= step 0))
       (ci-reduce rng f s)
-      (throw (str "Cannot reduce infinite sequence: (range " start " " end " " step ")")))))
-
-;; (set! cljs.core.Range/EMPTY (EmptyRange. nil))
+      (throw "Cannot reduce infinite sequence"))))
 
 (defn range
   "Returns a lazy seq of nums from start (inclusive) to end
-   (exclusive), by step, where start defaults to 0, step to 1, 
+   (exclusive), by step, where start defaults to 0, step to 1,
    and end to infinity."
-  ([] (range 0 goog.global.Number/MAX_VALUE 1))
+  ([] (range 0 js/Number.MAX_VALUE 1))
   ([end] (range 0 end 1))
   ([start end] (range start end 1))
-  ([start end step]
-     (if (or (<= end goog.global.Number/MAX_VALUE)
-             (<= start goog.global.Number/MIN_VALUE))
-         (Range. nil start end step)
-         (list))))
-
-;; (defn range
-;;   "Returns a lazy seq of nums from start (inclusive) to end
-;;   (exclusive), by step, where start defaults to 0 and step to 1."
-;;   ([] (Range. nil 0 goog.global.Number/MAX_VALUE 1))
-;;   ([end] (if (and (> end 0) (<= end goog.global.Number/MAX_VALUE))
-;;            (Range. nil 0 end 1)
-;;            (take end (iterate inc 0))))
-;;   ([start end] (if (and (< start end)
-;;                         (>= start goog.global.Number/MIN_VALUE)
-;;                         (<= end goog.global.Number/MAX_VALUE))
-;;                  (Range. nil start end 1)
-;;                  (take (- end start) (iterate inc start))))
-;;   ([start end step]
-;;      (take-while (partial (if (pos? step) > <) end)
-;;                  (iterate (partial + step) start))))
-
-;; (defn range
-;;   "Returns a lazy seq of nums from start (inclusive) to end
-;;   (exclusive), by step, where start defaults to 0, step to 1, and end
-;;   to infinity."
-;;   ([] (iterate inc 0))
-;;   ([end] (range 0 end 1))
-;;   ([start end] (range start end 1))
-;;   ([start end step]
-;;     (take-while
-;;       (fn [n] (< n end))
-;;       (iterate (fn [x] (+ x step)) start))))
+  ([start end step] (Range. nil start end step)))
 
 (defn take-nth
   "Returns a lazy seq of every nth item in coll."

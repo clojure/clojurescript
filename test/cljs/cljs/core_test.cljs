@@ -681,7 +681,34 @@
   (assert (= 1 (count (methods bar))))
   (remove-all-methods bar)
   (assert (zero? (count (methods bar))))
-  
+
+  ;; Range
+  (assert (= (range 0 30 3) (list 0 3 6 9 12 15 18 21 24 27)))
+
+  ;; Range -count
+  (assert (= (count (range 0 30 3)) 10))
+
+  ;; Range -reduce
+  ;; Range -nth
+
+  ;; Negative Ranges
+  (assert (= (range 0 -3 -1) (list 0 -1 -2)))
+  (assert (= (range 3 0 -1) (list 3 2 1)))
+  (assert (= (range 0 1 1) (list 0)))
+
+  ;; Empty Ranges
+  (assert (= (range 0 10 -1) (list)))
+  (assert (= (range 0 1 0) (list)))
+  (assert (= (range 10 0 1) (list)))
+  (assert (= (range 0 0 0) (list)))
+  (assert (= (count (range 0 10 -1)) 0))
+  (assert (= (count (range 0 1 0)) 0))
+  (assert (= (count (range 10 0 1)) 0))
+
+  ;; Infinite Repeating Range Sequences
+  (assert (= (take 3 (range 1 0 0)) (list 1 1 1))) ; (range 1 0 0) is infinite
+  (assert (= (take 3 (range 3 1 0)) (list 3 3 3)))
+
   :ok
   )
 
