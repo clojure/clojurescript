@@ -8,13 +8,13 @@
 
   (assert (= [[1 1] [1 2] [1 3] [2 1] [2 2] [2 3]]
              (map #(%) (for [i [1 2] j [1 2 3]] (fn [] [i j])))))
-  
+
   (assert (= 2 (:b {:a 1 :b 2})))
   (assert (= 2 ('b '{:a 1 b 2})))
   (assert (= 2 ({:a 1 :b 2} :b)))
   (assert (= 2 ({1 1 2 2} 2)))
   (assert (= 2 (#{1 2 3} 2)))
-  
+
   (assert (= "baz" (name 'foo/bar/baz)))
   (assert (= "foo/bar" (namespace 'foo/bar/baz)))
   (assert (= "baz" (name :foo/bar/baz)))
@@ -223,7 +223,7 @@
     (assert (empty? e-hmap))
     (assert (= {:b :c} (meta e-hmap))))
 
-  ;;this fails in v8 advanced mode - what's e? 
+  ;;this fails in v8 advanced mode - what's e?
   #_(let [a (atom nil)]
     (assert (= 1 (try* 1)))
     (assert (= 2 (try* 1 (throw 3) (catch e 2))))
@@ -237,7 +237,7 @@
     (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 1 2))))
     (assert (= 1 (try 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
-  
+
   (assert (= [3] (nthnext [1 2 3] 2)))
   (let [v [1 2 3]]
     (assert (= v (for [e v] e)))
@@ -429,7 +429,7 @@
 
   ;; sort-by
   (assert (= ["a" [ 1 2] "foo"] (sort-by count ["foo" "a" [1 2]])))
-  (assert (= ["foo" [1 2] "a"] (sort-by count > ["foo" "a" [1 2]])))  
+  (assert (= ["foo" [1 2] "a"] (sort-by count > ["foo" "a" [1 2]])))
 
   ;; js->clj
   (assert (= {"a" 1, "b" 2} (js->clj (js* "{\"a\":1,\"b\":2}"))))
@@ -454,7 +454,7 @@
         s (atom ())]
     (doseq [n v] (swap! s conj n))
     (assert (= @s (reverse v))))
-  
+
   ;; delay
   ;; (let [d (delay (. (js/Date.) (getTime)))]
   ;;   (assert (false? (realized? d)))
@@ -482,7 +482,7 @@
   (let [f (memoize (fn [] (rand)))]
     (f)
     (assert (= (f) (f))))
-  
+
   ;; find
   (assert (= (find {} :a) nil))
   (assert (= (find {:a 1} :a) [:a 1]))
@@ -549,7 +549,7 @@
 
   ;; frequencies
   (assert (= {:a 3 :b 2} (frequencies [:a :b :a :b :a])))
-  
+
   ;; reductions
   (assert (= [1 3 6 10 15] (reductions + [1 2 3 4 5])))
 
@@ -567,11 +567,11 @@
   ;; merge-with
   (assert (= '{"Foo" ("foo" "FOO" "fOo"), "Bar" ("bar" "BAR" "BAr"), "Baz" ["baz"], "Qux" ["qux" "quux"]}
              (merge-with concat
-		  {"Foo" ["foo" "FOO"]
-		   "Bar" ["bar" "BAR"]
+                  {"Foo" ["foo" "FOO"]
+                   "Bar" ["bar" "BAR"]
                    "Baz" ["baz"]}
-		  {"Foo" ["fOo"]
-		   "Bar" ["BAr"]
+                  {"Foo" ["fOo"]
+                   "Bar" ["BAr"]
                    "Qux" ["qux" "quux"]})))
   (assert (= {:a 111, :b 102, :c 13}
              (merge-with +
@@ -623,14 +623,14 @@
   ;; ?? (isa? String Object)
   (assert (true? (isa? [::square ::rect] [::shape ::shape])))
   ;; ?? (ancestors java.util.ArrayList)
-  
+
   ;; ?? isa? based dispatch tests
 
   ;; prefer-method test
   (defmulti bar (fn [x y] [x y]))
   (defmethod bar [::rect ::shape] [x y] :rect-shape)
   (defmethod bar [::shape ::rect] [x y] :shape-rect)
-  
+
   ;;(bar ::rect ::rect)
   ;; -> java.lang.IllegalArgumentException:
   ;;  Multiple methods match dispatch value:
@@ -654,7 +654,7 @@
   (defmethod nested-dispatch2 :a [m] :nested-a)
   (defmethod nested-dispatch2 :default [m] :nested-default)
   (assert (= :nested-a (nested-dispatch2 [[:a :b]])))
-  
+
   ;; general tests
   (defmulti foo (fn [& args] (first args)))
   (defmethod foo :a [& args] :a-return)

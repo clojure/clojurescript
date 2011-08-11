@@ -41,7 +41,7 @@
 
 (defn array
   "Creates a new javascript array.
-@param {...*} var_args" ;;array is a special case, don't emulate this doc string  
+@param {...*} var_args" ;;array is a special case, don't emulate this doc string
   [var-args]            ;; [& items]
   (js* "Array.prototype.slice.call(arguments)"))
 
@@ -92,7 +92,7 @@
   #_(-assoc-ex [coll k v])
   (-dissoc [coll k]))
 
-(defprotocol ISet  
+(defprotocol ISet
   (-disjoin [coll v]))
 
 (defprotocol IStack
@@ -153,7 +153,7 @@
 (extend-type nil
   IEquiv
   (-equiv [_ o] (nil? o))
-  
+
   ICounted
   (-count [_] 0)
 
@@ -211,7 +211,7 @@
 (extend-type number
   IEquiv
   (-equiv [x o] (identical? x o))
-  
+
   IHash
   (-hash [o] o))
 
@@ -1188,9 +1188,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (hash-coll coll))
 
   ISeqable
-  (-seq [coll] (seq (lazy-seq-value coll)))
-
-  )
+  (-seq [coll] (seq (lazy-seq-value coll))))
 
 ;;;;;;;;;;;;;;;;
 
@@ -2009,9 +2007,7 @@ reduces them without incurring seq initialization"
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
         (ObjMap. meta new-keys new-strobj))
-      coll)) ; key not found, return coll unchanged
-
-  )
+      coll))) ; key not found, return coll unchanged
 
 (set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj)))
 
@@ -2094,7 +2090,7 @@ reduces them without incurring seq initialization"
       (if i
         true
         false)))
-  
+
   IMap
   (-dissoc [coll k]
     (let [h (hash k)
@@ -2108,9 +2104,7 @@ reduces them without incurring seq initialization"
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
               (aset new-hashobj h new-bucket)))
-          (HashMap. meta (dec count) new-hashobj)))))
-
-  )
+          (HashMap. meta (dec count) new-hashobj))))))
 
 (set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj)))
 
@@ -2161,12 +2155,12 @@ reduces them without incurring seq initialization"
   [f & maps]
   (when (some identity maps)
     (let [merge-entry (fn [m e]
-			(let [k (first e) v (second e)]
-			  (if (contains? m k)
-			    (assoc m k (f (get m k) v))
-			    (assoc m k v))))
+                        (let [k (first e) v (second e)]
+                          (if (contains? m k)
+                            (assoc m k (f (get m k) v))
+                            (assoc m k v))))
           merge2 (fn [m1 m2]
-		   (reduce merge-entry (or m1 {}) (seq m2)))]
+                   (reduce merge-entry (or m1 {}) (seq m2)))]
       (reduce merge2 maps))))
 
 (defn select-keys
@@ -2188,10 +2182,10 @@ reduces them without incurring seq initialization"
 (deftype Set [meta hash-map]
   IWithMeta
   (-with-meta [coll meta] (Set. meta hash-map))
-  
+
   IMeta
   (-meta [coll] meta)
-  
+
   ICollection
   (-conj [coll o]
     (Set. meta (assoc hash-map o nil)))
@@ -2226,9 +2220,7 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (dissoc hash-map v)))
-
-)
+    (Set. meta (dissoc hash-map v))))
 
 (set! cljs.core.Set/EMPTY (Set. nil (hash-map)))
 
@@ -2267,7 +2259,7 @@ reduces them without incurring seq initialization"
                (lazy-seq
                 ((fn [[f :as xs] seen]
                    (when-let [s (seq xs)]
-                     (if (contains? seen f) 
+                     (if (contains? seen f)
                        (recur (rest s) seen)
                        (cons f (step (rest s) (conj seen f))))))
                  xs seen)))]
@@ -2521,21 +2513,21 @@ reduces them without incurring seq initialization"
   ((juxt a b c) x) => [(a x) (b x) (c x)]
 
   TODO: Implement apply"
-  ([f] 
+  ([f]
      (fn
        ([] (vector (f)))
        ([x] (vector (f x)))
        ([x y] (vector (f x y)))
        ([x y z] (vector (f x y z)))
        ([x y z & args] (vector (apply f x y z args)))))
-  ([f g] 
+  ([f g]
      (fn
        ([] (vector (f) (g)))
        ([x] (vector (f x) (g x)))
        ([x y] (vector (f x y) (g x y)))
        ([x y z] (vector (f x y z) (g x y z)))
        ([x y z & args] (vector (apply f x y z args) (apply g x y z args)))))
-  ([f g h] 
+  ([f g h]
      (fn
        ([] (vector (f) (g) (h)))
        ([x] (vector (f x) (g x) (h x)))
@@ -2720,14 +2712,14 @@ reduces them without incurring seq initialization"
 (extend-protocol IPrintable
   boolean
   (-pr-seq [bool opts] (list (str bool)))
- 
+
   number
   (-pr-seq [n opts] (list (str n)))
- 
+
   array
   (-pr-seq [a opts]
     (pr-sequential pr-seq "#<Array [" ", " "]>" opts a))
- 
+
   string
   (-pr-seq [obj opts]
     (cond
@@ -2743,13 +2735,13 @@ reduces them without incurring seq initialization"
      :else (list (if (:readably opts)
                    (goog.string.quote obj)
                    obj))))
- 
+
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
   IndexedSeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
-  
+
   List
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
@@ -2758,15 +2750,15 @@ reduces them without incurring seq initialization"
 
   EmptyList
   (-pr-seq [coll opts] (list "()"))
- 
+
   Vector
   (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll))
- 
+
   ObjMap
   (-pr-seq [coll opts]
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
       (pr-sequential pr-pair "{" ", " "}" opts coll)))
- 
+
   HashMap
   (-pr-seq [coll opts]
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
@@ -2829,7 +2821,7 @@ reduces them without incurring seq initialization"
   ([a f x]
      (reset! a (f (.state a) x)))
   ([a f x y]
-     (reset! a (f (.state a) x y)))  
+     (reset! a (f (.state a) x y)))
   ([a f x y z]
      (reset! a (f (.state a) x y z)))
   ([a f x y z & more]
@@ -2902,7 +2894,7 @@ reduces them without incurring seq initialization"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
 
 (deftype Delay [f state]
-  
+
   IDeref
   (-deref [_]
     (when-not @state
@@ -3003,11 +2995,11 @@ reduces them without incurring seq initialization"
   [coll]
   (nth coll (rand-int (count coll))))
 
-(defn group-by 
+(defn group-by
   "Returns a map of the elements of coll keyed by the result of
   f on each element. The value at each key will be a vector of the
   corresponding elements, in the order they appeared in coll."
-  [f coll]  
+  [f coll]
   (reduce
    (fn [ret x]
      (let [k (f x)]
@@ -3031,16 +3023,16 @@ reduces them without incurring seq initialization"
   ([child parent] (isa? @global-hierarchy child parent))
   ([h child parent]
      (or (= child parent)
-	 ;; (and (class? parent) (class? child)
+         ;; (and (class? parent) (class? child)
          ;;    (. ^Class parent isAssignableFrom child))
-	 (contains? ((:ancestors h) child) parent)
-	 ;;(and (class? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
-	 (and (vector? parent) (vector? child)
-	      (= (count parent) (count child))
-	      (loop [ret true i 0]
-		(if (or (not ret) (= i (count parent)))
-		  ret
-		  (recur (isa? h (child i) (parent i)) (inc i))))))))
+         (contains? ((:ancestors h) child) parent)
+         ;;(and (class? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
+         (and (vector? parent) (vector? child)
+              (= (count parent) (count child))
+              (loop [ret true i 0]
+                (if (or (not ret) (= i (count parent)))
+                  ret
+                  (recur (isa? h (child i) (parent i)) (inc i))))))))
 
 (defn parents
   "Returns the immediate parents of tag, either via a Java type
@@ -3110,17 +3102,17 @@ reduces them without incurring seq initialization"
      (swap! global-hierarchy underive tag parent) nil)
   ([h tag parent]
     (let [parentMap (:parents h)
-	  childsParents (if (parentMap tag)
-			  (disj (parentMap tag) parent) #{})
-	  newParents (if (not-empty childsParents)
-		       (assoc parentMap tag childsParents)
-		       (dissoc parentMap tag))
-	  deriv-seq (flatten (map #(cons (first %) (interpose (first %) (second %)))
-				       (seq newParents)))]
+          childsParents (if (parentMap tag)
+                          (disj (parentMap tag) parent) #{})
+          newParents (if (not-empty childsParents)
+                      (assoc parentMap tag childsParents)
+                      (dissoc parentMap tag))
+          deriv-seq (flatten (map #(cons (first %) (interpose (first %) (second %)))
+                                  (seq newParents)))]
       (if (contains? (parentMap tag) parent)
-	(reduce #(apply derive %1 %2) (make-hierarchy)
-		(partition 2 deriv-seq))
-	h))))
+        (reduce #(apply derive %1 %2) (make-hierarchy)
+                (partition 2 deriv-seq))
+        h))))
 
 (defn- reset-cache
   [method-cache method-table cached-hierarchy hierarchy]
@@ -3135,14 +3127,14 @@ reduces them without incurring seq initialization"
        true)
      (loop [ps (parents y)]
        (when (pos? (count ps))
-	 (when (prefers* x (first ps) prefer-table)
-	   true)
-	 (recur (rest ps))))
+         (when (prefers* x (first ps) prefer-table)
+           true)
+         (recur (rest ps))))
      (loop [ps (parents x)]
        (when (pos? (count ps))
-	 (when (prefers* (first ps) y prefer-table)
-	   true)
-	 (recur (rest ps))))
+         (when (prefers* (first ps) y prefer-table)
+           true)
+         (recur (rest ps))))
      false)))
 
 (defn- dominates
@@ -3152,25 +3144,25 @@ reduces them without incurring seq initialization"
 (defn- find-and-cache-best-method
   [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
   (let [best-entry (reduce (fn [be [k _ :as e]]
-			     (when (isa? dispatch-val k)
-			       (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
-					   e
-					   be)]
-				 (when-not (dominates (first be2) k prefer-table)
-				   (throw (str "Multiple methods in multimethod '" name
-					       "' match dispatch value: " dispatch-val " -> " k
-					       " and " (first be2) ", and neither is preferred")))
-				 be2)))
-			   nil @method-table)]
+                             (when (isa? dispatch-val k)
+                               (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
+                                           e
+                                           be)]
+                                 (when-not (dominates (first be2) k prefer-table)
+                                   (throw (str "Multiple methods in multimethod '" name
+                                               "' match dispatch value: " dispatch-val " -> " k
+                                               " and " (first be2) ", and neither is preferred")))
+                                 be2)))
+                           nil @method-table)]
     (when best-entry
       (if (= @cached-hierarchy @hierarchy)
-	(do
-	  (swap! method-cache assoc dispatch-val (second best-entry))
-	  (second best-entry))
-	(do
-	  (reset-cache method-cache method-table cached-hierarchy hierarchy)
-	  (find-and-cache-best-method name dispatch-val hierarchy method-table prefer-table
-				      method-cache cached-hierarchy))))))
+        (do
+          (swap! method-cache assoc dispatch-val (second best-entry))
+          (second best-entry))
+        (do
+          (reset-cache method-cache method-table cached-hierarchy hierarchy)
+          (find-and-cache-best-method name dispatch-val hierarchy method-table prefer-table
+                                      method-cache cached-hierarchy))))))
 
 (defprotocol IMultiFn
   (-reset [mf])
@@ -3185,13 +3177,13 @@ reduces them without incurring seq initialization"
 (defn- do-invoke
   [mf dispatch-fn args]
   (let [dispatch-val (apply dispatch-fn args)
-	target-fn (-get-method mf dispatch-val)]
+        target-fn (-get-method mf dispatch-val)]
     (when-not target-fn
       (throw (str "No method in multimethod '" name "' for dispatch value: " dispatch-val)))
     (apply target-fn args)))
 
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
-    		  method-table prefer-table method-cache cached-hierarchy]
+                  method-table prefer-table method-cache cached-hierarchy]
   IMultiFn
   (-reset [mf]
     (swap! method-table (fn [mf] {}))
@@ -3216,19 +3208,19 @@ reduces them without incurring seq initialization"
     (if-let [target-fn (@method-cache dispatch-val)]
       target-fn
       (if-let [target-fn (find-and-cache-best-method name dispatch-val hierarchy method-table
-						     prefer-table method-cache cached-hierarchy)]
-	target-fn
-	(@method-table default-dispatch-val))))
-  
+                                                     prefer-table method-cache cached-hierarchy)]
+        target-fn
+        (@method-table default-dispatch-val))))
+
   (-prefer-method [mf dispatch-val-x dispatch-val-y]
     (when (prefers* dispatch-val-x dispatch-val-y prefer-table)
       (throw (str "Preference conflict in multimethod '" name "': " dispatch-val-y
-		  " is already preferred to " dispatch-val-x)))
+                  " is already preferred to " dispatch-val-x)))
     (swap! prefer-table
-	   (fn [old]
-	     (assoc old dispatch-val-x
-		    (conj (get old dispatch-val-x #{})
-			  dispatch-val-y))))
+           (fn [old]
+             (assoc old dispatch-val-x
+                    (conj (get old dispatch-val-x #{})
+                          dispatch-val-y))))
     (reset-cache method-cache method-table cached-hierarchy hierarchy))
 
   (-methods [mf] @method-table)
@@ -3250,7 +3242,7 @@ reduces them without incurring seq initialization"
  (-remove-method multifn dispatch-val))
 
 (defn prefer-method
-  "Causes the multimethod to prefer matches of dispatch-val-x over dispatch-val-y 
+  "Causes the multimethod to prefer matches of dispatch-val-x over dispatch-val-y
    when there is a conflict"
   [multifn dispatch-val-x dispatch-val-y]
   (-prefer-method multifn dispatch-val-x dispatch-val-y))
