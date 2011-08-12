@@ -31,6 +31,11 @@
   argv as arguments"}
   *main-cli-fn* nil)
 
+(defn missing-protocol [proto obj]
+  (js/Error (js* "~{}+~{}+~{}+~{}+~{}+~{}"
+                 "No protocol method " proto
+                 " defined for type " (goog/typeOf obj) ": " obj)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn aclone
@@ -253,7 +258,7 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
   ISeq
   (-first [_] (aget a i))
-  (-rest [_] (if (lt- (inc i) (-count a))
+  (-rest [_] (if (lt- (inc i) (.length a))
                (IndexedSeq. a (inc i))
                (list)))
 
@@ -268,7 +273,7 @@ reduces them without incurring seq initialization"
     (ci-reduce a f start i)))
 
 (defn prim-seq [prim i]
-  (when-not (= 0 (-count prim))
+  (when-not (= 0 (.length prim))
     (IndexedSeq. prim i)))
 
 (defn array-seq [array i]

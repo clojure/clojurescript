@@ -254,7 +254,7 @@ nil if the end of stream has been reached")
   (let [token (read-token reader (read-char reader))]
     (if (gstring/contains token "/")
       (keyword (subs token 0 (.indexOf token "/"))
-              (subs (inc (.indexOf token "/")) (.length token)))
+               (subs token (inc (.indexOf token "/")) (.length token)))
       (keyword token))))
 
 (defn desugar-meta
