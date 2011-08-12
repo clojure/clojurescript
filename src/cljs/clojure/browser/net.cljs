@@ -11,7 +11,8 @@
   clojure.browser.net
   (:require [clojure.browser.event :as event]
             [goog.net.XhrIo :as gxhrio]
-            [goog.net.EventType :as gevent-type]))
+            [goog.net.EventType :as gevent-type]
+            [goog.net.xpc.CfgFields :as gxpc-config-fields]))
 
 (def *timeout* 10000)
 
@@ -59,7 +60,42 @@
            (merge
             (js->clj goog.net.EventType))))))
 
-(defn open
+(def xpc-config-fields
+  (into {}
+        (map
+         (fn [[k v]]
+           [(keyword (. k (toLowerCase)))
+            v])
+         (js->clj gxpc-config-fields))))
+
+(defprotocol IXpcConnection
+  (listen-parent [this type fn] [this type fn encode-json?])
+  (listen-child  [this type fn] [this type fn encode-json?]))
+
+(deftype XpcConnection [parent child]
+  IXpcConnection
+  ())
+
+(defn cross-page-channel
+  [config]
+  (goog.net.xpc.CrossPageChannel.
+   (.strobj (reduce (fn [sum [k v]]
+                      (when-let [field (xpc-config-fields k)]
+                        (assoc sum field v)))
+                    {}
+                    config))))
+
+(defn xpc-connection
+  ([url]
+     (xpc-connection url nil))
+  ([url & config]
+     (let [parent (cross-page-channel
+                   (assoc (apply hash-map config)
+                     :peer_uri
+                     url))]
+       ())))
+
+(defn xhr-connection
   "Returns a connection"
   []
   (goog.net.XhrIo.))

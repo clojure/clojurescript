@@ -18,82 +18,149 @@
   (:require [clojure.browser.net   :as net]
             [clojure.browser.event :as event]))
 
-(defn log [& args]
-  (.log js/console (apply pr-str args)))
-
 (defn log-obj [obj]
   (.log js/console obj))
 
-(def result-id (atom 0))
-(def result    (atom nil))
+;; See my notes inline. Delete them whenever you want.
 
-(defn next-result!
-  []
-  (swap! result-id inc)
-  (reset! result nil))
+(def result-state (atom nil))
 
-(defn input-uri [base-uri]
-  (str base-uri "/javascript/" @result-id))
-
-(defn output-uri [base-uri]
-  (str base-uri "/clojurescript/out/" @result-id))
-
-(defn get-block
-  "Gets a single block of JavaScript from the server"
-  [connection base-uri]
-  (log "(get-block " connection " " base-uri ")")
-  (net/transmit connection (input-uri base-uri)))
-
-(defn post-result
-  "Posts an evaluated block of ClojureScript to the server"
-  [connection base-uri]
-  (log "(post-result " connection " " base-uri " " @result ")")
-  (net/transmit connection (output-uri base-uri) "POST" @result))
+;; Can't send a new post while in the middle of another connection. I
+;; changed this so that instead of sending the result back we store the
+;; result in an atom and return. The result will be sent when the connection
+;; is ready.
 
 (defn process-block
   "Process a single block of JavaScript received from the server"
-  [block]
+  [connection block]
   (log-obj (str "evaluating: " block))
-  (js* "eval(~{block})"))
+  (let [result (try (js* "eval(~{block})")
+                    (catch js/Error e (pr-str e)))]
+    (log-obj (str "result: " result))
+    (reset! result-state result)))
 
-#_(defmacro with-timeout
-    [ms & body]
-    `(let [f# (fn [] ~@body)]
-       (js/setTimeout f# ~ms)))
+;; We are long polling so this cannot time out.
 
-(defn start-repl
+(defn transmit-post [connection url data]
+  (net/transmit connection url "POST" data nil 0))
+
+;; on-ready is called when the connection is ready to send.
+
+(defn on-ready [connection url]
+  (log-obj "connection is ready")
+  (let [result @result-state]
+    (log-obj (str "sending: " result))
+    (transmit-post connection url result)))
+
+(defn start-evaluator
   "Start the REPL loop"
-  [base-uri]
-  (let [connection (net/open)]
-    (event/listen connection
-                  :ready
-                  (fn [e]
-                    (if @result
-                      (post-result connection base-uri)
-                      (js/setTimeout
-                       (fn []
-                         (get-block connection base-uri))
-                       100))))
+  [connection url]
+  (event/listen connection
+                :success
+                (fn [e]
+                  (process-block connection
+                                 (.getResponseText e/currentTarget ()))))
+  (event/listen connection
+                :ready
+                (fn [e]
+                  (on-ready connection url)))
+  ;; The server is expecting to see the string "ready" for the
+  ;; initial connection.
+  (transmit-post connection url "ready"))
 
-    (event/listen-once connection
-                       :success
-                       (fn [_]
-                         (log "one time only")
-                         (event/listen connection
-                                       :success
-                                       (fn [e]
-                                         (log @result)
-                                         (if @result
-                                           (next-result!)
-                                           (reset! result
-                                                   (process-block
-                                                    (.getResponseText e/target ()))))))))
+;; The client will need to monitor the conenction and re-open it if it
+;; has been closed. There are all kinds of error states that we need
+;; to deal with.
+
+(defn connect-repl
+  "Connects to a REPL server in the context of an HTML document. After
+  the connection is made, the REPL will evaluate forms in the context
+  of the document."
+  ([repl-server-url]
+     (connect-repl repl-server-url (js/document)))
+  ([repl-server-url document]
+     (let [repl-frame (embed-iframe document)
+           repl-connection (net/xhr-connection repl-frame)]
+       (net/xpc-connection document repl-frame)
+       (start-evaluator repl-connection repl-server-url))))
+
+(comment
+  (defn log [& args]
+    (.log js/console (apply pr-str args)))
+
+  (defn log-obj [obj]
+    (.log js/console obj))
+
+  (def result-id (atom 0))
+  (def result    (atom nil))
+
+  (defn next-result!
+    []
+    (swap! result-id inc)
+    (reset! result nil))
+
+  (defn input-uri [base-uri]
+    (str base-uri "/javascript/" @result-id))
+
+  (defn output-uri [base-uri]
+    (str base-uri "/clojurescript/out/" @result-id))
+
+  (defn get-block
+    "Gets a single block of JavaScript from the server"
+    [connection base-uri]
+    (log "(get-block " connection " " base-uri ")")
+    (net/transmit connection (input-uri base-uri)))
+
+  (defn post-result
+    "Posts an evaluated block of ClojureScript to the server"
+    [connection base-uri]
+    (log "(post-result " connection " " base-uri " " @result ")")
+    (net/transmit connection (output-uri base-uri) "POST" @result))
+
+  (defn process-block
+    "Process a single block of JavaScript received from the server"
+    [block]
+    (log-obj (str "evaluating: " block))
+    (js* "eval(~{block})"))
+
+  #_(defmacro with-timeout
+      [ms & body]
+      `(let [f# (fn [] ~@body)]
+         (js/setTimeout f# ~ms)))
+
+  (defn start-repl
+    "Start the REPL loop"
+    [base-uri]
+    (let [connection (net/xhr-connection)]
+      (event/listen connection
+                    :ready
+                    (fn [e]
+                      (if @result
+                        (post-result connection base-uri)
+                        (js/setTimeout
+                         (fn []
+                           (get-block connection base-uri))
+                         100))))
+
+      (event/listen-once connection
+                         :success
+                         (fn [_]
+                           (log "one time only")
+                           (event/listen connection
+                                         :success
+                                         (fn [e]
+                                           (log @result)
+                                           (if @result
+                                             (next-result!)
+                                             (reset! result
+                                                     (process-block
+                                                      (.getResponseText e/target ()))))))))
 
 
 
-    (js/setTimeout
-     (fn []
-       (net/transmit connection
-                     (str base-uri "/clients")
-                     "POST"))
-     100)))
+      (js/setTimeout
+       (fn []
+         (net/transmit connection
+                       (str base-uri "/clients")
+                       "POST"))
+       100))))

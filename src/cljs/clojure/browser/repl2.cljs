@@ -47,7 +47,7 @@
 (defn start-repl
   "Start the REPL loop"
   [url]
-  (let [connection (net/open url)]
+  (let [connection (net/xhr-connection url)]
     (event/listen connection
                   :success
                   (fn [e]
