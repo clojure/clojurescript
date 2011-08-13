@@ -68,32 +68,37 @@
             v])
          (js->clj gxpc-config-fields))))
 
-(defprotocol IXpcConnection
-  (listen-parent [this type fn] [this type fn encode-json?])
-  (listen-child  [this type fn] [this type fn encode-json?]))
+(defprotocol CrossPageChannel
+  (register-service [this type fn] [this type fn encode-json?])
 
-(deftype XpcConnection [parent child]
-  IXpcConnection
-  ())
+  (connect [this fn])
+
+  (send-xpc [this type payload]))
+
+(extend-type goog.net.xpc.CrossPageChannel
+
+  CrossPageChannel
+  (register-service [this type fn]
+    (listen-parent this type fn false))
+  (register-service [this type fn encode-json?]
+    (.registerService parent (name type) fn encode-json?))
+
+  (connect [this fn]
+    (.connect this fn))
+
+  (send-xpc [this type payload]
+    (.send this (name type) payload)))
 
 (defn cross-page-channel
-  [config]
+  [url & config]
   (goog.net.xpc.CrossPageChannel.
    (.strobj (reduce (fn [sum [k v]]
                       (when-let [field (xpc-config-fields k)]
                         (assoc sum field v)))
                     {}
-                    config))))
-
-(defn xpc-connection
-  ([url]
-     (xpc-connection url nil))
-  ([url & config]
-     (let [parent (cross-page-channel
-                   (assoc (apply hash-map config)
-                     :peer_uri
-                     url))]
-       ())))
+                    (assoc (apply hash-map config)
+                      :peer_uri
+                      url)))))
 
 (defn xhr-connection
   "Returns a connection"
