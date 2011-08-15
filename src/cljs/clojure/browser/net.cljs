@@ -26,12 +26,13 @@
           (js->clj goog.net.EventType)))))
 
 (defprotocol IConnection
+  (connect [this] [this opt1])
   (transmit
-    [this uri]
-    [this uri method]
-    [this uri method content]
-    [this uri method content headers]
-    [this uri method content headers timeout])
+    [this opt]
+    [this opt opt2]
+    [this opt opt2 opt3]
+    [this opt opt2 opt3 opt4]
+    [this opt opt2 opt3 opt4 opt5])
   (close [this]))
 
 (extend-type goog.net.XhrIo
@@ -68,25 +69,26 @@
             v])
          (js->clj gxpc-config-fields))))
 
+(defn xhr-connection
+  "Returns a connection"
+  []
+  (goog.net.XhrIo.))
+
 (defprotocol CrossPageChannel
-  (register-service [this type fn] [this type fn encode-json?])
-
-  (connect [this fn])
-
-  (send-xpc [this type payload]))
+  (register-service [this type fn] [this type fn encode-json?]))
 
 (extend-type goog.net.xpc.CrossPageChannel
 
   CrossPageChannel
   (register-service [this type fn]
-    (listen-parent this type fn false))
+    (register-service this type fn false))
   (register-service [this type fn encode-json?]
-    (.registerService parent (name type) fn encode-json?))
+    (.registerService this (name type) fn encode-json?))
 
+  IConnection
   (connect [this fn]
     (.connect this fn))
-
-  (send-xpc [this type payload]
+  (transmit [this type payload]
     (.send this (name type) payload)))
 
 (defn cross-page-channel
@@ -99,8 +101,3 @@
                     (assoc (apply hash-map config)
                       :peer_uri
                       url)))))
-
-(defn xhr-connection
-  "Returns a connection"
-  []
-  (goog.net.XhrIo.))
