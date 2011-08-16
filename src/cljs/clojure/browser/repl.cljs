@@ -21,56 +21,48 @@
 (defn log-obj [obj]
   (.log js/console obj))
 
-;; See my notes inline. Delete them whenever you want.
-
-(def result-state (atom nil))
-
-;; Can't send a new post while in the middle of another connection. I
-;; changed this so that instead of sending the result back we store the
-;; result in an atom and return. The result will be sent when the connection
-;; is ready.
-
-(defn process-block
+(defn evaluate-javascript
   "Process a single block of JavaScript received from the server"
-  [connection block]
+  [block]
   (log-obj (str "evaluating: " block))
   (let [result (try (js* "eval(~{block})")
                     (catch js/Error e (pr-str e)))]
     (log-obj (str "result: " result))
-    (reset! result-state result)))
+    result))
 
-;; We are long polling so this cannot time out.
-
-(defn transmit-post [connection url data]
+(defn send-result [connection url data]
   (net/transmit connection url "POST" data nil 0))
 
-;; on-ready is called when the connection is ready to send.
-
-(defn on-ready [connection url]
-  (log-obj "connection is ready")
-  (let [result @result-state]
-    (log-obj (str "sending: " result))
-    (transmit-post connection url result)))
+(defn fetch-block [connection url]
+  (net/transmit connection url "GET" nil nil 0))
 
 (defn start-evaluator
-  "Start the REPL loop"
-  [connection url]
-  (event/listen connection
-                :success
-                (fn [e]
-                  (process-block connection
-                                 (.getResponseText e/currentTarget ()))))
-  (event/listen connection
-                :ready
-                (fn [e]
-                  (on-ready connection url)))
-  ;; The server is expecting to see the string "ready" for the
-  ;; initial connection.
-  (transmit-post connection url "ready"))
+  "Start the REPL server connection."
+  [url]
+  (if-let [config (.getParameterValue
+                   (goog.Uri. js/window.location.href)
+                   "xpc")]
+    (let [repl-connection     (net/xpc-connection config)
+          inbound-connection  (net/xhr-connection)
+          outbound-connection (net/xhr-connection)]
+      (net/register-service repl-connection
+                            :post-results
+                            (partial send-result
+                                     outbound-connection))
+      (event/listen outbound-connection
+                    :ready
+                    (fn [e]
+                      (fetch-block inbound-connection url)))
+      (event/listen inbound-connection
+                    :success
+                    (fn [e]
+                      (evaluate-javascript
+                       (.getResponseText e/currentTarget
+                                         ())))))
+    (js/alert "No 'xpc' param provided to child iframe.")))
 
-;; The client will need to monitor the conenction and re-open it if it
-;; has been closed. There are all kinds of error states that we need
-;; to deal with.
+;; We should refactor this to use two separate XhrIo objects, one for
+;; GETs, one for POSTs, resetting each other in a little state-machine
 
 (defn connect-repl
   "Connects to a REPL server in the context of an HTML document. After
@@ -79,10 +71,22 @@
   ([repl-server-url]
      (connect-repl repl-server-url (js/document)))
   ([repl-server-url document]
-     (let [repl-frame (embed-iframe document)
-           repl-connection (net/xhr-connection repl-frame)]
-       (net/xpc-connection document repl-frame)
-       (start-evaluator repl-connection repl-server-url))))
+     (let [repl-connection (net/xpc-connection
+                            {:peer_uri repl-server-url})]
+       (net/register-service repl-connection
+                             :evaluate-javascript
+                             (fn [js]
+                               (net/transmit
+                                repl-connection
+                                :send-result
+                                (evaluate-javascript js))))
+       (net/connect repl-connection
+                    js/window
+                    (fn []
+                      (js/alert "Working!"))
+                    (fn [iframe]
+                      (set! iframe.style.display
+                            "none"))))))
 
 (comment
   (defn log [& args]

@@ -26,7 +26,7 @@
           (js->clj goog.net.EventType)))))
 
 (defprotocol IConnection
-  (connect [this] [this opt1])
+  (connect [this] [this opt1] [this opt1 opt2])
   (transmit
     [this opt]
     [this opt opt2]
@@ -86,18 +86,23 @@
     (.registerService this (name type) fn encode-json?))
 
   IConnection
-  (connect [this fn]
-    (.connect this fn))
+  (connect [this]
+    (connect this js/window nil nil))
+  (connect [this iframe-parent]
+    (connect this iframe-parent nil nil))
+  (connect [this iframe-parent on-connect-fn]
+    (connect this iframe-parent on-connect-fn nil))
+  (connect [this iframe-parent on-connect-fn config-iframe-fn]
+    (.createPeerIframe this iframe-parent config-iframe-fn)
+    (.connect this on-connect-fn))
   (transmit [this type payload]
     (.send this (name type) payload)))
 
-(defn cross-page-channel
-  [url & config]
+(defn xpc-connection
+  [config]
   (goog.net.xpc.CrossPageChannel.
    (.strobj (reduce (fn [sum [k v]]
                       (when-let [field (xpc-config-fields k)]
                         (assoc sum field v)))
                     {}
-                    (assoc (apply hash-map config)
-                      :peer_uri
-                      url)))))
+                    config))))
