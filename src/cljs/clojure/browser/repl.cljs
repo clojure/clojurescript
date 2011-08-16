@@ -46,7 +46,7 @@
           inbound-connection  (net/xhr-connection)
           outbound-connection (net/xhr-connection)]
       (net/register-service repl-connection
-                            :post-results
+                            :send-result
                             (partial send-result
                                      outbound-connection))
       (event/listen outbound-connection
@@ -56,7 +56,9 @@
       (event/listen inbound-connection
                     :success
                     (fn [e]
-                      (evaluate-javascript
+                      (net/transmit
+                       repl-connection
+                       :evaluate-javascript
                        (.getResponseText e/currentTarget
                                          ())))))
     (js/alert "No 'xpc' param provided to child iframe.")))
