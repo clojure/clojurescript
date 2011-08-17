@@ -213,14 +213,21 @@
   (.close (:socket @server-state)))
 
 (defn browser-eval
+  "Given a string of JavaScript, evaluate it in the browser and return a map representing the
+   result of the evaluation. The map will contain the keys :type and :value. :type can be
+   :success, :exception, or :error. :success means that the JavaScript was evaluated without
+   exception and :value will contain the return value of the evaluation. :exception means that
+   there was an exception in the browser while evaluating the JavaScript and :value will
+   contain the error message. :error means that some other error has occured."
   [form]
   (let [return-value (promise)]
     (send-for-eval form
                    (fn [val] (deliver return-value val)))
     (let [ret @return-value]
-      ;; TODO: Check for errors.
-      {:type :return
-       :value ret})))
+      (try (read-string ret)
+           (catch Exception e
+             {:status :error
+              :value (str "Could not read return value: " ret)})))))
 
 (defrecord BrowserEvaluator [opts]
   IEvaluator

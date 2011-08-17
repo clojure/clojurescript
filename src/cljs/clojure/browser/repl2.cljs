@@ -15,8 +15,7 @@
 ;; =====
 ;;
 ;; Using keywords for the service names does not work in Chrome or
-;; FireFox. This may be an encoding issue. Set the content-encoding to
-;; UTF-8 for the inner peer page.
+;; FireFox.
 ;;
 ;; --
 
@@ -32,13 +31,19 @@
 
 (def parent-channel (atom nil))
 
+(defn- ensure-string [val]
+  (if (string? val)
+    val
+    (str val)))
+
 (defn evaluate-javascript
   "Given a block of JavaScript, evaluate it and transmit the result to
   the inner peer of the cross domain channel."
   [block]
   (log-obj (str "evaluating: " block))
-  (let [result (try (js* "eval(~{block})")
-                    (catch js/Error e (pr-str e)))]
+  (let [result (pr-str
+                (try {:status :success :value (ensure-string (js* "eval(~{block})"))} 
+                     (catch js/Error e {:status :exception :value (pr-str e)})))]
     (log-obj (str "result: " result))
     (net/transmit @parent-channel "return-value" result)))
 

@@ -29,15 +29,21 @@
       (when *cljs-verbose*
         (print js))
       (let [ret (-evaluate repl-env (:line (meta form)) js)]
-        (if (= (:type ret) :error)
+        (case (:status ret)
           ;;we eat ns errors because we know goog.provide() will throw when reloaded
           ;;TODO - file bug with google, this is bs error
           ;;this is what you get when you try to 'teach new developers'
           ;;via errors (goog/base.js 104)
-          (when-not (and (seq? form) (= 'ns (first form)))
-            (prn "Error evaluating:" form :as js)
-            (println (:stacktrace ret)))
-          (:value ret))))
+          :error (when-not (and (seq? form) (= 'ns (first form)))
+                   (println (:value ret))
+                   (when-let [st (:stacktrace ret)]
+                     (println st)))
+          :exception (when-not (and (seq? form) (= 'ns (first form)))
+                       (prn "Error evaluating:" form :as js)
+                       (println (:value ret))
+                       (when-let [st (:stacktrace ret)]
+                         (println st)))
+          :success (:value ret))))
     (catch Throwable ex
       (.printStackTrace ex)
       (println (str ex)))))

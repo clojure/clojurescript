@@ -36,15 +36,14 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           linenum (or line Integer/MIN_VALUE)
           ctx (sun.org.mozilla.javascript.internal.Context/enter)]
       (try
-        {:type :return
+        {:status :success
          :value (.evaluateString ctx (:global repl-env) js filename linenum nil)} 
         (finally
          (sun.org.mozilla.javascript.internal.Context/exit))))
     (catch Throwable ex
-      {:type :error
-       :js js
-       :stacktrace (with-out-str
-                     (.printStackTrace ex))})))
+      {:status :exception
+       :value (.getMessage ex)
+       :stacktrace (with-out-str (.printStackTrace ex))})))
 
 (def loaded-libs (atom #{}))
 
