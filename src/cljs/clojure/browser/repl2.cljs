@@ -8,59 +8,97 @@
 
 (ns clojure.browser.repl2
   (:require [clojure.browser.net   :as net]
-            [clojure.browser.event :as event]))
+            [clojure.browser.event :as event]
+            [goog.json :as gjson]))
+
+;; Notes
+;; =====
+;;
+;; Using keywords for the service names does not work in Chrome or
+;; FireFox. This may be an encoding issue. Set the content-encoding to
+;; UTF-8 for the inner peer page.
+;;
+;; --
 
 (defn log-obj [obj]
   (.log js/console obj))
 
-;; See my notes inline. Delete them whenever you want.
+;; Outer/Parent Peer
+;; =================
+;;
+;; The code in this section will be run in the parent page which
+;; exists in the application's domain. This is where code will be
+;; evaluated.
 
-(def result-state (atom nil))
+(def parent-channel (atom nil))
 
-;; Can't send a new post while in the middle of another connection. I
-;; changed this so that instead of sending the result back we store the
-;; result in an atom and return. The result will be sent when the connection
-;; is ready.
-
-(defn process-block
-  "Process a single block of JavaScript received from the server"
-  [connection block]
+(defn evaluate-javascript
+  "Given a block of JavaScript, evaluate it and transmit the result to
+  the inner peer of the cross domain channel."
+  [block]
   (log-obj (str "evaluating: " block))
   (let [result (try (js* "eval(~{block})")
                     (catch js/Error e (pr-str e)))]
     (log-obj (str "result: " result))
-    (reset! result-state result)))
+    (net/transmit @parent-channel "return-value" result)))
 
-;; We are long polling so this cannot time out.
+(defn create-cross-domain-channel
+  "Create a cross domain channel with an iframe which can communicate
+  with the REPL server."
+  [url]
+  (let [chnl (doto (net/xpc-connection {:peer_uri (str url "/repl")})
+               (net/register-service "evaluate-javascript" evaluate-javascript)
+               (net/connect document.body
+                            (fn [] (log-obj "Parent channel connected."))
+                            (fn [iframe] (set! iframe.style.display "none"))))]
+    (reset! parent-channel chnl)))
+
+(defn connect
+  "Connect to a ClojureScript REPL server located at the passed url."
+  [url]
+  (goog.events/listen js/window "load" #(create-cross-domain-channel url)))
+
+;; Inner peer
+;; =========
+;;
+;; The code in this section will be run in the child iframe and can
+;; communicate with REPL server.
+
+(def state (atom {:connection nil :url nil}))
+
+(def child-channel (atom nil))
 
 (defn transmit-post [connection url data]
   (net/transmit connection url "POST" data nil 0))
 
-;; on-ready is called when the connection is ready to send.
-
-(defn on-ready [connection url]
-  (log-obj "connection is ready")
-  (let [result @result-state]
-    (log-obj (str "sending: " result))
-    (transmit-post connection url result)))
-
-(defn start-repl
+(defn start-repl-connection
   "Start the REPL loop"
   [url]
-  (let [connection (net/xhr-connection url)]
+  (let [connection (net/xhr-connection)]
+    (reset! state {:connection connection :url url})
     (event/listen connection
                   :success
                   (fn [e]
-                    (process-block connection
-                                   (.getResponseText e/currentTarget ()))))
-    (event/listen connection
-                  :ready
-                  (fn [e]
-                    (on-ready connection url)))
+                    (net/transmit @child-channel
+                                  "evaluate-javascript"
+                                  (.getResponseText e/currentTarget ()))))
     ;; The server is expecting to see the string "ready" for the
     ;; initial connection.
     (transmit-post connection url "ready")))
 
-;; The client will need to monitor the conenction and re-open it if it
-;; has been closed. There are all kinds of error states that we need
-;; to deal with.
+(defn return-value [val]
+  (log-obj (str "sending: " val))
+  (transmit-post (:connection @state) (:url @state) val))
+
+;; I can't get this to work using the clojure.browser.net api.
+
+(defn inner-peer-channel
+  "This function will be called from a script in the child iframe."
+  [repl-url]
+  (let [cfg (gjson/parse (.getParameterValue (goog.Uri. window.location.href) "xpc"))
+        chnl (doto (goog.net.xpc.CrossPageChannel. cfg)
+               (net/register-service "return-value" return-value)
+               (.connect #(log-obj "Child channel connected.")))]
+    (do (reset! child-channel chnl)
+        (js/setTimeout #(start-repl-connection repl-url) 500))))
+
