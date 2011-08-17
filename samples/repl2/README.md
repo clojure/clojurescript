@@ -1,15 +1,14 @@
 # Long-Polling browser-connected REPL
 
 This sample application demonstrates how to use the long-polling
-browser-connected REPL. This is a work in progress and may not be
-the final approach that we take.
+browser-connected REPL. This is a work in progress.
 
 # Building
 
 To build the project, launch a Clojure repl and:
    
     (use 'cljs.closure)
-    (def opts {:output-to "samples/repl2/out/repl.js" :output-dir "samples/repl2/out"})
+    (def opts {:output-to "samples/repl2/main.js" :output-dir "samples/repl2/out"})
     (build "samples/repl2/src" opts)
     
 # Connect to REPL
@@ -18,12 +17,10 @@ Start the REPL using the browser as the evaluator:
 
     (require '[cljs.repl :as repl])
     (require '[cljs.repl.browser :as browser])
-    (def env (browser/repl-env "samples/repl2" 9000))
+    (def env (browser/repl-env :root "samples/repl2/"))
     (repl/repl env)
 
-Open a web browser and connect to
-http://localhost:9000/index.html. Here are some things that are known
-to work:
+Open index.html in a browser.
 
     ;; Evaluate some basic forms.
     (+ 1 1)
