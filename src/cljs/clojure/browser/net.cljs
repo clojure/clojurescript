@@ -12,7 +12,8 @@
   (:require [clojure.browser.event :as event]
             [goog.net.XhrIo :as gxhrio]
             [goog.net.EventType :as gevent-type]
-            [goog.net.xpc.CfgFields :as gxpc-config-fields]))
+            [goog.net.xpc.CfgFields :as gxpc-config-fields]
+            [goog.net.xpc.CrossPageChannel :as xpc]))
 
 (def *timeout* 10000)
 
@@ -26,7 +27,7 @@
           (js->clj goog.net.EventType)))))
 
 (defprotocol IConnection
-  (connect [this] [this opt1] [this opt1 opt2])
+  (connect [this] [this opt1] [this opt1 opt2] [this opt1 opt2 opt3])
   (transmit
     [this opt]
     [this opt opt2]
@@ -67,7 +68,7 @@
          (fn [[k v]]
            [(keyword (. k (toLowerCase)))
             v])
-         (js->clj gxpc-config-fields))))
+         (js->clj goog.net.xpc.CfgFields))))
 
 (defn xhr-connection
   "Returns a connection"
