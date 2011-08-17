@@ -1,17 +1,18 @@
 # ClojureScript REPL Examples
 
-The ClojureScript REPL has been updated to work with multiple JavaScript evaluation environments. This readme
-and the exmaple code show how to use the new REPL. There are now two implemented environments: Rhino and 
-the browser.
+The ClojureScript REPL has been updated to work with multiple
+JavaScript evaluation environments. This readme and the example code
+in this project show how to use the new REPL. There are now two
+implemented environments: Rhino and the browser.
 
 ## Using the new REPL
 
-There a four steps in starting a ClojureScript REPL.
+There are currently four steps in starting a ClojureScript REPL.
 
 1. require cljs.repl
 2. require the namespace which implements the desired evaluation environment
 3. create a new evaluation environment
-4. start the repl with the created environment
+4. start the REPL with the created environment
 
 ## Evaluating with Rhino
 
@@ -24,21 +25,30 @@ There a four steps in starting a ClojureScript REPL.
 
 ## Evaluating in the Browser
 
-A browser-connected REPL works the same as a normal REPL: forms are evaluated and return values are displayed
-in the REPL. All side-effects occur in the browser. You can show alerts, manipulate the dom and interact with
-running applications. The two main benefits of this are that REPL activity is no longer restricted to 
-non-browser code and evaluation time is faster than Rhino.
+A browser-connected REPL works in much the same way as a normal REPL:
+forms are read from the console, evaluated and return values are
+printed. A major and useful difference form normal REPL usage is that
+all side-effects occur in the browser. You can show alerts, manipulate
+the dom and interact with running applications.
 
-The example below shows how to start a browser-connected REPL with an empty project. The same technique can be
-used to integrate a REPL into an existing project. In the future there may be an easier way to start a
-browser-connected REPL without a project.
+The main benefit of using the browser as an evaluation environment is
+that the REPL is no longer limited to non-browser code. You get all
+the benefits of a REPL with all of your code.
+
+The example below shows how to start a browser-connected REPL with an
+empty project. The same technique can be used to integrate a REPL into
+an existing project. In the future there may be an easier way to start
+a browser-connected REPL without a project.
 
 ### Building
 
-This sample project contains an HTML file and single ClojureScript file which establishes are connection to the
-REPL from the browser. There are currently the minimum requirements for starting a browser-connected REPL.
+This sample project contains an HTML file and single ClojureScript
+file which establishes the connection to the REPL from the
+browser. These are currently the minimum requirements for starting a
+browser-connected REPL.
 
-To build the project, launch a Clojure repl and:
+To build the project, launch a Clojure REPL and evaluate the following
+forms:
 
 ```clj
 (use 'cljs.closure)
@@ -57,7 +67,8 @@ Start the REPL using the browser as the evaluator:
 (repl/repl env)
 ```
 
-Open index.html in a browser. When this page is loaded it will connect to the REPL.
+Open index.html in a browser. When this page is loaded it will connect
+to the REPL.
 
 ### Try it out
 
@@ -67,7 +78,7 @@ Open index.html in a browser. When this page is loaded it will connect to the RE
 {:a :b}
 "hello"
 (reduce + [1 2 3 4 5])
-(js/alert "hello world")
+(js/alert "Hello World!")
  
 ;; Load a file, and use it.
 (load-file "clojure/string.cljs")
