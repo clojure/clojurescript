@@ -151,18 +151,42 @@
           (.startsWith line "GET") (read-get line rdr)
           :else {:method :unknown :content line})))
 
-(defn handle-get [root conn request]
-  (let [file (io/file (str root (:path request)))]
-    (if (.exists file)
-      (send-and-close conn 200 (slurp file))
-      (send-404 conn (:path request)))))
+(defn send-repl-client-page
+  [opts conn request]
+  (send-and-close conn 200
+    (str
+     "<html>
+      <head>
+      <meta charset=\"UTF-8\">
+      <script type=\"text/javascript\" src=\"" (:goog-base opts) "\"></script>
+      <script type=\"text/javascript\" src=\"" (:main opts) "\"></script>
+      <script type=\"text/javascript\">
+      goog.require('clojure.browser.repl2');
+      </script>
+      <script>
+      goog.events.listen(window, 'load', function() {
+        clojure.browser.repl2.inner_peer_channel(\"http://" (-> request :headers :host) "\");
+      });
+      </script>
+      </head>
+      <body></body>
+      </html>")))
+
+(defn handle-get [opts conn request]
+  (let [path (:path request)]
+    (if (.startsWith path "/repl")
+      (send-repl-client-page opts conn request)
+      (let [file (io/file (str (:root opts) path))]
+        (if (.exists file)
+          (send-and-close conn 200 (slurp file))
+          (send-404 conn (:path request)))))))
 
 (defn- handle-connection
-  [root conn]
+  [opts conn]
   (let [rdr (BufferedReader. (InputStreamReader. (.getInputStream conn)))]
     (if-let [request (read-request rdr)]
       (case (:method request)
-        :get (handle-get root conn request)
+        :get (handle-get opts conn request)
         :post (do (when-not (= (:content request) "ready")
                     (return-value (:content request)))
                   (set-connection conn))
@@ -170,19 +194,19 @@
       (.close conn))))
 
 (defn- server-loop
-  [root server-socket]
+  [opts server-socket]
   (let [conn (.accept server-socket)]
     (do (.setKeepAlive conn true)
-        (future (handle-connection root conn))
-        (recur root server-socket))))
+        (future (handle-connection opts conn))
+        (recur opts server-socket))))
 
 (defn start-server
   "Start the server on the specified port."
-  [root port]
-  (do (println "Starting Server on Port:" port)
-      (let [ss (ServerSocket. port)]
-        (future (server-loop root ss))
-        (swap! server-state (fn [old] {:socket ss :port port})))))
+  [opts]
+  (do (println "Starting Server on Port:" (:port opts))
+      (let [ss (ServerSocket. (:port opts))]
+        (future (server-loop opts ss))
+        (swap! server-state (fn [old] {:socket ss :port (:port opts)})))))
 
 (defn stop-server
   []
@@ -198,10 +222,10 @@
       {:type :return
        :value ret})))
 
-(defrecord BrowserEvaluator [root port]
+(defrecord BrowserEvaluator [opts]
   IEvaluator
   (-setup [this]
-    (comp/with-core-cljs (start-server root port)))
+    (comp/with-core-cljs (start-server opts)))
   (-evaluate [this line js]
     (browser-eval js))
   (-put [this k v]
@@ -210,14 +234,15 @@
     (do (stop-server)
         (reset! server-state {}))))
 
-(defn repl-env [root port]
-  (BrowserEvaluator. root port))
+(defn repl-env [& {:keys [port root] :as opts}]
+  (let [opts (merge {:port 9000 :root "" :main "main.js" :goog-base "out/goog/base.js"} opts)]
+    (BrowserEvaluator. opts)))
 
 (comment
   
   (require '[cljs.repl :as repl])
   (require '[cljs.repl.browser :as browser])
-  (def env (browser/repl-env "samples/repl2" 9000))
+  (def env (browser/repl-env :main "out/repl.js"))
   (repl/repl env)
   ;; simulate the browser with curl
   ;; curl -v -d "ready" http://127.0.0.1:9000
