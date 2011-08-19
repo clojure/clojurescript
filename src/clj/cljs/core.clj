@@ -120,7 +120,9 @@
                          (. ~(first sig) ~slot ~@sig)
                          ((or 
                            (aget ~fname (goog.typeOf ~(first sig)))
-                           (aget ~fname "_"))
+                           (aget ~fname "_")
+                           (throw (missing-protocol
+                                    ~(str psym "." fname) ~(first sig))))
                           ~@sig))))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
