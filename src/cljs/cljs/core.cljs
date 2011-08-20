@@ -2374,7 +2374,6 @@ reduces them without incurring seq initialization"
   ICounted
   (-count [rng]
     (cond (nil? (-seq rng)) 0
-          (and (> start end) (= step 0)) (throw "Cannot count infinite sequence")
           (and (= start 0) (< start end) (= step 1)) (- end start)
           :else (js/Math.ceil (/ (- end start) step))))
 
@@ -2382,7 +2381,7 @@ reduces them without incurring seq initialization"
   (-nth [rng n]
     (if (< n (-count rng))
       (+ start (* n step))
-      (if (and (> start end) (= step 0)) ;; (range 10 0 0) ;=> (10 10 10 ...)
+      (if (and (> start end) (= step 0))
         start
         (throw "Index out of bounds"))))
   (-nth [rng n not-found]
@@ -2399,14 +2398,8 @@ reduces them without incurring seq initialization"
         rng)))
 
   IReduce
-  (-reduce [rng f]
-    (if-not (and (> start end) (= step 0))
-      (ci-reduce rng f)
-      (throw "Cannot reduce infinite sequence")))
-  (-reduce [rng f s]
-    (if-not (and (> start end) (= step 0))
-      (ci-reduce rng f s)
-      (throw "Cannot reduce infinite sequence"))))
+  (-reduce [rng f] (ci-reduce rng f))
+  (-reduce [rng f s] (ci-reduce rng f s)))
 
 (defn range
   "Returns a lazy seq of nums from start (inclusive) to end
