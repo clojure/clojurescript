@@ -261,16 +261,18 @@ reduces them without incurring seq initialization"
   (-rest [_] (if (lt- (inc i) (.length a))
                (IndexedSeq. a (inc i))
                (list)))
+  ICounted
+  (-count [_] (.length a))
 
   ISequential
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
 
   IReduce
-  (-reduce [_ f]
-    (ci-reduce a f (aget a i) (inc i)))
-  (-reduce [_ f start]
-    (ci-reduce a f start i)))
+  (-reduce [coll f]
+    (ci-reduce coll f (aget a i) (inc i)))
+  (-reduce [coll f start]
+    (ci-reduce coll f start i)))
 
 (defn prim-seq [prim i]
   (when-not (= 0 (.length prim))
