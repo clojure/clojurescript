@@ -6,14 +6,16 @@
 ;;  the terms of this license.
 ;;  You must not remove this notice, or any other, from this software.
 
-(ns ^{:doc "Network functionality for browser connected REPL"
+(ns ^{:doc "Network communication library, wrapping goog.net.
+Includes XhrIo, CrossPageChannel, and Websockets."
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.net
   (:require [clojure.browser.event :as event]
             [goog.net.XhrIo :as gxhrio]
             [goog.net.EventType :as gevent-type]
             [goog.net.xpc.CfgFields :as gxpc-config-fields]
-            [goog.net.xpc.CrossPageChannel :as xpc]))
+            [goog.net.xpc.CrossPageChannel :as xpc]
+            [goog.json :as gjson]))
 
 (def *timeout* 10000)
 
@@ -27,7 +29,11 @@
           (js->clj goog.net.EventType)))))
 
 (defprotocol IConnection
-  (connect [this] [this opt1] [this opt1 opt2] [this opt1 opt2 opt3])
+  (connect
+    [this]
+    [this opt1]
+    [this opt1 opt2]
+    [this opt1 opt2 opt3])
   (transmit
     [this opt]
     [this opt opt2]
@@ -39,17 +45,18 @@
 (extend-type goog.net.XhrIo
 
   IConnection
-  (transmit [this uri]
-    (transmit this uri "GET"  nil nil *timeout*))
-  (transmit [this uri method]
-    (transmit this uri method nil nil *timeout*))
-  (transmit [this uri method content]
-    (transmit this uri method content nil *timeout*))
-  (transmit [this uri method content headers]
-    (transmit this uri method content headers *timeout*))
-  (transmit [this uri method content headers timeout]
-    (.setTimeoutInterval this timeout)
-    (.send this uri method content headers))
+  (transmit
+    ([this uri]
+       (transmit this uri "GET"  nil nil *timeout*))
+    ([this uri method]
+       (transmit this uri method nil nil *timeout*))
+    ([this uri method content]
+       (transmit this uri method content nil *timeout*))
+    ([this uri method content headers]
+       (transmit this uri method content headers *timeout*))
+    ([this uri method content headers timeout]
+       (.setTimeoutInterval this timeout)
+       (.send this uri method content headers)))
   (close [this] nil)
 
   event/EventType
@@ -81,29 +88,46 @@
 (extend-type goog.net.xpc.CrossPageChannel
 
   CrossPageChannel
-  (register-service [this type fn]
-    (register-service this type fn false))
-  (register-service [this type fn encode-json?]
-    (.registerService this (name type) fn encode-json?))
+  (register-service
+    ([this type fn]
+       (register-service this type fn false))
+    ([this type fn encode-json?]
+       (.registerService this (name type) fn encode-json?)))
 
   IConnection
-  (connect [this]
-    (connect this js/window nil nil))
-  (connect [this iframe-parent]
-    (connect this iframe-parent nil nil))
-  (connect [this iframe-parent on-connect-fn]
-    (connect this iframe-parent on-connect-fn nil))
-  (connect [this iframe-parent on-connect-fn config-iframe-fn]
-    (.createPeerIframe this iframe-parent config-iframe-fn)
-    (.connect this on-connect-fn))
+  (connect
+    ([this]
+       (connect this nil))
+    ([this on-connect-fn]
+       (.connect this on-connect-fn))
+    ([this on-connect-fn config-iframe-fn]
+       (connect this on-connect-fn config-iframe-fn (.body js/document)))
+    ([this on-connect-fn config-iframe-fn iframe-parent]
+       (.createPeerIframe this iframe-parent config-iframe-fn)
+       (.connect this on-connect-fn)))
+
   (transmit [this type payload]
     (.send this (name type) payload)))
 
 (defn xpc-connection
-  [config]
-  (goog.net.xpc.CrossPageChannel.
-   (.strobj (reduce (fn [sum [k v]]
-                      (when-let [field (xpc-config-fields k)]
-                        (assoc sum field v)))
-                    {}
-                    config))))
+  "When passed with a config hash-map, returns a parent
+  CrossPageChannel object. Keys in the config hash map are downcased
+  versions of the goog.net.xpc.CfgFields enum keys,
+  e.g. goog.net.xpc.CfgFields.PEER_URI becomes :peer_uri in the config
+  hash.
+
+  When passed with no args, creates a child CrossPageChannel object,
+  and the config is automatically taken from the URL param 'xpc', as
+  per the CrossPageChannel API."
+  ([]
+     (when-let [config (.getParameterValue
+                        (goog.Uri. (.href (.location js/window)))
+                        "xpc")]
+       (goog.net.xpc.CrossPageChannel. (gjson/parse config))))
+  ([config]
+     (goog.net.xpc.CrossPageChannel.
+      (.strobj (reduce (fn [sum [k v]]
+                         (when-let [field (get xpc-config-fields k)]
+                           (assoc sum field v)))
+                       {}
+                       config)))))

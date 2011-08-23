@@ -25,148 +25,55 @@
   "Process a single block of JavaScript received from the server"
   [block]
   (log-obj (str "evaluating: " block))
-  (let [result (try (js* "eval(~{block})")
-                    (catch js/Error e (pr-str e)))]
+  (let [result (try {:status :success :value (js* "eval(~{block})")}
+                    (catch js/Error e {:status :exception :value (pr-str e)}))]
     (log-obj (str "result: " result))
-    result))
+    (pr-str result)))
 
 (defn send-result [connection url data]
   (net/transmit connection url "POST" data nil 0))
 
-(defn fetch-block [connection url]
-  (net/transmit connection url "GET" nil nil 0))
-
 (defn start-evaluator
   "Start the REPL server connection."
   [url]
-  (if-let [config (.getParameterValue
-                   (goog.Uri. js/window.location.href)
-                   "xpc")]
-    (let [repl-connection     (net/xpc-connection config)
-          inbound-connection  (net/xhr-connection)
-          outbound-connection (net/xhr-connection)]
-      (net/register-service repl-connection
-                            :send-result
-                            (partial send-result
-                                     outbound-connection))
-      (event/listen outbound-connection
-                    :ready
-                    (fn [e]
-                      (fetch-block inbound-connection url)))
-      (event/listen inbound-connection
+  (if-let [repl-connection (net/xpc-connection)]
+    (let [connection (net/xhr-connection)]
+      (event/listen connection
                     :success
                     (fn [e]
                       (net/transmit
                        repl-connection
                        :evaluate-javascript
                        (.getResponseText e/currentTarget
-                                         ())))))
+                                         ()))))
+
+      (net/register-service repl-connection
+                            :send-result
+                            (partial send-result
+                                     connection
+                                     url))
+      (net/connect repl-connection
+                   #(log-obj "Child REPL channel connected."))
+
+      (js/setTimeout #(send-result connection url "ready") 50))
     (js/alert "No 'xpc' param provided to child iframe.")))
 
-;; We should refactor this to use two separate XhrIo objects, one for
-;; GETs, one for POSTs, resetting each other in a little state-machine
-
-(defn connect-repl
-  "Connects to a REPL server in the context of an HTML document. After
-  the connection is made, the REPL will evaluate forms in the context
-  of the document."
-  ([repl-server-url]
-     (connect-repl repl-server-url (js/document)))
-  ([repl-server-url document]
-     (let [repl-connection (net/xpc-connection
-                            {:peer_uri repl-server-url})]
-       (net/register-service repl-connection
-                             :evaluate-javascript
-                             (fn [js]
-                               (net/transmit
-                                repl-connection
-                                :send-result
-                                (evaluate-javascript js))))
-       (net/connect repl-connection
-                    js/window
-                    (fn []
-                      (js/alert "Working!"))
-                    (fn [iframe]
-                      (set! iframe.style.display
-                            "none"))))))
-
-(comment
-  (defn log [& args]
-    (.log js/console (apply pr-str args)))
-
-  (defn log-obj [obj]
-    (.log js/console obj))
-
-  (def result-id (atom 0))
-  (def result    (atom nil))
-
-  (defn next-result!
-    []
-    (swap! result-id inc)
-    (reset! result nil))
-
-  (defn input-uri [base-uri]
-    (str base-uri "/javascript/" @result-id))
-
-  (defn output-uri [base-uri]
-    (str base-uri "/clojurescript/out/" @result-id))
-
-  (defn get-block
-    "Gets a single block of JavaScript from the server"
-    [connection base-uri]
-    (log "(get-block " connection " " base-uri ")")
-    (net/transmit connection (input-uri base-uri)))
-
-  (defn post-result
-    "Posts an evaluated block of ClojureScript to the server"
-    [connection base-uri]
-    (log "(post-result " connection " " base-uri " " @result ")")
-    (net/transmit connection (output-uri base-uri) "POST" @result))
-
-  (defn process-block
-    "Process a single block of JavaScript received from the server"
-    [block]
-    (log-obj (str "evaluating: " block))
-    (js* "eval(~{block})"))
-
-  #_(defmacro with-timeout
-      [ms & body]
-      `(let [f# (fn [] ~@body)]
-         (js/setTimeout f# ~ms)))
-
-  (defn start-repl
-    "Start the REPL loop"
-    [base-uri]
-    (let [connection (net/xhr-connection)]
-      (event/listen connection
-                    :ready
-                    (fn [e]
-                      (if @result
-                        (post-result connection base-uri)
-                        (js/setTimeout
-                         (fn []
-                           (get-block connection base-uri))
-                         100))))
-
-      (event/listen-once connection
-                         :success
-                         (fn [_]
-                           (log "one time only")
-                           (event/listen connection
-                                         :success
-                                         (fn [e]
-                                           (log @result)
-                                           (if @result
-                                             (next-result!)
-                                             (reset! result
-                                                     (process-block
-                                                      (.getResponseText e/target ()))))))))
-
-
-
-      (js/setTimeout
-       (fn []
-         (net/transmit connection
-                       (str base-uri "/clients")
-                       "POST"))
-       100))))
+(defn connect
+  "Connects to a REPL server from an HTML document. After the
+  connection is made, the REPL will evaluate forms in the context of
+  the document that called this function."
+  [repl-server-url]
+  (let [repl-connection (net/xpc-connection
+                         {:peer_uri repl-server-url})]
+    (net/register-service repl-connection
+                          :evaluate-javascript
+                          (fn [js]
+                            (net/transmit
+                             repl-connection
+                             :send-result
+                             (evaluate-javascript js))))
+    (net/connect repl-connection
+                 #(log-obj "Parent REPL channel connection.")
+                 (fn [iframe]
+                   (set! iframe.style.display
+                         "none")))))

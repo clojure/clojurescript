@@ -161,11 +161,11 @@
       <script type=\"text/javascript\" src=\"" (:goog-base opts) "\"></script>
       <script type=\"text/javascript\" src=\"" (:main opts) "\"></script>
       <script type=\"text/javascript\">
-      goog.require('clojure.browser.repl2');
+      goog.require('clojure.browser.repl');
       </script>
       <script>
       goog.events.listen(window, 'load', function() {
-        clojure.browser.repl2.inner_peer_channel(\"http://" (-> request :headers :host) "\");
+        clojure.browser.repl.start_evaluator(\"http://" (-> request :headers :host) "\");
       });
       </script>
       </head>

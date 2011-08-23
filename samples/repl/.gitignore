@@ -1,4 +1,2 @@
-resources/public/javascripts/
-repl.js
-lib/
-src/clj/cljs
+out/
+main.js
