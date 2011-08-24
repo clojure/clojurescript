@@ -137,3 +137,46 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
                            (assoc sum field v)))
                        {}
                        config)))))
+
+;; WebSocket is not supported in the 3/23/11 release of Google
+;; Closure, but will be included in the next release.
+
+#_(defprotocol IWebSocket
+    (open? [this]))
+
+#_(extend-type goog.net.WebSocket
+
+  IWebSocket
+  (open? [this]
+    (.isOpen this ()))
+
+  IConnection
+  (connect
+    ([this url]
+       (connect this url nil))
+    ([this url protocol]
+       (.open this url protocol)))
+
+  (transmit [this message]
+    (.send this message))
+
+  (close [this]
+    (.close this ()))
+
+  event/EventType
+  (event-types [this]
+    (into {}
+          (map
+           (fn [[k v]]
+             [(keyword (. k (toLowerCase)))
+              v])
+           (merge
+            (js->clj goog.net.WebSocket/EventType))))))
+
+#_(defn websocket-connection
+  ([]
+     (websocket-connection nil nil))
+  ([auto-reconnect?]
+     (websocket-connection auto-reconnect? nil))
+  ([auto-reconnect? next-reconnect-fn]
+     (goog.net.WebSocket. auto-reconnect? next-reconnect-fn)))
