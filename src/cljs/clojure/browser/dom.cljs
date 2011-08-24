@@ -88,8 +88,11 @@
 (defn get-element [id]
   (gdom/getElement (name id)))
 
-(defn html [s]
+(defn html->dom [s]
   (gdom/htmlToDocumentFragment s))
 
 (defn insert-at [parent child index]
   (gdom/insertChildAt parent child index))
+
+;; TODO CSS class manipulation
+;; TODO Query syntax

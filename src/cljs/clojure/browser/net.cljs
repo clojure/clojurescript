@@ -7,14 +7,15 @@
 ;;  You must not remove this notice, or any other, from this software.
 
 (ns ^{:doc "Network communication library, wrapping goog.net.
-Includes XhrIo, CrossPageChannel, and Websockets."
+Includes a common API over XhrIo, CrossPageChannel, and Websockets."
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.net
   (:require [clojure.browser.event :as event]
             [goog.net.XhrIo :as gxhrio]
-            [goog.net.EventType :as gevent-type]
+            [goog.net.EventType :as gnet-event-type]
             [goog.net.xpc.CfgFields :as gxpc-config-fields]
             [goog.net.xpc.CrossPageChannel :as xpc]
+            #_[goog.net.WebSocket :as gwebsocket]
             [goog.json :as gjson]))
 
 (def *timeout* 10000)
@@ -57,7 +58,7 @@ Includes XhrIo, CrossPageChannel, and Websockets."
     ([this uri method content headers timeout]
        (.setTimeoutInterval this timeout)
        (.send this uri method content headers)))
-  (close [this] nil)
+
 
   event/EventType
   (event-types [this]
@@ -69,6 +70,8 @@ Includes XhrIo, CrossPageChannel, and Websockets."
            (merge
             (js->clj goog.net.EventType))))))
 
+;; TODO jQuery/sinatra/RestClient style API: (get [uri]), (post [uri payload]), (put [uri payload]), (delete [uri])
+
 (def xpc-config-fields
   (into {}
         (map
@@ -78,21 +81,21 @@ Includes XhrIo, CrossPageChannel, and Websockets."
          (js->clj goog.net.xpc.CfgFields))))
 
 (defn xhr-connection
-  "Returns a connection"
+  "Returns an XhrIo connection"
   []
   (goog.net.XhrIo.))
 
-(defprotocol CrossPageChannel
-  (register-service [this type fn] [this type fn encode-json?]))
+(defprotocol ICrossPageChannel
+  (register-service [this service-name fn] [this service-name fn encode-json?]))
 
 (extend-type goog.net.xpc.CrossPageChannel
 
-  CrossPageChannel
+  ICrossPageChannel
   (register-service
-    ([this type fn]
-       (register-service this type fn false))
-    ([this type fn encode-json?]
-       (.registerService this (name type) fn encode-json?)))
+    ([this service-name fn]
+       (register-service this service-name fn false))
+    ([this service-name fn encode-json?]
+       (.registerService this (name service-name) fn encode-json?)))
 
   IConnection
   (connect
@@ -106,8 +109,11 @@ Includes XhrIo, CrossPageChannel, and Websockets."
        (.createPeerIframe this iframe-parent config-iframe-fn)
        (.connect this on-connect-fn)))
 
-  (transmit [this type payload]
-    (.send this (name type) payload)))
+  (transmit [this service-name payload]
+    (.send this (name service-name) payload))
+
+  (close [this]
+    (.close this ())))
 
 (defn xpc-connection
   "When passed with a config hash-map, returns a parent

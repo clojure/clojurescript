@@ -1,12 +1,13 @@
-                                        ;   Copyright (c) Rich Hickey. All rights reserved.
-                                        ;   The use and distribution terms for this software are covered by the
-                                        ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-                                        ;   which can be found in the file epl-v10.html at the root of this distribution.
-                                        ;   By using this software in any fashion, you are agreeing to be bound by
-                                        ;   the terms of this license.
-                                        ;   You must not remove this notice, or any other, from this software.
+;;  Copyright (c) Rich Hickey. All rights reserved.
+;;  The use and distribution terms for this software are covered by the
+;;  Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;;  which can be found in the file epl-v10.html at the root of this distribution.
+;;  By using this software in any fashion, you are agreeing to be bound by
+;;  the terms of this license.
+;;  You must not remove this notice, or any other, from this software.
 
-(ns ^{:doc "This namespace contains functions to work with DOM events.  It is based on the Google Closure Library event system."
+(ns ^{:doc "This namespace contains functions to work with browser
+events.  It is based on the Google Closure Library event system."
       :author "Bobby Calderwood"}
   clojure.browser.event
   (:require [goog.events :as events]
@@ -81,11 +82,12 @@
 (defn fire-listeners
   [obj type capture event])
 
+(defn total-listener-count []
+  (goog.events/getTotalListenerCount))
+
+;; TODO
 (defn get-listener [src type listener opt_capt opt_handler]); ⇒ ?Listener
 (defn all-listeners [obj type capture]); ⇒ Array.<Listener>
-
-(defn total-listener-count []
-  (goog.events/getTotalListenerCount)); ⇒ number
 
 (defn unique-event-id [event-type]); ⇒ string
 
