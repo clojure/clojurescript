@@ -531,6 +531,31 @@
       (println (str "this." fld " = " fld ";")))
     (println "})")))
 
+(defmethod emit :defrecord*
+  [{:keys [t fields]}]
+  (let [fields (map munge fields)]
+    (println "\n/**\n* @constructor")
+    (doseq [fld fields]
+      (println (str "* @param {*} " fld)))
+    (println "* @param {*=} __meta \n* @param {*=} __extmap\n*/")
+    (println (str t " = (function (" (comma-sep (map str fields)) ", __meta, __extmap){"))
+    (doseq [fld fields]
+      (println (str "this." fld " = " fld ";")))
+    (println (str "if(arguments.length>" (count fields) "){"))
+    ;; (println (str "this.__meta = arguments[" (count fields) "];"))
+    ;; (println (str "this.__extmap = arguments[" (inc (count fields)) "];"))
+    (println (str "this.__meta = __meta;"))
+    (println (str "this.__extmap = __extmap;"))
+    (println "} else {")
+    (print (str "this.__meta="))
+    (emit-constant nil)
+    (println ";")
+    (print (str "this.__extmap="))
+    (emit-constant nil)
+    (println ";")
+    (println "}")
+    (println "})")))
+
 (defmethod emit :dot
   [{:keys [target field method args env]}]
   (emit-wrap env
@@ -550,7 +575,7 @@
 
 (declare analyze analyze-symbol analyze-seq)
 
-(def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* . js* & quote})
+(def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* defrecord* . js* & quote})
 
 (def ^:dynamic *recur-frames* nil)
 
@@ -791,6 +816,12 @@
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
     {:env env :op :deftype* :t t :fields fields}))
+
+(defmethod parse 'defrecord*
+  [_ env [_ tsym fields] _]
+  (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
+    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    {:env env :op :defrecord* :t t :fields fields}))
 
 (defmethod parse '.
   [_ env [_ target & member+] _]
