@@ -25,7 +25,7 @@
   "Process a single block of JavaScript received from the server"
   [block]
   (log-obj (str "evaluating: " block))
-  (let [result (try {:status :success :value (js* "eval(~{block})")}
+  (let [result (try {:status :success :value (str (js* "eval(~{block})"))}
                     (catch js/Error e {:status :exception :value (pr-str e)}))]
     (log-obj (str "result: " result))
     (pr-str result)))
