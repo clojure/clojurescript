@@ -63,7 +63,7 @@ Start the REPL using the browser as the evaluator:
 ```clj
 (require '[cljs.repl :as repl])
 (require '[cljs.repl.browser :as browser])
-(def env (browser/repl-env :root "samples/repl/"))
+(def env (browser/repl-env))
 (repl/repl env)
 ```
 

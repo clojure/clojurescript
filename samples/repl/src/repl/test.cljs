@@ -24,15 +24,15 @@
   (def opts {:output-to "samples/repl/main.js"
              :output-dir "samples/repl/out"})
   (build "samples/repl/src" opts)
-
+  
   ;; Start REPL
   (do (require '[cljs.repl :as repl])
       (require '[cljs.repl.browser :as browser])
-      (def env (browser/repl-env :root "samples/repl/"))
+      (def env (browser/repl-env))
       (repl/repl env))
-
+  
   ;; Open the file samples/repl/index.html
-
+  
   ;; Evaluate some basic forms
   (+ 1 1)
   ;; TODO: Chrome has a problem with keywords
@@ -40,7 +40,7 @@
   "hello"
   (reduce + [1 2 3 4 5])
   (js/alert "Hello World!")
-
+  
   ;; Can only load files that depend on what is already avaialble.
   (load-file "clojure/string.cljs")
   (clojure.string/reverse "Hello")
