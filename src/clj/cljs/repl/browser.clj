@@ -10,6 +10,7 @@
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
+            [cljs.closure :as cljsc]
             [cljs.repl :as repl])
   (:import java.io.BufferedReader
            java.io.BufferedWriter
@@ -22,7 +23,8 @@
 (defonce server-state (atom {:socket nil
                              :connection nil
                              :promised-conn nil
-                             :return-value-fn nil}))
+                             :return-value-fn nil
+                             :client-js nil}))
 
 (defn connection
   "Promise to return a connection when one is available. If a
@@ -59,14 +61,6 @@
     200 "HTTP/1.1 200 OK"
     404 "HTTP/1.1 404 Not Found"
     "HTTP/1.1 500 Error"))
-
-(def content-types {".js" "text/javascript"
-                    ".html" "text/html"})
-
-(defn content-type [file-name]
-  (let [idx (.lastIndexOf file-name ".")
-        ext (.substring file-name idx)]
-    (get content-types ext "text/html")))
 
 (defn send-and-close
   "Use the passed connection to send a form to the browser. Send a
@@ -164,36 +158,27 @@
           (.startsWith line "GET") (read-get line rdr)
           :else {:method :unknown :content line})))
 
+(defn repl-client-js []
+  (slurp @(:client-js @server-state)))
+
 (defn send-repl-client-page
   [opts conn request]
   (send-and-close conn 200
-    (str
-     "<html>
-      <head>
-      <meta charset=\"UTF-8\">
-      <script type=\"text/javascript\" src=\"" (:goog-base opts) "\"></script>
-      <script type=\"text/javascript\" src=\"" (:main opts) "\"></script>
-      <script type=\"text/javascript\">
-      goog.require('clojure.browser.repl');
-      </script>
-      <script>
-      goog.events.listen(window, 'load', function() {
-        clojure.browser.repl.start_evaluator(\"http://" (-> request :headers :host) "\");
-      });
-      </script>
-      </head>
-      <body></body>
-      </html>")
+    (str "<html><head><meta charset=\"UTF-8\"></head><body>
+          <script type=\"text/javascript\">"
+         (repl-client-js)
+         "</script>"
+         "<script type=\"text/javascript\">
+          clojure.browser.repl.client.start(\"http://" (-> request :headers :host) "\");
+          </script>"
+         "</body></html>")
     "text/html"))
 
 (defn handle-get [opts conn request]
   (let [path (:path request)]
     (if (.startsWith path "/repl")
       (send-repl-client-page opts conn request)
-      (let [file (io/file (str (:root opts) path))]
-        (if (.exists file)
-          (send-and-close conn 200 (slurp file) (content-type (.getName file)))
-          (send-404 conn (:path request)))))))
+      (send-404 conn (:path request)))))
 
 (defn- handle-connection
   [opts conn]
@@ -220,7 +205,7 @@
   (do (println "Starting Server on Port:" (:port opts))
       (let [ss (ServerSocket. (:port opts))]
         (future (server-loop opts ss))
-        (swap! server-state (fn [old] {:socket ss :port (:port opts)})))))
+        (swap! server-state (fn [old] (assoc old :socket ss :port (:port opts)))))))
 
 (defn stop-server
   []
@@ -255,28 +240,42 @@
     (do (stop-server)
         (reset! server-state {}))))
 
+(defn compile-client-js [opts]
+  (cljsc/build '[(ns clojure.browser.repl.client
+                   (:require [goog.events :as event]
+                             [clojure.browser.repl :as repl]))
+                 (defn start [url]
+                   (event/listen js/window
+                                 "load"
+                                 (fn []
+                                   (repl/start-evaluator url))))]
+               {:optimizations (:optimizations opts)
+                :output-dir (:working-dir opts)}))
+
+(defn create-client-js-file [opts file-path]
+  (let [file (io/file file-path)]
+    (when (not (.exists file))
+      (spit file (compile-client-js opts)))
+    file))
+
 (defn repl-env [& {:keys [port root] :as opts}]
-  (let [opts (merge {:port 9000 :root "" :main "main.js" :goog-base "out/goog/base.js"} opts)]
-    (BrowserEvaluator. opts)))
+  (let [opts (merge {:port 9000 :optimizations :simple :working-dir ".repl"} opts)]
+    (do (swap! server-state
+               (fn [old] (assoc old :client-js
+                               (future (create-client-js-file
+                                        opts
+                                        (io/file (:working-dir opts) "client.js"))))))
+        (BrowserEvaluator. opts))))
 
 (comment
   
   (require '[cljs.repl :as repl])
   (require '[cljs.repl.browser :as browser])
-  (def env (browser/repl-env :main "out/repl.js"))
+  (def env (browser/repl-env))
   (repl/repl env)
   ;; simulate the browser with curl
   ;; curl -v -d "ready" http://127.0.0.1:9000
   ClojureScript:> (+ 1 1)
   ;; curl -v -d "2" http://127.0.0.1:9000
-
-  ;; TODO: You need to figure out when to send a (ns cljs.user) form
-  ;; to the browser.
-
-  (let [env {:context :statement :locals {}}]
-    (repl/evaluate-form this
-                        (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
-                        '(ns cljs.user)))
-  
 
   )
