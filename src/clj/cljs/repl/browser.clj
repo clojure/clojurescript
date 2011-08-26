@@ -60,31 +60,44 @@
     404 "HTTP/1.1 404 Not Found"
     "HTTP/1.1 500 Error"))
 
+(def content-types {".js" "text/javascript"
+                    ".html" "text/html"})
+
+(defn content-type [file-name]
+  (let [idx (.lastIndexOf file-name ".")
+        ext (.substring file-name idx)]
+    (get content-types ext "text/html")))
+
 (defn send-and-close
   "Use the passed connection to send a form to the browser. Send a
   proper HTTP response."
-  [conn status form]
-  (let [utf-8-form (.getBytes form "UTF-8")
-        content-length (count utf-8-form)
-        headers (map #(.getBytes (str % "\r\n"))
-                     [(status-line status)
-                      "Server: ClojureScript REPL"
-                      "Content-Type: text/html; charset=utf_8"
-                      (str "Content-Length: " content-length)
-                      ""])]
-    (with-open [os (.getOutputStream conn)]
-      (do (doseq [header headers]
-            (.write os header 0 (count header)))
-          (.write os utf-8-form 0 content-length)
-          (.flush os)
-          (.close conn)))))
+  ([conn status form]
+     (send-and-close conn status form "text/html"))
+  ([conn status form content-type]
+     (let [utf-8-form (.getBytes form "UTF-8")
+           content-length (count utf-8-form)
+           headers (map #(.getBytes (str % "\r\n"))
+                        [(status-line status)
+                         "Server: ClojureScript REPL"
+                         (str "Content-Type: "
+                              content-type
+                              "; charset=utf-8")
+                         (str "Content-Length: " content-length)
+                         ""])]
+       (with-open [os (.getOutputStream conn)]
+         (do (doseq [header headers]
+               (.write os header 0 (count header)))
+             (.write os utf-8-form 0 content-length)
+             (.flush os)
+             (.close conn))))))
 
 (defn send-404 [conn path]
   (send-and-close conn 404
                   (str "<html><body>"
                        "<h2>Page not found</h2>"
                        "No page " path " found on this server."
-                       "</body></html>")))
+                       "</body></html>")
+                  "text/html"))
 
 (defn send-for-eval
   "Given a form and a return value function, send the form to the
@@ -92,7 +105,7 @@
   when the return value is received."
   [form return-value-fn]
   (do (set-return-value-fn return-value-fn)
-      (send-and-close @(connection) 200 form)))
+      (send-and-close @(connection) 200 form "text/javascript")))
 
 (defn return-value
   "Called by the server when a return value is received."
@@ -170,7 +183,8 @@
       </script>
       </head>
       <body></body>
-      </html>")))
+      </html>")
+    "text/html"))
 
 (defn handle-get [opts conn request]
   (let [path (:path request)]
@@ -178,7 +192,7 @@
       (send-repl-client-page opts conn request)
       (let [file (io/file (str (:root opts) path))]
         (if (.exists file)
-          (send-and-close conn 200 (slurp file))
+          (send-and-close conn 200 (slurp file) (content-type (.getName file)))
           (send-404 conn (:path request)))))))
 
 (defn- handle-connection
