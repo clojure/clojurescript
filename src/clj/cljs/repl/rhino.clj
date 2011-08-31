@@ -52,6 +52,16 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhin
           (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
       (swap! loaded-libs conj rule))))
 
+(defn load-javascript [repl-env ns url]
+  (let [missing (remove #(contains? @loaded-libs %) ns)]
+    (when (seq missing)
+      (let [jse ^javax.script.ScriptEngine (:jse repl-env)]
+        (try 
+          (.eval jse (io/reader url))
+          ;; TODO: don't show errors for goog/base.js line number 105
+          (catch Throwable ex (println (.getMessage ex))))
+        (swap! loaded-libs (partial apply conj) missing)))))
+
 (defn rhino-setup [repl-env]
   (let [env {:context :statement :locals {}}]
     (repl/load-file repl-env "cljs/core.cljs")
@@ -67,6 +77,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhin
     (rhino-setup this))
   (-evaluate [this line js]
     (rhino-eval this line js))
+  (-load [this ns url]
+    (load-javascript this ns url))
   (-put [this k v]
     (case k
       :filename (.put ^javax.script.ScriptEngine (:jse this)
@@ -111,7 +123,14 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhin
   (clojure.string/triml "   hello")
   (clojure.string/reverse "   hello")
 
+  (load-namespace 'clojure.set)
+
+  (load-namespace 'goog.crypt)
   (ns test.crypt
     (:require [goog.crypt :as c]))
   (c/stringToByteArray "Hello")
+
+  (load-namespace 'goog.date.Date)
+  (goog.date.Date.)
+ 
   )

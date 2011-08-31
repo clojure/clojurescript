@@ -10,14 +10,15 @@
   (:refer-clojure :exclude [load-file])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
-            [cljs.compiler :as comp]))
+            [cljs.compiler :as comp]
+            [cljs.closure :as cljsc]))
 
 (def ^:dynamic *cljs-verbose* false)
-(def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defprotocol IJavaScriptEnv
   (-setup [this])
   (-evaluate [this line js])
+  (-load [this ns url])
   (-put [this k f])
   (-tear-down [this]))
 
@@ -67,13 +68,27 @@
       (-put repl-env :filename f)
       (load-stream repl-env res))))
 
+(defn load-namespace
+  [repl-env sym]
+  (let [sym (if (and (seq? sym)
+                     (= (first sym) 'quote))
+              (second sym)
+              sym)
+        opts {:output-dir ".repl"}
+        deps (->> (cljsc/add-dependencies opts {:requires [(name sym)] :type :seed})
+                  (remove (comp #{["goog"]} :provides))
+                  (remove (comp #{:seed} :type))
+                  (map #(select-keys % [:provides :url])))]
+    (doseq [{:keys [url provides]} deps]
+      (-load repl-env provides url))))
+
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
   [repl-env & {:keys [verbose warn-on-undeclared]}]
   (prn "Type: " :cljs/quit " to quit")
   (binding [comp/*cljs-ns* 'cljs.user
             *cljs-verbose* verbose
-            *cljs-warn-on-undeclared* warn-on-undeclared]
+            comp/*cljs-warn-on-undeclared* warn-on-undeclared]
     (let [env {:context :statement :locals {}}]
       (-setup repl-env)
       (loop []
@@ -88,6 +103,9 @@
 
            (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
            (do (load-file repl-env (second form)) (newline) (recur))
+
+           (and (seq? form) ('#{load-namespace} (first form)))
+           (do (load-namespace repl-env (second form)) (newline) (recur))
 
            (= form :namespaces)
            (do (prn @comp/namespaces) (newline) (recur))

@@ -7,6 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl.browser
+  (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
@@ -228,12 +229,30 @@
              {:status :error
               :value (str "Could not read return value: " ret)})))))
 
+(def loaded-libs (atom #{}))
+
+(defn object-query-str [ns]
+  (str "if("
+       (apply str (interpose " && " (map #(str "goog.getObjectByName('" (name %) "')") ns)))
+       "){true}else{false};"))
+
+(defn load-javascript [repl-env ns url]
+  (let [missing (remove #(contains? @loaded-libs %) ns)]
+    (when (seq missing)
+      (let [ret (browser-eval (object-query-str ns))]
+        (when-not (and (= (:status ret) :success)
+                       (= (:value ret) "true"))
+          (browser-eval (slurp url))))
+      (swap! loaded-libs (partial apply conj) missing))))
+
 (defrecord BrowserEnv [opts]
   IJavaScriptEnv
   (-setup [this]
     (comp/with-core-cljs (start-server opts)))
   (-evaluate [this line js]
     (browser-eval js))
+  (-load [this ns url]
+    (load-javascript this ns url))
   (-put [this k v]
     nil)
   (-tear-down [this]
