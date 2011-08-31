@@ -18,16 +18,11 @@
   (:require [clojure.browser.net   :as net]
             [clojure.browser.event :as event]))
 
-(defn log-obj [obj]
-  (.log js/console obj))
-
 (defn evaluate-javascript
   "Process a single block of JavaScript received from the server"
   [block]
-  (log-obj (str "evaluating: " block))
   (let [result (try {:status :success :value (str (js* "eval(~{block})"))}
                     (catch js/Error e {:status :exception :value (pr-str e)}))]
-    (log-obj (str "result: " result))
     (pr-str result)))
 
 (defn send-result [connection url data]
@@ -53,7 +48,7 @@
                                      connection
                                      url))
       (net/connect repl-connection
-                   #(log-obj "Child REPL channel connected."))
+                   (constantly nil))
 
       (js/setTimeout #(send-result connection url "ready") 50))
     (js/alert "No 'xpc' param provided to child iframe.")))
@@ -73,7 +68,7 @@
                              :send-result
                              (evaluate-javascript js))))
     (net/connect repl-connection
-                 #(log-obj "Parent REPL channel connection.")
+                 (constantly nil)
                  (fn [iframe]
                    (set! iframe.style.display
                          "none")))))
