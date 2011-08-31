@@ -18,7 +18,7 @@
            java.io.OutputStreamWriter
            java.net.Socket
            java.net.ServerSocket
-           cljs.repl.IEvaluator))
+           cljs.repl.IJavaScriptEnv))
 
 (defonce server-state (atom {:socket nil
                              :connection nil
@@ -228,8 +228,8 @@
              {:status :error
               :value (str "Could not read return value: " ret)})))))
 
-(defrecord BrowserEvaluator [opts]
-  IEvaluator
+(defrecord BrowserEnv [opts]
+  IJavaScriptEnv
   (-setup [this]
     (comp/with-core-cljs (start-server opts)))
   (-evaluate [this line js]
@@ -265,7 +265,7 @@
                                (future (create-client-js-file
                                         opts
                                         (io/file (:working-dir opts) "client.js"))))))
-        (BrowserEvaluator. opts))))
+        (BrowserEnv. opts))))
 
 (comment
   

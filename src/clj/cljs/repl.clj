@@ -15,7 +15,7 @@
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 
-(defprotocol IEvaluator
+(defprotocol IJavaScriptEnv
   (-setup [this])
   (-evaluate [this line js])
   (-put [this k f])
