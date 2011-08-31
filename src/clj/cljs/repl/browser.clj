@@ -181,6 +181,8 @@
       (send-repl-client-page opts conn request)
       (send-404 conn (:path request)))))
 
+(declare browser-eval)
+
 (defn- handle-connection
   [opts conn]
   (let [rdr (BufferedReader. (InputStreamReader. (.getInputStream conn)))]
@@ -248,7 +250,8 @@
 (defrecord BrowserEnv [opts]
   IJavaScriptEnv
   (-setup [this]
-    (comp/with-core-cljs (start-server opts)))
+    (do (comp/with-core-cljs (start-server opts))
+        (browser-eval "goog.provide('cljs.user');")))
   (-evaluate [this line js]
     (browser-eval js))
   (-load [this ns url]
