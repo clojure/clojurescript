@@ -74,7 +74,7 @@
                      (= (first sym) 'quote))
               (second sym)
               sym)
-        opts {:output-dir ".repl"}
+        opts {:output-dir (get repl-env :working-dir ".repl")}
         deps (->> (cljsc/add-dependencies opts {:requires [(name sym)] :type :seed})
                   (remove (comp #{["goog"]} :provides))
                   (remove (comp #{:seed} :type))
