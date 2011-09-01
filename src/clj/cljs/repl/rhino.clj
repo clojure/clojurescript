@@ -125,7 +125,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhin
 
   (load-namespace 'clojure.set)
 
-  (load-namespace 'goog.crypt)
   (ns test.crypt
     (:require [goog.crypt :as c]))
   (c/stringToByteArray "Hello")

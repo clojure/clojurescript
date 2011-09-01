@@ -22,11 +22,35 @@
   (-put [this k f])
   (-tear-down [this]))
 
+(defn load-namespace
+  "Load a namespace and all of its dependencies into the evaluation environment.
+  The environment is responsible for ensuring that each namespace is loaded once and
+  only once."
+  [repl-env sym]
+  (let [sym (if (and (seq? sym)
+                     (= (first sym) 'quote))
+              (second sym)
+              sym)
+        opts {:output-dir (get repl-env :working-dir ".repl")}
+        deps (->> (cljsc/add-dependencies opts {:requires [(name sym)] :type :seed})
+                  (remove (comp #{["goog"]} :provides))
+                  (remove (comp #{:seed} :type))
+                  (map #(select-keys % [:provides :url])))]
+    (doseq [{:keys [url provides]} deps]
+      (-load repl-env provides url))))
+
+(defn- load-dependencies
+  [repl-env requires]
+  (doseq [ns requires]
+    (load-namespace repl-env ns)))
+
 (defn evaluate-form
   [repl-env env form]
   (try
     (let [ast (comp/analyze env form)
           js (comp/emits ast)]
+      (when (= (:op ast) :ns)
+        (load-dependencies repl-env (vals (:requires ast))))
       (when *cljs-verbose*
         (print js))
       (let [ret (-evaluate repl-env (:line (meta form)) js)]
@@ -35,7 +59,7 @@
           ;;TODO - file bug with google, this is bs error
           ;;this is what you get when you try to 'teach new developers'
           ;;via errors (goog/base.js 104)
-          :error (when-not (and (seq? form) (= 'ns (first form)))
+          :error (when-not (and (seq? form) (= 'ns (first form))) ;; dry
                    (println (:value ret))
                    (when-let [st (:stacktrace ret)]
                      (println st)))
@@ -67,20 +91,6 @@
       (assert res (str "Can't find " f " in classpath"))
       (-put repl-env :filename f)
       (load-stream repl-env res))))
-
-(defn load-namespace
-  [repl-env sym]
-  (let [sym (if (and (seq? sym)
-                     (= (first sym) 'quote))
-              (second sym)
-              sym)
-        opts {:output-dir (get repl-env :working-dir ".repl")}
-        deps (->> (cljsc/add-dependencies opts {:requires [(name sym)] :type :seed})
-                  (remove (comp #{["goog"]} :provides))
-                  (remove (comp #{:seed} :type))
-                  (map #(select-keys % [:provides :url])))]
-    (doseq [{:keys [url provides]} deps]
-      (-load repl-env provides url))))
 
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"

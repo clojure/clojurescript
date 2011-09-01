@@ -247,17 +247,14 @@
           (browser-eval (slurp url))))
       (swap! loaded-libs (partial apply conj) missing))))
 
-(defrecord BrowserEnv [opts]
-  IJavaScriptEnv
+(extend-protocol repl/IJavaScriptEnv
+  clojure.lang.IPersistentMap
   (-setup [this]
-    (do (comp/with-core-cljs (start-server opts))
+    (do (comp/with-core-cljs (start-server this))
         (browser-eval "goog.provide('cljs.user');")))
-  (-evaluate [this line js]
-    (browser-eval js))
-  (-load [this ns url]
-    (load-javascript this ns url))
-  (-put [this k v]
-    nil)
+  (-evaluate [this line js] (browser-eval js))
+  (-load [this ns url] (load-javascript this ns url))
+  (-put [this k v] nil)
   (-tear-down [this]
     (do (stop-server)
         (reset! server-state {}))))
@@ -280,14 +277,14 @@
       (spit file (compile-client-js opts)))
     file))
 
-(defn repl-env [& {:keys [port root] :as opts}]
+(defn repl-env [& {:as opts}]
   (let [opts (merge {:port 9000 :optimizations :simple :working-dir ".repl"} opts)]
     (do (swap! server-state
                (fn [old] (assoc old :client-js
                                (future (create-client-js-file
                                         opts
                                         (io/file (:working-dir opts) "client.js"))))))
-        (BrowserEnv. opts))))
+        opts)))
 
 (comment
   
