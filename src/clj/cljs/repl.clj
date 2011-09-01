@@ -44,6 +44,16 @@
   (doseq [ns requires]
     (load-namespace repl-env ns)))
 
+(defn display-error
+  ([ret form js]
+     (display-error ret form js (constantly nil)))
+  ([ret form js f]
+     (when-not (and (seq? form) (= 'ns (first form)))
+       (f)
+       (println (:value ret))
+       (when-let [st (:stacktrace ret)]
+         (println st)))))
+
 (defn evaluate-form
   [repl-env env form]
   (try
@@ -59,15 +69,9 @@
           ;;TODO - file bug with google, this is bs error
           ;;this is what you get when you try to 'teach new developers'
           ;;via errors (goog/base.js 104)
-          :error (when-not (and (seq? form) (= 'ns (first form))) ;; dry
-                   (println (:value ret))
-                   (when-let [st (:stacktrace ret)]
-                     (println st)))
-          :exception (when-not (and (seq? form) (= 'ns (first form)))
-                       (prn "Error evaluating:" form :as js)
-                       (println (:value ret))
-                       (when-let [st (:stacktrace ret)]
-                         (println st)))
+          :error (display-error ret form js)
+          :exception (display-error ret form js
+                       #(prn "Error evaluating:" form :as js))
           :success (:value ret))))
     (catch Throwable ex
       (.printStackTrace ex)
