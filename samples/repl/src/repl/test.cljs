@@ -7,8 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns repl.test
-  (:require [clojure.browser.repl :as repl]
-            [clojure.browser.dom  :as dom]))
+  (:require [clojure.browser.repl :as repl]))
 
 (repl/connect "http://localhost:9000/repl")
 
@@ -35,32 +34,28 @@
   
   ;; Evaluate some basic forms
   (+ 1 1)
-  ;; TODO: Chrome has a problem with keywords
   {:a :b}
   "hello"
   (reduce + [1 2 3 4 5])
   (js/alert "Hello World!")
   
-  ;; Can only load files that depend on what is already avaialble.
   (load-file "clojure/string.cljs")
   (clojure.string/reverse "Hello")
 
-  ;; TODO: This is not being done automatically as it is in rhino.
-  (ns cljs.user)
   (defn sum [coll] (reduce + coll))
   (sum [2 2 2 2])
 
   ;; Create dom elements.
-  ;; This require only works because we have already compiled
-  ;; 'clojure.browser.dom when the project was built.
   (ns dom.testing (:require [clojure.browser.dom :as dom]))
   (dom/append (dom/get-element "content")
               (dom/element "Hello World!"))
 
-  ;; TODO: This will not work unless you have already required what it
-  ;; depends on. You may think that just copying all of goog to 'out'
-  ;; will solve the problem but it may not in every case. What if this
-  ;; depends on another cljs file which has not been compiled?
-  (load-file "clojure/browser/dom.cljs")
+  ;; Load something we haven't used yet
+  (ns test.crypt
+    (:require [goog.crypt :as c]))
+  (c/stringToByteArray "ClojureScript")
+
+  (load-namespace 'goog.date.Date)
+  (goog.date.Date.)
 
   )

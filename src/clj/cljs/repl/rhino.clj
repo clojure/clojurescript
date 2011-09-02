@@ -12,20 +12,11 @@
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.repl :as repl])
-  (:import cljs.repl.IEvaluator))
+  (:import cljs.repl.IJavaScriptEnv))
 
 ;;todo - move to core.cljs, using js
 (def ^String bootjs "
-//goog.provide should do this for us
-//cljs = {}
-//cljs.lang = {}
-//cljs.user = {}
-//goog.provide('cljs.core');
-//goog.provide('cljs.user');
-//cljs.lang.truth_ = function(x){return x != null && x !== false;}
-//cljs.lang.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}
-//cljs.lang.original_goog_require = goog.require;
-goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\",\"goog-require\").invoke(goog.global.cljs_javascript_engine, rule);}
+goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\").invoke(goog.global.cljs_javascript_engine, rule);}
 ")
 
 (defn rhino-eval
@@ -43,7 +34,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (catch Throwable ex
       {:status :exception
        :value (.getMessage ex)
-       :stacktrace (with-out-str (.printStackTrace ex))})))
+       :stacktrace (apply str (interpose "\n" (map #(.toString %) (.getStackTrace ex))))})))
 
 (def loaded-libs (atom #{}))
 
@@ -61,7 +52,41 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
           (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
       (swap! loaded-libs conj rule))))
 
-(defn rhino-repl-env
+(defn load-javascript [repl-env ns url]
+  (let [missing (remove #(contains? @loaded-libs %) ns)]
+    (when (seq missing)
+      (let [jse ^javax.script.ScriptEngine (:jse repl-env)]
+        (try 
+          (.eval jse (io/reader url))
+          ;; TODO: don't show errors for goog/base.js line number 105
+          (catch Throwable ex (println (.getMessage ex))))
+        (swap! loaded-libs (partial apply conj) missing)))))
+
+(defn rhino-setup [repl-env]
+  (let [env {:context :statement :locals {}}]
+    (repl/load-file repl-env "cljs/core.cljs")
+    (repl/evaluate-form repl-env
+                        (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
+                        '(ns cljs.user))
+    (.put ^javax.script.ScriptEngine (:jse repl-env)
+          javax.script.ScriptEngine/FILENAME "<cljs repl>")))
+
+(extend-protocol repl/IJavaScriptEnv
+  clojure.lang.IPersistentMap
+  (-setup [this]
+    (rhino-setup this))
+  (-evaluate [this line js]
+    (rhino-eval this line js))
+  (-load [this ns url]
+    (load-javascript this ns url))
+  (-put [this k v]
+    (case k
+      :filename (.put ^javax.script.ScriptEngine (:jse this)
+                      javax.script.ScriptEngine/FILENAME v)))
+  (-tear-down [this]
+    nil))
+
+(defn repl-env
   "Returns a fresh JS environment, suitable for passing to repl.
   Hang on to return for use across repl calls."
   []
@@ -81,31 +106,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
       (.eval jse line))
     new-repl-env))
 
-(defn rhino-setup [repl-env]
-  (let [env {:context :statement :locals {}}]
-    (repl/load-file repl-env "cljs/core.cljs")
-    (repl/evaluate-form repl-env
-                        (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
-                        '(ns cljs.user))
-    (.put ^javax.script.ScriptEngine (:jse repl-env)
-          javax.script.ScriptEngine/FILENAME "<cljs repl>")))
-
-(defrecord RhinoEvaluator []
-  IEvaluator
-  (-setup [this]
-    (rhino-setup this))
-  (-evaluate [this line js]
-    (rhino-eval this line js))
-  (-put [this k v]
-    (case k
-      :filename (.put ^javax.script.ScriptEngine (:jse this)
-                      javax.script.ScriptEngine/FILENAME v)))
-  (-tear-down [this]
-    nil))
-
-(defn repl-env []
-  (merge (RhinoEvaluator.) (rhino-repl-env)))
-
 (comment
 
   (require '[cljs.repl :as repl])
@@ -122,7 +122,14 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (load-file "clojure/string.cljs")
   (clojure.string/triml "   hello")
   (clojure.string/reverse "   hello")
-  :cljs/quit
-  (exit)
-  
+
+  (load-namespace 'clojure.set)
+
+  (ns test.crypt
+    (:require [goog.crypt :as c]))
+  (c/stringToByteArray "Hello")
+
+  (load-namespace 'goog.date.Date)
+  (goog.date.Date.)
+ 
   )

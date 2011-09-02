@@ -10,22 +10,57 @@
   (:refer-clojure :exclude [load-file])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
-            [cljs.compiler :as comp]))
+            [cljs.compiler :as comp]
+            [cljs.closure :as cljsc]))
 
 (def ^:dynamic *cljs-verbose* false)
-(def ^:dynamic *cljs-warn-on-undeclared* false)
 
-(defprotocol IEvaluator
+(defprotocol IJavaScriptEnv
   (-setup [this])
   (-evaluate [this line js])
+  (-load [this ns url])
   (-put [this k f])
   (-tear-down [this]))
+
+(defn load-namespace
+  "Load a namespace and all of its dependencies into the evaluation environment.
+  The environment is responsible for ensuring that each namespace is loaded once and
+  only once."
+  [repl-env sym]
+  (let [sym (if (and (seq? sym)
+                     (= (first sym) 'quote))
+              (second sym)
+              sym)
+        opts {:output-dir (get repl-env :working-dir ".repl")}
+        deps (->> (cljsc/add-dependencies opts {:requires [(name sym)] :type :seed})
+                  (remove (comp #{["goog"]} :provides))
+                  (remove (comp #{:seed} :type))
+                  (map #(select-keys % [:provides :url])))]
+    (doseq [{:keys [url provides]} deps]
+      (-load repl-env provides url))))
+
+(defn- load-dependencies
+  [repl-env requires]
+  (doseq [ns requires]
+    (load-namespace repl-env ns)))
+
+(defn display-error
+  ([ret form js]
+     (display-error ret form js (constantly nil)))
+  ([ret form js f]
+     (when-not (and (seq? form) (= 'ns (first form)))
+       (f)
+       (println (:value ret))
+       (when-let [st (:stacktrace ret)]
+         (println st)))))
 
 (defn evaluate-form
   [repl-env env form]
   (try
     (let [ast (comp/analyze env form)
           js (comp/emits ast)]
+      (when (= (:op ast) :ns)
+        (load-dependencies repl-env (vals (:requires ast))))
       (when *cljs-verbose*
         (print js))
       (let [ret (-evaluate repl-env (:line (meta form)) js)]
@@ -34,15 +69,9 @@
           ;;TODO - file bug with google, this is bs error
           ;;this is what you get when you try to 'teach new developers'
           ;;via errors (goog/base.js 104)
-          :error (when-not (and (seq? form) (= 'ns (first form)))
-                   (println (:value ret))
-                   (when-let [st (:stacktrace ret)]
-                     (println st)))
-          :exception (when-not (and (seq? form) (= 'ns (first form)))
-                       (prn "Error evaluating:" form :as js)
-                       (println (:value ret))
-                       (when-let [st (:stacktrace ret)]
-                         (println st)))
+          :error (display-error ret form js)
+          :exception (display-error ret form js
+                       #(prn "Error evaluating:" form :as js))
           :success (:value ret))))
     (catch Throwable ex
       (.printStackTrace ex)
@@ -73,7 +102,7 @@
   (prn "Type: " :cljs/quit " to quit")
   (binding [comp/*cljs-ns* 'cljs.user
             *cljs-verbose* verbose
-            *cljs-warn-on-undeclared* warn-on-undeclared]
+            comp/*cljs-warn-on-undeclared* warn-on-undeclared]
     (let [env {:context :statement :locals {}}]
       (-setup repl-env)
       (loop []
@@ -88,6 +117,9 @@
 
            (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
            (do (load-file repl-env (second form)) (newline) (recur))
+
+           (and (seq? form) ('#{load-namespace} (first form)))
+           (do (load-namespace repl-env (second form)) (newline) (recur))
 
            (= form :namespaces)
            (do (prn @comp/namespaces) (newline) (recur))
