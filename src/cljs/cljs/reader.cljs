@@ -232,7 +232,8 @@ nil if the end of stream has been reached")
          ch (read-char reader)]
     (cond
      (nil? ch) (reader-error reader "EOF while reading string")
-     (= "\\" ch) (recur (escape-char buffer reader) (read-char reader))
+     (= "\\" ch) (recur (do (.append buffer (escape-char buffer reader)) buffer)
+                        (read-char reader))
      (= \" ch) (. buffer (toString))
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
