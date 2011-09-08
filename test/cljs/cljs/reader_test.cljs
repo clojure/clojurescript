@@ -22,5 +22,7 @@
   (assert (= nil (reader/read-string "nil")))
   (assert (= true (reader/read-string "true")))
   (assert (= false (reader/read-string "false")))
-  
+  (assert (= "string" (reader/read-string "\"string\"")))
+  (assert (= "escape chars \t \r \n \\ \" \b \f" (reader/read-string "\"escape chars \\t \\r \\n \\\\ \\\" \\b \\f\"")))
+
   :ok)
