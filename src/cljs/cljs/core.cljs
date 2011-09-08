@@ -2356,7 +2356,7 @@ reduces them without incurring seq initialization"
   (-first [rng] start)
 
   (-rest [rng]
-    (if-not (nil? (-seq rng))
+    (if (-seq rng)
       (Range. meta (+ start step) end step)
       (list)))
 
@@ -2375,9 +2375,9 @@ reduces them without incurring seq initialization"
 
   ICounted
   (-count [rng]
-    (cond (nil? (-seq rng)) 0
-          (and (= start 0) (< start end) (= step 1)) (- end start)
-          :else (js/Math.ceil (/ (- end start) step))))
+    (if-not (-seq rng)
+      0
+      (js/Math.ceil (/ (- end start) step))))
 
   IIndexed
   (-nth [rng n]
@@ -2396,7 +2396,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [rng]
     (let [comp (if (pos? step) < >)]
-      (if (comp start end)
+      (when (comp start end)
         rng)))
 
   IReduce
