@@ -3,11 +3,11 @@
 mkdir -p lib
 
 echo "Fetching Clojure..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.3.0-beta1/clojure-1.3.0-beta1.zip
-unzip -q clojure-1.3.0-beta1.zip
-cp clojure-1.3.0-beta1/clojure-1.3.0-beta1.jar lib/clojure.jar
-rm -rf clojure-1.3.0-beta1/
-rm clojure-1.3.0-beta1.zip
+curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.3.0-beta3/clojure-1.3.0-beta3.zip
+unzip -q clojure-1.3.0-beta3.zip
+cp clojure-1.3.0-beta3/clojure-1.3.0-beta3.jar lib/clojure.jar
+rm -rf clojure-1.3.0-beta3/
+rm clojure-1.3.0-beta3.zip
 
 echo "Fetching Google Closure Library..."
 mkdir -p closure/library
