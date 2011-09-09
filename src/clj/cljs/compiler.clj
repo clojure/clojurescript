@@ -86,8 +86,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (defn js-var [sym]
   (let [parts (string/split (name sym) #"\.")
+        first (first parts)
         step (fn [part] (str "['" part "']"))]
-    (apply str "goog.global" (map step parts))))
+    (apply str first (map step (rest parts)))))
 
 (defn resolve-existing-var [env sym]
   (if (= (namespace sym) "js")
