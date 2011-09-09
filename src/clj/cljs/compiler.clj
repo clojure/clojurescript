@@ -9,7 +9,7 @@
 (set! *warn-on-reflection* true)
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge load-file loaded-libs macroexpand-1])
+  (:refer-clojure :exclude [munge macroexpand-1])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]))
 
@@ -34,7 +34,6 @@
                             cljs.user {:name cljs.user}}))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
-(def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defn munge [s]
@@ -48,20 +47,6 @@
     (if (symbol? s)
       (symbol ms)
       ms)))
-
-;;todo - move to core.cljs, using js
-(def ^String bootjs "
-//goog.provide should do this for us
-//cljs = {}
-//cljs.lang = {}
-//cljs.user = {}
-//goog.provide('cljs.core');
-//goog.provide('cljs.user');
-//cljs.lang.truth_ = function(x){return x != null && x !== false;}
-//cljs.lang.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}
-//cljs.lang.original_goog_require = goog.require;
-goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\",\"goog-require\").invoke(goog.global.cljs_javascript_engine, rule);}
-")
 
 (defn confirm-var-exists [env prefix suffix]
   (when true ;;*cljs-warn-on-undeclared*
@@ -958,54 +943,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (set? form) (analyze-set env form name)
         :else {:op :constant :env env :form form}))))
 
-(defn eval1
-  [repl-env env form]
-  (try
-    (let [ast (analyze env form)
-          js (emits ast)
-          jse ^javax.script.ScriptEngine (:jse repl-env)]
-      (try
-        (when *cljs-verbose*
-            (print js))
-        (let [filename (.get jse javax.script.ScriptEngine/FILENAME)
-              linenum (or (:line (meta form)) Integer/MIN_VALUE)
-              ctx (sun.org.mozilla.javascript.internal.Context/enter)]
-          (try
-            (.evaluateString ctx (:global repl-env) js filename linenum nil)
-          (finally
-            (sun.org.mozilla.javascript.internal.Context/exit))))
-        (catch Throwable ex
-          ;;we eat ns errors because we know goog.provide() will throw when reloaded
-          ;;TODO - file bug with google, this is bs error
-          ;;this is what you get when you try to 'teach new developers' via errors (goog/base.js 104)
-          (when-not (and (seq? form) (= 'ns (first form)))
-            (prn "Error evaluating:" form :as js)
-            (.printStackTrace ex)
-            #_(println (str ex))))))
-    (catch Throwable ex
-      (.printStackTrace ex)
-      (println (str ex)))))
-
-(defn load-stream [repl-env stream]
-  (with-open [r (io/reader stream)]
-    (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-          pbr (clojure.lang.LineNumberingPushbackReader. r)
-          eof (Object.)]
-      (loop [r (read pbr false eof false)]
-        (let [env (assoc env :ns (@namespaces *cljs-ns*))]
-          (when-not (identical? eof r)
-            (eval1 repl-env env r)
-            (recur (read pbr false eof false))))))))
-
-(defn load-file
-  [repl-env f]
-  (binding [*cljs-ns* 'cljs.user]
-    (let [res (if (= \/ (first f)) f (io/resource f))]
-      (assert res (str "Can't find " f " in classpath"))
-      (.put ^javax.script.ScriptEngine (:jse repl-env)
-            javax.script.ScriptEngine/FILENAME f)
-      (load-stream repl-env res))))
-
 (defn analyze-file
   [f]
   (binding [*cljs-ns* 'cljs.user]
@@ -1020,79 +957,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
               (when-not (identical? eof r)
                 (analyze env r)
                 (recur (read pbr false eof false))))))))))
-
-(def loaded-libs (atom #{}))
-
-(defn goog-require [repl-env rule]
-  (when-not (contains? @loaded-libs rule)
-    (let [jse ^javax.script.ScriptEngine (:jse repl-env)
-          path (string/replace (munge rule) \. java.io.File/separatorChar)
-          cljs-path (str path ".cljs")
-          js-path (str "goog/" (.eval jse (str "goog.dependencies_.nameToPath['" rule "']")))]
-      (if-let [res (io/resource cljs-path)]
-        (binding [*cljs-ns* 'cljs.user]
-          (load-stream repl-env res))
-        (if-let [res (io/resource js-path)]
-          (.eval jse (io/reader res))
-          (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
-      (swap! loaded-libs conj rule))))
-
-(defn repl-env
-  "Returns a fresh JS environment, suitable for passing to repl.
-  Hang on to return for use across repl calls."
-  []
-  (let [jse (-> (javax.script.ScriptEngineManager.) (.getEngineByName "JavaScript"))
-        base (io/resource "goog/base.js")
-        deps (io/resource "goog/deps.js")
-        new-repl-env {:jse jse :global (.eval jse "this")}]
-    (assert base "Can't find goog/base.js in classpath")
-    (assert deps "Can't find goog/deps.js in classpath")
-    (.put jse javax.script.ScriptEngine/FILENAME "goog/base.js")
-    (.put jse "cljs_javascript_engine" new-repl-env)
-    (with-open [r (io/reader base)]
-      (.eval jse r))
-    (.eval jse bootjs)
-    ;; Load deps.js line-by-line to avoid 64K method limit
-    (doseq [^String line (line-seq (io/reader deps))]
-      (.eval jse line))
-    new-repl-env))
-
-(defn repl
-  "Note - repl will reload core.cljs every time, even if supplied old repl-env"
-  [repl-env & {:keys [verbose warn-on-undeclared]}]
-  (prn "Type: " :cljs/quit " to quit")
-  (binding [*cljs-ns* 'cljs.user
-            *cljs-verbose* verbose
-            *cljs-warn-on-undeclared* warn-on-undeclared]
-    (let [env {:context :statement :locals {}}]
-      (load-file repl-env "cljs/core.cljs")
-      (eval1 repl-env (assoc env :ns (@namespaces *cljs-ns*))
-             '(ns cljs.user))
-      (.put ^javax.script.ScriptEngine (:jse repl-env)
-            javax.script.ScriptEngine/FILENAME "<cljs repl>")
-      (loop []
-        (print (str "ClojureScript:" *cljs-ns* "> "))
-        (flush)
-        (let [form (read)]
-          (cond
-           (= form :cljs/quit) :quit
-           
-           (and (seq? form) (= (first form) 'in-ns))
-           (do (set! *cljs-ns* (second (second form))) (newline) (recur))
-
-           (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
-           (do (load-file repl-env (second form)) (newline) (recur))
-           
-           :else
-           (let [ret (eval1 repl-env
-                            (assoc env :ns (@namespaces *cljs-ns*))
-                            ;;form
-                            (list 'cljs.core.prn form)
-                            ;(list 'goog.global.print form)
-                            )]
-             ;(newline) (flush)
-             ;;(prn (if (nil? ret) nil ret))
-             (recur))))))))
 
 (defn forms-seq
   "Seq of forms in a Clojure or ClojureScript file."
