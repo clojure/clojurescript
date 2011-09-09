@@ -140,6 +140,11 @@
 (defprotocol IPending
   (-realized? [d]))
 
+(defprotocol IWatchable
+  (-notify-watches [this oldval newval])
+  (-add-watch [this key f])
+  (-remove-watch [this key]))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn identical? [x y]
   "Tests if 2 arguments are the same object"
@@ -2726,7 +2731,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
-(deftype Atom [state meta validator]
+(deftype Atom [state meta validator watches]
   IEquiv
   (-equiv [o other] (identical? o other))
 
@@ -2738,7 +2743,16 @@ reduces them without incurring seq initialization"
 
   IPrintable
   (-pr-seq [a opts]
-    (concat  ["#<Atom: "] (-pr-seq state opts) ">")))
+    (concat  ["#<Atom: "] (-pr-seq state opts) ">"))
+
+  IWatchable
+  (-notify-watches [this oldval newval]
+    (doseq [[key f] watches]
+      (f key this oldval newval)))
+  (-add-watch [this key f]
+    (set! (.watches this) (assoc watches key f)))
+  (-remove-watch [this key]
+    (set! (.watches this) (dissoc watches key))))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
@@ -2753,8 +2767,8 @@ reduces them without incurring seq initialization"
   argument, which will be passed the intended new state on any state
   change. If the new state is unacceptable, the validate-fn should
   return false or throw an exception."
-  ([x] (Atom. x nil nil))
-  ([x & {:keys [meta validator]}] (Atom. x meta validator)))
+  ([x] (Atom. x nil nil nil))
+  ([x & {:keys [meta validator]}] (Atom. x meta validator nil)))
 
 (defn reset!
   "Sets the value of atom to newval without regard for the
@@ -2763,6 +2777,7 @@ reduces them without incurring seq initialization"
   (when-let [v (.validator a)]
     (when-not (v newval)
       (throw "Validator rejected reference state")))
+  (-notify-watches a (.state a) newval)
   (set! (.state a) newval))
 
 (defn swap!
@@ -2825,6 +2840,29 @@ reduces them without incurring seq initialization"
   "Atomically resets the metadata for a namespace/var/ref/agent/atom"
   [iref m]
   (set! (.meta iref) m))
+
+(defn add-watch
+  "Alpha - subject to change.
+
+  Adds a watch function to an atom reference. The watch fn must be a
+  fn of 4 args: a key, the reference, its old-state, its
+  new-state. Whenever the reference's state might have been changed,
+  any registered watches will have their functions called. The watch
+  fn will be called synchronously. Note that an atom's or ref's state
+  may have changed again prior to the fn call, so use old/new-state
+  rather than derefing the reference. Note also that watch fns may be
+  called from multiple threads simultaneously. Keys must be unique per
+  reference, and can be used to remove the watch with remove-watch,
+  but are otherwise considered opaque by the watch mechanism."
+  [iref key f]
+  (-add-watch iref key f))
+
+(defn remove-watch
+  "Alpha - subject to change.
+
+  Removes a watch (set by add-watch) from a reference"
+  [iref key]
+  (-remove-watch iref key))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; gensym ;;;;;;;;;;;;;;;;
 ;; Internal - do not use!
