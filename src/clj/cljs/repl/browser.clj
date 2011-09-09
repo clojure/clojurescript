@@ -1,10 +1,10 @@
-;   Copyright (c) Rich Hickey. All rights reserved.
-;   The use and distribution terms for this software are covered by the
-;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
-;   By using this software in any fashion, you are agreeing to be bound by
-;   the terms of this license.
-;   You must not remove this notice, or any other, from this software.
+;; Copyright (c) Rich Hickey. All rights reserved.
+;; The use and distribution terms for this software are covered by the
+;; Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;; which can be found in the file epl-v10.html at the root of this distribution.
+;; By using this software in any fashion, you are agreeing to be bound by
+;; the terms of this license.
+;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl.browser
   (:refer-clojure :exclude [loaded-libs])
@@ -27,7 +27,7 @@
                              :return-value-fn nil
                              :client-js nil}))
 
-(defn connection
+(defn- connection
   "Promise to return a connection when one is available. If a
   connection is not available, store the promise in server-state."
   []
@@ -39,7 +39,7 @@
       (do (swap! server-state (fn [old] (assoc old :promised-conn p)))
           p))))
 
-(defn set-connection
+(defn- set-connection
   "Given a new available connection, either use it to deliver the
   connection which was promised or store the connection for later
   use."
@@ -51,13 +51,13 @@
         (deliver promised-conn conn))
     (swap! server-state (fn [old] (assoc old :connection conn)))))
 
-(defn set-return-value-fn
+(defn- set-return-value-fn
   "Save the return value function which will be called when the next
   return value is received."
   [f]
   (swap! server-state (fn [old] (assoc old :return-value-fn f))))
 
-(defn status-line [status]
+(defn- status-line [status]
   (case status
     200 "HTTP/1.1 200 OK"
     404 "HTTP/1.1 404 Not Found"
@@ -102,7 +102,7 @@
   (do (set-return-value-fn return-value-fn)
       (send-and-close @(connection) 200 form "text/javascript")))
 
-(defn return-value
+(defn- return-value
   "Called by the server when a return value is received."
   [val]
   (when-let [f (:return-value-fn @server-state)]
@@ -183,7 +183,7 @@
 
 (declare browser-eval)
 
-(defn- handle-connection
+(defn handle-connection
   [opts conn]
   (let [rdr (BufferedReader. (InputStreamReader. (.getInputStream conn)))]
     (if-let [request (read-request rdr)]
@@ -195,7 +195,7 @@
         (.close conn))
       (.close conn))))
 
-(defn- server-loop
+(defn server-loop
   [opts server-socket]
   (let [conn (.accept server-socket)]
     (do (.setKeepAlive conn true)
@@ -233,7 +233,10 @@
 
 (def loaded-libs (atom #{}))
 
-(defn object-query-str [ns]
+(defn- object-query-str
+  "Given a list of goog namespaces, create a JavaScript string which, when evaluated,
+  will return true if all of the namespaces exist and false if any do not exist."
+  [ns]
   (str "if("
        (apply str (interpose " && " (map #(str "goog.getObjectByName('" (name %) "')") ns)))
        "){true}else{false};"))
@@ -252,10 +255,10 @@
   (-setup [this]
     (do (comp/with-core-cljs (start-server this))
         (browser-eval "goog.provide('cljs.user');")))
-  (-evaluate [this line js] (browser-eval js))
+  (-evaluate [_ _ js] (browser-eval js))
   (-load [this ns url] (load-javascript this ns url))
-  (-put [this k v] nil)
-  (-tear-down [this]
+  (-put [_ _ _] nil)
+  (-tear-down [_]
     (do (stop-server)
         (reset! server-state {}))))
 

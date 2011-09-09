@@ -1,10 +1,10 @@
-;   Copyright (c) Rich Hickey. All rights reserved.
-;   The use and distribution terms for this software are covered by the
-;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
-;   which can be found in the file epl-v10.html at the root of this distribution.
-;   By using this software in any fashion, you are agreeing to be bound by
-;   the terms of this license.
-;   You must not remove this notice, or any other, from this software.
+;; Copyright (c) Rich Hickey. All rights reserved.
+;; The use and distribution terms for this software are covered by the
+;; Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;; which can be found in the file epl-v10.html at the root of this distribution.
+;; By using this software in any fashion, you are agreeing to be bound by
+;; the terms of this license.
+;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl
   (:refer-clojure :exclude [load-file])
@@ -16,11 +16,11 @@
 (def ^:dynamic *cljs-verbose* false)
 
 (defprotocol IJavaScriptEnv
-  (-setup [this])
-  (-evaluate [this line js])
-  (-load [this ns url])
-  (-put [this k f])
-  (-tear-down [this]))
+  (-setup [this] "initialize the environment")
+  (-evaluate [this line js] "evaluate a javascript string")
+  (-load [this ns url] "load code at url into the environment")
+  (-put [this k f] "set mutable state in the environment")
+  (-tear-down [this] "dispose of the environment"))
 
 (defn load-namespace
   "Load a namespace and all of its dependencies into the evaluation environment.
@@ -44,7 +44,7 @@
   (doseq [ns requires]
     (load-namespace repl-env ns)))
 
-(defn display-error
+(defn- display-error
   ([ret form js]
      (display-error ret form js (constantly nil)))
   ([ret form js f]
@@ -55,6 +55,9 @@
          (println st)))))
 
 (defn evaluate-form
+  "Evaluate a ClojureScript form in the JavaScript environment. Returns a
+  string which is the ClojureScript return value. This string may or may
+  not be readable by the Clojure reader."
   [repl-env env form]
   (try
     (let [ast (comp/analyze env form)
@@ -120,9 +123,6 @@
 
            (and (seq? form) ('#{load-namespace} (first form)))
            (do (load-namespace repl-env (second form)) (newline) (recur))
-
-           (= form :namespaces)
-           (do (prn @comp/namespaces) (newline) (recur))
            
            :else
            (let [ret (evaluate-form repl-env

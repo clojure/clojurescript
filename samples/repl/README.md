@@ -85,7 +85,6 @@ to the REPL.
 (clojure.string/reverse "Hello")
  
 ;; Define functions and call them.
-(ns cljs.user)
 (defn sum [coll] (reduce + coll))
 (sum [2 2 2 2])
  
@@ -94,4 +93,3 @@ to the REPL.
 (dom/append (dom/get-element "content")
             (dom/element "Hello World!"))
 ```
-
