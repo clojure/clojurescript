@@ -223,15 +223,17 @@
 
 (defmacro defprotocol [psym & doc+methods]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
+        ns-name (-> &env :ns :name)
+        fqn (fn [n] (symbol (str ns-name "." n)))
         prefix (protocol-prefix p)
         methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
         expand-sig (fn [fname slot sig]
                      `(~sig
                        (if (and ~(first sig) (. ~(first sig) ~slot))
                          (. ~(first sig) ~slot ~@sig)
-                         ((or 
-                           (aget ~fname (goog.typeOf ~(first sig)))
-                           (aget ~fname "_")
+                         ((or
+                           (aget ~(fqn fname) (goog.typeOf ~(first sig)))
+                           (aget ~(fqn fname) "_")
                            (throw (missing-protocol
                                     ~(str psym "." fname) ~(first sig))))
                           ~@sig))))
