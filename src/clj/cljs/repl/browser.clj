@@ -27,6 +27,8 @@
                              :return-value-fn nil
                              :client-js nil}))
 
+(def loaded-libs (atom #{}))
+
 (defn- connection
   "Promise to return a connection when one is available. If a
   connection is not available, store the promise in server-state."
@@ -98,9 +100,11 @@
   "Given a form and a return value function, send the form to the
   browser for evaluation. The return value function will be called
   when the return value is received."
-  [form return-value-fn]
-  (do (set-return-value-fn return-value-fn)
-      (send-and-close @(connection) 200 form "text/javascript")))
+  ([form return-value-fn]
+     (send-for-eval @(connection) form return-value-fn))
+  ([conn form return-value-fn]
+     (do (set-return-value-fn return-value-fn)
+         (send-and-close conn 200 form "text/javascript"))))
 
 (defn- return-value
   "Called by the server when a return value is received."
@@ -189,9 +193,13 @@
     (if-let [request (read-request rdr)]
       (case (:method request)
         :get (handle-get opts conn request)
-        :post (do (when-not (= (:content request) "ready")
-                    (return-value (:content request)))
-                  (set-connection conn))
+        :post (if (= (:content request) "ready")
+                (do (reset! loaded-libs #{})
+                    (send-for-eval conn
+                                   "goog.provide('cljs.user');"
+                                   identity))
+                (do (return-value (:content request))
+                    (set-connection conn)))
         (.close conn))
       (.close conn))))
 
@@ -231,8 +239,6 @@
              {:status :error
               :value (str "Could not read return value: " ret)})))))
 
-(def loaded-libs (atom #{}))
-
 (defn- object-query-str
   "Given a list of goog namespaces, create a JavaScript string which, when evaluated,
   will return true if all of the namespaces exist and false if any do not exist."
@@ -253,8 +259,7 @@
 (extend-protocol repl/IJavaScriptEnv
   clojure.lang.IPersistentMap
   (-setup [this]
-    (do (comp/with-core-cljs (start-server this))
-        (browser-eval "goog.provide('cljs.user');")))
+    (comp/with-core-cljs (start-server this)))
   (-evaluate [_ _ js] (browser-eval js))
   (-load [this ns url] (load-javascript this ns url))
   (-put [_ _ _] nil)
