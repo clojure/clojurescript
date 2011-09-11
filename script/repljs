@@ -10,6 +10,7 @@ for next in lib/*: src/clj: src/cljs: test/cljs; do
 done
 
 java -server -cp $CLJSC_CP clojure.main -e \
-"(require '[cljs.compiler :as comp])
-(def jse (comp/repl-env))
-(comp/repl jse)"
+"(require '[cljs.repl :as repl])
+(require '[cljs.repl.rhino :as rhino])
+(def env (rhino/repl-env))
+(repl/repl env)"
