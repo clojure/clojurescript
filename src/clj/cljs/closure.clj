@@ -396,7 +396,7 @@
                             (-> (.substring s 1 (dec (count s)))
                                 (string/split #"'\s*,\s*'"))))]
     (->> (line-seq (io/reader (io/resource "goog/deps.js")))
-         (map #(re-matches #"^goog\.addDependency\('(.*)',\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
+         (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
          (remove nil?)
          (map #(drop 1 %))
          (remove #(.startsWith (first %) "../../third_party"))
