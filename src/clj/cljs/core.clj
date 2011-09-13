@@ -58,6 +58,15 @@
       'boolean "boolean"
       'default "_"})
 
+(defmacro reify [& impls]
+  (let [t (gensym "t")
+        locals (keys (:locals &env))]
+   `(do
+      (when (undefined? ~t)
+        (deftype ~t [~@locals]
+          ~@impls))
+      (new ~t ~@locals))))
+
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (str "Can't resolve: " %))
