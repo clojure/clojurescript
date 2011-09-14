@@ -99,6 +99,24 @@
       (-put repl-env :filename f)
       (load-stream repl-env res))))
 
+(defn- eval-and-print [repl-env env form]
+  (let [ret (evaluate-form repl-env
+                           (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
+                           (if (and (seq? form) (= 'ns (first form)))
+                             form
+                             (list 'cljs.core.pr-str form)))]
+    (try (prn (read-string ret))
+         (catch Exception e
+           (if (string? ret)
+             (println ret)
+             (prn nil))))))
+
+(defn- read-next-form []
+  (try {:status :success :form (read)}
+       (catch Exception e
+         (println (.getMessage e))
+         {:status :error})))
+
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
   [repl-env & {:keys [verbose warn-on-undeclared]}]
@@ -111,30 +129,22 @@
       (loop []
         (print (str "ClojureScript:" comp/*cljs-ns* "> "))
         (flush)
-        (let [form (read)]
+        (let [{:keys [status form]} (read-next-form)]
           (cond
            (= form :cljs/quit) :quit
            
+           (= status :error) (recur)
+           
            (and (seq? form) (= (first form) 'in-ns))
            (do (set! comp/*cljs-ns* (second (second form))) (newline) (recur))
-
+           
            (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
            (do (load-file repl-env (second form)) (newline) (recur))
-
+           
            (and (seq? form) ('#{load-namespace} (first form)))
            (do (load-namespace repl-env (second form)) (newline) (recur))
            
            :else
-           (let [ret (evaluate-form repl-env
-                                    (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
-                                    (if (and (seq? form) (= 'ns (first form)))
-                                      form
-                                      (list 'cljs.core.pr-str form)))]
-             (try (prn (read-string ret))
-                  (catch Exception e
-                    (if (string? ret)
-                      (println ret)
-                      (prn nil))))
-             (recur)))))
+           (do (eval-and-print repl-env env form) (recur)))))
       (-tear-down repl-env))))
 
