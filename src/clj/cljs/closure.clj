@@ -101,16 +101,14 @@
 
   Options may contain an :externs key with a list of file paths to
   load. The :use-only-custom-externs flag may be used to indicate that
-  the default externs should be excluded.
-
-  TODO: Implement options described above."
+  the default externs should be excluded."
   [opts]
-  (let [default (CommandLineRunner/getDefaultExterns)]
+  (let [jsf #(js-source-file % (io/input-stream (io/resource %)))
+        default (if (:use-only-custom-externs opts) [] (vec (CommandLineRunner/getDefaultExterns)))
+        externs (if (:externs opts) (vec (concat default (map #(jsf %) (:externs opts)))) default)]
     (if (= :nodejs (:target opts))
-      (let [path "cljs/nodejs_externs.js"]
-        (cons (js-source-file path (io/input-stream (io/resource path)))
-              default)) 
-      default)))
+      (conj externs (jsf "cljs/nodejs_externs.js"))
+      externs)))
 
 (defn ^com.google.javascript.jscomp.Compiler make-closure-compiler []
   (let [compiler (com.google.javascript.jscomp.Compiler.)]
