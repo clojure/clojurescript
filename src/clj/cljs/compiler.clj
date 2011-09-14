@@ -518,11 +518,11 @@
   (emit-wrap env (print (str (emits target) " = "(emits val)))))
 
 (defmethod emit :ns
-  [{:keys [name requires requires-macros env]}]
+  [{:keys [name requires uses requires-macros env]}]
   (println (str "goog.provide('" (munge name) "');"))
   (when-not (= name 'cljs.core)
     (println (str "goog.require('cljs.core');")))
-  (doseq [lib (vals requires)]
+  (doseq [lib (into (vals requires) (vals uses))]
     (println (str "goog.require('" (munge lib) "');"))))
 
 (defmethod emit :deftype*
