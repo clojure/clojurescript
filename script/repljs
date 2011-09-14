@@ -12,5 +12,4 @@ done
 java -server -cp $CLJSC_CP clojure.main -e \
 "(require '[cljs.repl :as repl])
 (require '[cljs.repl.rhino :as rhino])
-(def env (rhino/repl-env))
-(repl/repl env)"
+(repl/repl (rhino/repl-env))"
