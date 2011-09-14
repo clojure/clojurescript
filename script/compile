@@ -1,9 +1,8 @@
 #!/bin/sh
 
-java -server -Xmx2G -Xms2G -Xmn256m -cp 'lib/*:src/clj:src/cljs' clojure.main - > core.js <<CLJ
-(require :reload '[cljs.compiler :as comp] '[cljs.core])
-(binding [comp/*cljs-verbose* true]
-  (comp/load-file (comp/repl-env) "cljs/core.cljs"))
+java -server -Xmx2G -Xms2G -Xmn256m -cp 'lib/*:src/clj:src/cljs' clojure.main - <<CLJ
+(require :reload '[cljs.compiler :as comp] '[clojure.java.io :as io] '[cljs.core])
+(comp/compile-file (io/resource "cljs/core.cljs") "core.js")
 CLJ
 
 java -jar closure/compiler/compiler.jar \
