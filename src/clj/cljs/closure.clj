@@ -103,15 +103,10 @@
   load. The :use-only-custom-externs flag may be used to indicate that
   the default externs should be excluded."
   [{:keys [externs use-only-custom-externs target]}]
-  (letfn [(dir-files* [path]
-            (if-let [paths (.listFiles (io/file path))]
-              (map #(.getAbsolutePath %) paths)
-              [path]))
-          (filter-js [ext]
-            (map (fn [p]
-                   (filter #(.endsWith (.toLowerCase %) ".js")
-                           (dir-files* p)))
-                 ext))
+  (letfn [(filter-js [paths]
+            (for [p paths f (file-seq (io/file p))
+                  :when (.endsWith (.toLowerCase (.getName f)) ".js")]
+              (.getAbsolutePath f)))
           (add-target [ext]
             (if (= :nodejs target)
               (cons (.getFile (io/resource "cljs/nodejs_externs.js"))
@@ -119,7 +114,7 @@
               ext))
           (load-js [ext]
             (map #(js-source-file % (io/input-stream %)) ext))]
-    (let [js-sources (-> externs filter-js flatten add-target load-js)]
+    (let [js-sources (-> externs filter-js add-target load-js)]
       (if use-only-custom-externs
         js-sources
         (into js-sources (CommandLineRunner/getDefaultExterns))))))
