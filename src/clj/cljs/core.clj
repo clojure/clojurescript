@@ -121,7 +121,7 @@
 
 (defn- emit-defrecord
    "Do not use this directly - use defrecord"
-  [tagname fields impls]
+  [tagname rname fields impls]
   (let [hinted-fields fields
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
@@ -189,7 +189,7 @@
 		  `(~'-pr-seq [this# opts#]
 			      (let [pr-pair# (fn [keyval#] (pr-sequential pr-seq "" " " "" opts# keyval#))]
 				(pr-sequential
-				 pr-pair# (str "#:" ~(name tagname) "{") ", " "}" opts#
+				 pr-pair# (str "#" ~(name rname) "{") ", " "}" opts#
 				 (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
 					 ~'__extmap))))
 		  ])]
@@ -217,7 +217,7 @@
 (defmacro defrecord [rsym fields & impls]
   (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) rsym))]
     `(let []
-       ~(emit-defrecord rsym fields impls)
+       ~(emit-defrecord rsym r fields impls)
        ~(build-positional-factory rsym r fields)
        ~(build-map-factory rsym r fields))))
 
