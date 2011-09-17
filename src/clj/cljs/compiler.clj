@@ -780,17 +780,12 @@
                                                (:use :use-macros)
                                                (do (assert (and expr (= :only kw))
                                                            "Only (:use [lib.ns :only [names]]*) form of :use / :use-macros is supported")
-                                                   (if (= :use k)
-                                                     (map vector expr (repeat lib))
-                                                     (do (require lib)
-                                                         (->> lib ns-publics
-                                                              (filter (comp :macro meta val))
-                                                              (filter (comp (set expr) key))))))))
+                                                   (map vector expr (repeat lib)))))
                                            libs))))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (set! *cljs-ns* name)
     (require 'cljs.core)
-    (doseq [nsym (vals requires-macros)]
+    (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
@@ -876,8 +871,8 @@
                            :else
                            (-> env :ns :requires-macros (get (symbol nstr))))]
               (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
-            (if-let [mvar (-> env :ns :uses-macros sym)]
-              mvar
+            (if-let [nsym (-> env :ns :uses-macros sym)]
+              (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) sym)
               (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym))))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
       @mvar)))
