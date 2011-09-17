@@ -2766,7 +2766,7 @@ reduces them without incurring seq initialization"
   atom. validate-fn must be nil or a side-effect-free fn of one
   argument, which will be passed the intended new state on any state
   change. If the new state is unacceptable, the validate-fn should
-  return false or throw an exception."
+  return false or throw an Error."
   ([x] (Atom. x nil nil nil))
   ([x & {:keys [meta validator]}] (Atom. x meta validator nil)))
 
@@ -2776,9 +2776,10 @@ reduces them without incurring seq initialization"
   [a newval]
   (when-let [v (.validator a)]
     (when-not (v newval)
-      (throw "Validator rejected reference state")))
+      (throw (js/Error. "Validator rejected reference state"))))
+  (set! (.state a) newval)
   (-notify-watches a (.state a) newval)
-  (set! (.state a) newval))
+  newval)
 
 (defn swap!
   "Atomically swaps the value of atom to be:
@@ -2813,12 +2814,12 @@ reduces them without incurring seq initialization"
   (-deref o))
 
 (defn set-validator!
-  "Sets the validator-fn for a var/ref/agent/atom. validator-fn must be nil or a
+  "Sets the validator-fn for an atom. validator-fn must be nil or a
   side-effect-free fn of one argument, which will be passed the intended
   new state on any state change. If the new state is unacceptable, the
-  validator-fn should return false or throw an exception. If the current state (root
-  value if var) is not acceptable to the new validator, an exception
-  will be thrown and the validator will not be changed."
+  validator-fn should return false or throw an Error. If the current state
+  is not acceptable to the new validator, an Error will be thrown and the
+  validator will not be changed."
   [iref val]
   (set! (.validator iref) val))
 
@@ -2837,7 +2838,7 @@ reduces them without incurring seq initialization"
   (set! (.meta iref) (apply f (.meta iref) args)))
 
 (defn reset-meta!
-  "Atomically resets the metadata for a namespace/var/ref/agent/atom"
+  "Atomically resets the metadata for an atom"
   [iref m]
   (set! (.meta iref) m))
 
@@ -2848,10 +2849,9 @@ reduces them without incurring seq initialization"
   fn of 4 args: a key, the reference, its old-state, its
   new-state. Whenever the reference's state might have been changed,
   any registered watches will have their functions called. The watch
-  fn will be called synchronously. Note that an atom's or ref's state
+  fn will be called synchronously. Note that an atom's state
   may have changed again prior to the fn call, so use old/new-state
-  rather than derefing the reference. Note also that watch fns may be
-  called from multiple threads simultaneously. Keys must be unique per
+  rather than derefing the reference. Keys must be unique per
   reference, and can be used to remove the watch with remove-watch,
   but are otherwise considered opaque by the watch mechanism."
   [iref key f]
