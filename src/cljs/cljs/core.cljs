@@ -143,6 +143,11 @@
 (defprotocol IPending
   (-realized? [d]))
 
+(defprotocol IWatchable
+  (-notify-watches [this oldval newval])
+  (-add-watch [this key f])
+  (-remove-watch [this key]))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn identical? [x y]
   "Tests if 2 arguments are the same object"
@@ -2729,7 +2734,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
-(deftype Atom [state meta validator]
+(deftype Atom [state meta validator watches]
   IEquiv
   (-equiv [o other] (identical? o other))
 
@@ -2741,7 +2746,16 @@ reduces them without incurring seq initialization"
 
   IPrintable
   (-pr-seq [a opts]
-    (concat  ["#<Atom: "] (-pr-seq state opts) ">")))
+    (concat  ["#<Atom: "] (-pr-seq state opts) ">"))
+
+  IWatchable
+  (-notify-watches [this oldval newval]
+    (doseq [[key f] watches]
+      (f key this oldval newval)))
+  (-add-watch [this key f]
+    (set! (.watches this) (assoc watches key f)))
+  (-remove-watch [this key]
+    (set! (.watches this) (dissoc watches key))))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
@@ -2755,9 +2769,9 @@ reduces them without incurring seq initialization"
   atom. validate-fn must be nil or a side-effect-free fn of one
   argument, which will be passed the intended new state on any state
   change. If the new state is unacceptable, the validate-fn should
-  return false or throw an exception."
-  ([x] (Atom. x nil nil))
-  ([x & {:keys [meta validator]}] (Atom. x meta validator)))
+  return false or throw an Error."
+  ([x] (Atom. x nil nil nil))
+  ([x & {:keys [meta validator]}] (Atom. x meta validator nil)))
 
 (defn reset!
   "Sets the value of atom to newval without regard for the
@@ -2765,8 +2779,10 @@ reduces them without incurring seq initialization"
   [a newval]
   (when-let [v (.validator a)]
     (when-not (v newval)
-      (throw "Validator rejected reference state")))
-  (set! (.state a) newval))
+      (throw (js/Error. "Validator rejected reference state"))))
+  (set! (.state a) newval)
+  (-notify-watches a (.state a) newval)
+  newval)
 
 (defn swap!
   "Atomically swaps the value of atom to be:
@@ -2801,12 +2817,12 @@ reduces them without incurring seq initialization"
   (-deref o))
 
 (defn set-validator!
-  "Sets the validator-fn for a var/ref/agent/atom. validator-fn must be nil or a
+  "Sets the validator-fn for an atom. validator-fn must be nil or a
   side-effect-free fn of one argument, which will be passed the intended
   new state on any state change. If the new state is unacceptable, the
-  validator-fn should return false or throw an exception. If the current state (root
-  value if var) is not acceptable to the new validator, an exception
-  will be thrown and the validator will not be changed."
+  validator-fn should return false or throw an Error. If the current state
+  is not acceptable to the new validator, an Error will be thrown and the
+  validator will not be changed."
   [iref val]
   (set! (.validator iref) val))
 
@@ -2825,9 +2841,31 @@ reduces them without incurring seq initialization"
   (set! (.meta iref) (apply f (.meta iref) args)))
 
 (defn reset-meta!
-  "Atomically resets the metadata for a namespace/var/ref/agent/atom"
+  "Atomically resets the metadata for an atom"
   [iref m]
   (set! (.meta iref) m))
+
+(defn add-watch
+  "Alpha - subject to change.
+
+  Adds a watch function to an atom reference. The watch fn must be a
+  fn of 4 args: a key, the reference, its old-state, its
+  new-state. Whenever the reference's state might have been changed,
+  any registered watches will have their functions called. The watch
+  fn will be called synchronously. Note that an atom's state
+  may have changed again prior to the fn call, so use old/new-state
+  rather than derefing the reference. Keys must be unique per
+  reference, and can be used to remove the watch with remove-watch,
+  but are otherwise considered opaque by the watch mechanism."
+  [iref key f]
+  (-add-watch iref key f))
+
+(defn remove-watch
+  "Alpha - subject to change.
+
+  Removes a watch (set by add-watch) from a reference"
+  [iref key]
+  (-remove-watch iref key))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; gensym ;;;;;;;;;;;;;;;;
 ;; Internal - do not use!
