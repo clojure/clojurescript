@@ -2769,20 +2769,20 @@ reduces them without incurring seq initialization"
   atom. validate-fn must be nil or a side-effect-free fn of one
   argument, which will be passed the intended new state on any state
   change. If the new state is unacceptable, the validate-fn should
-  return false or throw an Error."
+  return false or throw an Error.  If either of these error conditions
+  occur, then the value of the atom will not change."
   ([x] (Atom. x nil nil nil))
   ([x & {:keys [meta validator]}] (Atom. x meta validator nil)))
 
 (defn reset!
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
-  [a newval]
-  (when-let [v (.validator a)]
-    (when-not (v newval)
-      (throw (js/Error. "Validator rejected reference state"))))
-  (set! (.state a) newval)
-  (-notify-watches a (.state a) newval)
-  newval)
+  [a new-value]
+  (when-let [validate (.validator a)]
+    (assert (validate new-value) "Validator rejected reference state"))
+  (set! (.state a) new-value)
+  (-notify-watches a (.state a) new-value)
+  new-value)
 
 (defn swap!
   "Atomically swaps the value of atom to be:
