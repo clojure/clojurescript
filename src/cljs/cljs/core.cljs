@@ -2864,7 +2864,7 @@ reduces them without incurring seq initialization"
       (add-watch a :inc (fn [k r o n] (assert (== 0 n))))
       (swap! a inc)
       ;; Assertion Error
-      @a
+      (deref a)
       ;=> 1"
   [iref key f]
   (-add-watch iref key f))
