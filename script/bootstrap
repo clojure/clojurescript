@@ -3,29 +3,37 @@
 mkdir -p lib
 
 echo "Fetching Clojure..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.3.0-beta1/clojure-1.3.0-beta1.zip
-unzip -q clojure-1.3.0-beta1.zip
-cp clojure-1.3.0-beta1/clojure-1.3.0-beta1.jar lib/clojure.jar
-rm -rf clojure-1.3.0-beta1/
-rm clojure-1.3.0-beta1.zip
+curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.3.0-beta3/clojure-1.3.0-beta3.zip
+unzip -qu clojure-1.3.0-beta3.zip
+echo "Copying clojure-1.3.0-beta3/clojure-1.3.0-beta3.jar to lib/clojure.jar..."
+cp clojure-1.3.0-beta3/clojure-1.3.0-beta3.jar lib/clojure.jar
+echo "Cleaning up Clojure directory..."
+rm -rf clojure-1.3.0-beta3/
+echo "Cleaning up Clojure archive..."
+rm clojure-1.3.0-beta3.zip
 
-echo "Fetching Google Closure Library..."
+echo "Fetching Google Closure library..."
 mkdir -p closure/library
 cd closure/library
 curl -O -s http://closure-library.googlecode.com/files/closure-library-20110323-r790.zip
-unzip -q closure-library-20110323-r790.zip
+unzip -qu closure-library-20110323-r790.zip
+echo "Cleaning up Google Closure library archive..."
 rm closure-library-20110323-r790.zip
 cd ..
 
-echo "Fetching Google Closure Compiler..."
+echo "Fetching Google Closure compiler..."
 mkdir -p compiler
 cd compiler
 curl -O -s http://closure-compiler.googlecode.com/files/compiler-latest.zip
-unzip -q compiler-latest.zip
+unzip -qu compiler-latest.zip
+echo "Cleaning up Google Closure compiler archive..."
 rm compiler-latest.zip
 cd ../..
-echo "Building goog.jar..."
+echo "Building lib/goog.jar..."
+echo "jar cf ./lib/goog.jar -C closure/library/closure/ goog"
 jar cf ./lib/goog.jar -C closure/library/closure/ goog
 
-echo "Copying closure/compiler/compiler.jar to lib/..."
+echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
 cp closure/compiler/compiler.jar lib
+
+echo "[Bootstrap Completed]"

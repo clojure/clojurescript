@@ -9,6 +9,6 @@ for /R "%CLOJURESCRIPT_HOME%\lib" %%a in (*.jar) do (
 )
 set CLASSPATH=!CLASSPATH!"
 
-set REPL_CLJ="(require '[cljs.compiler :as comp])(def jse (comp/repl-env))(comp/repl jse)"
+set REPL_CLJ="(require '[cljs.repl :as repl])(require '[cljs.repl.rhino :as rhino])(repl/repl (rhino/repl-env))"
 
 java -server -cp "%CLASSPATH%" clojure.main -e %REPL_CLJ%

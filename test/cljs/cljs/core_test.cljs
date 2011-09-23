@@ -703,4 +703,26 @@
   (assert (= (take 3 (range 1 0 0)) (list 1 1 1)))
   (assert (= (take 3 (range 3 1 0)) (list 3 3 3)))
 
+  ;; defrecord
+  (defrecord Person [firstname lastname])
+  (def fred (Person. "Fred" "Mertz"))
+  (assert (= (:firstname fred) "Fred"))
+  (assert (= fred {:firstname "Fred" :lastname "Mertz"}))
+
+  (def ethel (Person. "Ethel" "Mertz" {:married true} {:husband :fred}))
+  (assert (= (meta ethel) {:married true}))
+  (assert (= ethel {:firstname "Ethel" :lastname "Mertz" :husband :fred}))
+
+  (assert (= (map->Person {:firstname "Fred" :lastname "Mertz"}) fred))
+  (assert (= (->Person "Fred" "Mertz") fred))
+
+  (assert (= (count fred) 2))
+  (assert (= (count ethel) 3))
+
+  (assert (= (conj fred {:wife :ethel :friend :ricky}) {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky}))
+  (assert (= (conj fred {:lastname "Flintstone"}) {:firstname "Fred" :lastname "Flintstone"}))
+  (assert (= (assoc fred :lastname "Flintstone") {:firstname "Fred" :lastname "Flintstone"}))
+  (assert (= (assoc fred :wife :ethel) {:firstname "Fred" :lastname "Mertz" :wife :ethel}))
+  (assert (= (dissoc ethel :husband) {:firstname "Ethel" :lastname "Mertz"}))
+  
   :ok)

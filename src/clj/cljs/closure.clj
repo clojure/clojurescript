@@ -20,7 +20,7 @@
    Compilable protocol is satisfied by something which can return one
    or more IJavaScripts.
 
-   With IJavaScriipt objects in hand, calling add-dependencies will
+   With IJavaScript objects in hand, calling add-dependencies will
    produce a sequence of IJavaScript objects which includes all
    required dependencies from the Closure library and ClojureScript,
    in dependency order. This function replaces the closurebuilder
@@ -101,16 +101,23 @@
 
   Options may contain an :externs key with a list of file paths to
   load. The :use-only-custom-externs flag may be used to indicate that
-  the default externs should be excluded.
-
-  TODO: Implement options described above."
-  [opts]
-  (let [default (CommandLineRunner/getDefaultExterns)]
-    (if (= :nodejs (:target opts))
-      (let [path "cljs/nodejs_externs.js"]
-        (cons (js-source-file path (io/input-stream (io/resource path)))
-              default)) 
-      default)))
+  the default externs should be excluded."
+  [{:keys [externs use-only-custom-externs target]}]
+  (letfn [(filter-js [paths]
+            (for [p paths f (file-seq (io/file p))
+                  :when (.endsWith (.toLowerCase (.getName f)) ".js")]
+              (.getAbsolutePath f)))
+          (add-target [ext]
+            (if (= :nodejs target)
+              (cons (.getFile (io/resource "cljs/nodejs_externs.js"))
+                    (or ext []))
+              ext))
+          (load-js [ext]
+            (map #(js-source-file % (io/input-stream %)) ext))]
+    (let [js-sources (-> externs filter-js add-target load-js)]
+      (if use-only-custom-externs
+        js-sources
+        (into js-sources (CommandLineRunner/getDefaultExterns))))))
 
 (defn ^com.google.javascript.jscomp.Compiler make-closure-compiler []
   (let [compiler (com.google.javascript.jscomp.Compiler.)]
@@ -396,7 +403,7 @@
                             (-> (.substring s 1 (dec (count s)))
                                 (string/split #"'\s*,\s*'"))))]
     (->> (line-seq (io/reader (io/resource "goog/deps.js")))
-         (map #(re-matches #"^goog\.addDependency\('(.*)',\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
+         (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
          (remove nil?)
          (map #(drop 1 %))
          (remove #(.startsWith (first %) "../../third_party"))

@@ -58,6 +58,15 @@
       'boolean "boolean"
       'default "_"})
 
+(defmacro reify [& impls]
+  (let [t (gensym "t")
+        locals (keys (:locals &env))]
+   `(do
+      (when (undefined? ~t)
+        (deftype ~t [~@locals]
+          ~@impls))
+      (new ~t ~@locals))))
+
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (str "Can't resolve: " %))
@@ -110,17 +119,121 @@
          (extend-type ~t ~@(dt->et impls)))
       `(deftype* ~t ~fields))))
 
+(defn- emit-defrecord
+   "Do not use this directly - use defrecord"
+  [tagname rname fields impls]
+  (let [hinted-fields fields
+        fields (vec (map #(with-meta % nil) fields))
+        base-fields fields
+	fields (conj fields '__meta '__extmap)
+	adorn-params (fn [sig]
+                       (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
+                             (nnext sig)))
+        ;;reshape for extend-type
+        dt->et (fn [specs]
+                 (loop [ret [] s specs]
+                   (if (seq s)
+                     (recur (-> ret
+                                (conj (first s))
+                                (into
+                                 (reduce (fn [v [f sigs]]
+                                           (conj v (cons f (map adorn-params sigs))))
+                                         []
+                                         (group-by first (take-while seq? (next s))))))
+                            (drop-while seq? (next s)))
+                     ret)))]
+    (let [gs (gensym)
+	  impls (concat
+		 impls
+		 ['IRecord
+		  'IHash
+		  `(~'-hash [this#] (hash-coll this#))
+		  'IEquiv
+		  `(~'-equiv [this# other#] (equiv-map this# other#))
+		  'IMeta
+		  `(~'-meta [this#] ~'__meta)
+		  'IWithMeta
+		  `(~'-with-meta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields)))
+		  'ILookup
+		  `(~'-lookup [this# k#] (-lookup this# k# nil))
+		  `(~'-lookup [this# k# else#]
+			      (get (merge (hash-map ~@(mapcat (fn [fld] [(keyword fld) fld]) 
+							      base-fields))
+					  ~'__extmap)
+				   k# else#))
+		  'ICounted
+		  `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
+		  'ICollection
+		  `(~'-conj [this# entry#]
+      		       (if (vector? entry#)
+      			 (-assoc this# (-nth entry# 0) (-nth entry# 1))
+      			 (reduce -conj
+      				 this#
+      				 entry#)))
+		  'IAssociative
+		  `(~'-assoc [this# k# ~gs]
+                     (condp identical? k#
+                       ~@(mapcat (fn [fld]
+                                   [(keyword fld) (list* `new tagname (replace {fld gs} fields))])
+                                 base-fields)
+                       (new ~tagname ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
+		  'IMap
+		  `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                                            (dissoc (with-meta (into {} this#) ~'__meta) k#)
+                                            (new ~tagname ~@(remove #{'__extmap} fields) 
+                                                 (not-empty (dissoc ~'__extmap k#)))))
+		  'ISeqable
+		  `(~'-seq [this#] (seq (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
+                                              ~'__extmap)))
+		  'IPrintable
+		  `(~'-pr-seq [this# opts#]
+			      (let [pr-pair# (fn [keyval#] (pr-sequential pr-seq "" " " "" opts# keyval#))]
+				(pr-sequential
+				 pr-pair# (str "#" ~(name rname) "{") ", " "}" opts#
+				 (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
+					 ~'__extmap))))
+		  ])]
+      `(do
+	 (~'defrecord* ~tagname ~hinted-fields)
+	 (extend-type ~tagname ~@(dt->et impls))))))
+
+(defn- build-positional-factory
+  [rsym rname fields]
+  (let [fn-name (symbol (str '-> rsym))]
+    `(defn ~fn-name
+       [~@fields]
+       (new ~rname ~@fields))))
+
+(defn- build-map-factory
+  [rsym rname fields]
+  (let [fn-name (symbol (str 'map-> rsym))
+	ms (gensym)
+	ks (map keyword fields)
+	getters (map (fn [k] `(~k ~ms)) ks)]
+    `(defn ~fn-name
+       [~ms]
+       (new ~rname ~@getters nil (dissoc ~ms ~@ks)))))
+
+(defmacro defrecord [rsym fields & impls]
+  (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) rsym))]
+    `(let []
+       ~(emit-defrecord rsym r fields impls)
+       ~(build-positional-factory rsym r fields)
+       ~(build-map-factory rsym r fields))))
+
 (defmacro defprotocol [psym & doc+methods]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
+        ns-name (-> &env :ns :name)
+        fqn (fn [n] (symbol (str ns-name "." n)))
         prefix (protocol-prefix p)
         methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
         expand-sig (fn [fname slot sig]
                      `(~sig
                        (if (and ~(first sig) (. ~(first sig) ~slot))
                          (. ~(first sig) ~slot ~@sig)
-                         ((or 
-                           (aget ~fname (goog.typeOf ~(first sig)))
-                           (aget ~fname "_")
+                         ((or
+                           (aget ~(fqn fname) (goog.typeOf ~(first sig)))
+                           (aget ~(fqn fname) "_")
                            (throw (missing-protocol
                                     ~(str psym "." fname) ~(first sig))))
                           ~@sig))))
@@ -138,7 +251,7 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (and x# (. x# ~(symbol prefix)))
+       (if (and x# (. x# ~(symbol prefix)) (not (. x# (~'hasOwnProperty ~prefix))))
 	 true
 	 (cljs.core/type_satisfies_ ~psym x#)))))
 

@@ -9,7 +9,7 @@
 (set! *warn-on-reflection* true)
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge load-file loaded-libs macroexpand-1])
+  (:refer-clojure :exclude [munge macroexpand-1])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]))
 
@@ -34,7 +34,6 @@
                             cljs.user {:name cljs.user}}))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
-(def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defn munge [s]
@@ -49,22 +48,8 @@
       (symbol ms)
       ms)))
 
-;;todo - move to core.cljs, using js
-(def ^String bootjs "
-//goog.provide should do this for us
-//cljs = {}
-//cljs.lang = {}
-//cljs.user = {}
-//goog.provide('cljs.core');
-//goog.provide('cljs.user');
-//cljs.lang.truth_ = function(x){return x != null && x !== false;}
-//cljs.lang.fnOf_ = function(f){return (f instanceof Function?f:f.cljs$core$Fn$invoke);}
-//cljs.lang.original_goog_require = goog.require;
-goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\",\"goog-require\").invoke(goog.global.cljs_javascript_engine, rule);}
-")
-
 (defn confirm-var-exists [env prefix suffix]
-  (when true ;;*cljs-warn-on-undeclared*
+  (when *cljs-warn-on-undeclared*
     (let [crnt-ns (-> env :ns :name)]
       (when (= prefix crnt-ns)
         (when-not (-> @namespaces crnt-ns :defs suffix)
@@ -116,6 +101,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                       (do
                         (confirm-var-exists env prefix (symbol suffix))
                         sym))))
+
+           (get-in @namespaces [(-> env :ns :name) :uses sym])
+           (symbol (str (get-in @namespaces [(-> env :ns :name) :uses sym]) "." (munge (name sym))))
 
            :else
            (let [full-ns (if (core-name? env sym)
@@ -530,11 +518,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
   (emit-wrap env (print (str (emits target) " = "(emits val)))))
 
 (defmethod emit :ns
-  [{:keys [name requires requires-macros env]}]
+  [{:keys [name requires uses requires-macros env]}]
   (println (str "goog.provide('" (munge name) "');"))
   (when-not (= name 'cljs.core)
     (println (str "goog.require('cljs.core');")))
-  (doseq [lib (vals requires)]
+  (doseq [lib (into (vals requires) (vals uses))]
     (println (str "goog.require('" (munge lib) "');"))))
 
 (defmethod emit :deftype*
@@ -544,6 +532,31 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
     (println (str t " = (function (" (comma-sep (map str fields)) "){"))
     (doseq [fld fields]
       (println (str "this." fld " = " fld ";")))
+    (println "})")))
+
+(defmethod emit :defrecord*
+  [{:keys [t fields]}]
+  (let [fields (map munge fields)]
+    (println "\n/**\n* @constructor")
+    (doseq [fld fields]
+      (println (str "* @param {*} " fld)))
+    (println "* @param {*=} __meta \n* @param {*=} __extmap\n*/")
+    (println (str t " = (function (" (comma-sep (map str fields)) ", __meta, __extmap){"))
+    (doseq [fld fields]
+      (println (str "this." fld " = " fld ";")))
+    (println (str "if(arguments.length>" (count fields) "){"))
+    ;; (println (str "this.__meta = arguments[" (count fields) "];"))
+    ;; (println (str "this.__extmap = arguments[" (inc (count fields)) "];"))
+    (println (str "this.__meta = __meta;"))
+    (println (str "this.__extmap = __extmap;"))
+    (println "} else {")
+    (print (str "this.__meta="))
+    (emit-constant nil)
+    (println ";")
+    (print (str "this.__extmap="))
+    (emit-constant nil)
+    (println ";")
+    (println "}")
     (println "})")))
 
 (defmethod emit :dot
@@ -565,7 +578,7 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
 
 (declare analyze analyze-symbol analyze-seq)
 
-(def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* . js* & quote})
+(def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* defrecord* . js* & quote})
 
 (def ^:dynamic *recur-frames* nil)
 
@@ -778,34 +791,51 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                       (into s xs))
                     s))
                 #{} args)
-        {requires :require requires-macros :require-macros :as params}
+        {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
         (reduce (fn [m [k & libs]]
+                  (assert (#{:use :use-macros :require :require-macros} k)
+                          "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")
                   (assoc m k (into {}
-                                   (map (fn [[lib as alias]]
-                                          (assert (and alias (= :as as)) "Only [lib.ns :as alias] form supported")
-                                          [alias lib])
-                                        libs))))
+                                   (mapcat (fn [[lib kw expr]]
+                                             (case k
+                                               (:require :require-macros)
+                                               (do (assert (and expr (= :as kw))
+                                                           "Only (:require [lib.ns :as alias]*) form of :require / :require-macros is supported")
+                                                   [[expr lib]])
+                                               (:use :use-macros)
+                                               (do (assert (and expr (= :only kw))
+                                                           "Only (:use [lib.ns :only [names]]*) form of :use / :use-macros is supported")
+                                                   (map vector expr (repeat lib)))))
+                                           libs))))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (set! *cljs-ns* name)
     (require 'cljs.core)
-    (doseq [nsym (vals requires-macros)]
+    (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :excludes] excludes)
+                           (assoc-in [name :uses] uses)
                            (assoc-in [name :requires] requires)
+                           (assoc-in [name :uses-macros] uses-macros)
                            (assoc-in [name :requires-macros]
                                      (into {} (map (fn [[alias nsym]]
                                                      [alias (find-ns nsym)])
                                                    requires-macros)))))
-    {:env env :op :ns :name name :requires requires
-     :requires-macros requires-macros :excludes excludes}))
+    {:env env :op :ns :name name :uses uses :requires requires
+     :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
   [_ env [_ tsym fields] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
     {:env env :op :deftype* :t t :fields fields}))
+
+(defmethod parse 'defrecord*
+  [_ env [_ tsym fields] _]
+  (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
+    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    {:env env :op :defrecord* :t t :fields fields}))
 
 (defmethod parse '.
   [_ env [_ target & member+] _]
@@ -872,7 +902,9 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                            :else
                            (-> env :ns :requires-macros (get (symbol nstr))))]
               (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
-            (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym)))]
+            (if-let [nsym (-> env :ns :uses-macros sym)]
+              (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) sym)
+              (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym))))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
       @mvar)))
 
@@ -958,54 +990,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
         (set? form) (analyze-set env form name)
         :else {:op :constant :env env :form form}))))
 
-(defn eval1
-  [repl-env env form]
-  (try
-    (let [ast (analyze env form)
-          js (emits ast)
-          jse ^javax.script.ScriptEngine (:jse repl-env)]
-      (try
-        (when *cljs-verbose*
-            (print js))
-        (let [filename (.get jse javax.script.ScriptEngine/FILENAME)
-              linenum (or (:line (meta form)) Integer/MIN_VALUE)
-              ctx (sun.org.mozilla.javascript.internal.Context/enter)]
-          (try
-            (.evaluateString ctx (:global repl-env) js filename linenum nil)
-          (finally
-            (sun.org.mozilla.javascript.internal.Context/exit))))
-        (catch Throwable ex
-          ;;we eat ns errors because we know goog.provide() will throw when reloaded
-          ;;TODO - file bug with google, this is bs error
-          ;;this is what you get when you try to 'teach new developers' via errors (goog/base.js 104)
-          (when-not (and (seq? form) (= 'ns (first form)))
-            (prn "Error evaluating:" form :as js)
-            (.printStackTrace ex)
-            #_(println (str ex))))))
-    (catch Throwable ex
-      (.printStackTrace ex)
-      (println (str ex)))))
-
-(defn load-stream [repl-env stream]
-  (with-open [r (io/reader stream)]
-    (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
-          pbr (clojure.lang.LineNumberingPushbackReader. r)
-          eof (Object.)]
-      (loop [r (read pbr false eof false)]
-        (let [env (assoc env :ns (@namespaces *cljs-ns*))]
-          (when-not (identical? eof r)
-            (eval1 repl-env env r)
-            (recur (read pbr false eof false))))))))
-
-(defn load-file
-  [repl-env f]
-  (binding [*cljs-ns* 'cljs.user]
-    (let [res (if (= \/ (first f)) f (io/resource f))]
-      (assert res (str "Can't find " f " in classpath"))
-      (.put ^javax.script.ScriptEngine (:jse repl-env)
-            javax.script.ScriptEngine/FILENAME f)
-      (load-stream repl-env res))))
-
 (defn analyze-file
   [f]
   (binding [*cljs-ns* 'cljs.user]
@@ -1020,79 +1004,6 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
               (when-not (identical? eof r)
                 (analyze env r)
                 (recur (read pbr false eof false))))))))))
-
-(def loaded-libs (atom #{}))
-
-(defn goog-require [repl-env rule]
-  (when-not (contains? @loaded-libs rule)
-    (let [jse ^javax.script.ScriptEngine (:jse repl-env)
-          path (string/replace (munge rule) \. java.io.File/separatorChar)
-          cljs-path (str path ".cljs")
-          js-path (str "goog/" (.eval jse (str "goog.dependencies_.nameToPath['" rule "']")))]
-      (if-let [res (io/resource cljs-path)]
-        (binding [*cljs-ns* 'cljs.user]
-          (load-stream repl-env res))
-        (if-let [res (io/resource js-path)]
-          (.eval jse (io/reader res))
-          (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
-      (swap! loaded-libs conj rule))))
-
-(defn repl-env
-  "Returns a fresh JS environment, suitable for passing to repl.
-  Hang on to return for use across repl calls."
-  []
-  (let [jse (-> (javax.script.ScriptEngineManager.) (.getEngineByName "JavaScript"))
-        base (io/resource "goog/base.js")
-        deps (io/resource "goog/deps.js")
-        new-repl-env {:jse jse :global (.eval jse "this")}]
-    (assert base "Can't find goog/base.js in classpath")
-    (assert deps "Can't find goog/deps.js in classpath")
-    (.put jse javax.script.ScriptEngine/FILENAME "goog/base.js")
-    (.put jse "cljs_javascript_engine" new-repl-env)
-    (with-open [r (io/reader base)]
-      (.eval jse r))
-    (.eval jse bootjs)
-    ;; Load deps.js line-by-line to avoid 64K method limit
-    (doseq [^String line (line-seq (io/reader deps))]
-      (.eval jse line))
-    new-repl-env))
-
-(defn repl
-  "Note - repl will reload core.cljs every time, even if supplied old repl-env"
-  [repl-env & {:keys [verbose warn-on-undeclared]}]
-  (prn "Type: " :cljs/quit " to quit")
-  (binding [*cljs-ns* 'cljs.user
-            *cljs-verbose* verbose
-            *cljs-warn-on-undeclared* warn-on-undeclared]
-    (let [env {:context :statement :locals {}}]
-      (load-file repl-env "cljs/core.cljs")
-      (eval1 repl-env (assoc env :ns (@namespaces *cljs-ns*))
-             '(ns cljs.user))
-      (.put ^javax.script.ScriptEngine (:jse repl-env)
-            javax.script.ScriptEngine/FILENAME "<cljs repl>")
-      (loop []
-        (print (str "ClojureScript:" *cljs-ns* "> "))
-        (flush)
-        (let [form (read)]
-          (cond
-           (= form :cljs/quit) :quit
-           
-           (and (seq? form) (= (first form) 'in-ns))
-           (do (set! *cljs-ns* (second (second form))) (newline) (recur))
-
-           (and (seq? form) ('#{load-file clojure.core/load-file} (first form)))
-           (do (load-file repl-env (second form)) (newline) (recur))
-           
-           :else
-           (let [ret (eval1 repl-env
-                            (assoc env :ns (@namespaces *cljs-ns*))
-                            ;;form
-                            (list 'cljs.core.prn form)
-                            ;(list 'goog.global.print form)
-                            )]
-             ;(newline) (flush)
-             ;;(prn (if (nil? ret) nil ret))
-             (recur))))))))
 
 (defn forms-seq
   "Seq of forms in a Clojure or ClojureScript file."
@@ -1134,11 +1045,11 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.compiler\
                   ast (analyze env (first forms))]
               (do (emit ast)
                   (if (= (:op ast) :ns)
-                    (recur (rest forms) (:name ast) (:requires ast))
+                    (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
                     (recur (rest forms) ns-name deps))))
             {:ns (or ns-name 'cljs.user)
              :provides [ns-name]
-             :requires (if (= ns-name 'cljs.core) (vals deps) (conj (vals deps) 'cljs.core))
+             :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
              :file dest}))))))
 
 (defn requires-compilation?
