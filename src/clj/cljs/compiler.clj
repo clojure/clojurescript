@@ -102,6 +102,9 @@
                         (confirm-var-exists env prefix (symbol suffix))
                         sym))))
 
+           (get-in @namespaces [(-> env :ns :name) :uses sym])
+           (symbol (str (get-in @namespaces [(-> env :ns :name) :uses sym]) "." (munge (name sym))))
+
            :else
            (let [full-ns (if (core-name? env sym)
                            'cljs.core
@@ -515,11 +518,11 @@
   (emit-wrap env (print (str (emits target) " = "(emits val)))))
 
 (defmethod emit :ns
-  [{:keys [name requires requires-macros env]}]
+  [{:keys [name requires uses requires-macros env]}]
   (println (str "goog.provide('" (munge name) "');"))
   (when-not (= name 'cljs.core)
     (println (str "goog.require('cljs.core');")))
-  (doseq [lib (vals requires)]
+  (doseq [lib (into (vals requires) (vals uses))]
     (println (str "goog.require('" (munge lib) "');"))))
 
 (defmethod emit :deftype*
@@ -788,28 +791,39 @@
                       (into s xs))
                     s))
                 #{} args)
-        {requires :require requires-macros :require-macros :as params}
+        {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
         (reduce (fn [m [k & libs]]
+                  (assert (#{:use :use-macros :require :require-macros} k)
+                          "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")
                   (assoc m k (into {}
-                                   (map (fn [[lib as alias]]
-                                          (assert (and alias (= :as as)) "Only [lib.ns :as alias] form supported")
-                                          [alias lib])
-                                        libs))))
+                                   (mapcat (fn [[lib kw expr]]
+                                             (case k
+                                               (:require :require-macros)
+                                               (do (assert (and expr (= :as kw))
+                                                           "Only (:require [lib.ns :as alias]*) form of :require / :require-macros is supported")
+                                                   [[expr lib]])
+                                               (:use :use-macros)
+                                               (do (assert (and expr (= :only kw))
+                                                           "Only (:use [lib.ns :only [names]]*) form of :use / :use-macros is supported")
+                                                   (map vector expr (repeat lib)))))
+                                           libs))))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (set! *cljs-ns* name)
     (require 'cljs.core)
-    (doseq [nsym (vals requires-macros)]
+    (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :excludes] excludes)
+                           (assoc-in [name :uses] uses)
                            (assoc-in [name :requires] requires)
+                           (assoc-in [name :uses-macros] uses-macros)
                            (assoc-in [name :requires-macros]
                                      (into {} (map (fn [[alias nsym]]
                                                      [alias (find-ns nsym)])
                                                    requires-macros)))))
-    {:env env :op :ns :name name :requires requires
-     :requires-macros requires-macros :excludes excludes}))
+    {:env env :op :ns :name name :uses uses :requires requires
+     :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
   [_ env [_ tsym fields] _]
@@ -888,7 +902,9 @@
                            :else
                            (-> env :ns :requires-macros (get (symbol nstr))))]
               (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
-            (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym)))]
+            (if-let [nsym (-> env :ns :uses-macros sym)]
+              (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) sym)
+              (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym))))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
       @mvar)))
 
@@ -1029,11 +1045,11 @@
                   ast (analyze env (first forms))]
               (do (emit ast)
                   (if (= (:op ast) :ns)
-                    (recur (rest forms) (:name ast) (:requires ast))
+                    (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
                     (recur (rest forms) ns-name deps))))
             {:ns (or ns-name 'cljs.user)
              :provides [ns-name]
-             :requires (if (= ns-name 'cljs.core) (vals deps) (conj (vals deps) 'cljs.core))
+             :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
              :file dest}))))))
 
 (defn requires-compilation?
