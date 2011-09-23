@@ -17,7 +17,7 @@
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies?
 
-                            aget aset]))
+                            aget aset + - * / <= >= == zero? pos? neg? inc dec rem]))
 
 (alias 'core 'clojure.core)
 
@@ -44,6 +44,73 @@
 
 (defmacro aset [a i v]
   (list 'js* "(~{}[~{}] = ~{})" a i v))
+
+(defmacro +
+  ([] 0)
+  ([x] `x)
+  ([x y] (list 'js* "(~{} + ~{})" x y))
+  ([x y & more] `(+ (+ ~x ~y) ~@more)))
+
+(defmacro -
+  ([] 0)
+  ([x] `x)
+  ([x y] (list 'js* "(~{} - ~{})" x y))
+  ([x y & more] `(- (- ~x ~y) ~@more)))
+
+(defmacro *
+  ([] 1)
+  ([x] `x)
+  ([x y] (list 'js* "(~{} * ~{})" x y))
+  ([x y & more] `(* (* ~x ~y) ~@more)))
+
+(defmacro /
+  ([] 1)
+  ([x] `(/ 1 x))
+  ([x y] (list 'js* "(~{} / ~{})" x y))
+  ([x y & more] `(/ (/ ~x ~y) ~@more)))
+
+(defmacro <
+  ([x] true)
+  ([x y] (list 'js* "(~{} < ~{})" x y))
+  ([x y & more] `(< (< ~x ~y) ~@more)))
+
+(defmacro <=
+  ([x] true)
+  ([x y] (list 'js* "(~{} <= ~{})" x y))
+  ([x y & more] `(<= (<= ~x ~y) ~@more)))
+
+(defmacro >
+  ([x] true)
+  ([x y] (list 'js* "(~{} > ~{})" x y))
+  ([x y & more] `(> (> ~x ~y) ~@more)))
+
+(defmacro >=
+  ([x] true)
+  ([x y] (list 'js* "(~{} >= ~{})" x y))
+  ([x y & more] `(>= (>= ~x ~y) ~@more)))
+
+(defmacro ==
+  ([x] true)
+  ([x y] (list 'js* "(~{} === ~{})" x y))
+  ([x y & more] `(== (== ~x ~y) ~@more)))
+
+(defmacro dec
+  ([x] `(- x 1)))
+
+(defmacro inc
+  ([x] `(+ x 1)))
+
+(defmacro zero?
+  ([x] `(== x 0)))
+
+(defmacro pos?
+  ([x] `(> x 0)))
+
+(defmacro neg?
+  ([x] `(< x 0)))
+
+(defmacro rem
+  ([num div] (list 'js* "(~{} % ~{})" num div)))
 
 (defn- protocol-prefix [psym]
   (str (.replace (str psym) \. \$) "$"))
@@ -79,7 +146,7 @@
     (if (base-type tsym)
       (let [t (base-type tsym)
             assign-impls (fn [[psym sigs]]
-                           (let [pfn-prefix (subs (str psym) 0 (inc (.lastIndexOf (str psym) ".")))]
+                           (let [pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths]]
                                           `(aset ~(symbol (str pfn-prefix f)) ~t (fn* ~@meths)))
@@ -297,7 +364,7 @@
         [body catches] (split-with (complement catch?) forms)
         [catches fin] (split-with catch? catches)
         e (gensym "e")]
-    (assert (every? #(> (count %) 2) catches) "catch block must specify a prototype and a name")
+    (assert (every? #(clojure.core/> (count %) 2) catches) "catch block must specify a prototype and a name")
     (if (seq catches)
       `(~'try*
         ~@body
