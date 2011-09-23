@@ -17,7 +17,8 @@
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies?
 
-                            aget aset + - * / < <= > >= == zero? pos? neg? inc dec rem]))
+                            aget aset + - * / < <= > >= == zero? pos? neg? inc dec rem
+                            bit-not bit-and bit-or bit-xor bit-shift-left bit-shift-right]))
 
 (alias 'core 'clojure.core)
 
@@ -94,23 +95,44 @@
   ([x y] (list 'js* "(~{} === ~{})" x y))
   ([x y & more] `(== (== ~x ~y) ~@more)))
 
-(defmacro dec
-  ([x] `(- ~x 1)))
+(defmacro dec [x]
+  `(- ~x 1))
 
-(defmacro inc
-  ([x] `(+ ~x 1)))
+(defmacro inc [x]
+  `(+ ~x 1))
 
-(defmacro zero?
-  ([x] `(== ~x 0)))
+(defmacro zero? [x]
+  `(== ~x 0))
 
-(defmacro pos?
-  ([x] `(> ~x 0)))
+(defmacro pos? [x]
+  `(> ~x 0))
 
-(defmacro neg?
-  ([x] `(< ~x 0)))
+(defmacro neg? [x]
+  `(< ~x 0))
 
-(defmacro rem
-  ([num div] (list 'js* "(~{} % ~{})" num div)))
+(defmacro rem [num div]
+  (list 'js* "(~{} % ~{})" num div))
+
+(defmacro bit-not [x]
+  (list 'js* "(~ ~{})" x))
+
+(defmacro bit-and
+  ([x y] (list 'js* "(~{} & ~{})" x y))
+  ([x y & more] `(bit-and (bit-and ~x ~y) ~@more)))
+
+(defmacro bit-or
+  ([x y] (list 'js* "(~{} | ~{})" x y))
+  ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
+
+(defmacro bit-xor
+  ([x y] (list 'js* "(~{} ^ ~{})" x y))
+  ([x y & more] `(bit-xor (bit-xor ~x ~y) ~@more)))
+
+(defmacro bit-shift-left [x n]
+  (list 'js* "(~{} << ~{})" x n))
+
+(defmacro bit-shift-right [x n]
+  (list 'js* "(~{} >> ~{})" x n))
 
 (defn- protocol-prefix [psym]
   (str (.replace (str psym) \. \$) "$"))
