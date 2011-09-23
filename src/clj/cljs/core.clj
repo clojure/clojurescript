@@ -17,7 +17,7 @@
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies?
 
-                            aget aset + - * / <= >= == zero? pos? neg? inc dec rem]))
+                            aget aset + - * / < <= > >= == zero? pos? neg? inc dec rem]))
 
 (alias 'core 'clojure.core)
 
@@ -95,19 +95,19 @@
   ([x y & more] `(== (== ~x ~y) ~@more)))
 
 (defmacro dec
-  ([x] `(- x 1)))
+  ([x] `(- ~x 1)))
 
 (defmacro inc
-  ([x] `(+ x 1)))
+  ([x] `(+ ~x 1)))
 
 (defmacro zero?
-  ([x] `(== x 0)))
+  ([x] `(== ~x 0)))
 
 (defmacro pos?
-  ([x] `(> x 0)))
+  ([x] `(> ~x 0)))
 
 (defmacro neg?
-  ([x] `(< x 0)))
+  ([x] `(< ~x 0)))
 
 (defmacro rem
   ([num div] (list 'js* "(~{} % ~{})" num div)))
