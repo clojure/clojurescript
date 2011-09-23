@@ -2856,7 +2856,16 @@ reduces them without incurring seq initialization"
   may have changed again prior to the fn call, so use old/new-state
   rather than derefing the reference. Keys must be unique per
   reference, and can be used to remove the watch with remove-watch,
-  but are otherwise considered opaque by the watch mechanism."
+  but are otherwise considered opaque by the watch mechanism.  Bear in
+  mind that regardless of the result or action of the watch fns the
+  atom's value will change.  Example:
+
+      (def a (atom 0)) 
+      (add-watch a :inc (fn [k r o n] (assert (== 0 n))))
+      (swap! a inc)
+      ;; Assertion Error
+      @a
+      ;=> 1"
   [iref key f]
   (-add-watch iref key f))
 
