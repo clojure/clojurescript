@@ -237,9 +237,6 @@
   "Returns a number one greater than num."
   [x] (js* "(~{x} + 1)"))
 
-(defn- lt- [x y]
-  (js* "(~{x} < ~{y})"))
-
 (defn- ci-reduce
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
 reduces them without incurring seq initialization"
@@ -247,17 +244,17 @@ reduces them without incurring seq initialization"
      (if (= 0 (-count cicoll))
        (f)
        (loop [val (-nth cicoll 0), n 1]
-         (if (lt- n (-count cicoll))
+         (if (< n (-count cicoll))
            (recur (f val (-nth cicoll n)) (inc n))
            val))))
   ([cicoll f val]
      (loop [val val, n 0]
-         (if (lt- n (-count cicoll))
+         (if (< n (-count cicoll))
            (recur (f val (-nth cicoll n)) (inc n))
            val)))
   ([cicoll f val idx]
      (loop [val val, n idx]
-         (if (lt- n (-count cicoll))
+         (if (< n (-count cicoll))
            (recur (f val (-nth cicoll n)) (inc n))
            val))))
 
@@ -266,7 +263,7 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
   ISeq
   (-first [_] (aget a i))
-  (-rest [_] (if (lt- (inc i) (.length a))
+  (-rest [_] (if (< (inc i) (.length a))
                (IndexedSeq. a (inc i))
                (list)))
   ICounted
@@ -302,9 +299,9 @@ reduces them without incurring seq initialization"
   IIndexed
   (-nth
     ([array n]
-       (if (lt- n (.length array)) (aget array n)))
+       (if (< n (.length array)) (aget array n)))
     ([array n not-found]
-       (if (lt- n (.length array)) (aget array n)
+       (if (< n (.length array)) (aget array n)
            not-found)))
 
   ILookup
