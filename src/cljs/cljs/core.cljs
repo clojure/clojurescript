@@ -280,7 +280,10 @@ reduces them without incurring seq initialization"
   (-reduce [coll f]
     (ci-reduce coll f (aget a i) (inc i)))
   (-reduce [coll f start]
-    (ci-reduce coll f start i)))
+    (ci-reduce coll f start i))
+
+  IHash
+  (-hash [coll] (hash-coll coll)))
 
 (defn prim-seq [prim i]
   (when-not (= 0 (.length prim))
