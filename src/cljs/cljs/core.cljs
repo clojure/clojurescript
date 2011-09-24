@@ -219,7 +219,12 @@
 
 (extend-type js/Date
   IEquiv
-  (-equiv [o other] (identical? (.toString o) (.toString other))))
+  (-equiv [o other] (identical? (. o (toString)) (. other (toString)))))
+
+(extend-type js/RegExp
+  IEquiv
+  (-equiv [o other]
+    (identical? (. o (toString)) (. other (toString)))))
 
 (extend-type number
   IEquiv
