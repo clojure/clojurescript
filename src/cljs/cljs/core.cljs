@@ -2780,8 +2780,9 @@ reduces them without incurring seq initialization"
   [a new-value]
   (when-let [validate (.validator a)]
     (assert (validate new-value) "Validator rejected reference state"))
-  (set! (.state a) new-value)
-  (-notify-watches a (.state a) new-value)
+  (let [old-value (.state a)]
+    (set! (.state a) new-value)
+    (-notify-watches a old-value new-value))
   new-value)
 
 (defn swap!
