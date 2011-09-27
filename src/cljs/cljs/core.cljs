@@ -939,7 +939,7 @@ reduces them without incurring seq initialization"
    ([coll n]
       (if-let [xs (nthnext coll n)]
         (first xs)
-        (throw "Index out of bounds")))
+        (throw (js/Error. "Index out of bounds"))))
    ([coll n not-found]
       (if-let [xs (nthnext coll n)]
         (first xs)
@@ -1054,7 +1054,7 @@ reduces them without incurring seq initialization"
 
   IStack
   (-peek [coll] nil)
-  (-pop [coll] #_(throw "Can't pop empty list"))
+  (-pop [coll] #_(throw (js/Error. "Can't pop empty list")))
 
   ICollection
   (-conj [coll o] (List. meta o nil 1))
@@ -1363,7 +1363,7 @@ reduces them without incurring seq initialization"
   "Returns true if n is even, throws an exception if n is not an integer"
    [n] (if (integer? n)
         (zero? (bit-and n 1))
-        (throw (str "Argument must be an integer: " n))))
+        (throw (js/Error. (str "Argument must be an integer: " n)))))
 
 (defn odd?
   "Returns true if n is odd, throws an exception if n is not an integer"
@@ -1844,7 +1844,7 @@ reduces them without incurring seq initialization"
       (let [new-array (aclone array)]
         (. new-array (pop))
         (Vector. meta new-array))
-      (throw "Can't pop empty vector")))
+      (throw (js/Error. "Can't pop empty vector"))))
 
   ICollection
   (-conj [coll o]
@@ -1879,7 +1879,7 @@ reduces them without incurring seq initialization"
   (-nth [coll n]
     (if (and (<= 0 n) (< n (.length array)))
       (aget array n)
-      #_(throw (str "No item " n " in vector of length " (.length array)))))
+      #_(throw (js/Error. (str "No item " n " in vector of length " (.length array))))))
   (-nth [coll n not-found]
     (if (and (<= 0 n) (< n (.length array)))
       (aget array n)
@@ -2393,7 +2393,7 @@ reduces them without incurring seq initialization"
       (+ start (* n step))
       (if (and (> start end) (= step 0))
         start
-        (throw "Index out of bounds"))))
+        (throw (js/Error. "Index out of bounds")))))
   (-nth [rng n not-found]
     (if (< n (-count rng))
       (+ start (* n step))
@@ -3090,9 +3090,9 @@ reduces them without incurring seq initialization"
      (or
       (when-not (contains? (tp tag) parent)
         (when (contains? (ta tag) parent)
-          (throw (str tag "already has" parent "as ancestor")))
+          (throw (js/Error. (str tag "already has" parent "as ancestor"))))
         (when (contains? (ta parent) tag)
-          (throw (str "Cyclic derivation:" parent "has" tag "as ancestor")))
+          (throw (js/Error. (str "Cyclic derivation:" parent "has" tag "as ancestor"))))
         {:parents (assoc (:parents h) tag (conj (get tp tag #{}) parent))
          :ancestors (tf (:ancestors h) tag td parent ta)
          :descendants (tf (:descendants h) parent ta tag td)})
@@ -3154,9 +3154,10 @@ reduces them without incurring seq initialization"
                                            e
                                            be)]
                                  (when-not (dominates (first be2) k prefer-table)
-                                   (throw (str "Multiple methods in multimethod '" name
-                                               "' match dispatch value: " dispatch-val " -> " k
-                                               " and " (first be2) ", and neither is preferred")))
+                                   (throw (js/Error.
+                                           (str "Multiple methods in multimethod '" name
+                                                "' match dispatch value: " dispatch-val " -> " k
+                                                " and " (first be2) ", and neither is preferred"))))
                                  be2)))
                            nil @method-table)]
     (when best-entry
@@ -3184,7 +3185,7 @@ reduces them without incurring seq initialization"
   (let [dispatch-val (apply dispatch-fn args)
         target-fn (-get-method mf dispatch-val)]
     (when-not target-fn
-      (throw (str "No method in multimethod '" name "' for dispatch value: " dispatch-val)))
+      (throw (js/Error. (str "No method in multimethod '" name "' for dispatch value: " dispatch-val))))
     (apply target-fn args)))
 
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
@@ -3219,8 +3220,8 @@ reduces them without incurring seq initialization"
 
   (-prefer-method [mf dispatch-val-x dispatch-val-y]
     (when (prefers* dispatch-val-x dispatch-val-y prefer-table)
-      (throw (str "Preference conflict in multimethod '" name "': " dispatch-val-y
-                  " is already preferred to " dispatch-val-x)))
+      (throw (js/Error. (str "Preference conflict in multimethod '" name "': " dispatch-val-y
+                   " is already preferred to " dispatch-val-x))))
     (swap! prefer-table
            (fn [old]
              (assoc old dispatch-val-x
