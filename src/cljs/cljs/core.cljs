@@ -2297,7 +2297,7 @@ reduces them without incurring seq initialization"
         (if (< i 0)
           (subs x 2)
           (subs x (inc i))))
-    :else nil #_(throw (str "Doesn't support name: " x))))
+    :else (throw (js/Error. (str "Doesn't support name: " x)))))
 
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
