@@ -2306,7 +2306,7 @@ reduces them without incurring seq initialization"
     (let [i (.lastIndexOf x "/")]
       (when (> i -1)
         (subs x 2 i)))
-    nil #_(throw (str "Doesn't support namespace: " x))))
+    (throw (js/Error. (str "Doesn't support namespace: " x)))))
 
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."
