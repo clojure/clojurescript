@@ -115,12 +115,12 @@
 (defmacro max
   ([x] x)
   ([x y] (list 'js* "((~{} > ~{}) ? ~{} : ~{})" x y x y))
-  ([x y & more] `(max (max x y) ~@more)))
+  ([x y & more] `(max (max ~x ~y) ~@more)))
 
 (defmacro min
   ([x] x)
   ([x y] (list 'js* "((~{} < ~{}) ? ~{} : ~{})" x y x y))
-  ([x y & more] `(min (min x y) ~@more)))
+  ([x y & more] `(min (min ~x ~y) ~@more)))
 
 (defmacro mod [num div]
   (list 'js* "(~{} % ~{})" num div))
@@ -142,7 +142,7 @@
 
 (defmacro bit-and-not
   ([x y] (list 'js* "(~{} & ~~{})" x y))
-  ([x y & more] `(bit-and-not (bit-and-not x y) ~@more)))
+  ([x y & more] `(bit-and-not (bit-and-not ~x ~y) ~@more)))
 
 (defmacro bit-clear [x n]
   (list 'js* "(~{} & ~(1 << ~{}))" x n))

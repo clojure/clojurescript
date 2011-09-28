@@ -290,8 +290,10 @@
   (assert ((complement number?) :foo))
   (assert (= [1 [2 3] [1 2 3]] ((juxt first rest seq) [1 2 3])))
   (assert (= 5 (max 1 2 3 4 5)))
+  (assert (= 5 (max 5 4 3 2 1)))
   (assert (= 5.5 (max 1 2 3 4 5 5.5)))
   (assert (= 1 (min 5 4 3 2 1)))
+  (assert (= 1 (min 1 2 3 4 5)))
   (assert (= 0.5 (min 5 4 3 0.5 2 1)))
   (let [x (array 1 2 3)]
     (set! (.foo x) :hello)
