@@ -1117,6 +1117,14 @@
         parent-file (java.io.File. ^String (to-path (cons target parents)))]
     (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
 
+(defn cljs-files-in
+  "Return a sequence of all .cljs files in the given directory."
+  [dir]
+  (filter #(let [name (.getName ^java.io.File %)]
+             (and (.endsWith name ".cljs")
+                  (not= \. (first name))))
+          (file-seq dir)))
+
 (defn compile-root
   "Looks recursively in src-dir for .cljs files and compiles them to
    .js files. If target-dir is provided, output will go into this
@@ -1126,9 +1134,8 @@
   ([src-dir]
      (compile-root src-dir "out"))
   ([src-dir target-dir]
-     (let [src-dir-file (io/file src-dir)
-           cljs-files (filter #(.endsWith (.getName ^java.io.File %) ".cljs") (file-seq src-dir-file))]
-       (loop [cljs-files cljs-files
+     (let [src-dir-file (io/file src-dir)]
+       (loop [cljs-files (cljs-files-in src-dir-file)
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
