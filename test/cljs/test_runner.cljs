@@ -3,6 +3,8 @@
             [cljs.reader-test :as reader-test]
             [clojure.string-test :as string-test]))
 
+(set! *print-fn* js/print)
+
 (core-test/test-stuff)
 (reader-test/test-reader)
 (string-test/test-string)
