@@ -260,9 +260,8 @@
   clojure.lang.IPersistentMap
   (-setup [this]
     (comp/with-core-cljs (start-server this)))
-  (-evaluate [_ _ js] (browser-eval js))
+  (-evaluate [_ _ _ js] (browser-eval js))
   (-load [this ns url] (load-javascript this ns url))
-  (-put [_ _ _] nil)
   (-tear-down [_]
     (do (stop-server)
         (reset! server-state {}))))

@@ -17,9 +17,8 @@
 
 (defprotocol IJavaScriptEnv
   (-setup [this] "initialize the environment")
-  (-evaluate [this line js] "evaluate a javascript string")
+  (-evaluate [this filename line js] "evaluate a javascript string")
   (-load [this ns url] "load code at url into the environment")
-  (-put [this k f] "set mutable state in the environment")
   (-tear-down [this] "dispose of the environment"))
 
 (defn load-namespace
@@ -58,7 +57,7 @@
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
   string which is the ClojureScript return value. This string may or may
   not be readable by the Clojure reader."
-  [repl-env env form]
+  [repl-env env filename form]
   (try
     (let [ast (comp/analyze env form)
           js (comp/emits ast)]
@@ -66,7 +65,7 @@
         (load-dependencies repl-env (vals (:requires ast))))
       (when *cljs-verbose*
         (print js))
-      (let [ret (-evaluate repl-env (:line (meta form)) js)]
+      (let [ret (-evaluate repl-env filename (:line (meta form)) js)]
         (case (:status ret)
           ;;we eat ns errors because we know goog.provide() will throw when reloaded
           ;;TODO - file bug with google, this is bs error
@@ -80,7 +79,7 @@
       (.printStackTrace ex)
       (println (str ex)))))
 
-(defn load-stream [repl-env stream]
+(defn load-stream [repl-env filename stream]
   (with-open [r (io/reader stream)]
     (let [env {:ns (@comp/namespaces comp/*cljs-ns*) :context :statement :locals {}}
           pbr (clojure.lang.LineNumberingPushbackReader. r)
@@ -88,7 +87,7 @@
       (loop [r (read pbr false eof false)]
         (let [env (assoc env :ns (@comp/namespaces comp/*cljs-ns*))]
           (when-not (identical? eof r)
-            (evaluate-form repl-env env r)
+            (evaluate-form repl-env env filename r)
             (recur (read pbr false eof false))))))))
 
 (defn load-file
@@ -96,12 +95,12 @@
   (binding [comp/*cljs-ns* 'cljs.user]
     (let [res (if (= \/ (first f)) f (io/resource f))]
       (assert res (str "Can't find " f " in classpath"))
-      (-put repl-env :filename f)
-      (load-stream repl-env res))))
+      (load-stream repl-env f res))))
 
 (defn- eval-and-print [repl-env env form]
   (let [ret (evaluate-form repl-env
                            (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
+                           "<cljs repl>"
                            (if (and (seq? form) (= 'ns (first form)))
                              form
                              (list 'cljs.core.pr-str form)))]

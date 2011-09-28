@@ -12,97 +12,123 @@
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.repl :as repl])
-  (:import cljs.repl.IJavaScriptEnv))
+  (:import cljs.repl.IJavaScriptEnv
+           [org.mozilla.javascript Context]))
 
-;;todo - move to core.cljs, using js
-(def ^String bootjs "
-goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\").invoke(goog.global.cljs_javascript_engine, rule);}
-")
-
-(defn rhino-eval
-  [repl-env line js]
-  (try
-    (let [jse ^javax.script.ScriptEngine (:jse repl-env)
-          filename (.get jse javax.script.ScriptEngine/FILENAME)
-          linenum (or line Integer/MIN_VALUE)
-          ctx (sun.org.mozilla.javascript.internal.Context/enter)]
-      (try
-        {:status :success
-         :value (.evaluateString ctx (:global repl-env) js filename linenum nil)} 
-        (finally
-         (sun.org.mozilla.javascript.internal.Context/exit))))
-    (catch Throwable ex
-      {:status :exception
-       :value (.getMessage ex)
-       :stacktrace (apply str (interpose "\n" (map #(.toString %) (.getStackTrace ex))))})))
-
+(def current-repl-env (atom nil))
 (def loaded-libs (atom #{}))
 
-(defn goog-require [repl-env rule]
+;;todo - move to core.cljs, using js
+(def ^String bootjs (str "goog.require = function(rule){"
+                         "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
+                         ".invoke(rule);}"))
+
+(defprotocol IEval
+  (-eval [this env filename line]))
+
+(extend-protocol IEval
+  
+  java.lang.String
+  (-eval [this {:keys [cx scope]} filename line]
+    (.evaluateString cx scope this filename line nil))
+  
+  java.io.Reader
+  (-eval [this {:keys [cx scope]} filename line]
+    (.evaluateReader cx scope this filename line nil))
+  )
+
+(defmulti stacktrace class)
+
+(defmethod stacktrace :default [e]
+  (apply str (interpose "\n" (map #(str "        " (.toString %)) (.getStackTrace e)))))
+
+(defmethod stacktrace org.mozilla.javascript.JavaScriptException [e]
+  (.getScriptStackTrace e))
+
+(defmulti eval-result class)
+
+(defmethod eval-result :default [r]
+  (.toString r))
+
+(defmethod eval-result nil [_] "")
+
+(defmethod eval-result org.mozilla.javascript.Undefined [_] "")
+
+(defn rhino-eval
+  [repl-env filename line js]
+  (try
+    (let [linenum (or line Integer/MIN_VALUE)]
+      {:status :success
+       :value (eval-result (-eval js repl-env filename linenum))})
+    (catch Throwable ex
+      {:status :exception
+       :value (.toString ex)
+       :stacktrace (stacktrace ex)})))
+
+(defn goog-require [rule]
   (when-not (contains? @loaded-libs rule)
-    (let [jse ^javax.script.ScriptEngine (:jse repl-env)
+    (let [repl-env @current-repl-env
           path (string/replace (comp/munge rule) \. java.io.File/separatorChar)
           cljs-path (str path ".cljs")
-          js-path (str "goog/" (.eval jse (str "goog.dependencies_.nameToPath['" rule "']")))]
+          js-path (str "goog/"
+                       (-eval (str "goog.dependencies_.nameToPath['" rule "']")
+                              repl-env
+                              "<cljs repl>"
+                              1))]
       (if-let [res (io/resource cljs-path)]
         (binding [comp/*cljs-ns* 'cljs.user]
           (repl/load-stream repl-env res))
         (if-let [res (io/resource js-path)]
-          (.eval jse (io/reader res))
+          (-eval (io/reader res) repl-env js-path 1)
           (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
       (swap! loaded-libs conj rule))))
 
 (defn load-javascript [repl-env ns url]
   (let [missing (remove #(contains? @loaded-libs %) ns)]
     (when (seq missing)
-      (let [jse ^javax.script.ScriptEngine (:jse repl-env)]
-        (try 
-          (.eval jse (io/reader url))
-          ;; TODO: don't show errors for goog/base.js line number 105
-          (catch Throwable ex (println (.getMessage ex))))
-        (swap! loaded-libs (partial apply conj) missing)))))
+      (do (try 
+            (-eval (io/reader url) repl-env (.toString url) 1)
+            ;; TODO: don't show errors for goog/base.js line number 105
+            (catch Throwable ex (println (.getMessage ex))))
+          (swap! loaded-libs (partial apply conj) missing)))))
 
 (defn rhino-setup [repl-env]
   (let [env {:context :statement :locals {}}]
     (repl/load-file repl-env "cljs/core.cljs")
+    (swap! loaded-libs conj "cljs.core")
     (repl/evaluate-form repl-env
                         (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
-                        '(ns cljs.user))
-    (.put ^javax.script.ScriptEngine (:jse repl-env)
-          javax.script.ScriptEngine/FILENAME "<cljs repl>")))
+                        "<cljs repl>"
+                        '(ns cljs.user))))
 
 (extend-protocol repl/IJavaScriptEnv
   clojure.lang.IPersistentMap
   (-setup [this]
     (rhino-setup this))
-  (-evaluate [this line js]
-    (rhino-eval this line js))
+  (-evaluate [this filename line js]
+    (rhino-eval this filename line js))
   (-load [this ns url]
     (load-javascript this ns url))
-  (-put [this k v]
-    (case k
-      :filename (.put ^javax.script.ScriptEngine (:jse this)
-                      javax.script.ScriptEngine/FILENAME v)))
-  (-tear-down [_] nil))
+  (-tear-down [_] (Context/exit)))
 
 (defn repl-env
   "Returns a fresh JS environment, suitable for passing to repl.
   Hang on to return for use across repl calls."
   []
-  (let [jse (-> (javax.script.ScriptEngineManager.) (.getEngineByName "JavaScript"))
+  (let [cx (Context/enter)
+        scope (.initStandardObjects cx)
         base (io/resource "goog/base.js")
         deps (io/resource "goog/deps.js")
-        new-repl-env {:jse jse :global (.eval jse "this")}]
+        new-repl-env {:cx cx :scope scope}]
     (assert base "Can't find goog/base.js in classpath")
     (assert deps "Can't find goog/deps.js in classpath")
-    (.put jse javax.script.ScriptEngine/FILENAME "goog/base.js")
-    (.put jse "cljs_javascript_engine" new-repl-env)
+    (swap! current-repl-env (fn [old] new-repl-env))
     (with-open [r (io/reader base)]
-      (.eval jse r))
-    (.eval jse bootjs)
+      (-eval r new-repl-env "goog/base.js" 1))
+    (-eval bootjs new-repl-env "bootjs" 1)
     ;; Load deps.js line-by-line to avoid 64K method limit
     (doseq [^String line (line-seq (io/reader deps))]
-      (.eval jse line))
+      (-eval line new-repl-env "goog/deps.js" 1))
     new-repl-env))
 
 (comment
@@ -117,7 +143,8 @@ goog.require = function(rule){Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhin
   (:a {:a "hello"})
   (:a {:a :b})
   (reduce + [1 2 3 4 5])
-  (throw (java.lang.Exception. "hello"))
+  (even? :a)
+  (throw (js/Error. "There was an error"))
   (load-file "clojure/string.cljs")
   (clojure.string/triml "   hello")
   (clojure.string/reverse "   hello")
