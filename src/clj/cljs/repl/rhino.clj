@@ -13,7 +13,7 @@
             [cljs.compiler :as comp]
             [cljs.repl :as repl])
   (:import cljs.repl.IJavaScriptEnv
-           [org.mozilla.javascript Context]))
+           [org.mozilla.javascript Context ScriptableObject]))
 
 (def current-repl-env (atom nil))
 (def loaded-libs (atom #{}))
@@ -93,13 +93,21 @@
           (swap! loaded-libs (partial apply conj) missing)))))
 
 (defn rhino-setup [repl-env]
-  (let [env {:context :statement :locals {}}]
+  (let [env {:context :statement :locals {} :ns (@comp/namespaces comp/*cljs-ns*)}
+        scope (:scope repl-env)]
     (repl/load-file repl-env "cljs/core.cljs")
     (swap! loaded-libs conj "cljs.core")
     (repl/evaluate-form repl-env
-                        (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
+                        env
                         "<cljs repl>"
-                        '(ns cljs.user))))
+                        '(ns cljs.user))
+    (ScriptableObject/putProperty scope
+                                  "out"
+                                  (Context/javaToJS System/out scope))
+    (repl/evaluate-form repl-env
+                        env
+                        "<cljs repl>"
+                        '(set! *print-fn* (fn [x] (.print js/out x))))))
 
 (extend-protocol repl/IJavaScriptEnv
   clojure.lang.IPersistentMap
@@ -143,6 +151,7 @@
   (:a {:a "hello"})
   (:a {:a :b})
   (reduce + [1 2 3 4 5])
+  (time (reduce + [1 2 3 4 5]))
   (even? :a)
   (throw (js/Error. "There was an error"))
   (load-file "clojure/string.cljs")
