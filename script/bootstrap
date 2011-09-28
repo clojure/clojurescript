@@ -33,6 +33,16 @@ echo "Building lib/goog.jar..."
 echo "jar cf ./lib/goog.jar -C closure/library/closure/ goog"
 jar cf ./lib/goog.jar -C closure/library/closure/ goog
 
+echo "Fetching Rhino..."
+curl -O -s ftp://ftp.mozilla.org/pub/mozilla.org/js/rhino1_7R3.zip
+unzip -qu rhino1_7R3.zip
+echo "Copying rhino1_7R3/js.jar to lib/js.jar..."
+cp rhino1_7R3/js.jar lib/js.jar
+echo "Cleaning up Rhino directory..."
+rm -rf rhino1_7R3/
+echo "Cleaning up Rhino archive..."
+rm rhino1_7R3.zip
+
 echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
 cp closure/compiler/compiler.jar lib
 
