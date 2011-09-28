@@ -12,6 +12,14 @@
             [goog.object :as gobject]
             [goog.array :as garray]))
 
+(def
+  ^{:doc "Each runtime environment provides a diffenent way to print output.
+  Whatever function *print-fn* is bound to will be passed any
+  Strings which should be printed."}
+  *print-fn*
+  (fn [_]
+    (throw (js/Error. "No *print-fn* fn set for evaluation environment"))))
+
 (defn truth_
   "Internal - do not use!"
   [x]
@@ -2577,10 +2585,8 @@ reduces them without incurring seq initialization"
             (interpose [sep] (map #(print-one % opts) coll)))
           [end]))
 
-; This should be different in different runtime environments. For example
-; when in the browser, could use console.debug instead of print.
 (defn string-print [x]
-  (js/print x)
+  (*print-fn* x)
   nil)
 
 (defn flush [] ;stub
