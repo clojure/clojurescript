@@ -635,3 +635,11 @@
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val & fn-tail]
   `(-add-method ~(with-meta multifn {:tag 'cljs.core.MultiFn}) ~dispatch-val (fn ~@fn-tail)))
+
+(defmacro time
+  "Evaluates expr and prints the time it took. Returns the value of expr."
+  [expr]
+  `(let [start# (.getTime (js/Date.) ())
+         ret# ~expr]
+     (prn (str "Elapsed time: " (- (.getTime (js/Date.) ()) start#) " msecs"))
+     ret#))
