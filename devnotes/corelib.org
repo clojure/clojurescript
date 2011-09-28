@@ -517,7 +517,7 @@ as macro
 * test
 * the-ns
 * thread-bound?
-* TODO time
+* DONE time
 * DONE to-array
 * TODO to-array-2d
 * DONE trampoline
