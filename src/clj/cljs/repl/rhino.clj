@@ -42,7 +42,7 @@
 (defmethod stacktrace :default [e]
   (apply str (interpose "\n" (map #(str "        " (.toString %)) (.getStackTrace e)))))
 
-(defmethod stacktrace org.mozilla.javascript.JavaScriptException [e]
+(defmethod stacktrace org.mozilla.javascript.RhinoException [e]
   (.getScriptStackTrace e))
 
 (defmulti eval-result class)
