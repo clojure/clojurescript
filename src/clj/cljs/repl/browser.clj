@@ -196,7 +196,8 @@
         :post (if (= (:content request) "ready")
                 (do (reset! loaded-libs #{})
                     (send-for-eval conn
-                                   "goog.provide('cljs.user');"
+                                   (cljsc/-compile '[(ns cljs.user)
+                                                     (set! *print-fn* js/console.debug)] {})
                                    identity))
                 (do (return-value (:content request))
                     (set-connection conn)))
