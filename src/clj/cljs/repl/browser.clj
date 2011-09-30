@@ -187,20 +187,53 @@
 
 (declare browser-eval)
 
+(def ordering (agent {:expecting nil :fns {}}))
+
+(defmulti handle-post (fn [_ m] (:type m)))
+
+(defmethod handle-post :ready [conn _]
+  (do (reset! loaded-libs #{})
+      (send ordering (fn [_] {:expecting nil :fns {}}))
+      (send-for-eval conn
+                     (cljsc/-compile
+                      '[(ns cljs.user)
+                        (set! *print-fn* clojure.browser.repl/repl-print)] {})
+                     identity)))
+
+(defn add-in-order [{:keys [expecting fns]} order f]
+  {:expecting (or expecting order) :fns (assoc fns order f)})
+
+(defn run-in-order [{:keys [expecting fns]}]
+  (loop [order expecting
+         fns fns]
+    (if-let [f (get fns order)]
+      (do (f)
+          (recur (inc order) (dissoc fns order)))
+      {:expecting order :fns fns})))
+
+(defn constrain-order
+  "Elements to be printed in the REPL will arrive out of order. Ensure
+  that they are printed in the correct order."
+  [order f]
+  (send-off ordering add-in-order order f)
+  (send-off ordering run-in-order))
+
+(defmethod handle-post :print [conn {:keys [content order]}]
+  (do (constrain-order order (fn [] (do (print (read-string content))
+                                       (.flush *out*))))
+      (send-and-close conn 200 "ignore__")))
+
+(defmethod handle-post :result [conn {:keys [content order]}]
+  (constrain-order order (fn [] (do (return-value content)
+                                   (set-connection conn)))))
+
 (defn handle-connection
   [opts conn]
   (let [rdr (BufferedReader. (InputStreamReader. (.getInputStream conn)))]
     (if-let [request (read-request rdr)]
       (case (:method request)
         :get (handle-get opts conn request)
-        :post (if (= (:content request) "ready")
-                (do (reset! loaded-libs #{})
-                    (send-for-eval conn
-                                   (cljsc/-compile '[(ns cljs.user)
-                                                     (set! *print-fn* js/console.debug)] {})
-                                   identity))
-                (do (return-value (:content request))
-                    (set-connection conn)))
+        :post (handle-post conn (read-string (:content request)))
         (.close conn))
       (.close conn))))
 
