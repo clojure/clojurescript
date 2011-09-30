@@ -1,3 +1,4 @@
+rm -rf out
 mkdir -p out
 
 #bin/cljsc test > out/core-test.js
