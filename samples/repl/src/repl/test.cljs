@@ -34,9 +34,15 @@
   
   ;; Evaluate some basic forms
   (+ 1 1)
+  (string-print "hello")
+  (prn "foo")
+  (prn {:a :b})
+  (println "hello")
+  (doseq [next (range 20)] (println next))
   {:a :b}
   "hello"
   (reduce + [1 2 3 4 5])
+  (time (reduce + (range 10000)))
   (js/alert "Hello World!")
   
   (load-file "clojure/string.cljs")
