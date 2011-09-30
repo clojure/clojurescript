@@ -3266,7 +3266,7 @@ reduces them without incurring seq initialization"
   "Given a multimethod, returns a map of preferred value -> set of other values"
   [multifn] (-prefers multifn))
 
-(defn extend-object
+(defn extend-object!
   "Takes a JavaScript object and a map of names to functions and
   attaches said functions as methods on the object.  Any references to
   JavaScript's implict this (via the this-as macro) will resolve to the 
