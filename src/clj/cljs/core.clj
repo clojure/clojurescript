@@ -643,3 +643,9 @@
          ret# ~expr]
      (prn (str "Elapsed time: " (- (.getTime (js/Date.) ()) start#) " msecs"))
      ret#))
+
+(defmacro this-as
+  "Defines a scope where JavaScript's implit this is bound to the name provided."
+  [name & body]
+  `(let [~name (~'js* "this")]
+     ~@body))

@@ -3265,3 +3265,14 @@ reduces them without incurring seq initialization"
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   [multifn] (-prefers multifn))
+
+(defn extend-object
+  "Takes a JavaScript object and a map of names to functions and
+  attaches said functions as methods on the object.  Any references to
+  JavaScript's implict this (via the this-as macro) will resolve to the 
+  object that the function is attached."
+  [obj fn-map]
+  (doseq [[key-name f] fn-map]
+    (let [str-name (name key-name)]
+      (js* "~{obj}[~{str-name}] = ~{f}")))
+  obj)
