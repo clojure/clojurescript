@@ -18,19 +18,22 @@
   (:require [clojure.browser.net   :as net]
             [clojure.browser.event :as event]))
 
-(declare repl-print)
+(def xpc-connection (atom nil))
+
+(defn repl-print [data]
+  (if-let [conn @xpc-connection]
+    (net/transmit conn :print (pr-str data))))
 
 (defn evaluate-javascript
   "Process a single block of JavaScript received from the server"
   [conn block]
-  (binding [repl-print (fn [data] (net/transmit conn :print (pr-str data)))]
-    (let [result (try {:status :success :value (str (js* "eval(~{block})"))}
-                      (catch js/Error e
-                        {:status :exception :value (pr-str e)
-                         :stacktrace (if (.hasOwnProperty e "stack")
-                                       (.stack e)
-                                       "No stacktrace available.")}))]
-      (pr-str result))))
+  (let [result (try {:status :success :value (str (js* "eval(~{block})"))}
+                    (catch js/Error e
+                      {:status :exception :value (pr-str e)
+                       :stacktrace (if (.hasOwnProperty e "stack")
+                                     (.stack e)
+                                     "No stacktrace available.")}))]
+    (pr-str result)))
 
 (defn send-result [connection url data]
   (net/transmit connection url "POST" data nil 0))
@@ -91,6 +94,7 @@
   [repl-server-url]
   (let [repl-connection (net/xpc-connection
                          {:peer_uri repl-server-url})]
+    (swap! xpc-connection (constantly repl-connection))
     (net/register-service repl-connection
                           :evaluate-javascript
                           (fn [js]
