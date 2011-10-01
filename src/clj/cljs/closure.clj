@@ -161,6 +161,8 @@
 (defmethod to-url String [s] (to-url (io/file s)))
 
 (defprotocol IJavaScript
+  (-foreign? [this] "Whether the Javascript represents a foreign
+  library (a js file that not have any goog.provide statement")
   (-url [this] "The URL where this JavaScript is located. Returns nil
   when JavaScript exists in memory only.")
   (-provides [this] "A list of namespaces that this JavaScript provides.")
@@ -170,12 +172,14 @@
 (extend-protocol IJavaScript
   
   String
+  (-foreign? [this] false)
   (-url [this] nil)
   (-provides [this] (:provides (parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (parse-js-ns (string/split-lines this))))
   (-source [this] this)
   
   clojure.lang.IPersistentMap
+  (-foreign? [this] (:foreign this))
   (-url [this] (or (:url this)
                    (to-url (:file this))))
   (-provides [this] (map name (:provides this)))
@@ -184,18 +188,20 @@
                     s
                     (slurp (io/reader (-url this))))))
 
-(defrecord JavaScriptFile [^URL url provides requires]
+(defrecord JavaScriptFile [foreign ^URL url provides requires]
   IJavaScript
+  (-foreign? [this] foreign)
   (-url [this] url)
   (-provides [this] provides)
   (-requires [this] requires)
   (-source [this] (slurp (io/reader url))))
 
-(defn javascript-file [^URL url provides requires]
-  (JavaScriptFile. url (map name provides) (map name requires)))
+(defn javascript-file [foreign ^URL url provides requires]
+  (JavaScriptFile. foreign url (map name provides) (map name requires)))
 
 (defn map->javascript-file [m]
-  (javascript-file (to-url (:file m))
+  (javascript-file (:foreign m)
+                   (to-url (:file m))
                    (:provides m)
                    (:requires m)))
 
@@ -371,6 +377,27 @@
 ;; need for closurebuilder. cljs dependencies will be compiled as
 ;; needed.
 
+(defn find-url
+  "Given a string, returns a URL. Attempts to resolve as a classpath-relative
+  path, then as a path relative to the working directory or a URL string"
+  [path-or-url]
+  (or (io/resource path-or-url)
+      (try (io/as-url path-or-url)
+           (catch java.net.MalformedURLException e
+             false))
+      (io/as-url (io/as-file path-or-url))))
+
+(defn load-foreign-library*
+  "Given a library spec (a map containing the keys :file
+  and :provides), returns a map containing :provides, :requires, :file
+  and :url"
+  [lib-spec]
+  (merge lib-spec {:foreign true
+                   :requires nil
+                   :url (find-url (:file lib-spec))}))
+
+(def load-foreign-library (memoize load-foreign-library*))
+
 (defn load-library*
   "Given a path to a JavaScript library, which is a directory
   containing Javascript files, return a list of maps
@@ -386,15 +413,22 @@
 
 (def load-library (memoize load-library*))
 
-(defn library-dependencies [{:keys [libs]}]
-  (mapcat load-library libs))
+(defn library-dependencies [{:keys [libs foreign-libs]}]
+  (concat
+   (mapcat load-library libs)
+   (map load-foreign-library foreign-libs)))
 
 (comment
   ;; load one library
   (load-library* "closure/library/third_party/closure")
   ;; load all library dependencies
   (library-dependencies {:libs ["closure/library/third_party/closure"]})
-  )
+  (library-dependencies {:foreign-libs [{:file "http://example.com/remote.js"
+                                          :provides ["my.example"]}]})
+  (library-dependencies {:foreign-libs [{:file "local/file.js"
+                                            :provides ["my.example"]}]})
+  (library-dependencies {:foreign-libs [{:file "cljs/nodejs_externs.js"
+                                          :provides ["my.example"]}]}))
 
 (defn goog-dependencies*
   "Create an index of Google dependencies by namespace and file name."
@@ -413,6 +447,7 @@
                          :group :goog)))))
 
 (def goog-dependencies (memoize goog-dependencies*))
+
 
 (defn js-dependency-index
   "Returns the index for all JavaScript dependencies. Lookup by
@@ -501,7 +536,8 @@
   (let [requires (mapcat -requires inputs)
         required-cljs (cljs-dependencies opts requires)
         required-js (js-dependencies opts (set (concat (mapcat -requires required-cljs) requires)))]
-    (concat (map #(-> (javascript-file (or (:url %) (io/resource (:file %)))
+    (concat (map #(-> (javascript-file (:foreign %)
+                                       (or (:url %) (io/resource (:file %)))
                                        (:provides %)
                                        (:requires %))
                       (assoc :group (:group %))) required-js)
@@ -520,10 +556,16 @@
                     (str "goog.provide('test.app');\n"
                          "goog.require('goog.array');\n"
                          "goog.require('goog.dom.query');"))
+  ;; add dependencies with foreign lib
+  (add-dependencies {:foreign-libs [{:file "samples/hello/src/hello/core.cljs"
+                                     :provides ["example.lib"]}]}
+                    (str "goog.provide('test.app');\n"
+                         "goog.require('example.lib');\n"))
   ;; add dependencies to a JavaScriptFile record
-  (add-dependencies {} (javascript-file (to-url "samples/hello/src/hello/core.cljs")
-                                     ["hello.core"]
-                                     ["goog.array"]))
+  (add-dependencies {} (javascript-file false
+                                        (to-url "samples/hello/src/hello/core.cljs")
+                                        ["hello.core"]
+                                        ["goog.array"]))
   )
 
 ;; Optimize
@@ -539,9 +581,18 @@
 
 (defmethod javascript-name JavaScriptFile [js] (javascript-name (-url js)))
 
+(defn build-provides
+  "Given a vector of provides, builds required goog.provide statements"
+  [provides]
+  (apply str (map #(str "goog.provide('" % "');\n") provides)))
+
+
 (defmethod js-source-file JavaScriptFile [_ js]
-  (when-let [url (-url js)]
-    (js-source-file (javascript-name url) (io/input-stream url))))
+           (when-let [url (-url js)]
+             (js-source-file (javascript-name url)
+                             (if (-foreign? js)
+                               (str (build-provides (-provides js)) (slurp url))
+                               (io/input-stream url)))))
 
 (defn optimize
   "Use the Closure Compiler to optimize one or more JavaScript files."
