@@ -645,7 +645,7 @@
      ret#))
 
 (defmacro this-as
-  "Defines a scope where JavaScript's implit this is bound to the name provided."
+  "Defines a scope where JavaScript's implicit \"this\" is bound to the name provided."
   [name & body]
   `(let [~name (~'js* "this")]
      ~@body))
