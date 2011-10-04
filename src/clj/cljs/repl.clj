@@ -103,12 +103,12 @@
 (defn- wrap-fn [form]
   (cond (and (seq? form) (= 'ns (first form))) identity
         ('#{*1 *2 *3} form) (fn [x] `(cljs.core.pr-str ~x))
-        :else (fn [x]`(cljs.core.pr-str
-                      (let [ret# ~x]
-                        (do (set! *3 *2)
-                            (set! *2 *1)
-                            (set! *1 ret#)
-                            ret#))))))
+        :else (fn [x] `(cljs.core.pr-str
+                       (let [ret# ~x]
+                         (do (set! *3 *2)
+                             (set! *2 *1)
+                             (set! *1 ret#)
+                             ret#))))))
 
 (defn- eval-and-print [repl-env env form]
   (let [ret (evaluate-form repl-env
