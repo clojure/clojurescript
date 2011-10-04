@@ -75,27 +75,27 @@
 (defmacro <
   ([x] true)
   ([x y] (list 'js* "(~{} < ~{})" x y))
-  ([x y & more] `(< (< ~x ~y) ~@more)))
+  ([x y & more] `(and (< ~x ~y) (< ~y ~@more))))
 
 (defmacro <=
   ([x] true)
   ([x y] (list 'js* "(~{} <= ~{})" x y))
-  ([x y & more] `(<= (<= ~x ~y) ~@more)))
+  ([x y & more] `(and (<= ~x ~y) (<= ~y ~@more))))
 
 (defmacro >
   ([x] true)
   ([x y] (list 'js* "(~{} > ~{})" x y))
-  ([x y & more] `(> (> ~x ~y) ~@more)))
+  ([x y & more] `(and (> ~x ~y) (> ~y ~@more))))
 
 (defmacro >=
   ([x] true)
   ([x y] (list 'js* "(~{} >= ~{})" x y))
-  ([x y & more] `(>= (>= ~x ~y) ~@more)))
+  ([x y & more] `(and (>= ~x ~y) (>= ~y ~@more))))
 
 (defmacro ==
   ([x] true)
   ([x y] (list 'js* "(~{} === ~{})" x y))
-  ([x y & more] `(== (== ~x ~y) ~@more)))
+  ([x y & more] `(and (== ~x ~y) (== ~y ~@more))))
 
 (defmacro dec [x]
   `(- ~x 1))
