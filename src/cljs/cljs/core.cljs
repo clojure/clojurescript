@@ -20,6 +20,18 @@
   (fn [_]
     (throw (js/Error. "No *print-fn* fn set for evaluation environment"))))
 
+(def
+  ^{:doc "bound in a repl thread to the most recent value printed"}
+  *1)
+
+(def 
+  ^{:doc "bound in a repl thread to the second most recent value printed"}
+  *2)
+
+(def
+  ^{:doc "bound in a repl thread to the third most recent value printed"}
+  *3)
+
 (defn truth_
   "Internal - do not use!"
   [x]
