@@ -44,9 +44,9 @@
     (load-namespace repl-env ns)))
 
 (defn- display-error
-  ([ret form js]
-     (display-error ret form js (constantly nil)))
-  ([ret form js f]
+  ([ret form]
+     (display-error ret form (constantly nil)))
+  ([ret form f]
      (when-not (and (seq? form) (= 'ns (first form)))
        (f)
        (println (:value ret))
@@ -74,8 +74,8 @@
              ;;TODO - file bug with google, this is bs error
              ;;this is what you get when you try to 'teach new developers'
              ;;via errors (goog/base.js 104)
-             :error (display-error ret form js)
-             :exception (display-error ret form js
+             :error (display-error ret form)
+             :exception (display-error ret form
                           #(prn "Error evaluating:" form :as js))
              :success (:value ret))))
        (catch Throwable ex
