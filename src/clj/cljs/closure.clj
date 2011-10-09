@@ -192,7 +192,7 @@
 
 (defn load-externs
   "Externs are JavaScript files which contain empty definitions of
-  functions which will be provided by the envorinment. Any function in
+  functions which will be provided by the environment. Any function in
   an extern file will not be renamed during optimization.
 
   Options may contain an :externs key with a list of file paths to
@@ -480,7 +480,7 @@ should contain the source for the given namespace name."
   "Given a list of all required namespaces, return a list of
   IJavaScripts which are the cljs dependencies. The returned list will
   not only include the explicitly required files but any transitive
-  depedencies as well. JavaScript files will be compiled to the
+  dependencies as well. JavaScript files will be compiled to the
   working directory if they do not already exist.
 
   Only load dependencies from the classpath."

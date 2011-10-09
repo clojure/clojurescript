@@ -1641,7 +1641,7 @@ reduces them without incurring seq initialization"
 
 (defn sort
   "Returns a sorted sequence of the items in coll. Comp can be
-   boolean-valued comparison funcion, or a -/0/+ valued comparator.
+   boolean-valued comparison function, or a -/0/+ valued comparator.
    Comp defaults to compare."
   ([coll]
    (sort compare coll))
@@ -2185,7 +2185,7 @@ reduces them without incurring seq initialization"
 (defn- extend-object!
   "Takes a JavaScript object and a map of names to functions and
   attaches said functions as methods on the object.  Any references to
-  JavaScript's implict this (via the this-as macro) will resolve to the
+  JavaScript's implicit this (via the this-as macro) will resolve to the
   object that the function is attached."
   [obj fn-map]
   (doseq [[key-name f] fn-map]
@@ -3959,7 +3959,7 @@ reduces them without incurring seq initialization"
   "Returns a lazy sequence of lists of n items each, at offsets step
   apart. If step is not supplied, defaults to n, i.e. the partitions
   do not overlap. If a pad collection is supplied, use its elements as
-  necessary to complete last partition upto n items. In case there are
+  necessary to complete last partition up to n items. In case there are
   not enough padding elements, return a partition with less than n items."
   ([n coll]
      (partition n n coll))
