@@ -980,7 +980,11 @@ reduces them without incurring seq initialization"
   x.toString().  (str nil) returns the empty string. With more than
   one arg, returns the concatenation of the str values of the args."
   ([] "")
-  ([x] (if (nil? x) "" (. x (toString))))
+  ([x] (cond
+        (symbol? x) (. x (substring 2 (.length x)))
+        (keyword? x) (str ":" (. x (substring 2 (.length x))))
+        (nil? x) ""
+        :else (. x (toString))))
   ([x & ys]
      ((fn [sb more]
         (if more
