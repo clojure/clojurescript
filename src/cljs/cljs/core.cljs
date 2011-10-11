@@ -981,8 +981,6 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (symbol? x) (. x (substring 2 (.length x)))
-        (keyword? x) (str ":" (. x (substring 2 (.length x))))
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]
