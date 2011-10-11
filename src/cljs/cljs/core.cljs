@@ -297,6 +297,9 @@ reduces them without incurring seq initialization"
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
 
+  ICollection
+  (-conj [coll o] (cons o coll))
+
   IReduce
   (-reduce [coll f]
     (ci-reduce coll f (aget a i) (inc i)))
