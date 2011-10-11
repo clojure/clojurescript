@@ -248,6 +248,10 @@
   IHash
   (-hash [o] o))
 
+(extend-type boolean
+  IHash
+  (-hash [o] (js* "((~{o} === true) ? 1 : 0)")))
+
 (extend-type function
   IHash
   (-hash [o] (goog.getUid o)))
