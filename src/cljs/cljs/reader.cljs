@@ -71,7 +71,7 @@ nil if the end of stream has been reached")
   (throw (apply str msg)))
 
 (defn macro-terminating? [ch]
-  (and (not= ch "#") (not= ch \') (contains? macros ch)))
+  (and (not= ch "#") (not= ch \') (not= ch ":") (contains? macros ch)))
 
 (defn read-token
   [rdr initch]
