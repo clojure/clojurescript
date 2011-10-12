@@ -1001,17 +1001,17 @@ reduces them without incurring seq initialization"
 (defn symbol
   "Returns a Symbol with the given namespace and name."
   ([name] (cond (symbol? name) name
-                (keyword? name) (str "\uFDD1" "'" (subs name 2))
-                :else (str "\uFDD1" "'" name)))
-  ([ns name] (symbol (str ns "/" name))))
+                (keyword? name) (js* "\"\uFDD1'~{}\"" (subs name 2))
+                :else (js* "\"\uFDD1'~{}\"" name)))
+  ([ns name] (symbol (js* "\"~{}/~{}\"" ns name))))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
   ([name] (cond (keyword? name) name
-                (symbol? name) (str "\uFDD0" "'" (subs name 2))
-                :else (str "\uFDD0" "'" name)))
-  ([ns name] (keyword (str ns "/" name))))
+                (symbol? name) (js* "\"\uFDD0'~{}\"" (subs name 2))
+                :else (js* "\"\uFDD0'~{}\"" name)))
+  ([ns name] (keyword (js* "\"~{}/~{}\"" ns name))))
 
 
 
