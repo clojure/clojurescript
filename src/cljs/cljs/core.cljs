@@ -976,7 +976,7 @@ reduces them without incurring seq initialization"
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
 (defn- str*
-  "Internal. Do not use."
+  "Internal - do not use!"
   ([] "")
   ([x] (cond
         (nil? x) ""
