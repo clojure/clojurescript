@@ -975,6 +975,19 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
+(defn str*
+  "Internal. Do not use."
+  ([] "")
+  ([x] (cond
+        (nil? x) ""
+        :else (. x (toString))))
+  ([x & ys]
+     ((fn [sb more]
+        (if more
+          (recur (. sb  (append (str* (first more)))) (next more))
+          (str* sb)))
+      (gstring/StringBuffer. (str* x)) ys)))
+
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
@@ -982,15 +995,11 @@ reduces them without incurring seq initialization"
   ([] "")
   ([x] (cond
         (symbol? x) (. x (substring 2 (.length x)))
-        (keyword? x) (str ":" (. x (substring 2 (.length x))))
+        (keyword? x) (str* ":" (. x (substring 2 (.length x))))
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]
-     ((fn [sb more]
-        (if more
-          (recur (. sb  (append (str (first more)))) (next more))
-          (str sb)))
-      (gstring/StringBuffer. (str x)) ys)))
+     (apply str* x ys)))
 
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending
@@ -1001,17 +1010,17 @@ reduces them without incurring seq initialization"
 (defn symbol
   "Returns a Symbol with the given namespace and name."
   ([name] (cond (symbol? name) name
-                (keyword? name) (js* "\"\uFDD1'~{}\"" (subs name 2))
-                :else (js* "\"\uFDD1'~{}\"" name)))
-  ([ns name] (symbol (js* "\"~{}/~{}\"" ns name))))
+                (keyword? name) (str* "\uFDD1" "'" (subs name 2)))
+     :else (str* "\uFDD1" "'" name))
+  ([ns name] (symbol (str* ns "/" name))))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
   ([name] (cond (keyword? name) name
-                (symbol? name) (js* "\"\uFDD0'~{}\"" (subs name 2))
-                :else (js* "\"\uFDD0'~{}\"" name)))
-  ([ns name] (keyword (js* "\"~{}/~{}\"" ns name))))
+                (symbol? name) (str* "\uFDD0" "'" (subs name 2))
+                :else (str* "\uFDD0" "'" name)))
+  ([ns name] (keyword (str* ns "/" name))))
 
 
 
