@@ -95,6 +95,7 @@ nil if the end of stream has been reached")
 (def int-pattern (re-pattern "([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?"))
 (def ratio-pattern (re-pattern "([-+]?[0-9]+)/([0-9]+)"))
 (def float-pattern (re-pattern "([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?"))
+(def symbol-pattern (re-pattern "[:]?([^0-9/].*/)?([^0-9/][^/]*)"))
 
 (defn- match-int
   [s]
@@ -252,11 +253,16 @@ nil if the end of stream has been reached")
 
 (defn read-keyword
   [reader initch]
-  (let [token (read-token reader (read-char reader))]
-    (if (gstring/contains token "/")
-      (keyword (subs token 0 (.indexOf token "/"))
-               (subs token (inc (.indexOf token "/")) (.length token)))
-      (keyword token))))
+  (let [token (read-token reader (read-char reader))
+        [token ns name] (re-matches symbol-pattern token)]
+    (if (or (and (not (undefined? ns))
+                 (identical? (. ns (substring (- (.length ns) 2) (.length ns))) ":/"))
+            (identical? (aget name (dec (.length name))) ":")
+            (not (== (.indexOf token "::" 1) -1)))
+      (reader-error reader "Invalid token: " token)
+      (if (not (undefined? ns))
+        (keyword (.substring ns 0 (.indexOf ns "/")) name)
+        (keyword token)))))
 
 (defn desugar-meta
   [f]
