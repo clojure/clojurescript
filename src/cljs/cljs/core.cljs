@@ -290,8 +290,20 @@ reduces them without incurring seq initialization"
   (-rest [_] (if (< (inc i) (.length a))
                (IndexedSeq. a (inc i))
                (list)))
+
   ICounted
-  (-count [_] (.length a))
+  (-count [_] (- (.length a) i))
+
+  IIndexed
+  (-nth [coll n]
+    (let [i (+ n i)]
+      (when (< i (.length a))
+        (aget a i))))
+  (-nth [coll n not-found]
+    (let [i (+ n i)]
+      (if (< i (.length a))
+        (aget a i)
+        not-found)))
 
   ISequential
   IEquiv
