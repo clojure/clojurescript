@@ -196,6 +196,9 @@
   ICollection
   (-conj [_ o] (list o))
 
+  IPrintable
+  (-pr-seq [o] (list "nil"))
+
   IIndexed
   (-nth
    ([_ n] nil)
