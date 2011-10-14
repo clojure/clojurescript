@@ -561,7 +561,6 @@
 
 (defmethod emit :dot
   [{:keys [target field method args env]}]
-  (.println System/out (str "emit " [field method]))
   (emit-wrap env
              (if field
                (print (str (emits target) "." field))
@@ -851,6 +850,8 @@
                             :default [(ffirst member+) (nfirst member+)])
              argexprs (map #(analyze enve %) args)]
          {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)})))))
+
+;; (def o (js* "{foo : 42, bar : function() { return 108 }}"))
 
 (defmethod parse 'js*
   [op env [_ form & args] _]
