@@ -561,6 +561,7 @@
 
 (defmethod emit :dot
   [{:keys [target field method args env]}]
+  (.println System/out (str "emit " [field method]))
   (emit-wrap env
              (if field
                (print (str (emits target) "." field))
@@ -845,10 +846,9 @@
          children [enve]]
      (if (and (symbol? (first member+)) (nil? (next member+))) ;;(. target field)
        {:env env :op :dot :target targetexpr :field (munge (first member+)) :children children}
-       (let [[method args]
-             (if (symbol? (first member+))
-               [(first member+) (next member+)]
-               [(ffirst member+) (nfirst member+)])
+       (let [[method args] (cond
+                            (symbol?  (first member+)) [(first member+) (next member+)]
+                            :default [(ffirst member+) (nfirst member+)])
              argexprs (map #(analyze enve %) args)]
          {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)})))))
 
