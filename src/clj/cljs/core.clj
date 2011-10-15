@@ -56,7 +56,7 @@
 
 (defmacro -
   ([] 0)
-  ([x] x)
+  ([x] (list 'js* "(- ~{})" x))
   ([x y] (list 'js* "(~{} - ~{})" x y))
   ([x y & more] `(- (- ~x ~y) ~@more)))
 
