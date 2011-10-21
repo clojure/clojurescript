@@ -196,6 +196,9 @@
   ICollection
   (-conj [_ o] (list o))
 
+  IPrintable
+  (-pr-seq [o] (list "nil"))
+
   IIndexed
   (-nth
    ([_ n] nil)
@@ -2246,9 +2249,9 @@ reduces them without incurring seq initialization"
     (loop [ret {} keys (seq keyseq)]
       (if keys
         (let [key   (first keys)
-              entry (get map key)]
+              entry (get map key ::not-found)]
           (recur
-           (if entry
+           (if (not= entry ::not-found)
              (assoc ret key entry)
              ret)
            (next keys)))

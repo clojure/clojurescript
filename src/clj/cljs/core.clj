@@ -34,7 +34,7 @@
                  :imported)))
 
 (import-macros clojure.core
- [-> ->> ..  and assert comment cond condp
+ [-> ->> ..  and assert comment cond
   declare defn defn-
   doto
   extend-protocol fn for
@@ -56,7 +56,7 @@
 
 (defmacro -
   ([] 0)
-  ([x] x)
+  ([x] (list 'js* "(- ~{})" x))
   ([x y] (list 'js* "(~{} - ~{})" x y))
   ([x y & more] `(- (- ~x ~y) ~@more)))
 
@@ -181,19 +181,26 @@
           ~@impls))
       (new ~t ~@locals))))
 
+(defmacro this-as
+  "Defines a scope where JavaScript's implicit \"this\" is bound to the name provided."
+  [name & body]
+  `(let [~name (~'js* "this")]
+     ~@body))
+
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (str "Can't resolve: " %))
                    ret)
         impl-map (loop [ret {} s impls]
                    (if (seq s)
-                     (recur (assoc ret (resolve (first s)) (take-while seq? (next s)))
+                     (recur (assoc ret (first s) (take-while seq? (next s)))
                             (drop-while seq? (next s)))
                      ret))]
     (if (base-type tsym)
       (let [t (base-type tsym)
-            assign-impls (fn [[psym sigs]]
-                           (let [pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
+            assign-impls (fn [[p sigs]]
+                           (let [psym (resolve p)
+				 pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths]]
                                           `(aset ~(symbol (str pfn-prefix f)) ~t (fn* ~@meths)))
@@ -201,13 +208,21 @@
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
             prototype-prefix (str t ".prototype.")
-            
-            assign-impls (fn [[psym sigs]]
-                           (let [pprefix (protocol-prefix psym)]
-                             (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
-                                   (map (fn [[f & meths]]
-                                          `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
-                                        sigs))))]
+            assign-impls (fn [[p sigs]]
+                           (let [psym (resolve p)
+				 pprefix (protocol-prefix psym)]
+			     (if (= p 'Object)
+			       (let [adapt-params (fn [[sig & body]]
+						    (let [[tname & args] sig]
+						      (list (with-meta (vec args) (meta sig))
+							    (list* 'this-as tname body))))]
+				 (map (fn [[f & meths]]
+					`(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
+				      sigs))
+			       (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
+				     (map (fn [[f & meths]]
+					    `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
+					  sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
 (defmacro deftype [t fields & impls]
@@ -396,6 +411,48 @@
          ~@(map
             (fn [[k v]] (list 'set! k v))
             resets))))))
+
+(defmacro condp
+  "Takes a binary predicate, an expression, and a set of clauses.
+  Each clause can take the form of either:
+
+  test-expr result-expr
+
+  test-expr :>> result-fn
+
+  Note :>> is an ordinary keyword.
+
+  For each clause, (pred test-expr expr) is evaluated. If it returns
+  logical true, the clause is a match. If a binary clause matches, the
+  result-expr is returned, if a ternary clause matches, its result-fn,
+  which must be a unary function, is called with the result of the
+  predicate as its argument, the result of that call being the return
+  value of condp. A single default expression can follow the clauses,
+  and its value will be returned if no clause matches. If no default
+  expression is provided and no clause matches, an
+  IllegalArgumentException is thrown."
+  {:added "1.0"}
+
+  [pred expr & clauses]
+  (let [gpred (gensym "pred__")
+        gexpr (gensym "expr__")
+        emit (fn emit [pred expr args]
+               (let [[[a b c :as clause] more]
+                       (split-at (if (= :>> (second args)) 3 2) args)
+                       n (count clause)]
+                 (cond
+                  (= 0 n) `(throw (js/Error. (str "No matching clause: " ~expr)))
+                  (= 1 n) a
+                  (= 2 n) `(if (~pred ~a ~expr)
+                             ~b
+                             ~(emit pred expr more))
+                  :else `(if-let [p# (~pred ~a ~expr)]
+                           (~c p#)
+                           ~(emit pred expr more)))))
+        gres (gensym "res__")]
+    `(let [~gpred ~pred
+           ~gexpr ~expr]
+       ~(emit gpred gexpr clauses))))
 
 (defmacro try
   "(try expr* catch-clause* finally-clause?)
@@ -643,9 +700,3 @@
          ret# ~expr]
      (prn (str "Elapsed time: " (- (.getTime (js/Date.) ()) start#) " msecs"))
      ret#))
-
-(defmacro this-as
-  "Defines a scope where JavaScript's implicit \"this\" is bound to the name provided."
-  [name & body]
-  `(let [~name (~'js* "this")]
-     ~@body))
