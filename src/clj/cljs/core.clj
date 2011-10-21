@@ -214,8 +214,7 @@
 			     (if (= p 'Object)
 			       (let [adapt-params (fn [[sig & body]]
 						    (let [[tname & args] sig]
-						      (list (with-meta (vec args)
-							      (assoc (meta sig) :cljs.compiler/this-as tname))
+						      (list (with-meta (vec args) (meta sig))
 							    (list* 'this-as tname body))))]
 				 (map (fn [[f & meths]]
 					`(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
