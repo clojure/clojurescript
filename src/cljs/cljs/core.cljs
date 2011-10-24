@@ -1270,6 +1270,53 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll] (seq (lazy-seq-value coll))))
 
+;;; PersistentQueue ;;;
+
+(deftype PersistentQueue [meta count front rear]
+  IWithMeta
+  (-with-meta [coll meta] (PersistentQueue. meta count front rear))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (first front))
+  (-rest [coll] (rest (seq coll)))
+
+  IStack
+  (-peek [coll] (-first front))
+  (-pop [coll]
+    (if front
+      (if-let [f1 (next front)]
+        (PersistentQueue. meta (dec count) f1 rear)
+        (PersistentQueue. meta (dec count) (seq rear) nil))
+      coll))
+
+  ICollection
+  (-conj [coll o]
+    (if front
+      (PersistentQueue. meta (inc count) front (conj (or rear []) o))
+      (PersistentQueue. meta (inc count) (conj front o) nil)))
+
+  IEmptyableCollection
+  (-empty [coll] cljs.core.PersistentQueue/EMPTY)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  ; This is wrong, but quick
+  (-seq [coll] (concat front rear))
+
+  ICounted
+  (-count [coll] count))
+
+(set! cljs.core.PersistentQueue/EMPTY (PersistentQueue. nil 0 nil nil))
+
 ;;;;;;;;;;;;;;;;
 
 (defn to-array
