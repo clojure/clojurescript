@@ -36,6 +36,10 @@
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 
+(defmacro ^:private debug-prn
+  [& args]
+  `(.println System/out (str ~@args)))
+
 (defn munge [s]
   (let [ss (str s)
         ms (if (.contains ss "]")
@@ -844,12 +848,16 @@
          targetexpr (analyze enve target)
          children [enve]]
      (if (and (symbol? (first member+)) (nil? (next member+))) ;;(. target field)
-       {:env env :op :dot :target targetexpr :field (munge (first member+)) :children children}
+       (do
+         (debug-prn {:target target :field (first member+)})
+         {:env env :op :dot :target targetexpr :field (munge (first member+)) :children children})
        (let [[method args] (cond
                             (symbol?  (first member+)) [(first member+) (next member+)]
                             :default [(ffirst member+) (nfirst member+)])
              argexprs (map #(analyze enve %) args)]
-         {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)})))))
+         (do
+           (debug-prn {:target target :method method :args args})
+           {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)}))))))
 
 ;; (def o (js* "{foo : 42, bar : function() { return 108 }}"))
 
