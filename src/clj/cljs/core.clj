@@ -357,9 +357,8 @@
         prefix (protocol-prefix p)
         methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
         expand-sig (fn [fname slot sig]
-                     (println [:===> fname slot sig])
                      `(~sig
-                       (if (and ~(first sig) (. ~(first sig) ~slot))
+                       (if (and ~(first sig) (. ~(first sig) ~(symbol (str "-" slot)))) ;; HERE
                          (. ~(first sig) ~slot ~@sig)
                          ((or
                            (aget ~(fqn fname) (goog.typeOf ~(first sig)))
