@@ -490,13 +490,13 @@
   ([x]
      (when *assert*
        `(when-not ~x
-          (throw (cljs.core/str
-                   "Assert failed: " (cljs.core/pr-str '~x))))))
+          (throw (js/Error.
+                  (cljs.core/str "Assert failed: " (cljs.core/pr-str '~x)))))))
   ([x message]
      (when *assert*
        `(when-not ~x
-          (throw (cljs.core/str
-                  "Assert failed: " ~message "\n" (cljs.core/pr-str '~x)))))))
+          (throw (js/Error.
+                  (cljs.core/str "Assert failed: " ~message "\n" (cljs.core/pr-str '~x))))))))
 
 (defmacro ^{:private true} assert-args [fnname & pairs]
   `(do (when-not ~(first pairs)
