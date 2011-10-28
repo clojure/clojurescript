@@ -290,21 +290,21 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
   ISeq
   (-first [_] (aget a i))
-  (-rest [_] (if (< (inc i) (.length a))
+  (-rest [_] (if (< (inc i) (.-length a))
                (IndexedSeq. a (inc i))
                (list)))
 
   ICounted
-  (-count [_] (- (.length a) i))
+  (-count [_] (- (.-length a) i))
 
   IIndexed
   (-nth [coll n]
     (let [i (+ n i)]
-      (when (< i (.length a))
+      (when (< i (.-length a))
         (aget a i))))
   (-nth [coll n not-found]
     (let [i (+ n i)]
-      (if (< i (.length a))
+      (if (< i (.-length a))
         (aget a i)
         not-found)))
 
@@ -325,7 +325,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (hash-coll coll)))
 
 (defn prim-seq [prim i]
-  (when-not (= 0 (.length prim))
+  (when-not (= 0 (.-length prim))
     (IndexedSeq. prim i)))
 
 (defn array-seq [array i]
@@ -336,14 +336,14 @@ reduces them without incurring seq initialization"
   (-seq [array] (array-seq array 0))
 
   ICounted
-  (-count [a] (.length a))
+  (-count [a] (.-length a))
 
   IIndexed
   (-nth
     ([array n]
-       (if (< n (.length array)) (aget array n)))
+       (if (< n (.-length array)) (aget array n)))
     ([array n not-found]
-       (if (< n (.length array)) (aget array n)
+       (if (< n (.-length array)) (aget array n)
            not-found)))
 
   ILookup
@@ -1009,8 +1009,8 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (symbol? x) (. x (substring 2 (.length x)))
-        (keyword? x) (str* ":" (. x (substring 2 (.length x))))
+        (symbol? x) (. x (substring 2 (.-length x)))
+        (keyword? x) (str* ":" (. x (substring 2 (.-length x))))
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]
@@ -1192,7 +1192,7 @@ reduces them without incurring seq initialization"
   (-seq [string] (prim-seq string 0))
   
   ICounted
-  (-count [s] (.length s))
+  (-count [s] (.-length s))
 
   IIndexed
   (-nth
@@ -1235,13 +1235,13 @@ reduces them without incurring seq initialization"
 ;;; LazySeq ;;;
 
 (defn- lazy-seq-value [lazy-seq]
-  (let [x (.x lazy-seq)]
+  (let [x (.-x lazy-seq)]
     (if (.realized lazy-seq)
       x
       (do
-        (set! (.x lazy-seq) (x))
-        (set! (.realized lazy-seq) true)
-        (.x lazy-seq)))))
+        (set! (.-x lazy-seq) (x))
+        (set! (.-realized lazy-seq) true)
+        (.-x lazy-seq)))))
 
 (deftype LazySeq [meta realized x]
   IWithMeta
@@ -1901,11 +1901,11 @@ reduces them without incurring seq initialization"
 
   IStack
   (-peek [coll]
-    (let [count (.length array)]
+    (let [count (.-length array)]
       (when (> count 0)
         (aget array (dec count)))))
   (-pop [coll]
-    (if (> (.length array) 0)
+    (if (> (.-length array) 0)
       (let [new-array (aclone array)]
         (. new-array (pop))
         (Vector. meta new-array))
@@ -1929,24 +1929,24 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (> (.length array) 0)
+    (when (> (.-length array) 0)
       (let [vector-seq
              (fn vector-seq [i]
                (lazy-seq
-                 (when (< i (.length array))
+                 (when (< i (.-length array))
                    (cons (aget array i) (vector-seq (inc i))))))]
         (vector-seq 0))))
 
   ICounted
-  (-count [coll] (.length array))
+  (-count [coll] (.-length array))
 
   IIndexed
   (-nth [coll n]
-    (if (and (<= 0 n) (< n (.length array)))
+    (if (and (<= 0 n) (< n (.-length array)))
       (aget array n)
-      #_(throw (js/Error. (str "No item " n " in vector of length " (.length array))))))
+      #_(throw (js/Error. (str "No item " n " in vector of length " (.-length array))))))
   (-nth [coll n not-found]
-    (if (and (<= 0 n) (< n (.length array)))
+    (if (and (<= 0 n) (< n (.-length array)))
       (aget array n)
       not-found))
 
@@ -2004,7 +2004,7 @@ reduces them without incurring seq initialization"
 
 
 (defn- scan-array [incr k array]
-  (let [len (.length array)]
+  (let [len (.-length array)]
     (loop [i 0]
       (when (< i len)
         (if (= k (aget array i))
@@ -2052,11 +2052,11 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (pos? (.length keys))
+    (when (pos? (.-length keys))
       (map #(vector % (aget strobj %)) keys)))
 
   ICounted
-  (-count [coll] (.length keys))
+  (-count [coll] (.-length keys))
 
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
@@ -2179,7 +2179,7 @@ reduces them without incurring seq initialization"
       (if (not i)
         coll ; key not found, return coll unchanged
         (let [new-hashobj (goog.object/clone hashobj)]
-          (if (> 3 (.length bucket))
+          (if (> 3 (.-length bucket))
             (js-delete new-hashobj h)
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
@@ -2189,7 +2189,7 @@ reduces them without incurring seq initialization"
 (set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj)))
 
 (set! cljs.core.HashMap/fromArrays (fn [ks vs]
-  (let [len (.length ks)]
+  (let [len (.-length ks)]
     (loop [i 0, out cljs.core.HashMap/EMPTY]
       (if (< i len)
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
@@ -2816,9 +2816,9 @@ reduces them without incurring seq initialization"
     (doseq [[key f] watches]
       (f key this oldval newval)))
   (-add-watch [this key f]
-    (set! (.watches this) (assoc watches key f)))
+    (set! (.-watches this) (assoc watches key f)))
   (-remove-watch [this key]
-    (set! (.watches this) (dissoc watches key))))
+    (set! (.-watches this) (dissoc watches key))))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
@@ -2843,8 +2843,8 @@ reduces them without incurring seq initialization"
   [a new-value]
   (when-let [validate (.validator a)]
     (assert (validate new-value) "Validator rejected reference state"))
-  (let [old-value (.state a)]
-    (set! (.state a) new-value)
+  (let [old-value (.-state a)]
+    (set! (.-state a) new-value)
     (-notify-watches a old-value new-value))
   new-value)
 
@@ -2854,15 +2854,15 @@ reduces them without incurring seq initialization"
   multiple times, and thus should be free of side effects.  Returns
   the value that was swapped in."
   ([a f]
-     (reset! a (f (.state a))))
+     (reset! a (f (.-state a))))
   ([a f x]
-     (reset! a (f (.state a) x)))
+     (reset! a (f (.-state a) x)))
   ([a f x y]
-     (reset! a (f (.state a) x y)))
+     (reset! a (f (.-state a) x y)))
   ([a f x y z]
-     (reset! a (f (.state a) x y z)))
+     (reset! a (f (.-state a) x y z)))
   ([a f x y z & more]
-     (reset! a (apply f (.state a) x y z more))))
+     (reset! a (apply f (.-state a) x y z more))))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
@@ -2888,12 +2888,12 @@ reduces them without incurring seq initialization"
   is not acceptable to the new validator, an Error will be thrown and the
   validator will not be changed."
   [iref val]
-  (set! (.validator iref) val))
+  (set! (.-validator iref) val))
 
 (defn get-validator
   "Gets the validator-fn for a var/ref/agent/atom."
   [iref]
-  (.validator iref))
+  (.-validator iref))
 
 (defn alter-meta!
   "Atomically sets the metadata for a namespace/var/ref/agent/atom to be:
@@ -2902,12 +2902,12 @@ reduces them without incurring seq initialization"
 
   f must be free of side-effects"
   [iref f & args]
-  (set! (.meta iref) (apply f (.meta iref) args)))
+  (set! (.-meta iref) (apply f (.-meta iref) args)))
 
 (defn reset-meta!
   "Atomically resets the metadata for an atom"
   [iref m]
-  (set! (.meta iref) m))
+  (set! (.-meta iref) m))
 
 (defn add-watch
   "Alpha - subject to change.

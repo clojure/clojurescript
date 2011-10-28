@@ -841,23 +841,84 @@
     (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
     {:env env :op :defrecord* :t t :fields fields}))
 
+(def ^:private property-symbol? #(boolean (and (symbol? %) (re-matches #"^-.*" (name %)))))
+
+(defn- clean-symbol
+  [sym]
+  (symbol
+   (if (property-symbol? sym)
+     (-> sym name (.substring 1) munge)
+     (-> sym name munge))))
+
+(defn classify-sub
+  [e]
+  (cond (property-symbol? e) ::property
+        (symbol? e)          ::symbol
+        (seq? e)             ::list
+        (nil? e)             ()
+        :default             ::unknown))
+
+(defmulti build-dot-form #(map classify-sub %))
+
+;;   "Handles the dot accessors of (.-p o) and (. o -p)"
+(defmethod build-dot-form [::symbol ::property ()]
+  [[target prop _]]
+  {:dot-action ::access :target target :field (clean-symbol prop)})
+
+;;   "Handles the error dot accessors of (.-p o <args>) and (. o -p <args>)"
+(defmethod build-dot-form [::symbol ::property ::list]
+  [[target prop args]]
+  (throw (Error. (str "Cannot provide arguments " args " on property access " prop))))
+
+(defn- build-method-call
+  [target meth args]
+  {:dot-action ::call :target target :method (munge meth) :args args})
+
+;; (.m o 1 2)
+;; (. o m 1 2)
+(defmethod build-dot-form [::symbol ::symbol ::list]
+  [[target meth args]]
+  (build-method-call target meth args))
+
+;; (.m o)
+;; (. o m)
+(defmethod build-dot-form [::symbol ::symbol ()]
+  [[target meth args]]
+  (build-method-call target meth args))
+
+;; (. o (m))
+;; (. o (m 1 2))
+(defmethod build-dot-form [::symbol ::list ()]
+  [[target [meth & args] _]]
+  (build-method-call target meth args))
+
+(defmethod build-dot-form :default
+  [dot-form]
+  (throw (Error. (str "Unknown dot form of " dot-form))))
+
 (defmethod parse '.
-  [_ env [_ target & member+] _]
+  [_ env [_ target & [field & member+]] _]
+  (when (and (symbol? (first member+)) (nil? (next member+)))
+    (debug-prn (str "WARNING: It looks like you're trying to use an deprecated property access")))
+  
   (disallowing-recur
-   (let [enve (assoc env :context :expr)
-         targetexpr (analyze enve target)
-         children [enve]]
-     (if (and (symbol? (first member+)) (nil? (next member+))) ;;(. target field)
-       (do
-         (debug-prn {:target target :field (first member+)})
-         {:env env :op :dot :target targetexpr :field (munge (first member+)) :children children})
-       (let [[method args] (cond
-                            (symbol?  (first member+)) [(first member+) (next member+)]
-                            :default [(ffirst member+) (nfirst member+)])
-             argexprs (map #(analyze enve %) args)]
-         (do
-           (debug-prn {:target target :method method :args args})
-           {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)}))))))
+   (let [{action :dot-action
+          target :target
+          method :method
+          field  :field
+          args   :args}       (build-dot-form [target field member+])
+         enve                 (assoc env :context :expr)
+         targetexpr           (analyze enve target)
+         children             [enve]]
+     (case action
+           ::access {:env env :op :dot :children children
+                     :target targetexpr
+                     :field field}
+           ::call   (let [argexprs (map #(analyze enve %) args)]
+                      {:env env :op :dot :children (into children argexprs)
+                       :target targetexpr
+                       :method method
+                       :args argexprs})))))
 
 ;; (def o (js* "{foo : 42, bar : function() { return 108 }}"))
 
