@@ -1236,7 +1236,7 @@ reduces them without incurring seq initialization"
 
 (defn- lazy-seq-value [lazy-seq]
   (let [x (.-x lazy-seq)]
-    (if (.realized lazy-seq)
+    (if (.-realized lazy-seq)
       x
       (do
         (set! (.-x lazy-seq) (x))

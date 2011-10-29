@@ -358,7 +358,7 @@
         methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
         expand-sig (fn [fname slot sig]
                      `(~sig
-                       (if (and ~(first sig) (. ~(first sig) ~(symbol (str "-" slot)))) ;; HERE
+                       (if (and ~(first sig) (. ~(first sig) ~(symbol (str "-" slot)))) ;; Property access needed here.
                          (. ~(first sig) ~slot ~@sig)
                          ((or
                            (aget ~(fqn fname) (goog.typeOf ~(first sig)))
@@ -380,7 +380,9 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (and x# (. x# ~(symbol prefix)) (not (. x# (~'hasOwnProperty ~prefix))))
+       (if (and x#
+                (. x# ~(symbol (str "-" prefix)))        ;; Need prop lookup here
+                (not (. x# (~'hasOwnProperty ~prefix))))
 	 true
 	 (cljs.core/type_satisfies_ ~psym x#)))))
 
