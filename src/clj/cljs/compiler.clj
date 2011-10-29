@@ -841,6 +841,8 @@
     (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
     {:env env :op :defrecord* :t t :fields fields}))
 
+;; dot accessor code
+
 (def ^:private property-symbol? #(boolean (and (symbol? %) (re-matches #"^-.*" (name %)))))
 
 (defn- clean-symbol
@@ -850,7 +852,7 @@
      (-> sym name (.substring 1) munge)
      (-> sym name munge))))
 
-(defn classify-sub
+(defn- classify-sub
   [e]
   (cond (property-symbol? e) ::property
         (symbol? e)          ::symbol
@@ -860,12 +862,14 @@
 
 (defmulti build-dot-form #(map classify-sub %))
 
-;;   "Handles the dot accessors of (.-p o) and (. o -p)"
+;; (.-p o)
+;; (. o -p)
 (defmethod build-dot-form [::symbol ::property ()]
   [[target prop _]]
   {:dot-action ::access :target target :field (clean-symbol prop)})
 
-;;   "Handles the error dot accessors of (.-p o <args>) and (. o -p <args>)"
+;; (.-p o <args>)
+;; (. o -p <args>)
 (defmethod build-dot-form [::symbol ::property ::list]
   [[target prop args]]
   (throw (Error. (str "Cannot provide arguments " args " on property access " prop))))
@@ -898,19 +902,12 @@
 
 (defmethod parse '.
   [_ env [_ target & [field & member+]] _]
-  (when (and (symbol? (first member+)) (nil? (next member+)))
-    (debug-prn (str "WARNING: It looks like you're trying to use an deprecated property access")))
-  
   (disallowing-recur
-   (let [{action :dot-action
-          target :target
-          method :method
-          field  :field
-          args   :args}       (build-dot-form [target field member+])
-         enve                 (assoc env :context :expr)
-         targetexpr           (analyze enve target)
-         children             [enve]]
-     (case action
+   (let [{:keys [dot-action target method field args]} (build-dot-form [target field member+])
+         enve        (assoc env :context :expr)
+         targetexpr  (analyze enve target)
+         children    [enve]]
+     (case dot-action
            ::access {:env env :op :dot :children children
                      :target targetexpr
                      :field field}
@@ -919,8 +916,6 @@
                        :target targetexpr
                        :method method
                        :args argexprs})))))
-
-;; (def o (js* "{foo : 42, bar : function() { return 108 }}"))
 
 (defmethod parse 'js*
   [op env [_ form & args] _]

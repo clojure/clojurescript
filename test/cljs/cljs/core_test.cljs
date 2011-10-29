@@ -296,8 +296,8 @@
   (assert (= 1 (min 1 2 3 4 5)))
   (assert (= 0.5 (min 5 4 3 0.5 2 1)))
   (let [x (array 1 2 3)]
-    (set! (.foo x) :hello)
-    (assert (= (.foo x) :hello)))
+    (set! (.-foo x) :hello)
+    (assert (= (.-foo x) :hello)))
 
   (assert (set []))
   (assert (= #{} (set [])))
