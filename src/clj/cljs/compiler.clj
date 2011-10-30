@@ -876,7 +876,9 @@
 
 (defn- build-method-call
   [target meth args]
-  {:dot-action ::call :target target :method (munge meth) :args args})
+  (if (symbol? meth)
+    {:dot-action ::call :target target :method (munge meth) :args args}
+    {:dot-action ::call :target target :method (munge (first meth)) :args args}))
 
 ;; (.m o 1 2)
 ;; (. o m 1 2)
@@ -896,9 +898,19 @@
   [[target [meth & args] _]]
   (build-method-call target meth args))
 
+;; (. (. ...))
+(defmethod build-dot-form [::list ::list ()]
+  [[target meth _]]
+  (build-method-call target meth ()))
+
+;; (.m (f _) 1 2)
+(defmethod build-dot-form [::list ::symbol ::list]
+  [[target meth args]]
+  (build-method-call target meth args))
+
 (defmethod build-dot-form :default
   [dot-form]
-  (throw (Error. (str "Unknown dot form of " dot-form))))
+  (throw (Error. (str "Unknown dot form of " dot-form " with cassification " (vec (map classify-sub dot-form))))))
 
 (defmethod parse '.
   [_ env [_ target & [field & member+]] _]
