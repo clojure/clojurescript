@@ -875,6 +875,8 @@
   (throw (Error. (str "Cannot provide arguments " args " on property access " prop))))
 
 (defn- build-method-call
+  "Builds the intermediate method call map used to reason about the parsed form during
+  compilation."
   [target meth args]
   (if (symbol? meth)
     {:dot-action ::call :target target :method (munge meth) :args args}
