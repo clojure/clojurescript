@@ -609,7 +609,7 @@ reduces them without incurring seq initialization"
   (js* "(void 0 === ~{x})"))
 
 (defn instance? [t o]
-  (js* "(~{o} instanceof ~{t})"))
+  (js* "((~{o} instanceof ~{t}) || (~{o}.constructor === t))"))
 
 (defn seq?
   "Return true if s satisfies ISeq"
