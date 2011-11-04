@@ -862,6 +862,12 @@
 
 (defmulti build-dot-form #(map classify-sub %))
 
+;; (.-p (...))
+;; (. (...) -p)
+(defmethod build-dot-form [::list ::property ()]
+  [[target prop _]]
+  {:dot-action ::access :target target :field (clean-symbol prop)})
+
 ;; (.-p o)
 ;; (. o -p)
 (defmethod build-dot-form [::symbol ::property ()]
