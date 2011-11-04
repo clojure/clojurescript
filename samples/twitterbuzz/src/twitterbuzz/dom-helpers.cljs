@@ -31,7 +31,7 @@
     (doto e (dom/setTextContent s))))
 
 (defn normalize-args [tag args]
-  (let [parts (string/split tag #"(\.|#)")
+  (let [parts (string/split (name tag) #"(\.|#)")
         [tag attrs] [(first parts)
                      (apply hash-map (map #(cond (= % ".") :class
                                                  (= % "#") :id
