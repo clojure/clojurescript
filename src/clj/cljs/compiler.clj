@@ -122,10 +122,10 @@
     {:name (js-var sym)}
     (let [s (str sym)
           lb (-> env :locals sym)
-          nm 
+          nm
           (cond
            lb (:name lb)
-         
+
            (namespace sym)
            (let [ns (namespace sym)
                  ns (if (= "clojure.core" ns) "cljs.core" ns)]
@@ -463,7 +463,7 @@
           (print (str "catch (" name "){"))
           (when catch
             (let [{:keys [statements ret]} catch]
-              (emit-block subcontext statements ret)))      
+              (emit-block subcontext statements ret)))
           (print "}"))
         (when finally
           (let [{:keys [statements ret]} finally]
@@ -603,7 +603,7 @@
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name]
-  (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test)) 
+  (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
         then-expr (analyze env then)
         else-expr (analyze env else)]
     {:env env :op :if :form form
@@ -685,7 +685,7 @@
         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
         block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                 (analyze-block (assoc env :context :return :locals locals) body))]
-    
+
     (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block)))
 
 (defmethod parse 'fn*
@@ -864,7 +864,6 @@
          :default    ::expr)])
 
 (defmulti build-dot-form #(classify-dot-form %))
-
 
 ;; (. o -p)
 ;; (. (...) -p)
@@ -1144,7 +1143,7 @@
    Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
    If the file was not compiled returns only {:file ...}"
   ([src]
-     (let [dest (rename-to-js src)] 
+     (let [dest (rename-to-js src)]
        (compile-file src dest)))
   ([src dest]
      (let [src-file (io/file src)
@@ -1270,7 +1269,7 @@
 (deftype Foo [a] IMeta (-meta [_] (fn [] a)))
 ((-meta (Foo. 42)))
 
-;;OLD way, don't you want to use the REPL? 
+;;OLD way, don't you want to use the REPL?
 (in-ns 'cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))
