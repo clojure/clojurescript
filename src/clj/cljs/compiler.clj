@@ -122,10 +122,10 @@
     {:name (js-var sym)}
     (let [s (str sym)
           lb (-> env :locals sym)
-          nm 
+          nm
           (cond
            lb (:name lb)
-         
+
            (namespace sym)
            (let [ns (namespace sym)
                  ns (if (= "clojure.core" ns) "cljs.core" ns)]
@@ -463,7 +463,7 @@
           (print (str "catch (" name "){"))
           (when catch
             (let [{:keys [statements ret]} catch]
-              (emit-block subcontext statements ret)))      
+              (emit-block subcontext statements ret)))
           (print "}"))
         (when finally
           (let [{:keys [statements ret]} finally]
@@ -603,7 +603,7 @@
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name]
-  (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test)) 
+  (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
         then-expr (analyze env then)
         else-expr (analyze env else)]
     {:env env :op :if :form form
@@ -685,7 +685,7 @@
         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
         block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                 (analyze-block (assoc env :context :return :locals locals) body))]
-    
+
     (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block)))
 
 (defmethod parse 'fn*
@@ -852,31 +852,27 @@
      (-> sym name (.substring 1) munge)
      (-> sym name munge))))
 
-(defn- classify-sub
-  [e]
-  (cond (property-symbol? e) ::property
-        (symbol? e)          ::symbol
-        (seq? e)             ::list
-        (nil? e)             ()
-        :default             ::unknown))
+(defn- classify-dot-form
+  [[target member args]]
+  [(cond (nil? target) ::error
+         :default      ::expr)
+   (cond (property-symbol? member) ::property
+         (symbol? member)          ::symbol    
+         (seq? member)             ::list
+         :default                  ::error)
+   (cond (nil? args) ()
+         :default    ::expr)])
 
-(defmulti build-dot-form #(map classify-sub %))
+(defmulti build-dot-form #(classify-dot-form %))
 
-;; (.-p (...))
-;; (. (...) -p)
-(defmethod build-dot-form [::list ::property ()]
-  [[target prop _]]
-  {:dot-action ::access :target target :field (clean-symbol prop)})
-
-;; (.-p o)
 ;; (. o -p)
-(defmethod build-dot-form [::symbol ::property ()]
+;; (. (...) -p)
+(defmethod build-dot-form [::expr ::property ()]
   [[target prop _]]
   {:dot-action ::access :target target :field (clean-symbol prop)})
 
-;; (.-p o <args>)
 ;; (. o -p <args>)
-(defmethod build-dot-form [::symbol ::property ::list]
+(defmethod build-dot-form [::expr ::property ::list]
   [[target prop args]]
   (throw (Error. (str "Cannot provide arguments " args " on property access " prop))))
 
@@ -888,37 +884,27 @@
     {:dot-action ::call :target target :method (munge meth) :args args}
     {:dot-action ::call :target target :method (munge (first meth)) :args args}))
 
-;; (.m o 1 2)
 ;; (. o m 1 2)
-(defmethod build-dot-form [::symbol ::symbol ::list]
+(defmethod build-dot-form [::expr ::symbol ::expr]
   [[target meth args]]
   (build-method-call target meth args))
 
-;; (.m o)
 ;; (. o m)
-(defmethod build-dot-form [::symbol ::symbol ()]
+(defmethod build-dot-form [::expr ::symbol ()]
   [[target meth args]]
   (build-method-call target meth args))
 
 ;; (. o (m))
 ;; (. o (m 1 2))
-(defmethod build-dot-form [::symbol ::list ()]
-  [[target [meth & args] _]]
-  (build-method-call target meth args))
-
 ;; (. (. ...))
-(defmethod build-dot-form [::list ::list ()]
+;; (. (f _) m 1 2)
+(defmethod build-dot-form [::expr ::list ()]
   [[target meth _]]
   (build-method-call target meth ()))
 
-;; (.m (f _) 1 2)
-(defmethod build-dot-form [::list ::symbol ::list]
-  [[target meth args]]
-  (build-method-call target meth args))
-
 (defmethod build-dot-form :default
   [dot-form]
-  (throw (Error. (str "Unknown dot form of " dot-form " with cassification " (vec (map classify-sub dot-form))))))
+  (throw (Error. (str "Unknown dot form of " (list* '. dot-form) " with classification " (classify-dot-form dot-form)))))
 
 (defmethod parse '.
   [_ env [_ target & [field & member+]] _]
@@ -1157,7 +1143,7 @@
    Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
    If the file was not compiled returns only {:file ...}"
   ([src]
-     (let [dest (rename-to-js src)] 
+     (let [dest (rename-to-js src)]
        (compile-file src dest)))
   ([src dest]
      (let [src-file (io/file src)
@@ -1283,7 +1269,7 @@
 (deftype Foo [a] IMeta (-meta [_] (fn [] a)))
 ((-meta (Foo. 42)))
 
-;;OLD way, don't you want to use the REPL? 
+;;OLD way, don't you want to use the REPL?
 (in-ns 'cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))

@@ -726,5 +726,22 @@
   (assert (= (assoc fred :lastname "Flintstone") {:firstname "Fred" :lastname "Flintstone"}))
   (assert (= (assoc fred :wife :ethel) {:firstname "Fred" :lastname "Mertz" :wife :ethel}))
   (assert (= (dissoc ethel :husband) {:firstname "Ethel" :lastname "Mertz"}))
+
+  ;; dot
+  (let [s "abc"]
+    (assert (= 3 (.-length s)))
+    (assert (= 3 (. s -length)))
+    (assert (= 3 (. (str 138) -length)))
+    (assert (= 3 (. "abc" -length)))
+    (assert (= "bc" (.substring s 1)))
+    (assert (= "bc" (.substring "abc" 1)))
+    (assert (= "bc" (. s substring 1)))
+    (assert (= "bc" (. s (substring 1))))
+    (assert (= "bc" (. s (substring 1 3))))
+    (assert (= "bc" (.substring s 1 3)))
+    (assert (= "ABC" (. s (toUpperCase))))
+    (assert (= "ABC" (. "abc" (toUpperCase))))
+    (assert (= "BC" (. (.toUpperCase s) substring 1)))
+    (assert (= 3 (.-length (. (.toUpperCase s) substring 1)))))
   
   :ok)
