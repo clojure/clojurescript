@@ -726,5 +726,14 @@
   (assert (= (assoc fred :lastname "Flintstone") {:firstname "Fred" :lastname "Flintstone"}))
   (assert (= (assoc fred :wife :ethel) {:firstname "Fred" :lastname "Mertz" :wife :ethel}))
   (assert (= (dissoc ethel :husband) {:firstname "Ethel" :lastname "Mertz"}))
+
+  (assert (instance? js/Object 1))
+  (assert (instance? js/Number 1))
+  (assert (instance? js/Object "foo"))
+  (assert (instance? js/String "foo"))
+  (assert (instance? js/Object (array)))
+  (assert (instance? js/Array (array)))
+  (assert (instance? js/Object (fn [])))
+  (assert (instance? js/Function (fn [])))
   
   :ok)
