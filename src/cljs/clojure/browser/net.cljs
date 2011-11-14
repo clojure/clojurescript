@@ -133,8 +133,9 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   ([config]
      (goog.net.xpc.CrossPageChannel.
       (.-strobj (reduce (fn [sum [k v]]
-                         (when-let [field (get xpc-config-fields k)]
-                           (assoc sum field v)))
+                          (if-let [field (get xpc-config-fields k)]
+                            (assoc sum field v)
+                            sum))
                        {}
                        config)))))
 
