@@ -2841,7 +2841,7 @@ reduces them without incurring seq initialization"
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
   [a new-value]
-  (when-let [validate (.validator a)]
+  (when-let [validate (.-validator a)]
     (assert (validate new-value) "Validator rejected reference state"))
   (let [old-value (.-state a)]
     (set! (.-state a) new-value)

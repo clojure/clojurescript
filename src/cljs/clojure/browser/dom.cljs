@@ -41,7 +41,7 @@
     ([this attrs children]
        (log "string (-element " this " " attrs " " children ")")
        (let [str-attrs (if (and (map? attrs) (seq attrs))
-                         (.strobj (reduce (fn [m [k v]]
+                         (.-strobj (reduce (fn [m [k v]]
                                             (log "m = " m)
                                             (log "k = " k)
                                             (log "v = " v)

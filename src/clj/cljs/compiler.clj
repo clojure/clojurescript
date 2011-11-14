@@ -896,11 +896,9 @@
 
 ;; (. o (m))
 ;; (. o (m 1 2))
-;; (. (. ...))
-;; (. (f _) m 1 2)
 (defmethod build-dot-form [::expr ::list ()]
-  [[target meth _]]
-  (build-method-call target meth ()))
+  [[target meth-expr _]]
+  (build-method-call target (first meth-expr) (rest meth-expr)))
 
 (defmethod build-dot-form :default
   [dot-form]
