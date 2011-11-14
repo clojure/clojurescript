@@ -1336,7 +1336,7 @@ reduces them without incurring seq initialization"
   First cut.  Not lazy.  Needs to use emitted toApply."
   ([f args]
      (let [fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+       (if (. f -cljs$lang$applyTo)
          (if (<= (bounded-count args (inc fixed-arity))
                  fixed-arity)
            (. f apply f (to-array args))
@@ -1345,7 +1345,7 @@ reduces them without incurring seq initialization"
   ([f x args]
      (let [arglist (list* x args)
            fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+       (if (. f -cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
@@ -1354,7 +1354,7 @@ reduces them without incurring seq initialization"
   ([f x y args]
      (let [arglist (list* x y args)
            fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+       (if (. f -cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
@@ -1363,7 +1363,7 @@ reduces them without incurring seq initialization"
   ([f x y z args]
      (let [arglist (list* x y z args)
            fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+       (if (. f -cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
@@ -1372,7 +1372,7 @@ reduces them without incurring seq initialization"
   ([f a b c d & args]
      (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+       (if (. f -cljs$lang$applyTo)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
            (. f apply f (to-array arglist))
