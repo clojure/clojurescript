@@ -248,7 +248,7 @@ nil if the end of stream has been reached")
   (let [token (read-token reader initch)]
     (if (gstring/contains token "/")
       (symbol (subs token 0 (.indexOf token "/"))
-              (subs (inc (.indexOf token "/")) (.length token)))
+              (subs (inc (.indexOf token "/")) (.-length token)))
       (get special-symbols token (symbol token)))))
 
 (defn read-keyword
@@ -256,8 +256,8 @@ nil if the end of stream has been reached")
   (let [token (read-token reader (read-char reader))
         [token ns name] (re-matches symbol-pattern token)]
     (if (or (and (not (undefined? ns))
-                 (identical? (. ns (substring (- (.length ns) 2) (.length ns))) ":/"))
-            (identical? (aget name (dec (.length name))) ":")
+                 (identical? (. ns (substring (- (.-length ns) 2) (.-length ns))) ":/"))
+            (identical? (aget name (dec (.-length name))) ":")
             (not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
       (if (not (undefined? ns))

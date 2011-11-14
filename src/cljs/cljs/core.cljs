@@ -1335,49 +1335,49 @@ reduces them without incurring seq initialization"
   "Applies fn f to the argument list formed by prepending intervening arguments to args.
   First cut.  Not lazy.  Needs to use emitted toApply."
   ([f args]
-     (let [fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+     (let [fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count args (inc fixed-arity))
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f cljs$lang$applyTo args))
-         (. f apply f (to-array args)))))
+           (.apply f f (to-array args))
+           (.cljs$lang$applyTo f args))
+         (.apply f f (to-array args)))))
   ([f x args]
      (let [arglist (list* x args)
-           fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+          fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist)))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist)))))
   ([f x y args]
      (let [arglist (list* x y args)
-           fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+           fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist)))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist)))))
   ([f x y z args]
      (let [arglist (list* x y z args)
-           fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+           fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist)))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist)))))
   ([f a b c d & args]
      (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
-           fixed-arity (. f -cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+           fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist))))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist))))))
 
 (defn vary-meta
  "Returns an object of the same type and value as obj, with

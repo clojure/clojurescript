@@ -742,6 +742,6 @@
     (assert (= "ABC" (. s (toUpperCase))))
     (assert (= "ABC" (. "abc" (toUpperCase))))
     (assert (= "BC" (. (.toUpperCase s) substring 1)))
-    (assert (= 3 (.-length (. (.toUpperCase s) substring 1)))))
+    (assert (= 2 (.-length (. (.toUpperCase s) substring 1)))))
   
   :ok)
