@@ -1,5 +1,19 @@
 #!/bin/sh
 
+set -e
+
+if ! which curl 2>/dev/null 1>&2; then
+    echo "Could not find the curl command"
+    echo "Please install the curl package"
+    exit 1
+fi
+
+if ! which jar 2>/dev/null 1>&2; then
+    echo "Could not find the jar command"
+    echo "Please install the Sun Java package"
+    exit 1
+fi
+
 mkdir -p lib
 
 echo "Fetching Clojure..."
