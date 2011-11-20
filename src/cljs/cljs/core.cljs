@@ -463,9 +463,9 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (-nth coll n))
+     (-nth coll (.floor js/Math n)))
   ([coll n not-found]
-     (-nth coll n not-found)))
+     (-nth coll (.floor js/Math n) not-found)))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
