@@ -244,12 +244,18 @@
                                          []
                                          (group-by first (take-while seq? (next s))))))
                             (drop-while seq? (next s)))
-                     ret)))]
+                     ret)))
+        r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))]
     (if (seq impls)
       `(do
          (deftype* ~t ~fields)
-         (extend-type ~t ~@(dt->et impls)))
-      `(deftype* ~t ~fields))))
+         (set! (.-name ~t) ~(str r))
+         (extend-type ~t ~@(dt->et impls))
+         (cljs.core/Type. ~t))
+      `(do
+         (deftype* ~t ~fields)
+         (set! (.-name ~t) ~(str r))
+         (cljs.core/Type. ~t)))))
 
 (defn- emit-defrecord
    "Do not use this directly - use defrecord"
@@ -354,7 +360,9 @@
     `(let []
        ~(emit-defrecord rsym r fields impls)
        ~(build-positional-factory rsym r fields)
-       ~(build-map-factory rsym r fields))))
+       ~(build-map-factory rsym r fields)
+       (set! (.-name ~rsym) ~(str r))
+       (cljs.core/Type. ~rsym))))
 
 (defmacro defprotocol [psym & doc+methods]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
