@@ -203,7 +203,7 @@
       (let [t (base-type tsym)
             assign-impls (fn [[p sigs]]
                            (let [psym (resolve p)
-				 pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
+                                 pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths]]
                                           `(aset ~(symbol (str pfn-prefix f)) ~t (fn* ~@meths)))
@@ -213,19 +213,22 @@
             prototype-prefix (str t ".prototype.")
             assign-impls (fn [[p sigs]]
                            (let [psym (resolve p)
-				 pprefix (protocol-prefix psym)]
-			     (if (= p 'Object)
-			       (let [adapt-params (fn [[sig & body]]
-						    (let [[tname & args] sig]
-						      (list (with-meta (vec args) (meta sig))
-							    (list* 'this-as tname body))))]
-				 (map (fn [[f & meths]]
-					`(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
-				      sigs))
-			       (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
-				     (map (fn [[f & meths]]
-					    `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
-					  sigs)))))]
+                                 pprefix (protocol-prefix psym)]
+                             (if (= p 'Object)
+                               (let [adapt-params (fn [[sig & body]]
+                                                    (let [[tname & args] sig]
+                                                      (list (with-meta (vec args) (meta sig))
+                                                            (list* 'this-as tname body))))]
+                                 (map (fn [[f & meths]]
+                                        `(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
+                                      sigs))
+                               (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
+                                     (map (fn [[f & meths]]
+                                            (let [pf (if (= p 'cljs.core.IFn)
+                                                       (str prototype-prefix 'call)
+                                                       (str prototype-prefix pprefix f))]
+                                              `(set! ~(symbol pf) (fn* ~@meths))))
+                                          sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
 (defmacro deftype [t fields & impls]
