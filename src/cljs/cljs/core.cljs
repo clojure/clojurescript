@@ -192,7 +192,7 @@
     (list (let [n (.name c)]
             (if (and n (> (.length n) 0))
               n
-              (.-name c))))))
+              (.-cljs-type c))))))
 
 (defn type [x]
   (Type. (js* "(~{x}).constructor")))

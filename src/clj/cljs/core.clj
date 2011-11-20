@@ -249,12 +249,12 @@
     (if (seq impls)
       `(do
          (deftype* ~t ~fields)
-         (set! (.-name ~t) ~(str r))
+         (set! (.-cljs-type ~t) ~(str r))
          (extend-type ~t ~@(dt->et impls))
          (cljs.core/Type. ~t))
       `(do
          (deftype* ~t ~fields)
-         (set! (.-name ~t) ~(str r))
+         (set! (.-cljs-type ~t) ~(str r))
          (cljs.core/Type. ~t)))))
 
 (defn- emit-defrecord
@@ -361,7 +361,7 @@
        ~(emit-defrecord rsym r fields impls)
        ~(build-positional-factory rsym r fields)
        ~(build-map-factory rsym r fields)
-       (set! (.-name ~rsym) ~(str r))
+       (set! (.-cljs-type ~rsym) ~(str r))
        (cljs.core/Type. ~rsym))))
 
 (defmacro defprotocol [psym & doc+methods]
