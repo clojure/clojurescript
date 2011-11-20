@@ -254,13 +254,14 @@ nil if the end of stream has been reached")
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
-        [token ns name] (re-matches symbol-pattern token)]
-    (if (or (and (not (undefined? ns))
+        [token ns name] (re-matches symbol-pattern token)
+        ns? (and (not (undefined? ns)) (> (.length ns) 0))]
+    (if (or (and ns?
                  (identical? (. ns (substring (- (.length ns) 2) (.length ns))) ":/"))
             (identical? (aget name (dec (.length name))) ":")
             (not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
-      (if (not (undefined? ns))
+      (if ns?
         (keyword (.substring ns 0 (.indexOf ns "/")) name)
         (keyword token)))))
 
