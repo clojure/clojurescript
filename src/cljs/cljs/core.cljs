@@ -186,7 +186,7 @@
 (extend-type js/Function
   IPrintable
   (-pr-seq [this]
-    (list (.name this))))
+    (list "#<" (str this) ">")))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
