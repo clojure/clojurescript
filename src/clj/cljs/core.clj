@@ -386,7 +386,7 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (and x# (. x# ~(symbol prefix)))
+       (if (and x# (. x# ~(symbol prefix)) (not (cljs.core/is_proto_ x#)))
          true
          (cljs.core/type_satisfies_ ~psym x#)))))
 

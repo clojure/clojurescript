@@ -45,6 +45,10 @@
    (aget p "_")
    false))
 
+(defn is_proto_
+  [x]
+  (js* "(~{x}).constructor.prototype === ~{x}"))
+
 (def
   ^{:doc "When compiled for a command-line target, whatever
   function *main-fn* is set to will be called with the command-line
