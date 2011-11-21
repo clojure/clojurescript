@@ -180,29 +180,13 @@
   "Returns true if x is nil, false otherwise."
   (identical? x nil))
 
-(deftype Type [c]
-  IEquiv
-  (-equiv [this that]
-    (cond
-     (instance? Type that) (identical? (.c this) (.c that))
-     (fn? that) (identical? c that)
-     :else false))
-  IPrintable
-  (-pr-seq []
-    (list (let [n (.name c)]
-            (if (and n (> (.length n) 0))
-              n
-              (.-cljs-type c))))))
-
 (defn type [x]
-  (Type. (js* "(~{x}).constructor")))
+  (js* "(~{x}).constructor"))
 
 (extend-type js/Function
-  IEquiv
-  (-equiv [this that]
-    (if (instance? Type that)
-      (identical? this (.c that))
-      (identical? this that))))
+  IPrintable
+  (-pr-seq [this]
+    (list (.name this))))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
