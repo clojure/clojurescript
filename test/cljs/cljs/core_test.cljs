@@ -22,6 +22,7 @@
 
   (assert (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
   (assert (= :a (nth [:a :b :c :d] 0)))
+  (assert (= :a (nth [:a :b :c :d] 0.1)) )
   (assert (not (= {:a :b :c nil} {:a :b :d nil})))
   (assert (= (list 3 2 1) [3 2 1]))
   (assert (= [3 2 1] (seq (array 3 2 1))))
@@ -709,23 +710,19 @@
   (defrecord Person [firstname lastname])
   (def fred (Person. "Fred" "Mertz"))
   (assert (= (:firstname fred) "Fred"))
-  (assert (= fred {:firstname "Fred" :lastname "Mertz"}))
+  (def fred-too (Person. "Fred" "Mertz"))
+  (assert (= fred fred-too))
 
   (def ethel (Person. "Ethel" "Mertz" {:married true} {:husband :fred}))
   (assert (= (meta ethel) {:married true}))
-  (assert (= ethel {:firstname "Ethel" :lastname "Mertz" :husband :fred}))
+  (def ethel-too (Person. "Ethel" "Mertz" {:married true} {:husband :fred}))
+  (assert (= ethel ethel-too))
 
   (assert (= (map->Person {:firstname "Fred" :lastname "Mertz"}) fred))
   (assert (= (->Person "Fred" "Mertz") fred))
 
   (assert (= (count fred) 2))
   (assert (= (count ethel) 3))
-
-  (assert (= (conj fred {:wife :ethel :friend :ricky}) {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky}))
-  (assert (= (conj fred {:lastname "Flintstone"}) {:firstname "Fred" :lastname "Flintstone"}))
-  (assert (= (assoc fred :lastname "Flintstone") {:firstname "Fred" :lastname "Flintstone"}))
-  (assert (= (assoc fred :wife :ethel) {:firstname "Fred" :lastname "Mertz" :wife :ethel}))
-  (assert (= (dissoc ethel :husband) {:firstname "Ethel" :lastname "Mertz"}))
 
   ;; dot
   (let [s "abc"]
@@ -743,5 +740,29 @@
     (assert (= "ABC" (. "abc" (toUpperCase))))
     (assert (= "BC" (. (.toUpperCase s) substring 1)))
     (assert (= 2 (.-length (. (.toUpperCase s) substring 1)))))
+
+  (assert (= (conj fred {:wife :ethel :friend :ricky})
+             (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky})))
+  (assert (= (conj fred {:lastname "Flintstone"})
+             (map->Person {:firstname "Fred" :lastname "Flintstone"})))
+  (assert (= (assoc fred :lastname "Flintstone")
+             (map->Person {:firstname "Fred" :lastname "Flintstone"})))
+  (assert (= (assoc fred :wife :ethel)
+             (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel})))
+  (assert (= (dissoc ethel :husband)
+             (map->Person {:firstname "Ethel" :lastname "Mertz"})))
   
+  (defrecord A [x])
+  (defrecord B [x])
+  (assert (not= (A. nil) (B. nil)))
+
+  (assert (instance? js/Object 1))
+  (assert (instance? js/Number 1))
+  (assert (instance? js/Object "foo"))
+  (assert (instance? js/String "foo"))
+  (assert (instance? js/Object (array)))
+  (assert (instance? js/Array (array)))
+  (assert (instance? js/Object (fn [])))
+  (assert (instance? js/Function (fn [])))
+
   :ok)

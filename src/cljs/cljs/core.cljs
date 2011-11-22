@@ -45,6 +45,10 @@
    (aget p "_")
    false))
 
+(defn is_proto_
+  [x]
+  (js* "(~{x}).constructor.prototype === ~{x}"))
+
 (def
   ^{:doc "When compiled for a command-line target, whatever
   function *main-fn* is set to will be called with the command-line
@@ -463,9 +467,9 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (-nth coll n))
+     (-nth coll (.floor js/Math n)))
   ([coll n not-found]
-     (-nth coll n not-found)))
+     (-nth coll (.floor js/Math n) not-found)))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
@@ -609,7 +613,7 @@ reduces them without incurring seq initialization"
   (js* "(void 0 === ~{x})"))
 
 (defn instance? [t o]
-  (js* "(~{o} instanceof ~{t})"))
+  (js* "(~{o} != null && (~{o} instanceof ~{t} || ~{o}.constructor === ~{t} || ~{t} === Object))"))
 
 (defn seq?
   "Return true if s satisfies ISeq"

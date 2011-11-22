@@ -260,7 +260,7 @@ nil if the end of stream has been reached")
             (identical? (aget name (dec (.-length name))) ":")
             (not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
-      (if (not (undefined? ns))
+      (if ns?
         (keyword (.substring ns 0 (.indexOf ns "/")) name)
         (keyword token)))))
 

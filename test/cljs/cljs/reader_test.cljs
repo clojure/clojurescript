@@ -19,6 +19,7 @@
   (assert (= {:tag 'String} (meta (reader/read-string "^String {:a 1}"))))
   (assert (= [:a 'b #{'c {:d [:e :f :g]}}]
                (reader/read-string "[:a b #{c {:d [:e :f :g]}}]")))
+  (assert (= :foo/bar (reader/read-string ":foo/bar")))
   (assert (= nil (reader/read-string "nil")))
   (assert (= true (reader/read-string "true")))
   (assert (= false (reader/read-string "false")))
