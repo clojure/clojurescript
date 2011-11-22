@@ -99,15 +99,17 @@ nil if the end of stream has been reached")
 
 (defn- match-int
   [s]
-  (let [groups (re-find int-pattern s)]
-    (if (nth groups 2)
+  (let [groups (re-find int-pattern s)
+        group3 (nth groups 2)]
+    (if (not (or (undefined? group3)
+                 (< (.length group3) 1)))
       0
-      (let [negate (if (= "-" (nth groups 1)) -1 1) 
+      (let [negate (if (= "-" (nth groups 1)) -1 1)
             [n radix] (cond
                        (nth groups 3) [(nth groups 3) 10]
                        (nth groups 4) [(nth groups 4) 16]
                        (nth groups 5) [(nth groups 5) 8]
-                       (nth groups 7) [(nth groups 7) (js/parseInt (nth groups 7))] 
+                       (nth groups 7) [(nth groups 7) (js/parseInt (nth groups 7))]
                        :default [nil nil])]
         (if (nil? n)
           nil
