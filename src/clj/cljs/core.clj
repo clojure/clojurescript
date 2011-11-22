@@ -282,8 +282,8 @@
 		  `(~'-hash [this#] (hash-coll this#))
 		  'IEquiv
 		  `(~'-equiv [this# other#]
-         (and (identical? (.constructor this#) ;; TODO: change for prop lookup
-                          (.constructor other#))
+         (and (identical? (.-constructor this#)
+                          (.-constructor other#))
               (equiv-map this# other#)))
 		  'IMeta
 		  `(~'-meta [this#] ~'__meta)
