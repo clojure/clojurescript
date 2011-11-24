@@ -129,7 +129,7 @@
 (defn get-value
   "Get the value of an element."
   [e]
-  (.value (ensure-element e)))
+  (.-value (ensure-element e)))
 
 ;; TODO CSS class manipulation
 ;; TODO Query syntax

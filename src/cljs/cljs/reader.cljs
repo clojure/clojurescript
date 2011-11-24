@@ -102,7 +102,7 @@ nil if the end of stream has been reached")
   (let [groups (re-find int-pattern s)
         group3 (nth groups 2)]
     (if (not (or (undefined? group3)
-                 (< (.length group3) 1)))
+                 (< (.-length group3) 1)))
       0
       (let [negate (if (= "-" (nth groups 1)) -1 1)
             [n radix] (cond
