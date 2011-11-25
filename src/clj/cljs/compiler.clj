@@ -38,7 +38,7 @@
 
 (defmacro ^:private debug-prn
   [& args]
-  `(.println System/out (str ~@args)))
+  `(.println System/err (str ~@args)))
 
 (defn munge [s]
   (let [ss (str s)
@@ -892,6 +892,9 @@
 ;; (. o m)
 (defmethod build-dot-form [::expr ::symbol ()]
   [[target meth args]]
+  (debug-prn "WARNING: The form " (list '. target meth)
+             " is no longer a property access. Maybe you meant "
+             (list '. target (symbol (str '- meth))) " instead?")
   (build-method-call target meth args))
 
 ;; (. o (m))
