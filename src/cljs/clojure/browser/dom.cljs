@@ -131,5 +131,20 @@
   [e]
   (.value (ensure-element e)))
 
+(defn set-properties
+  "Set properties on an element"
+  [e m]
+  (gdom/setProperties (ensure-element e)
+                      (.strobj m)))
+
+(defn set-value
+  "Set the value property for an element."
+  [e v]
+  (set-properties e {"value" v}))
+
+(defn click-element
+  [e]
+  (.click (ensure-element e) ()))
+
 ;; TODO CSS class manipulation
 ;; TODO Query syntax
