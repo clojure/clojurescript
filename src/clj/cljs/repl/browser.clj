@@ -247,10 +247,9 @@
 (defn start-server
   "Start the server on the specified port."
   [opts]
-  (do (println "Starting Server on Port:" (:port opts))
-      (let [ss (ServerSocket. (:port opts))]
-        (future (server-loop opts ss))
-        (swap! server-state (fn [old] (assoc old :socket ss :port (:port opts)))))))
+  (let [ss (ServerSocket. (:port opts))]
+    (future (server-loop opts ss))
+    (swap! server-state (fn [old] (assoc old :socket ss :port (:port opts))))))
 
 (defn stop-server
   []
