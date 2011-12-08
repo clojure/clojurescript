@@ -706,6 +706,28 @@
   (assert (= (take 3 (range 1 0 0)) (list 1 1 1)))
   (assert (= (take 3 (range 3 1 0)) (list 3 3 3)))
 
+  ;; subvec
+  (let [v (vec (range 10))
+        s (subvec v 2 8)]
+    (assert (= s
+               (-> v
+                   (subvec 2)
+                   (subvec 0 6))
+               (->> v
+                    (drop 2)
+                    (take 6))))
+    (assert (= 6 (count s)))
+    (assert (= [2 3 4 5 6] (pop s)))
+    (assert (= 7 (peek s)))
+    (assert (= [2 3 4 5 6 7 1]
+               (assoc s 6 1)
+               (conj s 1)))
+    (assert (= 27 (reduce + s)))
+    (assert (= s (vec s))) ; pour into plain vector
+    (assert (= (str s (str (vec s)))))
+    (assert false)
+    (let [m {:x 1}] (assert (= m (meta (with-meta s m))))))
+
   ;; defrecord
   (defrecord Person [firstname lastname])
   (def fred (Person. "Fred" "Mertz"))

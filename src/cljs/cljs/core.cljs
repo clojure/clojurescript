@@ -1987,6 +1987,88 @@ reduces them without incurring seq initialization"
 
 (defn vector [& args] (vec args))
 
+(deftype Subvec [meta v start end]
+  IWithMeta
+  (-with-meta [coll meta] (Subvec. meta v start end))
+
+  IMeta
+  (-meta [coll] meta)
+
+  IStack
+  (-peek [coll]
+    (-nth v (dec end)))
+  (-pop [coll]
+    (if (= start end)
+      (throw (js/Error. "Can't pop empty vector"))
+      (Subvec. meta v start (dec end))))
+
+  ICollection
+  (-conj [coll o]
+    (Subvec. meta (-assoc-n v end o) start (inc end)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (let [subvec-seq (fn subvec-seq [i]
+                       (when-not (= i end)
+                         (cons (-nth v i)
+                               (lazy-seq
+                                (subvec-seq (inc i))))))]
+      (subvec-seq start)))
+
+  ICounted
+  (-count [coll] (- end start))
+
+  IIndexed
+  (-nth [coll n]
+    (-nth v (+ start n)))
+  (-nth [coll n not-found]
+    (-nth v (+ start n) not-found))
+
+  ILookup
+  (-lookup [coll k] (-nth coll k nil))
+  (-lookup [coll k not-found] (-nth coll k not-found))
+
+  IAssociative
+  (-assoc [coll key val]
+    (let [v-pos (+ start key)]
+      (Subvec. meta (-assoc v v-pos val)
+               start (max end (inc v-pos)))))
+
+  IVector
+  (-assoc-n [coll n val] (-assoc coll n val))
+
+  IReduce
+  (-reduce [coll f]
+    (ci-reduce coll f))
+  (-reduce [coll f start]
+    (ci-reduce coll f start)))
+
+(defn subvec
+  "Returns a persistent vector of the items in vector from
+  start (inclusive) to end (exclusive).  If end is not supplied,
+  defaults to (count vector). This operation is O(1) and very fast, as
+  the resulting vector shares structure with the original and no
+  trimming is done."
+  ([v start]
+     (subvec v start (count v)))
+  ([v start end]
+     (Subvec. nil v start end)))
+
+(set! cljs.core.Subvec.prototype.call
+      (fn
+        ([_ k] (-lookup (js* "this") k))
+        ([_ k not-found] (-lookup (js* "this") k not-found))))
+
 (deftype NeverEquiv []
   IEquiv
   (-equiv [o other] false))
@@ -2781,6 +2863,9 @@ reduces them without incurring seq initialization"
   (-pr-seq [coll opts] (list "()"))
 
   Vector
+  (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll))
+
+  Subvec
   (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll))
 
   ObjMap
