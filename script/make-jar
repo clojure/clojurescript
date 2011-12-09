@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -e
+
+ARCHIVE_NAME=`find . -name 'clojurescript*.zip'`
+PREFIX=${ARCHIVE_NAME:2:${#ARCHIVE_NAME}-6}
+JAR_NAME=$PREFIX.jar
+VERSION=${PREFIX:14}
+
+rm -rf temp
+mkdir temp
+cp $ARCHIVE_NAME temp
+cd temp
+
+unzip *.zip
+script/bootstrap
+
+jar -xvf lib/compiler.jar
+jar -xvf lib/goog.jar
+jar -xvf lib/js.jar
+
+jar cf ../$JAR_NAME -C src/clj cljs
+jar uf ../$JAR_NAME -C src/cljs cljs
+jar uf ../$JAR_NAME -C src/cljs clojure
+jar uf ../$JAR_NAME com goog org externs.zip javax rhino_ast
+
+cd ..
+rm -rf temp
+
+echo "<?xml version='1.0' encoding='UTF-8'?>
+<project xsi:schemaLocation='http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd' xmlns='http://maven.apache.org/POM/4.0.0'
+    xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
+   <modelVersion>4.0.0</modelVersion>
+   <groupId>clojurescript</groupId>
+   <artifactId>clojurescript</artifactId>
+   <version>$VERSION</version>
+</project>" > pom.xml
