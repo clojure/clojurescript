@@ -96,6 +96,8 @@
                        "</body></html>")
                   "text/html"))
 
+(defonce form-ids (atom 0))
+
 (defn send-for-eval
   "Given a form and a return value function, send the form to the
   browser for evaluation. The return value function will be called
@@ -104,7 +106,7 @@
      (send-for-eval @(connection) form return-value-fn))
   ([conn form return-value-fn]
      (do (set-return-value-fn return-value-fn)
-         (send-and-close conn 200 form "text/javascript"))))
+         (send-and-close conn 200 (pr-str {:id (swap! form-ids inc) :js form}) "text/javascript"))))
 
 (defn- return-value
   "Called by the server when a return value is received."

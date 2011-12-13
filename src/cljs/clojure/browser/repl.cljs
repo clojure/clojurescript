@@ -15,10 +15,27 @@
 
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.repl
-  (:require [clojure.browser.net   :as net]
+  (:require [cljs.reader :as reader]
+            [clojure.browser.net   :as net]
             [clojure.browser.event :as event]))
 
 (def xpc-connection (atom nil))
+(def ^{:doc "A unique identifier for this REPL client."}
+  client-id (atom nil))
+
+(defn set-client-id
+  "Accepts a unique identifier for this client and puts that value in
+  the client-id atom on both sides of the cross-page channel.
+
+  The value of client-id will be included in all messages sent back to
+  the REPL. See wrap-message. This can be used for keeping track of
+  multiple browsers connected to the same REPL."
+  [id]
+  (if-let [conn @xpc-connection]
+    (do (reset! client-id id)
+        (net/transmit conn :client-id (pr-str id))
+        true)
+    false))
 
 (defn repl-print [data]
   (if-let [conn @xpc-connection]
@@ -53,9 +70,21 @@
        (net/transmit conn url "POST" data nil 0))))
 
 (def order (atom 0))
+(def form-id (atom nil))
 
-(defn wrap-message [t data]
-  (pr-str {:type t :content data :order (swap! order inc)}))
+(defn wrap-message
+  "Accepts a type keyword and data and returns a serialized map with
+  additional, REPL specific, information.
+
+  The order of the result and the client-id are added to the
+  map. This function runs in the inner-frame of the cross-page
+  channel."
+  [t data]
+  (pr-str {:form-id @form-id
+           :client-id @client-id
+           :type t
+           :content data
+           :order (swap! order inc)}))
 
 (defn start-evaluator
   "Start the REPL server connection."
@@ -68,8 +97,9 @@
                       (net/transmit
                        repl-connection
                        :evaluate-javascript
-                       (.getResponseText e/currentTarget
-                                         ()))))
+                       (let [{:keys [id js]} (reader/read-string (.getResponseText e/currentTarget ()))]
+                         (reset! form-id id)
+                         js))))
 
       (net/register-service repl-connection
                             :send-result
@@ -80,6 +110,15 @@
                             :print
                             (fn [data]
                               (send-print url (wrap-message :print data))))
+
+      ;; Evaluating set-client-id in the host page will use the
+      ;; :client-id service to send the client-id from the host page
+      ;; to the inner-frame. It is required in the inner-frame so that
+      ;; it can be sent back to the REPL with each return value.
+      (net/register-service repl-connection
+                            :client-id
+                            (fn [data]
+                              (reset! client-id (js/parseInt data))))
       
       (net/connect repl-connection
                    (constantly nil))
