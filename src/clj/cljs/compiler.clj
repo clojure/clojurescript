@@ -662,7 +662,12 @@
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
-      (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
+      (swap! namespaces update-in [(-> env :ns :name) :defs sym]
+             (fn [m]
+               (let [m (assoc (or m {}) :name name)]
+                 (if-let [line (:line env)]
+                   (assoc m :line line)
+                   m))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when init-expr {:children [init-expr]})
@@ -828,13 +833,23 @@
 (defmethod parse 'deftype*
   [_ env [_ tsym fields] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
-    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
+           (fn [m]
+             (let [m (assoc (or m {}) :name t)]
+               (if-let [line (:line env)]
+                 (assoc m :line line)
+                 m))))
     {:env env :op :deftype* :t t :fields fields}))
 
 (defmethod parse 'defrecord*
   [_ env [_ tsym fields] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
-    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
+           (fn [m]
+             (let [m (assoc (or m {}) :name t)]
+               (if-let [line (:line env)]
+                 (assoc m :line line)
+                 m))))
     {:env env :op :defrecord* :t t :fields fields}))
 
 (defmethod parse '.
@@ -925,7 +940,9 @@
 
 (defn analyze-seq
   [env form name]
-  (let [env (assoc env :line (-> form meta :line))]
+  (let [env (assoc env :line
+                   (or (-> form meta :line)
+                       (:line env)))]
     (let [op (first form)]
       (assert (not (nil? op)) "Can't call nil")
       (let [mform (macroexpand-1 env form)]
