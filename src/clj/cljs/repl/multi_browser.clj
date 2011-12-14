@@ -181,7 +181,6 @@
   all results are received, pass them to the callback function. If the
   timeout is exceeded, only pass the received results."
   [form-id conn-count timeout return-value-fn]
-  #_(println "waiting for " conn-count " results for " form-id)
   (loop [timeout timeout
          return-values (get-return-values form-id)]
     (if (or (= conn-count (count return-values))
