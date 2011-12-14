@@ -319,26 +319,33 @@
        (apply str (interpose " && " (map #(str "goog.getObjectByName('" (name %) "')") ns)))
        "){true}else{false};"))
 
+(defn- load-javascript*
+  [ns url client-id]
+  (let [missing (remove #(contains? (get @loaded-libs client-id) %) ns)]
+    (when (seq missing)
+      (when-let [conn (get-client-connection client-id)]
+        (let [ret (browser-eval conn (object-query-str ns))
+              ret ((safe-read-string (:value ret)) client-id)]
+          (when-not (and (= (:status ret) :success)
+                         (= (:value ret) "true"))
+            (when-let [conn (get-client-connection client-id)]
+              (browser-eval conn (slurp url))))))
+      (swap! loaded-libs
+             (fn [old]
+               (let [ll (get old client-id)]
+                 (assoc old client-id (apply conj ll missing))))))))
+
 (defn load-javascript
   "Accepts a namespace and url (the JavaScript for this namespace) and
   ensures that the namespace is loaded in the browser. Does this
   for each actively connected browser."
   [ns url]
-  (let [connections (active-connections)]
-    (doseq [[client-id _] connections]
-      (let [missing (remove #(contains? (get @loaded-libs client-id) %) ns)]
-        (when (seq missing)
-          (when-let [conn (get-client-connection client-id)]
-            (let [ret (browser-eval conn (object-query-str ns))
-                  ret ((safe-read-string (:value ret)) client-id)]
-              (when-not (and (= (:status ret) :success)
-                             (= (:value ret) "true"))
-                (when-let [conn (get-client-connection client-id)]
-                  (browser-eval conn (slurp url))))))
-          (swap! loaded-libs
-                 (fn [old]
-                   (let [ll (get old client-id)]
-                     (assoc old client-id (apply conj ll missing))))))))))
+  (let [connections (active-connections)
+        futures (doall (map (fn [[client-id _]]
+                              (future (load-javascript* ns url client-id)))
+                            connections))]
+    (doseq [future futures]
+      @future)))
 
 (extend-protocol repl/IJavaScriptEnv
   clojure.lang.IPersistentMap
