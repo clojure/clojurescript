@@ -291,8 +291,8 @@
           (browser-eval (slurp url))))
       (swap! loaded-libs (partial apply conj) missing))))
 
-(extend-protocol repl/IJavaScriptEnv
-  clojure.lang.IPersistentMap
+(defrecord BrowserEnv [port optimizations working-dir]
+  repl/IJavaScriptEnv
   (-setup [this]
     (comp/with-core-cljs (start-server this)))
   (-evaluate [_ _ _ js] (browser-eval js))
@@ -320,7 +320,7 @@
     file))
 
 (defn repl-env [& {:as opts}]
-  (let [opts (merge {:port 9000 :optimizations :simple :working-dir ".repl"} opts)]
+  (let [opts (merge (BrowserEnv. 9000 :simple ".repl") opts)]
     (do (swap! server-state
                (fn [old] (assoc old :client-js
                                (future (create-client-js-file

@@ -134,8 +134,6 @@
     404 "HTTP/1.1 404 Not Found"
     "HTTP/1.1 500 Error"))
 
-;; Note: This version of the send-and-close function may work in
-;; cljs.repl.browser.clj.
 (defn send-and-close
   "Use the passed connection to send a form to the browser. Send a
   proper HTTP response."
@@ -351,8 +349,8 @@
     (doseq [future futures]
       @future)))
 
-(extend-protocol repl/IJavaScriptEnv
-  clojure.lang.IPersistentMap
+(defrecord MultiBrowserEnv [port optimizations working-dir]
+  repl/IJavaScriptEnv
   (-setup [this]
     (comp/with-core-cljs (start-server this)))
   (-evaluate [_ _ _ js] (browser-eval js))
@@ -362,7 +360,7 @@
         (reset! server-state {}))))
 
 (defn repl-env [& {:as opts}]
-  (let [opts (merge {:port 9000 :optimizations :simple :working-dir ".repl"} opts)]
+  (let [opts (merge (MultiBrowserEnv. 9000 :simple ".repl") opts)]
     (do (swap! server-state
                (fn [old] (assoc old :client-js
                                (future (create-client-js-file
