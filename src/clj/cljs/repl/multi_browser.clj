@@ -167,7 +167,13 @@
   "Accepts a map of client-ids to return values. Packs them as a
   proper REPL return value."
   [return-values]
-  {:status :success :value (pr-str return-values)})
+  (let [vals (map second return-values)]
+    (if (every? #{:exception} (map :status vals))
+      (second (first return-values))
+      (let [d (distinct vals)]
+        (if (= (count d) 1)
+          (first d)
+          {:status :success :value (pr-str return-values)})))))
 
 (defn- wait-for-return-values
   "Accepts a conn-count (the number of connections to wait for), a
@@ -270,8 +276,7 @@
     (if-let [request (read-request rdr)]
       (case (:method request)
         :get (handle-get opts conn request)
-        :post (do #_(println "new post " (:content request))
-                  (handle-post conn (safe-read-string (:content request))))
+        :post (handle-post conn (safe-read-string (:content request)))
         (.close conn))
       (.close conn))))
 
@@ -325,7 +330,7 @@
     (when (seq missing)
       (when-let [conn (get-client-connection client-id)]
         (let [ret (browser-eval conn (object-query-str ns))
-              ret ((safe-read-string (:value ret)) client-id)]
+              ret (safe-read-string (:value ret))]
           (when-not (and (= (:status ret) :success)
                          (= (:value ret) "true"))
             (when-let [conn (get-client-connection client-id)]
