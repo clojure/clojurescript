@@ -724,8 +724,6 @@
                (conj s 1)))
     (assert (= 27 (reduce + s)))
     (assert (= s (vec s))) ; pour into plain vector
-    (assert (= (str s (str (vec s)))))
-    (assert false)
     (let [m {:x 1}] (assert (= m (meta (with-meta s m))))))
 
   ;; defrecord
