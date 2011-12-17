@@ -1274,53 +1274,6 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll] (seq (lazy-seq-value coll))))
 
-;;; PersistentQueue ;;;
-
-(deftype PersistentQueue [meta count front rear]
-  IWithMeta
-  (-with-meta [coll meta] (PersistentQueue. meta count front rear))
-
-  IMeta
-  (-meta [coll] meta)
-
-  ISeq
-  (-first [coll] (first front))
-  (-rest [coll] (rest (seq coll)))
-
-  IStack
-  (-peek [coll] (-first front))
-  (-pop [coll]
-    (if front
-      (if-let [f1 (next front)]
-        (PersistentQueue. meta (dec count) f1 rear)
-        (PersistentQueue. meta (dec count) (seq rear) nil))
-      coll))
-
-  ICollection
-  (-conj [coll o]
-    (if front
-      (PersistentQueue. meta (inc count) front (conj (or rear []) o))
-      (PersistentQueue. meta (inc count) (conj front o) nil)))
-
-  IEmptyableCollection
-  (-empty [coll] cljs.core.PersistentQueue/EMPTY)
-
-  ISequential
-  IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
-
-  IHash
-  (-hash [coll] (hash-coll coll))
-
-  ISeqable
-  ; This is wrong, but quick
-  (-seq [coll] (concat front rear))
-
-  ICounted
-  (-count [coll] count))
-
-(set! cljs.core.PersistentQueue/EMPTY (PersistentQueue. nil 0 nil nil))
-
 ;;;;;;;;;;;;;;;;
 
 (defn to-array
@@ -2116,6 +2069,88 @@ reduces them without incurring seq initialization"
         ([_ k] (-lookup (js* "this") k))
         ([_ k not-found] (-lookup (js* "this") k not-found))))
 
+;;; PersistentQueue ;;;
+
+(deftype PersistentQueueSeq [meta front rear]
+  IWithMeta
+  (-with-meta [coll meta] (PersistentQueueSeq. meta front rear))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (-first front))
+  (-rest  [coll]
+    (if-let [f1 (next front)]
+      (PersistentQueueSeq. meta f1 rear)
+      (if (nil? rear)
+        (-empty coll)
+        (PersistentQueueSeq. meta rear nil))))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] coll))
+
+(deftype PersistentQueue [meta count front rear]
+  IWithMeta
+  (-with-meta [coll meta] (PersistentQueue. meta count front rear))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (first front))
+  (-rest [coll] (rest (seq coll)))
+
+  IStack
+  (-peek [coll] (-first front))
+  (-pop [coll]
+    (if front
+      (if-let [f1 (next front)]
+        (PersistentQueue. meta (dec count) f1 rear)
+        (PersistentQueue. meta (dec count) (seq rear) []))
+      coll))
+
+  ICollection
+  (-conj [coll o]
+    (if front
+      (PersistentQueue. meta (inc count) front (conj (or rear []) o))
+      (PersistentQueue. meta (inc count) (conj front o) [])))
+
+  IEmptyableCollection
+  (-empty [coll] cljs.core.PersistentQueue/EMPTY)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (let [rear (seq rear)]
+      (if (or front rear)
+        (PersistentQueueSeq. nil front (seq rear))
+        cljs.core.List/EMPTY)))
+
+  ICounted
+  (-count [coll] count))
+
+(set! cljs.core.PersistentQueue/EMPTY (PersistentQueue. nil 0 nil []))
+
 (deftype NeverEquiv []
   IEquiv
   (-equiv [o other] false))
@@ -2898,6 +2933,9 @@ reduces them without incurring seq initialization"
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
   IndexedSeq
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
+  PersistentQueueSeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
   List
