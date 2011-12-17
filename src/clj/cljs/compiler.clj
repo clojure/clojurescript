@@ -34,6 +34,7 @@
                             cljs.user {:name cljs.user}}))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
+(def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 
 (defn munge [s]
@@ -662,7 +663,14 @@
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
-      (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
+      (swap! namespaces update-in [(-> env :ns :name) :defs sym]
+             (fn [m]
+               (let [m (assoc (or m {}) :name name)]
+                 (if-let [line (:line env)]
+                   (-> m
+                       (assoc :file *cljs-file*)
+                       (assoc :line line))
+                   m))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when init-expr {:children [init-expr]})
@@ -828,13 +836,27 @@
 (defmethod parse 'deftype*
   [_ env [_ tsym fields] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
-    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
+           (fn [m]
+             (let [m (assoc (or m {}) :name t)]
+               (if-let [line (:line env)]
+                 (-> m
+                     (assoc :file *cljs-file*)
+                     (assoc :line line))
+                 m))))
     {:env env :op :deftype* :t t :fields fields}))
 
 (defmethod parse 'defrecord*
   [_ env [_ tsym fields] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
-    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
+           (fn [m]
+             (let [m (assoc (or m {}) :name t)]
+               (if-let [line (:line env)]
+                 (-> m
+                     (assoc :file *cljs-file*)
+                     (assoc :line line))
+                 m))))
     {:env env :op :defrecord* :t t :fields fields}))
 
 (defmethod parse '.
@@ -925,7 +947,9 @@
 
 (defn analyze-seq
   [env form name]
-  (let [env (assoc env :line (-> form meta :line))]
+  (let [env (assoc env :line
+                   (or (-> form meta :line)
+                       (:line env)))]
     (let [op (first form)]
       (assert (not (nil? op)) "Can't call nil")
       (let [mform (macroexpand-1 env form)]
@@ -992,9 +1016,10 @@
 
 (defn analyze-file
   [f]
-  (binding [*cljs-ns* 'cljs.user]
-    (let [res (if (= \/ (first f)) f (io/resource f))]
-      (assert res (str "Can't find " f " in classpath"))
+  (let [res (if (= \/ (first f)) f (io/resource f))]
+    (assert res (str "Can't find " f " in classpath"))
+    (binding [*cljs-ns* 'cljs.user
+              *cljs-file* (.getPath ^java.net.URL res)]
       (with-open [r (io/reader res)]
         (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
               pbr (clojure.lang.LineNumberingPushbackReader. r)
@@ -1008,7 +1033,7 @@
 (defn forms-seq
   "Seq of forms in a Clojure or ClojureScript file."
   ([f]
-     (forms-seq f (java.io.PushbackReader. (io/reader f))))
+     (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
   ([f ^java.io.PushbackReader rdr]
      (if-let [form (read rdr nil nil)]
        (lazy-seq (cons form (forms-seq f rdr)))
@@ -1036,7 +1061,8 @@
   (with-core-cljs
     (with-open [out ^java.io.Writer (io/make-writer dest {})]
       (binding [*out* out
-                *cljs-ns* 'cljs.user]
+                *cljs-ns* 'cljs.user
+                *cljs-file* (.getPath ^java.io.File src)]
         (loop [forms (forms-seq src)
                ns-name nil
                deps nil]

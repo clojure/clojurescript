@@ -99,15 +99,17 @@ nil if the end of stream has been reached")
 
 (defn- match-int
   [s]
-  (let [groups (re-find int-pattern s)]
-    (if (nth groups 2)
+  (let [groups (re-find int-pattern s)
+        group3 (nth groups 2)]
+    (if (not (or (undefined? group3)
+                 (< (.length group3) 1)))
       0
-      (let [negate (if (= "-" (nth groups 1)) -1 1) 
+      (let [negate (if (= "-" (nth groups 1)) -1 1)
             [n radix] (cond
                        (nth groups 3) [(nth groups 3) 10]
                        (nth groups 4) [(nth groups 4) 16]
                        (nth groups 5) [(nth groups 5) 8]
-                       (nth groups 7) [(nth groups 7) (js/parseInt (nth groups 7))] 
+                       (nth groups 7) [(nth groups 7) (js/parseInt (nth groups 7))]
                        :default [nil nil])]
         (if (nil? n)
           nil
@@ -254,13 +256,14 @@ nil if the end of stream has been reached")
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
-        [token ns name] (re-matches symbol-pattern token)]
-    (if (or (and (not (undefined? ns))
+        [token ns name] (re-matches symbol-pattern token)
+        ns? (and (not (undefined? ns)) (> (.length ns) 0))]
+    (if (or (and ns?
                  (identical? (. ns (substring (- (.length ns) 2) (.length ns))) ":/"))
             (identical? (aget name (dec (.length name))) ":")
             (not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
-      (if (not (undefined? ns))
+      (if ns?
         (keyword (.substring ns 0 (.indexOf ns "/")) name)
         (keyword token)))))
 

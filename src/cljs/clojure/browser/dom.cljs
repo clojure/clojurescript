@@ -102,5 +102,49 @@
 (defn insert-at [parent child index]
   (gdom/insertChildAt parent child index))
 
+(defn ensure-element
+  "Coerce the argument to a dom element if possible."
+  [e]
+  (cond (keyword? e) (get-element e)
+        (string? e) (html->dom e)
+        :else e))
+
+(defn replace-node
+  "Replace old-node with new-node. old-node can be an element or a
+   keyword which is the id of the node to replace.  new-node can be an
+   element or an html string."
+  [old-node new-node]
+  (let [old-node (ensure-element old-node)
+        new-node (ensure-element new-node)]
+    (gdom/replaceNode new-node old-node)
+    new-node))
+
+(defn set-text
+  "Set the text content for the passed element returning the
+  element. If a keyword is passed in the place of e, the element with
+  that id will be used and returned."
+  [e s]
+  (gdom/setTextContent (ensure-element e) s))
+
+(defn get-value
+  "Get the value of an element."
+  [e]
+  (.value (ensure-element e)))
+
+(defn set-properties
+  "Set properties on an element"
+  [e m]
+  (gdom/setProperties (ensure-element e)
+                      (.strobj m)))
+
+(defn set-value
+  "Set the value property for an element."
+  [e v]
+  (set-properties e {"value" v}))
+
+(defn click-element
+  [e]
+  (.click (ensure-element e) ()))
+
 ;; TODO CSS class manipulation
 ;; TODO Query syntax

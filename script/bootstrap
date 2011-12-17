@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 mkdir -p lib
 
 echo "Fetching Clojure..."
@@ -34,7 +36,7 @@ echo "jar cf ./lib/goog.jar -C closure/library/closure/ goog"
 jar cf ./lib/goog.jar -C closure/library/closure/ goog
 
 echo "Fetching Rhino..."
-curl -O -s ftp://ftp.mozilla.org/pub/mozilla.org/js/rhino1_7R3.zip
+curl -O -s http://ftp.mozilla.org/pub/mozilla.org/js/rhino1_7R3.zip
 unzip -qu rhino1_7R3.zip
 echo "Copying rhino1_7R3/js.jar to lib/js.jar..."
 cp rhino1_7R3/js.jar lib/js.jar

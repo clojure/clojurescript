@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies?
+                            satisfies? identical?
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -41,6 +41,9 @@
   if-let if-not let letfn loop
   or
   when when-first when-let when-not while])
+
+(defmacro identical? [a b]
+  (list 'js* "(~{} === ~{})" a b))
 
 (defmacro aget [a i]
   (list 'js* "(~{}[~{}])" a i))
@@ -278,7 +281,10 @@
 		  'IHash
 		  `(~'-hash [this#] (hash-coll this#))
 		  'IEquiv
-		  `(~'-equiv [this# other#] (equiv-map this# other#))
+		  `(~'-equiv [this# other#]
+         (and (identical? (.constructor this#) ;; TODO: change for prop lookup
+                          (.constructor other#))
+              (equiv-map this# other#)))
 		  'IMeta
 		  `(~'-meta [this#] ~'__meta)
 		  'IWithMeta
@@ -380,9 +386,9 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (and x# (. x# ~(symbol prefix)) (not (. x# (~'hasOwnProperty ~prefix))))
-	 true
-	 (cljs.core/type_satisfies_ ~psym x#)))))
+       (if (and x# (. x# ~(symbol prefix)) (not (cljs.core/is_proto_ x#)))
+         true
+         (cljs.core/type_satisfies_ ~psym x#)))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))
