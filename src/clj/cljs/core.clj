@@ -404,7 +404,7 @@
   [bindings & body]
   (let [names (take-nth 2 bindings)
         vals (take-nth 2 (drop 1 bindings))
-        tempnames (map gensym names)
+        tempnames (map (comp gensym name) names)
         binds (map vector names vals)
         resets (reverse (map vector names tempnames))]
     `(let [~@(interleave tempnames names)]
