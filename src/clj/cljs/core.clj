@@ -180,9 +180,14 @@
         locals (keys (:locals &env))]
    `(do
       (when (undefined? ~t)
-        (deftype ~t [~@locals]
+        (deftype ~t [~@locals ~'__meta]
+          cljs.core.IWithMeta
+          (~'-with-meta [~'_ ~'__meta]
+            (new ~t ~@locals ~'__meta))
+          cljs.core.IMeta
+          (~'-meta [~'_] ~'__meta)
           ~@impls))
-      (new ~t ~@locals))))
+      (new ~t ~@locals nil))))
 
 (defmacro this-as
   "Defines a scope where JavaScript's implicit \"this\" is bound to the name provided."

@@ -766,5 +766,9 @@
   (assert (instance? js/Array (array)))
   (assert (instance? js/Object (fn [])))
   (assert (instance? js/Function (fn [])))
+
+  (defprotocol IFoo (foo [this]))
+  (assert (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
+             {:foo :bar}))
   
   :ok)
