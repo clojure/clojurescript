@@ -3384,7 +3384,10 @@ reduces them without incurring seq initialization"
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
 
-  (-invoke [mf args] (do-invoke mf dispatch-fn args)))
+  (-invoke [mf args] (do-invoke mf dispatch-fn args))
+
+  IHash
+  (-hash [this] (goog.getUid this)))
 
 (set! cljs.core.MultiFn.prototype.call
       (fn [_ & args] (-invoke (js* "this") args)))
