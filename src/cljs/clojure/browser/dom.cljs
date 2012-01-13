@@ -135,7 +135,7 @@
   "Set properties on an element"
   [e m]
   (gdom/setProperties (ensure-element e)
-                      (.strobj m)))
+                      (.-strobj m)))
 
 (defn set-value
   "Set the value property for an element."
