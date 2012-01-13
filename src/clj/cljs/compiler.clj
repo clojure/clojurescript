@@ -34,7 +34,12 @@
                             cljs.user {:name cljs.user}}))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
+(def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
+
+(defmacro ^:private debug-prn
+  [& args]
+  `(.println System/err (str ~@args)))
 
 (defn munge [s]
   (let [ss (str s)
@@ -118,10 +123,10 @@
     {:name (js-var sym)}
     (let [s (str sym)
           lb (-> env :locals sym)
-          nm 
+          nm
           (cond
            lb (:name lb)
-         
+
            (namespace sym)
            (let [ns (namespace sym)
                  ns (if (= "clojure.core" ns) "cljs.core" ns)]
@@ -459,7 +464,7 @@
           (print (str "catch (" name "){"))
           (when catch
             (let [{:keys [statements ret]} catch]
-              (emit-block subcontext statements ret)))      
+              (emit-block subcontext statements ret)))
           (print "}"))
         (when finally
           (let [{:keys [statements ret]} finally]
@@ -599,7 +604,7 @@
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name]
-  (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test)) 
+  (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
         then-expr (analyze env then)
         else-expr (analyze env else)]
     {:env env :op :if :form form
@@ -662,7 +667,14 @@
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
-      (swap! namespaces assoc-in [(-> env :ns :name) :defs sym] name)
+      (swap! namespaces update-in [(-> env :ns :name) :defs sym]
+             (fn [m]
+               (let [m (assoc (or m {}) :name name)]
+                 (if-let [line (:line env)]
+                   (-> m
+                       (assoc :file *cljs-file*)
+                       (assoc :line line))
+                   m))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when init-expr {:children [init-expr]})
@@ -681,7 +693,7 @@
         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
         block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                 (analyze-block (assoc env :context :return :locals locals) body))]
-    
+
     (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block)))
 
 (defmethod parse 'fn*
@@ -828,29 +840,111 @@
 (defmethod parse 'deftype*
   [_ env [_ tsym fields] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
-    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
+           (fn [m]
+             (let [m (assoc (or m {}) :name t)]
+               (if-let [line (:line env)]
+                 (-> m
+                     (assoc :file *cljs-file*)
+                     (assoc :line line))
+                 m))))
     {:env env :op :deftype* :t t :fields fields}))
 
 (defmethod parse 'defrecord*
   [_ env [_ tsym fields] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
-    (swap! namespaces assoc-in [(-> env :ns :name) :defs tsym] t)
+    (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
+           (fn [m]
+             (let [m (assoc (or m {}) :name t)]
+               (if-let [line (:line env)]
+                 (-> m
+                     (assoc :file *cljs-file*)
+                     (assoc :line line))
+                 m))))
     {:env env :op :defrecord* :t t :fields fields}))
 
+;; dot accessor code
+
+(def ^:private property-symbol? #(boolean (and (symbol? %) (re-matches #"^-.*" (name %)))))
+
+(defn- clean-symbol
+  [sym]
+  (symbol
+   (if (property-symbol? sym)
+     (-> sym name (.substring 1) munge)
+     (-> sym name munge))))
+
+(defn- classify-dot-form
+  [[target member args]]
+  [(cond (nil? target) ::error
+         :default      ::expr)
+   (cond (property-symbol? member) ::property
+         (symbol? member)          ::symbol    
+         (seq? member)             ::list
+         :default                  ::error)
+   (cond (nil? args) ()
+         :default    ::expr)])
+
+(defmulti build-dot-form #(classify-dot-form %))
+
+;; (. o -p)
+;; (. (...) -p)
+(defmethod build-dot-form [::expr ::property ()]
+  [[target prop _]]
+  {:dot-action ::access :target target :field (clean-symbol prop)})
+
+;; (. o -p <args>)
+(defmethod build-dot-form [::expr ::property ::list]
+  [[target prop args]]
+  (throw (Error. (str "Cannot provide arguments " args " on property access " prop))))
+
+(defn- build-method-call
+  "Builds the intermediate method call map used to reason about the parsed form during
+  compilation."
+  [target meth args]
+  (if (symbol? meth)
+    {:dot-action ::call :target target :method (munge meth) :args args}
+    {:dot-action ::call :target target :method (munge (first meth)) :args args}))
+
+;; (. o m 1 2)
+(defmethod build-dot-form [::expr ::symbol ::expr]
+  [[target meth args]]
+  (build-method-call target meth args))
+
+;; (. o m)
+(defmethod build-dot-form [::expr ::symbol ()]
+  [[target meth args]]
+  (debug-prn "WARNING: The form " (list '. target meth)
+             " is no longer a property access. Maybe you meant "
+             (list '. target (symbol (str '- meth))) " instead?")
+  (build-method-call target meth args))
+
+;; (. o (m))
+;; (. o (m 1 2))
+(defmethod build-dot-form [::expr ::list ()]
+  [[target meth-expr _]]
+  (build-method-call target (first meth-expr) (rest meth-expr)))
+
+(defmethod build-dot-form :default
+  [dot-form]
+  (throw (Error. (str "Unknown dot form of " (list* '. dot-form) " with classification " (classify-dot-form dot-form)))))
+
 (defmethod parse '.
-  [_ env [_ target & member+] _]
+  [_ env [_ target & [field & member+]] _]
   (disallowing-recur
-   (let [enve (assoc env :context :expr)
-         targetexpr (analyze enve target)
-         children [enve]]
-     (if (and (symbol? (first member+)) (nil? (next member+))) ;;(. target field)
-       {:env env :op :dot :target targetexpr :field (munge (first member+)) :children children}
-       (let [[method args]
-             (if (symbol? (first member+))
-               [(first member+) (next member+)]
-               [(ffirst member+) (nfirst member+)])
-             argexprs (map #(analyze enve %) args)]
-         {:env env :op :dot :target targetexpr :method (munge method) :args argexprs :children (into children argexprs)})))))
+   (let [{:keys [dot-action target method field args]} (build-dot-form [target field member+])
+         enve        (assoc env :context :expr)
+         targetexpr  (analyze enve target)
+         children    [enve]]
+     (case dot-action
+           ::access {:env env :op :dot :children children
+                     :target targetexpr
+                     :field field}
+           ::call   (let [argexprs (map #(analyze enve %) args)]
+                      {:env env :op :dot :children (into children argexprs)
+                       :target targetexpr
+                       :method method
+                       :args argexprs})))))
 
 (defmethod parse 'js*
   [op env [_ form & args] _]
@@ -894,7 +988,8 @@
 
 (defn get-expander [sym env]
   (let [mvar
-        (when-not (-> env :locals sym)  ;locals hide macros
+        (when-not (or (-> env :locals sym)        ;locals hide macros
+                      (-> env :ns :excludes sym))
           (if-let [nstr (namespace sym)]
             (when-let [ns (cond
                            (= "clojure.core" nstr) (find-ns 'cljs.core)
@@ -925,7 +1020,9 @@
 
 (defn analyze-seq
   [env form name]
-  (let [env (assoc env :line (-> form meta :line))]
+  (let [env (assoc env :line
+                   (or (-> form meta :line)
+                       (:line env)))]
     (let [op (first form)]
       (assert (not (nil? op)) "Can't call nil")
       (let [mform (macroexpand-1 env form)]
@@ -992,9 +1089,10 @@
 
 (defn analyze-file
   [f]
-  (binding [*cljs-ns* 'cljs.user]
-    (let [res (if (= \/ (first f)) f (io/resource f))]
-      (assert res (str "Can't find " f " in classpath"))
+  (let [res (if (= \/ (first f)) f (io/resource f))]
+    (assert res (str "Can't find " f " in classpath"))
+    (binding [*cljs-ns* 'cljs.user
+              *cljs-file* (.getPath ^java.net.URL res)]
       (with-open [r (io/reader res)]
         (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
               pbr (clojure.lang.LineNumberingPushbackReader. r)
@@ -1008,7 +1106,7 @@
 (defn forms-seq
   "Seq of forms in a Clojure or ClojureScript file."
   ([f]
-     (forms-seq f (java.io.PushbackReader. (io/reader f))))
+     (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
   ([f ^java.io.PushbackReader rdr]
      (if-let [form (read rdr nil nil)]
        (lazy-seq (cons form (forms-seq f rdr)))
@@ -1036,7 +1134,8 @@
   (with-core-cljs
     (with-open [out ^java.io.Writer (io/make-writer dest {})]
       (binding [*out* out
-                *cljs-ns* 'cljs.user]
+                *cljs-ns* 'cljs.user
+                *cljs-file* (.getPath ^java.io.File src)]
         (loop [forms (forms-seq src)
                ns-name nil
                deps nil]
@@ -1072,7 +1171,7 @@
    Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
    If the file was not compiled returns only {:file ...}"
   ([src]
-     (let [dest (rename-to-js src)] 
+     (let [dest (rename-to-js src)]
        (compile-file src dest)))
   ([src dest]
      (let [src-file (io/file src)
@@ -1198,7 +1297,7 @@
 (deftype Foo [a] IMeta (-meta [_] (fn [] a)))
 ((-meta (Foo. 42)))
 
-;;OLD way, don't you want to use the REPL? 
+;;OLD way, don't you want to use the REPL?
 (in-ns 'cljs.compiler)
 (import '[javax.script ScriptEngineManager])
 (def jse (-> (ScriptEngineManager.) (.getEngineByName "JavaScript")))

@@ -180,9 +180,14 @@
         locals (keys (:locals &env))]
    `(do
       (when (undefined? ~t)
-        (deftype ~t [~@locals]
+        (deftype ~t [~@locals ~'__meta]
+          cljs.core.IWithMeta
+          (~'-with-meta [~'_ ~'__meta]
+            (new ~t ~@locals ~'__meta))
+          cljs.core.IMeta
+          (~'-meta [~'_] ~'__meta)
           ~@impls))
-      (new ~t ~@locals))))
+      (new ~t ~@locals nil))))
 
 (defmacro this-as
   "Defines a scope where JavaScript's implicit \"this\" is bound to the name provided."
@@ -288,8 +293,8 @@
 		  `(~'-hash [this#] (hash-coll this#))
 		  'IEquiv
 		  `(~'-equiv [this# other#]
-         (and (identical? (.constructor this#) ;; TODO: change for prop lookup
-                          (.constructor other#))
+         (and (identical? (.-constructor this#)
+                          (.-constructor other#))
               (equiv-map this# other#)))
 		  'IMeta
 		  `(~'-meta [this#] ~'__meta)
@@ -372,7 +377,7 @@
         methods (if (string? (first doc+methods)) (next doc+methods) doc+methods)
         expand-sig (fn [fname slot sig]
                      `(~sig
-                       (if (and ~(first sig) (. ~(first sig) ~slot))
+                       (if (and ~(first sig) (. ~(first sig) ~(symbol (str "-" slot)))) ;; Property access needed here.
                          (. ~(first sig) ~slot ~@sig)
                          ((or
                            (aget ~(fqn fname) (goog.typeOf ~(first sig)))
@@ -394,7 +399,9 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)]
     `(let [x# ~x]
-       (if (and x# (. x# ~(symbol prefix)) (not (. x# (~'hasOwnProperty ~prefix))))
+       (if (and x#
+                (. x# ~(symbol (str "-" prefix)))        ;; Need prop lookup here
+                (not (. x# (~'hasOwnProperty ~prefix))))
 	 true
 	 (cljs.core/type_satisfies_ ~psym x#)))))
 
@@ -412,7 +419,7 @@
   [bindings & body]
   (let [names (take-nth 2 bindings)
         vals (take-nth 2 (drop 1 bindings))
-        tempnames (map gensym names)
+        tempnames (map (comp gensym name) names)
         binds (map vector names vals)
         resets (reverse (map vector names tempnames))]
     `(let [~@(interleave tempnames names)]
