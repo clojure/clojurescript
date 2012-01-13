@@ -104,7 +104,7 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
     ([this on-connect-fn]
        (.connect this on-connect-fn))
     ([this on-connect-fn config-iframe-fn]
-       (connect this on-connect-fn config-iframe-fn (.body js/document)))
+       (connect this on-connect-fn config-iframe-fn (.-body js/document)))
     ([this on-connect-fn config-iframe-fn iframe-parent]
        (.createPeerIframe this iframe-parent config-iframe-fn)
        (.connect this on-connect-fn)))
@@ -127,14 +127,15 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   per the CrossPageChannel API."
   ([]
      (when-let [config (.getParameterValue
-                        (goog.Uri. (.href (.location js/window)))
+                        (goog.Uri. (.-href (.-location js/window)))
                         "xpc")]
        (goog.net.xpc.CrossPageChannel. (gjson/parse config))))
   ([config]
      (goog.net.xpc.CrossPageChannel.
-      (.strobj (reduce (fn [sum [k v]]
-                         (when-let [field (get xpc-config-fields k)]
-                           (assoc sum field v)))
+      (.-strobj (reduce (fn [sum [k v]]
+                          (if-let [field (get xpc-config-fields k)]
+                            (assoc sum field v)
+                            sum))
                        {}
                        config)))))
 
