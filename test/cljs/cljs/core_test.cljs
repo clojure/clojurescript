@@ -789,4 +789,8 @@
   (assert (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
              {:foo :bar}))
 
+  (defmulti foo identity)
+  (defmethod foo 0 [x] x)
+  (assert (= foo (ffirst {foo 1})))
+  
   :ok)
