@@ -31,7 +31,7 @@
                     (catch js/Error e
                       {:status :exception :value (pr-str e)
                        :stacktrace (if (.hasOwnProperty e "stack")
-                                     (.stack e)
+                                     (.-stack e)
                                      "No stacktrace available.")}))]
     (pr-str result)))
 

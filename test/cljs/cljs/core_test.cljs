@@ -297,8 +297,8 @@
   (assert (= 1 (min 1 2 3 4 5)))
   (assert (= 0.5 (min 5 4 3 0.5 2 1)))
   (let [x (array 1 2 3)]
-    (set! (.foo x) :hello)
-    (assert (= (.foo x) :hello)))
+    (set! (.-foo x) :hello)
+    (assert (= (.-foo x) :hello)))
 
   (assert (set []))
   (assert (= #{} (set [])))
@@ -744,6 +744,23 @@
   (assert (= (count fred) 2))
   (assert (= (count ethel) 3))
 
+  ;; dot
+  (let [s "abc"]
+    (assert (= 3 (.-length s)))
+    (assert (= 3 (. s -length)))
+    (assert (= 3 (. (str 138) -length)))
+    (assert (= 3 (. "abc" -length)))
+    (assert (= "bc" (.substring s 1)))
+    (assert (= "bc" (.substring "abc" 1)))
+    (assert (= "bc" (. s substring 1)))
+    (assert (= "bc" (. s (substring 1))))
+    (assert (= "bc" (. s (substring 1 3))))
+    (assert (= "bc" (.substring s 1 3)))
+    (assert (= "ABC" (. s (toUpperCase))))
+    (assert (= "ABC" (. "abc" (toUpperCase))))
+    (assert (= "BC" (. (.toUpperCase s) substring 1)))
+    (assert (= 2 (.-length (. (.toUpperCase s) substring 1)))))
+
   (assert (= (conj fred {:wife :ethel :friend :ricky})
              (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky})))
   (assert (= (conj fred {:lastname "Flintstone"})
@@ -754,6 +771,7 @@
              (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel})))
   (assert (= (dissoc ethel :husband)
              (map->Person {:firstname "Ethel" :lastname "Mertz"})))
+  
   (defrecord A [x])
   (defrecord B [x])
   (assert (not= (A. nil) (B. nil)))
@@ -766,5 +784,13 @@
   (assert (instance? js/Array (array)))
   (assert (instance? js/Object (fn [])))
   (assert (instance? js/Function (fn [])))
+
+  (defprotocol IFoo (foo [this]))
+  (assert (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
+             {:foo :bar}))
+
+  (defmulti foo identity)
+  (defmethod foo 0 [x] x)
+  (assert (= foo (ffirst {foo 1})))
   
   :ok)

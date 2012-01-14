@@ -41,7 +41,7 @@
     ([this attrs children]
        (log "string (-element " this " " attrs " " children ")")
        (let [str-attrs (if (and (map? attrs) (seq attrs))
-                         (.strobj (reduce (fn [m [k v]]
+                         (.-strobj (reduce (fn [m [k v]]
                                             (log "m = " m)
                                             (log "k = " k)
                                             (log "v = " v)
@@ -129,13 +129,13 @@
 (defn get-value
   "Get the value of an element."
   [e]
-  (.value (ensure-element e)))
+  (.-value (ensure-element e)))
 
 (defn set-properties
   "Set properties on an element"
   [e m]
   (gdom/setProperties (ensure-element e)
-                      (.strobj m)))
+                      (.-strobj m)))
 
 (defn set-value
   "Set the value property for an element."
