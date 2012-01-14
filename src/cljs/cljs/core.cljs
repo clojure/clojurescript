@@ -1458,9 +1458,7 @@ reduces them without incurring seq initialization"
   "Takes a set of functions and returns a fn that is the composition
   of those fns.  The returned fn takes a variable number of args,
   applies the rightmost of fns to the args, the next
-  fn (right-to-left) to the result, etc.
-
-  TODO: Implement apply"
+  fn (right-to-left) to the result, etc."
   ([] identity)
   ([f] f)
   ([f g] 
@@ -1488,9 +1486,7 @@ reduces them without incurring seq initialization"
 (defn partial
   "Takes a function f and fewer than the normal arguments to f, and
   returns a fn that takes a variable number of additional args. When
-  called, the returned function calls f with args + additional args.
-
-  TODO: Implement apply"
+  called, the returned function calls f with args + additional args."
   ([f arg1]
    (fn [& args] (apply f arg1 args)))
   ([f arg1 arg2]
@@ -2705,9 +2701,7 @@ reduces them without incurring seq initialization"
   of those fns.  The returned fn takes a variable number of args, and
   returns a vector containing the result of applying each fn to the
   args (left-to-right).
-  ((juxt a b c) x) => [(a x) (b x) (c x)]
-
-  TODO: Implement apply"
+  ((juxt a b c) x) => [(a x) (b x) (c x)]"
   ([f]
      (fn
        ([] (vector (f)))
