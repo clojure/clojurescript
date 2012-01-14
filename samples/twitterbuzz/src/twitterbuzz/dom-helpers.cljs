@@ -52,7 +52,7 @@
   [tag & args]
   (let [[tag attrs children] (normalize-args tag args)
         parent (dom/createDom (name tag)
-                              (.strobj (reduce (fn [m [k v]]
+                              (.-strobj (reduce (fn [m [k v]]
                                                  (assoc m k v))
                                                {}
                                                (map #(vector (name %1) %2)
