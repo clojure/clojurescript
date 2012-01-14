@@ -758,8 +758,8 @@
     (assert (= "bc" (.substring s 1 3)))
     (assert (= "ABC" (. s (toUpperCase))))
     (assert (= "ABC" (. "abc" (toUpperCase))))
-    (assert (= "BC" (. (.toUpperCase s) substring 1)))
-    (assert (= 2 (.-length (. (.toUpperCase s) substring 1)))))
+    (assert (= "BC" (. (. s (toUpperCase)) substring 1)))
+    (assert (= 2 (.-length (. (. s (toUpperCase)) substring 1)))))
 
   (assert (= (conj fred {:wife :ethel :friend :ricky})
              (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky})))
