@@ -679,20 +679,24 @@
              (when export-as {:export export-as})))))
 
 (defn- analyze-fn-method [env locals meth]
-  (let [params (first meth)
-        fields (-> params meta ::fields)
-        variadic (boolean (some '#{&} params))
-        params (remove '#{&} params)
-        fixed-arity (count (if variadic (butlast params) params))
-        body (next meth)
-        gthis (and fields (gensym "this__"))
-        locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
-        locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
-        recur-frame {:names (vec (map munge params)) :flag (atom nil)}
-        block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
-                (analyze-block (assoc env :context :return :locals locals) body))]
+  (letfn [(uniqify [[p & r]]
+            (when p
+              (cons (if (some #{p} r) (gensym (str p)) p)
+                    (uniqify r))))]
+   (let [params (first meth)
+         fields (-> params meta ::fields)
+         variadic (boolean (some '#{&} params))
+         params (uniqify (remove '#{&} params))
+         fixed-arity (count (if variadic (butlast params) params))
+         body (next meth)
+         gthis (and fields (gensym "this__"))
+         locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
+         locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
+         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
+         block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
+                 (analyze-block (assoc env :context :return :locals locals) body))]
 
-    (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block)))
+     (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block))))
 
 (defmethod parse 'fn*
   [op env [_ & args] name]
