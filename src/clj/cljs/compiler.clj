@@ -550,8 +550,6 @@
     (doseq [fld fields]
       (println (str "this." fld " = " fld ";")))
     (println (str "if(arguments.length>" (- (count fields) 2) "){"))
-    ;; (println (str "this.__meta = arguments[" (count fields) "];"))
-    ;; (println (str "this.__extmap = arguments[" (inc (count fields)) "];"))
     (println (str "this.__meta = __meta;"))
     (println (str "this.__extmap = __extmap;"))
     (println "} else {")
