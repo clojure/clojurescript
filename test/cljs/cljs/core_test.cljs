@@ -744,6 +744,10 @@
   (assert (= (count fred) 2))
   (assert (= (count ethel) 3))
 
+  (defrecord A [])
+  (assert (= {:foo 'bar} (meta (with-meta (A.) {:foo 'bar}))))
+  (assert (= 'bar (:foo (assoc (A.) :foo 'bar))))
+
   ;; dot
   (let [s "abc"]
     (assert (= 3 (.-length s)))

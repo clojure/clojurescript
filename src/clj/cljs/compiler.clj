@@ -541,15 +541,15 @@
 
 (defmethod emit :defrecord*
   [{:keys [t fields]}]
-  (let [fields (map munge fields)]
+  (let [fields (concat (map munge fields) '[__meta __extmap])]
     (println "\n/**\n* @constructor")
     (doseq [fld fields]
       (println (str "* @param {*} " fld)))
     (println "* @param {*=} __meta \n* @param {*=} __extmap\n*/")
-    (println (str t " = (function (" (comma-sep (map str fields)) ", __meta, __extmap){"))
+    (println (str t " = (function (" (comma-sep (map str fields)) "){"))
     (doseq [fld fields]
       (println (str "this." fld " = " fld ";")))
-    (println (str "if(arguments.length>" (count fields) "){"))
+    (println (str "if(arguments.length>" (- (count fields) 2) "){"))
     ;; (println (str "this.__meta = arguments[" (count fields) "];"))
     ;; (println (str "this.__extmap = arguments[" (inc (count fields)) "];"))
     (println (str "this.__meta = __meta;"))
