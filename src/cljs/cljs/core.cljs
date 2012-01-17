@@ -2986,7 +2986,10 @@ reduces them without incurring seq initialization"
   (-add-watch [this key f]
     (set! (.-watches this) (assoc watches key f)))
   (-remove-watch [this key]
-    (set! (.-watches this) (dissoc watches key))))
+    (set! (.-watches this) (dissoc watches key)))
+
+  IHash
+  (-hash [this] (goog.getUid this)))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
