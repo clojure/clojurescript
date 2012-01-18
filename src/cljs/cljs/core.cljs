@@ -3383,7 +3383,7 @@ reduces them without incurring seq initialization"
 (defn- find-and-cache-best-method
   [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
   (let [best-entry (reduce (fn [be [k _ :as e]]
-                             (when (isa? dispatch-val k)
+                             (if (isa? dispatch-val k)
                                (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
                                            e
                                            be)]
@@ -3392,7 +3392,8 @@ reduces them without incurring seq initialization"
                                            (str "Multiple methods in multimethod '" name
                                                 "' match dispatch value: " dispatch-val " -> " k
                                                 " and " (first be2) ", and neither is preferred"))))
-                                 be2)))
+                                 be2)
+                               be))
                            nil @method-table)]
     (when best-entry
       (if (= @cached-hierarchy @hierarchy)
