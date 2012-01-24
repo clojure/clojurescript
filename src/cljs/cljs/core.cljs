@@ -3475,6 +3475,9 @@ reduces them without incurring seq initialization"
 (set! cljs.core.MultiFn.prototype.call
       (fn [_ & args] (-invoke (js* "this") args)))
 
+(set! cljs.core.MultiFn.prototype.apply
+      (fn [_ args] (-invoke (js* "this") args)))
+
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
  [multifn]

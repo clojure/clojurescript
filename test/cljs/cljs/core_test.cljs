@@ -686,6 +686,14 @@
   (remove-all-methods bar)
   (assert (zero? (count (methods bar))))
 
+  ;; test apply
+  (defmulti apply-multi-test (fn ([_] 0) ([_ _] 0) ([_ _ _] 0)))
+  (defmethod apply-multi-test 0
+    ([x] :one)
+    ([x y] :two)
+    ([x y & r] [:three r]))
+  (assert (= [:three '(2)] (apply apply-multi-test [0 1 2])))
+
   ;; Range
   (assert (= (range 0 10 3) (list 0 3 6 9)))
   (assert (= (count (range 0 10 3)) 4))
