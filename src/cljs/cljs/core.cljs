@@ -320,10 +320,10 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IReduce
-  (-reduce [coll f]
-    (ci-reduce coll f (aget a i) (inc i)))
-  (-reduce [coll f start]
-    (ci-reduce coll f start i))
+  (-reduce [_ f]
+    (ci-reduce a f (aget a i) (inc i)))
+  (-reduce [_ f start]
+    (ci-reduce a f start i))
 
   IHash
   (-hash [coll] (hash-coll coll)))
