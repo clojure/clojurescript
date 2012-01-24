@@ -690,7 +690,12 @@
          fixed-arity (count (if variadic (butlast params) params))
          body (next meth)
          gthis (and fields (gensym "this__"))
-         locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
+         locals (reduce (fn [m fld]
+                          (assoc m fld
+                                 {:name (symbol (str gthis "." (munge fld)))
+                                  :field true
+                                  :mutable (-> fld meta :mutable)}))
+                        locals fields)
          locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
          recur-frame {:names (vec (map munge params)) :flag (atom nil)}
          block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
@@ -784,8 +789,11 @@
    (let [enve (assoc env :context :expr)
          targetexpr (if (symbol? target)
                       (do
-                        (assert (nil? (-> env :locals target))
-                                "Can't set! local var")
+                        (let [local (-> env :locals target)]
+                          (assert (or (nil? local)
+                                      (and (:field local)
+                                           (:mutable local)))
+                                  "Can't set! local var or non-mutable field"))
                         (analyze-symbol enve target))
                       (when (seq? target)
                         (let [targetexpr (analyze-seq enve target nil)]
