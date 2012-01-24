@@ -229,7 +229,7 @@
                                       sigs))
                                (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
                                      (map (fn [[f & meths]]
-                                            (let [pf (if (= p 'cljs.core.IFn)
+                                            (let [pf (if (= psym 'cljs.core.IFn)
                                                        (str prototype-prefix 'call)
                                                        (str prototype-prefix pprefix f))]
                                               `(set! ~(symbol pf) (fn* ~@meths))))
