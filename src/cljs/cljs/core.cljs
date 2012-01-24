@@ -113,8 +113,7 @@
     [this a b c d e f g h i j k l m n o p q]
     [this a b c d e f g h i j k l m n o p q s]
     [this a b c d e f g h i j k l m n o p q s t]
-    [this a b c d e f g h i j k l m n o p q s t u]
-    [this a b c d e f g h i j k l m n o p q s t u rest]))
+    [this a b c d e f g h i j k l m n o p q s t rest]))
 
 (defprotocol ICounted
   (-count [coll] "constant time count"))
