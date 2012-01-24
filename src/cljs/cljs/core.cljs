@@ -346,10 +346,10 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IReduce
-  (-reduce [coll f]
-    (ci-reduce coll f (aget a i) (inc i)))
-  (-reduce [coll f start]
-    (ci-reduce coll f start i))
+  (-reduce [_ f]
+    (ci-reduce a f (aget a i) (inc i)))
+  (-reduce [_ f start]
+    (ci-reduce a f start i))
 
   IHash
   (-hash [coll] (hash-coll coll)))
@@ -1484,9 +1484,7 @@ reduces them without incurring seq initialization"
   "Takes a set of functions and returns a fn that is the composition
   of those fns.  The returned fn takes a variable number of args,
   applies the rightmost of fns to the args, the next
-  fn (right-to-left) to the result, etc.
-
-  TODO: Implement apply"
+  fn (right-to-left) to the result, etc."
   ([] identity)
   ([f] f)
   ([f g] 
@@ -1514,9 +1512,7 @@ reduces them without incurring seq initialization"
 (defn partial
   "Takes a function f and fewer than the normal arguments to f, and
   returns a fn that takes a variable number of additional args. When
-  called, the returned function calls f with args + additional args.
-
-  TODO: Implement apply"
+  called, the returned function calls f with args + additional args."
   ([f arg1]
    (fn [& args] (apply f arg1 args)))
   ([f arg1 arg2]
@@ -2095,6 +2091,88 @@ reduces them without incurring seq initialization"
         ([_ k] (-lookup (js* "this") k))
         ([_ k not-found] (-lookup (js* "this") k not-found))))
 
+;;; PersistentQueue ;;;
+
+(deftype PersistentQueueSeq [meta front rear]
+  IWithMeta
+  (-with-meta [coll meta] (PersistentQueueSeq. meta front rear))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (-first front))
+  (-rest  [coll]
+    (if-let [f1 (next front)]
+      (PersistentQueueSeq. meta f1 rear)
+      (if (nil? rear)
+        (-empty coll)
+        (PersistentQueueSeq. meta rear nil))))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] coll))
+
+(deftype PersistentQueue [meta count front rear]
+  IWithMeta
+  (-with-meta [coll meta] (PersistentQueue. meta count front rear))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (first front))
+  (-rest [coll] (rest (seq coll)))
+
+  IStack
+  (-peek [coll] (-first front))
+  (-pop [coll]
+    (if front
+      (if-let [f1 (next front)]
+        (PersistentQueue. meta (dec count) f1 rear)
+        (PersistentQueue. meta (dec count) (seq rear) []))
+      coll))
+
+  ICollection
+  (-conj [coll o]
+    (if front
+      (PersistentQueue. meta (inc count) front (conj (or rear []) o))
+      (PersistentQueue. meta (inc count) (conj front o) [])))
+
+  IEmptyableCollection
+  (-empty [coll] cljs.core.PersistentQueue/EMPTY)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (let [rear (seq rear)]
+      (if (or front rear)
+        (PersistentQueueSeq. nil front (seq rear))
+        cljs.core.List/EMPTY)))
+
+  ICounted
+  (-count [coll] count))
+
+(set! cljs.core.PersistentQueue/EMPTY (PersistentQueue. nil 0 nil []))
+
 (deftype NeverEquiv []
   IEquiv
   (-equiv [o other] false))
@@ -2649,9 +2727,7 @@ reduces them without incurring seq initialization"
   of those fns.  The returned fn takes a variable number of args, and
   returns a vector containing the result of applying each fn to the
   args (left-to-right).
-  ((juxt a b c) x) => [(a x) (b x) (c x)]
-
-  TODO: Implement apply"
+  ((juxt a b c) x) => [(a x) (b x) (c x)]"
   ([f]
      (fn
        ([] (vector (f)))
@@ -2879,6 +2955,9 @@ reduces them without incurring seq initialization"
   IndexedSeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
+  PersistentQueueSeq
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
   List
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
@@ -2933,7 +3012,10 @@ reduces them without incurring seq initialization"
   (-add-watch [this key f]
     (set! (.-watches this) (assoc watches key f)))
   (-remove-watch [this key]
-    (set! (.-watches this) (dissoc watches key))))
+    (set! (.-watches this) (dissoc watches key)))
+
+  IHash
+  (-hash [this] (goog.getUid this)))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
@@ -3327,7 +3409,7 @@ reduces them without incurring seq initialization"
 (defn- find-and-cache-best-method
   [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
   (let [best-entry (reduce (fn [be [k _ :as e]]
-                             (when (isa? dispatch-val k)
+                             (if (isa? dispatch-val k)
                                (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
                                            e
                                            be)]
@@ -3336,7 +3418,8 @@ reduces them without incurring seq initialization"
                                            (str "Multiple methods in multimethod '" name
                                                 "' match dispatch value: " dispatch-val " -> " k
                                                 " and " (first be2) ", and neither is preferred"))))
-                                 be2)))
+                                 be2)
+                               be))
                            nil @method-table)]
     (when best-entry
       (if (= @cached-hierarchy @hierarchy)
@@ -3410,10 +3493,16 @@ reduces them without incurring seq initialization"
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
 
-  (-invoke [mf args] (do-invoke mf dispatch-fn args)))
+  (-invoke [mf args] (do-invoke mf dispatch-fn args))
+
+  IHash
+  (-hash [this] (goog.getUid this)))
 
 (set! cljs.core.MultiFn.prototype.call
       (fn [_ & args] (-invoke (js* "this") args)))
+
+(set! cljs.core.MultiFn.prototype.apply
+      (fn [_ args] (-invoke (js* "this") args)))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."

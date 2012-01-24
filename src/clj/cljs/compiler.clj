@@ -527,7 +527,7 @@
   (println (str "goog.provide('" (munge name) "');"))
   (when-not (= name 'cljs.core)
     (println (str "goog.require('cljs.core');")))
-  (doseq [lib (into (vals requires) (vals uses))]
+  (doseq [lib (into (vals requires) (distinct (vals uses)))]
     (println (str "goog.require('" (munge lib) "');"))))
 
 (defmethod emit :deftype*
@@ -541,17 +541,15 @@
 
 (defmethod emit :defrecord*
   [{:keys [t fields]}]
-  (let [fields (map munge fields)]
+  (let [fields (concat (map munge fields) '[__meta __extmap])]
     (println "\n/**\n* @constructor")
     (doseq [fld fields]
       (println (str "* @param {*} " fld)))
     (println "* @param {*=} __meta \n* @param {*=} __extmap\n*/")
-    (println (str t " = (function (" (comma-sep (map str fields)) ", __meta, __extmap){"))
+    (println (str t " = (function (" (comma-sep (map str fields)) "){"))
     (doseq [fld fields]
       (println (str "this." fld " = " fld ";")))
-    (println (str "if(arguments.length>" (count fields) "){"))
-    ;; (println (str "this.__meta = arguments[" (count fields) "];"))
-    ;; (println (str "this.__extmap = arguments[" (inc (count fields)) "];"))
+    (println (str "if(arguments.length>" (- (count fields) 2) "){"))
     (println (str "this.__meta = __meta;"))
     (println (str "this.__extmap = __extmap;"))
     (println "} else {")
@@ -681,20 +679,24 @@
              (when export-as {:export export-as})))))
 
 (defn- analyze-fn-method [env locals meth]
-  (let [params (first meth)
-        fields (-> params meta ::fields)
-        variadic (boolean (some '#{&} params))
-        params (remove '#{&} params)
-        fixed-arity (count (if variadic (butlast params) params))
-        body (next meth)
-        gthis (and fields (gensym "this__"))
-        locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
-        locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
-        recur-frame {:names (vec (map munge params)) :flag (atom nil)}
-        block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
-                (analyze-block (assoc env :context :return :locals locals) body))]
+  (letfn [(uniqify [[p & r]]
+            (when p
+              (cons (if (some #{p} r) (gensym (str p)) p)
+                    (uniqify r))))]
+   (let [params (first meth)
+         fields (-> params meta ::fields)
+         variadic (boolean (some '#{&} params))
+         params (uniqify (remove '#{&} params))
+         fixed-arity (count (if variadic (butlast params) params))
+         body (next meth)
+         gthis (and fields (gensym "this__"))
+         locals (reduce (fn [m fld] (assoc m fld {:name (symbol (str gthis "." (munge fld)))})) locals fields)
+         locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
+         recur-frame {:names (vec (map munge params)) :flag (atom nil)}
+         block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
+                 (analyze-block (assoc env :context :return :locals locals) body))]
 
-    (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block)))
+     (merge {:env env :variadic variadic :params (map munge params) :max-fixed-arity fixed-arity :gthis gthis :recurs @(:flag recur-frame)} block))))
 
 (defmethod parse 'fn*
   [op env [_ & args] name]
