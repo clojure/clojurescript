@@ -1246,12 +1246,13 @@ reduces them without incurring seq initialization"
        (ci-reduce string f start))))
 
 ;;hrm
-(set! js/String.prototype.call
-      (fn
-        ([_ coll]
-           (get coll (js* "this.toString()")))
-        ([_ coll not-found]
-           (get coll (js* "this.toString()") not-found))))
+(extend-type js/String
+  IFn
+  (-invoke
+    ([_ coll]
+       (get coll (js* "this.toString()")))
+    ([_ coll not-found]
+       (get coll (js* "this.toString()") not-found))))
 
 (set! js/String.prototype.apply
       (fn
@@ -1998,10 +1999,11 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs)))
 
-(set! cljs.core.Vector.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
+(extend-type cljs.core.Vector
+  IFn
+  (-invoke
+    ([_ k] (-lookup (js* "this") k))
+    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn vec [coll]
   (reduce conj cljs.core.Vector/EMPTY coll)) ; using [] here causes infinite recursion
@@ -2085,10 +2087,11 @@ reduces them without incurring seq initialization"
   ([v start end]
      (Subvec. nil v start end)))
 
-(set! cljs.core.Subvec.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
+(extend-type cljs.core.Subvec
+  IFn
+  (-invoke
+    ([_ k] (-lookup (js* "this") k))
+    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 ;;; PersistentQueue ;;;
 
@@ -2282,10 +2285,11 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj)))
 
-(set! cljs.core.ObjMap.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
+(extend-type cljs.core.ObjMap
+  IFn
+  (-invoke
+    ([_ k] (-lookup (js* "this") k))
+    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Each key is hashed and the result used as a property name of
@@ -2384,10 +2388,11 @@ reduces them without incurring seq initialization"
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
 
-(set! cljs.core.HashMap.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
+(extend-type cljs.core.HashMap
+  IFn
+  (-invoke
+    ([_ k] (-lookup (js* "this") k))
+    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn hash-map
   "keyval => key val
@@ -2493,10 +2498,11 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.Set/EMPTY (Set. nil (hash-map)))
 
-(set! cljs.core.Set.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
+(extend-type cljs.core.Set
+  IFn
+  (-invoke
+    ([_ k] (-lookup (js* "this") k))
+    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn set
   "Returns a set of the distinct elements of coll."
@@ -3438,9 +3444,9 @@ reduces them without incurring seq initialization"
   (-get-method [mf dispatch-val])
   (-methods [mf])
   (-prefers [mf])
-  (-invoke [mf args]))
+  (-dispatch [mf args]))
 
-(defn- do-invoke
+(defn- do-dispatch
   [mf dispatch-fn args]
   (let [dispatch-val (apply dispatch-fn args)
         target-fn (-get-method mf dispatch-val)]
@@ -3492,16 +3498,16 @@ reduces them without incurring seq initialization"
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
 
-  (-invoke [mf args] (do-invoke mf dispatch-fn args))
+  (-dispatch [mf args] (do-dispatch mf dispatch-fn args))
 
   IHash
   (-hash [this] (goog.getUid this)))
 
 (set! cljs.core.MultiFn.prototype.call
-      (fn [_ & args] (-invoke (js* "this") args)))
+      (fn [_ & args] (-dispatch (js* "this") args)))
 
 (set! cljs.core.MultiFn.prototype.apply
-      (fn [_ args] (-invoke (js* "this") args)))
+      (fn [_ args] (-dispatch (js* "this") args)))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
