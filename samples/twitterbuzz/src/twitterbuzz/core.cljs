@@ -45,7 +45,7 @@
 (defn search-tag
   "Get the current tag value from the page."
   []
-  (.value (dom/get-element :twitter-search-tag)))
+  (.-value (dom/get-element :twitter-search-tag)))
 
 (defn retrieve
   "Send request to twitter."
@@ -205,7 +205,7 @@
   (let [q (apply str (interpose " OR " (map #(str "from:" %)
                                             (take max-missing-query missing))))]
     (set-tweet-status :okay "Fetching mentioned tweets")
-    (retrieve (.strobj {"q" q "rpp" results-per-page})
+    (retrieve (.-strobj {"q" q "rpp" results-per-page})
               #(add-missing-callback missing %)
               error-callback)))
 
@@ -214,7 +214,7 @@
   []
   (when-let [tag (:search-tag @state)]
     (set-tweet-status :okay "Fetching tweets")
-    (retrieve (.strobj {"q" tag "rpp" results-per-page})
+    (retrieve (.-strobj {"q" tag "rpp" results-per-page})
               new-tweets-callback
               error-callback)))
 

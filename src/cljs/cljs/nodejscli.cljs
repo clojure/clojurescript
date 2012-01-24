@@ -5,5 +5,5 @@
   (:require [cljs.nodejs :as nodejs]))
 
 ; Call the user's main function
-(apply cljs.core/*main-cli-fn* (drop 2 (.argv nodejs/process)))
+(apply cljs.core/*main-cli-fn* (drop 2 (.-argv nodejs/process)))
 

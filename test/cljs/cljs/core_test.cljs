@@ -26,6 +26,7 @@
   (assert (not (= {:a :b :c nil} {:a :b :d nil})))
   (assert (= (list 3 2 1) [3 2 1]))
   (assert (= [3 2 1] (seq (array 3 2 1))))
+  (assert (= 9 (reduce + (next (seq (array 1 2 3 4))))))
   (assert (= () (rest nil)))
   (assert (= () (rest [1])))
   (assert (= () (rest (array 1))))
@@ -685,6 +686,14 @@
   (remove-all-methods bar)
   (assert (zero? (count (methods bar))))
 
+  ;; test apply
+  (defmulti apply-multi-test (fn ([_] 0) ([_ _] 0) ([_ _ _] 0)))
+  (defmethod apply-multi-test 0
+    ([x] :one)
+    ([x y] :two)
+    ([x y & r] [:three r]))
+  (assert (= [:three '(2)] (apply apply-multi-test [0 1 2])))
+
   ;; Range
   (assert (= (range 0 10 3) (list 0 3 6 9)))
   (assert (= (count (range 0 10 3)) 4))
@@ -744,6 +753,10 @@
   (assert (= (count fred) 2))
   (assert (= (count ethel) 3))
 
+  (defrecord A [])
+  (assert (= {:foo 'bar} (meta (with-meta (A.) {:foo 'bar}))))
+  (assert (= 'bar (:foo (assoc (A.) :foo 'bar))))
+
   ;; dot
   (let [s "abc"]
     (assert (= 3 (.-length s)))
@@ -758,8 +771,8 @@
     (assert (= "bc" (.substring s 1 3)))
     (assert (= "ABC" (. s (toUpperCase))))
     (assert (= "ABC" (. "abc" (toUpperCase))))
-    (assert (= "BC" (. (.toUpperCase s) substring 1)))
-    (assert (= 2 (.-length (. (.toUpperCase s) substring 1)))))
+    (assert (= "BC" (. (. s (toUpperCase)) substring 1)))
+    (assert (= 2 (.-length (. (. s (toUpperCase)) substring 1)))))
 
   (assert (= (conj fred {:wife :ethel :friend :ricky})
              (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky})))
@@ -789,4 +802,8 @@
   (assert (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
              {:foo :bar}))
 
+  (defmulti foo identity)
+  (defmethod foo 0 [x] x)
+  (assert (= foo (ffirst {foo 1})))
+  
   :ok)
