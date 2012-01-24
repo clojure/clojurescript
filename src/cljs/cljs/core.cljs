@@ -1993,17 +1993,17 @@ reduces them without incurring seq initialization"
   (-reduce [v f]
 	   (ci-reduce array f))
   (-reduce [v f start]
-	   (ci-reduce array f start)))
+	   (ci-reduce array f start))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
 (set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs)))
-
-(extend-type cljs.core.Vector
-  IFn
-  (-invoke
-    ([_ k] (-lookup (js* "this") k))
-    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn vec [coll]
   (reduce conj cljs.core.Vector/EMPTY coll)) ; using [] here causes infinite recursion
@@ -2074,7 +2074,13 @@ reduces them without incurring seq initialization"
   (-reduce [coll f]
     (ci-reduce coll f))
   (-reduce [coll f start]
-    (ci-reduce coll f start)))
+    (ci-reduce coll f start))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
@@ -2086,12 +2092,6 @@ reduces them without incurring seq initialization"
      (subvec v start (count v)))
   ([v start end]
      (Subvec. nil v start end)))
-
-(extend-type cljs.core.Subvec
-  IFn
-  (-invoke
-    ([_ k] (-lookup (js* "this") k))
-    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 ;;; PersistentQueue ;;;
 
@@ -2279,17 +2279,17 @@ reduces them without incurring seq initialization"
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
         (ObjMap. meta new-keys new-strobj))
-      coll))) ; key not found, return coll unchanged
+      coll)) ; key not found, return coll unchanged
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found))) 
 
 (set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj)))
 
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj)))
-
-(extend-type cljs.core.ObjMap
-  IFn
-  (-invoke
-    ([_ k] (-lookup (js* "this") k))
-    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Each key is hashed and the result used as a property name of
@@ -2377,7 +2377,13 @@ reduces them without incurring seq initialization"
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
               (aset new-hashobj h new-bucket)))
-          (HashMap. meta (dec count) new-hashobj))))))
+          (HashMap. meta (dec count) new-hashobj)))))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj)))
 
@@ -2387,12 +2393,6 @@ reduces them without incurring seq initialization"
       (if (< i len)
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
-
-(extend-type cljs.core.HashMap
-  IFn
-  (-invoke
-    ([_ k] (-lookup (js* "this") k))
-    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn hash-map
   "keyval => key val
@@ -2494,15 +2494,15 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (dissoc hash-map v))))
+    (Set. meta (dissoc hash-map v)))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (set! cljs.core.Set/EMPTY (Set. nil (hash-map)))
-
-(extend-type cljs.core.Set
-  IFn
-  (-invoke
-    ([_ k] (-lookup (js* "this") k))
-    ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn set
   "Returns a set of the distinct elements of coll."
