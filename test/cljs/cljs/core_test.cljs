@@ -806,4 +806,15 @@
   (defmethod foo 0 [x] x)
   (assert (= foo (ffirst {foo 1})))
   
+  ;; IFn
+  (deftype FnLike []
+    IFn
+    (-invoke [_] :a)
+    (-invoke [_ a] :b)
+    (-invoke [_ a b] :c))
+  
+  (assert (= :a ((FnLike.))))
+  (assert (= :b ((FnLike.) 1)))
+  (assert (= :c ((FnLike.) 1 2)))
+  
   :ok)
