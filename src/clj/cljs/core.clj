@@ -254,12 +254,12 @@
     (if (seq impls)
       `(do
          (deftype* ~t ~fields)
-         (set! (.cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(str r))))
+         (set! (.-cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(str r))))
          (extend-type ~t ~@(dt->et impls))
          ~t)
       `(do
          (deftype* ~t ~fields)
-         (set! (.cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(str r))))
+         (set! (.-cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(str r))))
          ~t))))
 
 (defn- emit-defrecord
@@ -364,7 +364,7 @@
   (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) rsym))]
     `(let []
        ~(emit-defrecord rsym r fields impls)
-       (set! (.cljs$core$IPrintable$_pr_seq ~r) (fn [this#] (list ~(str r))))
+       (set! (.-cljs$core$IPrintable$_pr_seq ~r) (fn [this#] (list ~(str r))))
        ~(build-positional-factory rsym r fields)
        ~(build-map-factory rsym r fields)
        ~r)))
