@@ -816,5 +816,7 @@
   (assert (= :a ((FnLike.))))
   (assert (= :b ((FnLike.) 1)))
   (assert (= :c ((FnLike.) 1 2)))
+
+  (assert (= [:b :b :b] (map (FnLike.) [0 0 0])))
   
   :ok)
