@@ -1257,10 +1257,10 @@ reduces them without incurring seq initialization"
 (extend-type js/String
   IFn
   (-invoke
-    ([_ coll]
-       (get coll (js* "this.toString()")))
-    ([_ coll not-found]
-       (get coll (js* "this.toString()") not-found))))
+    ([this coll]
+       (get coll (.toString this)))
+    ([this coll not-found]
+       (get coll (.toString this) not-found))))
 
 (set! js/String.prototype.apply
       (fn
