@@ -229,9 +229,17 @@
                                       sigs))
                                (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
                                      (map (fn [[f & meths]]
-                                            (let [pf (if (= psym 'cljs.core.IFn)
+                                            (let [ifn? (= psym 'cljs.core.IFn)
+                                                  pf (if ifn?
                                                        (str prototype-prefix 'call)
-                                                       (str prototype-prefix pprefix f))]
+                                                       (str prototype-prefix pprefix f))
+                                                  adapt-params (fn [[[tname :as args] & body]]
+                                                                 `([~@args]
+                                                                     (~'js* "~{} = this" ~tname)
+                                                                     ~@body))
+                                                  meths (if ifn?
+                                                          (map adapt-params meths)
+                                                          meths)]
                                               `(set! ~(symbol pf) (fn* ~@meths))))
                                           sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
