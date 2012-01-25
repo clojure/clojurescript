@@ -826,5 +826,11 @@
   (assert (= :c ((FnLike.) 1 2)))
 
   (assert (= [:b :b :b] (map (FnLike.) [0 0 0])))
+
+  (deftype FnLikeB [a]
+    IFn
+    (-invoke [_] a))
+
+  (assert (= 1 ((FnLikeB. 1))))
   
   :ok)
