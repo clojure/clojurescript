@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core
-  (:refer-clojure :exclude [-> ->> .. amap and areduce assert binding bound-fn case comment cond condp
+  (:refer-clojure :exclude [-> ->> .. amap and areduce alength assert binding bound-fn case comment cond condp
                             declare definline definterface defmethod defmulti defn defn- defonce
                             defprotocol defrecord defstruct deftype delay doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical?
+                            satisfies? identical? true? false?
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -41,6 +41,15 @@
   if-let if-not let letfn loop
   or
   when when-first when-let when-not while])
+
+(defmacro true? [x]
+  (list 'js* "~{} === true" x))
+
+(defmacro false? [x]
+  (list 'js* "~{} === false" x))
+
+(defmacro undefined? [x]
+  (list 'js* "(void 0 === ~{})" x))
 
 (defmacro identical? [a b]
   (list 'js* "(~{} === ~{})" a b))
@@ -161,6 +170,9 @@
 
 (defmacro bit-shift-right [x n]
   (list 'js* "(~{} >> ~{})" x n))
+
+(defmacro bit-set [x n]
+  (list 'js* "(~{} | (1 << ~{}))" x n))
 
 (defn- protocol-prefix [psym]
   (str (.replace (str psym) \. \$) "$"))
@@ -623,6 +635,9 @@
                                        (when-let [~seqsym (next ~seqsym)]
                                         ~@(when needrec [recform])))))]))))]
     (nth (step nil (seq seq-exprs)) 1)))
+
+(defmacro alength [a]
+  (list 'js* "~{}.length" a))
 
 (defmacro amap
   "Maps an expression across an array a, using an index named idx, and

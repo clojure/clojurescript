@@ -77,17 +77,17 @@
 (defn aget
   "Returns the value at the index."
   [array i]
-  (js* "~{array}[~{i}]"))
+  (cljs.core/aget array i))
 
 (defn aset
   "Sets the value at the index."
   [array i val]
-  (js* "(~{array}[~{i}] = ~{val})"))
+  (cljs.core/aset array i val))
 
 (defn alength
   "Returns the length of the Java array. Works on arrays of all types."
   [array]
-  (js* "~{array}.length"))
+  (.-length array))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 
@@ -200,7 +200,7 @@
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn identical? [x y]
   "Tests if 2 arguments are the same object"
-  (js* "(~{x} === ~{y})"))
+  (cljs.core/identical? x y))
 
 (defn = [x y]
   (-equiv x y))
@@ -299,7 +299,7 @@
 ;;this is primitive because & emits call to array-seq
 (defn inc
   "Returns a number one greater than num."
-  [x] (js* "(~{x} + 1)"))
+  [x] (cljs.core/+ x 1))
 
 (defn- ci-reduce
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
@@ -636,14 +636,14 @@ reduces them without incurring seq initialization"
 
 (defn false?
   "Returns true if x is the value false, false otherwise."
-  [x] (js* "~{x} === false"))
+  [x] (cljs.core/false? x))
 
 (defn true?
   "Returns true if x is the value true, false otherwise."
-  [x] (js* "~{x} === true"))
+  [x] (cljs.core/true? x))
 
 (defn undefined? [x]
-  (js* "(void 0 === ~{x})"))
+  (cljs.core/undefined? x))
 
 (defn instance? [t o]
   (js* "(~{o} != null && (~{o} instanceof ~{t} || ~{o}.constructor === ~{t} || ~{t} === Object))"))
@@ -807,76 +807,76 @@ reduces them without incurring seq initialization"
   "Returns the sum of nums. (+) returns 0."
   ([] 0)
   ([x] x)
-  ([x y] (js* "(~{x} + ~{y})"))
-  ([x y & more] (reduce + (+ x y) more)))
+  ([x y] (cljs.core/+ x y))
+  ([x y & more] (reduce + (cljs.core/+ x y) more)))
 
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
-  ([x] (js* "(- ~{x})"))
-  ([x y] (js* "(~{x} - ~{y})"))
-  ([x y & more] (reduce - (- x y) more)))
+  ([x] (cljs.core/- x))
+  ([x y] (cljs.core/- x y))
+  ([x y & more] (reduce - (cljs.core/- x y) more)))
 
 (defn *
   "Returns the product of nums. (*) returns 1."
   ([] 1)
   ([x] x)
-  ([x y] (js* "(~{x} * ~{y})"))
-  ([x y & more] (reduce * (* x y) more)))
+  ([x y] (cljs.core/* x y))
+  ([x y & more] (reduce * (cljs.core/* x y) more)))
 
 (defn /
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."  
-  ([x] (js* "(1 / ~{x})"))
-  ([x y] (js* "(~{x} / ~{y})"))
+  ([x] (/ 1 x))
+  ([x y] (/ x y))
   ([x y & more] (reduce / (/ x y) more)))
 
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} < ~{y})"))
+  ([x y] (cljs.core/< x y))
   ([x y & more]
-     (if (< x y)
+     (if (cljs.core/< x y)
        (if (next more)
          (recur y (first more) (next more))
-         (< y (first more)))
+         (cljs.core/< y (first more)))
        false)))
 
 (defn <=
   "Returns non-nil if nums are in monotonically non-decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} <= ~{y})"))
+  ([x y] (cljs.core/<= x y))
   ([x y & more]
-   (if (<= x y)
+   (if (cljs.core/<= x y)
      (if (next more)
        (recur y (first more) (next more))
-       (<= y (first more)))
+       (cljs.core/<= y (first more)))
      false)))
 
 (defn >
   "Returns non-nil if nums are in monotonically decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} > ~{y})"))
+  ([x y] (cljs.core/> x y))
   ([x y & more]
-   (if (> x y)
+   (if (cljs.core/> x y)
      (if (next more)
        (recur y (first more) (next more))
-       (> y (first more)))
+       (cljs.core/> y (first more)))
      false)))
 
 (defn >=
   "Returns non-nil if nums are in monotonically non-increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} >= ~{y})"))
+  ([x y] (cljs.core/>= x y))
   ([x y & more]
-   (if (>= x y)
+   (if (cljs.core/>= x y)
      (if (next more)
        (recur y (first more) (next more))
-       (>= y (first more)))
+       (cljs.core/>= y (first more)))
      false)))
 
 (defn dec
@@ -886,16 +886,16 @@ reduces them without incurring seq initialization"
 (defn max
   "Returns the greatest of the nums."
   ([x] x)
-  ([x y] (js* "((~{x} > ~{y}) ? x : y)"))
+  ([x y] (cljs.core/max x y))
   ([x y & more]
-   (reduce max (max x y) more)))
+   (reduce max (cljs.core/max x y) more)))
 
 (defn min
   "Returns the least of the nums."
   ([x] x)
-  ([x y] (js* "((~{x} < ~{y}) ? x : y)"))
+  ([x y] (cljs.core/min x y))
   ([x y & more]
-   (reduce min (min x y) more)))
+   (reduce min (cljs.core/min x y) more)))
 
 (defn- fix [q]
   (if (>= q 0)
@@ -905,7 +905,7 @@ reduces them without incurring seq initialization"
 (defn mod
   "Modulus of num and div. Truncates toward negative infinity."
   [n d]
-  (js* "(~{n} % ~{d})"))
+  (cljs.core/mod n d))
 
 (defn quot
   "quot[ient] of dividing numerator by denominator."
@@ -930,52 +930,51 @@ reduces them without incurring seq initialization"
 
 (defn bit-xor
   "Bitwise exclusive or"
-  [x y] (js* "(~{x} ^ ~{y})"))
+  [x y] (cljs.core/bit-xor x y))
 
 (defn bit-and
   "Bitwise and"
-  [x y] (js* "(~{x} & ~{y})"))
+  [x y] (cljs.core/bit-and x y))
 
 (defn bit-or
   "Bitwise or"
-  [x y] (js* "(~{x} | ~{y})"))
+  [x y] (cljs.core/bit-or x y))
 
 (defn bit-and-not
   "Bitwise and"
-  [x y] (js* "(~{x} & ~~{y})"))
+  [x y] (cljs.core/bit-and-not x y))
 
 (defn bit-clear
   "Clear bit at index n"
   [x n]
-  (js* "(~{x} & ~(1 << ~{n}))"))
+  (cljs.core/bit-clear x n))
 
 (defn bit-flip
   "Flip bit at index n"
   [x n]
-  (js* "(~{x} ^ (1 << ~{n}))"))
+  (cljs.core/bit-flip x n))
 
 (defn bit-not
   "Bitwise complement"
-  [x] (js* "(~~{x})"))
+  [x] (cljs.core/bit-not x))
 
 (defn bit-set
   "Set bit at index n"
   [x n]
-  (js* "(~{x} | (1 << ~{n}))"))
+  (cljs.core/bit-set x n))
 
 (defn bit-test
   "Test bit at index n"
   [x n]
-  (js* "((~{x} & (1 << ~{n})) != 0)"))
-
+  (cljs.core/bit-test x n))
 
 (defn bit-shift-left
   "Bitwise shift left"
-  [x n] (js* "(~{x} << ~{n})"))
+  [x n] (cljs.core/bit-shift-left x n))
 
 (defn bit-shift-right
   "Bitwise shift right"
-  [x n] (js* "(~{x} >> ~{n})"))
+  [x n] (cljs.core/bit-shift-right x n))
 
 (defn ==
   "Returns non-nil if nums all have the equivalent
@@ -991,14 +990,14 @@ reduces them without incurring seq initialization"
 
 (defn pos?
   "Returns true if num is greater than zero, else false"
-  [n] (< 0 n))
+  [n] (cljs.core/pos? n))
 
 (defn zero? [n]
-  (== 0 n))
+  (cljs.core/zero? n))
 
 (defn neg?
   "Returns true if num is less than zero, else false"
-  [x] (js* "(~{x} < 0)"))
+  [x] (cljs.core/neg? x))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
 
