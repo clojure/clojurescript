@@ -814,4 +814,17 @@
     (mutate [_]
       (set! a 'foo)))
   
+  ;; IFn
+  (deftype FnLike []
+    IFn
+    (-invoke [_] :a)
+    (-invoke [_ a] :b)
+    (-invoke [_ a b] :c))
+  
+  (assert (= :a ((FnLike.))))
+  (assert (= :b ((FnLike.) 1)))
+  (assert (= :c ((FnLike.) 1 2)))
+
+  (assert (= [:b :b :b] (map (FnLike.) [0 0 0])))
+  
   :ok)
