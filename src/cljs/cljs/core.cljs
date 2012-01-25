@@ -184,6 +184,14 @@
   "Returns true if x is nil, false otherwise."
   (identical? x nil))
 
+(defn type [x]
+  (js* "(~{x}).constructor"))
+
+(extend-type js/Function
+  IPrintable
+  (-pr-seq [this]
+    (list "#<" (str this) ">")))
+
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
