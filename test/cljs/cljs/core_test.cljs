@@ -806,4 +806,12 @@
   (defmethod foo 0 [x] x)
   (assert (= foo (ffirst {foo 1})))
   
+  (defprotocol IMutate
+    (mutate [this]))
+  
+  (deftype Mutate [^:mutable a]
+    IMutate
+    (mutate [_]
+      (set! a 'foo)))
+  
   :ok)
