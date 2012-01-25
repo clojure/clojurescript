@@ -198,15 +198,22 @@
   (-remove-watch [this key]))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
-(defn identical? [x y]
+(defn identical?
   "Tests if 2 arguments are the same object"
+  [x y]
   (cljs.core/identical? x y))
 
-(defn = [x y]
+(defn =
+  "Equality. Returns true if x equals y, false if not. Compares
+  numbers and collections in a type-independent manner.  Clojure's immutable data
+  structures define -equiv (and thus =) as a value, not an identity,
+  comparison."
+  [x y]
   (-equiv x y))
 
-(defn nil? [x]
+(defn nil?
   "Returns true if x is nil, false otherwise."
+  [x]
   (identical? x nil))
 
 (defn type [x]
