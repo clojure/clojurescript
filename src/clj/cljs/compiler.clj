@@ -712,7 +712,6 @@
         methods (map #(analyze-fn-method menv locals %) meths)
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))]
-    ;;(assert (= 1 (count methods)) "Arity overloading not yet supported")
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
     {:env env :op :fn :name mname :methods methods :variadic variadic :recur-frames *recur-frames*
      :jsdoc [(when variadic "@param {...*} var_args")]
