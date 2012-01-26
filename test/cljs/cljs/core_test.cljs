@@ -833,4 +833,9 @@
 
   (assert (= 1 ((FnLikeB. 1))))
   
+  ;; hashing bug in many JS runtimes CLJ-118
+  (let [g #{(conj #{:2} :alt)}
+        h #{#{:2 :alt}}]
+    (assert (= g h)))
+
   :ok)

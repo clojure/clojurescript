@@ -2337,7 +2337,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? count)
-      (let [hashes (js-keys hashobj)]
+      (let [hashes (.sort (js-keys hashobj))]
         (mapcat #(map vec (partition 2 (aget hashobj %)))
                 hashes))))
 
