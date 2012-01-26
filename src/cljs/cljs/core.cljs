@@ -77,19 +77,44 @@
 (defn aget
   "Returns the value at the index."
   [array i]
-  (js* "~{array}[~{i}]"))
+  (cljs.core/aget array i))
 
 (defn aset
   "Sets the value at the index."
   [array i val]
-  (js* "(~{array}[~{i}] = ~{val})"))
+  (cljs.core/aset array i val))
 
 (defn alength
   "Returns the length of the Java array. Works on arrays of all types."
   [array]
-  (js* "~{array}.length"))
+  (.-length array))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
+
+(defprotocol IFn
+  (-invoke
+    [this]
+    [this a]
+    [this a b]
+    [this a b c]
+    [this a b c d]
+    [this a b c d e]
+    [this a b c d e f]
+    [this a b c d e f g]
+    [this a b c d e f g h]
+    [this a b c d e f g h i]
+    [this a b c d e f g h i j]
+    [this a b c d e f g h i j k]
+    [this a b c d e f g h i j k l]
+    [this a b c d e f g h i j k l m]
+    [this a b c d e f g h i j k l m n]
+    [this a b c d e f g h i j k l m n o]
+    [this a b c d e f g h i j k l m n o p]
+    [this a b c d e f g h i j k l m n o p q]
+    [this a b c d e f g h i j k l m n o p q s]
+    [this a b c d e f g h i j k l m n o p q s t]
+    [this a b c d e f g h i j k l m n o p q s t rest]))
+
 (defprotocol ICounted
   (-count [coll] "constant time count"))
 
@@ -173,16 +198,31 @@
   (-remove-watch [this key]))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
-(defn identical? [x y]
+(defn identical?
   "Tests if 2 arguments are the same object"
-  (js* "(~{x} === ~{y})"))
+  [x y]
+  (cljs.core/identical? x y))
 
-(defn = [x y]
+(defn =
+  "Equality. Returns true if x equals y, false if not. Compares
+  numbers and collections in a type-independent manner.  Clojure's immutable data
+  structures define -equiv (and thus =) as a value, not an identity,
+  comparison."
+  [x y]
   (-equiv x y))
 
-(defn nil? [x]
+(defn nil?
   "Returns true if x is nil, false otherwise."
+  [x]
   (identical? x nil))
+
+(defn type [x]
+  (js* "(~{x}).constructor"))
+
+(extend-type js/Function
+  IPrintable
+  (-pr-seq [this]
+    (list "#<" (str this) ">")))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
@@ -266,7 +306,7 @@
 ;;this is primitive because & emits call to array-seq
 (defn inc
   "Returns a number one greater than num."
-  [x] (js* "(~{x} + 1)"))
+  [x] (cljs.core/+ x 1))
 
 (defn- ci-reduce
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
@@ -294,21 +334,21 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
   ISeq
   (-first [_] (aget a i))
-  (-rest [_] (if (< (inc i) (.length a))
+  (-rest [_] (if (< (inc i) (.-length a))
                (IndexedSeq. a (inc i))
                (list)))
 
   ICounted
-  (-count [_] (- (.length a) i))
+  (-count [_] (- (.-length a) i))
 
   IIndexed
   (-nth [coll n]
     (let [i (+ n i)]
-      (when (< i (.length a))
+      (when (< i (.-length a))
         (aget a i))))
   (-nth [coll n not-found]
     (let [i (+ n i)]
-      (if (< i (.length a))
+      (if (< i (.-length a))
         (aget a i)
         not-found)))
 
@@ -320,16 +360,16 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IReduce
-  (-reduce [coll f]
-    (ci-reduce coll f (aget a i) (inc i)))
-  (-reduce [coll f start]
-    (ci-reduce coll f start i))
+  (-reduce [_ f]
+    (ci-reduce a f (aget a i) (inc i)))
+  (-reduce [_ f start]
+    (ci-reduce a f start i))
 
   IHash
   (-hash [coll] (hash-coll coll)))
 
 (defn prim-seq [prim i]
-  (when-not (= 0 (.length prim))
+  (when-not (= 0 (.-length prim))
     (IndexedSeq. prim i)))
 
 (defn array-seq [array i]
@@ -340,14 +380,14 @@ reduces them without incurring seq initialization"
   (-seq [array] (array-seq array 0))
 
   ICounted
-  (-count [a] (.length a))
+  (-count [a] (.-length a))
 
   IIndexed
   (-nth
     ([array n]
-       (if (< n (.length array)) (aget array n)))
+       (if (< n (.-length array)) (aget array n)))
     ([array n not-found]
-       (if (< n (.length array)) (aget array n)
+       (if (< n (.-length array)) (aget array n)
            not-found)))
 
   ILookup
@@ -603,14 +643,14 @@ reduces them without incurring seq initialization"
 
 (defn false?
   "Returns true if x is the value false, false otherwise."
-  [x] (js* "~{x} === false"))
+  [x] (cljs.core/false? x))
 
 (defn true?
   "Returns true if x is the value true, false otherwise."
-  [x] (js* "~{x} === true"))
+  [x] (cljs.core/true? x))
 
 (defn undefined? [x]
-  (js* "(void 0 === ~{x})"))
+  (cljs.core/undefined? x))
 
 (defn instance? [t o]
   (js* "(~{o} != null && (~{o} instanceof ~{t} || ~{o}.constructor === ~{t} || ~{t} === Object))"))
@@ -774,76 +814,76 @@ reduces them without incurring seq initialization"
   "Returns the sum of nums. (+) returns 0."
   ([] 0)
   ([x] x)
-  ([x y] (js* "(~{x} + ~{y})"))
-  ([x y & more] (reduce + (+ x y) more)))
+  ([x y] (cljs.core/+ x y))
+  ([x y & more] (reduce + (cljs.core/+ x y) more)))
 
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
-  ([x] (js* "(- ~{x})"))
-  ([x y] (js* "(~{x} - ~{y})"))
-  ([x y & more] (reduce - (- x y) more)))
+  ([x] (cljs.core/- x))
+  ([x y] (cljs.core/- x y))
+  ([x y & more] (reduce - (cljs.core/- x y) more)))
 
 (defn *
   "Returns the product of nums. (*) returns 1."
   ([] 1)
   ([x] x)
-  ([x y] (js* "(~{x} * ~{y})"))
-  ([x y & more] (reduce * (* x y) more)))
+  ([x y] (cljs.core/* x y))
+  ([x y & more] (reduce * (cljs.core/* x y) more)))
 
 (defn /
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."  
-  ([x] (js* "(1 / ~{x})"))
-  ([x y] (js* "(~{x} / ~{y})"))
+  ([x] (/ 1 x))
+  ([x y] (/ x y))
   ([x y & more] (reduce / (/ x y) more)))
 
 (defn <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} < ~{y})"))
+  ([x y] (cljs.core/< x y))
   ([x y & more]
-     (if (< x y)
+     (if (cljs.core/< x y)
        (if (next more)
          (recur y (first more) (next more))
-         (< y (first more)))
+         (cljs.core/< y (first more)))
        false)))
 
 (defn <=
   "Returns non-nil if nums are in monotonically non-decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} <= ~{y})"))
+  ([x y] (cljs.core/<= x y))
   ([x y & more]
-   (if (<= x y)
+   (if (cljs.core/<= x y)
      (if (next more)
        (recur y (first more) (next more))
-       (<= y (first more)))
+       (cljs.core/<= y (first more)))
      false)))
 
 (defn >
   "Returns non-nil if nums are in monotonically decreasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} > ~{y})"))
+  ([x y] (cljs.core/> x y))
   ([x y & more]
-   (if (> x y)
+   (if (cljs.core/> x y)
      (if (next more)
        (recur y (first more) (next more))
-       (> y (first more)))
+       (cljs.core/> y (first more)))
      false)))
 
 (defn >=
   "Returns non-nil if nums are in monotonically non-increasing order,
   otherwise false."
   ([x] true)
-  ([x y] (js* "(~{x} >= ~{y})"))
+  ([x y] (cljs.core/>= x y))
   ([x y & more]
-   (if (>= x y)
+   (if (cljs.core/>= x y)
      (if (next more)
        (recur y (first more) (next more))
-       (>= y (first more)))
+       (cljs.core/>= y (first more)))
      false)))
 
 (defn dec
@@ -853,16 +893,16 @@ reduces them without incurring seq initialization"
 (defn max
   "Returns the greatest of the nums."
   ([x] x)
-  ([x y] (js* "((~{x} > ~{y}) ? x : y)"))
+  ([x y] (cljs.core/max x y))
   ([x y & more]
-   (reduce max (max x y) more)))
+   (reduce max (cljs.core/max x y) more)))
 
 (defn min
   "Returns the least of the nums."
   ([x] x)
-  ([x y] (js* "((~{x} < ~{y}) ? x : y)"))
+  ([x y] (cljs.core/min x y))
   ([x y & more]
-   (reduce min (min x y) more)))
+   (reduce min (cljs.core/min x y) more)))
 
 (defn- fix [q]
   (if (>= q 0)
@@ -872,7 +912,7 @@ reduces them without incurring seq initialization"
 (defn mod
   "Modulus of num and div. Truncates toward negative infinity."
   [n d]
-  (js* "(~{n} % ~{d})"))
+  (cljs.core/mod n d))
 
 (defn quot
   "quot[ient] of dividing numerator by denominator."
@@ -897,52 +937,51 @@ reduces them without incurring seq initialization"
 
 (defn bit-xor
   "Bitwise exclusive or"
-  [x y] (js* "(~{x} ^ ~{y})"))
+  [x y] (cljs.core/bit-xor x y))
 
 (defn bit-and
   "Bitwise and"
-  [x y] (js* "(~{x} & ~{y})"))
+  [x y] (cljs.core/bit-and x y))
 
 (defn bit-or
   "Bitwise or"
-  [x y] (js* "(~{x} | ~{y})"))
+  [x y] (cljs.core/bit-or x y))
 
 (defn bit-and-not
   "Bitwise and"
-  [x y] (js* "(~{x} & ~~{y})"))
+  [x y] (cljs.core/bit-and-not x y))
 
 (defn bit-clear
   "Clear bit at index n"
   [x n]
-  (js* "(~{x} & ~(1 << ~{n}))"))
+  (cljs.core/bit-clear x n))
 
 (defn bit-flip
   "Flip bit at index n"
   [x n]
-  (js* "(~{x} ^ (1 << ~{n}))"))
+  (cljs.core/bit-flip x n))
 
 (defn bit-not
   "Bitwise complement"
-  [x] (js* "(~~{x})"))
+  [x] (cljs.core/bit-not x))
 
 (defn bit-set
   "Set bit at index n"
   [x n]
-  (js* "(~{x} | (1 << ~{n}))"))
+  (cljs.core/bit-set x n))
 
 (defn bit-test
   "Test bit at index n"
   [x n]
-  (js* "((~{x} & (1 << ~{n})) != 0)"))
-
+  (cljs.core/bit-test x n))
 
 (defn bit-shift-left
   "Bitwise shift left"
-  [x n] (js* "(~{x} << ~{n})"))
+  [x n] (cljs.core/bit-shift-left x n))
 
 (defn bit-shift-right
   "Bitwise shift right"
-  [x n] (js* "(~{x} >> ~{n})"))
+  [x n] (cljs.core/bit-shift-right x n))
 
 (defn ==
   "Returns non-nil if nums all have the equivalent
@@ -958,14 +997,14 @@ reduces them without incurring seq initialization"
 
 (defn pos?
   "Returns true if num is greater than zero, else false"
-  [n] (< 0 n))
+  [n] (cljs.core/pos? n))
 
 (defn zero? [n]
-  (== 0 n))
+  (cljs.core/zero? n))
 
 (defn neg?
   "Returns true if num is less than zero, else false"
-  [x] (js* "(~{x} < 0)"))
+  [x] (cljs.core/neg? x))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
 
@@ -1013,8 +1052,8 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (symbol? x) (. x (substring 2 (.length x)))
-        (keyword? x) (str* ":" (. x (substring 2 (.length x))))
+        (symbol? x) (. x (substring 2 (.-length x)))
+        (keyword? x) (str* ":" (. x (substring 2 (.-length x))))
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]
@@ -1196,7 +1235,7 @@ reduces them without incurring seq initialization"
   (-seq [string] (prim-seq string 0))
   
   ICounted
-  (-count [s] (.length s))
+  (-count [s] (.-length s))
 
   IIndexed
   (-nth
@@ -1221,12 +1260,13 @@ reduces them without incurring seq initialization"
        (ci-reduce string f start))))
 
 ;;hrm
-(set! js/String.prototype.call
-      (fn
-        ([_ coll]
-           (get coll (js* "this.toString()")))
-        ([_ coll not-found]
-           (get coll (js* "this.toString()") not-found))))
+(extend-type js/String
+  IFn
+  (-invoke
+    ([this coll]
+       (get coll (.toString this)))
+    ([this coll not-found]
+       (get coll (.toString this) not-found))))
 
 (set! js/String.prototype.apply
       (fn
@@ -1239,13 +1279,13 @@ reduces them without incurring seq initialization"
 ;;; LazySeq ;;;
 
 (defn- lazy-seq-value [lazy-seq]
-  (let [x (.x lazy-seq)]
-    (if (.realized lazy-seq)
+  (let [x (.-x lazy-seq)]
+    (if (.-realized lazy-seq)
       x
       (do
-        (set! (.x lazy-seq) (x))
-        (set! (.realized lazy-seq) true)
-        (.x lazy-seq)))))
+        (set! (.-x lazy-seq) (x))
+        (set! (.-realized lazy-seq) true)
+        (.-x lazy-seq)))))
 
 (deftype LazySeq [meta realized x]
   IWithMeta
@@ -1339,49 +1379,49 @@ reduces them without incurring seq initialization"
   "Applies fn f to the argument list formed by prepending intervening arguments to args.
   First cut.  Not lazy.  Needs to use emitted toApply."
   ([f args]
-     (let [fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+     (let [fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count args (inc fixed-arity))
                  fixed-arity)
-           (. f apply f (to-array args))
-           (. f cljs$lang$applyTo args))
-         (. f apply f (to-array args)))))
+           (.apply f f (to-array args))
+           (.cljs$lang$applyTo f args))
+         (.apply f f (to-array args)))))
   ([f x args]
      (let [arglist (list* x args)
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+           fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist)))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist)))))
   ([f x y args]
      (let [arglist (list* x y args)
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+           fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist)))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist)))))
   ([f x y z args]
      (let [arglist (list* x y z args)
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+           fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist)))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist)))))
   ([f a b c d & args]
      (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
-           fixed-arity (. f cljs$lang$maxFixedArity)]
-       (if (. f cljs$lang$applyTo)
+           fixed-arity (.-cljs$lang$maxFixedArity f)]
+       (if (.-cljs$lang$applyTo f)
          (if (<= (bounded-count arglist fixed-arity)
                  fixed-arity)
-           (. f apply f (to-array arglist))
-           (. f cljs$lang$applyTo arglist))
-         (. f apply f (to-array arglist))))))
+           (.apply f f (to-array arglist))
+           (.cljs$lang$applyTo f arglist))
+         (.apply f f (to-array arglist))))))
 
 (defn vary-meta
  "Returns an object of the same type and value as obj, with
@@ -1458,9 +1498,7 @@ reduces them without incurring seq initialization"
   "Takes a set of functions and returns a fn that is the composition
   of those fns.  The returned fn takes a variable number of args,
   applies the rightmost of fns to the args, the next
-  fn (right-to-left) to the result, etc.
-
-  TODO: Implement apply"
+  fn (right-to-left) to the result, etc."
   ([] identity)
   ([f] f)
   ([f g] 
@@ -1488,9 +1526,7 @@ reduces them without incurring seq initialization"
 (defn partial
   "Takes a function f and fewer than the normal arguments to f, and
   returns a fn that takes a variable number of additional args. When
-  called, the returned function calls f with args + additional args.
-
-  TODO: Implement apply"
+  called, the returned function calls f with args + additional args."
   ([f arg1]
    (fn [& args] (apply f arg1 args)))
   ([f arg1 arg2]
@@ -1905,11 +1941,11 @@ reduces them without incurring seq initialization"
 
   IStack
   (-peek [coll]
-    (let [count (.length array)]
+    (let [count (.-length array)]
       (when (> count 0)
         (aget array (dec count)))))
   (-pop [coll]
-    (if (> (.length array) 0)
+    (if (> (.-length array) 0)
       (let [new-array (aclone array)]
         (. new-array (pop))
         (Vector. meta new-array))
@@ -1933,24 +1969,24 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (> (.length array) 0)
+    (when (> (.-length array) 0)
       (let [vector-seq
              (fn vector-seq [i]
                (lazy-seq
-                 (when (< i (.length array))
+                 (when (< i (.-length array))
                    (cons (aget array i) (vector-seq (inc i))))))]
         (vector-seq 0))))
 
   ICounted
-  (-count [coll] (.length array))
+  (-count [coll] (.-length array))
 
   IIndexed
   (-nth [coll n]
-    (if (and (<= 0 n) (< n (.length array)))
+    (if (and (<= 0 n) (< n (.-length array)))
       (aget array n)
-      #_(throw (js/Error. (str "No item " n " in vector of length " (.length array))))))
+      #_(throw (js/Error. (str "No item " n " in vector of length " (.-length array))))))
   (-nth [coll n not-found]
-    (if (and (<= 0 n) (< n (.length array)))
+    (if (and (<= 0 n) (< n (.-length array)))
       (aget array n)
       not-found))
 
@@ -1971,16 +2007,17 @@ reduces them without incurring seq initialization"
   (-reduce [v f]
 	   (ci-reduce array f))
   (-reduce [v f start]
-	   (ci-reduce array f start)))
+	   (ci-reduce array f start))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (set! cljs.core.Vector/EMPTY (Vector. nil (array)))
 
 (set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs)))
-
-(set! cljs.core.Vector.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn vec [coll]
   (reduce conj cljs.core.Vector/EMPTY coll)) ; using [] here causes infinite recursion
@@ -2051,7 +2088,13 @@ reduces them without incurring seq initialization"
   (-reduce [coll f]
     (ci-reduce coll f))
   (-reduce [coll f start]
-    (ci-reduce coll f start)))
+    (ci-reduce coll f start))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
@@ -2064,10 +2107,87 @@ reduces them without incurring seq initialization"
   ([v start end]
      (Subvec. nil v start end)))
 
-(set! cljs.core.Subvec.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
+;;; PersistentQueue ;;;
+
+(deftype PersistentQueueSeq [meta front rear]
+  IWithMeta
+  (-with-meta [coll meta] (PersistentQueueSeq. meta front rear))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (-first front))
+  (-rest  [coll]
+    (if-let [f1 (next front)]
+      (PersistentQueueSeq. meta f1 rear)
+      (if (nil? rear)
+        (-empty coll)
+        (PersistentQueueSeq. meta rear nil))))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll] coll))
+
+(deftype PersistentQueue [meta count front rear]
+  IWithMeta
+  (-with-meta [coll meta] (PersistentQueue. meta count front rear))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll] (first front))
+  (-rest [coll] (rest (seq coll)))
+
+  IStack
+  (-peek [coll] (-first front))
+  (-pop [coll]
+    (if front
+      (if-let [f1 (next front)]
+        (PersistentQueue. meta (dec count) f1 rear)
+        (PersistentQueue. meta (dec count) (seq rear) []))
+      coll))
+
+  ICollection
+  (-conj [coll o]
+    (if front
+      (PersistentQueue. meta (inc count) front (conj (or rear []) o))
+      (PersistentQueue. meta (inc count) (conj front o) [])))
+
+  IEmptyableCollection
+  (-empty [coll] cljs.core.PersistentQueue/EMPTY)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeqable
+  (-seq [coll]
+    (let [rear (seq rear)]
+      (if (or front rear)
+        (PersistentQueueSeq. nil front (seq rear))
+        cljs.core.List/EMPTY)))
+
+  ICounted
+  (-count [coll] count))
+
+(set! cljs.core.PersistentQueue/EMPTY (PersistentQueue. nil 0 nil []))
 
 (deftype NeverEquiv []
   IEquiv
@@ -2090,7 +2210,7 @@ reduces them without incurring seq initialization"
 
 
 (defn- scan-array [incr k array]
-  (let [len (.length array)]
+  (let [len (.-length array)]
     (loop [i 0]
       (when (< i len)
         (if (= k (aget array i))
@@ -2138,11 +2258,11 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (pos? (.length keys))
+    (when (pos? (.-length keys))
       (map #(vector % (aget strobj %)) keys)))
 
   ICounted
-  (-count [coll] (.length keys))
+  (-count [coll] (.-length keys))
 
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
@@ -2173,16 +2293,17 @@ reduces them without incurring seq initialization"
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
         (ObjMap. meta new-keys new-strobj))
-      coll))) ; key not found, return coll unchanged
+      coll)) ; key not found, return coll unchanged
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found))) 
 
 (set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj)))
 
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj)))
-
-(set! cljs.core.ObjMap.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 ; The keys field is an array of all keys of this map, in no particular
 ; order. Each key is hashed and the result used as a property name of
@@ -2216,7 +2337,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? count)
-      (let [hashes (js-keys hashobj)]
+      (let [hashes (.sort (js-keys hashobj))]
         (mapcat #(map vec (partition 2 (aget hashobj %)))
                 hashes))))
 
@@ -2265,26 +2386,27 @@ reduces them without incurring seq initialization"
       (if (not i)
         coll ; key not found, return coll unchanged
         (let [new-hashobj (goog.object/clone hashobj)]
-          (if (> 3 (.length bucket))
+          (if (> 3 (.-length bucket))
             (js-delete new-hashobj h)
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
               (aset new-hashobj h new-bucket)))
-          (HashMap. meta (dec count) new-hashobj))))))
+          (HashMap. meta (dec count) new-hashobj)))))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj)))
 
 (set! cljs.core.HashMap/fromArrays (fn [ks vs]
-  (let [len (.length ks)]
+  (let [len (.-length ks)]
     (loop [i 0, out cljs.core.HashMap/EMPTY]
       (if (< i len)
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
-
-(set! cljs.core.HashMap.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn hash-map
   "keyval => key val
@@ -2386,14 +2508,15 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (dissoc hash-map v))))
+    (Set. meta (dissoc hash-map v)))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 (set! cljs.core.Set/EMPTY (Set. nil (hash-map)))
-
-(set! cljs.core.Set.prototype.call
-      (fn
-        ([_ k] (-lookup (js* "this") k))
-        ([_ k not-found] (-lookup (js* "this") k not-found))))
 
 (defn set
   "Returns a set of the distinct elements of coll."
@@ -2623,9 +2746,7 @@ reduces them without incurring seq initialization"
   of those fns.  The returned fn takes a variable number of args, and
   returns a vector containing the result of applying each fn to the
   args (left-to-right).
-  ((juxt a b c) x) => [(a x) (b x) (c x)]
-
-  TODO: Implement apply"
+  ((juxt a b c) x) => [(a x) (b x) (c x)]"
   ([f]
      (fn
        ([] (vector (f)))
@@ -2853,6 +2974,9 @@ reduces them without incurring seq initialization"
   IndexedSeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
+  PersistentQueueSeq
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
   List
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
@@ -2905,9 +3029,12 @@ reduces them without incurring seq initialization"
     (doseq [[key f] watches]
       (f key this oldval newval)))
   (-add-watch [this key f]
-    (set! (.watches this) (assoc watches key f)))
+    (set! (.-watches this) (assoc watches key f)))
   (-remove-watch [this key]
-    (set! (.watches this) (dissoc watches key))))
+    (set! (.-watches this) (dissoc watches key)))
+
+  IHash
+  (-hash [this] (goog.getUid this)))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
@@ -2930,10 +3057,10 @@ reduces them without incurring seq initialization"
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
   [a new-value]
-  (when-let [validate (.validator a)]
+  (when-let [validate (.-validator a)]
     (assert (validate new-value) "Validator rejected reference state"))
-  (let [old-value (.state a)]
-    (set! (.state a) new-value)
+  (let [old-value (.-state a)]
+    (set! (.-state a) new-value)
     (-notify-watches a old-value new-value))
   new-value)
 
@@ -2943,15 +3070,15 @@ reduces them without incurring seq initialization"
   multiple times, and thus should be free of side effects.  Returns
   the value that was swapped in."
   ([a f]
-     (reset! a (f (.state a))))
+     (reset! a (f (.-state a))))
   ([a f x]
-     (reset! a (f (.state a) x)))
+     (reset! a (f (.-state a) x)))
   ([a f x y]
-     (reset! a (f (.state a) x y)))
+     (reset! a (f (.-state a) x y)))
   ([a f x y z]
-     (reset! a (f (.state a) x y z)))
+     (reset! a (f (.-state a) x y z)))
   ([a f x y z & more]
-     (reset! a (apply f (.state a) x y z more))))
+     (reset! a (apply f (.-state a) x y z more))))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
@@ -2977,12 +3104,12 @@ reduces them without incurring seq initialization"
   is not acceptable to the new validator, an Error will be thrown and the
   validator will not be changed."
   [iref val]
-  (set! (.validator iref) val))
+  (set! (.-validator iref) val))
 
 (defn get-validator
   "Gets the validator-fn for a var/ref/agent/atom."
   [iref]
-  (.validator iref))
+  (.-validator iref))
 
 (defn alter-meta!
   "Atomically sets the metadata for a namespace/var/ref/agent/atom to be:
@@ -2991,12 +3118,12 @@ reduces them without incurring seq initialization"
 
   f must be free of side-effects"
   [iref f & args]
-  (set! (.meta iref) (apply f (.meta iref) args)))
+  (set! (.-meta iref) (apply f (.-meta iref) args)))
 
 (defn reset-meta!
   "Atomically resets the metadata for an atom"
   [iref m]
-  (set! (.meta iref) m))
+  (set! (.-meta iref) m))
 
 (defn add-watch
   "Alpha - subject to change.
@@ -3301,7 +3428,7 @@ reduces them without incurring seq initialization"
 (defn- find-and-cache-best-method
   [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
   (let [best-entry (reduce (fn [be [k _ :as e]]
-                             (when (isa? dispatch-val k)
+                             (if (isa? dispatch-val k)
                                (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
                                            e
                                            be)]
@@ -3310,7 +3437,8 @@ reduces them without incurring seq initialization"
                                            (str "Multiple methods in multimethod '" name
                                                 "' match dispatch value: " dispatch-val " -> " k
                                                 " and " (first be2) ", and neither is preferred"))))
-                                 be2)))
+                                 be2)
+                               be))
                            nil @method-table)]
     (when best-entry
       (if (= @cached-hierarchy @hierarchy)
@@ -3330,9 +3458,9 @@ reduces them without incurring seq initialization"
   (-get-method [mf dispatch-val])
   (-methods [mf])
   (-prefers [mf])
-  (-invoke [mf args]))
+  (-dispatch [mf args]))
 
-(defn- do-invoke
+(defn- do-dispatch
   [mf dispatch-fn args]
   (let [dispatch-val (apply dispatch-fn args)
         target-fn (-get-method mf dispatch-val)]
@@ -3384,10 +3512,16 @@ reduces them without incurring seq initialization"
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
 
-  (-invoke [mf args] (do-invoke mf dispatch-fn args)))
+  (-dispatch [mf args] (do-dispatch mf dispatch-fn args))
+
+  IHash
+  (-hash [this] (goog.getUid this)))
 
 (set! cljs.core.MultiFn.prototype.call
-      (fn [_ & args] (-invoke (js* "this") args)))
+      (fn [_ & args] (-dispatch (js* "this") args)))
+
+(set! cljs.core.MultiFn.prototype.apply
+      (fn [_ args] (-dispatch (js* "this") args)))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."

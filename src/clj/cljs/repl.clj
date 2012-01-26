@@ -65,7 +65,8 @@
              js (comp/emits ast)
              wrap-js (comp/emits (comp/analyze env (wrap form)))]
          (when (= (:op ast) :ns)
-           (load-dependencies repl-env (vals (:requires ast))))
+           (load-dependencies repl-env (into (vals (:requires ast))
+                                             (distinct (vals (:uses ast))))))
          (when *cljs-verbose*
            (print js))
          (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]

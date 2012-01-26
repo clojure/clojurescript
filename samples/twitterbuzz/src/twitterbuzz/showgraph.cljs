@@ -77,12 +77,12 @@
 
     ; Draw mention edges
     (doseq [[username {ux1 :x, uy1 :y}] locs
-            :let [x1 (unit-to-pixel ux1 (.width canvas-size))
-                  y1 (unit-to-pixel uy1 (.height canvas-size))]
+            :let [x1 (unit-to-pixel ux1 (.-width canvas-size))
+                  y1 (unit-to-pixel uy1 (.-height canvas-size))]
             [mention-name mention-count] (:mentions (get mentions username))]
       (when-let [{ux2 :x, uy2 :y} (get locs mention-name)]
-        (let [x2 (unit-to-pixel ux2 (.width canvas-size))
-              y2 (unit-to-pixel uy2 (.height canvas-size))]
+        (let [x2 (unit-to-pixel ux2 (.-width canvas-size))
+              y2 (unit-to-pixel uy2 (.-height canvas-size))]
           (.drawPath g
                     (-> (. g (createPath)) (.moveTo x1 y1) (.lineTo x2 y2))
                     edge-stroke nil))))
@@ -90,8 +90,8 @@
     ; Draw avatar nodes
     (doseq [[username {:keys [x y] :as foo}] locs]
       ;(log (pr-str foo))
-      (let [px (- (unit-to-pixel x (.width canvas-size))  (/ avatar-size 2))
-            py (- (unit-to-pixel y (.height canvas-size)) (/ avatar-size 2))
+      (let [px (- (unit-to-pixel x (.-width canvas-size))  (/ avatar-size 2))
+            py (- (unit-to-pixel y (.-height canvas-size)) (/ avatar-size 2))
             user (get mentions username)
             image-url (get user :image-url default-avatar)
             img (.drawImage g px py avatar-size avatar-size image-url)]
@@ -104,7 +104,7 @@
                  "No locations to graph"
                  text)]
       (when text
-        (.drawTextOnLine g text 5 20 (.width canvas-size) 20
+        (.drawTextOnLine g text 5 20 (.-width canvas-size) 20
                         "left" font nil fill)))))
 
 (def graph-data (atom nil))

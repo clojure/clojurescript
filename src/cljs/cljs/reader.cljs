@@ -102,7 +102,7 @@ nil if the end of stream has been reached")
   (let [groups (re-find int-pattern s)
         group3 (nth groups 2)]
     (if (not (or (undefined? group3)
-                 (< (.length group3) 1)))
+                 (< (.-length group3) 1)))
       0
       (let [negate (if (= "-" (nth groups 1)) -1 1)
             [n radix] (cond
@@ -250,17 +250,16 @@ nil if the end of stream has been reached")
   (let [token (read-token reader initch)]
     (if (gstring/contains token "/")
       (symbol (subs token 0 (.indexOf token "/"))
-              (subs (inc (.indexOf token "/")) (.length token)))
+              (subs token (inc (.indexOf token "/")) (.-length token)))
       (get special-symbols token (symbol token)))))
 
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
-        [token ns name] (re-matches symbol-pattern token)
-        ns? (and (not (undefined? ns)) (> (.length ns) 0))]
-    (if (or (and ns?
-                 (identical? (. ns (substring (- (.length ns) 2) (.length ns))) ":/"))
-            (identical? (aget name (dec (.length name))) ":")
+        [token ns name] (re-matches symbol-pattern token)]
+    (if (or (and (not (undefined? ns))
+                 (identical? (. ns (substring (- (.-length ns) 2) (.-length ns))) ":/"))
+            (identical? (aget name (dec (.-length name))) ":")
             (not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
       (if ns?

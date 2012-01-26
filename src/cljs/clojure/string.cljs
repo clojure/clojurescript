@@ -30,7 +30,7 @@
   (cond (string? match)
         (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
         (.hasOwnProperty match "source")
-        (.replace s (js/RegExp. (.source match) "g") replacement)
+        (.replace s (js/RegExp. (.-source match) "g") replacement)
         :else (throw (str "Invalid match arg: " match))))
 
 (defn replace-first
@@ -122,7 +122,7 @@
   "Removes all trailing newline \\n or return \\r characters from
   string.  Similar to Perl's chomp."
   [s]
-  (loop [index (.length s)]
+  (loop [index (.-length s)]
     (if (zero? index)
       ""
       (let [ch (get s (dec index))]
@@ -149,7 +149,7 @@
    If (cmap ch) is non-nil, append (str (cmap ch)) instead."
   [s cmap]
   (let [buffer (gstring/StringBuffer.)
-        length (.length s)]
+        length (.-length s)]
     (loop [index 0]
       (if (= length index)
         (. buffer (toString))
