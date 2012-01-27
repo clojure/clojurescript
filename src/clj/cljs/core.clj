@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core
-  (:refer-clojure :exclude [-> ->> .. amap and areduce assert binding bound-fn case comment cond condp
+  (:refer-clojure :exclude [-> ->> .. amap and areduce alength assert binding bound-fn case comment cond condp
                             declare definline definterface defmethod defmulti defn defn- defonce
                             defprotocol defrecord defstruct deftype delay doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical?
+                            satisfies? identical? true? false?
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -41,6 +41,15 @@
   if-let if-not let letfn loop
   or
   when when-first when-let when-not while])
+
+(defmacro true? [x]
+  (list 'js* "~{} === true" x))
+
+(defmacro false? [x]
+  (list 'js* "~{} === false" x))
+
+(defmacro undefined? [x]
+  (list 'js* "(void 0 === ~{})" x))
 
 (defmacro identical? [a b]
   (list 'js* "(~{} === ~{})" a b))
@@ -162,6 +171,9 @@
 (defmacro bit-shift-right [x n]
   (list 'js* "(~{} >> ~{})" x n))
 
+(defmacro bit-set [x n]
+  (list 'js* "(~{} | (1 << ~{}))" x n))
+
 (defn- protocol-prefix [psym]
   (str (.replace (str psym) \. \$) "$"))
 
@@ -208,7 +220,7 @@
       (let [t (base-type tsym)
             assign-impls (fn [[p sigs]]
                            (let [psym (resolve p)
-				 pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
+                                 pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths]]
                                           `(aset ~(symbol (str pfn-prefix f)) ~t (fn* ~@meths)))
@@ -218,19 +230,30 @@
             prototype-prefix (str t ".prototype.")
             assign-impls (fn [[p sigs]]
                            (let [psym (resolve p)
-				 pprefix (protocol-prefix psym)]
-			     (if (= p 'Object)
-			       (let [adapt-params (fn [[sig & body]]
-						    (let [[tname & args] sig]
-						      (list (with-meta (vec args) (meta sig))
-							    (list* 'this-as tname body))))]
-				 (map (fn [[f & meths]]
-					`(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
-				      sigs))
-			       (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
-				     (map (fn [[f & meths]]
-					    `(set! ~(symbol (str prototype-prefix pprefix f)) (fn* ~@meths)))
-					  sigs)))))]
+                                 pprefix (protocol-prefix psym)]
+                             (if (= p 'Object)
+                               (let [adapt-params (fn [[sig & body]]
+                                                    (let [[tname & args] sig]
+                                                      (list (with-meta (vec args) (meta sig))
+                                                            (list* 'this-as tname body))))]
+                                 (map (fn [[f & meths]]
+                                        `(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
+                                      sigs))
+                               (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
+                                     (map (fn [[f & meths]]
+                                            (let [ifn? (= psym 'cljs.core.IFn)
+                                                  pf (if ifn?
+                                                       (str prototype-prefix 'call)
+                                                       (str prototype-prefix pprefix f))
+                                                  adapt-params (fn [[[tname :as args] & body]]
+                                                                 `(~args
+                                                                   (~'js* "~{} = this" ~tname)
+                                                                   ~@body))
+                                                  meths (if ifn?
+                                                          (map adapt-params meths)
+                                                          meths)]
+                                              `(set! ~(symbol pf) (fn* ~@meths))))
+                                          sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
 (defmacro deftype [t fields & impls]
@@ -249,12 +272,18 @@
                                          []
                                          (group-by first (take-while seq? (next s))))))
                             (drop-while seq? (next s)))
-                     ret)))]
+                     ret)))
+        r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))]
     (if (seq impls)
       `(do
          (deftype* ~t ~fields)
-         (extend-type ~t ~@(dt->et impls)))
-      `(deftype* ~t ~fields))))
+         (set! (.-cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(str r))))
+         (extend-type ~t ~@(dt->et impls))
+         ~t)
+      `(do
+         (deftype* ~t ~fields)
+         (set! (.-cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(str r))))
+         ~t))))
 
 (defn- emit-defrecord
    "Do not use this directly - use defrecord"
@@ -358,8 +387,10 @@
   (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) rsym))]
     `(let []
        ~(emit-defrecord rsym r fields impls)
+       (set! (.-cljs$core$IPrintable$_pr_seq ~r) (fn [this#] (list ~(str r))))
        ~(build-positional-factory rsym r fields)
-       ~(build-map-factory rsym r fields))))
+       ~(build-map-factory rsym r fields)
+       ~r)))
 
 (defmacro defprotocol [psym & doc+methods]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
@@ -604,6 +635,9 @@
                                        (when-let [~seqsym (next ~seqsym)]
                                         ~@(when needrec [recform])))))]))))]
     (nth (step nil (seq seq-exprs)) 1)))
+
+(defmacro alength [a]
+  (list 'js* "~{}.length" a))
 
 (defmacro amap
   "Maps an expression across an array a, using an index named idx, and

@@ -7,9 +7,23 @@ bin/cljsc test {:optimizations :advanced} > out/core-advanced-test.js
 if [ "$V8_HOME" == "" ]; then
   echo "V8_HOME not set, skipping V8 tests"
 else
+  echo "Testing with V8"
   ${V8_HOME}/d8 out/core-advanced-test.js
   # TODO: figure out path problem when not in advanced mode
   # ${V8_HOME}/d8 out/core-test.js
 fi
 
-# TODO : run tests with rhino if available
+if [ "$SPIDERMONKEY_HOME" == "" ]; then
+  echo "SPIDERMONKEY_HOME not set, skipping SpiderMonkey tests"
+else
+  echo "Testing with SpiderMonkey"
+  ${SPIDERMONKEY_HOME}/js -f out/core-advanced-test.js
+fi
+
+if [ "$JSC_HOME" == "" ]; then
+  echo "JSC_HOME not set, skipping JavaScriptCore tests"
+else
+  echo "Testing with JavaScriptCore"
+  ${JSC_HOME}/jsc -f out/core-advanced-test.js
+fi
+
