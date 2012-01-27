@@ -393,7 +393,6 @@
   and :url"
   [lib-spec]
   (merge lib-spec {:foreign true
-                   :requires nil
                    :url (find-url (:file lib-spec))}))
 
 (def load-foreign-library (memoize load-foreign-library*))
