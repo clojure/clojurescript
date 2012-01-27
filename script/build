@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+# This script must be run within the ClojureScript top-level project
+# directory.
+
+set -e
+
+cd `dirname $0`/..
+
+DATE=`date '+%Y%m%d%H%M%S'`
+WORKING="clojurescript_release_$DATE"
+mkdir "$WORKING"
+
+POM_TEMPLATE="pom.template.xml"
+
+# The command `git describe --match v0.0` will return a string like
+#
+# v0.0-856-g329708b
+#
+# where 856 is the number of commits since the v0.0 tag. It will always
+# find the v0.0 tag and will always return the total number of commits (even
+# if the tag is v0.0.1).
+REVISION=`git describe --match v0.0`
+
+# Extract the version number from the string. Do this in two steps so
+# it is a little easier to understand.
+REVISION=${REVISION:5} # drop the first 5 characters
+REVISION=${REVISION:0:${#REVISION}-9} # drop the last 9 characters
+
+TAG=r$REVISION
+
+POM_FILE="$WORKING/clojurescript-0.0-$REVISION.pom"
+JAR_FILE="$WORKING/clojurescript-0.0-$REVISION.jar"
+
+
+# `jar cf` errors on duplicate entries,
+# so we have to assemble the directory manually
+mkdir "$WORKING/jar_contents"
+
+cp -R epl-v10.html src/clj/cljs src/cljs/cljs src/cljs/clojure \
+    "$WORKING/jar_contents"
+
+jar cf "$JAR_FILE" -C "$WORKING/jar_contents" .
+
+sed -e s/CLOJURESCRIPT_VERSION/0.0-$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
+
+mvn install:install-file -Dfile="$JAR_FILE" -DpomFile="$POM_FILE"
+
+# For Hudson server
+if [ "$HUDSON" == "true" ]; then
+    echo "Creating tag $TAG"
+    git tag -f $TAG
+    # TODO git push
+
+    export PATH="$PATH:/var/lib/hudson/tools/Maven_2.2.1/bin"
+    export JAVA_HOME=/usr/lib/jvm/java-1.6.0
+    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile="$POM_FILE" -Dfile="$JAR_FILE"
+    #TODO #mvn nexus:staging-close
+    #TODO #mvn nexus:staging-promote
+else
+    echo "Skipping Maven deployment and Git push because we are not on Hudson."
+fi
