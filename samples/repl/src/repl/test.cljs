@@ -23,7 +23,7 @@
   (def opts {:output-to "samples/repl/main.js"
              :output-dir "samples/repl/out"})
   (build "samples/repl/src" opts)
-  
+
   ;; Start REPL
   (do (require '[cljs.repl :as repl])
       (require '[cljs.repl.browser :as browser])
@@ -35,9 +35,9 @@
       (require '[cljs.repl.multi-browser :as multi-browser])
       (def env (multi-browser/repl-env))
       (repl/repl env))
-  
+
   ;; Open the file samples/repl/index.html
-  
+
   ;; Evaluate some basic forms
   (+ 1 1)
   (string-print "hello")
@@ -50,7 +50,7 @@
   (reduce + [1 2 3 4 5])
   (time (reduce + (range 10000)))
   (js/alert "Hello World!")
-  
+
   (load-file "clojure/string.cljs")
   (clojure.string/reverse "Hello")
 
@@ -69,5 +69,5 @@
 
   (load-namespace 'goog.date.Date)
   (goog.date.Date.)
-  
+
   )
