@@ -60,7 +60,7 @@
 
   ;; Create dom elements.
   (ns dom.testing (:require [clojure.browser.dom :as dom]))
-  (dom/append (dom/get-element "gsr")
+  (dom/append (dom/get-element "content")
               (dom/element "Hello World!"))
 
   ;; Load something we haven't used yet
