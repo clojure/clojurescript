@@ -1,6 +1,3 @@
-clojurescript*.zip
-clojurescript*.jar
-pom.xml
 *~
 .idea
 /.DS_Store
