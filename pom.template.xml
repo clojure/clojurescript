@@ -1,0 +1,77 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.clojure</groupId>
+  <artifactId>clojurescript</artifactId>
+  <!-- Version number will be replaced by script/build -->
+  <version>CLOJURESCRIPT_VERSION</version>
+  <packaging>jar</packaging>
+  <name>ClojureScript</name>
+
+  <url>https://github.com/clojure/clojurescript</url>
+
+  <description>
+    ClojureScript compiler and core runtime library.
+  </description>
+
+  <licenses>
+    <license>
+      <name>Eclipse Public License 1.0</name>
+      <url>http://opensource.org/licenses/eclipse-1.0.php</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.google.javascript</groupId>
+      <artifactId>closure-compiler</artifactId>
+      <version>r1592</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>google-closure-library</artifactId>
+      <version>0.0-790</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mozilla</groupId>
+      <artifactId>rhino</artifactId>
+      <version>1.7R3</version>
+    </dependency>
+  </dependencies>
+
+  <developers>
+    <developer><id>abedra</id><name>Aaron Bedra</name></developer>
+    <developer><id>alandipert</id><name>Alan Dipert</name></developer>
+    <developer><id>amalloy</id><name>Alan Malloy</name></developer>
+    <developer><id>aredington</id><name>Alex Redington</name></developer>
+    <developer><id>billdozr</id><name>Alen Ribic</name></developer>
+    <developer><id>bobby</id><name>Bobby Calderwood</name></developer>
+    <developer><id>brentonashworth</id><name>Brenton Ashworth</name></developer>
+    <developer><id>Chouser</id><name>Chris Houser</name></developer>
+    <developer><id>devn</id><name>Devin Walters</name></developer>
+    <developer><id>ffailla</id><name>Frank Failla</name></developer>
+    <developer><id>fogus</id><name>Fogus</name></developer>
+    <developer><id>hozumi</id><name>Takahiro Hozumi</name></developer>
+    <developer><id>hugoduncan</id><name>Hugo Duncan</name></developer>
+    <developer><id>jessmartin</id><name>Jess Martin</name></developer>
+    <developer><id>jli</id><name>John Li</name></developer>
+    <developer><id>juergenhoetzel</id><name>Jürgen Hötzel</name></developer>
+    <developer><id>levand</id><name>Luke VanderHart</name></developer>
+    <developer><id>lynaghk</id><name>Kevin Lynagh</name></developer>
+    <developer><id>michalmarczyk</id><name>Micha  Marczyk</name></developer>
+    <developer><id>pmbauer</id><name>Paul Michael Bauer</name></developer>
+    <developer><id>redinger</id><name>Christopher</name></developer>
+    <developer><id>richhickey</id><name>Rich Hickey</name></developer>
+    <developer><id>stuarthalloway</id><name>Stuart Halloway</name></developer>
+    <developer><id>stuartsierra</id><name>Stuart Sierra</name></developer>
+    <developer><id>swannodette</id><name>David Nolen</name></developer>
+    <developer><id>thickey</id><name>Tom Hickey</name></developer>
+    <developer><id>wilkes</id><name>Wilkes Joiner</name></developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/clojure/clojurescript.git</connection>
+    <developerConnection>scm:git:git@github.com:clojure/clojurescript.git</developerConnection>
+    <url>https://github.com/clojure/clojurescript</url>
+  </scm>
+</project>

@@ -94,6 +94,54 @@
         (set-options opts compiler-options)
         compiler-options)))
 
+
+
+(defn jar-entry-names* [jar-path]
+  (with-open [z (java.util.zip.ZipFile. jar-path)]
+    (doall (map #(.getName %) (enumeration-seq (.entries z))))))
+
+(def jar-entry-names (memoize jar-entry-names*))
+
+(defn find-js-jar
+  "finds js resources from a given path in a jar file"
+  [jar-path lib-path]
+  (doall
+    (map #(io/resource %)
+         (filter #(do
+                    (and
+                      (.startsWith % lib-path)
+                      (.endsWith % ".js")))
+                 (jar-entry-names jar-path)))))
+(declare to-url)
+(defn find-js-fs
+  "finds js resources from a path on the files system"
+  [path]
+  (let [file (io/file path)]
+    (when (.exists file)
+      (map to-url (filter #(.endsWith (.getName %) ".js") (file-seq (io/file path)))))))
+
+
+(defn find-js-classpath [path]
+  "finds all js files on the classpath matching the path provided"
+  (let [process-entry #(if (.endsWith % ".jar")
+                           (find-js-jar % path)
+                           (find-js-fs (str % "/" path)))
+        cpath-list (let [sysp (System/getProperty  "java.class.path" )]
+                     (if (.contains sysp ";")
+                       (string/split sysp #";")
+                       (string/split sysp #":")))]
+    (doall (reduce #(let [p (process-entry %2)]
+                      (if p (concat %1 p) %1)) [] cpath-list))))
+
+(defn find-js-resources [path]
+  "finds js resources in a given path on either the file system or
+   the classpath"
+  (let [file (io/file path)]
+    (if (.exists file)
+      (find-js-fs path)
+      (find-js-classpath path))))
+
+
 (defn load-externs
   "Externs are JavaScript files which contain empty definitions of
   functions which will be provided by the envorinment. Any function in
@@ -104,16 +152,14 @@
   the default externs should be excluded."
   [{:keys [externs use-only-custom-externs target]}]
   (letfn [(filter-js [paths]
-            (for [p paths f (file-seq (io/file p))
-                  :when (.endsWith (.toLowerCase (.getName f)) ".js")]
-              (.getAbsolutePath f)))
+            (for [p paths u (find-js-resources p)] u))
           (add-target [ext]
             (if (= :nodejs target)
-              (cons (.getFile (io/resource "cljs/nodejs_externs.js"))
+              (cons (io/resource "cljs/nodejs_externs.js")
                     (or ext []))
               ext))
           (load-js [ext]
-            (map #(js-source-file % (io/input-stream %)) ext))]
+            (map #(js-source-file (.getFile %) (slurp %)) ext))]
     (let [js-sources (-> externs filter-js add-target load-js)]
       (if use-only-custom-externs
         js-sources
@@ -393,7 +439,6 @@
   and :url"
   [lib-spec]
   (merge lib-spec {:foreign true
-                   :requires nil
                    :url (find-url (:file lib-spec))}))
 
 (def load-foreign-library (memoize load-foreign-library*))
@@ -403,12 +448,12 @@
   containing Javascript files, return a list of maps
   containing :provides, :requires, :file and :url."
   [path]
-  (letfn [(graph-node [f]
-            (-> (io/reader f)
+  (letfn [(graph-node [u]
+            (-> (io/reader u)
                 line-seq
                 parse-js-ns
-                (assoc :file (.getPath f) :url (to-url f))))]
-    (let [js-sources (filter #(.endsWith (.getName %) ".js") (file-seq (io/file path)))]
+                (assoc :url u)))]
+    (let [js-sources (find-js-resources path)]
       (filter #(seq (:provides %)) (map graph-node js-sources)))))
 
 (def load-library (memoize load-library*))

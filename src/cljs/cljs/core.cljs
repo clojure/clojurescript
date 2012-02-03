@@ -835,7 +835,7 @@ reduces them without incurring seq initialization"
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."  
   ([x] (/ 1 x))
-  ([x y] (/ x y))
+  ([x y] (js* "(~{x} / ~{y})")) ;; FIXME: waiting on cljs.core//
   ([x y & more] (reduce / (/ x y) more)))
 
 (defn <
