@@ -29,6 +29,12 @@
       (require '[cljs.repl.browser :as browser])
       (def env (browser/repl-env))
       (repl/repl env))
+
+  ;; Start Multi-browser REPL
+  (do (require '[cljs.repl :as repl])
+      (require '[cljs.repl.multi-browser :as multi-browser])
+      (def env (multi-browser/repl-env))
+      (repl/repl env))
   
   ;; Open the file samples/repl/index.html
   
@@ -45,6 +51,7 @@
   (time (reduce + (range 10000)))
   (js/alert "Hello World!")
   
+  
   (load-file "clojure/string.cljs")
   (clojure.string/reverse "Hello")
 
@@ -53,7 +60,7 @@
 
   ;; Create dom elements.
   (ns dom.testing (:require [clojure.browser.dom :as dom]))
-  (dom/append (dom/get-element "content")
+  (dom/append (dom/get-element "gsr")
               (dom/element "Hello World!"))
 
   ;; Load something we haven't used yet
@@ -63,5 +70,4 @@
 
   (load-namespace 'goog.date.Date)
   (goog.date.Date.)
-
   )
