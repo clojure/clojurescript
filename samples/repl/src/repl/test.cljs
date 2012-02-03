@@ -51,7 +51,6 @@
   (time (reduce + (range 10000)))
   (js/alert "Hello World!")
   
-  
   (load-file "clojure/string.cljs")
   (clojure.string/reverse "Hello")
 
@@ -70,4 +69,5 @@
 
   (load-namespace 'goog.date.Date)
   (goog.date.Date.)
+  
   )
