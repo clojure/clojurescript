@@ -36,7 +36,6 @@
 
   clojure.lang.IPersistentMap
   (-closed? [this] (:closed this))
-
   )
 
 (defonce
@@ -60,9 +59,12 @@
   ([m]
      (remove (fn [[_ c]] (-closed? c)) m)))
 
-(comment
-  ;; TODO: move to tests
-  (active-connections {1 {:closed true} 2 {:closed false}})
+(comment ;; Tests
+  (do (assert (= (active-connections {1 {:closed true} 2 {:closed false}})
+                 [[2 {:closed false}]]))
+      (assert (= (active-connections {1 {:closed true}}) []))
+      (assert (= (active-connections {}) []))
+      :ok)
   )
 
 (defn- safe-read-string
