@@ -2259,7 +2259,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? (.-length keys))
-      (map #(vector % (aget strobj %)) keys)))
+      (map #(vector % (aget strobj %)) (.sort keys))))
 
   ICounted
   (-count [coll] (.-length keys))

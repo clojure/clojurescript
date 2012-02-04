@@ -977,6 +977,10 @@
   (let [g #{(conj #{:2} :alt)}
         h #{#{:2 :alt}}]
     (assert (= g h)))
+  (assert (= (hash {:a 1 :b 2})
+             (hash {:b 2 :a 1})))
+  (assert (= (hash (hash-map :a 1 :b 2))
+             (hash (hash-map :b 2 :a 1))))
 
   :ok
   )
