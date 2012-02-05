@@ -2839,7 +2839,8 @@ reduces them without incurring seq initialization"
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
   [s]
-  (js/RegExp. s))
+  (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" s)]
+    (js/RegExp. pattern flags)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
