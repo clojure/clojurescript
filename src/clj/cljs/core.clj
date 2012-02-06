@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical? true? false?
+                            satisfies? identical? true? false? nil?
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -41,6 +41,9 @@
   if-let if-not let letfn loop
   or
   when when-first when-let when-not while])
+
+(defmacro nil? [x]
+  `(identical? ~x nil))
 
 (defmacro true? [x]
   (list 'js* "~{} === true" x))
