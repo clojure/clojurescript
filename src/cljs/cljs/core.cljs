@@ -2231,6 +2231,14 @@ reduces them without incurring seq initialization"
        true-val
        false-val)))
 
+(defn- obj-map-compare-keys [a b]
+  (let [a (hash a)
+        b (hash b)]
+    (cond
+     (< a b) -1
+     (> a b) 1
+     :else 0)))
+
 (declare hash-map)
 (deftype ObjMap [meta keys strobj]
   IWithMeta
@@ -2259,7 +2267,8 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? (.-length keys))
-      (map #(vector % (aget strobj %)) (.sort keys))))
+      (map #(vector % (aget strobj %))
+           (.sort keys obj-map-compare-keys))))
 
   ICounted
   (-count [coll] (.-length keys))

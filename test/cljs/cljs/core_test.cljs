@@ -982,6 +982,8 @@
              (hash {:b 2 :a 1})))
   (assert (= (hash (hash-map :a 1 :b 2))
              (hash (hash-map :b 2 :a 1))))
+  (assert (= (hash {:start 133 :end 134})
+             (hash (apply hash-map [:start 133 :end 134]))))
 
   :ok
   )
