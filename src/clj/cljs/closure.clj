@@ -188,7 +188,7 @@
     (->> (for [line lines x (string/split line #";")] x)
          (map string/trim)
          (take-while #(not (re-matches #".*=[\s]*function\(.*\)[\s]*[{].*" %)))
-         (map #(re-matches #".*goog\.(provide|require)\('(.*)'\)" %))
+         (map #(re-matches #".*goog\.(provide|require)\(['\"](.*)['\"]\)" %))
          (remove nil?)
          (map #(drop 1 %))
          (reduce (fn [m ns]
