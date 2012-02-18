@@ -985,5 +985,35 @@
   (assert (= (hash {:start 133 :end 134})
              (hash (apply hash-map [:start 133 :end 134]))))
 
+  (defprotocol IHasFirst
+    (-get-first [this]))
+
+  (defprotocol IFindsFirst
+    (-find-first [this other]))
+
+  (deftype First [xs]
+    ISeqable
+    (-seq [this] (seq xs))
+    IIndexed
+    (-nth [this i] (nth xs i))
+    (-nth [this i not-found] (nth xs i not-found))
+    IFn
+    (-invoke [[x]] x)
+    Object
+    (toString [[x]] (str x))
+    IHasFirst
+    (-get-first [[x]] x)
+    IFindsFirst
+    (-find-first [_ [x]] x))
+
+  (let [fv (First. [1 2 3])
+        fs (First. "asdf")]
+    (assert (= (fv) 1))
+    (assert (= (fs) \a))
+    (assert (= (str fs) \a))
+    (assert (= (-get-first fv) 1))
+    (assert (= (-get-first fs) \a))
+    (assert (= (-find-first fv [1]) 1)))
+
   :ok
   )
