@@ -166,7 +166,6 @@
     (let [js-sources (-> externs filter-js add-target load-js)
           ups-sources (-> ups-externs filter-cp-js add-target load-js)
           all-sources (concat js-sources ups-sources)] 
-      (println all-sources)
       (if use-only-custom-externs
         all-sources
         (into all-sources (CommandLineRunner/getDefaultExterns))))))
@@ -835,6 +834,8 @@
   []
   (let [classloader (. (Thread/currentThread) (getContextClassLoader))
         upstream-deps (map #(read-string (slurp %)) (enumeration-seq (. classloader (findResources "deps.cljs"))))]
+    (doseq [dep upstream-deps]
+      (println (str "Upstream deps.cljs found on classpath. " dep " This is an EXPERIMENTAL FEATURE and is not guarenteed to remain stable in future versions.")))
     (apply merge-with concat upstream-deps)))
 
 (def get-upstream-deps (memoize get-upstream-deps*))
@@ -863,7 +864,6 @@
         js-sources (if (coll? compiled)
                      (apply add-dependencies all-opts compiled)
                      (add-dependencies all-opts compiled))]
-    (println "Compiler Options:" (pr-str all-opts))
     (if (:optimizations all-opts)
       (->> js-sources
            (apply optimize all-opts)
