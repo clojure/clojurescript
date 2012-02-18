@@ -224,7 +224,7 @@
                                  pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths]]
-                                          `(aset ~(symbol (str pfn-prefix f)) ~t (fn* ~@meths)))
+                                          `(aset ~(symbol (str pfn-prefix f)) ~t (fn ~@meths)))
                                         sigs))))]
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
@@ -238,7 +238,7 @@
                                                       (list (with-meta (vec args) (meta sig))
                                                             (list* 'this-as tname body))))]
                                  (map (fn [[f & meths]]
-                                        `(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
+                                        `(set! ~(symbol (str prototype-prefix f)) (fn ~@(map adapt-params meths))))
                                       sigs))
                                (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
                                      (map (fn [[f & meths]]
@@ -253,7 +253,7 @@
                                                   meths (if ifn?
                                                           (map adapt-params meths)
                                                           meths)]
-                                              `(set! ~(symbol pf) (fn* ~@meths))))
+                                              `(set! ~(symbol pf) (fn ~@meths))))
                                           sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
