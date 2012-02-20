@@ -219,11 +219,6 @@
 (defn type [x]
   (js* "(~{x}).constructor"))
 
-(extend-type js/Function
-  IPrintable
-  (-pr-seq [this]
-    (list "#<" (str this) ">")))
-
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
@@ -2977,6 +2972,10 @@ reduces them without incurring seq initialization"
      :else (list (if (:readably opts)
                    (goog.string.quote obj)
                    obj))))
+
+  function
+  (-pr-seq [this]
+    (list "#<" (str this) ">"))
 
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
