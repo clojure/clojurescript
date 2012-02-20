@@ -324,6 +324,8 @@ reduces them without incurring seq initialization"
            (recur (f val (-nth cicoll n)) (inc n))
            val))))
 
+(declare hash-coll cons)
+
 (deftype IndexedSeq [a i]
   ISeqable
   (-seq [this] this)
@@ -1041,6 +1043,8 @@ reduces them without incurring seq initialization"
           (str* sb)))
       (gstring/StringBuffer. (str* x)) ys)))
 
+(declare apply)
+
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
@@ -1097,6 +1101,8 @@ reduces them without incurring seq initialization"
 
 (defn- hash-coll [coll]
   (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
+
+(declare name)
 
 (defn- extend-object!
   "Takes a JavaScript object and a map of names to functions and
@@ -1219,8 +1225,6 @@ reduces them without incurring seq initialization"
   "Returns a new seq where x is the first element and seq is the rest."
   [x seq]
   (Cons. nil x seq))
-
-(declare hash-map)
 
 (extend-type string
   IHash
@@ -2234,7 +2238,6 @@ reduces them without incurring seq initialization"
      (> a b) 1
      :else 0)))
 
-(declare hash-map)
 (deftype ObjMap [meta keys strobj]
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj))
