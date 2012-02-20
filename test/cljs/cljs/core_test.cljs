@@ -999,6 +999,7 @@
     (-nth [this i not-found] (nth xs i not-found))
     IFn
     (-invoke [[x]] x)
+    (-invoke [this x] this)
     Object
     (toString [[x]] (str x))
     IHasFirst
@@ -1013,7 +1014,8 @@
     (assert (= (str fs) \a))
     (assert (= (-get-first fv) 1))
     (assert (= (-get-first fs) \a))
-    (assert (= (-find-first fv [1]) 1)))
+    (assert (= (-find-first fv [1]) 1))
+    (assert (identical? (fv 1) fv)))
 
   :ok
   )

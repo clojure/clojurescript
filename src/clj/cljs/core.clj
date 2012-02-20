@@ -248,8 +248,8 @@
                                                        (str prototype-prefix pprefix f))
                                                   adapt-params (fn [[[tname :as args] & body]]
                                                                  `(~args
-                                                                   (~'js* "~{} = this" ~tname)
-                                                                   ~@body))
+                                                                   (let [~tname (~'js* "this")]
+                                                                     ~@body)))
                                                   meths (if ifn?
                                                           (map adapt-params meths)
                                                           meths)]
