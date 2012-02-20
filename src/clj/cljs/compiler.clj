@@ -30,6 +30,8 @@
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"})
 
+(def cljs-reserved-file-names #{"deps.cljs"})
+
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
@@ -1230,7 +1232,8 @@
   [dir]
   (filter #(let [name (.getName ^java.io.File %)]
              (and (.endsWith name ".cljs")
-                  (not= \. (first name))))
+                  (not= \. (first name))
+                  (not (contains? cljs-reserved-file-names name))))
           (file-seq dir)))
 
 (defn compile-root
