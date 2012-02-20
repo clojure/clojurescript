@@ -246,10 +246,12 @@
                                                   pf (if ifn?
                                                        (str prototype-prefix 'call)
                                                        (str prototype-prefix pprefix f))
-                                                  adapt-params (fn [[[tname :as args] & body]]
-                                                                 `(~args
-                                                                   (let [~tname (~'js* "this")]
-                                                                     ~@body)))
+                                                  adapt-params (fn [[[targ & args :as sig] & body]]
+                                                                 (let [tsym (gensym "tsym")]
+                                                                   `(~(with-meta (vec (cons tsym args)) (meta sig))
+                                                                     (this-as ~tsym
+                                                                              (let [~targ ~tsym]
+                                                                                ~@body)))))
                                                   meths (if ifn?
                                                           (map adapt-params meths)
                                                           meths)]
