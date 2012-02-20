@@ -591,15 +591,15 @@
   plus all dependencies in dependency order."
   [opts & inputs]
   (let [requires (mapcat -requires inputs)
-        required-cljs (cljs-dependencies opts requires)
+        required-cljs (remove (set inputs) (cljs-dependencies opts requires))
         required-js (js-dependencies opts (set (concat (mapcat -requires required-cljs) requires)))]
-    (distinct (concat (map #(-> (javascript-file (:foreign %)
-                                                 (or (:url %) (io/resource (:file %)))
-                                                 (:provides %)
-                                                 (:requires %))
-                                (assoc :group (:group %))) required-js)
-                      required-cljs
-                      inputs))))
+    (concat (map #(-> (javascript-file (:foreign %)
+                                       (or (:url %) (io/resource (:file %)))
+                                       (:provides %)
+                                       (:requires %))
+                      (assoc :group (:group %))) required-js)
+            required-cljs
+            inputs)))
 
 (comment
   ;; add dependencies to literal js
