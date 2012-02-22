@@ -754,7 +754,7 @@
         {:keys [statements ret children]}
         (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)
                   *loop-lets* (cond
-                               is-loop () 
+                               is-loop (or *loop-lets* ()) 
                                *loop-lets* (cons {:names (vec (map :name bes))} *loop-lets*))]
           (analyze-block (assoc env :context (if (= :expr context) :return context)) exprs))]
     {:env encl-env :op :let :loop is-loop
