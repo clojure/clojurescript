@@ -396,7 +396,7 @@
   (when-not (= :statement (:context env))
     (let [loop-locals (seq (concat
                             (mapcat :names (filter #(and % @(:flag %)) recur-frames))
-                            (mapcat :name loop-lets)))]
+                            (mapcat :names loop-lets)))]
       (when loop-locals
         (when (= :return (:context env))
             (print "return "))
