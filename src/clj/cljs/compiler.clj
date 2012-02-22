@@ -391,10 +391,12 @@
                (println "})()"))))
 
 (defmethod emit :fn
-  [{:keys [name env methods max-fixed-arity variadic recur-frames]}]
+  [{:keys [name env methods max-fixed-arity variadic recur-frames loop-lets]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
-    (let [loop-locals (seq (mapcat :names (filter #(and % @(:flag %)) recur-frames)))]
+    (let [loop-locals (seq (concat
+                            (mapcat :names (filter #(and % @(:flag %)) recur-frames))
+                            (mapcat :name loop-lets)))]
       (when loop-locals
         (when (= :return (:context env))
             (print "return "))
@@ -586,6 +588,7 @@
 (def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* defrecord* . js* & quote})
 
 (def ^:dynamic *recur-frames* nil)
+(def ^:dynamic *loop-lets* nil)
 
 (defmacro disallowing-recur [& body]
   `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
@@ -720,7 +723,8 @@
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))]
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :name mname :methods methods :variadic variadic :recur-frames *recur-frames*
+    {:env env :op :fn :name mname :methods methods :variadic variadic
+     :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity}))
 
@@ -748,7 +752,10 @@
              [bes env])))
         recur-frame (when is-loop {:names (vec (map :name bes)) :flag (atom nil)})
         {:keys [statements ret children]}
-        (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)]
+        (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)
+                  *loop-lets* (cond
+                               is-loop () 
+                               *loop-lets* (cons {:names (vec (map :name bes))} *loop-lets*))]
           (analyze-block (assoc env :context (if (= :expr context) :return context)) exprs))]
     {:env encl-env :op :let :loop is-loop
      :bindings bes :statements statements :ret ret :form form :children (into [children] (map :init bes))}))
