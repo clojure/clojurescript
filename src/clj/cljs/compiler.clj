@@ -11,7 +11,8 @@
 (ns cljs.compiler
   (:refer-clojure :exclude [munge macroexpand-1])
   (:require [clojure.java.io :as io]
-            [clojure.string :as string]))
+            [clojure.string :as string])
+  (:import java.lang.StringBuilder))
 
 (declare resolve-var)
 (require 'cljs.core)
@@ -154,30 +155,60 @@
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
 
+(defn- escape-char [^Character c]
+  (let [cp (.hashCode c)]
+    (case cp
+      ; Handle printable escapes before ASCII
+      34 "\\\""
+      92 "\\\\"
+      47 "\\/"
+      ; Handle non-printable escapes
+      8 "\\b"
+      12 "\\f"
+      10 "\\n"
+      13 "\\r"
+      9 "\\t"
+      (if (< 31 cp 127)
+        c ; Print simple ASCII characters
+        (format "\\u%04X" cp))))) ; Any other character is Unicode
+
+(defn- escape-string [^CharSequence s]
+  (let [sb (StringBuilder. (count s))]
+    (doseq [c s]
+      (.append sb (escape-char c)))
+    (.toString sb)))
+
+(defn- wrap-in-double-quotes [x]
+  (str \" x \"))
+
 (defmulti emit-constant class)
 (defmethod emit-constant nil [x] (print "null"))
 (defmethod emit-constant Long [x] (print x))
 (defmethod emit-constant Integer [x] (print x)) ; reader puts Integers in metadata
 (defmethod emit-constant Double [x] (print x))
-(defmethod emit-constant String [x] (pr x))
+(defmethod emit-constant String [x]
+  (print (wrap-in-double-quotes (escape-string x))))
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
-(defmethod emit-constant Character [x] (pr (str x)))
+(defmethod emit-constant Character [x]
+  (print (wrap-in-double-quotes (escape-char x))))
 
 (defmethod emit-constant java.util.regex.Pattern [x]
   (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
     (print (str \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
 
 (defmethod emit-constant clojure.lang.Keyword [x]
-           (pr (str \uFDD0 \'
-                    (if (namespace x)
-                      (str (namespace x) "/") "")
-                    (name x))))
+           (print (str \" "\\uFDD0" \'
+                       (if (namespace x)
+                         (str (namespace x) "/") "")
+                       (name x)
+                       \")))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
-           (pr (str \uFDD1 \'
+           (print (str \" "\\uFDD1" \'
                     (if (namespace x)
                       (str (namespace x) "/") "")
-                    (name x))))
+                    (name x)
+                    \")))
 
 (defn- emit-meta-constant [x string]
   (if (meta x)
