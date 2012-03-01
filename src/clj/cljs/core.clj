@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical? true? false?
+                            satisfies? identical? true? false? nil?
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -41,6 +41,9 @@
   if-let if-not let letfn loop
   or
   when when-first when-let when-not while])
+
+(defmacro nil? [x]
+  `(identical? ~x nil))
 
 (defmacro true? [x]
   (list 'js* "~{} === true" x))
@@ -221,7 +224,7 @@
                                  pfn-prefix (subs (str psym) 0 (clojure.core/inc (.lastIndexOf (str psym) ".")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths]]
-                                          `(aset ~(symbol (str pfn-prefix f)) ~t (fn* ~@meths)))
+                                          `(aset ~(symbol (str pfn-prefix f)) ~t (fn ~@meths)))
                                         sigs))))]
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
@@ -235,7 +238,7 @@
                                                       (list (with-meta (vec args) (meta sig))
                                                             (list* 'this-as tname body))))]
                                  (map (fn [[f & meths]]
-                                        `(set! ~(symbol (str prototype-prefix f)) (fn* ~@(map adapt-params meths))))
+                                        `(set! ~(symbol (str prototype-prefix f)) (fn ~@(map adapt-params meths))))
                                       sigs))
                                (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
                                      (map (fn [[f & meths]]
@@ -243,14 +246,16 @@
                                                   pf (if ifn?
                                                        (str prototype-prefix 'call)
                                                        (str prototype-prefix pprefix f))
-                                                  adapt-params (fn [[[tname :as args] & body]]
-                                                                 `(~args
-                                                                   (~'js* "~{} = this" ~tname)
-                                                                   ~@body))
+                                                  adapt-params (fn [[[targ & args :as sig] & body]]
+                                                                 (let [tsym (gensym "tsym")]
+                                                                   `(~(with-meta (vec (cons tsym args)) (meta sig))
+                                                                     (this-as ~tsym
+                                                                              (let [~targ ~tsym]
+                                                                                ~@body)))))
                                                   meths (if ifn?
                                                           (map adapt-params meths)
                                                           meths)]
-                                              `(set! ~(symbol pf) (fn* ~@meths))))
+                                              `(set! ~(symbol pf) (fn ~@meths))))
                                           sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 

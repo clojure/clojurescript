@@ -11,7 +11,8 @@
 (ns cljs.compiler
   (:refer-clojure :exclude [munge macroexpand-1])
   (:require [clojure.java.io :as io]
-            [clojure.string :as string]))
+            [clojure.string :as string])
+  (:import java.lang.StringBuilder))
 
 (declare resolve-var)
 (require 'cljs.core)
@@ -29,6 +30,8 @@
     "synchronized" "this" "throw" "throws"
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"})
+
+(def cljs-reserved-file-names #{"deps.cljs"})
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
@@ -152,30 +155,60 @@
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
 
+(defn- escape-char [^Character c]
+  (let [cp (.hashCode c)]
+    (case cp
+      ; Handle printable escapes before ASCII
+      34 "\\\""
+      92 "\\\\"
+      47 "\\/"
+      ; Handle non-printable escapes
+      8 "\\b"
+      12 "\\f"
+      10 "\\n"
+      13 "\\r"
+      9 "\\t"
+      (if (< 31 cp 127)
+        c ; Print simple ASCII characters
+        (format "\\u%04X" cp))))) ; Any other character is Unicode
+
+(defn- escape-string [^CharSequence s]
+  (let [sb (StringBuilder. (count s))]
+    (doseq [c s]
+      (.append sb (escape-char c)))
+    (.toString sb)))
+
+(defn- wrap-in-double-quotes [x]
+  (str \" x \"))
+
 (defmulti emit-constant class)
 (defmethod emit-constant nil [x] (print "null"))
 (defmethod emit-constant Long [x] (print x))
 (defmethod emit-constant Integer [x] (print x)) ; reader puts Integers in metadata
 (defmethod emit-constant Double [x] (print x))
-(defmethod emit-constant String [x] (pr x))
+(defmethod emit-constant String [x]
+  (print (wrap-in-double-quotes (escape-string x))))
 (defmethod emit-constant Boolean [x] (print (if x "true" "false")))
-(defmethod emit-constant Character [x] (pr (str x)))
+(defmethod emit-constant Character [x]
+  (print (wrap-in-double-quotes (escape-char x))))
 
 (defmethod emit-constant java.util.regex.Pattern [x]
   (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
     (print (str \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
 
 (defmethod emit-constant clojure.lang.Keyword [x]
-           (pr (str \uFDD0 \'
-                    (if (namespace x)
-                      (str (namespace x) "/") "")
-                    (name x))))
+           (print (str \" "\\uFDD0" \'
+                       (if (namespace x)
+                         (str (namespace x) "/") "")
+                       (name x)
+                       \")))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
-           (pr (str \uFDD1 \'
+           (print (str \" "\\uFDD1" \'
                     (if (namespace x)
                       (str (namespace x) "/") "")
-                    (name x))))
+                    (name x)
+                    \")))
 
 (defn- emit-meta-constant [x string]
   (if (meta x)
@@ -389,10 +422,12 @@
                (println "})()"))))
 
 (defmethod emit :fn
-  [{:keys [name env methods max-fixed-arity variadic recur-frames]}]
+  [{:keys [name env methods max-fixed-arity variadic recur-frames loop-lets]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
-    (let [loop-locals (seq (mapcat :names (filter #(and % @(:flag %)) recur-frames)))]
+    (let [loop-locals (seq (concat
+                            (mapcat :names (filter #(and % @(:flag %)) recur-frames))
+                            (mapcat :names loop-lets)))]
       (when loop-locals
         (when (= :return (:context env))
             (print "return "))
@@ -584,6 +619,7 @@
 (def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* defrecord* . js* & quote})
 
 (def ^:dynamic *recur-frames* nil)
+(def ^:dynamic *loop-lets* nil)
 
 (defmacro disallowing-recur [& body]
   `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
@@ -718,7 +754,8 @@
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))]
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :name mname :methods methods :variadic variadic :recur-frames *recur-frames*
+    {:env env :op :fn :name mname :methods methods :variadic variadic
+     :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity}))
 
@@ -746,7 +783,10 @@
              [bes env])))
         recur-frame (when is-loop {:names (vec (map :name bes)) :flag (atom nil)})
         {:keys [statements ret children]}
-        (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)]
+        (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)
+                  *loop-lets* (cond
+                               is-loop (or *loop-lets* ()) 
+                               *loop-lets* (cons {:names (vec (map :name bes))} *loop-lets*))]
           (analyze-block (assoc env :context (if (= :expr context) :return context)) exprs))]
     {:env encl-env :op :let :loop is-loop
      :bindings bes :statements statements :ret ret :form form :children (into [children] (map :init bes))}))
@@ -1230,7 +1270,8 @@
   [dir]
   (filter #(let [name (.getName ^java.io.File %)]
              (and (.endsWith name ".cljs")
-                  (not= \. (first name))))
+                  (not= \. (first name))
+                  (not (contains? cljs-reserved-file-names name))))
           (file-seq dir)))
 
 (defn compile-root

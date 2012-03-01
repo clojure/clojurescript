@@ -24,7 +24,7 @@
   ^{:doc "bound in a repl thread to the most recent value printed"}
   *1)
 
-(def 
+(def
   ^{:doc "bound in a repl thread to the second most recent value printed"}
   *2)
 
@@ -219,11 +219,6 @@
 (defn type [x]
   (js* "(~{x}).constructor"))
 
-(extend-type js/Function
-  IPrintable
-  (-pr-seq [this]
-    (list "#<" (str this) ">")))
-
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
@@ -328,6 +323,8 @@ reduces them without incurring seq initialization"
          (if (< n (-count cicoll))
            (recur (f val (-nth cicoll n)) (inc n))
            val))))
+
+(declare hash-coll cons)
 
 (deftype IndexedSeq [a i]
   ISeqable
@@ -833,7 +830,7 @@ reduces them without incurring seq initialization"
 
 (defn /
   "If no denominators are supplied, returns 1/numerator,
-  else returns numerator divided by all of the denominators."  
+  else returns numerator divided by all of the denominators."
   ([x] (/ 1 x))
   ([x y] (js* "(~{x} / ~{y})")) ;; FIXME: waiting on cljs.core//
   ([x y & more] (reduce / (/ x y) more)))
@@ -1046,6 +1043,8 @@ reduces them without incurring seq initialization"
           (str* sb)))
       (gstring/StringBuffer. (str* x)) ys)))
 
+(declare apply)
+
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
@@ -1103,10 +1102,12 @@ reduces them without incurring seq initialization"
 (defn- hash-coll [coll]
   (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
 
+(declare name)
+
 (defn- extend-object!
   "Takes a JavaScript object and a map of names to functions and
   attaches said functions as methods on the object.  Any references to
-  JavaScript's implict this (via the this-as macro) will resolve to the 
+  JavaScript's implict this (via the this-as macro) will resolve to the
   object that the function is attached."
   [obj fn-map]
   (doseq [[key-name f] fn-map]
@@ -1225,15 +1226,13 @@ reduces them without incurring seq initialization"
   [x seq]
   (Cons. nil x seq))
 
-(declare hash-map)
-
 (extend-type string
   IHash
   (-hash [o] (goog.string/hashCode o))
 
   ISeqable
   (-seq [string] (prim-seq string 0))
-  
+
   ICounted
   (-count [s] (.-length s))
 
@@ -1483,8 +1482,8 @@ reduces them without incurring seq initialization"
 (defn complement
   "Takes a fn f and returns a fn that takes the same arguments as f,
   has the same effects, if any, and returns the opposite truth value."
-  [f] 
-  (fn 
+  [f]
+  (fn
     ([] (not (f)))
     ([x] (not (f x)))
     ([x y] (not (f x y)))
@@ -1501,15 +1500,15 @@ reduces them without incurring seq initialization"
   fn (right-to-left) to the result, etc."
   ([] identity)
   ([f] f)
-  ([f g] 
-     (fn 
+  ([f g]
+     (fn
        ([] (f (g)))
        ([x] (f (g x)))
        ([x y] (f (g x y)))
        ([x y z] (f (g x y z)))
        ([x y z & args] (f (apply g x y z args)))))
-  ([f g h] 
-     (fn 
+  ([f g h]
+     (fn
        ([] (f (g (h))))
        ([x] (f (g (h x))))
        ([x y] (f (g (h x y))))
@@ -1752,8 +1751,8 @@ reduces them without incurring seq initialization"
 
 (defn cycle
   "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
-  [coll] (lazy-seq 
-          (when-let [s (seq coll)] 
+  [coll] (lazy-seq
+          (when-let [s (seq coll)]
             (concat s (cycle s)))))
 
 (defn split-at
@@ -2005,9 +2004,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-	   (ci-reduce array f))
+    (ci-reduce array f))
   (-reduce [v f start]
-	   (ci-reduce array f start))
+    (ci-reduce array f start))
 
   IFn
   (-invoke [coll k]
@@ -2231,7 +2230,14 @@ reduces them without incurring seq initialization"
        true-val
        false-val)))
 
-(declare hash-map)
+(defn- obj-map-compare-keys [a b]
+  (let [a (hash a)
+        b (hash b)]
+    (cond
+     (< a b) -1
+     (> a b) 1
+     :else 0)))
+
 (deftype ObjMap [meta keys strobj]
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj))
@@ -2259,7 +2265,8 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? (.-length keys))
-      (map #(vector % (aget strobj %)) keys)))
+      (map #(vector % (aget strobj %))
+           (.sort keys obj-map-compare-keys))))
 
   ICounted
   (-count [coll] (.-length keys))
@@ -2299,7 +2306,7 @@ reduces them without incurring seq initialization"
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found))) 
+    (-lookup coll k not-found)))
 
 (set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj)))
 
@@ -2636,7 +2643,6 @@ reduces them without incurring seq initialization"
 
   ISeq
   (-first [rng] start)
-
   (-rest [rng]
     (if (-seq rng)
       (Range. meta (+ start step) end step)
@@ -2839,7 +2845,8 @@ reduces them without incurring seq initialization"
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
   [s]
-  (js/RegExp. s))
+  (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" s)]
+    (js/RegExp. pattern flags)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
@@ -2967,6 +2974,10 @@ reduces them without incurring seq initialization"
      :else (list (if (:readably opts)
                    (goog.string.quote obj)
                    obj))))
+
+  function
+  (-pr-seq [this]
+    (list "#<" (str this) ">"))
 
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
@@ -3140,7 +3151,7 @@ reduces them without incurring seq initialization"
   mind that regardless of the result or action of the watch fns the
   atom's value will change.  Example:
 
-      (def a (atom 0)) 
+      (def a (atom 0))
       (add-watch a :inc (fn [k r o n] (assert (== 0 n))))
       (swap! a inc)
       ;; Assertion Error

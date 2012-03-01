@@ -516,6 +516,7 @@
   (assert (= (re-matches (re-pattern "foo.*") "foo bar foo baz foo zot") "foo bar foo baz foo zot"))
   (assert (= (re-seq (re-pattern "foo") "foo bar foo baz foo zot") (list "foo" "foo" "foo")))
   (assert (= (re-seq (re-pattern "f(.)o") "foo bar foo baz foo zot") (list ["foo" "o"] ["foo" "o"] ["foo" "o"])))
+  (assert (= (re-matches (re-pattern "(?i)foo") "Foo") "Foo"))
 
   ;; destructuring
   (assert (= [2 1] (let [[a b] [1 2]] [b a])))
@@ -977,6 +978,44 @@
   (let [g #{(conj #{:2} :alt)}
         h #{#{:2 :alt}}]
     (assert (= g h)))
+  (assert (= (hash {:a 1 :b 2})
+             (hash {:b 2 :a 1})))
+  (assert (= (hash (hash-map :a 1 :b 2))
+             (hash (hash-map :b 2 :a 1))))
+  (assert (= (hash {:start 133 :end 134})
+             (hash (apply hash-map [:start 133 :end 134]))))
+
+  (defprotocol IHasFirst
+    (-get-first [this]))
+
+  (defprotocol IFindsFirst
+    (-find-first [this other]))
+
+  (deftype First [xs]
+    ISeqable
+    (-seq [this] (seq xs))
+    IIndexed
+    (-nth [this i] (nth xs i))
+    (-nth [this i not-found] (nth xs i not-found))
+    IFn
+    (-invoke [[x]] x)
+    (-invoke [this x] this)
+    Object
+    (toString [[x]] (str x))
+    IHasFirst
+    (-get-first [[x]] x)
+    IFindsFirst
+    (-find-first [_ [x]] x))
+
+  (let [fv (First. [1 2 3])
+        fs (First. "asdf")]
+    (assert (= (fv) 1))
+    (assert (= (fs) \a))
+    (assert (= (str fs) \a))
+    (assert (= (-get-first fv) 1))
+    (assert (= (-get-first fs) \a))
+    (assert (= (-find-first fv [1]) 1))
+    (assert (identical? (fv 1) fv)))
 
   :ok
   )
