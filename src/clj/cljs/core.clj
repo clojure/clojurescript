@@ -639,6 +639,15 @@
                                         ~@(when needrec [recform])))))]))))]
     (nth (step nil (seq seq-exprs)) 1)))
 
+(defmacro array [& rest]
+  (let [xs-str (->> (repeat "~{}")
+                    (take (count rest))
+                    (interpose ",")
+                    (apply str))]
+   (concat
+    (list 'js* (str "[" xs-str "]"))
+    rest)))
+
 (defmacro alength [a]
   (list 'js* "~{}.length" a))
 
