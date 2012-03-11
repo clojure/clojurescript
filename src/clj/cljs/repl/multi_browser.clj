@@ -12,7 +12,8 @@
   (:refer-clojure :exclude [loaded-libs])
   (:use [cljs.repl.browser :only [send-404 parse-headers read-headers read-post
                                   read-get read-request ordering add-in-order run-in-order
-                                  constrain-order compile-client-js create-client-js-file]])
+                                  constrain-order compile-client-js create-client-js-file
+                                  status-line]])
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
@@ -27,16 +28,37 @@
            cljs.repl.IJavaScriptEnv))
 
 (defprotocol IConnection
+  (-get-output-stream [this])
+  (-close! [this])
   (-closed? [this]))
+
+;; The record and constructor below are for testing only.
+
+(defrecord Connection [state]
+  IConnection
+  (-get-output-stream [this] (:out @state))
+  (-close! [this] (swap! state assoc :closed true))
+  (-closed? [this] (:closed @state)))
+
+(defn make-connection []
+  (let [state (atom {:closed false :out (java.io.ByteArrayOutputStream. 1024)})]
+    (->Connection state)))
 
 (extend-protocol IConnection
 
   java.net.Socket
+  (-get-output-stream [this] (.getOutputStream this))
+  (-close! [this] (.close this))
   (-closed? [this] (.isClosed this))
 
   clojure.lang.IPersistentMap
   (-closed? [this] (:closed this))
+  (-get-output-stream [this] nil)
+  (-close! [this] nil)
   )
+
+(def ^{:doc "A map of client-ids to sets of loaded libraries for that client."}
+  loaded-libs (atom nil))
 
 (defonce
   ^{:doc "Source of unique client ids."}
@@ -51,21 +73,9 @@
          :leader-cleint-id nil}))
 
 (defn- active-connections
-  "Return the list of tuples of the form [client-id connection].
-
-  Optionally takes a map of client-ids to connections."
-  ([]
-     (active-connections (get @server-state :connections {})))
-  ([m]
-     (remove (fn [[_ c]] (-closed? c)) m)))
-
-(comment ;; Tests
-  (do (assert (= (active-connections {1 {:closed true} 2 {:closed false}})
-                 [[2 {:closed false}]]))
-      (assert (= (active-connections {1 {:closed true}}) []))
-      (assert (= (active-connections {}) []))
-      :ok)
-  )
+  "Return the list of tuples of the form [client-id connection]."
+  [state]
+  (remove (fn [[_ c]] (-closed? c)) (get state :connections {})))
 
 (defn- safe-read-string
   "Accepts a string and attempts to read the string to Clojure data
@@ -79,62 +89,48 @@
 
   The passed val is serialized Clojure data. This val is read before
   being stored."
-  [form-id client-id val]
-  (swap! server-state assoc-in [:return-values form-id client-id]
-         (try (safe-read-string val)
-              (catch Exception e
-                {:status :error
-                 :value (str "Could not read return value: " val)}))))
+  [state form-id client-id val]
+  (assoc-in state [:return-values form-id client-id]
+            (try (safe-read-string val)
+                 (catch Exception e
+                   {:status :error
+                    :value (str "Could not read return value: " val)}))))
 
-(defn- get-return-values [form-id]
-  (get (:return-values @server-state) form-id))
+(defn- get-return-values [state form-id]
+  (get (:return-values state) form-id))
 
 (defn- active-leader-client-id
   "Accepts a map of client-ids to connections and returns the smallest
   active client-id."
-  [connection-map]
-  (let [conns (active-connections connection-map)]
-    (if (seq conns)
-      (apply min (map first conns))
-      nil)))
+  [state]
+  (let [conns (active-connections state)]
+    (when (seq conns)
+      (apply min (map first conns)))))
 
 (defn- set-leader-client-id
   "Updates server-state, setting the value of the :leader-cleint-id."
-  []
-  (swap! server-state
-         (fn [old]
-           (assoc old :leader-client-id
-                  (active-leader-client-id (get old :connections {}))))))
-
-(def ^{:doc "A map of client-ids to sets of loaded libraries for that client."}
-  loaded-libs (atom nil))
+  [state]
+  (assoc state :leader-client-id (active-leader-client-id state)))
 
 (defn- connections
   "Promise to return a list of active connections when at least one
   connection is available."
-  []
+  [state]
   (let [p (promise)
-        conns (vals (active-connections))]
-    (do (if (seq conns)
-          (deliver p conns)
-          (swap! server-state assoc :promised-conns p))
-        p)))
+        conns (vals (active-connections state))]
+    (do (when (seq conns)
+          (deliver p conns))
+        (assoc state :promised-conns p))))
 
 (defn- add-connection
   "Given a client-id and a new available connection, either use it to
-  deliver the connections which was promised or store the connection
+  deliver the connections which were promised or store the connection
   for later use."
-  [client-id conn]
-  (if-let [promised-conns (:promised-conns @server-state)]
-    (do (swap! server-state assoc :connections nil :promised-conns nil)
-        (deliver promised-conns [conn]))
-    (swap! server-state assoc-in [:connections client-id] conn)))
-
-(defn- status-line [status]
-  (case status
-    200 "HTTP/1.1 200 OK"
-    404 "HTTP/1.1 404 Not Found"
-    "HTTP/1.1 500 Error"))
+  [state client-id conn]
+  (if-let [promised-conns (:promised-conns state)]
+    (do (deliver promised-conns [conn])
+        (assoc state :connections nil :promised-conns nil))
+    (assoc-in state [:connections client-id] conn)))
 
 (defn send-and-close
   "Use the passed connection to send a form to the browser. Send a
@@ -152,16 +148,62 @@
                               "; charset=utf-8")
                          (str "Content-Length: " content-length)
                          ""])]
-       (try (with-open [os (.getOutputStream conn)]
+       (try (with-open [os (-get-output-stream conn)]
               (doseq [header headers]
                 (.write os header 0 (count header)))
               (.write os utf-8-form 0 content-length)
               (.flush os)
-              (.close conn)
+              (-close! conn)
               true)
             (catch Exception e
-              (.close conn)
+              (-close! conn)
               false)))))
+
+(comment ;; Tests
+  
+  (do (assert (= (active-connections {:connections {1 {:closed true} 2 {:closed false}}})
+                 [[2 {:closed false}]]))
+      (assert (= (active-connections {:connections {1 {:closed true}}}) []))
+      (assert (= (active-connections {}) []))
+      (assert (= (add-return-value {} 1 1 ":ok")
+                 {:return-values {1 {1 :ok}}}))
+      (assert (= (add-return-value {:return-values {1 {1 :okay}}} 1 1 ":okay")
+                 {:return-values {1 {1 :okay}}}))
+      (assert (= (active-leader-client-id {:connections {1 {:closed true} 2 {:closed false}}})
+                 2))
+      (assert (= (active-leader-client-id {})
+                 nil))
+      (assert (= (active-leader-client-id {:connections {10 {:closed false} 7 {:closed false}}})
+                 7))
+      (assert (= (set-leader-client-id {:connections {1 {:closed true} 2 {:closed false}}})
+                 {:connections {1 {:closed true} 2 {:closed false}}
+                  :leader-client-id 2}))
+      (assert (= @(:promised-conns (connections {:connections {1 {:closed true}
+                                                               2 {:closed false}}}))
+                 [{:closed false}]))
+      (assert (= (let [s (connections {:connections {1 {:closed true} 2 {:closed false}}})]
+                   (deliver (:promised-conns s) [{:closed false}])
+                   @(:promised-conns s))
+                 [{:closed false}]))
+      (assert (= (add-connection {} 1 {:closed false})
+                 {:connections {1 {:closed false}}}))
+      (assert (= (add-connection {:promised-conns (promise)} 1 {:closed false})
+                 {:connections nil
+                  :promised-conns nil}))
+      (let [p (promise)]
+        (add-connection {:promised-conns p} 1 {:closed false :id 1})
+        (assert (= @p [{:closed false :id 1}])))
+      (let [result (let [conn (make-connection)]
+                     (send-and-close conn 200 "1 + 1;" "text/javascript")
+                     @(:state conn))]
+        (assert (= (:closed result) true))
+        (assert (= (.toString (:out result))
+                   (str "HTTP/1.1 200 OK\r\n"
+                        "Server: ClojureScript REPL\r\n"
+                        "Content-Type: text/javascript; charset=utf-8\r\n"
+                        "Content-Length: 6\r\n\r\n1 + 1;"))))
+      :ok)
+  )
 
 (defn- pack-return-values
   "Accepts a map of client-ids to return values. Packs them as a
@@ -182,12 +224,12 @@
   timeout is exceeded, only pass the received results."
   [form-id conn-count timeout return-value-fn]
   (loop [timeout timeout
-         return-values (get-return-values form-id)]
+         return-values (get-return-values @server-state form-id)]
     (if (or (= conn-count (count return-values))
             (<= timeout 0))
       (return-value-fn (pack-return-values return-values))
       (do (Thread/sleep 100)
-          (recur (- timeout 100) (get-return-values form-id))))))
+          (recur (- timeout 100) (get-return-values @server-state form-id))))))
 
 (def form-ids (atom 0))
 
@@ -200,11 +242,12 @@
   timeout (which defaults to about 60 seconds.). If the timeout is
   exceeded then return the list of received results."
   ([form return-value-fn]
-     (send-for-eval @(connections) form return-value-fn 10000))
+     (let [conns (:promised-conns (swap! server-state connections))]
+       (send-for-eval conns form return-value-fn 10000)))
   ([conns form return-value-fn]
      (send-for-eval conns form return-value-fn 10000))
   ([conns form return-value-fn timeout]
-     (set-leader-client-id)
+     (swap! server-state set-leader-client-id)
      (let [form-id (swap! form-ids inc)
            sent (doall (map #(send-and-close %
                                              200
@@ -262,12 +305,13 @@
 
 (defmethod handle-post :result [conn {:keys [content order form-id client-id]}]
   (if (= client-id (:leader-client-id @server-state))
-    (constrain-order order (fn [] (do (add-return-value form-id client-id content)
-                                     (add-connection client-id conn))))
+    (constrain-order order
+                     (fn [] (do (swap! server-state add-return-value form-id client-id content)
+                               (swap! server-state add-connection client-id conn))))
     ;; If this is the leader which we are printing then we can
     ;; constain the order, otherwise we go ahead and update the server-state.
-    (do (add-return-value form-id client-id content)
-        (add-connection client-id conn))))
+    (do (swap! server-state add-return-value form-id client-id content)
+        (swap! server-state add-connection client-id conn))))
 
 (defn handle-connection
   [opts conn]

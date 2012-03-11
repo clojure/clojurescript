@@ -59,7 +59,7 @@
   [f]
   (swap! server-state (fn [old] (assoc old :return-value-fn f))))
 
-(defn- status-line [status]
+(defn status-line [status]
   (case status
     200 "HTTP/1.1 200 OK"
     404 "HTTP/1.1 404 Not Found"
