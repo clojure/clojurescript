@@ -391,17 +391,17 @@ dunno about printing
 * DONE prefer-method
 * DONE prefers
 * primitives-classnames
-* TODO print
+* DONE print
 * print-ctor
 * TODO print-dup
 * TODO print-method
 * TODO print-simple
-* TODO print-str
+* DONE print-str
 * printf
 * DONE println
-* TODO println-str
+* DONE println-str
 * DONE prn
-* TODO prn-str
+* DONE prn-str
 * promise
 * proxy
 * proxy-call-with-super

@@ -3058,10 +3058,7 @@ reduces them without incurring seq initialization"
               (-pr-seq obj opts)
               (list "#<" (str obj) ">")))))
 
-(defn pr-str-with-opts
-  "Prints a sequence of objects to a string, observing all the
-  options given in opts"
-  [objs opts]
+(defn- pr-sb [objs opts]
   (let [first-obj (first objs)
         sb (gstring/StringBuffer.)]
     (doseq [obj objs]
@@ -3069,6 +3066,19 @@ reduces them without incurring seq initialization"
         (.append sb " "))
       (doseq [string (pr-seq obj opts)]
         (.append sb string)))
+    sb))
+
+(defn pr-str-with-opts
+  "Prints a sequence of objects to a string, observing all the
+  options given in opts"
+  [objs opts]
+  (str (pr-sb objs opts)))
+
+(defn prn-str-with-opts
+  "Same as pr-str-with-opts followed by (newline)"
+  [objs opts]
+  (let [sb (pr-sb objs opts)]
+    (.append sb \newline)
     (str sb)))
 
 (defn pr-with-opts
@@ -3103,6 +3113,11 @@ reduces them without incurring seq initialization"
   [& objs]
   (pr-str-with-opts objs (pr-opts)))
 
+(defn prn-str
+  "Same as pr-str followed by (newline)"
+  [& objs]
+  (prn-str-with-opts objs (pr-opts)))
+
 (defn pr
   "Prints the object(s) using string-print.  Prints the
   object(s), separated by spaces if there is more than one.
@@ -3118,11 +3133,21 @@ reduces them without incurring seq initialization"
   (fn cljs-core-print [& objs]
     (pr-with-opts objs (assoc (pr-opts) :readably false))))
 
+(defn print-str
+  "print to a string, returning it"
+  [& objs]
+  (pr-str-with-opts objs (assoc (pr-opts) :readably false)))
+
 (defn println
   "Same as print followed by (newline)"
   [& objs]
   (pr-with-opts objs (assoc (pr-opts) :readably false))
   (newline (pr-opts)))
+
+(defn println-str
+  "println to a string, returning it"
+  [& objs]
+  (prn-str-with-opts objs (assoc (pr-opts) :readably false)))
 
 (defn prn
   "Same as pr followed by (newline)."

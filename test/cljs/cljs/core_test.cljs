@@ -181,8 +181,16 @@
   (assert (= (hash-map :foo 5)
              (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5)))
 
+  (assert (= "\"asdf\"" (pr-str "asdf")))
   (assert (= "[1 true {:a 2, :b 42} #<Array [3, 4]>]"
              (pr-str [1 true {:a 2 :b 42} (array 3 4)])))
+
+  (assert (= "\"asdf\"\n" (prn-str "asdf")))
+  (assert (= "[1 true {:a 2, :b 42} #<Array [3, 4]>]\n"
+             (prn-str [1 true {:a 2 :b 42} (array 3 4)])))
+
+  (assert (= "asdf" (print-str "asdf")))
+  (assert (= "asdf\n" (println-str "asdf")))
 
   ;;this fails in v8 - why?
   ;(assert (= "symbol\"'string" (pr-str (str 'symbol \" \' "string"))))
