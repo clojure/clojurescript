@@ -1030,6 +1030,8 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
+(declare apply)
+
 (defn- str*
   "Internal - do not use!"
   ([] "")
@@ -1043,8 +1045,6 @@ reduces them without incurring seq initialization"
           (str* sb)))
       (gstring/StringBuffer. (str* x)) ys)))
 
-(declare apply)
-
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
@@ -1056,7 +1056,11 @@ reduces them without incurring seq initialization"
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]
-     (apply str* x ys)))
+     ((fn [sb more]
+        (if more
+          (recur (. sb  (append (str (first more)))) (next more))
+          (str* sb)))
+      (gstring/StringBuffer. (str x)) ys)))
 
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending

@@ -160,6 +160,12 @@
   (assert (= "baz" (name :foo/bar/baz)))
   ;(assert (= "foo/bar" (namespace :foo/bar/baz)))
 
+  ; str
+  (assert (= ":hello" (str :hello)))
+  (assert (= "hello" (str 'hello)))
+  (assert (= "hello:world" (str "hello" :world)))
+  (assert (= ":helloworld" (str :hello 'world)))
+
   (assert (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
   (assert (= :a (nth [:a :b :c :d] 0)))
   (assert (= :a (nth [:a :b :c :d] 0.1)) )
@@ -925,7 +931,7 @@
              (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel})))
   (assert (= (dissoc ethel :husband)
              (map->Person {:firstname "Ethel" :lastname "Mertz"})))
-  
+
   (defrecord A [x])
   (defrecord B [x])
   (assert (not= (A. nil) (B. nil)))
@@ -946,22 +952,22 @@
   (defmulti foo identity)
   (defmethod foo 0 [x] x)
   (assert (= foo (ffirst {foo 1})))
-  
+
   (defprotocol IMutate
     (mutate [this]))
-  
+
   (deftype Mutate [^:mutable a]
     IMutate
     (mutate [_]
       (set! a 'foo)))
-  
+
   ;; IFn
   (deftype FnLike []
     IFn
     (-invoke [_] :a)
     (-invoke [_ a] :b)
     (-invoke [_ a b] :c))
-  
+
   (assert (= :a ((FnLike.))))
   (assert (= :b ((FnLike.) 1)))
   (assert (= :c ((FnLike.) 1 2)))
@@ -973,7 +979,7 @@
     (-invoke [_] a))
 
   (assert (= 1 ((FnLikeB. 1))))
-  
+
   ;; hashing bug in many JS runtimes CLJ-118
   (let [g #{(conj #{:2} :alt)}
         h #{#{:2 :alt}}]
