@@ -161,7 +161,6 @@
       ; Handle printable escapes before ASCII
       34 "\\\""
       92 "\\\\"
-      47 "\\/"
       ; Handle non-printable escapes
       8 "\\b"
       12 "\\f"
