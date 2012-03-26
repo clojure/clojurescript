@@ -312,6 +312,7 @@
                             (drop-while seq? (next s)))
                      ret)))]
     (let [gs (gensym)
+          ksym (gensym "k")
 	  impls (concat
 		 impls
 		 ['IRecord
@@ -328,11 +329,10 @@
 		  `(~'-with-meta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields)))
 		  'ILookup
 		  `(~'-lookup [this# k#] (-lookup this# k# nil))
-		  `(~'-lookup [this# k# else#]
-			      (get (merge (hash-map ~@(mapcat (fn [fld] [(keyword fld) fld]) 
-							      base-fields))
-					  ~'__extmap)
-				   k# else#))
+		  `(~'-lookup [this# ~ksym else#]
+         (cond
+           ~@(mapcat (fn [f] [`(identical? ~ksym ~(keyword f)) f]) base-fields)
+           :else (get ~'__extmap ~ksym else#)))
 		  'ICounted
 		  `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
 		  'ICollection
