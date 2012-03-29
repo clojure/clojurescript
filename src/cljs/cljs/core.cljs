@@ -3398,25 +3398,17 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
 
-(deftype Delay [f state]
-
+(deftype Delay [state f]
   IDeref
   (-deref [_]
-    (when-not @state
-      (swap! state f))
-    @state)
+    (:value (swap! state (fn [{:keys [done] :as curr-state}]
+                           (if done
+                             curr-state,
+                             {:done true :value (f)})))))
 
   IPending
   (-realized? [d]
-    (not (nil? @state))))
-
-(defn delay
-  "Takes a body of expressions and yields a Delay object that will
-  invoke the body only the first time it is forced (with force or deref/@), and
-  will cache the result and return it on all subsequent force
-  calls."
-  [& body]
-  (Delay. (fn [] (apply identity body)) (atom nil)))
+    (:done @state)))
 
 (defn delay?
   "returns true if x is a Delay created with delay"

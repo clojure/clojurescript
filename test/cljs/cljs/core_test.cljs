@@ -615,13 +615,17 @@
     (assert (= @s (reverse v))))
 
   ;; delay
-  ;; (let [d (delay (. (js/Date.) (getTime)))]
-  ;;   (assert (false? (realized? d)))
-  ;;   (let [d2 (. (js/Date.) (getTime))]
-  ;;     (assert (> d2 (deref d))))
-  ;;   (assert (true? (realized? d)))
-  ;;   (let [d3 (deref d)]
-  ;;     (assert (= (deref d) d3))))
+  (let [a (atom 0)
+        d (delay (swap! a inc))]
+    (assert (false? (realized? d)))
+    (assert (zero? @a)) ;; delay hasn't triggered yet
+    (assert (= 1 @d)) ;; trigger it
+    (assert (= 1 @a)) ;; make sure side effect has happened
+    (assert (true? (realized? d)))
+    (assert (= 1 @d)) ;; body doesn't happen again
+    (assert (= 1 @a)) ;; atom hasn't changed either
+    (assert (= (force d) @d))
+    (assert (= 1 (force 1)))) ;; you can safely force non-delays
 
   ;; assoc
   (assert (= {1 2 3 4} (assoc {} 1 2 3 4)))
