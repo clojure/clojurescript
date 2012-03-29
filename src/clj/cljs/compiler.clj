@@ -235,9 +235,9 @@
 
 (defmethod emit-constant clojure.lang.IPersistentVector [x]
   (emit-meta-constant x
-    (str "(new cljs.core.Vector(null, ["
+    (str "cljs.core.vec(["
          (comma-sep (map #(with-out-str (emit-constant %)) x))
-         "]))")))
+         "])")))
 
 (defmethod emit-constant clojure.lang.IPersistentMap [x]
   (emit-meta-constant x
@@ -298,7 +298,7 @@
 (defmethod emit :vector
   [{:keys [children env]}]
   (emit-wrap env
-    (print (str "cljs.core.Vector.fromArray(["
+    (print (str "cljs.core.PersistentVector.fromArray(["
                 (comma-sep (map emits children)) "])"))))
 
 (defmethod emit :set
@@ -785,7 +785,7 @@
         {:keys [statements ret children]}
         (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)
                   *loop-lets* (cond
-                               is-loop (or *loop-lets* ()) 
+                               is-loop (or *loop-lets* ())
                                *loop-lets* (cons {:names (vec (map :name bes))} *loop-lets*))]
           (analyze-block (assoc env :context (if (= :expr context) :return context)) exprs))]
     {:env encl-env :op :let :loop is-loop
@@ -928,7 +928,7 @@
   [(cond (nil? target) ::error
          :default      ::expr)
    (cond (property-symbol? member) ::property
-         (symbol? member)          ::symbol    
+         (symbol? member)          ::symbol
          (seq? member)             ::list
          :default                  ::error)
    (cond (nil? args) ()

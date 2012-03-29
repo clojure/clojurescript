@@ -861,6 +861,16 @@
   (assert (= (count (range 0 0 0)) 0))
   (assert (= (take 3 (range 1 0 0)) (list 1 1 1)))
   (assert (= (take 3 (range 3 1 0)) (list 3 3 3)))
+  ;; PersistentVector
+  (let [pv (vec (range 97))]
+    (assert (= (nth pv 96) 96))
+    (assert (= (nth pv 97 nil) nil))
+    (assert (= (pv 96) 96)))
+
+  (let [stack1 (pop (vec (range 97)))
+        stack2 (pop stack1)]
+    (assert (= 95 (peek stack1)))
+    (assert (= 94 (peek stack2))))
 
   ;; subvec
   (let [v (vec (range 10))
