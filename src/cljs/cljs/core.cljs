@@ -2023,8 +2023,6 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs)))
 
-(defn vector [& args] (vec args))
-
 ;;; PersistentVector
 
 (defn- tail-off [pv]
@@ -2204,6 +2202,8 @@ reduces them without incurring seq initialization"
 
 (defn vec [coll]
   (reduce conj cljs.core.PersistentVector/EMPTY coll))
+
+(defn vector [& args] (vec args))
 
 (deftype Subvec [meta v start end]
   IWithMeta
