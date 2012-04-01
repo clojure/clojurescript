@@ -292,11 +292,24 @@
             state (reduce dependency-order-visit state deps)]
         (assoc state :order (conj (:order state) file))))))
 
+(defn- pack-string [s]
+  (if (string? s)
+    {:provides (-provides s)
+     :requires (-requires s)
+     :file (str "from_source_" (gensym) ".clj")
+     ::original s}
+    s))
+
+(defn- unpack-string [m]
+  (or (::original m) m))
+
 (defn dependency-order
   "Topologically sort a collection of dependencies."
   [coll]
-  (let [state (build-index coll)]
-    (distinct (:order (reduce dependency-order-visit (assoc state :order []) (keys state))))))
+  (let [state (build-index (map pack-string coll))]
+    (map unpack-string
+         (distinct
+          (:order (reduce dependency-order-visit (assoc state :order []) (keys state)))))))
 
 ;; Compile
 ;; =======
@@ -591,13 +604,15 @@
   (let [requires (mapcat -requires inputs)
         required-cljs (remove (set inputs) (cljs-dependencies opts requires))
         required-js (js-dependencies opts (set (concat (mapcat -requires required-cljs) requires)))]
-    (concat (map #(-> (javascript-file (:foreign %)
-                                       (or (:url %) (io/resource (:file %)))
-                                       (:provides %)
-                                       (:requires %))
-                      (assoc :group (:group %))) required-js)
-            required-cljs
-            inputs)))
+    (cons (javascript-file nil (io/resource "goog/base.js") ["goog"] nil)
+          (dependency-order
+           (concat (map #(-> (javascript-file (:foreign %)
+                                              (or (:url %) (io/resource (:file %)))
+                                              (:provides %)
+                                              (:requires %))
+                             (assoc :group (:group %))) required-js)
+                   required-cljs
+                   inputs)))))
 
 (comment
   ;; add dependencies to literal js
@@ -861,9 +876,7 @@
                      [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
         js-sources (if (coll? compiled)
                      (apply add-dependencies all-opts compiled)
-                     (add-dependencies all-opts compiled))
-        js-sources (cons (javascript-file nil (io/resource "goog/base.js") ["goog"] nil)
-                         (dependency-order js-sources))]
+                     (add-dependencies all-opts compiled))]
     (if (:optimizations all-opts)
       (->> js-sources
            (apply optimize all-opts)
