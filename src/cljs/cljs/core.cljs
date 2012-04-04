@@ -3439,9 +3439,9 @@ reduces them without incurring seq initialization"
              (seq? x) (doall (map thisfn x))
              (coll? x) (into (empty x) (map thisfn x))
              (goog.isArray x) (vec (map thisfn x))
-             (goog.isObject x) (into {} (for [k (js-keys x)]
-                                          [(keyfn k)
-                                           (thisfn (aget x k))]))
+             (identical? (type x) js/Object) (into {} (for [k (js-keys x)]
+                                                        [(keyfn k)
+                                                         (thisfn (aget x k))]))
              :else x))]
     (f x)))
 
