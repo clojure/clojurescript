@@ -8,7 +8,7 @@ if [ "$CLOJURESCRIPT_HOME" = "" ]; then
 fi
 
 CLJSC_CP=''
-for next in lib/*: src/clj: src/cljs; do
+for next in lib/*: src/clj: src/cljs: test/cljs; do
   CLJSC_CP=$CLJSC_CP$CLOJURESCRIPT_HOME'/'$next
 done
 
