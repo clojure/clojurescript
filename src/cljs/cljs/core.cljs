@@ -324,9 +324,13 @@ reduces them without incurring seq initialization"
            (recur (f val (-nth cicoll n)) (inc n))
            val))))
 
-(declare hash-coll cons)
+(declare hash-coll cons pr-str)
 
 (deftype IndexedSeq [a i]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   ISeqable
   (-seq [this] this)
   ISeq
@@ -1121,6 +1125,10 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;; cons ;;;;;;;;;;;;;;;;
 (deftype List [meta first rest count]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   IWithMeta
   (-with-meta [coll meta] (List. meta first rest count))
 
@@ -1155,6 +1163,10 @@ reduces them without incurring seq initialization"
   (-count [coll] count))
 
 (deftype EmptyList [meta]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IWithMeta
   (-with-meta [coll meta] (EmptyList. meta))
 
@@ -1199,6 +1211,10 @@ reduces them without incurring seq initialization"
   (reduce conj () (reverse items)))
 
 (deftype Cons [meta first rest]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IWithMeta
   (-with-meta [coll meta] (Cons. meta first rest))
 
@@ -1291,6 +1307,10 @@ reduces them without incurring seq initialization"
         (.-x lazy-seq)))))
 
 (deftype LazySeq [meta realized x]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IWithMeta
   (-with-meta [coll meta] (LazySeq. meta realized x))
 
@@ -1937,6 +1957,10 @@ reduces them without incurring seq initialization"
 ;;; DEPRECATED
 ;;; in favor of PersistentVector
 (deftype Vector [meta array]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IWithMeta
   (-with-meta [coll meta] (Vector. meta array))
 
@@ -2094,6 +2118,10 @@ reduces them without incurring seq initialization"
              ret))))
 
 (deftype PersistentVector [meta cnt shift root tail]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IWithMeta
   (-with-meta [coll meta] (PersistentVector. meta cnt shift root tail))
 
@@ -2206,6 +2234,10 @@ reduces them without incurring seq initialization"
 (defn vector [& args] (vec args))
 
 (deftype Subvec [meta v start end]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IWithMeta
   (-with-meta [coll meta] (Subvec. meta v start end))
 
@@ -2291,6 +2323,10 @@ reduces them without incurring seq initialization"
 ;;; PersistentQueue ;;;
 
 (deftype PersistentQueueSeq [meta front rear]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   IWithMeta
   (-with-meta [coll meta] (PersistentQueueSeq. meta front rear))
 
@@ -2323,6 +2359,10 @@ reduces them without incurring seq initialization"
   (-seq [coll] coll))
 
 (deftype PersistentQueue [meta count front rear]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   IWithMeta
   (-with-meta [coll meta] (PersistentQueue. meta count front rear))
 
@@ -2421,6 +2461,10 @@ reduces them without incurring seq initialization"
      :else 0)))
 
 (deftype ObjMap [meta keys strobj]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj))
 
@@ -2500,6 +2544,10 @@ reduces them without incurring seq initialization"
 ; collisions. A bucket is an array of alternating keys (not their hashes) and
 ; vals.
 (deftype HashMap [meta count hashobj]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   IWithMeta
   (-with-meta [coll meta] (HashMap. meta count hashobj))
 
@@ -2657,6 +2705,10 @@ reduces them without incurring seq initialization"
 ;;; Set
 
 (deftype Set [meta hash-map]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   IWithMeta
   (-with-meta [coll meta] (Set. meta hash-map))
 
@@ -2817,6 +2869,10 @@ reduces them without incurring seq initialization"
        (cons (first s) (take-while pred (rest s)))))))
 
 (deftype Range [meta start end step]
+  Object
+  (toString [this]
+    (pr-str this))
+  
   IWithMeta
   (-with-meta [rng meta] (Range. meta start end step))
 
