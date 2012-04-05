@@ -146,6 +146,10 @@
   #_(-assoc-ex [coll k v])
   (-dissoc [coll k]))
 
+(defprotocol IMapEntry
+  (-key [coll])
+  (-val [coll]))
+
 (defprotocol ISet
   (-disjoin [coll v]))
 
@@ -2212,6 +2216,12 @@ reduces them without incurring seq initialization"
   (-lookup [coll k] (-nth coll k nil))
   (-lookup [coll k not-found] (-nth coll k not-found))
 
+  IMapEntry
+  (-key [coll]
+    (-nth coll 0))
+  (-val [coll]
+    (-nth coll 1))
+
   IAssociative
   (-assoc [coll k v]
     (cond
@@ -2674,10 +2684,20 @@ reduces them without incurring seq initialization"
   [hash-map]
   (seq (map first hash-map)))
 
+(defn key
+  "Returns the key of the map entry."
+  [map-entry]
+  (-key map-entry))
+
 (defn vals
   "Returns a sequence of the map's values."
   [hash-map]
   (seq (map second hash-map)))
+
+(defn val
+  "Returns the value in the map entry."
+  [map-entry]
+  (-val map-entry))
 
 (defn merge
   "Returns a map that consists of the rest of the maps conj-ed onto

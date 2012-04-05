@@ -1,8 +1,8 @@
 * DONE *
 * *'
-* TODO *1
-* TODO *2
-* TODO *3
+* DONE *1
+* DONE *2
+* DONE *3
 * *agent*
 * *allow-unresolved-vars*
 * *assert*
@@ -294,7 +294,7 @@ does what?
 * DONE juxt
 * DONE keep
 * DONE keep-indexed
-* TODO key
+* DONE key
 * DONE keys
 * DONE keyword
 * DONE keyword?
@@ -552,7 +552,7 @@ as macro
 * DONE update-in
 * update-proxy
 * use
-* TODO val
+* DONE val
 * DONE vals
 * var-get
 * var-set
