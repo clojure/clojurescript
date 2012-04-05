@@ -118,7 +118,6 @@ does what?
 * byte-array
 * bytes
 * DONE case
-CLOSED: [2012-04-05 Thu 01:30]
 * cast
 * char
 * char-array
@@ -174,7 +173,7 @@ CLOSED: [2012-04-05 Thu 01:30]
 * DONE defn-
 * defonce
 * DONE defprotocol
-* TODO defrecord
+* DONE defrecord
 * defstruct
 * DONE deftype
 * DONE delay
@@ -270,7 +269,7 @@ macro currently expands into extend call
 * DONE identity
 * DONE if-let
 * DONE if-not
-* TODO ifn?
+* DONE ifn?
 * import
 * DONE in-ns
 * DONE inc
@@ -308,7 +307,7 @@ does what?
 * line-seq
 * DONE list
 * DONE list*
-* TODO list?
+* DONE list?
 * load
 * DONE load-file
 * load-reader
@@ -415,7 +414,7 @@ dunno about printing
 * DONE rand
 * DONE rand-int
 * DONE rand-nth
-* TODO range
+* DONE range
 * TODO ratio?
 * TODO rational?
 * TODO rationalize
@@ -439,8 +438,8 @@ dunno about regex
 * ref-set
 * refer
 * refer-clojure
-* TODO reify
-also specify - make a particular object extend a protocol
+* DONE reify
+* TODO specify - make a particular object extend a protocol
 * release-pending-sends
 * DONE rem
 * DONE remove
