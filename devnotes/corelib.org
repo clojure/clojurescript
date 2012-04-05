@@ -504,7 +504,7 @@ as macro
 * struct-map
 * DONE subs
 * TODO subseq
-* TODO subvec
+* DONE subvec
 * TODO supers
 * DONE swap!
 * DONE symbol
@@ -524,8 +524,7 @@ as macro
 * transient
 * DONE tree-seq
 * DONE true?
-* TODO type
-does what?
+* DONE type - returns JS constructor
 * TODO unchecked-add
 * TODO unchecked-add-int
 * TODO unchecked-byte
