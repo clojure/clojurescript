@@ -90,7 +90,7 @@
     (let [s (str sym)
           lb (-> env :locals sym)]
       (cond
-       lb {:name (:name lb)}
+       lb lb
 
        (namespace sym)
        (let [ns (namespace sym)
@@ -127,32 +127,30 @@
   (if (= (namespace sym) "js")
     {:name (js-var sym)}
     (let [s (str sym)
-          lb (-> env :locals sym)
-          nm
-          (cond
-           lb (:name lb)
+          lb (-> env :locals sym)]
+      (cond
+       lb lb
 
-           (namespace sym)
-           (let [ns (namespace sym)
-                 ns (if (= "clojure.core" ns) "cljs.core" ns)]
-             (symbol (str (resolve-ns-alias env ns) "." (munge (name sym)))))
+       (namespace sym)
+       (let [ns (namespace sym)
+             ns (if (= "clojure.core" ns) "cljs.core" ns)]
+         {:name (symbol (str (resolve-ns-alias env ns) "." (munge (name sym))))})
 
-           (.contains s ".")
-           (munge (let [idx (.indexOf s ".")
-                        prefix (symbol (subs s 0 idx))
-                        suffix (subs s idx)
-                        lb (-> env :locals prefix)]
-                    (if lb
-                      (symbol (str (:name lb) suffix))
-                      sym)))
+       (.contains s ".")
+       (let [idx (.indexOf s ".")
+             prefix (symbol (subs s 0 idx))
+             suffix (subs s idx)
+             lb (-> env :locals prefix)]
+         (if lb
+           {:name (munge (symbol (str (:name lb) suffix)))}
+           {:name (munge sym)}))
 
-           :else
-           (munge (symbol (str
-                           (if (core-name? env sym)
-                             'cljs.core
-                             (-> env :ns :name))
-                           "." (munge (name sym))))))]
-      {:name nm})))
+       :else
+       (let [s (str (if (core-name? env sym)
+                      'cljs.core
+                      (-> env :ns :name))
+                    "." (munge (name sym)))]
+         {:name (munge (symbol s))})))))
 
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
