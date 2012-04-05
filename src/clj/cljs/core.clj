@@ -508,6 +508,15 @@
            ~gexpr ~expr]
        ~(emit gpred gexpr clauses))))
 
+(defmacro case [e & clauses]
+  (let [default (if (odd? (count clauses))
+                  (last clauses)
+                  `(throw (js/Error. (str "No matching clause: " ~e))))
+        pairs (partition 2 clauses)]
+   `(condp = ~e
+      ~@(apply concat pairs)
+      ~default)))
+
 (defmacro try
   "(try expr* catch-clause* finally-clause?)
 

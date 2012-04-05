@@ -1045,5 +1045,16 @@
     (assert (= (-find-first fv [1]) 1))
     (assert (identical? (fv 1) fv)))
 
+  (let [x 1]
+    (assert (= (case x 1 :one) :one)))
+  (let [x 1]
+    (assert (= (case x 2 :two :default) :default)))
+  (let [x 1]
+    (assert (= (try
+                 (case x 3 :three)
+                 (catch js/Error e
+                     :fail))
+               :fail)))
+
   :ok
   )
