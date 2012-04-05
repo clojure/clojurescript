@@ -685,6 +685,9 @@ reduces them without incurring seq initialization"
 (defn fn? [f]
   (goog/isFunction f))
 
+(defn ifn? [f]
+  (or (fn? f) (satisfies? IFn f)))
+
 (defn integer?
   "Returns true if n is an integer.  Warning: returns true on underflow condition."
   [n]
