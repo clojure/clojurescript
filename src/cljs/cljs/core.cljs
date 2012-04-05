@@ -183,6 +183,9 @@
 (defprotocol ISequential
   "Marker interface indicating a persistent collection of sequential items")
 
+(defprotocol IList
+  "Marker interface indicating a persistent list")
+
 (defprotocol IRecord
   "Marker interface indicating a record object")
 
@@ -1128,6 +1131,8 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;; cons ;;;;;;;;;;;;;;;;
 (deftype List [meta first rest count]
+  IList
+  
   Object
   (toString [this]
     (pr-str this))
@@ -1166,6 +1171,8 @@ reduces them without incurring seq initialization"
   (-count [coll] count))
 
 (deftype EmptyList [meta]
+  IList
+  
   Object
   (toString [this]
     (pr-str this))
@@ -1214,6 +1221,8 @@ reduces them without incurring seq initialization"
   (reduce conj () (reverse items)))
 
 (deftype Cons [meta first rest]
+  IList
+  
   Object
   (toString [this]
     (pr-str this))
@@ -1248,6 +1257,9 @@ reduces them without incurring seq initialization"
   "Returns a new seq where x is the first element and seq is the rest."
   [x seq]
   (Cons. nil x seq))
+
+(defn list? [x]
+  (satisfies? IList x))
 
 (extend-type string
   IHash
