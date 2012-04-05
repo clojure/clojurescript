@@ -39,6 +39,7 @@
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
+(def ^:dynamic *cljs-warn-on-redef* true)
 
 (defmacro ^:private debug-prn
   [& args]
@@ -85,41 +86,42 @@
 
 (defn resolve-existing-var [env sym]
   (if (= (namespace sym) "js")
-    {:name (js-var sym)}
+    {:name (js-var sym) :ns 'js}
     (let [s (str sym)
-          lb (-> env :locals sym)
-          nm
-          (cond
-           lb (:name lb)
+          lb (-> env :locals sym)]
+      (cond
+       lb {:name (:name lb)}
 
-           (namespace sym)
-           (let [ns (namespace sym)
-                 ns (if (= "clojure.core" ns) "cljs.core" ns)
-                 full-ns (resolve-ns-alias env ns)]
-             (confirm-var-exists env full-ns (symbol (name sym)))
-             (symbol (str full-ns "." (munge (name sym)))))
+       (namespace sym)
+       (let [ns (namespace sym)
+             ns (if (= "clojure.core" ns) "cljs.core" ns)
+             full-ns (resolve-ns-alias env ns)]
+         (confirm-var-exists env full-ns (symbol (name sym)))
+         {:name (symbol (str full-ns "." (munge (name sym))))
+          :ns full-ns})
 
-           (.contains s ".")
-           (munge (let [idx (.indexOf s ".")
-                        prefix (symbol (subs s 0 idx))
-                        suffix (subs s idx)
-                        lb (-> env :locals prefix)]
-                    (if lb
-                      (symbol (str (:name lb) suffix))
-                      (do
-                        (confirm-var-exists env prefix (symbol suffix))
-                        sym))))
+       (.contains s ".")
+       (let [idx (.indexOf s ".")
+             prefix (symbol (subs s 0 idx))
+             suffix (subs s idx)
+             lb (-> env :locals prefix)]
+         (if lb
+           {:name (munge (symbol (str (:name lb) suffix)))}
+           (do
+             (confirm-var-exists env prefix (symbol suffix))
+             {:name (munge sym) :ns prefix})))
 
-           (get-in @namespaces [(-> env :ns :name) :uses sym])
-           (symbol (str (get-in @namespaces [(-> env :ns :name) :uses sym]) "." (munge (name sym))))
+       (get-in @namespaces [(-> env :ns :name) :uses sym])
+       {:name (symbol (str (get-in @namespaces [(-> env :ns :name) :uses sym]) "." (munge (name sym))))
+        :ns (-> env :ns :name)}
 
-           :else
-           (let [full-ns (if (core-name? env sym)
-                           'cljs.core
-                           (-> env :ns :name))]
-             (confirm-var-exists env full-ns sym)
-             (munge (symbol (str full-ns "." (munge (name sym)))))))]
-      {:name nm})))
+       :else
+       (let [full-ns (if (core-name? env sym)
+                       'cljs.core
+                       (-> env :ns :name))]
+         (confirm-var-exists env full-ns sym)
+         {:name (munge (symbol (str full-ns "." (munge (name sym)))))
+          :ns full-ns})))))
 
 (defn resolve-var [env sym]
   (if (= (namespace sym) "js")
@@ -692,9 +694,19 @@
               ([_ sym init] {:sym sym :init init})
               ([_ sym doc init] {:sym sym :doc doc :init init}))
         args (apply pfn form)
-        sym (:sym args)]
+        sym (:sym args)
+        v (resolve-var (dissoc env :locals) sym)]
     (assert (not (namespace sym)) "Can't def ns-qualified name")
-    (let [name (munge (:name (resolve-var (dissoc env :locals) sym)))
+    (when *cljs-warn-on-redef*
+      (binding [*out* *err*]
+        (let [ns-name (-> env :ns :name)]
+          (when (or (and (not= ns-name 'cljs.core)
+                         (core-name? env sym))
+                    (get-in @namespaces [ns-name :uses sym]))
+            (let [ev (resolve-existing-var (dissoc env :locals) sym)]
+              (println "WARNING:" sym "already refers to:" (symbol (str (:ns ev)) (str sym))
+                       "being replaced by:" (symbol (str ns-name) (str sym))))))))
+    (let [name (munge (:name v))
           init-expr (when (contains? args :init) (disallowing-recur
                                                   (analyze (assoc env :context :expr) (:init args) sym)))
           export-as (when-let [export-val (-> sym meta :export)]
