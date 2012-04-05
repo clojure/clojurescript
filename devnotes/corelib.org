@@ -117,7 +117,8 @@ does what?
 * TODO byte
 * byte-array
 * bytes
-* TODO case
+* DONE case
+CLOSED: [2012-04-05 Thu 01:30]
 * cast
 * char
 * char-array
