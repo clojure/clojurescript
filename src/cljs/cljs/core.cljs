@@ -193,6 +193,9 @@
 (defprotocol IRecord
   "Marker interface indicating a record object")
 
+(defprotocol IReversible
+  (-rseq [coll]))
+
 (defprotocol IPrintable
   (-pr-seq [o opts]))
 
@@ -1215,6 +1218,12 @@ reduces them without incurring seq initialization"
   (-count [coll] 0))
 
 (set! cljs.core.List/EMPTY (EmptyList. nil))
+
+(defn reversible? [coll]
+  (satisfies? IReversible coll))
+
+(defn rseq [coll]
+  (-rseq coll))
 
 (defn reverse
   "Returns a seq of the items in coll in reverse order. Not lazy."

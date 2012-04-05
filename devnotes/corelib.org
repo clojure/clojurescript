@@ -460,8 +460,8 @@ ticket #8
 * restart-agent
 * resultset-seq
 * DONE reverse
-* TODO reversible?
-* TODO rseq
+* DONE reversible?
+* DONE rseq
 * TODO rsubseq
 * DONE satisfies?
 as macro
