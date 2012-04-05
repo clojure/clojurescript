@@ -694,19 +694,21 @@
               ([_ sym init] {:sym sym :init init})
               ([_ sym doc init] {:sym sym :doc doc :init init}))
         args (apply pfn form)
-        sym (:sym args)
-        v (resolve-var (dissoc env :locals) sym)]
+        sym (:sym args)]
     (assert (not (namespace sym)) "Can't def ns-qualified name")
-    (when *cljs-warn-on-redef*
-      (binding [*out* *err*]
-        (let [ns-name (-> env :ns :name)]
-          (when (or (and (not= ns-name 'cljs.core)
-                         (core-name? env sym))
-                    (get-in @namespaces [ns-name :uses sym]))
-            (let [ev (resolve-existing-var (dissoc env :locals) sym)]
-              (println "WARNING:" sym "already refers to:" (symbol (str (:ns ev)) (str sym))
-                       "being replaced by:" (symbol (str ns-name) (str sym))))))))
-    (let [name (munge (:name v))
+    (let [env (let [ns-name (-> env :ns :name)]
+                (if (or (and (not= ns-name 'cljs.core)
+                             (core-name? env sym))
+                        (get-in @namespaces [ns-name :uses sym]))
+                  (let [ev (resolve-existing-var (dissoc env :locals) sym)]
+                    (when *cljs-warn-on-redef*
+                      (binding [*out* *err*]
+                        (println "WARNING:" sym "already refers to:" (symbol (str (:ns ev)) (str sym))
+                                 "being replaced by:" (symbol (str ns-name) (str sym)))))
+                    (swap! namespaces update-in [ns-name :excludes] conj sym)
+                    (update-in env [:ns :excludes] conj sym))
+                  env))
+          name (munge (:name (resolve-var (dissoc env :locals) sym)))
           init-expr (when (contains? args :init) (disallowing-recur
                                                   (analyze (assoc env :context :expr) (:init args) sym)))
           export-as (when-let [export-val (-> sym meta :export)]
