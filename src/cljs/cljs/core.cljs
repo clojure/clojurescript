@@ -2086,7 +2086,7 @@ reduces them without incurring seq initialization"
 (defn- new-path [level node]
   (loop [ll level
          ret node]
-         (if (= 0 ll)
+         (if (zero? ll)
            ret
            (let [embed ret
                  r (aclone cljs.core.PersistentVector/EMPTY_NODE)
@@ -2096,7 +2096,7 @@ reduces them without incurring seq initialization"
 (defn- push-tail [pv level parent tailnode]
   (let [ret (aclone parent)
         subidx (bit-and (bit-shift-right (dec (.-cnt pv)) level) 0x01f)]
-    (if (= 5 level)
+    (if (== 5 level)
       (do
         (aset ret subidx tailnode)
         ret)
@@ -2163,7 +2163,7 @@ reduces them without incurring seq initialization"
   (-pop [coll]
     (cond
      (zero? cnt) (throw (js/Error. "Can't pop empty vector"))
-     (= 1 cnt) (-with-meta cljs.core.PersistentVector/EMPTY meta)
+     (== 1 cnt) (-with-meta cljs.core.PersistentVector/EMPTY meta)
      (< 1 (- cnt (tail-off coll)))
       (PersistentVector. meta (dec cnt) shift root (aclone tail))
       :else (let [new-tail (array-for coll (- cnt 2))
@@ -2202,7 +2202,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (> cnt 0)
+    (when (pos? cnt)
       (let [vector-seq
              (fn vector-seq [i]
                (lazy-seq
@@ -2240,7 +2240,7 @@ reduces them without incurring seq initialization"
            (aset new-tail (bit-and k 0x01f) v)
            (PersistentVector. meta cnt shift root new-tail))
          (PersistentVector. meta cnt shift (do-assoc coll shift root k v) tail))
-       (= k cnt) (-conj coll v)
+       (== k cnt) (-conj coll v)
        :else (throw (js/Error. (str "Index " k " out of bounds  [0," cnt "]")))))
 
   IVector
