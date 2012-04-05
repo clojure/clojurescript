@@ -208,12 +208,12 @@
   (-remove-watch [this key]))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
-(defn identical?
+(defn ^boolean identical?
   "Tests if 2 arguments are the same object"
   [x y]
   (cljs.core/identical? x y))
 
-(defn =
+(defn ^boolean =
   "Equality. Returns true if x equals y, false if not. Compares
   numbers and collections in a type-independent manner.  Clojure's immutable data
   structures define -equiv (and thus =) as a value, not an identity,
@@ -221,7 +221,7 @@
   [x y]
   (-equiv x y))
 
-(defn nil?
+(defn ^boolean nil?
   "Returns true if x is nil, false otherwise."
   [x]
   (identical? x nil))
@@ -594,45 +594,45 @@ reduces them without incurring seq initialization"
 (defn hash [o]
   (-hash o))
 
-(defn empty?
+(defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
   Please use the idiom (seq x) rather than (not (empty? x))"
   [coll] (not (seq coll)))
 
-(defn coll?
+(defn ^boolean coll?
   "Returns true if x satisfies ICollection"
   [x]
   (if (nil? x)
     false
     (satisfies? ICollection x)))
 
-(defn set?
+(defn ^boolean set?
   "Returns true if x satisfies ISet"
   [x]
   (if (nil? x)
     false
     (satisfies? ISet x)))
 
-(defn associative?
+(defn ^boolean associative?
  "Returns true if coll implements Associative"
   [x] (satisfies? IAssociative x))
 
-(defn sequential?
+(defn ^boolean sequential?
   "Returns true if coll satisfies ISequential"
   [x] (satisfies? ISequential x))
 
-(defn counted?
+(defn ^boolean counted?
   "Returns true if coll implements count in constant time"
   [x] (satisfies? ICounted x))
 
-(defn map?
+(defn ^boolean map?
   "Return true if x satisfies IMap"
   [x]
   (if (nil? x)
     false
     (satisfies? IMap x)))
 
-(defn vector?
+(defn ^boolean vector?
   "Return true if x satisfies IVector"
   [x] (satisfies? IVector x))
 
@@ -652,59 +652,59 @@ reduces them without incurring seq initialization"
 
 (def ^:private lookup-sentinel (js-obj))
 
-(defn false?
+(defn ^boolean false?
   "Returns true if x is the value false, false otherwise."
   [x] (cljs.core/false? x))
 
-(defn true?
+(defn ^boolean true?
   "Returns true if x is the value true, false otherwise."
   [x] (cljs.core/true? x))
 
-(defn undefined? [x]
+(defn ^boolean undefined? [x]
   (cljs.core/undefined? x))
 
-(defn instance? [t o]
+(defn ^boolean instance? [t o]
   (js* "(~{o} != null && (~{o} instanceof ~{t} || ~{o}.constructor === ~{t} || ~{t} === Object))"))
 
-(defn seq?
+(defn ^boolean seq?
   "Return true if s satisfies ISeq"
   [s]
   (if (nil? s)
     false
     (satisfies? ISeq s)))
 
-(defn boolean [x]
+(defn ^boolean boolean [x]
   (if x true false))
 
-(defn string? [x]
+(defn ^boolean string? [x]
   (and (goog/isString x)
        (not (or (= (.charAt x 0) \uFDD0)
                 (= (.charAt x 0) \uFDD1)))))
 
-(defn keyword? [x]
+(defn ^boolean keyword? [x]
   (and (goog/isString x)
        (= (.charAt x 0) \uFDD0)))
 
-(defn symbol? [x]
+(defn ^boolean symbol? [x]
   (and (goog/isString x)
        (= (.charAt x 0) \uFDD1)))
 
-(defn number? [n]
+(defn ^boolean number? [n]
   (goog/isNumber n))
 
-(defn fn? [f]
+(defn ^boolean fn? [f]
   (goog/isFunction f))
 
-(defn ifn? [f]
+(defn ^boolean ifn? [f]
   (or (fn? f) (satisfies? IFn f)))
 
-(defn integer?
+(defn ^boolean integer?
   "Returns true if n is an integer.  Warning: returns true on underflow condition."
   [n]
   (and (number? n)
        (js* "(~{n} == ~{n}.toFixed())")))
 
-(defn contains?
+(defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
   returns false.  Note that for numerically indexed collections like
   vectors and arrays, this tests if the numeric key is within the
@@ -723,7 +723,7 @@ reduces them without incurring seq initialization"
              (contains? coll k))
     [k (-lookup coll k)]))
 
-(defn distinct?
+(defn ^boolean distinct?
   "Returns true if no two of the arguments are ="
   ([x] true)
   ([x y] (not (= x y)))
@@ -852,7 +852,7 @@ reduces them without incurring seq initialization"
   ([x y] (js* "(~{x} / ~{y})")) ;; FIXME: waiting on cljs.core//
   ([x y & more] (reduce / (/ x y) more)))
 
-(defn <
+(defn ^boolean <
   "Returns non-nil if nums are in monotonically increasing order,
   otherwise false."
   ([x] true)
@@ -864,7 +864,7 @@ reduces them without incurring seq initialization"
          (cljs.core/< y (first more)))
        false)))
 
-(defn <=
+(defn ^boolean <=
   "Returns non-nil if nums are in monotonically non-decreasing order,
   otherwise false."
   ([x] true)
@@ -876,7 +876,7 @@ reduces them without incurring seq initialization"
        (cljs.core/<= y (first more)))
      false)))
 
-(defn >
+(defn ^boolean >
   "Returns non-nil if nums are in monotonically decreasing order,
   otherwise false."
   ([x] true)
@@ -888,7 +888,7 @@ reduces them without incurring seq initialization"
        (cljs.core/> y (first more)))
      false)))
 
-(defn >=
+(defn ^boolean >=
   "Returns non-nil if nums are in monotonically non-increasing order,
   otherwise false."
   ([x] true)
@@ -997,7 +997,7 @@ reduces them without incurring seq initialization"
   "Bitwise shift right"
   [x n] (cljs.core/bit-shift-right x n))
 
-(defn ==
+(defn ^boolean ==
   "Returns non-nil if nums all have the equivalent
   value (type-independent), otherwise false"
   ([x] true)
@@ -1009,14 +1009,14 @@ reduces them without incurring seq initialization"
        (== y (first more)))
      false)))
 
-(defn pos?
+(defn ^boolean pos?
   "Returns true if num is greater than zero, else false"
   [n] (cljs.core/pos? n))
 
-(defn zero? [n]
+(defn ^boolean zero? [n]
   (cljs.core/zero? n))
 
-(defn neg?
+(defn ^boolean neg?
   "Returns true if num is less than zero, else false"
   [x] (cljs.core/neg? x))
 
@@ -1219,7 +1219,7 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.List/EMPTY (EmptyList. nil))
 
-(defn reversible? [coll]
+(defn ^boolean reversible? [coll]
   (satisfies? IReversible coll))
 
 (defn rseq [coll]
@@ -1271,7 +1271,7 @@ reduces them without incurring seq initialization"
   [x seq]
   (Cons. nil x seq))
 
-(defn list? [x]
+(defn ^boolean list? [x]
   (satisfies? IList x))
 
 (extend-type string
@@ -1480,7 +1480,7 @@ reduces them without incurring seq initialization"
  [obj f & args]
  (with-meta obj (apply f (meta obj) args)))
 
-(defn not=
+(defn ^boolean not=
   "Same as (not (= obj1 obj2))"
   ([x] false)
   ([x y] (not (= x y)))
@@ -1491,7 +1491,7 @@ reduces them without incurring seq initialization"
   "If coll is empty, returns nil, else coll"
   [coll] (when (seq coll) coll))
 
-(defn every?
+(defn ^boolean every?
   "Returns true if (pred x) is logical true for every x in coll, else
   false."
   [pred coll]
@@ -1500,7 +1500,7 @@ reduces them without incurring seq initialization"
    (pred (first coll)) (recur pred (next coll))
    :else false))
 
-(defn not-every?
+(defn ^boolean not-every?
   "Returns false if (pred x) is logical true for every x in
   coll, else true."
   [pred coll] (not (every? pred coll)))
@@ -1514,24 +1514,24 @@ reduces them without incurring seq initialization"
     (when (seq coll)
       (or (pred (first coll)) (recur pred (next coll)))))
 
-(defn not-any?
+(defn ^boolean not-any?
   "Returns false if (pred x) is logical true for any x in coll,
   else true."
   [pred coll] (not (some pred coll)))
 
-(defn even?
+(defn ^boolean even?
   "Returns true if n is even, throws an exception if n is not an integer"
    [n] (if (integer? n)
         (zero? (bit-and n 1))
         (throw (js/Error. (str "Argument must be an integer: " n)))))
 
-(defn odd?
+(defn ^boolean odd?
   "Returns true if n is odd, throws an exception if n is not an integer"
   [n] (not (even? n)))
 
 (defn identity [x] x)
 
-(defn complement
+(defn ^boolean complement
   "Takes a fn f and returns a fn that takes the same arguments as f,
   has the same effects, if any, and returns the opposite truth value."
   [f]
@@ -3510,7 +3510,7 @@ reduces them without incurring seq initialization"
   (-realized? [d]
     (:done @state)))
 
-(defn delay?
+(defn ^boolean delay?
   "returns true if x is a Delay created with delay"
   [x] (instance? cljs.core.Delay x))
 
@@ -3521,7 +3521,7 @@ reduces them without incurring seq initialization"
     (deref x)
     x))
 
-(defn realized?
+(defn ^boolean realized?
   "Returns true if a value has been produced for a promise, delay, future or lazy sequence."
   [d]
   (-realized? d))
@@ -3611,7 +3611,7 @@ reduces them without incurring seq initialization"
   ^{:private true}
   global-hierarchy (atom (make-hierarchy)))
 
-(defn isa?
+(defn ^boolean isa?
   "Returns true if (= child parent), or child is directly or indirectly derived from
   parent, either via a Java type inheritance relationship or a
   relationship established via derive. h must be a hierarchy obtained
