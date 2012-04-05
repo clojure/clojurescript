@@ -313,12 +313,20 @@
   (when-not (= :statement (:context env))
     (emit-wrap env (emit-constant form))))
 
+(defn bool-expr? [e]
+  (or (= e true)
+      (= e false)
+      (= (-> e meta :tag) clojure.core$boolean)
+      (= (-> e :tag) clojure.core$boolean)))
+
 (defmethod emit :if
   [{:keys [test then else env]}]
   (let [context (:context env)]
     (if (= :expr context)
-      (print (str "(cljs.core.truth_(" (emits test) ")?" (emits then) ":" (emits else) ")"))
-      (print (str "if(cljs.core.truth_(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n")))))
+      (print (str "(" (when-not (bool-expr? test) "cljs.core.truth_")
+                  "(" (emits test) ")?" (emits then) ":" (emits else) ")"))
+      (print (str "if(" (when-not (bool-expr? test) "cljs.core.truth_")
+                  "(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n")))))
 
 (defmethod emit :throw
   [{:keys [throw env]}]
@@ -1008,8 +1016,8 @@
                        :args argexprs})))))
 
 (defmethod parse 'js*
-  [op env [_ form & args] _]
-  (assert (string? form))
+  [op env [_ jsform & args :as form] _]
+  (assert (string? jsform))
   (if args
     (disallowing-recur
      (let [seg (fn seg [^String s]
@@ -1020,7 +1028,8 @@
                        (cons (subs s 0 idx) (seg (subs s (inc end))))))))
            enve (assoc env :context :expr)
            argexprs (vec (map #(analyze enve %) args))]
-       {:env env :op :js :segs (seg form) :args argexprs :children argexprs}))
+       {:env env :op :js :segs (seg jsform) :args argexprs :children argexprs
+        :tag (-> form meta :tag) :form form}))
     (let [interp (fn interp [^String s]
                    (let [idx (.indexOf s "~{")]
                      (if (= -1 idx)
@@ -1028,7 +1037,8 @@
                        (let [end (.indexOf s "}" idx)
                              inner (:name (resolve-existing-var env (symbol (subs s (+ 2 idx) end))))]
                          (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
-      {:env env :op :js :code (apply str (interp form))})))
+      {:env env :op :js :code (apply str (interp jsform))
+       :tag (-> form meta :tag)})))
 
 (defn parse-invoke
   [env [f & args]]

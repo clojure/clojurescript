@@ -42,20 +42,23 @@
   or
   when when-first when-let when-not while])
 
+(defn bool-expr [e]
+  (vary-meta e assoc :tag clojure.core$boolean))
+
 (defmacro nil? [x]
   `(identical? ~x nil))
 
 (defmacro true? [x]
-  (list 'js* "~{} === true" x))
+  (bool-expr (list 'js* "~{} === true" x)))
 
 (defmacro false? [x]
-  (list 'js* "~{} === false" x))
+  (bool-expr (list 'js* "~{} === false" x)))
 
 (defmacro undefined? [x]
-  (list 'js* "(void 0 === ~{})" x))
+  (bool-expr (list 'js* "(void 0 === ~{})" x)))
 
 (defmacro identical? [a b]
-  (list 'js* "(~{} === ~{})" a b))
+  (bool-expr (list 'js* "(~{} === ~{})" a b)))
 
 (defmacro aget [a i]
   (list 'js* "(~{}[~{}])" a i))
@@ -87,27 +90,27 @@
 
 (defmacro <
   ([x] true)
-  ([x y] (list 'js* "(~{} < ~{})" x y))
+  ([x y] (bool-expr (list 'js* "(~{} < ~{})" x y)))
   ([x y & more] `(and (< ~x ~y) (< ~y ~@more))))
 
 (defmacro <=
   ([x] true)
-  ([x y] (list 'js* "(~{} <= ~{})" x y))
+  ([x y] (bool-expr (list 'js* "(~{} <= ~{})" x y)))
   ([x y & more] `(and (<= ~x ~y) (<= ~y ~@more))))
 
 (defmacro >
   ([x] true)
-  ([x y] (list 'js* "(~{} > ~{})" x y))
+  ([x y] (bool-expr (list 'js* "(~{} > ~{})" x y)))
   ([x y & more] `(and (> ~x ~y) (> ~y ~@more))))
 
 (defmacro >=
   ([x] true)
-  ([x y] (list 'js* "(~{} >= ~{})" x y))
+  ([x y] (bool-expr (list 'js* "(~{} >= ~{})" x y)))
   ([x y & more] `(and (>= ~x ~y) (>= ~y ~@more))))
 
 (defmacro ==
   ([x] true)
-  ([x y] (list 'js* "(~{} === ~{})" x y))
+  ([x y] (bool-expr (list 'js* "(~{} === ~{})" x y)))
   ([x y & more] `(and (== ~x ~y) (== ~y ~@more))))
 
 (defmacro dec [x]
