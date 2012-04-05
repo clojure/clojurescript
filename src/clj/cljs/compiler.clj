@@ -323,8 +323,10 @@
     (if (= :expr context)
       (print (str "(" (when-not (bool-expr? test) "cljs.core.truth_")
                   "(" (emits test) ")?" (emits then) ":" (emits else) ")"))
-      (print (str "if(" (when-not (bool-expr? test) "cljs.core.truth_")
-                  "(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n")))))
+      (let [testsym (gensym "test")]
+        (print (str "var " testsym " = " (emits test) ";\n"
+                    "if(" (when-not (bool-expr? test) "cljs.core.truth_")
+                    "(" testsym "))\n{" (emits then) "} else\n{" (emits else) "}\n"))))))
 
 (defmethod emit :throw
   [{:keys [throw env]}]
