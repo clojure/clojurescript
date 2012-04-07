@@ -326,14 +326,22 @@
               then-tag))
       nil)))
 
+(defn safe-test? [e]
+  (let [tag (infer-tag e)]
+    (or (= tag clojure.core$boolean)
+        (when (= (:op e) :constant)
+          (let [form (:form e)]
+            (not (or (and (string? form) (= form ""))
+                     (and (number? form) (zero? form)))))))))
+
 (defmethod emit :if
   [{:keys [test then else env]}]
   (let [context (:context env)]
     (if (= :expr context)
-      (print (str "(" (when-not (= (infer-tag test) clojure.core$boolean) "cljs.core.truth_")
+      (print (str "(" (when-not (safe-test? test) "cljs.core.truth_")
                   "(" (emits test) ")?" (emits then) ":" (emits else) ")"))
       (let [testsym (gensym "test")]
-        (print (str "if(" (when-not (= (infer-tag test) clojure.core$boolean) "cljs.core.truth_")
+        (print (str "if(" (when-not (safe-test? test) "cljs.core.truth_")
                     "(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n"))))))
 
 (defmethod emit :throw
