@@ -312,10 +312,7 @@
     (emit-wrap env (emit-constant form))))
 
 (defn bool-expr? [e]
-  (or (= e true)
-      (= e false)
-      (= (-> e meta :tag) clojure.core$boolean)
-      (= (-> e :tag) clojure.core$boolean)))
+  (= (:tag e) clojure.core$boolean))
 
 (defmethod emit :if
   [{:keys [test then else env]}]
