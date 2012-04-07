@@ -311,18 +311,29 @@
   (when-not (= :statement (:context env))
     (emit-wrap env (emit-constant form))))
 
-(defn bool-expr? [e]
-  (or (= (-> e :tag) clojure.core$boolean)
-      (= (-> e :info :tag) clojure.core$boolean)))
+(defn get-tag [e]
+  (or (-> e :tag)
+      (-> e :info :tag)))
+
+(defn infer-tag [e]
+  (if-let [tag (get-tag e)]
+    tag
+    (case (:op e)
+      :let (infer-tag (:ret e))
+      :if (let [then-tag (infer-tag (:then e))
+                else-tag (infer-tag (:else e))]
+            (when (= then-tag else-tag)
+              then-tag))
+      nil)))
 
 (defmethod emit :if
   [{:keys [test then else env]}]
   (let [context (:context env)]
     (if (= :expr context)
-      (print (str "(" (when-not (bool-expr? test) "cljs.core.truth_")
+      (print (str "(" (when-not (= (infer-tag test) clojure.core$boolean) "cljs.core.truth_")
                   "(" (emits test) ")?" (emits then) ":" (emits else) ")"))
       (let [testsym (gensym "test")]
-        (print (str "if(" (when-not (bool-expr? test) "cljs.core.truth_")
+        (print (str "if(" (when-not (= (infer-tag test) clojure.core$boolean) "cljs.core.truth_")
                     "(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n"))))))
 
 (defmethod emit :throw
