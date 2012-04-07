@@ -312,7 +312,8 @@
     (emit-wrap env (emit-constant form))))
 
 (defn bool-expr? [e]
-  (= (:tag e) clojure.core$boolean))
+  (or (= (-> e :tag) clojure.core$boolean)
+      (= (-> e :info :tag) clojure.core$boolean)))
 
 (defmethod emit :if
   [{:keys [test then else env]}]
@@ -795,7 +796,10 @@
              (do
                (assert (not (or (namespace name) (.contains (str name) "."))) (str "Invalid local name: " name))
                (let [init-expr (analyze env init)
-                     be {:name (gensym (str (munge name) "__")) :init init-expr}]
+                     be {:name (gensym (str (munge name) "__"))
+                         :init init-expr
+                         :tag (or (-> name meta :tag)
+                                  (-> init-expr :tag))}]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
                         (next bindings))))
