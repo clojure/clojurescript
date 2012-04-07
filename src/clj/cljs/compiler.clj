@@ -40,6 +40,7 @@
 (def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 (def ^:dynamic *cljs-warn-on-redef* true)
+(def ^:dynamic *unchecked-if* (atom false))
 
 (defmacro ^:private debug-prn
   [& args]
@@ -253,6 +254,9 @@
 
 (defmulti emit :op)
 
+(defmethod emit :no-op
+  [m] (println "void 0;"))
+
 (defn ^String emits [expr]
   (with-out-str (emit expr)))
 
@@ -335,13 +339,13 @@
                      (and (number? form) (zero? form)))))))))
 
 (defmethod emit :if
-  [{:keys [test then else env]}]
+  [{:keys [test then else env unchecked]}]
   (let [context (:context env)]
     (if (= :expr context)
-      (print (str "(" (when-not (safe-test? test) "cljs.core.truth_")
+      (print (str "(" (when-not (or unchecked (safe-test? test)) "cljs.core.truth_")
                   "(" (emits test) ")?" (emits then) ":" (emits else) ")"))
       (let [testsym (gensym "test")]
-        (print (str "if(" (when-not (safe-test? test) "cljs.core.truth_")
+        (print (str "if(" (when-not (or unchecked (safe-test? test)) "cljs.core.truth_")
                     "(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n"))))))
 
 (defmethod emit :throw
@@ -670,7 +674,8 @@
         else-expr (analyze env else)]
     {:env env :op :if :form form
      :test test-expr :then then-expr :else else-expr
-     :children [test-expr then-expr else-expr]}))
+     :children [test-expr then-expr else-expr]
+     :unchecked @*unchecked-if*}))
 
 (defmethod parse 'throw
   [op env [_ throw :as form] name]
@@ -868,21 +873,32 @@
   [_ env [_ target val] _]
   (disallowing-recur
    (let [enve (assoc env :context :expr)
-         targetexpr (if (symbol? target)
-                      (do
-                        (let [local (-> env :locals target)]
-                          (assert (or (nil? local)
-                                      (and (:field local)
-                                           (:mutable local)))
-                                  "Can't set! local var or non-mutable field"))
-                        (analyze-symbol enve target))
-                      (when (seq? target)
-                        (let [targetexpr (analyze-seq enve target nil)]
-                          (when (:field targetexpr)
-                            targetexpr))))
+         targetexpr (cond
+                     (= target '*unchecked-if*)
+                     (do
+                       (reset! *unchecked-if* val)
+                       ::set-unchecked-if)
+
+                     (symbol? target)
+                     (do
+                       (let [local (-> env :locals target)]
+                         (assert (or (nil? local)
+                                     (and (:field local)
+                                          (:mutable local)))
+                                 "Can't set! local var or non-mutable field"))
+                       (analyze-symbol enve target))
+
+                     :else
+                     (when (seq? target)
+                       (let [targetexpr (analyze-seq enve target nil)]
+                         (when (:field targetexpr)
+                           targetexpr))))
          valexpr (analyze enve val)]
      (assert targetexpr "set! target must be a field or a symbol naming a var")
-     {:env env :op :set! :target targetexpr :val valexpr :children [targetexpr valexpr]})))
+     (cond
+      (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
+      :else {:env env :op :set! :target targetexpr
+             :val valexpr :children [targetexpr valexpr]}))))
 
 (defmethod parse 'ns
   [_ env [_ name & args] _]
