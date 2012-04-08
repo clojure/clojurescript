@@ -241,22 +241,22 @@
                                         `(set! ~(symbol (str prototype-prefix f)) (fn ~@(map adapt-params meths))))
                                       sigs))
                                (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
-                                     (map (fn [[f & meths]]
-                                            (let [ifn? (= psym 'cljs.core.IFn)
-                                                  pf (if ifn?
-                                                       (str prototype-prefix 'call)
-                                                       (str prototype-prefix pprefix f))
-                                                  adapt-params (fn [[[targ & args :as sig] & body]]
-                                                                 (let [tsym (gensym "tsym")]
-                                                                   `(~(with-meta (vec (cons tsym args)) (meta sig))
-                                                                     (this-as ~tsym
-                                                                              (let [~targ ~tsym]
-                                                                                ~@body)))))
-                                                  meths (if ifn?
-                                                          (map adapt-params meths)
-                                                          meths)]
-                                              `(set! ~(symbol pf) (fn ~@meths))))
-                                          sigs)))))]
+                                     (mapcat (fn [[f & meths]]
+                                               (let [ifn? (= psym 'cljs.core.IFn)
+                                                     pf (if ifn?
+                                                          (str prototype-prefix 'call)
+                                                          (str prototype-prefix pprefix f))
+                                                     adapt-params (fn [[[targ & args :as sig] & body]]
+                                                                    (let [tsym (gensym "tsym")]
+                                                                      `(~(with-meta (vec (cons tsym args)) (meta sig))
+                                                                        (this-as ~tsym
+                                                                                 (let [~targ ~tsym]
+                                                                                   ~@body)))))
+                                                     meths (if ifn?
+                                                             (map adapt-params meths)
+                                                             meths)]
+                                                 [`(set! ~(symbol pf) (fn ~@meths))]))
+                                             sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
 (defmacro deftype [t fields & impls]
