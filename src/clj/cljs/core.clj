@@ -419,8 +419,10 @@
                        slot (symbol (str prefix (name fname)))]
                    `(defn ~fname ~@(map #(expand-sig fname slot %) sigs))))]
     `(do
+       (set! ~'*unchecked-if* true)
        (def ~psym (~'js* "{}"))
-       ~@(map method methods))))
+       ~@(map method methods)
+       (set! ~'*unchecked-if* false))))
 
 (defmacro satisfies?
   "Returns true if x satisfies the protocol"
