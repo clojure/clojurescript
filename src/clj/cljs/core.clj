@@ -419,9 +419,7 @@
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
                        slot (symbol (str prefix (name fname)))
-                       arity-name-fn (if (clojure.core/> (count sigs) 1)
-                                       (fn [sym sig] (symbol (str sym "__" (count sig))))
-                                       (fn [sym sig] sym))]
+                       arity-name-fn (fn [sym sig] (symbol (str sym "__" (count sig))))]
                    `(defn ~fname ~@(map (fn [sig]
                                           (expand-sig fname
                                                       (arity-name-fn slot sig)
