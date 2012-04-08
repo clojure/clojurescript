@@ -97,10 +97,9 @@
              ns (if (= "clojure.core" ns) "cljs.core" ns)
              full-ns (resolve-ns-alias env ns)]
          (confirm-var-exists env full-ns (symbol (name sym)))
-         (merge
-          (get-in @namespaces [full-ns :defs sym])
-          {:name (symbol (str full-ns "." (munge (name sym))))
-           :ns full-ns}))
+         (merge (get-in @namespaces [full-ns :defs sym])
+           {:name (symbol (str full-ns "." (munge (name sym))))
+            :ns full-ns}))
 
        (.contains s ".")
        (let [idx (.indexOf s ".")
@@ -111,8 +110,7 @@
            {:name (munge (symbol (str (:name lb) suffix)))}
            (do
              (confirm-var-exists env prefix (symbol suffix))
-             (merge
-              (get-in @namespaces [prefix :defs sym])
+             (merge (get-in @namespaces [prefix :defs sym])
               {:name (munge sym) :ns prefix}))))
 
        (get-in @namespaces [(-> env :ns :name) :uses sym])
@@ -127,10 +125,9 @@
                        'cljs.core
                        (-> env :ns :name))]
          (confirm-var-exists env full-ns sym)
-         (merge
-          (get-in @namespaces [full-ns :defs sym])
-          {:name (munge (symbol (str full-ns "." (munge (name sym)))))
-           :ns full-ns}))))))
+         (merge (get-in @namespaces [full-ns :defs sym])
+           {:name (munge (symbol (str full-ns "." (munge (name sym)))))
+            :ns full-ns}))))))
 
 (defn resolve-var [env sym]
   (if (= (namespace sym) "js")
@@ -476,7 +473,11 @@
           (emit-fn-method (assoc (first methods) :name name)))
         (let [name (or name (gensym))
               maxparams (apply max-key count (map :params methods))
-              mmap (zipmap (repeatedly #(gensym (str name  "__"))) methods)
+              mmap (into {}
+                     (map (fn [method]
+                            [(symbol (str name "__" (count (:params method))))
+                             method])
+                          methods))
               ms (sort-by #(-> % second :params count) (seq mmap))]
           (when (= :return (:context env))
             (print "return "))
@@ -484,8 +485,9 @@
           (println (str "var " name " = null;"))
           (doseq [[n meth] ms]
             (println (str "var " n " = " (with-out-str (if (:variadic meth)
-                                                         (emit-variadic-fn-method meth)
-                                                         (emit-fn-method meth))) ";")))
+                                                           (emit-variadic-fn-method meth)
+                                                           (emit-fn-method meth))) ";"))
+            (println (str (munge (-> env :ns :name)) "." n) " = " n ";"))
           (println (str name " = function(" (comma-sep (if variadic
                                                          (concat (butlast maxparams) ['var_args])
                                                          maxparams)) "){"))
@@ -577,10 +579,23 @@
 
 (defmethod emit :invoke
   [{:keys [f args env]}]
-  (emit-wrap env
-             (print (str (emits f) ".call("
-                         (comma-sep (cons "null" (map emits args)))
-                         ")"))))
+  (let [f (if (-> f :info :fn-var)
+            (let [info (-> f :info :info)
+                  arity (count args)
+                  methods (:methods info)]
+              (if (or (> arity (:max-fixed-arity info))
+                      (= (count methods) 1))
+                f
+                (let [arities (map #(-> % :params count) methods)]
+                  (if (some #{arity} arities)
+                    (update-in f [:info :name]
+                      (fn [name] (symbol (str name "__" arity))))
+                    f))))
+            f)]
+    (emit-wrap env
+               (print (str (emits f) ".call("
+                           (comma-sep (cons "null" (map emits args)))
+                           ")")))))
 
 (defmethod emit :new
   [{:keys [ctor args env]}]
@@ -746,8 +761,9 @@
                     (update-in env [:ns :excludes] conj sym))
                   env))
           name (munge (:name (resolve-var (dissoc env :locals) sym)))
-          init-expr (when (contains? args :init) (disallowing-recur
-                                                  (analyze (assoc env :context :expr) (:init args) sym)))
+          init-expr (when (contains? args :init)
+                      (disallowing-recur
+                       (analyze (assoc env :context :expr) (:init args) sym)))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
@@ -757,7 +773,9 @@
                  (merge m
                    (when tag {:tag tag})
                    (when-let [line (:line env)]
-                     {:file *cljs-file* :line line})))))
+                     {:file *cljs-file* :line line})
+                   (when (and init-expr (= (:op init-expr) :fn))
+                     {:fn-var true :info init-expr})))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when tag {:tag tag})
@@ -829,7 +847,8 @@
                      be {:name (gensym (str (munge name) "__"))
                          :init init-expr
                          :tag (or (-> name meta :tag)
-                                  (-> init-expr :tag))}]
+                                  (-> init-expr :tag))
+                         :local true}]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
                         (next bindings))))
