@@ -255,7 +255,12 @@
                                                      meths (if ifn?
                                                              (map adapt-params meths)
                                                              meths)]
-                                                 [`(set! ~(symbol pf) (fn ~@meths))]))
+                                                 (if (or ifn? (vector? (first meths))) ;; deal w/ ifn later
+                                                   [`(set! ~(symbol pf) (fn ~@meths))]
+                                                   (map (fn [[sig & body :as meth]]
+                                                          `(set! ~(symbol (str pf "__" (count sig)))
+                                                                 (fn ~meth)))
+                                                        meths))))
                                              sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
@@ -413,8 +418,15 @@
                           ~@sig))))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
-                       slot (symbol (str prefix (name fname)))]
-                   `(defn ~fname ~@(map #(expand-sig fname slot %) sigs))))]
+                       slot (symbol (str prefix (name fname)))
+                       arity-name-fn (if (clojure.core/> (count sigs) 1)
+                                       (fn [sym sig] (symbol (str sym "__" (count sig))))
+                                       (fn [sym sig] sym))]
+                   `(defn ~fname ~@(map (fn [sig]
+                                          (expand-sig fname
+                                                      (arity-name-fn slot sig)
+                                                      sig))
+                                        sigs))))]
     `(do
        (def ~psym (~'js* "{}"))
        ~@(map method methods))))
