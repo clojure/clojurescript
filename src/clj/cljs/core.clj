@@ -258,7 +258,18 @@
                                                      meths (if ifn?
                                                              (map adapt-params meths)
                                                              meths)]
-                                                 [`(set! ~(symbol pf) (fn ~@meths))]))
+                                                 (cond 
+                                                  ifn?
+                                                  [`(set! ~(symbol pf) (fn ~@meths))]
+                                                  
+                                                  (vector? (first meths))
+                                                  [`(set! ~(symbol (str pf "__" (count (first meths)))) (fn ~@meths))]
+
+                                                  :else
+                                                  (map (fn [[sig & body :as meth]]
+                                                         `(set! ~(symbol (str pf "__" (count sig)))
+                                                                (fn ~meth)))
+                                                       meths))))
                                              sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
@@ -416,8 +427,13 @@
                           ~@sig))))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
-                       slot (symbol (str prefix (name fname)))]
-                   `(defn ~fname ~@(map #(expand-sig fname slot %) sigs))))]
+                       slot (symbol (str prefix (name fname)))
+                       arity-name-fn (fn [sym sig] (symbol (str sym "__" (count sig))))]
+                   `(defn ~fname ~@(map (fn [sig]
+                                          (expand-sig fname
+                                                      (arity-name-fn slot sig)
+                                                      sig))
+                                        sigs))))]
     `(do
        (set! ~'*unchecked-if* true)
        (def ~psym (~'js* "{}"))
