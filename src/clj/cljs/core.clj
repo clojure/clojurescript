@@ -255,12 +255,18 @@
                                                      meths (if ifn?
                                                              (map adapt-params meths)
                                                              meths)]
-                                                 (if (or ifn? (vector? (first meths))) ;; deal w/ ifn later
-                                                   [`(set! ~(symbol pf) (fn ~@meths))]
-                                                   (map (fn [[sig & body :as meth]]
-                                                          `(set! ~(symbol (str pf "__" (count sig)))
-                                                                 (fn ~meth)))
-                                                        meths))))
+                                                 (cond 
+                                                  ifn?
+                                                  [`(set! ~(symbol pf) (fn ~@meths))]
+                                                  
+                                                  (vector? (first meths))
+                                                  [`(set! ~(symbol (str pf "__" (count (first meths)))) (fn ~@meths))]
+
+                                                  :else
+                                                  (map (fn [[sig & body :as meth]]
+                                                         `(set! ~(symbol (str pf "__" (count sig)))
+                                                                (fn ~meth)))
+                                                       meths))))
                                              sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
