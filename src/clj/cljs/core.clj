@@ -43,7 +43,7 @@
   when when-first when-let when-not while])
 
 (defn bool-expr [e]
-  (vary-meta e assoc :tag clojure.core$boolean))
+  (vary-meta e assoc :tag 'boolean))
 
 (defmacro nil? [x]
   `(identical? ~x nil))
