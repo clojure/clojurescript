@@ -97,8 +97,10 @@
              ns (if (= "clojure.core" ns) "cljs.core" ns)
              full-ns (resolve-ns-alias env ns)]
          (confirm-var-exists env full-ns (symbol (name sym)))
-         {:name (symbol (str full-ns "." (munge (name sym))))
-          :ns full-ns})
+         (merge
+          (get-in @namespaces [full-ns :defs sym])
+          {:name (symbol (str full-ns "." (munge (name sym))))
+           :ns full-ns}))
 
        (.contains s ".")
        (let [idx (.indexOf s ".")
@@ -109,19 +111,26 @@
            {:name (munge (symbol (str (:name lb) suffix)))}
            (do
              (confirm-var-exists env prefix (symbol suffix))
-             {:name (munge sym) :ns prefix})))
+             (merge
+              (get-in @namespaces [prefix :defs sym])
+              {:name (munge sym) :ns prefix}))))
 
        (get-in @namespaces [(-> env :ns :name) :uses sym])
-       {:name (symbol (str (get-in @namespaces [(-> env :ns :name) :uses sym]) "." (munge (name sym))))
-        :ns (-> env :ns :name)}
+       (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
+         (merge
+          (get-in @namespaces [full-ns :defs sym])
+          {:name (symbol (str full-ns "." (munge (name sym))))
+           :ns (-> env :ns :name)}))
 
        :else
        (let [full-ns (if (core-name? env sym)
                        'cljs.core
                        (-> env :ns :name))]
          (confirm-var-exists env full-ns sym)
-         {:name (munge (symbol (str full-ns "." (munge (name sym)))))
-          :ns full-ns})))))
+         (merge
+          (get-in @namespaces [full-ns :defs sym])
+          {:name (munge (symbol (str full-ns "." (munge (name sym)))))
+           :ns full-ns}))))))
 
 (defn resolve-var [env sym]
   (if (= (namespace sym) "js")
@@ -716,11 +725,13 @@
 
 (defmethod parse 'def
   [op env form name]
-  (let [pfn (fn ([_ sym] {:sym sym})
+  (let [pfn (fn
+              ([_ sym] {:sym sym})
               ([_ sym init] {:sym sym :init init})
               ([_ sym doc init] {:sym sym :doc doc :init init}))
         args (apply pfn form)
-        sym (:sym args)]
+        sym (:sym args)
+        tag (-> sym meta :tag)]
     (assert (not (namespace sym)) "Can't def ns-qualified name")
     (let [env (let [ns-name (-> env :ns :name)]
                 (if (or (and (not= ns-name 'cljs.core)
@@ -743,13 +754,13 @@
       (swap! namespaces update-in [(-> env :ns :name) :defs sym]
              (fn [m]
                (let [m (assoc (or m {}) :name name)]
-                 (if-let [line (:line env)]
-                   (-> m
-                       (assoc :file *cljs-file*)
-                       (assoc :line line))
-                   m))))
+                 (merge m
+                   (when tag {:tag tag})
+                   (when-let [line (:line env)]
+                     {:file *cljs-file* :line line})))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
+             (when tag {:tag tag})
              (when init-expr {:children [init-expr]})
              (when export-as {:export export-as})))))
 
@@ -1065,7 +1076,8 @@
    (let [enve (assoc env :context :expr)
          fexpr (analyze enve f)
          argexprs (vec (map #(analyze enve %) args))]
-     {:env env :op :invoke :f fexpr :args argexprs :children (conj argexprs fexpr)})))
+     {:env env :op :invoke :f fexpr :args argexprs
+      :children (conj argexprs fexpr) :tag (-> fexpr :info :tag)})))
 
 (defn analyze-symbol
   "Finds the var associated with sym"
