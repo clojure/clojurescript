@@ -475,7 +475,8 @@
         (if variadic
           (emit-variadic-fn-method (assoc (first methods) :name name))
           (emit-fn-method (assoc (first methods) :name name)))
-        (let [name (or name (gensym))
+        (let [has-name? (and name true)
+              name (or name (gensym))
               maxparams (apply max-key count (map :params methods))
               mmap (into {}
                      (map (fn [method]
@@ -490,8 +491,7 @@
           (doseq [[n meth] ms]
             (println (str "var " n " = " (with-out-str (if (:variadic meth)
                                                            (emit-variadic-fn-method meth)
-                                                           (emit-fn-method meth))) ";"))
-            (println (str (munge (-> env :ns :name)) "." n) " = " n ";"))
+                                                           (emit-fn-method meth))) ";")))
           (println (str name " = function(" (comma-sep (if variadic
                                                          (concat (butlast maxparams) ['var_args])
                                                          maxparams)) "){"))
@@ -512,6 +512,10 @@
           (when variadic
             (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity ";"))
             (println (str name ".cljs$lang$applyTo = " (some #(let [[n m] %] (when (:variadic m) n)) ms) ".cljs$lang$applyTo;")))
+          (when has-name?
+            (doseq [[n meth] ms]
+              (let [c (count (:params meth))]
+               (println (str name ".__" c " = " n ";")))))
           (println (str "return " name ";"))
           (println "})()")))
       (when loop-locals
@@ -593,7 +597,7 @@
                 (let [arities (map #(-> % :params count) methods)]
                   (if (some #{arity} arities)
                     (update-in f [:info :name]
-                      (fn [name] (symbol (str name "__" arity))))
+                      (fn [name] (symbol (str name ".__" arity))))
                     f))))
             f)]
     (emit-wrap env
