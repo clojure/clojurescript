@@ -587,7 +587,8 @@
 
 (defmethod emit :invoke
   [{:keys [f args env]}]
-  (let [f (if (-> f :info :fn-var)
+  (let [fn? (-> f :info :fn-var)
+        f (if fn?
             (let [info (-> f :info :info)
                   arity (count args)
                   methods (:methods info)]
@@ -597,12 +598,16 @@
                 (let [arities (map #(-> % :params count) methods)]
                   (if (some #{arity} arities)
                     (update-in f [:info :name]
-                      (fn [name] (symbol (str name ".__" arity))))
+                               (fn [name] (symbol (str name ".__" arity))))
                     f))))
             f)]
     (emit-wrap env
-               (print (str (emits f) ".call("
-                           (comma-sep (cons "null" (map emits args)))
+               (print (str (emits f) (when-not fn? ".call") "("
+                           (let [args (map emits args)
+                                 args (if-not fn?
+                                        (cons "null" args)
+                                        args)]
+                             (comma-sep args))
                            ")")))))
 
 (defmethod emit :new
