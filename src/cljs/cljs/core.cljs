@@ -220,8 +220,14 @@
   numbers and collections in a type-independent manner.  Clojure's immutable data
   structures define -equiv (and thus =) as a value, not an identity,
   comparison."
-  [x y]
-  (-equiv x y))
+  ([x] true)
+  ([x y] (-equiv x y))
+  ([x y & more]
+     (if (-equiv x y)
+       (if (next more)
+         (recur y (first more) (next more))
+         (-equiv y (first more)))
+       false)))
 
 (defn ^boolean nil?
   "Returns true if x is nil, false otherwise."
