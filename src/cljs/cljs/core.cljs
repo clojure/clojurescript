@@ -78,8 +78,10 @@
 
 (defn aget
   "Returns the value at the index."
-  [array i]
-  (cljs.core/aget array i))
+  ([array i]
+     (cljs.core/aget array i))
+  ([array i & idxs]
+     (apply aget (aget array i) idxs)))
 
 (defn aset
   "Sets the value at the index."

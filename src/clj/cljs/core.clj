@@ -60,8 +60,12 @@
 (defmacro identical? [a b]
   (bool-expr (list 'js* "(~{} === ~{})" a b)))
 
-(defmacro aget [a i]
-  (list 'js* "(~{}[~{}])" a i))
+(defmacro aget
+  ([a i]
+     (list 'js* "(~{}[~{}])" a i))
+  ([a i & idxs]
+     (let [astr (apply str (repeat (count idxs) "[~{}]"))]
+      `(~'js* ~(str "(~{}[~{}]" astr ")") ~a ~i ~@idxs))))
 
 (defmacro aset [a i v]
   (list 'js* "(~{}[~{}] = ~{})" a i v))
