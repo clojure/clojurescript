@@ -76,6 +76,8 @@
   [var-args]            ;; [& items]
   (js* "Array.prototype.slice.call(arguments)"))
 
+(declare apply)
+
 (defn aget
   "Returns the value at the index."
   ([array i]
@@ -216,6 +218,8 @@
   "Tests if 2 arguments are the same object"
   [x y]
   (cljs.core/identical? x y))
+
+(declare first next)
 
 (defn ^boolean =
   "Equality. Returns true if x equals y, false if not. Compares
@@ -1056,8 +1060,6 @@ reduces them without incurring seq initialization"
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
-
-(declare apply)
 
 (defn- str*
   "Internal - do not use!"
