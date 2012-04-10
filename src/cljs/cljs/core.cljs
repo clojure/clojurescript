@@ -76,6 +76,10 @@
   [var-args]            ;; [& items]
   (js* "Array.prototype.slice.call(arguments)"))
 
+(defn make-array
+  [n]
+  (js* "new Array(~{n})"))
+
 (declare apply)
 
 (defn aget
