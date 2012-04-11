@@ -15,6 +15,7 @@
   (:import java.lang.StringBuilder))
 
 (declare resolve-var)
+(declare confirm-bindings)
 (require 'cljs.core)
 
 (def js-reserved
@@ -40,6 +41,8 @@
 (def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
 (def ^:dynamic *cljs-warn-on-redef* true)
+(def ^:dynamic *cljs-warn-on-dynamic* true)
+(def ^:dynamic *cljs-warn-on-fn-var* true)
 (def ^:dynamic *unchecked-if* (atom false))
 
 (defmacro ^:private debug-prn
@@ -98,8 +101,9 @@
              ns (if (= "clojure.core" ns) "cljs.core" ns)
              full-ns (resolve-ns-alias env ns)]
          (confirm-var-exists env full-ns (symbol (name sym)))
-         (merge (get-in @namespaces [full-ns :defs sym])
+         (merge (get-in @namespaces [full-ns :defs (symbol (name sym))])
            {:name (symbol (str full-ns "." (munge (name sym))))
+            :name-sym (symbol (str full-ns) (str (name sym)))
             :ns full-ns}))
 
        (.contains s ".")
@@ -108,10 +112,11 @@
              suffix (subs s idx)
              lb (-> env :locals prefix)]
          (if lb
-           {:name (munge (symbol (str (:name lb) suffix)))}
+           {:name (munge (symbol (str (:name lb) suffix)))
+            :name-sym (symbol (str (:name lb) suffix))}
            (do
              (confirm-var-exists env prefix (symbol suffix))
-             (merge (get-in @namespaces [prefix :defs sym])
+             (merge (get-in @namespaces [prefix :defs (symbol suffix)])
               {:name (munge sym) :ns prefix}))))
 
        (get-in @namespaces [(-> env :ns :name) :uses sym])
@@ -119,6 +124,7 @@
          (merge
           (get-in @namespaces [full-ns :defs sym])
           {:name (symbol (str full-ns "." (munge (name sym))))
+           :name-sym (symbol (str full-ns) (str sym))
            :ns (-> env :ns :name)}))
 
        :else
@@ -128,6 +134,7 @@
          (confirm-var-exists env full-ns sym)
          (merge (get-in @namespaces [full-ns :defs sym])
            {:name (munge (symbol (str full-ns "." (munge (name sym)))))
+            :name-sym (symbol (str full-ns) (str sym))
             :ns full-ns}))))))
 
 (defn resolve-var [env sym]
@@ -158,6 +165,16 @@
                       (-> env :ns :name))
                     "." (munge (name sym)))]
          {:name (munge (symbol s))})))))
+
+(defn confirm-bindings [env names]
+  (doseq [name names]
+    (let [env (merge env {:ns (@namespaces *cljs-ns*)})
+          ev (resolve-existing-var env name)]
+      (when (and *cljs-warn-on-dynamic* ev (not (-> ev :dynamic)))
+        (binding [*out* *err*]
+          (println (str "WARNING: " (:name-sym ev) " not declared ^:dynamic"
+                        (when (:line env)
+                          (str " at line " (:line env) " " *cljs-file*)))))))))
 
 (defn- comma-sep [xs]
   (apply str (interpose "," xs)))
@@ -587,7 +604,8 @@
 
 (defmethod emit :invoke
   [{:keys [f args env]}]
-  (let [fn? (-> f :info :fn-var)
+  (let [fn? (and (not (-> f :info :dynamic))
+                 (-> f :info :fn-var))
         f (if fn?
             (let [info (-> f :info :info)
                   arity (count args)
@@ -760,39 +778,54 @@
               ([_ sym doc init] {:sym sym :doc doc :init init}))
         args (apply pfn form)
         sym (:sym args)
-        tag (-> sym meta :tag)]
+        tag (-> sym meta :tag)
+        dynamic (-> sym meta :dynamic)
+        ns-name (-> env :ns :name)]
     (assert (not (namespace sym)) "Can't def ns-qualified name")
-    (let [env (let [ns-name (-> env :ns :name)]
-                (if (or (and (not= ns-name 'cljs.core)
-                             (core-name? env sym))
-                        (get-in @namespaces [ns-name :uses sym]))
-                  (let [ev (resolve-existing-var (dissoc env :locals) sym)]
-                    (when *cljs-warn-on-redef*
-                      (binding [*out* *err*]
-                        (println "WARNING:" sym "already refers to:" (symbol (str (:ns ev)) (str sym))
-                                 "being replaced by:" (symbol (str ns-name) (str sym)))))
-                    (swap! namespaces update-in [ns-name :excludes] conj sym)
-                    (update-in env [:ns :excludes] conj sym))
-                  env))
+    (let [env (if (or (and (not= ns-name 'cljs.core)
+                           (core-name? env sym))
+                      (get-in @namespaces [ns-name :uses sym]))
+                (let [ev (resolve-existing-var (dissoc env :locals) sym)]
+                  (when *cljs-warn-on-redef*
+                    (binding [*out* *err*]
+                      (println (str "WARNING:" sym "already refers to:" (symbol (str (:ns ev)) (str sym))
+                                    "being replaced by:" (symbol (str ns-name) (str sym))
+                                    (when (:line env)
+                                      (str " at line " (:line env)))))))
+                  (swap! namespaces update-in [ns-name :excludes] conj sym)
+                  (update-in env [:ns :excludes] conj sym))
+                env)
           name (munge (:name (resolve-var (dissoc env :locals) sym)))
           init-expr (when (contains? args :init)
                       (disallowing-recur
                        (analyze (assoc env :context :expr) (:init args) sym)))
+          fn-var? (and init-expr (= (:op init-expr) :fn))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
-      (swap! namespaces update-in [(-> env :ns :name) :defs sym]
+      (when-let [v (get-in @namespaces [ns-name :defs sym])]
+        (when (and *cljs-warn-on-fn-var*
+                   (not (-> sym meta :declared))
+                   (and (:fn-var v) (not fn-var?)))
+          (binding [*out* *err*]
+            (println (str "WARNING: " (symbol (str ns-name) (str sym))
+                          " no longer fn, references are stale"
+                          (when (:line env)
+                            (str " at line " (:line env) " " *cljs-file*)))))))
+      (swap! namespaces update-in [ns-name :defs sym]
              (fn [m]
                (let [m (assoc (or m {}) :name name)]
                  (merge m
                    (when tag {:tag tag})
+                   (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
-                   (when (and init-expr (= (:op init-expr) :fn))
+                   (when fn-var?
                      {:fn-var true :info init-expr})))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when tag {:tag tag})
+             (when dynamic {:dynamic true})
              (when init-expr {:children [init-expr]})
              (when export-as {:export export-as})))))
 
