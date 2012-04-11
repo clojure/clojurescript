@@ -612,6 +612,7 @@
   [{:keys [f args env]}]
   (let [fn? (and (not (-> f :info :dynamic))
                  (-> f :info :fn-var))
+        js? (= (-> f :info :ns) 'js)
         f (if fn?
             (let [info (-> f :info :info)
                   arity (count args)
@@ -626,9 +627,9 @@
                     f))))
             f)]
     (emit-wrap env
-               (print (str (emits f) (when-not fn? ".call") "("
+               (print (str (emits f) (when-not (or fn? js?) ".call") "("
                            (let [args (map emits args)
-                                 args (if-not fn?
+                                 args (if-not (or fn? js?)
                                         (cons "null" args)
                                         args)]
                              (comma-sep args))
