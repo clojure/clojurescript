@@ -817,7 +817,7 @@
             (println (str "WARNING: " (symbol (str ns-name) (str sym))
                           " no longer fn, references are stale"
                           (when (:line env)
-                            (str " at line " (:line env) " " *cljs-file*)))))))
+                            (str ", at line " (:line env) " " *cljs-file*)))))))
       (swap! namespaces update-in [ns-name :defs sym]
              (fn [m]
                (let [m (assoc (or m {}) :name name)]
