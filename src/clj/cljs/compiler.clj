@@ -117,7 +117,9 @@
            (do
              (confirm-var-exists env prefix (symbol suffix))
              (merge (get-in @namespaces [prefix :defs (symbol suffix)])
-              {:name (munge sym) :ns prefix}))))
+              {:name (munge sym)
+               :name-sym (symbol (str prefix) suffix)
+               :ns prefix}))))
 
        (get-in @namespaces [(-> env :ns :name) :uses sym])
        (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
