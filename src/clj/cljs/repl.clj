@@ -64,7 +64,9 @@
        (let [ast (comp/analyze env form)
              js (comp/emits ast)
              wrap-js (comp/emits (binding [comp/*cljs-warn-on-undeclared* false
-                                           comp/*cljs-warn-on-redef* false]
+                                           comp/*cljs-warn-on-redef* false
+                                           comp/*cljs-warn-on-dynamic* false
+                                           comp/*cljs-warn-on-fn-var* false]
                                    (comp/analyze env (wrap form))))]
          (when (= (:op ast) :ns)
            (load-dependencies repl-env (into (vals (:requires ast))

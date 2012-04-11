@@ -838,11 +838,11 @@
   (assert (= :nested-a (nested-dispatch2 [[:a :b]])))
 
   ;; general tests
-  (defmulti foo (fn [& args] (first args)))
-  (defmethod foo :a [& args] :a-return)
-  (defmethod foo :default [& args] :default-return)
-  (assert (= :a-return (foo :a)))
-  (assert (= :default-return (foo 1)))
+  (defmulti foo1 (fn [& args] (first args)))
+  (defmethod foo1 :a [& args] :a-return)
+  (defmethod foo1 :default [& args] :default-return)
+  (assert (= :a-return (foo1 :a)))
+  (assert (= :default-return (foo1 1)))
 
   (defmulti area :Shape)
   (defn rect [wd ht] {:Shape :Rect :wd wd :ht ht})
@@ -990,9 +990,9 @@
   (assert (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
              {:foo :bar}))
 
-  (defmulti foo identity)
-  (defmethod foo 0 [x] x)
-  (assert (= foo (ffirst {foo 1})))
+  (defmulti foo2 identity)
+  (defmethod foo2 0 [x] x)
+  (assert (= foo2 (ffirst {foo2 1})))
 
   (defprotocol IMutate
     (mutate [this]))
