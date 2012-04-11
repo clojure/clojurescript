@@ -245,7 +245,9 @@
   (identical? x nil))
 
 (defn type [x]
-  (js* "(~{x}).constructor"))
+  (if (or (nil? x) (undefined? x))
+    nil
+    (js* "(~{x}).constructor")))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
