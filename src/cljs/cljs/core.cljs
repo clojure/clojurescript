@@ -2276,7 +2276,7 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found)))
 
-(set! cljs.core.PersistentVector/EMPTY_NODE (js* "(new Array(32))"))
+(set! cljs.core.PersistentVector/EMPTY_NODE (make-array 32))
 (set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array)))
 (set! cljs.core.PersistentVector/fromArray (fn [xs] (into cljs.core.PersistentVector/EMPTY xs)))
 
