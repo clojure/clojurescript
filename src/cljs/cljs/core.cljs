@@ -506,7 +506,7 @@ reduces them without incurring seq initialization"
         (recur (next s) (inc n))
         n))))
 
-(defn not
+(defn ^boolean not
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
 
