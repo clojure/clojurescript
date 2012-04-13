@@ -48,6 +48,9 @@
 (defmacro nil? [x]
   `(identical? ~x nil))
 
+(defmacro not-nil? [x]
+  (bool-expr (list 'js* "(~{} != null)" x)))
+
 (defmacro true? [x]
   (bool-expr (list 'js* "~{} === true" x)))
 
