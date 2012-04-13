@@ -798,7 +798,7 @@
                       (println (str "WARNING: " sym " already refers to: " (symbol (str (:ns ev)) (str sym))
                                     " being replaced by: " (symbol (str ns-name) (str sym))
                                     (when (:line env)
-                                      (str " at line " (:line env)))))))
+                                      (str " at line " (:line env) " " *cljs-file*))))))
                   (swap! namespaces update-in [ns-name :excludes] conj sym)
                   (update-in env [:ns :excludes] conj sym))
                 env)
