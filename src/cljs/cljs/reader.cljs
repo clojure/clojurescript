@@ -333,7 +333,9 @@ nil if the end of stream has been reached")
    "<" (throwing-reader "Unreadable form")
    "\"" read-regex
    "!" read-comment
-   "_" read-discard})
+   "_" read-discard
+   "i" read-discard
+   "u" read-discard})
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
