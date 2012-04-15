@@ -44,6 +44,7 @@
 (def ^:dynamic *cljs-warn-on-dynamic* true)
 (def ^:dynamic *cljs-warn-on-fn-var* true)
 (def ^:dynamic *unchecked-if* (atom false))
+(def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *position* nil)
 
 (defmacro ^:private debug-prn
@@ -642,7 +643,8 @@
 
 (defmethod emit :invoke
   [{:keys [f args env]}]
-  (let [fn? (and (not (-> f :info :dynamic))
+  (let [fn? (and *cljs-static-fns*
+                 (not (-> f :info :dynamic))
                  (-> f :info :fn-var))
         js? (= (-> f :info :ns) 'js)
         f (if fn?
