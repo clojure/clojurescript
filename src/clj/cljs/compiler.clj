@@ -574,7 +574,7 @@
           (when has-name?
             (doseq [[n meth] ms]
               (let [c (count (:params meth))]
-               (emitln name ".__" c " = " n ";"))))
+               (emitln name ".cljs$lang$arity$" c " = " n ";"))))
           (emitln "return " name ";")
           (emitln "})()")))
       (when loop-locals
@@ -660,7 +660,7 @@
                 (let [arities (map #(-> % :params count) methods)]
                   (if (some #{arity} arities)
                     (update-in f [:info :name]
-                               (fn [name] (symbol (str name ".__" arity))))
+                               (fn [name] (symbol (str name ".cljs$lang$arity$" arity))))
                     f))))
             f)]
     (emit-wrap env

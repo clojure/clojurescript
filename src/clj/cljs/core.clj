@@ -271,11 +271,11 @@
                                                   [`(set! ~(symbol pf) (fn ~@meths))]
                                                   
                                                   (vector? (first meths))
-                                                  [`(set! ~(symbol (str pf "__" (count (first meths)))) (fn ~@meths))]
+                                                  [`(set! ~(symbol (str pf "$arity$" (count (first meths)))) (fn ~@meths))]
 
                                                   :else
                                                   (map (fn [[sig & body :as meth]]
-                                                         `(set! ~(symbol (str pf "__" (count sig)))
+                                                         `(set! ~(symbol (str pf "$arity$" (count sig)))
                                                                 (fn ~meth)))
                                                        meths))))
                                              sigs)))))]
@@ -435,11 +435,10 @@
                           ~@sig))))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
-                       slot (symbol (str prefix (name fname)))
-                       arity-name-fn (fn [sym sig] (symbol (str sym "__" (count sig))))]
+                       slot (symbol (str prefix (name fname)))]
                    `(defn ~fname ~@(map (fn [sig]
                                           (expand-sig fname
-                                                      (arity-name-fn slot sig)
+                                                      (symbol (str slot "$arity$" (count sig)))
                                                       sig))
                                         sigs))))]
     `(do
