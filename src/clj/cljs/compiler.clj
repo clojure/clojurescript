@@ -44,6 +44,7 @@
 (def ^:dynamic *cljs-warn-on-dynamic* true)
 (def ^:dynamic *cljs-warn-on-fn-var* true)
 (def ^:dynamic *unchecked-if* (atom false))
+(def ^:dynamic *position* nil)
 
 (defmacro ^:private debug-prn
   [& args]
@@ -183,7 +184,7 @@
                           (str " at line " (:line env) " " *cljs-file*)))))))))
 
 (defn- comma-sep [xs]
-  (apply str (interpose "," xs)))
+  (interpose "," xs))
 
 (defn- escape-char [^Character c]
   (let [cp (.hashCode c)]
@@ -210,134 +211,157 @@
 (defn- wrap-in-double-quotes [x]
   (str \" x \"))
 
+(defmulti emit :op)
+
+(defn emits [& xs]
+  (doseq [x xs]
+    (cond
+      (nil? x) nil
+      (map? x) (emit x)
+      (seq? x) (apply emits x)
+      (fn? x)  (x)
+      :else (do
+              (let [s (print-str x)]
+                (when *position*
+                  (swap! *position* (fn [[line column]]
+                                      [line (+ column (count s))])))
+                (print s)))))
+  nil)
+
+(defn emitln [& xs]
+  (apply emits xs)
+  ;; Prints column-aligned line number comments; good test of *position*.
+  ;(when *position*
+  ;  (let [[line column] @*position*]
+  ;    (print (apply str (concat (repeat (- 120 column) \space) ["// " (inc line)])))))
+  (println)
+  (when *position*
+    (swap! *position* (fn [[line column]]
+                        [(inc line) 0])))
+  nil)
+
 (defmulti emit-constant class)
-(defmethod emit-constant nil [x] (print "null"))
-(defmethod emit-constant Long [x] (print x))
-(defmethod emit-constant Integer [x] (print x)) ; reader puts Integers in metadata
-(defmethod emit-constant Double [x] (print x))
+(defmethod emit-constant nil [x] (emits "null"))
+(defmethod emit-constant Long [x] (emits x))
+(defmethod emit-constant Integer [x] (emits x)) ; reader puts Integers in metadata
+(defmethod emit-constant Double [x] (emits x))
 (defmethod emit-constant String [x]
-  (print (wrap-in-double-quotes (escape-string x))))
-(defmethod emit-constant Boolean [x] (print (if x "true" "false")))
+  (emits (wrap-in-double-quotes (escape-string x))))
+(defmethod emit-constant Boolean [x] (emits (if x "true" "false")))
 (defmethod emit-constant Character [x]
-  (print (wrap-in-double-quotes (escape-char x))))
+  (emits (wrap-in-double-quotes (escape-char x))))
 
 (defmethod emit-constant java.util.regex.Pattern [x]
   (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
-    (print (str \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
+    (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags)))
 
 (defmethod emit-constant clojure.lang.Keyword [x]
-           (print (str \" "\\uFDD0" \'
-                       (if (namespace x)
-                         (str (namespace x) "/") "")
-                       (name x)
-                       \")))
+           (emits \" "\\uFDD0" \'
+                  (if (namespace x)
+                    (str (namespace x) "/") "")
+                  (name x)
+                  \"))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
-           (print (str \" "\\uFDD1" \'
-                    (if (namespace x)
-                      (str (namespace x) "/") "")
-                    (name x)
-                    \")))
+           (emits \" "\\uFDD1" \'
+                  (if (namespace x)
+                    (str (namespace x) "/") "")
+                  (name x)
+                  \"))
 
-(defn- emit-meta-constant [x string]
+(defn- emit-meta-constant [x & body]
   (if (meta x)
     (do
-      (print (str "cljs.core.with_meta(" string ","))
+      (emits "cljs.core.with_meta(" body ",")
       (emit-constant (meta x))
-      (print ")"))
-    (print string)))
+      (emits ")"))
+    (emits body)))
 
 (defmethod emit-constant clojure.lang.PersistentList$EmptyList [x]
   (emit-meta-constant x "cljs.core.List.EMPTY"))
 
 (defmethod emit-constant clojure.lang.PersistentList [x]
   (emit-meta-constant x
-    (str "cljs.core.list("
-         (comma-sep (map #(with-out-str (emit-constant %)) x))
-         ")")))
+    (concat ["cljs.core.list("]
+            (comma-sep (map #(fn [] (emit-constant %)) x))
+            [")"])))
 
 (defmethod emit-constant clojure.lang.Cons [x]
   (emit-meta-constant x
-    (str "cljs.core.list("
-         (comma-sep (map #(with-out-str (emit-constant %)) x))
-         ")")))
+    (concat ["cljs.core.list("]
+            (comma-sep (map #(fn [] (emit-constant %)) x))
+            [")"])))
 
 (defmethod emit-constant clojure.lang.IPersistentVector [x]
   (emit-meta-constant x
-    (str "cljs.core.vec(["
-         (comma-sep (map #(with-out-str (emit-constant %)) x))
-         "])")))
+    (concat ["cljs.core.vec(["]
+            (comma-sep (map #(fn [] (emit-constant %)) x))
+            ["])"])))
 
 (defmethod emit-constant clojure.lang.IPersistentMap [x]
   (emit-meta-constant x
-    (str "cljs.core.hash_map("
-         (comma-sep (map #(with-out-str (emit-constant %))
-                         (apply concat x)))
-         ")")))
+    (concat ["cljs.core.hash_map("]
+            (comma-sep (map #(fn [] (emit-constant %))
+                            (apply concat x)))
+            [")"])))
 
 (defmethod emit-constant clojure.lang.PersistentHashSet [x]
   (emit-meta-constant x
-    (str "cljs.core.set(["
-         (comma-sep (map #(with-out-str (emit-constant %)) x))
-         "])")))
-
-(defmulti emit :op)
-
-(defmethod emit :no-op
-  [m] (println "void 0;"))
-
-(defn ^String emits [expr]
-  (with-out-str (emit expr)))
+    (concat ["cljs.core.set(["]
+            (comma-sep (map #(fn [] (emit-constant %)) x))
+            ["])"])))
 
 (defn emit-block
   [context statements ret]
-  (if statements
-    (let [body (str (apply str (map emits statements)) (emits ret))]
-      (print body))
-    (emit ret)))
+  (when statements
+    (emits statements))
+  (emit ret))
 
 (defmacro emit-wrap [env & body]
   `(let [env# ~env]
-     (when (= :return (:context env#)) (print "return "))
+     (when (= :return (:context env#)) (emits "return "))
      ~@body
-     (when-not (= :expr (:context env#)) (print ";\n"))))
+     (when-not (= :expr (:context env#)) (emitln ";"))))
+
+(defmethod emit :no-op
+  [m] (emits "void 0;"))
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
-  (emit-wrap env (print (munge (:name info)))))
+  (emit-wrap env (emits (munge (:name info)))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
   (emit-wrap env
-    (print (str "cljs.core.with_meta(" (emits expr) "," (emits meta) ")"))))
+    (emits "cljs.core.with_meta(" expr "," meta ")")))
 
 (defmethod emit :map
   [{:keys [children env simple-keys? keys vals]}]
   (emit-wrap env
     (if simple-keys?
-      (print (str "cljs.core.ObjMap.fromObject(["
-                  (comma-sep (map emits keys)) ; keys
-                  "],{"
-                  (comma-sep (map (fn [k v] (str (emits k) ":" (emits v)))
-                                  keys vals)) ; js obj
-                  "})"))
-      (print (str "cljs.core.HashMap.fromArrays(["
-                  (comma-sep (map emits keys))
-                  "],["
-                  (comma-sep (map emits vals))
-                  "])")))))
+      (emits "cljs.core.ObjMap.fromObject(["
+             (comma-sep keys) ; keys
+             "],{"
+             (comma-sep (map (fn [k v] #(emits k ":" v))
+                             keys vals)) ; js obj
+             "})")
+      (emits "cljs.core.HashMap.fromArrays(["
+             (comma-sep keys)
+             "],["
+             (comma-sep vals)
+             "])"))))
 
 (defmethod emit :vector
   [{:keys [children env]}]
   (emit-wrap env
-    (print (str "cljs.core.PersistentVector.fromArray(["
-                (comma-sep (map emits children)) "])"))))
+    (emits "cljs.core.PersistentVector.fromArray(["
+           (comma-sep children) "])")))
 
 (defmethod emit :set
   [{:keys [children env]}]
   (emit-wrap env
-    (print (str "cljs.core.set(["
-                (comma-sep (map emits children)) "])"))))
+    (emits "cljs.core.set(["
+           (comma-sep children) "])")))
 
 (defmethod emit :constant
   [{:keys [form env]}]
@@ -369,19 +393,22 @@
 
 (defmethod emit :if
   [{:keys [test then else env unchecked]}]
-  (let [context (:context env)]
+  (let [context (:context env)
+        checked (not (or unchecked (safe-test? test)))]
     (if (= :expr context)
-      (print (str "(" (when-not (or unchecked (safe-test? test)) "cljs.core.truth_")
-                  "(" (emits test) ")?" (emits then) ":" (emits else) ")"))
-      (let [testsym (gensym "test")]
-        (print (str "if(" (when-not (or unchecked (safe-test? test)) "cljs.core.truth_")
-                    "(" (emits test) "))\n{" (emits then) "} else\n{" (emits else) "}\n"))))))
+      (emits "(" (when checked "cljs.core.truth_") "(" test ")?" then ":" else ")")
+      (do
+        (if checked
+          (emitln "if(cljs.core.truth_(" test "))")
+          (emitln "if(" test ")"))
+        (emitln "{" then "} else")
+        (emitln "{" else "}")))))
 
 (defmethod emit :throw
   [{:keys [throw env]}]
   (if (= :expr (:context env))
-    (print (str "(function(){throw " (emits throw) "})()"))
-    (print (str "throw " (emits throw) ";\n"))))
+    (emits "(function(){throw " throw "})()")
+    (emitln "throw " throw ";")))
 
 (defn emit-comment
   "Emit a nicely formatted comment string."
@@ -390,96 +417,99 @@
         docs (if jsdoc (concat docs jsdoc) docs)
         docs (remove nil? docs)]
     (letfn [(print-comment-lines [e] (doseq [next-line (string/split-lines e)]
-                                       (println "*" (string/trim next-line))))]
+                                       (emitln "* " (string/trim next-line))))]
       (when (seq docs)
-        (println "/**")
+        (emitln "/**")
         (doseq [e docs]
           (when e
             (print-comment-lines e)))
-        (println "*/")))))
+        (emitln "*/")))))
 
 (defmethod emit :def
   [{:keys [name init env doc export]}]
   (if init
     (do
-     (emit-comment doc (:jsdoc init))
-     (print name)
-     (print (str " = " (emits init)))
-     (when-not (= :expr (:context env)) (print ";\n"))
-     (when export
-       (println (str "goog.exportSymbol('" export "', " name ");"))))
+      (emit-comment doc (:jsdoc init))
+      (emits name)
+      (emits " = " init)
+      (when-not (= :expr (:context env)) (emitln ";"))
+      (when export
+        (emitln "goog.exportSymbol('" export "', " name ");")))
     (println "void 0;")))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
   (let [arglist (gensym "arglist__")
         delegate-name (str name "__delegate")]
-    (println (str "(function (" arglist "){"))
+    (emitln "(function (" arglist "){")
     (doseq [[i param] (map-indexed vector (butlast params))]
-      (print (str "var " param " = cljs.core.first("))
-      (dotimes [_ i] (print "cljs.core.next("))
-      (print (str arglist ")"))
-      (dotimes [_ i] (print ")"))
-      (println ";"))
+      (emits "var " param " = cljs.core.first(")
+      (dotimes [_ i] (emits "cljs.core.next("))
+      (emits arglist ")")
+      (dotimes [_ i] (emits ")"))
+      (emitln ";"))
     (if (< 1 (count params))
       (do
-        (print (str "var " (last params) " = cljs.core.rest("))
-        (dotimes [_ (- (count params) 2)] (print "cljs.core.next("))
-        (print arglist)
-        (dotimes [_ (- (count params) 2)] (print ")"))
-        (println ");")
-        (println (str "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");")))
+        (emits "var " (last params) " = cljs.core.rest(")
+        (dotimes [_ (- (count params) 2)] (emits "cljs.core.next("))
+        (emits arglist)
+        (dotimes [_ (- (count params) 2)] (emits ")"))
+        (emitln ");")
+        (emitln "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");"))
       (do
-        (print (str "var " (last params) " = "))
-        (print "cljs.core.seq(" arglist ");")
-        (println ";")
-        (println (str "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");"))))
-    (print "})")))
+        (emits "var " (last params) " = ")
+        (emits "cljs.core.seq(" arglist ");")
+        (emitln ";")
+        (emitln "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");")))
+    (emits "})")))
 
 (defn emit-fn-method
   [{:keys [gthis name variadic params statements ret env recurs max-fixed-arity]}]
   (emit-wrap env
-             (print (str "(function " name "(" (comma-sep params) "){\n"))
+             (emitln "(function " name "(" (comma-sep params) "){")
              (when gthis
-               (println (str "var " gthis " = this;")))
-             (when recurs (print "while(true){\n"))
+               (emitln "var " gthis " = this;"))
+             (when recurs (emitln "while(true){"))
              (emit-block :return statements ret)
-             (when recurs (print "break;\n}\n"))
-             (print "})")))
+             (when recurs
+               (emitln "break;")
+               (emitln "}"))
+             (emits "})")))
 
 (defn emit-variadic-fn-method
   [{:keys [gthis name variadic params statements ret env recurs max-fixed-arity] :as f}]
   (emit-wrap env
              (let [name (or name (gensym))
                    delegate-name (str name "__delegate")]
-               (println "(function() { ")
-               (println (str "var " delegate-name " = function (" (comma-sep params) "){"))
-               (when recurs (print "while(true){\n"))
+               (emitln "(function() { ")
+               (emitln "var " delegate-name " = function (" (comma-sep params) "){")
+               (when recurs (emitln "while(true){"))
                (emit-block :return statements ret)
-               (when recurs (print "break;\n}\n"))
-               (println "};")
+               (when recurs
+                 (emitln "break;")
+                 (emitln "}"))
+               (emitln "};")
 
-               (print (str "var " name " = function (" (comma-sep
-                                                        (if variadic
-                                                          (concat (butlast params) ['var_args])
-                                                          params)) "){\n"))
+               (emitln "var " name " = function (" (comma-sep
+                                                     (if variadic
+                                                       (concat (butlast params) ['var_args])
+                                                       params)) "){")
                (when gthis
-                 (println (str "var " gthis " = this;")))
+                 (emitln "var " gthis " = this;"))
                (when variadic
-                 (println (str "var " (last params) " = null;"))
-                 (println (str "if (goog.isDef(var_args)) {"))
-                 (println (str "  " (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);"))
-                 (println (str "} ")))
-               (println (str "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");"))
-               (println "};")
+                 (emitln "var " (last params) " = null;")
+                 (emitln "if (goog.isDef(var_args)) {")
+                 (emitln "  " (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);")
+                 (emitln "} "))
+               (emitln "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");")
+               (emitln "};")
 
-               (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity ";"))
-               (println (str name ".cljs$lang$applyTo = "
-                             (with-out-str
-                               (emit-apply-to (assoc f :name name)))
-                             ";"))
-               (println (str "return " name ";"))
-               (println "})()"))))
+               (emitln name ".cljs$lang$maxFixedArity = " max-fixed-arity ";")
+               (emits name ".cljs$lang$applyTo = ")
+               (emit-apply-to (assoc f :name name))
+               (emitln ";")
+               (emitln "return " name ";")
+               (emitln "})()"))))
 
 (defmethod emit :fn
   [{:keys [name env methods max-fixed-arity variadic recur-frames loop-lets]}]
@@ -490,10 +520,10 @@
                             (mapcat :names loop-lets)))]
       (when loop-locals
         (when (= :return (:context env))
-            (print "return "))
-        (println (str "((function (" (comma-sep loop-locals) "){"))
+            (emits "return "))
+        (emitln "((function (" (comma-sep loop-locals) "){")
         (when-not (= :return (:context env))
-            (print "return ")))
+            (emits "return ")))
       (if (= 1 (count methods))
         (if variadic
           (emit-variadic-fn-method (assoc (first methods) :name name))
@@ -508,50 +538,52 @@
                           methods))
               ms (sort-by #(-> % second :params count) (seq mmap))]
           (when (= :return (:context env))
-            (print "return "))
-          (println "(function() {")
-          (println (str "var " name " = null;"))
+            (emits "return "))
+          (emitln "(function() {")
+          (emitln "var " name " = null;")
           (doseq [[n meth] ms]
-            (println (str "var " n " = " (with-out-str (if (:variadic meth)
-                                                           (emit-variadic-fn-method meth)
-                                                           (emit-fn-method meth))) ";")))
-          (println (str name " = function(" (comma-sep (if variadic
-                                                         (concat (butlast maxparams) ['var_args])
-                                                         maxparams)) "){"))
+            (emits "var " n " = ")
+            (if (:variadic meth)
+              (emit-variadic-fn-method meth)
+              (emit-fn-method meth))
+            (emitln ";"))
+            (emitln name " = function(" (comma-sep (if variadic
+                                                     (concat (butlast maxparams) ['var_args])
+                                                     maxparams)) "){")
           (when variadic
-            (println (str "var " (last maxparams) " = var_args;")))
-          (println "switch(arguments.length){")
+            (emitln "var " (last maxparams) " = var_args;"))
+          (emitln "switch(arguments.length){")
           (doseq [[n meth] ms]
             (if (:variadic meth)
-              (do (println "default:")
-                  (println (str "return " n ".apply(this,arguments);")))
+              (do (emitln "default:")
+                  (emitln "return " n ".apply(this,arguments);"))
               (let [pcnt (count (:params meth))]
-                (println "case " pcnt ":")
-                (println (str "return " n ".call(this" (if (zero? pcnt) nil
-                                                           (str "," (comma-sep (take pcnt maxparams)))) ");")))))
-          (println "}")
-          (println "throw('Invalid arity: ' + arguments.length);")
-          (println "};")
+                (emitln "case " pcnt ":")
+                (emitln "return " n ".call(this" (if (zero? pcnt) nil
+                                                     (list "," (comma-sep (take pcnt maxparams)))) ");"))))
+          (emitln "}")
+          (emitln "throw('Invalid arity: ' + arguments.length);")
+          (emitln "};")
           (when variadic
-            (println (str name ".cljs$lang$maxFixedArity = " max-fixed-arity ";"))
-            (println (str name ".cljs$lang$applyTo = " (some #(let [[n m] %] (when (:variadic m) n)) ms) ".cljs$lang$applyTo;")))
+            (emitln name ".cljs$lang$maxFixedArity = " max-fixed-arity ";")
+            (emitln name ".cljs$lang$applyTo = " (some #(let [[n m] %] (when (:variadic m) n)) ms) ".cljs$lang$applyTo;"))
           (when has-name?
             (doseq [[n meth] ms]
               (let [c (count (:params meth))]
-               (println (str name ".__" c " = " n ";")))))
-          (println (str "return " name ";"))
-          (println "})()")))
+               (emitln name ".__" c " = " n ";"))))
+          (emitln "return " name ";")
+          (emitln "})()")))
       (when loop-locals
-        (println (str ";})(" (comma-sep loop-locals) "))"))))))
+        (emitln ";})(" (comma-sep loop-locals) "))")))))
 
 (defmethod emit :do
   [{:keys [statements ret env]}]
   (let [context (:context env)]
-    (when (and statements (= :expr context)) (print "(function (){"))
-    ;(when statements (print "{\n"))
+    (when (and statements (= :expr context)) (emits "(function (){"))
+    ;(when statements (emitln "{"))
     (emit-block context statements ret)
-    ;(when statements (print "}"))
-    (when (and statements (= :expr context)) (print "})()"))))
+    ;(when statements (emits "}"))
+    (when (and statements (= :expr context)) (emits "})()"))))
 
 (defmethod emit :try*
   [{:keys [env try catch name finally]}]
@@ -559,54 +591,54 @@
         subcontext (if (= :expr context) :return context)]
     (if (or name finally)
       (do
-        (when (= :expr context) (print "(function (){"))
-        (print "try{")
+        (when (= :expr context) (emits "(function (){"))
+        (emits "try{")
         (let [{:keys [statements ret]} try]
           (emit-block subcontext statements ret))
-        (print "}")
+        (emits "}")
         (when name
-          (print (str "catch (" name "){"))
+          (emits "catch (" name "){")
           (when catch
             (let [{:keys [statements ret]} catch]
               (emit-block subcontext statements ret)))
-          (print "}"))
+          (emits "}"))
         (when finally
           (let [{:keys [statements ret]} finally]
             (assert (not= :constant (:op ret)) "finally block cannot contain constant")
-            (print "finally {")
+            (emits "finally {")
             (emit-block subcontext statements ret)
-            (print "}")))
-        (when (= :expr context) (print "})()")))
+            (emits "}")))
+        (when (= :expr context) (emits "})()")))
       (let [{:keys [statements ret]} try]
-        (when (and statements (= :expr context)) (print "(function (){"))
+        (when (and statements (= :expr context)) (emits "(function (){"))
         (emit-block subcontext statements ret)
-        (when (and statements (= :expr context)) (print "})()"))))))
+        (when (and statements (= :expr context)) (emits "})()"))))))
 
 (defmethod emit :let
   [{:keys [bindings statements ret env loop]}]
-  (let [context (:context env)
-        bs (map (fn [{:keys [name init]}]
-                  (str "var " name " = " (emits init) ";\n"))
-                bindings)]
-    (when (= :expr context) (print "(function (){"))
-    (print (str (apply str bs) "\n"))
-    (when loop (print "while(true){\n"))
+  (let [context (:context env)]
+    (when (= :expr context) (emits "(function (){"))
+    (doseq [{:keys [name init]} bindings]
+      (emitln "var " name " = " init ";"))
+    (when loop (emitln "while(true){"))
     (emit-block (if (= :expr context) :return context) statements ret)
-    (when loop (print "break;\n}\n"))
-    ;(print "}")
-    (when (= :expr context) (print "})()"))))
+    (when loop
+      (emitln "break;")
+      (emitln "}"))
+    ;(emits "}")
+    (when (= :expr context) (emits "})()"))))
 
 (defmethod emit :recur
   [{:keys [frame exprs env]}]
   (let [temps (vec (take (count exprs) (repeatedly gensym)))
         names (:names frame)]
-    (print "{\n")
+    (emitln "{")
     (dotimes [i (count exprs)]
-      (print (str "var " (temps i) " = " (emits (exprs i)) ";\n")))
+      (emitln "var " (temps i) " = " (exprs i) ";"))
     (dotimes [i (count exprs)]
-      (print (str (names i) " = " (temps i) ";\n")))
-    (print "continue;\n")
-    (print "}\n")))
+      (emitln (names i) " = " (temps i) ";"))
+    (emitln "continue;")
+    (emitln "}")))
 
 (defmethod emit :invoke
   [{:keys [f args env]}]
@@ -627,81 +659,85 @@
                     f))))
             f)]
     (emit-wrap env
-               (print (str (emits f) (when-not (or fn? js?) ".call") "("
-                           (let [args (map emits args)
-                                 args (if-not (or fn? js?)
-                                        (cons "null" args)
-                                        args)]
-                             (comma-sep args))
-                           ")")))))
+      (emits f (when-not (or fn? js?) ".call") "("
+                 (let [args (if (or fn? js?) args (cons "null" args))]
+                   (comma-sep args))
+                 ")"))))
 
 (defmethod emit :new
   [{:keys [ctor args env]}]
   (emit-wrap env
-             (print (str "(new " (emits ctor) "("
-                         (comma-sep (map emits args))
-                         "))"))))
+             (emits "(new " ctor "("
+                    (comma-sep args)
+                    "))")))
 
 (defmethod emit :set!
   [{:keys [target val env]}]
-  (emit-wrap env (print (str (emits target) " = "(emits val)))))
+  (emit-wrap env (emits target " = " val)))
 
 (defmethod emit :ns
   [{:keys [name requires uses requires-macros env]}]
-  (println (str "goog.provide('" (munge name) "');"))
+  (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
-    (println (str "goog.require('cljs.core');")))
+    (emitln "goog.require('cljs.core');"))
   (doseq [lib (into (vals requires) (distinct (vals uses)))]
-    (println (str "goog.require('" (munge lib) "');"))))
+    (emitln "goog.require('" (munge lib) "');")))
 
 (defmethod emit :deftype*
   [{:keys [t fields]}]
   (let [fields (map munge fields)]
-    (println "\n/**\n* @constructor\n*/")
-    (println (str t " = (function (" (comma-sep (map str fields)) "){"))
+    (emitln "")
+    (emitln "/**")
+    (emitln "* @constructor")
+    (emitln "*/")
+    (emitln t " = (function (" (comma-sep (map str fields)) "){")
     (doseq [fld fields]
-      (println (str "this." fld " = " fld ";")))
-    (println "})")))
+      (emitln "this." fld " = " fld ";"))
+    (emitln "})")))
 
 (defmethod emit :defrecord*
   [{:keys [t fields]}]
   (let [fields (concat (map munge fields) '[__meta __extmap])]
-    (println "\n/**\n* @constructor")
+    (emitln "")
+    (emitln "/**")
+    (emitln "* @constructor")
     (doseq [fld fields]
-      (println (str "* @param {*} " fld)))
-    (println "* @param {*=} __meta \n* @param {*=} __extmap\n*/")
-    (println (str t " = (function (" (comma-sep (map str fields)) "){"))
+      (emitln "* @param {*} " fld))
+    (emitln "* @param {*=} __meta ")
+    (emitln "* @param {*=} __extmap")
+    (emitln "*/")
+    (emitln t " = (function (" (comma-sep (map str fields)) "){")
     (doseq [fld fields]
-      (println (str "this." fld " = " fld ";")))
-    (println (str "if(arguments.length>" (- (count fields) 2) "){"))
-    (println (str "this.__meta = __meta;"))
-    (println (str "this.__extmap = __extmap;"))
-    (println "} else {")
-    (print (str "this.__meta="))
+      (emitln "this." fld " = " fld ";"))
+    (emitln "if(arguments.length>" (- (count fields) 2) "){")
+    (emitln "this.__meta = __meta;")
+    (emitln "this.__extmap = __extmap;")
+    (emitln "} else {")
+    (emits "this.__meta=")
     (emit-constant nil)
-    (println ";")
-    (print (str "this.__extmap="))
+    (emitln ";")
+    (emits "this.__extmap=")
     (emit-constant nil)
-    (println ";")
-    (println "}")
-    (println "})")))
+    (emitln ";")
+    (emitln "}")
+    (emitln "})")))
 
 (defmethod emit :dot
   [{:keys [target field method args env]}]
   (emit-wrap env
              (if field
-               (print (str (emits target) "." field))
-               (print (str (emits target) "." method "("
-                           (comma-sep (map emits args))
-                           ")")))))
+               (emits target "." field)
+               (emits target "." method "("
+                      (comma-sep args)
+                      ")"))))
 
 (defmethod emit :js
   [{:keys [env code segs args]}]
   (emit-wrap env
              (if code
-               (print code)
-               (print (apply str (interleave (concat segs (repeat nil))
-                                             (concat (map emits args) [nil])))))))
+               (emits code)
+               (emits (interleave (concat segs (repeat nil))
+                                  (concat args [nil]))))))
 
 (declare analyze analyze-symbol analyze-seq)
 
@@ -1322,7 +1358,8 @@
     (with-open [out ^java.io.Writer (io/make-writer dest {})]
       (binding [*out* out
                 *cljs-ns* 'cljs.user
-                *cljs-file* (.getPath ^java.io.File src)]
+                *cljs-file* (.getPath ^java.io.File src)
+                *position* (atom [0 0])]
         (loop [forms (forms-seq src)
                ns-name nil
                deps nil]
@@ -1514,15 +1551,15 @@
 (defmacro js [form]
   `(emit (analyze {:ns (@namespaces 'cljs.user) :context :statement :locals {}} '~form)))
 
-(defn jseval [form]
-  (let [js (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}}
-                           form))]
-    ;;(prn js)
-    (.eval jse (str "print(" js ")"))))
-
 (defn jscapture [form]
   "just grabs the js, doesn't print it"
-  (emits (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}} form)))
+  (with-out-str
+    (emit (analyze {:ns (@namespaces 'cljs.user) :context :expr :locals {}} form))))
+
+(defn jseval [form]
+  (let [js (jscapture form)]
+    ;;(prn js)
+    (.eval jse (str "print(" js ")"))))
 
 ;; from closure.clj
 (optimize (jscapture '(defn foo [x y] (if true 46 (recur 1 x)))))
