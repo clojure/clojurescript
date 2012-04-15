@@ -62,8 +62,8 @@
   ([repl-env env filename form wrap]
      (try
        (let [ast (comp/analyze env form)
-             js (comp/emits ast)
-             wrap-js (comp/emits (binding [comp/*cljs-warn-on-undeclared* false
+             js (comp/emit-str ast)
+             wrap-js (comp/emit-str (binding [comp/*cljs-warn-on-undeclared* false
                                            comp/*cljs-warn-on-redef* false
                                            comp/*cljs-warn-on-dynamic* false
                                            comp/*cljs-warn-on-fn-var* false]
