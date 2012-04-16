@@ -871,6 +871,7 @@
                         :ups-externs (:externs ups-deps))
         compiled (binding [comp/*cljs-static-fns*
                            (or (and (= (opts :optimizations) :advanced))
+                               (:static-fns opts)
                                comp/*cljs-static-fns*)]
                    (-compile source all-opts))
         compiled (concat
