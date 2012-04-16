@@ -231,12 +231,12 @@
   structures define -equiv (and thus =) as a value, not an identity,
   comparison."
   ([x] true)
-  ([x y] (-equiv x y))
+  ([x y] (or (identical? x y) (-equiv x y)))
   ([x y & more]
-     (if (-equiv x y)
+     (if (= x y)
        (if (next more)
          (recur y (first more) (next more))
-         (-equiv y (first more)))
+         (= y (first more)))
        false)))
 
 (defn ^boolean nil?
