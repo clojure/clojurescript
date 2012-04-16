@@ -51,6 +51,12 @@
   [& args]
   `(.println System/err (str ~@args)))
 
+(defn warning [env s]
+  (binding [*out* *err*]
+    (println
+     (str s (when (:line env)
+       (str " at line " (:line env) " " *cljs-file*))))))
+
 (defn munge [s]
   (let [ss (str s)
         ms (if (.contains ss "]")
@@ -68,11 +74,8 @@
     (let [crnt-ns (-> env :ns :name)]
       (when (= prefix crnt-ns)
         (when-not (-> @namespaces crnt-ns :defs suffix)
-          (binding [*out* *err*]
-            (println
-              (str "WARNING: Use of undeclared Var " prefix "/" suffix
-                   (when (:line env)
-                     (str " at line " (:line env)))))))))))
+          (warning env
+            (str "WARNING: Use of undeclared Var " prefix "/" suffix)))))))
 
 (defn resolve-ns-alias [env name]
   (let [sym (symbol name)]
@@ -179,10 +182,8 @@
                  ;; dependency ordering happens *after* compilation
                  (= (:ns ev) *cljs-ns*)
                  ev (not (-> ev :dynamic)))
-        (binding [*out* *err*]
-          (println (str "WARNING: " (:name-sym ev) " not declared ^:dynamic"
-                        (when (:line env)
-                          (str " at line " (:line env) " " *cljs-file*)))))))))
+        (warning env
+          (str "WARNING: " (:name-sym ev) " not declared ^:dynamic"))))))
 
 (defn- comma-sep [xs]
   (interpose "," xs))
@@ -835,11 +836,9 @@
                       (get-in @namespaces [ns-name :uses sym]))
                 (let [ev (resolve-existing-var (dissoc env :locals) sym)]
                   (when *cljs-warn-on-redef*
-                    (binding [*out* *err*]
-                      (println (str "WARNING: " sym " already refers to: " (symbol (str (:ns ev)) (str sym))
-                                    " being replaced by: " (symbol (str ns-name) (str sym))
-                                    (when (:line env)
-                                      (str " at line " (:line env) " " *cljs-file*))))))
+                    (warning env
+                      (str "WARNING: " sym " already refers to: " (symbol (str (:ns ev)) (str sym))
+                           " being replaced by: " (symbol (str ns-name) (str sym)))))
                   (swap! namespaces update-in [ns-name :excludes] conj sym)
                   (update-in env [:ns :excludes] conj sym))
                 env)
@@ -855,11 +854,9 @@
         (when (and *cljs-warn-on-fn-var*
                    (not (-> sym meta :declared))
                    (and (:fn-var v) (not fn-var?)))
-          (binding [*out* *err*]
-            (println (str "WARNING: " (symbol (str ns-name) (str sym))
-                          " no longer fn, references are stale"
-                          (when (:line env)
-                            (str ", at line " (:line env) " " *cljs-file*)))))))
+          (warning env
+            (str "WARNING: " (symbol (str ns-name) (str sym))
+                 " no longer fn, references are stale"))))
       (swap! namespaces update-in [ns-name :defs sym]
              (fn [m]
                (let [m (assoc (or m {}) :name name)]
