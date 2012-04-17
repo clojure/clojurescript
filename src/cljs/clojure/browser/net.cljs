@@ -132,12 +132,12 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
        (goog.net.xpc.CrossPageChannel. (gjson/parse config))))
   ([config]
      (goog.net.xpc.CrossPageChannel.
-      (.-strobj (reduce (fn [sum [k v]]
-                          (if-let [field (get xpc-config-fields k)]
-                            (assoc sum field v)
-                            sum))
-                       {}
-                       config)))))
+      (reduce (fn [sum [k v]]
+                (if-let [field (get xpc-config-fields k)]
+                  (aset sum field v)
+                  sum))
+              (js-obj)
+              config))))
 
 ;; WebSocket is not supported in the 3/23/11 release of Google
 ;; Closure, but will be included in the next release.

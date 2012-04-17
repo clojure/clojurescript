@@ -7,7 +7,8 @@
 ;;  You must not remove this notice, or any other, from this software.
 
 (ns clojure.browser.dom
-  (:require [goog.dom :as gdom]))
+  (:require [goog.dom :as gdom]
+            [goog.object :as gobject]))
 
 (defn append [parent & children]
   (apply gdom/append parent children)
@@ -41,15 +42,15 @@
     ([this attrs children]
        (log "string (-element " this " " attrs " " children ")")
        (let [str-attrs (if (and (map? attrs) (seq attrs))
-                         (.-strobj (reduce (fn [m [k v]]
-                                            (log "m = " m)
-                                            (log "k = " k)
-                                            (log "v = " v)
-                                            (when (or (keyword? k)
-                                                      (string? k))
-                                              (assoc m (name k) v)))
-                                          {}
-                                          attrs))
+                         (reduce (fn [o [k v]]
+                                   (log "m = " m)
+                                   (log "k = " k)
+                                   (log "v = " v)
+                                   (when (or (keyword? k)
+                                             (string? k))
+                                     (aset o (name k) v)))
+                                 (js-obj)
+                                 attrs)
                          nil)]
          (log-obj str-attrs)
          (if (seq children)
@@ -135,7 +136,7 @@
   "Set properties on an element"
   [e m]
   (gdom/setProperties (ensure-element e)
-                      (.-strobj m)))
+                      (apply gobject/create (interleave (keys m) (vals m)))))
 
 (defn set-value
   "Set the value property for an element."

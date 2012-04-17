@@ -41,9 +41,6 @@
       [tag (merge attrs (first args)) (rest args)]
       [tag attrs args])))
 
-;; TODO: replace call to .strobj with whatever we come up with for
-;; creating js objects from Clojure maps.
-
 (defn element
   "Create a dom element using a keyword for the element name and a map
   for the attributes. Append all children to parent. If the first
@@ -52,12 +49,12 @@
   [tag & args]
   (let [[tag attrs children] (normalize-args tag args)
         parent (dom/createDom (name tag)
-                              (.-strobj (reduce (fn [m [k v]]
-                                                 (assoc m k v))
-                                               {}
-                                               (map #(vector (name %1) %2)
-                                                    (keys attrs)
-                                                    (vals attrs)))))
+                              (reduce (fn [o [k v]]
+                                        (aset o k v))
+                                      (js-obj)
+                                      (map #(vector (name %1) %2)
+                                           (keys attrs)
+                                           (vals attrs))))
         [parent children] (if (string? (first children))
                             [(set-text (element tag attrs) (first children))
                              (rest children)]

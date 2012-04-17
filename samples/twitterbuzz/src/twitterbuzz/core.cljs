@@ -195,9 +195,6 @@
        (remove empty?)
        (remove (:ignore-mentions @state))))
 
-;; TODO: replace call to .strobj with whatever we come up with for
-;; creating js objects from Clojure maps.
-
 (defn fetch-mentioned-tweets
   "Query twitter for usernames which are currently missing data in the
   graph. Limit this query to max-missing-query names."
@@ -205,7 +202,9 @@
   (let [q (apply str (interpose " OR " (map #(str "from:" %)
                                             (take max-missing-query missing))))]
     (set-tweet-status :okay "Fetching mentioned tweets")
-    (retrieve (.-strobj {"q" q "rpp" results-per-page})
+    (retrieve (doto (js-obj)
+                (aset "q" q)
+                (aset "rpp" results-per-page))
               #(add-missing-callback missing %)
               error-callback)))
 
@@ -214,7 +213,9 @@
   []
   (when-let [tag (:search-tag @state)]
     (set-tweet-status :okay "Fetching tweets")
-    (retrieve (.-strobj {"q" tag "rpp" results-per-page})
+    (retrieve (doto (js-obj)
+                (aset "q" tag)
+                (aset "rpp" results-per-page))
               new-tweets-callback
               error-callback)))
 
