@@ -440,7 +440,7 @@
       (when-not (= :expr (:context env)) (emitln ";"))
       (when export
         (emitln "goog.exportSymbol('" export "', " name ");")))
-    (println "void 0;")))
+    (emitln "void 0;")))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
