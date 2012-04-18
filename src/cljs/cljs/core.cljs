@@ -943,6 +943,16 @@ reduces them without incurring seq initialization"
     (Math/floor q)
     (Math/ceil q)))
 
+(defn int
+  "Coerce to int by stripping decimal places."
+  [x]
+  (fix x))
+
+(defn long
+  "Coerce to long by stripping decimal places. Identical to `int'."
+  [x]
+  (fix x))
+
 (defn mod
   "Modulus of num and div. Truncates toward negative infinity."
   [n d]

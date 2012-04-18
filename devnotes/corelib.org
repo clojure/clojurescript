@@ -277,7 +277,7 @@ macro currently expands into extend call
 * init-proxy
 * DONE instance?
 does what?
-* int
+* DONE int
 * int-array
 * DONE integer?
 * DONE interleave
@@ -314,7 +314,7 @@ does what?
 * load-string
 * loaded-libs
 * locking
-* TODO long
+* DONE long
 * TODO long-array
 * TODO longs
 * DONE loop
