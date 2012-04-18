@@ -43,12 +43,13 @@
        (log "string (-element " this " " attrs " " children ")")
        (let [str-attrs (if (and (map? attrs) (seq attrs))
                          (reduce (fn [o [k v]]
-                                   (log "m = " m)
-                                   (log "k = " k)
-                                   (log "v = " v)
-                                   (when (or (keyword? k)
-                                             (string? k))
-                                     (aset o (name k) v)))
+                                   (let [o (if (nil? o) (js-obj) o)]
+                                     (log "o = " o)
+                                     (log "k = " k)
+                                     (log "v = " v)
+                                     (when (or (keyword? k)
+                                               (string? k))
+                                       (doto o (aset (name k) v)))))
                                  (js-obj)
                                  attrs)
                          nil)]
@@ -59,7 +60,7 @@
                   str-attrs
                   (map -element children))
            (gdom/createDom (name this)
-                          str-attrs)))))
+                           str-attrs)))))
 
   Vector
   (-element
