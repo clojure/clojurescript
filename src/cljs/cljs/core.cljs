@@ -2183,7 +2183,7 @@ reduces them without incurring seq initialization"
      (zero? cnt) (throw (js/Error. "Can't pop empty vector"))
      (== 1 cnt) (-with-meta cljs.core.PersistentVector/EMPTY meta)
      (< 1 (- cnt (tail-off coll)))
-      (PersistentVector. meta (dec cnt) shift root (aclone tail))
+      (PersistentVector. meta (dec cnt) shift root (.slice tail 0 -1))
       :else (let [new-tail (array-for coll (- cnt 2))
                   nr (pop-tail shift root)
                   new-root (if (nil? nr) cljs.core.PersistentVector/EMPTY_NODE nr)
