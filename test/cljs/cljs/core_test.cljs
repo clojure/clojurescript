@@ -898,6 +898,14 @@
     (assert (= (nth pv 97 nil) nil))
     (assert (= (pv 96) 96)))
 
+  (let [pv (vec (range 33))]
+    (assert (= pv
+               (-> pv
+                   pop
+                   pop
+                   (conj 31)
+                   (conj 32)))))
+  
   (let [stack1 (pop (vec (range 97)))
         stack2 (pop stack1)]
     (assert (= 95 (peek stack1)))
