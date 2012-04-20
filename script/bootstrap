@@ -32,6 +32,7 @@ if [ "x$1" = "x--closure-library-head" ] ; then
         svn update -q --non-interactive
     else
         echo "Checking out HEAD of Google Closure library..."
+        rm -rf *
         svn checkout -q --non-interactive http://closure-library.googlecode.com/svn/trunk/ ./
     fi
 else
