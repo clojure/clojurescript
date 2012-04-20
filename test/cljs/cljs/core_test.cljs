@@ -940,6 +940,108 @@
     (assert (= s (vec s))) ; pour into plain vector
     (let [m {:x 1}] (assert (= m (meta (with-meta s m))))))
 
+  ;; PersistentHashMap & TransientHashMap
+  (loop [m1 cljs.core.PersistentHashMap/EMPTY
+         m2 (transient cljs.core.PersistentHashMap/EMPTY)
+         i 0]
+    (if (< i 100)
+      (recur (assoc m1 i i) (assoc! m2 i i) (inc i))
+      (let [m2 (persistent! m2)]
+        (assert (= (count m1) 100))
+        (assert (= (count m2) 100))
+        (assert (= m1 m2))
+        (loop [i 0]
+          (if (< i 100)
+            (do (assert (= (m1 i) i))
+                (assert (= (m2 i) i))
+                (assert (= (get m1 i) i))
+                (assert (= (get m2 i) i))
+                (assert (contains? m1 i))
+                (assert (contains? m2 i))
+                (recur (inc i)))))
+        (assert (= (map vector (range 100) (range 100)) (sort-by first (seq m1))))
+        (assert (= (map vector (range 100) (range 100)) (sort-by first (seq m2))))
+        (assert (not (contains? (dissoc m1 3) 3))))))
+  (let [m (-> (->> (interleave (range 10) (range 10))
+                   (apply assoc cljs.core.PersistentHashMap/EMPTY))
+              (dissoc 3 5 7))]
+    (assert (= (count m) 7))
+    (assert (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9})))
+  (let [m (-> (->> (interleave (range 10) (range 10))
+                   (apply assoc cljs.core.PersistentHashMap/EMPTY))
+              (conj [:foo 1]))]
+    (assert (= (count m) 11))
+    (assert (= m {0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 :foo 1})))
+  (let [m (-> (->> (interleave (range 10) (range 10))
+                   (apply assoc cljs.core.PersistentHashMap/EMPTY)
+                   transient)
+              (conj! [:foo 1])
+              persistent!)]
+    (assert (= (count m) 11))
+    (assert (= m {0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 :foo 1})))
+  (let [tm (->> (interleave (range 10) (range 10))
+                (apply assoc cljs.core.PersistentHashMap/EMPTY)
+                transient)]
+    (loop [tm tm ks [3 5 7]]
+      (if-let [k (first ks)]
+        (recur (dissoc! tm k) (next ks))
+        (let [m (persistent! tm)]
+          (assert (= (count m) 7))
+          (assert (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9}))))))
+  (let [tm (-> (->> (interleave (range 10) (range 10))
+                    (apply assoc cljs.core.PersistentHashMap/EMPTY))
+               (dissoc 3 5 7)
+               transient)]
+    (doseq [k [0 1 2 4 6 8 9]]
+      (assert (= k (get tm k))))
+    (let [m (persistent! tm)]
+      (assert (= 2 (try (dissoc! tm 1) 1 (catch js/Error e 2))))
+      (assert (= 2 (try (assoc! tm 10 10) 1 (catch js/Error e 2))))
+      (assert (= 2 (try (persistent! tm) 1 (catch js/Error e 2))))
+      (assert (= 2 (try (count tm) 1 (catch js/Error e 2))))
+      (assert (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9}))))
+  (deftype FixedHash [h v]
+    IHash
+    (-hash [this] h)
+    IEquiv
+    (-equiv [this other]
+      (and (instance? FixedHash other) (= v (.-v other)))))
+  (def fixed-hash-foo (FixedHash. 0 :foo))
+  (def fixed-hash-bar (FixedHash. 0 :bar))
+  (let [m (assoc cljs.core.PersistentHashMap/EMPTY
+            fixed-hash-foo 1
+            fixed-hash-bar 2)]
+    (assert (= (get m fixed-hash-foo) 1))
+    (assert (= (get m fixed-hash-bar) 2))
+    (assert (= (count m) 2))
+    (let [m (dissoc m fixed-hash-foo)]
+      (assert (= (get m fixed-hash-bar) 2))
+      (assert (not (contains? m fixed-hash-foo)))
+      (assert (= (count m) 1))))
+  (let [m (into cljs.core.PersistentHashMap/EMPTY ; make sure we're testing
+                (zipmap (range 100) (range 100))) ; the correct map type
+        m (assoc m fixed-hash-foo 1 fixed-hash-bar 2)]
+    (assert (= (count m) 102))
+    (assert (= (get m fixed-hash-foo) 1))
+    (assert (= (get m fixed-hash-bar) 2))
+    (let [m (dissoc m 3 5 7 fixed-hash-foo)]
+      (assert (= (get m fixed-hash-bar) 2))
+      (assert (not (contains? m fixed-hash-foo)))
+      (assert (= (count m) 98))))
+  (let [m (into cljs.core.PersistentHashMap/EMPTY ; make sure we're testing
+                (zipmap (range 100) (range 100))) ; the correct map type
+        m (transient m)
+        m (assoc! m fixed-hash-foo 1)
+        m (assoc! m fixed-hash-bar 2)
+        m (persistent! m)]
+    (assert (= (count m) 102))
+    (assert (= (get m fixed-hash-foo) 1))
+    (assert (= (get m fixed-hash-bar) 2))
+    (let [m (dissoc m 3 5 7 fixed-hash-foo)]
+      (assert (= (get m fixed-hash-bar) 2))
+      (assert (not (contains? m fixed-hash-foo)))
+      (assert (= (count m) 98))))
+
   ;; defrecord
   (defrecord Person [firstname lastname])
   (def fred (Person. "Fred" "Mertz"))
