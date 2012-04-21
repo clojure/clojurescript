@@ -3001,7 +3001,7 @@ reduces them without incurring seq initialization"
 
   (inode-find [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
-      (cond (< idx 0)              nil
+      (cond (< idx 0)              not-found
             (= key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
             :else                  not-found)))
 
