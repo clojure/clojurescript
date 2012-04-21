@@ -99,6 +99,20 @@
   [array]
   (.-length array))
 
+(declare reduce)
+
+(defn into-array [coll]
+  (reduce (fn [a x] (.push a x) a) (array) coll))
+
+(defn long-array [coll]
+  (array))
+
+(defn double-array [coll]
+  (array))
+
+(defn object-array [coll]
+  (array))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 
 (defprotocol IFn
@@ -1416,6 +1430,17 @@ reduces them without incurring seq initialization"
         (do (. ary push (first s))
             (recur (next s)))
         ary))))
+
+(defn to-array-2d
+  "Returns a (potentially-ragged) 2-dimensional array
+  containing the contents of coll."
+  [coll]
+    (let [ret (make-array (count coll))]
+      (loop [i 0 xs (seq coll)]
+        (when xs
+          (aset ret i (to-array (first xs)))
+          (recur (inc i) (next xs))))
+      ret))
 
 (defn- bounded-count [s n]
   (loop [s s i n sum 0]

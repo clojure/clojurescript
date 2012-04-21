@@ -198,7 +198,7 @@ For macros only, uses clojure.core version
 * DONE dotimes
 * DONE doto
 * TODO double
-* TODO double-array
+* DONE double-array
 * TODO doubles
 * DONE drop
 * DONE drop-last
@@ -284,7 +284,7 @@ does what?
 * intern
 * DONE interpose
 * DONE into
-* TODO into-array
+* DONE into-array
 * ints
 * io!
 * DONE isa?
@@ -315,12 +315,12 @@ does what?
 * loaded-libs
 * locking
 * DONE long
-* TODO long-array
+* DONE long-array
 * TODO longs
 * DONE loop
 * macroexpand
 * macroexpand-1
-* TODO make-array
+* DONE make-array
 * DONE make-hierarchy
 * DONE map
 * DONE map-indexed
@@ -369,7 +369,7 @@ does what?
 * TODO num
 * DONE number?
 * TODO numerator
-* TODO object-array
+* DONE object-array
 * DONE odd?
 * DONE or
 * DONE parents
@@ -519,7 +519,7 @@ as macro
 * thread-bound?
 * DONE time
 * DONE to-array
-* TODO to-array-2d
+* DONE to-array-2d
 * DONE trampoline
 * transient
 * DONE tree-seq
