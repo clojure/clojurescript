@@ -1042,6 +1042,50 @@
       (assert (not (contains? m fixed-hash-foo)))
       (assert (= (count m) 98))))
 
+  ;; PersistentTreeMap
+  (let [m1 (sorted-map)
+        c2 (comp - compare)
+        m2 (sorted-map-by c2)]
+    (assert (identical? cljs.core.PersistentTreeMap (type m1)))
+    (assert (identical? cljs.core.PersistentTreeMap (type m2)))
+    (assert (identical? compare (.-comp m1)))
+    (assert (identical? c2 (.-comp m2)))
+    (assert (zero? (count m1)))
+    (assert (zero? (count m2)))
+    (let [m1 (assoc m1 :foo 1 :bar 2 :quux 3)
+          m2 (assoc m2 :foo 1 :bar 2 :quux 3)]
+      (assert (= (count m1) 3))
+      (assert (= (count m2) 3))
+      (assert (= (seq m1) (list [:bar 2] [:foo 1] [:quux 3])))
+      (assert (= (seq m2) (list [:quux 3] [:foo 1] [:bar 2])))
+      (assert (= (seq m1) (rseq m2)))
+      (assert (= (seq m2) (rseq m1)))
+      (assert (= (conj m1 [:wibble 4]) {:foo 1 :bar 2 :quux 3 :wibble 4}))
+      (assert (= (count (conj m1 [:wibble 4])) 4))
+      (assert (= (conj m2 [:wibble 4]) {:foo 1 :bar 2 :quux 3 :wibble 4}))
+      (assert (= (count (conj m2 [:wibble 4])) 4))
+      (assert (= (map key (assoc m1 nil 4)) (list nil :bar :foo :quux)))
+      (assert (= (map key (assoc m2 nil 4)) (list :quux :foo :bar nil)))))
+  (let [m (->> [[0 10] [20 30] [10 20] [50 60] [30 40] [40 50]]
+               (mapcat (partial apply range))
+               (mapcat #(list % %))
+               (apply sorted-map))
+        s1 (map #(vector % %) (range 60))
+        s2 (map #(vector % %) (range 59 -1 -1))]
+    (assert (= (count m) 60))
+    (assert (= (seq m) s1))
+    (assert (= (rseq m) s2)))
+  (let [m (sorted-map :foo 1 :bar 2 :quux 3)]
+    (assert (= (dissoc m :foo) (hash-map :bar 2 :quux 3)))
+    (assert (= (count (dissoc m :foo)) 2))
+    (assert (= (hash m) (hash (hash-map :foo 1 :bar 2 :quux 3))))
+    (assert (= (subseq m < :foo)  (list [:bar 2])))
+    (assert (= (subseq m <= :foo) (list [:bar 2] [:foo 1])))
+    (assert (= (subseq m > :foo)  (list [:quux 3])))
+    (assert (= (subseq m >= :foo) (list [:foo 1] [:quux 3])))
+    (assert (= (map #(reduce (fn [_ x] x) %) m) (list 2 1 3)))
+    (assert (= (map #(reduce (fn [x _] x) 7 %) m) (list 7 7 7))))
+
   ;; defrecord
   (defrecord Person [firstname lastname])
   (def fred (Person. "Fred" "Mertz"))
