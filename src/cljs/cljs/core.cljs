@@ -1180,6 +1180,8 @@ reduces them without incurring seq initialization"
 (defn- hash-coll [coll]
   (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
 
+(declare key val)
+
 (defn- hash-imap [m]
   ;; a la clojure.lang.APersistentMap
   (loop [h 0 s (seq m)]
