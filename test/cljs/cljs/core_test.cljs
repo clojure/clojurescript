@@ -1148,6 +1148,19 @@
                        (map #(vector % %)
                             (range (* 2 array-map-conversion-threshold)))))))
 
+  ;; literal maps
+  (loop [m1 {} m2 {} i 0]
+    (if (< i 100)
+      (recur (assoc m1 i i) (assoc m2 (str "foo" i) i) (inc i))
+      (do (assert (= m1 (into cljs.core.PersistentHashMap/EMPTY
+                              (map vector (range 100) (range 100)))))
+          (assert (= m2 (into cljs.core.PersistentHashMap/EMPTY
+                              (map vector
+                                   (map (partial str "foo") (range 100))
+                                   (range 100)))))
+          (assert (= (count m1) 100))
+          (assert (= (count m2) 100)))))
+
   ;; TransientHashSet
   (loop [s (transient #{})
          i 0]

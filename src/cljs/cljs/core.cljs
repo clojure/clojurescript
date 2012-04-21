@@ -2933,16 +2933,27 @@ reduces them without incurring seq initialization"
      (> a b) 1
      :else 0)))
 
+(defn- obj-map->hash-map [m k v]
+  (let [ks  (.-keys m)
+        len (.-length ks)
+        so  (.-strobj m)
+        out (with-meta cljs.core.PersistentHashMap/EMPTY (meta m))]
+    (loop [i   0
+           out (transient out)]
+      (if (< i len)
+        (let [k (aget ks i)]
+          (recur (inc i) (assoc! out k (aget so k))))
+        (persistent! (assoc! out k v))))))
+
 ;;; ObjMap
-;;; DEPRECATED
-;;; in favor of PersistentHashMap
-(deftype ObjMap [meta keys strobj ^:mutable __hash]
+
+(deftype ObjMap [meta keys strobj update-count ^:mutable __hash]
   Object
   (toString [this]
     (pr-str this))
   
   IWithMeta
-  (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
+  (-with-meta [coll meta] (ObjMap. meta keys strobj update-count __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -2981,16 +2992,21 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll k v]
     (if (goog/isString k)
-      (let [new-strobj (goog.object/clone strobj)
-            overwrite? (.hasOwnProperty new-strobj k)]
-        (aset new-strobj k v)
+      (let [overwrite? (.hasOwnProperty strobj k)]
         (if overwrite?
-          (ObjMap. meta keys new-strobj nil)     ; overwrite
-          (let [new-keys (aclone keys)] ; append
-            (.push new-keys k)
-            (ObjMap. meta new-keys new-strobj nil))))
+          (let [new-strobj (goog.object/clone strobj)]
+            (aset new-strobj k v)
+            (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
+          (if (< update-count cljs.core.ObjMap/HASHMAP_THRESHOLD) #_(< (.-length keys) cljs.core.ObjMap/HASHMAP_THRESHOLD)
+            (let [new-strobj (goog.object/clone strobj) ; append
+                  new-keys (aclone keys)]
+              (aset new-strobj k v)
+              (.push new-keys k)
+              (ObjMap. meta new-keys new-strobj (inc update-count) nil))
+            ;; too many keys, switching to PersistentHashMap
+            (obj-map->hash-map coll k v))))
       ; non-string key. game over.
-      (with-meta (into (hash-map k v) (seq coll)) meta)))
+      (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
     (obj-map-contains-key? k strobj))
 
@@ -3001,18 +3017,24 @@ reduces them without incurring seq initialization"
             new-strobj (goog.object/clone strobj)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
-        (ObjMap. meta new-keys new-strobj nil))
+        (ObjMap. meta new-keys new-strobj (inc update-count) nil))
       coll)) ; key not found, return coll unchanged
 
   IFn
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
+    (-lookup coll k not-found))
 
-(set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj) 0))
+  IEditableCollection
+  (-as-transient [coll]
+    (transient (into (hash-map) coll))))
 
-(set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj nil)))
+(set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj) 0 0))
+
+(set! cljs.core.ObjMap/HASHMAP_THRESHOLD 32)
+
+(set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
 ;;; HashMap
 ;;; DEPRECATED

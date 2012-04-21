@@ -346,14 +346,35 @@
   (emit-wrap env
     (emits "cljs.core.with_meta(" expr "," meta ")")))
 
+(def ^:private array-map-threshold 16)
+(def ^:private obj-map-threshold 32)
+
 (defmethod emit :map
   [{:keys [env simple-keys? keys vals]}]
   (emit-wrap env
-    (emits "cljs.core.PersistentHashMap.fromArrays(["
-           (comma-sep keys)
-           "],["
-           (comma-sep vals)
-           "])")))
+    (cond
+      (and simple-keys? (<= (count keys) obj-map-threshold))
+      (emits "cljs.core.ObjMap.fromObject(["
+             (comma-sep keys) ; keys
+             "],{"
+             (comma-sep (map (fn [k v]
+                               (with-out-str (emit k) (print ":") (emit v)))
+                             keys vals)) ; js obj
+             "})")
+
+      (<= (count keys) array-map-threshold)
+      (emits "cljs.core.PersistentArrayMap.fromArrays(["
+             (comma-sep keys)
+             "],["
+             (comma-sep vals)
+             "])")
+
+      :else
+      (emits "cljs.core.PersistentHashMap.fromArrays(["
+             (comma-sep keys)
+             "],["
+             (comma-sep vals)
+             "])"))))
 
 (defmethod emit :vector
   [{:keys [items env]}]
