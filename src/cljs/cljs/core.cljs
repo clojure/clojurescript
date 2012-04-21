@@ -1177,6 +1177,16 @@ reduces them without incurring seq initialization"
 (defn- hash-coll [coll]
   (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
 
+(defn- hash-imap [m]
+  ;; a la clojure.lang.APersistentMap
+  (loop [h 0 s (seq m)]
+    (if s
+      (let [e (first s)]
+        (recur (mod (+ h (bit-xor (hash (key e)) (hash (val e))))
+                    4503599627370496)
+               (next s)))
+      h)))
+
 (declare name)
 
 (defn- extend-object!
@@ -2588,7 +2598,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-imap coll))
 
   ISeqable
   (-seq [coll]
@@ -2675,7 +2685,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-imap coll))
 
   ISeqable
   (-seq [coll]
@@ -3105,7 +3115,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-imap coll))
 
   ISeqable
   (-seq [coll]
