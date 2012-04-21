@@ -792,8 +792,14 @@ reduces them without incurring seq initialization"
 (defn compare
   "Comparator. Returns a negative number, zero, or a positive number
   when x is logically 'less than', 'equal to', or 'greater than'
-  y. Uses google.array.defaultCompare."
-  [x y] (garray/defaultCompare x y))
+  y. Uses google.array.defaultCompare for objects of the same type
+  and special-cases nil to be less than any other object."
+  [x y]
+  (cond
+    (identical? (type x) (type y)) (garray/defaultCompare x y)
+    (nil? x) -1
+    (nil? y) 1
+    :else (throw (js/Error. "compare on non-nil objects of different types"))))
 
 (defn ^:private fn->comparator
   "Given a fn that might be boolean valued or a comparator,
