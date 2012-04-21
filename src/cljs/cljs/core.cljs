@@ -77,8 +77,10 @@
   (js* "Array.prototype.slice.call(arguments)"))
 
 (defn make-array
-  [n]
-  (js* "new Array(~{n})"))
+  ([size]
+     (js* "new Array(~{size})"))
+  ([type size]
+     (make-array size)))
 
 (declare apply)
 
@@ -101,17 +103,11 @@
 
 (declare reduce)
 
-(defn into-array [coll]
-  (reduce (fn [a x] (.push a x) a) (array) coll))
-
-(defn long-array [coll]
-  (array))
-
-(defn double-array [coll]
-  (array))
-
-(defn object-array [coll]
-  (array))
+(defn into-array
+  ([aseq]
+     (into-array nil aseq))
+  ([type aseq]
+     (reduce (fn [a x] (.push a x) a) (array) aseq)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 
@@ -706,6 +702,13 @@ reduces them without incurring seq initialization"
   (if (nil? s)
     false
     (satisfies? ISeq s)))
+
+(defn ^boolean seqable?
+  "Return true if s satisfies ISeqable"
+  [s]
+  (if (nil? s)
+    false
+    (satisfies? ISeqable s)))
 
 (defn ^boolean boolean [x]
   (if x true false))
@@ -1451,6 +1454,69 @@ reduces them without incurring seq initialization"
           (aset ret i (to-array (first xs)))
           (recur (inc i) (next xs))))
       ret))
+
+(defn long-array
+  ([size-or-seq]
+     (cond
+      (number? size-or-seq) (long-array size-or-seq nil)
+      (seq? size-or-seq) (into-array size-or-seq)
+      :else (throw (js/Error. "long-array called with something other than size or ISeqable"))))
+  ([size init-val-or-seq]
+     (let [a (make-array size)]
+       (if (seq? init-val-or-seq)
+         (let [s (seq init-val-or-seq)]
+           (loop [i 0 s s]
+             (if (and s (< i size))
+               (do
+                 (aset a i (first s))
+                 (recur (inc i) (next s)))
+               a)))
+         (do
+           (dotimes [i size]
+             (aset a i init-val-or-seq))
+           a)))))
+
+(defn double-array
+  ([size-or-seq]
+     (cond
+      (number? size-or-seq) (double-array size-or-seq nil)
+      (seq? size-or-seq) (into-array size-or-seq)
+      :else (throw (js/Error. "double-array called with something other than size or ISeqable"))))
+  ([size init-val-or-seq]
+     (let [a (make-array size)]
+       (if (seq? init-val-or-seq)
+         (let [s (seq init-val-or-seq)]
+           (loop [i 0 s s]
+             (if (and s (< i size))
+               (do
+                 (aset a i (first s))
+                 (recur (inc i) (next s)))
+               a)))
+         (do
+           (dotimes [i size]
+             (aset a i init-val-or-seq))
+           a)))))
+
+(defn object-array
+  ([size-or-seq]
+     (cond
+      (number? size-or-seq) (object-array size-or-seq nil)
+      (seq? size-or-seq) (into-array size-or-seq)
+      :else (throw (js/Error. "object-array called with something other than size or ISeqable"))))
+  ([size init-val-or-seq]
+     (let [a (make-array size)]
+       (if (seq? init-val-or-seq)
+         (let [s (seq init-val-or-seq)]
+           (loop [i 0 s s]
+             (if (and s (< i size))
+               (do
+                 (aset a i (first s))
+                 (recur (inc i) (next s)))
+               a)))
+         (do
+           (dotimes [i size]
+             (aset a i init-val-or-seq))
+           a)))))
 
 (defn- bounded-count [s n]
   (loop [s s i n sum 0]
