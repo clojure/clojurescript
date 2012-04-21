@@ -97,7 +97,7 @@
   (cljs.core/aset array i val))
 
 (defn alength
-  "Returns the length of the Java array. Works on arrays of all types."
+  "Returns the length of the array. Works on arrays of all types."
   [array]
   (.-length array))
 
@@ -1462,7 +1462,7 @@ reduces them without incurring seq initialization"
      (cond
       (number? size-or-seq) (long-array size-or-seq nil)
       (seq? size-or-seq) (into-array size-or-seq)
-      :else (throw (js/Error. "long-array called with something other than size or ISeqable"))))
+      :else (throw (js/Error. "long-array called with something other than size or ISeq"))))
   ([size init-val-or-seq]
      (let [a (make-array size)]
        (if (seq? init-val-or-seq)
@@ -1483,7 +1483,7 @@ reduces them without incurring seq initialization"
      (cond
       (number? size-or-seq) (double-array size-or-seq nil)
       (seq? size-or-seq) (into-array size-or-seq)
-      :else (throw (js/Error. "double-array called with something other than size or ISeqable"))))
+      :else (throw (js/Error. "double-array called with something other than size or ISeq"))))
   ([size init-val-or-seq]
      (let [a (make-array size)]
        (if (seq? init-val-or-seq)
@@ -1504,7 +1504,7 @@ reduces them without incurring seq initialization"
      (cond
       (number? size-or-seq) (object-array size-or-seq nil)
       (seq? size-or-seq) (into-array size-or-seq)
-      :else (throw (js/Error. "object-array called with something other than size or ISeqable"))))
+      :else (throw (js/Error. "object-array called with something other than size or ISeq"))))
   ([size init-val-or-seq]
      (let [a (make-array size)]
        (if (seq? init-val-or-seq)
@@ -4202,7 +4202,7 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean isa?
   "Returns true if (= child parent), or child is directly or indirectly derived from
-  parent, either via a Java type inheritance relationship or a
+  parent, either via a JavaScript type inheritance relationship or a
   relationship established via derive. h must be a hierarchy obtained
   from make-hierarchy, if not supplied defaults to the global
   hierarchy"
@@ -4221,7 +4221,7 @@ reduces them without incurring seq initialization"
                   (recur (isa? h (child i) (parent i)) (inc i))))))))
 
 (defn parents
-  "Returns the immediate parents of tag, either via a Java type
+  "Returns the immediate parents of tag, either via a JavaScript type
   inheritance relationship or a relationship established via derive. h
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
@@ -4229,7 +4229,7 @@ reduces them without incurring seq initialization"
   ([h tag] (not-empty (get (:parents h) tag))))
 
 (defn ancestors
-  "Returns the immediate and indirect parents of tag, either via a Java type
+  "Returns the immediate and indirect parents of tag, either via a JavaScript type
   inheritance relationship or a relationship established via derive. h
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
@@ -4240,7 +4240,7 @@ reduces them without incurring seq initialization"
   "Returns the immediate and indirect children of tag, through a
   relationship established via derive. h must be a hierarchy obtained
   from make-hierarchy, if not supplied defaults to the global
-  hierarchy. Note: does not work on Java type inheritance
+  hierarchy. Note: does not work on JavaScript type inheritance
   relationships."
   ([tag] (descendants @global-hierarchy tag))
   ([h tag] (not-empty (get (:descendants h) tag))))
