@@ -861,7 +861,9 @@
                    (when fn-var?
                      {:fn-var true
                       :info {:max-fixed-arity (:max-fixed-arity init-expr)
-                             :methods (:methods init-expr)}})))))
+                             :methods (map (fn [m]
+                                             {:params (:params m)})
+                                           (:methods init-expr))}})))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when tag {:tag tag})
