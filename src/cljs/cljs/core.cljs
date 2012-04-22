@@ -2342,7 +2342,7 @@ reduces them without incurring seq initialization"
      (< 1 (- cnt (tail-off coll)))
       (PersistentVector. meta (dec cnt) shift root (.slice tail 0 -1))
       :else (let [new-tail (array-for coll (- cnt 2))
-                  nr (pop-tail shift root)
+                  nr (pop-tail coll shift root)
                   new-root (if (nil? nr) cljs.core.PersistentVector/EMPTY_NODE nr)
                   cnt-1 (dec cnt)]
               (if (and (< 5 shift) (nil? (aget new-root 1)))
@@ -3166,7 +3166,7 @@ reduces them without incurring seq initialization"
 
             (nil? n)
             (if (<= cnt 8)
-              (pack-array-node inode idx)
+              (pack-array-node inode nil idx)
               (ArrayNode. nil (dec cnt) (clone-and-set arr idx n)))
 
             :else
@@ -4381,7 +4381,7 @@ reduces them without incurring seq initialization"
 
   ISorted
   (-sorted-seq [coll ascending?]
-    (map key (-sorted-seq-from tree-map ascending?)))
+    (map key (-sorted-seq tree-map ascending?)))
 
   (-sorted-seq-from [coll k ascending?]
     (map key (-sorted-seq-from tree-map k ascending?)))
