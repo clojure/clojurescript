@@ -4042,6 +4042,7 @@ reduces them without incurring seq initialization"
                               (.-right app)
                               (.-right right)))
         (balance-left-del (.-key left) (.-val left)
+                          (.-left left)
                           (BlackNode. (.-key right) (.-val right)
                                       app
                                       (.-right right)))))))
