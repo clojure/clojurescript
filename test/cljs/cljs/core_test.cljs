@@ -1086,6 +1086,35 @@
     (assert (= (map #(reduce (fn [_ x] x) %) m) (list 2 1 3)))
     (assert (= (map #(reduce (fn [x _] x) 7 %) m) (list 7 7 7))))
 
+  ;; PersistentTreeSet
+  (let [s1 (sorted-set)
+        c2 (comp - compare)
+        s2 (sorted-set-by c2)]
+    (assert (identical? cljs.core.PersistentTreeSet (type s1)))
+    (assert (identical? cljs.core.PersistentTreeSet (type s2)))
+    (assert (identical? compare (-comparator s1)))
+    (assert (identical? c2 (-comparator s2)))
+    (assert (zero? (count s1)))
+    (assert (zero? (count s2)))
+    (let [s1 (conj s1 1 2 3)
+          s2 (conj s2 1 2 3)]
+      (assert (= (hash s1) (hash s2)))
+      (assert (= (hash s1) (hash #{1 2 3})))
+      (assert (= (seq s1)  (list 1 2 3)))
+      (assert (= (rseq s1) (list 3 2 1)))
+      (assert (= (seq s2)  (list 3 2 1)))
+      (assert (= (rseq s2) (list 1 2 3)))
+      (assert (= (count s1) 3))
+      (assert (= (count s2) 3))
+      (let [s1 (disj s1 2)
+            s2 (disj s2 2)]
+        (assert (= (seq s1)  (list 1 3)))
+        (assert (= (rseq s1) (list 3 1)))
+        (assert (= (seq s2)  (list 3 1)))
+        (assert (= (rseq s2) (list 1 3)))
+        (assert (= (count s1) 2))
+        (assert (= (count s2) 2)))))
+
   ;; defrecord
   (defrecord Person [firstname lastname])
   (def fred (Person. "Fred" "Mertz"))

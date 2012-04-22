@@ -1215,6 +1215,15 @@ reduces them without incurring seq initialization"
                (next s)))
       h)))
 
+(defn- hash-iset [s]
+  ;; a la clojure.lang.APersistentSet
+  (loop [h 0 s (seq s)]
+    (if s
+      (let [e (first s)]
+        (recur (mod (+ h (hash e)) 4503599627370496)
+               (next s)))
+      h)))
+
 (declare name)
 
 (defn- extend-object!
@@ -4310,7 +4319,7 @@ reduces them without incurring seq initialization"
              other)))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-iset coll))
 
   ISeqable
   (-seq [coll] (keys hash-map))
@@ -4338,6 +4347,76 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.Set/EMPTY (Set. nil (hash-map)))
 
+(deftype PersistentTreeSet [meta tree-map]
+  Object
+  (toString [this]
+    (pr-str this))
+
+  IWithMeta
+  (-with-meta [coll meta] (PersistentTreeSet. meta tree-map))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll o]
+    (PersistentTreeSet. meta (assoc tree-map o nil)))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.PersistentTreeSet/EMPTY meta))
+
+  IEquiv
+  (-equiv [coll other]
+    (and
+     (set? other)
+     (= (count coll) (count other))
+     (every? #(contains? coll %)
+             other)))
+
+  IHash
+  (-hash [coll] (hash-iset coll))
+
+  ISeqable
+  (-seq [coll] (keys tree-map))
+
+  ISorted
+  (-sorted-seq [coll ascending?]
+    (map key (-sorted-seq-from tree-map ascending?)))
+
+  (-sorted-seq-from [coll k ascending?]
+    (map key (-sorted-seq-from tree-map k ascending?)))
+
+  (-entry-key [coll entry] entry)
+
+  (-comparator [coll] (-comparator tree-map))
+
+  IReversible
+  (-rseq [coll]
+    (map key (rseq tree-map)))
+
+  ICounted
+  (-count [coll] (count tree-map))
+
+  ILookup
+  (-lookup [coll v]
+    (-lookup coll v nil))
+  (-lookup [coll v not-found]
+    (if (-contains-key? tree-map v)
+      v
+      not-found))
+
+  ISet
+  (-disjoin [coll v]
+    (PersistentTreeSet. meta (dissoc tree-map v)))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
+
+(set! cljs.core.PersistentTreeSet/EMPTY (PersistentTreeSet. nil (sorted-map)))
+
 (defn set
   "Returns a set of the distinct elements of coll."
   [coll]
@@ -4346,6 +4425,18 @@ reduces them without incurring seq initialization"
     (if-not (empty? in)
       (recur (rest in) (conj out (first in)))
       out)))
+
+(defn sorted-set
+  "Returns a new sorted set with supplied keys."
+  ([& keys]
+   (reduce -conj cljs.core.PersistentTreeSet/EMPTY keys)))
+
+(defn sorted-set-by
+  "Returns a new sorted set with supplied keys, using the supplied comparator."
+  ([comparator & keys]
+   (reduce -conj
+           (cljs.core.PersistentTreeSet. nil (sorted-map-by comparator))
+           keys)))
 
 (defn replace
   "Given a map of replacement pairs and a vector/collection, returns a
@@ -4905,6 +4996,9 @@ reduces them without incurring seq initialization"
       (pr-sequential pr-pair "{" ", " "}" opts coll)))
 
   Set
+  (-pr-seq [coll opts] (pr-sequential pr-seq "#{" " " "}" opts coll))
+
+  PersistentTreeSet
   (-pr-seq [coll opts] (pr-sequential pr-seq "#{" " " "}" opts coll))
 
   Range
