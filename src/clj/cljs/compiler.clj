@@ -37,6 +37,11 @@
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
+(defn reset-namespaces! []
+  (reset! namespaces
+    '{cljs.core {:name cljs.core}
+      cljs.user {:name cljs.user}}))
+
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *cljs-warn-on-undeclared* false)
