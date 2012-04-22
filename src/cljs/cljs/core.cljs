@@ -524,14 +524,7 @@ reduces them without incurring seq initialization"
 
 (extend-type default
   IEquiv
-  (-equiv [x o] (identical? x o))
-
-  ICounted
-  (-count [x]
-    (loop [s (seq x) n 0]
-      (if s
-        (recur (next s) (inc n))
-        n))))
+  (-equiv [x o] (identical? x o)))
 
 (defn ^boolean not
   "Returns true if x is logical false, false otherwise."
@@ -1365,7 +1358,14 @@ reduces them without incurring seq initialization"
   (-hash [coll] (hash-coll coll))
 
   ISeqable
-  (-seq [coll] coll))
+  (-seq [coll] coll)
+
+  ICounted
+  (-count [coll]
+    (loop [s (seq coll) n 0]
+      (if s
+        (recur (next s) (inc n))
+        n))))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
