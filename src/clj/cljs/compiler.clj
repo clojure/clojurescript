@@ -48,6 +48,7 @@
 (def ^:dynamic *cljs-warn-on-redef* true)
 (def ^:dynamic *cljs-warn-on-dynamic* true)
 (def ^:dynamic *cljs-warn-on-fn-var* true)
+(def ^:dynamic *cljs-warn-fn-arity* true)
 (def ^:dynamic *unchecked-if* (atom false))
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *position* nil)
@@ -865,6 +866,7 @@
                      {:file *cljs-file* :line line})
                    (when fn-var?
                      {:fn-var true
+                      :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
                       :method-params (map (fn [m]
                                             (:params m))
@@ -1199,7 +1201,15 @@
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          fexpr (analyze enve f)
-         argexprs (vec (map #(analyze enve %) args))]
+         argexprs (vec (map #(analyze enve %) args))
+         argc (count args)]
+     (if (and *cljs-warn-fn-arity* (-> fexpr :info :fn-var))
+       (let [{:keys [variadic max-fixed-arity method-params name]} (:info fexpr)]
+         (when (and (not (some #{argc} (map count method-params)))
+                    (or (not variadic)
+                        (and variadic (< argc max-fixed-arity))))
+           (warning env
+             (str "WARNING: Wrong number of args (" argc ") passed to " name)))))
      {:env env :op :invoke :f fexpr :args argexprs
       :children (conj argexprs fexpr) :tag (-> fexpr :info :tag)})))
 
