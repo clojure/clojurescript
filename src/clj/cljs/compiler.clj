@@ -859,7 +859,9 @@
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
                    (when fn-var?
-                     {:fn-var true :info init-expr})))))
+                     {:fn-var true
+                      :info {:max-fixed-arity (:max-fixed-arity init-expr)
+                             :methods (:methods init-expr)}})))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when tag {:tag tag})
