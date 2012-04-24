@@ -3359,11 +3359,21 @@ reduces them without incurring seq initialization"
                (.inode-assoc! edit shift key2hash key2 val2 added-leaf?)))))))
 
 (deftype NodeSeq [meta nodes i s]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IMeta
   (-meta [coll] meta)
 
   IWithMeta
   (-with-meta [coll meta] (NodeSeq. meta nodes i s))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   ISequential
   ISeq
@@ -3381,7 +3391,10 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
 
   IEquiv
-  (-equiv [coll other] (equiv-sequential coll other)))
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll)))
 
 (defn- create-inode-seq
   ([nodes]
@@ -3401,11 +3414,21 @@ reduces them without incurring seq initialization"
        (NodeSeq. nil nodes i s))))
 
 (deftype ArrayNodeSeq [meta nodes i s]
+  Object
+  (toString [this]
+    (pr-str this))
+
   IMeta
   (-meta [coll] meta)
 
   IWithMeta
   (-with-meta [coll meta] (ArrayNodeSeq. meta nodes i s))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   ISequential
   ISeq
@@ -3416,7 +3439,10 @@ reduces them without incurring seq initialization"
   (-seq [this] this)
 
   IEquiv
-  (-equiv [coll other] (equiv-sequential coll other)))
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IHash
+  (-hash [coll] (hash-coll coll)))
 
 (defn- create-array-node-seq
   ([nodes] (create-array-node-seq nil nodes 0 nil))
@@ -3772,6 +3798,9 @@ reduces them without incurring seq initialization"
 
 (deftype BlackNode [key val left right]
   Object
+  (toString [this]
+    (pr-str this))
+
   (add-left [node ins]
     (.balance-left ins node))
 
@@ -3871,6 +3900,9 @@ reduces them without incurring seq initialization"
 
 (deftype RedNode [key val left right]
   Object
+  (toString [this]
+    (pr-str this))
+
   (add-left [node ins]
     (RedNode. key val ins right))
 
@@ -4039,6 +4071,7 @@ reduces them without incurring seq initialization"
                               (.-right app)
                               (.-right right)))
           (RedNode. (.-key left) (.-val left)
+                    (.-left left)
                     (RedNode. (.-key right) (.-val right) app (.-right right)))))
       (RedNode. (.-key left) (.-val left)
                 (.-left left)
