@@ -708,6 +708,15 @@
     (list 'js* (str "[" xs-str "]"))
     rest)))
 
+(defmacro js-obj [& rest]
+  (let [kvs-str (->> (repeat "~{}:~{}")
+                     (take (quot (count rest) 2))
+                     (interpose ",")
+                     (apply str))]
+    (concat
+     (list 'js* (str "{" kvs-str "}"))
+     rest)))
+
 (defmacro alength [a]
   (list 'js* "~{}.length" a))
 
