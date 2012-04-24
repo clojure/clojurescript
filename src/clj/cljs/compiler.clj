@@ -1099,12 +1099,17 @@
 
 (def ^:private property-symbol? #(boolean (and (symbol? %) (re-matches #"^-.*" (name %)))))
 
+(defn- munge-not-reserved [meth]
+  (if-not (js-reserved (str meth))
+    (munge meth)
+    meth))
+
 (defn- clean-symbol
   [sym]
   (symbol
    (if (property-symbol? sym)
-     (-> sym name (.substring 1) munge)
-     (-> sym name munge))))
+     (-> sym name (.substring 1) munge-not-reserved)
+     (-> sym name munge-not-reserved))))
 
 (defn- classify-dot-form
   [[target member args]]
@@ -1135,8 +1140,8 @@
   compilation."
   [target meth args]
   (if (symbol? meth)
-    {:dot-action ::call :target target :method (munge meth) :args args}
-    {:dot-action ::call :target target :method (munge (first meth)) :args args}))
+    {:dot-action ::call :target target :method (munge-not-reserved meth) :args args}
+    {:dot-action ::call :target target :method (munge-not-reserved (first meth)) :args args}))
 
 ;; (. o m 1 2)
 (defmethod build-dot-form [::expr ::symbol ::expr]
