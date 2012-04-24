@@ -991,35 +991,39 @@
      {:env env :op :new :ctor ctorexpr :args argexprs :children (conj argexprs ctorexpr)})))
 
 (defmethod parse 'set!
-  [_ env [_ target val] _]
-  (disallowing-recur
-   (let [enve (assoc env :context :expr)
-         targetexpr (cond
-                     (= target '*unchecked-if*)
-                     (do
-                       (reset! *unchecked-if* val)
-                       ::set-unchecked-if)
+  [_ env [_ target val alt] _]
+  (let [[target val] (if alt
+                       ;; (set! o -prop val)
+                       [`(. ~target ~val) alt]
+                       [target val])]
+    (disallowing-recur
+     (let [enve (assoc env :context :expr)
+           targetexpr (cond
+                       (= target '*unchecked-if*)
+                       (do
+                         (reset! *unchecked-if* val)
+                         ::set-unchecked-if)
 
-                     (symbol? target)
-                     (do
-                       (let [local (-> env :locals target)]
-                         (assert (or (nil? local)
-                                     (and (:field local)
-                                          (:mutable local)))
-                                 "Can't set! local var or non-mutable field"))
-                       (analyze-symbol enve target))
+                       (symbol? target)
+                       (do
+                         (let [local (-> env :locals target)]
+                           (assert (or (nil? local)
+                                       (and (:field local)
+                                            (:mutable local)))
+                                   "Can't set! local var or non-mutable field"))
+                         (analyze-symbol enve target))
 
-                     :else
-                     (when (seq? target)
-                       (let [targetexpr (analyze-seq enve target nil)]
-                         (when (:field targetexpr)
-                           targetexpr))))
-         valexpr (analyze enve val)]
-     (assert targetexpr "set! target must be a field or a symbol naming a var")
-     (cond
-      (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
-      :else {:env env :op :set! :target targetexpr
-             :val valexpr :children [targetexpr valexpr]}))))
+                       :else
+                       (when (seq? target)
+                         (let [targetexpr (analyze-seq enve target nil)]
+                           (when (:field targetexpr)
+                             targetexpr))))
+           valexpr (analyze enve val)]
+       (assert targetexpr "set! target must be a field or a symbol naming a var")
+       (cond
+        (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
+        :else {:env env :op :set! :target targetexpr
+               :val valexpr :children [targetexpr valexpr]})))))
 
 (defmethod parse 'ns
   [_ env [_ name & args] _]
