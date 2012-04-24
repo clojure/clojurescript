@@ -201,6 +201,15 @@
 (defmacro bitpos [hash shift]
   (list 'js* "(1 << ~{})" `(mask ~hash ~shift)))
 
+;; internal
+(defmacro caching-hash [coll hash-fn hash-key]
+  `(let [h# ~hash-key]
+     (if (coercive-not= h# nil)
+       h#
+       (let [h# (~hash-fn ~coll)]
+         (set! ~hash-key h#)
+         h#))))
+
 (defn- protocol-prefix [psym]
   (str (.replace (str psym) \. \$) "$"))
 
