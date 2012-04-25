@@ -1121,6 +1121,8 @@
   (assert (= (:firstname fred) "Fred"))
   (def fred-too (Person. "Fred" "Mertz"))
   (assert (= fred fred-too))
+  (assert (false? (= fred nil)))
+  (assert (false? (= nil fred)))
 
   (def ethel (Person. "Ethel" "Mertz" {:married true} {:husband :fred}))
   (assert (= (meta ethel) {:married true}))

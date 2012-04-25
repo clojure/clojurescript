@@ -357,9 +357,12 @@
 		  `(~'-hash [this#] (hash-coll this#))
 		  'IEquiv
 		  `(~'-equiv [this# other#]
-         (and (identical? (.-constructor this#)
-                          (.-constructor other#))
-              (equiv-map this# other#)))
+        (if (and other#
+                 (identical? (.-constructor this#)
+                             (.-constructor other#))
+                 (equiv-map this# other#))
+          true
+          false))
 		  'IMeta
 		  `(~'-meta [this#] ~'__meta)
 		  'IWithMeta
