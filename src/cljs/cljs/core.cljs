@@ -241,8 +241,14 @@
   (-persistent! [tcoll]))
 
 (defprotocol ITransientAssociative
-  (-assoc! [tcoll key val])
+  (-assoc! [tcoll key val]))
+
+(defprotocol ITransientMap
   (-dissoc! [tcoll key]))
+
+(defprotocol ITransientVector
+  (-assoc-n! [tcoll n val])
+  (-pop! [tcoll]))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn ^boolean identical?
@@ -703,6 +709,22 @@ reduces them without incurring seq initialization"
 
 (defn js-delete [obj key]
   (js* "delete ~{obj}[~{key}]"))
+
+(defn- array-copy
+  ([from i to j len]
+     (loop [i i j j len len]
+       (if (zero? len)
+         to
+         (do (aset to j (aget from i))
+             (recur (inc i) (inc j) (dec len)))))))
+
+(defn- array-copy-downward
+  ([from i to j len]
+     (loop [i (+ i (dec len)) j (+ j (dec len)) len len]
+       (if (zero? len)
+         to
+         (do (aset to j (aget from i))
+             (recur (dec i) (dec j) (dec len)))))))
 
 ;;;;;;;;;;;;;;;; preds ;;;;;;;;;;;;;;;;;;
 
@@ -2165,6 +2187,27 @@ reduces them without incurring seq initialization"
      (assoc m k (apply f (get m k) args)))))
 
 
+;;; Transients
+
+(defn transient [coll]
+  (-as-transient coll))
+
+(defn persistent! [tcoll]
+  (-persistent! tcoll))
+
+(defn conj! [tcoll val]
+  (-conj! tcoll val))
+
+(defn assoc! [tcoll key val]
+  (-assoc! tcoll key val))
+
+(defn dissoc! [tcoll key]
+  (-dissoc! tcoll key))
+
+(defn pop! [tcoll]
+  (-pop! tcoll))
+
+
 ;;; Vector
 ;;; DEPRECATED
 ;;; in favor of PersistentVector
@@ -2261,37 +2304,50 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentVector
 
+(deftype VectorNode [edit arr])
+
+(defn- pv-fresh-node [edit]
+  (VectorNode. edit (make-array 32)))
+
+(defn- pv-aget [node idx]
+  (aget (.-arr node) idx))
+
+(defn- pv-aset [node idx val]
+  (aset (.-arr node) idx val))
+
+(defn- pv-clone-node [node]
+  (VectorNode. (.-edit node) (aclone (.-arr node))))
+
 (defn- tail-off [pv]
   (let [cnt (.-cnt pv)]
     (if (< cnt 32)
       0
-      (bit-shift-left (bit-shift-right (dec cnt) 5) 5))))
+      (bit-shift-left (bit-shift-right-zero-fill (dec cnt) 5) 5))))
 
-(defn- new-path [level node]
+(defn- new-path [edit level node]
   (loop [ll level
          ret node]
-         (if (zero? ll)
-           ret
-           (let [embed ret
-                 r (aclone cljs.core.PersistentVector/EMPTY_NODE)
-                 _ (aset r 0 embed)]
-             (recur (- ll 5) r)))))
+    (if (zero? ll)
+      ret
+      (let [embed ret
+            r (pv-fresh-node edit)
+            _ (pv-aset r 0 embed)]
+        (recur (- ll 5) r)))))
 
 (defn- push-tail [pv level parent tailnode]
-  (let [ret (aclone parent)
-        subidx (bit-and (bit-shift-right (dec (.-cnt pv)) level) 0x01f)]
+  (let [ret (pv-clone-node parent)
+        subidx (bit-and (bit-shift-right-zero-fill (dec (.-cnt pv)) level) 0x01f)]
     (if (== 5 level)
       (do
-        (aset ret subidx tailnode)
+        (pv-aset ret subidx tailnode)
         ret)
-      (if-let [child (aget parent subidx)]
-        (let [node-to-insert (push-tail pv (- level 5) child tailnode)
-              _ (aset ret subidx node-to-insert)]
+      (if-let [child (pv-aget parent subidx)]
+        (let [node-to-insert (push-tail pv (- level 5) child tailnode)]
+          (pv-aset ret subidx node-to-insert)
           ret)
-        (let [node-to-insert (new-path (- level 5) tailnode)
-              _ (aset ret subidx node-to-insert)]
+        (let [node-to-insert (new-path nil (- level 5) tailnode)]
+          (pv-aset ret subidx node-to-insert)
           ret)))))
-
 
 (defn- array-for [pv i]
   (if (and (<= 0 i) (< i (.-cnt pv)))
@@ -2300,34 +2356,36 @@ reduces them without incurring seq initialization"
       (loop [node (.-root pv)
              level (.-shift pv)]
         (if (pos? level)
-          (recur (aget node (bit-and (bit-shift-right i level) 0x01f))
+          (recur (pv-aget node (bit-and (bit-shift-right-zero-fill i level) 0x01f))
                  (- level 5))
-          node )))
+          (.-arr node))))
     (throw (js/Error. (str "No item " i " in vector of length " (.-cnt pv))))))
 
 (defn- do-assoc [pv level node i val]
-  (let [ret (aclone node)]
+  (let [ret (pv-clone-node node)]
     (if (zero? level)
       (do
-        (aset ret (bit-and i 0x01f) val)
+        (pv-aset ret (bit-and i 0x01f) val)
         ret)
-      (let [subidx (bit-and (bit-shift-right i level) 0x01f)
-            _ (aset ret subidx (do-assoc pv (- level 5) (aget node subidx) i val))]
+      (let [subidx (bit-and (bit-shift-right-zero-fill i level) 0x01f)]
+        (pv-aset ret subidx (do-assoc pv (- level 5) (pv-aget node subidx) i val))
         ret))))
 
 (defn- pop-tail [pv level node]
-  (let [subidx (bit-and (bit-shift-right (- (.-cnt pv) 2) level) 0x01f)]
+  (let [subidx (bit-and (bit-shift-right-zero-fill (- (.-cnt pv) 2) level) 0x01f)]
     (cond
-     (> level 5) (let [new-child (pop-tail pv (- level 5) (aget node subidx))]
+     (> level 5) (let [new-child (pop-tail pv (- level 5) (pv-aget node subidx))]
                    (if (and (nil? new-child) (zero? subidx))
                      nil
-                     (let [ret (aclone node)
-                           _ (aset ret subidx new-child)]
+                     (let [ret (pv-clone-node node)]
+                       (pv-aset ret subidx new-child)
                        ret)))
      (zero? subidx) nil
-     :else (let [ret (aclone node)
-                 _ (aset ret subidx nil)]
+     :else (let [ret (pv-clone-node node)]
+             (pv-aset ret subidx nil)
              ret))))
+
+(declare tv-editable-root tv-editable-tail TransientVector)
 
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
@@ -2354,8 +2412,8 @@ reduces them without incurring seq initialization"
                   nr (pop-tail coll shift root)
                   new-root (if (nil? nr) cljs.core.PersistentVector/EMPTY_NODE nr)
                   cnt-1 (dec cnt)]
-              (if (and (< 5 shift) (nil? (aget new-root 1)))
-                (PersistentVector. meta cnt-1 (- shift 5) (aget new-root 0) new-tail nil)
+              (if (and (< 5 shift) (nil? (pv-aget new-root 1)))
+                (PersistentVector. meta cnt-1 (- shift 5) (pv-aget new-root 0) new-tail nil)
                 (PersistentVector. meta cnt-1 shift new-root new-tail nil)))))
 
   ICollection
@@ -2364,14 +2422,14 @@ reduces them without incurring seq initialization"
       (let [new-tail (aclone tail)]
         (.push new-tail o)
         (PersistentVector. meta (inc cnt) shift root new-tail nil))
-      (let [root-overflow? (> (bit-shift-right cnt 5) (bit-shift-left 1 shift))
+      (let [root-overflow? (> (bit-shift-right-zero-fill cnt 5) (bit-shift-left 1 shift))
             new-shift (if root-overflow? (+ shift 5) shift)
             new-root (if root-overflow?
-                       (let [n-r (aclone cljs.core.PersistentVector/EMPTY_NODE)]
-                           (aset n-r 0 root)
-                           (aset n-r 1 (new-path shift tail))
+                       (let [n-r (pv-fresh-node nil)]
+                           (pv-aset n-r 0 root)
+                           (pv-aset n-r 1 (new-path nil shift (VectorNode. nil tail)))
                            n-r)
-                       (push-tail coll shift root tail))]
+                       (push-tail coll shift root (VectorNode. nil tail)))]
         (PersistentVector. meta (inc cnt) new-shift new-root (array o) nil))))
 
   IEmptyableCollection
@@ -2440,11 +2498,20 @@ reduces them without incurring seq initialization"
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
+    (-lookup coll k not-found))
 
-(set! cljs.core.PersistentVector/EMPTY_NODE (make-array 32))
+  IEditableCollection
+  (-as-transient [coll]
+    (TransientVector. cnt shift (tv-editable-root root) (tv-editable-tail tail))))
+
+(set! cljs.core.PersistentVector/EMPTY_NODE (pv-fresh-node nil))
 (set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
-(set! cljs.core.PersistentVector/fromArray (fn [xs] (into cljs.core.PersistentVector/EMPTY xs)))
+(set! cljs.core.PersistentVector/fromArray
+      (fn [xs]
+        (loop [xs (seq xs) out (transient cljs.core.PersistentVector/EMPTY)]
+          (if xs
+            (recur (next xs) (conj! out (first xs)))
+            (persistent! out)))))
 
 (defn vec [coll]
   (reduce conj cljs.core.PersistentVector/EMPTY coll))
@@ -2538,6 +2605,189 @@ reduces them without incurring seq initialization"
      (subvec v start (count v)))
   ([v start end]
      (Subvec. nil v start end nil)))
+
+(defn- tv-ensure-editable [edit node]
+  (if (identical? edit (.-edit node))
+    node
+    (VectorNode. edit (aclone (.-arr node)))))
+
+(defn- tv-editable-root [node]
+  (VectorNode. (js-obj) (aclone (.-arr node))))
+
+(defn- tv-editable-tail [tl]
+  (let [ret (make-array 32)]
+    (array-copy tl 0 ret 0 (.-length tl))
+    ret))
+
+(defn- tv-push-tail [tv level parent tail-node]
+  (let [ret    (tv-ensure-editable (.. tv -root -edit) parent)
+        subidx (bit-and (bit-shift-right-zero-fill (dec (.-cnt tv)) level) 0x01f)]
+    (pv-aset ret subidx
+             (if (== level 5)
+               tail-node
+               (let [child (pv-aget ret subidx)]
+                 (if (coercive-= child nil)
+                   (tv-push-tail tv (- level 5) child tail-node)
+                   (new-path (.. tv -root -edit) (- level 5) tail-node)))))
+    ret))
+
+(defn- tv-pop-tail [tv level node]
+  (let [node   (tv-ensure-editable (.. tv -root -edit) node)
+        subidx (bit-and (bit-shift-right-zero-fill (- (.-cnt tv) 2) level) 0x01f)]
+    (cond
+      (> level 5) (let [new-child (tv-pop-tail
+                                   tv (- level 5) (pv-aget node subidx))]
+                    (if (and (coercive-= new-child nil) (zero? subidx))
+                      nil
+                      (do (pv-aset node subidx new-child)
+                          node)))
+      (zero? subidx) nil
+      :else (do (pv-aset node subidx nil)
+                node))))
+
+(defn- editable-array-for [tv i]
+  (if (and (<= 0 i) (< i (.-cnt tv)))
+    (if (>= i (tail-off tv))
+      (.-tail tv)
+      (let [root (.-root tv)]
+        (loop [node  root
+               level (.-shift tv)]
+          (if (pos? level)
+            (recur (tv-ensure-editable
+                    (.-edit root)
+                    (pv-aget node
+                             (bit-and (bit-shift-right-zero-fill i level)
+                                      0x01f)))
+                   (- level 5))
+            (.-arr node)))))
+    (throw (js/Error.
+            (str "No item " i " in transient vector of length " (.-cnt tv))))))
+
+(deftype TransientVector [^:mutable cnt
+                          ^:mutable shift
+                          ^:mutable root
+                          ^:mutable tail]
+  ITransientCollection
+  (-conj! [tcoll o]
+    (if (.-edit root)
+      (if (< (- cnt (tail-off tcoll)) 32)
+        (do (aset tail (bit-and cnt 0x01f) o)
+            (set! cnt (inc cnt))
+            tcoll)
+        (let [tail-node (VectorNode. (.-edit root) tail)
+              new-tail  (make-array 32)]
+          (aset new-tail 0 o)
+          (set! tail new-tail)
+          (if (> (bit-shift-right-zero-fill cnt 5)
+                 (bit-shift-left 1 shift))
+            (let [new-root-array (make-array 32)
+                  new-shift      (+ shift 5)]
+              (aset new-root-array 0 root)
+              (aset new-root-array 1 (new-path (.-edit root) shift tail-node))
+              (set! root  (VectorNode. (.-edit root) new-root-array))
+              (set! shift new-shift)
+              (set! cnt   (inc cnt))
+              tcoll)
+            (let [new-root (tv-push-tail tcoll shift root tail-node)]
+              (set! root new-root)
+              (set! cnt  (inc cnt))
+              tcoll))))
+      (throw (js/Error. "conj! after persistent!"))))
+
+  (-persistent! [tcoll]
+    (if (.-edit root)
+      (do (set! (.-edit root) nil)
+          (let [len (- cnt (tail-off tcoll))
+                trimmed-tail (make-array len)]
+            (array-copy tail 0 trimmed-tail 0 len)
+            (PersistentVector. nil cnt shift root trimmed-tail nil)))
+      (throw (js/Error. "persistent! called twice"))))
+
+  ITransientAssociative
+  (-assoc! [tcoll key val] (-assoc-n! tcoll key val))
+
+  ITransientVector
+  (-assoc-n! [tcoll n val]
+    (if (.-edit root)
+      (cond
+        (and (<= 0 n) (< n cnt))
+        (if (<= (tail-off tcoll) n)
+          (do (aset tail (bit-and n 0x01f) val)
+              tcoll)
+          (let [new-root
+                ((fn go [level node]
+                   (let [node (tv-ensure-editable (.-edit root) node)]
+                     (if (zero? level)
+                       (do (pv-aset node (bit-and n 0x01f) val)
+                           node)
+                       (let [subidx (bit-and (bit-shift-right-zero-fill n level)
+                                             0x01f)]
+                         (pv-aset node subidx
+                                  (go (- level 5) (pv-aget node subidx)))
+                         node))))
+                 shift root)]
+            (set! root new-root)
+            tcoll))
+        (== n cnt) (-conj! tcoll val)
+        :else
+        (throw
+         (js/Error.
+          (str "Index " n " out of bounds for TransientVector of length" cnt))))
+      (throw (js/Error. "assoc! after persistent!"))))
+
+  (-pop! [tcoll]
+    (if (.-edit root)
+      (cond
+        (zero? cnt) (throw (js/Error. "Can't pop empty vector"))
+        (== 1 cnt)                       (do (set! cnt 0) tcoll)
+        (pos? (bit-and (dec cnt) 0x01f)) (do (set! cnt (dec cnt)) tcoll)
+        :else
+        (let [new-tail (editable-array-for tcoll (- cnt 2))
+              new-root (let [nr (tv-pop-tail tcoll shift root)]
+                         (if (coercive-not= nr nil)
+                           nr
+                           (VectorNode. (.-edit root) (make-array 32))))]
+          (if (and (< 5 shift) (coercive-= (pv-aget new-root 1) nil))
+            (let [new-root (tv-ensure-editable (.-edit root) (pv-aget new-root 0))]
+              (set! root  new-root)
+              (set! shift (- shift 5))
+              (set! cnt   (dec cnt))
+              (set! tail  new-tail)
+              tcoll)
+            (do (set! root new-root)
+                (set! cnt  (dec cnt))
+                (set! tail new-tail)
+                tcoll))))
+      (throw (js/Error. "pop! after persistent!"))))
+
+  ICounted
+  (-count [coll]
+    (if (.-edit root)
+      cnt
+      (throw (js/Error. "count after persistent!"))))
+
+  IIndexed
+  (-nth [coll n]
+    (if (.-edit root)
+      (aget (array-for coll n) (bit-and n 0x01f))
+      (throw (js/Error. "nth after persistent!"))))
+
+  (-nth [coll n not-found]
+    (if (and (<= 0 n) (< n cnt))
+      (-nth coll n)
+      not-found))
+
+  ILookup
+  (-lookup [coll k] (-nth coll k nil))
+
+  (-lookup [coll k not-found] (-nth coll k not-found))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found)))
 
 ;;; PersistentQueue ;;;
 
@@ -2871,23 +3121,6 @@ reduces them without incurring seq initialization"
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
 
-;;; Transients
-
-(defn transient [coll]
-  (-as-transient coll))
-
-(defn persistent! [tcoll]
-  (-persistent! tcoll))
-
-(defn conj! [tcoll val]
-  (-conj! tcoll val))
-
-(defn assoc! [tcoll key val]
-  (-assoc! tcoll key val))
-
-(defn dissoc! [tcoll key]
-  (-dissoc! tcoll key))
-
 ;;; PersistentHashMap
 
 (declare create-inode-seq create-array-node-seq reset! create-node atom deref)
@@ -2903,22 +3136,6 @@ reduces them without incurring seq initialization"
      (doto (aclone arr)
        (aset i a)
        (aset j b))))
-
-(defn- array-copy
-  ([from i to j len]
-     (loop [i i j j len len]
-       (if (zero? len)
-         to
-         (do (aset to j (aget from i))
-             (recur (inc i) (inc j) (dec len)))))))
-
-(defn- array-copy-downward
-  ([from i to j len]
-     (loop [i (+ i (dec len)) j (+ j (dec len)) len len]
-       (if (zero? len)
-         to
-         (do (aset to j (aget from i))
-             (recur (dec i) (dec j) (dec len)))))))
 
 (defn- remove-pair [arr i]
   (let [new-arr (make-array (- (.-length arr) 2))]
@@ -3675,6 +3892,7 @@ reduces them without incurring seq initialization"
   ITransientAssociative
   (-assoc! [tcoll key val] (.assoc! tcoll key val))
 
+  ITransientMap
   (-dissoc! [tcoll key] (.without! tcoll key)))
 
 ;;; PersistentTreeMap

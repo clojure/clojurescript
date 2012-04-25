@@ -901,6 +901,7 @@
   (assert (= (count (range 0 0 0)) 0))
   (assert (= (take 3 (range 1 0 0)) (list 1 1 1)))
   (assert (= (take 3 (range 3 1 0)) (list 3 3 3)))
+
   ;; PersistentVector
   (let [pv (vec (range 97))]
     (assert (= (nth pv 96) 96))
@@ -939,6 +940,24 @@
     (assert (= 27 (reduce + s)))
     (assert (= s (vec s))) ; pour into plain vector
     (let [m {:x 1}] (assert (= m (meta (with-meta s m))))))
+
+  ;; TransientVector
+  (let [v1 (vec (range 15 48))
+        v2 (vec (range 40 57))
+        v1 (persistent! (assoc! (conj! (pop! (transient v1)) :foo) 0 :quux))
+        v2 (persistent! (assoc! (conj! (transient v2) :bar) 0 :quux))
+        v  (into v1 v2)]
+    (assert (= v (vec (concat [:quux] (range 16 47) [:foo]
+                              [:quux] (range 41 57) [:bar])))))
+  (loop [v  (transient [])
+         xs (range 100)]
+    (if-let [x (first xs)]
+      (recur
+       (condp #(%1 (mod %2 3)) x
+         #{0 2} (conj! v x)
+         #{1}   (assoc! v (count v) x))
+       (next xs))
+      (assert (= (vec (range 100)) (persistent! v)))))
 
   ;; PersistentHashMap & TransientHashMap
   (loop [m1 cljs.core.PersistentHashMap/EMPTY
