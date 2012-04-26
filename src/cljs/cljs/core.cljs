@@ -1634,6 +1634,31 @@ reduces them without incurring seq initialization"
   ([a b c d & more]
      (cons a (cons b (cons c (cons d (spread more)))))))
 
+
+;;; Transients
+
+(defn transient [coll]
+  (-as-transient coll))
+
+(defn persistent! [tcoll]
+  (-persistent! tcoll))
+
+(defn conj! [tcoll val]
+  (-conj! tcoll val))
+
+(defn assoc! [tcoll key val]
+  (-assoc! tcoll key val))
+
+(defn dissoc! [tcoll key]
+  (-dissoc! tcoll key))
+
+(defn pop! [tcoll]
+  (-pop! tcoll))
+
+(defn disj! [tcoll val]
+  (-disjoin! tcoll val))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
 
 (defn apply
@@ -2127,7 +2152,9 @@ reduces them without incurring seq initialization"
   "Returns a new coll consisting of to-coll with all of the items of
   from-coll conjoined."
   [to from]
-  (reduce -conj to from))
+  (if (satisfies? IEditableCollection to)
+    (persistent! (reduce -conj! (transient to) from))
+    (reduce -conj to from)))
 
 (defn partition
   "Returns a lazy sequence of lists of n items each, at offsets step
@@ -2189,30 +2216,6 @@ reduces them without incurring seq initialization"
    (if ks
      (assoc m k (apply update-in (get m k) ks f args))
      (assoc m k (apply f (get m k) args)))))
-
-
-;;; Transients
-
-(defn transient [coll]
-  (-as-transient coll))
-
-(defn persistent! [tcoll]
-  (-persistent! tcoll))
-
-(defn conj! [tcoll val]
-  (-conj! tcoll val))
-
-(defn assoc! [tcoll key val]
-  (-assoc! tcoll key val))
-
-(defn dissoc! [tcoll key]
-  (-dissoc! tcoll key))
-
-(defn pop! [tcoll]
-  (-pop! tcoll))
-
-(defn disj! [tcoll val]
-  (-disjoin! tcoll val))
 
 
 ;;; Vector
