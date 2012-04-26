@@ -250,6 +250,9 @@
   (-assoc-n! [tcoll n val])
   (-pop! [tcoll]))
 
+(defprotocol ITransientSet
+  (-disjoin! [tcoll v]))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn ^boolean identical?
   "Tests if 2 arguments are the same object"
@@ -2206,6 +2209,9 @@ reduces them without incurring seq initialization"
 
 (defn pop! [tcoll]
   (-pop! tcoll))
+
+(defn disj! [tcoll val]
+  (-disjoin! tcoll val))
 
 
 ;;; Vector
@@ -4593,25 +4599,27 @@ reduces them without incurring seq initialization"
            (next keys)))
         ret)))
 
-;;; Set
+;;; PersistentHashSet
 
-(deftype Set [meta hash-map ^:mutable __hash]
+(declare TransientHashSet)
+
+(deftype PersistentHashSet [meta hash-map ^:mutable __hash]
   Object
   (toString [this]
     (pr-str this))
   
   IWithMeta
-  (-with-meta [coll meta] (Set. meta hash-map __hash))
+  (-with-meta [coll meta] (PersistentHashSet. meta hash-map __hash))
 
   IMeta
   (-meta [coll] meta)
 
   ICollection
   (-conj [coll o]
-    (Set. meta (assoc hash-map o nil) nil))
+    (PersistentHashSet. meta (assoc hash-map o nil) nil))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.Set/EMPTY meta))
+  (-empty [coll] (with-meta cljs.core.PersistentHashSet/EMPTY meta))
 
   IEquiv
   (-equiv [coll other]
@@ -4640,15 +4648,55 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (Set. meta (dissoc hash-map v) nil))
+    (PersistentHashSet. meta (dissoc hash-map v) nil))
 
   IFn
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
+    (-lookup coll k not-found))
 
-(set! cljs.core.Set/EMPTY (Set. nil (hash-map) 0))
+  IEditableCollection
+  (-as-transient [coll] (TransientHashSet. (transient hash-map))))
+
+(set! cljs.core.PersistentHashSet/EMPTY (PersistentHashSet. nil (hash-map) 0))
+
+(deftype TransientHashSet [^:mutable transient-map]
+  ITransientCollection
+  (-conj! [tcoll o]
+    (set! transient-map (assoc! transient-map o nil))
+    tcoll)
+
+  (-persistent! [tcoll]
+    (PersistentHashSet. nil (persistent! transient-map) nil))
+
+  ITransientSet
+  (-disjoin! [tcoll v]
+    (set! transient-map (dissoc! transient-map v))
+    tcoll)
+
+  ICounted
+  (-count [tcoll] (count transient-map))
+
+  ILookup
+  (-lookup [tcoll v]
+    (-lookup tcoll v nil))
+
+  (-lookup [tcoll v not-found]
+    (if (identical? (-lookup transient-map v lookup-sentinel) lookup-sentinel)
+      not-found
+      v))
+
+  IFn
+  (-invoke [tcoll k]
+    (if (identical? (-lookup transient-map k lookup-sentinel) lookup-sentinel)
+      nil
+      k))
+
+  (-invoke [tcoll k not-found]
+    (if (identical? (-lookup transient-map k lookup-sentinel) lookup-sentinel)
+      not-found
+      k)))
 
 (deftype PersistentTreeSet [meta tree-map ^:mutable __hash]
   Object
@@ -4724,10 +4772,10 @@ reduces them without incurring seq initialization"
   "Returns a set of the distinct elements of coll."
   [coll]
   (loop [in (seq coll)
-         out cljs.core.Set/EMPTY]
-    (if-not (empty? in)
-      (recur (rest in) (conj out (first in)))
-      out)))
+         out (transient cljs.core.PersistentHashSet/EMPTY)]
+    (if (seq in)
+      (recur (next in) (conj! out (first in)))
+      (persistent! out))))
 
 (defn sorted-set
   "Returns a new sorted set with supplied keys."
@@ -5298,7 +5346,7 @@ reduces them without incurring seq initialization"
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
       (pr-sequential pr-pair "{" ", " "}" opts coll)))
 
-  Set
+  PersistentHashSet
   (-pr-seq [coll opts] (pr-sequential pr-seq "#{" " " "}" opts coll))
 
   PersistentTreeSet

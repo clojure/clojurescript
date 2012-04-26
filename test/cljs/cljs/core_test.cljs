@@ -807,9 +807,9 @@
   (assert (true? (isa? ::square ::shape)))
 
   (derive cljs.core.ObjMap ::collection)
-  (derive cljs.core.Set ::collection)
+  (derive cljs.core.PersistentHashSet ::collection)
   (assert (true? (isa? cljs.core.ObjMap ::collection)))
-  (assert (true? (isa? cljs.core.Set ::collection)))
+  (assert (true? (isa? cljs.core.PersistentHashSet ::collection)))
   (assert (false? (isa? cljs.core.IndexedSeq ::collection)))
   ;; ?? (isa? String Object)
   (assert (true? (isa? [::square ::rect] [::shape ::shape])))
@@ -1060,6 +1060,23 @@
       (assert (= (get m fixed-hash-bar) 2))
       (assert (not (contains? m fixed-hash-foo)))
       (assert (= (count m) 98))))
+
+  ;; TransientHashSet
+  (loop [s (transient #{})
+         i 0]
+    (if (< i 100)
+      (recur (conj! s i) (inc i))
+      (loop [s s i 0]
+        (if (< i 100)
+          (if (zero? (mod i 3))
+            (recur (disj! s i) (inc i))
+            (recur s (inc i)))
+          (let [s (persistent! s)]
+            (assert (= s (loop [s #{} xs (remove #(zero? (mod % 3)) (range 100))]
+                           (if-let [x (first xs)]
+                             (recur (conj s x) (next xs))
+                             s))))
+            (assert (= s (set (remove #(zero? (mod % 3)) (range 100))))))))))
 
   ;; PersistentTreeMap
   (let [m1 (sorted-map)
