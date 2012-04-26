@@ -1115,7 +1115,8 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean ==
   "Returns non-nil if nums all have the equivalent
-  value (type-independent), otherwise false"
+  value, otherwise false. Behavior on non nums is
+  undefined."
   ([x] true)
   ([x y] (-equiv x y))
   ([x y & more]
