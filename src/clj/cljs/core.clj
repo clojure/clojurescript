@@ -19,7 +19,7 @@
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
-                            bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set 
+                            bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
                             bit-test bit-shift-left bit-shift-right bit-xor]))
 
 (alias 'core 'clojure.core)
@@ -277,31 +277,28 @@
                                       sigs))
                                (cons `(set! ~(symbol (str prototype-prefix pprefix)) true)
                                      (mapcat (fn [[f & meths]]
-                                               (let [ifn? (= psym 'cljs.core.IFn)
-                                                     pf (if ifn?
-                                                          (str prototype-prefix 'call)
-                                                          (str prototype-prefix pprefix f))
-                                                     adapt-params (fn [[[targ & args :as sig] & body]]
-                                                                    (let [tsym (gensym "tsym")]
-                                                                      `(~(with-meta (vec (cons tsym args)) (meta sig))
-                                                                        (this-as ~tsym
-                                                                                 (let [~targ ~tsym]
-                                                                                   ~@body)))))
-                                                     meths (if ifn?
-                                                             (map adapt-params meths)
-                                                             meths)]
-                                                 (cond 
-                                                  ifn?
-                                                  [`(set! ~(symbol pf) (fn ~@meths))]
-                                                  
-                                                  (vector? (first meths))
-                                                  [`(set! ~(symbol (str pf "$arity$" (count (first meths)))) (fn ~@meths))]
-
-                                                  :else
-                                                  (map (fn [[sig & body :as meth]]
-                                                         `(set! ~(symbol (str pf "$arity$" (count sig)))
-                                                                (fn ~meth)))
-                                                       meths))))
+                                               (if (= psym 'cljs.core.IFn)
+                                                 (let [adapt-params (fn [[[targ & args :as sig] & body]]
+                                                                      (let [tsym (gensym "tsym")]
+                                                                        `(~(with-meta (vec (cons tsym args)) (meta sig))
+                                                                          (this-as ~tsym
+                                                                                   (let [~targ ~tsym]
+                                                                                     ~@body)))))
+                                                       meths (map adapt-params meths)
+                                                       tsym (gensym "tsym")
+                                                       argsym (gensym "args")]
+                                                    [`(set! ~(symbol (str prototype-prefix 'call)) (fn ~@meths))
+                                                     `(set! ~(symbol (str prototype-prefix 'apply))
+                                                            (fn ~(with-meta [tsym argsym] (meta (first meths)))
+                                                              (.apply (.-call ~tsym) ~tsym
+                                                                      (.concat (array ~tsym) (aclone ~argsym)))))])
+                                                 (let [pf (str prototype-prefix pprefix f)]
+                                                   (if (vector? (first meths))
+                                                     [`(set! ~(symbol (str pf "$arity$" (count (first meths)))) (fn ~@meths))]
+                                                     (map (fn [[sig & body :as meth]]
+                                                            `(set! ~(symbol (str pf "$arity$" (count sig)))
+                                                                   (fn ~meth)))
+                                                          meths)))))
                                              sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 

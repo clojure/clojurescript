@@ -175,6 +175,11 @@
   (assert (= 2 ({1 1 2 2} 2)))
   (assert (= 2 (#{1 2 3} 2)))
 
+  (assert (= 1 (apply :a '[{:a 1 a 2}])))
+  (assert (= 1 (apply 'a '[{a 1 :b 2}])))
+  (assert (= 1 (apply {:a 1} [:a])))
+  (assert (= 2 (apply {:a 1} [:b 2])))
+
   (assert (= "baz" (name 'foo/bar/baz)))
   (assert (= "foo/bar" (namespace 'foo/bar/baz)))
   (assert (= "baz" (name :foo/bar/baz)))
