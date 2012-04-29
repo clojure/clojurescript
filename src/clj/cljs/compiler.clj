@@ -512,6 +512,7 @@
                (emits name ".cljs$lang$applyTo = ")
                (emit-apply-to (assoc f :name name))
                (emitln ";")
+               (emitln name ".cljs$lang$arity$variadic = " delegate-name ";")
                (emitln "return " name ";")
                (emitln "})()"))))
 
@@ -574,7 +575,9 @@
           (when has-name?
             (doseq [[n meth] ms]
               (let [c (count (:params meth))]
-               (emitln name ".cljs$lang$arity$" c " = " n ";"))))
+                (if (:variadic meth)
+                  (emitln name ".cljs$lang$arity$variadic = " n ".cljs$lang$arity$variadic;")
+                  (emitln name ".cljs$lang$arity$" c " = " n ";")))))
           (emitln "return " name ";")
           (emitln "})()")))
       (when loop-locals
