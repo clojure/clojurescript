@@ -693,14 +693,8 @@ reduces them without incurring seq initialization"
 (defn js-obj
   ([]
      (js* "{}"))
-  ([k1 v1]
-     (js* "{~{}:~{}}" k1 v1))
-  ([k1 v1 k2 v2]
-     (js* "{~{}:~{},~{}:~{}}" k1 v1 k2 v2))
-  ([k1 v1 k2 v2 k3 v3]
-     (js* "{~{}:~{},~{}:~{},~{}:~{}}" k1 v1 k2 v2 k3 v3))
-  ([k1 v1 k2 v2 k3 v3 & more]
-     (apply gobject/create k1 v1 k2 v2 k3 v3 more)))
+  ([& keyvals]
+     (apply gobject/create keyvals)))
 
 (defn js-keys [obj]
   (let [keys (array)]
