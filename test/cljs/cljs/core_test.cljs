@@ -175,6 +175,11 @@
   (assert (= 2 ({1 1 2 2} 2)))
   (assert (= 2 (#{1 2 3} 2)))
 
+  (assert (= 1 (apply :a '[{:a 1 a 2}])))
+  (assert (= 1 (apply 'a '[{a 1 :b 2}])))
+  (assert (= 1 (apply {:a 1} [:a])))
+  (assert (= 2 (apply {:a 1} [:b 2])))
+
   (assert (= "baz" (name 'foo/bar/baz)))
   (assert (= "foo/bar" (namespace 'foo/bar/baz)))
   (assert (= "baz" (name :foo/bar/baz)))
@@ -807,9 +812,9 @@
   (assert (true? (isa? ::square ::shape)))
 
   (derive cljs.core.ObjMap ::collection)
-  (derive cljs.core.Set ::collection)
+  (derive cljs.core.PersistentHashSet ::collection)
   (assert (true? (isa? cljs.core.ObjMap ::collection)))
-  (assert (true? (isa? cljs.core.Set ::collection)))
+  (assert (true? (isa? cljs.core.PersistentHashSet ::collection)))
   (assert (false? (isa? cljs.core.IndexedSeq ::collection)))
   ;; ?? (isa? String Object)
   (assert (true? (isa? [::square ::rect] [::shape ::shape])))
@@ -901,6 +906,7 @@
   (assert (= (count (range 0 0 0)) 0))
   (assert (= (take 3 (range 1 0 0)) (list 1 1 1)))
   (assert (= (take 3 (range 3 1 0)) (list 3 3 3)))
+
   ;; PersistentVector
   (let [pv (vec (range 97))]
     (assert (= (nth pv 96) 96))
@@ -939,6 +945,24 @@
     (assert (= 27 (reduce + s)))
     (assert (= s (vec s))) ; pour into plain vector
     (let [m {:x 1}] (assert (= m (meta (with-meta s m))))))
+
+  ;; TransientVector
+  (let [v1 (vec (range 15 48))
+        v2 (vec (range 40 57))
+        v1 (persistent! (assoc! (conj! (pop! (transient v1)) :foo) 0 :quux))
+        v2 (persistent! (assoc! (conj! (transient v2) :bar) 0 :quux))
+        v  (into v1 v2)]
+    (assert (= v (vec (concat [:quux] (range 16 47) [:foo]
+                              [:quux] (range 41 57) [:bar])))))
+  (loop [v  (transient [])
+         xs (range 100)]
+    (if-let [x (first xs)]
+      (recur
+       (condp #(%1 (mod %2 3)) x
+         #{0 2} (conj! v x)
+         #{1}   (assoc! v (count v) x))
+       (next xs))
+      (assert (= (vec (range 100)) (persistent! v)))))
 
   ;; PersistentHashMap & TransientHashMap
   (loop [m1 cljs.core.PersistentHashMap/EMPTY
@@ -1042,6 +1066,23 @@
       (assert (not (contains? m fixed-hash-foo)))
       (assert (= (count m) 98))))
 
+  ;; TransientHashSet
+  (loop [s (transient #{})
+         i 0]
+    (if (< i 100)
+      (recur (conj! s i) (inc i))
+      (loop [s s i 0]
+        (if (< i 100)
+          (if (zero? (mod i 3))
+            (recur (disj! s i) (inc i))
+            (recur s (inc i)))
+          (let [s (persistent! s)]
+            (assert (= s (loop [s #{} xs (remove #(zero? (mod % 3)) (range 100))]
+                           (if-let [x (first xs)]
+                             (recur (conj s x) (next xs))
+                             s))))
+            (assert (= s (set (remove #(zero? (mod % 3)) (range 100))))))))))
+
   ;; PersistentTreeMap
   (let [m1 (sorted-map)
         c2 (comp - compare)
@@ -1121,6 +1162,8 @@
   (assert (= (:firstname fred) "Fred"))
   (def fred-too (Person. "Fred" "Mertz"))
   (assert (= fred fred-too))
+  (assert (false? (= fred nil)))
+  (assert (false? (= nil fred)))
 
   (def ethel (Person. "Ethel" "Mertz" {:married true} {:husband :fred}))
   (assert (= (meta ethel) {:married true}))
