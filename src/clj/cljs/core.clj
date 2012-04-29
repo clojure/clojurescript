@@ -42,6 +42,12 @@
   or
   when when-first when-let when-not while])
 
+(defmacro str [& xs]
+  (let [strs (->> (repeat (count xs) "cljs.core.str(~{})")
+                  (interpose ",")
+                  (apply core/str))]
+   (concat (list 'js* (core/str "[" strs "].join('')")) xs)))
+
 (defn bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
 
