@@ -1484,24 +1484,18 @@
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
            output-files)))))
 
-(defn- expr-obj? [obj]
-  (contains? obj :op))
-
 (defmulti children
   "Returns the children [exprs..] of an expression object. This will
    facilitate code walking without knowing the details of the op set."
   :op)
 
 (defmethod children :if [ast]
-  {:post [(every? expr-obj? %)]}
   [(:test ast) (:then ast) (:else ast)])
 
 (defmethod children :throw [ast]
-  {:post [(every? expr-obj? %)]}
   [(:throw ast)])
 
 (defn- block-children [block]
-  {:post [(every? expr-obj? %)]}
   (let [statements (when-let [statements (:statements block)]
                      (vec statements))
         ret (when-let [ret (:ret block)]
@@ -1511,77 +1505,61 @@
       children)))
 
 (defmethod children :try* [ast]
-  {:post [(every? expr-obj? %)]}
   (vec (mapcat block-children
                [(:try ast)
                 (:catch ast)
                 (:finally ast)])))
 
 (defmethod children :def [ast]
-  {:post [(every? expr-obj? %)]}
   (when-let [init (:init ast)]
     [init]))
 
 (defmethod children :fn [ast]
-  {:post [(every? expr-obj? %)]}
   (vec (mapcat block-children (:methods ast))))
 
 (defmethod children :do [ast]
-  {:post [(every? expr-obj? %)]}
   (block-children ast))
 
 (defmethod children :let [ast]
-  {:post [(every? expr-obj? %)]}
   (let [inits (vec (map :init (:bindings ast)))]
     (into inits
           (block-children ast))))
 
 (defmethod children :recur [ast]
-  {:post [(every? expr-obj? %)]}
   (:exprs ast))
 
 (defmethod children :new [ast]
-  {:post [(every? expr-obj? %)]}
   (into [(:ctor ast)]
         (:args ast)))
 
 (defmethod children :set! [ast]
-  {:post [(every? expr-obj? %)]}
   [(:target ast)
    (:val ast)])
 
 (defmethod children :dot [ast]
-  {:post [(every? expr-obj? %)]}
   (into [(:target ast)]
         (:args ast)))
 
 (defmethod children :js [ast]
-  {:post [(every? expr-obj? %)]}
   (vec (:args ast)))
 
 (defmethod children :invoke [ast]
-  {:post [(every? expr-obj? %)]}
   (into [(:f ast)]
         (:args ast)))
 
 (defmethod children :map [ast]
-  {:post [(every? expr-obj? %)]}
   (vec (interleave (:keys ast) (:vals ast))))
   
 (defmethod children :vector [ast]
-  {:post [(every? expr-obj? %)]}
   (:items ast))
 
 (defmethod children :set [ast]
-  {:post [(every? expr-obj? %)]}
   (:items ast))
 
 (defmethod children :meta [ast]
-  {:post [(every? expr-obj? %)]}
   [(:meta ast) (:expr ast)])
 
 (defmethod children :default [ast]
-  {:pre [(expr-obj? ast)]}
   nil)
 
 (comment
