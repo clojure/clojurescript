@@ -428,9 +428,13 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [_ f]
-    (ci-reduce a f (aget a i) (inc i)))
+    (if (counted? a)
+      (ci-reduce a f (aget a i) (inc i))
+      (ci-reduce this f (aget a i) (inc i))))
   (-reduce [_ f start]
-    (ci-reduce a f start i))
+    (if (counted? a)
+      (ci-reduce a f start i)
+      (ci-reduce this f start i)))
 
   IHash
   (-hash [coll] (hash-coll coll)))
