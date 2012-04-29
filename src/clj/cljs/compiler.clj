@@ -901,7 +901,7 @@
             block))))
 
 (defmethod parse 'fn*
-  [op env [_ & args] name]
+  [op env [_ & args :as form] name]
   (let [[name meths] (if (symbol? (first args))
                        [(first args) (next args)]
                        [name (seq args)])
@@ -915,14 +915,14 @@
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))]
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :name mname :methods methods :variadic variadic
+    {:env env :op :fn :form form :name mname :methods methods :variadic variadic
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity}))
 
 (defmethod parse 'do
-  [op env [_ & exprs] _]
-  (merge {:env env :op :do} (analyze-block env exprs)))
+  [op env [_ & exprs :as form] _]
+  (merge {:env env :op :do :form form} (analyze-block env exprs)))
 
 (defn analyze-let
   [encl-env [_ bindings & exprs :as form] is-loop]
@@ -965,13 +965,13 @@
   (analyze-let encl-env form true))
 
 (defmethod parse 'recur
-  [op env [_ & exprs] _]
+  [op env [_ & exprs :as form] _]
   (let [context (:context env)
         frame (first *recur-frames*)]
     (assert frame "Can't recur here")
     (assert (= (count exprs) (count (:names frame))) "recur argument count mismatch")
     (reset! (:flag frame) true)
-    (assoc {:env env :op :recur}
+    (assoc {:env env :op :recur :form form}
       :frame frame
       :exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs))))))
 
@@ -980,15 +980,15 @@
   {:op :constant :env env :form x})
 
 (defmethod parse 'new
-  [_ env [_ ctor & args] _]
+  [_ env [_ ctor & args :as form] _]
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          ctorexpr (analyze enve ctor)
          argexprs (vec (map #(analyze enve %) args))]
-     {:env env :op :new :ctor ctorexpr :args argexprs})))
+     {:env env :op :new :form form :ctor ctorexpr :args argexprs})))
 
 (defmethod parse 'set!
-  [_ env [_ target val alt] _]
+  [_ env [_ target val alt :as form] _]
   (let [[target val] (if alt
                        ;; (set! o -prop val)
                        [`(. ~target ~val) alt]
@@ -1019,10 +1019,10 @@
        (assert targetexpr "set! target must be a field or a symbol naming a var")
        (cond
         (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
-        :else {:env env :op :set! :target targetexpr :val valexpr})))))
+        :else {:env env :op :set! :form form :target targetexpr :val valexpr})))))
 
 (defmethod parse 'ns
-  [_ env [_ name & args] _]
+  [_ env [_ name & args :as form] _]
   (let [excludes
         (reduce (fn [s [k exclude xs]]
                   (if (= k :refer-clojure)
@@ -1062,11 +1062,11 @@
                                      (into {} (map (fn [[alias nsym]]
                                                      [alias (find-ns nsym)])
                                                    requires-macros)))))
-    {:env env :op :ns :name name :uses uses :requires requires
+    {:env env :op :ns :form form :name name :uses uses :requires requires
      :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
-  [_ env [_ tsym fields] _]
+  [_ env [_ tsym fields :as form] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1076,10 +1076,10 @@
                      (assoc :file *cljs-file*)
                      (assoc :line line))
                  m))))
-    {:env env :op :deftype* :t t :fields fields}))
+    {:env env :op :deftype* :as form :t t :fields fields}))
 
 (defmethod parse 'defrecord*
-  [_ env [_ tsym fields] _]
+  [_ env [_ tsym fields :as form] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1089,7 +1089,7 @@
                      (assoc :file *cljs-file*)
                      (assoc :line line))
                  m))))
-    {:env env :op :defrecord* :t t :fields fields}))
+    {:env env :op :defrecord* :form form :t t :fields fields}))
 
 ;; dot accessor code
 
@@ -1160,17 +1160,17 @@
   (throw (Error. (str "Unknown dot form of " (list* '. dot-form) " with classification " (classify-dot-form dot-form)))))
 
 (defmethod parse '.
-  [_ env [_ target & [field & member+]] _]
+  [_ env [_ target & [field & member+] :as form] _]
   (disallowing-recur
    (let [{:keys [dot-action target method field args]} (build-dot-form [target field member+])
          enve        (assoc env :context :expr)
          targetexpr  (analyze enve target)]
      (case dot-action
-           ::access {:env env :op :dot
+           ::access {:env env :op :dot :form form
                      :target targetexpr
                      :field field}
            ::call   (let [argexprs (map #(analyze enve %) args)]
-                      {:env env :op :dot
+                      {:env env :op :dot :form form
                        :target targetexpr
                        :method method
                        :args argexprs})))))
@@ -1197,11 +1197,11 @@
                        (let [end (.indexOf s "}" idx)
                              inner (:name (resolve-existing-var env (symbol (subs s (+ 2 idx) end))))]
                          (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
-      {:env env :op :js :code (apply str (interp jsform))
+      {:env env :op :js :form form :code (apply str (interp jsform))
        :tag (-> form meta :tag)})))
 
 (defn parse-invoke
-  [env [f & args]]
+  [env [f & args :as form]]
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          fexpr (analyze enve f)
@@ -1214,7 +1214,7 @@
                         (and variadic (< argc max-fixed-arity))))
            (warning env
              (str "WARNING: Wrong number of args (" argc ") passed to " name)))))
-     {:env env :op :invoke :f fexpr :args argexprs
+     {:env env :op :invoke :form form :f fexpr :args argexprs
       :tag (-> fexpr :info :tag)})))
 
 (defn analyze-symbol
