@@ -5005,11 +5005,10 @@ reduces them without incurring seq initialization"
   "Returns a map from distinct items in coll to the number of times
   they appear."
   [coll]
-  (reduce
-   (fn [counts x]
-     (assoc counts x (inc (get counts x 0))))
-   {}
-   coll))
+  (persistent!
+   (reduce (fn [counts x]
+             (assoc! counts x (inc (get counts x 0))))
+           (transient {}) coll)))
 
 (defn reductions
   "Returns a lazy seq of the intermediate values of the reduction (as
