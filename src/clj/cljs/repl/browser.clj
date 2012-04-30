@@ -179,11 +179,27 @@
          "</body></html>")
     "text/html"))
 
+(defn send-static [opts conn {path :path :as request}]
+  (if (and (:static-dir opts)
+           (not= "/favicon.ico" path))
+    (try
+      (let [path     (if (= "/" path) "/index.html" path)
+            contents (slurp (str (:static-dir opts) path))]
+        (send-and-close conn 200 contents
+                        (condp #(.endsWith %2 %1) path
+                          ".js" "text/javascript"
+                          ".html" "text/html"
+                          "text/plain")))
+      (catch java.io.FileNotFoundException e
+        (send-404 conn path)))
+    (send-404 conn path)))
+
 (defn handle-get [opts conn request]
   (let [path (:path request)]
-    (if (.startsWith path "/repl")
-      (send-repl-client-page opts conn request)
-      (send-404 conn (:path request)))))
+    (cond
+     (.startsWith path "/repl") (send-repl-client-page opts conn request)
+     (:serve-static opts) (send-static opts conn request)
+     :else (send-404 conn (:path request)))))
 
 (declare browser-eval)
 
@@ -318,7 +334,12 @@
     file))
 
 (defn repl-env [& {:as opts}]
-  (let [opts (merge {:port 9000 :optimizations :simple :working-dir ".repl"} opts)]
+  (let [opts (merge {:port          9000
+                     :optimizations :simple
+                     :working-dir   ".repl"
+                     :serve-static  true
+                     :static-dir    "."}
+                    opts)]
     (do (swap! server-state
                (fn [old] (assoc old :client-js
                                (future (create-client-js-file
