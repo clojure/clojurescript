@@ -58,7 +58,7 @@ forms:
     
 ### Starting the REPL and connecting to the browser
 
-Start the REPL using the browser as the evaluator:
+Start the REPL using the browser as the evaluator (do it in "samples/repl"):
 
 ```clj
 (require '[cljs.repl :as repl])
@@ -67,7 +67,7 @@ Start the REPL using the browser as the evaluator:
 (repl/repl env)
 ```
 
-Open index.html in a browser. When this page is loaded it will connect
+Open http://localhost:9000/ in a browser. When this page is loaded it will connect
 to the REPL.
 
 ### Try it out
