@@ -3886,7 +3886,7 @@ reduces them without incurring seq initialization"
         not-found)
       (if (nil? root)
         not-found
-        (nth (.inode-find root 0 (hash k) k not-found) 1))))
+        (nth (.inode-find root 0 (hash k) k (array nil not-found)) 1))))
 
   ITransientCollection
   (-conj! [tcoll val] (.conj! tcoll val))
