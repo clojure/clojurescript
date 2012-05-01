@@ -1061,7 +1061,9 @@
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
-  (let [excludes
+  (let [docstring (if (string? (first args)) (first args) nil)
+        args      (if docstring (next args) args)
+        excludes
         (reduce (fn [s [k exclude xs]]
                   (if (= k :refer-clojure)
                     (do
