@@ -2937,16 +2937,27 @@ reduces them without incurring seq initialization"
      (> a b) 1
      :else 0)))
 
+(defn- obj-map->hash-map [m k v]
+  (let [ks  (.-keys m)
+        len (.-length ks)
+        so  (.-strobj m)
+        out (with-meta cljs.core.PersistentHashMap/EMPTY (meta m))]
+    (loop [i   0
+           out (transient out)]
+      (if (< i len)
+        (let [k (aget ks i)]
+          (recur (inc i) (assoc! out k (aget so k))))
+        (persistent! (assoc! out k v))))))
+
 ;;; ObjMap
-;;; DEPRECATED
-;;; in favor of PersistentHashMap
-(deftype ObjMap [meta keys strobj ^:mutable __hash]
+
+(deftype ObjMap [meta keys strobj update-count ^:mutable __hash]
   Object
   (toString [this]
     (pr-str this))
   
   IWithMeta
-  (-with-meta [coll meta] (ObjMap. meta keys strobj __hash))
+  (-with-meta [coll meta] (ObjMap. meta keys strobj update-count __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -2985,16 +2996,21 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll k v]
     (if (goog/isString k)
-      (let [new-strobj (goog.object/clone strobj)
-            overwrite? (.hasOwnProperty new-strobj k)]
-        (aset new-strobj k v)
+      (let [overwrite? (.hasOwnProperty strobj k)]
         (if overwrite?
-          (ObjMap. meta keys new-strobj nil)     ; overwrite
-          (let [new-keys (aclone keys)] ; append
-            (.push new-keys k)
-            (ObjMap. meta new-keys new-strobj nil))))
+          (let [new-strobj (goog.object/clone strobj)]
+            (aset new-strobj k v)
+            (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
+          (if (< update-count cljs.core.ObjMap/HASHMAP_THRESHOLD) #_(< (.-length keys) cljs.core.ObjMap/HASHMAP_THRESHOLD)
+            (let [new-strobj (goog.object/clone strobj) ; append
+                  new-keys (aclone keys)]
+              (aset new-strobj k v)
+              (.push new-keys k)
+              (ObjMap. meta new-keys new-strobj (inc update-count) nil))
+            ;; too many keys, switching to PersistentHashMap
+            (obj-map->hash-map coll k v))))
       ; non-string key. game over.
-      (with-meta (into (hash-map k v) (seq coll)) meta)))
+      (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
     (obj-map-contains-key? k strobj))
 
@@ -3005,18 +3021,24 @@ reduces them without incurring seq initialization"
             new-strobj (goog.object/clone strobj)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
-        (ObjMap. meta new-keys new-strobj nil))
+        (ObjMap. meta new-keys new-strobj (inc update-count) nil))
       coll)) ; key not found, return coll unchanged
 
   IFn
   (-invoke [coll k]
     (-lookup coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
+    (-lookup coll k not-found))
 
-(set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj) 0))
+  IEditableCollection
+  (-as-transient [coll]
+    (transient (into (hash-map) coll))))
 
-(set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj nil)))
+(set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj) 0 0))
+
+(set! cljs.core.ObjMap/HASHMAP_THRESHOLD 32)
+
+(set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
 ;;; HashMap
 ;;; DEPRECATED
@@ -3128,6 +3150,221 @@ reduces them without incurring seq initialization"
       (if (< i len)
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
         out)))))
+
+;;; PersistentArrayMap
+
+(defn- array-map-index-of [m k]
+  (let [arr (.-arr m)
+        len (.-length arr)]
+    (loop [i 0]
+      (cond
+        (<= len i) -1
+        (= (aget arr i) k) i
+        :else (recur (+ i 2))))))
+
+(declare TransientArrayMap)
+
+(deftype PersistentArrayMap [meta cnt arr ^:mutable __hash]
+  Object
+  (toString [this]
+    (pr-str this))
+
+  IWithMeta
+  (-with-meta [coll meta] (PersistentArrayMap. meta cnt arr __hash))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ICollection
+  (-conj [coll entry]
+    (if (vector? entry)
+      (-assoc coll (-nth entry 0) (-nth entry 1))
+      (reduce -conj coll entry)))
+
+  IEmptyableCollection
+  (-empty [coll] (-with-meta cljs.core.PersistentArrayMap/EMPTY meta))
+
+  IEquiv
+  (-equiv [coll other] (equiv-map coll other))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-imap __hash))
+
+  ISeqable
+  (-seq [coll]
+    (when (pos? cnt)
+      (let [len (.-length arr)
+            array-map-seq
+            (fn array-map-seq [i]
+              (lazy-seq
+               (when (< i len)
+                 (cons [(aget arr i) (aget arr (inc i))]
+                       (array-map-seq (+ i 2))))))]
+        (array-map-seq 0))))
+
+  ICounted
+  (-count [coll] cnt)
+
+  ILookup
+  (-lookup [coll k]
+    (-lookup coll k nil))
+
+  (-lookup [coll k not-found]
+    (let [idx (array-map-index-of coll k)]
+      (if (== idx -1)
+        not-found
+        (aget arr (inc idx)))))
+
+  IAssociative
+  (-assoc [coll k v]
+    (let [idx (array-map-index-of coll k)]
+      (cond
+        (== idx -1)
+        (if (< cnt cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD)
+          (PersistentArrayMap. meta
+                               (inc cnt)
+                               (doto (aclone arr)
+                                 (.push k)
+                                 (.push v))
+                               nil)
+          (persistent!
+           (assoc!
+            (transient (into cljs.core.PersistentHashMap/EMPTY coll))
+            k v)))
+
+        (identical? v (aget arr (inc idx)))
+        coll
+
+        :else
+        (PersistentArrayMap. meta
+                             cnt
+                             (doto (aclone arr)
+                               (aset (inc idx) v))
+                             nil))))
+
+  (-contains-key? [coll k]
+    (coercive-not= (array-map-index-of coll k) -1))
+
+  IMap
+  (-dissoc [coll k]
+    (let [idx (array-map-index-of coll k)]
+      (if (>= idx 0)
+        (let [len     (.-length arr)
+              new-len (- len 2)]
+          (if (zero? new-len)
+            (-empty coll)
+            (let [new-arr (make-array new-len)]
+              (loop [s 0 d 0]
+                (cond
+                  (>= s len) (PersistentArrayMap. meta (dec cnt) new-arr nil)
+                  (= k (aget arr s)) (recur (+ s 2) d)
+                  :else (do (aset new-arr d (aget arr s))
+                            (aset new-arr (inc d) (aget arr (inc s)))
+                            (recur (+ s 2) (+ d 2))))))))
+        coll)))
+
+  IFn
+  (-invoke [coll k]
+    (-lookup coll k))
+
+  (-invoke [coll k not-found]
+    (-lookup coll k not-found))
+
+  IEditableCollection
+  (-as-transient [coll]
+    (TransientArrayMap. (js-obj) (.-length arr) (aclone arr))))
+
+(set! cljs.core.PersistentArrayMap/EMPTY (PersistentArrayMap. nil 0 (array) nil))
+
+(set! cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 16)
+
+(set! cljs.core.PersistentArrayMap/fromArrays
+      (fn [ks vs]
+        (let [len (count ks)]
+          (loop [i   0
+                 out (transient cljs.core.PersistentArrayMap/EMPTY)]
+            (if (< i len)
+              (recur (inc i) (assoc! out (aget ks i) (aget vs i)))
+              (persistent! out))))))
+
+(declare array->transient-hash-map)
+
+(deftype TransientArrayMap [^:mutable editable?
+                            ^:mutable len
+                            arr]
+  ICounted
+  (-count [tcoll]
+    (if editable?
+      (quot len 2)
+      (throw (js/Error. "count after persistent!"))))
+
+  ILookup
+  (-lookup [tcoll k]
+    (-lookup tcoll k nil))
+
+  (-lookup [tcoll k not-found]
+    (if editable?
+      (let [idx (array-map-index-of tcoll k)]
+        (if (== idx -1)
+          not-found
+          (aget arr (inc idx))))
+      (throw (js/Error. "lookup after persistent!"))))
+
+  ITransientCollection
+  (-conj! [tcoll o]
+    (if editable?
+      (if (satisfies? IMapEntry o)
+        (-assoc! tcoll (key o) (val o))
+        (loop [es (seq o) tcoll tcoll]
+          (if-let [e (first es)]
+            (recur (next es)
+                   (-assoc! tcoll (key e) (val e)))
+            tcoll)))
+      (throw (js/Error. "conj! after persistent!"))))
+
+  (-persistent! [tcoll]
+    (if editable?
+      (do (set! editable? false)
+          (PersistentArrayMap. nil (quot len 2) arr nil))
+      (throw (js/Error. "persistent! called twice"))))
+
+  ITransientAssociative
+  (-assoc! [tcoll key val]
+    (if editable?
+      (let [idx (array-map-index-of tcoll key)]
+        (if (== idx -1)
+          (if (<= (+ len 2) (* 2 cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD))
+            (do (set! len (+ len 2))
+                (.push arr key)
+                (.push arr val)
+                tcoll)
+            (assoc! (array->transient-hash-map len arr) key val))
+          (if (identical? val (aget arr (inc idx)))
+            tcoll
+            (do (aset arr (inc idx) val)
+                tcoll))))
+      (throw (js/Error. "assoc! after persistent!"))))
+
+  ITransientMap
+  (-dissoc! [tcoll key]
+    (if editable?
+      (let [idx (array-map-index-of tcoll key)]
+        (when (>= idx 0)
+          (aset arr idx (aget arr (- len 2)))
+          (aset arr (inc idx) (aget arr (dec len)))
+          (doto arr .pop .pop)
+          (set! len (- len 2)))
+        tcoll)
+      (throw (js/Error. "dissoc! after persistent!")))))
+
+(declare TransientHashMap)
+
+(defn- array->transient-hash-map [len arr]
+  (loop [out (transient {})
+         i   0]
+    (if (< i len)
+      (recur (assoc! out (aget arr i) (aget arr (inc i))) (+ i 2))
+      out)))
 
 ;;; PersistentHashMap
 
@@ -3890,7 +4127,7 @@ reduces them without incurring seq initialization"
         not-found)
       (if (nil? root)
         not-found
-        (nth (.inode-find root 0 (hash k) k not-found) 1))))
+        (nth (.inode-find root 0 (hash k) k (array nil not-found)) 1))))
 
   ITransientCollection
   (-conj! [tcoll val] (.conj! tcoll val))
@@ -4519,10 +4756,16 @@ reduces them without incurring seq initialization"
   "keyval => key val
   Returns a new hash map with supplied mappings."
   [& keyvals]
-  (loop [in (seq keyvals), out cljs.core.PersistentHashMap/EMPTY]
+  (loop [in (seq keyvals), out (transient cljs.core.PersistentHashMap/EMPTY)]
     (if in
-      (recur (nnext in) (assoc out (first in) (second in)))
-      out)))
+      (recur (nnext in) (assoc! out (first in) (second in)))
+      (persistent! out))))
+
+(defn array-map
+  "keyval => key val
+  Returns a new array map with supplied mappings."
+  [& keyvals]
+  (PersistentArrayMap. nil (quot (count keyvals) 2) (apply array keyvals) nil))
 
 (defn sorted-map
   "keyval => key val
@@ -5009,11 +5252,10 @@ reduces them without incurring seq initialization"
   "Returns a map from distinct items in coll to the number of times
   they appear."
   [coll]
-  (reduce
-   (fn [counts x]
-     (assoc counts x (inc (get counts x 0))))
-   {}
-   coll))
+  (persistent!
+   (reduce (fn [counts x]
+             (assoc! counts x (inc (get counts x 0))))
+           (transient {}) coll)))
 
 (defn reductions
   "Returns a lazy seq of the intermediate values of the reduction (as
@@ -5334,6 +5576,11 @@ reduces them without incurring seq initialization"
       (pr-sequential pr-pair "{" ", " "}" opts coll)))
 
   HashMap
+  (-pr-seq [coll opts]
+    (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
+      (pr-sequential pr-pair "{" ", " "}" opts coll)))
+
+  PersistentArrayMap
   (-pr-seq [coll opts]
     (let [pr-pair (fn [keyval] (pr-sequential pr-seq "" " " "" opts keyval))]
       (pr-sequential pr-pair "{" ", " "}" opts coll)))
