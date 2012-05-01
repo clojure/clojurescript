@@ -372,6 +372,8 @@
   "Returns a number one greater than num."
   [x] (cljs.core/+ x 1))
 
+(declare reduced? deref)
+
 (defn- ci-reduce
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
 reduces them without incurring seq initialization"
@@ -380,17 +382,26 @@ reduces them without incurring seq initialization"
        (f)
        (loop [val (-nth cicoll 0), n 1]
          (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
+           (let [nval (f val (-nth cicoll n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
            val))))
   ([cicoll f val]
      (loop [val val, n 0]
          (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
+           (let [nval (f val (-nth cicoll n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
            val)))
   ([cicoll f val idx]
      (loop [val val, n idx]
          (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
+           (let [nval (f val (-nth cicoll n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
            val))))
 
 (declare hash-coll cons pr-str)
@@ -904,7 +915,10 @@ reduces them without incurring seq initialization"
   ([f val coll]
     (loop [val val, coll (seq coll)]
       (if coll
-        (recur (f val (first coll)) (next coll))
+        (let [nval (f val (first coll))]
+          (if (reduced? nval)
+            @nval
+            (recur nval (next coll))))
         val))))
 
 (extend-type default
@@ -4489,10 +4503,10 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [node f]
-    (f key val))
+    (ci-reduce node f))
 
   (-reduce [node f start]
-    (f (f start key)))
+    (ci-reduce node f start))
 
   IFn
   (-invoke [node k]
@@ -4636,10 +4650,10 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [node f]
-    (f key val))
+    (ci-reduce node f))
 
   (-reduce [node f start]
-    (f (f start key)))
+    (ci-reduce node f start))
 
   IFn
   (-invoke [node k]
