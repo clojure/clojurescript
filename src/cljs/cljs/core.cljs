@@ -433,11 +433,11 @@ reduces them without incurring seq initialization"
   (-reduce [coll f]
     (if (counted? a)
       (ci-reduce a f (aget a i) (inc i))
-      (ci-reduce coll f (aget a i) (inc i))))
+      (ci-reduce coll f (aget a i) 0)))
   (-reduce [coll f start]
     (if (counted? a)
       (ci-reduce a f start i)
-      (ci-reduce coll f start i)))
+      (ci-reduce coll f start 0)))
 
   IHash
   (-hash [coll] (hash-coll coll)))
