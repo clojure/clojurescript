@@ -4515,10 +4515,10 @@ reduces them without incurring seq initialization"
   "keyval => key val
   Returns a new hash map with supplied mappings."
   [& keyvals]
-  (loop [in (seq keyvals), out cljs.core.PersistentHashMap/EMPTY]
+  (loop [in (seq keyvals), out (transient cljs.core.PersistentHashMap/EMPTY)]
     (if in
-      (recur (nnext in) (assoc out (first in) (second in)))
-      out)))
+      (recur (nnext in) (assoc! out (first in) (second in)))
+      (persistent! out))))
 
 (defn sorted-map
   "keyval => key val
