@@ -83,7 +83,7 @@ does what?
 * aset-short
 * DONE assert
 * DONE assoc
-* TODO assoc!
+* DONE assoc!
 * DONE assoc-in
 * DONE associative?
 * DONE atom
@@ -150,7 +150,7 @@ does what?
 * DONE cond
 * DONE condp
 * DONE conj
-* conj!
+* DONE conj!
 * DONE cons
 * DONE constantly
 * construct-proxy
@@ -186,9 +186,9 @@ does what?
 * DONE destructure
 For macros only, uses clojure.core version
 * DONE disj
-* disj!
+* DONE disj!
 * DONE dissoc
-* dissoc!
+* DONE dissoc!
 * DONE distinct
 * DONE distinct?
 * DONE doall
@@ -379,10 +379,10 @@ does what?
 * DONE partition-by
 * pcalls
 * DONE peek
-* persistent!
+* DONE persistent!
 * pmap
 * DONE pop
-* pop!
+* DONE pop!
 * pop-thread-bindings
 * DONE pos?
 * DONE pr
@@ -521,7 +521,7 @@ as macro
 * DONE to-array
 * DONE to-array-2d
 * DONE trampoline
-* transient
+* DONE transient
 * DONE tree-seq
 * DONE true?
 * DONE type - returns JS constructor
