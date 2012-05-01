@@ -2678,7 +2678,7 @@ reduces them without incurring seq initialization"
              (if (== level 5)
                tail-node
                (let [child (pv-aget ret subidx)]
-                 (if (coercive-= child nil)
+                 (if (coercive-not= child nil)
                    (tv-push-tail tv (- level 5) child tail-node)
                    (new-path (.. tv -root -edit) (- level 5) tail-node)))))
     ret))
