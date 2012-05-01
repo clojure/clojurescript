@@ -71,7 +71,7 @@ does what?
 * DONE and
 * DONE apply
 * DONE areduce
-* TODO array-map
+* DONE array-map
 * DONE aset
 * aset-boolean
 * aset-byte
