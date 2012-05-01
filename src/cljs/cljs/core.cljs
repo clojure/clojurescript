@@ -1418,14 +1418,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-coll __hash))
 
   ISeqable
-  (-seq [coll] coll)
-
-  ICounted
-  (-count [coll]
-    (loop [s (seq coll) n 0]
-      (if s
-        (recur (next s) (inc n))
-        n))))
+  (-seq [coll] coll))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
