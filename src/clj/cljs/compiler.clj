@@ -584,7 +584,8 @@
               (do (emitln "default:")
                   (emitln "return " n ".cljs$lang$arity$variadic.call(this,"
                           (comma-sep (butlast maxparams))
-                          ", cljs.core.array_seq(arguments, " max-fixed-arity "));"))
+                          (and (> (count maxparams) 1) ", ")
+                          "cljs.core.array_seq(arguments, " max-fixed-arity "));"))
               (let [pcnt (count (:params meth))]
                 (emitln "case " pcnt ":")
                 (emitln "return " n ".call(this" (if (zero? pcnt) nil
