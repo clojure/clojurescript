@@ -562,11 +562,24 @@ reduces them without incurring seq initialization"
   [coll]
   (-empty coll))
 
+(declare seqable?)
+
+(defn- seq-count [coll]
+  (loop [i 0 s (seq coll)]
+    (if (nil? s)
+      i
+      (recur (inc i) (next s)))))
+
 (defn count
   "Returns the number of items in the collection. (count nil) returns
   0.  Also works on strings, arrays, and Maps"
   [coll]
-  (-count coll))
+  (if (counted? coll)
+    (-count coll)
+    (if (seqable? coll)
+      (seq-count coll))))
+
+(declare indexed? nthnext)
 
 (defn nth
   "Returns the value at the index. get returns nil if index out of
@@ -574,9 +587,19 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (-nth coll (.floor js/Math n)))
+     (if (indexed? coll)
+       (-nth coll (.floor js/Math n))
+       (if (seqable? coll)
+         (if-let [xs (nthnext coll n)]
+           (first xs)
+           (throw (js/Error. "Index out of bounds"))))))
   ([coll n not-found]
-     (-nth coll (.floor js/Math n) not-found)))
+     (if (indexed? coll)
+       (-nth coll (.floor js/Math n) not-found)
+       (if (seqable? coll)
+         (if-let [xs (nthnext coll n)]
+           (first xs)
+           not-found)))))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
@@ -751,9 +774,17 @@ reduces them without incurring seq initialization"
 (defn ^boolean seqable?
   "Return true if s satisfies ISeqable"
   [s]
-  (if (nil? s)
-    false
-    (satisfies? ISeqable s)))
+  (satisfies? ISeqable s))
+
+(defn ^boolean reduceable?
+  "Return true if s satisfies IReduce"
+  [s]
+  (satisfies? IReduce s))
+
+(defn ^boolean indexed?
+  "Return true if s satisfies IIndexed"
+  [s]
+  (satisfies? IIndexed s))
 
 (defn ^boolean boolean [x]
   (if x true false))
@@ -874,6 +905,8 @@ reduces them without incurring seq initialization"
   ([keyfn comp coll]
      (sort (fn [x y] ((fn->comparator comp) (keyfn x) (keyfn y))) coll)))
 
+(declare seq-reduce)
+
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
@@ -885,9 +918,15 @@ reduces them without incurring seq initialization"
   applying f to that result and the 2nd item, etc. If coll contains no
   items, returns val and f is not called."
   ([f coll]
-     (-reduce coll f))
+     (if (reduceable? coll)
+       (-reduce coll f)
+       (if (seqable? coll)
+         (seq-reduce f coll))))
   ([f val coll]
-     (-reduce coll f val)))
+     (if (reduceable? coll)
+       (-reduce coll f val)
+       (if (seqable? coll)
+         (seq-reduce f val coll)))))
 
 (defn reduce-kv
   "Reduces an associative collection. f should be a function of 3
@@ -910,14 +949,6 @@ reduces them without incurring seq initialization"
       (if coll
         (recur (f val (first coll)) (next coll))
         val))))
-
-(extend-type default
-  IReduce
-  (-reduce
-    ([coll f]
-       (seq-reduce f coll))
-    ([coll f start]
-       (seq-reduce f start coll))))
 
 (deftype Reduced [val]
   IDeref
@@ -1157,8 +1188,6 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
 
-
-
 (defn nthnext
   "Returns the nth next of coll, (seq coll) when n is 0."
   [coll n]
@@ -1166,19 +1195,6 @@ reduces them without incurring seq initialization"
     (if (and xs (pos? n))
       (recur (dec n) (next xs))
       xs)))
-
-(extend-type default
-  IIndexed
-  (-nth
-   ([coll n]
-      (if-let [xs (nthnext coll n)]
-        (first xs)
-        (throw (js/Error. "Index out of bounds"))))
-   ([coll n not-found]
-      (if-let [xs (nthnext coll n)]
-        (first xs)
-        not-found))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
@@ -1606,13 +1622,15 @@ reduces them without incurring seq initialization"
            a)))))
 
 (defn- bounded-count [s n]
-  (loop [s s i n sum 0]
-    (if (and (pos? i)
-             (seq s))
-      (recur (next s)
-             (dec i)
-             (inc sum))
-      sum)))
+  (if (counted? s)
+    (count s)
+    (loop [s s i n sum 0]
+      (if (and (pos? i)
+               (seq s))
+        (recur (next s)
+               (dec i)
+               (inc sum))
+        sum))))
 
 (defn spread
   [arglist]
@@ -1685,8 +1703,7 @@ reduces them without incurring seq initialization"
   ([f args]
      (let [fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count args (inc fixed-arity))
-                 fixed-arity)
+         (if (<= (bounded-count args (inc fixed-arity)) fixed-arity)
            (.apply f f (to-array args))
            (.cljs$lang$applyTo f args))
          (.apply f f (to-array args)))))
@@ -1694,8 +1711,7 @@ reduces them without incurring seq initialization"
      (let [arglist (list* x args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist fixed-arity)
-                 fixed-arity)
+         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
            (.apply f f (to-array arglist))
            (.cljs$lang$applyTo f arglist))
          (.apply f f (to-array arglist)))))
@@ -1703,8 +1719,7 @@ reduces them without incurring seq initialization"
      (let [arglist (list* x y args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist fixed-arity)
-                 fixed-arity)
+         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
            (.apply f f (to-array arglist))
            (.cljs$lang$applyTo f arglist))
          (.apply f f (to-array arglist)))))
@@ -1712,8 +1727,7 @@ reduces them without incurring seq initialization"
      (let [arglist (list* x y z args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist fixed-arity)
-                 fixed-arity)
+         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
            (.apply f f (to-array arglist))
            (.cljs$lang$applyTo f arglist))
          (.apply f f (to-array arglist)))))
@@ -1721,8 +1735,7 @@ reduces them without incurring seq initialization"
      (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist fixed-arity)
-                 fixed-arity)
+         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
            (.apply f f (to-array arglist))
            (.cljs$lang$applyTo f arglist))
          (.apply f f (to-array arglist))))))
