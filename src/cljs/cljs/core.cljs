@@ -750,6 +750,10 @@ reduces them without incurring seq initialization"
   "Returns true if coll implements nth in constant time"
   [x] (satisfies? IIndexed x))
 
+(defn ^boolean reducible?
+  "Returns true if coll satisfies IReduce"
+  [x] (satisfies? IReduce x))
+
 (defn ^boolean map?
   "Return true if x satisfies IMap"
   [x]
@@ -943,31 +947,6 @@ reduces them without incurring seq initialization"
   ([keyfn comp coll]
      (sort (fn [x y] ((fn->comparator comp) (keyfn x) (keyfn y))) coll)))
 
-(defn reduce
-  "f should be a function of 2 arguments. If val is not supplied,
-  returns the result of applying f to the first 2 items in coll, then
-  applying f to that result and the 3rd item, etc. If coll contains no
-  items, f must accept no arguments as well, and reduce returns the
-  result of calling f with no arguments.  If coll has only 1 item, it
-  is returned and f is not called.  If val is supplied, returns the
-  result of applying f to val and the first item in coll, then
-  applying f to that result and the 2nd item, etc. If coll contains no
-  items, returns val and f is not called."
-  ([f coll]
-     (-reduce coll f))
-  ([f val coll]
-     (-reduce coll f val)))
-
-(defn reduce-kv
-  "Reduces an associative collection. f should be a function of 3
-  arguments. Returns the result of applying f to init, the first key
-  and the first value in coll, then applying f to that result and the
-  2nd key and value, etc. If coll contains no entries, returns init
-  and f is not called. Note that reduce-kv is supported on vectors,
-  where the keys will be the ordinals."
-  ([f init coll]
-     (-kv-reduce coll f init)))
-
 ; simple reduce based on seqs, used as default
 (defn- seq-reduce
   ([f coll]
@@ -983,13 +962,34 @@ reduces them without incurring seq initialization"
             (recur nval (next coll))))
         val))))
 
-(extend-type default
-  IReduce
-  (-reduce
-    ([coll f]
-       (seq-reduce f coll))
-    ([coll f start]
-       (seq-reduce f start coll))))
+(defn reduce
+  "f should be a function of 2 arguments. If val is not supplied,
+  returns the result of applying f to the first 2 items in coll, then
+  applying f to that result and the 3rd item, etc. If coll contains no
+  items, f must accept no arguments as well, and reduce returns the
+  result of calling f with no arguments.  If coll has only 1 item, it
+  is returned and f is not called.  If val is supplied, returns the
+  result of applying f to val and the first item in coll, then
+  applying f to that result and the 2nd item, etc. If coll contains no
+  items, returns val and f is not called."
+  ([f coll]
+     (if (reducible? coll)
+       (-reduce coll f)
+       (seq-reduce f coll)))
+  ([f val coll]
+     (if (reducible? coll)
+       (-reduce coll f val)
+       (seq-reduce f val coll))))
+
+(defn reduce-kv
+  "Reduces an associative collection. f should be a function of 3
+  arguments. Returns the result of applying f to init, the first key
+  and the first value in coll, then applying f to that result and the
+  2nd key and value, etc. If coll contains no entries, returns init
+  and f is not called. Note that reduce-kv is supported on vectors,
+  where the keys will be the ordinals."
+  ([f init coll]
+     (-kv-reduce coll f init)))
 
 (deftype Reduced [val]
   IDeref
