@@ -230,10 +230,13 @@
       'default "_"})
 
 (defmacro reify [& impls]
-  (let [t (gensym "t")
-        locals (keys (:locals &env))]
+  (let [t      (gensym "t")
+        locals (keys (:locals &env))
+        ns     (-> &env :ns :name)
+        munge  cljs.compiler/munge
+        ns-t   (list 'js* (core/str (munge ns) "." (munge t)))]
     `(do
-       (when (undefined? ~t)
+       (when (undefined? ~ns-t)
          (deftype ~t [~@locals __meta#]
            cljs.core.IWithMeta
            (~'-with-meta [_# __meta#]
