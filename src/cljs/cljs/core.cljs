@@ -942,7 +942,7 @@ reduces them without incurring seq initialization"
   IDeref
   (-deref [o] val))
 
-(defn reduced?
+(defn ^boolean reduced?
   "Returns true if x is the result of a call to reduced"
   [r]
   (instance? Reduced r))
