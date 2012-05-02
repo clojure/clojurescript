@@ -378,7 +378,7 @@
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
 reduces them without incurring seq initialization"
   ([cicoll f]
-     (if (= 0 (-count cicoll))
+     (if (zero? (-count cicoll))
        (f)
        (loop [val (-nth cicoll 0), n 1]
          (if (< n (-count cicoll))
@@ -450,7 +450,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (hash-coll coll)))
 
 (defn prim-seq [prim i]
-  (when-not (= 0 (.-length prim))
+  (when-not (zero? (.-length prim))
     (IndexedSeq. prim i)))
 
 (defn array-seq [array i]
@@ -2205,13 +2205,13 @@ reduces them without incurring seq initialization"
      (lazy-seq
        (when-let [s (seq coll)]
          (let [p (take n s)]
-           (when (= n (count p))
+           (when (== n (count p))
              (cons p (partition n step (drop step s))))))))
   ([n step pad coll]
      (lazy-seq
        (when-let [s (seq coll)]
          (let [p (take n s)]
-           (if (= n (count p))
+           (if (== n (count p))
              (cons p (partition n step pad (drop step s)))
              (list (take n (concat p pad)))))))))
 
@@ -2601,7 +2601,7 @@ reduces them without incurring seq initialization"
   (-peek [coll]
     (-nth v (dec end)))
   (-pop [coll]
-    (if (= start end)
+    (if (== start end)
       (throw (js/Error. "Can't pop empty vector"))
       (Subvec. meta v start (dec end) nil)))
 
@@ -2622,7 +2622,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (let [subvec-seq (fn subvec-seq [i]
-                       (when-not (= i end)
+                       (when-not (== i end)
                          (cons (-nth v i)
                                (lazy-seq
                                 (subvec-seq (inc i))))))]
@@ -2960,7 +2960,7 @@ reduces them without incurring seq initialization"
   (boolean
     (when (map? y)
       ; assume all maps are counted
-      (when (= (count x) (count y))
+      (when (== (count x) (count y))
         (every? identity
                 (map (fn [xkv] (= (get y (first xkv) never-equiv)
                                   (second xkv)))
@@ -5010,7 +5010,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other]
     (and
      (set? other)
-     (= (count coll) (count other))
+     (== (count coll) (count other))
      (every? #(contains? coll %)
              other)))
 
@@ -5105,7 +5105,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other]
     (and
      (set? other)
-     (= (count coll) (count other))
+     (== (count coll) (count other))
      (every? #(contains? coll %)
              other)))
 
@@ -5351,13 +5351,13 @@ reduces them without incurring seq initialization"
   (-nth [rng n]
     (if (< n (-count rng))
       (+ start (* n step))
-      (if (and (> start end) (= step 0))
+      (if (and (> start end) (zero? step))
         start
         (throw (js/Error. "Index out of bounds")))))
   (-nth [rng n not-found]
     (if (< n (-count rng))
       (+ start (* n step))
-      (if (and (> start end) (= step 0))
+      (if (and (> start end) (zero? step))
         start
         not-found)))
 
@@ -5496,7 +5496,7 @@ reduces them without incurring seq initialization"
   [re s]
   (let [matches (.exec re s)]
     (when (= (first matches) s)
-      (if (= (count matches) 1)
+      (if (== (count matches) 1)
         (first matches)
         (vec matches)))))
 
@@ -5508,7 +5508,7 @@ reduces them without incurring seq initialization"
   [re s]
   (let [matches (.exec re s)]
     (when-not (nil? matches)
-      (if (= (count matches) 1)
+      (if (== (count matches) 1)
         (first matches)
         (vec matches)))))
 
@@ -6055,9 +6055,9 @@ reduces them without incurring seq initialization"
          (contains? ((:ancestors h) child) parent)
          ;;(and (class? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
          (and (vector? parent) (vector? child)
-              (= (count parent) (count child))
+              (== (count parent) (count child))
               (loop [ret true i 0]
-                (if (or (not ret) (= i (count parent)))
+                (if (or (not ret) (== i (count parent)))
                   ret
                   (recur (isa? h (child i) (parent i)) (inc i))))))))
 
