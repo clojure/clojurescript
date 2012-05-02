@@ -569,11 +569,20 @@ reduces them without incurring seq initialization"
   [coll]
   (-empty coll))
 
+(declare counted?)
+
+(defn- accumulating-seq-count [coll acc]
+  (if (counted? coll) ; assumes nil is counted, which it currently is
+    (+ acc (-count coll))
+    (recur (next coll) (inc acc))))
+
 (defn count
   "Returns the number of items in the collection. (count nil) returns
   0.  Also works on strings, arrays, and Maps"
   [coll]
-  (-count coll))
+  (if (counted? coll)
+    (-count coll)
+    (accumulating-seq-count coll 0)))
 
 (defn nth
   "Returns the value at the index. get returns nil if index out of
@@ -1428,14 +1437,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-coll __hash))
 
   ISeqable
-  (-seq [coll] coll)
-
-  ICounted
-  (-count [coll]
-    (loop [s (seq coll) n 0]
-      (if s
-        (recur (next s) (inc n))
-        n))))
+  (-seq [coll] coll))
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
