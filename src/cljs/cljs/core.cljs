@@ -609,15 +609,39 @@ reduces them without incurring seq initialization"
     (-count coll)
     (accumulating-seq-count coll 0)))
 
+(declare indexed?)
+
+(defn- linear-traversal-nth
+  ([coll n]
+     (cond
+       (zero? n)       (if (seq coll)
+                         (first coll)
+                         (throw (js/Error. "Index out of bounds")))
+       (indexed? coll) (-nth coll n)
+       (seq coll)      (linear-traversal-nth (next coll) (dec n))
+       :else           (throw (js/Error. "Index out of bounds"))))
+  ([coll n not-found]
+     (cond
+       (zero? n)       (if (seq coll)
+                         (first coll)
+                         not-found)
+       (indexed? coll) (-nth coll n not-found)
+       (seq coll)      (linear-traversal-nth (next coll) (dec n))
+       :else           not-found)))
+
 (defn nth
   "Returns the value at the index. get returns nil if index out of
   bounds, nth throws an exception unless not-found is supplied.  nth
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (-nth coll (.floor js/Math n)))
+     (if (indexed? coll)
+       (-nth coll (.floor js/Math n))
+       (linear-traversal-nth coll (.floor js/Math n))))
   ([coll n not-found]
-     (-nth coll (.floor js/Math n) not-found)))
+     (if (indexed? coll)
+       (-nth coll (.floor js/Math n) not-found)
+       (linear-traversal-nth coll (.floor js/Math n) not-found))))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
@@ -721,6 +745,10 @@ reduces them without incurring seq initialization"
 (defn ^boolean counted?
   "Returns true if coll implements count in constant time"
   [x] (satisfies? ICounted x))
+
+(defn ^boolean indexed?
+  "Returns true if coll implements nth in constant time"
+  [x] (satisfies? IIndexed x))
 
 (defn ^boolean map?
   "Return true if x satisfies IMap"
@@ -1201,8 +1229,6 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; protocols for host types ;;;;;;
 
-
-
 (defn nthnext
   "Returns the nth next of coll, (seq coll) when n is 0."
   [coll n]
@@ -1210,19 +1236,6 @@ reduces them without incurring seq initialization"
     (if (and xs (pos? n))
       (recur (dec n) (next xs))
       xs)))
-
-(extend-type default
-  IIndexed
-  (-nth
-   ([coll n]
-      (if-let [xs (nthnext coll n)]
-        (first xs)
-        (throw (js/Error. "Index out of bounds"))))
-   ([coll n not-found]
-      (if-let [xs (nthnext coll n)]
-        (first xs)
-        not-found))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
