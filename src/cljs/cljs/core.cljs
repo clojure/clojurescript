@@ -779,16 +779,16 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean string? [x]
   (and (goog/isString x)
-       (not (or (= (.charAt x 0) \uFDD0)
-                (= (.charAt x 0) \uFDD1)))))
+       (not (or (identical? (.charAt x 0) \uFDD0)
+                (identical? (.charAt x 0) \uFDD1)))))
 
 (defn ^boolean keyword? [x]
   (and (goog/isString x)
-       (= (.charAt x 0) \uFDD0)))
+       (identical? (.charAt x 0) \uFDD0)))
 
 (defn ^boolean symbol? [x]
   (and (goog/isString x)
-       (= (.charAt x 0) \uFDD1)))
+       (identical? (.charAt x 0) \uFDD1)))
 
 (defn ^boolean number? [n]
   (goog/isNumber n))
