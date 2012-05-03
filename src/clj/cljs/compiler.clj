@@ -715,7 +715,7 @@
     (emitln "goog.require('" (munge lib) "');")))
 
 (defmethod emit :deftype*
-  [{:keys [t fields]}]
+  [{:keys [t fields pmask]}]
   (let [fields (map munge fields)]
     (emitln "")
     (emitln "/**")
@@ -724,10 +724,11 @@
     (emitln t " = (function (" (comma-sep (map str fields)) "){")
     (doseq [fld fields]
       (emitln "this." fld " = " fld ";"))
+    (when pmask (emitln "this.__protocol_mask = " pmask ";"))
     (emitln "})")))
 
 (defmethod emit :defrecord*
-  [{:keys [t fields]}]
+  [{:keys [t fields pmask]}]
   (let [fields (concat (map munge fields) '[__meta __extmap])]
     (emitln "")
     (emitln "/**")
@@ -740,6 +741,7 @@
     (emitln t " = (function (" (comma-sep (map str fields)) "){")
     (doseq [fld fields]
       (emitln "this." fld " = " fld ";"))
+    (when pmask (emitln "this.__protocol_mask = " pmask ";"))
     (emitln "if(arguments.length>" (- (count fields) 2) "){")
     (emitln "this.__meta = __meta;")
     (emitln "this.__extmap = __extmap;")
@@ -1111,7 +1113,7 @@
      :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
-  [_ env [_ tsym fields :as form] _]
+  [_ env [_ tsym fields pmask :as form] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1121,10 +1123,10 @@
                      (assoc :file *cljs-file*)
                      (assoc :line line))
                  m))))
-    {:env env :op :deftype* :as form :t t :fields fields}))
+    {:env env :op :deftype* :as form :t t :fields fields :pmask pmask}))
 
 (defmethod parse 'defrecord*
-  [_ env [_ tsym fields :as form] _]
+  [_ env [_ tsym fields pmask :as form] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1134,7 +1136,7 @@
                      (assoc :file *cljs-file*)
                      (assoc :line line))
                  m))))
-    {:env env :op :defrecord* :form form :t t :fields fields}))
+    {:env env :op :defrecord* :form form :t t :fields fields :pmask pmask}))
 
 ;; dot accessor code
 
