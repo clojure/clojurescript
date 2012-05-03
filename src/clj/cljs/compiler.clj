@@ -1210,13 +1210,15 @@
            ::access {:env env :op :dot :form form
                      :target targetexpr
                      :field field
-                     :children [targetexpr]}
+                     :children [targetexpr]
+                     :tag (-> form meta :tag)}
            ::call   (let [argexprs (map #(analyze enve %) args)]
                       {:env env :op :dot :form form
                        :target targetexpr
                        :method method
                        :args argexprs
-                       :children (into [targetexpr] argexprs)})))))
+                       :children (into [targetexpr] argexprs)
+                       :tag (-> form meta :tag)})))))
 
 (defmethod parse 'js*
   [op env [_ jsform & args :as form] _]
