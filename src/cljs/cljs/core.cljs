@@ -281,7 +281,7 @@
 (defn ^boolean nil?
   "Returns true if x is nil, false otherwise."
   [x]
-  (identical? x nil))
+  (coercive-= x nil))
 
 (defn type [x]
   (if (or (nil? x) (undefined? x))

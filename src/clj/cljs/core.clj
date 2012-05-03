@@ -52,7 +52,7 @@
   (vary-meta e assoc :tag 'boolean))
 
 (defmacro nil? [x]
-  `(identical? ~x nil))
+  `(coercive-= ~x nil))
 
 ;; internal - do not use.
 (defmacro coercive-not= [x y]
