@@ -500,14 +500,23 @@ reduces them without incurring seq initialization"
   "Returns the first item in the collection. Calls seq on its
   argument. If coll is nil, returns nil."
   [coll]
-  (when-let [s (seq coll)]
-    (-first s)))
+  (when (coercive-not= coll nil)
+    (if (satisfies? ISeq coll)
+      (-first coll)
+      (let [s (seq coll)]
+        (when (coercive-not= s nil)
+          (-first s))))))
 
 (defn rest
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (-rest (seq coll)))
+  (when (coercive-not= coll nil)
+    (if (satisfies? ISeq coll)
+      (-rest coll)
+      (let [s (seq coll)]
+        (when (coercive-not= s nil)
+          (-rest s))))))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
