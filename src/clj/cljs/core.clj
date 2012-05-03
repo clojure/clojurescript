@@ -488,13 +488,14 @@
   "Returns true if x satisfies the protocol"
   [psym x]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
-        prefix (protocol-prefix p)]
-    `(let [x# ~x]
-       (if (and x#
-                (. x# ~(symbol (core/str "-" prefix)))        ;; Need prop lookup here
-                (not (. x# (~'hasOwnProperty ~prefix))))
+        prefix (protocol-prefix p)
+        xsym (gensym)]
+    `(let [~xsym ~x]
+       (if (and (coercive-not= ~xsym nil)
+                ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))) ;; Need prop lookup here
+                (coercive-not (. ~xsym (~'hasOwnProperty ~prefix))))
 	 true
-	 (cljs.core/type_satisfies_ ~psym x#)))))
+	 (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))
