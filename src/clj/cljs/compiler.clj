@@ -1294,7 +1294,8 @@
     (if (specials op)
       form
       (if-let [mac (and (symbol? op) (get-expander op env))]
-        (apply mac form env (rest form))
+        (binding [*ns* *cljs-ns*]
+          (apply mac form env (rest form)))
         (if (symbol? op)
           (let [opname (str op)]
             (cond
