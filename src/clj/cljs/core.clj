@@ -55,6 +55,10 @@
   `(coercive-= ~x nil))
 
 ;; internal - do not use.
+(defmacro coercive-not [x]
+  (bool-expr (list 'js* "(!~{})" x)))
+
+;; internal - do not use.
 (defmacro coercive-not= [x y]
   (bool-expr (list 'js* "(~{} != ~{})" x y)))
 
