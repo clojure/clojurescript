@@ -176,6 +176,11 @@
   ([x y] (list 'js* "(~{} & ~{})" x y))
   ([x y & more] `(bit-and (bit-and ~x ~y) ~@more)))
 
+;; internal do not use
+(defmacro unsafe-bit-and
+  ([x y] (bool-expr (list 'js* "(~{} & ~{})" x y)))
+  ([x y & more] `(unsafe-bit-and (unsafe-bit-and ~x ~y) ~@more)))
+
 (defmacro bit-or
   ([x y] (list 'js* "(~{} | ~{})" x y))
   ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
@@ -518,9 +523,10 @@
         msym (symbol "-__protocol_mask")]
     `(let [~xsym ~x]
        (if (and (coercive-not= ~xsym nil)
-                ~@(if-let [bit (fast-path-protocols p)]
-                    [(bool-expr `(bit-and (. ~xsym ~msym) ~bit))])
-                ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+                (or
+                 ~(if-let [bit (fast-path-protocols p)]
+                    `(unsafe-bit-and (. ~xsym ~msym) ~bit))
+                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix))))))
          true
          (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
