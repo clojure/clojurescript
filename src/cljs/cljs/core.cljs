@@ -39,7 +39,7 @@
   [x]
   (js* "(~{x} != null && ~{x} !== false)"))
 
-(defn type_satisfies_
+(defn ^boolean type_satisfies_
   "Internal - do not use!"
   [p x]
   (cond
