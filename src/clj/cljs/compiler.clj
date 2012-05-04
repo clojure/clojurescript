@@ -407,6 +407,10 @@
                 else-tag (infer-tag (:else e))]
             (when (= then-tag else-tag)
               then-tag))
+      :constant (case (:form e)
+                  true 'boolean
+                  false 'boolean
+                  nil)
       nil)))
 
 (defn safe-test? [e]
