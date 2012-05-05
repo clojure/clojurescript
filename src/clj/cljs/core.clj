@@ -549,11 +549,13 @@
         [part bit] (fast-path-protocols p)
         msym (symbol (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
     `(let [~xsym ~x]
-       (if (and (coercive-not= ~xsym nil)
-                (or
-                 ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
-                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix))))))
-         true
+       (if (coercive-not= ~xsym nil)
+         (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
+                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+           true
+           (if (coercive-not (. ~xsym ~msym))
+             (cljs.core/type_satisfies_ ~psym ~xsym)
+             false))
          (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
 (defmacro lazy-seq [& body]
