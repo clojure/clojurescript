@@ -511,12 +511,14 @@ reduces them without incurring seq initialization"
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (when (coercive-not= coll nil)
+  (if (coercive-not= coll nil)
     (if (satisfies? ISeq coll)
       (-rest coll)
       (let [s (seq coll)]
-        (when (coercive-not= s nil)
-          (-rest s))))))
+        (if (coercive-not= s nil)
+          (-rest s)
+          ())))
+    ()))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
