@@ -43,10 +43,28 @@
   when when-first when-let when-not while])
 
 (def fast-path-protocols
+  "protocol fqn -> [partition number, bit]"
   (zipmap (map #(symbol (core/str "cljs.core." %))
-               '[ISeq IFn IHash IEquiv ISeqable ILookup ICounted IIndexed
-                 ICollection IAssociative])
-          (iterate (partial core/* 2) 1)))
+               '[IFn ICounted IEmptyableCollection ICollection IIndexed ISeq
+                 ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
+                 IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
+                 ISeqable ISequential IList IRecord IReversible ISorted IPrintable
+                 IPending IWatchable IEditableCollection ITransientCollection
+                 ITransientAssociative ITransientMap ITransientVector ITransientSet
+                 IMultiFn])
+          (iterate (fn [[p b]]
+                     (if (core/== 32 b)
+                       [(core/inc p) 1]
+                       [p (core/bit-shift-left b 1)]))
+                   [0 1])))
+
+(def fast-path-protocol-partitions-count
+  "total number of partitions"
+  (let [c (count fast-path-protocols)
+        m (core/mod c 32)]
+    (if (core/zero? m)
+      (core/quot c 32)
+      (core/inc (core/quot c 32)))))
 
 (defmacro str [& xs]
   (let [strs (->> (repeat (count xs) "cljs.core.str(~{})")
@@ -326,7 +344,7 @@
                                              sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
-(defn- prepare-protocol-mask [env t impls]
+(defn- prepare-protocol-masks [env t impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc env :locals) %))]
                    (assert ret (core/str "Can't resolve: " %))
                    ret)
@@ -335,10 +353,18 @@
                      (recur (assoc ret (first s) (take-while seq? (next s)))
                             (drop-while seq? (next s)))
                      ret))]
-    (if-let [fpp-bits (seq (keep fast-path-protocols
-                                 (map resolve
-                                      (keys impl-map))))]
-      (reduce core/bit-or fpp-bits))))
+    (if-let [fpp-pbs (seq (keep fast-path-protocols
+                                (map resolve
+                                     (keys impl-map))))]
+      (let [fpp-partitions (group-by first fpp-pbs)
+            fpp-partitions (into {} (map (juxt key (comp (partial map peek) val))
+                                         fpp-partitions))
+            fpp-partitions (into {} (map (juxt key (comp (partial reduce core/bit-or) val))
+                                         fpp-partitions))]
+        (reduce (fn [ps p]
+                  (update-in ps [p] (fnil identity 0)))
+                fpp-partitions
+                (range fast-path-protocol-partitions-count))))))
 
 (defmacro deftype [t fields & impls]
   (let [adorn-params (fn [sig]
@@ -358,16 +384,16 @@
                             (drop-while seq? (next s)))
                      ret)))
         r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))
-        pmask (prepare-protocol-mask &env t impls)]
+        pmasks (prepare-protocol-masks &env t impls)]
     (if (seq impls)
       `(do
-         (deftype* ~t ~fields ~pmask)
+         (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
          (extend-type ~t ~@(dt->et impls))
          ~t)
       `(do
-         (deftype* ~t ~fields ~pmask)
+         (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
          ~t))))
@@ -379,7 +405,7 @@
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
 	fields (conj fields '__meta '__extmap)
-        pmask (prepare-protocol-mask env tagname impls)
+        pmasks (prepare-protocol-masks env tagname impls)
 	adorn-params (fn [sig]
                        (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
                              (nnext sig)))
@@ -454,7 +480,7 @@
 					 ~'__extmap))))
 		  ])]
       `(do
-	 (~'defrecord* ~tagname ~hinted-fields ~pmask)
+	 (~'defrecord* ~tagname ~hinted-fields ~pmasks)
 	 (extend-type ~tagname ~@(dt->et impls))))))
 
 (defn- build-positional-factory
@@ -520,12 +546,12 @@
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)
         xsym (gensym)
-        msym (symbol "-__protocol_mask")]
+        [part bit] (fast-path-protocols p)
+        msym (symbol (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
     `(let [~xsym ~x]
        (if (and (coercive-not= ~xsym nil)
                 (or
-                 ~(if-let [bit (fast-path-protocols p)]
-                    `(unsafe-bit-and (. ~xsym ~msym) ~bit))
+                 ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
                  ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix))))))
          true
          (cljs.core/type_satisfies_ ~psym ~xsym)))))
