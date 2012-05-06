@@ -682,19 +682,20 @@
                  (not (-> f :info :dynamic))
                  (-> f :info :fn-var))
         js? (= (-> f :info :ns) 'js)
-        f (if fn?
-            (let [info (-> f :info)
-                  arity (count args)
-                  mps (:method-params info)]
-              (if (or (> arity (:max-fixed-arity info))
-                      (= (count mps) 1))
-                f
-                (let [arities (map count mps)]
-                  (if (some #{arity} arities)
-                    (update-in f [:info :name]
-                               (fn [name] (symbol (str name ".cljs$lang$arity$" arity))))
-                    f))))
-            f)]
+        [f direct-variadic?]
+        (if fn?
+          (let [info (-> f :info)
+                arity (count args)
+                mps (:method-params info)]
+            (if (or (> arity (:max-fixed-arity info))
+                    (= (count mps) 1))
+              [f false]
+              (let [arities (map count mps)]
+                (if (some #{arity} arities)
+                  [(update-in f [:info :name]
+                     (fn [name] (symbol (str name ".cljs$lang$arity$" arity)))) false]
+                  [f false]))))
+          [f false])]
     (emit-wrap env
       (emits f (when-not (or fn? js?) ".call") "("
                  (let [args (if (or fn? js?) args (cons "null" args))]
