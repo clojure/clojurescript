@@ -153,6 +153,8 @@
 (defprotocol IIndexed
   (-nth [coll n] [coll n not-found]))
 
+(defprotocol ASeq)
+
 (defprotocol ISeq
   (-first [coll])
   (-rest [coll]))
@@ -416,6 +418,8 @@ reduces them without incurring seq initialization"
   
   ISeqable
   (-seq [this] this)
+
+  ASeq
   ISeq
   (-first [_] (aget a i))
   (-rest [_] (if (< (inc i) (.-length a))
@@ -493,8 +497,10 @@ reduces them without incurring seq initialization"
   empty, returns nil.  (seq nil) returns nil. seq also works on
   Strings."
   [coll]
-  (when coll
-    (-seq coll)))
+  (if (coercive-not= coll nil)
+    (if (satisfies? ASeq coll)
+      coll
+      (-seq coll))))
 
 (defn first
   "Returns the first item in the collection. Calls seq on its
@@ -524,8 +530,14 @@ reduces them without incurring seq initialization"
   "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil"
   [coll]
-  (when coll
-    (seq (rest coll))))
+  (if (coercive-not= coll nil)
+    (if (satisfies? ISeq coll)
+      (let [coll (-rest coll)]
+        (if (coercive-not= coll nil)
+          (if (satisfies? ASeq coll)
+            coll
+            (-seq coll))))
+      (seq (rest coll)))))
 
 (defn second
   "Same as (first (next x))"
@@ -1337,6 +1349,7 @@ reduces them without incurring seq initialization"
   IMeta
   (-meta [coll] meta)
 
+  ASeq
   ISeq
   (-first [coll] first)
   (-rest [coll] rest)
@@ -1433,6 +1446,7 @@ reduces them without incurring seq initialization"
   IMeta
   (-meta [coll] meta)
 
+  ASeq
   ISeq
   (-first [coll] first)
   (-rest [coll] (if (nil? rest) () rest))
