@@ -38,7 +38,7 @@ nil if the end of stream has been reached")
 (defn- whitespace?
   "Checks whether a given character is whitespace"
   [ch]
-  (or (gstring/isBreakingWhitespace ch) (= \, ch)))
+  (or (gstring/isBreakingWhitespace ch) (identical? \, ch)))
 
 (defn- numeric?
   "Checks whether a given character is numeric"
@@ -48,13 +48,13 @@ nil if the end of stream has been reached")
 (defn- comment-prefix?
   "Checks whether the character begins a comment."
   [ch]
-  (= \; ch))
+  (identical? \; ch))
 
 (defn- number-literal?
   "Checks whether the reader is at the start of a number literal"
   [reader initch]
   (or (numeric? initch)
-      (and (or (= \+ initch) (= \- initch))
+      (and (or (identical? \+ initch) (identical? \- initch))
            (numeric? (let [next-ch (read-char reader)]
                        (unread reader next-ch)
                        next-ch)))))
@@ -88,7 +88,7 @@ nil if the end of stream has been reached")
   [reader _]
   (loop []
     (let [ch (read-char reader)]
-      (if (or (= ch \n) (= ch \r) (nil? ch))
+      (if (or (identical? ch \n) (identical? ch \r) (nil? ch))
         reader
         (recur)))))
 
@@ -104,7 +104,7 @@ nil if the end of stream has been reached")
     (if (not (or (undefined? group3)
                  (< (.-length group3) 1)))
       0
-      (let [negate (if (= "-" (nth groups 1)) -1 1)
+      (let [negate (if (identical? "-" (nth groups 1)) -1 1)
             [n radix] (cond
                        (nth groups 3) [(nth groups 3) 10]
                        (nth groups 4) [(nth groups 4) 16]
@@ -152,7 +152,7 @@ nil if the end of stream has been reached")
         mapresult (get escape-char-map ch)]
     (if mapresult
       mapresult
-      (if (or (= \u ch) (numeric? ch))
+      (if (or (identical? \u ch) (numeric? ch))
         (read-unicode-char reader ch)
         (reader-error reader "Unsupported escape charater: \\" ch)))))
 
@@ -170,7 +170,7 @@ nil if the end of stream has been reached")
   (loop [a []]
     (let [ch (read-past whitespace? rdr)]
       (when-not ch (reader-error rdr "EOF"))
-      (if (= delim ch)
+      (if (identical? delim ch)
         a
         (if-let [macrofn (get macros ch)]
           (let [mret (macrofn rdr ch)]
@@ -235,9 +235,9 @@ nil if the end of stream has been reached")
          ch (read-char reader)]
     (cond
      (nil? ch) (reader-error reader "EOF while reading string")
-     (= "\\" ch) (recur (do (.append buffer (escape-char buffer reader)) buffer)
+     (identical? "\\" ch) (recur (do (.append buffer (escape-char buffer reader)) buffer)
                         (read-char reader))
-     (= \" ch) (. buffer (toString))
+     (identical? \" ch) (. buffer (toString))
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
 (def special-symbols
@@ -262,7 +262,7 @@ nil if the end of stream has been reached")
             (identical? (aget name (dec (.-length name))) ":")
             (not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
-      (if ns?
+      (if ns
         (keyword (.substring ns 0 (.indexOf ns "/")) name)
         (keyword token)))))
 

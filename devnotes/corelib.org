@@ -462,7 +462,7 @@ ticket #8
 * DONE reverse
 * DONE reversible?
 * DONE rseq
-* TODO rsubseq
+* DONE rsubseq
 * DONE satisfies?
 as macro
 * DONE second

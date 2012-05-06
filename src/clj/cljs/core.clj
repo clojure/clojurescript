@@ -42,6 +42,30 @@
   or
   when when-first when-let when-not while])
 
+(def fast-path-protocols
+  "protocol fqn -> [partition number, bit]"
+  (zipmap (map #(symbol (core/str "cljs.core." %))
+               '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq
+                 ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
+                 IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
+                 ISeqable ISequential IList IRecord IReversible ISorted IPrintable
+                 IPending IWatchable IEditableCollection ITransientCollection
+                 ITransientAssociative ITransientMap ITransientVector ITransientSet
+                 IMultiFn])
+          (iterate (fn [[p b]]
+                     (if (core/== 2147483648 b)
+                       [(core/inc p) 1]
+                       [p (core/bit-shift-left b 1)]))
+                   [0 1])))
+
+(def fast-path-protocol-partitions-count
+  "total number of partitions"
+  (let [c (count fast-path-protocols)
+        m (core/mod c 32)]
+    (if (core/zero? m)
+      (core/quot c 32)
+      (core/inc (core/quot c 32)))))
+
 (defmacro str [& xs]
   (let [strs (->> (repeat (count xs) "cljs.core.str(~{})")
                   (interpose ",")
@@ -52,7 +76,11 @@
   (vary-meta e assoc :tag 'boolean))
 
 (defmacro nil? [x]
-  `(identical? ~x nil))
+  `(coercive-= ~x nil))
+
+;; internal - do not use.
+(defmacro coercive-not [x]
+  (bool-expr (list 'js* "(!~{})" x)))
 
 ;; internal - do not use.
 (defmacro coercive-not= [x y]
@@ -166,6 +194,11 @@
   ([x y] (list 'js* "(~{} & ~{})" x y))
   ([x y & more] `(bit-and (bit-and ~x ~y) ~@more)))
 
+;; internal do not use
+(defmacro unsafe-bit-and
+  ([x y] (bool-expr (list 'js* "(~{} & ~{})" x y)))
+  ([x y & more] `(unsafe-bit-and (unsafe-bit-and ~x ~y) ~@more)))
+
 (defmacro bit-or
   ([x y] (list 'js* "(~{} | ~{})" x y))
   ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
@@ -230,10 +263,13 @@
       'default "_"})
 
 (defmacro reify [& impls]
-  (let [t (gensym "t")
-        locals (keys (:locals &env))]
+  (let [t      (gensym "t")
+        locals (keys (:locals &env))
+        ns     (-> &env :ns :name)
+        munge  cljs.compiler/munge
+        ns-t   (list 'js* (core/str (munge ns) "." (munge t)))]
     `(do
-       (when (undefined? ~t)
+       (when (undefined? ~ns-t)
          (deftype ~t [~@locals __meta#]
            cljs.core.IWithMeta
            (~'-with-meta [_# __meta#]
@@ -308,6 +344,28 @@
                                              sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
 
+(defn- prepare-protocol-masks [env t impls]
+  (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc env :locals) %))]
+                   (assert ret (core/str "Can't resolve: " %))
+                   ret)
+        impl-map (loop [ret {} s impls]
+                   (if (seq s)
+                     (recur (assoc ret (first s) (take-while seq? (next s)))
+                            (drop-while seq? (next s)))
+                     ret))]
+    (if-let [fpp-pbs (seq (keep fast-path-protocols
+                                (map resolve
+                                     (keys impl-map))))]
+      (let [fpp-partitions (group-by first fpp-pbs)
+            fpp-partitions (into {} (map (juxt key (comp (partial map peek) val))
+                                         fpp-partitions))
+            fpp-partitions (into {} (map (juxt key (comp (partial reduce core/bit-or) val))
+                                         fpp-partitions))]
+        (reduce (fn [ps p]
+                  (update-in ps [p] (fnil identity 0)))
+                fpp-partitions
+                (range fast-path-protocol-partitions-count))))))
+
 (defmacro deftype [t fields & impls]
   (let [adorn-params (fn [sig]
                        (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
@@ -325,25 +383,29 @@
                                          (group-by first (take-while seq? (next s))))))
                             (drop-while seq? (next s)))
                      ret)))
-        r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))]
+        r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))
+        pmasks (prepare-protocol-masks &env t impls)]
     (if (seq impls)
       `(do
-         (deftype* ~t ~fields)
-         (set! (.-cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(core/str r))))
+         (deftype* ~t ~fields ~pmasks)
+         (set! (.-cljs$lang$type ~t) true)
+         (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
          (extend-type ~t ~@(dt->et impls))
          ~t)
       `(do
-         (deftype* ~t ~fields)
-         (set! (.-cljs$core$IPrintable$_pr_seq ~t) (fn [this#] (list ~(core/str r))))
+         (deftype* ~t ~fields ~pmasks)
+         (set! (.-cljs$lang$type ~t) true)
+         (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
          ~t))))
 
 (defn- emit-defrecord
    "Do not use this directly - use defrecord"
-  [tagname rname fields impls]
+  [env tagname rname fields impls]
   (let [hinted-fields fields
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
 	fields (conj fields '__meta '__extmap)
+        pmasks (prepare-protocol-masks env tagname impls)
 	adorn-params (fn [sig]
                        (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
                              (nnext sig)))
@@ -418,7 +480,7 @@
 					 ~'__extmap))))
 		  ])]
       `(do
-	 (~'defrecord* ~tagname ~hinted-fields)
+	 (~'defrecord* ~tagname ~hinted-fields ~pmasks)
 	 (extend-type ~tagname ~@(dt->et impls))))))
 
 (defn- build-positional-factory
@@ -441,8 +503,9 @@
 (defmacro defrecord [rsym fields & impls]
   (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) rsym))]
     `(let []
-       ~(emit-defrecord rsym r fields impls)
-       (set! (.-cljs$core$IPrintable$_pr_seq ~r) (fn [this#] (list ~(core/str r))))
+       ~(emit-defrecord &env rsym r fields impls)
+       (set! (.-cljs$lang$type ~r) true)
+       (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(core/str r))))
        ~(build-positional-factory rsym r fields)
        ~(build-map-factory rsym r fields)
        ~r)))
@@ -481,13 +544,19 @@
   "Returns true if x satisfies the protocol"
   [psym x]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
-        prefix (protocol-prefix p)]
-    `(let [x# ~x]
-       (if (and x#
-                (. x# ~(symbol (core/str "-" prefix)))        ;; Need prop lookup here
-                (not (. x# (~'hasOwnProperty ~prefix))))
-	 true
-	 (cljs.core/type_satisfies_ ~psym x#)))))
+        prefix (protocol-prefix p)
+        xsym (gensym)
+        [part bit] (fast-path-protocols p)
+        msym (symbol (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
+    `(let [~xsym ~x]
+       (if (coercive-not= ~xsym nil)
+         (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
+                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+           true
+           (if (coercive-not (. ~xsym ~msym))
+             (cljs.core/type_satisfies_ ~psym ~xsym)
+             false))
+         (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core.LazySeq nil false (fn [] ~@body)))

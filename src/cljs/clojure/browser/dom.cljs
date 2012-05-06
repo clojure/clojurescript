@@ -62,10 +62,10 @@
            (gdom/createDom (name this)
                            str-attrs)))))
 
-  Vector
+  PersistentVector
   (-element
     [this]
-    (log "Vector (-element " this ")")
+    (log "PersistentVector (-element " this ")")
     (let [tag      (first this)
           attrs    (second this)
           children (drop 2 this)]

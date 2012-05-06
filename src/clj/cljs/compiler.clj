@@ -16,6 +16,7 @@
 
 (declare resolve-var)
 (declare confirm-bindings)
+(declare munge)
 (require 'cljs.core)
 
 (def js-reserved
@@ -406,6 +407,10 @@
                 else-tag (infer-tag (:else e))]
             (when (= then-tag else-tag)
               then-tag))
+      :constant (case (:form e)
+                  true 'boolean
+                  false 'boolean
+                  nil)
       nil)))
 
 (defn safe-test? [e]
@@ -716,7 +721,7 @@
     (emitln "goog.require('" (munge lib) "');")))
 
 (defmethod emit :deftype*
-  [{:keys [t fields]}]
+  [{:keys [t fields pmasks]}]
   (let [fields (map munge fields)]
     (emitln "")
     (emitln "/**")
@@ -725,10 +730,12 @@
     (emitln t " = (function (" (comma-sep (map str fields)) "){")
     (doseq [fld fields]
       (emitln "this." fld " = " fld ";"))
+    (doseq [[pno pmask] pmasks]
+      (emitln "this.cljs$lang$protocol_mask$partition" pno "$ = " pmask ";"))
     (emitln "})")))
 
 (defmethod emit :defrecord*
-  [{:keys [t fields]}]
+  [{:keys [t fields pmasks]}]
   (let [fields (concat (map munge fields) '[__meta __extmap])]
     (emitln "")
     (emitln "/**")
@@ -741,6 +748,8 @@
     (emitln t " = (function (" (comma-sep (map str fields)) "){")
     (doseq [fld fields]
       (emitln "this." fld " = " fld ";"))
+    (doseq [[pno pmask] pmasks]
+      (emitln "this.cljs$lang$protocol_mask$partition" pno "$ = " pmask ";"))
     (emitln "if(arguments.length>" (- (count fields) 2) "){")
     (emitln "this.__meta = __meta;")
     (emitln "this.__extmap = __extmap;")
@@ -1067,7 +1076,9 @@
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
-  (let [excludes
+  (let [docstring (if (string? (first args)) (first args) nil)
+        args      (if docstring (next args) args)
+        excludes
         (reduce (fn [s [k exclude xs]]
                   (if (= k :refer-clojure)
                     (do
@@ -1110,7 +1121,7 @@
      :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
-  [_ env [_ tsym fields :as form] _]
+  [_ env [_ tsym fields pmasks :as form] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1120,10 +1131,10 @@
                      (assoc :file *cljs-file*)
                      (assoc :line line))
                  m))))
-    {:env env :op :deftype* :as form :t t :fields fields}))
+    {:env env :op :deftype* :as form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
-  [_ env [_ tsym fields :as form] _]
+  [_ env [_ tsym fields pmasks :as form] _]
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1133,7 +1144,7 @@
                      (assoc :file *cljs-file*)
                      (assoc :line line))
                  m))))
-    {:env env :op :defrecord* :form form :t t :fields fields}))
+    {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
 
@@ -1213,13 +1224,15 @@
            ::access {:env env :op :dot :form form
                      :target targetexpr
                      :field field
-                     :children [targetexpr]}
+                     :children [targetexpr]
+                     :tag (-> form meta :tag)}
            ::call   (let [argexprs (map #(analyze enve %) args)]
                       {:env env :op :dot :form form
                        :target targetexpr
                        :method method
                        :args argexprs
-                       :children (into [targetexpr] argexprs)})))))
+                       :children (into [targetexpr] argexprs)
+                       :tag (-> form meta :tag)})))))
 
 (defmethod parse 'js*
   [op env [_ jsform & args :as form] _]
@@ -1295,7 +1308,8 @@
     (if (specials op)
       form
       (if-let [mac (and (symbol? op) (get-expander op env))]
-        (apply mac form env (rest form))
+        (binding [*ns* *cljs-ns*]
+          (apply mac form env (rest form)))
         (if (symbol? op)
           (let [opname (str op)]
             (cond

@@ -39,13 +39,15 @@
   [x]
   (js* "(~{x} != null && ~{x} !== false)"))
 
-(defn type_satisfies_
+(set! *unchecked-if* true)
+(defn ^boolean type_satisfies_
   "Internal - do not use!"
   [p x]
-  (or
-   (aget p (goog.typeOf x))
-   (aget p "_")
-   false))
+  (cond
+   (aget p (goog.typeOf x)) true
+   (aget p "_") true
+   :else false))
+(set! *unchecked-if* false)
 
 (defn is_proto_
   [x]
@@ -149,6 +151,8 @@
 
 (defprotocol IIndexed
   (-nth [coll n] [coll n not-found]))
+
+(defprotocol ASeq)
 
 (defprotocol ISeq
   (-first [coll])
@@ -281,7 +285,7 @@
 (defn ^boolean nil?
   "Returns true if x is nil, false otherwise."
   [x]
-  (identical? x nil))
+  (coercive-= x nil))
 
 (defn type [x]
   (if (or (nil? x) (undefined? x))
@@ -372,25 +376,36 @@
   "Returns a number one greater than num."
   [x] (cljs.core/+ x 1))
 
+(declare reduced? deref)
+
 (defn- ci-reduce
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
 reduces them without incurring seq initialization"
   ([cicoll f]
-     (if (= 0 (-count cicoll))
+     (if (zero? (-count cicoll))
        (f)
        (loop [val (-nth cicoll 0), n 1]
          (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
+           (let [nval (f val (-nth cicoll n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
            val))))
   ([cicoll f val]
      (loop [val val, n 0]
          (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
+           (let [nval (f val (-nth cicoll n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
            val)))
   ([cicoll f val idx]
      (loop [val val, n idx]
          (if (< n (-count cicoll))
-           (recur (f val (-nth cicoll n)) (inc n))
+           (let [nval (f val (-nth cicoll n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
            val))))
 
 (declare hash-coll cons pr-str counted?)
@@ -402,6 +417,8 @@ reduces them without incurring seq initialization"
   
   ISeqable
   (-seq [this] this)
+
+  ASeq
   ISeq
   (-first [_] (aget a i))
   (-rest [_] (if (< (inc i) (.-length a))
@@ -443,7 +460,7 @@ reduces them without incurring seq initialization"
   (-hash [coll] (hash-coll coll)))
 
 (defn prim-seq [prim i]
-  (when-not (= 0 (.-length prim))
+  (when-not (zero? (.-length prim))
     (IndexedSeq. prim i)))
 
 (defn array-seq [array i]
@@ -483,28 +500,47 @@ reduces them without incurring seq initialization"
   empty, returns nil.  (seq nil) returns nil. seq also works on
   Strings."
   [coll]
-  (when coll
-    (-seq coll)))
+  (if (coercive-not= coll nil)
+    (if (satisfies? ASeq coll)
+      coll
+      (-seq coll))))
 
 (defn first
   "Returns the first item in the collection. Calls seq on its
   argument. If coll is nil, returns nil."
   [coll]
-  (when-let [s (seq coll)]
-    (-first s)))
+  (when (coercive-not= coll nil)
+    (if (satisfies? ISeq coll)
+      (-first coll)
+      (let [s (seq coll)]
+        (when (coercive-not= s nil)
+          (-first s))))))
 
 (defn rest
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (-rest (seq coll)))
+  (if (coercive-not= coll nil)
+    (if (satisfies? ISeq coll)
+      (-rest coll)
+      (let [s (seq coll)]
+        (if (coercive-not= s nil)
+          (-rest s)
+          ())))
+    ()))
 
 (defn next
   "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil"
   [coll]
-  (when coll
-    (seq (rest coll))))
+  (if (coercive-not= coll nil)
+    (if (satisfies? ISeq coll)
+      (let [coll (-rest coll)]
+        (if (coercive-not= coll nil)
+          (if (satisfies? ASeq coll)
+            coll
+            (-seq coll))))
+      (seq (rest coll)))))
 
 (defn second
   "Same as (first (next x))"
@@ -562,13 +598,12 @@ reduces them without incurring seq initialization"
   [coll]
   (-empty coll))
 
-(declare seqable?)
+(declare counted?)
 
-(defn- seq-count [coll]
-  (loop [i 0 s (seq coll)]
-    (if (nil? s)
-      i
-      (recur (inc i) (next s)))))
+(defn- accumulating-seq-count [coll acc]
+  (if (counted? coll) ; assumes nil is counted, which it currently is
+    (+ acc (-count coll))
+    (recur (next coll) (inc acc))))
 
 (defn count
   "Returns the number of items in the collection. (count nil) returns
@@ -576,10 +611,27 @@ reduces them without incurring seq initialization"
   [coll]
   (if (counted? coll)
     (-count coll)
-    (if (seqable? coll)
-      (seq-count coll))))
+    (accumulating-seq-count coll 0)))
 
-(declare indexed? nthnext)
+(declare indexed?)
+
+(defn- linear-traversal-nth
+  ([coll n]
+     (cond
+       (zero? n)       (if (seq coll)
+                         (first coll)
+                         (throw (js/Error. "Index out of bounds")))
+       (indexed? coll) (-nth coll n)
+       (seq coll)      (linear-traversal-nth (next coll) (dec n))
+       :else           (throw (js/Error. "Index out of bounds"))))
+  ([coll n not-found]
+     (cond
+       (zero? n)       (if (seq coll)
+                         (first coll)
+                         not-found)
+       (indexed? coll) (-nth coll n not-found)
+       (seq coll)      (linear-traversal-nth (next coll) (dec n))
+       :else           not-found)))
 
 (defn nth
   "Returns the value at the index. get returns nil if index out of
@@ -587,19 +639,13 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (if (indexed? coll)
+     (if (satisfies? IIndexed coll)
        (-nth coll (.floor js/Math n))
-       (if (seqable? coll)
-         (if-let [xs (nthnext coll n)]
-           (first xs)
-           (throw (js/Error. "Index out of bounds"))))))
+       (linear-traversal-nth coll (.floor js/Math n))))
   ([coll n not-found]
-     (if (indexed? coll)
+     (if (satisfies? IIndexed coll)
        (-nth coll (.floor js/Math n) not-found)
-       (if (seqable? coll)
-         (if-let [xs (nthnext coll n)]
-           (first xs)
-           not-found)))))
+       (linear-traversal-nth coll (.floor js/Math n) not-found))))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
@@ -704,6 +750,14 @@ reduces them without incurring seq initialization"
   "Returns true if coll implements count in constant time"
   [x] (satisfies? ICounted x))
 
+(defn ^boolean indexed?
+  "Returns true if coll implements nth in constant time"
+  [x] (satisfies? IIndexed x))
+
+(defn ^boolean reduceable?
+  "Returns true if coll satisfies IReduce"
+  [x] (satisfies? IReduce x))
+
 (defn ^boolean map?
   "Return true if x satisfies IMap"
   [x]
@@ -791,16 +845,16 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean string? [x]
   (and (goog/isString x)
-       (not (or (= (.charAt x 0) \uFDD0)
-                (= (.charAt x 0) \uFDD1)))))
+       (not (or (identical? (.charAt x 0) \uFDD0)
+                (identical? (.charAt x 0) \uFDD1)))))
 
 (defn ^boolean keyword? [x]
   (and (goog/isString x)
-       (= (.charAt x 0) \uFDD0)))
+       (identical? (.charAt x 0) \uFDD0)))
 
 (defn ^boolean symbol? [x]
   (and (goog/isString x)
-       (= (.charAt x 0) \uFDD1)))
+       (identical? (.charAt x 0) \uFDD1)))
 
 (defn ^boolean number? [n]
   (goog/isNumber n))
@@ -905,7 +959,20 @@ reduces them without incurring seq initialization"
   ([keyfn comp coll]
      (sort (fn [x y] ((fn->comparator comp) (keyfn x) (keyfn y))) coll)))
 
-(declare seq-reduce)
+; simple reduce based on seqs, used as default
+(defn- seq-reduce
+  ([f coll]
+    (if-let [s (seq coll)]
+      (reduce f (first s) (next s))
+      (f)))
+  ([f val coll]
+    (loop [val val, coll (seq coll)]
+      (if coll
+        (let [nval (f val (first coll))]
+          (if (reduced? nval)
+            @nval
+            (recur nval (next coll))))
+        val))))
 
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
@@ -918,15 +985,13 @@ reduces them without incurring seq initialization"
   applying f to that result and the 2nd item, etc. If coll contains no
   items, returns val and f is not called."
   ([f coll]
-     (if (reduceable? coll)
+     (if (satisfies? IReduce coll)
        (-reduce coll f)
-       (if (seqable? coll)
-         (seq-reduce f coll))))
+       (seq-reduce f coll)))
   ([f val coll]
-     (if (reduceable? coll)
+     (if (satisfies? IReduce coll)
        (-reduce coll f val)
-       (if (seqable? coll)
-         (seq-reduce f val coll)))))
+       (seq-reduce f val coll))))
 
 (defn reduce-kv
   "Reduces an associative collection. f should be a function of 3
@@ -938,23 +1003,11 @@ reduces them without incurring seq initialization"
   ([f init coll]
      (-kv-reduce coll f init)))
 
-; simple reduce based on seqs, used as default
-(defn- seq-reduce
-  ([f coll]
-    (if-let [s (seq coll)]
-      (reduce f (first s) (next s))
-      (f)))
-  ([f val coll]
-    (loop [val val, coll (seq coll)]
-      (if coll
-        (recur (f val (first coll)) (next coll))
-        val))))
-
 (deftype Reduced [val]
   IDeref
   (-deref [o] val))
 
-(defn reduced?
+(defn ^boolean reduced?
   "Returns true if x is the result of a call to reduced"
   [r]
   (instance? Reduced r))
@@ -1320,6 +1373,7 @@ reduces them without incurring seq initialization"
   IMeta
   (-meta [coll] meta)
 
+  ASeq
   ISeq
   (-first [coll] first)
   (-rest [coll] rest)
@@ -1416,6 +1470,7 @@ reduces them without incurring seq initialization"
   IMeta
   (-meta [coll] meta)
 
+  ASeq
   ISeq
   (-first [coll] first)
   (-rest [coll] (if (nil? rest) () rest))
@@ -2199,13 +2254,13 @@ reduces them without incurring seq initialization"
      (lazy-seq
        (when-let [s (seq coll)]
          (let [p (take n s)]
-           (when (= n (count p))
+           (when (== n (count p))
              (cons p (partition n step (drop step s))))))))
   ([n step pad coll]
      (lazy-seq
        (when-let [s (seq coll)]
          (let [p (take n s)]
-           (if (= n (count p))
+           (if (== n (count p))
              (cons p (partition n step pad (drop step s)))
              (list (take n (concat p pad)))))))))
 
@@ -2595,7 +2650,7 @@ reduces them without incurring seq initialization"
   (-peek [coll]
     (-nth v (dec end)))
   (-pop [coll]
-    (if (= start end)
+    (if (== start end)
       (throw (js/Error. "Can't pop empty vector"))
       (Subvec. meta v start (dec end) nil)))
 
@@ -2616,7 +2671,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (let [subvec-seq (fn subvec-seq [i]
-                       (when-not (= i end)
+                       (when-not (== i end)
                          (cons (-nth v i)
                                (lazy-seq
                                 (subvec-seq (inc i))))))]
@@ -2688,7 +2743,7 @@ reduces them without incurring seq initialization"
              (if (== level 5)
                tail-node
                (let [child (pv-aget ret subidx)]
-                 (if (coercive-= child nil)
+                 (if (coercive-not= child nil)
                    (tv-push-tail tv (- level 5) child tail-node)
                    (new-path (.. tv -root -edit) (- level 5) tail-node)))))
     ret))
@@ -2954,7 +3009,7 @@ reduces them without incurring seq initialization"
   (boolean
     (when (map? y)
       ; assume all maps are counted
-      (when (= (count x) (count y))
+      (when (== (count x) (count y))
         (every? identity
                 (map (fn [xkv] (= (get y (first xkv) never-equiv)
                                   (second xkv)))
@@ -4499,10 +4554,10 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [node f]
-    (f key val))
+    (ci-reduce node f))
 
   (-reduce [node f start]
-    (f (f start key)))
+    (ci-reduce node f start))
 
   IFn
   (-invoke [node k]
@@ -4646,10 +4701,10 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [node f]
-    (f key val))
+    (ci-reduce node f))
 
   (-reduce [node f start]
-    (f (f start key)))
+    (ci-reduce node f start))
 
   IFn
   (-invoke [node k]
@@ -5004,7 +5059,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other]
     (and
      (set? other)
-     (= (count coll) (count other))
+     (== (count coll) (count other))
      (every? #(contains? coll %)
              other)))
 
@@ -5099,7 +5154,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other]
     (and
      (set? other)
-     (= (count coll) (count other))
+     (== (count coll) (count other))
      (every? #(contains? coll %)
              other)))
 
@@ -5289,6 +5344,21 @@ reduces them without incurring seq initialization"
        (take-while (mk-bound-fn sc end-test end-key)
                    (if ((mk-bound-fn sc start-test start-key) e) s (next s))))))
 
+(defn rsubseq
+  "sc must be a sorted collection, test(s) one of <, <=, > or
+  >=. Returns a reverse seq of those entries with keys ek for
+  which (test (.. sc comparator (compare ek key)) 0) is true"
+  ([sc test key]
+     (let [include (mk-bound-fn sc test key)]
+       (if (#{< <=} test)
+         (when-let [[e :as s] (-sorted-seq-from sc key false)]
+           (if (include e) s (next s)))
+         (take-while include (-sorted-seq sc false)))))
+  ([sc start-test start-key end-test end-key]
+     (when-let [[e :as s] (-sorted-seq-from sc end-key false)]
+       (take-while (mk-bound-fn sc start-test start-key)
+                   (if ((mk-bound-fn sc end-test end-key) e) s (next s))))))
+
 (deftype Range [meta start end step ^:mutable __hash]
   Object
   (toString [this]
@@ -5330,13 +5400,13 @@ reduces them without incurring seq initialization"
   (-nth [rng n]
     (if (< n (-count rng))
       (+ start (* n step))
-      (if (and (> start end) (= step 0))
+      (if (and (> start end) (zero? step))
         start
         (throw (js/Error. "Index out of bounds")))))
   (-nth [rng n not-found]
     (if (< n (-count rng))
       (+ start (* n step))
-      (if (and (> start end) (= step 0))
+      (if (and (> start end) (zero? step))
         start
         not-found)))
 
@@ -5475,7 +5545,7 @@ reduces them without incurring seq initialization"
   [re s]
   (let [matches (.exec re s)]
     (when (= (first matches) s)
-      (if (= (count matches) 1)
+      (if (== (count matches) 1)
         (first matches)
         (vec matches)))))
 
@@ -5487,7 +5557,7 @@ reduces them without incurring seq initialization"
   [re s]
   (let [matches (.exec re s)]
     (when-not (nil? matches)
-      (if (= (count matches) 1)
+      (if (== (count matches) 1)
         (first matches)
         (vec matches)))))
 
@@ -5530,9 +5600,15 @@ reduces them without incurring seq initialization"
                        (satisfies? IMeta obj)
                        (meta obj))
               (concat ["^"] (pr-seq (meta obj) opts) [" "]))
-            (if (satisfies? IPrintable obj)
-              (-pr-seq obj opts)
-              (list "#<" (str obj) ">")))))
+            (cond
+             ;; handle CLJS ctors
+             (and (coercive-not= obj nil)
+                  ^boolean (.-cljs$lang$type obj))
+             (.cljs$lang$ctorPrSeq obj obj) 
+
+             (satisfies? IPrintable obj) (-pr-seq obj opts)
+
+             :else (list "#<" (str obj) ">")))))
 
 (defn- pr-sb [objs opts]
   (let [first-obj (first objs)
@@ -6034,9 +6110,9 @@ reduces them without incurring seq initialization"
          (contains? ((:ancestors h) child) parent)
          ;;(and (class? child) (some #(contains? ((:ancestors h) %) parent) (supers child)))
          (and (vector? parent) (vector? child)
-              (= (count parent) (count child))
+              (== (count parent) (count child))
               (loop [ret true i 0]
-                (if (or (not ret) (= i (count parent)))
+                (if (or (not ret) (== i (count parent)))
                   ret
                   (recur (isa? h (child i) (parent i)) (inc i))))))))
 
