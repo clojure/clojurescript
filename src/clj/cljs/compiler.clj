@@ -682,22 +682,41 @@
                  (not (-> f :info :dynamic))
                  (-> f :info :fn-var))
         js? (= (-> f :info :ns) 'js)
-        [f direct-variadic?]
+        [f variadic-invoke]
         (if fn?
           (let [info (-> f :info)
                 arity (count args)
-                mps (:method-params info)]
-            (if (or (> arity (:max-fixed-arity info))
-                    (= (count mps) 1))
-              [f false]
-              (let [arities (map count mps)]
-                (if (some #{arity} arities)
-                  [(update-in f [:info :name]
-                     (fn [name] (symbol (str name ".cljs$lang$arity$" arity)))) false]
-                  [f false]))))
-          [f false])]
+                variadic? (:variadic info)
+                mps (:method-params info)
+                mfa (:max-fixed-arity info)]
+            (cond
+             ;; if only one method, no renaming needed
+             (and (not variadic?)
+                  (= (count mps) 1))
+             [f nil]
+
+             ;; direct dispatch to variadic case
+             (and variadic? (> arity mfa))
+             [(update-in f [:info :name]
+                             (fn [name] (symbol (str name ".cljs$lang$arity$variadic"))))
+              {:max-fixed-arity mfa}]
+
+             ;; direct dispatch to specific arity case
+             :else
+             (let [arities (map count mps)]
+               (if (some #{arity} arities)
+                 [(update-in f [:info :name]
+                             (fn [name] (symbol (str name ".cljs$lang$arity$" arity)))) nil]
+                 [f nil]))))
+          [f nil])]
     (emit-wrap env
       (cond
+       variadic-invoke
+       (let [mfa (:max-fixed-arity variadic-invoke)]
+        (emits f "(" (comma-sep (take mfa args))
+               (when-not (zero? mfa) ",")
+               "cljs.core.array_seq([" (comma-sep (drop mfa args)) "], 0))"))
+       
        (or fn? js?)
        (emits f "(" (comma-sep args)  ")")
        
