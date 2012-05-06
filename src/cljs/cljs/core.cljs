@@ -830,16 +830,6 @@ reduces them without incurring seq initialization"
   [s]
   (satisfies? ISeqable s))
 
-(defn ^boolean reduceable?
-  "Return true if s satisfies IReduce"
-  [s]
-  (satisfies? IReduce s))
-
-(defn ^boolean indexed?
-  "Return true if s satisfies IIndexed"
-  [s]
-  (satisfies? IIndexed s))
-
 (defn ^boolean boolean [x]
   (if x true false))
 
