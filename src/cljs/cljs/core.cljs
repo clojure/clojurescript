@@ -635,11 +635,11 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (if (indexed? coll)
+     (if (satisfies? IIndexed coll)
        (-nth coll (.floor js/Math n))
        (linear-traversal-nth coll (.floor js/Math n))))
   ([coll n not-found]
-     (if (indexed? coll)
+     (if (satisfies? IIndexed coll)
        (-nth coll (.floor js/Math n) not-found)
        (linear-traversal-nth coll (.floor js/Math n) not-found))))
 
@@ -750,7 +750,7 @@ reduces them without incurring seq initialization"
   "Returns true if coll implements nth in constant time"
   [x] (satisfies? IIndexed x))
 
-(defn ^boolean reducible?
+(defn ^boolean reduceable?
   "Returns true if coll satisfies IReduce"
   [x] (satisfies? IReduce x))
 
@@ -973,11 +973,11 @@ reduces them without incurring seq initialization"
   applying f to that result and the 2nd item, etc. If coll contains no
   items, returns val and f is not called."
   ([f coll]
-     (if (reducible? coll)
+     (if (satisfies? IReduce coll)
        (-reduce coll f)
        (seq-reduce f coll)))
   ([f val coll]
-     (if (reducible? coll)
+     (if (satisfies? IReduce coll)
        (-reduce coll f val)
        (seq-reduce f val coll))))
 
