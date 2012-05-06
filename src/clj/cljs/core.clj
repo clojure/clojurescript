@@ -53,7 +53,7 @@
                  ITransientAssociative ITransientMap ITransientVector ITransientSet
                  IMultiFn])
           (iterate (fn [[p b]]
-                     (if (core/== 32 b)
+                     (if (core/== 2147483648 b)
                        [(core/inc p) 1]
                        [p (core/bit-shift-left b 1)]))
                    [0 1])))
