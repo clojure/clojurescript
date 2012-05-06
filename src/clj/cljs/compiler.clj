@@ -697,10 +697,12 @@
                   [f false]))))
           [f false])]
     (emit-wrap env
-      (emits f (when-not (or fn? js?) ".call") "("
-                 (let [args (if (or fn? js?) args (cons "null" args))]
-                   (comma-sep args))
-                 ")"))))
+      (cond
+       (or fn? js?)
+       (emits f "(" (comma-sep args)  ")")
+       
+       :else
+       (emits f ".call(" (comma-sep (cons "null" args)) ")")))))
 
 (defmethod emit :new
   [{:keys [ctor args env]}]
