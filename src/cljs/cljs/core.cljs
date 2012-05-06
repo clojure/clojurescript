@@ -39,16 +39,15 @@
   [x]
   (js* "(~{x} != null && ~{x} !== false)"))
 
+(set! *unchecked-if* true)
 (defn ^boolean type_satisfies_
   "Internal - do not use!"
   [p x]
   (cond
-   ;; check that x isn't a CLJS ctor
-   (and (coercive-not= x nil)
-        ^boolean (.-cljs$lang$type x)) false
    (aget p (goog.typeOf x)) true
    (aget p "_") true
    :else false))
+(set! *unchecked-if* false)
 
 (defn is_proto_
   [x]
@@ -5580,12 +5579,12 @@ reduces them without incurring seq initialization"
                        (meta obj))
               (concat ["^"] (pr-seq (meta obj) opts) [" "]))
             (cond
-             (satisfies? IPrintable obj) (-pr-seq obj opts)
-
              ;; handle CLJS ctors
              (and (coercive-not= obj nil)
                   ^boolean (.-cljs$lang$type obj))
              (.cljs$lang$ctorPrSeq obj obj) 
+
+             (satisfies? IPrintable obj) (-pr-seq obj opts)
 
              :else (list "#<" (str obj) ">")))))
 
