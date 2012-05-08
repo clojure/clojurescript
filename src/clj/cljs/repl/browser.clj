@@ -182,15 +182,16 @@
 (defn send-static [opts conn {path :path :as request}]
   (if (and (:static-dir opts)
            (not= "/favicon.ico" path))
-    (try
-      (let [path     (if (= "/" path) "/index.html" path)
-            contents (slurp (str (:static-dir opts) path))]
-        (send-and-close conn 200 contents
+    (let [path   (if (= "/" path) "/index.html" path)
+          st-dir (:static-dir opts)]
+      (if-let [local-path (seq (for [x (if (string? st-dir) [st-dir] st-dir)
+                                     :when (.exists (io/file (str x path)))]
+                                 (str x path)))]
+        (send-and-close conn 200 (slurp (first local-path))
                         (condp #(.endsWith %2 %1) path
                           ".js" "text/javascript"
                           ".html" "text/html"
-                          "text/plain")))
-      (catch java.io.FileNotFoundException e
+                          "text/plain"))
         (send-404 conn path)))
     (send-404 conn path)))
 
@@ -338,7 +339,7 @@
                      :optimizations :simple
                      :working-dir   ".repl"
                      :serve-static  true
-                     :static-dir    "."}
+                     :static-dir    ["." "out/"]}
                     opts)]
     (do (swap! server-state
                (fn [old] (assoc old :client-js
