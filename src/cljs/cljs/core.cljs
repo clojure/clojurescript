@@ -1483,8 +1483,11 @@ reduces them without incurring seq initialization"
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
-  [x seq]
-  (Cons. nil x seq nil))
+  [x coll]
+  (if (or (coercive-= coll nil)
+          (satisfies? ISeq coll))
+    (Cons. nil x coll nil)
+    (Cons. nil x (seq coll) nil)))
 
 (defn ^boolean list? [x]
   (satisfies? IList x))
