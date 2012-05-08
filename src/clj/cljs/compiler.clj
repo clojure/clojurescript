@@ -485,12 +485,12 @@
         (emits arglist)
         (dotimes [_ (- (count params) 2)] (emits ")"))
         (emitln ");")
-        (emitln "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");"))
+        (emitln "return " delegate-name "(" (string/join ", " params) ");"))
       (do
         (emits "var " (last params) " = ")
         (emits "cljs.core.seq(" arglist ");")
         (emitln ";")
-        (emitln "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");")))
+        (emitln "return " delegate-name "(" (string/join ", " params) ");")))
     (emits "})")))
 
 (defn emit-fn-method
@@ -587,7 +587,7 @@
           (doseq [[n meth] ms]
             (if (:variadic meth)
               (do (emitln "default:")
-                  (emitln "return " n ".cljs$lang$arity$variadic.call(this,"
+                  (emitln "return " n ".cljs$lang$arity$variadic("
                           (comma-sep (butlast maxparams))
                           (and (> (count maxparams) 1) ", ")
                           "cljs.core.array_seq(arguments, " max-fixed-arity "));"))
