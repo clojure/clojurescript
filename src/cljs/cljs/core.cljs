@@ -1670,11 +1670,8 @@ reduces them without incurring seq initialization"
   (if (counted? s)
     (count s)
     (loop [s s i n sum 0]
-      (if (and (pos? i)
-               (seq s))
-        (recur (next s)
-               (dec i)
-               (inc sum))
+      (if (and (pos? i) (seq s))
+        (recur (next s) (dec i) (inc sum))
         sum))))
 
 (defn spread
@@ -1742,6 +1739,9 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
 
+;; see core.clj
+(gen-apply-to)
+
 (defn apply
   "Applies fn f to the argument list formed by prepending intervening arguments to args.
   First cut.  Not lazy.  Needs to use emitted toApply."
@@ -1749,8 +1749,8 @@ reduces them without incurring seq initialization"
      (let [fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
          (let [bc (bounded-count args (inc fixed-arity))]
-          (if (<=  bc fixed-arity)
-            (.apply f f (to-array args))
+          (if (<= bc fixed-arity)
+            (apply-to f bc args)
             (.cljs$lang$applyTo f args)))
          (.apply f f (to-array args)))))
   ([f x args]
@@ -1759,7 +1759,7 @@ reduces them without incurring seq initialization"
        (if (.-cljs$lang$applyTo f)
          (let [bc (bounded-count arglist (inc fixed-arity))]
           (if (<= bc fixed-arity)
-            (.apply f f (to-array arglist))
+            (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist)))))
   ([f x y args]
@@ -1768,7 +1768,7 @@ reduces them without incurring seq initialization"
        (if (.-cljs$lang$applyTo f)
          (let [bc (bounded-count arglist (inc fixed-arity))]
           (if (<= bc fixed-arity)
-            (.apply f f (to-array arglist))
+            (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist)))))
   ([f x y z args]
@@ -1777,7 +1777,7 @@ reduces them without incurring seq initialization"
        (if (.-cljs$lang$applyTo f)
          (let [bc (bounded-count arglist (inc fixed-arity))]
           (if (<= bc fixed-arity)
-            (.apply f f (to-array arglist))
+            (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist)))))
   ([f a b c d & args]
@@ -1786,7 +1786,7 @@ reduces them without incurring seq initialization"
        (if (.-cljs$lang$applyTo f)
          (let [bc (bounded-count arglist (inc fixed-arity))]
           (if (<= bc fixed-arity)
-            (.apply f f (to-array arglist))
+            (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist))))))
 

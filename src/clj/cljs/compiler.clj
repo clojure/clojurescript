@@ -1070,6 +1070,7 @@
     (disallowing-recur
      (let [enve (assoc env :context :expr)
            targetexpr (cond
+                       ;; TODO: proper resolve
                        (= target '*unchecked-if*)
                        (do
                          (reset! *unchecked-if* val)
