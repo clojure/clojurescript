@@ -912,3 +912,30 @@
          ret# ~expr]
      (prn (core/str "Elapsed time: " (- (.getTime (js/Date.) ()) start#) " msecs"))
      ret#))
+
+(def cs (into [] (map (comp symbol core/str char) (range 97 118))))
+
+(defn gen-apply-to-helper
+  ([] (gen-apply-to-helper 1))
+  ([n]
+     (let [prop (symbol (core/str "-cljs$lang$arity$" n))
+           f (symbol (core/str "cljs$lang$arity$" n))]
+       (if (core/<= n 20)
+         `(let [~(cs (core/dec n)) (-first ~'args)
+                ~'args (-rest ~'args)]
+            (if (core/== ~'argc ~n)
+              (if (. ~'f ~prop)
+                (. ~'f (~f ~@(take n cs)))
+                (~'f ~@(take n cs)))
+              ~(gen-apply-to-helper (core/inc n))))
+         `(throw (js/Error. "Only up to 20 arguments supported on functions"))))))
+
+(defmacro gen-apply-to []
+  `(do
+     (set! ~'*unchecked-if* true)
+     (defn ~'apply-to [~'f ~'argc ~'args]
+       (let [~'args (seq ~'args)]
+         (if (zero? ~'argc)
+           (~'f)
+           ~(gen-apply-to-helper))))
+     (set! ~'*unchecked-if* false)))

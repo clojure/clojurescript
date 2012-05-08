@@ -1483,8 +1483,11 @@ reduces them without incurring seq initialization"
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
-  [x seq]
-  (Cons. nil x seq nil))
+  [x coll]
+  (if (or (coercive-= coll nil)
+          (satisfies? ISeq coll))
+    (Cons. nil x coll nil)
+    (Cons. nil x (seq coll) nil)))
 
 (defn ^boolean list? [x]
   (satisfies? IList x))
@@ -1670,11 +1673,8 @@ reduces them without incurring seq initialization"
   (if (counted? s)
     (count s)
     (loop [s s i n sum 0]
-      (if (and (pos? i)
-               (seq s))
-        (recur (next s)
-               (dec i)
-               (inc sum))
+      (if (and (pos? i) (seq s))
+        (recur (next s) (dec i) (inc sum))
         sum))))
 
 (defn spread
@@ -1742,47 +1742,55 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
 
+;; see core.clj
+(gen-apply-to)
+
 (defn apply
   "Applies fn f to the argument list formed by prepending intervening arguments to args.
   First cut.  Not lazy.  Needs to use emitted toApply."
   ([f args]
      (let [fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count args (inc fixed-arity)) fixed-arity)
-           (.apply f f (to-array args))
-           (.cljs$lang$applyTo f args))
+         (let [bc (bounded-count args (inc fixed-arity))]
+          (if (<= bc fixed-arity)
+            (apply-to f bc args)
+            (.cljs$lang$applyTo f args)))
          (.apply f f (to-array args)))))
   ([f x args]
      (let [arglist (list* x args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
-           (.apply f f (to-array arglist))
-           (.cljs$lang$applyTo f arglist))
+         (let [bc (bounded-count arglist (inc fixed-arity))]
+          (if (<= bc fixed-arity)
+            (apply-to f bc arglist)
+            (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist)))))
   ([f x y args]
      (let [arglist (list* x y args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
-           (.apply f f (to-array arglist))
-           (.cljs$lang$applyTo f arglist))
+         (let [bc (bounded-count arglist (inc fixed-arity))]
+          (if (<= bc fixed-arity)
+            (apply-to f bc arglist)
+            (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist)))))
   ([f x y z args]
      (let [arglist (list* x y z args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
-           (.apply f f (to-array arglist))
-           (.cljs$lang$applyTo f arglist))
+         (let [bc (bounded-count arglist (inc fixed-arity))]
+          (if (<= bc fixed-arity)
+            (apply-to f bc arglist)
+            (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist)))))
   ([f a b c d & args]
      (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (if (<= (bounded-count arglist (inc fixed-arity)) fixed-arity)
-           (.apply f f (to-array arglist))
-           (.cljs$lang$applyTo f arglist))
+         (let [bc (bounded-count arglist (inc fixed-arity))]
+          (if (<= bc fixed-arity)
+            (apply-to f bc arglist)
+            (.cljs$lang$applyTo f arglist)))
          (.apply f f (to-array arglist))))))
 
 (defn vary-meta
@@ -2496,7 +2504,27 @@ reduces them without incurring seq initialization"
              (pv-aset ret subidx nil)
              ret))))
 
-(declare tv-editable-root tv-editable-tail TransientVector deref)
+(declare tv-editable-root tv-editable-tail TransientVector deref
+         pr-sequential pr-seq)
+
+(defn vector-seq [v offset]
+  (let [c (-count v)]
+    (when (pos? c)
+      (reify
+        IPrintable
+        (-pr-seq [vseq opts] (pr-sequential pr-seq "(" " " ")" opts vseq))
+        ISequential
+        IEquiv
+        (-equiv [vseq other] (equiv-sequential vseq other))
+        ISeq
+        (-first [_] (-nth v offset))
+        (-rest [_]
+          (let [offset (inc offset)]
+            (if (< offset c)
+              (vector-seq v offset)
+              ())))
+        ISeqable
+        (-seq [vseq] vseq)))))
 
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
@@ -2555,13 +2583,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (pos? cnt)
-      (let [vector-seq
-             (fn vector-seq [i]
-               (lazy-seq
-                 (when (< i cnt)
-                   (cons (-nth coll i) (vector-seq (inc i))))))]
-        (vector-seq 0))))
+    (vector-seq coll 0))
 
   ICounted
   (-count [coll] cnt)
