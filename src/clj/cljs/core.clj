@@ -921,8 +921,8 @@
      (let [prop (symbol (core/str "-cljs$lang$arity$" n))
            f (symbol (core/str "cljs$lang$arity$" n))]
        (if (core/<= n 20)
-         `(let [~(cs (core/dec n)) (first ~'args)
-                ~'args (rest ~'args)]
+         `(let [~(cs (core/dec n)) (-first ~'args)
+                ~'args (-rest ~'args)]
             (if (core/== ~'argc ~n)
               (if (. ~'f ~prop)
                 (. ~'f (~f ~@(take n cs)))
@@ -934,7 +934,8 @@
   `(do
      (set! ~'*unchecked-if* true)
      (defn ~'apply-to [~'f ~'argc ~'args]
-       (if (zero? ~'argc)
-         (~'f)
-         ~(gen-apply-to-helper)))
+       (let [~'args (seq ~'args)]
+         (if (zero? ~'argc)
+           (~'f)
+           ~(gen-apply-to-helper))))
      (set! ~'*unchecked-if* false)))
