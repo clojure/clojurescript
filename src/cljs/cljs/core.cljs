@@ -2479,7 +2479,8 @@ reduces them without incurring seq initialization"
              (pv-aset ret subidx nil)
              ret))))
 
-(declare tv-editable-root tv-editable-tail TransientVector deref)
+(declare tv-editable-root tv-editable-tail TransientVector deref
+         pr-sequential pr-seq)
 
 (defn vector-seq [v offset]
   (let [c (-count v)]
