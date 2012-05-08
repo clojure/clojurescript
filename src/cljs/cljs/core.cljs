@@ -2481,6 +2481,25 @@ reduces them without incurring seq initialization"
 
 (declare tv-editable-root tv-editable-tail TransientVector deref)
 
+(defn vector-seq [v offset]
+  (let [c (-count v)]
+    (when (pos? c)
+      (reify
+        IPrintable
+        (-pr-seq [vseq opts] (pr-sequential pr-seq "(" " " ")" opts vseq))
+        ISequential
+        IEquiv
+        (-equiv [vseq other] (equiv-sequential vseq other))
+        ISeq
+        (-first [_] (-nth v offset))
+        (-rest [_]
+          (let [offset (inc offset)]
+            (if (< offset c)
+              (vector-seq v offset)
+              ())))
+        ISeqable
+        (-seq [vseq] vseq)))))
+
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
   (toString [this]
@@ -2538,13 +2557,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (pos? cnt)
-      (let [vector-seq
-             (fn vector-seq [i]
-               (lazy-seq
-                 (when (< i cnt)
-                   (cons (-nth coll i) (vector-seq (inc i))))))]
-        (vector-seq 0))))
+    (vector-seq coll 0))
 
   ICounted
   (-count [coll] cnt)
