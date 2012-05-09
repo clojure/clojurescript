@@ -1097,6 +1097,18 @@
         :else {:env env :op :set! :form form :target targetexpr :val valexpr
                :children [targetexpr valexpr]})))))
 
+(defn ns->relpath [s]
+  (str (string/replace (munge s) \. \/) ".cljs"))
+
+(declare analyze-file)
+
+(defn analyze-deps [deps]
+  (doseq [dep deps]
+    (when-not (:defs (@namespaces dep))
+      (let [relpath (ns->relpath dep)]
+        (when (io/resource relpath)
+          (analyze-file relpath))))))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
   (let [docstring (if (string? (first args)) (first args) nil)
@@ -1109,12 +1121,14 @@
                       (into s xs))
                     s))
                 #{} args)
+        deps (atom #{})
         {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
         (reduce (fn [m [k & libs]]
                   (assert (#{:use :use-macros :require :require-macros} k)
                           "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")
                   (assoc m k (into {}
                                    (mapcat (fn [[lib kw expr]]
+                                             (swap! deps conj lib)
                                              (case k
                                                (:require :require-macros)
                                                (do (assert (and expr (= :as kw))
@@ -1126,6 +1140,8 @@
                                                    (map vector expr (repeat lib)))))
                                            libs))))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
+    (when (seq @deps)
+      (analyze-deps @deps))
     (set! *cljs-ns* name)
     (require 'cljs.core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
