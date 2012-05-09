@@ -2516,6 +2516,7 @@ reduces them without incurring seq initialization"
         ISequential
         IEquiv
         (-equiv [vseq other] (equiv-sequential vseq other))
+        ASeq
         ISeq
         (-first [_] (-nth v offset))
         (-rest [_]
