@@ -867,27 +867,28 @@
                opts)
         ups-deps (get-upstream-deps)
         all-opts (assoc opts 
-                        :ups-libs (:libs ups-deps)
-                        :ups-foreign-libs (:foreign-libs ups-deps)
-                        :ups-externs (:externs ups-deps))
-        compiled (binding [comp/*cljs-static-fns*
-                           (or (and (= (opts :optimizations) :advanced))
-                               (:static-fns opts)
-                               comp/*cljs-static-fns*)]
-                   (-compile source all-opts))
-        compiled (concat
-                   (if (coll? compiled) compiled [compiled])
-                   (when (= :nodejs (:target all-opts))
-                     [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
-        js-sources (if (coll? compiled)
-                     (apply add-dependencies all-opts compiled)
-                     (add-dependencies all-opts compiled))]
-    (if (:optimizations all-opts)
-      (->> js-sources
-           (apply optimize all-opts)
-           (add-header all-opts)
-           (output-one-file all-opts))
-      (apply output-unoptimized all-opts js-sources))))
+                   :ups-libs (:libs ups-deps)
+                   :ups-foreign-libs (:foreign-libs ups-deps)
+                   :ups-externs (:externs ups-deps))]
+    (binding [comp/*cljs-static-fns*
+              (or (and (= (opts :optimizations) :advanced))
+                  (:static-fns opts)
+                  comp/*cljs-static-fns*)]
+      (let [compiled (-compile source all-opts)
+            compiled (concat
+                      (if (coll? compiled) compiled [compiled])
+                      (when (= :nodejs (:target all-opts))
+                        [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
+            js-sources (if (coll? compiled)
+                         (binding []
+                           (apply add-dependencies all-opts compiled))
+                         (add-dependencies all-opts compiled))]
+        (if (:optimizations all-opts)
+          (->> js-sources
+               (apply optimize all-opts)
+               (add-header all-opts)
+               (output-one-file all-opts))
+          (apply output-unoptimized all-opts js-sources))))))
 
 (comment
 

@@ -5,22 +5,45 @@ set -e
 mkdir -p lib
 
 echo "Fetching Clojure..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.3.0/clojure-1.3.0.zip
-unzip -qu clojure-1.3.0.zip
-echo "Copying clojure-1.3.0/clojure-1.3.0.jar to lib/clojure.jar..."
-cp clojure-1.3.0/clojure-1.3.0.jar lib/clojure.jar
+curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.4.0/clojure-1.4.0.zip
+unzip -qu clojure-1.4.0.zip
+echo "Copying clojure-1.4.0/clojure-1.4.0.jar to lib/clojure.jar..."
+cp clojure-1.4.0/clojure-1.4.0.jar lib/clojure.jar
 echo "Cleaning up Clojure directory..."
-rm -rf clojure-1.3.0/
+rm -rf clojure-1.4.0/
 echo "Cleaning up Clojure archive..."
-rm clojure-1.3.0.zip
+rm clojure-1.4.0.zip
 
 echo "Fetching Google Closure library..."
 mkdir -p closure/library
 cd closure/library
-curl -O -s http://closure-library.googlecode.com/files/closure-library-20110323-r790.zip
-unzip -qu closure-library-20110323-r790.zip
-echo "Cleaning up Google Closure library archive..."
-rm closure-library-20110323-r790.zip
+if [ "x$1" = "x--closure-library-head" ] ; then
+    echo "Building against HEAD of Google Closure library..."
+
+    # Check if svn present
+    type svn >/dev/null 2>&1 || { echo >&2 "Need svn command to checkout HEAD of Google Closure library. Aborting."; exit 1; }
+
+    # Existing checkout?
+    set +e
+    svn info --non-interactive >/dev/null 2>&1
+    declare -i r=$?
+    set -e
+    if [ 0 -eq $r ] ; then
+        echo "Updating Google Closure library from HEAD..."
+        svn update -q --non-interactive
+    else
+        echo "Checking out HEAD of Google Closure library..."
+        rm -rf *
+        svn checkout -q --non-interactive http://closure-library.googlecode.com/svn/trunk/ ./
+    fi
+else
+    echo "Fetching Google Closure library..."
+    f=closure-library-20111110-r1376.zip
+    curl -O -s http://closure-library.googlecode.com/files/$f
+    unzip -qu $f
+    echo "Cleaning up Google Closure library archive..."
+    rm $f
+fi
 cd ..
 
 echo "Fetching Google Closure compiler..."

@@ -60,7 +60,7 @@
   (events/listen
     img events/EventType.MOUSEOVER
     (fn [event]
-        (hide-tooltip)
+        (hide-tooltip event)
         (.setPosition avatar-hover
                     (goog.ui/Tooltip.CursorTooltipPosition.
                         (Coordinate/sum (goog.math/Coordinate. px py)
@@ -117,5 +117,5 @@
     (draw-graph (layout/radial data) nil)))
 
 (events/listen (dom/get-element :network) events/EventType.CLICK
-               #(draw-graph (layout/radial @graph-data)))
+               #(draw-graph (layout/radial @graph-data) nil))
 (buzz/register :track-clicked #(. g (clear)))
