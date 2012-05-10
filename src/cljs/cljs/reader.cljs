@@ -154,7 +154,7 @@ nil if the end of stream has been reached")
       mapresult
       (if (or (identical? \u ch) (numeric? ch))
         (read-unicode-char reader ch)
-        (reader-error reader "Unsupported escape charater: \\" ch)))))
+        (reader-error reader "Unsupported escape character: \\" ch)))))
 
 (defn read-past
   "Read until first character that doesn't match pred, returning
