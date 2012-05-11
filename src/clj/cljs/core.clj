@@ -674,7 +674,20 @@
   (let [default (if (odd? (count clauses))
                   (last clauses)
                   `(throw (js/Error. (core/str "No matching clause: " ~e))))
-        pairs (partition 2 clauses)]
+        assoc-test (fn assoc-test [m test expr]
+                         (if (contains? m test)
+                           (throw (clojure.core/IllegalArgumentException.
+                                   (core/str "Duplicate case test constant '"
+                                             test "'"
+                                             (when (:line &env)
+                                               (core/str " on line " (:line &env) " "
+                                                         cljs.compiler/*cljs-file*)))))
+                           (assoc m test expr)))
+        pairs (reduce (fn [m [test expr]]
+                        (if (seq? test)
+                          (reduce #(assoc-test %1 %2 expr) m test)
+                          (assoc-test m test expr)))
+                      {} (partition 2 clauses))]
    `(cond
      ~@(mapcat (fn [[m c]] `((identical? ~m ~e) ~c)) pairs)
      :else ~default)))

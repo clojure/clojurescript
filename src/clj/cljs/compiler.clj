@@ -17,6 +17,7 @@
 (declare resolve-var)
 (declare confirm-bindings)
 (declare munge)
+(declare ^:dynamic *cljs-file*)
 (require 'cljs.core)
 
 (def js-reserved
