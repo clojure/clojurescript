@@ -1,5 +1,9 @@
 (ns cljs.reader-test
-  (:require [cljs.reader :as reader]))
+  (:require [cljs.reader :as reader]
+            [goog.object :as o]))
+
+(deftype T [a b])
+(defrecord R [a b])
 
 (defn test-reader
   []
@@ -26,5 +30,23 @@
   (assert (= false (reader/read-string "false")))
   (assert (= "string" (reader/read-string "\"string\"")))
   (assert (= "escape chars \t \r \n \\ \" \b \f" (reader/read-string "\"escape chars \\t \\r \\n \\\\ \\\" \\b \\f\"")))
+
+  (println (pr-str (reader/read-string "#cljs.reader_test.R[1 2]")))
+  (println (pr-str (reader/read-string "#cljs.reader_test.R{:a 1 :b 2}")))
+  (println (pr-str (new (.-R cljs.reader_test) 1 2)))
+
+  (let [n 'R
+        k cljs.reader_test.R]
+    (println (pr-str (js* "(new ~{k}(1,2))"))))
+
+  (println (pr-str (new (.-R (.-reader_test js/cljs)) 1 2)))
+
+  (let [a "cljs"
+        b "reader_test"
+        c "R"
+        #_d #_"window['~{a}']"]
+    (println (js* "Function('return this')()")))
+  
+  (assert (= (R. 1 2) (reader/read-string "#cljs.reader_test.R[1 2]")))
   
   :ok)

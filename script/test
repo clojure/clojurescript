@@ -1,6 +1,9 @@
 rm -rf out
 mkdir -p out
 
+possible=3
+ran=0
+
 #bin/cljsc test > out/core-test.js
 bin/cljsc test {:optimizations :advanced} > out/core-advanced-test.js
 
@@ -11,6 +14,7 @@ else
   ${V8_HOME}/d8 out/core-advanced-test.js
   # TODO: figure out path problem when not in advanced mode
   # ${V8_HOME}/d8 out/core-test.js
+  ran=$[ran+1]
 fi
 
 if [ "$SPIDERMONKEY_HOME" == "" ]; then
@@ -18,6 +22,7 @@ if [ "$SPIDERMONKEY_HOME" == "" ]; then
 else
   echo "Testing with SpiderMonkey"
   ${SPIDERMONKEY_HOME}/js -f out/core-advanced-test.js
+  ran=$[ran+1]
 fi
 
 if [ "$JSC_HOME" == "" ]; then
@@ -25,5 +30,7 @@ if [ "$JSC_HOME" == "" ]; then
 else
   echo "Testing with JavaScriptCore"
   ${JSC_HOME}/jsc -f out/core-advanced-test.js
+  ran=$[ran+1]
 fi
 
+echo "Tested with $ran out of $possible possible js targets"

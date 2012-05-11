@@ -188,13 +188,25 @@ nil if the end of stream has been reached")
   [rdr ch]
   (reader-error rdr "Reader for " ch " not implemented yet"))
 
+(defn maybe-read-tagged-type
+  [rdr initch]
+  (let [sym  (read-symbol rdr initch)
+        nxt  (read-char rdr)
+        vals ((macros nxt) rdr nxt)]
+    (cond
+     (vector? vals) vals
+     (map? vals)    vals
+     :else sym)))
+
 (defn read-dispatch
   [rdr _]
   (let [ch (read-char rdr)
         dm (get dispatch-macros ch)]
     (if dm
       (dm rdr _)
-      (reader-error rdr "No dispatch macro for " ch))))
+      (if-let [obj (maybe-read-tagged-type rdr ch)]
+        obj
+        (reader-error rdr "No dispatch macro for " ch)))))
 
 (defn read-unmatched-delimiter
   [rdr ch]
