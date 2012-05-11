@@ -13,7 +13,7 @@
       dependency info."
       :author "Rich Hickey"}
   clojure.core.reducers
-  (:refer-clojure :exclude [reduce map filter remove take take-while drop flatten])
+  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop flatten])
   (:require [clojure.walk :as walk]
             [cljs.core :as core]))
 
@@ -92,6 +92,17 @@
           ([ret k v]
              (f1 ret (f k v)))))))
 
+(defcurried mapcat
+  "Applies f to every value in the reduction of coll, concatenating the result
+  colls of (f val). Foldable."
+  {}
+  [f coll]
+  (folder coll
+   (fn [f1]
+     (rfn [f1 k]
+          ([ret k v]
+             (reduce f1 ret (f k v)))))))
+
 (defcurried filter
   "Retains values in the reduction of coll for which (pred val)
   returns logical true. Foldable."
@@ -104,6 +115,21 @@
              (if (pred k v)
                (f1 ret k v)
                ret))))))
+
+(defcurried flatten
+  "Takes any nested combination of sequential things (lists, vectors,
+  etc.) and returns their contents as a single, flat foldable
+  collection."
+  {}
+  [coll]
+  (folder coll
+   (fn [f1]
+     (fn
+       ([] (f1))
+       ([ret v]
+          (if (sequential? v)
+            (-reduce (flatten v) f1 ret)
+            (f1 ret v)))))))
 
 (defcurried remove
   "Removes values in the reduction of coll for which (pred val)
@@ -151,29 +177,6 @@
             (if (neg? @cnt)
               (f1 ret k v)
               ret)))))))
-
-(defcurried flatten
-  "Takes any nested combination of sequential things (lists, vectors,
-  etc.) and returns their contents as a single, flat foldable
-  collection."
-  {}
-  [coll]
-  (let [rf (fn [f1]
-             (fn
-               ([] (f1))
-               ([ret v]
-                  (if (sequential? v)
-                    (-reduce (flatten v) f1 ret)
-                    (f1 ret v)))))]
-    (reify
-     cljs.core/IReduce
-     (-reduce [this f1] (-reduce this f1 (f1)))
-     (-reduce [_  f1 init] (-reduce coll (rf f1) init))
-
-     #_
-     CollFold
-     #_
-     (coll-fold [_ n combinef reducef] (coll-fold coll n combinef (rf reducef))))))
 
 ;;do not construct this directly, use cat
 (deftype Cat [cnt left right]
