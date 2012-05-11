@@ -193,18 +193,18 @@ nil if the end of stream has been reached")
 
 (defn read-delimited-list
   [delim rdr recursive?]
-  (loop [a []]
+  (loop [a (transient [])]
     (let [ch (read-past whitespace? rdr)]
       (when-not ch (reader-error rdr "EOF"))
       (if (identical? delim ch)
-        a
+        (persistent! a)
         (if-let [macrofn (macros ch)]
           (let [mret (macrofn rdr ch)]
-            (recur (if (identical? mret rdr) a (conj a mret))))
+            (recur (if (identical? mret rdr) a (conj! a mret))))
           (do
             (unread rdr ch)
             (let [o (read rdr true nil recursive?)]
-              (recur (if (identical? o rdr) a (conj a o))))))))))
+              (recur (if (identical? o rdr) a (conj! a o))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; data structure readers

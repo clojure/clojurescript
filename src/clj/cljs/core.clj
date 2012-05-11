@@ -641,9 +641,9 @@
                   (last clauses)
                   `(throw (js/Error. (core/str "No matching clause: " ~e))))
         pairs (partition 2 clauses)]
-   `(condp = ~e
-      ~@(apply concat pairs)
-      ~default)))
+   `(cond
+     ~@(mapcat (fn [[m c]] `((identical? ~m ~e) ~c)) pairs)
+     :else ~default)))
 
 (defmacro try
   "(try expr* catch-clause* finally-clause?)
