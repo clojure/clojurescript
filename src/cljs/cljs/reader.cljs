@@ -21,7 +21,7 @@ nil if the end of stream has been reached")
              (if (empty? @buffer-atom)
                (let [idx @index-atom]
                  (swap! index-atom inc)
-                 (nth s idx))
+                 (aget s idx))
                (let [buf @buffer-atom]
                  (swap! buffer-atom rest)
                  (first buf))))
@@ -35,22 +35,22 @@ nil if the end of stream has been reached")
 ;; predicates
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- whitespace?
+(defn- ^boolean whitespace?
   "Checks whether a given character is whitespace"
   [ch]
   (or (gstring/isBreakingWhitespace ch) (identical? \, ch)))
 
-(defn- numeric?
+(defn- ^boolean numeric?
   "Checks whether a given character is numeric"
   [ch]
   (gstring/isNumeric ch))
 
-(defn- comment-prefix?
+(defn- ^boolean comment-prefix?
   "Checks whether the character begins a comment."
   [ch]
   (identical? \; ch))
 
-(defn- number-literal?
+(defn- ^boolean number-literal?
   "Checks whether the reader is at the start of a number literal"
   [reader initch]
   (or (numeric? initch)
@@ -70,8 +70,11 @@ nil if the end of stream has been reached")
   [rdr & msg]
   (throw (apply str msg)))
 
-(defn macro-terminating? [ch]
-  (and (not= ch "#") (not= ch \') (not= ch ":") (contains? macros ch)))
+(defn ^boolean macro-terminating? [ch]
+  (and (coercive-not= ch "#")
+       (coercive-not= ch \')
+       (coercive-not= ch ":")
+       (macros ch)))
 
 (defn read-token
   [rdr initch]
@@ -97,20 +100,31 @@ nil if the end of stream has been reached")
 (def float-pattern (re-pattern "([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?"))
 (def symbol-pattern (re-pattern "[:]?([^0-9/].*/)?([^0-9/][^/]*)"))
 
+(defn- re-find*
+  [re s]
+  (let [matches (.exec re s)]
+    (when (coercive-not= matches nil)
+      (if (== (alength matches) 1)
+        (aget matches 0)
+        matches))))
+
 (defn- match-int
   [s]
-  (let [groups (re-find int-pattern s)
-        group3 (nth groups 2)]
-    (if (not (or (undefined? group3)
-                 (< (.-length group3) 1)))
+  (let [groups (re-find* int-pattern s)
+        group3 (aget groups 2)]
+    (if (coercive-not
+         (or (nil? group3)
+             (< (alength group3) 1)))
       0
-      (let [negate (if (identical? "-" (nth groups 1)) -1 1)
-            [n radix] (cond
-                       (nth groups 3) [(nth groups 3) 10]
-                       (nth groups 4) [(nth groups 4) 16]
-                       (nth groups 5) [(nth groups 5) 8]
-                       (nth groups 7) [(nth groups 7) (js/parseInt (nth groups 7))]
-                       :default [nil nil])]
+      (let [negate (if (identical? "-" (aget groups 1)) -1 1)
+            a (cond
+               (aget groups 3) (array (aget groups 3) 10)
+               (aget groups 4) (array (aget groups 4) 16)
+               (aget groups 5) (array (aget groups 5) 8)
+               (aget groups 7) (array (aget groups 7) (js/parseInt (aget groups 7)))
+               :default (array nil nil))
+            n (aget a 0)
+            radix (aget a 1)]
         (if (nil? n)
           nil
           (* negate (js/parseInt n radix)))))))
@@ -118,29 +132,41 @@ nil if the end of stream has been reached")
 
 (defn- match-ratio
   [s]
-  (let [groups (re-find ratio-pattern s)
-        numinator (nth groups 1)
-        denominator (nth groups 2)]
+  (let [groups (re-find* ratio-pattern s)
+        numinator (aget groups 1)
+        denominator (aget groups 2)]
     (/ (js/parseInt numinator) (js/parseInt denominator))))
 
 (defn- match-float
   [s]
   (js/parseFloat s))
 
+(defn- re-matches*
+  [re s]
+  (let [matches (.exec re s)]
+    (when (and (coercive-not= matches nil)
+               (identical? (aget matches 0) s))
+      (if (== (alength matches) 1)
+        (aget matches 0)
+        matches))))
+
 (defn- match-number
   [s]
   (cond
-   (re-matches int-pattern s) (match-int s)
-   (re-matches ratio-pattern s) (match-ratio s)
-   (re-matches float-pattern s) (match-float s)))
+   (re-matches* int-pattern s) (match-int s)
+   (re-matches* ratio-pattern s) (match-ratio s)
+   (re-matches* float-pattern s) (match-float s)))
 
-(def escape-char-map {\t "\t"
-                      \r "\r"
-                      \n "\n"
-                      \\ \\
-                      \" \"
-                      \b "\b"
-                      \f "\f"})
+(defn escape-char-map [c]
+  (case c
+    \t "\t"
+    \r "\r"
+    \n "\n"
+    \\ \\
+    \" \"
+    \b "\b"
+    \f "\f"
+    nil))
 
 (defn read-unicode-char
   [reader initch]
@@ -149,7 +175,7 @@ nil if the end of stream has been reached")
 (defn escape-char
   [buffer reader]
   (let [ch (read-char reader)
-        mapresult (get escape-char-map ch)]
+        mapresult (escape-char-map ch)]
     (if mapresult
       mapresult
       (if (or (identical? \u ch) (numeric? ch))
@@ -167,18 +193,18 @@ nil if the end of stream has been reached")
 
 (defn read-delimited-list
   [delim rdr recursive?]
-  (loop [a []]
+  (loop [a (transient [])]
     (let [ch (read-past whitespace? rdr)]
       (when-not ch (reader-error rdr "EOF"))
       (if (identical? delim ch)
-        a
-        (if-let [macrofn (get macros ch)]
+        (persistent! a)
+        (if-let [macrofn (macros ch)]
           (let [mret (macrofn rdr ch)]
-            (recur (if (= mret rdr) a (conj a mret))))
+            (recur (if (identical? mret rdr) a (conj! a mret))))
           (do
             (unread rdr ch)
             (let [o (read rdr true nil recursive?)]
-              (recur (if (= o rdr) a (conj a o))))))))))
+              (recur (if (identical? o rdr) a (conj! a o))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; data structure readers
@@ -201,7 +227,7 @@ nil if the end of stream has been reached")
 (defn read-dispatch
   [rdr _]
   (let [ch (read-char rdr)
-        dm (get dispatch-macros ch)]
+        dm (dispatch-macros ch)]
     (if dm
       (dm rdr _)
       (if-let [obj (maybe-read-tagged-type rdr ch)]
@@ -233,7 +259,7 @@ nil if the end of stream has been reached")
   [reader initch]
   (loop [buffer (gstring/StringBuffer. initch)
          ch (read-char reader)]
-    (if (or (nil? ch) (whitespace? ch) (contains? macros ch))
+    (if (or (nil? ch) (whitespace? ch) (macros ch))
       (do
         (unread reader ch)
         (let [s (. buffer (toString))]
@@ -241,7 +267,7 @@ nil if the end of stream has been reached")
               (reader-error reader "Invalid number format [" s "]"))))
       (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
-(defn read-string
+(defn read-string*
   [reader _]
   (loop [buffer (gstring/StringBuffer.)
          ch (read-char reader)]
@@ -268,11 +294,14 @@ nil if the end of stream has been reached")
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
-        [token ns name] (re-matches symbol-pattern token)]
-    (if (or (and (not (undefined? ns))
+        a (re-matches* symbol-pattern token)
+        token (aget a 0)
+        ns (aget a 1)
+        name (aget a 2)]
+    (if (or (and (coercive-not (undefined? ns))
                  (identical? (. ns (substring (- (.-length ns) 2) (.-length ns))) ":/"))
             (identical? (aget name (dec (.-length name))) ":")
-            (not (== (.indexOf token "::" 1) -1)))
+            (coercive-not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
       (if ns
         (keyword (.substring ns 0 (.indexOf ns "/")) name)
@@ -312,40 +341,43 @@ nil if the end of stream has been reached")
 
 (defn read-regex
   [rdr ch]
-  (-> (read-string rdr ch) re-pattern))
+  (-> (read-string* rdr ch) re-pattern))
 
 (defn read-discard
   [rdr _]
   (read rdr true nil true)
   rdr)
 
-(def macros
-     { \" read-string
-       \: read-keyword
-       \; not-implemented ;; never hit this
-       \' (wrapping-reader 'quote)
-       \@ (wrapping-reader 'deref)
-       \^ read-meta
-       \` not-implemented
-       \~ not-implemented
-       \( read-list
-       \) read-unmatched-delimiter
-       \[ read-vector
-       \] read-unmatched-delimiter
-       \{ read-map
-       \} read-unmatched-delimiter
-       \\ read-char
-       \% not-implemented
-       \# read-dispatch
-       })
+(defn macros [c]
+  (case c
+    \" read-string*
+    \: read-keyword
+    \; not-implemented ;; never hit this
+    \' (wrapping-reader 'quote)
+    \@ (wrapping-reader 'deref)
+    \^ read-meta
+    \` not-implemented
+    \~ not-implemented
+    \( read-list
+    \) read-unmatched-delimiter
+    \[ read-vector
+    \] read-unmatched-delimiter
+    \{ read-map
+    \} read-unmatched-delimiter
+    \\ read-char
+    \% not-implemented
+    \# read-dispatch
+    nil))
 
 ;; omitted by design: var reader, eval reader
-(def dispatch-macros
-  {"{" read-set
-   "<" (throwing-reader "Unreadable form")
-   "\"" read-regex
-   "!" read-comment
-   "_" read-discard})
+(defn dispatch-macros [s]
+  (case s
+    "{" read-set
+    "<" (throwing-reader "Unreadable form")
+    "\"" read-regex
+    "!" read-comment
+    "_" read-discard
+    nil))
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
@@ -356,12 +388,13 @@ nil if the end of stream has been reached")
      (nil? ch) (if eof-is-error (reader-error reader "EOF") sentinel)
      (whitespace? ch) (recur reader eof-is-error sentinel is-recursive)
      (comment-prefix? ch) (recur (read-comment reader ch) eof-is-error sentinel is-recursive)
-     :else (let [res
+     :else (let [f (macros ch)
+                 res
                  (cond
-                  (macros ch) ((macros ch) reader ch)
+                  f (f reader ch)
                   (number-literal? reader ch) (read-number reader ch)
                   :else (read-symbol reader ch))]
-     (if (= res reader)
+     (if (identical? res reader)
        (recur reader eof-is-error sentinel is-recursive)
        res)))))
 

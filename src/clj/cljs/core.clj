@@ -20,7 +20,8 @@
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
                             bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
-                            bit-test bit-shift-left bit-shift-right bit-xor]))
+                            bit-test bit-shift-left bit-shift-right bit-xor])
+  (:require clojure.walk))
 
 (alias 'core 'clojure.core)
 
@@ -248,6 +249,39 @@
        (let [h# (~hash-fn ~coll)]
          (set! ~hash-key h#)
          h#))))
+
+;;; internal -- reducers-related macros
+
+(defn- do-curried
+  [name doc meta args body]
+  (let [cargs (vec (butlast args))]
+    `(defn ~name ~doc ~meta
+       (~cargs (fn [x#] (~name ~@cargs x#)))
+       (~args ~@body))))
+
+(defmacro ^:private defcurried
+  "Builds another arity of the fn that returns a fn awaiting the last
+  param"
+  [name doc meta args & body]
+  (do-curried name doc meta args body))
+
+(defn- do-rfn [f1 k fkv]
+  `(fn
+     ([] (~f1))
+     ~(clojure.walk/postwalk
+       #(if (sequential? %)
+          ((if (vector? %) vec identity)
+           (core/remove #{k} %))
+          %)
+       fkv)
+     ~fkv))
+
+(defmacro ^:private rfn
+  "Builds 3-arity reducing fn given names of wrapped fn and key, and k/v impl."
+  [[f1 k] fkv]
+  (do-rfn f1 k fkv))
+
+;;; end of reducers macros
 
 (defn- protocol-prefix [psym]
   (core/str (.replace (core/str psym) \. \$) "$"))
@@ -641,9 +675,9 @@
                   (last clauses)
                   `(throw (js/Error. (core/str "No matching clause: " ~e))))
         pairs (partition 2 clauses)]
-   `(condp = ~e
-      ~@(apply concat pairs)
-      ~default)))
+   `(cond
+     ~@(mapcat (fn [[m c]] `((identical? ~m ~e) ~c)) pairs)
+     :else ~default)))
 
 (defmacro try
   "(try expr* catch-clause* finally-clause?)

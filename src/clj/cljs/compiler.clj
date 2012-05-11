@@ -676,6 +676,15 @@
     (emitln "continue;")
     (emitln "}")))
 
+(defmethod emit :letfn
+  [{:keys [bindings statements ret env]}]
+  (let [context (:context env)]
+    (when (= :expr context) (emits "(function (){"))
+    (doseq [{:keys [name init]} bindings]
+      (emitln "var " name " = " init ";"))
+    (emit-block (if (= :expr context) :return context) statements ret)
+    (when (= :expr context) (emits "})()"))))
+
 (defmethod emit :invoke
   [{:keys [f args env]}]
   (let [fn? (and *cljs-static-fns*
@@ -804,7 +813,7 @@
 
 (declare analyze analyze-symbol analyze-seq)
 
-(def specials '#{if def fn* do let* loop* throw try* recur new set! ns deftype* defrecord* . js* & quote})
+(def specials '#{if def fn* do let* loop* letfn* throw try* recur new set! ns deftype* defrecord* . js* & quote})
 
 (def ^:dynamic *recur-frames* nil)
 (def ^:dynamic *loop-lets* nil)
@@ -987,6 +996,42 @@
      :max-fixed-arity max-fixed-arity
      :children (vec (mapcat block-children
                             methods))}))
+
+(defmethod parse 'letfn*
+  [op env [_ bindings & exprs :as form] name]
+  (assert (and (vector? bindings) (even? (count bindings))) "bindings must be vector of even number of elements")
+  (let [n->fexpr (into {} (map (juxt first second) (partition 2 bindings)))
+        names    (keys n->fexpr)
+        n->gsym  (into {} (map (juxt identity #(gensym (str (munge %) "__"))) names))
+        gsym->n  (into {} (map (juxt n->gsym identity) names))
+        context  (:context env)
+        bes      (reduce (fn [bes n]
+                           (let [g (n->gsym n)]
+                             (conj bes {:name  g
+                                        :tag   (-> n meta :tag)
+                                        :local true})))
+                         []
+                         names)
+        meth-env (reduce (fn [env be]
+                           (let [n (gsym->n (be :name))]
+                             (assoc-in env [:locals n] be)))
+                         (assoc env :context :expr)
+                         bes)
+        [meth-env finits]
+        (reduce (fn [[env finits] n]
+                  (let [finit (analyze meth-env (n->fexpr n))
+                        be (-> (get-in env [:locals n])
+                               (assoc :init finit))]
+                    [(assoc-in env [:locals n] be)
+                     (conj finits finit)]))
+                [meth-env []]
+                names)
+        {:keys [statements ret]}
+        (analyze-block (assoc meth-env :context (if (= :expr context) :return context)) exprs)
+        bes (vec (map #(get-in meth-env [:locals %]) names))]
+    {:env env :op :letfn :bindings bes :statements statements :ret ret :form form
+     :children (into (vec (map :init bes))
+                     (conj (vec statements) ret))}))
 
 (defmethod parse 'do
   [op env [_ & exprs :as form] _]

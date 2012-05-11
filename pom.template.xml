@@ -25,12 +25,12 @@
     <dependency>
       <groupId>com.google.javascript</groupId>
       <artifactId>closure-compiler</artifactId>
-      <version>r1592</version>
+      <version>r1918</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>google-closure-library</artifactId>
-      <version>0.0-790</version>
+      <version>0.0-1376</version>
     </dependency>
     <dependency>
       <groupId>org.mozilla</groupId>
@@ -40,33 +40,44 @@
   </dependencies>
 
   <developers>
-    <developer><id>abedra</id><name>Aaron Bedra</name></developer>
-    <developer><id>alandipert</id><name>Alan Dipert</name></developer>
-    <developer><id>amalloy</id><name>Alan Malloy</name></developer>
-    <developer><id>aredington</id><name>Alex Redington</name></developer>
-    <developer><id>billdozr</id><name>Alen Ribic</name></developer>
-    <developer><id>bobby</id><name>Bobby Calderwood</name></developer>
-    <developer><id>brentonashworth</id><name>Brenton Ashworth</name></developer>
-    <developer><id>Chouser</id><name>Chris Houser</name></developer>
-    <developer><id>devn</id><name>Devin Walters</name></developer>
-    <developer><id>ffailla</id><name>Frank Failla</name></developer>
-    <developer><id>fogus</id><name>Fogus</name></developer>
-    <developer><id>hozumi</id><name>Takahiro Hozumi</name></developer>
-    <developer><id>hugoduncan</id><name>Hugo Duncan</name></developer>
-    <developer><id>jessmartin</id><name>Jess Martin</name></developer>
-    <developer><id>jli</id><name>John Li</name></developer>
-    <developer><id>juergenhoetzel</id><name>Jürgen Hötzel</name></developer>
-    <developer><id>levand</id><name>Luke VanderHart</name></developer>
-    <developer><id>lynaghk</id><name>Kevin Lynagh</name></developer>
-    <developer><id>michalmarczyk</id><name>Micha  Marczyk</name></developer>
-    <developer><id>pmbauer</id><name>Paul Michael Bauer</name></developer>
-    <developer><id>redinger</id><name>Christopher</name></developer>
-    <developer><id>richhickey</id><name>Rich Hickey</name></developer>
-    <developer><id>stuarthalloway</id><name>Stuart Halloway</name></developer>
-    <developer><id>stuartsierra</id><name>Stuart Sierra</name></developer>
-    <developer><id>swannodette</id><name>David Nolen</name></developer>
-    <developer><id>thickey</id><name>Tom Hickey</name></developer>
-    <developer><id>wilkes</id><name>Wilkes Joiner</name></developer>
+    <developer><name>Aaron Bedra</name></developer>
+    <developer><name>Alan Dipert</name></developer>
+    <developer><name>Alan Malloy</name></developer>
+    <developer><name>Alen Ribic</name></developer>
+    <developer><name>Alex Redington</name></developer>
+    <developer><name>Bobby Calderwood</name></developer>
+    <developer><name>Brandon Bloom</name></developer>
+    <developer><name>Brenton Ashworth</name></developer>
+    <developer><name>Chris Houser</name></developer>
+    <developer><name>Christopher Redinger</name></developer>
+    <developer><name>Creighton Kirkendall</name></developer>
+    <developer><name>David Nolen</name></developer>
+    <developer><name>Devin Walters</name></developer>
+    <developer><name>Eric Thorsen</name></developer>
+    <developer><name>Frank Failla</name></developer>
+    <developer><name>Hubert Iwaniuk</name></developer>
+    <developer><name>Hugo Duncan</name></developer>
+    <developer><name>Jess Martin</name></developer>
+    <developer><name>John Li</name></developer>
+    <developer><name>Jonas Enlund</name></developer>
+    <developer><name>Juergen Hoetzel</name></developer>
+    <developer><name>Kevin J. Lynagh</name></developer>
+    <developer><name>Laszlo Toeroek</name></developer>
+    <developer><name>Luke VanderHart</name></developer>
+    <developer><name>Michael Fogus</name></developer>
+    <developer><name>Michał Marczyk</name></developer>
+    <developer><name>Moritz Ulrich</name></developer>
+    <developer><name>Nicola Mometto</name></developer>
+    <developer><name>Paul Michael Bauer</name></developer>
+    <developer><name>Rich Hickey</name></developer>
+    <developer><name>Roman Gonzalez</name></developer>
+    <developer><name>Russ Olsen</name></developer>
+    <developer><name>Stuart Halloway</name></developer>
+    <developer><name>Stuart Sierra</name></developer>
+    <developer><name>Takahiro Hozumi</name></developer>
+    <developer><name>Thomas Scheiblauer</name></developer>
+    <developer><name>Tom Hickey</name></developer>
+    <developer><name>Wilkes Joiner</name></developer>
   </developers>
 
   <scm>
