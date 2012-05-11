@@ -35,22 +35,22 @@ nil if the end of stream has been reached")
 ;; predicates
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- whitespace?
+(defn- ^boolean whitespace?
   "Checks whether a given character is whitespace"
   [ch]
   (or (gstring/isBreakingWhitespace ch) (identical? \, ch)))
 
-(defn- numeric?
+(defn- ^boolean numeric?
   "Checks whether a given character is numeric"
   [ch]
   (gstring/isNumeric ch))
 
-(defn- comment-prefix?
+(defn- ^boolean comment-prefix?
   "Checks whether the character begins a comment."
   [ch]
   (identical? \; ch))
 
-(defn- number-literal?
+(defn- ^boolean number-literal?
   "Checks whether the reader is at the start of a number literal"
   [reader initch]
   (or (numeric? initch)
@@ -70,7 +70,7 @@ nil if the end of stream has been reached")
   [rdr & msg]
   (throw (apply str msg)))
 
-(defn macro-terminating? [ch]
+(defn ^boolean macro-terminating? [ch]
   (and (coercive-not= ch "#")
        (coercive-not= ch \')
        (coercive-not= ch ":")
