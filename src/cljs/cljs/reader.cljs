@@ -21,7 +21,7 @@ nil if the end of stream has been reached")
              (if (empty? @buffer-atom)
                (let [idx @index-atom]
                  (swap! index-atom inc)
-                 (nth s idx))
+                 (aget s idx))
                (let [buf @buffer-atom]
                  (swap! buffer-atom rest)
                  (first buf))))
@@ -100,21 +100,31 @@ nil if the end of stream has been reached")
 (def float-pattern (re-pattern "([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?"))
 (def symbol-pattern (re-pattern "[:]?([^0-9/].*/)?([^0-9/][^/]*)"))
 
+(defn- re-find*
+  [re s]
+  (let [matches (.exec re s)]
+    (when (coercive-not= matches nil)
+      (if (== (alength matches) 1)
+        (aget matches 0)
+        matches))))
+
 (defn- match-int
   [s]
-  (let [groups (re-find int-pattern s)
-        group3 (nth groups 2)]
+  (let [groups (re-find* int-pattern s)
+        group3 (aget groups 2)]
     (if (coercive-not
-         (or (undefined? group3)
-             (< (.-length group3) 1)))
+         (or (nil? group3)
+             (< (alength group3) 1)))
       0
-      (let [negate (if (identical? "-" (nth groups 1)) -1 1)
-            [n radix] (cond
-                       (nth groups 3) [(nth groups 3) 10]
-                       (nth groups 4) [(nth groups 4) 16]
-                       (nth groups 5) [(nth groups 5) 8]
-                       (nth groups 7) [(nth groups 7) (js/parseInt (nth groups 7))]
-                       :default [nil nil])]
+      (let [negate (if (identical? "-" (aget groups 1)) -1 1)
+            a (cond
+               (aget groups 3) (array (aget groups 3) 10)
+               (aget groups 4) (array (aget groups 4) 16)
+               (aget groups 5) (array (aget groups 5) 8)
+               (aget groups 7) (array (aget groups 7) (js/parseInt (aget groups 7)))
+               :default (array nil nil))
+            n (aget a 0)
+            radix (aget a 1)]
         (if (nil? n)
           nil
           (* negate (js/parseInt n radix)))))))
@@ -122,21 +132,30 @@ nil if the end of stream has been reached")
 
 (defn- match-ratio
   [s]
-  (let [groups (re-find ratio-pattern s)
-        numinator (nth groups 1)
-        denominator (nth groups 2)]
+  (let [groups (re-find* ratio-pattern s)
+        numinator (aget groups 1)
+        denominator (aget groups 2)]
     (/ (js/parseInt numinator) (js/parseInt denominator))))
 
 (defn- match-float
   [s]
   (js/parseFloat s))
 
+(defn- re-matches*
+  [re s]
+  (let [matches (.exec re s)]
+    (when (and (coercive-not= matches nil)
+               (identical? (aget matches 0) s))
+      (if (== (alength matches) 1)
+        (aget matches 0)
+        matches))))
+
 (defn- match-number
   [s]
   (cond
-   (re-matches int-pattern s) (match-int s)
-   (re-matches ratio-pattern s) (match-ratio s)
-   (re-matches float-pattern s) (match-float s)))
+   (re-matches* int-pattern s) (match-int s)
+   (re-matches* ratio-pattern s) (match-ratio s)
+   (re-matches* float-pattern s) (match-float s)))
 
 (defn escape-char-map [c]
   (case c
@@ -263,7 +282,10 @@ nil if the end of stream has been reached")
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
-        [token ns name] (re-matches symbol-pattern token)]
+        a (re-matches* symbol-pattern token)
+        token (aget a 0)
+        ns (aget a 1)
+        name (aget a 2)]
     (if (or (and (coercive-not (undefined? ns))
                  (identical? (. ns (substring (- (.-length ns) 2) (.-length ns))) ":/"))
             (identical? (aget name (dec (.-length name))) ":")
