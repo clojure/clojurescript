@@ -947,6 +947,24 @@
      (prn (core/str "Elapsed time: " (- (.getTime (js/Date.) ()) start#) " msecs"))
      ret#))
 
+(defmacro simple-benchmark
+  "Runs expr iterations times in the context of a let expression with
+  the given bindings, then prints out the bindings and the expr
+  followed by number of iterations and total time. The optional
+  argument print-fn, defaulting to println, sets function used to
+  print the result. expr's string representation will be produced
+  using pr-str in any case."
+  [bindings expr iterations & {:keys [print-fn] :or {print-fn 'println}}]
+  (let [bs-str   (pr-str bindings)
+        expr-str (pr-str expr)]
+    `(let ~bindings
+       (let [start#   (.getTime (js/Date.))
+             ret#     (dotimes [_# ~iterations] ~expr)
+             end#     (.getTime (js/Date.))
+             elapsed# (- end# start#)]
+         (~print-fn (str ~bs-str ", " ~expr-str ", "
+                         ~iterations " runs, " elapsed# " msecs"))))))
+
 (def cs (into [] (map (comp symbol core/str char) (range 97 118))))
 
 (defn gen-apply-to-helper

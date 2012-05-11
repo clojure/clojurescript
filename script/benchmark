@@ -1,0 +1,28 @@
+rm -rf out
+mkdir -p out
+
+#bin/cljsc benchmark > out/core-benchmark.js
+bin/cljsc benchmark {:optimizations :advanced} > out/core-advanced-benchmark.js
+
+if [ "$V8_HOME" == "" ]; then
+  echo "V8_HOME not set, skipping V8 benchmarks"
+else
+  echo "Benchmarking with V8"
+  ${V8_HOME}/d8 out/core-advanced-benchmark.js
+  # TODO: figure out path problem when not in advanced mode
+  # ${V8_HOME}/d8 out/core-benchmark.js
+fi
+
+if [ "$SPIDERMONKEY_HOME" == "" ]; then
+  echo "SPIDERMONKEY_HOME not set, skipping SpiderMonkey benchmarks"
+else
+  echo "Benchmarking with SpiderMonkey"
+  ${SPIDERMONKEY_HOME}/js -f out/core-advanced-benchmark.js
+fi
+
+if [ "$JSC_HOME" == "" ]; then
+  echo "JSC_HOME not set, skipping JavaScriptCore benchmarks"
+else
+  echo "Benchmarking with JavaScriptCore"
+  ${JSC_HOME}/jsc -f out/core-advanced-benchmark.js
+fi
