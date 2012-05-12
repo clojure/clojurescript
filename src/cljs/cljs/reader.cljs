@@ -214,15 +214,7 @@ nil if the end of stream has been reached")
   [rdr ch]
   (reader-error rdr "Reader for " ch " not implemented yet"))
 
-(defn maybe-read-tagged-type
-  [rdr initch]
-  (let [sym  (read-symbol rdr initch)
-        nxt  (read-char rdr)
-        vals ((macros nxt) rdr nxt)]
-    (cond
-     (vector? vals) vals
-     (map? vals)    vals
-     :else sym)))
+(declare maybe-read-tagged-type)
 
 (defn read-dispatch
   [rdr _]
@@ -405,3 +397,35 @@ nil if the end of stream has been reached")
     (read r true nil false)))
 
   
+;; read table
+
+(defn ^:private read-date
+  [str]
+  (js/Date. (Date/parse str)))
+
+
+(defn ^:private read-queue
+  [elems]
+  (if (vector? elems)
+    (into cljs.core.PersistentQueue/EMPTY elems)
+    (reader-error nil "Queue literal expects a vector for its elements.")))
+
+(def *tag-table* (atom {"inst"  identity
+                        "uuid"  identity
+                        "queue" read-queue}))
+
+(defn maybe-read-tagged-type
+  [rdr initch]
+  (let [tag  (read-symbol rdr initch)
+        form (read rdr true nil false)
+        pfn  (get @*tag-table* (name tag))]
+    (if pfn
+      (pfn form)
+      (reader-error rdr "Could not find tag parser for " (name tag) (pr-str @*tag-table*)))))
+
+(defn register-tag-parser!
+  [tag f]
+  (let [tag (name tag)
+        old-parser (get @*tag-table* tag)]
+    (swap! *tag-table* assoc tag f)
+    old-parser))
