@@ -5788,8 +5788,8 @@ reduces them without incurring seq initialization"
   IndexedSeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
-  PersistentQueueSeq
-  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+  PersistentQueue
+  (-pr-seq [coll opts] (pr-sequential pr-seq "#queue [" " " "]" opts (seq coll)))
 
   PersistentTreeMapSeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))

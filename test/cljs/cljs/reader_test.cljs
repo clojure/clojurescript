@@ -1,5 +1,9 @@
 (ns cljs.reader-test
-  (:require [cljs.reader :as reader]))
+  (:require [cljs.reader :as reader]
+            [goog.object :as o]))
+
+(deftype T [a b])
+(defrecord R [a b])
 
 (defn test-reader
   []
@@ -26,5 +30,21 @@
   (assert (= false (reader/read-string "false")))
   (assert (= "string" (reader/read-string "\"string\"")))
   (assert (= "escape chars \t \r \n \\ \" \b \f" (reader/read-string "\"escape chars \\t \\r \\n \\\\ \\\" \\b \\f\"")))
+  
+  ;; queue literals
+  (assert (= cljs.core.PersistentQueue/EMPTY
+             (reader/read-string "#queue []")))
+  
+  (assert (= (-> cljs.core.PersistentQueue/EMPTY (conj 1))
+             (reader/read-string "#queue [1]")))
+  
+  (assert (= (into cljs.core.PersistentQueue/EMPTY [1 2])
+             (reader/read-string "#queue [1 2]")))
+
+  ;; new parsers
+
+  (reader/register-tag-parser! "foo" identity)
+
+  (assert (= [1 2] (reader/read-string "#foo [1 2]")))
   
   :ok)
