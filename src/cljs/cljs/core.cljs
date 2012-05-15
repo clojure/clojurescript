@@ -606,10 +606,11 @@ reduces them without incurring seq initialization"
 
 (declare counted?)
 
-(defn- accumulating-seq-count [coll acc]
-  (if (counted? coll) ; assumes nil is counted, which it currently is
-    (+ acc (-count coll))
-    (recur (next coll) (inc acc))))
+(defn- accumulating-seq-count [coll]
+  (loop [s (seq coll) acc 0]
+    (if (counted? s) ; assumes nil is counted, which it currently is
+      (+ acc (-count s))
+      (recur (next s) (inc acc)))))
 
 (defn count
   "Returns the number of items in the collection. (count nil) returns
@@ -617,7 +618,7 @@ reduces them without incurring seq initialization"
   [coll]
   (if (counted? coll)
     (-count coll)
-    (accumulating-seq-count coll 0)))
+    (accumulating-seq-count coll)))
 
 (declare indexed?)
 
