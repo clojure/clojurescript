@@ -260,6 +260,9 @@
 (defprotocol ITransientSet
   (-disjoin! [tcoll v]))
 
+(defprotocol IComparable
+  (-compare [x y]))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn ^boolean identical?
   "Tests if 2 arguments are the same object"
@@ -913,14 +916,32 @@ reduces them without incurring seq initialization"
 (defn compare
   "Comparator. Returns a negative number, zero, or a positive number
   when x is logically 'less than', 'equal to', or 'greater than'
-  y. Uses google.array.defaultCompare for objects of the same type
-  and special-cases nil to be less than any other object."
+  y. Uses IComparable if available and google.array.defaultCompare for objects
+ of the same type and special-cases nil to be less than any other object."
   [x y]
   (cond
-    (identical? (type x) (type y)) (garray/defaultCompare x y)
-    (nil? x) -1
-    (nil? y) 1
-    :else (throw (js/Error. "compare on non-nil objects of different types"))))
+   (identical? x y) 0
+   (nil? x) -1
+   (nil? y) 1
+   (identical? (type x) (type y)) (if (satisfies? IComparable x)
+                                    (-compare x y)
+                                    (garray/defaultCompare x y))
+   :else (throw (js/Error. "compare on non-nil objects of different types"))))
+
+(defn ^:private compare-indexed
+  "Compare indexed collection."
+  ([xs ys]
+     (let [xl (count xs)
+           yl (count ys)]
+       (cond
+        (< xl yl) -1
+        (> xl yl) 1
+        :else (compare-indexed xs ys xl 0))))
+  ([xs ys len n]
+     (let [d (compare (nth xs n) (nth ys n))]
+       (if (and (zero? d) (< (+ n 1) len))
+         (recur xs ys len (inc n))
+         d))))
 
 (defn ^:private fn->comparator
   "Given a fn that might be boolean valued or a comparator,
@@ -5863,6 +5884,12 @@ reduces them without incurring seq initialization"
 
   Range
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll)))
+
+
+;; IComparable
+(extend-protocol IComparable
+  PersistentVector
+  (-compare [x y] (compare-indexed x y)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
