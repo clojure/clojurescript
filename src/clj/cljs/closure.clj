@@ -882,8 +882,9 @@
             js-sources (if (coll? compiled)
                          (binding []
                            (apply add-dependencies all-opts compiled))
-                         (add-dependencies all-opts compiled))]
-        (if (:optimizations all-opts)
+                         (add-dependencies all-opts compiled))
+            optim (:optimizations all-opts)]
+        (if (and optim (not= optim :none))
           (->> js-sources
                (apply optimize all-opts)
                (add-header all-opts)
