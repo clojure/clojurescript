@@ -625,6 +625,7 @@ reduces them without incurring seq initialization"
 (defn- linear-traversal-nth
   ([coll n]
      (cond
+       (nil? coll)     (throw (js/Error. "Index out of bounds"))
        (zero? n)       (if (seq coll)
                          (first coll)
                          (throw (js/Error. "Index out of bounds")))
@@ -633,11 +634,12 @@ reduces them without incurring seq initialization"
        :else           (throw (js/Error. "Index out of bounds"))))
   ([coll n not-found]
      (cond
+       (nil? coll)     not-found
        (zero? n)       (if (seq coll)
                          (first coll)
                          not-found)
        (indexed? coll) (-nth coll n not-found)
-       (seq coll)      (linear-traversal-nth (next coll) (dec n))
+       (seq coll)      (linear-traversal-nth (next coll) (dec n) not-found)
        :else           not-found)))
 
 (defn nth
@@ -646,13 +648,16 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (if (satisfies? IIndexed coll)
-       (-nth coll (.floor js/Math n))
-       (linear-traversal-nth coll (.floor js/Math n))))
+     (when (coercive-not= coll nil)
+       (if (satisfies? IIndexed coll)
+         (-nth coll (.floor js/Math n))
+         (linear-traversal-nth coll (.floor js/Math n)))))
   ([coll n not-found]
-     (if (satisfies? IIndexed coll)
-       (-nth coll (.floor js/Math n) not-found)
-       (linear-traversal-nth coll (.floor js/Math n) not-found))))
+     (if (coercive-not= coll nil)
+       (if (satisfies? IIndexed coll)
+         (-nth coll (.floor js/Math n) not-found)
+         (linear-traversal-nth coll (.floor js/Math n) not-found))
+       not-found)))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
