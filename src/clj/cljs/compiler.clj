@@ -186,9 +186,6 @@
     (let [env (merge env {:ns (@namespaces *cljs-ns*)})
           ev (resolve-existing-var env name)]
       (when (and *cljs-warn-on-dynamic*
-                 ;; don't warn on vars from other namespaces because
-                 ;; dependency ordering happens *after* compilation
-                 (= (:ns ev) *cljs-ns*)
                  ev (not (-> ev :dynamic)))
         (warning env
           (str "WARNING: " (:name-sym ev) " not declared ^:dynamic"))))))
