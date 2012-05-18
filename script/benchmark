@@ -17,7 +17,7 @@ if [ "$SPIDERMONKEY_HOME" == "" ]; then
   echo "SPIDERMONKEY_HOME not set, skipping SpiderMonkey benchmarks"
 else
   echo "Benchmarking with SpiderMonkey"
-  ${SPIDERMONKEY_HOME}/js -f out/core-advanced-benchmark.js
+  ${SPIDERMONKEY_HOME}/js -m -n -a -f out/core-advanced-benchmark.js
 fi
 
 if [ "$JSC_HOME" == "" ]; then

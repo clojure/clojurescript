@@ -896,6 +896,7 @@
         args (apply pfn form)
         sym (:sym args)
         tag (-> sym meta :tag)
+        protocol (-> sym meta :protocol)
         dynamic (-> sym meta :dynamic)
         ns-name (-> env :ns :name)]
     (assert (not (namespace sym)) "Can't def ns-qualified name")
@@ -933,6 +934,8 @@
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
+                   (when protocol
+                     {:protocol protocol})
                    (when fn-var?
                      {:fn-var true
                       :variadic (:variadic init-expr)

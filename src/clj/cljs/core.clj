@@ -562,7 +562,8 @@
                           ~@sig))))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
-                       slot (symbol (core/str prefix (name fname)))]
+                       slot (symbol (core/str prefix (name fname)))
+                       fname (vary-meta fname assoc :protocol p)]
                    `(defn ~fname ~@(map (fn [sig]
                                           (expand-sig fname
                                                       (symbol (core/str slot "$arity$" (count sig)))
