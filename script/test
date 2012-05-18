@@ -21,7 +21,7 @@ if [ "$SPIDERMONKEY_HOME" == "" ]; then
   echo "SPIDERMONKEY_HOME not set, skipping SpiderMonkey tests"
 else
   echo "Testing with SpiderMonkey"
-  ${SPIDERMONKEY_HOME}/js -f out/core-advanced-test.js
+  ${SPIDERMONKEY_HOME}/js -m -n -a -f out/core-advanced-test.js
   ran=$[ran+1]
 fi
 
