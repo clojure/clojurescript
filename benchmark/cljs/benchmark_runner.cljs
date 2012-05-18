@@ -25,4 +25,8 @@
 (simple-benchmark [coll [1 2 3]] (next coll) 1000000)
 (println)
 
+(println ";;; seq ops")
+(simple-benchmark [coll (range 500000)] (reduce + coll) 1)
+(println)
+
 (println "\n")
