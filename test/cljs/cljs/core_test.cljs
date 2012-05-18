@@ -1404,6 +1404,11 @@
                  (catch js/Error e
                      :fail))
                :fail)))
+  (let [x 1]
+    (assert (= (case x
+                 (1 2 3) :ok
+                 :fail)
+               :ok)))
 
   :ok
   )
