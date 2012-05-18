@@ -19,6 +19,9 @@
 
 (println ";;; vector ops")
 (simple-benchmark [coll [1 2 3]] (first coll) 1000000)
+(simple-benchmark [coll (seq [1 2 3])] (first coll) 1000000)
+(simple-benchmark [coll [1 2 3]] (conj coll 4) 1000000)
+(simple-benchmark [coll [1 2 3]] (-conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (nth coll 1) 1000000)
 (simple-benchmark [coll [1 2 3]] (-nth coll 1) 1000000)
 (simple-benchmark [coll [1 2 3]] (rest coll) 1000000)
