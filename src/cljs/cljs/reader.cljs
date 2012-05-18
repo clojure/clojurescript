@@ -421,11 +421,20 @@ nil if the end of stream has been reached")
         pfn  (get @*tag-table* (name tag))]
     (if pfn
       (pfn form)
-      (reader-error rdr "Could not find tag parser for " (name tag) (pr-str @*tag-table*)))))
+      (reader-error rdr
+                    "Could not find tag parser for " (name tag)
+                    " in " (pr-str (keys @*tag-table*))))))
 
 (defn register-tag-parser!
   [tag f]
   (let [tag (name tag)
         old-parser (get @*tag-table* tag)]
     (swap! *tag-table* assoc tag f)
+    old-parser))
+
+(defn deregister-tag-parser!
+  [tag]
+  (let [tag (name tag)
+        old-parser (get @*tag-table* tag)]
+    (swap! *tag-table* dissoc tag)
     old-parser))
