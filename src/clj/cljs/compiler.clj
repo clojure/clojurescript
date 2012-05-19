@@ -1359,7 +1359,7 @@
            (warning env
              (str "WARNING: Wrong number of args (" argc ") passed to " name)))))
      {:env env :op :invoke :form form :f fexpr :args argexprs
-      :tag (-> fexpr :info :tag) :children (into [fexpr] argexprs)})))
+      :tag (or (-> fexpr :info :tag) (-> form meta :tag)) :children (into [fexpr] argexprs)})))
 
 (defn analyze-symbol
   "Finds the var associated with sym"
