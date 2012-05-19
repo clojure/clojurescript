@@ -2558,7 +2558,10 @@ reduces them without incurring seq initialization"
               (vector-seq v offset)
               ())))
         ISeqable
-        (-seq [vseq] vseq)))))
+        (-seq [vseq] vseq)
+        ICollection
+        (-conj [this o]
+          (cons o this))))))
 
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
