@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical? true? false? nil? str
+                            satisfies? identical? true? false? nil? str get
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -250,6 +250,12 @@
          (set! ~hash-key h#)
          h#))))
 
+(defmacro get
+  ([coll k]
+     `(-lookup ~coll ~k nil))
+  ([coll k not-found]
+     `(-lookup ~coll ~k ~not-found)))
+
 ;;; internal -- reducers-related macros
 
 (defn- do-curried
@@ -480,7 +486,7 @@
 		  `(~'-lookup [this# ~ksym else#]
          (cond
            ~@(mapcat (fn [f] [`(identical? ~ksym ~(keyword f)) f]) base-fields)
-           :else (get ~'__extmap ~ksym else#)))
+           :else (core/get ~'__extmap ~ksym else#)))
 		  'ICounted
 		  `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
 		  'ICollection
@@ -934,8 +940,8 @@
     (when (= (count options) 1)
       (throw "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)"))
     (let [options   (apply hash-map options)
-          default   (get options :default :default)
-          ;; hierarchy (get options :hierarchy #'cljs.core.global-hierarchy)
+          default   (core/get options :default :default)
+          ;; hierarchy (core/get options :hierarchy #'cljs.core.global-hierarchy)
 	  ]
       (check-valid-options options :default :hierarchy)
       `(def ~(with-meta mm-name m)
@@ -943,7 +949,7 @@
 	       prefer-table# (atom {})
 	       method-cache# (atom {})
 	       cached-hierarchy# (atom {})
-	       hierarchy# (get ~options :hierarchy cljs.core/global-hierarchy)
+	       hierarchy# (core/get ~options :hierarchy cljs.core/global-hierarchy)
 	       ]
 	   (cljs.core.MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
 			       method-table# prefer-table# method-cache# cached-hierarchy#))))))
