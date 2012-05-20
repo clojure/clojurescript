@@ -31,6 +31,7 @@
 (println ";;; map ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (-lookup coll :foo nil) 1000000)
+(simple-benchmark [coll {:foo 1 :bar 2}] (:foo coll) 100000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (assoc coll :baz 3) 100000)
 (println)
 
