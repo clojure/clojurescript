@@ -28,10 +28,12 @@
 (simple-benchmark [coll [1 2 3]] (next coll) 1000000)
 (println)
 
-(println ";;; map ops")
+(println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (-lookup coll :foo nil) 1000000)
-(simple-benchmark [coll {:foo 1 :bar 2}] (:foo coll) 100000)
+(simple-benchmark [coll {:foo 1 :bar 2}] (:foo coll) 1000000)
+(defrecord Foo [bar baz])
+(simple-benchmark [coll (Foo. 1 2)] (:bar coll) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (assoc coll :baz 3) 100000)
 (println)
 
