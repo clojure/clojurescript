@@ -696,7 +696,7 @@
                           (assoc-test m test expr)))
                       {} (partition 2 clauses))]
    `(cond
-     ~@(mapcat (fn [[m c]] `((identical? ~m ~e) ~c)) pairs)
+     ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~e) ~c)) pairs)
      :else ~default)))
 
 (defmacro try

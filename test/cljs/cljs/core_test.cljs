@@ -1417,6 +1417,11 @@
                  :fail)
                :ok)))
 
+  (let [x [:a :b]]
+    (assert (= (case x
+                 [:a :b] :ok)
+               :ok)))
+
   ;; IComparable
   (assert (=  0 (compare false false)))
   (assert (= -1 (compare false true)))
