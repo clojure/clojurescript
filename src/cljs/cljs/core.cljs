@@ -3222,7 +3222,8 @@ reduces them without incurring seq initialization"
 
   IMap
   (-dissoc [coll k]
-    (if (and ^boolean (goog/isString k) ^boolean (.hasOwnProperty strobj k))
+    (if (and ^boolean (goog/isString k)
+             (coercive-not= (scan-array 1 k keys) nil))
       (let [new-keys (aclone keys)
             new-strobj (obj-clone strobj keys)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
