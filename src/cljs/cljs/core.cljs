@@ -849,16 +849,16 @@ reduces them without incurring seq initialization"
   (if x true false))
 
 (defn ^boolean string? [x]
-  (and (goog/isString x)
-       (not (or (identical? (.charAt x 0) \uFDD0)
-                (identical? (.charAt x 0) \uFDD1)))))
+  (and ^boolean (goog/isString x)
+       (coercive-not (or (identical? (.charAt x 0) \uFDD0)
+                         (identical? (.charAt x 0) \uFDD1)))))
 
 (defn ^boolean keyword? [x]
-  (and (goog/isString x)
+  (and ^boolean (goog/isString x)
        (identical? (.charAt x 0) \uFDD0)))
 
 (defn ^boolean symbol? [x]
-  (and (goog/isString x)
+  (and ^boolean (goog/isString x)
        (identical? (.charAt x 0) \uFDD1)))
 
 (defn ^boolean number? [n]
@@ -3117,7 +3117,7 @@ reduces them without incurring seq initialization"
   ([k strobj]
      (obj-map-contains-key? k strobj true false))
   ([k strobj true-val false-val]
-     (if (and (goog/isString k) (.hasOwnProperty strobj k))
+     (if (and ^boolean (goog/isString k) ^boolean (.hasOwnProperty strobj k))
        true-val
        false-val)))
 
@@ -3187,20 +3187,19 @@ reduces them without incurring seq initialization"
 
   IAssociative
   (-assoc [coll k v]
-    (if (goog/isString k)
-      (let [overwrite? (.hasOwnProperty strobj k)]
-        (if overwrite?
-          (let [new-strobj (goog.object/clone strobj)]
-            (aset new-strobj k v)
-            (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
-          (if (< update-count cljs.core.ObjMap/HASHMAP_THRESHOLD) #_(< (.-length keys) cljs.core.ObjMap/HASHMAP_THRESHOLD)
-            (let [new-strobj (goog.object/clone strobj) ; append
-                  new-keys (aclone keys)]
+    (if ^boolean (goog/isString k)
+        (if ^boolean (.hasOwnProperty strobj k)
+            (let [new-strobj (goog.object/clone strobj)]
               (aset new-strobj k v)
-              (.push new-keys k)
-              (ObjMap. meta new-keys new-strobj (inc update-count) nil))
-            ;; too many keys, switching to PersistentHashMap
-            (obj-map->hash-map coll k v))))
+              (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
+            (if (< update-count cljs.core.ObjMap/HASHMAP_THRESHOLD) #_(< (.-length keys) cljs.core.ObjMap/HASHMAP_THRESHOLD)
+                (let [new-strobj (goog.object/clone strobj) ; append
+                      new-keys (aclone keys)]
+                  (aset new-strobj k v)
+                  (.push new-keys k)
+                  (ObjMap. meta new-keys new-strobj (inc update-count) nil))
+                ;; too many keys, switching to PersistentHashMap
+                (obj-map->hash-map coll k v)))
       ; non-string key. game over.
       (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
@@ -3208,7 +3207,7 @@ reduces them without incurring seq initialization"
 
   IMap
   (-dissoc [coll k]
-    (if (and (goog/isString k) (.hasOwnProperty strobj k))
+    (if (and ^boolean (goog/isString k) ^boolean (.hasOwnProperty strobj k))
       (let [new-keys (aclone keys)
             new-strobj (goog.object/clone strobj)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
