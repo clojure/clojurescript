@@ -3119,14 +3119,6 @@ reduces them without incurring seq initialization"
 ; key already exists in strobj, the old value is overwritten. If a
 ; non-string key is assoc'ed, return a HashMap object instead.
 
-(defn- obj-map-contains-key?
-  ([k strobj]
-     (obj-map-contains-key? k strobj true false))
-  ([k strobj true-val false-val]
-     (if (and ^boolean (goog/isString k) ^boolean (.hasOwnProperty strobj k))
-       true-val
-       false-val)))
-
 (defn- obj-map-compare-keys [a b]
   (let [a (hash a)
         b (hash b)]
@@ -3199,7 +3191,10 @@ reduces them without incurring seq initialization"
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
-    (obj-map-contains-key? k strobj (aget strobj k) not-found))
+    (if (and ^boolean (goog/isString k)
+             (coercive-not= (scan-array 1 k keys) nil))
+      (aget strobj k)
+      not-found))
 
   IAssociative
   (-assoc [coll k v]
@@ -3220,7 +3215,10 @@ reduces them without incurring seq initialization"
       ; non-string key. game over.
       (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
-    (obj-map-contains-key? k strobj))
+    (if (and ^boolean (goog/isString k)
+             (coercive-not= (scan-array 1 k keys) nil))
+      true
+      false))
 
   IMap
   (-dissoc [coll k]
