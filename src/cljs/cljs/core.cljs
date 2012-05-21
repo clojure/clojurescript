@@ -69,8 +69,7 @@
 (defn aclone
   "Returns a javascript array, cloned from the passed in array"
   [array-like]
-  #_(goog.array.clone array-like)
-  (js* "Array.prototype.slice.call(~{array-like})"))
+  (js* "(~{array-like}).slice()"))
 
 (defn array
   "Creates a new javascript array.
@@ -3100,10 +3099,10 @@ reduces them without incurring seq initialization"
 
 
 (defn- scan-array [incr k array]
-  (let [len (.-length array)]
+  (let [len (alength array)]
     (loop [i 0]
       (when (< i len)
-        (if (= k (aget array i))
+        (if (identical? k (aget array i))
           i
           (recur (+ i incr)))))))
 
@@ -3142,6 +3141,16 @@ reduces them without incurring seq initialization"
         (persistent! (assoc! out k v))))))
 
 ;;; ObjMap
+
+(defn- obj-clone [obj ks]
+  (let [new-obj (js-obj)
+        l (alength ks)]
+    (loop [i 0]
+      (when (< i l)
+        (let [k (aget ks i)]
+          (aset new-obj k (aget obj k))
+          (recur (inc i)))))
+    new-obj))
 
 (deftype ObjMap [meta keys strobj update-count ^:mutable __hash]
   Object
@@ -3188,12 +3197,13 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll k v]
     (if ^boolean (goog/isString k)
-        (if ^boolean (.hasOwnProperty strobj k)
-            (let [new-strobj (goog.object/clone strobj)]
+        (if (coercive-not= (scan-array 1 k keys) nil)
+            (let [new-strobj (obj-clone strobj keys)]
               (aset new-strobj k v)
               (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
-            (if (< update-count cljs.core.ObjMap/HASHMAP_THRESHOLD) #_(< (.-length keys) cljs.core.ObjMap/HASHMAP_THRESHOLD)
-                (let [new-strobj (goog.object/clone strobj) ; append
+            (if (or (< update-count cljs.core.ObjMap/HASHMAP_THRESHOLD)
+                    (< (alength keys) cljs.core.ObjMap/HASHMAP_THRESHOLD))
+                (let [new-strobj (obj-clone strobj keys) ; append
                       new-keys (aclone keys)]
                   (aset new-strobj k v)
                   (.push new-keys k)
@@ -3209,7 +3219,7 @@ reduces them without incurring seq initialization"
   (-dissoc [coll k]
     (if (and ^boolean (goog/isString k) ^boolean (.hasOwnProperty strobj k))
       (let [new-keys (aclone keys)
-            new-strobj (goog.object/clone strobj)]
+            new-strobj (obj-clone strobj keys)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
         (js-delete new-strobj k)
         (ObjMap. meta new-keys new-strobj (inc update-count) nil))

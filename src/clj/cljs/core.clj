@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core
-  (:refer-clojure :exclude [-> ->> .. amap and areduce alength assert binding bound-fn case comment cond condp
+  (:refer-clojure :exclude [-> ->> .. amap and areduce alength aclone assert binding bound-fn case comment cond condp
                             declare definline definterface defmethod defmulti defn defn- defonce
                             defprotocol defrecord defstruct deftype delay doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
@@ -857,6 +857,9 @@
 
 (defmacro alength [a]
   (list 'js* "~{}.length" a))
+
+(defmacro aclone [a]
+  (list 'js* "~{}.slice()" a))
 
 (defmacro amap
   "Maps an expression across an array a, using an index named idx, and
