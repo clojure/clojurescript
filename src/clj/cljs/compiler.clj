@@ -688,7 +688,12 @@
   (let [fn? (and *cljs-static-fns*
                  (not (-> f :info :dynamic))
                  (-> f :info :fn-var))
-        js? (= (-> f :info :ns) 'js)
+        ns (-> f :info :ns)
+        js? (= ns 'js)
+        goog? (when ns
+                (or (= ns 'goog)
+                    (when-let [ns-str (str ns)]
+                      (= (get (string/split ns-str #"\.") 0 nil) "goog"))))
         keyword? (and (= (-> f :op) :constant)
                       (keyword? (-> f :form)))
         [f variadic-invoke]
@@ -729,7 +734,7 @@
                (when-not (zero? mfa) ",")
                "cljs.core.array_seq([" (comma-sep (drop mfa args)) "], 0))"))
        
-       (or fn? js?)
+       (or fn? js? goog?)
        (emits f "(" (comma-sep args)  ")")
        
        :else
