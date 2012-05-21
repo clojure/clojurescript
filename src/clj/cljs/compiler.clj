@@ -689,6 +689,8 @@
                  (not (-> f :info :dynamic))
                  (-> f :info :fn-var))
         js? (= (-> f :info :ns) 'js)
+        keyword? (and (= (-> f :op) :constant)
+                      (keyword? (-> f :form)))
         [f variadic-invoke]
         (if fn?
           (let [info (-> f :info)
@@ -718,6 +720,9 @@
           [f nil])]
     (emit-wrap env
       (cond
+       keyword?
+       (emits "(new cljs.core.Keyword(" f ")).call(" (comma-sep (cons "null" args)) ")")
+       
        variadic-invoke
        (let [mfa (:max-fixed-arity variadic-invoke)]
         (emits f "(" (comma-sep (take mfa args))

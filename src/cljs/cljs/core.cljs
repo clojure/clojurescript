@@ -1557,6 +1557,15 @@ reduces them without incurring seq initialization"
     ([string f start]
        (ci-reduce string f start))))
 
+(deftype Keyword [k]
+  IFn
+  (invoke [_ coll]
+    (when (coercive-not= coll nil)
+      (let [strobj (.-strobj coll)]
+        (if (nil? strobj)
+          (-lookup coll k nil)
+          (aget strobj k))))))
+
 ;;hrm
 (extend-type js/String
   IFn
