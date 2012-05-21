@@ -1,5 +1,6 @@
 (ns cljs.benchmark-runner
-  (:refer-clojure :exclude [println]))
+  (:refer-clojure :exclude [println])
+  (:require [cljs.reader :as reader]))
 
 (def println print)
 
@@ -40,6 +41,10 @@
 
 (println ";;; seq ops")
 (simple-benchmark [coll (range 500000)] (reduce + coll) 1)
+(println)
+
+(println ";;; reader")
+(simple-benchmark [s "{:foo [1 2 3]}"] (reader/read-string s) 1000)
 (println)
 
 (println "\n")
