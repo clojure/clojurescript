@@ -486,7 +486,7 @@
 		  `(~'-lookup [this# ~ksym else#]
          (cond
            ~@(mapcat (fn [f] [`(identical? ~ksym ~(keyword f)) f]) base-fields)
-           :else (core/get ~'__extmap ~ksym else#)))
+           :else (get ~'__extmap ~ksym else#)))
 		  'ICounted
 		  `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
 		  'ICollection
@@ -943,19 +943,16 @@
     (when (= (count options) 1)
       (throw "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)"))
     (let [options   (apply hash-map options)
-          default   (core/get options :default :default)
-          ;; hierarchy (core/get options :hierarchy #'cljs.core.global-hierarchy)
-	  ]
+          default   (core/get options :default :default)]
       (check-valid-options options :default :hierarchy)
       `(def ~(with-meta mm-name m)
-	 (let [method-table# (atom {})
-	       prefer-table# (atom {})
-	       method-cache# (atom {})
-	       cached-hierarchy# (atom {})
-	       hierarchy# (core/get ~options :hierarchy cljs.core/global-hierarchy)
-	       ]
-	   (cljs.core.MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
-			       method-table# prefer-table# method-cache# cached-hierarchy#))))))
+         (let [method-table# (atom {})
+               prefer-table# (atom {})
+               method-cache# (atom {})
+               cached-hierarchy# (atom {})
+               hierarchy# (get ~options :hierarchy cljs.core/global-hierarchy)]
+           (cljs.core.MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
+                               method-table# prefer-table# method-cache# cached-hierarchy#))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
