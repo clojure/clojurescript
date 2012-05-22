@@ -29,6 +29,16 @@
 (simple-benchmark [coll [1 2 3]] (next coll) 1000000)
 (println)
 
+(println ";;; transients")
+(print "transient vector, conj! 1000000 items")
+(time
+ (let [v (transient [])]
+   (loop [i 0 v v]
+     (if (> i 1000000)
+       (persistent! v)
+       (recur (inc i) (conj! v i))))))
+(println)
+
 (println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (-lookup coll :foo nil) 1000000)
