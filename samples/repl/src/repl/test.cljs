@@ -30,7 +30,8 @@
       (def env (browser/repl-env))
       (repl/repl env))
   
-  ;; Open the file samples/repl/index.html
+  ;; Open http://localhost:9000/ in a browser. When this page is loaded
+  ;; it will connect to the REPL.
   
   ;; Evaluate some basic forms
   (+ 1 1)
