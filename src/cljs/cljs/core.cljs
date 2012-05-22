@@ -996,6 +996,8 @@ reduces them without incurring seq initialization"
             (recur nval (next coll))))
         val))))
 
+(declare vec)
+
 (defn shuffle
   "Return a random permutation of coll"
   [coll]
