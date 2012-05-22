@@ -2716,7 +2716,7 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentVector/fromArray
       (fn [xs]
         (loop [xs (seq xs) out (transient cljs.core.PersistentVector/EMPTY)]
-          (if xs
+          (if (coercive-not= xs nil)
             (recur (next xs) (conj! out (first xs)))
             (persistent! out)))))
 
