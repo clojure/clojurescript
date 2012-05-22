@@ -2876,7 +2876,7 @@ reduces them without incurring seq initialization"
                           ^:mutable tail]
   ITransientCollection
   (-conj! [tcoll o]
-    (if (.-edit root)
+    (if ^boolean (.-edit root)
       (if (< (- cnt (tail-off tcoll)) 32)
         (do (aset tail (bit-and cnt 0x01f) o)
             (set! cnt (inc cnt))
@@ -2902,7 +2902,7 @@ reduces them without incurring seq initialization"
       (throw (js/Error. "conj! after persistent!"))))
 
   (-persistent! [tcoll]
-    (if (.-edit root)
+    (if ^boolean (.-edit root)
       (do (set! (.-edit root) nil)
           (let [len (- cnt (tail-off tcoll))
                 trimmed-tail (make-array len)]
@@ -2915,7 +2915,7 @@ reduces them without incurring seq initialization"
 
   ITransientVector
   (-assoc-n! [tcoll n val]
-    (if (.-edit root)
+    (if ^boolean (.-edit root)
       (cond
         (and (<= 0 n) (< n cnt))
         (if (<= (tail-off tcoll) n)
@@ -2943,7 +2943,7 @@ reduces them without incurring seq initialization"
       (throw (js/Error. "assoc! after persistent!"))))
 
   (-pop! [tcoll]
-    (if (.-edit root)
+    (if ^boolean (.-edit root)
       (cond
         (zero? cnt) (throw (js/Error. "Can't pop empty vector"))
         (== 1 cnt)                       (do (set! cnt 0) tcoll)
@@ -2969,13 +2969,13 @@ reduces them without incurring seq initialization"
 
   ICounted
   (-count [coll]
-    (if (.-edit root)
+    (if ^boolean (.-edit root)
       cnt
       (throw (js/Error. "count after persistent!"))))
 
   IIndexed
   (-nth [coll n]
-    (if (.-edit root)
+    (if ^boolean (.-edit root)
       (aget (array-for coll n) (bit-and n 0x01f))
       (throw (js/Error. "nth after persistent!"))))
 
