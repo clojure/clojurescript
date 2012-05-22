@@ -1383,8 +1383,10 @@
 (defn get-expander [sym env]
   (let [mvar
         (when-not (or (-> env :locals sym)        ;locals hide macros
-                      (and (-> env :ns :excludes sym)
-                           (not (-> env :ns :uses-macros sym))))
+                      (and (or (-> env :ns :excludes sym)
+                               (get-in @namespaces [(-> env :ns :name) :excludes sym]))
+                           (not (or (-> env :ns :uses-macros sym)
+                                    (get-in @namespaces [(-> env :ns :name) :uses-macros sym])))))
           (if-let [nstr (namespace sym)]
             (when-let [ns (cond
                            (= "clojure.core" nstr) (find-ns 'cljs.core)
