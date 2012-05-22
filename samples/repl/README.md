@@ -68,7 +68,7 @@ Start the REPL using the browser as the evaluator (do it in "samples/repl"):
 ```
 
 Open http://localhost:9000/ in a browser. When this page is loaded it will connect
-to the REPL.
+to the REPL. Alternatively you can serve index.html from your own local webserver.
 
 ### Try it out
 
