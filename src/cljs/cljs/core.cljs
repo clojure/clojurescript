@@ -2508,13 +2508,14 @@ reduces them without incurring seq initialization"
       (do
         (pv-aset ret subidx tailnode)
         ret)
-      (if-let [child (pv-aget parent subidx)]
-        (let [node-to-insert (push-tail pv (- level 5) child tailnode)]
-          (pv-aset ret subidx node-to-insert)
-          ret)
-        (let [node-to-insert (new-path nil (- level 5) tailnode)]
-          (pv-aset ret subidx node-to-insert)
-          ret)))))
+      (let [child (pv-aget parent subidx)]
+        (if (coercive-not= child nil)
+          (let [node-to-insert (push-tail pv (- level 5) child tailnode)]
+            (pv-aset ret subidx node-to-insert)
+            ret)
+          (let [node-to-insert (new-path nil (- level 5) tailnode)]
+            (pv-aset ret subidx node-to-insert)
+            ret))))))
 
 (defn- array-for [pv i]
   (if (and (<= 0 i) (< i (.-cnt pv)))
