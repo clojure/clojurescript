@@ -586,11 +586,11 @@
   [psym x]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)
-        xsym (gensym)
+        xsym (bool-expr (gensym))
         [part bit] (fast-path-protocols p)
         msym (symbol (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
     `(let [~xsym ~x]
-       (if (coercive-not= ~xsym nil)
+       (if ~xsym
          (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
                  ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
            true
