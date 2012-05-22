@@ -1409,8 +1409,11 @@
           (let [opname (str op)]
             (cond
              (= (first opname) \.) (let [[target & args] (next form)]
-                                     (list* '. target (symbol (subs opname 1)) args))
-             (= (last opname) \.) (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
+                                     (with-meta (list* '. target (symbol (subs opname 1)) args)
+                                       (meta form)))
+             (= (last opname) \.) (with-meta
+                                    (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
+                                    (meta form))
              :else form))
           form)))))
 
