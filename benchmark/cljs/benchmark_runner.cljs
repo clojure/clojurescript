@@ -57,4 +57,8 @@
 (simple-benchmark [s "{:foo [1 2 3]}"] (reader/read-string s) 1000)
 (println)
 
+(println ";;; range")
+(simple-benchmark [r (range 100000)] (last r) 1)
+(println)
+
 (println "\n")
