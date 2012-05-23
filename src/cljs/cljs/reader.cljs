@@ -172,21 +172,20 @@ nil if the end of stream has been reached")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unicode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn read-2-chars [reader]
   (.toString
-    (gstring/StringBuffer. 
-      (read-char reader) 
-      (read-char reader))
-  ))
+    (gstring/StringBuffer.
+      (read-char reader)
+      (read-char reader))))
 
 (defn read-4-chars [reader]
   (.toString
-    (gstring/StringBuffer. 
-      (read-char reader) 
+    (gstring/StringBuffer.
       (read-char reader)
-      (read-char reader) 
-      (read-char reader))
-  ))
+      (read-char reader)
+      (read-char reader)
+      (read-char reader))))
 
 (def unicode-2-pattern (re-pattern "[0-9A-Fa-f]{2}"))
 (def unicode-4-pattern (re-pattern "[0-9A-Fa-f]{4}"))
@@ -211,18 +210,18 @@ nil if the end of stream has been reached")
         (->> (read-2-chars reader)
           (validate-unicode-escape unicode-2-pattern reader ch)
           (make-unicode-char))
-    
+
         (identical? ch \u)
         (->> (read-4-chars reader)
           (validate-unicode-escape unicode-4-pattern reader ch)
           (make-unicode-char))
 
-        ; unsure about how this might arise 
+        ; unsure about how this might arise
         ; - need was implied from original calling context in escape-char
         ; can someone in the know please confirm
         (numeric? ch)
         (.fromCharCode js/String ch)
-    
+
         :else
         (reader-error reader "Unexpected unicode escape \\" ch )))))
 
@@ -442,7 +441,7 @@ nil if the end of stream has been reached")
   (let [r (push-back-reader s)]
     (read r true nil false)))
 
-  
+
 ;; read table
 
 (defn ^:private read-date
