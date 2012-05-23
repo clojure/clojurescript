@@ -216,9 +216,6 @@ nil if the end of stream has been reached")
           (validate-unicode-escape unicode-4-pattern reader ch)
           (make-unicode-char))
 
-        ; unsure about how this might arise
-        ; - need was implied from original calling context in escape-char
-        ; can someone in the know please confirm
         (numeric? ch)
         (.fromCharCode js/String ch)
 
