@@ -58,7 +58,7 @@
 (println)
 
 (println ";;; range")
-(simple-benchmark [r (range 100000)] (last r) 1)
+(simple-benchmark [r (range 1000000)] (last r) 1)
 (println)
 
 (println "\n")
