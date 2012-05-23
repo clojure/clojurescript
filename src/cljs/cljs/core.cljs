@@ -578,9 +578,10 @@ reduces them without incurring seq initialization"
 (defn last
   "Return the last item in coll, in linear time"
   [s]
-  (if (next s)
-    (recur (next s))
-    (first s)))
+  (let [sn (next s)]
+    (if (coercive-not= sn nil)
+      (recur sn)
+      (first s))))
 
 (extend-type default
   IEquiv
@@ -5474,9 +5475,9 @@ reduces them without incurring seq initialization"
   ISeq
   (-first [rng] start)
   (-rest [rng]
-    (if (-seq rng)
+    (if (coercive-not= (-seq rng) nil)
       (Range. meta (+ start step) end step nil)
-      (list)))
+      ()))
 
   ICollection
   (-conj [rng o] (cons o rng))
@@ -5513,8 +5514,10 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [rng]
-    (let [comp (if (pos? step) < >)]
-      (when (comp start end)
+    (if (pos? step)
+      (when (< start end)
+        rng)
+      (when (> start end)
         rng)))
 
   IReduce
