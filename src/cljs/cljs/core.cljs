@@ -1408,7 +1408,10 @@ reduces them without incurring seq initialization"
   ASeq
   ISeq
   (-first [coll] first)
-  (-rest [coll] rest)
+  (-rest [coll]
+    (if (== count 1)
+      nil
+      rest))
 
   IStack
   (-peek [coll] first)
