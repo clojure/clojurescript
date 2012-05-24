@@ -39,6 +39,12 @@
        (recur (inc i) (conj! v i))))))
 (println)
 
+(println ";;; (def v (into [] (range 1000000)))")
+(println ";;; (reduce + v)")
+(def v (into [] (range 1000000)))
+(time (reduce + v))
+(println)
+
 (println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (-lookup coll :foo nil) 1000000)
