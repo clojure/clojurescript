@@ -3084,7 +3084,7 @@ reduces them without incurring seq initialization"
   (-seq [coll]
     (let [rear (seq rear)]
       (if (or front rear)
-        (PersistentQueueSeq. nil front (seq rear) nil nil)
+        (PersistentQueueSeq. nil front (seq rear) nil)
         cljs.core.List/EMPTY)))
 
   ICounted
@@ -4852,10 +4852,12 @@ reduces them without incurring seq initialization"
           (RedNode. (.-key app) (.-val app)
                     (RedNode. (.-key left) (.-val left)
                               (.-left left)
-                              (.-left app))
+                              (.-left app)
+                              nil)
                     (RedNode. (.-key right) (.-val right)
                               (.-right app)
-                              (.-right right))
+                              (.-right right)
+                              nil)
                     nil)
           (RedNode. (.-key left) (.-val left)
                     (.-left left)
@@ -5030,7 +5032,7 @@ reduces them without incurring seq initialization"
         (if (coercive-not= t nil)
           (let [c (comp k (.-key t))]
             (cond
-              (zero? c)  (PersistentTreeMapSeq. nil (conj stack t) ascending? -1)
+              (zero? c)  (PersistentTreeMapSeq. nil (conj stack t) ascending? -1 nil)
               ascending? (if (neg? c)
                            (recur (conj stack t) (.-left t))
                            (recur stack          (.-right t)))
@@ -5038,7 +5040,7 @@ reduces them without incurring seq initialization"
                            (recur (conj stack t) (.-right t))
                            (recur stack          (.-left t)))))
           (if (coercive-= stack nil)
-            (PersistentTreeMapSeq. nil stack ascending? -1))))))
+            (PersistentTreeMapSeq. nil stack ascending? -1 nil))))))
 
   (-entry-key [coll entry] (key entry))
 
