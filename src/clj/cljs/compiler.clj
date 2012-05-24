@@ -1113,7 +1113,13 @@
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          ctorexpr (analyze enve ctor)
-         argexprs (vec (map #(analyze enve %) args))]
+         argexprs (vec (map #(analyze enve %) args))
+         known-num-fields (:num-fields (resolve-existing-var env ctor))
+         argc (count args)]
+     (when (and known-num-fields (not= known-num-fields argc))
+       (warning env
+         (str "WARNING: Wrong number of args (" argc ") passed to " ctor)))
+     
      {:env env :op :new :form form :ctor ctorexpr :args argexprs
       :children (into [ctorexpr] argexprs)})))
 
@@ -1220,7 +1226,9 @@
   (let [t (munge (:name (resolve-var (dissoc env :locals) tsym)))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
-             (let [m (assoc (or m {}) :name t)]
+             (let [m (assoc (or m {})
+                       :name t
+                       :num-fields (count fields))]
                (if-let [line (:line env)]
                  (-> m
                      (assoc :file *cljs-file*)
