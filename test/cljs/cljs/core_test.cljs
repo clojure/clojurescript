@@ -204,6 +204,7 @@
   (assert (= [3 2 1] (seq (array 3 2 1))))
   (assert (= 9 (reduce + (next (seq (array 1 2 3 4))))))
   (assert (= () (rest nil)))
+  (assert (= () (rest ())))
   (assert (= () (rest [1])))
   (assert (= () (rest (array 1))))
   (assert (= {"x" "y"} (meta ^{"x" "y"} [])))

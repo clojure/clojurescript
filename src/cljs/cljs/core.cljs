@@ -1451,7 +1451,7 @@ reduces them without incurring seq initialization"
 
   ISeq
   (-first [coll] nil)
-  (-rest [coll] nil)
+  (-rest [coll] ())
 
   IStack
   (-peek [coll] nil)
