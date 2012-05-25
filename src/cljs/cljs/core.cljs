@@ -1663,7 +1663,7 @@ reduces them without incurring seq initialization"
       (set! buf nil)
       ret))
 
-  ICount
+  ICounted
   (-count [_] end))
 
 (defn chunk-buffer [capacity]

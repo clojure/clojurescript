@@ -311,10 +311,10 @@
     `(do
        (when (undefined? ~ns-t)
          (deftype ~t [~@locals __meta#]
-           cljs.core.IWithMeta
+           IWithMeta
            (~'-with-meta [_# __meta#]
              (new ~t ~@locals __meta#))
-           cljs.core.IMeta
+           IMeta
            (~'-meta [_#] __meta#)
            ~@impls))
        (new ~t ~@locals nil))))
