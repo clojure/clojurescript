@@ -262,6 +262,13 @@
 (defprotocol IComparable
   (-compare [x y]))
 
+(defprotocol IChunk
+  (-drop-first [coll]))
+
+(defprotocol IChunkedSeq
+  (-chunked-first [coll])
+  (-chunked-rest [coll]))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn ^boolean identical?
   "Tests if 2 arguments are the same object"
@@ -783,6 +790,9 @@ reduces them without incurring seq initialization"
 (defn ^boolean vector?
   "Return true if x satisfies IVector"
   [x] (satisfies? IVector x))
+
+(defn ^boolean chunked-seq?
+  [x] (satisfies? IChunkedSeq x))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj
@@ -1637,6 +1647,113 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll] (seq (lazy-seq-value coll))))
 
+(declare ArrayChunk)
+
+(deftype ChunkBuffer [^:mutable buf ^:mutable end]
+  Object
+  (add [_ o]
+    (aset buf end o)
+    (set! end (inc end)))
+
+  (chunk [_ o]
+    (let [ret (ArrayChunk. buf 0 end)]
+      (set! buf nil)
+      ret))
+
+  ICount
+  (-count [_] end))
+
+(defn chunk-buffer [capacity]
+  (ChunkBuffer. (make-array capacity) 0))
+
+(deftype ArrayChunk [arr off end]
+  ICounted
+  (-count [_] (- end off))
+  
+  IIndexed
+  (-nth [coll i]
+    (aget arr (+ off i)))
+  (-nth [coll i not-found]
+    (if (and (>= i 0) (< i (- end off)))
+      (aget arr (+ off i))
+      not-found))
+
+  IChunk
+  (-drop-first [coll]
+    (if (== off end)
+      (throw (js/Error. "-drop-first of empty chunk"))
+      (ArrayChunk. arr (inc off) end)))
+
+  IReduce
+  (-reduce [coll f]
+    (ci-reduce coll f (aget arr off) (inc off)))
+  (-reduce [coll f start]
+    (ci-reduce coll f start off)))
+
+(defn array-chunk
+  ([arr]
+     (array-chunk arr 0 (alength arr)))
+  ([arr off]
+     (array-chunk arr off (alength arr)))
+  ([arr off end]
+     (ArrayChunk. arr off end)))
+
+(deftype ChunkedCons [chunk more meta]
+  IWithMeta
+  (-with-meta [coll m]
+    (ChunkedCons. chunk more m))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  ISeqable
+  (-seq [coll] coll)
+
+  ASeq
+  ISeq
+  (-first [coll] (-nth chunk 0))
+  (-rest [coll]
+    (if (> (-count chunk) 1)
+      (ChunkedCons. (-drop-first chunk) more meta)
+      (if (nil? more)
+        ()
+        more)))
+
+  IChunkedSeq
+  (-chunked-first [coll] chunk)
+  (-chunked-rest [coll]
+    (if (nil? more)
+      ()
+      more))
+
+  ICollection
+  (-conj [this o]
+    (cons o this)))
+
+(defn chunk-cons [chunk rest]
+  (if (zero? (-count chunk))
+    rest
+    (ChunkedCons. chunk rest nil)))
+
+(defn chunk-append [b x]
+  (.add b x))
+
+(defn chunk [b]
+  (.chunk b))
+
+(defn chunk-first [s]
+  (-chunked-first s))
+
+(defn chunk-rest [s]
+  (-chunked-rest s))
+
+(defn chunk-next [s]
+  (seq (-chunked-rest s)))
+
 ;;;;;;;;;;;;;;;;
 
 (defn to-array
@@ -1747,14 +1864,19 @@ reduces them without incurring seq initialization"
     (lazy-seq
       (let [s (seq x)]
         (if s
-          (cons (first s) (concat (rest s) y))
+          (if (chunked-seq? s)
+            (chunk-cons (chunk-first s) (concat (chunk-rest s) y))
+            (cons (first s) (concat (rest s) y)))
           y))))
   ([x y & zs]
      (let [cat (fn cat [xys zs]
                  (lazy-seq
                    (let [xys (seq xys)]
                      (if xys
-                       (cons (first xys) (cat (rest xys) zs))
+                       (if (chunked-seq? xys)
+                         (chunk-cons (chunk-first xys)
+                                     (cat (chunk-rest xys) zs))
+                         (cons (first xys) (cat (rest xys) zs)))
                        (when zs
                          (cat (first zs) (next zs)))))))]
        (cat (concat x y) zs))))
@@ -1989,11 +2111,17 @@ reduces them without incurring seq initialization"
   item in coll, etc, until coll is exhausted. Thus function f should
   accept 2 arguments, index and item."
   [f coll]
-  (let [mapi (fn mpi [idx coll]
-               (lazy-seq
-                (when-let [s (seq coll)]
-                  (cons (f idx (first s))
-                        (mpi (inc idx) (rest s))))))]
+  (letfn [(mapi [idx coll]
+            (lazy-seq
+             (when-let [s (seq coll)]
+               (if (chunked-seq? s)
+                 (let [c (chunk-first s)
+                       size (count c)
+                       b (chunk-buffer size)]
+                   (dotimes [i size]
+                     (chunk-append b (f (+ idx i) (-nth c i))))
+                   (chunk-cons (chunk b) (mapi (+ idx size) (chunk-rest s))))
+                 (cons (f idx (first s)) (mapi (inc idx) (rest s)))))))]
     (mapi 0 coll)))
 
 (defn keep
@@ -2003,23 +2131,41 @@ reduces them without incurring seq initialization"
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
-      (let [x (f (first s))]
-        (if (nil? x)
-          (keep f (rest s))
-          (cons x (keep f (rest s)))))))))
+      (if (chunked-seq? s)
+        (let [c (chunk-first s)
+              size (count c)
+              b (chunk-buffer size)]
+          (dotimes [i size]
+            (let [x (f (-nth c i))]
+              (when-not (nil? x)
+                (chunk-append b x))))
+          (chunk-cons (chunk b) (keep f (chunk-rest s))))
+        (let [x (f (first s))]
+          (if (nil? x)
+            (keep f (rest s))
+            (cons x (keep f (rest s))))))))))
 
 (defn keep-indexed
   "Returns a lazy sequence of the non-nil results of (f index item). Note,
   this means false return values will be included.  f must be free of
   side-effects."
   ([f coll]
-     (let [keepi (fn kpi [idx coll]
-                   (lazy-seq
-                    (when-let [s (seq coll)]
-                      (let [x (f idx (first s))]
-                        (if (nil? x)
-                          (kpi (inc idx) (rest s))
-                          (cons x (kpi (inc idx) (rest s))))))))]
+     (letfn [(keepi [idx coll]
+               (lazy-seq
+                (when-let [s (seq coll)]
+                  (if (chunked-seq? s)
+                    (let [c (chunk-first s)
+                          size (count c)
+                          b (chunk-buffer size)]
+                      (dotimes [i size]
+                        (let [x (f (+ idx i) (-nth c i))]
+                          (when-not (nil? x)
+                            (chunk-append b x))))
+                      (chunk-cons (chunk b) (keepi (+ idx size) (chunk-rest s))))
+                    (let [x (f idx (first s))]
+                      (if (nil? x)
+                        (keepi (inc idx) (rest s))
+                        (cons x (keepi (inc idx) (rest s)))))))))]
        (keepi 0 coll))))
 
 (defn every-pred
@@ -2109,7 +2255,14 @@ reduces them without incurring seq initialization"
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
-      (cons (f (first s)) (map f (rest s))))))
+      (if (chunked-seq? s)
+        (let [c (chunk-first s)
+              size (count c)
+              b (chunk-buffer size)]
+          (dotimes [i size]
+              (chunk-append b (f (-nth c i))))
+          (chunk-cons (chunk b) (map f (chunk-rest s))))
+        (cons (f (first s)) (map f (rest s)))))))
   ([f c1 c2]
    (lazy-seq
     (let [s1 (seq c1) s2 (seq c2)]
@@ -2252,10 +2405,18 @@ reduces them without incurring seq initialization"
   ([pred coll]
    (lazy-seq
     (when-let [s (seq coll)]
-      (let [f (first s) r (rest s)]
-        (if (pred f)
-          (cons f (filter pred r))
-          (filter pred r)))))))
+      (if (chunked-seq? s)
+        (let [c (chunk-first s)
+              size (count c)
+              b (chunk-buffer size)]
+          (dotimes [i size]
+              (when (pred (-nth c i))
+                (chunk-append b (-nth c i))))
+          (chunk-cons (chunk b) (filter pred (chunk-rest s))))
+        (let [f (first s) r (rest s)]
+          (if (pred f)
+            (cons f (filter pred r))
+            (filter pred r))))))))
 
 (defn remove
   "Returns a lazy sequence of the items in coll for which
@@ -2585,6 +2746,8 @@ reduces them without incurring seq initialization"
         (-conj [this o]
           (cons o this))))))
 
+(declare chunked-seq)
+
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
   (toString [this]
@@ -2642,7 +2805,9 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (vector-seq coll 0))
+    (if (zero? cnt)
+      nil
+      (chunked-seq coll 0 0)))
 
   ICounted
   (-count [coll] cnt)
@@ -2730,6 +2895,56 @@ reduces them without incurring seq initialization"
   (reduce conj cljs.core.PersistentVector/EMPTY coll))
 
 (defn vector [& args] (vec args))
+
+(deftype ChunkedSeq [vec node i off meta]
+  IWithMeta
+  (-with-meta [coll m]
+    (chunked-seq vec node i off m))
+  (-meta [coll] meta)
+
+  ISeqable
+  (-seq [coll] coll)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  ASeq
+  ISeq
+  (-first [coll]
+    (aget node off))
+  (-rest [coll]
+    (if (< (inc off) (alength node))
+      (let [s (chunked-seq vec node i (inc off))]
+        (if (nil? s)
+          ()
+          s))
+      (-chunked-rest coll)))
+
+  ICollection
+  (-conj [coll o]
+    (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll]
+    (with-meta cljs.core.PersistentVector/EMPTY meta))
+
+  IChunkedSeq
+  (-chunked-first [coll]
+    (array-chunk node off))
+  (-chunked-rest [coll]
+    (let [l (alength node)
+          s (when (< (+ i l) (-count vec))
+              (chunked-seq vec (+ i l) 0))]
+      (if (nil? s)
+        ()
+        s))))
+
+(defn chunked-seq
+  ([vec i off] (chunked-seq vec (array-for vec i) i off nil))
+  ([vec node i off] (chunked-seq vec node i off nil))
+  ([vec node i off meta]
+     (ChunkedSeq. vec node i off meta)))
 
 (deftype Subvec [meta v start end ^:mutable __hash]
   Object
@@ -5879,6 +6094,12 @@ reduces them without incurring seq initialization"
 
   PersistentVector
   (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll))
+
+  ChunkedCons
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
+  ChunkedSeq
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
   Subvec
   (-pr-seq [coll opts] (pr-sequential pr-seq "[" " " "]" opts coll))
