@@ -176,6 +176,12 @@
            {:name (munge (symbol (str (:name lb) suffix)))}
            {:name (munge sym)}))
 
+       (get-in @namespaces [(-> env :ns :name) :uses sym])
+       (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
+         (merge
+          (get-in @namespaces [full-ns :defs sym])
+          {:name (symbol (str full-ns "." (munge (name sym))))}))
+
        :else
        (let [s (str (if (core-name? env sym)
                       'cljs.core
