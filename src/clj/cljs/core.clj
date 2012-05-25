@@ -304,18 +304,20 @@
 
 (defmacro reify [& impls]
   (let [t      (gensym "t")
+        meta-sym (gensym "meta")
+        this-sym (gensym "_")
         locals (keys (:locals &env))
         ns     (-> &env :ns :name)
         munge  cljs.compiler/munge
         ns-t   (list 'js* (core/str (munge ns) "." (munge t)))]
     `(do
        (when (undefined? ~ns-t)
-         (deftype ~t [~@locals __meta#]
+         (deftype ~t [~@locals ~meta-sym]
            IWithMeta
-           (~'-with-meta [_# __meta#]
-             (new ~t ~@locals __meta#))
+           (~'-with-meta [~this-sym ~meta-sym]
+             (new ~t ~@locals ~meta-sym))
            IMeta
-           (~'-meta [_#] __meta#)
+           (~'-meta [~this-sym] ~meta-sym)
            ~@impls))
        (new ~t ~@locals nil))))
 
