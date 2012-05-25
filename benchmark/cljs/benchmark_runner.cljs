@@ -6,6 +6,9 @@
 
 (set! *print-fn* js/print)
 
+(println ";;; instance?")
+;; WARNING: will get compiled away under advanced
+(simple-benchmark [coll []] (instance? PersistentVector coll) 1000000)
 (println ";;; satisfies?")
 (simple-benchmark [coll (list 1 2 3)] (satisfies? ISeq coll) 1000000)
 (simple-benchmark [coll [1 2 3]] (satisfies? ISeq coll) 1000000)
