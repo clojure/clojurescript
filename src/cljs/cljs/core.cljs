@@ -2726,29 +2726,6 @@ reduces them without incurring seq initialization"
 (declare tv-editable-root tv-editable-tail TransientVector deref
          pr-sequential pr-seq)
 
-(defn vector-seq [v offset]
-  (let [c (-count v)]
-    (when (pos? c)
-      (reify
-        IPrintable
-        (-pr-seq [vseq opts] (pr-sequential pr-seq "(" " " ")" opts vseq))
-        ISequential
-        IEquiv
-        (-equiv [vseq other] (equiv-sequential vseq other))
-        ASeq
-        ISeq
-        (-first [_] (-nth v offset))
-        (-rest [_]
-          (let [offset (inc offset)]
-            (if (< offset c)
-              (vector-seq v offset)
-              ())))
-        ISeqable
-        (-seq [vseq] vseq)
-        ICollection
-        (-conj [this o]
-          (cons o this))))))
-
 (declare chunked-seq)
 
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
