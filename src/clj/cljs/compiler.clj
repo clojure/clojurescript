@@ -684,11 +684,14 @@
     (when (= :expr context) (emits "})()"))))
 
 (defmethod emit :invoke
-  [{:keys [f args env]}]
-  (let [fn? (and *cljs-static-fns*
-                 (not (-> f :info :dynamic))
-                 (-> f :info :fn-var))
-        ns (-> f :info :ns)
+  [{:keys [f args env] :as expr}]
+  (let [info (:info f)
+        fn? (and *cljs-static-fns*
+                 (not (:dynamic info))
+                 (:fn-var info))
+        opt-not? (and (= (:name-sym info) 'cljs.core/not)
+                      (= (infer-tag (first (:args expr))) 'boolean))
+        ns (:ns info)
         js? (= ns 'js)
         goog? (when ns
                 (or (= ns 'goog)
@@ -698,8 +701,7 @@
                       (keyword? (-> f :form)))
         [f variadic-invoke]
         (if fn?
-          (let [info (-> f :info)
-                arity (count args)
+          (let [arity (count args)
                 variadic? (:variadic info)
                 mps (:method-params info)
                 mfa (:max-fixed-arity info)]
@@ -725,6 +727,9 @@
           [f nil])]
     (emit-wrap env
       (cond
+       opt-not?
+       (emits "!(" (first args) ")")
+
        keyword?
        (emits "(new cljs.core.Keyword(" f ")).call(" (comma-sep (cons "null" args)) ")")
        
