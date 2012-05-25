@@ -376,7 +376,8 @@
 
 (extend-type boolean
   IHash
-  (-hash [o] (js* "((~{o} === true) ? 1 : 0)")))
+  (-hash [o]
+    (if (identical? o true) 1 0)))
 
 (extend-type function
   IHash
@@ -1182,13 +1183,13 @@ reduces them without incurring seq initialization"
   "quot[ient] of dividing numerator by denominator."
   [n d]
   (let [rem (mod n d)]
-    (fix (js* "((~{n} - ~{rem}) / ~{d})"))))
+    (fix (/ (- n rem) d))))
 
 (defn rem
   "remainder of dividing numerator by denominator."
   [n d]
   (let [q (quot n d)]
-    (js* "(~{n} - (~{d} * ~{q}))")))
+    (- n (* d q))))
 
 (defn rand
   "Returns a random floating point number between 0 (inclusive) and n (default 1) (exclusive)."
