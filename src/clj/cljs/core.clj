@@ -333,10 +333,18 @@
                    (if (seq s)
                      (recur (assoc ret (first s) (take-while seq? (next s)))
                             (drop-while seq? (next s)))
-                     ret))]
+                     ret))
+        warn-if-not-protocol #(when-not (= 'Object %)
+                                (if-let [var (cljs.compiler/resolve-existing-var (dissoc &env :locals) %)]
+                                  (when-not (:protocol-symbol var)
+                                    (cljs.compiler/warning &env
+                                      (core/str "WARNING: Symbol " % " is not a protocol")))
+                                  (cljs.compiler/warning &env
+                                      (core/str "WARNING: Can't resolve protocol symbol " %))))]
     (if (base-type tsym)
       (let [t (base-type tsym)
             assign-impls (fn [[p sigs]]
+                           (warn-if-not-protocol p)
                            (let [psym (resolve p)
                                  pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.lastIndexOf (core/str psym) ".")))]
                              (cons `(aset ~psym ~t true)
@@ -347,6 +355,7 @@
       (let [t (resolve tsym)
             prototype-prefix (core/str t ".prototype.")
             assign-impls (fn [[p sigs]]
+                           (warn-if-not-protocol p)
                            (let [psym (resolve p)
                                  pprefix (protocol-prefix psym)]
                              (if (= p 'Object)
@@ -552,6 +561,7 @@
 
 (defmacro defprotocol [psym & doc+methods]
   (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
+        psym (vary-meta psym assoc :protocol-symbol true)
         ns-name (-> &env :ns :name)
         fqn (fn [n] (symbol (core/str ns-name "." n)))
         prefix (protocol-prefix p)

@@ -15,6 +15,8 @@
   (:import java.lang.StringBuilder))
 
 (declare resolve-var)
+(declare resolve-existing-var)
+(declare warning)
 (declare confirm-bindings)
 (declare munge)
 (declare ^:dynamic *cljs-file*)
@@ -951,6 +953,8 @@
                      {:file *cljs-file* :line line})
                    (when protocol
                      {:protocol protocol})
+                   (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
+                     {:protocol-symbol protocol-symbol})
                    (when fn-var?
                      {:fn-var true
                       :variadic (:variadic init-expr)
