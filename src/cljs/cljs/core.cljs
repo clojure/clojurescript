@@ -34,6 +34,8 @@
   ^{:doc "bound in a repl thread to the third most recent value printed"}
   *3)
 
+(declare not nil? identical)
+
 (defn truth_
   "Internal - do not use!"
   [x]
@@ -51,7 +53,7 @@
 
 (defn is_proto_
   [x]
-  (js* "(~{x}).constructor.prototype === ~{x}"))
+  (identical? (.-prototype (.-constructor x)) x))
 
 (def
   ^{:doc "When compiled for a command-line target, whatever
@@ -69,7 +71,7 @@
 (defn aclone
   "Returns a javascript array, cloned from the passed in array"
   [array-like]
-  (js* "(~{array-like}).slice()"))
+  (.slice array-like))
 
 (defn array
   "Creates a new javascript array.
@@ -79,7 +81,7 @@
 
 (defn make-array
   ([size]
-     (js* "new Array(~{size})"))
+     (js/Array. size))
   ([type size]
      (make-array size)))
 
@@ -299,7 +301,7 @@
 (defn type [x]
   (if (or (nil? x) (undefined? x))
     nil
-    (js* "(~{x}).constructor")))
+    (.-constructor x)))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
@@ -884,7 +886,7 @@ reduces them without incurring seq initialization"
   "Returns true if n is an integer.  Warning: returns true on underflow condition."
   [n]
   (and (number? n)
-       (js* "(~{n} == ~{n}.toFixed())")))
+       (coercive-= n (.toFixed n))))
 
 (defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
@@ -1398,7 +1400,7 @@ reduces them without incurring seq initialization"
   [obj fn-map]
   (doseq [[key-name f] fn-map]
     (let [str-name (name key-name)]
-      (js* "~{obj}[~{str-name}] = ~{f}")))
+      (aset obj str-name f)))
   obj)
 
 ;;;;;;;;;;;;;;;; cons ;;;;;;;;;;;;;;;;
@@ -4771,7 +4773,7 @@ reduces them without incurring seq initialization"
                    init)]
         (if (reduced? init)
           @init
-          (let [init (if-not (nbil? (.-right node))
+          (let [init (if-not (nil? (.-right node))
                        (tree-map-kv-reduce (.-right node) f init)
                        init)]
             (if (reduced? init)
@@ -6400,11 +6402,11 @@ reduces them without incurring seq initialization"
   "Returns a random floating point number between 0 (inclusive) and
   n (default 1) (exclusive)."
   ([] (rand 1))
-  ([n] (js* "Math.random() * ~{n}")))
+  ([n] (* (Math/random) n)))
 
 (defn rand-int
   "Returns a random integer between 0 (inclusive) and n (exclusive)."
-  [n] (js* "Math.floor(Math.random() * ~{n})"))
+  [n] (Math/floor (* (Math/random) n)))
 
 (defn rand-nth
   "Return a random element of the (sequential) collection. Will have
@@ -6652,10 +6654,14 @@ reduces them without incurring seq initialization"
   (-hash [this] (goog.getUid this)))
 
 (set! cljs.core.MultiFn.prototype.call
-      (fn [_ & args] (-dispatch (js* "this") args)))
+      (fn [_ & args]
+        (this-as self
+          (-dispatch self args))))
 
 (set! cljs.core.MultiFn.prototype.apply
-      (fn [_ args] (-dispatch (js* "this") args)))
+      (fn [_ args]
+        (this-as self
+          (-dispatch self args))))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
