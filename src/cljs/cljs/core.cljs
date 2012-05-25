@@ -515,7 +515,7 @@ reduces them without incurring seq initialization"
   empty, returns nil.  (seq nil) returns nil. seq also works on
   Strings."
   [coll]
-  (if (coercive-not= coll nil)
+  (if-not (nil? coll)
     (if (satisfies? ASeq coll)
       coll
       (-seq coll))))
@@ -524,22 +524,22 @@ reduces them without incurring seq initialization"
   "Returns the first item in the collection. Calls seq on its
   argument. If coll is nil, returns nil."
   [coll]
-  (when (coercive-not= coll nil)
+  (when-not (nil? coll)
     (if (satisfies? ISeq coll)
       (-first coll)
       (let [s (seq coll)]
-        (when (coercive-not= s nil)
+        (when-not (nil? s)
           (-first s))))))
 
 (defn rest
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
-  (if (coercive-not= coll nil)
+  (if-not (nil? coll)
     (if (satisfies? ISeq coll)
       (-rest coll)
       (let [s (seq coll)]
-        (if (coercive-not= s nil)
+        (if-not (nil? s)
           (-rest s)
           ())))
     ()))
@@ -548,10 +548,10 @@ reduces them without incurring seq initialization"
   "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil"
   [coll]
-  (if (coercive-not= coll nil)
+  (if-not (nil? coll)
     (if (satisfies? ISeq coll)
       (let [coll (-rest coll)]
-        (if (coercive-not= coll nil)
+        (if-not (nil? coll)
           (if (satisfies? ASeq coll)
             coll
             (-seq coll))))
@@ -586,7 +586,7 @@ reduces them without incurring seq initialization"
   "Return the last item in coll, in linear time"
   [s]
   (let [sn (next s)]
-    (if (coercive-not= sn nil)
+    (if-not (nil? sn)
       (recur sn)
       (first s))))
 
@@ -658,12 +658,12 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (when (coercive-not= coll nil)
+     (when-not (nil? coll)
        (if (satisfies? IIndexed coll)
          (-nth coll (.floor js/Math n))
          (linear-traversal-nth coll (.floor js/Math n)))))
   ([coll n not-found]
-     (if (coercive-not= coll nil)
+     (if-not (nil? coll)
        (if (satisfies? IIndexed coll)
          (-nth coll (.floor js/Math n) not-found)
          (linear-traversal-nth coll (.floor js/Math n) not-found))
@@ -860,8 +860,8 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean string? [x]
   (and ^boolean (goog/isString x)
-       (coercive-not (or (identical? (.charAt x 0) \uFDD0)
-                         (identical? (.charAt x 0) \uFDD1)))))
+       (not (or (identical? (.charAt x 0) \uFDD0)
+                (identical? (.charAt x 0) \uFDD1)))))
 
 (defn ^boolean keyword? [x]
   (and ^boolean (goog/isString x)
@@ -1582,7 +1582,7 @@ reduces them without incurring seq initialization"
 (deftype Keyword [k]
   IFn
   (invoke [_ coll]
-    (when (coercive-not= coll nil)
+    (when-not (nil? coll)
       (let [strobj (.-strobj coll)]
         (if (nil? strobj)
           (-lookup coll k nil)
@@ -2676,7 +2676,7 @@ reduces them without incurring seq initialization"
         (pv-aset ret subidx tailnode)
         ret)
       (let [child (pv-aget parent subidx)]
-        (if (coercive-not= child nil)
+        (if-not (nil? child)
           (let [node-to-insert (push-tail pv (- level 5) child tailnode)]
             (pv-aset ret subidx node-to-insert)
             ret)
@@ -2887,7 +2887,7 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentVector/fromArray
       (fn [xs]
         (loop [xs (seq xs) out (transient cljs.core.PersistentVector/EMPTY)]
-          (if (coercive-not= xs nil)
+          (if-not (nil? xs)
             (recur (next xs) (conj! out (first xs)))
             (persistent! out)))))
 
@@ -3054,7 +3054,7 @@ reduces them without incurring seq initialization"
              (if (== level 5)
                tail-node
                (let [child (pv-aget ret subidx)]
-                 (if (coercive-not= child nil)
+                 (if-not (nil? child)
                    (tv-push-tail tv (- level 5) child tail-node)
                    (new-path (.. tv -root -edit) (- level 5) tail-node)))))
     ret))
@@ -3172,7 +3172,7 @@ reduces them without incurring seq initialization"
         :else
         (let [new-tail (editable-array-for tcoll (- cnt 2))
               new-root (let [nr (tv-pop-tail tcoll shift root)]
-                         (if (coercive-not= nr nil)
+                         (if-not (nil? nr)
                            nr
                            (VectorNode. (.-edit root) (make-array 32))))]
           (if (and (< 5 shift) (coercive-= (pv-aget new-root 1) nil))
@@ -3414,14 +3414,14 @@ reduces them without incurring seq initialization"
   (-lookup [coll k] (-lookup coll k nil))
   (-lookup [coll k not-found]
     (if (and ^boolean (goog/isString k)
-             (coercive-not= (scan-array 1 k keys) nil))
+             (not (nil? (scan-array 1 k keys))))
       (aget strobj k)
       not-found))
 
   IAssociative
   (-assoc [coll k v]
     (if ^boolean (goog/isString k)
-        (if (coercive-not= (scan-array 1 k keys) nil)
+        (if-not (nil? (scan-array 1 k keys))
             (let [new-strobj (obj-clone strobj keys)]
               (aset new-strobj k v)
               (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
@@ -3438,14 +3438,14 @@ reduces them without incurring seq initialization"
       (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
     (if (and ^boolean (goog/isString k)
-             (coercive-not= (scan-array 1 k keys) nil))
+             (not (nil? (scan-array 1 k keys))))
       true
       false))
 
   IMap
   (-dissoc [coll k]
     (if (and ^boolean (goog/isString k)
-             (coercive-not= (scan-array 1 k keys) nil))
+             (not (nil? (scan-array 1 k keys))))
       (let [new-keys (aclone keys)
             new-strobj (obj-clone strobj keys)]
         (.splice new-keys (scan-array 1 k new-keys) 1)
@@ -3672,7 +3672,7 @@ reduces them without incurring seq initialization"
                              nil))))
 
   (-contains-key? [coll k]
-    (coercive-not= (array-map-index-of coll k) -1))
+    (not (== (array-map-index-of coll k) -1)))
 
   IMap
   (-dissoc [coll k]
@@ -3849,10 +3849,10 @@ reduces them without incurring seq initialization"
     (loop [i 0 init init]
       (if (< i len)
         (let [init (let [k (aget arr i)]
-                     (if (coercive-not= k nil)
+                     (if-not (nil? k)
                        (f init k (aget arr (inc i)))
                        (let [node (aget arr (inc i))]
-                         (if (coercive-not= node nil)
+                         (if-not (nil? node)
                            (.kv-reduce node f init)
                            init))))]
           (if (reduced? init)
@@ -3878,7 +3878,7 @@ reduces them without incurring seq initialization"
                   (if (zero? (bit-and (bit-shift-right-zero-fill bitmap i) 1))
                     (recur (inc i) j)
                     (do (aset nodes i
-                              (if (coercive-not= nil (aget arr j))
+                              (if-not (nil? (aget arr j))
                                 (.inode-assoc cljs.core.BitmapIndexedNode/EMPTY
                                               (+ shift 5) (cljs.core/hash (aget arr j)) (aget arr j) (aget arr (inc j)) added-leaf?)
                                 (aget arr (inc j))))
@@ -3920,7 +3920,7 @@ reduces them without incurring seq initialization"
           (cond (coercive-= nil key-or-nil)
                 (let [n (.inode-without val-or-node (+ shift 5) hash key)]
                   (cond (identical? n val-or-node) inode
-                        (coercive-not= nil n) (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) n))
+                        (not (nil? n)) (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) n))
                         (== bitmap bit) nil
                         :else (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))))
                 (= key key-or-nil)
@@ -4001,7 +4001,7 @@ reduces them without incurring seq initialization"
                   (if (zero? (bit-and (bit-shift-right-zero-fill bitmap i) 1))
                     (recur (inc i) j)
                     (do (aset nodes i
-                              (if (coercive-not= nil (aget arr j))
+                              (if-not (nil? (aget arr j))
                                 (.inode-assoc! cljs.core.BitmapIndexedNode/EMPTY
                                                edit (+ shift 5) (cljs.core/hash (aget arr j)) (aget arr j) (aget arr (inc j)) added-leaf?)
                                 (aget arr (inc j))))
@@ -4047,7 +4047,7 @@ reduces them without incurring seq initialization"
           (cond (coercive-= nil key-or-nil)
                 (let [n (.inode-without! val-or-node edit (+ shift 5) hash key removed-leaf?)]
                   (cond (identical? n val-or-node) inode
-                        (coercive-not= nil n) (edit-and-set inode edit (inc (* 2 idx)) n)
+                        (not (nil? n)) (edit-and-set inode edit (inc (* 2 idx)) n)
                         (== bitmap bit) nil
                         :else (.edit-and-remove-pair inode edit bit idx)))
                 (= key key-or-nil)
@@ -4066,8 +4066,8 @@ reduces them without incurring seq initialization"
         new-arr (make-array len)]
     (loop [i 0 j 1 bitmap 0]
       (if (< i len)
-        (if (and (coercive-not= i idx)
-                 (coercive-not= nil (aget arr i)))
+        (if (and (not (== i idx))
+                 (not (nil? (aget arr i))))
           (do (aset new-arr j (aget arr i))
               (recur (inc i) (+ j 2) (bit-or bitmap (bit-shift-left 1 i))))
           (recur (inc i) j bitmap))
@@ -4088,7 +4088,7 @@ reduces them without incurring seq initialization"
   (inode-without [inode shift hash key]
     (let [idx  (mask hash shift)
           node (aget arr idx)]
-      (if (coercive-not= nil node)
+      (if-not (nil? node)
         (let [n (.inode-without node (+ shift 5) hash key)]
           (cond
             (identical? n node)
@@ -4106,14 +4106,14 @@ reduces them without incurring seq initialization"
   (inode-find [inode shift hash key]
     (let [idx  (mask hash shift)
           node (aget arr idx)]
-      (if (coercive-not= nil node)
+      (if-not (nil? node)
         (.inode-find node (+ shift 5) hash key)
         nil)))
 
   (inode-find [inode shift hash key not-found]
     (let [idx  (mask hash shift)
           node (aget arr idx)]
-      (if (coercive-not= nil node)
+      (if-not (nil? node)
         (.inode-find node (+ shift 5) hash key not-found)
         not-found)))
 
@@ -4162,7 +4162,7 @@ reduces them without incurring seq initialization"
       (loop [i 0 init init]
         (if (< i len)
           (let [node (aget arr i)]
-            (if (coercive-not= node nil)
+            (if-not (nil? node)
               (let [init (.kv-reduce node f init)]
                 (if (reduced? init)
                   @init
@@ -4346,7 +4346,7 @@ reduces them without incurring seq initialization"
        (let [len (.-length nodes)]
          (loop [j i]
            (if (< j len)
-             (if (coercive-not= nil (aget nodes j))
+             (if-not (nil? (aget nodes j))
                (NodeSeq. nil nodes j nil nil)
                (if-let [node (aget nodes (inc j))]
                  (if-let [node-seq (.inode-seq node)]
@@ -4437,7 +4437,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? cnt)
-      (let [s (if (coercive-not= nil root) (.inode-seq root))]
+      (let [s (if-not (nil? root) (.inode-seq root))]
         (if has-nil?
           (cons [nil nil-val] s)
           s))))
@@ -4494,7 +4494,7 @@ reduces them without incurring seq initialization"
     (let [init (if has-nil? (f init nil nil-val) init)]
       (cond
         (reduced? init)          @init
-        (coercive-not= nil root) (.kv-reduce root f init)
+        (not (nil? root)) (.kv-reduce root f init)
         :else                    init)))
 
   IFn
@@ -4625,7 +4625,7 @@ reduces them without incurring seq initialization"
 
 (defn- tree-map-seq-push [node stack ascending?]
   (loop [t node stack stack]
-    (if (coercive-not= t nil)
+    (if-not (nil? t)
       (recur (if ascending? (.-left t) (.-right t))
              (conj stack t))
       stack)))
@@ -4647,7 +4647,7 @@ reduces them without incurring seq initialization"
           next-stack (tree-map-seq-push (if ascending? (.-right t) (.-left t))
                                         (pop stack)
                                         ascending?)]
-      (if (coercive-not= next-stack nil)
+      (if-not (nil? next-stack)
         (PersistentTreeMapSeq. nil next-stack ascending? (dec cnt) nil))))
 
   ICounted
@@ -4766,12 +4766,12 @@ reduces them without incurring seq initialization"
   (let [init (f init (.-key node) (.-val node))]
     (if (reduced? init)
       @init
-      (let [init (if (coercive-not= (.-left node) nil)
+      (let [init (if-not (nil? (.-left node))
                    (tree-map-kv-reduce (.-left node) f init)
                    init)]
         (if (reduced? init)
           @init
-          (let [init (if (coercive-not= (.-right node) nil)
+          (let [init (if-not (nbil? (.-right node))
                        (tree-map-kv-reduce (.-right node) f init)
                        init)]
             (if (reduced? init)
@@ -5044,12 +5044,12 @@ reduces them without incurring seq initialization"
 
         (neg? c)
         (let [ins (tree-map-add comp (.-left tree) k v found)]
-          (if (coercive-not= ins nil)
+          (if-not (nil? ins)
             (.add-left tree ins)))
 
         :else
         (let [ins (tree-map-add comp (.-right tree) k v found)]
-          (if (coercive-not= ins nil)
+          (if-not (nil? ins)
             (.add-right tree ins)))))))
 
 (defn- tree-map-append [left right]
@@ -5110,7 +5110,7 @@ reduces them without incurring seq initialization"
                                       nil))))))
 
 (defn- tree-map-remove [comp tree k found]
-  (if (coercive-not= tree nil)
+  (if-not (nil? tree)
     (let [c (comp k (.-key tree))]
       (cond
         (zero? c)
@@ -5119,14 +5119,14 @@ reduces them without incurring seq initialization"
 
         (neg? c)
         (let [del (tree-map-remove comp (.-left tree) k found)]
-          (if (or (coercive-not= del nil) (coercive-not= (aget found 0) nil))
+          (if (or (not (nil? del)) (not (nil? (aget found 0))))
             (if (instance? BlackNode (.-left tree))
               (balance-left-del (.-key tree) (.-val tree) del (.-right tree))
               (RedNode. (.-key tree) (.-val tree) del (.-right tree) nil))))
 
         :else
         (let [del (tree-map-remove comp (.-right tree) k found)]
-          (if (or (coercive-not= del nil) (coercive-not= (aget found 0) nil))
+          (if (or (not (nil? del)) (not (nil? (aget found 0))))
             (if (instance? BlackNode (.-right tree))
               (balance-right-del (.-key tree) (.-val tree) (.-left tree) del)
               (RedNode. (.-key tree) (.-val tree) (.-left tree) del nil))))))))
@@ -5147,7 +5147,7 @@ reduces them without incurring seq initialization"
 
   (entry-at [coll k]
     (loop [t tree]
-      (if (coercive-not= t nil)
+      (if-not (nil? t)
         (let [c (comp k (.-key t))]
           (cond (zero? c) t
                 (neg? c)  (recur (.-left t))
@@ -5181,7 +5181,7 @@ reduces them without incurring seq initialization"
 
   IKVReduce
   (-kv-reduce [coll f init]
-    (if (coercive-not= tree nil)
+    (if-not (nil? tree)
       (tree-map-kv-reduce tree f init)
       init))
 
@@ -5208,7 +5208,7 @@ reduces them without incurring seq initialization"
 
   (-lookup [coll k not-found]
     (let [n (.entry-at coll k)]
-      (if (coercive-not= n nil)
+      (if-not (nil? n)
         (.-val n)
         not-found)))
 
@@ -5224,7 +5224,7 @@ reduces them without incurring seq initialization"
         (PersistentTreeMap. comp (.blacken t) (inc cnt) meta nil))))
 
   (-contains-key? [coll k]
-    (coercive-not= (.entry-at coll k) nil))
+    (not (nil? (.entry-at coll k))))
 
   IMap
   (-dissoc [coll k]
@@ -5244,7 +5244,7 @@ reduces them without incurring seq initialization"
   (-sorted-seq-from [coll k ascending?]
     (if (pos? cnt)
       (loop [stack nil t tree]
-        (if (coercive-not= t nil)
+        (if-not (nil? t)
           (let [c (comp k (.-key t))]
             (cond
               (zero? c)  (PersistentTreeMapSeq. nil (conj stack t) ascending? -1 nil)
@@ -5695,7 +5695,7 @@ reduces them without incurring seq initialization"
   ISeq
   (-first [rng] start)
   (-rest [rng]
-    (if (coercive-not= (-seq rng) nil)
+    (if-not (nil? (-seq rng))
       (Range. meta (+ start step) end step nil)
       ()))
 
@@ -5926,7 +5926,7 @@ reduces them without incurring seq initialization"
               (concat ["^"] (pr-seq (meta obj) opts) [" "]))
             (cond
              ;; handle CLJS ctors
-             (and (coercive-not= obj nil)
+             (and (not (nil? obj))
                   ^boolean (.-cljs$lang$type obj))
              (.cljs$lang$ctorPrSeq obj obj) 
 
