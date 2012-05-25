@@ -244,7 +244,7 @@
 ;; internal
 (defmacro caching-hash [coll hash-fn hash-key]
   `(let [h# ~hash-key]
-     (if (coercive-not= h# nil)
+     (if-not (nil? h#)
        h#
        (let [h# (~hash-fn ~coll)]
          (set! ~hash-key h#)
