@@ -1465,5 +1465,15 @@
   (assert (=  0 (compare (subvec [1 2 3] 1) (subvec [1 2 3] 1))))
   (assert (=  1 (compare (subvec [1 2 4] 1) (subvec [1 2 3] 1))))
 
+  ;; Chunked Sequences
+
+  (assert (= 6 (reduce + (array-chunk (array 1 2 3)))))
+  (assert (instance? ChunkedSeq (seq [1 2 3])))
+  (assert (= '(1 2 3) (seq [1 2 3])))
+  (assert (= '(2 3 4) (map inc [1 2 3])))
+  (assert (= '(2) (filter even? [1 2 3])))
+  (assert (= '(1 3) (filter odd? [1 2 3])))
+  (assert (= '(1 2 3) (concat [1] [2] [3])))
+
   :ok
   )
