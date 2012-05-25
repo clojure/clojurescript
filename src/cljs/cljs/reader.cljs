@@ -72,9 +72,9 @@ nil if the end of stream has been reached")
   (throw (js/Error. (apply str msg))))
 
 (defn ^boolean macro-terminating? [ch]
-  (and (coercive-not= ch "#")
-       (coercive-not= ch \')
-       (coercive-not= ch ":")
+  (and (not (identical? ch "#"))
+       (not (identical? ch \'))
+       (not (identical? ch ":"))
        (macros ch)))
 
 (defn read-token
@@ -104,7 +104,7 @@ nil if the end of stream has been reached")
 (defn- re-find*
   [re s]
   (let [matches (.exec re s)]
-    (when (coercive-not= matches nil)
+    (when-not (nil? matches)
       (if (== (alength matches) 1)
         (aget matches 0)
         matches))))
@@ -113,9 +113,8 @@ nil if the end of stream has been reached")
   [s]
   (let [groups (re-find* int-pattern s)
         group3 (aget groups 2)]
-    (if (coercive-not
-         (or (nil? group3)
-             (< (alength group3) 1)))
+    (if-not (or (nil? group3)
+                (< (alength group3) 1))
       0
       (let [negate (if (identical? "-" (aget groups 1)) -1 1)
             a (cond
@@ -145,7 +144,7 @@ nil if the end of stream has been reached")
 (defn- re-matches*
   [re s]
   (let [matches (.exec re s)]
-    (when (and (coercive-not= matches nil)
+    (when (and (not (nil? matches))
                (identical? (aget matches 0) s))
       (if (== (alength matches) 1)
         (aget matches 0)
@@ -332,12 +331,12 @@ nil if the end of stream has been reached")
         token (aget a 0)
         ns (aget a 1)
         name (aget a 2)]
-    (if (or (and (coercive-not (undefined? ns))
+    (if (or (and (not (undefined? ns))
                  (identical? (. ns (substring (- (.-length ns) 2) (.-length ns))) ":/"))
             (identical? (aget name (dec (.-length name))) ":")
-            (coercive-not (== (.indexOf token "::" 1) -1)))
+            (not (== (.indexOf token "::" 1) -1)))
       (reader-error reader "Invalid token: " token)
-      (if (and (coercive-not= ns nil) (> (.-length ns) 0))
+      (if (and (not (nil? ns)) (> (.-length ns) 0))
         (keyword (.substring ns 0 (.indexOf ns "/")) name)
         (keyword token)))))
 
