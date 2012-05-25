@@ -17,6 +17,7 @@
 (declare resolve-var)
 (declare resolve-existing-var)
 (declare warning)
+(def ^:dynamic *cljs-warn-on-undeclared* false)
 (declare confirm-bindings)
 (declare munge)
 (declare ^:dynamic *cljs-file*)
@@ -48,7 +49,6 @@
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
-(def ^:dynamic *cljs-warn-on-undeclared* false)
 (def ^:dynamic *cljs-warn-on-redef* true)
 (def ^:dynamic *cljs-warn-on-dynamic* true)
 (def ^:dynamic *cljs-warn-on-fn-var* true)

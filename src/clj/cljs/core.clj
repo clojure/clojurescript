@@ -335,12 +335,13 @@
                             (drop-while seq? (next s)))
                      ret))
         warn-if-not-protocol #(when-not (= 'Object %)
-                                (if-let [var (cljs.compiler/resolve-existing-var (dissoc &env :locals) %)]
-                                  (when-not (:protocol-symbol var)
+                                (if cljs.compiler/*cljs-warn-on-undeclared*
+                                  (if-let [var (cljs.compiler/resolve-existing-var (dissoc &env :locals) %)]
+                                    (when-not (:protocol-symbol var)
+                                      (cljs.compiler/warning &env
+                                        (core/str "WARNING: Symbol " % " is not a protocol")))
                                     (cljs.compiler/warning &env
-                                      (core/str "WARNING: Symbol " % " is not a protocol")))
-                                  (cljs.compiler/warning &env
-                                      (core/str "WARNING: Can't resolve protocol symbol " %))))]
+                                      (core/str "WARNING: Can't resolve protocol symbol " %)))))]
     (if (base-type tsym)
       (let [t (base-type tsym)
             assign-impls (fn [[p sigs]]
