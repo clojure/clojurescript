@@ -37,12 +37,11 @@
      (if (> i 1000000)
        (persistent! v)
        (recur (inc i) (conj! v i))))))
-(println)
 
-(println ";;; (def v (into [] (range 1000000)))")
-(println ";;; (reduce + v)")
-(def v (into [] (range 1000000)))
-(time (reduce + v))
+(println ";;; reduce lazy-seqs, vectors, ranges")
+(simple-benchmark [coll (take 100000 (iterate inc 0))] (reduce + 0 coll) 1)
+(simple-benchmark [coll (range 1000000)] (reduce + 0 coll) 1)
+(simple-benchmark [coll (into [] (range 1000000))] (reduce + 0 coll) 1)
 (println)
 
 (println ";;; map / record ops")
