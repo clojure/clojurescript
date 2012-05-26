@@ -379,7 +379,7 @@
   (-hash [o]
     (if (identical? o true) 1 0)))
 
-(extend-type function
+(extend-type default
   IHash
   (-hash [o] (goog.getUid o)))
 
