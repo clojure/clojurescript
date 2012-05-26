@@ -159,6 +159,9 @@
   (-first [coll])
   (-rest [coll]))
 
+(defprotocol INext
+  (-next [coll]))
+
 (defprotocol ILookup
   (-lookup [o k] [o k not-found]))
 
@@ -271,6 +274,9 @@
   (-chunked-first [coll])
   (-chunked-rest [coll]))
 
+(defprotocol IChunkedNext
+  (-chunked-next [coll]))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 (defn ^boolean identical?
   "Tests if 2 arguments are the same object"
@@ -330,6 +336,9 @@
   ISeq
   (-first [_] nil)
   (-rest [_] (list))
+
+  INext
+  (-next [_] nil)
 
   ILookup
   (-lookup
@@ -436,6 +445,11 @@ reduces them without incurring seq initialization"
   (-rest [_] (if (< (inc i) (.-length a))
                (IndexedSeq. a (inc i))
                (list)))
+
+  INext
+  (-next [_] (if (< (inc i) (.-length a))
+               (IndexedSeq. a (inc i))
+               nil))
 
   ICounted
   (-count [_] (- (.-length a) i))
@@ -551,13 +565,9 @@ reduces them without incurring seq initialization"
   "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil"
   [coll]
-  (if-not (nil? coll)
-    (if (satisfies? ISeq coll)
-      (let [coll (-rest coll)]
-        (if-not (nil? coll)
-          (if (satisfies? ASeq coll)
-            coll
-            (-seq coll))))
+  (when-not (nil? coll)
+    (if (satisfies? INext coll)
+      (-next coll)
       (seq (rest coll)))))
 
 (defn second
@@ -1423,6 +1433,12 @@ reduces them without incurring seq initialization"
   (-first [coll] first)
   (-rest [coll]
     (if (== count 1)
+      ()
+      rest))
+
+  INext
+  (-next [coll]
+    (if (== count 1)
       nil
       rest))
 
@@ -1465,6 +1481,9 @@ reduces them without incurring seq initialization"
   ISeq
   (-first [coll] nil)
   (-rest [coll] ())
+
+  INext
+  (-next [coll] nil)
 
   IStack
   (-peek [coll] nil)
@@ -1522,6 +1541,9 @@ reduces them without incurring seq initialization"
   ISeq
   (-first [coll] first)
   (-rest [coll] (if (nil? rest) () rest))
+
+  INext
+  (-next [coll] (if (nil? rest) nil (-seq rest)))
 
   ICollection
   (-conj [coll o] (Cons. nil o coll __hash))
@@ -1634,6 +1656,9 @@ reduces them without incurring seq initialization"
   (-first [coll] (first (lazy-seq-value coll)))
   (-rest [coll] (rest (lazy-seq-value coll)))
 
+  INext
+  (-next [coll] (-seq (-rest coll)))
+
   ICollection
   (-conj [coll o] (cons o coll))
 
@@ -1733,6 +1758,12 @@ reduces them without incurring seq initialization"
       ()
       more))
 
+  IChunkedNext
+  (-chunked-next [coll]
+    (if (nil? more)
+      nil
+      more))
+
   ICollection
   (-conj [this o]
     (cons o this)))
@@ -1755,7 +1786,9 @@ reduces them without incurring seq initialization"
   (-chunked-rest s))
 
 (defn chunk-next [s]
-  (seq (-chunked-rest s)))
+  (if (satisfies? IChunkedNext s)
+    (-chunked-next s)
+    (seq (-chunked-rest s))))
 
 ;;;;;;;;;;;;;;;;
 
@@ -2901,6 +2934,15 @@ reduces them without incurring seq initialization"
           s))
       (-chunked-rest coll)))
 
+  INext
+  (-next [coll]
+    (if (< (inc off) (alength node))
+      (let [s (chunked-seq vec node i (inc off))]
+        (if (nil? s)
+          nil
+          s))
+      (-chunked-next coll)))
+
   ICollection
   (-conj [coll o]
     (cons o coll))
@@ -2918,6 +2960,15 @@ reduces them without incurring seq initialization"
               (chunked-seq vec (+ i l) 0))]
       (if (nil? s)
         ()
+        s)))
+
+  IChunkedNext
+  (-chunked-next [coll]
+    (let [l (alength node)
+          s (when (< (+ i l) (-count vec))
+              (chunked-seq vec (+ i l) 0))]
+      (if (nil? s)
+        nil
         s))))
 
 (defn chunked-seq
@@ -5672,12 +5723,28 @@ reduces them without incurring seq initialization"
   IMeta
   (-meta [rng] meta)
 
+  ISeqable
+  (-seq [rng]
+    (if (pos? step)
+      (when (< start end)
+        rng)
+      (when (> start end)
+        rng)))
+
   ISeq
   (-first [rng] start)
   (-rest [rng]
     (if-not (nil? (-seq rng))
       (Range. meta (+ start step) end step nil)
       ()))
+
+  INext
+  (-next [rng]
+    (if (pos? step)
+      (when (< (+ start step) end)
+        (Range. meta (+ start step) end step nil))
+      (when (> (+ start step) end)
+        (Range. meta (+ start step) end step nil))))
 
   ICollection
   (-conj [rng o] (cons o rng))
@@ -5711,14 +5778,6 @@ reduces them without incurring seq initialization"
       (if (and (> start end) (zero? step))
         start
         not-found)))
-
-  ISeqable
-  (-seq [rng]
-    (if (pos? step)
-      (when (< start end)
-        rng)
-      (when (> start end)
-        rng)))
 
   IReduce
   (-reduce [rng f] (ci-reduce rng f))
