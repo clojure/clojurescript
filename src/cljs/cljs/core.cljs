@@ -403,59 +403,65 @@
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
 reduces them without incurring seq initialization"
   ([cicoll f]
-     (if (zero? (-count cicoll))
-       (f)
-       (loop [val (-nth cicoll 0), n 1]
-         (if (< n (-count cicoll))
-           (let [nval (f val (-nth cicoll n))]
-             (if (reduced? nval)
-               @nval
-               (recur nval (inc n))))
-           val))))
+     (let [cnt (-count cicoll)]
+       (if (zero? cnt)
+         (f)
+         (loop [val (-nth cicoll 0), n 1]
+           (if (< n cnt)
+             (let [nval (f val (-nth cicoll n))]
+               (if (reduced? nval)
+                 @nval
+                 (recur nval (inc n))))
+             val)))))
   ([cicoll f val]
-     (loop [val val, n 0]
-         (if (< n (-count cicoll))
-           (let [nval (f val (-nth cicoll n))]
-             (if (reduced? nval)
-               @nval
-               (recur nval (inc n))))
-           val)))
-  ([cicoll f val idx]
-     (loop [val val, n idx]
-         (if (< n (-count cicoll))
+     (let [cnt (-count cicoll)]
+       (loop [val val, n 0]
+         (if (< n cnt)
            (let [nval (f val (-nth cicoll n))]
              (if (reduced? nval)
                @nval
                (recur nval (inc n))))
            val))))
+  ([cicoll f val idx]
+     (let [cnt (-count cicoll)]
+       (loop [val val, n idx]
+         (if (< n cnt)
+           (let [nval (f val (-nth cicoll n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
+           val)))))
 
 (defn- array-reduce
   ([arr f]
-     (if (zero? (alength arr))
-       (f)
-       (loop [val (aget arr 0), n 1]
-         (if (< n (alength arr))
-           (let [nval (f val (aget arr n))]
-             (if (reduced? nval)
-               @nval
-               (recur nval (inc n))))
-           val))))
+     (let [cnt (alength arr)]
+       (if (zero? (alength arr))
+         (f)
+         (loop [val (aget arr 0), n 1]
+           (if (< n cnt)
+             (let [nval (f val (aget arr n))]
+               (if (reduced? nval)
+                 @nval
+                 (recur nval (inc n))))
+             val)))))
   ([arr f val]
-     (loop [val val, n 0]
-         (if (< n (alength arr))
-           (let [nval (f val (aget arr n))]
-             (if (reduced? nval)
-               @nval
-               (recur nval (inc n))))
-           val)))
-  ([arr f val idx]
-     (loop [val val, n idx]
-         (if (< n (alength arr))
+     (let [cnt (alength arr)]
+       (loop [val val, n 0]
+         (if (< n cnt)
            (let [nval (f val (aget arr n))]
              (if (reduced? nval)
                @nval
                (recur nval (inc n))))
            val))))
+  ([arr f val idx]
+     (let [cnt (alength arr)]
+       (loop [val val, n idx]
+         (if (< n cnt)
+           (let [nval (f val (aget arr n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
+           val)))))
 
 (declare hash-coll cons pr-str counted? RSeq)
 
