@@ -1484,5 +1484,27 @@
   (assert (= '(1 3) (filter odd? [1 2 3])))
   (assert (= '(1 2 3) (concat [1] [2] [3])))
 
+  ;; INext
+
+  (assert (= nil (next nil)))
+  (assert (= nil (next (seq (array 1)))))
+  (assert (= '(2 3) (next (seq (array 1 2 3)))))
+  (assert (= nil (next (reverse (seq (array 1))))))
+  (assert (= '(2 1) (next (reverse (seq (array 1 2 3))))))
+  (assert (= nil (next (cons 1 nil))))
+  (assert (= '(2 3) (next (cons 1 (cons 2 (cons 3 nil))))))
+  (assert (= nil (next (lazy-seq (cons 1 nil)))))
+  (assert (= '(2 3) (next (lazy-seq
+                             (cons 1
+                               (lazy-seq
+                                 (cons 2
+                                   (lazy-seq (cons 3 nil)))))))))
+  (assert (= nil (next (list 1))))
+  (assert (= '(2 3) (next (list 1 2 3))))
+  (assert (= nil (next [1])))
+  (assert (= '(2 3) (next [1 2 3])))
+  (assert (= nil (next (range 1 2))))
+  (assert (= '(2 3) (next (range 1 4))))
+
   :ok
   )
