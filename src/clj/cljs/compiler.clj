@@ -421,7 +421,7 @@
 
 (defn safe-test? [e]
   (let [tag (infer-tag e)]
-    (or (= tag 'boolean)
+    (or (#{'boolean 'seq} tag)
         (when (= (:op e) :constant)
           (let [form (:form e)]
             (not (or (and (string? form) (= form ""))

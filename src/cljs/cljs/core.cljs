@@ -570,12 +570,12 @@ reduces them without incurring seq initialization"
   IHash
   (-hash [coll] (hash-coll coll)))
 
-(defn seq
+(defn ^seq seq
   "Returns a seq on the collection. If the collection is
   empty, returns nil.  (seq nil) returns nil. seq also works on
   Strings."
   [coll]
-  (if-not (nil? coll)
+  (when-not (nil? coll)
     (if (satisfies? ASeq coll)
       coll
       (-seq coll))))
@@ -591,7 +591,7 @@ reduces them without incurring seq initialization"
         (when-not (nil? s)
           (-first s))))))
 
-(defn rest
+(defn ^seq rest
   "Returns a possibly empty seq of the items after the first. Calls seq on its
   argument."
   [coll]
@@ -604,7 +604,7 @@ reduces them without incurring seq initialization"
           ())))
     ()))
 
-(defn next
+(defn ^seq next
   "Returns a seq of the items after the first. Calls seq on its
   argument.  If there are no more items, returns nil"
   [coll]
