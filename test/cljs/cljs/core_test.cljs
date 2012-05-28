@@ -1315,15 +1315,6 @@
   (defrecord B [x])
   (assert (not= (A. nil) (B. nil)))
 
-  (assert (instance? js/Object 1))
-  (assert (instance? js/Number 1))
-  (assert (instance? js/Object "foo"))
-  (assert (instance? js/String "foo"))
-  (assert (instance? js/Object (array)))
-  (assert (instance? js/Array (array)))
-  (assert (instance? js/Object (fn [])))
-  (assert (instance? js/Function (fn [])))
-
   (defprotocol IFoo (foo [this]))
   (assert (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
              {:foo :bar}))

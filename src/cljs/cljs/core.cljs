@@ -429,6 +429,34 @@ reduces them without incurring seq initialization"
                (recur nval (inc n))))
            val))))
 
+(defn- array-reduce
+  ([arr f]
+     (if (zero? (alength arr))
+       (f)
+       (loop [val (aget arr 0), n 1]
+         (if (< n (alength arr))
+           (let [nval (f val (aget arr n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
+           val))))
+  ([arr f val]
+     (loop [val val, n 0]
+         (if (< n (alength arr))
+           (let [nval (f val (aget arr n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
+           val)))
+  ([arr f val idx]
+     (loop [val val, n idx]
+         (if (< n (alength arr))
+           (let [nval (f val (aget arr n))]
+             (if (reduced? nval)
+               @nval
+               (recur nval (inc n))))
+           val))))
+
 (declare hash-coll cons pr-str counted? RSeq)
 
 (deftype IndexedSeq [a i]
@@ -897,7 +925,7 @@ reduces them without incurring seq initialization"
   (cljs.core/undefined? x))
 
 (defn ^boolean instance? [t o]
-  (js* "(~{o} != null && (~{o} instanceof ~{t} || ~{o}.constructor === ~{t} || ~{t} === Object))"))
+  (js* "(~{o} instanceof ~{t})"))
 
 (defn ^boolean seq?
   "Return true if s satisfies ISeq"
