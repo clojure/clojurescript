@@ -4729,14 +4729,14 @@ reduces them without incurring seq initialization"
   ISequential
   ISeq
   (-first [this] (peek stack))
-
   (-rest [this]
-    (let [t (peek stack)
+    (let [t (first stack)
           next-stack (tree-map-seq-push (if ascending? (.-right t) (.-left t))
-                                        (pop stack)
+                                        (next stack)
                                         ascending?)]
       (if-not (nil? next-stack)
-        (PersistentTreeMapSeq. nil next-stack ascending? (dec cnt) nil))))
+        (PersistentTreeMapSeq. nil next-stack ascending? (dec cnt) nil)
+        ())))
 
   ICounted
   (-count [coll]
