@@ -751,7 +751,10 @@
        (emits f "(" (comma-sep args)  ")")
        
        :else
-       (emits f ".call(" (comma-sep (cons "null" args)) ")")))))
+       (if (= (:op f) :var)
+         (let [fprop (str ".cljs$lang$arity$" (count args))]
+           (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : " f ".call(" (comma-sep (cons "null" args)) "))"))
+         (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
 
 (defmethod emit :new
   [{:keys [ctor args env]}]
