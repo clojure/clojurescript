@@ -456,7 +456,7 @@
   (let [hinted-fields fields
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
-	fields (conj fields '__meta '__extmap)
+	fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))
         pmasks (prepare-protocol-masks env tagname impls)
 	adorn-params (fn [sig]
                        (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
@@ -480,7 +480,7 @@
 		 impls
 		 ['IRecord
 		  'IHash
-		  `(~'-hash [this#] (hash-coll this#))
+		  `(~'-hash [this#] (caching-hash this# ~'hash-imap ~'__hash))
 		  'IEquiv
 		  `(~'-equiv [this# other#]
         (if (and other#
@@ -512,14 +512,15 @@
 		  `(~'-assoc [this# k# ~gs]
                      (condp identical? k#
                        ~@(mapcat (fn [fld]
-                                   [(keyword fld) (list* `new tagname (replace {fld gs} fields))])
+                                   [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
                                  base-fields)
-                       (new ~tagname ~@(remove #{'__extmap} fields) (assoc ~'__extmap k# ~gs))))
+                       (new ~tagname ~@(remove #{'__extmap '__hash} fields) (assoc ~'__extmap k# ~gs) nil)))
 		  'IMap
 		  `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
                                             (dissoc (with-meta (into {} this#) ~'__meta) k#)
                                             (new ~tagname ~@(remove #{'__extmap} fields) 
-                                                 (not-empty (dissoc ~'__extmap k#)))))
+                                                 (not-empty (dissoc ~'__extmap k#))
+                                                 nil)))
 		  'ISeqable
 		  `(~'-seq [this#] (seq (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
                                               ~'__extmap)))
