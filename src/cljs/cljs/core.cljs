@@ -1530,7 +1530,7 @@ reduces them without incurring seq initialization"
 
   IStack
   (-peek [coll] nil)
-  (-pop [coll] #_(throw (js/Error. "Can't pop empty list")))
+  (-pop [coll] (throw (js/Error. "Can't pop empty list")))
 
   ICollection
   (-conj [coll o] (List. meta o nil 1 nil))
