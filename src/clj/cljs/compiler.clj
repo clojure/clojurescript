@@ -1014,7 +1014,16 @@
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
         methods (map #(analyze-fn-method menv locals %) meths)
         max-fixed-arity (apply max (map :max-fixed-arity methods))
-        variadic (boolean (some :variadic methods))]
+        variadic (boolean (some :variadic methods))
+        locals (if name (assoc locals name {:name mname :fn-var true
+                                            :variadic variadic
+                                            :max-fixed-arity max-fixed-arity
+                                            :method-params (map :params methods)}))
+        methods (if name
+                  ;; a second pass with knowledge of our function-ness/arity
+                  ;; lets us optimize self calls
+                  (map #(analyze-fn-method menv locals %) meths)
+                  methods)]
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
     {:env env :op :fn :form form :name mname :methods methods :variadic variadic
      :recur-frames *recur-frames* :loop-lets *loop-lets*
