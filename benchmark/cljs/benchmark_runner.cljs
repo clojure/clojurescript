@@ -19,7 +19,8 @@
 (simple-benchmark [coll (list 1 2 3)] (-first coll) 1000000)
 (simple-benchmark [coll (list 1 2 3)] (rest coll) 1000000)
 (simple-benchmark [coll (list 1 2 3)] (-rest coll) 1000000)
-(simple-benchmark [coll (list 1 2 3)] (next coll) 1000000)
+(simple-benchmark [] (list) 1000000)
+(simple-benchmark [] (list 1 2 3) 1000000)
 (println)
 
 (println ";;; vector ops")

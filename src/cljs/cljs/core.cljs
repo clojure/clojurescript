@@ -1547,8 +1547,14 @@ reduces them without incurring seq initialization"
     (rseq coll)
     (reduce conj () coll)))
 
-(defn list [& items]
-  (reduce conj () (reverse items)))
+(defn list
+  ([] ())
+  ([x] (conj () x))
+  ([x y] (conj (list y) x))
+  ([x y z] (conj (list y z) x))
+  ([x y z & items]
+     (conj (conj (conj (reduce conj () (reverse items))
+                       z) y) x)))
 
 (deftype Cons [meta first rest ^:mutable __hash]
   IList
