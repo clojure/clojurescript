@@ -1465,6 +1465,15 @@
   (assert (=  0 (compare (subvec [1 2 3] 1) (subvec [1 2 3] 1))))
   (assert (=  1 (compare (subvec [1 2 4] 1) (subvec [1 2 3] 1))))
 
+  ;; RSeq
+
+  (assert (= '(3 2 1) (reverse (seq (array 1 2 3)))))
+  (assert (= '(3 2 1) (reverse [1 2 3])))
+  (assert (= '(4 3 2 1) (cons 4 (reverse [1 2 3]))))
+  (assert (= 6 (reduce + (reverse [1 2 3]))))
+  (assert (= '(4 3 2) (map inc (reverse [1 2 3]))))
+  (assert (= '(4 2) (filter even? (reverse [1 2 3 4]))))
+
   ;; Chunked Sequences
 
   (assert (= 6 (reduce + (array-chunk (array 1 2 3)))))
