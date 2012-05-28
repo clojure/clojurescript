@@ -429,7 +429,7 @@ reduces them without incurring seq initialization"
                (recur nval (inc n))))
            val))))
 
-(declare hash-coll cons pr-str counted?)
+(declare hash-coll cons pr-str counted? RSeq)
 
 (deftype IndexedSeq [a i]
   Object
@@ -483,7 +483,14 @@ reduces them without incurring seq initialization"
       (ci-reduce coll f start 0)))
 
   IHash
-  (-hash [coll] (hash-coll coll)))
+  (-hash [coll] (hash-coll coll))
+
+  IReversible
+  (-rseq [coll]
+    (let [c (-count coll)]
+      (if (pos? c)
+        (RSeq. coll (dec c) nil)
+        ()))))
 
 (defn prim-seq
   ([prim]
@@ -526,6 +533,42 @@ reduces them without incurring seq initialization"
        (ci-reduce array f))
     ([array f start]
        (ci-reduce array f start))))
+
+(deftype RSeq [ci i meta]
+  Object
+  (toString [this]
+    (pr-str this))
+
+  IMeta
+  (-meta [coll] meta)
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (RSeq. ci i new-meta))
+  
+  ISeqable
+  (-seq [coll] coll)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  ISeq
+  (-first [coll]
+    (-nth ci i))
+  (-rest [coll]
+    (if (pos? i)
+      (RSeq. ci (dec i) nil)
+      ()))
+
+  ICounted
+  (-count [coll] (inc i))
+
+  ICollection
+  (-conj [coll o]
+    (cons o coll))
+
+  IHash
+  (-hash [coll] (hash-coll coll)))
 
 (defn seq
   "Returns a seq on the collection. If the collection is
@@ -1519,10 +1562,18 @@ reduces them without incurring seq initialization"
 (defn reverse
   "Returns a seq of the items in coll in reverse order. Not lazy."
   [coll]
-  (reduce conj () coll))
+  (if (reversible? coll)
+    (rseq coll)
+    (reduce conj () coll)))
 
-(defn list [& items]
-  (reduce conj () (reverse items)))
+(defn list
+  ([] ())
+  ([x] (conj () x))
+  ([x y] (conj (list y) x))
+  ([x y z] (conj (list y z) x))
+  ([x y z & items]
+     (conj (conj (conj (reduce conj () (reverse items))
+                       z) y) x)))
 
 (deftype Cons [meta first rest ^:mutable __hash]
   IList
@@ -2893,7 +2944,13 @@ reduces them without incurring seq initialization"
 
   IEditableCollection
   (-as-transient [coll]
-    (TransientVector. cnt shift (tv-editable-root root) (tv-editable-tail tail))))
+    (TransientVector. cnt shift (tv-editable-root root) (tv-editable-tail tail)))
+
+  IReversible
+  (-rseq [coll]
+    (if (pos? cnt)
+      (RSeq. coll (dec cnt) nil)
+      ())))
 
 (set! cljs.core.PersistentVector/EMPTY_NODE (pv-fresh-node nil))
 (set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
@@ -6105,6 +6162,9 @@ reduces them without incurring seq initialization"
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
   IndexedSeq
+  (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
+
+  RSeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
   PersistentQueue

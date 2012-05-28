@@ -1204,14 +1204,19 @@
                   (if (= k :refer-clojure)
                     (do
                       (assert (= exclude :exclude) "Only [:refer-clojure :exclude [names]] form supported")
+                      (assert (not (seq s)) "Only one :refer-clojure form is allowed per namespace definition")
                       (into s xs))
                     s))
                 #{} args)
         deps (atom #{})
+        valid-forms (atom #{:use :use-macros :require :require-macros})
         {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
         (reduce (fn [m [k & libs]]
                   (assert (#{:use :use-macros :require :require-macros} k)
                           "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")
+                  (assert (@valid-forms k)
+                          (str "Only one " k " form is allowed per namespace definition"))
+                  (swap! valid-forms disj k)
                   (assoc m k (into {}
                                    (mapcat (fn [[lib kw expr]]
                                              (swap! deps conj lib)
