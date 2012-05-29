@@ -180,11 +180,11 @@
 
 ;;do not construct this directly, use cat
 (deftype Cat [cnt left right]
-  clojure.lang.Counted
-  (count [_] cnt)
+  cljs.core/ICounted
+  (-count [_] cnt)
 
-  clojure.lang.Seqable
-  (seq [_] (concat (seq left) (seq right)))
+  cljs.core/ISeqable
+  (-seq [_] (concat (seq left) (seq right)))
   
   cljs.core/IReduce
   (-reduce [this f1] (-reduce this f1 (f1)))
