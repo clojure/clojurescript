@@ -6,6 +6,8 @@
 
 (set! *print-fn* js/print)
 
+(simple-benchmark [x 1] (identity x) 1000000)
+
 (println ";; array-reduce & ci-reduce")
 (def arr (let [arr (array)]
            (dotimes [i 1000000]
