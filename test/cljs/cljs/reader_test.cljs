@@ -41,6 +41,10 @@
   (assert (= (into cljs.core.PersistentQueue/EMPTY [1 2])
              (reader/read-string "#queue [1 2]")))
 
+  ;; inst
+  (assert (= (js/Date. "2010-11-12T13:14:15.666-06:00")
+             (reader/read-string "#inst \"2010-11-12T13:14:15.666-06:00\"")))
+
   ;; new parsers
 
   (reader/register-tag-parser! "foo" identity)

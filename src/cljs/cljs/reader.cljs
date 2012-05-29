@@ -442,7 +442,9 @@ nil if the end of stream has been reached")
 
 (defn ^:private read-date
   [str]
-  (js/Date. (Date/parse str)))
+  (if (string? str)
+    (js/Date. str)
+    (reader-error nil "Instance literal expects a string for its timestamp.")))
 
 
 (defn ^:private read-queue
@@ -451,7 +453,7 @@ nil if the end of stream has been reached")
     (into cljs.core.PersistentQueue/EMPTY elems)
     (reader-error nil "Queue literal expects a vector for its elements.")))
 
-(def *tag-table* (atom {"inst"  identity
+(def *tag-table* (atom {"inst"  read-date
                         "uuid"  identity
                         "queue" read-queue}))
 
