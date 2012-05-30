@@ -4530,7 +4530,7 @@ reduces them without incurring seq initialization"
 
 (declare TransientHashMap)
 
-(deftype PersistentHashMap [meta cnt root has-nil? nil-val ^:mutable __hash]
+(deftype PersistentHashMap [meta cnt root ^boolean has-nil? nil-val ^:mutable __hash]
   Object
   (toString [this]
     (pr-str this))
@@ -4640,10 +4640,10 @@ reduces them without incurring seq initialization"
               (recur (inc i) (assoc! out (aget ks i) (aget vs i)))
               (persistent! out))))))
 
-(deftype TransientHashMap [^:mutable edit
+(deftype TransientHashMap [^{:mutable true :tag 'boolean} edit
                            ^:mutable root
                            ^:mutable count
-                           ^:mutable has-nil?
+                           ^{:mutable true :tag 'boolean} has-nil?
                            ^:mutable nil-val]
   Object
   (conj! [tcoll o]
@@ -4745,14 +4745,14 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentTreeMap
 
-(defn- tree-map-seq-push [node stack ascending?]
+(defn- tree-map-seq-push [node stack ^boolean ascending?]
   (loop [t node stack stack]
     (if-not (nil? t)
       (recur (if ascending? (.-left t) (.-right t))
              (conj stack t))
       stack)))
 
-(deftype PersistentTreeMapSeq [meta stack ascending? cnt ^:mutable __hash]
+(deftype PersistentTreeMapSeq [meta stack ^boolean ascending? cnt ^:mutable __hash]
   Object
   (toString [this]
     (pr-str this))

@@ -994,7 +994,8 @@
                           (assoc m fld
                                  {:name (symbol (str gthis "." (munge fld)))
                                   :field true
-                                  :mutable (-> fld meta :mutable)}))
+                                  :mutable (-> fld meta :mutable)
+                                  :tag (-> fld meta :tag)}))
                         locals fields)
          locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
          recur-frame {:names (vec (map munge params)) :flag (atom nil)}
@@ -1092,7 +1093,8 @@
                      be {:name (gensym (str (munge name) "__"))
                          :init init-expr
                          :tag (or (-> name meta :tag)
-                                  (-> init-expr :tag))
+                                  (-> init-expr :tag)
+                                  (-> init-expr :info :tag))
                          :local true}]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
