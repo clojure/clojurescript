@@ -751,7 +751,7 @@
        (emits f "(" (comma-sep args)  ")")
        
        :else
-       (if (= (:op f) :var)
+       (if (and *cljs-static-fns* (= (:op f) :var))
          (let [fprop (str ".cljs$lang$arity$" (count args))]
            (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : " f ".call(" (comma-sep (cons "null" args)) "))"))
          (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
