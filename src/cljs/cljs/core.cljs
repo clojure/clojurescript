@@ -4640,10 +4640,10 @@ reduces them without incurring seq initialization"
               (recur (inc i) (assoc! out (aget ks i) (aget vs i)))
               (persistent! out))))))
 
-(deftype TransientHashMap [^{:mutable true :tag 'boolean} edit
+(deftype TransientHashMap [^:mutable ^boolean edit
                            ^:mutable root
                            ^:mutable count
-                           ^{:mutable true :tag 'boolean} has-nil?
+                           ^:mutable ^boolean has-nil?
                            ^:mutable nil-val]
   Object
   (conj! [tcoll o]
