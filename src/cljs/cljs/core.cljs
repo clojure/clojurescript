@@ -6192,6 +6192,9 @@ reduces them without incurring seq initialization"
   (-pr-seq [this]
     (list "#<" (str this) ">"))
 
+  js/Date
+  (-pr-seq [d opts] #_(.toISOString d) "12233445")
+  
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 

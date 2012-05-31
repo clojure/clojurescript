@@ -438,13 +438,66 @@ nil if the end of stream has been reached")
     (read r true nil false)))
 
 
-;; read table
+;; read instances
+
+(defn ^:private parse-int [s]
+    (js/parseInt s 10))
+
+(defn ^:private zero-fill-right [s width]
+  (cond (= width (count s)) s
+        (< width (count s)) (.substring s 0 width)
+        :else (loop [b (gstring/StringBuffer. s)]
+                (if (< (.getLength b) width)
+                  (recur (.append b \0))
+                  (.toString b)))))
+
+(defn ^:private divisible?
+  [num div]
+  (zero? (mod num div)))
+
+(defn ^:private indivisible?
+  [num div]
+    (not (divisible? num div)))
+
+(defn ^:private leap-year?
+  [year]
+  (and (divisible? year 4)
+       (or (indivisible? year 100)
+           (divisible? year 400))))
+
+(def ^:private days-in-month
+  (let [dim-norm [nil 31 28 31 30 31 30 31 31 30 31 30 31]
+        dim-leap [nil 31 29 31 30 31 30 31 31 30 31 30 31]]
+    (fn [month leap-year?]
+               ((if leap-year? dim-leap dim-norm) month))))
+
+(def parse-timestamp
+  (let [timestamp #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?"]
+    (fn [new-instant cs]
+      (if-let [[_ years months days hours minutes seconds fraction
+                offset-sign offset-hours offset-minutes]
+               (re-matches timestamp cs)]
+        (new-instant
+         (parse-int years)
+         (if-not months   1 (parse-int months))
+         (if-not days     1 (parse-int days))
+         (if-not hours    0 (parse-int hours))
+         (if-not minutes  0 (parse-int minutes))
+         (if-not seconds  0 (parse-int seconds))
+         (if-not fraction 0 (parse-int (zero-fill-right fraction 9)))
+         (cond (= "-" offset-sign) -1
+               (= "+" offset-sign)  1
+               :else                0)
+         (if-not offset-hours   0 (parse-int offset-hours))
+         (if-not offset-minutes 0 (parse-int offset-minutes)))
+        (reader-error nil (str "Unrecognized date/time syntax: " cs))))))
 
 (defn ^:private read-date
   [str]
-  (if (string? str)
-    (js/Date. str)
-    (reader-error nil "Instance literal expects a string for its timestamp.")))
+  (when-not (string? str)
+    (reader-error nil "Instance literal expects a string for its timestamp."))
+
+  )
 
 
 (defn ^:private read-queue
