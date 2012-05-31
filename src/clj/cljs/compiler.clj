@@ -386,8 +386,10 @@
 (defmethod emit :vector
   [{:keys [items env]}]
   (emit-wrap env
-    (emits "cljs.core.PersistentVector.fromArray(["
-           (comma-sep items) "])")))
+    (if (empty? items)
+      (emits "cljs.core.PersistentVector.EMPTY")
+      (emits "cljs.core.PersistentVector.fromArray(["
+             (comma-sep items) "])"))))
 
 (defmethod emit :set
   [{:keys [items env]}]

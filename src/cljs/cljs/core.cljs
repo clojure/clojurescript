@@ -2990,10 +2990,11 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
 (set! cljs.core.PersistentVector/fromArray
       (fn [xs]
-        (loop [xs (seq xs) out (transient cljs.core.PersistentVector/EMPTY)]
-          (if-not (nil? xs)
-            (recur (next xs) (conj! out (first xs)))
-            (persistent! out)))))
+        (let [l (alength xs)]
+         (loop [i 0 out (-as-transient cljs.core.PersistentVector/EMPTY)]
+           (if (< i l)
+             (recur (inc i) (conj! out (aget xs i)))
+             (persistent! out))))))
 
 (defn vec [coll]
   (reduce conj cljs.core.PersistentVector/EMPTY coll))
