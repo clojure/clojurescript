@@ -39,6 +39,7 @@
 (println ";;; vector ops")
 (simple-benchmark [] [] 1000000)
 (simple-benchmark [] [1 2 3] 1000000)
+(simple-benchmark [coll [1 2 3]] (transient coll) 100000)
 (simple-benchmark [coll [1 2 3]] (conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (-conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (seq coll) 1000000)
