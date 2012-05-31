@@ -1,5 +1,6 @@
 (ns cljs.sourcemap.base64-vlq
-  (require [cljs.sourcemap.base64 :as base64]))
+  (require [clojure.string :as string]
+           [cljs.sourcemap.base64 :as base64]))
 
 (def ^:const vlq-base-shift 5)
 (def ^:const vlq-base (bit-shift-left 1 vlq-base-shift))
@@ -47,7 +48,11 @@
               shift (+ shift vlq-base-shift)]
           (if continuation?
             (recur i result shift)
-            {:value (from-vlq-signed result) :rest (.substring s i)}))))))
+            (lazy-seq
+             (cons (from-vlq-signed result)
+                   (let [s (.substring s i)]
+                     (when-not (string/blank? s)
+                       (decode s)))))))))))
 
 (comment
   ;; tests
@@ -62,4 +67,9 @@
 
   (encode 32) ; "gC"
   (decode "gC") ; {:value 32 :rest ""}
+
+  (decode "AAgBC") ; (0 0 16 1)
+
+  ;; lines kept count by semicolons
+  ;; the above is col 0, file 0, line 16, col 1
   )
