@@ -24,24 +24,42 @@
 (defn encode [v]
   (let [sb (StringBuilder.)
         vlq (to-vlq-signed v)]
-    (loop [vlq   (bit-shift-right-zero-fill vlq vlq-base-shift)
-           digit (bit-and vlq vlq-base-mask)]
+    (loop [digit (bit-and vlq vlq-base-mask)
+           vlq   (bit-shift-right-zero-fill vlq vlq-base-shift)]
       (if (pos? vlq)
         (let [digit (bit-or digit vlq-continuation-bit)]
           (.append sb (base64/encode digit))
-          (recur (bit-shift-right-zero-fill vlq vlq-base-shift)
-                 (bit-and vlq vlq-base-mask)))))
+          (recur (bit-and vlq vlq-base-mask)
+                 (bit-shift-right-zero-fill vlq vlq-base-shift)))
+        (.append sb (base64/encode digit))))
     (str sb)))
 
 (defn decode [^String s]
-  (let [l (count str)]
-   (loop [i 0 result 0 shift 0]
-     (when (>= i l)
-       (throw (Error. "Expected more digits in base 64 VLQ value.")))
-     (let [i (inc i)
-           digit (base64/decode (.charAt s i))]
-       (if (pos? (bit-and digit vlq-continuation-bit))
-         (recur i
-                (+ result (bit-shift-left (bit-and digit vlq-base-mask) shift))
-                (+ shift vlq-base-shift))
-         [result i])))))
+  (let [l (.length s)]
+    (loop [i 0 result 0 shift 0]
+      (when (>= i l)
+        (throw (Error. "Expected more digits in base 64 VLQ value.")))
+      (let [digit (base64/decode (.charAt s i))]
+        (let [i (inc i)
+              continuation? (pos? (bit-and digit vlq-continuation-bit))
+              digit (bit-and digit vlq-base-mask)
+              result (+ result (bit-shift-left digit shift))
+              shift (+ shift vlq-base-shift)]
+          (if continuation?
+            (recur i result shift)
+            {:value (from-vlq-signed result) :rest (.substring s i)}))))))
+
+(comment
+  ;; tests
+
+  (bit-shift-right-zero-fill 127 1) ;; 63
+  (bit-shift-right-zero-fill -127 1) ;; 2147483584
+  
+  (to-vlq-signed 32) ;; 64
+  (to-vlq-signed -32) ;; 65
+  (from-vlq-signed 64) ;; 32
+  (from-vlq-signed 65) ;; -32
+
+  (encode 32) ; "gC"
+  (decode "gC") ; {:value 32 :rest ""}
+  )
