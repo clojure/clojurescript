@@ -9,10 +9,18 @@ curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.4.0/clojure-1.4.0
 unzip -qu clojure-1.4.0.zip
 echo "Copying clojure-1.4.0/clojure-1.4.0.jar to lib/clojure.jar..."
 cp clojure-1.4.0/clojure-1.4.0.jar lib/clojure.jar
+
 echo "Cleaning up Clojure directory..."
 rm -rf clojure-1.4.0/
 echo "Cleaning up Clojure archive..."
 rm clojure-1.4.0.zip
+
+echo "Fetching data.json..."
+curl -O -s http://repo1.maven.org/maven2/org/clojure/data.json/0.1.3/data.json-0.1.3.jar
+echo "Copying data.json-0.1.3.jar to lib/data.json-0.1.3.jar..."
+cp data.json-0.1.3.jar lib/data.json-0.1.3.jar
+echo "Cleaning up data.json..."
+rm data.json-0.1.3.jar
 
 echo "Fetching Google Closure library..."
 mkdir -p closure/library
