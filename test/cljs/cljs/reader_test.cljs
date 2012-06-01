@@ -41,7 +41,11 @@
   (assert (= (into cljs.core.PersistentQueue/EMPTY [1 2])
              (reader/read-string "#queue [1 2]")))
 
-  (println (.valueOf (reader/read-string "#inst \"2010-11-12T13:14:15.666-06:00\"")))
+  (let [d (reader/read-string "#inst \"2010-11-12T13:14:15.666-06:00\"")]
+    (println
+     (pr-str [:___ "Fri Nov 12 14:14:15 EST 2010"
+              :___ (.toString d)
+              :___ (.toString (js/Date. "2010-11-12T13:14:15.666-06:00"))])))
   
   ;; inst
   (assert (= (.valueOf (js/Date. "2010-11-12T13:14:15.666-06:00"))

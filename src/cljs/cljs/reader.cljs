@@ -471,33 +471,32 @@ nil if the end of stream has been reached")
     (fn [month leap-year?]
                ((if leap-year? dim-leap dim-norm) month))))
 
-(def parse-timestamp
+(def parse-and-validate-timestamp
   (let [timestamp #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?"]
-    (fn [new-instant cs]
-      (if-let [[_ years months days hours minutes seconds fraction
-                offset-sign offset-hours offset-minutes]
-               (re-matches timestamp cs)]
-        (new-instant
-         (parse-int years)
-         (if-not months   1 (parse-int months))
-         (if-not days     1 (parse-int days))
-         (if-not hours    0 (parse-int hours))
-         (if-not minutes  0 (parse-int minutes))
-         (if-not seconds  0 (parse-int seconds))
-         (if-not fraction 0 (parse-int (zero-fill-right fraction 9)))
-         (cond (= "-" offset-sign) -1
-               (= "+" offset-sign)  1
-               :else                0)
-         (if-not offset-hours   0 (parse-int offset-hours))
-         (if-not offset-minutes 0 (parse-int offset-minutes)))
-        (reader-error nil (str "Unrecognized date/time syntax: " cs))))))
+    (fn [ts]
+      (when-let [[_ years months days hours minutes seconds ms
+                  offset-sign offset-hours offset-minutes]
+                 (re-matches timestamp ts)]
+        (let [offset (+ (* (parse-int offset-hours) 60) (parse-int offset-minutes))
+              offset (if (= offset-sign "-") (- offset) offset)]
+          (concat
+           (map #(if % (parse-int %) 1) [years months days hours minutes seconds ms])
+           [offset]))))))
+
+(defn parse-timestamp
+  [ts]
+  (if-let [[years months days hours minutes seconds ms offset]
+           (parse-and-validate-timestamp ts)]
+    (js/Date.
+     (- (.UTC js/Date years (dec months) days hours minutes seconds ms)
+        (* offset 60 1000)))
+    (reader-error nil (str "Unrecognized date/time syntax: " ts))))
 
 (defn ^:private read-date
-  [str]
-  (when-not (string? str)
+  [s]
+  (when-not (string? s)
     (reader-error nil "Instance literal expects a string for its timestamp."))
-
-  )
+  (parse-timestamp s))
 
 
 (defn ^:private read-queue
