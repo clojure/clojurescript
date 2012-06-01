@@ -516,8 +516,13 @@ nil if the end of stream has been reached")
     (into cljs.core.PersistentQueue/EMPTY elems)
     (reader-error nil "Queue literal expects a vector for its elements.")))
 
+
+(defn ^:private read-uuid
+  [uuid]
+  (UUID. uuid))
+
 (def *tag-table* (atom {"inst"  read-date
-                        "uuid"  identity
+                        "uuid"  read-uuid
                         "queue" read-queue}))
 
 (defn maybe-read-tagged-type

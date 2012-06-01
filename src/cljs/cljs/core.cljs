@@ -6848,3 +6848,23 @@ reduces them without incurring seq initialization"
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   [multifn] (-prefers multifn))
+
+;; UUID
+
+(deftype UUID [uuid]
+  Object
+  (toString [this]
+    (pr-str this))
+    
+  IEquiv
+  (-equiv [_ other]
+    (identical? uuid (.-uuid other)))
+
+  IPrintable
+  (-pr-seq [_ _]
+    (list (str "#uuid \"" uuid "\"")))
+
+  IHash
+  (-hash [this]
+    (goog.string/hashCode (pr-str this))))
+
