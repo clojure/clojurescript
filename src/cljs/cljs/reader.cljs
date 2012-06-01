@@ -440,9 +440,6 @@ nil if the end of stream has been reached")
 
 ;; read instances
 
-(defn ^:private parse-int [s]
-    (js/parseInt s 10))
-
 (defn ^:private zero-fill-right [s width]
   (cond (= width (count s)) s
         (< width (count s)) (.substring s 0 width)
@@ -469,19 +466,33 @@ nil if the end of stream has been reached")
   (let [dim-norm [nil 31 28 31 30 31 30 31 31 30 31 30 31]
         dim-leap [nil 31 29 31 30 31 30 31 31 30 31 30 31]]
     (fn [month leap-year?]
-               ((if leap-year? dim-leap dim-norm) month))))
+      (get (if leap-year? dim-leap dim-norm) month))))
 
-(def parse-and-validate-timestamp
-  (let [timestamp #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?"]
+(def ^:private parse-and-validate-timestamp
+  (let [timestamp #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?"
+        check (fn [low n high msg]
+                (assert (<= low n high) (str msg " Failed:  " low "<=" n "<=" high))
+                n)]
     (fn [ts]
-      (when-let [[_ years months days hours minutes seconds ms
-                  offset-sign offset-hours offset-minutes]
-                 (re-matches timestamp ts)]
-        (let [offset (+ (* (parse-int offset-hours) 60) (parse-int offset-minutes))
-              offset (if (= offset-sign "-") (- offset) offset)]
-          (concat
-           (map #(if % (parse-int %) 1) [years months days hours minutes seconds ms])
-           [offset]))))))
+      (when-let [[[_ years months days hours minutes seconds milliseconds] [_ _ _] :as V]
+                 (->> ts
+                      (re-matches timestamp)
+                      (split-at 8)
+                      (map vec))]
+        (let [[[_ y mo d h m s ms] [offset-sign offset-hours offset-minutes]]
+              (->> V
+                   (map #(update-in %2 [0] %)
+                        [(constantly nil) #(if (= % "-") "-1" "1")])
+                   (map (fn [v] (map #(js/parseInt %) v))))
+              offset (* offset-sign (+ (* offset-hours 60) offset-minutes))]
+          [(if-not years 1970 y)
+           (if-not months 1        (check 1 mo 12 "timestamp month field must be in range 1..12"))
+           (if-not days 1          (check 1 d (days-in-month mo (leap-year? y)) "timestamp day field must be in range 1..last day in month"))
+           (if-not hours 0         (check 0 h 23 "timestamp hour field must be in range 0..23"))
+           (if-not minutes 0       (check 0 m 59 "timestamp minute field must be in range 0..59"))
+           (if-not seconds 0       (check 0 s (if (= m 59) 60 59) "timestamp second field must be in range 0..60"))
+           (if-not milliseconds 0  (check 0 ms 999 "timestamp millisecond field must be in range 0..999"))
+           offset])))))
 
 (defn parse-timestamp
   [ts]

@@ -41,19 +41,27 @@
   (assert (= (into cljs.core.PersistentQueue/EMPTY [1 2])
              (reader/read-string "#queue [1 2]")))
 
-  (let [d (reader/read-string "#inst \"2010-11-12T13:14:15.666-06:00\"")]
-    (println
-     (pr-str [:___ "Fri Nov 12 14:14:15 EST 2010"
-              :___ (.toString d)
-              :___ (.toString (js/Date. "2010-11-12T13:14:15.666-06:00"))])))
-  
   ;; inst
-  (assert (= (.valueOf (js/Date. "2010-11-12T13:14:15.666-06:00"))
-             (.valueOf (reader/read-string "#inst \"2010-11-12T13:14:15.666-06:00\""))))
+  (let [est-inst (reader/read-string "#inst \"2010-11-12T13:14:15.666-05:00\"")
+        utc-inst (reader/read-string "#inst \"2010-11-12T18:14:15.666-00:00\"")]
+
+    (assert (= (.valueOf (js/Date. "2010-11-12T13:14:15.666-05:00"))
+               (.valueOf est-inst)))
+
+    (assert (= (.valueOf est-inst)
+               (.valueOf (reader/read-string (pr-str est-inst)))))
+
+    (assert (= (.valueOf est-inst)
+               (.valueOf utc-inst)))
+
+    (doseq [month (range 1 13) day (range 1 29) hour (range 1 23)]
+      (let [s (str "#inst \"2010-" month "-" day "T" hour ":14:15.666-06:00\"")]
+        (assert (= (-> s reader/read-string .valueOf)
+                   (-> s reader/read-string pr-str reader/read-string .valueOf))))))
 
   ;; new parsers
 
-  (reader/register-tag-parser! "foo" identity)
+  (reader/register-tag-parser! 'foo identity)
 
   (assert (= [1 2] (reader/read-string "#foo [1 2]")))
 
