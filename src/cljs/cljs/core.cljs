@@ -2989,8 +2989,9 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentVector/EMPTY_NODE (pv-fresh-node nil))
 (set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
 (set! cljs.core.PersistentVector/fromArray
-      (fn [xs]
-        (let [l (alength xs)]
+      (fn [xs no-clone]
+        (let [l (alength xs)
+              xs (if (identical? no-clone true) xs (aclone xs))]
           (if (< l 32)
             (PersistentVector. nil l 5 cljs.core.PersistentVector/EMPTY_NODE xs nil)
             (let [node (.slice xs 0 32)

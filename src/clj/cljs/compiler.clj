@@ -389,7 +389,7 @@
     (if (empty? items)
       (emits "cljs.core.PersistentVector.EMPTY")
       (emits "cljs.core.PersistentVector.fromArray(["
-             (comma-sep items) "])"))))
+             (comma-sep items) "], true)"))))
 
 (defmethod emit :set
   [{:keys [items env]}]
