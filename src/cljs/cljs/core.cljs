@@ -828,8 +828,44 @@ reduces them without incurring seq initialization"
          (recur ret (first ks) (next ks))
          ret))))
 
+;; Simple approach probably something better
+;; and faster out there
+(def hash-cache-purge-threshold 256)
+(def hash-cache (js-obj))
+(def hash-cache-count 0)
+(def hash-cache-mru-size 32)
+(def hash-cache-mru (array))
+
+(defn update-hash-cache-mru [k h]
+  (.push hash-cache-mru (array k h))
+  (when (> (alength hash-cache-mru) hash-cache-mru-size)
+    (.shift hash-cache-mru)))
+
+(defn add-to-hash-cache [k]
+  (let [h (goog.string/hashCode k)]
+    (aset hash-cache k h)
+    (update-hash-cache-mru k h)
+    (set! hash-cache-count (inc hash-cache-count))
+    h))
+
+(defn check-hash-cache [k]
+  (if (> hash-cache-count hash-cache-purge-threshold)
+    (let [mrul (alength hash-cache-mru)]
+      (set! hash-cache (js-obj))
+      (dotimes [i mrul]
+        (let [kv (aget hash-cache-mru i)]
+          (aset hash-cache (aget kv 0) (aget kv 1))))
+      (set! hash-cache-count mrul)
+      (add-to-hash-cache k))
+    (let [h (aget hash-cache k)]
+      (if-not (nil? h)
+        h
+        (add-to-hash-cache k)))))
+
 (defn hash [o]
-  (-hash o))
+  (if ^boolean (goog/isString o)
+    (check-hash-cache o)
+    (-hash o)))
 
 (defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
