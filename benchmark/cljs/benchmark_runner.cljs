@@ -85,7 +85,7 @@
              [:i 8] [:j 9] [:k 10] [:l 11] [:m 12] [:n 13] [:o 14] [:p 15]
              [:q 16] [:r 17] [:s 18] [:t 19] [:u 20] [:v 21] [:w 22] [:x 23]
              [:y 24] [:z 25] [:a0 26] [:b0 27] [:c0 28] [:d0 29] [:e0 30] [:f0 31]]))
-(simple-benchmark [key :f0] (hash key) 100000)
+(simple-benchmark [key :f0] (hash key) 1000000)
 (simple-benchmark [coll pmap] (:f0 coll) 100000)
 (simple-benchmark [coll pmap] (get coll :f0) 100000)
 (simple-benchmark [coll pmap] (-lookup coll :f0 nil) 100000)
