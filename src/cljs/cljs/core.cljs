@@ -862,10 +862,13 @@ reduces them without incurring seq initialization"
         h
         (add-to-hash-cache k)))))
 
-(defn hash [o]
-  (if ^boolean (goog/isString o)
-    (check-hash-cache o)
-    (-hash o)))
+(defn hash
+  ([o] (hash o true))
+  ([o check-cache]
+     (if (and ^boolean (goog/isString o)
+              (not (false? check-cache))) 
+       (check-hash-cache o)
+       (-hash o))))
 
 (defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
@@ -1491,7 +1494,7 @@ reduces them without incurring seq initialization"
                    (bit-shift-right seed 2))))
 
 (defn- hash-coll [coll]
-  (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
+  (reduce #(hash-combine %1 (hash %2 false)) (hash (first coll) false) (next coll)))
 
 (declare key val)
 
