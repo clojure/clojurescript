@@ -386,8 +386,10 @@
 (defmethod emit :vector
   [{:keys [items env]}]
   (emit-wrap env
-    (emits "cljs.core.PersistentVector.fromArray(["
-           (comma-sep items) "])")))
+    (if (empty? items)
+      (emits "cljs.core.PersistentVector.EMPTY")
+      (emits "cljs.core.PersistentVector.fromArray(["
+             (comma-sep items) "], true)"))))
 
 (defmethod emit :set
   [{:keys [items env]}]
@@ -751,7 +753,7 @@
        (emits f "(" (comma-sep args)  ")")
        
        :else
-       (if (= (:op f) :var)
+       (if (and *cljs-static-fns* (= (:op f) :var))
          (let [fprop (str ".cljs$lang$arity$" (count args))]
            (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : " f ".call(" (comma-sep (cons "null" args)) "))"))
          (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
@@ -994,7 +996,8 @@
                           (assoc m fld
                                  {:name (symbol (str gthis "." (munge fld)))
                                   :field true
-                                  :mutable (-> fld meta :mutable)}))
+                                  :mutable (-> fld meta :mutable)
+                                  :tag (-> fld meta :tag)}))
                         locals fields)
          locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
          recur-frame {:names (vec (map munge params)) :flag (atom nil)}
@@ -1092,7 +1095,8 @@
                      be {:name (gensym (str (munge name) "__"))
                          :init init-expr
                          :tag (or (-> name meta :tag)
-                                  (-> init-expr :tag))
+                                  (-> init-expr :tag)
+                                  (-> init-expr :info :tag))
                          :local true}]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
@@ -1445,7 +1449,7 @@
     (if (specials op)
       form
       (if-let [mac (and (symbol? op) (get-expander op env))]
-        (binding [*ns* *cljs-ns*]
+        (binding [*ns* (create-ns *cljs-ns*)]
           (apply mac form env (rest form)))
         (if (symbol? op)
           (let [opname (str op)]
