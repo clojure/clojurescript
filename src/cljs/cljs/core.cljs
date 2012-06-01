@@ -6200,6 +6200,24 @@ reduces them without incurring seq initialization"
   (-pr-seq [this]
     (list "#<" (str this) ">"))
 
+  js/Date
+  (-pr-seq [d _]
+    (let [normalize (fn [n len]
+                      (loop [ns (str n)]
+                        (if (< (count ns) len)
+                          (recur (str "0" ns))
+                          ns)))]
+      (list
+       (str "#inst \""
+            (.getUTCFullYear d)                   "-"
+            (normalize (inc (.getUTCMonth d)) 2)  "-"
+            (normalize (.getUTCDate d) 2)         "T"
+            (normalize (.getUTCHours d) 2)        ":"
+            (normalize (.getUTCMinutes d) 2)      ":"
+            (normalize (.getUTCSeconds d) 2)      "."
+            (normalize (.getUTCMilliseconds d) 3) "-"
+            "00:00\""))))
+  
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
