@@ -2991,10 +2991,14 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentVector/fromArray
       (fn [xs]
         (let [l (alength xs)]
-         (loop [i 0 out (-as-transient cljs.core.PersistentVector/EMPTY)]
-           (if (< i l)
-             (recur (inc i) (conj! out (aget xs i)))
-             (persistent! out))))))
+          (if (< l 32)
+            (PersistentVector. nil l 5 cljs.core.PersistentVector/EMPTY_NODE xs nil)
+            (let [node (.slice xs 0 32)
+                  v (PersistentVector. nil 32 5 cljs.core.PersistentVector/EMPTY_NODE node nil)]
+             (loop [i 32 out (-as-transient v)]
+               (if (< i l)
+                 (recur (inc i) (conj! out (aget xs i)))
+                 (persistent! out))))))))
 
 (defn vec [coll]
   (reduce conj cljs.core.PersistentVector/EMPTY coll))
