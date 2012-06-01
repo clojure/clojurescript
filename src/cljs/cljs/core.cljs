@@ -3002,7 +3002,10 @@ reduces them without incurring seq initialization"
                  (persistent! out))))))))
 
 (defn vec [coll]
-  (reduce conj cljs.core.PersistentVector/EMPTY coll))
+  (-persistent!
+   (reduce -conj!
+           (-as-transient cljs.core.PersistentVector/EMPTY)
+           coll)))
 
 (defn vector [& args] (vec args))
 
