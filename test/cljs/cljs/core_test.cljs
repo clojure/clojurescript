@@ -1393,6 +1393,14 @@
     (assert (= (-find-first fv [1]) 1))
     (assert (identical? (fv 1) fv)))
 
+  (deftype DestructuringWithLocals [a]
+    IFindsFirst
+    (-find-first [_ [x y]]
+      [x y a]))
+
+  (let [t (DestructuringWithLocals. 1)]
+    (assert (= [2 3 1] (-find-first t [2 3]))))
+
   (let [x 1]
     (assert (= (case x 1 :one) :one)))
   (let [x 1]

@@ -386,8 +386,10 @@
 (defmethod emit :vector
   [{:keys [items env]}]
   (emit-wrap env
-    (emits "cljs.core.PersistentVector.fromArray(["
-           (comma-sep items) "])")))
+    (if (empty? items)
+      (emits "cljs.core.PersistentVector.EMPTY")
+      (emits "cljs.core.PersistentVector.fromArray(["
+             (comma-sep items) "], true)"))))
 
 (defmethod emit :set
   [{:keys [items env]}]
@@ -978,25 +980,16 @@
              (when export-as {:export export-as})
              (when init-expr {:children [init-expr]})))))
 
-(defn- analyze-fn-method [env locals meth]
+(defn- analyze-fn-method [env locals meth gthis]
   (letfn [(uniqify [[p & r]]
             (when p
               (cons (if (some #{p} r) (gensym (str p)) p)
                     (uniqify r))))]
    (let [params (first meth)
-         fields (-> params meta ::fields)
          variadic (boolean (some '#{&} params))
          params (uniqify (remove '#{&} params))
          fixed-arity (count (if variadic (butlast params) params))
          body (next meth)
-         gthis (and fields (gensym "this__"))
-         locals (reduce (fn [m fld]
-                          (assoc m fld
-                                 {:name (symbol (str gthis "." (munge fld)))
-                                  :field true
-                                  :mutable (-> fld meta :mutable)
-                                  :tag (-> fld meta :tag)}))
-                        locals fields)
          locals (reduce (fn [m name] (assoc m name {:name (munge name)})) locals params)
          recur-frame {:names (vec (map munge params)) :flag (atom nil)}
          block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
@@ -1015,8 +1008,18 @@
         mname (when name (munge name))
         locals (:locals env)
         locals (if name (assoc locals name {:name mname}) locals)
+        fields (-> form meta ::fields)
+        gthis (and fields (gensym "this__"))
+        locals (reduce (fn [m fld]
+                         (assoc m fld
+                                {:name (symbol (str gthis "." (munge fld)))
+                                 :field true
+                                 :mutable (-> fld meta :mutable)
+                                 :tag (-> fld meta :tag)}))
+                       locals fields)
+
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
-        methods (map #(analyze-fn-method menv locals %) meths)
+        methods (map #(analyze-fn-method menv locals % gthis) meths)
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))
         locals (if name (assoc locals name {:name mname :fn-var true
@@ -1026,7 +1029,7 @@
         methods (if name
                   ;; a second pass with knowledge of our function-ness/arity
                   ;; lets us optimize self calls
-                  (map #(analyze-fn-method menv locals %) meths)
+                  (map #(analyze-fn-method menv locals % gthis) meths)
                   methods)]
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
     {:env env :op :fn :form form :name mname :methods methods :variadic variadic
@@ -1447,7 +1450,7 @@
     (if (specials op)
       form
       (if-let [mac (and (symbol? op) (get-expander op env))]
-        (binding [*ns* *cljs-ns*]
+        (binding [*ns* (create-ns *cljs-ns*)]
           (apply mac form env (rest form)))
         (if (symbol? op)
           (let [opname (str op)]

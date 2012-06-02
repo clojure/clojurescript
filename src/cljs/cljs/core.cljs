@@ -2989,14 +2989,23 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentVector/EMPTY_NODE (pv-fresh-node nil))
 (set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
 (set! cljs.core.PersistentVector/fromArray
-      (fn [xs]
-        (loop [xs (seq xs) out (transient cljs.core.PersistentVector/EMPTY)]
-          (if-not (nil? xs)
-            (recur (next xs) (conj! out (first xs)))
-            (persistent! out)))))
+      (fn [xs no-clone]
+        (let [l (alength xs)
+              xs (if (identical? no-clone true) xs (aclone xs))]
+          (if (< l 32)
+            (PersistentVector. nil l 5 cljs.core.PersistentVector/EMPTY_NODE xs nil)
+            (let [node (.slice xs 0 32)
+                  v (PersistentVector. nil 32 5 cljs.core.PersistentVector/EMPTY_NODE node nil)]
+             (loop [i 32 out (-as-transient v)]
+               (if (< i l)
+                 (recur (inc i) (conj! out (aget xs i)))
+                 (persistent! out))))))))
 
 (defn vec [coll]
-  (reduce conj cljs.core.PersistentVector/EMPTY coll))
+  (-persistent!
+   (reduce -conj!
+           (-as-transient cljs.core.PersistentVector/EMPTY)
+           coll)))
 
 (defn vector [& args] (vec args))
 
@@ -3543,21 +3552,20 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll k v]
     (if ^boolean (goog/isString k)
-        (if-not (nil? (scan-array 1 k keys))
+        (if (or (> update-count cljs.core.ObjMap/HASHMAP_THRESHOLD)
+                (>= (alength keys) cljs.core.ObjMap/HASHMAP_THRESHOLD))
+          (obj-map->hash-map coll k v)
+          (if-not (nil? (scan-array 1 k keys))
             (let [new-strobj (obj-clone strobj keys)]
               (aset new-strobj k v)
               (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
-            (if (or (< update-count cljs.core.ObjMap/HASHMAP_THRESHOLD)
-                    (< (alength keys) cljs.core.ObjMap/HASHMAP_THRESHOLD))
-                (let [new-strobj (obj-clone strobj keys) ; append
-                      new-keys (aclone keys)]
-                  (aset new-strobj k v)
-                  (.push new-keys k)
-                  (ObjMap. meta new-keys new-strobj (inc update-count) nil))
-                ;; too many keys, switching to PersistentHashMap
-                (obj-map->hash-map coll k v)))
-      ; non-string key. game over.
-      (obj-map->hash-map coll k v)))
+            (let [new-strobj (obj-clone strobj keys) ; append
+                  new-keys (aclone keys)]
+              (aset new-strobj k v)
+              (.push new-keys k)
+              (ObjMap. meta new-keys new-strobj (inc update-count) nil))))
+        ;; non-string key. game over.
+        (obj-map->hash-map coll k v)))
   (-contains-key? [coll k]
     (if (and ^boolean (goog/isString k)
              (not (nil? (scan-array 1 k keys))))
@@ -4640,10 +4648,10 @@ reduces them without incurring seq initialization"
               (recur (inc i) (assoc! out (aget ks i) (aget vs i)))
               (persistent! out))))))
 
-(deftype TransientHashMap [^{:mutable true :tag 'boolean} edit
+(deftype TransientHashMap [^:mutable ^boolean edit
                            ^:mutable root
                            ^:mutable count
-                           ^{:mutable true :tag 'boolean} has-nil?
+                           ^:mutable ^boolean has-nil?
                            ^:mutable nil-val]
   Object
   (conj! [tcoll o]
@@ -6192,6 +6200,24 @@ reduces them without incurring seq initialization"
   (-pr-seq [this]
     (list "#<" (str this) ">"))
 
+  js/Date
+  (-pr-seq [d _]
+    (let [normalize (fn [n len]
+                      (loop [ns (str n)]
+                        (if (< (count ns) len)
+                          (recur (str "0" ns))
+                          ns)))]
+      (list
+       (str "#inst \""
+            (.getUTCFullYear d)                   "-"
+            (normalize (inc (.getUTCMonth d)) 2)  "-"
+            (normalize (.getUTCDate d) 2)         "T"
+            (normalize (.getUTCHours d) 2)        ":"
+            (normalize (.getUTCMinutes d) 2)      ":"
+            (normalize (.getUTCSeconds d) 2)      "."
+            (normalize (.getUTCMilliseconds d) 3) "-"
+            "00:00\""))))
+  
   LazySeq
   (-pr-seq [coll opts] (pr-sequential pr-seq "(" " " ")" opts coll))
 
