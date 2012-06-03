@@ -829,7 +829,6 @@ reduces them without incurring seq initialization"
          ret))))
 
 ;; Simple caching of string hashcode
-(def string-hash-cache-max 2048)
 (def string-hash-cache (js-obj))
 (def string-hash-cache-count 0)
 
@@ -840,7 +839,7 @@ reduces them without incurring seq initialization"
     h))
 
 (defn check-string-hash-cache [k]
-  (when (> string-hash-cache-count string-hash-cache-max)
+  (when (> string-hash-cache-count 255)
     (set! string-hash-cache (js-obj))
     (set! string-hash-cache-count 0))
   (let [h (aget string-hash-cache k)]
