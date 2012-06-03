@@ -350,7 +350,7 @@
             (vary-meta n
               (fn [m]
                 (merge m {:line (:line env)
-                          :name (:name-sym info)})))
+                          :name (:name info)})))
             n)]
     (emit-wrap env (emits n))))
 
