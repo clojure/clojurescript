@@ -55,7 +55,9 @@
 (def ^:dynamic *cljs-warn-fn-arity* true)
 (def ^:dynamic *unchecked-if* (atom false))
 (def ^:dynamic *cljs-static-fns* false)
-(def ^:dynamic *position* nil)
+
+(def ^:dynamic *cljs-mappings* nil)
+(def ^:dynamic *cljs-gen-col* nil)
 
 (defmacro ^:private debug-prn
   [& args]
@@ -231,16 +233,25 @@
 (defn emits [& xs]
   (doseq [x xs]
     (cond
-      (nil? x) nil
-      (map? x) (emit x)
-      (seq? x) (apply emits x)
-      (fn? x)  (x)
-      :else (let [s (print-str x)]
-              (when *position*
-                (swap! *position*
-                  (fn [{:keys [gline gcol]}]
-                    {:gline gline :gcol (+ gcol (count s))})))
-              (print s))))
+     (nil? x) nil
+     (map? x) (emit x)
+     (seq? x) (apply emits x)
+     (fn? x)  (x)
+     :else (let [m (when (symbol? x)
+                     (-> x meta))
+                 s (print-str x)]
+             (when *cljs-mappings*
+               (swap! *cljs-mappings*
+                      (fn [lines]
+                        (let [last (conj (peek lines)
+                                         {:gline (count lines)
+                                          :gcol *cljs-gen-col*
+                                          :line (when m (:line m))
+                                          :col 0
+                                          :name (when m (str (:name m)))})]
+                          (conj (pop lines) last))))
+               (swap! *cljs-gen-col* (fn [col] (+ col (count s)))))
+             (print s))))
   nil)
 
 (defn ^String emit-str [expr]
@@ -248,15 +259,11 @@
 
 (defn emitln [& xs]
   (apply emits xs)
-  ;; Prints column-aligned line number comments; good test of *position*.
-  ;(when *position*
-  ;  (let [[line column] @*position*]
-  ;    (print (apply str (concat (repeat (- 120 column) \space) ["// " (inc line)])))))
   (println)
-  (when *position*
-    (swap! *position*
-      (fn [{:keys [gline gcol]}]
-        {:gline (inc gline) :gcol 0})))
+  (when *cljs-mappings*
+    (swap! *cljs-mappings*
+      (fn [lines]
+        (conj lines []))))
   nil)
 
 (defmulti emit-constant class)
@@ -347,7 +354,14 @@
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
-  (emit-wrap env (emits (munge (:name info)))))
+  (let [n (munge (:name info))
+        n (if (symbol? n)
+            (vary-meta n
+              (fn [m]
+                (merge m {:line (:line env)
+                          :name (:name-sym info)})))
+            n)]
+    (emit-wrap env (emits n))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
@@ -1584,7 +1598,8 @@
       (binding [*out* out
                 *cljs-ns* 'cljs.user
                 *cljs-file* (.getPath ^java.io.File src)
-                *position* (atom {:gline 0 :gcol 0})]
+                *cljs-mappings* (atom [[]])
+                *cljs-gen-col* (atom 0)]
         (loop [forms (forms-seq src)
                ns-name nil
                deps nil]
