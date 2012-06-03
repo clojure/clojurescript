@@ -244,11 +244,11 @@
                (swap! *cljs-mappings*
                       (fn [lines]
                         (let [last (conj (peek lines)
-                                         {:file *cljs-file*
-                                          :gcol *cljs-gen-col*
-                                          :line (when m (:line m))
-                                          :col 0
-                                          :name (when m (str (:name m)))})]
+                                         (merge {:file *cljs-file*
+                                                 :gcol *cljs-gen-col*}
+                                                (when m {:line (:line m)
+                                                         :col (or (:col m) 0)
+                                                         :name (:name m)})))]
                           (conj (pop lines) last))))
                (swap! *cljs-gen-col* (fn [col] (+ col (count s)))))
              (print s))))
