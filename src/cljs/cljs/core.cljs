@@ -828,8 +828,32 @@ reduces them without incurring seq initialization"
          (recur ret (first ks) (next ks))
          ret))))
 
-(defn hash [o]
-  (-hash o))
+;; Simple caching of string hashcode
+(def string-hash-cache (js-obj))
+(def string-hash-cache-count 0)
+
+(defn add-to-string-hash-cache [k]
+  (let [h (goog.string/hashCode k)]
+    (aset string-hash-cache k h)
+    (set! string-hash-cache-count (inc string-hash-cache-count))
+    h))
+
+(defn check-string-hash-cache [k]
+  (when (> string-hash-cache-count 255)
+    (set! string-hash-cache (js-obj))
+    (set! string-hash-cache-count 0))
+  (let [h (aget string-hash-cache k)]
+    (if-not (nil? h)
+      h
+      (add-to-string-hash-cache k))))
+
+(defn hash
+  ([o] (hash o true))
+  ([o check-cache]
+     (if (and ^boolean (goog/isString o)
+              (not (false? check-cache))) 
+       (check-string-hash-cache o)
+       (-hash o))))
 
 (defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
@@ -1455,7 +1479,7 @@ reduces them without incurring seq initialization"
                    (bit-shift-right seed 2))))
 
 (defn- hash-coll [coll]
-  (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
+  (reduce #(hash-combine %1 (hash %2 false)) (hash (first coll) false) (next coll)))
 
 (declare key val)
 
@@ -6386,7 +6410,7 @@ reduces them without incurring seq initialization"
   current value of the atom is identical to oldval. Returns true if
   set happened, else false."
   [a oldval newval]
-  (if (= a.state oldval)
+  (if (= (.-state a) oldval)
     (do (reset! a newval) true)
     false))
 
