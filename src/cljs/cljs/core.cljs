@@ -4081,16 +4081,16 @@ reduces them without incurring seq initialization"
                 (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))
                 :else inode)))))
 
-  (inode-find [inode shift hash key]
+  (inode-lookup [inode shift hash key not-found]
     (let [bit (bitpos hash shift)]
       (if (zero? (bit-and bitmap bit))
-        nil
+        not-found
         (let [idx         (bitmap-indexed-node-index bitmap bit)
               key-or-nil  (aget arr (* 2 idx))
               val-or-node (aget arr (inc (* 2 idx)))]
-          (cond (nil? key-or-nil) (.inode-find val-or-node (+ shift 5) hash key)
-                (= key key-or-nil)          [key-or-nil val-or-node]
-                :else nil)))))
+          (cond (nil? key-or-nil)  (.inode-lookup val-or-node (+ shift 5) hash key not-found)
+                (= key key-or-nil) val-or-node
+                :else not-found)))))
 
   (inode-find [inode shift hash key not-found]
     (let [bit (bitpos hash shift)]
@@ -4257,12 +4257,12 @@ reduces them without incurring seq initialization"
             (ArrayNode. nil cnt (clone-and-set arr idx n))))
         inode)))
 
-  (inode-find [inode shift hash key]
+  (inode-lookup [inode shift hash key not-found]
     (let [idx  (mask hash shift)
           node (aget arr idx)]
       (if-not (nil? node)
-        (.inode-find node (+ shift 5) hash key)
-        nil)))
+        (.inode-lookup node (+ shift 5) hash key not-found)
+        not-found)))
 
   (inode-find [inode shift hash key not-found]
     (let [idx  (mask hash shift)
@@ -4360,11 +4360,11 @@ reduces them without incurring seq initialization"
             (== cnt 1)  nil
             :else (HashCollisionNode. nil collision-hash (dec cnt) (remove-pair arr (quot idx 2))))))
 
-  (inode-find [inode shift hash key]
+  (inode-lookup [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
-      (cond (< idx 0)              nil
-            (= key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
-            :else                  nil)))
+      (cond (< idx 0)              not-found
+            (= key (aget arr idx)) (aget arr (inc idx))
+            :else                  not-found)))
 
   (inode-find [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
@@ -4608,7 +4608,7 @@ reduces them without incurring seq initialization"
                         nil-val
                         not-found)
           (nil? root) not-found
-          :else       (nth (.inode-find root 0 (hash k) k (array nil not-found)) 1)))
+          :else       (.inode-lookup root 0 (hash k) k not-found)))
 
   IAssociative
   (-assoc [coll k v]
@@ -4628,7 +4628,7 @@ reduces them without incurring seq initialization"
   (-contains-key? [coll k]
     (cond (nil? k)    has-nil?
           (nil? root) false
-          :else       (not (identical? (.inode-find root 0 (hash k) k lookup-sentinel)
+          :else       (not (identical? (.inode-lookup root 0 (hash k) k lookup-sentinel)
                                        lookup-sentinel))))
 
   IMap
@@ -4753,7 +4753,7 @@ reduces them without incurring seq initialization"
         nil-val)
       (if (nil? root)
         nil
-        (nth (.inode-find root 0 (hash k) k) 1))))
+        (.inode-lookup root 0 (hash k) k))))
 
   (-lookup [tcoll k not-found]
     (if (nil? k)
@@ -4762,7 +4762,7 @@ reduces them without incurring seq initialization"
         not-found)
       (if (nil? root)
         not-found
-        (nth (.inode-find root 0 (hash k) k (array nil not-found)) 1))))
+        (.inode-lookup root 0 (hash k) k not-found))))
 
   ITransientCollection
   (-conj! [tcoll val] (.conj! tcoll val))
