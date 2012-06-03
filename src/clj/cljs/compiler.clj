@@ -244,7 +244,7 @@
                (swap! *cljs-mappings*
                       (fn [lines]
                         (let [last (conj (peek lines)
-                                         {:gline (count lines)
+                                         {:file *cljs-file*
                                           :gcol *cljs-gen-col*
                                           :line (when m (:line m))
                                           :col 0
