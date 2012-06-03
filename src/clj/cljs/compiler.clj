@@ -235,12 +235,12 @@
       (map? x) (emit x)
       (seq? x) (apply emits x)
       (fn? x)  (x)
-      :else (do
-              (let [s (print-str x)]
-                (when *position*
-                  (swap! *position* (fn [[line column]]
-                                      [line (+ column (count s))])))
-                (print s)))))
+      :else (let [s (print-str x)]
+              (when *position*
+                (swap! *position*
+                  (fn [{:keys [line col]}]
+                    {:line line :col (+ col (count s))})))
+              (print s))))
   nil)
 
 (defn ^String emit-str [expr]
@@ -254,8 +254,9 @@
   ;    (print (apply str (concat (repeat (- 120 column) \space) ["// " (inc line)])))))
   (println)
   (when *position*
-    (swap! *position* (fn [[line column]]
-                        [(inc line) 0])))
+    (swap! *position*
+      (fn [{:keys [line col]}]
+        {:line (inc line) :col 0})))
   nil)
 
 (defmulti emit-constant class)
@@ -1583,7 +1584,7 @@
       (binding [*out* out
                 *cljs-ns* 'cljs.user
                 *cljs-file* (.getPath ^java.io.File src)
-                *position* (atom [0 0])]
+                *position* (atom {:line 0 :col 0})]
         (loop [forms (forms-seq src)
                ns-name nil
                deps nil]
