@@ -877,6 +877,7 @@
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
   (comp/reset-namespaces!)
+  (comp/reset-mappings!)
   (let [opts (if (= :nodejs (:target opts))
                (merge {:optimizations :simple} opts)
                opts)

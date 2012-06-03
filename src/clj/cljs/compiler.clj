@@ -56,8 +56,12 @@
 (def ^:dynamic *unchecked-if* (atom false))
 (def ^:dynamic *cljs-static-fns* false)
 
-(def ^:dynamic *cljs-mappings* nil)
-(def ^:dynamic *cljs-gen-col* nil)
+(def ^:dynamic *cljs-mappings* (atom [[]]))
+(def ^:dynamic *cljs-gen-col* (atom 0))
+
+(defn reset-mappings! []
+  (reset! *cljs-mappings* [[]])
+  (reset! *cljs-gen-col* 0))
 
 (defmacro ^:private debug-prn
   [& args]
@@ -240,17 +244,16 @@
      :else (let [m (when (symbol? x)
                      (-> x meta))
                  s (print-str x)]
-             (when *cljs-mappings*
-               (swap! *cljs-mappings*
-                      (fn [lines]
-                        (let [last (conj (peek lines)
-                                         (merge {:file *cljs-file*
-                                                 :gcol *cljs-gen-col*}
-                                                (when m {:line (:line m)
-                                                         :col (or (:col m) 0)
-                                                         :name (:name m)})))]
-                          (conj (pop lines) last))))
-               (swap! *cljs-gen-col* (fn [col] (+ col (count s)))))
+             (swap! *cljs-mappings*
+                    (fn [lines]
+                      (let [last (conj (peek lines)
+                                       (merge {:file *cljs-file*
+                                               :gcol @*cljs-gen-col*}
+                                              (when m {:line (:line m)
+                                                       :col (or (:col m) 0)
+                                                       :name (:name m)})))]
+                        (conj (pop lines) last))))
+             (swap! *cljs-gen-col* (fn [col] (+ col (count s))))
              (print s))))
   nil)
 
@@ -260,10 +263,10 @@
 (defn emitln [& xs]
   (apply emits xs)
   (println)
-  (when *cljs-mappings*
-    (swap! *cljs-mappings*
-      (fn [lines]
-        (conj lines []))))
+  (swap! *cljs-mappings*
+         (fn [lines]
+           (conj lines [])))
+  (reset! *cljs-gen-col* 0)
   nil)
 
 (defmulti emit-constant class)
@@ -1597,9 +1600,7 @@
     (with-open [out ^java.io.Writer (io/make-writer dest {})]
       (binding [*out* out
                 *cljs-ns* 'cljs.user
-                *cljs-file* (.getPath ^java.io.File src)
-                *cljs-mappings* (atom [[]])
-                *cljs-gen-col* (atom 0)]
+                *cljs-file* (.getPath ^java.io.File src)]
         (loop [forms (forms-seq src)
                ns-name nil
                deps nil]
