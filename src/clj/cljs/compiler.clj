@@ -238,8 +238,8 @@
       :else (let [s (print-str x)]
               (when *position*
                 (swap! *position*
-                  (fn [{:keys [line col]}]
-                    {:line line :col (+ col (count s))})))
+                  (fn [{:keys [gline gcol]}]
+                    {:gline gline :gcol (+ gcol (count s))})))
               (print s))))
   nil)
 
@@ -255,8 +255,8 @@
   (println)
   (when *position*
     (swap! *position*
-      (fn [{:keys [line col]}]
-        {:line (inc line) :col 0})))
+      (fn [{:keys [gline gcol]}]
+        {:gline (inc gline) :gcol 0})))
   nil)
 
 (defmulti emit-constant class)
@@ -1584,7 +1584,7 @@
       (binding [*out* out
                 *cljs-ns* 'cljs.user
                 *cljs-file* (.getPath ^java.io.File src)
-                *position* (atom {:line 0 :col 0})]
+                *position* (atom {:gline 0 :gcol 0})]
         (loop [forms (forms-seq src)
                ns-name nil
                deps nil]
