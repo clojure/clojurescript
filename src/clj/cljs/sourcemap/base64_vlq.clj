@@ -65,11 +65,18 @@
   (from-vlq-signed 64) ;; 32
   (from-vlq-signed 65) ;; -32
 
+  ;; Base64 VLQ can only represent 32bit values
+
   (encode 32) ; "gC"
   (decode "gC") ; {:value 32 :rest ""}
 
   (decode "AAgBC") ; (0 0 16 1)
-
-  ;; lines kept count by semicolons
+  
+  ;; lines kept count by semicolons, segments delimited by commas
   ;; the above is col 0, file 0, line 16, col 1
+
+  (decode "AAggBC") ; very clever way to encode large values
+  (decode "AAggBCA") ; 5 values instead of 4
+
+  (apply str (map encode [0 0 16 1])) ; "AAgBC"
   )
