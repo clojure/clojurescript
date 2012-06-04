@@ -4627,7 +4627,7 @@ reduces them without incurring seq initialization"
                             (.inode-assoc 0 (hash k) k v added-leaf?))]
         (if (identical? new-root root)
           coll
-          (PersistentHashMap. meta (if (aget added-leaf? 0) (inc cnt) cnt) new-root has-nil? nil-val nil)))))
+          (PersistentHashMap. meta (if (true? (aget added-leaf? 0)) (inc cnt) cnt) new-root has-nil? nil-val nil)))))
 
   (-contains-key? [coll k]
     (cond (nil? k)    has-nil?
