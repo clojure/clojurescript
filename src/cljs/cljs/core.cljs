@@ -1365,11 +1365,10 @@ reduces them without incurring seq initialization"
 
 (defn bit-count
   "Counts the number of bits set in n"
-  [n]
-  (loop [c 0 n n]
-    (if (zero? n)
-      c
-      (recur (inc c) (bit-and n (dec n))))))
+  [v]
+  (let [v (- v (bit-and (bit-shift-right v 1) 0x55555555))
+        v (+ (bit-and v 0x33333333) (bit-and (bit-shift-right v 2) 0x33333333))]
+    (bit-shift-right (* (bit-and (+ v (bit-shift-right v 4)) 0xF0F0F0F) 0x1010101) 24)))
 
 (defn ^boolean ==
   "Returns non-nil if nums all have the equivalent
@@ -3963,6 +3962,11 @@ reduces them without incurring seq initialization"
 
 (declare create-inode-seq create-array-node-seq reset! create-node atom deref)
 
+(defn ^boolean key-test [key other]
+  (if ^boolean (goog/isString key)
+    (identical? key other)
+    (= key other)))
+
 (defn- mask [hash shift]
   (bit-and (bit-shift-right-zero-fill hash shift) 0x01f))
 
@@ -4053,7 +4057,7 @@ reduces them without incurring seq initialization"
                     inode
                     (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) n))))
 
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (if (identical? val val-or-node)
                   inode
                   (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) val)))
@@ -4077,7 +4081,7 @@ reduces them without incurring seq initialization"
                         (not (nil? n)) (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) n))
                         (== bitmap bit) nil
                         :else (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))))
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))
                 :else inode)))))
 
@@ -4089,7 +4093,7 @@ reduces them without incurring seq initialization"
               key-or-nil  (aget arr (* 2 idx))
               val-or-node (aget arr (inc (* 2 idx)))]
           (cond (nil? key-or-nil)  (.inode-lookup val-or-node (+ shift 5) hash key not-found)
-                (= key key-or-nil) val-or-node
+                (key-test key key-or-nil) val-or-node
                 :else not-found)))))
 
   (inode-find [inode shift hash key not-found]
@@ -4100,7 +4104,7 @@ reduces them without incurring seq initialization"
               key-or-nil  (aget arr (* 2 idx))
               val-or-node (aget arr (inc (* 2 idx)))]
           (cond (nil? key-or-nil) (.inode-find val-or-node (+ shift 5) hash key not-found)
-                (= key key-or-nil)          [key-or-nil val-or-node]
+                (key-test key key-or-nil)          [key-or-nil val-or-node]
                 :else not-found)))))
 
   (inode-seq [inode]
@@ -4181,7 +4185,7 @@ reduces them without incurring seq initialization"
                     inode
                     (edit-and-set inode edit (inc (* 2 idx)) n)))
 
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (if (identical? val val-or-node)
                   inode
                   (edit-and-set inode edit (inc (* 2 idx)) val))
@@ -4204,7 +4208,7 @@ reduces them without incurring seq initialization"
                         (not (nil? n)) (edit-and-set inode edit (inc (* 2 idx)) n)
                         (== bitmap bit) nil
                         :else (.edit-and-remove-pair inode edit bit idx)))
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (do (aset removed-leaf? 0 true)
                     (.edit-and-remove-pair inode edit bit idx))
                 :else inode)))))
@@ -4327,7 +4331,7 @@ reduces them without incurring seq initialization"
   (let [lim (* 2 cnt)]
     (loop [i 0]
       (if (< i lim)
-        (if (= key (aget arr i))
+        (if (key-test key (aget arr i))
           i
           (recur (+ i 2)))
         -1))))
@@ -4363,13 +4367,13 @@ reduces them without incurring seq initialization"
   (inode-lookup [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
       (cond (< idx 0)              not-found
-            (= key (aget arr idx)) (aget arr (inc idx))
+            (key-test key (aget arr idx)) (aget arr (inc idx))
             :else                  not-found)))
 
   (inode-find [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
       (cond (< idx 0)              not-found
-            (= key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
+            (key-test key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
             :else                  not-found)))
 
   (inode-seq [inode]
@@ -4382,7 +4386,7 @@ reduces them without incurring seq initialization"
         (array-copy arr 0 new-arr 0 (* 2 cnt))
         (HashCollisionNode. e collision-hash cnt new-arr))))
 
-  (ensure-editable [inode e count array]
+  (ensure-editable-array [inode e count array]
     (if (identical? e edit)
       (do (set! arr array)
           (set! cnt count)
@@ -4404,7 +4408,7 @@ reduces them without incurring seq initialization"
               (aset new-arr len key)
               (aset new-arr (inc len) val)
               (aset added-leaf? 0 true)
-              (.ensure-editable inode edit (inc cnt) new-arr)))
+              (.ensure-editable-array inode edit (inc cnt) new-arr)))
           (if (identical? (aget arr (inc idx)) val)
             inode
             (edit-and-set inode edit (inc idx) val))))
