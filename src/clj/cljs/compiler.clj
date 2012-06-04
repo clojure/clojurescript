@@ -454,13 +454,13 @@
 (defmethod emit :def
   [{:keys [name init env doc export]}]
   (if init
-    (do
+    (let [mname (munge name)]
       (emit-comment doc (:jsdoc init))
-      (emits (munge name))
+      (emits mname)
       (emits " = " init)
       (when-not (= :expr (:context env)) (emitln ";"))
       (when export
-        (emitln "goog.exportSymbol('" export "', " name ");")))
+        (emitln "goog.exportSymbol('" (munge export) "', " mname ");")))
     (emitln "void 0;")))
 
 (defn emit-apply-to
