@@ -305,8 +305,7 @@
   (coercive-= x nil))
 
 (defn type [x]
-  (if (or (nil? x) (undefined? x))
-    nil
+  (when-not (nil? x)
     (.-constructor x)))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
