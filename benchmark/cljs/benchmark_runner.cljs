@@ -40,6 +40,8 @@
 (simple-benchmark [] [] 1000000)
 (simple-benchmark [] [1 2 3] 1000000)
 (simple-benchmark [coll [1 2 3]] (transient coll) 100000)
+(simple-benchmark [coll [1 2 3]] (nth coll 0) 1000000)
+(simple-benchmark [coll [1 2 3]] (-nth coll 0) 1000000)
 (simple-benchmark [coll [1 2 3]] (conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (-conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (seq coll) 1000000)
@@ -98,6 +100,7 @@
 (simple-benchmark [coll pmap] (get coll :f0) 1000000)
 (simple-benchmark [coll pmap] (-lookup coll :f0 nil) 1000000)
 (simple-benchmark [coll pmap] (assoc coll :g0 32) 1000000)
+(simple-benchmark [coll cljs.core.PersistentHashMap/EMPTY] (assoc coll :f0 1) 1000000)
 (println)
 
 (println ";;; seq ops")
