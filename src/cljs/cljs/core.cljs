@@ -6028,6 +6028,9 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;; Regular Expressions ;;;;;;;;;;
 
+(defn regexp? [o]
+  (js* "~{o} instanceof RegExp"))
+
 (defn re-matches
   "Returns the result of (re-find re s) if re fully matches s."
   [re s]
@@ -6092,9 +6095,11 @@ reduces them without incurring seq initialization"
              ;; handle CLJS ctors
              (and (not (nil? obj))
                   ^boolean (.-cljs$lang$type obj))
-             (.cljs$lang$ctorPrSeq obj obj) 
+             (.cljs$lang$ctorPrSeq obj obj)
 
              (satisfies? IPrintable obj) (-pr-seq obj opts)
+
+             (regexp? obj) (list "#\"" (.-source obj) "\"")
 
              :else (list "#<" (str obj) ">")))))
 
