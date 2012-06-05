@@ -3451,8 +3451,7 @@ reduces them without incurring seq initialization"
   (-seq [coll]
     (let [rear (seq rear)]
       (if (or front rear)
-        (PersistentQueueSeq. nil front (seq rear) nil)
-        cljs.core.List/EMPTY)))
+        (PersistentQueueSeq. nil front (seq rear) nil))))
 
   ICounted
   (-count [coll] count))
