@@ -305,8 +305,7 @@
   (coercive-= x nil))
 
 (defn type [x]
-  (if (or (nil? x) (undefined? x))
-    nil
+  (when-not (nil? x)
     (.-constructor x)))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
@@ -828,8 +827,31 @@ reduces them without incurring seq initialization"
          (recur ret (first ks) (next ks))
          ret))))
 
-(defn hash [o]
-  (-hash o))
+;; Simple caching of string hashcode
+(def string-hash-cache (js-obj))
+(def string-hash-cache-count 0)
+
+(defn add-to-string-hash-cache [k]
+  (let [h (goog.string/hashCode k)]
+    (aset string-hash-cache k h)
+    (set! string-hash-cache-count (inc string-hash-cache-count))
+    h))
+
+(defn check-string-hash-cache [k]
+  (when (> string-hash-cache-count 255)
+    (set! string-hash-cache (js-obj))
+    (set! string-hash-cache-count 0))
+  (let [h (aget string-hash-cache k)]
+    (if-not (nil? h)
+      h
+      (add-to-string-hash-cache k))))
+
+(defn hash
+  ([o] (hash o true))
+  ([o ^boolean check-cache]
+     (if (and ^boolean (goog/isString o) check-cache) 
+       (check-string-hash-cache o)
+       (-hash o))))
 
 (defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
@@ -1341,11 +1363,10 @@ reduces them without incurring seq initialization"
 
 (defn bit-count
   "Counts the number of bits set in n"
-  [n]
-  (loop [c 0 n n]
-    (if (zero? n)
-      c
-      (recur (inc c) (bit-and n (dec n))))))
+  [v]
+  (let [v (- v (bit-and (bit-shift-right v 1) 0x55555555))
+        v (+ (bit-and v 0x33333333) (bit-and (bit-shift-right v 2) 0x33333333))]
+    (bit-shift-right (* (bit-and (+ v (bit-shift-right v 4)) 0xF0F0F0F) 0x1010101) 24)))
 
 (defn ^boolean ==
   "Returns non-nil if nums all have the equivalent
@@ -1455,7 +1476,7 @@ reduces them without incurring seq initialization"
                    (bit-shift-right seed 2))))
 
 (defn- hash-coll [coll]
-  (reduce #(hash-combine %1 (hash %2)) (hash (first coll)) (next coll)))
+  (reduce #(hash-combine %1 (hash %2 false)) (hash (first coll) false) (next coll)))
 
 (declare key val)
 
@@ -3939,6 +3960,11 @@ reduces them without incurring seq initialization"
 
 (declare create-inode-seq create-array-node-seq reset! create-node atom deref)
 
+(defn ^boolean key-test [key other]
+  (if ^boolean (goog/isString key)
+    (identical? key other)
+    (= key other)))
+
 (defn- mask [hash shift]
   (bit-and (bit-shift-right-zero-fill hash shift) 0x01f))
 
@@ -4029,7 +4055,7 @@ reduces them without incurring seq initialization"
                     inode
                     (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) n))))
 
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (if (identical? val val-or-node)
                   inode
                   (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) val)))
@@ -4053,20 +4079,20 @@ reduces them without incurring seq initialization"
                         (not (nil? n)) (BitmapIndexedNode. nil bitmap (clone-and-set arr (inc (* 2 idx)) n))
                         (== bitmap bit) nil
                         :else (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))))
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (BitmapIndexedNode. nil (bit-xor bitmap bit) (remove-pair arr idx))
                 :else inode)))))
 
-  (inode-find [inode shift hash key]
+  (inode-lookup [inode shift hash key not-found]
     (let [bit (bitpos hash shift)]
       (if (zero? (bit-and bitmap bit))
-        nil
+        not-found
         (let [idx         (bitmap-indexed-node-index bitmap bit)
               key-or-nil  (aget arr (* 2 idx))
               val-or-node (aget arr (inc (* 2 idx)))]
-          (cond (nil? key-or-nil) (.inode-find val-or-node (+ shift 5) hash key)
-                (= key key-or-nil)          [key-or-nil val-or-node]
-                :else nil)))))
+          (cond (nil? key-or-nil)  (.inode-lookup val-or-node (+ shift 5) hash key not-found)
+                (key-test key key-or-nil) val-or-node
+                :else not-found)))))
 
   (inode-find [inode shift hash key not-found]
     (let [bit (bitpos hash shift)]
@@ -4076,7 +4102,7 @@ reduces them without incurring seq initialization"
               key-or-nil  (aget arr (* 2 idx))
               val-or-node (aget arr (inc (* 2 idx)))]
           (cond (nil? key-or-nil) (.inode-find val-or-node (+ shift 5) hash key not-found)
-                (= key key-or-nil)          [key-or-nil val-or-node]
+                (key-test key key-or-nil)          [key-or-nil val-or-node]
                 :else not-found)))))
 
   (inode-seq [inode]
@@ -4157,7 +4183,7 @@ reduces them without incurring seq initialization"
                     inode
                     (edit-and-set inode edit (inc (* 2 idx)) n)))
 
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (if (identical? val val-or-node)
                   inode
                   (edit-and-set inode edit (inc (* 2 idx)) val))
@@ -4180,7 +4206,7 @@ reduces them without incurring seq initialization"
                         (not (nil? n)) (edit-and-set inode edit (inc (* 2 idx)) n)
                         (== bitmap bit) nil
                         :else (.edit-and-remove-pair inode edit bit idx)))
-                (= key key-or-nil)
+                (key-test key key-or-nil)
                 (do (aset removed-leaf? 0 true)
                     (.edit-and-remove-pair inode edit bit idx))
                 :else inode)))))
@@ -4233,12 +4259,12 @@ reduces them without incurring seq initialization"
             (ArrayNode. nil cnt (clone-and-set arr idx n))))
         inode)))
 
-  (inode-find [inode shift hash key]
+  (inode-lookup [inode shift hash key not-found]
     (let [idx  (mask hash shift)
           node (aget arr idx)]
       (if-not (nil? node)
-        (.inode-find node (+ shift 5) hash key)
-        nil)))
+        (.inode-lookup node (+ shift 5) hash key not-found)
+        not-found)))
 
   (inode-find [inode shift hash key not-found]
     (let [idx  (mask hash shift)
@@ -4303,7 +4329,7 @@ reduces them without incurring seq initialization"
   (let [lim (* 2 cnt)]
     (loop [i 0]
       (if (< i lim)
-        (if (= key (aget arr i))
+        (if (key-test key (aget arr i))
           i
           (recur (+ i 2)))
         -1))))
@@ -4336,16 +4362,16 @@ reduces them without incurring seq initialization"
             (== cnt 1)  nil
             :else (HashCollisionNode. nil collision-hash (dec cnt) (remove-pair arr (quot idx 2))))))
 
-  (inode-find [inode shift hash key]
+  (inode-lookup [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
-      (cond (< idx 0)              nil
-            (= key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
-            :else                  nil)))
+      (cond (< idx 0)              not-found
+            (key-test key (aget arr idx)) (aget arr (inc idx))
+            :else                  not-found)))
 
   (inode-find [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
       (cond (< idx 0)              not-found
-            (= key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
+            (key-test key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
             :else                  not-found)))
 
   (inode-seq [inode]
@@ -4358,7 +4384,7 @@ reduces them without incurring seq initialization"
         (array-copy arr 0 new-arr 0 (* 2 cnt))
         (HashCollisionNode. e collision-hash cnt new-arr))))
 
-  (ensure-editable [inode e count array]
+  (ensure-editable-array [inode e count array]
     (if (identical? e edit)
       (do (set! arr array)
           (set! cnt count)
@@ -4380,7 +4406,7 @@ reduces them without incurring seq initialization"
               (aset new-arr len key)
               (aset new-arr (inc len) val)
               (aset added-leaf? 0 true)
-              (.ensure-editable inode edit (inc cnt) new-arr)))
+              (.ensure-editable-array inode edit (inc cnt) new-arr)))
           (if (identical? (aget arr (inc idx)) val)
             inode
             (edit-and-set inode edit (inc idx) val))))
@@ -4584,7 +4610,7 @@ reduces them without incurring seq initialization"
                         nil-val
                         not-found)
           (nil? root) not-found
-          :else       (nth (.inode-find root 0 (hash k) k (array nil not-found)) 1)))
+          :else       (.inode-lookup root 0 (hash k) k not-found)))
 
   IAssociative
   (-assoc [coll k v]
@@ -4599,12 +4625,12 @@ reduces them without incurring seq initialization"
                             (.inode-assoc 0 (hash k) k v added-leaf?))]
         (if (identical? new-root root)
           coll
-          (PersistentHashMap. meta (if (aget added-leaf? 0) (inc cnt) cnt) new-root has-nil? nil-val nil)))))
+          (PersistentHashMap. meta (if (true? (aget added-leaf? 0)) (inc cnt) cnt) new-root has-nil? nil-val nil)))))
 
   (-contains-key? [coll k]
     (cond (nil? k)    has-nil?
           (nil? root) false
-          :else       (not (identical? (.inode-find root 0 (hash k) k lookup-sentinel)
+          :else       (not (identical? (.inode-lookup root 0 (hash k) k lookup-sentinel)
                                        lookup-sentinel))))
 
   IMap
@@ -4729,7 +4755,7 @@ reduces them without incurring seq initialization"
         nil-val)
       (if (nil? root)
         nil
-        (nth (.inode-find root 0 (hash k) k) 1))))
+        (.inode-lookup root 0 (hash k) k))))
 
   (-lookup [tcoll k not-found]
     (if (nil? k)
@@ -4738,7 +4764,7 @@ reduces them without incurring seq initialization"
         not-found)
       (if (nil? root)
         not-found
-        (nth (.inode-find root 0 (hash k) k (array nil not-found)) 1))))
+        (.inode-lookup root 0 (hash k) k not-found))))
 
   ITransientCollection
   (-conj! [tcoll val] (.conj! tcoll val))
@@ -6002,6 +6028,9 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;; Regular Expressions ;;;;;;;;;;
 
+(defn regexp? [o]
+  (js* "~{o} instanceof RegExp"))
+
 (defn re-matches
   "Returns the result of (re-find re s) if re fully matches s."
   [re s]
@@ -6066,9 +6095,11 @@ reduces them without incurring seq initialization"
              ;; handle CLJS ctors
              (and (not (nil? obj))
                   ^boolean (.-cljs$lang$type obj))
-             (.cljs$lang$ctorPrSeq obj obj) 
+             (.cljs$lang$ctorPrSeq obj obj)
 
              (satisfies? IPrintable obj) (-pr-seq obj opts)
+
+             (regexp? obj) (list "#\"" (.-source obj) "\"")
 
              :else (list "#<" (str obj) ">")))))
 
@@ -6386,7 +6417,7 @@ reduces them without incurring seq initialization"
   current value of the atom is identical to oldval. Returns true if
   set happened, else false."
   [a oldval newval]
-  (if (= a.state oldval)
+  (if (= (.-state a) oldval)
     (do (reset! a newval) true)
     false))
 

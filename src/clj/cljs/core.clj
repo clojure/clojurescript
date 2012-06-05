@@ -352,8 +352,8 @@
                            (let [psym (resolve p)
                                  pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.lastIndexOf (core/str psym) ".")))]
                              (cons `(aset ~psym ~t true)
-                                   (map (fn [[f & meths]]
-                                          `(aset ~(symbol (core/str pfn-prefix f)) ~t (fn ~@meths)))
+                                   (map (fn [[f & meths :as form]]
+                                          `(aset ~(symbol (core/str pfn-prefix f)) ~t ~(with-meta `(fn ~@meths) (meta form))))
                                         sigs))))]
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
@@ -365,35 +365,37 @@
                              (if (= p 'Object)
                                (let [adapt-params (fn [[sig & body]]
                                                     (let [[tname & args] sig]
-                                                      (list (with-meta (vec args) (meta sig))
-                                                            (list* 'this-as tname body))))]
-                                 (map (fn [[f & meths]]
-                                        `(set! ~(symbol (core/str prototype-prefix f)) (fn ~@(map adapt-params meths))))
+                                                      (list (vec args) (list* 'this-as tname body))))]
+                                 (map (fn [[f & meths :as form]]
+                                        `(set! ~(symbol (core/str prototype-prefix f))
+                                               ~(with-meta `(fn ~@(map adapt-params meths)) (meta form))))
                                       sigs))
                                (concat (when-not (skip-flag psym)
                                          [`(set! ~(symbol (core/str prototype-prefix pprefix)) true)])
-                                       (mapcat (fn [[f & meths]]
+                                       (mapcat (fn [[f & meths :as form]]
                                                  (if (= psym 'cljs.core.IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
                                                                         (let [tsym (gensym "tsym")]
-                                                                          `(~(with-meta (vec (cons tsym args)) (meta sig))
+                                                                          `(~(vec (cons tsym args))
                                                                             (this-as ~tsym
                                                                               (let [~targ ~tsym]
                                                                                 ~@body)))))
                                                          meths (map adapt-params meths)
                                                          tsym (gensym "tsym")
                                                          argsym (gensym "args")]
-                                                     [`(set! ~(symbol (core/str prototype-prefix 'call)) (fn ~@meths))
+                                                     [`(set! ~(symbol (core/str prototype-prefix 'call)) ~(with-meta `(fn ~@meths) (meta form)))
                                                       `(set! ~(symbol (core/str prototype-prefix 'apply))
-                                                             (fn ~(with-meta [tsym argsym] (meta (first meths)))
-                                                               (.apply (.-call ~tsym) ~tsym
-                                                                       (.concat (array ~tsym) (aclone ~argsym)))))])
+                                                             ~(with-meta
+                                                                `(fn ~[tsym argsym]
+                                                                   (.apply (.-call ~tsym) ~tsym
+                                                                           (.concat (array ~tsym) (aclone ~argsym))))
+                                                                (meta form)))])
                                                    (let [pf (core/str prototype-prefix pprefix f)]
                                                      (if (vector? (first meths))
-                                                       [`(set! ~(symbol (core/str pf "$arity$" (count (first meths)))) (fn ~@meths))]
+                                                       [`(set! ~(symbol (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@meths) (meta form)))]
                                                        (map (fn [[sig & body :as meth]]
                                                               `(set! ~(symbol (core/str pf "$arity$" (count sig)))
-                                                                     (fn ~meth)))
+                                                                     ~(with-meta `(fn ~meth) (meta form))))
                                                             meths)))))
                                                sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
@@ -425,10 +427,7 @@
                  (range fast-path-protocol-partitions-count))]))))
 
 (defmacro deftype [t fields & impls]
-  (let [adorn-params (fn [sig]
-                       (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
-                             (nnext sig)))
-        ;;reshape for extend-type
+  (let [;;reshape for extend-type
         dt->et (fn [specs]
                  (loop [ret [] s specs]
                    (if (seq s)
@@ -436,7 +435,8 @@
                                 (conj (first s))
                                 (into
                                  (reduce (fn [v [f sigs]]
-                                           (conj v (cons f (map adorn-params sigs))))
+                                           (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
+                                                              assoc :cljs.compiler/fields fields)))
                                          []
                                          (group-by first (take-while seq? (next s))))))
                             (drop-while seq? (next s)))
@@ -463,9 +463,7 @@
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
 	fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))
-	adorn-params (fn [sig]
-                       (cons (vary-meta (second sig) assoc :cljs.compiler/fields fields)
-                             (nnext sig)))
+
         ;;reshape for extend-type
         dt->et (fn [specs]
                  (loop [ret [] s specs]
@@ -474,7 +472,8 @@
                                 (conj (first s))
                                 (into
                                  (reduce (fn [v [f sigs]]
-                                           (conj v (cons f (map adorn-params sigs))))
+                                           (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
+                                                              assoc :cljs.compiler/fields fields)))
                                          []
                                          (group-by first (take-while seq? (next s))))))
                             (drop-while seq? (next s)))

@@ -213,8 +213,8 @@
              (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5)))
 
   (assert (= "\"asdf\"" (pr-str "asdf")))
-  (assert (= "[1 true {:a 2, :b 42} #<Array [3, 4]>]"
-             (pr-str [1 true {:a 2 :b 42} (array 3 4)])))
+  (assert (= "[1 true {:a 2, :b #\"x\\\"y\"} #<Array [3, 4]>]"
+             (pr-str [1 true {:a 2 :b #"x\"y"} (array 3 4)])))
 
   (assert (= "\"asdf\"\n" (prn-str "asdf")))
   (assert (= "[1 true {:a 2, :b 42} #<Array [3, 4]>]\n"
@@ -1392,6 +1392,14 @@
     (assert (= (-get-first fs) \a))
     (assert (= (-find-first fv [1]) 1))
     (assert (identical? (fv 1) fv)))
+
+  (deftype DestructuringWithLocals [a]
+    IFindsFirst
+    (-find-first [_ [x y]]
+      [x y a]))
+
+  (let [t (DestructuringWithLocals. 1)]
+    (assert (= [2 3 1] (-find-first t [2 3]))))
 
   (let [x 1]
     (assert (= (case x 1 :one) :one)))
