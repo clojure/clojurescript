@@ -848,9 +848,8 @@ reduces them without incurring seq initialization"
 
 (defn hash
   ([o] (hash o true))
-  ([o check-cache]
-     (if (and ^boolean (goog/isString o)
-              (not (false? check-cache))) 
+  ([o ^boolean check-cache]
+     (if (and ^boolean (goog/isString o) check-cache) 
        (check-string-hash-cache o)
        (-hash o))))
 
