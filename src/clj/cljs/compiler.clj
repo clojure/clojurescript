@@ -982,7 +982,10 @@
          params (vec (uniqify (remove '#{&} params)))
          fixed-arity (count (if variadic (butlast params) params))
          body (next meth)
-         locals (reduce (fn [m name] (assoc m name {:name name})) locals params)
+         locals (reduce (fn [m name]
+                          (assoc m name {:name name
+                                         :tag (-> name meta :tag)}))
+                        locals params)
          recur-frame {:names params :flag (atom nil)}
          block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                  (analyze-block (assoc env :context :return :locals locals) body))]
