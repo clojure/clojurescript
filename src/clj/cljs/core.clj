@@ -713,10 +713,12 @@
                         (if (seq? test)
                           (reduce #(assoc-test %1 %2 expr) m test)
                           (assoc-test m test expr)))
-                      {} (partition 2 clauses))]
-   `(cond
-     ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~e) ~c)) pairs)
-     :else ~default)))
+                      {} (partition 2 clauses))
+        esym (gensym)]
+   `(let [~esym ~e]
+      (cond
+        ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
+        :else ~default))))
 
 (defmacro try
   "(try expr* catch-clause* finally-clause?)
