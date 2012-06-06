@@ -993,9 +993,9 @@
 (defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."
   [expr]
-  `(let [start# (.getTime (js/Date.) ())
+  `(let [start# (.getTime (js/Date.))
          ret# ~expr]
-     (prn (core/str "Elapsed time: " (- (.getTime (js/Date.) ()) start#) " msecs"))
+     (prn (core/str "Elapsed time: " (- (.getTime (js/Date.)) start#) " msecs"))
      ret#))
 
 (defmacro simple-benchmark

@@ -308,6 +308,9 @@
   (when-not (nil? x)
     (.-constructor x)))
 
+(defn ^boolean instance? [t o]
+  (js* "(~{o} instanceof ~{t})"))
+
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
@@ -373,7 +376,9 @@
 
 (extend-type js/Date
   IEquiv
-  (-equiv [o other] (identical? (. o (toString)) (. other (toString)))))
+  (-equiv [o other]
+    (and (instance? js/Date other)
+         (identical? (.toString o) (.toString other)))))
 
 (extend-type number
   IEquiv
@@ -951,9 +956,6 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean undefined? [x]
   (cljs.core/undefined? x))
-
-(defn ^boolean instance? [t o]
-  (js* "(~{o} instanceof ~{t})"))
 
 (defn ^boolean seq?
   "Return true if s satisfies ISeq"
