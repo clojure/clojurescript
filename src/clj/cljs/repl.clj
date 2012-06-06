@@ -129,7 +129,8 @@
              (prn nil))))))
 
 (defn- read-next-form []
-  (try {:status :success :form (binding [*ns* (create-ns comp/*cljs-ns*)]
+  (try {:status :success :form (binding [*ns* (create-ns comp/*cljs-ns*)
+                                         *data-readers* comp/*cljs-data-readers*]
                                  (read))}
        (catch Exception e
          (println (.getMessage e))

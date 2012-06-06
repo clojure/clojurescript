@@ -505,9 +505,9 @@ nil if the end of stream has been reached")
 
 (defn ^:private read-date
   [s]
-  (when-not (string? s)
-    (reader-error nil "Instance literal expects a string for its timestamp."))
-  (parse-timestamp s))
+  (if (string? s)
+    (parse-timestamp s)
+    (reader-error nil "Instance literal expects a string for its timestamp.")))
 
 
 (defn ^:private read-queue
@@ -519,7 +519,9 @@ nil if the end of stream has been reached")
 
 (defn ^:private read-uuid
   [uuid]
-  (UUID. uuid))
+  (if (string? uuid)
+    (UUID. uuid)
+    (reader-error nil "UUID literal expects a string as its representation.")))
 
 (def *tag-table* (atom {"inst"  read-date
                         "uuid"  read-uuid
