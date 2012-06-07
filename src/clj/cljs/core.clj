@@ -440,15 +440,25 @@
              (drop-while seq? (next s)))
       ret)))
 
+(defn collect-protocols [impls env]
+  (->> impls
+      (filter symbol?)
+      (map #(:name (cljs.compiler/resolve-var (dissoc env :locals) %)))
+      (into #{})))
+
 (defmacro deftype [t fields & impls]
   (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))
-        [fpps pmasks] (prepare-protocol-masks &env t impls)]
+        [fpps pmasks] (prepare-protocol-masks &env t impls)
+        protocols (collect-protocols impls &env)
+        t (vary-meta t assoc
+            :protocols protocols
+            :skip-protocol-flag fpps) ]
     (if (seq impls)
       `(do
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
-         (extend-type ~(with-meta t {:skip-protocol-flag fpps}) ~@(dt->et impls fields))
+         (extend-type ~t ~@(dt->et impls fields))
          ~t)
       `(do
          (deftype* ~t ~fields ~pmasks)
@@ -521,10 +531,14 @@
                                  (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
                                          ~'__extmap))))
                   ])
-          [fpps pmasks] (prepare-protocol-masks env tagname impls)]
+          [fpps pmasks] (prepare-protocol-masks env tagname impls)
+          protocols (collect-protocols impls env)
+          tagname (vary-meta tagname assoc
+                    :protocols protocols
+                    :skip-protocol-flag fpps)]
       `(do
          (~'defrecord* ~tagname ~hinted-fields ~pmasks)
-         (extend-type ~(with-meta tagname {:skip-protocol-flag fpps}) ~@(dt->et impls fields))))))
+         (extend-type ~tagname ~@(dt->et impls fields))))))
 
 (defn- build-positional-factory
   [rsym rname fields]
