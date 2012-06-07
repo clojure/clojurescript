@@ -375,20 +375,20 @@
                                        (mapcat (fn [[f & meths :as form]]
                                                  (if (= psym 'cljs.core.IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
-                                                                        (let [tsym (gensym "tsym")]
-                                                                          `(~(vec (cons tsym args))
-                                                                            (this-as ~tsym
-                                                                              (let [~targ ~tsym]
+                                                                        (let [this-sym (gensym "this-sym")]
+                                                                          `(~(vec (cons this-sym args))
+                                                                            (this-as ~this-sym
+                                                                              (let [~targ ~this-sym]
                                                                                 ~@body)))))
                                                          meths (map adapt-params meths)
-                                                         tsym (gensym "tsym")
+                                                         this-sym (gensym "this-sym")
                                                          argsym (gensym "args")]
                                                      [`(set! ~(symbol (core/str prototype-prefix 'call)) ~(with-meta `(fn ~@meths) (meta form)))
                                                       `(set! ~(symbol (core/str prototype-prefix 'apply))
                                                              ~(with-meta
-                                                                `(fn ~[tsym argsym]
-                                                                   (.apply (.-call ~tsym) ~tsym
-                                                                           (.concat (array ~tsym) (aclone ~argsym))))
+                                                                `(fn ~[this-sym argsym]
+                                                                   (.apply (.-call ~this-sym) ~this-sym
+                                                                           (.concat (array ~this-sym) (aclone ~argsym))))
                                                                 (meta form)))])
                                                    (let [pf (core/str prototype-prefix pprefix f)]
                                                      (if (vector? (first meths))
