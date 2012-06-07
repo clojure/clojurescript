@@ -1264,12 +1264,12 @@
              (let [m (assoc (or m {})
                        :name t
                        :num-fields (count fields))]
-               (if-let [line (:line env)]
-                 (-> m
-                     (assoc :file *cljs-file*)
-                     (assoc :line line))
-                 m))))
-    {:env env :op :deftype* :as form :t t :fields fields :pmasks pmasks}))
+               (merge m
+                 {:protocols (-> tsym meta :protocols)}     
+                 (when-let [line (:line env)]
+                   {:file *cljs-file*
+                    :line line})))))
+    {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
   [_ env [_ tsym fields pmasks :as form] _]
@@ -1277,11 +1277,11 @@
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
              (let [m (assoc (or m {}) :name t)]
-               (if-let [line (:line env)]
-                 (-> m
-                     (assoc :file *cljs-file*)
-                     (assoc :line line))
-                 m))))
+               (merge m
+                 {:protocols (-> tsym meta :protocols)}
+                 (when-let [line (:line env)]
+                   {:file *cljs-file*
+                    :line line})))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
