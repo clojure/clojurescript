@@ -349,6 +349,9 @@
   [{:keys [env simple-keys? keys vals]}]
   (emit-wrap env
     (cond
+      (zero? (count keys))
+      (emits "cljs.core.ObjMap.EMPTY")
+
       (and simple-keys? (<= (count keys) obj-map-threshold))
       (emits "cljs.core.ObjMap.fromObject(["
              (comma-sep keys) ; keys
