@@ -45,7 +45,7 @@
 
 (def fast-path-protocols
   "protocol fqn -> [partition number, bit]"
-  (zipmap (map #(symbol (core/str "cljs.core." %))
+  (zipmap (map #(symbol "cljs.core" (core/str %))
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
                  ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
                  IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
@@ -289,8 +289,8 @@
 
 ;;; end of reducers macros
 
-(defn- protocol-prefix [psym]
-  (core/str (.replace (core/str psym) \. \$) "$"))
+(defn protocol-prefix [psym]
+  (core/str (-> (core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
 
 (def #^:private base-type
      {nil "null"
@@ -350,7 +350,7 @@
             assign-impls (fn [[p sigs]]
                            (warn-if-not-protocol p)
                            (let [psym (resolve p)
-                                 pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.lastIndexOf (core/str psym) ".")))]
+                                 pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.indexOf (core/str psym) "/")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths :as form]]
                                           `(aset ~(symbol (core/str pfn-prefix f)) ~t ~(with-meta `(fn ~@meths) (meta form))))
@@ -373,7 +373,7 @@
                                (concat (when-not (skip-flag psym)
                                          [`(set! ~(symbol (core/str prototype-prefix pprefix)) true)])
                                        (mapcat (fn [[f & meths :as form]]
-                                                 (if (= psym 'cljs.core.IFn)
+                                                 (if (= psym 'cljs.core/IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
                                                                         (let [this-sym (with-meta (gensym "this-sym") {:tag t})]
                                                                           `(~(vec (cons this-sym args))
@@ -625,14 +625,14 @@
          (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
 (defmacro lazy-seq [& body]
-  `(new cljs.core.LazySeq nil false (fn [] ~@body)))
+  `(new cljs.core/LazySeq nil false (fn [] ~@body) nil))
 
 (defmacro delay [& body]
   "Takes a body of expressions and yields a Delay object that will
   invoke the body only the first time it is forced (with force or deref/@), and
   will cache the result and return it on all subsequent force
   calls."
-  `(new cljs.core.Delay (atom {:done false, :value nil}) (fn [] ~@body)))
+  `(new cljs.core/Delay (atom {:done false, :value nil}) (fn [] ~@body)))
 
 (defmacro binding
   "binding => var-symbol init-expr
@@ -978,13 +978,13 @@
                method-cache# (atom {})
                cached-hierarchy# (atom {})
                hierarchy# (get ~options :hierarchy cljs.core/global-hierarchy)]
-           (cljs.core.MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
+           (cljs.core/MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
                                method-table# prefer-table# method-cache# cached-hierarchy#))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val & fn-tail]
-  `(-add-method ~(with-meta multifn {:tag 'cljs.core.MultiFn}) ~dispatch-val (fn ~@fn-tail)))
+  `(-add-method ~(with-meta multifn {:tag 'cljs.core/MultiFn}) ~dispatch-val (fn ~@fn-tail)))
 
 (defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."
