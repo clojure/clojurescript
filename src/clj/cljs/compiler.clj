@@ -154,7 +154,7 @@
        (namespace sym)
        (let [ns (namespace sym)
              ns (if (= "clojure.core" ns) "cljs.core" ns)]
-         {:name (symbol (str (resolve-ns-alias env ns) "." (name sym)))})
+         {:name (symbol (str (resolve-ns-alias env ns)) (name sym))})
 
        (.contains s ".")
        (let [idx (.indexOf s ".")
@@ -169,14 +169,13 @@
        (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
          (merge
           (get-in @namespaces [full-ns :defs sym])
-          {:name (symbol (str full-ns "." (name sym)))}))
+          {:name (symbol (str full-ns) (name sym))}))
 
        :else
-       (let [s (str (if (core-name? env sym)
-                      'cljs.core
-                      (-> env :ns :name))
-                    "." (name sym))]
-         {:name (symbol s)})))))
+       (let [ns (if (core-name? env sym)
+                  'cljs.core
+                  (-> env :ns :name))]
+         {:name (symbol (str ns) (name sym))})))))
 
 (defn confirm-bindings [env names]
   (doseq [name names]
@@ -690,12 +689,23 @@
     (emit-block (if (= :expr context) :return context) statements ret)
     (when (= :expr context) (emits "})()"))))
 
+(defn protocol-prefix [psym]
+  (str (-> (str psym) (.replace \. \$) (.replace \/ \$)) "$"))
+
 (defmethod emit :invoke
   [{:keys [f args env] :as expr}]
   (let [info (:info f)
         fn? (and *cljs-static-fns*
                  (not (:dynamic info))
                  (:fn-var info))
+        protocol (:protocol info)
+        proto? (let [tag (infer-tag (first (:args expr)))]
+                 (and protocol tag
+                      (or *cljs-static-fns*
+                          (:protocol-inline env))
+                      (or (= protocol tag)
+                          (when-let [ps (:protocols (resolve-existing-var (dissoc env :locals) tag))]
+                            (ps protocol)))))
         opt-not? (and (= (:name info) 'cljs.core/not)
                       (= (infer-tag (first (:args expr))) 'boolean))
         ns (:ns info)
@@ -736,6 +746,11 @@
       (cond
        opt-not?
        (emits "!(" (first args) ")")
+
+       proto?
+       (let [pimpl (str (protocol-prefix protocol)
+                        (munge (name (:name info))) "$arity$" (count args))]
+         (emits (first args) "." pimpl "(" (comma-sep args) ")"))
 
        keyword?
        (emits "(new cljs.core.Keyword(" f ")).call(" (comma-sep (cons "null" args)) ")")
@@ -958,12 +973,18 @@
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
+                   ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
+                   ;; symbol for reified protocol
                    (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
                      {:protocol-symbol protocol-symbol})
                    (when fn-var?
                      {:fn-var true
+                      ;; protocol implementation context
+                      :protocol-impl (:protocol-impl init-expr)
+                      ;; inline protocol implementation context
+                      :protocol-inline (:protocol-inline init-expr)
                       :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
                       :method-params (map (fn [m]
@@ -1007,6 +1028,8 @@
         locals (:locals env)
         locals (if name (assoc locals name {:name name}) locals)
         fields (-> form meta ::fields)
+        protocol-impl (-> form meta :protocol-impl)
+        protocol-inline (-> form meta :protocol-inline)
         gthis (and fields (gensym "this__"))
         locals (reduce (fn [m fld]
                          (assoc m fld
@@ -1017,6 +1040,9 @@
                        locals fields)
 
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
+        menv (merge menv
+               {:protocol-impl protocol-impl
+                :protocol-inline protocol-inline})
         methods (map #(analyze-fn-method menv locals % gthis) meths)
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))
@@ -1034,6 +1060,8 @@
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity
+     :protocol-impl protocol-impl
+     :protocol-inline protocol-inline
      :children (vec (mapcat block-children
                             methods))}))
 
@@ -1263,25 +1291,26 @@
            (fn [m]
              (let [m (assoc (or m {})
                        :name t
+                       :type true
                        :num-fields (count fields))]
-               (if-let [line (:line env)]
-                 (-> m
-                     (assoc :file *cljs-file*)
-                     (assoc :line line))
-                 m))))
-    {:env env :op :deftype* :as form :t t :fields fields :pmasks pmasks}))
+               (merge m
+                 {:protocols (-> tsym meta :protocols)}     
+                 (when-let [line (:line env)]
+                   {:file *cljs-file*
+                    :line line})))))
+    {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
   [_ env [_ tsym fields pmasks :as form] _]
   (let [t (:name (resolve-var (dissoc env :locals) tsym))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
-             (let [m (assoc (or m {}) :name t)]
-               (if-let [line (:line env)]
-                 (-> m
-                     (assoc :file *cljs-file*)
-                     (assoc :line line))
-                 m))))
+             (let [m (assoc (or m {}) :name t :type true)]
+               (merge m
+                 {:protocols (-> tsym meta :protocols)}
+                 (when-let [line (:line env)]
+                   {:file *cljs-file*
+                    :line line})))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code

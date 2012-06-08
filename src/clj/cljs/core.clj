@@ -45,7 +45,7 @@
 
 (def fast-path-protocols
   "protocol fqn -> [partition number, bit]"
-  (zipmap (map #(symbol (core/str "cljs.core." %))
+  (zipmap (map #(symbol "cljs.core" (core/str %))
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
                  ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
                  IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
@@ -289,8 +289,8 @@
 
 ;;; end of reducers macros
 
-(defn- protocol-prefix [psym]
-  (core/str (.replace (core/str psym) \. \$) "$"))
+(defn protocol-prefix [psym]
+  (core/str (-> (core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
 
 (def #^:private base-type
      {nil "null"
@@ -327,6 +327,9 @@
   `(let [~name (~'js* "this")]
      ~@body))
 
+(defn to-property [sym]
+  (symbol (core/str "-" sym)))
+
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (core/str "Can't resolve: " %))
@@ -350,14 +353,15 @@
             assign-impls (fn [[p sigs]]
                            (warn-if-not-protocol p)
                            (let [psym (resolve p)
-                                 pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.lastIndexOf (core/str psym) ".")))]
+                                 pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.indexOf (core/str psym) "/")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths :as form]]
                                           `(aset ~(symbol (core/str pfn-prefix f)) ~t ~(with-meta `(fn ~@meths) (meta form))))
                                         sigs))))]
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
-            prototype-prefix (core/str t ".prototype.")
+            prototype-prefix (fn [sym]
+                               `(.. ~tsym -prototype ~(to-property sym)))
             assign-impls (fn [[p sigs]]
                            (warn-if-not-protocol p)
                            (let [psym (resolve p)
@@ -365,37 +369,40 @@
                              (if (= p 'Object)
                                (let [adapt-params (fn [[sig & body]]
                                                     (let [[tname & args] sig]
-                                                      (list (vec args) (list* 'this-as tname body))))]
+                                                      (list (vec args) (list* 'this-as (vary-meta tname assoc :tag t) body))))]
                                  (map (fn [[f & meths :as form]]
-                                        `(set! ~(symbol (core/str prototype-prefix f))
+                                        `(set! ~(prototype-prefix f)
                                                ~(with-meta `(fn ~@(map adapt-params meths)) (meta form))))
                                       sigs))
                                (concat (when-not (skip-flag psym)
-                                         [`(set! ~(symbol (core/str prototype-prefix pprefix)) true)])
+                                         [`(set! ~(prototype-prefix pprefix) true)])
                                        (mapcat (fn [[f & meths :as form]]
-                                                 (if (= psym 'cljs.core.IFn)
+                                                 (if (= psym 'cljs.core/IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
-                                                                        (let [tsym (gensym "tsym")]
-                                                                          `(~(vec (cons tsym args))
-                                                                            (this-as ~tsym
-                                                                              (let [~targ ~tsym]
-                                                                                ~@body)))))
+                                                                        (let [this-sym (with-meta (gensym "this-sym") {:tag t})]
+                                                                          `(~(vec (cons this-sym args))
+                                                                            (this-as ~this-sym
+                                                                                     (let [~targ ~this-sym]
+                                                                                       ~@body)))))
                                                          meths (map adapt-params meths)
-                                                         tsym (gensym "tsym")
+                                                         this-sym (with-meta (gensym "this-sym") {:tag t})
                                                          argsym (gensym "args")]
-                                                     [`(set! ~(symbol (core/str prototype-prefix 'call)) ~(with-meta `(fn ~@meths) (meta form)))
-                                                      `(set! ~(symbol (core/str prototype-prefix 'apply))
+                                                     [`(set! ~(prototype-prefix 'call) ~(with-meta `(fn ~@meths) (meta form)))
+                                                      `(set! ~(prototype-prefix 'apply)
                                                              ~(with-meta
-                                                                `(fn ~[tsym argsym]
-                                                                   (.apply (.-call ~tsym) ~tsym
-                                                                           (.concat (array ~tsym) (aclone ~argsym))))
+                                                                `(fn ~[this-sym argsym]
+                                                                   (.apply (.-call ~this-sym) ~this-sym
+                                                                           (.concat (array ~this-sym) (aclone ~argsym))))
                                                                 (meta form)))])
-                                                   (let [pf (core/str prototype-prefix pprefix f)]
+                                                   (let [pf (core/str pprefix f)
+                                                         adapt-params (fn [[[targ & args :as sig] & body]]
+                                                                        (cons (vec (cons (vary-meta targ assoc :tag t) args))
+                                                                              body))]
                                                      (if (vector? (first meths))
-                                                       [`(set! ~(symbol (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@meths) (meta form)))]
+                                                       [`(set! ~(prototype-prefix (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@(adapt-params meths)) (meta form)))]
                                                        (map (fn [[sig & body :as meth]]
-                                                              `(set! ~(symbol (core/str pf "$arity$" (count sig)))
-                                                                     ~(with-meta `(fn ~meth) (meta form))))
+                                                              `(set! ~(prototype-prefix (core/str pf "$arity$" (count sig)))
+                                                                     ~(with-meta `(fn ~(adapt-params meth)) (meta form))))
                                                             meths)))))
                                                sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
@@ -426,29 +433,43 @@
                  fpp-partitions
                  (range fast-path-protocol-partitions-count))]))))
 
-(defn dt->et [specs fields]
-  (loop [ret [] s specs]
-    (if (seq s)
-      (recur (-> ret
-                 (conj (first s))
-                 (into
-                   (reduce (fn [v [f sigs]]
-                             (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
-                                                assoc :cljs.compiler/fields fields)))
-                           []
-                           (group-by first (take-while seq? (next s))))))
-             (drop-while seq? (next s)))
-      ret)))
+(defn dt->et
+  ([specs fields] (dt->et specs fields false))
+  ([specs fields inline]
+     (loop [ret [] s specs]
+       (if (seq s)
+         (recur (-> ret
+                    (conj (first s))
+                    (into
+                      (reduce (fn [v [f sigs]]
+                                (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
+                                                   assoc :cljs.compiler/fields fields
+                                                         :protocol-impl true
+                                                         :protocol-inline inline)))
+                              []
+                              (group-by first (take-while seq? (next s))))))
+                (drop-while seq? (next s)))
+         ret))))
+
+(defn collect-protocols [impls env]
+  (->> impls
+      (filter symbol?)
+      (map #(:name (cljs.compiler/resolve-var (dissoc env :locals) %)))
+      (into #{})))
 
 (defmacro deftype [t fields & impls]
   (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))
-        [fpps pmasks] (prepare-protocol-masks &env t impls)]
+        [fpps pmasks] (prepare-protocol-masks &env t impls)
+        protocols (collect-protocols impls &env)
+        t (vary-meta t assoc
+            :protocols protocols
+            :skip-protocol-flag fpps) ]
     (if (seq impls)
       `(do
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
-         (extend-type ~(with-meta t {:skip-protocol-flag fpps}) ~@(dt->et impls fields))
+         (extend-type ~t ~@(dt->et impls fields true))
          ~t)
       `(do
          (deftype* ~t ~fields ~pmasks)
@@ -521,10 +542,14 @@
                                  (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
                                          ~'__extmap))))
                   ])
-          [fpps pmasks] (prepare-protocol-masks env tagname impls)]
+          [fpps pmasks] (prepare-protocol-masks env tagname impls)
+          protocols (collect-protocols impls env)
+          tagname (vary-meta tagname assoc
+                    :protocols protocols
+                    :skip-protocol-flag fpps)]
       `(do
          (~'defrecord* ~tagname ~hinted-fields ~pmasks)
-         (extend-type ~(with-meta tagname {:skip-protocol-flag fpps}) ~@(dt->et impls fields))))))
+         (extend-type ~tagname ~@(dt->et impls fields true))))))
 
 (defn- build-positional-factory
   [rsym rname fields]
@@ -604,14 +629,14 @@
          (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
 (defmacro lazy-seq [& body]
-  `(new cljs.core.LazySeq nil false (fn [] ~@body)))
+  `(new cljs.core/LazySeq nil false (fn [] ~@body) nil))
 
 (defmacro delay [& body]
   "Takes a body of expressions and yields a Delay object that will
   invoke the body only the first time it is forced (with force or deref/@), and
   will cache the result and return it on all subsequent force
   calls."
-  `(new cljs.core.Delay (atom {:done false, :value nil}) (fn [] ~@body)))
+  `(new cljs.core/Delay (atom {:done false, :value nil}) (fn [] ~@body)))
 
 (defmacro binding
   "binding => var-symbol init-expr
@@ -957,13 +982,13 @@
                method-cache# (atom {})
                cached-hierarchy# (atom {})
                hierarchy# (get ~options :hierarchy cljs.core/global-hierarchy)]
-           (cljs.core.MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
+           (cljs.core/MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
                                method-table# prefer-table# method-cache# cached-hierarchy#))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val & fn-tail]
-  `(-add-method ~(with-meta multifn {:tag 'cljs.core.MultiFn}) ~dispatch-val (fn ~@fn-tail)))
+  `(-add-method ~(with-meta multifn {:tag 'cljs.core/MultiFn}) ~dispatch-val (fn ~@fn-tail)))
 
 (defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."
