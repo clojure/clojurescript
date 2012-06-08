@@ -689,6 +689,9 @@
     (emit-block (if (= :expr context) :return context) statements ret)
     (when (= :expr context) (emits "})()"))))
 
+(defn protocol-prefix [psym]
+  (str (-> (str psym) (.replace \. \$) (.replace \/ \$)) "$"))
+
 (defmethod emit :invoke
   [{:keys [f args env] :as expr}]
   (let [info (:info f)
@@ -698,7 +701,7 @@
         protocol (:protocol info)
         proto? (let [tag (infer-tag (first (:args expr)))]
                  (and protocol tag
-                      (or (and *cljs-static-fns* (:protocol-impl env))
+                      (or *cljs-static-fns*
                           (:protocol-inline env))
                       (when-let [ps (:protocols (resolve-existing-var (dissoc env :locals) tag))]
                         (ps protocol))))
@@ -742,6 +745,11 @@
       (cond
        opt-not?
        (emits "!(" (first args) ")")
+
+       proto?
+       (let [pimpl (str (protocol-prefix protocol)
+                        (munge (name (:name info))) "$arity$" (count args))]
+         (emits (first args) "." pimpl "(" (comma-sep args) ")"))
 
        keyword?
        (emits "(new cljs.core.Keyword(" f ")).call(" (comma-sep (cons "null" args)) ")")
