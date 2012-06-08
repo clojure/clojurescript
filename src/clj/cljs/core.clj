@@ -327,6 +327,9 @@
   `(let [~name (~'js* "this")]
      ~@body))
 
+(defn to-property [sym]
+  (symbol (core/str "-" sym)))
+
 (defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
                    (assert ret (core/str "Can't resolve: " %))
@@ -357,7 +360,8 @@
                                         sigs))))]
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
-            prototype-prefix (core/str t ".prototype.")
+            prototype-prefix (fn [sym]
+                               `(.. ~tsym -prototype ~(to-property sym)))
             assign-impls (fn [[p sigs]]
                            (warn-if-not-protocol p)
                            (let [psym (resolve p)
@@ -367,11 +371,11 @@
                                                     (let [[tname & args] sig]
                                                       (list (vec args) (list* 'this-as tname body))))]
                                  (map (fn [[f & meths :as form]]
-                                        `(set! ~(symbol (core/str prototype-prefix f))
+                                        `(set! ~(prototype-prefix f)
                                                ~(with-meta `(fn ~@(map adapt-params meths)) (meta form))))
                                       sigs))
                                (concat (when-not (skip-flag psym)
-                                         [`(set! ~(symbol (core/str prototype-prefix pprefix)) true)])
+                                         [`(set! ~(prototype-prefix pprefix) true)])
                                        (mapcat (fn [[f & meths :as form]]
                                                  (if (= psym 'cljs.core/IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
@@ -383,18 +387,18 @@
                                                          meths (map adapt-params meths)
                                                          tsym (gensym "tsym")
                                                          argsym (gensym "args")]
-                                                     [`(set! ~(symbol (core/str prototype-prefix 'call)) ~(with-meta `(fn ~@meths) (meta form)))
-                                                      `(set! ~(symbol (core/str prototype-prefix 'apply))
+                                                     [`(set! ~(prototype-prefix 'call) ~(with-meta `(fn ~@meths) (meta form)))
+                                                      `(set! ~(prototype-prefix 'apply)
                                                              ~(with-meta
                                                                 `(fn ~[tsym argsym]
                                                                    (.apply (.-call ~tsym) ~tsym
                                                                            (.concat (array ~tsym) (aclone ~argsym))))
                                                                 (meta form)))])
-                                                   (let [pf (core/str prototype-prefix pprefix f)]
+                                                   (let [pf (core/str pprefix f)]
                                                      (if (vector? (first meths))
-                                                       [`(set! ~(symbol (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@meths) (meta form)))]
+                                                       [`(set! ~(prototype-prefix (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@meths) (meta form)))]
                                                        (map (fn [[sig & body :as meth]]
-                                                              `(set! ~(symbol (core/str pf "$arity$" (count sig)))
+                                                              `(set! ~(prototype-prefix (core/str pf "$arity$" (count sig)))
                                                                      ~(with-meta `(fn ~meth) (meta form))))
                                                             meths)))))
                                                sigs)))))]
