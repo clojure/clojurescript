@@ -604,14 +604,14 @@
          (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
 (defmacro lazy-seq [& body]
-  `(new cljs.core.LazySeq nil false (fn [] ~@body)))
+  `(new cljs.core/LazySeq nil false (fn [] ~@body) nil))
 
 (defmacro delay [& body]
   "Takes a body of expressions and yields a Delay object that will
   invoke the body only the first time it is forced (with force or deref/@), and
   will cache the result and return it on all subsequent force
   calls."
-  `(new cljs.core.Delay (atom {:done false, :value nil}) (fn [] ~@body)))
+  `(new cljs.core/Delay (atom {:done false, :value nil}) (fn [] ~@body)))
 
 (defmacro binding
   "binding => var-symbol init-expr
@@ -957,13 +957,13 @@
                method-cache# (atom {})
                cached-hierarchy# (atom {})
                hierarchy# (get ~options :hierarchy cljs.core/global-hierarchy)]
-           (cljs.core.MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
+           (cljs.core/MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
                                method-table# prefer-table# method-cache# cached-hierarchy#))))))
 
 (defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val & fn-tail]
-  `(-add-method ~(with-meta multifn {:tag 'cljs.core.MultiFn}) ~dispatch-val (fn ~@fn-tail)))
+  `(-add-method ~(with-meta multifn {:tag 'cljs.core/MultiFn}) ~dispatch-val (fn ~@fn-tail)))
 
 (defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."
