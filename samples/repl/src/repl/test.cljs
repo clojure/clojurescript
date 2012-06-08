@@ -66,4 +66,7 @@
   (load-namespace 'goog.date.Date)
   (goog.date.Date.)
 
+  (ns test.color (:require [goog.color :as c]))
+  (js->clj (c/parse "#000000"))
+
   )
