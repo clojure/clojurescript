@@ -154,7 +154,7 @@
        (namespace sym)
        (let [ns (namespace sym)
              ns (if (= "clojure.core" ns) "cljs.core" ns)]
-         {:name (symbol (str (resolve-ns-alias env ns) "." (name sym)))})
+         {:name (symbol (str (resolve-ns-alias env ns)) (name sym))})
 
        (.contains s ".")
        (let [idx (.indexOf s ".")
@@ -169,14 +169,13 @@
        (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
          (merge
           (get-in @namespaces [full-ns :defs sym])
-          {:name (symbol (str full-ns "." (name sym)))}))
+          {:name (symbol (str full-ns) (name sym))}))
 
        :else
-       (let [s (str (if (core-name? env sym)
-                      'cljs.core
-                      (-> env :ns :name))
-                    "." (name sym))]
-         {:name (symbol s)})))))
+       (let [ns (if (core-name? env sym)
+                  'cljs.core
+                  (-> env :ns :name))]
+         {:name (symbol (str ns) (name sym))})))))
 
 (defn confirm-bindings [env names]
   (doseq [name names]

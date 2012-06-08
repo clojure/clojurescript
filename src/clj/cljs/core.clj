@@ -289,8 +289,8 @@
 
 ;;; end of reducers macros
 
-(defn- protocol-prefix [psym]
-  (core/str (.replace (core/str psym) \. \$) "$"))
+(defn protocol-prefix [psym]
+  (core/str (-> (core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
 
 (def #^:private base-type
      {nil "null"
@@ -350,7 +350,7 @@
             assign-impls (fn [[p sigs]]
                            (warn-if-not-protocol p)
                            (let [psym (resolve p)
-                                 pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.lastIndexOf (core/str psym) ".")))]
+                                 pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.indexOf (core/str psym) "/")))]
                              (cons `(aset ~psym ~t true)
                                    (map (fn [[f & meths :as form]]
                                           `(aset ~(symbol (core/str pfn-prefix f)) ~t ~(with-meta `(fn ~@meths) (meta form))))
@@ -373,7 +373,7 @@
                                (concat (when-not (skip-flag psym)
                                          [`(set! ~(symbol (core/str prototype-prefix pprefix)) true)])
                                        (mapcat (fn [[f & meths :as form]]
-                                                 (if (= psym 'cljs.core.IFn)
+                                                 (if (= psym 'cljs.core/IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
                                                                         (let [tsym (gensym "tsym")]
                                                                           `(~(vec (cons tsym args))
