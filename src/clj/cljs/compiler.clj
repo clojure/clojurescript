@@ -964,6 +964,7 @@
                      {:protocol-symbol protocol-symbol})
                    (when fn-var?
                      {:fn-var true
+                      :protocol-impl (:protocol-impl init-expr)
                       :protocol-inline (:protocol-inline init-expr)
                       :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
@@ -1008,6 +1009,7 @@
         locals (:locals env)
         locals (if name (assoc locals name {:name name}) locals)
         fields (-> form meta ::fields)
+        protocol-impl (-> form meta :protocol-impl)
         protocol-inline (-> form meta :protocol-inline)
         gthis (and fields (gensym "this__"))
         locals (reduce (fn [m fld]
@@ -1036,6 +1038,7 @@
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity
+     :protocol-impl protocol-impl
      :protocol-inline protocol-inline
      :children (vec (mapcat block-children
                             methods))}))

@@ -440,6 +440,7 @@
                       (reduce (fn [v [f sigs]]
                                 (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
                                                    assoc :cljs.compiler/fields fields
+                                                         :protocol-impl true
                                                          :protocol-inline inline)))
                               []
                               (group-by first (take-while seq? (next s))))))
