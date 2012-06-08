@@ -1263,6 +1263,7 @@
            (fn [m]
              (let [m (assoc (or m {})
                        :name t
+                       :type true
                        :num-fields (count fields))]
                (merge m
                  {:protocols (-> tsym meta :protocols)}     
@@ -1276,7 +1277,7 @@
   (let [t (:name (resolve-var (dissoc env :locals) tsym))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
-             (let [m (assoc (or m {}) :name t)]
+             (let [m (assoc (or m {}) :name t :type true)]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
                  (when-let [line (:line env)]
