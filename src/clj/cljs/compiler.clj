@@ -1217,8 +1217,11 @@
         :else {:env env :op :set! :form form :target targetexpr :val valexpr
                :children [targetexpr valexpr]})))))
 
+(defn munge-path [ss]
+  (clojure.lang.Compiler/munge (str ss)))
+
 (defn ns->relpath [s]
-  (str (string/replace (munge s) \. \/) ".cljs"))
+  (str (string/replace (munge-path s) \. \/) ".cljs"))
 
 (declare analyze-file)
 
