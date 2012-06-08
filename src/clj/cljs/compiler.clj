@@ -703,8 +703,9 @@
                  (and protocol tag
                       (or *cljs-static-fns*
                           (:protocol-inline env))
-                      (when-let [ps (:protocols (resolve-existing-var (dissoc env :locals) tag))]
-                        (ps protocol))))
+                      (or (= protocol tag)
+                          (when-let [ps (:protocols (resolve-existing-var (dissoc env :locals) tag))]
+                            (ps protocol)))))
         opt-not? (and (= (:name info) 'cljs.core/not)
                       (= (infer-tag (first (:args expr))) 'boolean))
         ns (:ns info)
