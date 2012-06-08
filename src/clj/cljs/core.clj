@@ -45,7 +45,7 @@
 
 (def fast-path-protocols
   "protocol fqn -> [partition number, bit]"
-  (zipmap (map #(symbol (core/str "cljs.core." %))
+  (zipmap (map #(symbol "cljs.core" (core/str %))
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
                  ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
                  IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
