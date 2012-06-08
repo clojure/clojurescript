@@ -958,13 +958,17 @@
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
+                   ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
+                   ;; symbol for reified protocol
                    (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
                      {:protocol-symbol protocol-symbol})
                    (when fn-var?
                      {:fn-var true
+                      ;; protocol implementation context
                       :protocol-impl (:protocol-impl init-expr)
+                      ;; inline protocol implementation context
                       :protocol-inline (:protocol-inline init-expr)
                       :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
@@ -1021,6 +1025,9 @@
                        locals fields)
 
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
+        menv (merge menv
+               {:protocol-impl protocol-impl
+                :protocol-inline protocol-inline})
         methods (map #(analyze-fn-method menv locals % gthis) meths)
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))
