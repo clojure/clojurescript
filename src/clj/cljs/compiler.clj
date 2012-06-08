@@ -695,6 +695,13 @@
         fn? (and *cljs-static-fns*
                  (not (:dynamic info))
                  (:fn-var info))
+        protocol (:protocol info)
+        proto? (let [tag (infer-tag (first (:args expr)))]
+                 (and protocol tag
+                      (or (and *cljs-static-fns* (:protocol-impl env))
+                          (:protocol-inline env))
+                      (when-let [ps (:protocols (resolve-existing-var (dissoc env :locals) tag))]
+                        (ps protocol))))
         opt-not? (and (= (:name info) 'cljs.core/not)
                       (= (infer-tag (first (:args expr))) 'boolean))
         ns (:ns info)
