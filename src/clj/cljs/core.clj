@@ -365,7 +365,7 @@
                              (if (= p 'Object)
                                (let [adapt-params (fn [[sig & body]]
                                                     (let [[tname & args] sig]
-                                                      (list (vec args) (list* 'this-as tname body))))]
+                                                      (list (vec args) (list* 'this-as (vary-meta tname assoc :tag t) body))))]
                                  (map (fn [[f & meths :as form]]
                                         `(set! ~(symbol (core/str prototype-prefix f))
                                                ~(with-meta `(fn ~@(map adapt-params meths)) (meta form))))
@@ -375,13 +375,13 @@
                                        (mapcat (fn [[f & meths :as form]]
                                                  (if (= psym 'cljs.core.IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
-                                                                        (let [this-sym (gensym "this-sym")]
+                                                                        (let [this-sym (with-meta (gensym "this-sym") {:tag t})]
                                                                           `(~(vec (cons this-sym args))
                                                                             (this-as ~this-sym
-                                                                              (let [~targ ~this-sym]
-                                                                                ~@body)))))
+                                                                                     (let [~targ ~this-sym]
+                                                                                       ~@body)))))
                                                          meths (map adapt-params meths)
-                                                         this-sym (gensym "this-sym")
+                                                         this-sym (with-meta (gensym "this-sym") {:tag t})
                                                          argsym (gensym "args")]
                                                      [`(set! ~(symbol (core/str prototype-prefix 'call)) ~(with-meta `(fn ~@meths) (meta form)))
                                                       `(set! ~(symbol (core/str prototype-prefix 'apply))
@@ -390,12 +390,15 @@
                                                                    (.apply (.-call ~this-sym) ~this-sym
                                                                            (.concat (array ~this-sym) (aclone ~argsym))))
                                                                 (meta form)))])
-                                                   (let [pf (core/str prototype-prefix pprefix f)]
+                                                   (let [pf (core/str prototype-prefix pprefix f)
+                                                         adapt-params (fn [[[targ & args :as sig] & body]]
+                                                                        (cons (vec (cons (vary-meta targ assoc :tag t) args))
+                                                                              body))]
                                                      (if (vector? (first meths))
-                                                       [`(set! ~(symbol (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@meths) (meta form)))]
+                                                       [`(set! ~(symbol (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@(adapt-params meths)) (meta form)))]
                                                        (map (fn [[sig & body :as meth]]
                                                               `(set! ~(symbol (core/str pf "$arity$" (count sig)))
-                                                                     ~(with-meta `(fn ~meth) (meta form))))
+                                                                     ~(with-meta `(fn ~(adapt-params meth)) (meta form))))
                                                             meths)))))
                                                sigs)))))]
         `(do ~@(mapcat assign-impls impl-map))))))
