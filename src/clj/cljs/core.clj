@@ -426,19 +426,22 @@
                  fpp-partitions
                  (range fast-path-protocol-partitions-count))]))))
 
-(defn dt->et [specs fields]
-  (loop [ret [] s specs]
-    (if (seq s)
-      (recur (-> ret
-                 (conj (first s))
-                 (into
-                   (reduce (fn [v [f sigs]]
-                             (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
-                                                assoc :cljs.compiler/fields fields)))
-                           []
-                           (group-by first (take-while seq? (next s))))))
-             (drop-while seq? (next s)))
-      ret)))
+(defn dt->et
+  ([specs fields] (dt->et specs fields false))
+  ([specs fields inline]
+     (loop [ret [] s specs]
+       (if (seq s)
+         (recur (-> ret
+                    (conj (first s))
+                    (into
+                      (reduce (fn [v [f sigs]]
+                                (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
+                                                   assoc :cljs.compiler/fields fields
+                                                         :protocol-inline inline)))
+                              []
+                              (group-by first (take-while seq? (next s))))))
+                (drop-while seq? (next s)))
+         ret))))
 
 (defn collect-protocols [impls env]
   (->> impls
@@ -458,7 +461,7 @@
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
-         (extend-type ~t ~@(dt->et impls fields))
+         (extend-type ~t ~@(dt->et impls fields true))
          ~t)
       `(do
          (deftype* ~t ~fields ~pmasks)
@@ -538,7 +541,7 @@
                     :skip-protocol-flag fpps)]
       `(do
          (~'defrecord* ~tagname ~hinted-fields ~pmasks)
-         (extend-type ~tagname ~@(dt->et impls fields))))))
+         (extend-type ~tagname ~@(dt->et impls fields true))))))
 
 (defn- build-positional-factory
   [rsym rname fields]
