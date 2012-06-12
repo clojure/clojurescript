@@ -1247,6 +1247,38 @@
                 #{} args)
         deps (atom #{})
         valid-forms (atom #{:use :use-macros :require :require-macros})
+        error-msg (fn [spec msg] (str msg "; offending spec: " (pr-str spec)))
+        parse-require-spec (fn parse-require-spec [macros? spec]
+                             (assert (or (symbol? spec) (vector? spec))
+                                     (error-msg spec "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))
+                             (when (vector? spec)
+                               (assert (symbol? (first spec))
+                                       (error-msg spec "Library name must be specified as a symbol in :require / :require-macros"))
+                               (assert (odd? (count spec))
+                                       (error-msg spec "Only :as alias and :refer [names] options supported in :require"))
+                               (assert (every? #{:as :refer} (map first (partition 2 (next spec))))
+                                       (error-msg spec "Only :as and :refer options supported in :require / :require-macros"))
+                               (assert (let [fs (frequencies (next spec))]
+                                         (and (<= (fs :as 0) 1)
+                                              (<= (fs :refer 0) 1)))
+                                       (error-msg spec "Each of :as and :refer options may only be specified once in :require / :require-macros")))
+                             (if (symbol? spec)
+                               (recur macros? [spec :as spec])
+                               (let [[lib & opts] spec
+                                     {alias :as referred :refer} (apply hash-map opts)
+                                     [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
+                                 (assert (or (symbol? alias) (nil? alias))
+                                         (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))
+                                 (assert (or (and (vector? referred) (every? symbol? referred))
+                                             (nil? referred))
+                                         (error-msg spec ":refer must be followed by a vector of symbols in :require / :require-macros"))
+                                 (swap! deps conj lib)
+                                 (merge (when alias {rk {alias lib}})
+                                        (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
+        use->require (fn use->require [[lib kw referred :as spec]]
+                       (assert (and (symbol? lib) (= :only kw) (vector? referred) (every? symbol? referred))
+                               (error-msg spec "Only [lib.ns :only [names]] specs supported in :use / :use-macros"))
+                       [lib :refer referred])
         {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
         (reduce (fn [m [k & libs]]
                   (assert (#{:use :use-macros :require :require-macros} k)
@@ -1254,19 +1286,11 @@
                   (assert (@valid-forms k)
                           (str "Only one " k " form is allowed per namespace definition"))
                   (swap! valid-forms disj k)
-                  (assoc m k (into {}
-                                   (mapcat (fn [[lib kw expr]]
-                                             (swap! deps conj lib)
-                                             (case k
-                                               (:require :require-macros)
-                                               (do (assert (and expr (= :as kw))
-                                                           "Only (:require [lib.ns :as alias]*) form of :require / :require-macros is supported")
-                                                   [[expr lib]])
-                                               (:use :use-macros)
-                                               (do (assert (and expr (= :only kw))
-                                                           "Only (:use [lib.ns :only [names]]*) form of :use / :use-macros is supported")
-                                                   (map vector expr (repeat lib)))))
-                                           libs))))
+                  (apply merge-with merge m
+                         (map (partial parse-require-spec (contains? #{:require-macros :use-macros} k))
+                              (if (contains? #{:use :use-macros} k)
+                                (map use->require libs)
+                                libs))))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (seq @deps)
       (analyze-deps @deps))
