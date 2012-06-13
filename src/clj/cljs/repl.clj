@@ -90,11 +90,11 @@
 
 (defn load-stream [repl-env filename stream]
   (with-open [r (io/reader stream)]
-    (let [env {:ns (@comp/namespaces comp/*cljs-ns*) :context :statement :locals {}}
+    (let [env (comp/empty-env)
           pbr (clojure.lang.LineNumberingPushbackReader. r)
           eof (Object.)]
       (loop [r (read pbr false eof false)]
-        (let [env (assoc env :ns (@comp/namespaces comp/*cljs-ns*))]
+        (let [env (assoc env :ns (comp/get-namespace comp/*cljs-ns*))]
           (when-not (identical? eof r)
             (evaluate-form repl-env env filename r)
             (recur (read pbr false eof false))))))))
@@ -118,7 +118,7 @@
 
 (defn- eval-and-print [repl-env env form]
   (let [ret (evaluate-form repl-env
-                           (assoc env :ns (@comp/namespaces comp/*cljs-ns*))
+                           (assoc env :ns (comp/get-namespace comp/*cljs-ns*))
                            "<cljs repl>"
                            form
                            (wrap-fn form))]
@@ -140,8 +140,8 @@
   (let [load-file-fn (fn [repl-env file] (load-file repl-env file))]
     {'in-ns (fn [_ quoted-ns]
               (let [ns-name (second quoted-ns)]
-                (when-not (@comp/namespaces ns-name)
-                  (swap! comp/namespaces assoc ns-name {:name ns-name}))
+                (when-not (comp/get-namespace ns-name)
+                  (comp/set-namespace ns-name {:name ns-name}))
                 (set! comp/*cljs-ns* ns-name)))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
