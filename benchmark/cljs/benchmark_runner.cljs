@@ -100,6 +100,12 @@
 (simple-benchmark [coll pmap] (get coll :f0) 1000000)
 (simple-benchmark [coll pmap] (-lookup coll :f0 nil) 1000000)
 (simple-benchmark [coll pmap] (assoc coll :g0 32) 1000000)
+(simple-benchmark [coll pmap]
+                  (loop [i 0 m coll]
+                    (if (< i 1000000)
+                      (recur (inc i) (assoc m :a 1))
+                      m))
+                  1)
 (simple-benchmark [coll cljs.core.PersistentHashMap/EMPTY] (assoc coll :f0 1) 1000000)
 (println)
 

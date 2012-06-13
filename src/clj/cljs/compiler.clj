@@ -154,7 +154,7 @@
        (namespace sym)
        (let [ns (namespace sym)
              ns (if (= "clojure.core" ns) "cljs.core" ns)]
-         {:name (symbol (str (resolve-ns-alias env ns) "." (name sym)))})
+         {:name (symbol (str (resolve-ns-alias env ns)) (name sym))})
 
        (.contains s ".")
        (let [idx (.indexOf s ".")
@@ -169,14 +169,13 @@
        (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
          (merge
           (get-in @namespaces [full-ns :defs sym])
-          {:name (symbol (str full-ns "." (name sym)))}))
+          {:name (symbol (str full-ns) (name sym))}))
 
        :else
-       (let [s (str (if (core-name? env sym)
-                      'cljs.core
-                      (-> env :ns :name))
-                    "." (name sym))]
-         {:name (symbol s)})))))
+       (let [ns (if (core-name? env sym)
+                  'cljs.core
+                  (-> env :ns :name))]
+         {:name (symbol (str ns) (name sym))})))))
 
 (defn confirm-bindings [env names]
   (doseq [name names]
@@ -349,6 +348,9 @@
   [{:keys [env simple-keys? keys vals]}]
   (emit-wrap env
     (cond
+      (zero? (count keys))
+      (emits "cljs.core.ObjMap.EMPTY")
+
       (and simple-keys? (<= (count keys) obj-map-threshold))
       (emits "cljs.core.ObjMap.fromObject(["
              (comma-sep keys) ; keys
@@ -687,12 +689,23 @@
     (emit-block (if (= :expr context) :return context) statements ret)
     (when (= :expr context) (emits "})()"))))
 
+(defn protocol-prefix [psym]
+  (str (-> (str psym) (.replace \. \$) (.replace \/ \$)) "$"))
+
 (defmethod emit :invoke
   [{:keys [f args env] :as expr}]
   (let [info (:info f)
         fn? (and *cljs-static-fns*
                  (not (:dynamic info))
                  (:fn-var info))
+        protocol (:protocol info)
+        proto? (let [tag (infer-tag (first (:args expr)))]
+                 (and protocol tag
+                      (or *cljs-static-fns*
+                          (:protocol-inline env))
+                      (or (= protocol tag)
+                          (when-let [ps (:protocols (resolve-existing-var (dissoc env :locals) tag))]
+                            (ps protocol)))))
         opt-not? (and (= (:name info) 'cljs.core/not)
                       (= (infer-tag (first (:args expr))) 'boolean))
         ns (:ns info)
@@ -733,6 +746,11 @@
       (cond
        opt-not?
        (emits "!(" (first args) ")")
+
+       proto?
+       (let [pimpl (str (protocol-prefix protocol)
+                        (munge (name (:name info))) "$arity$" (count args))]
+         (emits (first args) "." pimpl "(" (comma-sep args) ")"))
 
        keyword?
        (emits "(new cljs.core.Keyword(" f ")).call(" (comma-sep (cons "null" args)) ")")
@@ -955,12 +973,18 @@
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
+                   ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
+                   ;; symbol for reified protocol
                    (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
                      {:protocol-symbol protocol-symbol})
                    (when fn-var?
                      {:fn-var true
+                      ;; protocol implementation context
+                      :protocol-impl (:protocol-impl init-expr)
+                      ;; inline protocol implementation context
+                      :protocol-inline (:protocol-inline init-expr)
                       :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
                       :method-params (map (fn [m]
@@ -1004,6 +1028,8 @@
         locals (:locals env)
         locals (if name (assoc locals name {:name name}) locals)
         fields (-> form meta ::fields)
+        protocol-impl (-> form meta :protocol-impl)
+        protocol-inline (-> form meta :protocol-inline)
         gthis (and fields (gensym "this__"))
         locals (reduce (fn [m fld]
                          (assoc m fld
@@ -1014,6 +1040,9 @@
                        locals fields)
 
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
+        menv (merge menv
+               {:protocol-impl protocol-impl
+                :protocol-inline protocol-inline})
         methods (map #(analyze-fn-method menv locals % gthis) meths)
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))
@@ -1031,6 +1060,8 @@
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity
+     :protocol-impl protocol-impl
+     :protocol-inline protocol-inline
      :children (vec (mapcat block-children
                             methods))}))
 
@@ -1186,8 +1217,11 @@
         :else {:env env :op :set! :form form :target targetexpr :val valexpr
                :children [targetexpr valexpr]})))))
 
+(defn munge-path [ss]
+  (clojure.lang.Compiler/munge (str ss)))
+
 (defn ns->relpath [s]
-  (str (string/replace (munge s) \. \/) ".cljs"))
+  (str (string/replace (munge-path s) \. \/) ".cljs"))
 
 (declare analyze-file)
 
@@ -1213,6 +1247,38 @@
                 #{} args)
         deps (atom #{})
         valid-forms (atom #{:use :use-macros :require :require-macros})
+        error-msg (fn [spec msg] (str msg "; offending spec: " (pr-str spec)))
+        parse-require-spec (fn parse-require-spec [macros? spec]
+                             (assert (or (symbol? spec) (vector? spec))
+                                     (error-msg spec "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))
+                             (when (vector? spec)
+                               (assert (symbol? (first spec))
+                                       (error-msg spec "Library name must be specified as a symbol in :require / :require-macros"))
+                               (assert (odd? (count spec))
+                                       (error-msg spec "Only :as alias and :refer [names] options supported in :require"))
+                               (assert (every? #{:as :refer} (map first (partition 2 (next spec))))
+                                       (error-msg spec "Only :as and :refer options supported in :require / :require-macros"))
+                               (assert (let [fs (frequencies (next spec))]
+                                         (and (<= (fs :as 0) 1)
+                                              (<= (fs :refer 0) 1)))
+                                       (error-msg spec "Each of :as and :refer options may only be specified once in :require / :require-macros")))
+                             (if (symbol? spec)
+                               (recur macros? [spec :as spec])
+                               (let [[lib & opts] spec
+                                     {alias :as referred :refer} (apply hash-map opts)
+                                     [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
+                                 (assert (or (symbol? alias) (nil? alias))
+                                         (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))
+                                 (assert (or (and (vector? referred) (every? symbol? referred))
+                                             (nil? referred))
+                                         (error-msg spec ":refer must be followed by a vector of symbols in :require / :require-macros"))
+                                 (swap! deps conj lib)
+                                 (merge (when alias {rk {alias lib}})
+                                        (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
+        use->require (fn use->require [[lib kw referred :as spec]]
+                       (assert (and (symbol? lib) (= :only kw) (vector? referred) (every? symbol? referred))
+                               (error-msg spec "Only [lib.ns :only [names]] specs supported in :use / :use-macros"))
+                       [lib :refer referred])
         {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
         (reduce (fn [m [k & libs]]
                   (assert (#{:use :use-macros :require :require-macros} k)
@@ -1220,19 +1286,11 @@
                   (assert (@valid-forms k)
                           (str "Only one " k " form is allowed per namespace definition"))
                   (swap! valid-forms disj k)
-                  (assoc m k (into {}
-                                   (mapcat (fn [[lib kw expr]]
-                                             (swap! deps conj lib)
-                                             (case k
-                                               (:require :require-macros)
-                                               (do (assert (and expr (= :as kw))
-                                                           "Only (:require [lib.ns :as alias]*) form of :require / :require-macros is supported")
-                                                   [[expr lib]])
-                                               (:use :use-macros)
-                                               (do (assert (and expr (= :only kw))
-                                                           "Only (:use [lib.ns :only [names]]*) form of :use / :use-macros is supported")
-                                                   (map vector expr (repeat lib)))))
-                                           libs))))
+                  (apply merge-with merge m
+                         (map (partial parse-require-spec (contains? #{:require-macros :use-macros} k))
+                              (if (contains? #{:use :use-macros} k)
+                                (map use->require libs)
+                                libs))))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (seq @deps)
       (analyze-deps @deps))
@@ -1260,25 +1318,26 @@
            (fn [m]
              (let [m (assoc (or m {})
                        :name t
+                       :type true
                        :num-fields (count fields))]
-               (if-let [line (:line env)]
-                 (-> m
-                     (assoc :file *cljs-file*)
-                     (assoc :line line))
-                 m))))
-    {:env env :op :deftype* :as form :t t :fields fields :pmasks pmasks}))
+               (merge m
+                 {:protocols (-> tsym meta :protocols)}     
+                 (when-let [line (:line env)]
+                   {:file *cljs-file*
+                    :line line})))))
+    {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
   [_ env [_ tsym fields pmasks :as form] _]
   (let [t (:name (resolve-var (dissoc env :locals) tsym))]
     (swap! namespaces update-in [(-> env :ns :name) :defs tsym]
            (fn [m]
-             (let [m (assoc (or m {}) :name t)]
-               (if-let [line (:line env)]
-                 (-> m
-                     (assoc :file *cljs-file*)
-                     (assoc :line line))
-                 m))))
+             (let [m (assoc (or m {}) :name t :type true)]
+               (merge m
+                 {:protocols (-> tsym meta :protocols)}
+                 (when-let [line (:line env)]
+                   {:file *cljs-file*
+                    :line line})))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
@@ -1567,7 +1626,7 @@
   "Change the file extension from .cljs to .js. Takes a File or a
   String. Always returns a String."
   [file-str]
-  (clojure.string/replace file-str #".cljs$" ".js"))
+  (clojure.string/replace file-str #"\.cljs$" ".js"))
 
 (defn mkdirs
   "Create all parent directories for the passed file."

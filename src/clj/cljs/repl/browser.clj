@@ -28,6 +28,7 @@
                              :client-js nil}))
 
 (def loaded-libs (atom #{}))
+(def preloaded-libs (atom #{}))
 
 (defn- connection
   "Promise to return a connection when one is available. If a
@@ -209,7 +210,7 @@
 (defmulti handle-post (fn [_ m] (:type m)))
 
 (defmethod handle-post :ready [conn _]
-  (do (reset! loaded-libs #{})
+  (do (reset! loaded-libs @preloaded-libs)
       (send ordering (fn [_] {:expecting nil :fns {}}))
       (send-for-eval conn
                      (cljsc/-compile
@@ -289,21 +290,16 @@
              {:status :error
               :value (str "Could not read return value: " ret)})))))
 
-(defn- object-query-str
-  "Given a list of goog namespaces, create a JavaScript string which, when evaluated,
-  will return true if all of the namespaces exist and false if any do not exist."
-  [ns]
-  (str "if("
-       (apply str (interpose " && " (map #(str "goog.getObjectByName('" (name %) "')") ns)))
-       "){true}else{false};"))
-
-(defn load-javascript [repl-env ns url]
-  (let [missing (remove #(contains? @loaded-libs %) ns)]
+(defn load-javascript
+  "Accepts a REPL environment, a list of namespaces, and a URL for a
+  JavaScript file which contains the implementation for the list of
+  namespaces. Will load the JavaScript file into the REPL environment
+  if any of the namespaces have not already been loaded from the
+  ClojureScript REPL."
+  [repl-env ns-list url]
+  (let [missing (remove #(contains? @loaded-libs %) ns-list)]
     (when (seq missing)
-      (let [ret (browser-eval (object-query-str ns))]
-        (when-not (and (= (:status ret) :success)
-                       (= (:value ret) "true"))
-          (browser-eval (slurp url))))
+      (browser-eval (slurp url))
       (swap! loaded-libs (partial apply conj) missing))))
 
 (extend-protocol repl/IJavaScriptEnv
@@ -334,14 +330,49 @@
       (spit file (compile-client-js opts)))
     file))
 
-(defn repl-env [& {:as opts}]
+(defn- provides-and-requires
+  "Return a flat list of all provided and required namespaces from a
+  sequence of IJavaScripts."
+  [deps]
+  (flatten (mapcat (juxt :provides :requires) deps)))
+
+(defn- always-preload
+  "Return a list of all namespaces which are always loaded into the browser
+  when using a browser-connected REPL."
+  []
+  (let [cljs (provides-and-requires (cljsc/cljs-dependencies {} ["clojure.browser.repl"]))
+        goog (provides-and-requires (cljsc/js-dependencies {} cljs))]
+    (disj (set (concat cljs goog)) nil)))
+
+(defn repl-env
+  "Create a browser-connected REPL environment.
+
+  Options:
+
+  port:           The port on which the REPL server will run. Defaults to 9000.
+  working-dir:    The directory where the compiled REPL client JavaScript will
+                  be stored. Defaults to \".repl\".
+  serve-static:   Should the REPL server attempt to serve static content?
+                  Defaults to true.
+  static-dir:     List of directories to search for static content. Defaults to
+                  [\".\" \"out/\"].
+  preloaded-libs: List of namespaces that should not be sent from the REPL server
+                  to the browser. This may be required if the browser is already
+                  loading code and reloading it would cause a problem.
+  optimizations:  The level of optimization to use when compiling the client
+                  end of the REPL. Defaults to :simple.
+  "
+  [& {:as opts}]
   (let [opts (merge {:port          9000
                      :optimizations :simple
                      :working-dir   ".repl"
                      :serve-static  true
-                     :static-dir    ["." "out/"]}
+                     :static-dir    ["." "out/"]
+                     :preloaded-libs   []}
                     opts)]
-    (do (swap! server-state
+    (do (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))
+        (reset! loaded-libs @preloaded-libs)
+        (swap! server-state
                (fn [old] (assoc old :client-js
                                (future (create-client-js-file
                                         opts
