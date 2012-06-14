@@ -12,7 +12,7 @@
   (:refer-clojure :exclude [munge macroexpand-1])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
-            [clojure.instant :as inst])
+            [cljs.tagged-literals :as tags])
   (:import java.lang.StringBuilder))
 
 (declare resolve-var)
@@ -1576,27 +1576,6 @@
         (set? form) (analyze-set env form name)
         :else {:op :constant :env env :form form}))))
 
-(defn read-queue
-  [form]
-  (assert (vector? form) "Queue literal expects a vector for its elements.")
-  (list 'cljs.core/into 'cljs.core.PersistentQueue/EMPTY form))
-
-(defn read-uuid
-  [form]
-  (assert (string? form) "UUID literal expects a string as its representation.")
-  (list (symbol "UUID.") form))
-
-(defn read-inst
-  [form]
-  (assert (string? form) "Instance literal expects a string for its timestamp.")
-  (let [^java.util.Date d (inst/read-instant-date form)]
-    (list (symbol "js/Date.") (.getTime d))))
-
-(def ^:dynamic *cljs-data-readers*
-  {'queue read-queue
-   'uuid  read-uuid
-   'inst  read-inst})
-
 (defn analyze-file
   [f]
   (let [res (if (= \/ (first f)) f (io/resource f))]
@@ -1646,7 +1625,7 @@
       (binding [*out* out
                 *cljs-ns* 'cljs.user
                 *cljs-file* (.getPath ^java.io.File src)
-                *data-readers* *cljs-data-readers*
+                *data-readers* tags/*cljs-data-readers*
                 *position* (atom [0 0])]
         (loop [forms (forms-seq src)
                ns-name nil

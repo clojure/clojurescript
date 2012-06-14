@@ -11,6 +11,7 @@
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
+            [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]))
 
 (def ^:dynamic *cljs-verbose* false)
@@ -130,7 +131,7 @@
 
 (defn- read-next-form []
   (try {:status :success :form (binding [*ns* (create-ns comp/*cljs-ns*)
-                                         *data-readers* comp/*cljs-data-readers*]
+                                         *data-readers* tags/*cljs-data-readers*]
                                  (read))}
        (catch Exception e
          (println (.getMessage e))
