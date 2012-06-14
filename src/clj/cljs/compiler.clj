@@ -108,7 +108,7 @@
 
 (defn resolve-existing-var [env sym]
   (if (= (namespace sym) "js")
-    {:name (name sym) :ns 'js}
+    {:name sym :ns 'js}
     (let [s (str sym)
           lb (-> env :locals sym)]
       (cond
@@ -154,7 +154,7 @@
 
 (defn resolve-var [env sym]
   (if (= (namespace sym) "js")
-    {:name (name sym)}
+    {:name sym}
     (let [s (str sym)
           lb (-> env :locals sym)]
       (cond
@@ -343,7 +343,11 @@
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
-  (emit-wrap env (emits (munge (:name info)))))
+  (let [n (:name info)
+        n (if (= (namespace n) "js")
+            (name n)
+            n)]
+    (emit-wrap env (emits (munge n)))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
