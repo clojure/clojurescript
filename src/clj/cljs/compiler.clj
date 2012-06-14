@@ -48,6 +48,12 @@
     '{cljs.core {:name cljs.core}
       cljs.user {:name cljs.user}}))
 
+(defn get-namespace [key]
+  (@namespaces key))
+
+(defn set-namespace [key val]
+  (swap! namespaces assoc key val))
+
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *cljs-warn-on-redef* true)
@@ -57,6 +63,9 @@
 (def ^:dynamic *unchecked-if* (atom false))
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *position* nil)
+
+(defn empty-env []
+  {:ns (@namespaces *cljs-ns*) :context :statement :locals {}})
 
 (defmacro ^:private debug-prn
   [& args]
@@ -1583,11 +1592,11 @@
     (binding [*cljs-ns* 'cljs.user
               *cljs-file* (.getPath ^java.net.URL res)]
       (with-open [r (io/reader res)]
-        (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+        (let [env (empty-env)
               pbr (clojure.lang.LineNumberingPushbackReader. r)
               eof (Object.)]
           (loop [r (read pbr false eof false)]
-            (let [env (assoc env :ns (@namespaces *cljs-ns*))]
+            (let [env (assoc env :ns (get-namespace *cljs-ns*))]
               (when-not (identical? eof r)
                 (analyze env r)
                 (recur (read pbr false eof false))))))))))
@@ -1631,7 +1640,7 @@
                ns-name nil
                deps nil]
           (if (seq forms)
-            (let [env {:ns (@namespaces *cljs-ns*) :context :statement :locals {}}
+            (let [env (empty-env)
                   ast (analyze env (first forms))]
               (do (emit ast)
                   (if (= (:op ast) :ns)

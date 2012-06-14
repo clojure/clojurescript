@@ -93,7 +93,7 @@
           (swap! loaded-libs (partial apply conj) missing)))))
 
 (defn rhino-setup [repl-env]
-  (let [env {:context :statement :locals {} :ns (@comp/namespaces comp/*cljs-ns*)}
+  (let [env (comp/empty-env)
         scope (:scope repl-env)]
     (repl/load-file repl-env "cljs/core.cljs")
     (swap! loaded-libs conj "cljs.core")

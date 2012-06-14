@@ -314,9 +314,6 @@
 ;; Compile
 ;; =======
 
-(defn empty-env []
-  {:ns (@comp/namespaces comp/*cljs-ns*) :context :statement :locals {}})
-
 (defn compile-form-seq
   "Compile a sequence of forms to a JavaScript source string."
   [forms]
@@ -324,7 +321,7 @@
     (with-out-str
       (binding [comp/*cljs-ns* 'cljs.user]
         (doseq [form forms]
-          (comp/emit (comp/analyze (empty-env) form)))))))
+          (comp/emit (comp/analyze (comp/empty-env) form)))))))
 
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
