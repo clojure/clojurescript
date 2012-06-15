@@ -331,7 +331,7 @@
   (symbol (core/str "-" sym)))
 
 (defmacro extend-type [tsym & impls]
-  (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc &env :locals) %))]
+  (let [resolve #(let [ret (:name (cljs.analyzer/resolve-var (dissoc &env :locals) %))]
                    (assert ret (core/str "Can't resolve: " %))
                    ret)
         impl-map (loop [ret {} s impls]
@@ -340,12 +340,12 @@
                             (drop-while seq? (next s)))
                      ret))
         warn-if-not-protocol #(when-not (= 'Object %)
-                                (if cljs.compiler/*cljs-warn-on-undeclared*
-                                  (if-let [var (cljs.compiler/resolve-existing-var (dissoc &env :locals) %)]
+                                (if cljs.analyzer/*cljs-warn-on-undeclared*
+                                  (if-let [var (cljs.analyzer/resolve-existing-var (dissoc &env :locals) %)]
                                     (when-not (:protocol-symbol var)
-                                      (cljs.compiler/warning &env
+                                      (cljs.analyzer/warning &env
                                         (core/str "WARNING: Symbol " % " is not a protocol")))
-                                    (cljs.compiler/warning &env
+                                    (cljs.analyzer/warning &env
                                       (core/str "WARNING: Can't resolve protocol symbol " %)))))
         skip-flag (set (-> tsym meta :skip-protocol-flag))]
     (if (base-type tsym)
@@ -408,7 +408,7 @@
         `(do ~@(mapcat assign-impls impl-map))))))
 
 (defn- prepare-protocol-masks [env t impls]
-  (let [resolve #(let [ret (:name (cljs.compiler/resolve-var (dissoc env :locals) %))]
+  (let [resolve #(let [ret (:name (cljs.analyzer/resolve-var (dissoc env :locals) %))]
                    (assert ret (core/str "Can't resolve: " %))
                    ret)
         impl-map (loop [ret {} s impls]
@@ -443,7 +443,7 @@
                     (into
                       (reduce (fn [v [f sigs]]
                                 (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
-                                                   assoc :cljs.compiler/fields fields
+                                                   assoc :cljs.analyzer/fields fields
                                                          :protocol-impl true
                                                          :protocol-inline inline)))
                               []
@@ -454,11 +454,11 @@
 (defn collect-protocols [impls env]
   (->> impls
       (filter symbol?)
-      (map #(:name (cljs.compiler/resolve-var (dissoc env :locals) %)))
+      (map #(:name (cljs.analyzer/resolve-var (dissoc env :locals) %)))
       (into #{})))
 
 (defmacro deftype [t fields & impls]
-  (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) t))
+  (let [r (:name (cljs.analyzer/resolve-var (dissoc &env :locals) t))
         [fpps pmasks] (prepare-protocol-masks &env t impls)
         protocols (collect-protocols impls &env)
         t (vary-meta t assoc
@@ -569,7 +569,7 @@
        (new ~rname ~@getters nil (dissoc ~ms ~@ks)))))
 
 (defmacro defrecord [rsym fields & impls]
-  (let [r (:name (cljs.compiler/resolve-var (dissoc &env :locals) rsym))]
+  (let [r (:name (cljs.analyzer/resolve-var (dissoc &env :locals) rsym))]
     `(let []
        ~(emit-defrecord &env rsym r fields impls)
        (set! (.-cljs$lang$type ~r) true)
@@ -579,7 +579,7 @@
        ~r)))
 
 (defmacro defprotocol [psym & doc+methods]
-  (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
+  (let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
         psym (vary-meta psym assoc :protocol-symbol true)
         ns-name (-> &env :ns :name)
         fqn (fn [n] (symbol (core/str ns-name "." n)))
@@ -613,7 +613,7 @@
 (defmacro satisfies?
   "Returns true if x satisfies the protocol"
   [psym x]
-  (let [p (:name (cljs.compiler/resolve-var (dissoc &env :locals) psym))
+  (let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
         prefix (protocol-prefix p)
         xsym (bool-expr (gensym))
         [part bit] (fast-path-protocols p)
@@ -652,7 +652,7 @@
         tempnames (map (comp gensym name) names)
         binds (map vector names vals)
         resets (reverse (map vector names tempnames))]
-    (cljs.compiler/confirm-bindings &env names)
+    (cljs.analyzer/confirm-bindings &env names)
     `(let [~@(interleave tempnames names)]
        (try
         ~@(map
@@ -717,7 +717,7 @@
                                              test "'"
                                              (when (:line &env)
                                                (core/str " on line " (:line &env) " "
-                                                         cljs.compiler/*cljs-file*)))))
+                                                         cljs.analyzer/*cljs-file*)))))
                            (assoc m test expr)))
         pairs (reduce (fn [m [test expr]]
                         (if (seq? test)
