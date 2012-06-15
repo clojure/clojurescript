@@ -22,7 +22,6 @@
 (declare confirm-bindings)
 (declare munge)
 (declare ^:dynamic *cljs-file*)
-(require 'cljs.core)
 
 (def js-reserved
   #{"abstract" "boolean" "break" "byte" "case"
@@ -63,6 +62,33 @@
 (def ^:dynamic *unchecked-if* (atom false))
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *position* nil)
+(def ^:dynamic *cljs-macros-path* "/cljs/core")
+(def ^:dynamic *cljs-macros-is-classpath* true)
+(def  -cljs-macros-loaded (atom false))
+
+(defn load-core []
+  (when (not @-cljs-macros-loaded)
+    (reset! -cljs-macros-loaded true)
+    (if *cljs-macros-is-classpath*
+      (load *cljs-macros-path*)
+      (load-file *cljs-macros-path*))))
+
+(defmacro with-core-macros
+  [path & body]
+  `(do
+     (when (not= *cljs-macros-path* ~path)
+       (reset! -cljs-macros-loaded false))
+     (binding [*cljs-macros-path* ~path]
+       ~@body)))
+
+(defmacro with-core-macros-file
+  [path & body]
+  `(do
+     (when (not= *cljs-macros-path* ~path)
+       (reset! -cljs-macros-loaded false))
+     (binding [*cljs-macros-path* ~path
+               *cljs-macros-is-classpath* false]
+       ~@body)))
 
 (defn empty-env []
   {:ns (@namespaces *cljs-ns*) :context :statement :locals {}})
@@ -1308,7 +1334,7 @@
     (when (seq @deps)
       (analyze-deps @deps))
     (set! *cljs-ns* name)
-    (require 'cljs.core)
+    (load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
@@ -1581,6 +1607,7 @@
      (let [form (if (instance? clojure.lang.LazySeq form)
                   (or (seq form) ())
                   form)]
+       (load-core)
        (cond
         (symbol? form) (analyze-symbol env form)
         (and (seq? form) (seq form)) (analyze-seq env form name)
