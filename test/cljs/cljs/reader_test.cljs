@@ -59,7 +59,15 @@
         (assert (= (-> s reader/read-string .valueOf)
                    (-> s reader/read-string pr-str reader/read-string .valueOf))))))
 
-  ;; new parsers
+  ;; uuid literals
+  (let [u (reader/read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")]
+    (assert (= u (reader/read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
+
+    (assert (not (identical? u (reader/read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\""))))
+
+    (assert (= u (-> u pr-str reader/read-string))))
+  
+  ;; new tag parsers
 
   (reader/register-tag-parser! 'foo identity)
 

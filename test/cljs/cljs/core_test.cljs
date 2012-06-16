@@ -213,8 +213,8 @@
              (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5)))
 
   (assert (= "\"asdf\"" (pr-str "asdf")))
-  (assert (= "[1 true {:a 2, :b 42} #<Array [3, 4]>]"
-             (pr-str [1 true {:a 2 :b 42} (array 3 4)])))
+  (assert (= "[1 true {:a 2, :b #\"x\\\"y\"} #<Array [3, 4]>]"
+             (pr-str [1 true {:a 2 :b #"x\"y"} (array 3 4)])))
 
   (assert (= "\"asdf\"\n" (prn-str "asdf")))
   (assert (= "[1 true {:a 2, :b 42} #<Array [3, 4]>]\n"
@@ -1505,5 +1505,35 @@
   (assert (= nil (next (range 1 2))))
   (assert (= '(2 3) (next (range 1 4))))
 
+  ;; UUID
+
+  (assert (= (UUID. "550e8400-e29b-41d4-a716-446655440000")
+             (UUID. "550e8400-e29b-41d4-a716-446655440000")))
+
+  (assert (not (identical? (UUID. "550e8400-e29b-41d4-a716-446655440000")
+                           (UUID. "550e8400-e29b-41d4-a716-446655440000"))))
+
+  (assert (= 42 (get {(UUID. "550e8400-e29b-41d4-a716-446655440000") 42}
+                     (UUID. "550e8400-e29b-41d4-a716-446655440000")
+                     :not-at-all-found)))
+
+  (assert (= :not-at-all-found
+             (get {(UUID. "550e8400-e29b-41d4-a716-446655440000") 42}
+                  (UUID. "666e8400-e29b-41d4-a716-446655440000")
+                  :not-at-all-found)))
+
+  ;; Reader literals
+  (assert (= #queue [1]      (into cljs.core.PersistentQueue/EMPTY [1])))
+  (assert (not= #queue [1 2] (into cljs.core.PersistentQueue/EMPTY [1])))
+
+  (assert (= #inst "2010-11-12T18:14:15.666-00:00"
+             #inst "2010-11-12T13:14:15.666-05:00"))
+
+  (assert (= #uuid "550e8400-e29b-41d4-a716-446655440000"
+             #uuid "550e8400-e29b-41d4-a716-446655440000"))
+
+  (assert (= 42
+             (get {#uuid "550e8400-e29b-41d4-a716-446655440000" 42}
+                  #uuid "550e8400-e29b-41d4-a716-446655440000")))
   :ok
   )

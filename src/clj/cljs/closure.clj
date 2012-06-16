@@ -34,6 +34,7 @@
    JavaScript or a deps file for use during development.
   "
   (:require [cljs.compiler :as comp]
+            [cljs.analyzer :as ana]
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import java.io.File
@@ -323,17 +324,14 @@
 ;; Compile
 ;; =======
 
-(defn empty-env []
-  {:ns (@comp/namespaces comp/*cljs-ns*) :context :statement :locals {}})
-
 (defn compile-form-seq
   "Compile a sequence of forms to a JavaScript source string."
   [forms]
   (comp/with-core-cljs
     (with-out-str
-      (binding [comp/*cljs-ns* 'cljs.user]
+      (binding [ana/*cljs-ns* 'cljs.user]
         (doseq [form forms]
-          (comp/emit (comp/analyze (empty-env) form)))))))
+          (comp/emit (ana/analyze (ana/empty-env) form)))))))
 
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
@@ -876,7 +874,7 @@
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
-  (comp/reset-namespaces!)
+  (ana/reset-namespaces!)
   (comp/reset-mappings!)
   (let [opts (if (= :nodejs (:target opts))
                (merge {:optimizations :simple} opts)
@@ -886,10 +884,10 @@
                    :ups-libs (:libs ups-deps)
                    :ups-foreign-libs (:foreign-libs ups-deps)
                    :ups-externs (:externs ups-deps))]
-    (binding [comp/*cljs-static-fns*
+    (binding [ana/*cljs-static-fns*
               (or (and (= (opts :optimizations) :advanced))
                   (:static-fns opts)
-                  comp/*cljs-static-fns*)]
+                  ana/*cljs-static-fns*)]
       (let [compiled (-compile source all-opts)
             compiled (concat
                       (if (coll? compiled) compiled [compiled])

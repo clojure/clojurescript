@@ -105,5 +105,5 @@
     (net/connect repl-connection
                  (constantly nil)
                  (fn [iframe]
-                   (set! iframe.style.display
+                   (set! (.-display (.-style iframe))
                          "none")))))

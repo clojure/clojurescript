@@ -11,6 +11,7 @@
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
+            [cljs.analyzer :as ana]
             [cljs.repl :as repl])
   (:import cljs.repl.IJavaScriptEnv
            [org.mozilla.javascript Context ScriptableObject]))
@@ -76,7 +77,7 @@
                               "<cljs repl>"
                               1))]
       (if-let [res (io/resource cljs-path)]
-        (binding [comp/*cljs-ns* 'cljs.user]
+        (binding [ana/*cljs-ns* 'cljs.user]
           (repl/load-stream repl-env res))
         (if-let [res (io/resource js-path)]
           (-eval (io/reader res) repl-env js-path 1)
@@ -93,7 +94,7 @@
           (swap! loaded-libs (partial apply conj) missing)))))
 
 (defn rhino-setup [repl-env]
-  (let [env {:context :statement :locals {} :ns (@comp/namespaces comp/*cljs-ns*)}
+  (let [env (ana/empty-env)
         scope (:scope repl-env)]
     (repl/load-file repl-env "cljs/core.cljs")
     (swap! loaded-libs conj "cljs.core")
