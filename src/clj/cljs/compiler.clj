@@ -96,7 +96,7 @@
              (swap! *cljs-mappings*
                     (fn [lines]
                       (let [last (conj (peek lines)
-                                       (merge {:file *cljs-file*
+                                       (merge {:file ana/*cljs-file*
                                                :gcol @*cljs-gen-col*}
                                               (when m {:line (:line m)
                                                        :col (or (:col m) 0)
