@@ -146,6 +146,9 @@
           {:name (symbol (str full-ns) (str sym))
            :ns (-> env :ns :name)}))
 
+       (get-in @namespaces [(-> env :ns :name) :imports sym])
+       (recur env (get-in @namespaces [(-> env :ns :name) :imports sym]))
+
        :else
        (let [full-ns (if (core-name? env sym)
                        'cljs.core
@@ -182,6 +185,9 @@
          (merge
           (get-in @namespaces [full-ns :defs sym])
           {:name (symbol (str full-ns) (name sym))}))
+
+       (get-in @namespaces [(-> env :ns :name) :imports sym])
+       (recur env (get-in @namespaces [(-> env :ns :name) :imports sym]))
 
        :else
        (let [ns (if (core-name? env sym)
@@ -610,7 +616,7 @@
                     s))
                 #{} args)
         deps (atom #{})
-        valid-forms (atom #{:use :use-macros :require :require-macros})
+        valid-forms (atom #{:use :use-macros :require :require-macros :import})
         error-msg (fn [spec msg] (str msg "; offending spec: " (pr-str spec)))
         parse-require-spec (fn parse-require-spec [macros? spec]
                              (assert (or (symbol? spec) (vector? spec))
@@ -643,18 +649,26 @@
                        (assert (and (symbol? lib) (= :only kw) (vector? referred) (every? symbol? referred))
                                (error-msg spec "Only [lib.ns :only [names]] specs supported in :use / :use-macros"))
                        [lib :refer referred])
-        {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
+        parse-import-spec (fn parse-import-spec [spec]
+                            (assert (and (symbol? spec) (nil? (namespace spec)))
+                                    (error-msg spec "Only lib.Ctor specs supported in :import"))
+                            (swap! deps conj spec)
+                            (let [ctor-sym (symbol (last (string/split (str spec) #"\.")))]
+                              {:import  {ctor-sym spec}
+                               :require {ctor-sym spec}}))
+        spec-parsers {:require        (partial parse-require-spec false)
+                      :require-macros (partial parse-require-spec true)
+                      :use            (comp (partial parse-require-spec false) use->require)
+                      :use-macros     (comp (partial parse-require-spec true) use->require)
+                      :import         parse-import-spec}
+        {uses :use requires :require uses-macros :use-macros requires-macros :require-macros imports :import :as params}
         (reduce (fn [m [k & libs]]
-                  (assert (#{:use :use-macros :require :require-macros} k)
+                  (assert (#{:use :use-macros :require :require-macros :import} k)
                           "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")
                   (assert (@valid-forms k)
                           (str "Only one " k " form is allowed per namespace definition"))
                   (swap! valid-forms disj k)
-                  (apply merge-with merge m
-                         (map (partial parse-require-spec (contains? #{:require-macros :use-macros} k))
-                              (if (contains? #{:use :use-macros} k)
-                                (map use->require libs)
-                                libs))))
+                  (apply merge-with merge m (map (spec-parsers k) libs)))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (seq @deps)
       (analyze-deps @deps))
@@ -671,8 +685,9 @@
                            (assoc-in [name :requires-macros]
                                      (into {} (map (fn [[alias nsym]]
                                                      [alias (find-ns nsym)])
-                                                   requires-macros)))))
-    {:env env :op :ns :form form :name name :uses uses :requires requires
+                                                   requires-macros)))
+                           (assoc-in [name :imports] imports)))
+    {:env env :op :ns :form form :name name :uses uses :requires requires :imports imports
      :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
