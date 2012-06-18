@@ -5437,6 +5437,19 @@ reduces them without incurring seq initialization"
   [& keyvals]
   (PersistentArrayMap. nil (quot (count keyvals) 2) (apply array keyvals) nil))
 
+(defn obj-map
+  "keyval => key val
+  Returns a new object map with supplied mappings."
+  [& keyvals]
+  (let [ks  (array)
+        obj (js-obj)]
+    (loop [kvs (seq keyvals)]
+      (if kvs
+        (do (.push ks (first kvs))
+            (aset obj (first kvs) (second kvs))
+            (recur (nnext kvs)))
+        (cljs.core.ObjMap/fromObject ks obj)))))
+
 (defn sorted-map
   "keyval => key val
   Returns a new sorted map with supplied mappings."

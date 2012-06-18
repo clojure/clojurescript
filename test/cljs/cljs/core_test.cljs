@@ -1283,6 +1283,13 @@
   (assert (= {:foo 'bar} (meta (with-meta (A.) {:foo 'bar}))))
   (assert (= 'bar (:foo (assoc (A.) :foo 'bar))))
 
+  ;; ObjMap
+  (let [ks (map (partial str "foo") (range 500))
+        m  (apply obj-map (interleave ks (range 500)))]
+    (assert (instance? cljs.core.ObjMap m))
+    (assert (= 500 (count m)))
+    (assert (= 123 (m "foo123"))))
+
   ;; dot
   (let [s "abc"]
     (assert (= 3 (.-length s)))
