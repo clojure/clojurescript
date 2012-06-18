@@ -40,7 +40,7 @@
   doto
   extend-protocol fn for
   if-let if-not let letfn loop
-  or
+  memfn or
   when when-first when-let when-not while])
 
 (def fast-path-protocols
