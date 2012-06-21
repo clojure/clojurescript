@@ -6146,11 +6146,11 @@ reduces them without incurring seq initialization"
              :else (list "#<" (str obj) ">")))))
 
 (defn- pr-sb [objs opts]
-  (let [first-obj (first objs)
-        sb (gstring/StringBuffer.)]
-    (doseq [obj objs]
-      (when-not (identical? obj first-obj)
-        (.append sb " "))
+  (let [sb (gstring/StringBuffer.)]
+    (doseq [string (pr-seq (first objs) opts)]
+      (.append sb string))
+    (doseq [obj (next objs)]
+      (.append sb " ")
       (doseq [string (pr-seq obj opts)]
         (.append sb string)))
     sb))
@@ -6172,12 +6172,12 @@ reduces them without incurring seq initialization"
   "Prints a sequence of objects using string-print, observing all
   the options given in opts"
   [objs opts]
-  (let [first-obj (first objs)]
-    (doseq [obj objs]
-      (when-not (identical? obj first-obj)
-        (string-print " "))
-      (doseq [string (pr-seq obj opts)]
-        (string-print string)))))
+  (doseq [string (pr-seq (first objs) opts)]
+    (string-print string))
+  (doseq [obj (next objs)]
+    (string-print " ")
+    (doseq [string (pr-seq obj opts)]
+      (string-print string))))
 
 (defn newline [opts]
   (string-print "\n")

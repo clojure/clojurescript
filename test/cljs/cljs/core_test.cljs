@@ -221,7 +221,7 @@
   (assert (= (hash-map :foo 5)
              (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5)))
 
-  (assert (= "\"asdf\"" (pr-str "asdf")))
+  (assert (= "\"asdf\" \"asdf\"" (pr-str "asdf" "asdf")))
   (assert (= "[1 true {:a 2, :b #\"x\\\"y\"} #<Array [3, 4]>]"
              (pr-str [1 true {:a 2 :b #"x\"y"} (array 3 4)])))
 
