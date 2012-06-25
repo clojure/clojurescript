@@ -488,8 +488,11 @@
 
   (assert (set []))
   (assert (= #{} (set [])))
+  (assert (= #{} (hash-set)))
+  (assert (identical? cljs.core.PersistentHashSet (type (hash-set))))
 
   (assert (= #{"foo"} (set ["foo"])))
+  (assert (= #{"foo"} (hash-set "foo")))
   (assert (= #{1 2 3} #{1 3 2}))
   (assert (= #{#{1 2 3} [4 5 6] {7 8} 9 10}
              #{10 9 [4 5 6] {7 8} #{1 2 3}}))

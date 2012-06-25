@@ -5589,6 +5589,15 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentHashSet/EMPTY (PersistentHashSet. nil (hash-map) 0))
 
+(set! cljs.core.PersistentHashSet/fromArray
+      (fn [items]
+        (let [len (count items)]
+          (loop [i   0
+                 out (transient cljs.core.PersistentHashSet/EMPTY)]
+            (if (< i len)
+              (recur (inc i) (conj! out (aget items i)))
+              (persistent! out))))))
+
 (deftype TransientHashSet [^:mutable transient-map]
   ITransientCollection
   (-conj! [tcoll o]
@@ -5696,14 +5705,19 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentTreeSet/EMPTY (PersistentTreeSet. nil (sorted-map) 0))
 
+(defn hash-set
+  ([] cljs.core.PersistentHashSet/EMPTY)
+  ([& keys]
+    (loop [in (seq keys)
+           out (transient cljs.core.PersistentHashSet/EMPTY)]
+      (if (seq in)
+        (recur (next in) (conj! out (first in)))
+        (persistent! out)))))
+
 (defn set
   "Returns a set of the distinct elements of coll."
   [coll]
-  (loop [in (seq coll)
-         out (transient cljs.core.PersistentHashSet/EMPTY)]
-    (if (seq in)
-      (recur (next in) (conj! out (first in)))
-      (persistent! out))))
+  (apply hash-set coll))
 
 (defn sorted-set
   "Returns a new sorted set with supplied keys."

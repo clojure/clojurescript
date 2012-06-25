@@ -249,8 +249,10 @@
 (defmethod emit :set
   [{:keys [items env]}]
   (emit-wrap env
-    (emits "cljs.core.set(["
-           (comma-sep items) "])")))
+    (if (empty? items)
+      (emits "cljs.core.PersistentHashSet.EMPTY")
+      (emits "cljs.core.PersistentHashSet.fromArray(["
+             (comma-sep items) "])"))))
 
 (defmethod emit :constant
   [{:keys [form env]}]
