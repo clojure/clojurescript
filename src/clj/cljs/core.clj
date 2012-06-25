@@ -9,7 +9,7 @@
 (ns cljs.core
   (:refer-clojure :exclude [-> ->> .. amap and areduce alength aclone assert binding bound-fn case comment cond condp
                             declare definline definterface defmethod defmulti defn defn- defonce
-                            defprotocol defrecord defstruct deftype delay doseq dosync dotimes doto
+                            defprotocol defrecord defstruct deftype delay destructure doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
                             if-let if-not import io! lazy-cat lazy-seq let letfn locking loop
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
@@ -39,9 +39,114 @@
   declare defn defn-
   doto
   extend-protocol fn for
-  if-let if-not let letfn loop
+  if-let if-not letfn
   memfn or
   when when-first when-let when-not while])
+
+(defmacro ^{:private true} assert-args [fnname & pairs]
+  `(do (when-not ~(first pairs)
+         (throw (IllegalArgumentException.
+                  ~(core/str fnname " requires " (second pairs)))))
+     ~(core/let [more (nnext pairs)]
+        (when more
+          (list* `assert-args fnname more)))))
+
+(defn destructure [bindings]
+  (core/let [bents (partition 2 bindings)
+         pb (fn pb [bvec b v]
+              (core/let [pvec
+                     (fn [bvec b val]
+                       (core/let [gvec (gensym "vec__")]
+                         (core/loop [ret (-> bvec (conj gvec) (conj val))
+                                     n 0
+                                     bs b
+                                     seen-rest? false]
+                           (if (seq bs)
+                             (core/let [firstb (first bs)]
+                               (cond
+                                 (= firstb '&) (recur (pb ret (second bs) (list `nthnext gvec n))
+                                                      n
+                                                      (nnext bs)
+                                                      true)
+                                 (= firstb :as) (pb ret (second bs) gvec)
+                                 :else (if seen-rest?
+                                         (throw (new Exception "Unsupported binding form, only :as can follow & parameter"))
+                                         (recur (pb ret firstb  (list `nth gvec n nil))
+                                                (core/inc n)
+                                                (next bs)
+                                                seen-rest?))))
+                             ret))))
+                     pmap
+                     (fn [bvec b v]
+                       (core/let [gmap (gensym "map__")
+                                  defaults (:or b)]
+                         (core/loop [ret (-> bvec (conj gmap) (conj v)
+                                             (conj gmap) (conj `(if (seq? ~gmap) (apply hash-map ~gmap) ~gmap))
+                                             ((fn [ret]
+                                                (if (:as b)
+                                                  (conj ret (:as b) gmap)
+                                                  ret))))
+                                     bes (reduce
+                                          (fn [bes entry]
+                                            (reduce #(assoc %1 %2 ((val entry) %2))
+                                                    (dissoc bes (key entry))
+                                                    ((key entry) bes)))
+                                          (dissoc b :as :or)
+                                          {:keys #(keyword (core/str %)), :strs core/str, :syms #(list `quote %)})]
+                           (if (seq bes)
+                             (core/let [bb (key (first bes))
+                                        bk (val (first bes))
+                                        has-default (contains? defaults bb)]
+                               (recur (pb ret bb (if has-default
+                                                   (list `get gmap bk (defaults bb))
+                                                   (list `get gmap bk)))
+                                      (next bes)))
+                             ret))))]
+                    (cond
+                      (symbol? b) (-> bvec (conj b) (conj v))
+                      (vector? b) (pvec bvec b v)
+                      (map? b) (pmap bvec b v)
+                      :else (throw (new Exception (core/str "Unsupported binding form: " b))))))
+         process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
+        (if (every? symbol? (map first bents))
+          bindings
+          (reduce process-entry [] bents))))
+
+(defmacro let
+  "binding => binding-form init-expr
+
+  Evaluates the exprs in a lexical context in which the symbols in
+  the binding-forms are bound to their respective init-exprs or parts
+  therein."
+  [bindings & body]
+  (assert-args
+     (vector? bindings) "a vector for its binding"
+     (even? (count bindings)) "an even number of forms in binding vector")
+  `(let* ~(destructure bindings) ~@body))
+
+(defmacro loop
+  "Evaluates the exprs in a lexical context in which the symbols in
+  the binding-forms are bound to their respective init-exprs or parts
+  therein. Acts as a recur target."
+  [bindings & body]
+    (assert-args
+      (vector? bindings) "a vector for its binding"
+      (even? (count bindings)) "an even number of forms in binding vector")
+    (let [db (destructure bindings)]
+      (if (= db bindings)
+        `(loop* ~bindings ~@body)
+        (let [vs (take-nth 2 (drop 1 bindings))
+              bs (take-nth 2 bindings)
+              gs (map (fn [b] (if (symbol? b) b (gensym))) bs)
+              bfs (reduce (fn [ret [b v g]]
+                            (if (symbol? b)
+                              (conj ret g v)
+                              (conj ret g v b g)))
+                          [] (map vector bs vs gs))]
+          `(let ~bfs
+             (loop* ~(vec (interleave gs gs))
+               (let ~(vec (interleave bs gs))
+                 ~@body)))))))
 
 (def fast-path-protocols
   "protocol fqn -> [partition number, bit]"
@@ -773,14 +878,6 @@
        `(when-not ~x
           (throw (js/Error.
                   (cljs.core/str "Assert failed: " ~message "\n" (cljs.core/pr-str '~x))))))))
-
-(defmacro ^{:private true} assert-args [fnname & pairs]
-  `(do (when-not ~(first pairs)
-         (throw (IllegalArgumentException.
-                  ~(core/str fnname " requires " (second pairs)))))
-     ~(let [more (nnext pairs)]
-        (when more
-          (list* `assert-args fnname more)))))
 
 (defmacro for
   "List comprehension. Takes a vector of one or more
