@@ -606,9 +606,9 @@
                                               (<= (fs :refer 0) 1)))
                                        (error-msg spec "Each of :as and :refer options may only be specified once in :require / :require-macros")))
                              (if (symbol? spec)
-                               (recur macros? [spec :as spec])
+                               (recur macros? [spec])
                                (let [[lib & opts] spec
-                                     {alias :as referred :refer} (apply hash-map opts)
+                                     {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
                                      [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
                                  (assert (or (symbol? alias) (nil? alias))
                                          (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))
