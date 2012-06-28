@@ -9,6 +9,7 @@
 (ns cljs.core
   (:require [goog.string :as gstring]
             [goog.string.StringBuffer :as gstringbuf]
+            [goog.string.format]
             [goog.object :as gobject]
             [goog.array :as garray]))
 
@@ -1441,6 +1442,11 @@ reduces them without incurring seq initialization"
   at end (defaults to length of string), exclusive."
   ([s start] (.substring s start))
   ([s start end] (.substring s start end)))
+
+(defn format
+  "Formats a string using goog.string.format."
+  [fmt & args]
+  (apply gstring/format fmt args))
 
 (defn symbol
   "Returns a Symbol with the given namespace and name."
@@ -6229,6 +6235,11 @@ reduces them without incurring seq initialization"
   [& objs]
   (pr-with-opts objs (pr-opts))
   (newline (pr-opts)))
+
+(defn printf
+  "Prints formatted output, as per format"
+  [fmt & args]
+  (print (apply format fmt args)))
 
 (extend-protocol IPrintable
   boolean

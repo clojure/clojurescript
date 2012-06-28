@@ -196,6 +196,9 @@
   (assert (= "hello:world" (str "hello" :world)))
   (assert (= ":helloworld" (str :hello 'world)))
 
+  ;; format
+  (assert (= "01: 2.000000" (format "%02d: %.6f" 1 2)))
+
   (assert (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
   (assert (= :a (nth [:a :b :c :d] 0)))
   (assert (= :a (nth [:a :b :c :d] 0.1)) )
