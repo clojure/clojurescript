@@ -231,8 +231,8 @@
      :throw throw-expr
      :children [throw-expr]}))
 
-(defn- block-children [{:keys [statements ret]}]
-  (conj (vec statements) ret))
+(defn- block-children [{:keys [statements ret] :as block}]
+  (when block (conj (vec statements) ret)))
 
 (defmethod parse 'try*
   [op env [_ & body :as form] name]
