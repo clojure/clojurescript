@@ -6935,7 +6935,7 @@ reduces them without incurring seq initialization"
     
   IEquiv
   (-equiv [_ other]
-    (identical? uuid (.-uuid other)))
+    (and (instance? UUID other) (identical? uuid (.-uuid other))))
 
   IPrintable
   (-pr-seq [_ _]
