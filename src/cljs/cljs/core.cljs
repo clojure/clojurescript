@@ -395,7 +395,8 @@
 
 (extend-type default
   IHash
-  (-hash [o] (goog.getUid o)))
+  (-hash [o]
+    (if (nil? o) 0 (goog.getUid o))))
 
 ;;this is primitive because & emits call to array-seq
 (defn inc
