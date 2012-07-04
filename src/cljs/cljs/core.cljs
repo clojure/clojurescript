@@ -1726,7 +1726,11 @@ reduces them without incurring seq initialization"
       (let [strobj (.-strobj coll)]
         (if (nil? strobj)
           (-lookup coll k nil)
-          (aget strobj k))))))
+          (aget strobj k)))))
+  (invoke [_ coll not-found]
+    (if (nil? coll)
+      not-found
+      (-lookup coll k not-found))))
 
 ;;hrm
 (extend-type js/String
