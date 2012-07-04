@@ -189,8 +189,7 @@
      ~@body
      (when-not (= :expr (:context env#)) (emitln ";"))))
 
-(defmethod emit :no-op
-  [m] (emits "void 0;"))
+(defmethod emit :no-op [m])
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
@@ -322,15 +321,14 @@
 
 (defmethod emit :def
   [{:keys [name init env doc export]}]
-  (if init
+  (when init
     (let [mname (munge name)]
       (emit-comment doc (:jsdoc init))
       (emits mname)
       (emits " = " init)
       (when-not (= :expr (:context env)) (emitln ";"))
       (when export
-        (emitln "goog.exportSymbol('" (munge export) "', " mname ");")))
-    (emitln "void 0;")))
+        (emitln "goog.exportSymbol('" (munge export) "', " mname ");")))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
