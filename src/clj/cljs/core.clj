@@ -694,10 +694,9 @@
                      `(~sig
                        (if (and ~(first sig) (. ~(first sig) ~(symbol (core/str "-" slot)))) ;; Property access needed here.
                          (. ~(first sig) ~slot ~@sig)
-                         (let [t# ~(first sig)
-                               t# (if (nil? t#) nil t#)]
+                         (let [x# (if (nil? ~(first sig)) nil ~(first sig))]
                            ((or
-                             (aget ~(fqn fname) (goog.typeOf t#))
+                             (aget ~(fqn fname) (goog.typeOf x#))
                              (aget ~(fqn fname) "_")
                              (throw (missing-protocol
                                      ~(core/str psym "." fname) ~(first sig))))

@@ -46,10 +46,9 @@
 (defn ^boolean type_satisfies_
   "Internal - do not use!"
   [p x]
-  (let [t (goog.typeOf x)
-        t (if (nil? t) nil t)]
+  (let [x (if (nil? x) nil x)]
     (cond
-     (aget p t) true
+     (aget p (goog.typeOf x)) true
      (aget p "_") true
      :else false)))
 (set! *unchecked-if* false)
