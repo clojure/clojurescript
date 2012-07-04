@@ -694,12 +694,14 @@
                      `(~sig
                        (if (and ~(first sig) (. ~(first sig) ~(symbol (core/str "-" slot)))) ;; Property access needed here.
                          (. ~(first sig) ~slot ~@sig)
-                         ((or
-                           (aget ~(fqn fname) (goog.typeOf ~(first sig)))
-                           (aget ~(fqn fname) "_")
-                           (throw (missing-protocol
-                                    ~(core/str psym "." fname) ~(first sig))))
-                          ~@sig))))
+                         (let [t# ~(first sig)
+                               t# (if (nil? t#) nil t#)]
+                           ((or
+                             (aget ~(fqn fname) (goog.typeOf t#))
+                             (aget ~(fqn fname) "_")
+                             (throw (missing-protocol
+                                     ~(core/str psym "." fname) ~(first sig))))
+                            ~@sig)))))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
                        slot (symbol (core/str prefix (name fname)))

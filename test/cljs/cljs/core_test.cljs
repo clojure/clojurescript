@@ -184,6 +184,7 @@
   (assert (= 2 ({} :a 2)))
   (assert (= nil (:a {})))
   (assert (= 2 (#{1 2 3} 2)))
+  (assert (zero? (hash (aget (js-obj) "foo"))))
 
   (assert (= 1 (apply :a '[{:a 1 a 2}])))
   (assert (= 1 (apply 'a '[{a 1 :b 2}])))

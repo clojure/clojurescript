@@ -46,10 +46,12 @@
 (defn ^boolean type_satisfies_
   "Internal - do not use!"
   [p x]
-  (cond
-   (aget p (goog.typeOf x)) true
-   (aget p "_") true
-   :else false))
+  (let [t (goog.typeOf x)
+        t (if (nil? t) nil t)]
+    (cond
+     (aget p t) true
+     (aget p "_") true
+     :else false)))
 (set! *unchecked-if* false)
 
 (defn is_proto_
@@ -396,7 +398,7 @@
 (extend-type default
   IHash
   (-hash [o]
-    (if (nil? o) 0 (goog.getUid o))))
+    (goog.getUid o)))
 
 ;;this is primitive because & emits call to array-seq
 (defn inc
