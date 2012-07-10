@@ -483,7 +483,7 @@ nil if the end of stream has been reached")
               (->> V
                    (map #(update-in %2 [0] %)
                         [(constantly nil) #(if (= % "-") "-1" "1")])
-                   (map (fn [v] (map #(js/parseInt %) v))))
+                   (map (fn [v] (map #(js/parseInt % 10) v))))
               offset (* offset-sign (+ (* offset-hours 60) offset-minutes))]
           [(if-not years 1970 y)
            (if-not months 1        (check 1 mo 12 "timestamp month field must be in range 1..12"))
