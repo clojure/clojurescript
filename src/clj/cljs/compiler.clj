@@ -718,7 +718,7 @@
   ([f]
      (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
   ([f ^java.io.PushbackReader rdr]
-     (if-let [form (read rdr nil nil)]
+     (if-let [form (binding [*ns* ana/*reader-ns*] (read rdr nil nil))]
        (lazy-seq (cons form (forms-seq f rdr)))
        (.close rdr))))
 

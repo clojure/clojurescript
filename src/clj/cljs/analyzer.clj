@@ -22,6 +22,9 @@
 (declare confirm-bindings)
 (declare ^:dynamic *cljs-file*)
 
+(def ^:dynamic *reader-ns-name* (gensym))
+(def ^:dynamic *reader-ns* (create-ns *reader-ns-name*))
+
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
@@ -201,6 +204,13 @@
 
 (defmacro disallowing-recur [& body]
   `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
+
+(defn analyze-keyword
+    [env sym]
+    {:op :constant :env env
+     :form (if (= (namespace sym) (name *reader-ns-name*))
+               (keyword (-> env :ns :name name) (name sym))
+               sym)})
 
 (defn analyze-block
   "returns {:statements .. :ret ..}"
@@ -918,6 +928,7 @@
         (map? form) (analyze-map env form name)
         (vector? form) (analyze-vector env form name)
         (set? form) (analyze-set env form name)
+        (keyword? form) (analyze-keyword env form)
         :else {:op :constant :env env :form form}))))
 
 (defn analyze-file
@@ -925,7 +936,8 @@
   (let [res (if (= \/ (first f)) f (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))
     (binding [*cljs-ns* 'cljs.user
-              *cljs-file* (.getPath ^java.net.URL res)]
+              *cljs-file* (.getPath ^java.net.URL res)
+              *ns* *reader-ns*]
       (with-open [r (io/reader res)]
         (let [env (empty-env)
               pbr (clojure.lang.LineNumberingPushbackReader. r)
