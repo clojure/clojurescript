@@ -22,6 +22,9 @@
 (declare confirm-bindings)
 (declare ^:dynamic *cljs-file*)
 
+;; to resolve keywords like ::foo - the namespace
+;; must be determined during analysis - the reader
+;; did not know
 (def ^:dynamic *reader-ns-name* (gensym))
 (def ^:dynamic *reader-ns* (create-ns *reader-ns-name*))
 
