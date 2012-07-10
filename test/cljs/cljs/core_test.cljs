@@ -830,9 +830,9 @@
   (derive ::rect ::shape)
   (derive ::square ::rect)
 
-  (assert (= #{:user/shape} (parents ::rect)))
-  (assert (= #{:user/rect :user/shape} (ancestors ::square)))
-  (assert (= #{:user/rect :user/square} (descendants ::shape)))
+  (assert (= #{:cljs.core-test/shape} (parents ::rect)))
+  (assert (= #{:cljs.core-test/rect :cljs.core-test/shape} (ancestors ::square)))
+  (assert (= #{:cljs.core-test/rect :cljs.core-test/square} (descendants ::shape)))
   (assert (true? (isa? 42 42)))
   (assert (true? (isa? ::square ::shape)))
 
@@ -855,8 +855,8 @@
   ;;(bar ::rect ::rect)
   ;; -> java.lang.IllegalArgumentException:
   ;;  Multiple methods match dispatch value:
-  ;;  [:user/rect :user/rect] -> [:user/rect :user/shape]
-  ;;  and [:user/shape :user/rect],
+  ;;  [:cljs.core-test/rect :cljs.core-test/rect] -> [:cljs.core-test/rect :cljs.core-test/shape]
+  ;;  and [:cljs.core-test/shape :cljs.core-test/rect],
   ;;  and neither is preferred
 
   (assert (zero? (count (prefers bar))))
