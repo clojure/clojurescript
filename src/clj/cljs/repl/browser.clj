@@ -8,168 +8,47 @@
 
 (ns cljs.repl.browser
   (:refer-clojure :exclude [loaded-libs])
-  (:require [clojure.string :as str]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.closure :as cljsc]
-            [cljs.repl :as repl])
-  (:import java.io.BufferedReader
-           java.io.BufferedWriter
-           java.io.InputStreamReader
-           java.io.OutputStreamWriter
-           java.net.Socket
-           java.net.ServerSocket
-           cljs.repl.IJavaScriptEnv))
+            [cljs.repl :as repl]
+            [cljs.repl.server :as server])
+  (:import cljs.repl.IJavaScriptEnv))
 
-(defonce server-state (atom {:socket nil
-                             :connection nil
-                             :promised-conn nil
-                             :return-value-fn nil
-                             :client-js nil}))
+(defonce browser-state (atom {:return-value-fn nil
+                              :client-js nil}))
 
 (def loaded-libs (atom #{}))
 (def preloaded-libs (atom #{}))
-
-(defn- connection
-  "Promise to return a connection when one is available. If a
-  connection is not available, store the promise in server-state."
-  []
-  (let [p (promise)
-        conn (:connection @server-state)]
-    (if (and conn (not (.isClosed conn)))
-      (do (deliver p conn)
-          p)
-      (do (swap! server-state (fn [old] (assoc old :promised-conn p)))
-          p))))
-
-(defn- set-connection
-  "Given a new available connection, either use it to deliver the
-  connection which was promised or store the connection for later
-  use."
-  [conn]
-  (if-let [promised-conn (:promised-conn @server-state)]
-    (do (swap! server-state (fn [old] (-> old
-                                         (assoc :connection nil)
-                                         (assoc :promised-conn nil))))
-        (deliver promised-conn conn))
-    (swap! server-state (fn [old] (assoc old :connection conn)))))
 
 (defn- set-return-value-fn
   "Save the return value function which will be called when the next
   return value is received."
   [f]
-  (swap! server-state (fn [old] (assoc old :return-value-fn f))))
-
-(defn- status-line [status]
-  (case status
-    200 "HTTP/1.1 200 OK"
-    404 "HTTP/1.1 404 Not Found"
-    "HTTP/1.1 500 Error"))
-
-(defn send-and-close
-  "Use the passed connection to send a form to the browser. Send a
-  proper HTTP response."
-  ([conn status form]
-     (send-and-close conn status form "text/html"))
-  ([conn status form content-type]
-     (let [utf-8-form (.getBytes form "UTF-8")
-           content-length (count utf-8-form)
-           headers (map #(.getBytes (str % "\r\n"))
-                        [(status-line status)
-                         "Server: ClojureScript REPL"
-                         (str "Content-Type: "
-                              content-type
-                              "; charset=utf-8")
-                         (str "Content-Length: " content-length)
-                         ""])]
-       (with-open [os (.getOutputStream conn)]
-         (do (doseq [header headers]
-               (.write os header 0 (count header)))
-             (.write os utf-8-form 0 content-length)
-             (.flush os)
-             (.close conn))))))
-
-(defn send-404 [conn path]
-  (send-and-close conn 404
-                  (str "<html><body>"
-                       "<h2>Page not found</h2>"
-                       "No page " path " found on this server."
-                       "</body></html>")
-                  "text/html"))
+  (swap! browser-state (fn [old] (assoc old :return-value-fn f))))
 
 (defn send-for-eval
   "Given a form and a return value function, send the form to the
   browser for evaluation. The return value function will be called
   when the return value is received."
   ([form return-value-fn]
-     (send-for-eval @(connection) form return-value-fn))
+     (send-for-eval @(server/connection) form return-value-fn))
   ([conn form return-value-fn]
      (do (set-return-value-fn return-value-fn)
-         (send-and-close conn 200 form "text/javascript"))))
+         (server/send-and-close conn 200 form "text/javascript"))))
 
 (defn- return-value
   "Called by the server when a return value is received."
   [val]
-  (when-let [f (:return-value-fn @server-state)]
+  (when-let [f (:return-value-fn @browser-state)]
     (f val)))
 
-(defn parse-headers
-  "Parse the headers of an HTTP POST request."
-  [header-lines]
-  (apply hash-map
-   (mapcat
-    (fn [line]
-      (let [[k v] (str/split line #":" 2)]
-        [(keyword (str/lower-case k)) (str/triml v)]))
-    header-lines)))
-
-(comment
-
-  (parse-headers
-   ["Host: www.mysite.com"
-    "User-Agent: Mozilla/4.0"
-    "Content-Length: 27"
-    "Content-Type: application/x-www-form-urlencoded"])
-)
-
-;;; assumes first line already consumed
-(defn read-headers [rdr]
-  (loop [next-line (.readLine rdr)
-         header-lines []]
-    (if (= "" next-line)
-      header-lines                      ;we're done reading headers
-      (recur (.readLine rdr) (conj header-lines next-line)))))
-
-(defn read-post [line rdr]
-  (let [[_ path _] (str/split line #" ")
-        headers (parse-headers (read-headers rdr))
-        content-length (Integer/parseInt (:content-length headers))
-        content (char-array content-length)]
-    (io! (.read rdr content 0 content-length)
-         {:method :post
-          :path path
-          :headers headers
-          :content (String. content)})))
-
-(defn read-get [line rdr]
-  (let [[_ path _] (str/split line #" ")
-        headers (parse-headers (read-headers rdr))]
-    {:method :get
-     :path path
-     :headers headers}))
-
-(defn read-request [rdr]
-  (let [line (.readLine rdr)]
-    (cond (.startsWith line "POST") (read-post line rdr)
-          (.startsWith line "GET") (read-get line rdr)
-          :else {:method :unknown :content line})))
-
 (defn repl-client-js []
-  (slurp @(:client-js @server-state)))
+  (slurp @(:client-js @browser-state)))
 
 (defn send-repl-client-page
-  [opts conn request]
-  (send-and-close conn 200
+  [request conn opts]
+  (server/send-and-close conn 200
     (str "<html><head><meta charset=\"UTF-8\"></head><body>
           <script type=\"text/javascript\">"
          (repl-client-js)
@@ -180,7 +59,7 @@
          "</body></html>")
     "text/html"))
 
-(defn send-static [opts conn {path :path :as request}]
+(defn send-static [{path :path :as request} conn opts]
   (if (and (:static-dir opts)
            (not= "/favicon.ico" path))
     (let [path   (if (= "/" path) "/index.html" path)
@@ -188,28 +67,31 @@
       (if-let [local-path (seq (for [x (if (string? st-dir) [st-dir] st-dir)
                                      :when (.exists (io/file (str x path)))]
                                  (str x path)))]
-        (send-and-close conn 200 (slurp (first local-path))
+        (server/send-and-close conn 200 (slurp (first local-path))
                         (condp #(.endsWith %2 %1) path
                           ".js" "text/javascript"
                           ".html" "text/html"
                           "text/plain"))
-        (send-404 conn path)))
-    (send-404 conn path)))
+        (server/send-404 conn path)))
+    (server/send-404 conn path)))
 
-(defn handle-get [opts conn request]
-  (let [path (:path request)]
-    (cond
-     (.startsWith path "/repl") (send-repl-client-page opts conn request)
-     (:serve-static opts) (send-static opts conn request)
-     :else (send-404 conn (:path request)))))
+(server/dispatch-on :get
+                    (fn [{:keys [path]} _ _] (.startsWith path "/repl"))
+                    send-repl-client-page)
 
-(declare browser-eval)
+(server/dispatch-on :get
+                    (fn [{:keys [path]} _ _] (or (= path "/")
+                                                (.endsWith path ".js")
+                                                (.endsWith path ".html")))
+                    send-static)
+
+(defmulti handle-post (fn [m _ _ ] (:type m)))
+
+(server/dispatch-on :post (constantly true) handle-post)
 
 (def ordering (agent {:expecting nil :fns {}}))
 
-(defmulti handle-post (fn [_ m] (:type m)))
-
-(defmethod handle-post :ready [conn _]
+(defmethod handle-post :ready [_ conn _]
   (do (reset! loaded-libs @preloaded-libs)
       (send ordering (fn [_] {:expecting nil :fns {}}))
       (send-for-eval conn
@@ -236,42 +118,14 @@
   (send-off ordering add-in-order order f)
   (send-off ordering run-in-order))
 
-(defmethod handle-post :print [conn {:keys [content order]}]
+(defmethod handle-post :print [{:keys [content order]} conn _ ]
   (do (constrain-order order (fn [] (do (print (read-string content))
                                        (.flush *out*))))
-      (send-and-close conn 200 "ignore__")))
+      (server/send-and-close conn 200 "ignore__")))
 
-(defmethod handle-post :result [conn {:keys [content order]}]
+(defmethod handle-post :result [{:keys [content order]} conn _ ]
   (constrain-order order (fn [] (do (return-value content)
-                                   (set-connection conn)))))
-
-(defn handle-connection
-  [opts conn]
-  (let [rdr (BufferedReader. (InputStreamReader. (.getInputStream conn)))]
-    (if-let [request (read-request rdr)]
-      (case (:method request)
-        :get (handle-get opts conn request)
-        :post (handle-post conn (read-string (:content request)))
-        (.close conn))
-      (.close conn))))
-
-(defn server-loop
-  [opts server-socket]
-  (let [conn (.accept server-socket)]
-    (do (.setKeepAlive conn true)
-        (future (handle-connection opts conn))
-        (recur opts server-socket))))
-
-(defn start-server
-  "Start the server on the specified port."
-  [opts]
-  (let [ss (ServerSocket. (:port opts))]
-    (future (server-loop opts ss))
-    (swap! server-state (fn [old] (assoc old :socket ss :port (:port opts))))))
-
-(defn stop-server
-  []
-  (.close (:socket @server-state)))
+                                   (server/set-connection conn)))))
 
 (defn browser-eval
   "Given a string of JavaScript, evaluate it in the browser and return a map representing the
@@ -305,12 +159,15 @@
 (extend-protocol repl/IJavaScriptEnv
   clojure.lang.IPersistentMap
   (-setup [this]
-    (comp/with-core-cljs (start-server this)))
+    (do (require 'cljs.repl.reflect)
+        (repl/analyze-source (:src this))
+        (comp/with-core-cljs (server/start this))))
   (-evaluate [_ _ _ js] (browser-eval js))
   (-load [this ns url] (load-javascript this ns url))
   (-tear-down [_]
-    (do (stop-server)
-        (reset! server-state {}))))
+    (do (server/stop)
+        (reset! server/state {})
+        (reset! browser-state {}))))
 
 (defn compile-client-js [opts]
   (cljsc/build '[(ns clojure.browser.repl.client
@@ -361,6 +218,8 @@
                   loading code and reloading it would cause a problem.
   optimizations:  The level of optimization to use when compiling the client
                   end of the REPL. Defaults to :simple.
+  src:            The source directory containing user-defined cljs files. Used to
+                  support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
   (let [opts (merge {:port          9000
@@ -368,11 +227,12 @@
                      :working-dir   ".repl"
                      :serve-static  true
                      :static-dir    ["." "out/"]
-                     :preloaded-libs   []}
+                     :preloaded-libs   []
+                     :src           "src/"}
                     opts)]
     (do (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))
         (reset! loaded-libs @preloaded-libs)
-        (swap! server-state
+        (swap! browser-state
                (fn [old] (assoc old :client-js
                                (future (create-client-js-file
                                         opts
@@ -380,7 +240,7 @@
         opts)))
 
 (comment
-  
+
   (require '[cljs.repl :as repl])
   (require '[cljs.repl.browser :as browser])
   (def env (browser/repl-env))
