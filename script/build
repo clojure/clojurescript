@@ -47,7 +47,7 @@ sed -e s/CLOJURESCRIPT_VERSION/0.0-$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
 mvn install:install-file -Dfile="$JAR_FILE" -DpomFile="$POM_FILE"
 
 # For Hudson server
-if [ "$HUDSON" == "true" ]; then
+if [ "$HUDSON" = "true" ]; then
     echo "Creating tag $TAG"
     git tag -f "$TAG"
     git push origin "$TAG"
