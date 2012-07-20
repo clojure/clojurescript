@@ -201,8 +201,7 @@
      ~@body
      (when-not (= :expr (:context env#)) (emitln ";"))))
 
-(defmethod emit :no-op
-  [m] (emits "void 0;"))
+(defmethod emit :no-op [m])
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
@@ -267,8 +266,10 @@
 (defmethod emit :set
   [{:keys [items env]}]
   (emit-wrap env
-    (emits "cljs.core.set(["
-           (comma-sep items) "])")))
+    (if (empty? items)
+      (emits "cljs.core.PersistentHashSet.EMPTY")
+      (emits "cljs.core.PersistentHashSet.fromArray(["
+             (comma-sep items) "])"))))
 
 (defmethod emit :constant
   [{:keys [form env]}]
@@ -338,15 +339,14 @@
 
 (defmethod emit :def
   [{:keys [name init env doc export]}]
-  (if init
+  (when init
     (let [mname (munge name)]
       (emit-comment doc (:jsdoc init))
       (emits mname)
       (emits " = " init)
       (when-not (= :expr (:context env)) (emitln ";"))
       (when export
-        (emitln "goog.exportSymbol('" (munge export) "', " mname ");")))
-    (emitln "void 0;")))
+        (emitln "goog.exportSymbol('" (munge export) "', " mname ");")))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
@@ -475,7 +475,7 @@
               (do (emitln "default:")
                   (emitln "return " n ".cljs$lang$arity$variadic("
                           (comma-sep (butlast maxparams))
-                          (and (> (count maxparams) 1) ", ")
+                          (when (> (count maxparams) 1) ", ")
                           "cljs.core.array_seq(arguments, " max-fixed-arity "));"))
               (let [pcnt (count (:params meth))]
                 (emitln "case " pcnt ":")
@@ -736,7 +736,7 @@
   ([f]
      (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
   ([f ^java.io.PushbackReader rdr]
-     (if-let [form (read rdr nil nil)]
+     (if-let [form (binding [*ns* ana/*reader-ns*] (read rdr nil nil))]
        (lazy-seq (cons form (forms-seq f rdr)))
        (.close rdr))))
 

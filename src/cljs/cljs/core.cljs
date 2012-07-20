@@ -9,6 +9,7 @@
 (ns cljs.core
   (:require [goog.string :as gstring]
             [goog.string.StringBuffer :as gstringbuf]
+            [goog.string.format]
             [goog.object :as gobject]
             [goog.array :as garray]))
 
@@ -45,10 +46,11 @@
 (defn ^boolean type_satisfies_
   "Internal - do not use!"
   [p x]
-  (cond
-   (aget p (goog.typeOf x)) true
-   (aget p "_") true
-   :else false))
+  (let [x (if (nil? x) nil x)]
+    (cond
+     (aget p (goog.typeOf x)) true
+     (aget p "_") true
+     :else false)))
 (set! *unchecked-if* false)
 
 (defn is_proto_
@@ -308,6 +310,9 @@
   (when-not (nil? x)
     (.-constructor x)))
 
+(defn ^boolean instance? [t o]
+  (js* "(~{o} instanceof ~{t})"))
+
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
@@ -373,7 +378,9 @@
 
 (extend-type js/Date
   IEquiv
-  (-equiv [o other] (identical? (. o (toString)) (. other (toString)))))
+  (-equiv [o other]
+    (and (instance? js/Date other)
+         (identical? (.toString o) (.toString other)))))
 
 (extend-type number
   IEquiv
@@ -389,7 +396,8 @@
 
 (extend-type default
   IHash
-  (-hash [o] (goog.getUid o)))
+  (-hash [o]
+    (goog.getUid o)))
 
 ;;this is primitive because & emits call to array-seq
 (defn inc
@@ -952,9 +960,6 @@ reduces them without incurring seq initialization"
 (defn ^boolean undefined? [x]
   (cljs.core/undefined? x))
 
-(defn ^boolean instance? [t o]
-  (js* "(~{o} instanceof ~{t})"))
-
 (defn ^boolean seq?
   "Return true if s satisfies ISeq"
   [s]
@@ -1440,6 +1445,11 @@ reduces them without incurring seq initialization"
   ([s start] (.substring s start))
   ([s start end] (.substring s start end)))
 
+(defn format
+  "Formats a string using goog.string.format."
+  [fmt & args]
+  (apply gstring/format fmt args))
+
 (defn symbol
   "Returns a Symbol with the given namespace and name."
   ([name] (cond (symbol? name) name
@@ -1717,7 +1727,11 @@ reduces them without incurring seq initialization"
       (let [strobj (.-strobj coll)]
         (if (nil? strobj)
           (-lookup coll k nil)
-          (aget strobj k))))))
+          (aget strobj k)))))
+  (invoke [_ coll not-found]
+    (if (nil? coll)
+      not-found
+      (-lookup coll k not-found))))
 
 ;;hrm
 (extend-type js/String
@@ -2646,7 +2660,7 @@ reduces them without incurring seq initialization"
 
 (defn get-in
   "Returns the value in a nested associative structure,
-  where ks is a sequence of ke(ys. Returns nil if the key is not present,
+  where ks is a sequence of keys. Returns nil if the key is not present,
   or the not-found value if supplied."
   {:added "1.2"
    :static true}
@@ -5435,6 +5449,19 @@ reduces them without incurring seq initialization"
   [& keyvals]
   (PersistentArrayMap. nil (quot (count keyvals) 2) (apply array keyvals) nil))
 
+(defn obj-map
+  "keyval => key val
+  Returns a new object map with supplied mappings."
+  [& keyvals]
+  (let [ks  (array)
+        obj (js-obj)]
+    (loop [kvs (seq keyvals)]
+      (if kvs
+        (do (.push ks (first kvs))
+            (aset obj (first kvs) (second kvs))
+            (recur (nnext kvs)))
+        (cljs.core.ObjMap/fromObject ks obj)))))
+
 (defn sorted-map
   "keyval => key val
   Returns a new sorted map with supplied mappings."
@@ -5574,6 +5601,15 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentHashSet/EMPTY (PersistentHashSet. nil (hash-map) 0))
 
+(set! cljs.core.PersistentHashSet/fromArray
+      (fn [items]
+        (let [len (count items)]
+          (loop [i   0
+                 out (transient cljs.core.PersistentHashSet/EMPTY)]
+            (if (< i len)
+              (recur (inc i) (conj! out (aget items i)))
+              (persistent! out))))))
+
 (deftype TransientHashSet [^:mutable transient-map]
   ITransientCollection
   (-conj! [tcoll o]
@@ -5681,14 +5717,19 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentTreeSet/EMPTY (PersistentTreeSet. nil (sorted-map) 0))
 
+(defn hash-set
+  ([] cljs.core.PersistentHashSet/EMPTY)
+  ([& keys]
+    (loop [in (seq keys)
+           out (transient cljs.core.PersistentHashSet/EMPTY)]
+      (if (seq in)
+        (recur (next in) (conj! out (first in)))
+        (persistent! out)))))
+
 (defn set
   "Returns a set of the distinct elements of coll."
   [coll]
-  (loop [in (seq coll)
-         out (transient cljs.core.PersistentHashSet/EMPTY)]
-    (if (seq in)
-      (recur (next in) (conj! out (first in)))
-      (persistent! out))))
+  (apply hash-set coll))
 
 (defn sorted-set
   "Returns a new sorted set with supplied keys."
@@ -6105,11 +6146,11 @@ reduces them without incurring seq initialization"
              :else (list "#<" (str obj) ">")))))
 
 (defn- pr-sb [objs opts]
-  (let [first-obj (first objs)
-        sb (gstring/StringBuffer.)]
-    (doseq [obj objs]
-      (when-not (identical? obj first-obj)
-        (.append sb " "))
+  (let [sb (gstring/StringBuffer.)]
+    (doseq [string (pr-seq (first objs) opts)]
+      (.append sb string))
+    (doseq [obj (next objs)]
+      (.append sb " ")
       (doseq [string (pr-seq obj opts)]
         (.append sb string)))
     sb))
@@ -6131,12 +6172,12 @@ reduces them without incurring seq initialization"
   "Prints a sequence of objects using string-print, observing all
   the options given in opts"
   [objs opts]
-  (let [first-obj (first objs)]
-    (doseq [obj objs]
-      (when-not (identical? obj first-obj)
-        (string-print " "))
-      (doseq [string (pr-seq obj opts)]
-        (string-print string)))))
+  (doseq [string (pr-seq (first objs) opts)]
+    (string-print string))
+  (doseq [obj (next objs)]
+    (string-print " ")
+    (doseq [string (pr-seq obj opts)]
+      (string-print string))))
 
 (defn newline [opts]
   (string-print "\n")
@@ -6200,6 +6241,11 @@ reduces them without incurring seq initialization"
   [& objs]
   (pr-with-opts objs (pr-opts))
   (newline (pr-opts)))
+
+(defn printf
+  "Prints formatted output, as per format"
+  [fmt & args]
+  (print (apply format fmt args)))
 
 (extend-protocol IPrintable
   boolean
@@ -6890,7 +6936,7 @@ reduces them without incurring seq initialization"
     
   IEquiv
   (-equiv [_ other]
-    (identical? uuid (.-uuid other)))
+    (and (instance? UUID other) (identical? uuid (.-uuid other))))
 
   IPrintable
   (-pr-seq [_ _]

@@ -16,7 +16,7 @@
   (assert (not (= 1 1 2)))
   (assert (not (= 1 1 2 1)))
   (assert (not (= 1 1 1 2)))
-  
+
   ;; arithmetic
   (assert (= (+) 0))
   (assert (= (apply + []) 0))
@@ -178,7 +178,13 @@
   (assert (= 2 ('b '{:a 1 b 2})))
   (assert (= 2 ({:a 1 :b 2} :b)))
   (assert (= 2 ({1 1 2 2} 2)))
+  (assert (= 2 (:a {:b 1} 2)))
+  (assert (= 2 (:a {} 2)))
+  (assert (= 2 ({:b 1} :a 2)))
+  (assert (= 2 ({} :a 2)))
+  (assert (= nil (:a {})))
   (assert (= 2 (#{1 2 3} 2)))
+  (assert (zero? (hash (aget (js-obj) "foo"))))
 
   (assert (= 1 (apply :a '[{:a 1 a 2}])))
   (assert (= 1 (apply 'a '[{a 1 :b 2}])))
@@ -196,6 +202,9 @@
   (assert (= "hello:world" (str "hello" :world)))
   (assert (= ":helloworld" (str :hello 'world)))
 
+  ;; format
+  (assert (= "01: 2.000000" (format "%02d: %.6f" 1 2)))
+
   (assert (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
   (assert (= :a (nth [:a :b :c :d] 0)))
   (assert (= :a (nth [:a :b :c :d] 0.1)) )
@@ -212,7 +221,7 @@
   (assert (= (hash-map :foo 5)
              (assoc (cljs.core.ObjMap. nil (array) (js-obj)) :foo 5)))
 
-  (assert (= "\"asdf\"" (pr-str "asdf")))
+  (assert (= "\"asdf\" \"asdf\"" (pr-str "asdf" "asdf")))
   (assert (= "[1 true {:a 2, :b #\"x\\\"y\"} #<Array [3, 4]>]"
              (pr-str [1 true {:a 2 :b #"x\"y"} (array 3 4)])))
 
@@ -488,8 +497,11 @@
 
   (assert (set []))
   (assert (= #{} (set [])))
+  (assert (= #{} (hash-set)))
+  (assert (identical? cljs.core.PersistentHashSet (type (hash-set))))
 
   (assert (= #{"foo"} (set ["foo"])))
+  (assert (= #{"foo"} (hash-set "foo")))
   (assert (= #{1 2 3} #{1 3 2}))
   (assert (= #{#{1 2 3} [4 5 6] {7 8} 9 10}
              #{10 9 [4 5 6] {7 8} #{1 2 3}}))
@@ -818,9 +830,9 @@
   (derive ::rect ::shape)
   (derive ::square ::rect)
 
-  (assert (= #{:user/shape} (parents ::rect)))
-  (assert (= #{:user/rect :user/shape} (ancestors ::square)))
-  (assert (= #{:user/rect :user/square} (descendants ::shape)))
+  (assert (= #{:cljs.core-test/shape} (parents ::rect)))
+  (assert (= #{:cljs.core-test/rect :cljs.core-test/shape} (ancestors ::square)))
+  (assert (= #{:cljs.core-test/rect :cljs.core-test/square} (descendants ::shape)))
   (assert (true? (isa? 42 42)))
   (assert (true? (isa? ::square ::shape)))
 
@@ -843,8 +855,8 @@
   ;;(bar ::rect ::rect)
   ;; -> java.lang.IllegalArgumentException:
   ;;  Multiple methods match dispatch value:
-  ;;  [:user/rect :user/rect] -> [:user/rect :user/shape]
-  ;;  and [:user/shape :user/rect],
+  ;;  [:cljs.core-test/rect :cljs.core-test/rect] -> [:cljs.core-test/rect :cljs.core-test/shape]
+  ;;  and [:cljs.core-test/shape :cljs.core-test/rect],
   ;;  and neither is preferred
 
   (assert (zero? (count (prefers bar))))
@@ -933,7 +945,7 @@
                    pop
                    (conj 31)
                    (conj 32)))))
-  
+
   (let [stack1 (pop (vec (range 97)))
         stack2 (pop stack1)]
     (assert (= 95 (peek stack1)))
@@ -1283,6 +1295,13 @@
   (assert (= {:foo 'bar} (meta (with-meta (A.) {:foo 'bar}))))
   (assert (= 'bar (:foo (assoc (A.) :foo 'bar))))
 
+  ;; ObjMap
+  (let [ks (map (partial str "foo") (range 500))
+        m  (apply obj-map (interleave ks (range 500)))]
+    (assert (instance? cljs.core.ObjMap m))
+    (assert (= 500 (count m)))
+    (assert (= 123 (m "foo123"))))
+
   ;; dot
   (let [s "abc"]
     (assert (= 3 (.-length s)))
@@ -1291,12 +1310,14 @@
     (assert (= 3 (. "abc" -length)))
     (assert (= "bc" (.substring s 1)))
     (assert (= "bc" (.substring "abc" 1)))
+    (assert (= "bc" ((memfn substring start) s 1)))
     (assert (= "bc" (. s substring 1)))
     (assert (= "bc" (. s (substring 1))))
     (assert (= "bc" (. s (substring 1 3))))
     (assert (= "bc" (.substring s 1 3)))
     (assert (= "ABC" (. s (toUpperCase))))
     (assert (= "ABC" (. "abc" (toUpperCase))))
+    (assert (= "ABC" ((memfn toUpperCase) s)))
     (assert (= "BC" (. (. s (toUpperCase)) substring 1)))
     (assert (= 2 (.-length (. (. s (toUpperCase)) substring 1)))))
 

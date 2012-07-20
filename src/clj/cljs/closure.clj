@@ -887,7 +887,9 @@
     (binding [ana/*cljs-static-fns*
               (or (and (= (opts :optimizations) :advanced))
                   (:static-fns opts)
-                  ana/*cljs-static-fns*)]
+                  ana/*cljs-static-fns*)
+              ana/*cljs-warn-on-undeclared*
+              (true? (opts :warnings))]
       (let [compiled (-compile source all-opts)
             compiled (concat
                       (if (coll? compiled) compiled [compiled])

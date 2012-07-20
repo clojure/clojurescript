@@ -109,6 +109,12 @@
 (simple-benchmark [coll cljs.core.PersistentHashMap/EMPTY] (assoc coll :f0 1) 1000000)
 (println)
 
+(println ";;; set ops")
+(simple-benchmark [] #{} 100000)
+(simple-benchmark [] #{1 2 3} 100000)
+(simple-benchmark [coll #{1 2 3}] (conj coll 4) 100000)
+(println)
+
 (println ";;; seq ops")
 (simple-benchmark [coll (range 500000)] (reduce + coll) 1)
 (println)

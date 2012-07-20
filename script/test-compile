@@ -3,7 +3,7 @@
 echo "Generating sample javascript"
 mkdir compilation
 
-cat <<EOF > compilation/test.js
+cat >compilation/test.js <<EOF
 function create_alert(msg) {
     alert(msg);
 }
@@ -13,9 +13,9 @@ echo "Testing compilation"
 cd compilation
 for file in *
 do
-  if [ -f $file ] ; then
-    name=${file%\.*}
-    java -jar ../closure/compiler/compiler.jar --js $file --js_output_file $name-compiled.js
+  if [ -f "$file" ] ; then
+    name=${file%.*}
+    java -jar ../closure/compiler/compiler.jar --js "$file" --js_output_file "$name-compiled.js"
   fi
 done
 cd ..

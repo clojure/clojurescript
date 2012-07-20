@@ -22,6 +22,12 @@
 (declare confirm-bindings)
 (declare ^:dynamic *cljs-file*)
 
+;; to resolve keywords like ::foo - the namespace
+;; must be determined during analysis - the reader
+;; did not know
+(def ^:dynamic *reader-ns-name* (gensym))
+(def ^:dynamic *reader-ns* (create-ns *reader-ns-name*))
+
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
@@ -202,6 +208,13 @@
 (defmacro disallowing-recur [& body]
   `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
 
+(defn analyze-keyword
+    [env sym]
+    {:op :constant :env env
+     :form (if (= (namespace sym) (name *reader-ns-name*))
+               (keyword (-> env :ns :name name) (name sym))
+               sym)})
+
 (defn analyze-block
   "returns {:statements .. :ret ..}"
   [env exprs]
@@ -231,8 +244,8 @@
      :throw throw-expr
      :children [throw-expr]}))
 
-(defn- block-children [{:keys [statements ret]}]
-  (conj (vec statements) ret))
+(defn- block-children [{:keys [statements ret] :as block}]
+  (when block (conj (vec statements) ret)))
 
 (defmethod parse 'try*
   [op env [_ & body :as form] name]
@@ -606,9 +619,9 @@
                                               (<= (fs :refer 0) 1)))
                                        (error-msg spec "Each of :as and :refer options may only be specified once in :require / :require-macros")))
                              (if (symbol? spec)
-                               (recur macros? [spec :as spec])
+                               (recur macros? [spec])
                                (let [[lib & opts] spec
-                                     {alias :as referred :refer} (apply hash-map opts)
+                                     {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
                                      [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
                                  (assert (or (symbol? alias) (nil? alias))
                                          (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))
@@ -918,6 +931,7 @@
         (map? form) (analyze-map env form name)
         (vector? form) (analyze-vector env form name)
         (set? form) (analyze-set env form name)
+        (keyword? form) (analyze-keyword env form)
         :else {:op :constant :env env :form form}))))
 
 (defn analyze-file
@@ -925,7 +939,8 @@
   (let [res (if (= \/ (first f)) f (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))
     (binding [*cljs-ns* 'cljs.user
-              *cljs-file* (.getPath ^java.net.URL res)]
+              *cljs-file* (.getPath ^java.net.URL res)
+              *ns* *reader-ns*]
       (with-open [r (io/reader res)]
         (let [env (empty-env)
               pbr (clojure.lang.LineNumberingPushbackReader. r)
