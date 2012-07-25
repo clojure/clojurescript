@@ -633,7 +633,7 @@
                   'IMap
                   `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
                                            (dissoc (with-meta (into {} this#) ~'__meta) k#)
-                                           (new ~tagname ~@(remove #{'__extmap} fields) 
+                                           (new ~tagname ~@(remove #{'__extmap '__hash} fields) 
                                                 (not-empty (dissoc ~'__extmap k#))
                                                 nil)))
                   'ISeqable
