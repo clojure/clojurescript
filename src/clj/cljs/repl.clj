@@ -8,6 +8,7 @@
 
 (ns cljs.repl
   (:refer-clojure :exclude [load-file])
+  (:import java.io.File)
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
@@ -149,6 +150,15 @@
      'clojure.core/load-file load-file-fn
      'load-namespace (fn [repl-env ns] (load-namespace repl-env ns))}))
 
+(defn analyze-source
+  "Given a source directory, analyzes all .cljs files. Used to populate
+  cljs.analyzer/namespaces so as to support code reflection."
+  [src-dir]
+  (if-let [src-dir (and (not (empty? src-dir))
+                     (File. src-dir))]
+    (doseq [file (comp/cljs-files-in src-dir)]
+      (ana/analyze-file (str "file://" (.getAbsolutePath file))))))
+
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
   [repl-env & {:keys [verbose warn-on-undeclared special-fns]}]
@@ -166,12 +176,12 @@
         (let [{:keys [status form]} (read-next-form)]
           (cond
            (= form :cljs/quit) :quit
-           
+
            (= status :error) (recur)
-           
+
            (and (seq? form) (is-special-fn? (first form)))
            (do (apply (get special-fns (first form)) repl-env (rest form)) (newline) (recur))
-           
+
            :else
            (do (eval-and-print repl-env env form) (recur)))))
       (-tear-down repl-env))))
