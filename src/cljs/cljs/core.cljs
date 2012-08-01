@@ -1846,10 +1846,10 @@ reduces them without incurring seq initialization"
   ([arr off end]
      (ArrayChunk. arr off end)))
 
-(deftype ChunkedCons [chunk more meta]
+(deftype ChunkedCons [chunk more meta ^:mutable __hash]
   IWithMeta
   (-with-meta [coll m]
-    (ChunkedCons. chunk more m))
+    (ChunkedCons. chunk more m __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -1866,7 +1866,7 @@ reduces them without incurring seq initialization"
   (-first [coll] (-nth chunk 0))
   (-rest [coll]
     (if (> (-count chunk) 1)
-      (ChunkedCons. (-drop-first chunk) more meta)
+      (ChunkedCons. (-drop-first chunk) more meta nil)
       (if (nil? more)
         ()
         more)))
@@ -1886,12 +1886,15 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [this o]
-    (cons o this)))
+    (cons o this))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-coll __hash)))
 
 (defn chunk-cons [chunk rest]
   (if (zero? (-count chunk))
     rest
-    (ChunkedCons. chunk rest nil)))
+    (ChunkedCons. chunk rest nil nil)))
 
 (defn chunk-append [b x]
   (.add b x))
@@ -3044,7 +3047,7 @@ reduces them without incurring seq initialization"
 
 (defn vector [& args] (vec args))
 
-(deftype ChunkedSeq [vec node i off meta]
+(deftype ChunkedSeq [vec node i off meta ^:mutable __hash]
   IWithMeta
   (-with-meta [coll m]
     (chunked-seq vec node i off m))
@@ -3104,13 +3107,15 @@ reduces them without incurring seq initialization"
               (chunked-seq vec (+ i l) 0))]
       (if (nil? s)
         nil
-        s))))
+        s)))
+  IHash
+  (-hash [coll] (caching-hash coll hash-coll __hash)))
 
 (defn chunked-seq
   ([vec i off] (chunked-seq vec (array-for vec i) i off nil))
   ([vec node i off] (chunked-seq vec node i off nil))
   ([vec node i off meta]
-     (ChunkedSeq. vec node i off meta)))
+     (ChunkedSeq. vec node i off meta nil)))
 
 (deftype Subvec [meta v start end ^:mutable __hash]
   Object
