@@ -1505,6 +1505,7 @@
 
   ;; Chunked Sequences
 
+  (assert (= (hash (seq [1 2])) (hash (seq [1 2]))))
   (assert (= 6 (reduce + (array-chunk (array 1 2 3)))))
   (assert (instance? ChunkedSeq (seq [1 2 3])))
   (assert (= '(1 2 3) (seq [1 2 3])))
