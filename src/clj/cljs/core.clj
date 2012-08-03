@@ -643,7 +643,7 @@
                   `(~'-pr-seq [this# opts#]
                               (let [pr-pair# (fn [keyval#] (pr-sequential pr-seq "" " " "" opts# keyval#))]
                                 (pr-sequential
-                                 pr-pair# (core/str "#" ~(name rname) "{") ", " "}" opts#
+                                 pr-pair# (core/str "#" ~(core/str (namespace rname) "." (name rname)) "{") ", " "}" opts#
                                  (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
                                          ~'__extmap))))
                   ])
