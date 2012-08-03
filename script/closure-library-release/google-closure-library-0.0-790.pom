@@ -1,0 +1,54 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.clojure</groupId>
+  <artifactId>google-closure-library</artifactId>
+  <version>0.0-790</version>
+  <packaging>jar</packaging>
+  <name>Google Closure Library</name>
+
+  <url>http://code.google.com/p/closure-library/</url>
+
+  <description>
+    The Google Closure Library is a collection of JavaScript code
+    designed for use with the Google Closure JavaScript Compiler.
+
+    This non-official distribution was prepared by the ClojureScript
+    team at http://clojure.org/
+  </description>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Google</name>
+    <url>http://www.google.com</url>
+  </organization>
+
+  <developers>
+    <developer><name>Google, Inc.</name></developer>
+    <developer><name>Mohamed Mansour</name><email>hello@mohamedmansour.com</email></developer>
+    <developer><name>Bjorn Tipling</name><email>bjorn.tipling@gmail.com</email></developer>
+    <developer><name>SameGoal LLC</name><email>help@samegoal.com</email></developer>
+    <developer><name>Guido Tapia</name><email>guido.tapia@gmail.com</email></developer>
+    <developer><name>Andrew Mattie</name><email>amattie@gmail.com</email></developer>
+    <developer><name>Ilia Mirkin</name><email>ibmirkin@gmail.com</email></developer>
+    <developer><name>Ivan Kozik</name><email>ivan.kozik@gmail.com</email></developer>
+    <developer><name>Rich Dougherty</name><email>rich@rd.gen.nz</email></developer>
+  </developers>
+
+  <scm>
+    <connection>scm:svn:http://closure-library.googlecode.com/svn/trunk</connection>
+    <developerConnection>scm:svn:http://closure-library.googlecode.com/svn/trunk</developerConnection>
+    <url>http://code.google.com/p/closure-library/source/browse/#svn/trunk</url>
+  </scm>
+
+  <issueManagement>
+    <system>code.google.com</system>
+    <url>http://code.google.com/p/closure-library/issues</url>
+  </issueManagement>
+</project>
