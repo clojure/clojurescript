@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.clojure</groupId>
   <artifactId>google-closure-library-third-party</artifactId>
-  <version>0.0-1376</version>
+  <version>RELEASE_VERSION</version>
   <packaging>jar</packaging>
   <name>Google Closure Library Third-Party Extensions</name>
 
