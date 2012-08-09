@@ -104,7 +104,7 @@
 (defn alength
   "Returns the length of the array. Works on arrays of all types."
   [array]
-  (.-length array))
+  (alength array))
 
 (declare reduce)
 
@@ -483,26 +483,26 @@ reduces them without incurring seq initialization"
   ASeq
   ISeq
   (-first [_] (aget a i))
-  (-rest [_] (if (< (inc i) (.-length a))
+  (-rest [_] (if (< (inc i) (alength a))
                (IndexedSeq. a (inc i))
                (list)))
 
   INext
-  (-next [_] (if (< (inc i) (.-length a))
+  (-next [_] (if (< (inc i) (alength a))
                (IndexedSeq. a (inc i))
                nil))
 
   ICounted
-  (-count [_] (- (.-length a) i))
+  (-count [_] (- (alength a) i))
 
   IIndexed
   (-nth [coll n]
     (let [i (+ n i)]
-      (when (< i (.-length a))
+      (when (< i (alength a))
         (aget a i))))
   (-nth [coll n not-found]
     (let [i (+ n i)]
-      (if (< i (.-length a))
+      (if (< i (alength a))
         (aget a i)
         not-found)))
 
@@ -537,7 +537,7 @@ reduces them without incurring seq initialization"
   ([prim]
      (prim-seq prim 0))
   ([prim i]
-     (when-not (zero? (.-length prim))
+     (when-not (zero? (alength prim))
        (IndexedSeq. prim i))))
 
 (defn array-seq
@@ -551,14 +551,14 @@ reduces them without incurring seq initialization"
   (-seq [array] (array-seq array 0))
 
   ICounted
-  (-count [a] (.-length a))
+  (-count [a] (alength a))
 
   IIndexed
   (-nth
     ([array n]
-       (if (< n (.-length array)) (aget array n)))
+       (if (< n (alength array)) (aget array n)))
     ([array n not-found]
-       (if (< n (.-length array)) (aget array n)
+       (if (< n (alength array)) (aget array n)
            not-found)))
 
   ILookup
@@ -1428,8 +1428,8 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (symbol? x) (. x (substring 2 (.-length x)))
-        (keyword? x) (str* ":" (. x (substring 2 (.-length x))))
+        (symbol? x) (. x (substring 2 (alength x)))
+        (keyword? x) (str* ":" (. x (substring 2 (alength x))))
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]
@@ -1696,7 +1696,7 @@ reduces them without incurring seq initialization"
   (-seq [string] (prim-seq string 0))
 
   ICounted
-  (-count [s] (.-length s))
+  (-count [s] (alength s))
 
   IIndexed
   (-nth
@@ -1846,10 +1846,10 @@ reduces them without incurring seq initialization"
   ([arr off end]
      (ArrayChunk. arr off end)))
 
-(deftype ChunkedCons [chunk more meta]
+(deftype ChunkedCons [chunk more meta ^:mutable __hash]
   IWithMeta
   (-with-meta [coll m]
-    (ChunkedCons. chunk more m))
+    (ChunkedCons. chunk more m __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -1866,7 +1866,7 @@ reduces them without incurring seq initialization"
   (-first [coll] (-nth chunk 0))
   (-rest [coll]
     (if (> (-count chunk) 1)
-      (ChunkedCons. (-drop-first chunk) more meta)
+      (ChunkedCons. (-drop-first chunk) more meta nil)
       (if (nil? more)
         ()
         more)))
@@ -1886,12 +1886,15 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [this o]
-    (cons o this)))
+    (cons o this))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-coll __hash)))
 
 (defn chunk-cons [chunk rest]
   (if (zero? (-count chunk))
     rest
-    (ChunkedCons. chunk rest nil)))
+    (ChunkedCons. chunk rest nil nil)))
 
 (defn chunk-append [b x]
   (.add b x))
@@ -2714,11 +2717,11 @@ reduces them without incurring seq initialization"
 
   IStack
   (-peek [coll]
-    (let [count (.-length array)]
+    (let [count (alength array)]
       (when (> count 0)
         (aget array (dec count)))))
   (-pop [coll]
-    (if (> (.-length array) 0)
+    (if (> (alength array) 0)
       (let [new-array (aclone array)]
         (. new-array (pop))
         (Vector. meta new-array nil))
@@ -2742,24 +2745,24 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (> (.-length array) 0)
+    (when (> (alength array) 0)
       (let [vector-seq
              (fn vector-seq [i]
                (lazy-seq
-                 (when (< i (.-length array))
+                 (when (< i (alength array))
                    (cons (aget array i) (vector-seq (inc i))))))]
         (vector-seq 0))))
 
   ICounted
-  (-count [coll] (.-length array))
+  (-count [coll] (alength array))
 
   IIndexed
   (-nth [coll n]
-    (if (and (<= 0 n) (< n (.-length array)))
+    (if (and (<= 0 n) (< n (alength array)))
       (aget array n)
-      #_(throw (js/Error. (str "No item " n " in vector of length " (.-length array))))))
+      #_(throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
   (-nth [coll n not-found]
-    (if (and (<= 0 n) (< n (.-length array)))
+    (if (and (<= 0 n) (< n (alength array)))
       (aget array n)
       not-found))
 
@@ -2990,7 +2993,7 @@ reduces them without incurring seq initialization"
       (loop [i 0]
         (if (< i cnt)
           (let [arr (array-for v i)
-                len (.-length arr)]
+                len (alength arr)]
             (let [init (loop [j 0 init (aget step-init 1)]
                          (if (< j len)
                            (let [init (f init (+ j i) (aget arr j))]
@@ -3044,7 +3047,7 @@ reduces them without incurring seq initialization"
 
 (defn vector [& args] (vec args))
 
-(deftype ChunkedSeq [vec node i off meta]
+(deftype ChunkedSeq [vec node i off meta ^:mutable __hash]
   IWithMeta
   (-with-meta [coll m]
     (chunked-seq vec node i off m))
@@ -3104,13 +3107,15 @@ reduces them without incurring seq initialization"
               (chunked-seq vec (+ i l) 0))]
       (if (nil? s)
         nil
-        s))))
+        s)))
+  IHash
+  (-hash [coll] (caching-hash coll hash-coll __hash)))
 
 (defn chunked-seq
   ([vec i off] (chunked-seq vec (array-for vec i) i off nil))
   ([vec node i off] (chunked-seq vec node i off nil))
   ([vec node i off meta]
-     (ChunkedSeq. vec node i off meta)))
+     (ChunkedSeq. vec node i off meta nil)))
 
 (deftype Subvec [meta v start end ^:mutable __hash]
   Object
@@ -3210,7 +3215,7 @@ reduces them without incurring seq initialization"
 
 (defn- tv-editable-tail [tl]
   (let [ret (make-array 32)]
-    (array-copy tl 0 ret 0 (.-length tl))
+    (array-copy tl 0 ret 0 (alength tl))
     ret))
 
 (defn- tv-push-tail [tv level parent tail-node]
@@ -3516,7 +3521,7 @@ reduces them without incurring seq initialization"
 
 (defn- obj-map->hash-map [m k v]
   (let [ks  (.-keys m)
-        len (.-length ks)
+        len (alength ks)
         so  (.-strobj m)
         out (with-meta cljs.core.PersistentHashMap/EMPTY (meta m))]
     (loop [i   0
@@ -3568,12 +3573,12 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (pos? (.-length keys))
+    (when (pos? (alength keys))
       (map #(vector % (aget strobj %))
            (.sort keys obj-map-compare-keys))))
 
   ICounted
-  (-count [coll] (.-length keys))
+  (-count [coll] (alength keys))
 
   ILookup
   (-lookup [coll k] (-lookup coll k nil))
@@ -3722,7 +3727,7 @@ reduces them without incurring seq initialization"
       (if (not i)
         coll ; key not found, return coll unchanged
         (let [new-hashobj (goog.object/clone hashobj)]
-          (if (> 3 (.-length bucket))
+          (if (> 3 (alength bucket))
             (js-delete new-hashobj h)
             (let [new-bucket (aclone bucket)]
               (.splice new-bucket i 2)
@@ -3738,7 +3743,7 @@ reduces them without incurring seq initialization"
 (set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj) 0))
 
 (set! cljs.core.HashMap/fromArrays (fn [ks vs]
-  (let [len (.-length ks)]
+  (let [len (alength ks)]
     (loop [i 0, out cljs.core.HashMap/EMPTY]
       (if (< i len)
         (recur (inc i) (assoc out (aget ks i) (aget vs i)))
@@ -3748,7 +3753,7 @@ reduces them without incurring seq initialization"
 
 (defn- array-map-index-of [m k]
   (let [arr (.-arr m)
-        len (.-length arr)]
+        len (alength arr)]
     (loop [i 0]
       (cond
         (<= len i) -1
@@ -3786,7 +3791,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? cnt)
-      (let [len (.-length arr)
+      (let [len (alength arr)
             array-map-seq
             (fn array-map-seq [i]
               (lazy-seq
@@ -3842,7 +3847,7 @@ reduces them without incurring seq initialization"
   (-dissoc [coll k]
     (let [idx (array-map-index-of coll k)]
       (if (>= idx 0)
-        (let [len     (.-length arr)
+        (let [len     (alength arr)
               new-len (- len 2)]
           (if (zero? new-len)
             (-empty coll)
@@ -3858,7 +3863,7 @@ reduces them without incurring seq initialization"
 
   IKVReduce
   (-kv-reduce [coll f init]
-    (let [len (.-length arr)]
+    (let [len (alength arr)]
       (loop [i 0 init init]
         (if (< i len)
           (let [init (f init (aget arr i) (aget arr (inc i)))]
@@ -3875,7 +3880,7 @@ reduces them without incurring seq initialization"
 
   IEditableCollection
   (-as-transient [coll]
-    (TransientArrayMap. (js-obj) (.-length arr) (aclone arr))))
+    (TransientArrayMap. (js-obj) (alength arr) (aclone arr))))
 
 (set! cljs.core.PersistentArrayMap/EMPTY (PersistentArrayMap. nil 0 (array) nil))
 
@@ -3993,9 +3998,9 @@ reduces them without incurring seq initialization"
        (aset j b))))
 
 (defn- remove-pair [arr i]
-  (let [new-arr (make-array (- (.-length arr) 2))]
+  (let [new-arr (make-array (- (alength arr) 2))]
     (array-copy arr 0 new-arr 0 (* 2 i))
-    (array-copy arr (* 2 (inc i)) new-arr (* 2 i) (- (.-length new-arr) (* 2 i)))
+    (array-copy arr (* 2 (inc i)) new-arr (* 2 i) (- (alength new-arr) (* 2 i)))
     new-arr))
 
 (defn- bitmap-indexed-node-index [bitmap bit]
@@ -4016,7 +4021,7 @@ reduces them without incurring seq initialization"
        editable)))
 
 (defn- inode-kv-reduce [arr f init]
-  (let [len (.-length arr)]
+  (let [len (alength arr)]
     (loop [i 0 init init]
       (if (< i len)
         (let [init (let [k (aget arr i)]
@@ -4136,7 +4141,7 @@ reduces them without incurring seq initialization"
       nil
       (let [editable (.ensure-editable inode e)
             earr     (.-arr editable)
-            len      (.-length earr)]
+            len      (alength earr)]
         (set! (.-bitmap editable) (bit-xor bit (.-bitmap editable)))
         (array-copy earr (* 2 (inc i))
                     earr (* 2 i)
@@ -4151,7 +4156,7 @@ reduces them without incurring seq initialization"
       (if (zero? (bit-and bitmap bit))
         (let [n (bit-count bitmap)]
           (cond
-            (< (* 2 n) (.-length arr))
+            (< (* 2 n) (alength arr))
             (let [editable (.ensure-editable inode edit)
                   earr     (.-arr editable)]
               (set! (.-val added-leaf?) true)
@@ -4329,7 +4334,7 @@ reduces them without incurring seq initialization"
             (edit-and-set inode edit idx n))))))
 
   (kv-reduce [inode f init]
-    (let [len (.-length arr)]           ; actually 32
+    (let [len (alength arr)]           ; actually 32
       (loop [i 0 init init]
         (if (< i len)
           (let [node (aget arr i)]
@@ -4358,7 +4363,7 @@ reduces them without incurring seq initialization"
     (if (== hash collision-hash)
       (let [idx (hash-collision-node-find-index arr cnt key)]
         (if (== idx -1)
-          (let [len (.-length arr)
+          (let [len (alength arr)
                 new-arr (make-array (+ len 2))]
             (array-copy arr 0 new-arr 0 len)
             (aset new-arr len key)
@@ -4410,12 +4415,12 @@ reduces them without incurring seq initialization"
     (if (== hash collision-hash)
       (let [idx (hash-collision-node-find-index arr cnt key)]
         (if (== idx -1)
-          (if (> (.-length arr) (* 2 cnt))
+          (if (> (alength arr) (* 2 cnt))
             (let [editable (edit-and-set inode edit (* 2 cnt) key (inc (* 2 cnt)) val)]
               (set! (.-val added-leaf?) true)
               (set! (.-cnt editable) (inc (.-cnt editable)))
               editable)
-            (let [len     (.-length arr)
+            (let [len     (alength arr)
                   new-arr (make-array (+ len 2))]
               (array-copy arr 0 new-arr 0 len)
               (aset new-arr len key)
@@ -4514,7 +4519,7 @@ reduces them without incurring seq initialization"
      (create-inode-seq nodes 0 nil))
   ([nodes i s]
      (if (nil? s)
-       (let [len (.-length nodes)]
+       (let [len (alength nodes)]
          (loop [j i]
            (if (< j len)
              (if-not (nil? (aget nodes j))
@@ -4567,7 +4572,7 @@ reduces them without incurring seq initialization"
   ([nodes] (create-array-node-seq nil nodes 0 nil))
   ([meta nodes i s]
      (if (nil? s)
-       (let [len (.-length nodes)]
+       (let [len (alength nodes)]
          (loop [j i]
            (if (< j len)
              (if-let [nj (aget nodes j)]
@@ -4683,7 +4688,7 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentHashMap/fromArrays
       (fn [ks vs]
-        (let [len (.-length ks)]
+        (let [len (alength ks)]
           (loop [i 0 out (transient cljs.core.PersistentHashMap/EMPTY)]
             (if (< i len)
               (recur (inc i) (assoc! out (aget ks i) (aget vs i)))

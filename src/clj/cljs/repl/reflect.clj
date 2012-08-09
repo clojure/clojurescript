@@ -3,7 +3,8 @@
   (:require [cljs.repl.server :as server]
             [cljs.analyzer :as analyzer]
             [cljs.compiler :as compiler]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.pprint :as pprint]))
 
 (defn- dissoc-unless
   "Dissoc all keys from map that do not appear in key-set.
@@ -66,7 +67,7 @@
 (defmethod handle-reflect-query "macroform"
   [[_ mform] req conn opts]
   (let [mform (-> mform read-url-string macroexpand)]
-    (server/send-and-close conn 200 (str mform))))
+    (server/send-and-close conn 200 (with-out-str (pprint/pprint mform)))))
 
 (server/dispatch-on :get
                     (fn [{:keys [path]} _ _] (.startsWith path "/reflect"))

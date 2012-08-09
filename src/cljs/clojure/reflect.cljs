@@ -1,4 +1,5 @@
 (ns clojure.reflect
+  (:refer-clojure :exclude [meta])
   (:require [clojure.browser.net :as net]
             [clojure.browser.event :as event]))
 
@@ -20,7 +21,7 @@
     (event/listen conn :error #(println "Reflection query failed."))
     (net/transmit conn url)))
 
-(defn query-meta
+(defn meta
   "Queries the reflection api with a fully qualified symbol, then calls
   callback fn cb with the evaluated cljs map containing that symbol's
   meta information."
@@ -28,7 +29,7 @@
   (query-reflection (str "var=" (js/encodeURIComponent (str sym)))
                     #(cb (evaluate-javascript %))))
 
-(defn query-macroexpand
+(defn macroexpand
   "Queries the reflection api with a quoted macro form, then calls the
   callback function with the macroexpanded form, as a string."
   [form]
@@ -40,6 +41,8 @@
     (println method-params)
     (println doc)))
 
-(defn query-doc [sym]
-  (query-meta sym print-doc))
-
+(defn doc
+  "Queries the reflection api with a fully qualified symbol, then prints
+  documentation information at the repl."
+  [sym]
+  (meta sym print-doc))
