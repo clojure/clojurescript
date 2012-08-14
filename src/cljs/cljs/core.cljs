@@ -104,7 +104,7 @@
 (defn alength
   "Returns the length of the array. Works on arrays of all types."
   [array]
-  (alength array))
+  (cljs.core/alength array))
 
 (declare reduce)
 
