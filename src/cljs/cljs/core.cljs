@@ -1834,9 +1834,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [coll f]
-    (ci-reduce coll f (aget arr off) (inc off)))
+    (array-reduce arr f (aget arr off) (inc off)))
   (-reduce [coll f start]
-    (ci-reduce coll f start off)))
+    (array-reduce arr f start off)))
 
 (defn array-chunk
   ([arr]
