@@ -6177,12 +6177,15 @@ reduces them without incurring seq initialization"
   "Prints a sequence of objects using string-print, observing all
   the options given in opts"
   [objs opts]
-  (doseq [string (pr-seq (first objs) opts)]
-    (string-print string))
-  (doseq [obj (next objs)]
-    (string-print " ")
-    (doseq [string (pr-seq obj opts)]
-      (string-print string))))
+  (if (empty? objs)
+    (string-print "")
+    (do
+     (doseq [string (pr-seq (first objs) opts)]
+       (string-print string))
+     (doseq [obj (next objs)]
+       (string-print " ")
+       (doseq [string (pr-seq obj opts)]
+         (string-print string))))))
 
 (defn newline [opts]
   (string-print "\n")
