@@ -526,6 +526,7 @@
 
 (defmethod parse 'new
   [_ env [_ ctor & args :as form] _]
+  (assert (symbol? ctor) "First arg to new must be a symbol")
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          ctorexpr (analyze enve ctor)
