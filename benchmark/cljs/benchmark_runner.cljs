@@ -52,6 +52,13 @@
 (simple-benchmark [coll (seq [1 2 3])] (next coll) 1000000)
 (println)
 
+(println ";;; large vector ops")
+(simple-benchmark [] (reduce conj [] (range 40000)) 100)
+(simple-benchmark [coll (reduce conj [] (range (+ 32768 32)))] (conj coll :foo) 1000000)
+(simple-benchmark [coll (reduce conj [] (range 40000))] (assoc coll 123 :foo) 1000000)
+(simple-benchmark [coll (reduce conj [] (range (+ 32768 33)))] (pop coll) 1000000)
+(println)
+
 (println ";;; transients")
 (print "transient vector, conj! 1000000 items")
 (time
