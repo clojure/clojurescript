@@ -74,6 +74,10 @@
 (simple-benchmark [coll (into [] (range 1000000))] (reduce + 0 coll) 1)
 (println)
 
+(println ";; apply")
+(simple-benchmark [coll (into [] (range 1000000))] (apply + coll) 1)
+(println)
+
 (println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (-lookup coll :foo nil) 1000000)
