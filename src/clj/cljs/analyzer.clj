@@ -345,9 +345,7 @@
                       :protocol-inline (:protocol-inline init-expr)
                       :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
-                      :method-params (map (fn [m]
-                                            (:params m))
-                                          (:methods init-expr))})))))
+                      :method-params (map :params (:methods init-expr))})))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when tag {:tag tag})
@@ -482,7 +480,14 @@
                          :tag (or (-> name meta :tag)
                                   (-> init-expr :tag)
                                   (-> init-expr :info :tag))
-                         :local true}]
+                         :local true}
+                     be (if (= (:op init-expr) :fn)
+                          (merge be
+                            {:fn-var true
+                             :variadic (:variadic init-expr)
+                             :max-fixed-arity (:max-fixed-arity init-expr)
+                             :method-params (map :params (:methods init-expr))})
+                          be)]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
                         (next bindings))))
