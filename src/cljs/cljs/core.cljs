@@ -1445,10 +1445,17 @@ reduces them without incurring seq initialization"
   ([s start] (.substring s start))
   ([s start end] (.substring s start end)))
 
+(declare map)
+
 (defn format
   "Formats a string using goog.string.format."
   [fmt & args]
-  (apply gstring/format fmt args))
+  (let [args (map (fn [x]
+                    (if (or (keyword? x) (symbol? x))
+                      (str x)
+                      x))
+                args)]
+    (apply gstring/format fmt args)))
 
 (defn symbol
   "Returns a Symbol with the given namespace and name."
