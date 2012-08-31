@@ -31,6 +31,8 @@
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
+(defonce ns-first-segments (atom '#{"cljs" "clojure"}))
+
 (defn reset-namespaces! []
   (reset! namespaces
     '{cljs.core {:name cljs.core}
@@ -363,16 +365,21 @@
   (letfn [(uniqify [[p & r]]
             (when p
               (cons (if (some #{p} r) (gensym (str p)) p)
-                    (uniqify r))))]
+                    (uniqify r))))
+          (prevent-ns-shadow [p]
+            (if (@ns-first-segments (str p))
+              (symbol (str p "$"))
+              p))]
    (let [params (first meth)
          variadic (boolean (some '#{&} params))
          params (vec (uniqify (remove '#{&} params)))
          fixed-arity (count (if variadic (butlast params) params))
          body (next meth)
          locals (reduce (fn [m name]
-                          (assoc m name {:name name
+                          (assoc m name {:name (prevent-ns-shadow name)
                                          :tag (-> name meta :tag)}))
                         locals params)
+         params (vec (map prevent-ns-shadow params))
          recur-frame {:names params :flag (atom nil)}
          block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                  (analyze-block (assoc env :context :return :locals locals) body))]
@@ -676,6 +683,7 @@
     (load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
+    (swap! ns-first-segments conj (first (string/split (str name) #"\.")))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :excludes] excludes)
