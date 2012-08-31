@@ -555,7 +555,7 @@
     (when (= :expr context) (emits "})()"))))
 
 (defn protocol-prefix [psym]
-  (str (-> (str psym) (.replace \. \$) (.replace \/ \$)) "$"))
+  (symbol (str (-> (str psym) (.replace \. \$) (.replace \/ \$)) "$")))
 
 (defmethod emit :invoke
   [{:keys [f args env] :as expr}]
@@ -613,7 +613,7 @@
        (emits "!(" (first args) ")")
 
        proto?
-       (let [pimpl (str (protocol-prefix protocol)
+       (let [pimpl (str (munge (protocol-prefix protocol))
                         (munge (name (:name info))) "$arity$" (count args))]
          (emits (first args) "." pimpl "(" (comma-sep args) ")"))
 
