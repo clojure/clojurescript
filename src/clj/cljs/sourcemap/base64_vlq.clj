@@ -73,10 +73,21 @@
   (decode "AAgBC") ; (0 0 16 1)
   
   ;; lines kept count by semicolons, segments delimited by commas
-  ;; the above is col 0, file 0, line 16, col 1
+  ;; the above is gline 0, gcol 0, file 0, line 16, col 1, no name if this was the first segment read
 
   (decode "AAggBC") ; very clever way to encode large values
   (decode "AAggBCA") ; 5 values instead of 4
 
   (apply str (map encode [0 0 16 1])) ; "AAgBC"
+
+  (decode "IAWdD") ; (4 0 11 -14 -1) this is correct
+  ;; gline N, gcol +4, file +0, line +11, col -14, name -1
+
+  ;; Notes about format
+  ;; we always have 1, 4, or 5 values, all zero-based indexes
+  ;; 1. generated col - relative - reset on every new line in generated source
+  ;; 2. index into sources list - relative
+  ;; 3. original line - relative
+  ;; 4. origin column - relative
+  ;; 5. name - relative
   )
