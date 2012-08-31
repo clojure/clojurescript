@@ -11,17 +11,20 @@
     :source (nth (:sources source-map) source)
     :line   line
     :col    col
-    :name   (when name
+    :name   (if-let [name (-> seg meta :name)]
               (nth (:names source-map) name))}))
 
 (defn seg-combine [seg relseg]
   (let [[gcol source line col name] seg
-        [rgcol rsource rline rcol rname] relseg]
-    [(+ gcol rgcol)
-     (+ (or source 0) rsource)
-     (+ (or line 0) rline)
-     (+ (or col 0) rcol)
-     (+ (or name 0) rname)]))
+        [rgcol rsource rline rcol rname] relseg
+        nseg [(+ gcol rgcol)
+              (+ (or source 0) rsource)
+              (+ (or line 0) rline)
+              (+ (or col 0) rcol)
+              (+ (or name 0) rname)]]
+    (if name
+      (with-meta nseg {:name (+ name rname)})
+      nseg)))
 
 (defn decode
   ([source-map]
@@ -35,9 +38,11 @@
                                        (update-in m [(:line segmap)]
                                          (fnil (fn [m]
                                                  (assoc m (:col segmap)
-                                                   {:gline gline
-                                                    :gcol (:gcol segmap)
-                                                    :name (:name segmap)}))
+                                                   (let [d {:gline gline
+                                                            :gcol (:gcol segmap)}]
+                                                     (if-let [name (:name segmap)]
+                                                       (assoc d :name name)
+                                                       d))))
                                                (sorted-map))))
                                      (sorted-map)))))
            lines (seq (string/split mappings #";"))]
