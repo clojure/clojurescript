@@ -104,7 +104,7 @@
 (defn alength
   "Returns the length of the array. Works on arrays of all types."
   [array]
-  (alength array))
+  (cljs.core/alength array))
 
 (declare reduce)
 
@@ -1445,10 +1445,17 @@ reduces them without incurring seq initialization"
   ([s start] (.substring s start))
   ([s start end] (.substring s start end)))
 
+(declare map)
+
 (defn format
   "Formats a string using goog.string.format."
   [fmt & args]
-  (apply gstring/format fmt args))
+  (let [args (map (fn [x]
+                    (if (or (keyword? x) (symbol? x))
+                      (str x)
+                      x))
+                args)]
+    (apply gstring/format fmt args)))
 
 (defn symbol
   "Returns a Symbol with the given namespace and name."
@@ -1834,9 +1841,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [coll f]
-    (ci-reduce coll f (aget arr off) (inc off)))
+    (array-reduce arr f (aget arr off) (inc off)))
   (-reduce [coll f start]
-    (ci-reduce coll f start off)))
+    (array-reduce arr f start off)))
 
 (defn array-chunk
   ([arr]
@@ -6177,12 +6184,15 @@ reduces them without incurring seq initialization"
   "Prints a sequence of objects using string-print, observing all
   the options given in opts"
   [objs opts]
-  (doseq [string (pr-seq (first objs) opts)]
-    (string-print string))
-  (doseq [obj (next objs)]
-    (string-print " ")
-    (doseq [string (pr-seq obj opts)]
-      (string-print string))))
+  (if (empty? objs)
+    (string-print "")
+    (do
+     (doseq [string (pr-seq (first objs) opts)]
+       (string-print string))
+     (doseq [obj (next objs)]
+       (string-print " ")
+       (doseq [string (pr-seq obj opts)]
+         (string-print string))))))
 
 (defn newline [opts]
   (string-print "\n")

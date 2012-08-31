@@ -5,7 +5,8 @@
             [cljs.ns-test :as ns-test]
             [clojure.string-test :as string-test]
             [cljs.macro-test :as macro-test]
-            [cljs.letfn-test :as letfn-test]))
+            [cljs.letfn-test :as letfn-test]
+            [foo.ns-shadow-test :as ns-shadow-test]))
 
 (set! *print-fn* js/print)
 
@@ -16,6 +17,7 @@
 (ns-test/test-ns)
 (macro-test/test-macros)
 (letfn-test/test-letfn)
+(ns-shadow-test/test-shadow)
 
 (println "Tests completed without exception")
 

@@ -30,7 +30,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>google-closure-library</artifactId>
-      <version>0.0-1376</version>
+      <version>0.0-1376-2</version>
     </dependency>
     <dependency>
       <groupId>org.mozilla</groupId>

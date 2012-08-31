@@ -31,6 +31,8 @@
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
+(defonce ns-first-segments (atom '#{"cljs" "clojure"}))
+
 (defn reset-namespaces! []
   (reset! namespaces
     '{cljs.core {:name cljs.core}
@@ -146,6 +148,9 @@
           {:name (symbol (str full-ns) (str sym))
            :ns (-> env :ns :name)}))
 
+       (get-in @namespaces [(-> env :ns :name) :imports sym])
+       (recur env (get-in @namespaces [(-> env :ns :name) :imports sym]))
+
        :else
        (let [full-ns (if (core-name? env sym)
                        'cljs.core
@@ -182,6 +187,9 @@
          (merge
           (get-in @namespaces [full-ns :defs sym])
           {:name (symbol (str full-ns) (name sym))}))
+
+       (get-in @namespaces [(-> env :ns :name) :imports sym])
+       (recur env (get-in @namespaces [(-> env :ns :name) :imports sym]))
 
        :else
        (let [ns (if (core-name? env sym)
@@ -345,9 +353,7 @@
                       :protocol-inline (:protocol-inline init-expr)
                       :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
-                      :method-params (map (fn [m]
-                                            (:params m))
-                                          (:methods init-expr))})))))
+                      :method-params (map :params (:methods init-expr))})))))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when tag {:tag tag})
@@ -359,16 +365,21 @@
   (letfn [(uniqify [[p & r]]
             (when p
               (cons (if (some #{p} r) (gensym (str p)) p)
-                    (uniqify r))))]
+                    (uniqify r))))
+          (prevent-ns-shadow [p]
+            (if (@ns-first-segments (str p))
+              (symbol (str p "$"))
+              p))]
    (let [params (first meth)
          variadic (boolean (some '#{&} params))
          params (vec (uniqify (remove '#{&} params)))
          fixed-arity (count (if variadic (butlast params) params))
          body (next meth)
          locals (reduce (fn [m name]
-                          (assoc m name {:name name
+                          (assoc m name {:name (prevent-ns-shadow name)
                                          :tag (-> name meta :tag)}))
                         locals params)
+         params (vec (map prevent-ns-shadow params))
          recur-frame {:names params :flag (atom nil)}
          block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                  (analyze-block (assoc env :context :return :locals locals) body))]
@@ -482,7 +493,14 @@
                          :tag (or (-> name meta :tag)
                                   (-> init-expr :tag)
                                   (-> init-expr :info :tag))
-                         :local true}]
+                         :local true}
+                     be (if (= (:op init-expr) :fn)
+                          (merge be
+                            {:fn-var true
+                             :variadic (:variadic init-expr)
+                             :max-fixed-arity (:max-fixed-arity init-expr)
+                             :method-params (map :params (:methods init-expr))})
+                          be)]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
                         (next bindings))))
@@ -526,6 +544,7 @@
 
 (defmethod parse 'new
   [_ env [_ ctor & args :as form] _]
+  (assert (symbol? ctor) "First arg to new must be a symbol")
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          ctorexpr (analyze enve ctor)
@@ -604,7 +623,7 @@
                     s))
                 #{} args)
         deps (atom #{})
-        valid-forms (atom #{:use :use-macros :require :require-macros})
+        valid-forms (atom #{:use :use-macros :require :require-macros :import})
         error-msg (fn [spec msg] (str msg "; offending spec: " (pr-str spec)))
         parse-require-spec (fn parse-require-spec [macros? spec]
                              (assert (or (symbol? spec) (vector? spec))
@@ -637,18 +656,26 @@
                        (assert (and (symbol? lib) (= :only kw) (vector? referred) (every? symbol? referred))
                                (error-msg spec "Only [lib.ns :only [names]] specs supported in :use / :use-macros"))
                        [lib :refer referred])
-        {uses :use requires :require uses-macros :use-macros requires-macros :require-macros :as params}
+        parse-import-spec (fn parse-import-spec [spec]
+                            (assert (and (symbol? spec) (nil? (namespace spec)))
+                                    (error-msg spec "Only lib.Ctor specs supported in :import"))
+                            (swap! deps conj spec)
+                            (let [ctor-sym (symbol (last (string/split (str spec) #"\.")))]
+                              {:import  {ctor-sym spec}
+                               :require {ctor-sym spec}}))
+        spec-parsers {:require        (partial parse-require-spec false)
+                      :require-macros (partial parse-require-spec true)
+                      :use            (comp (partial parse-require-spec false) use->require)
+                      :use-macros     (comp (partial parse-require-spec true) use->require)
+                      :import         parse-import-spec}
+        {uses :use requires :require uses-macros :use-macros requires-macros :require-macros imports :import :as params}
         (reduce (fn [m [k & libs]]
-                  (assert (#{:use :use-macros :require :require-macros} k)
+                  (assert (#{:use :use-macros :require :require-macros :import} k)
                           "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")
                   (assert (@valid-forms k)
                           (str "Only one " k " form is allowed per namespace definition"))
                   (swap! valid-forms disj k)
-                  (apply merge-with merge m
-                         (map (partial parse-require-spec (contains? #{:require-macros :use-macros} k))
-                              (if (contains? #{:use :use-macros} k)
-                                (map use->require libs)
-                                libs))))
+                  (apply merge-with merge m (map (spec-parsers k) libs)))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (seq @deps)
       (analyze-deps @deps))
@@ -656,6 +683,7 @@
     (load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
+    (swap! ns-first-segments conj (first (string/split (str name) #"\.")))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :excludes] excludes)
@@ -665,8 +693,9 @@
                            (assoc-in [name :requires-macros]
                                      (into {} (map (fn [[alias nsym]]
                                                      [alias (find-ns nsym)])
-                                                   requires-macros)))))
-    {:env env :op :ns :form form :name name :uses uses :requires requires
+                                                   requires-macros)))
+                           (assoc-in [name :imports] imports)))
+    {:env env :op :ns :form form :name name :uses uses :requires requires :imports imports
      :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
