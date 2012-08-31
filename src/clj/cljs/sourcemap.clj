@@ -46,7 +46,7 @@
   ([mappings source-map]
      (let [relseg-init [0 0 0 0 0]
            lines (seq (string/split mappings #";"))]
-       (loop [i 0 lines lines relseg relseg-init result {}]
+       (loop [gline 0 lines lines relseg relseg-init result {}]
          (if lines
            (let [line (first lines)
                  [result relseg]
@@ -56,9 +56,9 @@
                        (let [seg (first segs)
                              nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
                          (recur (next segs) nrelseg
-                           (update-result result (seg->map nrelseg source-map) i)))
+                           (update-result result (seg->map nrelseg source-map) gline)))
                        [result relseg])))]
-             (recur (inc i) (next lines) (assoc relseg 0 0) result))
+             (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
 (defn encode [xs]
