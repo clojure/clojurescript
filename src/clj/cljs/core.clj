@@ -944,7 +944,7 @@
                        v (second exprs)
                        
                        seqsym (when-not (keyword? k) (gensym))
-                       recform (if (keyword? k) recform `(recur (first ~seqsym) ~seqsym))
+                       recform (if (keyword? k) recform `(recur (next ~seqsym)))
                        steppair (step recform (nnext exprs))
                        needrec (steppair 0)
                        subform (steppair 1)]
@@ -958,12 +958,11 @@
                                              ~subform
                                              ~@(when needrec [recform]))
                                            ~recform)]
-                     :else [true `(let [~seqsym (seq ~v)]
+                     :else [true `(loop [~seqsym (seq ~v)]
                                     (when ~seqsym
-                                      (loop [~k (first ~seqsym) ~seqsym ~seqsym]
-                                       ~subform
-                                       (when-let [~seqsym (next ~seqsym)]
-                                        ~@(when needrec [recform])))))]))))]
+                                      (let [~k (first ~seqsym)]
+                                        ~subform
+                                        ~@(when needrec [recform]))))]))))]
     (nth (step nil (seq seq-exprs)) 1)))
 
 (defmacro array [& rest]
