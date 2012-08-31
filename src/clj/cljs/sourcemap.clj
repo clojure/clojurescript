@@ -26,36 +26,38 @@
       (with-meta nseg {:name (+ name rname)})
       nseg)))
 
+(defn update-result [result segmap gline]
+  (update-in result [(:source segmap)]
+    (fnil (fn [m]
+            (update-in m [(:line segmap)]
+              (fnil (fn [m]
+                      (assoc m (:col segmap)
+                        (let [d {:gline gline
+                                 :gcol (:gcol segmap)}]
+                          (if-let [name (:name segmap)]
+                            (assoc d :name name)
+                            d))))
+                    (sorted-map))))
+          (sorted-map))))
+
 (defn decode
   ([source-map]
      (decode (:mappings source-map) source-map))
   ([mappings source-map]
      (let [relseg-init [0 0 0 0 0]
-           update-result (fn [result seg gline]
-                           (let [segmap (seg->map seg source-map)]
-                             (update-in result [(:source segmap)]
-                               (fnil (fn [m]
-                                       (update-in m [(:line segmap)]
-                                         (fnil (fn [m]
-                                                 (assoc m (:col segmap)
-                                                   (let [d {:gline gline
-                                                            :gcol (:gcol segmap)}]
-                                                     (if-let [name (:name segmap)]
-                                                       (assoc d :name name)
-                                                       d))))
-                                               (sorted-map))))
-                                     (sorted-map)))))
            lines (seq (string/split mappings #";"))]
        (loop [i 0 lines lines relseg relseg-init result {}]
          (if lines
            (let [line (first lines)
-                 [result relseg] (let [segs (seq (string/split line #","))]
-                                   (loop [segs segs relseg relseg result result]
-                                     (if segs
-                                       (let [seg (first segs)
-                                             nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
-                                         (recur (next segs) nrelseg (update-result result nrelseg i)))
-                                       [result relseg])))]
+                 [result relseg]
+                 (let [segs (seq (string/split line #","))]
+                   (loop [segs segs relseg relseg result result]
+                     (if segs
+                       (let [seg (first segs)
+                             nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
+                         (recur (next segs) nrelseg
+                           (update-result result (seg->map nrelseg source-map) i)))
+                       [result relseg])))]
              (recur (inc i) (next lines) (assoc relseg 0 0) result))
            result)))))
 
