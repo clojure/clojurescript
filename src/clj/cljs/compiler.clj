@@ -32,16 +32,22 @@
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"})
 
-(def ^:dynamic *cljs-mappings* (atom [[]]))
+(def ^:dynamic *cljs-mappings* (atom {}))
 (def ^:dynamic *cljs-gen-col* (atom 0))
+(def ^:dynamic *cljs-gen-line* (atom 0))
 
 (defn reset-mappings! []
-  (reset! *cljs-mappings* [[]])
-  (reset! *cljs-gen-col* 0))
+  (reset! *cljs-mappings* {})
+  (reset! *cljs-gen-col* 0)
+  (reset! *cljs-gen-line* 0))
 
 (def ^:dynamic *position* nil)
 (def ^:dynamic *emitted-provides* nil)
 (def cljs-reserved-file-names #{"deps.cljs"})
+
+(defmacro ^:private debug-prn
+  [& args]
+  `(.println System/err (str ~@args)))
 
 (defn munge
   ([s] (munge s js-reserved))
@@ -91,18 +97,7 @@
      (map? x) (emit x)
      (seq? x) (apply emits x)
      (fn? x)  (x)
-     :else (let [m (when (symbol? x)
-                     (-> x meta))
-                 s (print-str x)]
-             (swap! *cljs-mappings*
-                    (fn [lines]
-                      (let [last (conj (peek lines)
-                                       (merge {:file ana/*cljs-file*
-                                               :gcol @*cljs-gen-col*}
-                                              (when m {:line (:line m)
-                                                       :col (or (:col m) 0)
-                                                       :name (:name m)})))]
-                        (conj (pop lines) last))))
+     :else (let [s (print-str x)]
              (swap! *cljs-gen-col* (fn [col] (+ col (count s))))
              (print s))))
   nil)
@@ -113,9 +108,7 @@
 (defn emitln [& xs]
   (apply emits xs)
   (println)
-  (swap! *cljs-mappings*
-         (fn [lines]
-           (conj lines [])))
+  (swap! *cljs-gen-line* inc)
   (reset! *cljs-gen-col* 0)
   nil)
 
@@ -207,15 +200,24 @@
 (defmethod emit :var
   [{:keys [info env] :as arg}]
   (let [n (:name info)
-        n (if (symbol? n)
-            (vary-meta n
-              (fn [m]
-                (merge m {:line (:line env)
-                          :name (:name info)})))
-            n)
         n (if (= (namespace n) "js")
             (name n)
             n)]
+    (when (and (:line env) (symbol? n))
+      (let [{:keys [line col]} env]
+        (swap! *cljs-mappings*
+          (fn [m]
+            (let [minfo {:gcol @*cljs-gen-col*
+                         :gline @*cljs-gen-line*
+                         :name n}]
+              (update-in m [ana/*cljs-file*]
+                (fnil (fn [m]
+                        (update-in m [line]
+                          (fnil (fn [m]
+                                  (update-in m [(or col 0)]
+                                    (fnil (fn [v] (conj v minfo)) [])))
+                            (sorted-map))))
+                  (sorted-map))))))))
     (emit-wrap env (emits (munge n)))))
 
 (defmethod emit :meta
