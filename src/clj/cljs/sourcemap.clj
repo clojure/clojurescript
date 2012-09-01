@@ -27,18 +27,17 @@
       nseg)))
 
 (defn update-result [result segmap gline]
-  (update-in result [(:source segmap)]
-    (fnil (fn [m]
-            (update-in m [(:line segmap)]
-              (fnil (fn [m]
-                      (assoc m (:col segmap)
-                        (let [d {:gline gline
-                                 :gcol (:gcol segmap)}]
-                          (if-let [name (:name segmap)]
-                            (assoc d :name name)
-                            d))))
-                    (sorted-map))))
-          (sorted-map))))
+  (let [{:keys [gcol source line col name]} segmap
+        d {:gline gline
+           :gcol gcol}
+        d (if name (assoc d :name name) d)]
+    (update-in result [source]
+      (fnil (fn [m]
+              (update-in m [line]
+                (fnil (fn [m]
+                        (assoc m col d))
+                      (sorted-map))))
+            (sorted-map)))))
 
 (defn decode
   ([source-map]
@@ -81,5 +80,5 @@
     (json/read-json (slurp (io/file "samples/repl/repl_sample_map.json"))))
 
   ;; test it out
-  (first (decode raw-source-map))
+  (second (decode raw-source-map))
   )
