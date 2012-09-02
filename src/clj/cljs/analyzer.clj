@@ -360,11 +360,11 @@
              (when export-as {:export export-as})
              (when init-expr {:children [init-expr]})))))
 
-(defn- analyze-fn-method [env locals meth type]
-  (let [param-names (first meth)
+(defn- analyze-fn-method [env locals form type]
+  (let [param-names (first form)
         variadic (boolean (some '#{&} param-names))
         param-names (vec (remove '#{&} param-names))
-        body (next meth)
+        body (next form)
         [locals params] (reduce (fn [[locals params] name]
                                   (let [param {:name name
                                                :tag (-> name meta :tag)
@@ -376,7 +376,7 @@
         block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
                 (analyze-block (assoc env :context :return :locals locals) body))]
     (merge {:env env :variadic variadic :params params :max-fixed-arity fixed-arity
-            :type type :recurs @(:flag recur-frame)}
+            :type type :form form :recurs @(:flag recur-frame)}
            block)))
 
 (defmethod parse 'fn*
