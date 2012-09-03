@@ -165,6 +165,15 @@
   (assert (= [[1 1] [1 2] [1 3] [2 1] [2 2] [2 3]]
              (map #(%) (for [i [1 2] j [1 2 3]] (fn [] [i j])))))
 
+  (assert (integer? 0))
+  (assert (integer? 42))
+  (assert (integer? -42))
+  (assert (not (integer? "")))
+  (assert (not (integer? 1e308)))
+  (assert (not (integer? js/Infinity)))
+  (assert (not (integer? (- js/Infinity))))
+  (assert (not (integer? js/NaN)))
+
   (assert (= 42 (int 42.5)))
   (assert (integer? (int 42.5)))
 
