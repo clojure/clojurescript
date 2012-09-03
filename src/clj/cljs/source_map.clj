@@ -1,9 +1,9 @@
-(ns cljs.sourcemap
+(ns cljs.source-map
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.data.json :as json]
             [clojure.pprint :as pp]
-            [cljs.sourcemap.base64-vlq :as base64-vlq]))
+            [cljs.source-map.base64-vlq :as base64-vlq]))
 
 (defn seg->map [seg source-map]
   (let [[gcol source line col name] seg]
@@ -49,9 +49,13 @@
   ([source-map]
      (decode (:mappings source-map) source-map))
   ([mappings source-map]
-     (let [relseg-init [0 0 0 0 0]
+     (let [{:keys [sources]} source-map
+           relseg-init [0 0 0 0 0]
            lines (seq (string/split mappings #";"))]
-       (loop [gline 0 lines lines relseg relseg-init result {}]
+       (loop [gline 0
+              lines lines
+              relseg relseg-init
+              result (sorted-map-by (source-compare sources))]
          (if lines
            (let [line (first lines)
                  [result relseg]
@@ -66,7 +70,7 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
-(defn encode [xs]
+(defn encode [m]
   )
 
 (defn gen-merged-map [cljs-map closure-map]
@@ -86,5 +90,8 @@
     (json/read-json (slurp (io/file "samples/repl/repl_sample_map.json"))))
 
   ;; test it out
-  (second (decode raw-source-map))
+  (first (decode raw-source-map))
+
+  ;; decoded source map preserves file order
+  (= (keys (decode raw-source-map)) (:sources raw-source-map))
   )

@@ -1,4 +1,4 @@
-(ns cljs.sourcemap.base64)
+(ns cljs.source-map.base64)
 
 (def chars64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 (def char->int (zipmap chars64 (range 0 64)))
