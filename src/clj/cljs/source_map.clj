@@ -5,6 +5,12 @@
             [clojure.pprint :as pp]
             [cljs.source-map.base64-vlq :as base64-vlq]))
 
+(defn source-compare [sources]
+  (let [sources (->> sources
+                  (map-indexed (fn [a b] [a b]))
+                  (reduce (fn [m [i v]] (assoc m v i)) {}))]
+    (fn [a b] (compare (sources a) (sources b)))))
+
 (defn seg->map [seg source-map]
   (let [[gcol source line col name] seg]
    {:gcol   gcol
@@ -25,12 +31,6 @@
     (if name
       (with-meta nseg {:name (+ name rname)})
       nseg)))
-
-(defn source-compare [sources]
-  (let [sources (->> sources
-                  (map-indexed (fn [a b] [a b]))
-                  (reduce (fn [m [i v]] (assoc m v i)) {}))]
-    (fn [a b] (compare (sources a) (sources b)))))
 
 (defn update-result [result segmap gline]
   (let [{:keys [gcol source line col name]} segmap
