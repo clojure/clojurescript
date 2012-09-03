@@ -6171,14 +6171,18 @@ reduces them without incurring seq initialization"
   "Prints a sequence of objects to a string, observing all the
   options given in opts"
   [objs opts]
-  (str (pr-sb objs opts)))
+  (if (empty? objs)
+    ""
+    (str (pr-sb objs opts))))
 
 (defn prn-str-with-opts
   "Same as pr-str-with-opts followed by (newline)"
   [objs opts]
-  (let [sb (pr-sb objs opts)]
-    (.append sb \newline)
-    (str sb)))
+  (if (empty? objs)
+    "\n"
+    (let [sb (pr-sb objs opts)]
+      (.append sb \newline)
+      (str sb))))
 
 (defn pr-with-opts
   "Prints a sequence of objects using string-print, observing all

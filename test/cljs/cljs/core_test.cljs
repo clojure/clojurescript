@@ -232,6 +232,9 @@
   (assert (= "asdf" (print-str "asdf")))
   (assert (= "asdf\n" (println-str "asdf")))
 
+  (assert (= "" (pr-str)))
+  (assert (= "\n" (prn-str)))
+
   ;;this fails in v8 - why?
   ;(assert (= "symbol\"'string" (pr-str (str 'symbol \" \' "string"))))
 
