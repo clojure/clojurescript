@@ -41,7 +41,6 @@
   (reset! *cljs-gen-col* 0)
   (reset! *cljs-gen-line* 0))
 
-(def ^:dynamic *position* nil)
 (def ^:dynamic *emitted-provides* nil)
 (def cljs-reserved-file-names #{"deps.cljs"})
 
@@ -776,7 +775,6 @@
                 ana/*cljs-ns* 'cljs.user
                 ana/*cljs-file* (.getPath ^java.io.File src)
                 *data-readers* tags/*cljs-data-readers*
-                *position* (atom [0 0])
                 *emitted-provides* (atom #{})]
         (loop [forms (forms-seq src)
                ns-name nil
