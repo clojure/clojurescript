@@ -26,6 +26,12 @@
       (with-meta nseg {:name (+ name rname)})
       nseg)))
 
+(defn source-compare [sources]
+  (let [sources (->> sources
+                  (map-indexed (fn [a b] [a b]))
+                  (reduce (fn [m [i v]] (assoc m v i)) {}))]
+    (fn [a b] (compare (sources a) (sources b)))))
+
 (defn update-result [result segmap gline]
   (let [{:keys [gcol source line col name]} segmap
         d {:gline gline
