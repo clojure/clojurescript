@@ -1020,7 +1020,7 @@ reduces them without incurring seq initialization"
   [n]
   (and (number? n)
        (coercive-= (js/parseFloat n) (js/parseInt n 10))
-       (not (js/isNaN n))))
+       (not ^boolean (js/isNaN n))))
 
 (defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
