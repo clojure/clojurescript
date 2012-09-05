@@ -1016,10 +1016,12 @@ reduces them without incurring seq initialization"
   (or (fn? f) (satisfies? IFn f)))
 
 (defn ^boolean integer?
-  "Returns true if n is an integer.  Warning: returns true on underflow condition."
+  "Returns true if n is an integer."
   [n]
   (and (number? n)
-       (coercive-= n (.toFixed n))))
+       (not ^boolean (js/isNaN n))
+       (not (identical? n js/Infinity))
+       (== (js/parseFloat n) (js/parseInt n 10))))
 
 (defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
