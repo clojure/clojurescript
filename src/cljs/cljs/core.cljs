@@ -1019,8 +1019,9 @@ reduces them without incurring seq initialization"
   "Returns true if n is an integer."
   [n]
   (and (number? n)
-       (coercive-= (js/parseFloat n) (js/parseInt n 10))
-       (not ^boolean (js/isNaN n))))
+       (not ^boolean (js/isNaN n))
+       (not (identical? n js/Infinity))
+       (== (js/parseFloat n) (js/parseInt n 10))))
 
 (defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
