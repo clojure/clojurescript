@@ -330,12 +330,9 @@
           (warning env
             (str "WARNING: " (symbol (str ns-name) (str sym))
                  " no longer fn, references are stale"))))
-      (swap! namespaces update-in [ns-name :defs sym]
-             (fn [m]
-               (let [m (assoc (or m {}) :name name)]
-                 (merge m
-                   (when tag {:tag tag})
-                   (when sym-meta sym-meta)
+      (swap! namespaces assoc-in [ns-name :defs sym]
+                 (merge {:name name}
+                   sym-meta
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
@@ -353,7 +350,7 @@
                       :protocol-inline (:protocol-inline init-expr)
                       :variadic (:variadic init-expr)
                       :max-fixed-arity (:max-fixed-arity init-expr)
-                      :method-params (map :params (:methods init-expr))})))))
+                      :method-params (map :params (:methods init-expr))})))
       (merge {:env env :op :def :form form
               :name name :doc doc :init init-expr}
              (when tag {:tag tag})

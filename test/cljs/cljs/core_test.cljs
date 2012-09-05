@@ -232,6 +232,9 @@
   (assert (= "asdf" (print-str "asdf")))
   (assert (= "asdf\n" (println-str "asdf")))
 
+  (assert (= "" (pr-str)))
+  (assert (= "\n" (prn-str)))
+
   ;;this fails in v8 - why?
   ;(assert (= "symbol\"'string" (pr-str (str 'symbol \" \' "string"))))
 
@@ -1303,7 +1306,7 @@
   (assert (= (set (keys (dissoc more-letters :d))) #{:a :b :c :e :f}))
   (assert (= (set (keys (dissoc more-letters :d :e))) #{:a :b :c :f}))
   (assert (= (set (keys (dissoc more-letters :d :e :f))) #{:a :b :c}))
-  
+
   ;; ObjMap
   (let [ks (map (partial str "foo") (range 500))
         m  (apply obj-map (interleave ks (range 500)))]
@@ -1566,5 +1569,60 @@
   (assert (= 42
              (get {#uuid "550e8400-e29b-41d4-a716-446655440000" 42}
                   #uuid "550e8400-e29b-41d4-a716-446655440000")))
+
+  ;; pr-str
+
+  (assert (= (pr-str 1) "1"))
+  (assert (= (pr-str -1) "-1"))
+  (assert (= (pr-str -1.5) "-1.5"))
+  (assert (= (pr-str [3 4]) "[3 4]"))
+  (assert (= (pr-str "foo") "\"foo\""))
+  (assert (= (pr-str :hello) ":hello"))
+  (assert (= (pr-str 'goodbye) "goodbye"))
+  (assert (= (pr-str #{1 2 3}) "#{1 2 3}"))
+  (assert (= (pr-str '(7 8 9)) "(7 8 9)"))
+  (assert (= (pr-str '(deref foo)) "(deref foo)"))
+  (assert (= (pr-str '(quote bar)) "(quote bar)"))
+  (assert (= (pr-str 'foo/bar) "foo/bar"))
+  (assert (= (pr-str \a) "\"a\""))
+  (assert (= (pr-str :foo/bar) ":foo/bar"))
+  (assert (= (pr-str nil) "nil"))
+  (assert (= (pr-str true) "true"))
+  (assert (= (pr-str false) "false"))
+  (assert (= (pr-str "string") "\"string\""))
+  (assert (= (pr-str "escape chars \t \r \n \\ \" \b \f") "\"escape chars \\t \\r \\n \\\\ \\\" \\b \\f\""))
+
+  ;;; pr-str records
+
+  (defrecord PrintMe [a b])
+  (assert (= (pr-str (PrintMe. 1 2)) "#PrintMe{:a 1, :b 2}"))
+
+  ;;; pr-str backwards compatibility
+
+  (deftype PrintMeBackwardsCompat [a b]
+    IPrintable
+    (-pr-seq [_ _] (list (str "<<<" a " " b ">>>"))))
+
+  (assert (= (pr-str (PrintMeBackwardsCompat. 1 2)) "<<<1 2>>>"))
+
+  ;;; pr-str inst
+
+  (assert (= (pr-str (js/Date. "2010-11-12T13:14:15.666-05:00"))
+             "#inst \"2010-11-12T18:14:15.666-00:00\""))
+
+  (doseq [month (range 1 13) day (range 1 29) hour (range 1 23)]
+    (let [pad (fn [n]
+                (if (< n 10)
+                  (str "0" n)
+                  n))
+          inst (str "2010-" (pad month) "-" (pad day) "T" (pad hour) ":14:15.666-00:00")]
+      (assert (= (pr-str (js/Date. inst)) (str "#inst \"" inst "\"")))))
+
+  ;;; pr-str uuid
+
+  (let [uuid-str "550e8400-e29b-41d4-a716-446655440000"
+        uuid (UUID. uuid-str)]
+    (assert (= (pr-str uuid) (str "#uuid \"" uuid-str "\""))))
+
   :ok
   )

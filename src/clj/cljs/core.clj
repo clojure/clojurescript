@@ -154,8 +154,8 @@
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
                  ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
                  IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
-                 ISeqable ISequential IList IRecord IReversible ISorted IPrintable
-                 IPending IWatchable IEditableCollection ITransientCollection
+                 ISeqable ISequential IList IRecord IReversible ISorted IPrintable IWriter
+                 IPrintWithWriter IPending IWatchable IEditableCollection ITransientCollection
                  ITransientAssociative ITransientMap ITransientVector ITransientSet
                  IMultiFn])
           (iterate (fn [[p b]]
@@ -574,12 +574,14 @@
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
+         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer#] (-write writer# ~(core/str r))))
          (extend-type ~t ~@(dt->et impls fields true))
          ~t)
       `(do
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
+         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer#] (-write writer# ~(core/str r))))
          ~t))))
 
 (defn- emit-defrecord
@@ -633,19 +635,28 @@
                   'IMap
                   `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
                                            (dissoc (with-meta (into {} this#) ~'__meta) k#)
-                                           (new ~tagname ~@(remove #{'__extmap '__hash} fields) 
+                                           (new ~tagname ~@(remove #{'__extmap '__hash} fields)
                                                 (not-empty (dissoc ~'__extmap k#))
                                                 nil)))
                   'ISeqable
-                  `(~'-seq [this#] (seq (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
+                  `(~'-seq [this#] (seq (concat [~@(map #(list `vector (keyword %) %) base-fields)]
                                                 ~'__extmap)))
+
                   'IPrintable
                   `(~'-pr-seq [this# opts#]
                               (let [pr-pair# (fn [keyval#] (pr-sequential pr-seq "" " " "" opts# keyval#))]
                                 (pr-sequential
                                  pr-pair# (core/str "#" ~(core/str (namespace rname) "." (name rname)) "{") ", " "}" opts#
-                                 (concat [~@(map #(list `vector (keyword %) %) base-fields)] 
+                                 (concat [~@(map #(list `vector (keyword %) %) base-fields)]
                                          ~'__extmap))))
+
+                  'IPrintWithWriter
+                  `(~'-pr-writer [this# writer# opts#]
+                                 (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# pr-writer "" " " "" opts# keyval#))]
+                                   (pr-sequential-writer
+                                    writer# pr-pair# (core/str "#" ~(name rname) "{") ", " "}" opts#
+                                    (concat [~@(map #(list `vector (keyword %) %) base-fields)]
+                                            ~'__extmap))))
                   ])
           [fpps pmasks] (prepare-protocol-masks env tagname impls)
           protocols (collect-protocols impls env)
@@ -679,6 +690,7 @@
        ~(emit-defrecord &env rsym r fields impls)
        (set! (.-cljs$lang$type ~r) true)
        (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (list ~(core/str r))))
+       (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (-write writer# ~(core/str r))))
        ~(build-positional-factory rsym r fields)
        ~(build-map-factory rsym r fields)
        ~r)))
@@ -942,7 +954,7 @@
                  [true `(do ~@body)]
                  (let [k (first exprs)
                        v (second exprs)
-                       
+
                        seqsym (when-not (keyword? k) (gensym))
                        recform (if (keyword? k) recform `(recur (next ~seqsym)))
                        steppair (step recform (nnext exprs))
@@ -991,8 +1003,8 @@
 
 (defmacro amap
   "Maps an expression across an array a, using an index named idx, and
-  return value named ret, initialized to a clone of a, then setting 
-  each element of ret to the evaluation of expr, returning the new 
+  return value named ret, initialized to a clone of a, then setting
+  each element of ret to the evaluation of expr, returning the new
   array ret."
   [a idx ret expr]
   `(let [a# ~a
@@ -1006,7 +1018,7 @@
 
 (defmacro areduce
   "Reduces an expression across an array a, using an index named idx,
-  and return value named ret, initialized to init, setting ret to the 
+  and return value named ret, initialized to init, setting ret to the
   evaluation of expr at each step, returning ret."
   [a idx ret init expr]
   `(let [a# ~a]
