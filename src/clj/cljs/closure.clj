@@ -668,6 +668,9 @@
   (let [closure-compiler (make-closure-compiler)
         externs (load-externs opts)
         compiler-options (make-options opts)
+        sources (if (= :whitespace (:optimizations opts))
+                  (cons "var CLOSURE_NO_DEPS = true;" sources)
+                  sources)
         inputs (map #(js-source-file (javascript-name %) %) sources)
         result ^Result (.compile closure-compiler externs inputs compiler-options)]
     (if (.success result)
