@@ -5,10 +5,13 @@
             [clojure.pprint :as pp]
             [cljs.source-map.base64-vlq :as base64-vlq]))
 
+(defn indexed-sources [sources]
+  (->> sources
+    (map-indexed (fn [a b] [a b]))
+    (reduce (fn [m [i v]] (assoc m v i)) {})))
+
 (defn source-compare [sources]
-  (let [sources (->> sources
-                  (map-indexed (fn [a b] [a b]))
-                  (reduce (fn [m [i v]] (assoc m v i)) {}))]
+  (let [sources (indexed-sources sources)]
     (fn [a b] (compare (sources a) (sources b)))))
 
 (defn seg->map [seg source-map]
