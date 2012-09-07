@@ -308,6 +308,16 @@
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
+(defn ^seq seq
+  "Returns a seq on the collection. If the collection is
+  empty, returns nil.  (seq nil) returns nil. seq also works on
+  Strings."
+  [coll]
+  (when-not (nil? coll)
+    (if (satisfies? ASeq coll)
+      coll
+      (-seq coll))))
+
 (defn first
   "Returns the first item in the collection. Calls seq on its
   argument. If coll is nil, returns nil."
@@ -318,6 +328,19 @@
       (let [s (seq coll)]
         (when-not (nil? s)
           (-first s))))))
+
+(defn ^seq rest
+  "Returns a possibly empty seq of the items after the first. Calls seq on its
+  argument."
+  [coll]
+  (if-not (nil? coll)
+    (if (satisfies? ISeq coll)
+      (-rest coll)
+      (let [s (seq coll)]
+        (if-not (nil? s)
+          (-rest s)
+          ())))
+    ()))
 
 (defn ^seq next
   "Returns a seq of the items after the first. Calls seq on its
@@ -671,30 +694,6 @@ reduces them without incurring seq initialization"
 
   IHash
   (-hash [coll] (hash-coll coll)))
-
-(defn ^seq seq
-  "Returns a seq on the collection. If the collection is
-  empty, returns nil.  (seq nil) returns nil. seq also works on
-  Strings."
-  [coll]
-  (when-not (nil? coll)
-    (if (satisfies? ASeq coll)
-      coll
-      (-seq coll))))
-
-
-(defn ^seq rest
-  "Returns a possibly empty seq of the items after the first. Calls seq on its
-  argument."
-  [coll]
-  (if-not (nil? coll)
-    (if (satisfies? ISeq coll)
-      (-rest coll)
-      (let [s (seq coll)]
-        (if-not (nil? s)
-          (-rest s)
-          ())))
-    ()))
 
 (defn second
   "Same as (first (next x))"
