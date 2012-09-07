@@ -1112,6 +1112,7 @@ reduces them without incurring seq initialization"
             (if (f y x) 1 0)))))))
 
 (declare to-array)
+
 (defn sort
   "Returns a sorted sequence of the items in coll. Comp can be
    boolean-valued comparison funcion, or a -/0/+ valued comparator.
@@ -2902,9 +2903,7 @@ reduces them without incurring seq initialization"
              ret))))
 
 (declare tv-editable-root tv-editable-tail TransientVector deref
-         pr-sequential pr-sequential-writer pr-writer)
-
-(declare chunked-seq)
+         pr-sequential pr-sequential-writer pr-writer chunked-seq)
 
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
