@@ -838,9 +838,15 @@
                                                          cljs.analyzer/*cljs-file*)))))
                            (assoc m test expr)))
         pairs (reduce (fn [m [test expr]]
-                        (if (seq? test)
-                          (reduce #(assoc-test %1 %2 expr) m test)
-                          (assoc-test m test expr)))
+                        (cond
+                         (seq? test) (reduce (fn [m test]
+                                               (let [test (if (symbol? test)
+                                                            (list 'quote test)
+                                                            test)]
+                                                 (assoc-test m test expr)))
+                                             m test)
+                         (symbol? test) (assoc-test m (list 'quote test) expr)
+                         :else (assoc-test m test expr)))
                       {} (partition 2 clauses))
         esym (gensym)]
    `(let [~esym ~e]
