@@ -1473,9 +1473,11 @@ reduces them without incurring seq initialization"
 
 (defn symbol
   "Returns a Symbol with the given namespace and name."
-  ([name] (cond (symbol? name) name
-                (keyword? name) (str* "\uFDD1" "'" (subs name 2)))
-     :else (str* "\uFDD1" "'" name))
+  ([name]
+     (cond
+      (symbol? name) name
+      (keyword? name) (str* "\uFDD1" "'" (subs name 2))
+      :else (str* "\uFDD1" "'" name)))
   ([ns name] (symbol (str* ns "/" name))))
 
 (defn keyword

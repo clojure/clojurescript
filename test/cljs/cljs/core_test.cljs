@@ -211,6 +211,9 @@
   (assert (= "hello:world" (str "hello" :world)))
   (assert (= ":helloworld" (str :hello 'world)))
 
+  ; symbol
+  (assert (= 'a (symbol 'a)))
+
   ;; format
   (assert (= "01: 2.000000" (format "%02d: %.6f" 1 2)))
 
