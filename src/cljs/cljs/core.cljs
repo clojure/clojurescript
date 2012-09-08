@@ -6264,7 +6264,7 @@ reduces them without incurring seq initialization"
   "Prints a sequence of objects using string-print, observing all
   the options given in opts"
   [objs opts]
-  (string-print (prn-str-with-opts objs opts)))
+  (string-print (pr-str-with-opts objs opts)))
 
 (defn newline [opts]
   (string-print "\n")
