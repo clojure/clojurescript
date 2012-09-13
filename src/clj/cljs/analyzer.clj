@@ -614,7 +614,7 @@
         (reduce (fn [s [k exclude xs]]
                   (if (= k :refer-clojure)
                     (do
-                      (assert (= exclude :exclude) "Only [:refer-clojure :exclude [names]] form supported")
+                      (assert (= exclude :exclude) "Only [:refer-clojure :exclude (names)] form supported")
                       (assert (not (seq s)) "Only one :refer-clojure form is allowed per namespace definition")
                       (into s xs))
                     s))
@@ -629,7 +629,7 @@
                                (assert (symbol? (first spec))
                                        (error-msg spec "Library name must be specified as a symbol in :require / :require-macros"))
                                (assert (odd? (count spec))
-                                       (error-msg spec "Only :as alias and :refer [names] options supported in :require"))
+                                       (error-msg spec "Only :as alias and :refer (names) options supported in :require"))
                                (assert (every? #{:as :refer} (map first (partition 2 (next spec))))
                                        (error-msg spec "Only :as and :refer options supported in :require / :require-macros"))
                                (assert (let [fs (frequencies (next spec))]
@@ -643,15 +643,15 @@
                                      [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
                                  (assert (or (symbol? alias) (nil? alias))
                                          (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))
-                                 (assert (or (and (vector? referred) (every? symbol? referred))
+                                 (assert (or (and (sequential? referred) (every? symbol? referred))
                                              (nil? referred))
-                                         (error-msg spec ":refer must be followed by a vector of symbols in :require / :require-macros"))
+                                         (error-msg spec ":refer must be followed by a sequence of symbols in :require / :require-macros"))
                                  (swap! deps conj lib)
                                  (merge (when alias {rk {alias lib}})
                                         (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
         use->require (fn use->require [[lib kw referred :as spec]]
-                       (assert (and (symbol? lib) (= :only kw) (vector? referred) (every? symbol? referred))
-                               (error-msg spec "Only [lib.ns :only [names]] specs supported in :use / :use-macros"))
+                       (assert (and (symbol? lib) (= :only kw) (sequential? referred) (every? symbol? referred))
+                               (error-msg spec "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))
                        [lib :refer referred])
         parse-import-spec (fn parse-import-spec [spec]
                             (assert (and (symbol? spec) (nil? (namespace spec)))
