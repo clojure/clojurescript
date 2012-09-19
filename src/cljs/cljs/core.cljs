@@ -770,7 +770,7 @@ reduces them without incurring seq initialization"
                          (first coll)
                          (throw (js/Error. "Index out of bounds")))
        (indexed? coll) (-nth coll n)
-       (seq coll)      (linear-traversal-nth (next coll) (dec n))
+       (seq coll)      (recur (next coll) (dec n))
        :else           (throw (js/Error. "Index out of bounds"))))
   ([coll n not-found]
      (cond
@@ -779,7 +779,7 @@ reduces them without incurring seq initialization"
                          (first coll)
                          not-found)
        (indexed? coll) (-nth coll n not-found)
-       (seq coll)      (linear-traversal-nth (next coll) (dec n) not-found)
+       (seq coll)      (recur (next coll) (dec n) not-found)
        :else           not-found)))
 
 (defn nth
