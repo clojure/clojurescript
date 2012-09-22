@@ -533,7 +533,7 @@
   [opts requires]
   (let [index (js-dependency-index opts)]
     (loop [requires requires
-           visited requires
+           visited (set requires)
            deps #{}]
       (if (seq requires)
         (let [node (get index (first requires))
