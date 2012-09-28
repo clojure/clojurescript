@@ -47,8 +47,14 @@ file which establishes the connection to the REPL from the
 browser. These are currently the minimum requirements for starting a
 browser-connected REPL.
 
-To build the project, launch a Clojure REPL from this folder and evaluate the following
-forms:
+To build the project, launch a Clojure REPL from this folder 
+
+```bash
+cd samples/repl
+../../script/repl
+```
+
+and evaluate the following forms:
 
 ```clj
 (use 'cljs.closure)
