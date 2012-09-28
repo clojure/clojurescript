@@ -110,8 +110,8 @@
                         "<cljs repl>"
                         '(set! *print-fn* (fn [x] (.print js/out x))))))
 
-(extend-protocol repl/IJavaScriptEnv
-  clojure.lang.IPersistentMap
+(defrecord RhinoEnv []
+  repl/IJavaScriptEnv
   (-setup [this]
     (rhino-setup this))
   (-evaluate [this filename line js]
@@ -128,7 +128,7 @@
         scope (.initStandardObjects cx)
         base (io/resource "goog/base.js")
         deps (io/resource "goog/deps.js")
-        new-repl-env {:cx cx :scope scope}]
+        new-repl-env (merge (RhinoEnv.) {:cx cx :scope scope})]
     (assert base "Can't find goog/base.js in classpath")
     (assert deps "Can't find goog/deps.js in classpath")
     (swap! current-repl-env (fn [old] new-repl-env))

@@ -160,8 +160,8 @@
       (browser-eval (slurp url))
       (swap! loaded-libs (partial apply conj) missing))))
 
-(extend-protocol repl/IJavaScriptEnv
-  clojure.lang.IPersistentMap
+(defrecord BrowserEnv []
+  repl/IJavaScriptEnv
   (-setup [this]
     (do (require 'cljs.repl.reflect)
         (repl/analyze-source (:src this))
@@ -226,7 +226,8 @@
                   support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
-  (let [opts (merge {:port          9000
+  (let [opts (merge (BrowserEnv.)
+                    {:port          9000
                      :optimizations :simple
                      :working-dir   ".repl"
                      :serve-static  true
