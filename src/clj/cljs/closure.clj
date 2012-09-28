@@ -856,7 +856,7 @@
 
 (defn add-header [{:keys [hashbang target]} js]
   (if (= :nodejs target)
-    (str "#!" (or hashbang "/usr/bin/nodejs") "\n" js)
+    (str "#!" (or hashbang "/usr/bin/env node") "\n" js)
     js))
 
 (defn build
