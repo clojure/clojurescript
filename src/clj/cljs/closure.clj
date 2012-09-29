@@ -878,13 +878,11 @@
               ana/*cljs-warn-on-undeclared*
               (true? (opts :warnings))]
       (let [compiled (-compile source all-opts)
-            js-sources (if (coll? compiled)
-                         (binding []
-                           (apply add-dependencies all-opts compiled))
-                         (add-dependencies all-opts compiled))
-            js-sources (concat js-sources
-                               (when (= :nodejs (:target all-opts))
-                                 [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
+            js-sources (concat
+                         (apply add-dependencies all-opts
+                            (if (coll? compiled) compiled [compiled]))
+                         (when (= :nodejs (:target all-opts))
+                           [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
             optim (:optimizations all-opts)]
         (if (and optim (not= optim :none))
           (->> js-sources
