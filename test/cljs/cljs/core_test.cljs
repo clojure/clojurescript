@@ -388,6 +388,15 @@
     (assert (= [[3 4 5] 2 1] (apply multiple-arity-variadic 1 2 3 4 [5])))
     (assert (= [3 4 5] (take 3 (first (apply multiple-arity-variadic (iterate inc 1))))))
     (assert (= [2 1] (rest (apply multiple-arity-variadic (iterate inc 1))))))
+
+  ;; CLJS-383
+  (let [f1 (fn f1 ([] 0) ([a] 1) ([a b] 2) ([a b c & more] 3))
+        f2 (fn f2 ([x] :foo) ([x y & more] (apply f1 y more)))]
+    (assert (= 1 (f2 1 2))))
+  (let [f (fn ([]) ([a & more] more))]
+    (assert (nil? (f :foo))))
+  (assert (nil? (array-seq (array 1) 1)))
+
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))

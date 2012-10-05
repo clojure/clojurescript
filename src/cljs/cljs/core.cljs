@@ -624,7 +624,7 @@ reduces them without incurring seq initialization"
   ([prim]
      (prim-seq prim 0))
   ([prim i]
-     (when-not (zero? (alength prim))
+     (when (< i (alength prim))
        (IndexedSeq. prim i))))
 
 (defn array-seq
