@@ -634,7 +634,8 @@
                                  (assert (or (and (sequential? referred) (every? symbol? referred))
                                              (nil? referred))
                                          (error-msg spec ":refer must be followed by a sequence of symbols in :require / :require-macros"))
-                                 (swap! deps conj lib)
+                                 (when-not macros?
+                                   (swap! deps conj lib))
                                  (merge (when alias {rk {alias lib}})
                                         (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
         use->require (fn use->require [[lib kw referred :as spec]]
