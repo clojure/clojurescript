@@ -597,6 +597,9 @@ reduces them without incurring seq initialization"
   ICollection
   (-conj [coll o] (cons o coll))
 
+  IEmptyableCollection
+  (-empty [coll] cljs.core.List/EMPTY)
+
   IReduce
   (-reduce [coll f]
     (if (counted? a)
@@ -659,6 +662,8 @@ reduces them without incurring seq initialization"
     ([array f start]
        (ci-reduce array f start))))
 
+(declare with-meta)
+
 (deftype RSeq [ci i meta]
   Object
   (toString [this]
@@ -691,6 +696,9 @@ reduces them without incurring seq initialization"
   ICollection
   (-conj [coll o]
     (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   IHash
   (-hash [coll] (hash-coll coll)))
@@ -1910,6 +1918,9 @@ reduces them without incurring seq initialization"
   ICollection
   (-conj [this o]
     (cons o this))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   IHash
   (-hash [coll] (caching-hash coll hash-coll __hash)))
@@ -4860,6 +4871,9 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY meta))
 
   IHash
   (-hash [coll] (caching-hash coll hash-coll __hash))
