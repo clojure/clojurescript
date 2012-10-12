@@ -447,9 +447,15 @@
         warn-if-not-protocol #(when-not (= 'Object %)
                                 (if cljs.analyzer/*cljs-warn-on-undeclared*
                                   (if-let [var (cljs.analyzer/resolve-existing-var (dissoc &env :locals) %)]
-                                    (when-not (:protocol-symbol var)
-                                      (cljs.analyzer/warning &env
-                                        (core/str "WARNING: Symbol " % " is not a protocol")))
+                                    (do
+                                     (when-not (:protocol-symbol var)
+                                       (cljs.analyzer/warning &env
+                                         (core/str "WARNING: Symbol " % " is not a protocol")))
+                                     (when (and cljs.analyzer/*cljs-warn-protocol-deprecated*
+                                                (-> var :deprecated)
+                                                (not (-> % meta :deprecation-nowarn)))
+                                       (cljs.analyzer/warning &env
+                                         (core/str "WARNING: Protocol " % " is deprecated"))))
                                     (cljs.analyzer/warning &env
                                       (core/str "WARNING: Can't resolve protocol symbol " %)))))
         skip-flag (set (-> tsym meta :skip-protocol-flag))]

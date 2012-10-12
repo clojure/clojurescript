@@ -50,6 +50,8 @@
 (def ^:dynamic *cljs-warn-on-dynamic* true)
 (def ^:dynamic *cljs-warn-on-fn-var* true)
 (def ^:dynamic *cljs-warn-fn-arity* true)
+(def ^:dynamic *cljs-warn-fn-deprecated* true)
+(def ^:dynamic *cljs-warn-protocol-deprecated* true)
 (def ^:dynamic *unchecked-if* (atom false))
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
@@ -839,6 +841,10 @@
                         (and variadic (< argc max-fixed-arity))))
            (warning env
              (str "WARNING: Wrong number of args (" argc ") passed to " name)))))
+     (if (and *cljs-warn-fn-deprecated* (-> fexpr :info :deprecated)
+              (not (-> form meta :deprecation-nowarn)))
+       (warning env
+         (str "WARNING: " (-> fexpr :info :name) " is deprecated.")))
      {:env env :op :invoke :form form :f fexpr :args argexprs
       :tag (or (-> fexpr :info :tag) (-> form meta :tag)) :children (into [fexpr] argexprs)})))
 
