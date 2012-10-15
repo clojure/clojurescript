@@ -5743,9 +5743,10 @@ reduces them without incurring seq initialization"
   (-lookup [coll v]
     (-lookup coll v nil))
   (-lookup [coll v not-found]
-    (if (-contains-key? tree-map v)
-      v
-      not-found))
+    (let [n (.entry-at tree-map v)]
+      (if-not (nil? n)
+        (.-key n)
+        not-found)))
 
   ISet
   (-disjoin [coll v]
