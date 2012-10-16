@@ -31,8 +31,6 @@
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
-(defonce ns-first-segments (atom '#{"cljs" "clojure"}))
-
 (defn reset-namespaces! []
   (reset! namespaces
     '{cljs.core {:name cljs.core}
@@ -360,31 +358,24 @@
              (when export-as {:export export-as})
              (when init-expr {:children [init-expr]})))))
 
-(defn- analyze-fn-method [env locals meth gthis]
-  (letfn [(uniqify [[p & r]]
-            (when p
-              (cons (if (some #{p} r) (gensym (str p)) p)
-                    (uniqify r))))
-          (prevent-ns-shadow [p]
-            (if (@ns-first-segments (str p))
-              (symbol (str p "$"))
-              p))]
-   (let [params (first meth)
-         variadic (boolean (some '#{&} params))
-         params (vec (uniqify (remove '#{&} params)))
-         fixed-arity (count (if variadic (butlast params) params))
-         body (next meth)
-         locals (reduce (fn [m name]
-                          (assoc m name {:name (prevent-ns-shadow name)
-                                         :tag (-> name meta :tag)}))
-                        locals params)
-         params (vec (map prevent-ns-shadow params))
-         recur-frame {:names params :flag (atom nil)}
-         block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
-                 (analyze-block (assoc env :context :return :locals locals) body))]
-     (merge {:env env :variadic variadic :params params :max-fixed-arity fixed-arity
-             :gthis gthis :recurs @(:flag recur-frame)}
-            block))))
+(defn- analyze-fn-method [env locals meth type]
+  (let [param-names (first meth)
+        variadic (boolean (some '#{&} param-names))
+        param-names (vec (remove '#{&} param-names))
+        body (next meth)
+        [locals params] (reduce (fn [[locals params] name]
+                                  (let [param {:name name
+                                               :tag (-> name meta :tag)
+                                               :shadow (locals name)}]
+                                    [(assoc locals name param) (conj params param)]))
+                                [locals []] param-names)
+        fixed-arity (count (if variadic (butlast params) params))
+        recur-frame {:params params :flag (atom nil)}
+        block (binding [*recur-frames* (cons recur-frame *recur-frames*)]
+                (analyze-block (assoc env :context :return :locals locals) body))]
+    (merge {:env env :variadic variadic :params params :max-fixed-arity fixed-arity
+            :type type :recurs @(:flag recur-frame)}
+           block)))
 
 (defmethod parse 'fn*
   [op env [_ & args :as form] name]
@@ -394,34 +385,38 @@
         ;;turn (fn [] ...) into (fn ([]...))
         meths (if (vector? (first meths)) (list meths) meths)
         locals (:locals env)
-        locals (if name (assoc locals name {:name name}) locals)
+        locals (if name (assoc locals name {:name name :shadow (locals name)}) locals)
+        type (-> form meta ::type)
         fields (-> form meta ::fields)
         protocol-impl (-> form meta :protocol-impl)
         protocol-inline (-> form meta :protocol-inline)
-        gthis (and fields (gensym "this__"))
         locals (reduce (fn [m fld]
                          (assoc m fld
-                                {:name (symbol (str gthis "." fld))
+                                {:name fld
                                  :field true
                                  :mutable (-> fld meta :mutable)
-                                 :tag (-> fld meta :tag)}))
+                                 :tag (-> fld meta :tag)
+                                 :shadow (m fld)}))
                        locals fields)
 
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
         menv (merge menv
                {:protocol-impl protocol-impl
                 :protocol-inline protocol-inline})
-        methods (map #(analyze-fn-method menv locals % gthis) meths)
+        methods (map #(analyze-fn-method menv locals % type) meths)
         max-fixed-arity (apply max (map :max-fixed-arity methods))
         variadic (boolean (some :variadic methods))
-        locals (if name (assoc locals name {:name name :fn-var true
-                                            :variadic variadic
-                                            :max-fixed-arity max-fixed-arity
-                                            :method-params (map :params methods)}))
+        locals (if name
+                 (update-in locals [name] assoc
+                            :fn-var true
+                            :variadic variadic
+                            :max-fixed-arity max-fixed-arity
+                            :method-params (map :params methods))
+                 locals)
         methods (if name
                   ;; a second pass with knowledge of our function-ness/arity
                   ;; lets us optimize self calls
-                  (map #(analyze-fn-method menv locals % gthis) meths)
+                  (map #(analyze-fn-method menv locals % type) meths)
                   methods)]
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
     {:env env :op :fn :form form :name name :methods methods :variadic variadic
@@ -438,33 +433,23 @@
   (assert (and (vector? bindings) (even? (count bindings))) "bindings must be vector of even number of elements")
   (let [n->fexpr (into {} (map (juxt first second) (partition 2 bindings)))
         names    (keys n->fexpr)
-        n->gsym  (into {} (map (juxt identity #(gensym (str % "__"))) names))
-        gsym->n  (into {} (map (juxt n->gsym identity) names))
         context  (:context env)
-        bes      (reduce (fn [bes n]
-                           (let [g (n->gsym n)]
-                             (conj bes {:name  g
-                                        :tag   (-> n meta :tag)
-                                        :local true})))
-                         []
-                         names)
-        meth-env (reduce (fn [env be]
-                           (let [n (gsym->n (be :name))]
-                             (assoc-in env [:locals n] be)))
-                         (assoc env :context :expr)
-                         bes)
-        [meth-env finits]
-        (reduce (fn [[env finits] n]
-                  (let [finit (analyze meth-env (n->fexpr n))
-                        be (-> (get-in env [:locals n])
-                               (assoc :init finit))]
+        [meth-env bes]
+        (reduce (fn [[{:keys [locals] :as env} bes] n]
+                  (let [be {:name   n
+                            :tag    (-> n meta :tag)
+                            :local  true
+                            :shadow (locals n)}]
                     [(assoc-in env [:locals n] be)
-                     (conj finits finit)]))
-                [meth-env []]
-                names)
+                     (conj bes be)]))
+                [env []] names)
+        meth-env (assoc meth-env :context :expr)
+        bes (vec (map (fn [{:keys [name shadow] :as be}]
+                        (let [env (assoc-in meth-env [:locals name] shadow)]
+                          (assoc be :init (analyze env (n->fexpr name)))))
+                      bes))
         {:keys [statements ret]}
-        (analyze-block (assoc meth-env :context (if (= :expr context) :return context)) exprs)
-        bes (vec (map #(get-in meth-env [:locals %]) names))]
+        (analyze-block (assoc meth-env :context (if (= :expr context) :return context)) exprs)]
     {:env env :op :letfn :bindings bes :statements statements :ret ret :form form
      :children (into (vec (map :init bes))
                      (conj (vec statements) ret))}))
@@ -487,12 +472,13 @@
              (do
                (assert (not (or (namespace name) (.contains (str name) "."))) (str "Invalid local name: " name))
                (let [init-expr (analyze env init)
-                     be {:name (gensym (str name "__"))
+                     be {:name name
                          :init init-expr
                          :tag (or (-> name meta :tag)
                                   (-> init-expr :tag)
                                   (-> init-expr :info :tag))
-                         :local true}
+                         :local true
+                         :shadow (-> env :locals name)}
                      be (if (= (:op init-expr) :fn)
                           (merge be
                             {:fn-var true
@@ -504,12 +490,12 @@
                         (assoc-in env [:locals name] be)
                         (next bindings))))
              [bes env])))
-        recur-frame (when is-loop {:names (vec (map :name bes)) :flag (atom nil)})
+        recur-frame (when is-loop {:params bes :flag (atom nil)})
         {:keys [statements ret]}
         (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)
                   *loop-lets* (cond
                                is-loop (or *loop-lets* ())
-                               *loop-lets* (cons {:names (vec (map :name bes))} *loop-lets*))]
+                               *loop-lets* (cons {:params bes} *loop-lets*))]
           (analyze-block (assoc env :context (if (= :expr context) :return context)) exprs))]
     {:env encl-env :op :let :loop is-loop
      :bindings bes :statements statements :ret ret :form form
@@ -530,7 +516,7 @@
         frame (first *recur-frames*)
         exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs)))]
     (assert frame "Can't recur here")
-    (assert (= (count exprs) (count (:names frame))) "recur argument count mismatch")
+    (assert (= (count exprs) (count (:params frame))) "recur argument count mismatch")
     (reset! (:flag frame) true)
     (assoc {:env env :op :recur :form form}
       :frame frame
@@ -682,7 +668,6 @@
     (load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
-    (swap! ns-first-segments conj (first (string/split (str name) #"\.")))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :excludes] excludes)
