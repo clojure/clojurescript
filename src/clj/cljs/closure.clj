@@ -859,6 +859,11 @@
     (str "#!" (or hashbang "/usr/bin/env node") "\n" js)
     js))
 
+(defn add-wrapper [{:keys [output-wrapper] :as opts} js]
+  (if output-wrapper
+   (str ";(function(){\n" js "\n})();\n")
+   js))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
@@ -888,6 +893,7 @@
           (->> js-sources
                (apply optimize all-opts)
                (add-header all-opts)
+               (add-wrapper all-opts)
                (output-one-file all-opts))
           (apply output-unoptimized all-opts js-sources))))))
 
