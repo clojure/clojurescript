@@ -905,7 +905,8 @@ reduces them without incurring seq initialization"
 (defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
   Please use the idiom (seq x) rather than (not (empty? x))"
-  [coll] (not (seq coll)))
+  [coll] (or (nil? coll)
+             (not (seq coll))))
 
 (defn ^boolean coll?
   "Returns true if x satisfies ICollection"
