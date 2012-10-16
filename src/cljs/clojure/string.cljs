@@ -53,12 +53,12 @@
 (defn upper-case
   "Converts string to all upper-case."
   [s]
-  (. s (toUpperCase)))
+  (.toUpperCase s))
 
 (defn lower-case
   "Converts string to all lower-case."
   [s]
-  (. s (toLowerCase)))
+  (.toLowerCase s))
 
 (defn capitalize
   "Converts first character of the string to upper-case, all other
