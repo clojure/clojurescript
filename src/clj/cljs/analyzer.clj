@@ -331,8 +331,10 @@
             (str "WARNING: " (symbol (str ns-name) (str sym))
                  " no longer fn, references are stale"))))
       (swap! namespaces assoc-in [ns-name :defs sym]
-                 (merge {:name name}
+                 (merge 
+                   {:name name}
                    sym-meta
+                   (when doc {:doc doc})
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
                      {:file *cljs-file* :line line})
@@ -671,6 +673,7 @@
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
+                           (assoc-in [name :doc] docstring)
                            (assoc-in [name :excludes] excludes)
                            (assoc-in [name :uses] uses)
                            (assoc-in [name :requires] requires)
@@ -680,7 +683,7 @@
                                                      [alias (find-ns nsym)])
                                                    requires-macros)))
                            (assoc-in [name :imports] imports)))
-    {:env env :op :ns :form form :name name :uses uses :requires requires :imports imports
+    {:env env :op :ns :form form :name name :doc docstring :uses uses :requires requires :imports imports
      :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
