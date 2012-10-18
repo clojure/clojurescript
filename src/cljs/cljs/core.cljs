@@ -5468,7 +5468,7 @@ reduces them without incurring seq initialization"
               :else      (if (pos? c)
                            (recur (conj stack t) (.-right t))
                            (recur stack          (.-left t)))))
-          (if (nil? stack)
+          (when-not (nil? stack)
             (PersistentTreeMapSeq. nil stack ascending? -1 nil))))))
 
   (-entry-key [coll entry] (key entry))
@@ -5519,7 +5519,7 @@ reduces them without incurring seq initialization"
   Returns a new sorted map with supplied mappings, using the supplied comparator."
   ([comparator & keyvals]
      (loop [in (seq keyvals)
-            out (cljs.core.PersistentTreeMap. comparator nil 0 nil 0)]
+            out (cljs.core.PersistentTreeMap. (fn->comparator comparator) nil 0 nil 0)]
        (if in
          (recur (nnext in) (assoc out (first in) (second in)))
          out))))
