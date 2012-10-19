@@ -1650,6 +1650,7 @@
   (assert (= (pr-str true) "true"))
   (assert (= (pr-str false) "false"))
   (assert (= (pr-str "string") "\"string\""))
+  (assert (= (pr-str ["üñîçó∂£" :ทดสอบ/你好 'こんにちは]) "[\"üñîçó∂£\" :ทดสอบ/你好 こんにちは]"))
   (assert (= (pr-str "escape chars \t \r \n \\ \" \b \f") "\"escape chars \\t \\r \\n \\\\ \\\" \\b \\f\""))
 
   ;;; pr-str records
