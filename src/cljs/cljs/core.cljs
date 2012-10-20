@@ -6232,7 +6232,7 @@ reduces them without incurring seq initialization"
               ;; handle CLJS ctors
               (and (not (nil? obj))
                    ^boolean (.-cljs$lang$type obj))
-                (.cljs$lang$ctorPrWriter obj writer opts)
+                (.cljs$lang$ctorPrWriter obj obj writer opts)
 
               ; Use the new, more efficient, IPrintWithWriter interface when possible.
               (satisfies? IPrintWithWriter obj) (-pr-writer obj writer opts)

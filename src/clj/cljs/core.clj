@@ -581,14 +581,14 @@
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
-         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer#] (-write writer# ~(core/str r))))
+         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
          (extend-type ~t ~@(dt->et t impls fields true))
          ~t)
       `(do
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
-         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer#] (-write writer# ~(core/str r))))
+         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opts#] (-write writer# ~(core/str r))))
          ~t))))
 
 (defn- emit-defrecord
