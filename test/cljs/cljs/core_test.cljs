@@ -246,6 +246,8 @@
 
   (assert (= "" (pr-str)))
   (assert (= "\n" (prn-str)))
+  (assert  (= "12" (with-out-str (print 1) (print 2))))
+  (assert  (= "12" (with-out-str (*print-fn* 1) (*print-fn* 2))))
 
   ;;this fails in v8 - why?
   ;(assert (= "symbol\"'string" (pr-str (str 'symbol \" \' "string"))))
