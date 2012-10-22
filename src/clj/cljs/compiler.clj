@@ -213,7 +213,8 @@
         n (if (= (namespace n) "js")
             (name n)
             info)]
-    (emit-wrap env (emits (munge n)))))
+    (when-not (= :statement (:context env))
+      (emit-wrap env (emits (munge n))))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
