@@ -18,7 +18,7 @@
 (def
   ^{:doc "Each runtime environment provides a diffenent way to print output.
   Whatever function *print-fn* is bound to will be passed any
-  Strings which should be printed."}
+  Strings which should be printed." :dynamic true}
   *print-fn*
   (fn [_]
     (throw (js/Error. "No *print-fn* fn set for evaluation environment"))))
