@@ -211,6 +211,9 @@
   (assert (= "hello:world" (str "hello" :world)))
   (assert (= ":helloworld" (str :hello 'world)))
 
+  ; symbol
+  (assert (= 'a (symbol 'a)))
+
   ;; format
   (assert (= "01: 2.000000" (format "%02d: %.6f" 1 2)))
 
@@ -385,6 +388,15 @@
     (assert (= [[3 4 5] 2 1] (apply multiple-arity-variadic 1 2 3 4 [5])))
     (assert (= [3 4 5] (take 3 (first (apply multiple-arity-variadic (iterate inc 1))))))
     (assert (= [2 1] (rest (apply multiple-arity-variadic (iterate inc 1))))))
+
+  ;; CLJS-383
+  (let [f1 (fn f1 ([] 0) ([a] 1) ([a b] 2) ([a b c & more] 3))
+        f2 (fn f2 ([x] :foo) ([x y & more] (apply f1 y more)))]
+    (assert (= 1 (f2 1 2))))
+  (let [f (fn ([]) ([a & more] more))]
+    (assert (nil? (f :foo))))
+  (assert (nil? (array-seq (array 1) 1)))
+
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))
@@ -1217,7 +1229,6 @@
     (assert (identical? cljs.core.PersistentTreeMap (type m1)))
     (assert (identical? cljs.core.PersistentTreeMap (type m2)))
     (assert (identical? compare (.-comp m1)))
-    (assert (identical? c2 (.-comp m2)))
     (assert (zero? (count m1)))
     (assert (zero? (count m2)))
     (let [m1 (assoc m1 :foo 1 :bar 2 :quux 3)
@@ -1257,15 +1268,19 @@
   ;; PersistentTreeSet
   (let [s1 (sorted-set)
         c2 (comp - compare)
-        s2 (sorted-set-by c2)]
+        s2 (sorted-set-by c2)
+        c3 #(compare (quot %1 2) (quot %2 2))
+        s3 (sorted-set-by c3)
+        s4 (sorted-set-by <)]
     (assert (identical? cljs.core.PersistentTreeSet (type s1)))
     (assert (identical? cljs.core.PersistentTreeSet (type s2)))
     (assert (identical? compare (-comparator s1)))
-    (assert (identical? c2 (-comparator s2)))
     (assert (zero? (count s1)))
     (assert (zero? (count s2)))
     (let [s1 (conj s1 1 2 3)
-          s2 (conj s2 1 2 3)]
+          s2 (conj s2 1 2 3)
+          s3 (conj s3 1 2 3 7 8 9)
+          s4 (conj s4 1 2 3)]
       (assert (= (hash s1) (hash s2)))
       (assert (= (hash s1) (hash #{1 2 3})))
       (assert (= (seq s1)  (list 1 2 3)))
@@ -1274,6 +1289,18 @@
       (assert (= (rseq s2) (list 1 2 3)))
       (assert (= (count s1) 3))
       (assert (= (count s2) 3))
+      (assert (= (count s3) 4))
+      (assert (= (get s3 0) 1))
+      (assert (= (subseq s3 > 5) (list 7 8)))
+      (assert (= (subseq s3 > 6) (list 8)))
+      (assert (= (subseq s3 >= 6) (list 7 8)))
+      (assert (= (subseq s3 >= 12) nil))
+      (assert (= (subseq s3 < 0) (list)))
+      (assert (= (subseq s3 < 5) (list 1 2)))
+      (assert (= (subseq s3 < 6) (list 1 2)))
+      (assert (= (subseq s3 <= 6) (list 1 2 7)))
+      (assert (= (subseq s3 >= 2 <= 6) (list 2 7)))
+      (assert (= (subseq s4 >= 2 < 3) (list 2)))
       (let [s1 (disj s1 2)
             s2 (disj s2 2)]
         (assert (= (seq s1)  (list 1 3)))
@@ -1464,6 +1491,30 @@
                  [:a :b] :ok)
                :ok)))
 
+  (let [a 'a]
+    (assert (= (case a
+                 nil nil
+                 & :amp
+                 :none)
+               :none)))
+
+  (let [a '&]
+    (assert (= (case a
+                 nil nil
+                 & :amp
+                 :none)
+               :amp)))
+
+  (let [foo 'a]
+    (assert (= (case foo
+                 (a b c) :sym
+                 :none)
+               :sym))
+    (assert (= (case foo
+                 (b c d) :sym
+                 :none)
+               :none)))
+  
   ;; IComparable
   (assert (=  0 (compare false false)))
   (assert (= -1 (compare false true)))

@@ -157,7 +157,7 @@
                  ISeqable ISequential IList IRecord IReversible ISorted IPrintable IWriter
                  IPrintWithWriter IPending IWatchable IEditableCollection ITransientCollection
                  ITransientAssociative ITransientMap ITransientVector ITransientSet
-                 IMultiFn])
+                 IMultiFn IChunkedSeq IChunkedNext IComparable])
           (iterate (fn [[p b]]
                      (if (core/== 2147483648 b)
                        [(core/inc p) 1]
@@ -447,9 +447,15 @@
         warn-if-not-protocol #(when-not (= 'Object %)
                                 (if cljs.analyzer/*cljs-warn-on-undeclared*
                                   (if-let [var (cljs.analyzer/resolve-existing-var (dissoc &env :locals) %)]
-                                    (when-not (:protocol-symbol var)
-                                      (cljs.analyzer/warning &env
-                                        (core/str "WARNING: Symbol " % " is not a protocol")))
+                                    (do
+                                     (when-not (:protocol-symbol var)
+                                       (cljs.analyzer/warning &env
+                                         (core/str "WARNING: Symbol " % " is not a protocol")))
+                                     (when (and cljs.analyzer/*cljs-warn-protocol-deprecated*
+                                                (-> var :deprecated)
+                                                (not (-> % meta :deprecation-nowarn)))
+                                       (cljs.analyzer/warning &env
+                                         (core/str "WARNING: Protocol " % " is deprecated"))))
                                     (cljs.analyzer/warning &env
                                       (core/str "WARNING: Can't resolve protocol symbol " %)))))
         skip-flag (set (-> tsym meta :skip-protocol-flag))]
@@ -539,8 +545,8 @@
                  (range fast-path-protocol-partitions-count))]))))
 
 (defn dt->et
-  ([specs fields] (dt->et specs fields false))
-  ([specs fields inline]
+  ([t specs fields] (dt->et t specs fields false))
+  ([t specs fields inline]
      (loop [ret [] s specs]
        (if (seq s)
          (recur (-> ret
@@ -548,7 +554,8 @@
                     (into
                       (reduce (fn [v [f sigs]]
                                 (conj v (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
-                                                   assoc :cljs.analyzer/fields fields
+                                                   assoc :cljs.analyzer/type t
+                                                         :cljs.analyzer/fields fields
                                                          :protocol-impl true
                                                          :protocol-inline inline)))
                               []
@@ -574,14 +581,14 @@
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
-         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer#] (-write writer# ~(core/str r))))
-         (extend-type ~t ~@(dt->et impls fields true))
+         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
+         (extend-type ~t ~@(dt->et t impls fields true))
          ~t)
       `(do
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorPrSeq ~t) (fn [this#] (list ~(core/str r))))
-         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer#] (-write writer# ~(core/str r))))
+         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opts#] (-write writer# ~(core/str r))))
          ~t))))
 
 (defn- emit-defrecord
@@ -642,14 +649,6 @@
                   `(~'-seq [this#] (seq (concat [~@(map #(list `vector (keyword %) %) base-fields)]
                                                 ~'__extmap)))
 
-                  'IPrintable
-                  `(~'-pr-seq [this# opts#]
-                              (let [pr-pair# (fn [keyval#] (pr-sequential pr-seq "" " " "" opts# keyval#))]
-                                (pr-sequential
-                                 pr-pair# (core/str "#" ~(core/str (namespace rname) "." (name rname)) "{") ", " "}" opts#
-                                 (concat [~@(map #(list `vector (keyword %) %) base-fields)]
-                                         ~'__extmap))))
-
                   'IPrintWithWriter
                   `(~'-pr-writer [this# writer# opts#]
                                  (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# pr-writer "" " " "" opts# keyval#))]
@@ -665,7 +664,7 @@
                     :skip-protocol-flag fpps)]
       `(do
          (~'defrecord* ~tagname ~hinted-fields ~pmasks)
-         (extend-type ~tagname ~@(dt->et impls fields true))))))
+         (extend-type ~tagname ~@(dt->et tagname impls fields true))))))
 
 (defn- build-positional-factory
   [rsym rname fields]
@@ -838,9 +837,15 @@
                                                          cljs.analyzer/*cljs-file*)))))
                            (assoc m test expr)))
         pairs (reduce (fn [m [test expr]]
-                        (if (seq? test)
-                          (reduce #(assoc-test %1 %2 expr) m test)
-                          (assoc-test m test expr)))
+                        (cond
+                         (seq? test) (reduce (fn [m test]
+                                               (let [test (if (symbol? test)
+                                                            (list 'quote test)
+                                                            test)]
+                                                 (assoc-test m test expr)))
+                                             m test)
+                         (symbol? test) (assoc-test m (list 'quote test) expr)
+                         :else (assoc-test m test expr)))
                       {} (partition 2 clauses))
         esym (gensym)]
    `(let [~esym ~e]
