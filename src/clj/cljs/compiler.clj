@@ -49,12 +49,10 @@
                       shadow (recur (inc d) shadow)
                       (@ns-first-segments (str name)) (inc d)
                       :else d))
-            name (if field
-                   (str "self__." name)
-                   name)]
-        (if (zero? depth)
-          (munge name reserved)
-          (symbol (str (munge name reserved) "__$" depth))))
+            munged-name (munge (if field (str "self__." name) name) reserved)]
+        (if (or field (zero? depth))
+          munged-name
+          (symbol (str munged-name "__$" depth))))
       ; String munging
       (let [ss (string/replace (str s) #"\/(.)" ".$1") ; Division is special
             ss (apply str (map #(if (reserved %) (str % "$") %)

@@ -1687,5 +1687,17 @@
         uuid (UUID. uuid-str)]
     (assert (= (pr-str uuid) (str "#uuid \"" uuid-str "\""))))
 
+  ;; CLJS-405
+
+  (defprotocol IBar (-bar [this x]))
+
+  (defn baz [f]
+    (reify
+      IBar
+      (-bar [_ x]
+        (f x))))
+
+  (assert (= 2 (-bar (baz inc) 1)))
+
   :ok
   )
