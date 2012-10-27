@@ -130,6 +130,11 @@
 (defn ^String emit-str [expr]
   (with-out-str (emit-top-level expr)))
 
+(defn emit-provide [sym]
+  (when-not (or (nil? *emitted-provides*) (contains? @*emitted-provides* sym))
+    (swap! *emitted-provides* conj sym)
+    (emitln "goog.provide('" (munge sym) "');")))
+
 (defmulti emit-constant class)
 (defmethod emit-constant nil [x] (emits "null"))
 (defmethod emit-constant Long [x] (emits x))
@@ -682,10 +687,7 @@
 (defmethod emit :deftype*
   [{:keys [t fields pmasks]}]
   (let [fields (map munge fields)]
-    (when-not (or (nil? *emitted-provides*) (contains? @*emitted-provides* t))
-      (swap! *emitted-provides* conj t)
-      (emitln "")
-      (emitln "goog.provide('" (munge t) "');"))
+    (emit-provide t)
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
@@ -700,10 +702,7 @@
 (defmethod emit :defrecord*
   [{:keys [t fields pmasks]}]
   (let [fields (concat (map munge fields) '[__meta __extmap])]
-    (when-not (or (nil? *emitted-provides*) (contains? @*emitted-provides* t))
-      (swap! *emitted-provides* conj t)
-      (emitln "")
-      (emitln "goog.provide('" (munge t) "');"))
+    (emit-provide t)
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
