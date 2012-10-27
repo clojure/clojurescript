@@ -7,7 +7,8 @@
             [clojure.data-test :as data-test]
             [cljs.macro-test :as macro-test]
             [cljs.letfn-test :as letfn-test]
-            [foo.ns-shadow-test :as ns-shadow-test]))
+            [foo.ns-shadow-test :as ns-shadow-test]
+            [cljs.top-level :as top-level]))
 
 (set! *print-fn* js/print)
 
@@ -20,6 +21,7 @@
 (macro-test/test-macros)
 (letfn-test/test-letfn)
 (ns-shadow-test/test-shadow)
+(top-level/test)
 
 (println "Tests completed without exception")
 
