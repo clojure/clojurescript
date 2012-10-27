@@ -107,9 +107,6 @@
                 (print s)))))
   nil)
 
-(defn ^String emit-str [expr]
-  (with-out-str (emit expr)))
-
 (defn emitln [& xs]
   (apply emits xs)
   ;; Prints column-aligned line number comments; good test of *position*.
@@ -121,6 +118,17 @@
     (swap! *position* (fn [[line column]]
                         [(inc line) 0])))
   nil)
+
+(defn emit-top-level [{:keys [op] :as ast}]
+  (if (= op :ns)
+    (emit ast)
+    (do
+      (emitln "(function(){")
+      (emit ast)
+      (emitln "})();"))))
+
+(defn ^String emit-str [expr]
+  (with-out-str (emit-top-level expr)))
 
 (defmulti emit-constant class)
 (defmethod emit-constant nil [x] (emits "null"))
@@ -781,7 +789,7 @@
           (if (seq forms)
             (let [env (ana/empty-env)
                   ast (ana/analyze env (first forms))]
-              (do (emit ast)
+              (do (emit-top-level ast)
                   (if (= (:op ast) :ns)
                     (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
                     (recur (rest forms) ns-name deps))))
