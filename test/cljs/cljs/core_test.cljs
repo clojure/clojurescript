@@ -1699,5 +1699,18 @@
 
   (assert (= 2 (-bar (baz inc) 1)))
 
+  ;; CLJS-411
+
+  (assert (= "original" (let [x "original"
+                              oce (fn [] x)
+                              x "overwritten"]
+                          (oce))))
+
+
+  (letfn [(x [] "original")
+          (y [] (x))]
+    (let [x (fn [] "overwritten")]
+      (assert (= "original" (y)))))
+
   :ok
   )
