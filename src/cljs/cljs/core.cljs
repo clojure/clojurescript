@@ -3651,6 +3651,19 @@ reduces them without incurring seq initialization"
       true
       false))
 
+  IKVReduce
+  (-kv-reduce [coll f init]
+    (let [len (alength keys)]
+      (loop [keys (.sort keys obj-map-compare-keys)
+             init init]
+        (if (seq keys)
+          (let [k (first keys)
+                init (f init k (aget strobj k))]
+            (if (reduced? init)
+              @init
+              (recur (rest keys) init)))
+          init))))
+
   IMap
   (-dissoc [coll k]
     (if (and ^boolean (goog/isString k)
@@ -3909,7 +3922,8 @@ reduces them without incurring seq initialization"
           (let [init (f init (aget arr i) (aget arr (inc i)))]
             (if (reduced? init)
               @init
-              (recur (+ i 2) init)))))))
+              (recur (+ i 2) init)))
+          init))))
 
   IFn
   (-invoke [coll k]
