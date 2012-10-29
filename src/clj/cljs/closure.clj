@@ -45,6 +45,8 @@
            com.google.common.collect.ImmutableList
            com.google.javascript.jscomp.CompilerOptions
            com.google.javascript.jscomp.CompilationLevel
+           com.google.javascript.jscomp.SourceMap$Format
+           com.google.javascript.jscomp.SourceMap$DetailLevel
            com.google.javascript.jscomp.ClosureCodingConvention
            com.google.javascript.jscomp.JSSourceFile
            com.google.javascript.jscomp.Result
@@ -86,11 +88,18 @@
   "Create a CompilerOptions object and set options from opts map."
   [opts]
   (let [level (case (:optimizations opts)
-                    :advanced CompilationLevel/ADVANCED_OPTIMIZATIONS
-                    :whitespace CompilationLevel/WHITESPACE_ONLY
-                    :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
+                :advanced CompilationLevel/ADVANCED_OPTIMIZATIONS
+                :whitespace CompilationLevel/WHITESPACE_ONLY
+                :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
         compiler-options (doto (CompilerOptions.)
                            (.setCodingConvention (ClosureCodingConvention.)))]
+    (when (contains? opts :source-map)
+      (set! (.sourceMapOutputPath compiler-options)
+            (:source-map opts))
+      (set! (.sourceMapDetailLevel compiler-options)
+            SourceMap$DetailLevel/ALL)
+      (set! (.sourceMapFormat compiler-options)
+            SourceMap$Format/V3))
     (do (.setOptionsForCompilationLevel level compiler-options)
         (set-options opts compiler-options)
         compiler-options)))
@@ -674,7 +683,13 @@
         inputs (map #(js-source-file (javascript-name %) %) sources)
         result ^Result (.compile closure-compiler externs inputs compiler-options)]
     (if (.success result)
-      (.toSource closure-compiler)
+      ;; compiler.getSourceMap().reset()
+      (let [source (.toSource closure-compiler)]
+        (when-let [name (:source-map opts)]
+          (let [out (io/writer name)]
+            (.appendTo (.getSourceMap closure-compiler) out name)
+            (.close out)))
+        source)
       (report-failure result))))
 
 (comment
