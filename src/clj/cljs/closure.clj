@@ -45,6 +45,8 @@
            com.google.common.collect.ImmutableList
            com.google.javascript.jscomp.CompilerOptions
            com.google.javascript.jscomp.CompilationLevel
+           com.google.javascript.jscomp.SourceMap$Format
+           com.google.javascript.jscomp.SourceMap$DetailLevel
            com.google.javascript.jscomp.ClosureCodingConvention
            com.google.javascript.jscomp.JSSourceFile
            com.google.javascript.jscomp.Result
@@ -91,6 +93,13 @@
                     :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
         compiler-options (doto (CompilerOptions.)
                            (.setCodingConvention (ClosureCodingConvention.)))]
+    (when (contains? opts :source-map)
+      (set! (.sourceMapOutputPath compiler-options)
+            (:source-map opts))
+      (set! (.sourceMapDetailLevel compiler-options)
+            SourceMap$DetailLevel/ALL)
+      (set! (.sourceMapFormat compiler-options)
+            SourceMap$Format/V3))
     (do (.setOptionsForCompilationLevel level compiler-options)
         (set-options opts compiler-options)
         compiler-options)))
@@ -674,7 +683,13 @@
         inputs (map #(js-source-file (javascript-name %) %) sources)
         result ^Result (.compile closure-compiler externs inputs compiler-options)]
     (if (.success result)
-      (.toSource closure-compiler)
+      ;; compiler.getSourceMap().reset()
+      (let [source (.toSource closure-compiler)]
+        (when-let [path (:source-map opts)]
+          (let [out (io/writer path)]
+            (.appendTo (.getSourceMap closure-compiler) out (:output-to opts))
+            (.close out)))
+        source)
       (report-failure result))))
 
 (comment
@@ -868,6 +883,7 @@
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
   (ana/reset-namespaces!)
+  (comp/reset-mappings!)
   (let [opts (if (= :nodejs (:target opts))
                (merge {:optimizations :simple} opts)
                opts)

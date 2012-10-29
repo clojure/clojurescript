@@ -32,9 +32,21 @@
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"})
 
-(def ^:dynamic *position* nil)
+(def ^:dynamic *cljs-mappings* (atom {}))
+(def ^:dynamic *cljs-gen-col* (atom 0))
+(def ^:dynamic *cljs-gen-line* (atom 0))
+
+(defn reset-mappings! []
+  (reset! *cljs-mappings* {})
+  (reset! *cljs-gen-col* 0)
+  (reset! *cljs-gen-line* 0))
+
 (def ^:dynamic *emitted-provides* nil)
 (def cljs-reserved-file-names #{"deps.cljs"})
+
+(defmacro ^:private debug-prn
+  [& args]
+  `(.println System/err (str ~@args)))
 
 (defonce ns-first-segments (atom '#{"cljs" "clojure"}))
 
@@ -95,28 +107,20 @@
 (defn emits [& xs]
   (doseq [x xs]
     (cond
-      (nil? x) nil
-      (map? x) (emit x)
-      (seq? x) (apply emits x)
-      (fn? x)  (x)
-      :else (do
-              (let [s (print-str x)]
-                (when *position*
-                  (swap! *position* (fn [[line column]]
-                                      [line (+ column (count s))])))
-                (print s)))))
+     (nil? x) nil
+     (map? x) (emit x)
+     (seq? x) (apply emits x)
+     (fn? x)  (x)
+     :else (let [s (print-str x)]
+             (swap! *cljs-gen-col* (fn [col] (+ col (count s))))
+             (print s))))
   nil)
 
 (defn emitln [& xs]
   (apply emits xs)
-  ;; Prints column-aligned line number comments; good test of *position*.
-  ;(when *position*
-  ;  (let [[line column] @*position*]
-  ;    (print (apply str (concat (repeat (- 120 column) \space) ["// " (inc line)])))))
   (println)
-  (when *position*
-    (swap! *position* (fn [[line column]]
-                        [(inc line) 0])))
+  (swap! *cljs-gen-line* inc)
+  (reset! *cljs-gen-col* 0)
   nil)
 
 (defn emit-top-level [{:keys [op] :as ast}]
@@ -222,12 +226,27 @@
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
-  (let [n (:name info)
-        n (if (= (namespace n) "js")
-            (name n)
-            info)]
+  (let [var-name (:name info)
+        info (if (= (namespace var-name) "js")
+               (name var-name)
+               info)]
+    (when (and (:line env) (symbol? var-name))
+      (let [{:keys [line col]} env]
+        (swap! *cljs-mappings*
+          (fn [m]
+            (let [minfo {:gcol  @*cljs-gen-col*
+                         :gline @*cljs-gen-line*
+                         :name  var-name}]
+              (update-in m [ana/*cljs-file*]
+                (fnil (fn [m]
+                        (update-in m [line]
+                          (fnil (fn [m]
+                                  (update-in m [(or col 0)]
+                                    (fnil (fn [v] (conj v minfo)) [])))
+                            (sorted-map))))
+                  (sorted-map))))))))
     (when-not (= :statement (:context env))
-      (emit-wrap env (emits (munge n))))))
+      (emit-wrap env (emits (munge info))))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
@@ -780,7 +799,6 @@
                 ana/*cljs-ns* 'cljs.user
                 ana/*cljs-file* (.getPath ^java.io.File src)
                 *data-readers* tags/*cljs-data-readers*
-                *position* (atom [0 0])
                 *emitted-provides* (atom #{})]
         (loop [forms (forms-seq src)
                ns-name nil
