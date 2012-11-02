@@ -34,6 +34,7 @@
 
 (def ^:dynamic *position* nil)
 (def ^:dynamic *emitted-provides* nil)
+(def ^:dynamic *lexical-renames* {})
 (def cljs-reserved-file-names #{"deps.cljs"})
 
 (defonce ns-first-segments (atom '#{"cljs" "clojure"}))
@@ -49,7 +50,11 @@
                       shadow (recur (inc d) shadow)
                       (@ns-first-segments (str name)) (inc d)
                       :else d))
-            munged-name (munge (if field (str "self__." name) name) reserved)]
+            renamed (*lexical-renames* (System/identityHashCode s))
+            munged-name (munge (cond field (str "self__." name)
+                                     renamed renamed
+                                     :else name)
+                               reserved)]
         (if (or field (zero? depth))
           munged-name
           (symbol (str munged-name "__$" depth))))
@@ -547,13 +552,18 @@
   [{:keys [bindings statements ret env loop]}]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
-    (doseq [{:keys [init] :as binding} bindings]
-      (emitln "var " (munge binding) " = " init ";"))
-    (when loop (emitln "while(true){"))
-    (emit-block (if (= :expr context) :return context) statements ret)
-    (when loop
-      (emitln "break;")
-      (emitln "}"))
+    (binding [*lexical-renames* (into *lexical-renames*
+                                      (when (= :statement context)
+                                        (map #(vector (System/identityHashCode %)
+                                                      (gensym (str (:name %) "-")))
+                                             bindings)))]
+      (doseq [{:keys [init] :as binding} bindings]
+        (emitln "var " (munge binding) " = " init ";"))
+      (when loop (emitln "while(true){"))
+      (emit-block (if (= :expr context) :return context) statements ret)
+      (when loop
+        (emitln "break;")
+        (emitln "}")))
     ;(emits "}")
     (when (= :expr context) (emits "})()"))))
 

@@ -1699,7 +1699,13 @@
 
   (assert (= 2 (-bar (baz inc) 1)))
 
-  ;; CLJS-411
+  ;; CLJS-401 / CLJS-411
+
+  (let [x "original"]
+    (defn original-closure-stmt [] x))
+
+  (let [x "overwritten"]
+    (assert (= "original" (original-closure-stmt))))
 
   (assert (= "original" (let [x "original"
                               oce (fn [] x)
