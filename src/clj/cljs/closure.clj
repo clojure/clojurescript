@@ -331,7 +331,7 @@
     (with-out-str
       (binding [ana/*cljs-ns* 'cljs.user]
         (doseq [form forms]
-          (comp/emit-top-level (ana/analyze (ana/empty-env) form)))))))
+          (comp/emit (ana/analyze (ana/empty-env) form)))))))
 
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
