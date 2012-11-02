@@ -21,7 +21,7 @@
 (macro-test/test-macros)
 (letfn-test/test-letfn)
 (ns-shadow-test/test-shadow)
-;(top-level/test)
+(top-level/test)
 
 (println "Tests completed without exception")
 
