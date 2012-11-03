@@ -4,8 +4,8 @@ set -e
 
 ## Set the version numbers to download and release:
 
-ZIP_VERSION="20111110-r1376"
-RELEASE_VERSION="0.0-1376-2"
+ZIP_VERSION="20120710-r2029"
+RELEASE_VERSION="0.0-2029"
 
 ## These only need to change if the URL or file names change:
 
