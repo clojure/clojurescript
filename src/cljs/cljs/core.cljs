@@ -1311,15 +1311,20 @@ reduces them without incurring seq initialization"
   [x]
   (fix x))
 
+(defn js-mod
+  "Modulus of num and div with original javascript behavior. i.e. bug for negative numbers"
+  [n d]
+  (cljs.core/js-mod n d))
+
 (defn mod
   "Modulus of num and div. Truncates toward negative infinity."
   [n d]
-  (cljs.core/mod n d))
+  (js-mod (+ (js-mod n d) d) d))
 
 (defn quot
   "quot[ient] of dividing numerator by denominator."
   [n d]
-  (let [rem (mod n d)]
+  (let [rem (js-mod n d)]
     (fix (/ (- n rem) d))))
 
 (defn rem
@@ -1527,7 +1532,7 @@ reduces them without incurring seq initialization"
   (loop [h 0 s (seq m)]
     (if s
       (let [e (first s)]
-        (recur (mod (+ h (bit-xor (hash (key e)) (hash (val e))))
+        (recur (js-mod (+ h (bit-xor (hash (key e)) (hash (val e))))
                     4503599627370496)
                (next s)))
       h)))
@@ -1537,7 +1542,7 @@ reduces them without incurring seq initialization"
   (loop [h 0 s (seq s)]
     (if s
       (let [e (first s)]
-        (recur (mod (+ h (hash e)) 4503599627370496)
+        (recur (js-mod (+ h (hash e)) 4503599627370496)
                (next s)))
       h)))
 

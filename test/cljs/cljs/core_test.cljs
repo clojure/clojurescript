@@ -156,6 +156,7 @@
   (assert (= (apply mod [4 2]) 0))
   (assert (= (mod 3 2) 1))
   (assert (= (apply mod [3 2]) 1))
+  (assert (= (mod -2 5) 3))
 
   (assert (= [4 3 2 1 0] (loop [i 0 j ()]
                  (if (< i 5)

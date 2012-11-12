@@ -290,7 +290,7 @@
   ([x y] (list 'js* "((~{} < ~{}) ? ~{} : ~{})" x y x y))
   ([x y & more] `(min (min ~x ~y) ~@more)))
 
-(defmacro mod [num div]
+(defmacro js-mod [num div]
   (list 'js* "(~{} % ~{})" num div))
 
 (defmacro bit-not [x]
