@@ -1,0 +1,41 @@
+<html>
+  <head></head>
+  <body>
+    <script type="text/javascript" src="out/goog/base.js"></script>
+    <script type="text/javascript" src="analyzer.js"></script>
+    <script type="text/javascript" src="compiler.js"></script>
+    <script type="text/javascript" src="reader.js"></script>
+    <script type="text/javascript" src="bs.js"></script>
+    <script type="text/javascript" src="macros.js"></script>
+    <script type="text/javascript">goog.require('cljs.analyzer');</script>
+    <script type="text/javascript">goog.require('cljs.compiler');</script>
+    <script type="text/javascript">goog.require('cljs.reader');</script>
+    <script type="text/javascript">goog.require('bs');</script>
+    <script type="text/javascript">goog.require('cljs.macros');</script>
+    <script>
+      cljs.core._STAR_print_fn_STAR_ = function (x) { console.log(x); };
+
+      var System = {};
+      System.identityHashCode = cljs.core.hash;
+
+      bs.reset();
+
+      cljs.user = {};
+
+      env = cljs.analyzer.empty_env();
+
+function ana (str) { try { return cljs.analyzer.analyze(env, cljs.reader.read_string(str)) } catch (e) { window.e = e; e.stack; } }
+
+function comp (str) { try { return cljs.compiler.emit_str(ana(str)) } catch (e) { window.e = e; e.stack; } }
+function re (str) { try { return eval(comp(str)) } catch (e) { window.e = e; e.stack; } }
+
+//function re (str) { try { return eval(cljs.compiler.emit_str(ana(str))) } catch (e) { window.e = e; e.stack; } }
+
+function rep (str) { try { cljs.core.prn(re(str)) } catch (e) { window.e = e; e.stack; } }
+
+      re("(set! js/env (assoc js/env :context :expr))");
+
+      //alert(hello.greet("ClojureScript"));
+    </script>
+  </body>
+</html>
