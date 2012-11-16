@@ -20,7 +20,7 @@
 
 ;; Stubs just to make it work
 ;;(defn create-ns [ns-sym] nil)
-(defn create-ns [ns-sym] (.log js/console ns-sym)
+(defn create-ns [ns-sym] #_(.log js/console ns-sym)
   (js/eval (str "try { " ns-sym "; } catch (e) { " ns-sym " = {}; }")))
 
 

@@ -80,7 +80,7 @@
                       shadow (recur (inc d) shadow)
                       (@ns-first-segments (str name)) (inc d)
                       :else d))
-            renamed (*lexical-renames* (System/identityHashCode s))
+            renamed (*lexical-renames* (hash s))
             munged-name (munge (cond field (str "self__." name)
                                      renamed renamed
                                      :else name)
@@ -662,7 +662,7 @@
     (when (= :expr context) (emits "(function (){"))
     (binding [*lexical-renames* (into *lexical-renames*
                                       (when (= :statement context)
-                                        (map #(vector (System/identityHashCode %)
+                                        (map #(vector (hash %)
                                                       (gensym (str (:name %) "-")))
                                              bindings)))]
       (doseq [{:keys [init] :as binding} bindings]
@@ -1010,6 +1010,20 @@
 ;;   ;; will produce a mirrored directory structure under "out" but all
 ;;   ;; files will be compiled to js.
 ;;   )
+
+(defn ns-snap []
+  (let [nss (read-string (pr-str (update-in @ana/namespaces
+                                            ['cljs.core :defs] dissoc '/)))]
+    (with-core-cljs
+      (binding [ana/*cljs-ns* 'cljs.user]
+        (spit "src/cljs/bs.js"
+              (apply str
+                     (for [form ['(ns bs)
+                                 (list 'def 'nss (list 'quote nss))
+                                 '(defn reset [] (reset! cljs.analyzer/namespace nss))]]
+                       (when form
+                         (with-out-str
+                           (emit (ana/analyze (ana/empty-env) form)))))))))))
 
 (comment
 
