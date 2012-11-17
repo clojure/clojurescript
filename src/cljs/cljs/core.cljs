@@ -1453,6 +1453,7 @@ reduces them without incurring seq initialization"
   ([x] (cond
         (symbol? x) (. x (substring 2 (alength x)))
         (keyword? x) (str* ":" (. x (substring 2 (alength x))))
+        (regexp? x) (.-source x)
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]

@@ -101,7 +101,7 @@
   (interpose "," xs))
 
 (defn- escape-char [^Character c]
-  (let [cp (.hashCode c)]
+  (let [cp (.charCodeAt c 0)]
     (case cp
       ; Handle printable escapes before ASCII
       34 "\\\""
@@ -117,10 +117,7 @@
         (format "\\u%04X" cp))))) ; Any other character is Unicode
 
 (defn- escape-string [^CharSequence s]
-  (let [sb (StringBuilder. (count s))]
-    (doseq [c s]
-      (.append sb (escape-char c)))
-    (.toString sb)))
+  (apply str (map #(escape-char %) s)))
 
 (defn- wrap-in-double-quotes [x]
   (str \" x \"))
@@ -206,12 +203,13 @@
 
 (extend-protocol EmitConstant
   nil (emit-constant [x] (emits "null"))
-  js/Number (emit-constant [x] (emits x))
-  js/Boolean (emit-constant [x] (emits (if x "true" "false")))
+  number (emit-constant [x] (emits x))
+  boolean (emit-constant [x] (emits (if x "true" "false")))
   js/RegExp (emit-constant [x]
-      (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
-          (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags)))
-  js/String (emit-constant [x]
+      (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))
+            all-slashes (js/RegExp. "\\/" "g")]
+          (emits (str \/ (.replace pattern all-slashes "\\\\/") \/ flags))))
+  string (emit-constant [x]
       (cond
        (symbol? x) (emit-constant-symbol x)
        (keyword? x) (emit-constant-keyword x)
