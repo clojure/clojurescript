@@ -37,13 +37,13 @@
        line]))
   (set! (.-scrollTop log) (.-scrollHeight log)))
 
-(defn postexpr [log input]
+(defn postexpr [log text]
   (append-dom log
     [:table
      [:tbody
       [:tr
        [:td {:class "cg"} "user=> "]
-       [:td (.replace (.-value input) #"\n$" "")]]]]))
+       [:td (.replace text #"\n$" "")]]]]))
 
 #_(defmacro print-with-class [c m]
   `(binding [*print-class* ~c]
@@ -54,6 +54,14 @@
 #_(defmacro let-elem-ids [ids & body]
   `(let ~(vec (mapcat #(list % (list '.getElementById 'document (str %))) ids))
      ~@body))
+
+(defn pep [log text]
+ (postexpr log text)
+ (try
+   (repl-print log (pr-str (js/eval (comp/emit-str (ana/analyze js/env (reader/read-string text))))) "rtn")
+   (catch js/Error e
+    (repl-print log e "err")
+    #_(set! *e e))))
 
 (set! (.-onload js/window) (fn []
   (let [log (.getElementById js/document "log")
@@ -67,11 +75,7 @@
               (try
                 (let [form (reader/read-string (.-value input))]
                   (do
-                    (postexpr log input)
-                    (try (repl-print log (pr-str (js/eval (comp/emit-str (ana/analyze js/env form)))) "rtn")
-                      (catch js/Error e
-                        (repl-print log e "err")
-                        #_(set! *e e)))
+                    (pep log (.-value input))
                     (js/setTimeout #(set! (.-value input) "") 0)
                     (set! (.-src status) "blank.gif")))
                 (catch js/Error e
@@ -79,6 +83,15 @@
                     (set! (.-src status) "dots.png")
                     (repl-print log e "err")))))))
 
-    (println "ClojureScript")
+    (println ";; ClojureScript")
+    (append-dom log [:div {:class "cg"}
+      ";;   - "
+      [:a {:href "http://github.com/kanaka/clojurescript"}
+       "http://github.com/kanaka/clojurescript"]])
+    (println ";;   - A port of the ClojureScript to ClojureScript")
+    (println ";;   - No macros (yet)")
+    (pep log "(+ 1 2)")
+    (pep log "(def double (fn* [x] (* x x)))")
+    (pep log "(double 8)")
 
     (.focus input))))
