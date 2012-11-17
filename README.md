@@ -1,3 +1,64 @@
+## ClojureScript Compiler Compiled with ClojureScript? ##
+
+This is a **patched version of the ClojureScript compiler** that
+compiles to ClojureScript. Normally, the ClojureScript compiler is
+a pure Clojure program that runs on the JVM. This patched version runs
+from the compiled JavaScript. This project was started by
+[kanaka](https://github.com/kanaka) but most of the hard problems were
+solved by [chouser](https://github.com/chouser).
+
+### Why?
+
+* Why not?
+* Compilers aren't cool until they are self-hosting (can compile their
+  own code).
+* You can use ClojureScript without a JVM.
+* You can have a [ClojureScript REPL web
+  app](http://kanaka.github.com/clojurescript/web/jsrepl.html) that
+  runs locally (no server involved after loading the page).
+
+### Current Caveats
+
+* No macro support yet. This means defining a function currently
+  looks like this `(def dbl (fn* [x] (* x x)))`.
+* The code is not yet compatible with the normal Clojure ClojureScript
+  compiler. To make it compatible we really need [Feature Expressions in
+  Clojure](http://dev.clojure.org/display/design/Feature+Expressions)
+* JavaScript output is not optimized by the Google Closure Compiler
+  (which is a Java program).
+* The :nodejs compilation target is currently broken for some reason.
+* The `analyzer/@namespaces` atom is needed by the compiler but it is
+  not currently generated automatically so we generated a static
+  version.
+* Other miscellaneous broken things that haven't been tracked down
+  yet.
+
+### Build
+
+You can build the ClojureScript analyzer and compiler with
+ClojureScript like this:
+
+```
+bin/cljsc src/cljs/cljs/compiler.cljs > compiler.cljs
+```
+
+However, that's not all that useful because it is missing the
+necessary analyzer `@namespaces` atom built during the analysis phase.
+It's also not runnable on it's own because it doesn't have pieces
+necessary to run it under a JavaScript engine (e.g. browser or node.js).
+
+You can rebuild the ClojureScript analyzer, compiler, reader and
+bootstrap pieces with a web REPL like this:
+
+```
+cd web
+../bin/cljsc ../src/cljs/jsrepl.cljs > jsrepl.js
+```
+
+Now load the `web/jsrepl.html` file in a browser.
+
+--------
+
 ## What is ClojureScript? ##
 
 ClojureScript is a new compiler for [Clojure](http://clojure.org) that targets JavaScript. It is designed to emit JavaScript code which is compatible with the advanced compilation mode of the [Google Closure](http://code.google.com/closure/) optimizing compiler.
