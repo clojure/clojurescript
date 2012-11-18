@@ -88,9 +88,9 @@
   "Create a CompilerOptions object and set options from opts map."
   [opts]
   (let [level (case (:optimizations opts)
-                    :advanced CompilationLevel/ADVANCED_OPTIMIZATIONS
-                    :whitespace CompilationLevel/WHITESPACE_ONLY
-                    :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
+                :advanced CompilationLevel/ADVANCED_OPTIMIZATIONS
+                :whitespace CompilationLevel/WHITESPACE_ONLY
+                :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
         compiler-options (doto (CompilerOptions.)
                            (.setCodingConvention (ClosureCodingConvention.)))]
     (when (contains? opts :source-map)
@@ -331,7 +331,7 @@
     (with-out-str
       (binding [ana/*cljs-ns* 'cljs.user]
         (doseq [form forms]
-          (comp/emit-top-level (ana/analyze (ana/empty-env) form)))))))
+          (comp/emit (ana/analyze (ana/empty-env) form)))))))
 
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
@@ -685,9 +685,9 @@
     (if (.success result)
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
-        (when-let [path (:source-map opts)]
-          (let [out (io/writer path)]
-            (.appendTo (.getSourceMap closure-compiler) out (:output-to opts))
+        (when-let [name (:source-map opts)]
+          (let [out (io/writer name)]
+            (.appendTo (.getSourceMap closure-compiler) out name)
             (.close out)))
         source)
       (report-failure result))))

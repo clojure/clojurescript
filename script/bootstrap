@@ -42,7 +42,7 @@ if [ "$1" = "--closure-library-head" ] ; then
     fi
 else
     echo "Fetching Google Closure library..."
-    f=closure-library-20111110-r1376.zip
+    f=closure-library-20120710-r2029.zip
     curl -O -s "http://closure-library.googlecode.com/files/$f"
     unzip -qu "$f"
     echo "Cleaning up Google Closure library archive..."

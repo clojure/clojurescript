@@ -11,3 +11,5 @@ closure
 .repl
 *.swp
 *.zip
+clojurescript_release_*
+closure-release-*

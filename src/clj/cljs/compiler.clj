@@ -42,6 +42,7 @@
   (reset! *cljs-gen-line* 0))
 
 (def ^:dynamic *emitted-provides* nil)
+(def ^:dynamic *lexical-renames* {})
 (def cljs-reserved-file-names #{"deps.cljs"})
 
 (defmacro ^:private debug-prn
@@ -61,7 +62,11 @@
                       shadow (recur (inc d) shadow)
                       (@ns-first-segments (str name)) (inc d)
                       :else d))
-            munged-name (munge (if field (str "self__." name) name) reserved)]
+            renamed (*lexical-renames* (System/identityHashCode s))
+            munged-name (munge (cond field (str "self__." name)
+                                     renamed renamed
+                                     :else name)
+                               reserved)]
         (if (or field (zero? depth))
           munged-name
           (symbol (str munged-name "__$" depth))))
@@ -116,6 +121,9 @@
              (print s))))
   nil)
 
+(defn ^String emit-str [expr]
+  (with-out-str (emit expr)))
+
 (defn emitln [& xs]
   (apply emits xs)
   (println)
@@ -123,16 +131,8 @@
   (reset! *cljs-gen-col* 0)
   nil)
 
-(defn emit-top-level [{:keys [op] :as ast}]
-  (if (= op :ns)
-    (emit ast)
-    (do
-      (emitln "(function(){")
-      (emit ast)
-      (emitln "})();"))))
-
 (defn ^String emit-str [expr]
-  (with-out-str (emit-top-level expr)))
+  (with-out-str (emit expr)))
 
 (defn emit-provide [sym]
   (when-not (or (nil? *emitted-provides*) (contains? @*emitted-provides* sym))
@@ -571,13 +571,18 @@
   [{:keys [bindings statements ret env loop]}]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
-    (doseq [{:keys [init] :as binding} bindings]
-      (emitln "var " (munge binding) " = " init ";"))
-    (when loop (emitln "while(true){"))
-    (emit-block (if (= :expr context) :return context) statements ret)
-    (when loop
-      (emitln "break;")
-      (emitln "}"))
+    (binding [*lexical-renames* (into *lexical-renames*
+                                      (when (= :statement context)
+                                        (map #(vector (System/identityHashCode %)
+                                                      (gensym (str (:name %) "-")))
+                                             bindings)))]
+      (doseq [{:keys [init] :as binding} bindings]
+        (emitln "var " (munge binding) " = " init ";"))
+      (when loop (emitln "while(true){"))
+      (emit-block (if (= :expr context) :return context) statements ret)
+      (when loop
+        (emitln "break;")
+        (emitln "}")))
     ;(emits "}")
     (when (= :expr context) (emits "})()"))))
 
@@ -806,7 +811,7 @@
           (if (seq forms)
             (let [env (ana/empty-env)
                   ast (ana/analyze env (first forms))]
-              (do (emit-top-level ast)
+              (do (emit ast)
                   (if (= (:op ast) :ns)
                     (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
                     (recur (rest forms) ns-name deps))))
