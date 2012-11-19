@@ -682,6 +682,24 @@
   (assert (= [[{:a 1, :b 2} {:a 1, :b 2}]]
                (js->clj [[{:a 1, :b 2} {:a 1, :b 2}]])))
 
+  ;; clj->js
+  (assert (= (clj->js 'a) "a"))
+  (assert (= (clj->js :a) "a"))
+  (assert (= (clj->js "a") "a"))
+  (assert (= (clj->js 1) 1))
+  (assert (= (clj->js nil) (js* "null")))
+  (assert (= (clj->js true) (js* "true")))
+  (assert (goog/isArray (clj->js [])))
+  (assert (goog/isArray (clj->js #{})))
+  (assert (goog/isArray (clj->js '())))
+  (assert (goog/isObject (clj->js {})))
+  (assert (= (aget (clj->js {:a 1}) "a") 1))
+  (assert (= (-> (clj->js {:a {:b {{:k :ey} :d}}})
+                 (aget "a")
+                 (aget "b")
+                 (aget "{:k :ey}"))
+             "d"))
+
   ;; last
   (assert (= nil (last nil)))
   (assert (= 3 (last [1 2 3])))
@@ -1516,7 +1534,7 @@
                  (b c d) :sym
                  :none)
                :none)))
-  
+
   ;; IComparable
   (assert (=  0 (compare false false)))
   (assert (= -1 (compare false true)))
