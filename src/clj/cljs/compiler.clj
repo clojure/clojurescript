@@ -808,6 +808,24 @@
   (or (not (.exists dest))
       (> (.lastModified src) (.lastModified dest))))
 
+(defn parse-ns [src dest]
+  (with-core-cljs
+    (binding [ana/*cljs-ns* 'cljs.user]
+      (loop [forms (forms-seq src)]
+        (if (seq forms)
+          (let [env (ana/empty-env)
+                ast (ana/analyze env (first forms))]
+            (if (= (:op ast) :ns)
+              (let [ns-name (:name ast)
+                    deps    (merge (:uses ast) (:requires ast))]
+                {:ns (or ns-name 'cljs.user)
+                 :provides [ns-name]
+                 :requires (if (= ns-name 'cljs.core)
+                             (set (vals deps))
+                             (conj (set (vals deps)) 'cljs.core))
+                 :file dest})
+              (recur (rest forms)))))))))
+
 (defn compile-file
   "Compiles src to a file of the same name, but with a .js extension,
    in the src file's directory.
@@ -831,7 +849,7 @@
          (if (requires-compilation? src-file dest-file)
            (do (mkdirs dest-file)
                (compile-file* src-file dest-file))
-           {:file dest-file})
+           (parse-ns src-file dest-file))
          (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
