@@ -290,6 +290,7 @@
                   (update-in env [:ns :excludes] conj sym))
                 env)
           name (:name (resolve-var (dissoc env :locals) sym))
+          var-expr (assoc (analyze (-> env (dissoc :locals) (assoc :context :expr)) sym) :op :var)
           init-expr (when (contains? args :init)
                       (disallowing-recur
                        (analyze (assoc env :context :expr) (:init args) sym)))
@@ -328,7 +329,7 @@
                       :max-fixed-arity (:max-fixed-arity init-expr)
                       :method-params (map :params (:methods init-expr))})))
       (merge {:env env :op :def :form form
-              :name name :doc doc :init init-expr}
+              :name name :var var-expr :doc doc :init init-expr}
              (when tag {:tag tag})
              (when dynamic {:dynamic true})
              (when export-as {:export export-as})
