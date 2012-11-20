@@ -231,7 +231,7 @@
                (name var-name)
                info)]
     (when (and (:line env) (symbol? var-name))
-      (let [{:keys [line col]} env]
+      (let [{:keys [line column]} env]
         (swap! *cljs-mappings*
           (fn [m]
             (let [minfo {:gcol  @*cljs-gen-col*
@@ -241,7 +241,7 @@
                 (fnil (fn [m]
                         (update-in m [line]
                           (fnil (fn [m]
-                                  (update-in m [(or col 0)]
+                                  (update-in m [(or column 0)]
                                     (fnil (fn [v] (conj v minfo)) [])))
                             (sorted-map))))
                   (sorted-map))))))))
