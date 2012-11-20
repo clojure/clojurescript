@@ -82,15 +82,16 @@
 (comment
   ;; INSTRUCTIONS:
   
-  ;; switch into samples/repl
+  ;; switch into samples/hello
   ;; run repl to start clojure
   ;; build with
+  
   (require '[cljs.closure :as cljsc])
-  (cljsc/build "src" {:optimizations :simple :output-to "repl_sample.js" :source-map "repl_sample_map.json"})
+  (cljsc/build "src" {:optimizations :simple :output-to "hello.js" :source-map "hello.js.map"})
 
   ;; load source map
   (def raw-source-map
-    (json/read-json (slurp (io/file "samples/repl/repl_sample_map.json"))))
+    (json/read-json (slurp (io/file "hello.js.map"))))
 
   ;; test it out
   (first (decode raw-source-map))
