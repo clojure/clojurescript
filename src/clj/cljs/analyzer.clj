@@ -91,7 +91,8 @@
   (binding [*out* *err*]
     (println
      (str s (when (:line env)
-       (str " at line " (:line env) " " *cljs-file*))))))
+       (str " at line " (:line env) " column " (:column env) " "
+            *cljs-file*))))))
 
 (defn confirm-var-exists [env prefix suffix]
   (when *cljs-warn-on-undeclared*
@@ -337,7 +338,7 @@
                    (when doc {:doc doc})
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
-                     {:file *cljs-file* :line line})
+                     {:file *cljs-file* :line line :column (:column env)})
                    ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
@@ -699,7 +700,8 @@
                  {:protocols (-> tsym meta :protocols)}
                  (when-let [line (:line env)]
                    {:file *cljs-file*
-                    :line line})))))
+                    :line line
+                    :column (:column env)})))))
     {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
@@ -712,7 +714,8 @@
                  {:protocols (-> tsym meta :protocols)}
                  (when-let [line (:line env)]
                    {:file *cljs-file*
-                    :line line})))))
+                    :line line
+                    :column (:column env)})))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
@@ -887,9 +890,11 @@
 
 (defn analyze-seq
   [env form name]
-  (let [env (assoc env :line
-                   (or (-> form meta :line)
-                       (:line env)))]
+  (let [env (assoc env
+              :line (or (-> form meta :line)
+                        (:line env))
+              :column (or (-> form meta :column)
+                          (:column env)))]
     (let [op (first form)]
       (assert (not (nil? op)) "Can't call nil")
       (let [mform (macroexpand-1 env form)]
