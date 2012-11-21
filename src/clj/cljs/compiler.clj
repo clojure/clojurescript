@@ -112,7 +112,8 @@
      (seq? x) (apply emits x)
      (fn? x)  (x)
      :else (let [s (print-str x)]
-             (swap! *cljs-gen-col* (fn [col] (+ col (count s))))
+             (when *cljs-source-map*
+               (swap! *cljs-gen-col* (fn [col] (+ col (count s)))))
              (print s))))
   nil)
 
@@ -122,8 +123,10 @@
 (defn emitln [& xs]
   (apply emits xs)
   (println)
-  (swap! *cljs-gen-line* inc)
-  (reset! *cljs-gen-col* 0)
+  (when *cljs-gen-line*
+    (swap! *cljs-gen-line* inc))
+  (when *cljs-gen-col*
+    (reset! *cljs-gen-col* 0))
   nil)
 
 (defn ^String emit-str [expr]
@@ -225,18 +228,19 @@
         info (if (= (namespace var-name) "js")
                (name var-name)
                info)]
-    (when (and (:line env) (symbol? var-name))
-      (let [{:keys [line column]} env]
-        (swap! *cljs-source-map*
-          (fn [m]
-            (let [minfo {:gcol  @*cljs-gen-col*
-                         :gline @*cljs-gen-line*
-                         :name  var-name}]
-              (update-in m [line]
-                (fnil (fn [m]
-                        (update-in m [(or column 0)]
-                          (fnil (fn [v] (conj v minfo)) [])))
-                  (sorted-map))))))))
+    (when *cljs-source-map*
+      (when (and (:line env) (symbol? var-name))
+        (let [{:keys [line column]} env]
+          (swap! *cljs-source-map*
+            (fn [m]
+              (let [minfo {:gcol  @*cljs-gen-col*
+                           :gline @*cljs-gen-line*
+                           :name  var-name}]
+                (update-in m [line]
+                  (fnil (fn [m]
+                          (update-in m [(or column 0)]
+                            (fnil (fn [v] (conj v minfo)) [])))
+                    (sorted-map)))))))))
     (when-not (= :statement (:context env))
       (emit-wrap env (emits (munge info))))))
 
@@ -798,9 +802,9 @@
                    ana/*cljs-file* (.getPath ^java.io.File src)
                    *data-readers* tags/*cljs-data-readers*
                    *emitted-provides* (atom #{})
-                   *cljs-source-map* (atom (sorted-map))
+                   *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
                    *cljs-gen-line* (atom 0)
-                   *cljs-gen-col*  (atom 0)]
+                   *cljs-gen-col* (atom 0)]
            (loop [forms (forms-seq src)
                   ns-name nil
                   deps nil]
