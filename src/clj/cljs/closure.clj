@@ -340,6 +340,7 @@
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
 
+;; cache from js file path to map of {:file .. :provides .. :requires ..}
 (def compiled-cljs (atom {}))
 
 (defn compiled-file
