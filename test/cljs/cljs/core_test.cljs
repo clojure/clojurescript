@@ -400,6 +400,16 @@
     (assert (nil? (f :foo))))
   (assert (nil? (array-seq (array 1) 1)))
 
+  ;; Functions with metadata
+  (let [f (fn [x] (* x 2))
+        m {:foo "bar"}
+        mf (with-meta f m)]
+    (assert (nil? (meta f)))
+    (assert (fn? mf))
+    (assert (= 4 (mf 2)))
+    (assert (= 4 (apply mf [2])))
+    (assert (= (meta mf) m)))
+
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
     (assert (= 1 (swap! a inc)))
