@@ -459,6 +459,8 @@
   (-hash [o]
     (if (identical? o true) 1 0)))
 
+(declare with-meta)
+
 (extend-type function
   Fn
 
