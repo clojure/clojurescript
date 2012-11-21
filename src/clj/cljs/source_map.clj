@@ -76,8 +76,24 @@
 (defn encode [m]
   )
 
-(defn gen-merged-map [cljs-map closure-map]
-  )
+(defn merge-source-maps
+  ([cljs-map closure-map] (merge-source-maps cljs-map closure-map 0))
+  ([cljs-map closure-map line-offset]
+     (loop [line-map-seq (seq cljs-map) new-lines (sorted-map)]
+       (if line-map-seq
+         (let [[line col-map] (first line-map-seq)
+               new-cols
+               (loop [col-map-seq (seq col-map) new-cols (sorted-map)]
+                 (if col-map-seq
+                   (let [[col {:keys [gline gcol]}] (first col-map-seq)]
+                     (recur (rest col-map-seq)
+                       (assoc new-cols col
+                         (get-in closure-map [(+ gline line-offset) gcol]))))
+                   new-cols))]
+           (recur (rest line-map-seq)
+             (assoc new-lines line
+               (new-cols))))
+         new-lines))))
 
 (comment
   ;; INSTRUCTIONS:
