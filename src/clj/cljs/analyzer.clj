@@ -290,10 +290,14 @@
                   (update-in env [:ns :excludes] conj sym))
                 env)
           name (:name (resolve-var (dissoc env :locals) sym))
-          var-expr (assoc (analyze (-> env (dissoc :locals) (assoc :context :expr)) sym) :op :var)
+          var-expr (assoc (analyze (-> env (dissoc :locals)
+                                       (assoc :context :expr)
+                                       (assoc :def-var true))
+                                   sym)
+                     :op :var)
           init-expr (when (contains? args :init)
                       (disallowing-recur
-                       (analyze (assoc env :context :expr) (:init args) sym)))
+                        (analyze (assoc env :context :expr) (:init args) sym)))
           fn-var? (and init-expr (= (:op init-expr) :fn))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
@@ -821,7 +825,9 @@
         lb (-> env :locals sym)]
     (if lb
       (assoc ret :op :var :info lb)
-      (assoc ret :op :var :info (resolve-existing-var env sym)))))
+      (if-not (:def-var env)
+        (assoc ret :op :var :info (resolve-existing-var env sym))
+        (assoc ret :op :var :info (resolve-var env sym))))))
 
 (defn get-expander [sym env]
   (let [mvar
