@@ -490,13 +490,13 @@
                                        (mapcat (fn [[f & meths :as form]]
                                                  (if (= psym 'cljs.core/IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
-                                                                        (let [this-sym (with-meta (gensym "this-sym") {:tag t})]
+                                                                        (let [this-sym (with-meta 'self__ {:tag t})]
                                                                           `(~(vec (cons this-sym args))
                                                                             (this-as ~this-sym
                                                                                      (let [~targ ~this-sym]
                                                                                        ~@body)))))
                                                          meths (map adapt-params meths)
-                                                         this-sym (with-meta (gensym "this-sym") {:tag t})
+                                                         this-sym (with-meta 'self__ {:tag t})
                                                          argsym (gensym "args")]
                                                      [`(set! ~(prototype-prefix 'call) ~(with-meta `(fn ~@meths) (meta form)))
                                                       `(set! ~(prototype-prefix 'apply)
