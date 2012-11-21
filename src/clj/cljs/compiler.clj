@@ -32,7 +32,7 @@
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"})
 
-(def ^:dynamic *cljs-mappings* nil)
+(def ^:dynamic *cljs-source-map* nil)
 (def ^:dynamic *cljs-gen-col* nil)
 (def ^:dynamic *cljs-gen-line* nil)
 
@@ -227,7 +227,7 @@
                info)]
     (when (and (:line env) (symbol? var-name))
       (let [{:keys [line column]} env]
-        (swap! *cljs-mappings*
+        (swap! *cljs-source-map*
           (fn [m]
             (let [minfo {:gcol  @*cljs-gen-col*
                          :gline @*cljs-gen-line*
@@ -798,7 +798,7 @@
                    ana/*cljs-file* (.getPath ^java.io.File src)
                    *data-readers* tags/*cljs-data-readers*
                    *emitted-provides* (atom #{})
-                   *cljs-mappings* (atom (sorted-map))
+                   *cljs-source-map* (atom (sorted-map))
                    *cljs-gen-line* (atom 0)
                    *cljs-gen-col*  (atom 0)]
            (loop [forms (forms-seq src)
@@ -818,7 +818,7 @@
                   :file dest
                   :lines @*cljs-gen-line*}
                  (when (:source-map opts)
-                   {:mappings @*cljs-mappings*})))))))))
+                   {:source-map @*cljs-source-map*})))))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."

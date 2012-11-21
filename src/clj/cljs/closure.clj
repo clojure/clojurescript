@@ -236,6 +236,9 @@
   (-requires [this] "A list of namespaces that this JavaScript requires.")
   (-source [this] "The JavaScript source string."))
 
+(defprotocol ISourceMap
+  (-source-map [this] "Return the CLJS compiler generated JS source mapping"))
+
 (extend-protocol IJavaScript
   
   String
@@ -255,19 +258,21 @@
                     s
                     (slurp (io/reader (-url this))))))
 
-(defrecord JavaScriptFile [foreign ^URL url provides requires lines mappings]
+(defrecord JavaScriptFile [foreign ^URL url provides requires lines source-map]
   IJavaScript
   (-foreign? [this] foreign)
   (-url [this] url)
   (-provides [this] provides)
   (-requires [this] requires)
-  (-source [this] (slurp (io/reader url))))
+  (-source [this] (slurp (io/reader url)))
+  ISourceMap
+  (-source-map [this] source-map))
 
 (defn javascript-file
   ([foreign ^URL url provides requires]
      (javascript-file foreign url provides requires nil nil))
-  ([foreign ^URL url provides requires lines mappings]
-     (JavaScriptFile. foreign url (map name provides) (map name requires) lines mappings)))
+  ([foreign ^URL url provides requires lines source-map]
+     (JavaScriptFile. foreign url (map name provides) (map name requires) lines source-map)))
 
 (defn map->javascript-file [m]
   (javascript-file
@@ -276,7 +281,7 @@
     (:provides m)
     (:requires m)
     (:lines m)
-    (:mappings m)))
+    (:source-map m)))
 
 (defn read-js
   "Read a JavaScript file returning a map of file information."
