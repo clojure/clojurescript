@@ -35,8 +35,10 @@
   "
   (:require [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
+            [cljs.source-map :as sm]
             [clojure.java.io :as io]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [clojure.data.json :as json])
   (:import java.io.File
            java.io.BufferedInputStream
            java.net.URL
@@ -699,7 +701,12 @@
         (when-let [name (:source-map opts)]
           (let [out (io/writer name)]
             (.appendTo (.getSourceMap closure-compiler) out name)
-            (.close out)))
+            (.close out))
+          (let [source-map (-> (io/file name) slurp
+                               json/read-json sm/decode)]
+            ;; loop over the source maps from compiler & merge maps
+            ;; final source map from merged map
+            ))
         source)
       (report-failure result))))
 
