@@ -867,7 +867,7 @@
      (let [src-file (io/file src)
            dest-file (io/file dest)]
        (if (.exists src-file)
-         (if (requires-compilation? src-file dest-file)
+         (if (or (requires-compilation? src-file dest-file) (:source-map opts))
            (do (mkdirs dest-file)
                (compile-file* src-file dest-file opts))
            (parse-ns src-file dest-file opts))
