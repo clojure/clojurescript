@@ -566,7 +566,7 @@
 
 (defn analyze-deps [deps]
   (doseq [dep deps]
-    (when-not (:defs (@namespaces dep))
+    (when-not (contains? @namespaces dep)
       (let [relpath (ns->relpath dep)]
         (when (io/resource relpath)
           (analyze-file relpath))))))
