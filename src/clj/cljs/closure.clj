@@ -253,7 +253,7 @@
                     s
                     (slurp (io/reader (-url this))))))
 
-(defrecord JavaScriptFile [foreign ^URL url provides requires]
+(defrecord JavaScriptFile [foreign ^URL url provides requires lines mappings]
   IJavaScript
   (-foreign? [this] foreign)
   (-url [this] url)
@@ -261,14 +261,20 @@
   (-requires [this] requires)
   (-source [this] (slurp (io/reader url))))
 
-(defn javascript-file [foreign ^URL url provides requires]
-  (JavaScriptFile. foreign url (map name provides) (map name requires)))
+(defn javascript-file
+  ([foreign ^URL url provides requires]
+     (javascript-file foreign url provides requires nil nil))
+  ([foreign ^URL url provides requires lines mappings]
+     (JavaScriptFile. foreign url (map name provides) (map name requires) lines mappings)))
 
 (defn map->javascript-file [m]
-  (javascript-file (:foreign m)
-                   (to-url (:file m))
-                   (:provides m)
-                   (:requires m)))
+  (javascript-file
+    (:foreign m)
+    (to-url (:file m))
+    (:provides m)
+    (:requires m)
+    (:lines m)
+    (:mappings m)))
 
 (defn read-js
   "Read a JavaScript file returning a map of file information."
@@ -376,7 +382,7 @@
   [^File src-dir opts]
   (let [out-dir (output-directory opts)]
     (map compiled-file
-         (comp/compile-root src-dir out-dir))))
+         (comp/compile-root src-dir out-dir opts))))
 
 (defn path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
