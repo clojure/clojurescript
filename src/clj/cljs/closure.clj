@@ -53,6 +53,10 @@
            com.google.javascript.jscomp.JSError
            com.google.javascript.jscomp.CommandLineRunner))
 
+(defmacro ^:private debug-prn
+  [& args]
+  `(.println System/err (str ~@args)))
+
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
 (defn random-char []
