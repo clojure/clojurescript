@@ -3184,7 +3184,7 @@ reduces them without incurring seq initialization"
     (pr-str this))
 
   IWithMeta
-  (-with-meta [coll meta] (Subvec. meta v start end __hash))
+  (-with-meta [coll meta] (build-subvec meta v start end __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -3195,11 +3195,11 @@ reduces them without incurring seq initialization"
   (-pop [coll]
     (if (== start end)
       (throw (js/Error. "Can't pop empty vector"))
-      (Subvec. meta v start (dec end) nil)))
+      (build-subvec meta v start (dec end) nil)))
 
   ICollection
   (-conj [coll o]
-    (Subvec. meta (-assoc-n v end o) start (inc end) nil))
+    (build-subvec meta (-assoc-n v end o) start (inc end) nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
@@ -3236,7 +3236,7 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll key val]
     (let [v-pos (+ start key)]
-      (Subvec. meta (-assoc v v-pos val)
+      (build-subvec meta (-assoc v v-pos val)
                start (max end (inc v-pos))
                nil)))
 
@@ -3255,6 +3255,15 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found)))
 
+(defn- build-subvec [meta v start end __hash]
+  (let [c (count v)]
+       (when (or (neg? start)
+                 (neg? end)
+                 (> start c)
+                 (> end c))
+         (throw (js/Error. "Index out of bounds")))
+       (Subvec. meta v start end __hash)))
+
 (defn subvec
   "Returns a persistent vector of the items in vector from
   start (inclusive) to end (exclusive).  If end is not supplied,
@@ -3264,7 +3273,7 @@ reduces them without incurring seq initialization"
   ([v start]
      (subvec v start (count v)))
   ([v start end]
-     (Subvec. nil v start end nil)))
+     (build-subvec nil v start end nil)))
 
 (defn- tv-ensure-editable [edit node]
   (if (identical? edit (.-edit node))
