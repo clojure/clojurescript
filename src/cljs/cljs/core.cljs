@@ -3178,6 +3178,8 @@ reduces them without incurring seq initialization"
   ([vec node i off meta]
      (ChunkedSeq. vec node i off meta nil)))
 
+(declare build-subvec)
+
 (deftype Subvec [meta v start end ^:mutable __hash]
   Object
   (toString [this]
