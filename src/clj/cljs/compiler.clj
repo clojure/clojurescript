@@ -112,7 +112,7 @@
      (seq? x) (apply emits x)
      (fn? x)  (x)
      :else (let [s (print-str x)]
-             (when *cljs-source-map*
+             (when *cljs-gen-col*
                (swap! *cljs-gen-col* (fn [col] (+ col (count s)))))
              (print s))))
   nil)
