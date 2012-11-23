@@ -1007,13 +1007,14 @@
     (assert (= 94 (peek stack2))))
 
   ;; subvec
-  (let [v (vec (range 10))
-        s (subvec v 2 8)]
+  (let [v1 (vec (range 10))
+        v2 (vec (range 5))
+        s (subvec v1 2 8)]
     (assert (= s
-               (-> v
+               (-> v1
                    (subvec 2)
                    (subvec 0 6))
-               (->> v
+               (->> v1
                     (drop 2)
                     (take 6))))
     (assert (= 6 (count s)))
@@ -1024,7 +1025,13 @@
                (conj s 1)))
     (assert (= 27 (reduce + s)))
     (assert (= s (vec s))) ; pour into plain vector
-    (let [m {:x 1}] (assert (= m (meta (with-meta s m))))))
+    (let [m {:x 1}] (assert (= m (meta (with-meta s m)))))
+    ;; go outside ranges
+    (assert (= :fail (try (subvec v2 0 6) (catch js/Error e :fail))))
+    (assert (= :fail (try (subvec v2 6 10) (catch js/Error e :fail))))
+    (assert (= :fail (try (subvec v2 6 10) (catch js/Error e :fail))))
+    (assert (= :fail (try (subvec v2 3 6) (catch js/Error e :fail))))
+    )
 
   ;; TransientVector
   (let [v1 (vec (range 15 48))
