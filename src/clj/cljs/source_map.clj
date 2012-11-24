@@ -80,8 +80,8 @@
   (loop [vs (seq vs) lastseg nil cols-segs []]
     (if vs
       (let [v (first vs)
-            seg [{:gcol v} source-idx line col]
-            seg (if-let [name (:name seg)]
+            seg [(:gcol v) source-idx line col]
+            seg (if-let [name (:name v)]
                   (let [idx (if-let [idx (get names->idx name)]
                               idx
                               (let [cidx @name-idx]
