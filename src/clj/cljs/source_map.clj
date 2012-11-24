@@ -92,14 +92,15 @@
                new-cols
                (loop [col-map-seq (seq col-map) new-cols (sorted-map)]
                  (if col-map-seq
-                   (let [[col {:keys [gline gcol]}] (first col-map-seq)]
-                     (recur (rest col-map-seq)
+                   (let [[col infos] (first col-map-seq)]
+                     (recur (next col-map-seq)
                        (assoc new-cols col
-                         (get-in closure-map [(+ gline line-offset) gcol]))))
+                         (reduce (fn [v {:keys [gline gcol]}]
+                                   (into v (get-in closure-map [(+ gline line-offset) gcol])))
+                                 [] infos))))
                    new-cols))]
-           (recur (rest line-map-seq)
-             (assoc new-lines line
-               (new-cols))))
+           (recur (next line-map-seq)
+             (assoc new-lines line new-cols)))
          new-lines))))
 
 (comment
