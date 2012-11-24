@@ -82,7 +82,7 @@
       (let [v (first vs)
             seg [(:gcol v) source-idx line col]
             seg (if-let [name (:name v)]
-                  (let [idx (if-let [idx (get names->idx name)]
+                  (let [idx (if-let [idx (get @names->idx name)]
                               idx
                               (let [cidx @name-idx]
                                 (swap! names->idx assoc name cidx)
