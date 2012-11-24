@@ -20,7 +20,7 @@
     :source (nth (:sources source-map) source)
     :line   line
     :col    col
-    :name   (if-let [name (-> seg meta :name)]
+    :name   (when-let [name (-> seg meta :name)]
               (nth (:names source-map) name))}))
 
 (defn seg-combine [seg relseg]
@@ -44,7 +44,9 @@
       (fnil (fn [m]
               (update-in m [line]
                 (fnil (fn [m]
-                        (assoc m col d))
+                        (update-in m [col]
+                          (fnil (fn [v] (conj v d))
+                            [])))
                       (sorted-map))))
             (sorted-map)))))
 
