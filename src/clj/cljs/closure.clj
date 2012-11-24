@@ -707,12 +707,20 @@
           (let [out (io/writer name)]
             (.appendTo (.getSourceMap closure-compiler) out name)
             (.close out))
-          (let [source-map (-> (io/file name) slurp
-                               (json/read-str :key-fn keyword)
-                               sm/decode)]
-            ;; loop over the source maps from compiler & merge maps
-            ;; final source map from merged map
-            ))
+          (let [closure-source-map (-> (io/file name) slurp
+                                       (json/read-str :key-fn keyword)
+                                       sm/decode)]
+            (loop [sources (seq sources) line-offset 0 result (sorted-map-by (sm/source-compare sources))]
+              (if sources
+                (let [source (first sources)]
+                  (recur (next sources)
+                    (+ line-offset (or (:lines source) 0))
+                    (let [path (.getPath ^URL (:url source))]
+                      (if-let [compiled (get @compiled-cljs path)] 
+                        (assoc result path
+                          (sm/merge-source-maps (:source-map compiled) closure-source-map line-offset))
+                        result))))
+                (spit (io/file (str name ".merged")) (sm/encode result {}))))))
         source)
       (report-failure result))))
 
