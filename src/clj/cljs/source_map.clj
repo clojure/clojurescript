@@ -76,6 +76,9 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
+;; TODO: the lastseg needs to be passed into encode-cols - everything
+;; but :gcol is relative
+
 (defn encode-cols [vs source-idx line col names->idx name-idx]
   (loop [vs (seq vs) lastseg nil cols-segs []]
     (if vs
