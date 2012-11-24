@@ -112,7 +112,7 @@
 
   ;; load source map
   (def raw-source-map
-    (json/read-str (slurp (io/file "hello.js.map"))))
+    (json/read-str (slurp (io/file "hello.js.map")) :key-fn keyword))
 
   ;; test it out
   (first (decode raw-source-map))

@@ -708,7 +708,8 @@
             (.appendTo (.getSourceMap closure-compiler) out name)
             (.close out))
           (let [source-map (-> (io/file name) slurp
-                               json/read-str sm/decode)]
+                               (json/read-str :key-fn keyword)
+                               sm/decode)]
             ;; loop over the source maps from compiler & merge maps
             ;; final source map from merged map
             ))
