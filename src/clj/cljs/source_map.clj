@@ -90,10 +90,15 @@
                                 cidx))]
                     (conj seg idx))
                   seg)
-            col-seg (if lastseg
+            relseg (if lastseg
                       (into [] (map - seg lastseg))
                       seg)]
-        (recur (next vs) col-seg (conj cols-segs (base64-vlq/encode col-seg))))
+        (recur (next vs)
+          (if (and (= (count seg) 4)
+                   (= (count lastseg) 5))
+            (conj seg (peek lastseg))
+            seg)
+          (conj cols-segs (base64-vlq/encode relseg))))
       cols-segs)))
 
 (defn encode-source [lines segs source-idx names->idx name-idx]
