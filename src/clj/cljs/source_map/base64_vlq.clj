@@ -22,9 +22,9 @@
       (- shifted)
       shifted)))
 
-(defn encode [v]
+(defn encode-val [n]
   (let [sb (StringBuilder.)
-        vlq (to-vlq-signed v)]
+        vlq (to-vlq-signed n)]
     (loop [digit (bit-and vlq vlq-base-mask)
            vlq   (bit-shift-right-zero-fill vlq vlq-base-shift)]
       (if (pos? vlq)
@@ -34,6 +34,9 @@
                  (bit-shift-right-zero-fill vlq vlq-base-shift)))
         (.append sb (base64/encode digit))))
     (str sb)))
+
+(defn encode [v]
+  (apply str (map encode-val v)))
 
 (defn decode [^String s]
   (let [l (.length s)]
@@ -67,7 +70,7 @@
 
   ;; Base64 VLQ can only represent 32bit values
 
-  (encode 32) ; "gC"
+  (encode-val 32) ; "gC"
   (decode "gC") ; {:value 32 :rest ""}
 
   (decode "AAgBC") ; (0 0 16 1)
@@ -78,7 +81,7 @@
   (decode "AAggBC") ; very clever way to encode large values
   (decode "AAggBCA") ; 5 values instead of 4
 
-  (apply str (map encode [0 0 16 1])) ; "AAgBC"
+  (encode [0 0 16 1]) ; "AAgBC"
 
   (decode "IAWdD") ; (4 0 11 -14 -1) this is correct
   ;; gline N, gcol +4, file +0, line +11, col -14, name -1
