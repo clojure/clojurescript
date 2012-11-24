@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.data.json :as json]
+            [clojure.set :as set]
             [clojure.pprint :as pp]
             [cljs.source-map.base64-vlq :as base64-vlq]))
 
@@ -75,13 +76,58 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
+(defn encode-cols [vs source-idx line col names->idx name-idx]
+  (loop [vs (seq vs) lastseg nil cols-segs []]
+    (if vs
+      (let [v (first vs)
+            seg [{:gcol v} source-idx line col]
+            seg (if-let [name (:name seg)]
+                  (let [idx (if-let [idx (get names->idx name)]
+                              idx
+                              (let [cidx @name-idx]
+                                (swap! names->idx assoc name cidx)
+                                (swap! name-idx inc)
+                                cidx))]
+                    (conj seg idx))
+                  seg)
+            col-seg (if lastseg
+                      (into [] (map - seg lastseg))
+                      seg)]
+        (recur (next vs) col-seg (conj (base64-vlq/encode col-seg) cols-segs)))
+      cols-segs)))
+
+(defn encode-source [lines segs source-idx names->idx name-idx]
+  (loop [lines (seq lines) segs segs]
+    (if lines
+      (let [[line cols] (first lines)
+            segs
+            (loop [cols (seq cols) segs segs]
+              (if cols
+                (let [[col vs] (first cols)
+                      col-segs (encode-cols vs source-idx line col names->idx name-idx)]
+                  (recur (next cols) (conj segs col-segs)))
+                segs))]
+        (recur (next lines) segs))
+      segs)))
+
 (defn encode [m opts]
-  (let [source-map {"version" 3
-                    "file" (:file opts)
-                    "lineCount" (:lines opts)
-                    "mappings" nil
-                    "names" nil}]
-    (json/write-str source-map)))
+  (let [names->idx (atom {})
+        name-idx   (atom 0)
+        segs (loop [sources (seq m) source-idx 0 segs []]
+               (if sources
+                 (let [[source lines] (first sources)
+                       segs (encode-source lines segs source-idx names->idx name-idx)]
+                   (recur (next sources) (inc source-idx) segs))
+                 segs))]
+    (json/write-str
+     {"version" 3
+      "file" (:file opts)
+      "sources" (into [] (keys m))
+      "lineCount" (:lines opts)
+      "mappings" (->> segs
+                   (map #(string/join "," (apply str %)))
+                   (string/join ";"))
+      "names" (into [] (map (set/map-invert @names->idx) (range (count @names->idx))))})))
 
 (defn merge-source-maps
   ([cljs-map closure-map] (merge-source-maps cljs-map closure-map 0))
