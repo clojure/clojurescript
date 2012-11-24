@@ -119,15 +119,16 @@
                        segs (encode-source lines segs source-idx names->idx name-idx)]
                    (recur (next sources) (inc source-idx) segs))
                  segs))]
-    (json/write-str
-     {"version" 3
-      "file" (:file opts)
-      "sources" (into [] (keys m))
-      "lineCount" (:lines opts)
-      "mappings" (->> segs
-                   (map #(string/join "," (apply str %)))
-                   (string/join ";"))
-      "names" (into [] (map (set/map-invert @names->idx) (range (count @names->idx))))})))
+    (with-out-str
+      (json/pprint 
+       {"version" 3
+        "file" (:file opts)
+        "sources" (into [] (keys m))
+        "lineCount" (:lines opts)
+        "mappings" (->> segs
+                        (map #(string/join "," %))
+                        (string/join ";"))
+        "names" (into [] (map (set/map-invert @names->idx) (range (count @names->idx))))}))))
 
 (defn merge-source-maps
   ([cljs-map closure-map] (merge-source-maps cljs-map closure-map 0))
