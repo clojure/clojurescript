@@ -73,8 +73,13 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
-(defn encode [m]
-  )
+(defn encode [m opts]
+  (let [source-map {"version" 3
+                    "file" (:file opts)
+                    "lineCount" (:lines opts)
+                    "mappings" nil
+                    "names" nil}]
+    (json/write-str source-map)))
 
 (defn merge-source-maps
   ([cljs-map closure-map] (merge-source-maps cljs-map closure-map 0))
@@ -107,7 +112,7 @@
 
   ;; load source map
   (def raw-source-map
-    (json/read-json (slurp (io/file "hello.js.map"))))
+    (json/read-str (slurp (io/file "hello.js.map"))))
 
   ;; test it out
   (first (decode raw-source-map))
