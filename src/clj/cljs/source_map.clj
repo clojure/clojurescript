@@ -93,7 +93,7 @@
             col-seg (if lastseg
                       (into [] (map - seg lastseg))
                       seg)]
-        (recur (next vs) col-seg (conj (base64-vlq/encode col-seg) cols-segs)))
+        (recur (next vs) col-seg (conj cols-segs (base64-vlq/encode col-seg))))
       cols-segs)))
 
 (defn encode-source [lines segs source-idx names->idx name-idx]
