@@ -76,6 +76,9 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
+;; TODO: line logic is incorrect, we need to group them into lines ourselves, based
+;; on whether (:gline v) has changed
+
 (defn encode-cols [vs prev-seg source-idx line col names->idx name-idx]
   (loop [vs (seq vs) prev-seg prev-seg cols-segs []]
     (if vs
