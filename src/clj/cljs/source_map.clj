@@ -120,7 +120,7 @@
 (defn encode [m opts]
   (let [names->idx (atom {})
         name-idx   (atom 0)
-        {:keys [segs]}
+        segs
         (loop [sources (seq m) prev-seg nil source-idx 0 segs []]
           (if sources
             (let [[source lines] (first sources)
