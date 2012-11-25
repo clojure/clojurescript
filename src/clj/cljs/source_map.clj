@@ -124,7 +124,8 @@
         (loop [sources (seq m) prev-seg nil source-idx 0 segs []]
           (if sources
             (let [[source lines] (first sources)
-                  segs (encode-source lines segs prev-seg source-idx names->idx name-idx)]
+                  {:keys [segs prev-seg]}
+                  (encode-source lines segs prev-seg source-idx names->idx name-idx)]
               (recur (next sources) prev-seg (inc source-idx) segs))
             segs))]
     (with-out-str
