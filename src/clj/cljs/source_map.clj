@@ -76,11 +76,8 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
-;; TODO: the lastseg needs to be passed into encode-cols - everything
-;; but :gcol is relative
-
-(defn encode-cols [vs source-idx line col names->idx name-idx]
-  (loop [vs (seq vs) lastseg nil cols-segs []]
+(defn encode-cols [vs prev-seg source-idx line col names->idx name-idx]
+  (loop [vs (seq vs) prev-seg prev-seg cols-segs []]
     (if vs
       (let [v (first vs)
             seg [(:gcol v) source-idx line col]
@@ -93,40 +90,43 @@
                                 cidx))]
                     (conj seg idx))
                   seg)
-            relseg (if lastseg
-                      (into [] (map - seg lastseg))
+            relseg (if prev-seg
+                      (into [] (map - seg prev-seg))
                       seg)]
         (recur (next vs)
           (if (and (= (count seg) 4)
-                   (= (count lastseg) 5))
-            (conj seg (peek lastseg))
+                   (= (count prev-seg) 5))
+            (conj seg (peek prev-seg))
             seg)
           (conj cols-segs (base64-vlq/encode relseg))))
-      cols-segs)))
+      {:col-segs cols-segs
+       :prev-seg prev-seg})))
 
-(defn encode-source [lines segs source-idx names->idx name-idx]
-  (loop [lines (seq lines) segs segs]
+(defn encode-source [lines segs prev-seg source-idx names->idx name-idx]
+  (loop [lines (seq lines) segs segs prev-seg prev-seg]
     (if lines
       (let [[line cols] (first lines)
-            segs
-            (loop [cols (seq cols) segs segs]
+            {:keys [segs prev-seg]}
+            (loop [cols (seq cols) segs segs prev-seg prev-seg]
               (if cols
                 (let [[col vs] (first cols)
-                      col-segs (encode-cols vs source-idx line col names->idx name-idx)]
-                  (recur (next cols) (conj segs col-segs)))
-                segs))]
-        (recur (next lines) segs))
-      segs)))
+                      {:keys [col-segs prev-seg]}
+                      (encode-cols vs prev-seg source-idx line col names->idx name-idx)]
+                  (recur (next cols) (conj segs col-segs) prev-seg))
+                {:segs segs :prev-seg prev-seg}))]
+        (recur (next lines) segs prev-seg))
+      {:segs segs :prev-seg prev-seg})))
 
 (defn encode [m opts]
   (let [names->idx (atom {})
         name-idx   (atom 0)
-        segs (loop [sources (seq m) source-idx 0 segs []]
-               (if sources
-                 (let [[source lines] (first sources)
-                       segs (encode-source lines segs source-idx names->idx name-idx)]
-                   (recur (next sources) (inc source-idx) segs))
-                 segs))]
+        {:keys [segs]}
+        (loop [sources (seq m) prev-seg nil source-idx 0 segs []]
+          (if sources
+            (let [[source lines] (first sources)
+                  segs (encode-source lines segs prev-seg source-idx names->idx name-idx)]
+              (recur (next sources) prev-seg (inc source-idx) segs))
+            segs))]
     (with-out-str
       (json/pprint 
        {"version" 3
