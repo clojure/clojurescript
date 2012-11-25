@@ -99,7 +99,7 @@
             (conj seg (peek prev-seg))
             seg)
           (conj cols-segs (base64-vlq/encode relseg))))
-      {:col-segs cols-segs
+      {:cols-segs cols-segs
        :prev-seg prev-seg})))
 
 (defn encode-source [lines segs prev-seg source-idx names->idx name-idx]
@@ -110,9 +110,9 @@
             (loop [cols (seq cols) segs segs prev-seg prev-seg]
               (if cols
                 (let [[col vs] (first cols)
-                      {:keys [col-segs prev-seg]}
+                      {:keys [cols-segs prev-seg]}
                       (encode-cols vs prev-seg source-idx line col names->idx name-idx)]
-                  (recur (next cols) (conj segs col-segs) prev-seg))
+                  (recur (next cols) (conj segs cols-segs) prev-seg))
                 {:segs segs :prev-seg prev-seg}))]
         (recur (next lines) segs prev-seg))
       {:segs segs :prev-seg prev-seg})))
