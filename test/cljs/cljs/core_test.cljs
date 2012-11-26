@@ -1770,5 +1770,13 @@
     (kvr-test (array-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
     (kvr-test [:v0 :v1] [0 :v0 1 :v1]))
 
+  ;; data conveying exception
+  (assert (= {:foo 1}
+             (try (throw (ex-info "asdf" {:foo 1}))
+                  (catch ExceptionInfo e
+                    (ex-data e)))))
+  (assert (instance? js/Error (ex-info "asdf" {:foo 1})))
+  (assert (not (instance? cljs.core.ExceptionInfo (js/Error.))))
+
   :ok
   )
