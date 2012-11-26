@@ -76,71 +76,65 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
-;; TODO: line logic is incorrect, we need to group them into lines ourselves, based
-;; on whether (:gline v) has changed
+(defn info->segv [info state]
+  [(:gcol info) (:source-idx state) (:line state) (:col state)])
 
-(defn encode-cols [vs prev-seg source-idx line col names->idx name-idx]
-  (loop [vs (seq vs) prev-seg prev-seg cols-segs []]
-    (if vs
-      (let [v (first vs)
-            seg [(:gcol v) source-idx line col]
-            seg (if-let [name (:name v)]
-                  (let [idx (if-let [idx (get @names->idx name)]
-                              idx
-                              (let [cidx @name-idx]
-                                (swap! names->idx assoc name cidx)
-                                (swap! name-idx inc)
-                                cidx))]
-                    (conj seg idx))
-                  seg)
-            relseg (if prev-seg
-                      (into [] (map - seg prev-seg))
-                      seg)]
-        (recur (next vs)
-          (if (and (= (count seg) 4)
-                   (= (count prev-seg) 5))
-            (conj seg (peek prev-seg))
-            seg)
-          (conj cols-segs (base64-vlq/encode relseg))))
-      {:cols-segs cols-segs
-       :prev-seg prev-seg})))
-
-(defn encode-source [lines segs prev-seg source-idx names->idx name-idx]
-  (loop [lines (seq lines) segs segs prev-seg prev-seg]
-    (if lines
-      (let [[line cols] (first lines)
-            {:keys [segs prev-seg]}
-            (loop [cols (seq cols) segs segs prev-seg prev-seg]
-              (if cols
-                (let [[col vs] (first cols)
-                      {:keys [cols-segs prev-seg]}
-                      (encode-cols vs prev-seg source-idx line col names->idx name-idx)]
-                  (recur (next cols) (conj segs cols-segs) prev-seg))
-                {:segs segs :prev-seg prev-seg}))]
-        (recur (next lines) segs prev-seg))
-      {:segs segs :prev-seg prev-seg})))
+(defn encode-cols [infos state]
+  (loop [infos (seq infos) state state]
+    (if infos
+      (let [info (first infos)
+            prev-info (:prev-info state)
+            segv (info->segv info state)
+            [segv state] (if-let [name (:name info)]
+                           (let [[idx state]
+                                 (if-let [idx (get-in state [:names->idx name])]
+                                   [idx state]
+                                   (let [cidx (:name-idx state)]
+                                     [cidx (-> state
+                                               (assoc-in [:names->idx name] cidx)
+                                               (assoc :name-idx (inc cidx)))]))]
+                             [(conj segv idx) state])
+                           [segv state])
+            relsegv (if prev-info
+                      (into [] (map - segv (info->segv prev-info state)))
+                      segv)]
+        (recur (next infos)
+          (let [lines (:lines state)
+                lines (conj (pop lines)
+                            (if (and prev-info (not= (:gline info) (:gline prev-info)))
+                              [(base64-vlq/encode relsegv)]
+                              (conj (peek lines) (base64-vlq/encode relsegv))))]
+            (-> state
+                (assoc :lines lines)
+                (assoc :prev-info
+                  (if (:name info) info (assoc info :name (:name prev-info))))))))
+      state)))
 
 (defn encode [m opts]
-  (let [names->idx (atom {})
-        name-idx   (atom 0)
-        segs
-        (loop [sources (seq m) prev-seg nil source-idx 0 segs []]
-          (if sources
-            (let [[source lines] (first sources)
-                  {:keys [segs prev-seg]}
-                  (encode-source lines segs prev-seg source-idx names->idx name-idx)]
-              (recur (next sources) prev-seg (inc source-idx) segs))
-            segs))]
+  (let [step (fn [state [_ lines]]
+               (update-in
+                 (reduce (fn [state [line cols]]
+                           (reduce (fn [state [col infos]]
+                                     (encode-cols infos (assoc state :col col)))
+                                   (assoc state :line line)
+                                   cols))
+                         state lines)
+                 [:source-idx] inc))
+        init-state {:source-idx 0 :lines [[]]
+                    :names->idx {} :name-idx 0
+                    :prev-info nil}
+        {:keys [names->idx lines]} (reduce step init-state m)]
     (with-out-str
       (json/pprint 
        {"version" 3
         "file" (:file opts)
         "sources" (into [] (keys m))
         "lineCount" (:lines opts)
-        "mappings" (->> segs
+        "mappings" (->> lines
                         (map #(string/join "," %))
                         (string/join ";"))
-        "names" (into [] (map (set/map-invert @names->idx) (range (count @names->idx))))}))))
+        "names" (into [] (map (set/map-invert names->idx)
+                              (range (count names->idx))))}))))
 
 (defn merge-source-maps
   ([cljs-map closure-map] (merge-source-maps cljs-map closure-map 0))
