@@ -111,7 +111,7 @@
         (fn [info source-idx line col]
           (let [segv [(:gcol info) source-idx line col]]
             (if-let [name (:name info)]
-              (let [idx (if-let [idx (get-in @names->idx name)]
+              (let [idx (if-let [idx (get @names->idx name)]
                           idx
                           (let [cidx @name-idx]
                             (swap! names->idx assoc name cidx)
