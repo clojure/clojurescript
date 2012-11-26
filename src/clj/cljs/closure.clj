@@ -237,6 +237,7 @@
   (-source [this] "The JavaScript source string."))
 
 (defprotocol ISourceMap
+  (-source-url [this] "Return the CLJS source url")
   (-source-map [this] "Return the CLJS compiler generated JS source mapping"))
 
 (extend-protocol IJavaScript
@@ -258,7 +259,7 @@
                     s
                     (slurp (io/reader (-url this))))))
 
-(defrecord JavaScriptFile [foreign ^URL url provides requires lines source-map]
+(defrecord JavaScriptFile [foreign ^URL url ^URL source-url provides requires lines source-map]
   IJavaScript
   (-foreign? [this] foreign)
   (-url [this] url)
@@ -266,18 +267,20 @@
   (-requires [this] requires)
   (-source [this] (slurp (io/reader url)))
   ISourceMap
+  (-source-url [this] source-url)
   (-source-map [this] source-map))
 
 (defn javascript-file
   ([foreign ^URL url provides requires]
-     (javascript-file foreign url provides requires nil nil))
-  ([foreign ^URL url provides requires lines source-map]
-     (JavaScriptFile. foreign url (map name provides) (map name requires) lines source-map)))
+     (javascript-file foreign url nil provides requires nil nil))
+  ([foreign ^URL url source-url provides requires lines source-map]
+     (JavaScriptFile. foreign url source-url (map name provides) (map name requires) lines source-map)))
 
 (defn map->javascript-file [m]
   (javascript-file
     (:foreign m)
     (to-url (:file m))
+    (to-url (:source-file m))
     (:provides m)
     (:requires m)
     (:lines m)
@@ -717,10 +720,13 @@
                     (+ line-offset (or (:lines source) 0))
                     (let [path (.getPath ^URL (:url source))]
                       (if-let [compiled (get @compiled-cljs path)] 
-                        (assoc result path
+                        (assoc result (:source-url source)
                           (sm/merge-source-maps (:source-map compiled) closure-source-map line-offset))
-                        result))))
-                (spit (io/file (str name ".merged")) (sm/encode result {}))))))
+                        (assoc result path source)))))
+                (let [out-name (str name ".merged")]
+                  (spit (io/file out-name)
+                    (sm/encode result
+                      {:lines line-offset :file out-name})))))))
         source)
       (report-failure result))))
 
