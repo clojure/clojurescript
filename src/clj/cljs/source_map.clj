@@ -164,7 +164,6 @@
                   (recur (next col-map-seq)
                     (assoc new-cols col
                       (reduce (fn [v {:keys [gline gcol]}]
-                                (println [gline gcol])
                                 (into v (get-in closure-map [gline gcol])))
                         [] infos))))
                 new-cols))]
