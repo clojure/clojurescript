@@ -926,6 +926,11 @@
    (str ";(function(){\n" js "\n})();\n")
    js))
 
+(defn add-source-map-link [{:keys [source-map] :as opts} js]
+  (if source-map
+    (str js "\n//@ sourceMappingURL=" source-map ".merged")
+    js))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
@@ -958,6 +963,7 @@
                (apply optimize all-opts)
                (add-header all-opts)
                (add-wrapper all-opts)
+               (add-source-map-link all-opts)
                (output-one-file all-opts))
           (apply output-unoptimized all-opts js-sources))))))
 
