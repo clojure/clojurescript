@@ -6,6 +6,9 @@
             [clojure.pprint :as pp]
             [cljs.source-map.base64-vlq :as base64-vlq]))
 
+;; -----------------------------------------------------------------------------
+;; Utilities
+
 (defn indexed-sources [sources]
   (->> sources
     (map-indexed (fn [a b] [a b]))
@@ -14,6 +17,9 @@
 (defn source-compare [sources]
   (let [sources (indexed-sources sources)]
     (fn [a b] (compare (sources a) (sources b)))))
+
+;; -----------------------------------------------------------------------------
+;; Decoding
 
 (defn seg->map [seg source-map]
   (let [[gcol source line col name] seg]
@@ -76,80 +82,74 @@
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
-(defn info->segv [info state]
-  (let [segv [(:gcol info) (:source-idx state) (:line state) (:col state)]]
-    (if-let [name (:name info)]
-      (let [[idx state]
-            (if-let [idx (get-in state [:names->idx name])]
-              [idx state]
-              (let [cidx (:name-idx state)]
-                [cidx (-> state
-                          (assoc-in [:names->idx name] cidx)
-                          (assoc :name-idx (inc cidx)))]))]
-        [(conj segv idx) state])
-      [segv state])))
+;; -----------------------------------------------------------------------------
+;; Encoding
 
-(defn prev-info->segv [info]
-  (let [state (meta info)
-        segv [(:gcol info) (:source-idx state) (:line state) (:col state)]]
-    (if-let [name (:name info)]
-      (conj segv (get (:names->idx state) name))
-      segv)))
-
-(defn encode-cols [infos state]
-  (loop [infos (seq infos) state state]
-    (if infos
-      (let [info (first infos)
-            [segv state] (info->segv info state)
-            prev-info (:prev-info state)
-            gline (:gline info)
-            relsegv (if prev-info
-                      (let [prev-segv (prev-info->segv prev-info)]
-                        (if (not= gline (:gline prev-info))
-                          (into [(first segv)] (map - (rest segv) (rest prev-segv)))
-                          (into [] (map - segv prev-segv))))
-                      segv)]
-        (recur (next infos)
-          (let [lines (:lines state)
-                lc    (count lines)
-                lines (if (> gline (dec lc))
-                        (conj (into lines (repeat (dec (- gline (dec lc))) [])) [(base64-vlq/encode relsegv)])
-                        (update-in lines [gline] conj (base64-vlq/encode relsegv)))]
-            (-> state
-                (assoc :lines lines)
-                (assoc :prev-info
-                  (with-meta
-                    (if (:name info)
-                      info
-                      (assoc info :name (:name prev-info)))
-                    state))))))
-      state)))
+(defn lines->segs [lines]
+  (let [relseg (atom [0 0 0 0 0])]
+    (reduce
+      (fn [segs cols]
+        (swap! relseg
+          (fn [[_ source line col name]]
+            [0 source line col name]))
+        (conj segs
+          (reduce
+            (fn [cols [gcol sidx line col name :as seg]]
+              (let [offset (map - seg @relseg)]
+                (swap! relseg
+                  (fn [[_ _ _ _ lname]]
+                    [gcol sidx line col (or name lname)]))
+                (conj cols (base64-vlq/encode offset))))
+            [] cols)))
+      [] lines)))
 
 (defn encode [m opts]
-  (let [step (fn [state [_ lines]]
-               (update-in
-                 (reduce (fn [state [line cols]]
-                           (reduce (fn [state [col infos]]
-                                     (encode-cols infos (assoc state :col col)))
-                                   (assoc state :line line)
-                                   cols))
-                         state lines)
-                 [:source-idx] inc))
-        init-state {:source-idx 0 :lines [[]]
-                    :names->idx {} :name-idx 0
-                    :prev-info nil}
-        {:keys [names->idx lines]} (reduce step init-state m)]
+  (let [lines (atom [[]])
+        names->idx (atom {})
+        name-idx (atom 0)
+        info->segv
+        (fn [info source-idx line col]
+          (let [segv [(:gcol info) source-idx line col]]
+            (if-let [name (:name info)]
+              (let [idx (if-let [idx (get-in @names->idx name)]
+                          idx
+                          (let [cidx @name-idx]
+                            (swap! names->idx assoc name cidx)
+                            (swap! name-idx inc)
+                            cidx))]
+                (conj segv idx))
+              segv)))
+        encode-cols
+        (fn [infos source-idx line col]
+          (doseq [info infos]
+            (let [segv (info->segv info source-idx line col)
+                  gline (:gline info)
+                  lc (count @lines)]
+              (if (> gline (dec lc))
+                (swap! lines
+                  (fn [lines]
+                    (conj (into lines (repeat (dec (- gline (dec lc))) [])) [segv])))
+                (swap! lines
+                  (fn [lines]
+                    (update-in lines [gline] conj segv)))))))]
+    (doseq [[source-idx [_ lines]] (map-indexed (fn [i v] [i v]) m)]
+      (doseq [[line cols] lines]
+        (doseq [[col infos] cols]
+          (encode-cols infos source-idx line col))))
     (with-out-str
       (json/pprint 
        {"version" 3
         "file" (:file opts)
         "sources" (into [] (keys m))
         "lineCount" (:lines opts)
-        "mappings" (->> lines
+        "mappings" (->> (lines->segs @lines)
                         (map #(string/join "," %))
                         (string/join ";"))
-        "names" (into [] (map (set/map-invert names->idx)
-                              (range (count names->idx))))}))))
+        "names" (into [] (map (set/map-invert @names->idx)
+                              (range (count @names->idx))))}))))
+
+;; -----------------------------------------------------------------------------
+;; Merging
 
 (defn merge-source-maps
   ([cljs-map closure-map] (merge-source-maps cljs-map closure-map 0))
