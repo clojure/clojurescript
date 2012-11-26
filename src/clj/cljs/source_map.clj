@@ -77,33 +77,41 @@
            result)))))
 
 (defn info->segv [info state]
-  [(:gcol info) (:source-idx state) (:line state) (:col state)])
+  (let [segv [(:gcol info) (:source-idx state) (:line state) (:col state)]]
+    (if-let [name (:name info)]
+      (let [[idx state]
+            (if-let [idx (get-in state [:names->idx name])]
+              [idx state]
+              (let [cidx (:name-idx state)]
+                [cidx (-> state
+                          (assoc-in [:names->idx name] cidx)
+                          (assoc :name-idx (inc cidx)))]))]
+        [(conj segv idx) state])
+      [segv state])))
+
+(defn prev-info->segv [info state]
+  (let [segv [(:gcol info) (:source-idx state) (:line state) (:col state)]]
+    (if-let [name (:name info)]
+      (conj segv (get (:names->idx state) name))
+      segv)))
 
 (defn encode-cols [infos state]
   (loop [infos (seq infos) state state]
     (if infos
       (let [info (first infos)
+            [segv state] (info->segv info state)
             prev-info (:prev-info state)
-            segv (info->segv info state)
-            [segv state] (if-let [name (:name info)]
-                           (let [[idx state]
-                                 (if-let [idx (get-in state [:names->idx name])]
-                                   [idx state]
-                                   (let [cidx (:name-idx state)]
-                                     [cidx (-> state
-                                               (assoc-in [:names->idx name] cidx)
-                                               (assoc :name-idx (inc cidx)))]))]
-                             [(conj segv idx) state])
-                           [segv state])
             relsegv (if prev-info
-                      (into [] (map - segv (info->segv prev-info state)))
+                      (let [prev-segv (prev-info->segv prev-info state)]
+                        (if (not= (:gline info) (:gline prev-info))
+                          (into [] (cons (first segv) (map - (rest segv) (rest prev-segv))))
+                          (into [] (map - segv prev-segv))))
                       segv)]
         (recur (next infos)
           (let [lines (:lines state)
-                lines (conj (pop lines)
-                            (if (and prev-info (not= (:gline info) (:gline prev-info)))
-                              [(base64-vlq/encode relsegv)]
-                              (conj (peek lines) (base64-vlq/encode relsegv))))]
+                lines (if (and prev-info (not= (:gline info) (:gline prev-info)))
+                        (conj lines [(base64-vlq/encode relsegv)])
+                        (conj (pop lines) (conj (peek lines) (base64-vlq/encode relsegv))))]
             (-> state
                 (assoc :lines lines)
                 (assoc :prev-info
