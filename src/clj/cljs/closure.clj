@@ -710,9 +710,9 @@
           (let [out (io/writer name)]
             (.appendTo (.getSourceMap closure-compiler) out name)
             (.close out))
-          (let [closure-source-map (-> (io/file name) slurp
-                                       (json/read-str :key-fn keyword)
-                                       sm/decode)]
+          (let [sm-json (-> (io/file name) slurp
+                            (json/read-str :key-fn keyword))
+                closure-source-map (sm/decode sm-json)]
             (loop [sources (seq sources) line-offset 0
                    merged (sorted-map-by
                             (sm/source-compare
@@ -729,12 +729,14 @@
                     (let [path (.getPath ^URL (:url source))]
                       (if-let [compiled (get @compiled-cljs path)] 
                         (assoc merged (.getPath ^URL (:source-url source))
-                          (sm/merge-source-maps (:source-map compiled) closure-source-map line-offset))
+                          (sm/merge-source-maps
+                            (:source-map compiled)
+                            (get closure-source-map path)))
                         (assoc merged path (get closure-source-map path))))))
                 (let [out-name (str name ".merged")]
                   (spit (io/file out-name)
                     (sm/encode merged
-                      {:lines line-offset :file (:output-to opts)})))))))
+                      {:lines (:lineCount sm-json) :file (:file sm-json)})))))))
         source)
       (report-failure result))))
 

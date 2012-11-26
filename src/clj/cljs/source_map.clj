@@ -153,24 +153,24 @@
 ;; Merging
 
 (defn merge-source-maps
-  ([cljs-map closure-map] (merge-source-maps cljs-map closure-map 0))
-  ([cljs-map closure-map line-offset]
-     (loop [line-map-seq (seq cljs-map) new-lines (sorted-map)]
-       (if line-map-seq
-         (let [[line col-map] (first line-map-seq)
-               new-cols
-               (loop [col-map-seq (seq col-map) new-cols (sorted-map)]
-                 (if col-map-seq
-                   (let [[col infos] (first col-map-seq)]
-                     (recur (next col-map-seq)
-                       (assoc new-cols col
-                         (reduce (fn [v {:keys [gline gcol]}]
-                                   (into v (get-in closure-map [(+ gline line-offset) gcol])))
-                                 [] infos))))
-                   new-cols))]
-           (recur (next line-map-seq)
-             (assoc new-lines line new-cols)))
-         new-lines))))
+  [cljs-map closure-map]
+  (loop [line-map-seq (seq cljs-map) new-lines (sorted-map)]
+    (if line-map-seq
+      (let [[line col-map] (first line-map-seq)
+            new-cols
+            (loop [col-map-seq (seq col-map) new-cols (sorted-map)]
+              (if col-map-seq
+                (let [[col infos] (first col-map-seq)]
+                  (recur (next col-map-seq)
+                    (assoc new-cols col
+                      (reduce (fn [v {:keys [gline gcol]}]
+                                (println [gline gcol])
+                                (into v (get-in closure-map [gline gcol])))
+                        [] infos))))
+                new-cols))]
+        (recur (next line-map-seq)
+          (assoc new-lines line new-cols)))
+      new-lines)))
 
 (comment
   ;; INSTRUCTIONS:
