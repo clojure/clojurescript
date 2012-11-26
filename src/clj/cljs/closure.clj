@@ -713,7 +713,7 @@
           (let [sm-json (-> (io/file name) slurp
                             (json/read-str :key-fn keyword))
                 closure-source-map (sm/decode sm-json)]
-            (loop [sources (seq sources) line-offset 0
+            (loop [sources (seq sources)
                    merged (sorted-map-by
                             (sm/source-compare
                               (map (fn [source]
@@ -725,7 +725,6 @@
               (if sources
                 (let [source (first sources)]
                   (recur (next sources)
-                    (+ line-offset (or (:lines source) 0))
                     (let [path (.getPath ^URL (:url source))]
                       (if-let [compiled (get @compiled-cljs path)] 
                         (assoc merged (.getPath ^URL (:source-url source))
