@@ -102,17 +102,19 @@
       (let [info (first infos)
             [segv state] (info->segv info state)
             prev-info (:prev-info state)
+            gline (:gline info)
             relsegv (if prev-info
                       (let [prev-segv (prev-info->segv prev-info)]
-                        (if (not= (:gline info) (:gline prev-info))
+                        (if (not= gline (:gline prev-info))
                           (into [(first segv)] (map - (rest segv) (rest prev-segv)))
                           (into [] (map - segv prev-segv))))
                       segv)]
         (recur (next infos)
           (let [lines (:lines state)
-                lines (if (and prev-info (not= (:gline info) (:gline prev-info)))
-                        (conj lines [(base64-vlq/encode relsegv)])
-                        (conj (pop lines) (conj (peek lines) (base64-vlq/encode relsegv))))]
+                lc    (count lines)
+                lines (if (> gline (dec lc))
+                        (conj (into lines (repeat (dec (- gline (dec lc))) [])) [(base64-vlq/encode relsegv)])
+                        (update-in lines [gline] conj (base64-vlq/encode relsegv)))]
             (-> state
                 (assoc :lines lines)
                 (assoc :prev-info
