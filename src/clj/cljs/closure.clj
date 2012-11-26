@@ -720,7 +720,7 @@
                     (+ line-offset (or (:lines source) 0))
                     (let [path (.getPath ^URL (:url source))]
                       (if-let [compiled (get @compiled-cljs path)] 
-                        (assoc result (:source-url source)
+                        (assoc result (.getPath ^URL (:source-url source))
                           (sm/merge-source-maps (:source-map compiled) closure-source-map line-offset))
                         (assoc result path source)))))
                 (let [out-name (str name ".merged")]
