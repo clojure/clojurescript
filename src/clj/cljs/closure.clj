@@ -713,20 +713,28 @@
           (let [closure-source-map (-> (io/file name) slurp
                                        (json/read-str :key-fn keyword)
                                        sm/decode)]
-            (loop [sources (seq sources) line-offset 0 result (sorted-map-by (sm/source-compare sources))]
+            (loop [sources (seq sources) line-offset 0
+                   merged (sorted-map-by
+                            (sm/source-compare
+                              (map (fn [source]
+                                     (if-let [^URL source-url (:source-url source)]
+                                       (.getPath source-url)
+                                       (let [^URL url (:url source)]
+                                         (.getPath url))))
+                                   sources)))]
               (if sources
                 (let [source (first sources)]
                   (recur (next sources)
                     (+ line-offset (or (:lines source) 0))
                     (let [path (.getPath ^URL (:url source))]
                       (if-let [compiled (get @compiled-cljs path)] 
-                        (assoc result (.getPath ^URL (:source-url source))
+                        (assoc merged (.getPath ^URL (:source-url source))
                           (sm/merge-source-maps (:source-map compiled) closure-source-map line-offset))
-                        (assoc result path source)))))
+                        (assoc merged path (get closure-source-map path))))))
                 (let [out-name (str name ".merged")]
                   (spit (io/file out-name)
-                    (sm/encode result
-                      {:lines line-offset :file out-name})))))))
+                    (sm/encode merged
+                      {:lines line-offset :file (:output-to opts)})))))))
         source)
       (report-failure result))))
 
