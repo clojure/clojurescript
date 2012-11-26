@@ -146,7 +146,8 @@
                         (map #(string/join "," %))
                         (string/join ";"))
         "names" (into [] (map (set/map-invert @names->idx)
-                              (range (count @names->idx))))}))))
+                              (range (count @names->idx))))}
+       :escape-slash false))))
 
 ;; -----------------------------------------------------------------------------
 ;; Merging
