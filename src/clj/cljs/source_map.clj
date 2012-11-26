@@ -71,14 +71,17 @@
          (if lines
            (let [line (first lines)
                  [result relseg]
-                 (let [segs (seq (string/split line #","))]
-                   (loop [segs segs relseg relseg result result]
-                     (if segs
-                       (let [seg (first segs)
-                             nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
-                         (recur (next segs) nrelseg
-                           (update-result result (seg->map nrelseg source-map) gline)))
-                       [result relseg])))]
+                 (if (string? blank? line)
+                   ;; TODO: correctly handle ;; case
+                   [result relseg]
+                   (let [segs (seq (string/split line #","))]
+                     (loop [segs segs relseg relseg result result]
+                       (if segs
+                         (let [seg (first segs)
+                               nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
+                           (recur (next segs) nrelseg
+                             (update-result result (seg->map nrelseg source-map) gline)))
+                         [result relseg]))))]
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
 
