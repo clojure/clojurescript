@@ -820,6 +820,7 @@
                   :provides [ns-name]
                   :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
                   :file dest
+                  :source-file src
                   :lines @*cljs-gen-line*}
                  (when (:source-map opts)
                    {:source-map @*cljs-source-map*})))))))))
@@ -846,6 +847,7 @@
                              (set (vals deps))
                              (conj (set (vals deps)) 'cljs.core))
                  :file dest
+                 :source-file src
                  :lines (-> dest io/reader line-seq count)})
               (recur (rest forms)))))))))
 
