@@ -89,8 +89,9 @@
         [(conj segv idx) state])
       [segv state])))
 
-(defn prev-info->segv [info state]
-  (let [segv [(:gcol info) (:source-idx state) (:line state) (:col state)]]
+(defn prev-info->segv [info]
+  (let [state (meta info)
+        segv [(:gcol info) (:source-idx state) (:line state) (:col state)]]
     (if-let [name (:name info)]
       (conj segv (get (:names->idx state) name))
       segv)))
@@ -102,9 +103,9 @@
             [segv state] (info->segv info state)
             prev-info (:prev-info state)
             relsegv (if prev-info
-                      (let [prev-segv (prev-info->segv prev-info state)]
+                      (let [prev-segv (prev-info->segv prev-info)]
                         (if (not= (:gline info) (:gline prev-info))
-                          (into [] (cons (first segv) (map - (rest segv) (rest prev-segv))))
+                          (into [(first segv)] (map - (rest segv) (rest prev-segv)))
                           (into [] (map - segv prev-segv))))
                       segv)]
         (recur (next infos)
@@ -115,7 +116,11 @@
             (-> state
                 (assoc :lines lines)
                 (assoc :prev-info
-                  (if (:name info) info (assoc info :name (:name prev-info))))))))
+                  (with-meta
+                    (if (:name info)
+                      info
+                      (assoc info :name (:name prev-info)))
+                    state))))))
       state)))
 
 (defn encode [m opts]
