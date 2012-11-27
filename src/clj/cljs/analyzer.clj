@@ -56,6 +56,12 @@
 (def ^:dynamic *cljs-macros-is-classpath* true)
 (def  -cljs-macros-loaded (atom false))
 
+(defn get-line [x env]
+  (or (-> x meta :line) (:line env)))
+
+(defn get-col [x env]
+  (or (-> x meta :column) (:column env)))
+
 (defn load-core []
   (when (not @-cljs-macros-loaded)
     (reset! -cljs-macros-loaded true)
@@ -248,7 +254,10 @@
         name (first cblock)
         locals (:locals catchenv)
         locals (if name
-                 (assoc locals name {:name name})
+                 (assoc locals name
+                   {:name name
+                    :line (get-line name env)
+                    :column (get-col name env)})
                  locals)
         catch (when cblock
                 (analyze-block (assoc catchenv :locals locals) (rest cblock)))
@@ -316,7 +325,9 @@
                    (when doc {:doc doc})
                    (when dynamic {:dynamic true})
                    (when-let [line (:line env)]
-                     {:file *cljs-file* :line line :column (:column env)})
+                     {:file *cljs-file*
+                      :line (get-line name env)
+                      :column (get-col name env)})
                    ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
@@ -346,6 +357,8 @@
         body (next form)
         [locals params] (reduce (fn [[locals params] name]
                                   (let [param {:name name
+                                               :line (get-line name env)
+                                               :column (get-col name env)
                                                :tag (-> name meta :tag)
                                                :shadow (when locals (locals name))}]
                                     [(assoc locals name param) (conj params param)]))
@@ -374,6 +387,8 @@
         locals (reduce (fn [m fld]
                          (assoc m fld
                                 {:name fld
+                                 :line (get-line fld env)
+                                 :column (get-col fld env)
                                  :field true
                                  :mutable (-> fld meta :mutable)
                                  :tag (-> fld meta :tag)
@@ -418,6 +433,8 @@
         [meth-env bes]
         (reduce (fn [[{:keys [locals] :as env} bes] n]
                   (let [be {:name   n
+                            :line (get-line n env)
+                            :column (get-col n env)
                             :tag    (-> n meta :tag)
                             :local  true
                             :shadow (locals n)}]
@@ -454,6 +471,8 @@
                (assert (not (or (namespace name) (.contains (str name) "."))) (str "Invalid local name: " name))
                (let [init-expr (analyze env init)
                      be {:name name
+                         :line (get-line name env)
+                         :column (get-col name env)
                          :init init-expr
                          :tag (or (-> name meta :tag)
                                   (-> init-expr :tag)
@@ -678,8 +697,8 @@
                  {:protocols (-> tsym meta :protocols)}
                  (when-let [line (:line env)]
                    {:file *cljs-file*
-                    :line line
-                    :column (:column env)})))))
+                    :line (get-line tsym env)
+                    :column (get-col tsym env)})))))
     {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
@@ -692,8 +711,8 @@
                  {:protocols (-> tsym meta :protocols)}
                  (when-let [line (:line env)]
                    {:file *cljs-file*
-                    :line line
-                    :column (:column env)})))))
+                    :line (get-line tsym env)
+                    :column (get-col tsym env)})))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
