@@ -71,8 +71,7 @@
          (if lines
            (let [line (first lines)
                  [result relseg]
-                 (if (string? blank? line)
-                   ;; TODO: correctly handle ;; case
+                 (if (string/blank? line)
                    [result relseg]
                    (let [segs (seq (string/split line #","))]
                      (loop [segs segs relseg relseg result result]

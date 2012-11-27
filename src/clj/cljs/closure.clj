@@ -735,7 +735,7 @@
                 (let [out-name (str name ".merged")]
                   (spit (io/file out-name)
                     (sm/encode merged
-                      {:lines (:lineCount sm-json) :file (:file sm-json)})))))))
+                      {:lines (+ (:lineCount sm-json) 2) :file (:file sm-json)})))))))
         source)
       (report-failure result))))
 
