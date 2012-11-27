@@ -347,7 +347,7 @@
         [locals params] (reduce (fn [[locals params] name]
                                   (let [param {:name name
                                                :tag (-> name meta :tag)
-                                               :shadow (locals name)}]
+                                               :shadow (when locals (locals name))}]
                                     [(assoc locals name param) (conj params param)]))
                                 [locals []] param-names)
         fixed-arity (count (if variadic (butlast params) params))
@@ -366,7 +366,7 @@
         ;;turn (fn [] ...) into (fn ([]...))
         meths (if (vector? (first meths)) (list meths) meths)
         locals (:locals env)
-        locals (if name (assoc locals name {:name name :shadow (locals name)}) locals)
+        locals (if (and locals name) (assoc locals name {:name name :shadow (locals name)}) locals)
         type (-> form meta ::type)
         fields (-> form meta ::fields)
         protocol-impl (-> form meta :protocol-impl)
