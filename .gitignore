@@ -8,6 +8,8 @@ closure
 /coreadvanced.js
 /coresimple.js
 /out
+/web/out
+/node/out
 .repl
 *.swp
 *.zip

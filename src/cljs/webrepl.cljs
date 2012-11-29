@@ -1,4 +1,4 @@
-(ns jsrepl
+(ns webrepl
   (:require [cljs.core]
             [bs :as bs]
             [cljs.analyzer :as ana]
@@ -91,7 +91,7 @@
     (println ";;   - A port of the ClojureScript to ClojureScript")
     (println ";;   - No macros (yet)")
     (pep log "(+ 1 2)")
-    (pep log "(def double (fn* [x] (* x x)))")
-    (pep log "(double 8)")
+    (pep log "(def sqr (fn* [x] (* x x)))")
+    (pep log "(sqr 8)")
 
     (.focus input))))

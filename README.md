@@ -20,16 +20,18 @@ solved by [chouser](https://github.com/chouser).
 ### Current Caveats
 
 * No macro support yet. This means defining a function currently
-  looks like this `(def dbl (fn* [x] (* x x)))`.
+  looks like this `(def sqr (fn* [x] (* x x)))`.
 * The code is not yet compatible with the normal Clojure ClojureScript
   compiler. To make it compatible we really need [Feature Expressions in
   Clojure](http://dev.clojure.org/display/design/Feature+Expressions)
 * JavaScript output is not optimized by the Google Closure Compiler
   (which is a Java program).
-* The :nodejs compilation target is currently broken for some reason.
+* The :nodejs compilation target is currently broken. However, the
+  `node/run.js` bootstrap script enables compiled CLJS code to be
+  invoked that was not compiled with a :target.
 * The `analyzer/@namespaces` atom is needed by the compiler but it is
   not currently generated automatically so we generated a static
-  version.
+  bootstrap version in `src/cljs/bs.cljs`.
 * Other miscellaneous broken things that haven't been tracked down
   yet.
 
@@ -52,10 +54,40 @@ bootstrap pieces with a web REPL like this:
 
 ```
 cd web
-../bin/cljsc ../src/cljs/jsrepl.cljs > jsrepl.js
+../bin/cljsc ../src/cljs/webrepl.cljs > webrepl.js
+```
+Now load the `web/jsrepl.html` file in a browser.
+
+For a REPL in nodejs, build the `src/cljs/noderepl.cljs` code:
+
+```
+cd node
+../bin/cljsc ../src/cljs/noderepl.cljs > noderepl.js
+cp ../src/cljs/goog.js out/
 ```
 
-Now load the `web/jsrepl.html` file in a browser.
+Now use the `run.js` bootstrap code to launch the repl:
+
+```
+./run.js noderepl.js
+```
+
+For direct *.cljs file compilation/evaluation, build the nodecljs.cljs compiler:
+
+```
+cd node
+../bin/cljsc ../src/cljs/nodecljs.cljs > nodecljs.js
+cp ../src/cljs/goog.js out/
+```
+
+You can now use a combination of the `run.js` bootstrap code and
+`nodecljs.js` to compile/evaluate the `hello.cljs` file:
+
+```
+./run.js nodecljs.cljs hello.cljs
+```
+
+
 
 --------
 
