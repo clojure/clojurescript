@@ -87,11 +87,36 @@
   [& args]
   `(.println System/err (str ~@args)))
 
+(defn source-info [env]
+  (when-let [line (:line env)]
+    {:file *cljs-file*
+     :line line}))
+
+(defn message [env s]
+  (str s (when (:line env)
+           (str " at line " (:line env) " " *cljs-file*))))
+
 (defn warning [env s]
   (binding [*out* *err*]
-    (println
-     (str s (when (:line env)
-       (str " at line " (:line env) " " *cljs-file*))))))
+    (println (message env s))))
+
+(defn error
+  ([env s] (error env s nil))
+  ([env s cause]
+   (ex-info (message env s)
+            (assoc (source-info env) :tag :cljs/analysis-error)
+            cause)))
+
+(defn analysis-error? [ex]
+  (= :cljs/analysis-error (:tag (ex-data ex))))
+
+(defmacro wrapping-errors [env & body]
+  `(try
+     ~@body
+     (catch Throwable err#
+       (if (analysis-error? err#)
+         (throw err#)
+         (throw (error ~env (.getMessage err#) err#))))))
 
 (defn confirm-var-exists [env prefix suffix]
   (when *cljs-warn-on-undeclared*
@@ -309,8 +334,7 @@
                    sym-meta
                    (when doc {:doc doc})
                    (when dynamic {:dynamic true})
-                   (when-let [line (:line env)]
-                     {:file *cljs-file* :line line})
+                   (source-info env)
                    ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
@@ -670,9 +694,7 @@
                        :num-fields (count fields))]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
-                 (when-let [line (:line env)]
-                   {:file *cljs-file*
-                    :line line})))))
+                 (source-info env)))))
     {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
@@ -683,9 +705,7 @@
              (let [m (assoc (or m {}) :name t :type true)]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
-                 (when-let [line (:line env)]
-                   {:file *cljs-file*
-                    :line line})))))
+                 (source-info env)))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
@@ -867,9 +887,10 @@
       (assert (not (nil? op)) "Can't call nil")
       (let [mform (macroexpand-1 env form)]
         (if (identical? form mform)
-          (if (specials op)
-            (parse op env form name)
-            (parse-invoke env form))
+          (wrapping-errors env
+            (if (specials op)
+              (parse op env form name)
+              (parse-invoke env form)))
           (analyze env mform name))))))
 
 (declare analyze-wrap-meta)
@@ -917,6 +938,7 @@
   facilitate code walking without knowing the details of the op set."
   ([env form] (analyze env form nil))
   ([env form name]
+   (wrapping-errors env
      (let [form (if (instance? clojure.lang.LazySeq form)
                   (or (seq form) ())
                   form)]
@@ -928,7 +950,7 @@
         (vector? form) (analyze-vector env form name)
         (set? form) (analyze-set env form name)
         (keyword? form) (analyze-keyword env form)
-        :else {:op :constant :env env :form form}))))
+        :else {:op :constant :env env :form form})))))
 
 (defn analyze-file
   [^String f]
