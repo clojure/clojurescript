@@ -653,16 +653,16 @@
 
        keyword?
        (emits "(new cljs.core.Keyword(" f ")).call(" (comma-sep (cons "null" args)) ")")
-       
+
        variadic-invoke
        (let [mfa (:max-fixed-arity variadic-invoke)]
         (emits f "(" (comma-sep (take mfa args))
                (when-not (zero? mfa) ",")
                "cljs.core.array_seq([" (comma-sep (drop mfa args)) "], 0))"))
-       
+
        (or fn? js? goog?)
        (emits f "(" (comma-sep args)  ")")
-       
+
        :else
        (if (and ana/*cljs-static-fns* (= (:op f) :var))
          (let [fprop (str ".cljs$lang$arity$" (count args))]
@@ -868,25 +868,40 @@
     (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
 
 (defn cljs-files-in
-  "Return a sequence of all .cljs files in the given directory."
-  [dir]
-  (filter #(let [name (.getName ^java.io.File %)]
-             (and (.endsWith name ".cljs")
-                  (not= \. (first name))
-                  (not (contains? cljs-reserved-file-names name))))
-          (file-seq dir)))
+  "Return a sequence of all .cljs files in the given directory, but the
+  excluded ones."
+  ([dir]
+     (cljs-files-in dir nil))
+  ([dir excluded-set]
+     (filter #(let [name (.getName ^java.io.File %)
+                    path (.getAbsolutePath ^java.io.File %)]
+                (and (.endsWith name ".cljs")
+                     (not= \. (first name))
+                     (not (contains? cljs-reserved-file-names name))
+                     (not (contains? excluded-set path))))
+             (file-seq dir))))
+
+(defn exclude-file-names
+  "Return a set of absolute paths of files to be excluded"
+  [dir exclude-vec]
+  (set (filter #(.endsWith ^String % ".cljs")
+               (map #(.getAbsolutePath ^java.io.File %)
+                    (mapcat #(file-seq (io/file (str dir java.io.File/separator %)))
+                            exclude-vec)))))
 
 (defn compile-root
-  "Looks recursively in src-dir for .cljs files and compiles them to
-   .js files. If target-dir is provided, output will go into this
-   directory mirroring the source directory structure. Returns a list
-   of maps containing information about each file which was compiled
-   in dependency order."
+  "Looks recursively in src-dir for .cljs files and compiles them, but
+   the excluded ones, to .js files. If target-dir is provided, output
+   will go into this directory mirroring the source directory
+   structure. Returns a list of maps containing information about each
+   file which was compiled in dependency order."
   ([src-dir]
      (compile-root src-dir "out"))
   ([src-dir target-dir]
+     (compile-root src-dir target-dir nil))
+  ([src-dir target-dir exclude-vec]
      (let [src-dir-file (io/file src-dir)]
-       (loop [cljs-files (cljs-files-in src-dir-file)
+       (loop [cljs-files (cljs-files-in src-dir-file (exclude-file-names src-dir exclude-vec))
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
