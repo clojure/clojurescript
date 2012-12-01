@@ -10,12 +10,18 @@
         ns = path.basename(targ).replace(/[.]js$/, ""),
         jsfile = path.resolve("./", targ);
 
+    // Load the Closure Library wrapper
     require('./out/goog.js');
+    
+    // Load the initial compiled file
     require(jsfile);
     goog.require(ns);
 
+    // Setup the print function
     cljs.core._STAR_print_fn_STAR_ = require("util").print;
-    bs.reset();
+
+    // Setup initial namespaces and environment for the analyzer
+    cljs.analyzer.namespaces = cljs.namespaces;
     cljs.user = {};
     env = cljs.analyzer.empty_env();
 })();

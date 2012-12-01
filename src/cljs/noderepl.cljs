@@ -1,6 +1,5 @@
 (ns noderepl
   (:require [cljs.core]
-            [bs :as bs]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.reader :as reader]))

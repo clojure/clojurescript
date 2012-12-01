@@ -778,6 +778,20 @@
          (ana/analyze-file "cljs/core.cljs"))
        ~@body))
 
+(defn ns-snap [ns]
+  (let [nss1 (dissoc (get @ana/namespaces ns) :requires-macros)
+        nss2 (read-string (pr-str (update-in nss1
+                                             [:defs] dissoc '/)))]
+    (emitln "if(!('namespaces' in cljs)){")
+    (emits "cljs.namespaces = ")
+    (emit (ana/analyze (ana/empty-env) '(atom {'cljs.core {:name 'cljs.core}
+                                               'cljs.user {:name 'cljs.user}})))
+    (emitln "}")
+    (apply str
+      (emit (ana/analyze (ana/empty-env)
+        (list 'swap! 'cljs/namespaces 'assoc (list 'quote ns) (list 'quote nss2)))))))
+
+
 (defn compile-file* [src dest]
   (with-core-cljs
     (with-open [out ^java.io.Writer (io/make-writer dest {})]
@@ -797,10 +811,13 @@
                   (if (= (:op ast) :ns)
                     (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
                     (recur (rest forms) ns-name deps))))
-            {:ns (or ns-name 'cljs.user)
-             :provides [ns-name]
-             :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
-             :file dest}))))))
+            (do
+              (println "\n// Analyzer namespace snapshot:")
+              (ns-snap ns-name)
+              {:ns (or ns-name 'cljs.user)
+               :provides [ns-name]
+               :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
+               :file dest})))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."
