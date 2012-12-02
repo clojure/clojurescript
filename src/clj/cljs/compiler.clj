@@ -881,22 +881,13 @@
                      (not (contains? excluded-set path))))
              (file-seq dir))))
 
-;; (defn exclude-file-names
-;;   "Return a set of absolute paths of files that must be excluded"
-;;   [dir exclude-coll]
-;;   (set (filter #(.endsWith ^String % ".cljs")
-;;           (map #(.getAbsolutePath ^java.io.File %)
-;;                (mapcat #(let [dir-path (.getAbsolutePath ^java.io.File dir)]
-;;                           (file-seq (io/file (str dir-path java.io.File/separator %))))
-;;                        exclude-coll)))))
-
 (defn exclude-file-names
   "Return a set of absolute paths of files to be excluded"
   [dir exclude-vec]
   (when (and dir exclude-vec)
     (set (filter #(.endsWith ^String % ".cljs")
                  (map #(.getAbsolutePath ^java.io.File %)
-                      (mapcat #(file-seq (io/file (str dir java.io.File/separator %)))
+                      (mapcat #(file-seq (io/file (str dir) %))
                               exclude-vec))))))
 
 (defn compile-root
