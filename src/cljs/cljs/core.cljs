@@ -5878,7 +5878,7 @@ reduces them without incurring seq initialization"
   (cond
     (string? x) x
     (or (keyword? x) (symbol? x))
-      (let [i (.lastIndexOf x "/")]
+      (let [i (.lastIndexOf x "/" (- (alength x) 2))]
         (if (< i 0)
           (subs x 2)
           (subs x (inc i))))
@@ -5888,7 +5888,7 @@ reduces them without incurring seq initialization"
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
   (if (or (keyword? x) (symbol? x))
-    (let [i (.lastIndexOf x "/")]
+    (let [i (.lastIndexOf x "/" (- (alength x) 2))]
       (when (> i -1)
         (subs x 2 i)))
     (throw (js/Error. (str "Doesn't support namespace: " x)))))

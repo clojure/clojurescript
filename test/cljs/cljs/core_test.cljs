@@ -205,6 +205,11 @@
   (assert (= "foo/bar" (namespace 'foo/bar/baz)))
   (assert (= "baz" (name :foo/bar/baz)))
   ;(assert (= "foo/bar" (namespace :foo/bar/baz)))
+  (assert (nil? (namespace '/)))
+  (assert (= "/" (name '/)))
+  ;;TODO: These next two tests need Clojure 1.5
+  ;(assert (= "foo" (namespace 'foo//)))
+  ;(assert (= "/" (name 'foo//)))
 
   ; str
   (assert (= ":hello" (str :hello)))
