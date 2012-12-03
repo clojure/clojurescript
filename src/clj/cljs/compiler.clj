@@ -16,6 +16,7 @@
             [cljs.analyzer :as ana])
   (:import java.lang.StringBuilder))
 
+
 (declare munge)
 
 (def js-reserved
@@ -868,25 +869,40 @@
     (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
 
 (defn cljs-files-in
-  "Return a sequence of all .cljs files in the given directory."
-  [dir]
-  (filter #(let [name (.getName ^java.io.File %)]
+  "Return a sequence of all .cljs files in the given directory, excluding those files
+	 specified by the exclude compiler option"
+  [dir & {:keys [exclude]}]
+  (filter #(let [name (.getName ^java.io.File %)
+                 path (.getAbsolutePath ^java.io.File %)]
              (and (.endsWith name ".cljs")
                   (not= \. (first name))
-                  (not (contains? cljs-reserved-file-names name))))
+                  (not (contains? cljs-reserved-file-names name))
+                  (not (contains? exclude path))))
           (file-seq dir)))
+
+(defn exclude-file-names [dir exclude-vec]
+  "Return a set of absolute paths of files to be excluded"
+  (when (and dir (vector? exclude-vec))
+    (set (filter #(.endsWith ^String % ".cljs")
+                 (map #(.getCanonicalPath ^java.io.File %)
+                      (mapcat #(let [file (io/file (str dir) %)]
+                                 (when (and (> (count %) 0) (.exists file))
+                                   (file-seq file)))
+                              exclude-vec))))))
 
 (defn compile-root
   "Looks recursively in src-dir for .cljs files and compiles them to
-   .js files. If target-dir is provided, output will go into this
-   directory mirroring the source directory structure. Returns a list
-   of maps containing information about each file which was compiled
-   in dependency order."
+ .js files. If target-dir is provided, output will go into this
+ directory mirroring the source directory structure. Returns a list
+ of maps containing information about each file which was compiled
+ in dependency order."
   ([src-dir]
      (compile-root src-dir "out"))
-  ([src-dir target-dir]
+  ([scr-dir target-dir]
+     (compile-root scr-dir target-dir nil))
+  ([src-dir target-dir opts]
      (let [src-dir-file (io/file src-dir)]
-       (loop [cljs-files (cljs-files-in src-dir-file)
+       (loop [cljs-files (cljs-files-in src-dir-file :exclude (exclude-file-names src-dir (:exclude opts)))
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
