@@ -885,7 +885,7 @@
   "Return a set of absolute paths of files to be excluded"
   (when (and dir (vector? exclude-vec))
     (set (filter #(.endsWith ^String % ".cljs")
-                 (map #(.getAbsolutePath ^java.io.File %)
+                 (map #(.getCanonicalPath ^java.io.File %)
                       (mapcat #(let [file (io/file (str dir) %)]
                                  (when (and (> (count %) 0) (.exists file))
                                    (file-seq file)))
