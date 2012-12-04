@@ -3,27 +3,28 @@
             [cljs.compiler :as c]
             [clojure.java.io :as io]))
 
+;;; dirs seeds
 (def dir-names (atom ["__dir"
                       "__dir/dir1"
                       "__dir/dir2"
                       "__dir/dir2/dir21"]))
 
+;;; files seeds
 (def file-names (atom ["__dir/file1.cljs"
                        "__dir/dir1/file11.cljs"
                        "__dir/dir2/file21.cljs"
                        "__dir/dir2/file22.cljs"
                        "__dir/dir2/dir21/file211.cljs"]))
 
-
+;;; scenario creation
 (defn create-context []
   (doall (map #(.mkdir (io/file %)) @dir-names))
   (doall (map #(.createNewFile (io/file %)) @file-names)))
 
+;;; scenario destruction
 (defn clear-context []
   (doall (map #(.delete (io/file %)) @file-names))
   (doall (map #(.delete (io/file %)) (reverse @dir-names))))
-
-(def files (map #(io/file %) @file-names))
 
 (def file-paths (map #(str (.getCanonicalPath ^java.io.File (io/file ".")) java.io.File/separator %)
                      @file-names))
@@ -35,7 +36,7 @@
   (create-context)
   (t/are [x y] (= x y)
 
-         ;; border (logical cases)
+         ;; logical cases - all at border
 
          nil (c/exclude-file-names nil nil)
          nil (c/exclude-file-names nil [])
@@ -50,9 +51,7 @@
          #{} (c/exclude-file-names "__dir" ["dir1/non_existent_directory"])
          #{} (c/exclude-file-names "__dir" ["dir1/non_existent_file.cljs" "cljs/non_existent_directory"])
 
-
          ;; real cases
-
 
          ;; standard
          ;; exclude a single source file
