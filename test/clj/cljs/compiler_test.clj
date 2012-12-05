@@ -33,7 +33,12 @@
   (map #(nth coll %) indeces))
 
 (t/deftest test-exclude-file-names
+
+  ;; scenario creation
+
   (create-context)
+
+  ;; declaration of assertions
   (t/are [x y] (= x y)
 
          ;; logical cases - all at border
@@ -51,27 +56,33 @@
          #{} (c/exclude-file-names "__dir" ["dir1/non_existent_directory"])
          #{} (c/exclude-file-names "__dir" ["dir1/non_existent_file.cljs" "cljs/non_existent_directory"])
 
+         ;; logical cases should they throw exceptions?
+         nil (c/exclude-file-names "__dir" "")
+         nil (c/exclude-file-names "__dir" "whatever.clj")
+         nil (c/exclude-file-names "__dir" "dir1/whatever.clj")
+         nil (c/exclude-file-names "__dir" "dir1/whatever")
+
          ;; real cases
 
-         ;; standard
-         ;; exclude a single source file
+         ;; exclude a single source file (standard)
          (set (get-file-names file-paths [0])) (c/exclude-file-names "__dir" ["file1.cljs"])
 
-         ;; standard
-         ;; exclude a single directory containing a directory with a source file and two source files
+         ;; exclude a single directory (standard)
          (set (get-file-names file-paths [2 3 4])) (c/exclude-file-names "__dir" ["dir2"])
 
-         ;; border
-         ;; exclude a directory and a file which happens to be included in the exclude directory
+         ;; exclude a directory and a file already excluded (border)
          (set (get-file-names file-paths [4])) (c/exclude-file-names "__dir" ["dir2/dir21" "dir2/dir21/file211.cljs"])
 
-         ;; border
-         ;; exclude all files by excluding a file and two directories
+         ;; exclude all files by excluding a file and two directories (border)
          (set file-paths) (c/exclude-file-names "__dir" ["file1.cljs" "dir1" "dir2"])
 
-         ;; border
-         ;; exclude all
+         ;; exclude all by using "." (border)
          (set file-paths) (c/exclude-file-names "__dir" ["."])
 
+         ;; exclude all by using ".." (border)
+         ;; (set file-paths) (c/exclude-file-names "__dir" [".."])
+
+
          )
-  (clear-context))
+  (clear-context)
+  )
