@@ -10,7 +10,7 @@
 (require '[cljs.closure :as closure])
 
 (defn transform-cl-args
-  "Called from the script cljsc; added a parsing and refactoring of the compiler options"
+  "Called from the script cljsc"
   [args]
   (let [source (first args)
         refactor-args (clojure.string/split (nth args 1) #"\s")

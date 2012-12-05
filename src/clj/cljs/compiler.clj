@@ -882,7 +882,7 @@
              (file-seq dir))))
 
 (defn exclude-file-names [dir exclude-vec]
-  "Return a set of absolute paths of files to be excluded"
+  "Return a set of files to be excluded"
   (when (and dir (vector? exclude-vec))
     (set (filter #(.endsWith ^String % ".cljs")
                  (map #(.getCanonicalPath ^java.io.File %)

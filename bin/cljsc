@@ -16,6 +16,7 @@ if test "$#" -eq 0
 then
   echo 'Usage: cljsc <file-or-dir>'
   echo '       cljsc <file-or-dir> "{:optimizations :advanced}"'
+  echo '       cljsc <file-or-dir> "{:exclude ["<file-or-dir>" "..."] :optimizations :advanced}"'
 else
   java -server -cp "$CLJSC_CP" clojure.main "$CLOJURESCRIPT_HOME/bin/cljsc.clj" "$@"
 fi
