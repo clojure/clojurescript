@@ -18,16 +18,16 @@
 
 ;;; scenario creation
 (defn create-context []
-  (doall (map #(.mkdir (io/file %)) @dir-names))
-  (doall (map #(.createNewFile (io/file %)) @file-names)))
+  (doall (map #(.mkdir (io/file %)) dir-names))
+  (doall (map #(.createNewFile (io/file %)) file-names)))
 
 ;;; scenario destruction
 (defn clear-context []
-  (doall (map #(.delete (io/file %)) @file-names))
-  (doall (map #(.delete (io/file %)) (reverse @dir-names))))
+  (doall (map #(.delete (io/file %)) file-names))
+  (doall (map #(.delete (io/file %)) (reverse dir-names))))
 
 (def file-paths (map #(str (.getCanonicalPath ^java.io.File (io/file ".")) java.io.File/separator %)
-                     @file-names))
+                     file-names))
 
 (defn get-file-names [coll indeces]
   (map #(nth coll %) indeces))
