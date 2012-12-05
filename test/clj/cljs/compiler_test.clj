@@ -4,17 +4,17 @@
             [clojure.java.io :as io]))
 
 ;;; dirs seeds
-(def dir-names (atom ["__dir"
-                      "__dir/dir1"
-                      "__dir/dir2"
-                      "__dir/dir2/dir21"]))
+(def dir-names ["__dir"
+                "__dir/dir1"
+                "__dir/dir2"
+                "__dir/dir2/dir21"])
 
 ;;; files seeds
-(def file-names (atom ["__dir/file1.cljs"
-                       "__dir/dir1/file11.cljs"
-                       "__dir/dir2/file21.cljs"
-                       "__dir/dir2/file22.cljs"
-                       "__dir/dir2/dir21/file211.cljs"]))
+(def file-names ["__dir/file1.cljs"
+                 "__dir/dir1/file11.cljs"
+                 "__dir/dir2/file21.cljs"
+                 "__dir/dir2/file22.cljs"
+                 "__dir/dir2/dir21/file211.cljs"])
 
 ;;; scenario creation
 (defn create-context []
