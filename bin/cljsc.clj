@@ -12,31 +12,18 @@
 (defn transform-cl-args
   "Called from the script cljsc"
   [args]
-  (let [source (first args)
-        refactor-args (clojure.string/split (nth args 1) #"\s")
-        exclude-vec (if
-                        (= (.indexOf refactor-args ":exclude") -1)
-                      []
-                      (read-string
-                       (nth refactor-args
-                           (inc (.indexOf refactor-args ":exclude")))))
+  (let [srd-dir (first args)
+        args-rest (clojure.string/split (nth args 1) #"\s")
+        exclude (when (= (.indexOf args-rest ":exclude") -1)
+                  (read-string (nth args-rest
+                                    (inc (.indexOf args-rest ":exclude")))))
         opts-string (apply str (interpose " " (rest args)))
         options (when (> (count opts-string) 1)
                   (try (read-string opts-string)
                        (catch Exception e (println e))))]
-    
-    {:source source
-     :options (merge {:output-to :print} options {:exclude exclude-vec})}))
+
+    {:source src-dir
+     :options (merge {:output-to :print} options {:exclude exclude})}))
 
 (let [args (transform-cl-args *command-line-args*)]
   (closure/build (:source args) (:options args)))
-
-
-
-
-
-
-
-
-
-

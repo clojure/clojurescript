@@ -891,6 +891,16 @@
                                    (file-seq file)))
                               exclude-vec))))))
 
+(comment
+  ;; exclude a single cljs source living in src/subdir
+  (exclude-file-names "src" ["hello/foo/bar.cljs"])
+
+  ;; exclude an entire directory of sources living in src
+  (exclude-file-names "src" ["hello/foo"])
+
+  ;; for more exclude call samples see test/clj/cljs/compiler_test.clj
+  )
+
 (defn compile-root
   "Looks recursively in src-dir for .cljs files and compiles them, but
    the excluded ones, to .js files. If target-dir is provided, output
@@ -918,6 +928,10 @@
   (compile-root "src")
   ;; will produce a mirrored directory structure under "out" but all
   ;; files will be compiled to js.
+
+  ;; compile-root
+  ;; If you want exclude a cljs file from compilation of a project
+  (compile-root "src" ["hello/foo/bar.cljs"])
   )
 
 (comment

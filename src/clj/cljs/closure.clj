@@ -439,6 +439,8 @@
   (-compile '[(ns test.app (:require [goog.array :as array]))
               (defn plus-one [x] (inc x))]
             {})
+  ;; compile a project excluding a file from the source base
+  (-compile (io/file "sample/hello/src") {:exclude ["hello/foo/bar.cljs"]})
   )
 
 ;; Dependencies
@@ -938,4 +940,10 @@
            (defn ^:export sum [xs] 42)]
          {:output-dir "samples/hello/out" :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello-dev.html' to see the result in action
+
+  ;; build a project excluding a single cljs source file
+  (build "sample/hello/src" {:optimizations :advanced :exclude ["hello/foo/bar.clj"]})
+
+  ;; build a project excluding an entire directory of cljs source files
+  (build "sample/hello/src" {:optimizations :advanced :exclude ["hello/foo/bar.clj"]})
   )
