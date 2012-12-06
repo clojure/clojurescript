@@ -87,11 +87,36 @@
   [& args]
   `(.println System/err (str ~@args)))
 
+(defn source-info [env]
+  (when-let [line (:line env)]
+    {:file *cljs-file*
+     :line line}))
+
+(defn message [env s]
+  (str s (when (:line env)
+           (str " at line " (:line env) " " *cljs-file*))))
+
 (defn warning [env s]
   (binding [*out* *err*]
-    (println
-     (str s (when (:line env)
-       (str " at line " (:line env) " " *cljs-file*))))))
+    (println (message env s))))
+
+(defn error
+  ([env s] (error env s nil))
+  ([env s cause]
+   (ex-info (message env s)
+            (assoc (source-info env) :tag :cljs/analysis-error)
+            cause)))
+
+(defn analysis-error? [ex]
+  (= :cljs/analysis-error (:tag (ex-data ex))))
+
+(defmacro wrapping-errors [env & body]
+  `(try
+     ~@body
+     (catch Throwable err#
+       (if (analysis-error? err#)
+         (throw err#)
+         (throw (error ~env (.getMessage err#) err#))))))
 
 (defn confirm-var-exists [env prefix suffix]
   (when *cljs-warn-on-undeclared*
@@ -111,91 +136,64 @@
   (and (get (:defs (@namespaces 'cljs.core)) sym)
        (not (contains? (-> env :ns :excludes) sym))))
 
+(defn resolve-var
+  "Resolve a var. Accepts a side-effecting confirm fn for producing
+   warnings about unresolved vars."
+  ([env sym] (resolve-var env sym nil))
+  ([env sym confirm]
+     (if (= (namespace sym) "js")
+       {:name sym :ns 'js}
+       (let [s (str sym)
+             lb (-> env :locals sym)]
+         (cond
+           lb lb
+
+           (namespace sym)
+           (let [ns (namespace sym)
+                 ns (if (= "clojure.core" ns) "cljs.core" ns)
+                 full-ns (resolve-ns-alias env ns)]
+             (when confirm
+               (confirm env full-ns (symbol (name sym))))
+             (merge (get-in @namespaces [full-ns :defs (symbol (name sym))])
+                    {:name (symbol (str full-ns) (str (name sym)))
+                     :ns full-ns}))
+
+           (.contains s ".")
+           (let [idx (.indexOf s ".")
+                 prefix (symbol (subs s 0 idx))
+                 suffix (subs s (inc idx))
+                 lb (-> env :locals prefix)]
+             (if lb
+               {:name (symbol (str (:name lb) suffix))}
+               (do
+                 (when confirm
+                   (confirm env prefix (symbol suffix)))
+                 (merge (get-in @namespaces [prefix :defs (symbol suffix)])
+                        {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
+                         :ns prefix}))))
+
+           (get-in @namespaces [(-> env :ns :name) :uses sym])
+           (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
+             (merge
+              (get-in @namespaces [full-ns :defs sym])
+              {:name (symbol (str full-ns) (str sym))
+               :ns (-> env :ns :name)}))
+
+           (get-in @namespaces [(-> env :ns :name) :imports sym])
+           (recur env (get-in @namespaces [(-> env :ns :name) :imports sym]) confirm)
+
+           :else
+           (let [full-ns (if (core-name? env sym)
+                           'cljs.core
+                           (-> env :ns :name))]
+             (when confirm
+               (confirm env full-ns sym))
+             (merge (get-in @namespaces [full-ns :defs sym])
+                    {:name (symbol (str full-ns) (str sym))
+                     :ns full-ns})))))))
+
 (defn resolve-existing-var [env sym]
-  (if (= (namespace sym) "js")
-    {:name sym :ns 'js}
-    (let [s (str sym)
-          lb (-> env :locals sym)]
-      (cond
-       lb lb
-
-       (namespace sym)
-       (let [ns (namespace sym)
-             ns (if (= "clojure.core" ns) "cljs.core" ns)
-             full-ns (resolve-ns-alias env ns)]
-         (confirm-var-exists env full-ns (symbol (name sym)))
-         (merge (get-in @namespaces [full-ns :defs (symbol (name sym))])
-           {:name (symbol (str full-ns) (str (name sym)))
-            :ns full-ns}))
-
-       (.contains s ".")
-       (let [idx (.indexOf s ".")
-             prefix (symbol (subs s 0 idx))
-             suffix (subs s (inc idx))
-             lb (-> env :locals prefix)]
-         (if lb
-           {:name (symbol (str (:name lb) suffix))}
-           (do
-             (confirm-var-exists env prefix (symbol suffix))
-             (merge (get-in @namespaces [prefix :defs (symbol suffix)])
-              {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-               :ns prefix}))))
-
-       (get-in @namespaces [(-> env :ns :name) :uses sym])
-       (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
-         (merge
-          (get-in @namespaces [full-ns :defs sym])
-          {:name (symbol (str full-ns) (str sym))
-           :ns (-> env :ns :name)}))
-
-       (get-in @namespaces [(-> env :ns :name) :imports sym])
-       (recur env (get-in @namespaces [(-> env :ns :name) :imports sym]))
-
-       :else
-       (let [full-ns (if (core-name? env sym)
-                       'cljs.core
-                       (-> env :ns :name))]
-         (confirm-var-exists env full-ns sym)
-         (merge (get-in @namespaces [full-ns :defs sym])
-           {:name (symbol (str full-ns) (str sym))
-            :ns full-ns}))))))
-
-(defn resolve-var [env sym]
-  (if (= (namespace sym) "js")
-    {:name sym}
-    (let [s (str sym)
-          lb (-> env :locals sym)]
-      (cond
-       lb lb
-
-       (namespace sym)
-       (let [ns (namespace sym)
-             ns (if (= "clojure.core" ns) "cljs.core" ns)]
-         {:name (symbol (str (resolve-ns-alias env ns)) (name sym))})
-
-       (.contains s ".")
-       (let [idx (.indexOf s ".")
-             prefix (symbol (subs s 0 idx))
-             suffix (subs s idx)
-             lb (-> env :locals prefix)]
-         (if lb
-           {:name (symbol (str (:name lb) suffix))}
-           {:name sym}))
-
-       (get-in @namespaces [(-> env :ns :name) :uses sym])
-       (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
-         (merge
-          (get-in @namespaces [full-ns :defs sym])
-          {:name (symbol (str full-ns) (name sym))}))
-
-       (get-in @namespaces [(-> env :ns :name) :imports sym])
-       (recur env (get-in @namespaces [(-> env :ns :name) :imports sym]))
-
-       :else
-       (let [ns (if (core-name? env sym)
-                  'cljs.core
-                  (-> env :ns :name))]
-         {:name (symbol (str ns) (name sym))})))))
+  (resolve-var env sym confirm-var-exists))
 
 (defn confirm-bindings [env names]
   (doseq [name names]
@@ -336,8 +334,7 @@
                    sym-meta
                    (when doc {:doc doc})
                    (when dynamic {:dynamic true})
-                   (when-let [line (:line env)]
-                     {:file *cljs-file* :line line})
+                   (source-info env)
                    ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
@@ -591,7 +588,7 @@
 
 (defn analyze-deps [deps]
   (doseq [dep deps]
-    (when-not (:defs (@namespaces dep))
+    (when-not (contains? @namespaces dep)
       (let [relpath (ns->relpath dep)]
         (when (io/resource relpath)
           (analyze-file relpath))))))
@@ -697,9 +694,7 @@
                        :num-fields (count fields))]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
-                 (when-let [line (:line env)]
-                   {:file *cljs-file*
-                    :line line})))))
+                 (source-info env)))))
     {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
@@ -710,9 +705,7 @@
              (let [m (assoc (or m {}) :name t :type true)]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
-                 (when-let [line (:line env)]
-                   {:file *cljs-file*
-                    :line line})))))
+                 (source-info env)))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
@@ -894,9 +887,10 @@
       (assert (not (nil? op)) "Can't call nil")
       (let [mform (macroexpand-1 env form)]
         (if (identical? form mform)
-          (if (specials op)
-            (parse op env form name)
-            (parse-invoke env form))
+          (wrapping-errors env
+            (if (specials op)
+              (parse op env form name)
+              (parse-invoke env form)))
           (analyze env mform name))))))
 
 (declare analyze-wrap-meta)
@@ -944,6 +938,7 @@
   facilitate code walking without knowing the details of the op set."
   ([env form] (analyze env form nil))
   ([env form name]
+   (wrapping-errors env
      (let [form (if (instance? clojure.lang.LazySeq form)
                   (or (seq form) ())
                   form)]
@@ -955,7 +950,7 @@
         (vector? form) (analyze-vector env form name)
         (set? form) (analyze-set env form name)
         (keyword? form) (analyze-keyword env form)
-        :else {:op :constant :env env :form form}))))
+        :else {:op :constant :env env :form form})))))
 
 (defn analyze-file
   [^String f]

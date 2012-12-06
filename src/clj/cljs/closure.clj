@@ -118,7 +118,7 @@
   (doall
     (map #(io/resource %)
          (filter #(do
-                    (and 
+                    (and
                       (.startsWith % lib-path)
                       (.endsWith % ".js")))
                  (jar-entry-names jar-path)))))
@@ -131,7 +131,7 @@
       (map to-url (filter #(.endsWith (.getName %) ".js") (file-seq (io/file path)))))))
 
 
-(defn find-js-classpath 
+(defn find-js-classpath
   "finds all js files on the classpath matching the path provided"
   [path]
   (let [process-entry #(if (.endsWith % ".jar")
@@ -175,7 +175,7 @@
                   (map #(js-source-file (.getFile %) (slurp %)) ext))]
     (let [js-sources (-> externs filter-js add-target load-js)
           ups-sources (-> ups-externs filter-cp-js load-js)
-          all-sources (concat js-sources ups-sources)] 
+          all-sources (concat js-sources ups-sources)]
       (if use-only-custom-externs
         all-sources
         (into all-sources (CommandLineRunner/getDefaultExterns))))))
@@ -231,14 +231,14 @@
   (-source [this] "The JavaScript source string."))
 
 (extend-protocol IJavaScript
-  
+
   String
   (-foreign? [this] false)
   (-url [this] nil)
   (-provides [this] (:provides (parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (parse-js-ns (string/split-lines this))))
   (-source [this] this)
-  
+
   clojure.lang.IPersistentMap
   (-foreign? [this] (:foreign this))
   (-url [this] (or (:url this)
@@ -366,12 +366,13 @@
     (compile-form-seq (comp/forms-seq file))))
 
 (defn compile-dir
-  "Recursively compile all cljs files under the given source
-  directory. Return a list of JavaScriptFiles."
-  [^File src-dir opts]
-  (let [out-dir (output-directory opts)]
+  "Recursively compile all cljs files under the given source directory,
+  but the excluded ones. Return a list of JavaScriptFiles."  [^File
+  src-dir opts]
+  (let [out-dir (output-directory opts)
+        exclude (:exclude opts)]
     (map compiled-file
-         (comp/compile-root src-dir out-dir opts))))
+         (comp/compile-root src-dir out-dir exclude))))
 
 (defn path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
@@ -382,7 +383,7 @@
 (defn jar-file-to-disk
   "Copy a file contained within a jar to disk. Return the created file."
   [url out-dir]
-  (let [out-file (io/file out-dir (path-from-jarfile url)) 
+  (let [out-file (io/file out-dir (path-from-jarfile url))
         content (slurp (io/reader url))]
     (do (comp/mkdirs out-file)
         (spit out-file content)
@@ -411,14 +412,14 @@
     (case (.getProtocol this)
       "file" (-compile (io/file this) opts)
       "jar" (compile-from-jar this opts)))
-  
+
   clojure.lang.PersistentList
   (-compile [this opts]
     (compile-form-seq [this]))
-  
+
   String
   (-compile [this opts] (-compile (io/file this) opts))
-  
+
   clojure.lang.PersistentVector
   (-compile [this opts] (compile-form-seq this))
   )
@@ -438,6 +439,8 @@
   (-compile '[(ns test.app (:require [goog.array :as array]))
               (defn plus-one [x] (inc x))]
             {})
+  ;; compile a project excluding a file from the source base
+  (-compile (io/file "sample/hello/src") {:exclude ["hello/foo/bar.cljs"]})
   )
 
 ;; Dependencies
@@ -462,7 +465,7 @@
   and :provides), returns a map containing :provides, :requires, :file
   and :url"
   ([lib-spec] (load-foreign-library* lib-spec false))
-  ([lib-spec cp-only?] 
+  ([lib-spec cp-only?]
     (let [find-func (if cp-only? io/resource find-url)]
       (merge lib-spec {:foreign true
                        :url (find-func (:file lib-spec))}))))
@@ -703,7 +706,7 @@
 
   ;; optimize a ClojureScript form
   (optimize {:optimizations :simple} (-compile '(def x 3) {}))
-  
+
   ;; optimize a project
   (println (->> (-compile "samples/hello/src" {})
                 (apply add-dependencies {})
@@ -841,7 +844,7 @@
           (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
 (comment
-  
+
   ;; output unoptimized alone
   (output-unoptimized {} "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
   ;; output unoptimized with all dependencies
@@ -858,7 +861,7 @@
   )
 
 
-(defn get-upstream-deps* 
+(defn get-upstream-deps*
   "returns a merged map containing all upstream dependencies defined by libraries on the classpath"
   []
   (let [classloader (. (Thread/currentThread) (getContextClassLoader))
@@ -887,7 +890,7 @@
                (merge {:optimizations :simple} opts)
                opts)
         ups-deps (get-upstream-deps)
-        all-opts (assoc opts 
+        all-opts (assoc opts
                    :ups-libs (:libs ups-deps)
                    :ups-foreign-libs (:foreign-libs ups-deps)
                    :ups-externs (:externs ups-deps))]
@@ -925,16 +928,22 @@
   (build "samples/hello/src" {:optimizations :advanced})
   (build "samples/hello/src" {:optimizations :advanced :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello.html' to see the result in action
-  
+
   ;; build a project without optimizations
   (build "samples/hello/src" {:output-dir "samples/hello/out" :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello-dev.html' to see the result in action
   ;; notice how each script was loaded individually
-  
+
   ;; build unoptimized from raw ClojureScript
   (build '[(ns hello.core)
            (defn ^{:export greet} greet [n] (str "Hola " n))
            (defn ^:export sum [xs] 42)]
          {:output-dir "samples/hello/out" :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello-dev.html' to see the result in action
+
+  ;; build a project excluding a single cljs source file
+  (build "sample/hello/src" {:optimizations :advanced :exclude ["hello/foo/bar.clj"]})
+
+  ;; build a project excluding an entire directory of cljs source files
+  (build "sample/hello/src" {:optimizations :advanced :exclude ["hello/foo/bar.clj"]})
   )

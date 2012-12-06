@@ -12,7 +12,7 @@ set CLASSPATH=!CLASSPATH!"
 
 if (%1) == () (
 echo Usage: "cljsc <file-or-dir> > out.js"
-echo        "cljsc <file-or-dir> {:optimiztions :advanced} > out.js"
+echo        "cljsc <file-or-dir> {:optimiztions :advanced :exclude ["<file-or-dir>" ...]} > out.js"
 ) else (
 java -server -cp "%CLASSPATH%" clojure.main "%CLOJURESCRIPT_HOME%\bin\cljsc.clj" %*
 )

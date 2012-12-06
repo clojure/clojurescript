@@ -156,6 +156,7 @@
   (assert (= (apply mod [4 2]) 0))
   (assert (= (mod 3 2) 1))
   (assert (= (apply mod [3 2]) 1))
+  (assert (= (mod -2 5) 3))
 
   (assert (= [4 3 2 1 0] (loop [i 0 j ()]
                  (if (< i 5)
@@ -204,6 +205,11 @@
   (assert (= "foo/bar" (namespace 'foo/bar/baz)))
   (assert (= "baz" (name :foo/bar/baz)))
   ;(assert (= "foo/bar" (namespace :foo/bar/baz)))
+  (assert (nil? (namespace '/)))
+  (assert (= "/" (name '/)))
+  ;;TODO: These next two tests need Clojure 1.5
+  ;(assert (= "foo" (namespace 'foo//)))
+  ;(assert (= "/" (name 'foo//)))
 
   ; str
   (assert (= ":hello" (str :hello)))
@@ -398,6 +404,16 @@
   (let [f (fn ([]) ([a & more] more))]
     (assert (nil? (f :foo))))
   (assert (nil? (array-seq (array 1) 1)))
+
+  ;; Functions with metadata
+  (let [f (fn [x] (* x 2))
+        m {:foo "bar"}
+        mf (with-meta f m)]
+    (assert (nil? (meta f)))
+    (assert (fn? mf))
+    (assert (= 4 (mf 2)))
+    (assert (= 4 (apply mf [2])))
+    (assert (= (meta mf) m)))
 
   (let [a (atom 0)]
     (assert (= 0 (deref a)))
@@ -681,6 +697,24 @@
                (js->clj (js* "[[{\"a\":1,\"b\":2}, {\"a\":1,\"b\":2}]]") :keywordize-keys true)))
   (assert (= [[{:a 1, :b 2} {:a 1, :b 2}]]
                (js->clj [[{:a 1, :b 2} {:a 1, :b 2}]])))
+
+  ;; clj->js
+  (assert (= (clj->js 'a) "a"))
+  (assert (= (clj->js :a) "a"))
+  (assert (= (clj->js "a") "a"))
+  (assert (= (clj->js 1) 1))
+  (assert (= (clj->js nil) (js* "null")))
+  (assert (= (clj->js true) (js* "true")))
+  (assert (goog/isArray (clj->js [])))
+  (assert (goog/isArray (clj->js #{})))
+  (assert (goog/isArray (clj->js '())))
+  (assert (goog/isObject (clj->js {})))
+  (assert (= (aget (clj->js {:a 1}) "a") 1))
+  (assert (= (-> (clj->js {:a {:b {{:k :ey} :d}}})
+                 (aget "a")
+                 (aget "b")
+                 (aget "{:k :ey}"))
+             "d"))
 
   ;; last
   (assert (= nil (last nil)))
@@ -978,13 +1012,14 @@
     (assert (= 94 (peek stack2))))
 
   ;; subvec
-  (let [v (vec (range 10))
-        s (subvec v 2 8)]
+  (let [v1 (vec (range 10))
+        v2 (vec (range 5))
+        s (subvec v1 2 8)]
     (assert (= s
-               (-> v
+               (-> v1
                    (subvec 2)
                    (subvec 0 6))
-               (->> v
+               (->> v1
                     (drop 2)
                     (take 6))))
     (assert (= 6 (count s)))
@@ -995,7 +1030,13 @@
                (conj s 1)))
     (assert (= 27 (reduce + s)))
     (assert (= s (vec s))) ; pour into plain vector
-    (let [m {:x 1}] (assert (= m (meta (with-meta s m))))))
+    (let [m {:x 1}] (assert (= m (meta (with-meta s m)))))
+    ;; go outside ranges
+    (assert (= :fail (try (subvec v2 0 6) (catch js/Error e :fail))))
+    (assert (= :fail (try (subvec v2 6 10) (catch js/Error e :fail))))
+    (assert (= :fail (try (subvec v2 6 10) (catch js/Error e :fail))))
+    (assert (= :fail (try (subvec v2 3 6) (catch js/Error e :fail))))
+    )
 
   ;; TransientVector
   (let [v1 (vec (range 15 48))
@@ -1516,7 +1557,7 @@
                  (b c d) :sym
                  :none)
                :none)))
-  
+
   ;; IComparable
   (assert (=  0 (compare false false)))
   (assert (= -1 (compare false true)))
@@ -1717,6 +1758,17 @@
           (y [] (x))]
     (let [x (fn [] "overwritten")]
       (assert (= "original" (y)))))
+
+  ;; Test builtin implementations of IKVReduce
+  (letfn [(kvr-test [data expect]
+            (assert (= :reduced (reduce-kv (fn [_ _ _] (reduced :reduced))
+                                           [] data)))
+            (assert (= expect (reduce-kv (fn [r k v] (-> r (conj k) (conj v)))
+                                         [] data))))]
+    (kvr-test (obj-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
+    (kvr-test (hash-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
+    (kvr-test (array-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
+    (kvr-test [:v0 :v1] [0 :v0 1 :v1]))
 
   :ok
   )
