@@ -25,17 +25,17 @@
     <dependency>
       <groupId>com.google.javascript</groupId>
       <artifactId>closure-compiler</artifactId>
-      <version>r1918</version>
+      <version>r2180</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>google-closure-library</artifactId>
-      <version>0.0-1376-2</version>
+      <version>0.0-2029</version>
     </dependency>
     <dependency>
       <groupId>org.mozilla</groupId>
       <artifactId>rhino</artifactId>
-      <version>1.7R3</version>
+      <version>1.7R4</version>
     </dependency>
   </dependencies>
 

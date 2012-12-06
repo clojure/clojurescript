@@ -128,6 +128,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 
+(defprotocol Fn
+  "Marker protocol")
+
 (defprotocol IFn
   (-invoke
     [this]
@@ -455,6 +458,24 @@
   IHash
   (-hash [o]
     (if (identical? o true) 1 0)))
+
+(declare with-meta)
+
+(extend-type function
+  Fn
+
+  IMeta
+  (-meta [_] nil)
+
+  IWithMeta
+  (-with-meta [f meta]
+    (with-meta
+      (reify
+        Fn
+        IFn
+        (-invoke [_ & args]
+          (apply f args)))
+      meta)))
 
 (extend-type default
   IHash
@@ -1026,7 +1047,7 @@ reduces them without incurring seq initialization"
   (goog/isNumber n))
 
 (defn ^boolean fn? [f]
-  (goog/isFunction f))
+  (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
 
 (defn ^boolean ifn? [f]
   (or (fn? f) (satisfies? IFn f)))
@@ -1311,15 +1332,20 @@ reduces them without incurring seq initialization"
   [x]
   (fix x))
 
+(defn js-mod
+  "Modulus of num and div with original javascript behavior. i.e. bug for negative numbers"
+  [n d]
+  (cljs.core/js-mod n d))
+
 (defn mod
   "Modulus of num and div. Truncates toward negative infinity."
   [n d]
-  (cljs.core/mod n d))
+  (js-mod (+ (js-mod n d) d) d))
 
 (defn quot
   "quot[ient] of dividing numerator by denominator."
   [n d]
-  (let [rem (mod n d)]
+  (let [rem (js-mod n d)]
     (fix (/ (- n rem) d))))
 
 (defn rem
@@ -1527,7 +1553,7 @@ reduces them without incurring seq initialization"
   (loop [h 0 s (seq m)]
     (if s
       (let [e (first s)]
-        (recur (mod (+ h (bit-xor (hash (key e)) (hash (val e))))
+        (recur (js-mod (+ h (bit-xor (hash (key e)) (hash (val e))))
                     4503599627370496)
                (next s)))
       h)))
@@ -1537,7 +1563,7 @@ reduces them without incurring seq initialization"
   (loop [h 0 s (seq s)]
     (if s
       (let [e (first s)]
-        (recur (mod (+ h (hash e)) 4503599627370496)
+        (recur (js-mod (+ h (hash e)) 4503599627370496)
                (next s)))
       h)))
 
@@ -3152,13 +3178,15 @@ reduces them without incurring seq initialization"
   ([vec node i off meta]
      (ChunkedSeq. vec node i off meta nil)))
 
+(declare build-subvec)
+
 (deftype Subvec [meta v start end ^:mutable __hash]
   Object
   (toString [this]
     (pr-str this))
 
   IWithMeta
-  (-with-meta [coll meta] (Subvec. meta v start end __hash))
+  (-with-meta [coll meta] (build-subvec meta v start end __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -3169,11 +3197,11 @@ reduces them without incurring seq initialization"
   (-pop [coll]
     (if (== start end)
       (throw (js/Error. "Can't pop empty vector"))
-      (Subvec. meta v start (dec end) nil)))
+      (build-subvec meta v start (dec end) nil)))
 
   ICollection
   (-conj [coll o]
-    (Subvec. meta (-assoc-n v end o) start (inc end) nil))
+    (build-subvec meta (-assoc-n v end o) start (inc end) nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
@@ -3210,7 +3238,7 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll key val]
     (let [v-pos (+ start key)]
-      (Subvec. meta (-assoc v v-pos val)
+      (build-subvec meta (-assoc v v-pos val)
                start (max end (inc v-pos))
                nil)))
 
@@ -3229,6 +3257,15 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found)))
 
+(defn- build-subvec [meta v start end __hash]
+  (let [c (count v)]
+       (when (or (neg? start)
+                 (neg? end)
+                 (> start c)
+                 (> end c))
+         (throw (js/Error. "Index out of bounds")))
+       (Subvec. meta v start end __hash)))
+
 (defn subvec
   "Returns a persistent vector of the items in vector from
   start (inclusive) to end (exclusive).  If end is not supplied,
@@ -3238,7 +3275,7 @@ reduces them without incurring seq initialization"
   ([v start]
      (subvec v start (count v)))
   ([v start end]
-     (Subvec. nil v start end nil)))
+     (build-subvec nil v start end nil)))
 
 (defn- tv-ensure-editable [edit node]
   (if (identical? edit (.-edit node))
@@ -3646,6 +3683,19 @@ reduces them without incurring seq initialization"
       true
       false))
 
+  IKVReduce
+  (-kv-reduce [coll f init]
+    (let [len (alength keys)]
+      (loop [keys (.sort keys obj-map-compare-keys)
+             init init]
+        (if (seq keys)
+          (let [k (first keys)
+                init (f init k (aget strobj k))]
+            (if (reduced? init)
+              @init
+              (recur (rest keys) init)))
+          init))))
+
   IMap
   (-dissoc [coll k]
     (if (and ^boolean (goog/isString k)
@@ -3904,7 +3954,8 @@ reduces them without incurring seq initialization"
           (let [init (f init (aget arr i) (aget arr (inc i)))]
             (if (reduced? init)
               @init
-              (recur (+ i 2) init)))))))
+              (recur (+ i 2) init)))
+          init))))
 
   IFn
   (-invoke [coll k]
@@ -5827,7 +5878,7 @@ reduces them without incurring seq initialization"
   (cond
     (string? x) x
     (or (keyword? x) (symbol? x))
-      (let [i (.lastIndexOf x "/")]
+      (let [i (.lastIndexOf x "/" (- (alength x) 2))]
         (if (< i 0)
           (subs x 2)
           (subs x (inc i))))
@@ -5837,7 +5888,7 @@ reduces them without incurring seq initialization"
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
   (if (or (keyword? x) (symbol? x))
-    (let [i (.lastIndexOf x "/")]
+    (let [i (.lastIndexOf x "/" (- (alength x) 2))]
       (when (> i -1)
         (subs x 2 i)))
     (throw (js/Error. (str "Doesn't support namespace: " x)))))
@@ -6844,24 +6895,70 @@ reduces them without incurring seq initialization"
   [d]
   (-realized? d))
 
+(defprotocol IEncodeJS
+  (-clj->js [x] "Recursively transforms clj values to JavaScript")
+  (-key->js [x] "Transforms map keys to valid JavaScript keys. Arbitrary keys are
+  encoded to their string representation via (pr-str x)"))
+
+(extend-protocol IEncodeJS
+  default
+  (-key->js [k]
+    (if (or (string? k)
+            (number? k)
+            (keyword? k)
+            (symbol? k))
+      (-clj->js k)
+      (pr-str k)))
+
+  (-clj->js [x]
+    (cond
+      (keyword? x) (name x)
+      (symbol? x) (str x)
+      (map? x) (let [m (js-obj)]
+                 (doseq [[k v] x]
+                   (aset m (-key->js k) (-clj->js v)))
+                 m)
+      (coll? x) (apply array (map -clj->js x))
+      :else x))
+
+  nil
+  (-clj->js [x] nil))
+
+(defn clj->js
+   "Recursively transforms ClojureScript values to JavaScript.
+sets/vectors/lists become Arrays, Keywords and Symbol become Strings,
+Maps become Objects. Arbitrary keys are encoded to by key->js."
+   [x]
+   (-clj->js x))
+
+(defprotocol IEncodeClojure
+  (-js->clj [x] [x options] "Transforms JavaScript values to Clojure"))
+
+(extend-protocol IEncodeClojure
+  default
+  (-js->clj
+    ([x options]
+       (let [{:keys [keywordize-keys]} options
+             keyfn (if keywordize-keys keyword str)
+             f (fn thisfn [x]
+                 (cond
+                   (seq? x) (doall (map thisfn x))
+                   (coll? x) (into (empty x) (map thisfn x))
+                   (goog.isArray x) (vec (map thisfn x))
+                   (identical? (type x) js/Object) (into {} (for [k (js-keys x)]
+                                                              [(keyfn k)
+                                                               (thisfn (aget x k))]))
+                   :else x))]
+         (f x)))
+    ([x] (-js->clj x {:keywordize-keys false}))))
+
 (defn js->clj
   "Recursively transforms JavaScript arrays into ClojureScript
   vectors, and JavaScript objects into ClojureScript maps.  With
   option ':keywordize-keys true' will convert object fields from
   strings to keywords."
-  [x & options]
-  (let [{:keys [keywordize-keys]} options
-        keyfn (if keywordize-keys keyword str)
-        f (fn thisfn [x]
-            (cond
-             (seq? x) (doall (map thisfn x))
-             (coll? x) (into (empty x) (map thisfn x))
-             (goog.isArray x) (vec (map thisfn x))
-             (identical? (type x) js/Object) (into {} (for [k (js-keys x)]
-                                                        [(keyfn k)
-                                                         (thisfn (aget x k))]))
-             :else x))]
-    (f x)))
+  [x & opts]
+  (-js->clj x (apply array-map opts)))
 
 (defn memoize
   "Returns a memoized version of a referentially transparent function. The
@@ -7209,4 +7306,3 @@ reduces them without incurring seq initialization"
   IHash
   (-hash [this]
     (goog.string/hashCode (pr-str this))))
-

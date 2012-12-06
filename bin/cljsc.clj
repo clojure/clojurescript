@@ -26,4 +26,7 @@
      :options (merge {:output-to :print} options {:exclude exclude})}))
 
 (let [args (transform-cl-args *command-line-args*)]
-  (closure/build (:source args) (:options args)))
+  (closure/build (:source args) (:options args))
+  (.flush *out*)
+  (shutdown-agents)
+  (System/exit 0))
