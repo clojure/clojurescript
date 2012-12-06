@@ -235,6 +235,7 @@
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name]
+  (assert (>= (count form) 3) "Too few arguments to if")
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
         then-expr (analyze env then)
         else-expr (analyze env else)]
