@@ -6,13 +6,11 @@
 if [ "$CLOJURESCRIPT_HOME" = "" ]; then
   CLOJURESCRIPT_HOME="`dirname $0`/.."
 fi
-echo $CLOJURESCRIPT_HOME
-ls $CLOJURESCRIPT_HOME
+
 CLJTEST_CP=''
 for next in lib/*: src/clj: src/cljs: test/cljs: test/clj: lib/clojure.jar; do
   CLJTEST_CP="${CLJTEST_CP}${CLOJURESCRIPT_HOME}/${next}"
 done
-echo class: $CLJTEST_CP
 
 java -server -cp $CLJTEST_CP clojure.main "$CLOJURESCRIPT_HOME/test/clj/test_runner.clj" "$@"
 
