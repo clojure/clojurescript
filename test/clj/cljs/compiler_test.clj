@@ -32,7 +32,7 @@
 (defn get-file-names [coll indeces]
   (map #(nth coll %) indeces))
 
-(t/deftest test-exclude-file-names
+(t/deftest test-exclude
 
   ;; scenario creation
 
@@ -41,69 +41,68 @@
   ;; declaration of assertions
   (t/are [x y] (= x y)
 
-         ;; logical cases - all at border
+         ;; logical cases passing nil or a vector of exclusions
 
-         nil (c/exclude-file-names nil nil)
-         nil (c/exclude-file-names nil [])
-         nil (c/exclude-file-names nil [""])
-         nil (c/exclude-file-names "__dir" nil)
-         #{} (c/exclude-file-names "__dir" [])
-         #{} (c/exclude-file-names "__dir" [""])
-         #{} (c/exclude-file-names "__dir" ["non_existent_file.cljs"])
-         #{} (c/exclude-file-names "__dir" ["non_existent_directory"])
-         #{} (c/exclude-file-names "__dir" ["non_existent_file.cljs" "non_existent_directory"])
-         #{} (c/exclude-file-names "__dir" ["dir1/non_existent_file.cljs"])
-         #{} (c/exclude-file-names "__dir" ["dir1/non_existent_directory"])
-         #{} (c/exclude-file-names "__dir" ["dir1/non_existent_file.cljs" "cljs/non_existent_directory"])
+         nil (c/-exclude nil nil)
+         nil (c/-exclude [] nil)
+         nil (c/-exclude [""] nil)
+         nil (c/-exclude nil "__dir")
+         #{} (c/-exclude [] "__dir")
+         #{} (c/-exclude [""] "__dir")
+         #{} (c/-exclude ["non_existent_file.cljs"] "__dir")
+         #{} (c/-exclude ["non_existent_directory"] "__dir")
+         #{} (c/-exclude ["non_existent_file.cljs" "non_existent_directory"] "__dir")
+         #{} (c/-exclude ["dir1/non_existent_file.cljs"] "__dir")
+         #{} (c/-exclude ["dir1/non_existent_directory"] "__dir")
+         #{} (c/-exclude ["dir1/non_existent_file.cljs" "cljs/non_existent_directory"] "__dir")
 
-         ;; logical cases. should they throw exceptions or
-         ;; exclude-file-names should be implemented as protocol?
-         ;; now they just return nil.
-         nil (c/exclude-file-names "__dir" "")
-         nil (c/exclude-file-names "__dir" "whatever.clj")
-         nil (c/exclude-file-names "__dir" "dir1/whatever.clj")
-         nil (c/exclude-file-names "__dir" "dir1/whatever")
+         ;; logical cases passing a single exclusion as a string
+         
+         #{} (c/-exclude "" "__dir")
+         #{} (c/-exclude "non_existent_file.clj" "__dir")
+         #{} (c/-exclude "dir1/non_existing_file.clj" "__dir")
+         #{} (c/-exclude "non_exsiting_dir" "__dir")
 
          ;; real cases
 
-         ;; exclude a single source file (standard) by passing it in a
-         ;; vector 
+         ;; exclude a single source file by passing it inside a vector
          (set (get-file-names file-paths [0]))
-         (c/exclude-file-names "__dir" ["file1.cljs"])
+         (c/-exclude ["file1.cljs"] "__dir")
 
-         ;; ;; exclude a single source file (standard) by passing it as a
-         ;; ;; string  
-         ;; (set (get-file-names file-paths [0]))
-         ;; (c/exclude-file-names "__dir" "file1.cljs")
+         ;; exclude a single source file by passing it as a
+         ;; string  
+         (set (get-file-names file-paths [0]))
+         (c/-exclude "file1.cljs" "__dir")
 
-         ;; exclude a single directory (standard) by passing it in a
-         ;; vector 
+         ;; exclude a single directory by passing it inside a vector
          (set (get-file-names file-paths [2 3 4]))
-         (c/exclude-file-names "__dir" ["dir2"])
+         (c/-exclude ["dir2"] "__dir")
 
-         ;; ;; exclude a single directory (standard) by passing it as a
-         ;; ;; string 
-         ;; (set (get-file-names file-paths [2 3 4]))
-         ;; (c/exclude-file-names "__dir" "dir2")
+         ;; exclude a single directory by passing it as a string
+         (set (get-file-names file-paths [2 3 4]))
+         (c/-exclude "dir2" "__dir")
 
          ;; exclude a directory and a file already excluded (border)
          (set (get-file-names file-paths [4]))
-         (c/exclude-file-names "__dir" ["dir2/dir21" "dir2/dir21/file211.cljs"])
+         (c/-exclude ["dir2/dir21" "dir2/dir21/file211.cljs"] "__dir")
 
          ;; exclude all files by excluding a file and two directories (border)
          (set file-paths)
-         (c/exclude-file-names "__dir" ["file1.cljs" "dir1" "dir2"])
+         (c/-exclude ["file1.cljs" "dir1" "dir2"] "__dir")
 
-         ;; exclude all by using "." (border)
+         ;; exclude all by passing "." inside a vector
          (set file-paths)
-         (c/exclude-file-names "__dir" ["."])
+         (c/-exclude ["."] "__dir")
 
-         ;; (set file-paths)
-         ;; (c/exclude-file-names "__dir" ".")
+         ;; exclude all by passing "." as a string
+         (set file-paths)
+         (c/-exclude "__dir" ".")
+        
+         ;;exclude all by passing "../__dir" inside a vector
+         (set file-paths) (c/-exclude ["../__dir"] "__dir")
 
-         ;; exclude all by using ".." (border)
-         ;; (set file-paths) (c/exclude-file-names "__dir" [".."])
-
+         ;;exclude all by passing "../__dir" as a string
+         (set file-paths) (c/-exclude "../__dir" "__dir")
 
          )
   (clear-context)

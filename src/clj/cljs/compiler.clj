@@ -899,15 +899,30 @@
                      (not (contains? excluded-set path))))
              (file-seq dir))))
 
+(defprotocol Excludable
+  (-exclude [this src-dir]))
+
 (defn exclude-file-names [dir exclude-vec]
   "Return a set of files to be excluded"
-  (when (and dir (vector? exclude-vec))
+  (when dir
     (set (filter #(.endsWith ^String % ".cljs")
                  (map #(.getCanonicalPath ^java.io.File %)
                       (mapcat #(let [file (io/file (str dir) %)]
                                  (when (and (> (count %) 0) (.exists file))
                                    (file-seq file)))
                               exclude-vec))))))
+
+(extend-protocol Excludable
+
+  clojure.lang.PersistentVector
+  (-exclude [this src-dir] (exclude-file-names src-dir this))
+
+  java.lang.String
+  (-exclude [this src-dir] (exclude-file-names src-dir (vector this)))
+  
+  nil
+  (-exclude [this src-dir] nil)
+  )
 
 (comment
   ;; exclude a single cljs source living in src/subdir
@@ -931,7 +946,7 @@
      (compile-root src-dir target-dir nil))
   ([src-dir target-dir exclude-vec]
      (let [src-dir-file (io/file src-dir)]
-       (loop [cljs-files (cljs-files-in src-dir-file (exclude-file-names src-dir exclude-vec))
+       (loop [cljs-files (cljs-files-in src-dir-file (-exclude exclude-vec src-dir))
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
