@@ -1,0 +1,12 @@
+#!/bin/sh
+
+rm -rf out
+mkdir -p out
+
+echo "Testing exclude all cljs files by using a string arg..."
+bin/cljsc test '{:optimizations :whitespace :exclude "cljs" :output-to "out/exclude-all-by-string.js"}'
+echo "...Test exclude all by using a string done"
+
+echo "Testing exclude all cljs files by using a vector of strings..."
+bin/cljsc test '{:optimizations :whitespace :exclude ["cljs"] :output-to "out/exclude-all-by-vector.js"}'
+echo "...Test exclude all by using a vector of strings done"
