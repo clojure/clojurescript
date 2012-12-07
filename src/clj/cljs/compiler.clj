@@ -902,7 +902,7 @@
 (defprotocol Excludable
   (-exclude [this src-dir]))
 
-(defn exclude-file-names [dir exclude-vec]
+(defn exclude-file-names [exclude-vec dir]
   "Return a set of files to be excluded"
   (when dir
     (set (filter #(.endsWith ^String % ".cljs")
@@ -915,21 +915,21 @@
 (extend-protocol Excludable
 
   clojure.lang.PersistentVector
-  (-exclude [this src-dir] (exclude-file-names src-dir this))
+  (-exclude [this src-dir] (exclude-file-names this src-dir))
 
   java.lang.String
-  (-exclude [this src-dir] (exclude-file-names src-dir (vector this)))
-  
+  (-exclude [this src-dir] (exclude-file-names (vector this) src-dir))
+
   nil
   (-exclude [this src-dir] nil)
   )
 
 (comment
   ;; exclude a single cljs source living in src/subdir
-  (exclude-file-names "src" ["hello/foo/bar.cljs"])
+  (exclude-file-names ["hello/foo/bar.cljs"] "src")
 
   ;; exclude an entire directory of sources living in src
-  (exclude-file-names "src" ["hello/foo"])
+  (exclude-file-names ["hello/foo"] "src")
 
   ;; for more exclude call samples see test/clj/cljs/compiler_test.clj
   )

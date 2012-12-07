@@ -1,6 +1,7 @@
-(require '[cljs.compiler-test :as c])
-(require '[clojure.test :as t])
+(ns test-runner
+  (require [clojure.test :as t]
+           [cljs.compiler-test :as c]))
 
 (t/run-tests 'cljs.compiler-test)
 
-(println "Clojure Test Finished")
+(println "Test completed without exception")
