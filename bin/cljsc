@@ -16,7 +16,10 @@ done
 if test "$#" -eq 0
 then
   echo 'Usage: cljsc <file-or-dir>'
-  echo '       cljsc <file-or-dir> "{:optimizations :advanced :exclude ["<file-or-dir>...]"}"'
+  echo '       cljsc <file-or-dir> "{:optimizations :adavanced}"'
+  echo '       cljsc <file-or-dir> "{:optimizations :adavanced}"'
+  echo '       cljsc <file-or-dir> "{:optimizations :advanced :exclude "<f-or-d-to-exclude>"}"'
+  echo '       cljsc <file-or-dir> "{:optimizations :advanced :exclude ["<f-or-d-to-exclude>"...]}"'
 else
   java -server -cp "$CLJSC_CP" clojure.main "$CLOJURESCRIPT_HOME/bin/cljsc.clj" "$@"
 fi

@@ -1,6 +1,6 @@
-  (require '[cljs.compiler-test :as comp-test])
-  (require '[clojure.test :as test])
+(require '[cljs.compiler-test :as c])
+(require '[clojure.test :as t])
 
-(test/run-all-tests)
+(t/run-tests 'cljs.compiler-test)
 
 (println "Clojure Test Finished")
