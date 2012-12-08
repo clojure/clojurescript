@@ -7211,3 +7211,9 @@ reduces them without incurring seq initialization"
   (-hash [this]
     (goog.string/hashCode (pr-str this))))
 
+
+;;;;;;;;;;;;;;;;;; Namespace/Vars/Macro hackery ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def namespaces (atom '{cljs.core {:name cljs.core}
+                        cljs.user {:name cljs.user}}))
+

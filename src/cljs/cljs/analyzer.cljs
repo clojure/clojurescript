@@ -42,8 +42,10 @@
 
 ;; (defonce namespaces (atom '{cljs.core {:name cljs.core}
 ;;                             cljs.user {:name cljs.user}}))
-(def namespaces (atom '{cljs.core {:name cljs.core}
-                        cljs.user {:name cljs.user}}))
+;; (def namespaces (atom '{cljs.core {:name cljs.core}
+;;                         cljs.user {:name cljs.user}}))
+;; "refer" it from somehwere that it will be from the start
+(set! cljs.analyzer/namespaces cljs.core/namespaces)
 
 (defn reset-namespaces! []
   (reset! namespaces

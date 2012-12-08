@@ -782,14 +782,9 @@
   (let [nss1 (dissoc (get @ana/namespaces ns) :requires-macros)
         nss2 (read-string (pr-str (update-in nss1
                                              [:defs] dissoc '/)))]
-    (emitln "if(!('namespaces' in cljs)){")
-    (emits "cljs.namespaces = ")
-    (emit (ana/analyze (ana/empty-env) '(atom {'cljs.core {:name 'cljs.core}
-                                               'cljs.user {:name 'cljs.user}})))
-    (emitln "}")
     (apply str
       (emit (ana/analyze (ana/empty-env)
-        (list 'swap! 'cljs/namespaces 'assoc (list 'quote ns) (list 'quote nss2)))))))
+        (list 'swap! 'cljs.core/namespaces 'assoc (list 'quote ns) (list 'quote nss2)))))))
 
 
 (defn compile-file* [src dest]

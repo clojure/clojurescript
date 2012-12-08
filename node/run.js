@@ -21,7 +21,6 @@
     cljs.core._STAR_print_fn_STAR_ = require("util").print;
 
     // Setup initial namespaces and environment for the analyzer
-    cljs.analyzer.namespaces = cljs.namespaces;
     cljs.user = {};
     env = cljs.analyzer.empty_env();
 })();
