@@ -7217,3 +7217,63 @@ reduces them without incurring seq initialization"
 (def namespaces (atom '{cljs.core {:name cljs.core}
                         cljs.user {:name cljs.user}}))
 
+(defn setMacro [sym]
+ (let [ns (symbol (or (namespace sym)
+                      (try cljs.analyzer/*cljs-ns*
+                        (catch js/Error e 'cljs.core))))
+       name (symbol (name sym))]
+   (swap! namespaces assoc-in [:macros ns name] true))
+   nil)
+
+(def
+
+ ^{:doc "Like defn, but the resulting function name is declared as a
+  macro and will be used as a macro by the compiler when it is
+  called."
+   :arglists '([name doc-string? attr-map? [params*] body]
+                 [name doc-string? attr-map? ([params*] body)+ attr-map?])
+   :added "1.0"}
+ defmacro (fn [&form &env
+                name & args]
+             (let [prefix (loop [p (list name) args args]
+                            (let [f (first args)]
+                              (if (string? f)
+                                (recur (cons f p) (next args))
+                                (if (map? f)
+                                  (recur (cons f p) (next args))
+                                  p))))
+                   fdecl (loop [fd args]
+                           (if (string? (first fd))
+                             (recur (next fd))
+                             (if (map? (first fd))
+                               (recur (next fd))
+                               fd)))
+                   fdecl (if (vector? (first fdecl))
+                           (list fdecl)
+                           fdecl)
+                   add-implicit-args (fn [fd]
+                             (let [args (first fd)]
+                               (cons (vec (cons '&form (cons '&env args))) (next fd))))
+                   add-args (fn [acc ds]
+                              (if (nil? ds)
+                                acc
+                                (let [d (first ds)]
+                                  (if (map? d)
+                                    (conj acc d)
+                                    (recur (conj acc (add-implicit-args d)) (next ds))))))
+                   fdecl (seq (add-args [] fdecl))
+                   decl (loop [p prefix d fdecl]
+                          (if p
+                            (recur (next p) (cons (first p) d))
+                            d))]
+               (prn "defmacro here1: ")
+               (list 'do
+                     (list 'def (first decl) (cons `fn* (first (rest decl))))
+                     #_(cons `defn decl)
+                     #_(list '. (list 'var name) '(setMacro))
+                     (list 'cljs.core/setMacro (list 'quote name))
+                     #_(list 'var name)))))
+
+#_(. (var defmacro) (setMacro))
+(setMacro 'cljs.core/defmacro)
+

@@ -864,27 +864,20 @@
       (assoc ret :op :var :info lb)
       (assoc ret :op :var :info (resolve-existing-var env sym)))))
 
-(defn get-expander [sym env]
-  (let [mvar
-        (when-not (or (-> env :locals sym)        ;locals hide macros
-                      (and (or (-> env :ns :excludes sym)
-                               (get-in @namespaces [(-> env :ns :name) :excludes sym]))
-                           (not (or (-> env :ns :uses-macros sym)
-                                    (get-in @namespaces [(-> env :ns :name) :uses-macros sym])))))
-          (if-let [nstr (namespace sym)]
-            (when-let [ns (cond
-                           (= "clojure.core" nstr) (find-ns 'cljs.core)
-                           (>= (.indexOf nstr ".") 0) (find-ns (symbol nstr))
-                           :else
-                           (-> env :ns :requires-macros (get (symbol nstr))))]
-              (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
-            (if-let [nsym (-> env :ns :uses-macros sym)]
-              (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) sym)
-              (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym))))]
-    (when (and mvar (.isMacro ^clojure.lang.Var mvar))
-      @mvar)))
+(defn is-macro? [sym]
+  (let [var (resolve-existing-var (empty-env) sym)
+        ns (:ns var)
+        name (symbol (name (:name var)))]
+    (get-in @namespaces [:macros ns name])))
 
-;; JOELM: we will need this eventually
+(defn get-expander [sym env]
+  (let [var (resolve-existing-var (empty-env) sym)
+        ns (:ns var)
+        name (symbol (name (:name var)))]
+    ;(println "// get-expander:" sym ns name)
+    (when (is-macro? sym)
+      (js/eval (str ns "." name)))))
+
 (defn macroexpand-1 [env form]
   (let [op (first form)]
     (if (specials op)
@@ -903,8 +896,6 @@
                                     (meta form))
              :else form))
           form)))))
-
-(defn macroexpand-1 [env form] form)
 
 (defn analyze-seq
   [env form name]
