@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.reader
-  (:require [goog.string :as gstring]))
+  (:require [goog.string :as gstring]
+            [cljs.analyzer :as ana]))
 
 (defprotocol PushbackReader
   (read-char [reader] "Returns the next char from the Reader,
@@ -368,6 +369,138 @@ nil if the end of stream has been reached")
         (with-meta o (merge (meta o) m))
         (reader-error rdr "Metadata can only be applied to IWithMetas")))))
 
+(def UNQUOTE :__thisInternalKeywordRepresentsUnquoteToTheReader__)
+(def UNQUOTE-SPICING :__thisInternalKeywordRepresentsUnquoteSplicingToTheReader__)
+
+(declare syntaxQuote)
+(def ^:dynamic *gensym-env* (atom nil))
+
+(defn isUnquote? [form]
+  (and (satisfies? ISeq form) (= (first form) UNQUOTE)))
+
+(defn isUnquoteSplicing? [form]
+  (and (satisfies? ISeq form) (= (first form) UNQUOTE-SPLICING)))
+
+(defn sqExpandList [sq]
+  (doall
+    (for [item sq]
+      (cond
+        (isUnquote? item)
+        (list 'list (second item))
+  
+        (isUnquoteSplicing? item)
+        (second item)
+  
+        :else
+        (list 'list (syntaxQuote item))
+        ))))
+
+(defn syntaxQuote [form]
+  (cond
+    ;; (Compiler.isSpecial(form))
+    (get ana/specials form)
+    (list 'quote form)
+
+    ;; (form instanceof Symbol)
+    (symbol? form)
+    (let [sym form
+          name (name sym)
+          ns (namespace sym)
+          var (ana/resolve-existing-var (ana/empty-env) sym)]
+      (cond
+        ;; no namespace and name ends with #
+        (and (not ns) (= "#" (last name)))
+        (let [new-name (subs name 0 (- (count name) 1))
+              gmap @*gensym-env*]
+          (when (not gmap)
+            (reader-error nil "Gensym literal not in syntax-quote"))
+          (let [gs (or (get gmap sym)
+                       (gensym (str new-name "__auto__")))]
+            (swap! *gensym-env* assoc sym gs)
+            (list 'quote gs)))
+  
+        ;; no namespace and name ends with .
+        (and (not ns) (= "." (last name)))
+        (let [new-name (subs name 0 (- (count name) 1))
+              new-var (ana/resolve-existing-var
+                        (ana/empty-env) (symbol new-name))]
+          (list 'quote (:name new-var)))
+  
+        ;; no namespace and name begins with .
+        (and (not ns) (= "." (first name)))
+        (list 'quote sym)
+        
+        ;; resolve symbol
+        :else
+        (list 'quote
+          (:name
+            (cljs.analyzer/resolve-existing-var (cljs.analyzer/empty-env) sym)))))
+    
+    ;; (isUnquote(form))
+    (isUnquote? form)
+    (second form)
+
+    ;; (isUnquoteSplicing(form))
+    (isUnquoteSplicing? form)
+    (reader-error rdr "Reader ~@ splice not in list")
+
+    ;; (form instanceof IPersistentCollection)
+    (satisfies? ICollection form)
+    (cond
+      (satisfies? IRecord form)
+      form
+
+      (satisfies? IMap form)
+      (list 'apply 'hash-map (list 'seq (cons 'concat (sqExpandList (apply concat (seq form))))))
+
+      (satisfies? IVector form)
+      (list 'apply 'vector (list 'seq (cons 'concat (sqExpandList form))))
+
+      (satisfies? ISet form)
+      (list 'apply 'hash-set (list 'seq (cons 'concat (sqExpandList (seq form)))))
+
+      (or (satisfies? ISeq form) (satisfies? IList form))
+      (if-let [sq (seq form)]
+        (list 'seq (cons 'concat (sqExpandList sq)))
+        (cons 'list nil))
+
+      :else
+      (reader-error rdr "Unknown Collection type"))
+
+    ;; (form instanceof Keyword || form instanceof Number ||
+    ;;  form instanceof Character || form instanceof String)
+    (or (keyword? form) (number? form) (string? form))
+    form
+
+    :else
+    (list 'quote form)
+    ))
+
+(defn read-syntax-quote
+  [rdr _]
+  (binding [*gensym-env* (atom {})]
+    (let [form (read rdr true nil true)]
+      (syntaxQuote form))))
+
+(defn read-unquote
+  [rdr _]
+  (prn "read-unquote")
+  (let [ch (read-char rdr)]
+    (prn "read-unquote ch:" ch)
+    (cond
+      (= nil ch)
+      (reader-error rdr "EOF while reading character")
+
+      (= "@" ch)
+      (let [o (read rdr true nil true)]
+        (list UNQUOTE-SPLICING o))
+
+      :else
+      (do
+        (unread rdr ch)
+        (let [o (read rdr true nil true)]
+          (list UNQUOTE o))))))
+
 (defn read-set
   [rdr _]
   (set (read-delimited-list "}" rdr true)))
@@ -389,8 +522,8 @@ nil if the end of stream has been reached")
    (identical? c \') (wrapping-reader 'quote)
    (identical? c \@) (wrapping-reader 'deref)
    (identical? c \^) read-meta
-   (identical? c \`) not-implemented
-   (identical? c \~) not-implemented
+   (identical? c \`) read-syntax-quote
+   (identical? c \~) read-unquote
    (identical? c \() read-list
    (identical? c \)) read-unmatched-delimiter
    (identical? c \[) read-vector
