@@ -484,9 +484,7 @@ nil if the end of stream has been reached")
 
 (defn read-unquote
   [rdr _]
-  (prn "read-unquote")
   (let [ch (read-char rdr)]
-    (prn "read-unquote ch:" ch)
     (cond
       (= nil ch)
       (reader-error rdr "EOF while reading character")
