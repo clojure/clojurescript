@@ -4,6 +4,8 @@
             [cljs.compiler :as comp]
             [cljs.reader :as reader]))
 
+(defn prompt [] (str ana/*cljs-ns* "=> "))
+
 (def append-dom)
 
 (defn dom [o]
@@ -41,7 +43,7 @@
     [:table
      [:tbody
       [:tr
-       [:td {:class "cg"} "user=> "]
+       [:td {:class "cg"} (prompt)]
        [:td (.replace text #"\n$" "")]]]]))
 
 #_(defmacro print-with-class [c m]

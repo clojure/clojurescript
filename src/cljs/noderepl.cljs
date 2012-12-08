@@ -4,7 +4,7 @@
             [cljs.compiler :as comp]
             [cljs.reader :as reader]))
 
-(def prompt "cljs.user=> ")
+(defn prompt [] (str ana/*cljs-ns* "=> "))
 
 (defn repl-print [text cls]
   (doseq [line (.split (str text) #"\n")]
@@ -13,7 +13,7 @@
     (println line)))
 
 (defn postexpr [text]
-  (println prompt text))
+  (println (str (prompt) text)))
 
 (defn ep [text]
   (try
@@ -38,10 +38,11 @@
   (pep "(sqr 8)")
   (let [readline (js/require "readline")
         rl (.createInterface readline js/process.stdin js/process.stdout)]
-    (.setPrompt rl prompt)
+    (.setPrompt rl (prompt))
     (.prompt rl)
     (.on rl "line" (fn [line]
                      (ep line)
+                     (.setPrompt rl (prompt))
                      (.prompt rl)))
     (.on rl "close" (fn [] (.exit js/process 0)))))
 
