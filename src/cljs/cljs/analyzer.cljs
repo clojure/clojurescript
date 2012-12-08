@@ -19,6 +19,9 @@
   )
 
 ;; Stubs just to make it work
+(declare ^:dynamic *out*)
+(declare ^:dynamic *ns*)
+
 ;;(defn create-ns [ns-sym] nil)
 (defn create-ns [ns-sym] #_(.log js/console ns-sym)
   (js/eval (str "try { " ns-sym "; } catch (e) { " ns-sym " = {}; }")))
