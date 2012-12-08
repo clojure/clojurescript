@@ -940,20 +940,6 @@
 ;;   ;; files will be compiled to js.
 ;;   )
 
-(defn ns-snap []
-  (let [nss (read-string (pr-str (update-in @ana/namespaces
-                                            ['cljs.core :defs] dissoc '/)))]
-    (with-core-cljs
-      (binding [ana/*cljs-ns* 'cljs.user]
-        (spit "src/cljs/bs.js"
-              (apply str
-                     (for [form ['(ns bs)
-                                 (list 'def 'nss (list 'quote nss))
-                                 '(defn reset [] (reset! cljs.analyzer/namespace nss))]]
-                       (when form
-                         (with-out-str
-                           (emit (ana/analyze (ana/empty-env) form)))))))))))
-
 (comment
 
 ;;the new way - use the REPL!!
