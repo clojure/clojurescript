@@ -507,7 +507,7 @@
                                is-loop (or *loop-lets* ())
                                *loop-lets* (cons {:params bes} *loop-lets*))]
           (analyze-block (assoc env :context (if (= :expr context) :return context)) exprs))]
-    {:env encl-env :op :let :loop is-loop
+    {:env encl-env :op (if is-loop :loop :let)
      :bindings bes :statements statements :ret ret :form form
      :children (into (vec (map :init bes))
                      (conj (vec statements) ret))}))

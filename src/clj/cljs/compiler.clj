@@ -549,8 +549,8 @@
         (emit-block subcontext statements ret)
         (when (and statements (= :expr context)) (emits "})()"))))))
 
-(defmethod emit :let
-  [{:keys [bindings statements ret env loop]}]
+(defn emit-let
+  [{:keys [bindings statements ret env]} is-loop]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
     (binding [*lexical-renames* (into *lexical-renames*
@@ -560,13 +560,18 @@
                                              bindings)))]
       (doseq [{:keys [init] :as binding} bindings]
         (emitln "var " (munge binding) " = " init ";"))
-      (when loop (emitln "while(true){"))
+      (when is-loop (emitln "while(true){"))
       (emit-block (if (= :expr context) :return context) statements ret)
-      (when loop
+      (when is-loop
         (emitln "break;")
         (emitln "}")))
-    ;(emits "}")
     (when (= :expr context) (emits "})()"))))
+
+(defmethod emit :let [ast]
+  (emit-let ast false))
+
+(defmethod emit :loop [ast]
+  (emit-let ast true))
 
 (defmethod emit :recur
   [{:keys [frame exprs env]}]
