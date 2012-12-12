@@ -206,12 +206,6 @@
             (comma-sep (map #(fn [] (emit-constant %)) x))
             ["])"])))
 
-(defn emit-block
-  [context statements ret]
-  (when statements
-    (emits statements))
-  (emit ret))
-
 (defmacro emit-wrap [env & body]
   `(let [env# ~env]
      (when (= :return (:context env#)) (emits "return "))
@@ -389,20 +383,20 @@
     (emits "})")))
 
 (defn emit-fn-method
-  [{:keys [type name variadic params statements ret env recurs max-fixed-arity]}]
+  [{:keys [type name variadic params expr env recurs max-fixed-arity]}]
   (emit-wrap env
              (emitln "(function " (munge name) "(" (comma-sep (map munge params)) "){")
              (when type
                (emitln "var self__ = this;"))
              (when recurs (emitln "while(true){"))
-             (emit-block :return statements ret)
+             (emits expr)
              (when recurs
                (emitln "break;")
                (emitln "}"))
              (emits "})")))
 
 (defn emit-variadic-fn-method
-  [{:keys [type name variadic params statements ret env recurs max-fixed-arity] :as f}]
+  [{:keys [type name variadic params expr env recurs max-fixed-arity] :as f}]
   (emit-wrap env
              (let [name (or name (gensym))
                    mname (munge name)
@@ -411,7 +405,7 @@
                (emitln "(function() { ")
                (emitln "var " delegate-name " = function (" (comma-sep params) "){")
                (when recurs (emitln "while(true){"))
-               (emit-block :return statements ret)
+               (emits expr)
                (when recurs
                  (emitln "break;")
                  (emitln "}"))
@@ -515,42 +509,30 @@
   [{:keys [statements ret env]}]
   (let [context (:context env)]
     (when (and statements (= :expr context)) (emits "(function (){"))
-    ;(when statements (emitln "{"))
-    (emit-block context statements ret)
-    ;(when statements (emits "}"))
+    (when statements
+      (emits statements))
+    (emit ret)
     (when (and statements (= :expr context)) (emits "})()"))))
 
 (defmethod emit :try*
   [{:keys [env try catch name finally]}]
-  (let [context (:context env)
-        subcontext (if (= :expr context) :return context)]
+  (let [context (:context env)]
     (if (or name finally)
       (do
-        (when (= :expr context) (emits "(function (){"))
-        (emits "try{")
-        (let [{:keys [statements ret]} try]
-          (emit-block subcontext statements ret))
-        (emits "}")
+        (when (= :expr context)
+          (emits "(function (){"))
+        (emits "try{" try "}")
         (when name
-          (emits "catch (" (munge name) "){")
-          (when catch
-            (let [{:keys [statements ret]} catch]
-              (emit-block subcontext statements ret)))
-          (emits "}"))
+          (emits "catch (" (munge name) "){" catch "}"))
         (when finally
-          (let [{:keys [statements ret]} finally]
-            (assert (not= :constant (:op ret)) "finally block cannot contain constant")
-            (emits "finally {")
-            (emit-block subcontext statements ret)
-            (emits "}")))
-        (when (= :expr context) (emits "})()")))
-      (let [{:keys [statements ret]} try]
-        (when (and statements (= :expr context)) (emits "(function (){"))
-        (emit-block subcontext statements ret)
-        (when (and statements (= :expr context)) (emits "})()"))))))
+          (assert (not= :constant (:op finally)) "finally block cannot contain constant")
+          (emits "finally {" finally "}"))
+        (when (= :expr context)
+          (emits "})()")))
+      (emits try))))
 
 (defn emit-let
-  [{:keys [bindings statements ret env]} is-loop]
+  [{:keys [bindings expr env]} is-loop]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
     (binding [*lexical-renames* (into *lexical-renames*
@@ -561,7 +543,7 @@
       (doseq [{:keys [init] :as binding} bindings]
         (emitln "var " (munge binding) " = " init ";"))
       (when is-loop (emitln "while(true){"))
-      (emit-block (if (= :expr context) :return context) statements ret)
+      (emits expr)
       (when is-loop
         (emitln "break;")
         (emitln "}")))
@@ -586,12 +568,12 @@
     (emitln "}")))
 
 (defmethod emit :letfn
-  [{:keys [bindings statements ret env]}]
+  [{:keys [bindings expr env]}]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
     (doseq [{:keys [init] :as binding} bindings]
       (emitln "var " (munge binding) " = " init ";"))
-    (emit-block (if (= :expr context) :return context) statements ret)
+    (emits expr)
     (when (= :expr context) (emits "})()"))))
 
 (defn protocol-prefix [psym]
