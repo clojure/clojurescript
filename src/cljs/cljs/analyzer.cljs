@@ -870,13 +870,12 @@
         name (symbol (name (:name var)))]
     (get-in @namespaces [:macros ns name])))
 
+;; implicit dependency on cljs.compiler
 (defn get-expander [sym env]
-  (let [var (resolve-existing-var (empty-env) sym)
-        ns (:ns var)
-        name (symbol (name (:name var)))]
-    ;(println "// get-expander:" sym ns name)
+  (let [var (resolve-existing-var (empty-env) sym)]
+    ;(println "// get-expander:" sym var)
     (when (is-macro? sym)
-      (js/eval (str ns "." name)))))
+      (js/eval (str (cljs.compiler/munge (:name var)))))))
 
 (defn macroexpand-1 [env form]
   (let [op (first form)]
