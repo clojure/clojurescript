@@ -246,7 +246,7 @@
 
 (defn read-unmatched-delimiter
   [rdr ch]
-  (reader-error rdr "Unmached delimiter " ch))
+  (reader-error rdr "Unmatched delimiter " ch))
 
 (defn read-list
   [rdr _]
@@ -348,7 +348,7 @@
         (reader-error rdr "Metadata can only be applied to IWithMetas")))))
 
 (def UNQUOTE :__thisInternalKeywordRepresentsUnquoteToTheReader__)
-(def UNQUOTE-SPICING :__thisInternalKeywordRepresentsUnquoteSplicingToTheReader__)
+(def UNQUOTE-SPLICING :__thisInternalKeywordRepresentsUnquoteSplicingToTheReader__)
 
 (declare syntaxQuote)
 (def ^:dynamic *gensym-env* (atom nil))
@@ -370,8 +370,7 @@
         (second item)
   
         :else
-        (list 'list (syntaxQuote item))
-        ))))
+        (list 'list (syntaxQuote item))))))
 
 (defn syntaxQuote [form]
   (cond
@@ -421,6 +420,10 @@
     ;; (isUnquoteSplicing(form))
     (isUnquoteSplicing? form)
     (reader-error rdr "Reader ~@ splice not in list")
+
+    ;; TODO: figure out why nil is mapping to IMap
+    (nil? form)
+    (list 'quote form)
 
     ;; (form instanceof IPersistentCollection)
     (satisfies? ICollection form)
