@@ -4,6 +4,8 @@
             [cljs.compiler :as comp]
             [cljs.reader :as reader]))
 
+(def ^:dynamic *debug* false)
+
 (defn prompt [] (str ana/*cljs-ns* "=> "))
 
 (defn repl-print [text cls]
@@ -18,9 +20,10 @@
 (defn ep [text]
   (try
    (let [res (comp/emit-str (ana/analyze js/env (reader/read-string text)))]
+     (when *debug* (println "emit:" res))
      (repl-print (pr-str (js/eval res)) "rtn"))
    (catch js/Error e
-    (repl-print e "err")
+    (repl-print (.-stack e) "err")
     #_(set! *e e))))
 
 (defn pep [text]

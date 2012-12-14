@@ -4,6 +4,8 @@
             [cljs.compiler :as comp]
             [cljs.reader :as reader]))
 
+(def ^:dynamic *debug* false)
+
 (defn prompt [] (str ana/*cljs-ns* "=> "))
 
 (def append-dom)
@@ -59,9 +61,11 @@
 (defn pep [log text]
  (postexpr log text)
  (try
-   (repl-print log (pr-str (js/eval (comp/emit-str (ana/analyze js/env (reader/read-string text))))) "rtn")
+   (let [res (comp/emit-str (ana/analyze js/env (reader/read-string text)))]
+     (when *debug* (println "emit:" res))
+     (repl-print log (pr-str (js/eval res)) "rtn"))
    (catch js/Error e
-    (repl-print log e "err")
+    (repl-print log (.-stack e) "err")
     #_(set! *e e))))
 
 (set! (.-onload js/window) (fn []
