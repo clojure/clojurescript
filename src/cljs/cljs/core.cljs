@@ -15,6 +15,7 @@
   (:use-macros [cljs.core-macros :only [clj-defmacro]]))
 
 (def *unchecked-if* false)
+(def *assert* true)
 
 (def
   ^{:doc "Each runtime environment provides a diffenent way to print output.
@@ -7746,5 +7747,396 @@ nil if the end of stream has been reached")
                              (map #(cons `cljs.core/fn %) fnspecs)))
            ~@body))
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;; Macros from ClojureScript src/clj/cljs/core.clj ;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(clj-defmacro let
+  "binding => binding-form init-expr
+
+  Evaluates the exprs in a lexical context in which the symbols in
+  the binding-forms are bound to their respective init-exprs or parts
+  therein."
+  [bindings & body]
+  (assert-args
+     (vector? bindings) "a vector for its binding"
+     (even? (count bindings)) "an even number of forms in binding vector")
+  `(let* ~(cljs.core/destructure bindings) ~@body))
+
+(clj-defmacro loop
+  "Evaluates the exprs in a lexical context in which the symbols in
+  the binding-forms are bound to their respective init-exprs or parts
+  therein. Acts as a recur target."
+  [bindings & body]
+    (assert-args
+      (vector? bindings) "a vector for its binding"
+      (even? (count bindings)) "an even number of forms in binding vector")
+    (let [db (destructure bindings)]
+      (if (= db bindings)
+        `(loop* ~bindings ~@body)
+        (let [vs (take-nth 2 (drop 1 bindings))
+              bs (take-nth 2 bindings)
+              gs (map (fn [b] (if (symbol? b) b (gensym))) bs)
+              bfs (reduce (fn [ret [b v g]]
+                            (if (symbol? b)
+                              (conj ret g v)
+                              (conj ret g v b g)))
+                          [] (map vector bs vs gs))]
+          `(cljs.core/let ~bfs
+             (loop* ~(vec (interleave gs gs))
+               (cljs.core/let ~(vec (interleave bs gs))
+                 ~@body)))))))
+
+
+(def fast-path-protocols
+  "protocol fqn -> [partition number, bit]"
+  (zipmap (map #(symbol "cljs.core" (cljs.core/str %))
+               '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
+                 ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
+                 IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
+                 ISeqable ISequential IList IRecord IReversible ISorted IPrintable IWriter
+                 IPrintWithWriter IPending IWatchable IEditableCollection ITransientCollection
+                 ITransientAssociative ITransientMap ITransientVector ITransientSet
+                 IMultiFn IChunkedSeq IChunkedNext IComparable])
+          (iterate (fn [[p b]]
+                     (if (cljs.core/== 2147483648 b)
+                       [(cljs.core/inc p) 1]
+                       [p (cljs.core/bit-shift-left b 1)]))
+                   [0 1])))
+
+(defn bool-expr [e]
+  (vary-meta e assoc :tag 'boolean))
+
+;; internal - do not use.
+(clj-defmacro coercive-not [x]
+  (bool-expr (list 'js* "(!~{})" x)))
+
+;; internal do not use
+(clj-defmacro unsafe-bit-and
+  ([x y] (bool-expr (list 'js* "(~{} & ~{})" x y)))
+  ([x y & more] `(cljs.core/unsafe-bit-and (cljs.core/unsafe-bit-and ~x ~y) ~@more)))
+
+(defn protocol-prefix [psym]
+  (cljs.core/str (-> (cljs.core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
+
+(clj-defmacro satisfies?
+  "Returns true if x satisfies the protocol"
+  [psym x]
+  (let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
+        prefix (protocol-prefix p)
+        ;; TODO: what to do here
+        ;;xsym (bool-expr (gensym))
+        xsym (gensym)
+        [part bit] (fast-path-protocols p)
+        msym (symbol (cljs.core/str "-cljs$lang$protocol_mask$partition" part "$"))]
+    `(cljs.core/let [~xsym ~x]
+       (if ~xsym
+         (if (cljs.core/or ~(if bit `(cljs.core/unsafe-bit-and (. ~xsym ~msym) ~bit))
+                 ~(bool-expr `(. ~xsym ~(symbol (cljs.core/str "-" prefix)))))
+           true
+           (if (cljs.core/coercive-not (. ~xsym ~msym))
+             (cljs.core/type_satisfies_ ~psym ~xsym)
+             false))
+         (cljs.core/type_satisfies_ ~psym ~xsym)))))
+
+(clj-defmacro binding
+  "binding => var-symbol init-expr
+
+  Creates new bindings for the (already-existing) vars, with the
+  supplied initial values, executes the exprs in an implicit do, then
+  re-establishes the bindings that existed before.  The new bindings
+  are made in parallel (unlike let); all init-exprs are evaluated
+  before the vars are bound to their new values."
+  [bindings & body]
+  (let [names (take-nth 2 bindings)
+        vals (take-nth 2 (drop 1 bindings))
+        tempnames (map (comp gensym name) names)
+        binds (map vector names vals)
+        resets (reverse (map vector names tempnames))]
+    (cljs.analyzer/confirm-bindings &env names)
+    `(cljs.core/let [~@(interleave tempnames names)]
+       (try
+        ~@(map
+           (fn [[k v]] (list 'set! k v))
+           binds)
+        ~@body
+        (finally
+         ~@(map
+            (fn [[k v]] (list 'set! k v))
+            resets))))))
+
+(clj-defmacro lazy-seq [& body]
+  `(new cljs.core/LazySeq nil false (cljs.core/fn [] ~@body) nil))
+
+(clj-defmacro delay [& body]
+  "Takes a body of expressions and yields a Delay object that will
+  invoke the body only the first time it is forced (with force or deref/@), and
+  will cache the result and return it on all subsequent force
+  calls."
+  `(new cljs.core/Delay (cljs.core/atom {:done false, :value nil}) (cljs.core/fn [] ~@body)))
+
+(clj-defmacro condp
+  "Takes a binary predicate, an expression, and a set of clauses.
+  Each clause can take the form of either:
+
+  test-expr result-expr
+
+  test-expr :>> result-fn
+
+  Note :>> is an ordinary keyword.
+
+  For each clause, (pred test-expr expr) is evaluated. If it returns
+  logical true, the clause is a match. If a binary clause matches, the
+  result-expr is returned, if a ternary clause matches, its result-fn,
+  which must be a unary function, is called with the result of the
+  predicate as its argument, the result of that call being the return
+  value of condp. A single default expression can follow the clauses,
+  and its value will be returned if no clause matches. If no default
+  expression is provided and no clause matches, an
+  IllegalArgumentException is thrown."
+  {:added "1.0"}
+
+  [pred expr & clauses]
+  (let [gpred (gensym "pred__")
+        gexpr (gensym "expr__")
+        emit (fn emit [pred expr args]
+               (let [[[a b c :as clause] more]
+                       (split-at (if (= :>> (second args)) 3 2) args)
+                       n (count clause)]
+                 (cond
+                  (= 0 n) `(throw (js/Error. (core/str "No matching clause: " ~expr)))
+                  (= 1 n) a
+                  (= 2 n) `(if (~pred ~a ~expr)
+                             ~b
+                             ~(emit pred expr more))
+                  :else `(cljs.core/if-let [p# (~pred ~a ~expr)]
+                           (~c p#)
+                           ~(emit pred expr more)))))
+        gres (gensym "res__")]
+    `(cljs.core/let [~gpred ~pred
+           ~gexpr ~expr]
+       ~(emit gpred gexpr clauses))))
+
+(clj-defmacro case [e & clauses]
+  (let [default (if (odd? (count clauses))
+                  (last clauses)
+                  `(throw (js/Error. (cljs.core/str "No matching clause: " ~e))))
+        assoc-test (fn assoc-test [m test expr]
+                         (if (contains? m test)
+                           (throw (js/Error.
+                                   (cljs.core/str "Duplicate case test constant '"
+                                             test "'"
+                                             (when (:line &env)
+                                               (cljs.core/str " on line " (:line &env) " "
+                                                         cljs.analyzer/*cljs-file*)))))
+                           (assoc m test expr)))
+        pairs (reduce (fn [m [test expr]]
+                        (cond
+                         (seq? test) (reduce (fn [m test]
+                                               (let [test (if (symbol? test)
+                                                            (list 'quote test)
+                                                            test)]
+                                                 (assoc-test m test expr)))
+                                             m test)
+                         (symbol? test) (assoc-test m (list 'quote test) expr)
+                         :else (assoc-test m test expr)))
+                      {} (partition 2 clauses))
+        esym (gensym)]
+   `(cljs.core/let [~esym ~e]
+      (cljs.core/cond
+        ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
+        :else ~default))))
+
+(clj-defmacro try
+  "(try expr* catch-clause* finally-clause?)
+
+   Special Form
+
+   catch-clause => (catch protoname name expr*)
+   finally-clause => (finally expr*)
+
+  Catches and handles JavaScript exceptions."
+  [& forms]
+  (let [catch? #(and (list? %) (= (first %) 'catch))
+        [body catches] (split-with (complement catch?) forms)
+        [catches fin] (split-with catch? catches)
+        e (gensym "e")]
+    (assert (every? #(cljs.core/> (count %) 2) catches) "catch block must specify a prototype and a name")
+    (if (seq catches)
+      `(~'try*
+        ~@body
+        (catch ~e
+            (cljs.core/cond
+             ~@(mapcat
+                (fn [[_ type name & cb]]
+                  `[(cljs.core/instance? ~type ~e) (cljs.core/let [~name ~e] ~@cb)])
+                catches)
+             :else (throw ~e)))
+        ~@fin)
+      `(~'try*
+        ~@body
+        ~@fin))))
+
+(clj-defmacro assert
+  "Evaluates expr and throws an exception if it does not evaluate to
+  logical true."
+  ([x]
+     (when *assert*
+       `(cljs.core/when-not ~x
+          (throw (js/Error.
+                  (cljs.core/str "Assert failed: " (cljs.core/pr-str '~x)))))))
+  ([x message]
+     (when *assert*
+       `(cljs.core/when-not ~x
+          (throw (js/Error.
+                  (cljs.core/str "Assert failed: " ~message "\n" (cljs.core/pr-str '~x))))))))
+
+(clj-defmacro for
+  "List comprehension. Takes a vector of one or more
+   binding-form/collection-expr pairs, each followed by zero or more
+   modifiers, and yields a lazy sequence of evaluations of expr.
+   Collections are iterated in a nested fashion, rightmost fastest,
+   and nested coll-exprs can refer to bindings created in prior
+   binding-forms.  Supported modifiers are: :let [binding-form expr ...],
+   :while test, :when test.
+
+  (take 100 (for [x (range 100000000) y (range 1000000) :while (< y x)]  [x y]))"
+  [seq-exprs body-expr]
+  (assert-args for
+     (vector? seq-exprs) "a vector for its binding"
+     (even? (count seq-exprs)) "an even number of forms in binding vector")
+  (let [to-groups (fn [seq-exprs]
+                    (reduce (fn [groups [k v]]
+                              (if (keyword? k)
+                                (conj (pop groups) (conj (peek groups) [k v]))
+                                (conj groups [k v])))
+                            [] (partition 2 seq-exprs)))
+        err (fn [& msg] (throw (js/Error. (apply core/str msg))))
+        emit-bind (fn emit-bind [[[bind expr & mod-pairs]
+                                  & [[_ next-expr] :as next-groups]]]
+                    (let [giter (gensym "iter__")
+                          gxs (gensym "s__")
+                          do-mod (fn do-mod [[[k v :as pair] & etc]]
+                                   (cond
+                                     (= k :let) `(cljs.core/let ~v ~(do-mod etc))
+                                     (= k :while) `(cljs.core/when ~v ~(do-mod etc))
+                                     (= k :when) `(if ~v
+                                                    ~(do-mod etc)
+                                                    (recur (cljs.core/rest ~gxs)))
+                                     (keyword? k) (err "Invalid 'for' keyword " k)
+                                     next-groups
+                                      `(cljs.core/let [iterys# ~(emit-bind next-groups)
+                                             fs# (cljs.core/seq (iterys# ~next-expr))]
+                                         (if fs#
+                                           (cljs.core/concat fs# (~giter (cljs.core/rest ~gxs)))
+                                           (recur (cljs.core/rest ~gxs))))
+                                     :else `(cljs.core/cons ~body-expr
+                                                  (~giter (cljs.core/rest ~gxs)))))]
+                      `(cljs.core/fn ~giter [~gxs]
+                         (cljs.core/lazy-seq
+                           (cljs.core/loop [~gxs ~gxs]
+                             (cljs.core/when-first [~bind ~gxs]
+                               ~(do-mod mod-pairs)))))))]
+    `(cljs.core/let [iter# ~(emit-bind (to-groups seq-exprs))]
+       (iter# ~(second seq-exprs)))))
+
+(clj-defmacro doseq
+  "Repeatedly executes body (presumably for side-effects) with
+  bindings and filtering as provided by \"for\".  Does not retain
+  the head of the sequence. Returns nil."
+  [seq-exprs & body]
+  (assert-args doseq
+     (vector? seq-exprs) "a vector for its binding"
+     (even? (count seq-exprs)) "an even number of forms in binding vector")
+  (let [step (fn step [recform exprs]
+               (if-not exprs
+                 [true `(do ~@body)]
+                 (let [k (first exprs)
+                       v (second exprs)
+
+                       seqsym (when-not (keyword? k) (gensym))
+                       recform (if (keyword? k) recform `(recur (cljs.core/next ~seqsym)))
+                       steppair (step recform (nnext exprs))
+                       needrec (steppair 0)
+                       subform (steppair 1)]
+                   (cond
+                     (= k :let) [needrec `(cljs.core/let ~v ~subform)]
+                     (= k :while) [false `(cljs.core/when ~v
+                                            ~subform
+                                            ~@(when needrec [recform]))]
+                     (= k :when) [false `(if ~v
+                                           (do
+                                             ~subform
+                                             ~@(when needrec [recform]))
+                                           ~recform)]
+                     :else [true `(cljs.core/loop [~seqsym (cljs.core/seq ~v)]
+                                    (cljs.core/when ~seqsym
+                                      (cljs.core/let [~k (cljs.core/first ~seqsym)]
+                                        ~subform
+                                        ~@(when needrec [recform]))))]))))]
+    (nth (step nil (seq seq-exprs)) 1)))
+
+(clj-defmacro amap
+  "Maps an expression across an array a, using an index named idx, and
+  return value named ret, initialized to a clone of a, then setting
+  each element of ret to the evaluation of expr, returning the new
+  array ret."
+  [a idx ret expr]
+  `(cljs.core/let [a# ~a
+         ~ret (cljs.core/aclone a#)]
+     (cljs.core/loop  [~idx 0]
+       (if (cljs.core/< ~idx  (cljs.core/alength a#))
+         (do
+           (cljs.core/aset ~ret ~idx ~expr)
+           (recur (cljs.core/inc ~idx)))
+         ~ret))))
+
+(clj-defmacro areduce
+  "Reduces an expression across an array a, using an index named idx,
+  and return value named ret, initialized to init, setting ret to the
+  evaluation of expr at each step, returning ret."
+  [a idx ret init expr]
+  `(cljs.core/let [a# ~a]
+     (cljs.core/loop  [~idx 0 ~ret ~init]
+       (if (cljs.core/< ~idx  (cljs.core/alength a#))
+         (recur (cljs.core/inc ~idx) ~expr)
+         ~ret))))
+
+(clj-defmacro dotimes
+  "bindings => name n
+
+  Repeatedly executes body (presumably for side-effects) with name
+  bound to integers from 0 through n-1."
+  [bindings & body]
+  (let [i (first bindings)
+        n (second bindings)]
+    `(cljs.core/let [n# ~n]
+       (cljs.core/loop [~i 0]
+         (cljs.core/when (cljs.core/< ~i n#)
+           ~@body
+           (recur (cljs.core/inc ~i)))))))
+
+;;;
+
+(clj-defmacro time
+  "Evaluates expr and prints the time it took. Returns the value of expr."
+  [expr]
+  `(cljs.core/let [start# (.getTime (js/Date.))
+         ret# ~expr]
+     (cljs.core/prn (cljs.core/str "Elapsed time: " (cljs.core/- (.getTime (js/Date.)) start#) " msecs"))
+     ret#))
+
+
+(clj-defmacro with-out-str
+  "Evaluates exprs in a context in which *print-fn* is bound to .append
+  on a fresh StringBuffer.  Returns the string created by any nested
+  printing calls."
+  [& body]
+  `(cljs.core/let [sb# (goog.string/StringBuffer.)]
+     (cljs.core/binding [cljs.core/*print-fn* (cljs.core/fn [x#] (.append sb# x#))]
+       ~@body)
+     (cljs.core/str sb#)))
 
 
