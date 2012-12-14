@@ -352,6 +352,7 @@
 
 (declare syntaxQuote)
 (def ^:dynamic *gensym-env* (atom nil))
+(def ^:dynamic *arg-env* (atom nil))
 
 (defn isUnquote? [form]
   (and (satisfies? ISeq form) (= (first form) UNQUOTE)))
@@ -480,6 +481,65 @@
         (let [o (read rdr true nil true)]
           (list UNQUOTE o))))))
 
+(defn garg [n]
+  (let [pre (if (= n -1) "rest" (str "p" n))]
+    (symbol (str (gensym pre) "#"))))
+
+(defn read-fn
+  [rdr _]
+  (when @*arg-env*
+    (reader-error nil "nested #()s are not allowed"))
+  (binding [*arg-env* (atom (sorted-map))]
+    (unread rdr "(")  ;) - the wink towards vim paren matching
+    (let [form (read rdr true nil true)
+          argsyms @*arg-env*
+          rargs (rseq argsyms)
+          highpair (first rargs)
+          higharg (if highpair (key highpair) 0)
+          args (if (> higharg 0)
+                 (doall (for [i (range 1 (+ 1 higharg))]
+                          (or (get argsyms i)
+                              (garg i))))
+                 args)
+          restsym (get argsyms -1)
+          args (if restsym
+                 (concat args ['& restsym])
+                 args)]
+      ;(println "here1" (list 'fn* (vec args) form))
+      (list 'fn* (vec args) form))))
+
+(defn registerArg [n]
+  (let [argsyms @*arg-env*]
+    (when-not argsyms (reader-error _ "arg literal not in #()"))
+    (let [ret (get argsyms n)]
+      (if ret
+        ret
+        (let [ret (garg n)]
+          (swap! *arg-env* assoc n ret)
+          ret)))))
+
+(defn read-arg
+  [rdr pct]
+  (if (not @*arg-env*)
+    (read-symbol rdr "%")
+    (let [ch (read-char rdr)]
+      (unread rdr ch)
+      ;; % alone is first arg
+      (if (or (nil? ch)
+                (whitespace? ch)
+                (macro-terminating? ch))
+        (registerArg 1)
+        (let [n (read rdr true nil true)]
+          (cond
+            (= '& n) 
+            (registerArg -1)
+  
+            (not (number? n))
+            (throw (js/Error. "arg literal must be %, %& or %integer"))
+  
+            :else
+            (registerArg (int n))))))))
+
 (defn read-set
   [rdr _]
   (set (read-delimited-list "}" rdr true)))
@@ -510,7 +570,7 @@
    (identical? c \{) read-map
    (identical? c \}) read-unmatched-delimiter
    (identical? c \\) read-char
-   (identical? c \%) not-implemented
+   (identical? c \%) read-arg
    (identical? c \#) read-dispatch
    :else nil))
 
@@ -518,6 +578,7 @@
 (defn dispatch-macros [s]
   (cond
    (identical? s "{") read-set
+   (identical? s "(") read-fn
    (identical? s "<") (throwing-reader "Unreadable form")
    (identical? s "\"") read-regex
    (identical? s"!") read-comment
