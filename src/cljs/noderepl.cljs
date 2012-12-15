@@ -5,6 +5,7 @@
             [cljs.reader :as reader]))
 
 (def ^:dynamic *debug* false)
+(def ^:dynamic *e nil)
 
 (defn prompt [] (str ana/*cljs-ns* "=> "))
 
@@ -23,8 +24,8 @@
      (when *debug* (println "emit:" res))
      (repl-print (pr-str (js/eval res)) "rtn"))
    (catch js/Error e
-    (repl-print (.-stack e) "err")
-    #_(set! *e e))))
+     (repl-print (.-stack e) "err")
+     (set! *e e))))
 
 (defn pep [text]
   (postexpr text)
@@ -46,7 +47,8 @@
     (.setPrompt rl (prompt))
     (.prompt rl)
     (.on rl "line" (fn [line]
-                     (ep line)
+                     (when (seq (filter #(not= " " %) line))
+                       (ep line))
                      (.setPrompt rl (prompt))
                      (.prompt rl)))
     (.on rl "close" (fn [] (.exit js/process 0)))))

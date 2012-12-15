@@ -5,6 +5,7 @@
             [cljs.reader :as reader]))
 
 (def ^:dynamic *debug* false)
+(def ^:dynamic *e nil)
 
 (defn prompt [] (str ana/*cljs-ns* "=> "))
 
@@ -28,9 +29,6 @@
     (.appendChild parent i))
   parent)
 
-(def *print-class* nil)
-(def *e nil)
-
 (defn repl-print [log text cls]
   (doseq [line (.split (str text) #"\n")]
     (append-dom log
@@ -48,25 +46,18 @@
        [:td {:class "cg"} (prompt)]
        [:td (.replace text #"\n$" "")]]]]))
 
-#_(defmacro print-with-class [c m]
-  `(binding [*print-class* ~c]
-     (println ~m)))
-
-;;(set! *print-length* 103)
-
-#_(defmacro let-elem-ids [ids & body]
-  `(let ~(vec (mapcat #(list % (list '.getElementById 'document (str %))) ids))
-     ~@body))
+(defn ep [log text]
+  (try
+    (let [res (comp/emit-str (ana/analyze js/env (reader/read-string text)))]
+      (when *debug* (println "emit:" res))
+      (repl-print log (pr-str (js/eval res)) "rtn"))
+    (catch js/Error e
+      (repl-print log (.-stack e) "err")
+      (set! *e e))))
 
 (defn pep [log text]
  (postexpr log text)
- (try
-   (let [res (comp/emit-str (ana/analyze js/env (reader/read-string text)))]
-     (when *debug* (println "emit:" res))
-     (repl-print log (pr-str (js/eval res)) "rtn"))
-   (catch js/Error e
-    (repl-print log (.-stack e) "err")
-    #_(set! *e e))))
+ (ep log text))
 
 (set! (.-onload js/window) (fn []
   (let [log (.getElementById js/document "log")
