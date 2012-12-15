@@ -3,16 +3,19 @@
 This is a **patched version of the ClojureScript compiler** that
 compiles to ClojureScript. Normally, the ClojureScript compiler is
 a pure Clojure program that runs on the JVM. This patched version runs
-from the compiled JavaScript. This project was started by
-[kanaka](https://github.com/kanaka) but most of the hard problems were
-solved by [chouser](https://github.com/chouser).
+from the compiled JavaScript. This project was kicked off by
+[kanaka](https://github.com/kanaka) and
+[chouser](https://github.com/chouser) during some intense hacking at
+Clojure/conj 2012. Kanaka continues to develop the fork towards the
+goal of being fully self-hosting (i.e. ClojureScript in
+ClojureScript).
 
 ### Why?
 
 * Why not?
 * Compilers are only cool once they are self-hosting (can compile
   their own code). This fork is not self-hosting yet, but that is the
-  aim.
+  goal.
 * You can use ClojureScript without a JVM.
 * You can have a [ClojureScript REPL web
   app](http://kanaka.github.com/clojurescript/web/jsrepl.html) that
@@ -21,20 +24,27 @@ solved by [chouser](https://github.com/chouser).
 
 ### Current Caveats
 
-* No compiled macro support yet. This means that you can define new
-  macros at the REPL, but the normal "precompiled" macros (like
-  defn, fn, let, loop, etc)  are not yet working. So defining
-  a function currently looks like this `(def sqr (fn* [x] (* x x)))`.
-* The code is not yet compatible with the normal Clojure ClojureScript
-  compiler. To make it compatible we really need [Feature Expressions in
-  Clojure](http://dev.clojure.org/display/design/Feature+Expressions)
 * JavaScript output is not optimized by the Google Closure Compiler
   (which is a Java program).
+* The code changes are not all compatible with the normal Clojure
+  ClojureScript (JVM based) compiler. To make it compatible we really
+  need [Feature Expressions in Clojure](http://dev.clojure.org/display/design/Feature+Expressions)
 * The :nodejs compilation target is currently broken. However, the
   `node/run.js` bootstrap script enables compiled CLJS code to be
   invoked that was not compiled with a :target.
 * Other miscellaneous broken things that have not been tracked down
   yet.
+
+### Bugs and TODOs
+
+- Use of certain regex causes hard hangs
+- Anonymous functions do not warn about arity
+- squelch warnings during compile about *unchecked-if* and
+  protocol-prefix
+- Port prototype/interface/type related macros/functions (macro_list)
+- implement file I/O (at least on the node.js side)
+- possibly figure out a way to emulate metadata on symbols/"vars"
+- self-hosting (compile ClojureScript compiler using node.js hosted ClojureScript compiler)
 
 ### Build
 
@@ -45,13 +55,11 @@ ClojureScript like this:
 bin/cljsc src/cljs/cljs/compiler.cljs > compiler.cljs
 ```
 
-However, that's not all that useful because it is missing the
-necessary analyzer `@namespaces` atom built during the analysis phase.
-It's also not runnable on it's own because it doesn't have pieces
+However, that is not all that useful because it  does not have all the pieces
 necessary to run it under a JavaScript engine (e.g. browser or node.js).
 
 You can rebuild the ClojureScript analyzer, compiler, reader and
-bootstrap pieces with a web REPL like this:
+browser/node.js bootstrap pieces with a web REPL like this:
 
 ```
 cd web
