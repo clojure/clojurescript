@@ -471,7 +471,8 @@
            (if-let [[name init] (first bindings)]
              (do
                (assert (not (or (namespace name) (.contains (str name) "."))) (str "Invalid local name: " name))
-               (let [init-expr (analyze env init)
+               (let [init-expr (binding [*loop-lets* (cons {:params bes} (or *loop-lets* ()))]
+                                 (analyze env init))
                      be {:name name
                          :init init-expr
                          :tag (or (-> name meta :tag)
