@@ -36,7 +36,6 @@
   (println ";; ClojureScript")
   (println ";;   - http://github.com/kanaka/clojurescript")
   (println ";;   - A port of the ClojureScript compiler to ClojureScript")
-  (println ";;   - No predefined macros (yet), but defmacro works.")
   (pep "(+ 1 2)")
   (pep "(def sqr (fn* [x] (* x x)))")
   (pep "(sqr 8)")

@@ -85,7 +85,6 @@
       [:a {:href "http://github.com/kanaka/clojurescript"}
        "http://github.com/kanaka/clojurescript"]])
     (println ";;   - A port of the ClojureScript compiler to ClojureScript")
-    (println ";;   - No predefined macros (yet), but defmacro works.")
     (pep log "(+ 1 2)")
     (pep log "(def sqr (fn* [x] (* x x)))")
     (pep log "(sqr 8)")
