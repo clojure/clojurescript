@@ -527,14 +527,20 @@ nil if the end of stream has been reached")
                         "uuid"  read-uuid
                         "queue" read-queue}))
 
+(def *default-data-reader-fn*
+  (atom nil))
+
 (defn maybe-read-tagged-type
   [rdr initch]
-  (let [tag  (read-symbol rdr initch)]
-    (if-let [pfn (get @*tag-table* (str tag))]
-      (pfn (read rdr true nil false))
-      (reader-error rdr
-                    "Could not find tag parser for " (str tag)
-                    " in " (pr-str (keys @*tag-table*))))))
+  (let [tag (read-symbol rdr initch)
+        pfn (get @*tag-table* (str tag))
+        dfn @*default-data-reader-fn*]
+    (cond
+     pfn (pfn (read rdr true nil false))
+     dfn (dfn tag (read rdr true nil false))
+     :else (reader-error rdr
+                         "Could not find tag parser for " (str tag)
+                         " in " (pr-str (keys @*tag-table*))))))
 
 (defn register-tag-parser!
   [tag f]
@@ -548,4 +554,16 @@ nil if the end of stream has been reached")
   (let [tag (str tag)
         old-parser (get @*tag-table* tag)]
     (swap! *tag-table* dissoc tag)
+    old-parser))
+
+(defn register-default-tag-parser!
+  [f]
+  (let [old-parser @*default-data-reader-fn*]
+    (swap! *default-data-reader-fn* (fn [_] f))
+    old-parser))
+
+(defn deregister-default-tag-parser!
+  []
+  (let [old-parser @*default-data-reader-fn*]
+    (swap! *default-data-reader-fn* (fn [_] nil))
     old-parser))
