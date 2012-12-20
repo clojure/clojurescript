@@ -530,22 +530,22 @@ nil if the end of stream has been reached")
 (defn maybe-read-tagged-type
   [rdr initch]
   (let [tag  (read-symbol rdr initch)]
-    (if-let [pfn (get @*tag-table* (name tag))]
+    (if-let [pfn (get @*tag-table* (str tag))]
       (pfn (read rdr true nil false))
       (reader-error rdr
-                    "Could not find tag parser for " (name tag)
+                    "Could not find tag parser for " (str tag)
                     " in " (pr-str (keys @*tag-table*))))))
 
 (defn register-tag-parser!
   [tag f]
-  (let [tag (name tag)
+  (let [tag (str tag)
         old-parser (get @*tag-table* tag)]
     (swap! *tag-table* assoc tag f)
     old-parser))
 
 (defn deregister-tag-parser!
   [tag]
-  (let [tag (name tag)
+  (let [tag (str tag)
         old-parser (get @*tag-table* tag)]
     (swap! *tag-table* dissoc tag)
     old-parser))
