@@ -30,7 +30,8 @@
     "return" "short" "static" "super" "switch"
     "synchronized" "this" "throw" "throws"
     "transient" "try" "typeof" "var" "void"
-    "volatile" "while" "with" "yield" "methods"})
+    "volatile" "while" "with" "yield" "methods"
+    "null"})
 
 (def ^:dynamic *position* nil)
 (def ^:dynamic *emitted-provides* nil)
