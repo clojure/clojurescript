@@ -73,6 +73,14 @@
 
   (assert (= [1 2] (reader/read-string "#foo [1 2]")))
 
+  ;; tag elements with prefix component
+  (reader/register-tag-parser! 'foo.bar/baz identity)
+  (assert (= [1 2] (reader/read-string "#foo.bar/baz [1 2]")))
+
+  ;; default tag parser
+  (reader/register-default-tag-parser! (fn [tag val] val))
+  (assert (= [1 2] (reader/read-string "#a.b/c [1 2]")))
+
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Unicode Tests
 
