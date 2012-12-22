@@ -452,7 +452,7 @@
   (-equiv [x o] (identical? x o))
 
   IHash
-  (-hash [o] o))
+  (-hash [o] (js-mod (.floor js/Math o) 2147483647)))
 
 (extend-type boolean
   IHash
