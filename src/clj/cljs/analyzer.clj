@@ -590,6 +590,7 @@
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
+  (assert (symbol? name) "Namespaces must be named by a symbol.")
   (let [docstring (if (string? (first args)) (first args) nil)
         args      (if docstring (next args) args)
         excludes
