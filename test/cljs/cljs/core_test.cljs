@@ -1778,5 +1778,10 @@
   (assert (instance? js/Error (ex-info "asdf" {:foo 1})))
   (assert (not (instance? cljs.core.ExceptionInfo (js/Error.))))
 
+  ;; CLJS-435
+
+  (assert (= (assoc {} 154618822656 1 261993005056 1)
+             {154618822656 1 261993005056 1}))
+
   :ok
   )
