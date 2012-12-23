@@ -618,6 +618,7 @@
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
+  (assert (symbol? name) "Namespaces must be named by a symbol.")
   (let [docstring (if (string? (first args)) (first args) nil)
         args      (if docstring (next args) args)
         excludes
@@ -630,6 +631,7 @@
                     s))
                 #{} args)
         deps (atom #{})
+        aliases (atom #{})
         valid-forms (atom #{:use :use-macros :require :require-macros :import})
         error-msg (fn [spec msg] (str msg "; offending spec: " (pr-str spec)))
         parse-require-spec (fn parse-require-spec [macros? spec]
@@ -651,6 +653,10 @@
                                (let [[lib & opts] spec
                                      {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
                                      [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
+                                 (when alias
+                                   (assert (not (contains? @aliases alias))
+                                           (error-msg spec ":as alias must be unique"))
+                                   (swap! aliases conj alias))
                                  (assert (or (symbol? alias) (nil? alias))
                                          (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))
                                  (assert (or (and (sequential? referred) (every? symbol? referred))

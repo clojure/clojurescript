@@ -154,7 +154,7 @@
     (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags)))
 
 (defmethod emit-constant clojure.lang.Keyword [x]
-           (emits \" "\\uFDD0" \'
+           (emits \" "\\uFDD0" \:
                   (if (namespace x)
                     (str (namespace x) "/") "")
                   (name x)
