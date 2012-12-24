@@ -7,8 +7,7 @@ from the compiled JavaScript. This project was kicked off by
 [kanaka](https://github.com/kanaka) and
 [chouser](https://github.com/chouser) during some intense hacking at
 Clojure/conj 2012. Kanaka continues to develop the fork towards the
-goal of being fully self-hosting (i.e. ClojureScript in
-ClojureScript).
+goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 
 ### Why?
 
@@ -35,15 +34,25 @@ ClojureScript).
 * Other miscellaneous broken things that have not been tracked down
   yet.
 
-### Bugs and TODOs
+### Bugs
 
-- Use of certain regex causes hard hangs
-- Anonymous functions do not warn about arity
-- squelch warnings during compile about *unchecked-if* and
-  protocol-prefix
-- Port prototype/interface/type related macros/functions (macro_list)
+- defining new namespaces is broken
+- deftype with IFn doesn't result in runnable object
+- namespaced keywords are broken
+- numeric keywords are broken
+- no division ("/" symbol in general is problematic)
+- use of certain regexex causes hard hangs
+- escaping in regexes is broken
+- anonymous functions do not warn about arity
+- non-unicode symbol breakage
+- warnings during compile about *unchecked-if*
+
+
+### TODOs
+
+- update to upstream ClojureScript
+- ability to define new namespaces
 - implement file I/O (at least on the node.js side)
-- possibly figure out a way to emulate metadata on symbols/"vars"
 - self-hosting (compile ClojureScript compiler using node.js hosted ClojureScript compiler)
 
 ### Build
