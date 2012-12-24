@@ -7581,7 +7581,26 @@ nil if the end of stream has been reached")
       `(cljs.core/let [or# ~x]
          (if or# or# (cljs.core/or ~@next)))))
 
-;; TODO: (defmacro .. ....)
+;; TODO: get this working
+;; (clj-defmacro ..
+;;   "form => fieldName-symbol or (instanceMethodName-symbol args*)
+;; 
+;;   Expands into a member access (.) of the first member on the first
+;;   argument, followed by the next member on the result, etc. For
+;;   instance:
+;; 
+;;   (.. System (getProperties) (get \"os.name\"))
+;; 
+;;   expands to:
+;; 
+;;   (. (. System (getProperties)) (get \"os.name\"))
+;; 
+;;   but is easier to write, read, and understand."
+;;   {:added "1.0"}
+;;   ([x form] `(. ~x ~form))
+;;   ([x form & more] `(.. (. ~x ~form) ~@more)))
+
+
 
 (clj-defmacro ->
   "Threads the expr through the forms. Inserts x as the
@@ -8125,6 +8144,31 @@ nil if the end of stream has been reached")
                                         ~subform
                                         ~@(when needrec [recform]))))]))))]
     (nth (step nil (seq seq-exprs)) 1)))
+
+(clj-defmacro array [& rest]
+  (let [xs-str (->> (repeat "~{}")
+                    (take (count rest))
+                    (interpose ",")
+                    (apply cljs.core/str))]
+   (concat
+    (list 'js* (cljs.core/str "[" xs-str "]"))
+    rest)))
+
+;; TODO: do we need this?
+;;(clj-defmacro js-obj [& rest]
+;;  (let [kvs-str (->> (repeat "~{}:~{}")
+;;                     (take (quot (count rest) 2))
+;;                     (interpose ",")
+;;                     (apply cljs.core/str))]
+;;    (concat
+;;     (list 'js* (cljs.core/str "{" kvs-str "}"))
+;;     rest)))
+
+(clj-defmacro alength [a]
+  (list 'js* "~{}.length" a))
+
+(clj-defmacro aclone [a]
+  (list 'js* "~{}.slice()" a))
 
 (clj-defmacro amap
   "Maps an expression across an array a, using an index named idx, and
