@@ -231,6 +231,9 @@
 (defprotocol ISeqable
   (-seq [o]))
 
+(defprotocol ISymbol
+  "Marker interface indicating a symbol")
+
 (defprotocol ISequential
   "Marker interface indicating a persistent collection of sequential items")
 
@@ -1013,16 +1016,14 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean string? [x]
   (and ^boolean (goog/isString x)
-       (not (or (identical? (.charAt x 0) \uFDD0)
-                (identical? (.charAt x 0) \uFDD1)))))
+       (not (identical? (.charAt x 0) \uFDD0))))
 
 (defn ^boolean keyword? [x]
   (and ^boolean (goog/isString x)
        (identical? (.charAt x 0) \uFDD0)))
 
 (defn ^boolean symbol? [x]
-  (and ^boolean (goog/isString x)
-       (identical? (.charAt x 0) \uFDD1)))
+  (satisfies? ISymbol x))
 
 (defn ^boolean number? [n]
   (goog/isNumber n))
@@ -1453,7 +1454,6 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (symbol? x) (. x (substring 2 (alength x)))
         (keyword? x) (str* ":" (. x (substring 2 (alength x))))
         (regexp? x) (.-source x)
         (nil? x) ""
@@ -1488,15 +1488,15 @@ reduces them without incurring seq initialization"
   ([name]
      (cond
       (symbol? name) name
-      (keyword? name) (str* "\uFDD1" "'" (subs name 2))
-      :else (str* "\uFDD1" "'" name)))
-  ([ns name] (symbol (str* ns "/" name))))
+      (string? name) (Symbol. nil name)
+      :else (throw (js/Error. "Symbol name must be string or symbol"))))
+  ([ns name] (symbol (str ns "/" name))))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
   ([name] (cond (keyword? name) name
-                (symbol? name) (str* "\uFDD0" "'" (subs name 2))
+                (symbol? name) (str* "\uFDD0" "'" name)
                 :else (str* "\uFDD0" "'" name)))
   ([ns name] (keyword (str* ns "/" name))))
 
@@ -1754,6 +1754,41 @@ reduces them without incurring seq initialization"
        (ci-reduce string f))
     ([string f start]
        (ci-reduce string f start))))
+
+(deftype Symbol [meta sym]
+  ISymbol
+
+  Object
+  (toString [_] sym)
+
+  IHash
+  (-hash [o] (goog.string/hashCode (str* "\uFDD1" "'" o)))
+
+  IEquiv
+  (-equiv [o other]
+    (or (identical? o other)
+        (and (symbol? other)
+             (= sym (name other)))))
+
+  ILookup
+  (-lookup [sym k] nil)
+  (-lookup [sym k not_found] not_found)
+
+  IMeta
+  (-meta [sym] meta)
+
+  IWithMeta
+  (-with-meta [sym new-meta] (Symbol. new-meta (str sym)))
+
+  IFn
+  (invoke [sym coll]
+    (when-not (nil? coll)
+      (-lookup coll sym nil)))
+  (invoke [_ coll not-found]
+    (if (nil? coll)
+      not-found
+      (-lookup coll sym not-found))))
+
 
 (deftype Keyword [k]
   IFn
@@ -5829,7 +5864,15 @@ reduces them without incurring seq initialization"
   [x]
   (cond
     (string? x) x
-    (or (keyword? x) (symbol? x))
+
+    (symbol? x)
+    (let [x (str x)
+          i (.lastIndexOf x "/")]
+      (if (< i 0)
+        x
+        (subs x (inc i))))
+
+    (keyword? x)
       (let [i (.lastIndexOf x "/")]
         (if (< i 0)
           (subs x 2)
@@ -5839,10 +5882,19 @@ reduces them without incurring seq initialization"
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
-  (if (or (keyword? x) (symbol? x))
+  (cond
+    (symbol? x)
+    (let [x (str x)
+          i (.lastIndexOf x "/")]
+      (when (> i -1)
+        (subs x 0 i)))
+  
+    (keyword? x)
     (let [i (.lastIndexOf x "/")]
       (when (> i -1)
         (subs x 2 i)))
+
+    :else
     (throw (js/Error. (str "Doesn't support namespace: " x)))))
 
 (defn zipmap
@@ -6513,17 +6565,19 @@ reduces them without incurring seq initialization"
   (-pr-writer [a writer opts]
     ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "#<Array [" ", " "]>" opts a))
 
+  Symbol
+  (-pr-writer [s writer _]
+    (do
+      (when-let [nspc (namespace s)]
+        (write-all writer (str nspc) "/"))
+      (-write writer (name s))))
+
   string
   (-pr-writer [obj writer opts]
     (cond
      (keyword? obj)
        (do
          (-write writer ":")
-         (when-let [nspc (namespace obj)]
-           (write-all writer (str nspc) "/"))
-         (-write writer (name obj)))
-     (symbol? obj)
-       (do
          (when-let [nspc (namespace obj)]
            (write-all writer (str nspc) "/"))
          (-write writer (name obj)))
@@ -7410,9 +7464,8 @@ nil if the end of stream has been reached")
 ;;                                                     (next inline))))
 ;;                    m))
               m (conj (if (meta name) (meta name) {}) m)]
-          ;; TODO: what to do here?
-          ;;(list 'def (with-meta name m) ...)
-          (list 'def name
+          ;; TODO: how to add metadata to "var"?
+          (list 'def (with-meta name m)
                 ;;todo - restore propagation of fn name
                 ;;must figure out how to convey primitive hints to self calls first
                 #_(cons `fn fdecl)
@@ -7818,17 +7871,15 @@ nil if the end of stream has been reached")
   ([x y] (bool-expr (list 'js* "(~{} & ~{})" x y)))
   ([x y & more] `(cljs.core/unsafe-bit-and (cljs.core/unsafe-bit-and ~x ~y) ~@more)))
 
-(defn protocol-prefix [psym]
-  (cljs.core/str (-> (cljs.core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
 
+;; Implicitly depends on cljs.analyzer and cljs.compiler namespace
 (clj-defmacro satisfies?
   "Returns true if x satisfies the protocol"
   [psym x]
   (let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
-        prefix (protocol-prefix p)
-        ;; TODO: what to do here
-        ;;xsym (bool-expr (gensym))
-        xsym (gensym)
+        prefix (cljs.compiler/protocol-prefix p)
+        ;; TODO: verify this works
+        xsym (bool-expr (gensym))
         [part bit] (fast-path-protocols p)
         msym (symbol (cljs.core/str "-cljs$lang$protocol_mask$partition" part "$"))]
     `(cljs.core/let [~xsym ~x]

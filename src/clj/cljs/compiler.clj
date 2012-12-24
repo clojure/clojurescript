@@ -158,11 +158,14 @@
                   \"))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
-           (emits \" "\\uFDD1" \'
-                  (if (namespace x)
-                    (str (namespace x) "/") "")
-                  (name x)
-                  \"))
+            (emits "(new cljs.core.Symbol("  
+                  (if (meta x)
+                    (emit-constant (meta x))
+                    "null")
+                  ","
+                  (str "\"" x "\"")
+                  "))"))
+
 
 (defn- emit-meta-constant [x & body]
   (if (meta x)

@@ -179,11 +179,13 @@
                   \"))
 
 (defn emit-constant-symbol [x]
-           (emits \" "\\uFDD1" \'
-                  (if (namespace x)
-                    (str (namespace x) "/") "")
-                  (name x)
-                  \"))
+            (emits "(new cljs.core.Symbol("
+                  (if (meta x)
+                    (emit-constant (meta x))
+                    "null")
+                  ","
+                  (str "\"" x "\"")
+                  "))"))
 
 (defn emit-constant-map [x]
             (emit-meta-constant x
@@ -211,9 +213,9 @@
           (emits (str \/ (.replace pattern all-slashes "\\\\/") \/ flags))))
   string (emit-constant [x]
       (cond
-       (symbol? x) (emit-constant-symbol x)
        (keyword? x) (emit-constant-keyword x)
        :else (emits (wrap-in-double-quotes (escape-string x)))))
+  cljs.core/Symbol (emit-constant [x] (emit-constant-symbol x))
   cljs.core/EmptyList (emit-constant [x]
       (emit-meta-constant x "cljs.core.List.EMPTY"))
   cljs.core/List (emit-constant [x]
