@@ -535,7 +535,7 @@
             (registerArg -1)
   
             (not (number? n))
-            (throw (js/Error. "arg literal must be %, %& or %integer"))
+            (reader-error rdr "arg literal must be %, %& or %integer")
   
             :else
             (registerArg (int n))))))))

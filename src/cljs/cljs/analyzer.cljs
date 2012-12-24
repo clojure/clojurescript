@@ -759,7 +759,7 @@
 ;; (. o -p <args>)
 (defmethod build-dot-form [::expr ::property ::list]
   [[target prop args]]
-  (throw (Error. (str "Cannot provide arguments " args " on property access " prop))))
+  (throw (js/Error. (str "Cannot provide arguments " args " on property access " prop))))
 
 (defn- build-method-call
   "Builds the intermediate method call map used to reason about the parsed form during
@@ -787,7 +787,7 @@
 
 (defmethod build-dot-form :default
   [dot-form]
-  (throw (Error. (str "Unknown dot form of " (list* '. dot-form) " with classification " (classify-dot-form dot-form)))))
+  (throw (js/Error. (str "Unknown dot form of " (list* '. dot-form) " with classification " (classify-dot-form dot-form)))))
 
 (defmethod parse '.
   [_ env [_ target & [field & member+] :as form] _]

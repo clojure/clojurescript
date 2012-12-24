@@ -7957,7 +7957,7 @@ nil if the end of stream has been reached")
                        (split-at (if (= :>> (second args)) 3 2) args)
                        n (count clause)]
                  (cond
-                  (= 0 n) `(throw (js/Error. (core/str "No matching clause: " ~expr)))
+                  (= 0 n) `(throw (js/Error. (cljs.core/str "No matching clause: " ~expr)))
                   (= 1 n) a
                   (= 2 n) `(if (~pred ~a ~expr)
                              ~b
