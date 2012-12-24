@@ -7398,7 +7398,7 @@ nil if the end of stream has been reached")
  sigs
  (fn [fdecl]
    (assert-valid-fdecl fdecl)
-   (let [asig
+   (let [asig 
          (fn [fdecl]
            (let [arglist (first fdecl)
                  ;elide implicit macro args
@@ -7474,13 +7474,14 @@ nil if the end of stream has been reached")
 (setMacro 'defn)
 
 (def
+
  ^{:doc "Like defn, but the resulting function name is declared as a
   macro and will be used as a macro by the compiler when it is
   called."
    :arglists '([name doc-string? attr-map? [params*] body]
                  [name doc-string? attr-map? ([params*] body)+ attr-map?])
    :added "1.0"}
- defmacro (fn [&form &env
+ defmacro (fn [&form &env 
                 name & args]
              (let [prefix (loop [p (list name) args args]
                             (let [f (first args)]
@@ -7514,8 +7515,6 @@ nil if the end of stream has been reached")
                             (recur (next p) (cons (first p) d))
                             d))]
                (list 'do
-                     #_(list 'def (first decl) (cons `fn* (first (rest decl))))
-                     #_(cons `defn decl)
                      (cons 'defn decl)
                      #_(list '. (list 'var name) '(setMacro))
                      (list 'cljs.core/setMacro (list 'quote name))
@@ -7533,7 +7532,7 @@ nil if the end of stream has been reached")
   "Evaluates test. If logical false, evaluates body in an implicit do."
   {:added "1.0"}
   [test & body]
-  (list 'if test nil (cons 'do body)))
+    (list 'if test nil (cons 'do body)))
 
 (clj-defmacro cond
   "Takes a set of test/expr pairs. It evaluates each test one at a
@@ -7667,10 +7666,9 @@ nil if the end of stream has been reached")
   type in order to avoid reflective calls."
   {:added "1.0"}
   [name & args]
-  (let [t (gensym "target")
-        ;; TODO: what to do here?
-        ;;t (with-meta (gensym "target")
-        ;;    (meta name))
+  (let [;; TODO: verify this works
+        t (with-meta (gensym "target")
+            (meta name))
        ]
     `(cljs.core/fn [~t ~@args]
        (. ~t (~name ~@args)))))
@@ -7842,7 +7840,6 @@ nil if the end of stream has been reached")
                (cljs.core/let ~(vec (interleave bs gs))
                  ~@body)))))))
 
-
 (def fast-path-protocols
   "protocol fqn -> [partition number, bit]"
   (zipmap (map #(symbol "cljs.core" (cljs.core/str %))
@@ -7892,6 +7889,16 @@ nil if the end of stream has been reached")
              false))
          (cljs.core/type_satisfies_ ~psym ~xsym)))))
 
+(clj-defmacro lazy-seq [& body]
+  `(new cljs.core/LazySeq nil false (cljs.core/fn [] ~@body) nil))
+
+(clj-defmacro delay [& body]
+  "Takes a body of expressions and yields a Delay object that will
+  invoke the body only the first time it is forced (with force or deref/@), and
+  will cache the result and return it on all subsequent force
+  calls."
+  `(new cljs.core/Delay (cljs.core/atom {:done false, :value nil}) (cljs.core/fn [] ~@body)))
+
 (clj-defmacro binding
   "binding => var-symbol init-expr
 
@@ -7917,16 +7924,6 @@ nil if the end of stream has been reached")
          ~@(map
             (fn [[k v]] (list 'set! k v))
             resets))))))
-
-(clj-defmacro lazy-seq [& body]
-  `(new cljs.core/LazySeq nil false (cljs.core/fn [] ~@body) nil))
-
-(clj-defmacro delay [& body]
-  "Takes a body of expressions and yields a Delay object that will
-  invoke the body only the first time it is forced (with force or deref/@), and
-  will cache the result and return it on all subsequent force
-  calls."
-  `(new cljs.core/Delay (cljs.core/atom {:done false, :value nil}) (cljs.core/fn [] ~@body)))
 
 (clj-defmacro condp
   "Takes a binary predicate, an expression, and a set of clauses.
