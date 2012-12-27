@@ -7949,16 +7949,19 @@ nil if the end of stream has been reached")
 (defn to-property [sym]
   (symbol (cljs.core/str "-" sym)))
 
+(defn- parse-impls [specs]
+  (loop [ret {} s specs]
+    (if (seq s)
+      (recur (assoc ret (first s) (take-while seq? (next s)))
+             (drop-while seq? (next s)))
+      ret)))
+
 ;; Implicitly depends on cljs.compiler namespace
 (clj-defmacro extend-type [tsym & impls]
   (let [resolve #(let [ret (:name (cljs.analyzer/resolve-var (dissoc &env :locals) %))]
                    (assert ret (cljs.core/str "Can't resolve: " %))
                    ret)
-        impl-map (loop [ret {} s impls]
-                   (if (seq s)
-                     (recur (assoc ret (first s) (take-while seq? (next s)))
-                            (drop-while seq? (next s)))
-                     ret))
+        impl-map (parse-impls impls)
         warn-if-not-protocol #(when-not (= 'Object %)
                                 (if cljs.analyzer/*cljs-warn-on-undeclared*
                                   (if-let [var (cljs.analyzer/resolve-existing-var (dissoc &env :locals) %)]
@@ -8275,6 +8278,54 @@ nil if the end of stream has been reached")
        ~@(map method methods)
        (set! ~'*unchecked-if* false))))
 
+;; extend-protocol actually comes from Clojure core.clj but really
+;; wants to be here in the file
+(defn- emit-extend-protocol [p specs]
+  (let [impls (parse-impls specs)]
+    `(do
+       ~@(map (fn [[t fs]]
+                `(cljs.core/extend-type ~t ~p ~@fs))
+              impls))))
+
+(clj-defmacro extend-protocol
+  "Useful when you want to provide several implementations of the same
+  protocol all at once. Takes a single protocol and the implementation
+  of that protocol for one or more types. Expands into calls to
+  extend-type:
+
+  (extend-protocol Protocol
+    AType
+      (foo [x] ...)
+      (bar [x y] ...)
+    BType
+      (foo [x] ...)
+      (bar [x y] ...)
+    AClass
+      (foo [x] ...)
+      (bar [x y] ...)
+    nil
+      (foo [x] ...)
+      (bar [x y] ...))
+
+  expands into:
+
+  (do
+   (clojure.core/extend-type AType Protocol
+     (foo [x] ...)
+     (bar [x y] ...))
+   (clojure.core/extend-type BType Protocol
+     (foo [x] ...)
+     (bar [x y] ...))
+   (clojure.core/extend-type AClass Protocol
+     (foo [x] ...)
+     (bar [x y] ...))
+   (clojure.core/extend-type nil Protocol
+     (foo [x] ...)
+     (bar [x y] ...)))"
+  {:added "1.2"}
+
+  [p & specs]
+  (emit-extend-protocol p specs))
 
 ;; Implicitly depends on cljs.analyzer and cljs.compiler namespace
 (clj-defmacro satisfies?
