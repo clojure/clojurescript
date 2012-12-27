@@ -35,7 +35,7 @@
     "volatile" "while" "with" "yield" "methods"})
 
 (def ^:dynamic *position* nil)
-(def ^:dynamic *emitted-provides* nil)
+(def ^:dynamic *emitted-provides* (atom #{}))
 (def ^:dynamic *lexical-renames* {})
 (def cljs-reserved-file-names #{"deps.cljs"})
 
@@ -724,7 +724,7 @@
 (defmethod emit :ns
   [{:keys [name requires uses requires-macros env]}]
   (swap! ns-first-segments conj (first (string/split (str name) #"\.")))
-  (emitln "goog.provide('" (munge name) "');")
+  (emit-provide (munge name))
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
   (doseq [lib (into (vals requires) (distinct (vals uses)))]
