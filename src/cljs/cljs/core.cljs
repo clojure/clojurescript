@@ -1768,7 +1768,8 @@ reduces them without incurring seq initialization"
   (-equiv [o other]
     (or (identical? o other)
         (and (symbol? other)
-             (= sym (name other)))))
+             (= (goog.string/hashCode (str* "\uFDD1" "'" o))
+                (hash other)))))
 
   ILookup
   (-lookup [sym k] nil)
