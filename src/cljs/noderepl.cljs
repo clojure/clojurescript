@@ -15,12 +15,18 @@
       (print "ERR: "))
     (println line)))
 
+(defn- read-next-form [text]
+  (binding [*ns* (cljs.core/create-ns ana/*cljs-ns*)]
+    (reader/read-string text)))
+
 (defn postexpr [text]
   (println (str (prompt) text)))
 
 (defn ep [text]
   (try
-   (let [res (comp/emit-str (ana/analyze js/env (reader/read-string text)))]
+   (let [env (assoc (ana/empty-env) :context :expr)
+         form (read-next-form text)
+         res (comp/emit-str (ana/analyze env form))]
      (when *debug* (println "emit:" res))
      (repl-print (pr-str (js/eval res)) "rtn"))
    (catch js/Error e
@@ -32,7 +38,6 @@
   (ep text))
 
 (defn -main [& args]
-  (set! js/env (assoc js/env :context :expr))
   (println ";; ClojureScript")
   (println ";;   - http://github.com/kanaka/clojurescript")
   (println ";;   - A port of the ClojureScript compiler to ClojureScript")

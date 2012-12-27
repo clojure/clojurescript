@@ -38,6 +38,10 @@
        line]))
   (set! (.-scrollTop log) (.-scrollHeight log)))
 
+(defn- read-next-form [text]
+  (binding [*ns* (cljs.core/create-ns ana/*cljs-ns*)]
+    (reader/read-string text)))
+
 (defn postexpr [log text]
   (append-dom log
     [:table
@@ -48,7 +52,9 @@
 
 (defn ep [log text]
   (try
-    (let [res (comp/emit-str (ana/analyze js/env (reader/read-string text)))]
+    (let [env (assoc (ana/empty-env) :context :expr)
+          form (read-next-form text)
+          res (comp/emit-str (ana/analyze env form))]
       (when *debug* (println "emit:" res))
       (repl-print log (pr-str (js/eval res)) "rtn"))
     (catch js/Error e
@@ -65,20 +71,6 @@
         status (.getElementById js/document "status")]
     (set! *print-fn* #(repl-print log % nil))
 
-    (set! (.-onkeypress input)
-          (fn [ev]
-            (when (== (.-keyCode (or ev event)) 13)
-              (try
-                (let [form (reader/read-string (.-value input))]
-                  (do
-                    (pep log (.-value input))
-                    (js/setTimeout #(set! (.-value input) "") 0)
-                    (set! (.-src status) "blank.gif")))
-                (catch js/Error e
-                  (if (= (.-message e) "EOF while reading")
-                    (set! (.-src status) "dots.png")
-                    (repl-print log e "err")))))))
-
     (println ";; ClojureScript")
     (append-dom log [:div {:class "cg"}
       ";;   - "
@@ -90,5 +82,20 @@
     (pep log "(sqr 8)")
     (pep log "(defmacro unless [pred a b] `(if (not ~pred) ~a ~b))")
     (pep log "(unless false :yep :nope)")
+
+    (set! (.-onkeypress input)
+          (fn [ev]
+            (when (== (.-keyCode (or ev event)) 13)
+              (try
+                (let [form (reader/read-string (.-value input))]
+                  (do
+                    (pep log (.-value input))
+                    (js/setTimeout #(set! (.-value input) "") 0)
+                    (set! (.-src status) "blank.gif")
+                    (set! (.-innerText (.getElementById js/document "ns")) (prompt))))
+                (catch js/Error e
+                  (if (= (.-message e) "EOF while reading")
+                    (set! (.-src status) "dots.png")
+                    (repl-print log e "err")))))))
 
     (.focus input))))

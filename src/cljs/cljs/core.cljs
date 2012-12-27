@@ -7371,6 +7371,7 @@ nil if the end of stream has been reached")
 
 ;; Implicitly depends on cljs.analyzer
 (defn in-ns [name]
+  (assert name "Unable to resolve namespace name")
   (set! cljs.analyzer/*cljs-ns* name)
   (set! *ns* name)
   nil)
