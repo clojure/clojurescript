@@ -7362,6 +7362,19 @@ nil if the end of stream has been reached")
 (def namespaces (atom '{cljs.core {:name cljs.core}
                         cljs.user {:name cljs.user}}))
 
+(declare ^:dynamic *ns*)
+
+;; Implicitly depends on cljs.compiler
+(defn create-ns [ns-sym]
+  (let [msym (cljs.compiler/munge ns-sym)]
+      (js/eval (str "try { " msym "; } catch (e) { " msym " = {}; }"))))
+
+;; Implicitly depends on cljs.analyzer
+(defn in-ns [name]
+  (set! cljs.analyzer/*cljs-ns* name)
+  (set! *ns* name)
+  nil)
+
 ;; Implicitly depends on cljs.analyzer
 (defn setMacro [sym]
  (let [ns (symbol (or (namespace sym)

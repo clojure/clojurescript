@@ -20,11 +20,7 @@
 
 ;; Stubs just to make it work
 (declare ^:dynamic *out*)
-(declare ^:dynamic *ns*)
-
-;;(defn create-ns [ns-sym] nil)
-(defn create-ns [ns-sym] #_(.log js/console ns-sym)
-  (js/eval (str "try { " ns-sym "; } catch (e) { " ns-sym " = {}; }")))
+(defn create-first-ns [ns-sym] (js/eval (str ns-sym " = {};")))
 
 
 (declare resolve-var)
@@ -38,12 +34,8 @@
 ;; must be determined during analysis - the reader
 ;; did not know
 (def ^:dynamic *reader-ns-name* (gensym))
-(def ^:dynamic *reader-ns* (create-ns *reader-ns-name*))
+(def ^:dynamic *reader-ns* (create-first-ns *reader-ns-name*))
 
-;; (defonce namespaces (atom '{cljs.core {:name cljs.core}
-;;                             cljs.user {:name cljs.user}}))
-;; (def namespaces (atom '{cljs.core {:name cljs.core}
-;;                         cljs.user {:name cljs.user}}))
 ;; "refer" it from somehwere that it will be from the start
 (set! cljs.analyzer/namespaces cljs.core/namespaces)
 
@@ -686,7 +678,8 @@
       (println "**** Skipping analyze-deps ****")
       )
     (set! *cljs-ns* name)
-    (load-core)
+    (set! cljs.core/*ns* name)
+    ;;(load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
     (swap! namespaces #(-> %
@@ -882,7 +875,8 @@
     (if (specials op)
       form
       (if-let [mac (and (symbol? op) (get-expander op env))]
-        (binding [*ns* (create-ns *cljs-ns*)]
+        (binding [cljs.core/*ns* (cljs.core/create-ns *cljs-ns*)]
+          ;;(println "// macroexpand-1, detected macro: " form "->" )
           (apply mac form env (rest form)))
         (if (symbol? op)
           (let [opname (str op)]
@@ -974,7 +968,7 @@
 ;;     (assert res (str "Can't find " f " in classpath"))
 ;;     (binding [*cljs-ns* 'cljs.user
 ;;               *cljs-file* (.getPath ^java.net.URL res)
-;;               *ns* *reader-ns*]
+;;               cljs.core/*ns* *reader-ns*]
 ;;       (with-open [r (io/reader res)]
 ;;         (let [env (empty-env)
 ;;               pbr (clojure.lang.LineNumberingPushbackReader. r)
