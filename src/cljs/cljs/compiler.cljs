@@ -628,7 +628,9 @@
     (when (= :expr context) (emits "})()"))))
 
 (defn protocol-prefix [psym]
-  (symbol (str (-> (str psym) (.replace \. \$) (.replace \/ \$)) "$")))
+  (symbol (str (-> (str psym)
+                   (.replace (js/RegExp. "\\." "g") \$)
+                   (.replace (js/RegExp. "\\/" "g") \$)) "$")))
 
 (defmethod emit :invoke
   [{:keys [f args env] :as expr}]
