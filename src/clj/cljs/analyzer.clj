@@ -128,7 +128,7 @@
            {:name (symbol (str full-ns) (str (name sym)))
             :ns full-ns}))
 
-       (.contains s ".")
+       (and (not= ".." s) (>= (.indexOf s ".") 0))
        (let [idx (.indexOf s ".")
              prefix (symbol (subs s 0 idx))
              suffix (subs s (inc idx))
@@ -173,7 +173,7 @@
              ns (if (= "clojure.core" ns) "cljs.core" ns)]
          {:name (symbol (str (resolve-ns-alias env ns)) (name sym))})
 
-       (.contains s ".")
+       (and (not= ".." s) (>= (.indexOf s ".") 0))
        (let [idx (.indexOf s ".")
              prefix (symbol (subs s 0 idx))
              suffix (subs s idx)

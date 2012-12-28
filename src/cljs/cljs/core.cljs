@@ -7596,26 +7596,23 @@ nil if the end of stream has been reached")
       `(cljs.core/let [or# ~x]
          (if or# or# (cljs.core/or ~@next)))))
 
-;; TODO: get this working
-;; (clj-defmacro ..
-;;   "form => fieldName-symbol or (instanceMethodName-symbol args*)
-;; 
-;;   Expands into a member access (.) of the first member on the first
-;;   argument, followed by the next member on the result, etc. For
-;;   instance:
-;; 
-;;   (.. System (getProperties) (get \"os.name\"))
-;; 
-;;   expands to:
-;; 
-;;   (. (. System (getProperties)) (get \"os.name\"))
-;; 
-;;   but is easier to write, read, and understand."
-;;   {:added "1.0"}
-;;   ([x form] `(. ~x ~form))
-;;   ([x form & more] `(.. (. ~x ~form) ~@more)))
+(clj-defmacro ..
+  "form => fieldName-symbol or (instanceMethodName-symbol args*)
 
+  Expands into a member access (.) of the first member on the first
+  argument, followed by the next member on the result, etc. For
+  instance:
 
+  (.. System (getProperties) (get \"os.name\"))
+
+  expands to:
+
+  (. (. System (getProperties)) (get \"os.name\"))
+
+  but is easier to write, read, and understand."
+  {:added "1.0"}
+  ([x form] `(. ~x ~form))
+  ([x form & more] `(cljs.core/.. (. ~x ~form) ~@more)))
 
 (clj-defmacro ->
   "Threads the expr through the forms. Inserts x as the
@@ -7994,9 +7991,7 @@ nil if the end of stream has been reached")
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
             prototype-prefix (fn [sym]
-                               ;; TODO: restore .. form when it works
-                               ;;`(.. ~tsym -prototype ~(to-property sym))
-                               `(. (.-prototype ~tsym) ~(to-property sym)))
+                               `(cljs.core/.. ~tsym -prototype ~(to-property sym)))
             assign-impls (fn [[p sigs]]
                            (warn-if-not-protocol p)
                            (let [psym (resolve p)
@@ -8278,7 +8273,7 @@ nil if the end of stream has been reached")
        ~@(map method methods)
        (set! ~'*unchecked-if* false))))
 
-;; extend-protocol actually comes from Clojure core.clj but really
+;; extend-protyocol actually comes from Clojure core.clj but really
 ;; wants to be here in the file
 (defn- emit-extend-protocol [p specs]
   (let [impls (parse-impls specs)]

@@ -89,7 +89,8 @@
           munged-name
           (symbol (str munged-name "__$" depth))))
       ; String munging
-      (let [ss (string/replace (str s) #"/(.)" ".$1") ; Division is special
+      (let [ss (string/replace (str s) #"[.][.]" "_DOTDOT_") ; .. is special
+            ss (string/replace ss #"/(.)" ".$1") ; Division is special
             ss (string/join "." (map #(if (reserved %) (str % "$") %)
                                      (string/split ss #"[.]")))
             ms (apply str (map #(get CHAR_MAP % %) ss))]
