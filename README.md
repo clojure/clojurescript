@@ -36,8 +36,6 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 
 ### Bugs
 
-- defining new namespaces is broken
-- deftype with IFn doesn't result in runnable object
 - namespaced keywords are broken
 - numeric keywords are broken
 - no division ("/" symbol in general is problematic)
@@ -51,9 +49,10 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 ### TODOs
 
 - update to upstream ClojureScript
-- ability to define new namespaces
-- implement file I/O (at least on the node.js side)
+- file I/O (at least on the node.js side)
+- misc functionality: require/use, var metadata, defn-, defonce
 - self-hosting (compile ClojureScript compiler using node.js hosted ClojureScript compiler)
+- optional optimizations (single JS file output, etc)
 
 ### Build
 
