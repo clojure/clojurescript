@@ -36,7 +36,6 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 
 ### Bugs
 
-- namespaced keywords are broken
 - numeric keywords are broken
 - no division ("/" symbol in general is problematic)
 - use of certain regexex causes hard hangs

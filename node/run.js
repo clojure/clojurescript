@@ -20,9 +20,10 @@
     // Setup the print function
     cljs.core._STAR_print_fn_STAR_ = require("util").print;
 
-    // Bootstrap cljs.user namespace
+    // Bootstrap an empty version of the cljs.user namespace
     cljs.core.swap_BANG_.call(null,cljs.compiler._STAR_emitted_provides_STAR_,cljs.core.conj,(new cljs.core.Symbol(null,"cljs.user")));
     goog.provide('cljs.user');
+    cljs.core._STAR_ns_sym_STAR_ = cljs.core.symbol.call(null,"cljs.user");
 })();
 
 // Call the users's main function

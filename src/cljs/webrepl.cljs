@@ -39,7 +39,7 @@
   (set! (.-scrollTop log) (.-scrollHeight log)))
 
 (defn- read-next-form [text]
-  (binding [*ns* (cljs.core/create-ns ana/*cljs-ns*)]
+  (binding [*ns-sym* ana/*cljs-ns*]
     (reader/read-string text)))
 
 (defn postexpr [log text]

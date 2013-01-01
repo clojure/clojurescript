@@ -7362,25 +7362,53 @@ nil if the end of stream has been reached")
 (def namespaces (atom '{cljs.core {:name cljs.core}
                         cljs.user {:name cljs.user}}))
 
-(declare ^:dynamic *ns*)
+(declare ^:dynamic *ns-sym*)
 
-;; Implicitly depends on cljs.compiler
-(defn create-ns [ns-sym]
-  (let [msym (cljs.compiler/munge ns-sym)]
-      (js/eval (str "try { " msym "; } catch (e) { " msym " = {}; }"))))
+(defn find-ns
+  "Returns the namespace named by the symbol or nil if it doesn't
+  exist."
+  [sym]
+  (@namespaces sym))
 
+(defn create-ns
+  "Create a new namespace named by the symbol if one doesn't already
+  exist, returns it or the already-existing namespace of the same
+  name."
+  [sym]
+  (let [ns (find-ns sym)]
+    (if ns
+      ns
+      (do
+        (swap! namespaces assoc-in [sym :name] sym)
+        (find-ns sym)))))
+
+;; TODO: this belongs in REPL environment only
 ;; Implicitly depends on cljs.analyzer
 (defn in-ns [name]
-  (assert name "Unable to resolve namespace name")
+  (assert (symbol? name) "Unable to resolve namespace name")
   (set! cljs.analyzer/*cljs-ns* name)
-  (set! *ns* name)
-  nil)
+  (set! *ns-sym* name))
+
+(defn ns-resolve
+  "Returns the \"var\" to which a symbol will be resolved in the
+  namespace, else nil."
+  {:added "1.0"
+   :static true}
+  [ns sym]
+  (get-in ns [:defs sym]))
+
+(defn resolve
+  "same as (ns-resolve (find-ns *ns-sym*) symbol)"
+  [sym]
+  (ns-resolve (find-ns *ns-sym*) sym))
 
 ;; Implicitly depends on cljs.analyzer
 (defn setMacro [sym]
  (let [ns (symbol (or (namespace sym)
+                      *ns-sym*
                       (try cljs.analyzer/*cljs-ns*
-                        (catch js/Error e 'cljs.core))))
+                        (catch js/Error e 'cljs.core))
+                      'cljs.core))
        name (symbol (name sym))]
    (swap! namespaces assoc-in [:macros ns name] true))
    nil)

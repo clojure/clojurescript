@@ -20,8 +20,6 @@
 
 ;; Stubs just to make it work
 (declare ^:dynamic *out*)
-(defn create-first-ns [ns-sym] (js/eval (str ns-sym " = {};")))
-
 
 (declare resolve-var)
 (declare resolve-existing-var)
@@ -30,25 +28,13 @@
 (declare confirm-bindings)
 (declare ^:dynamic *cljs-file*)
 
-;; to resolve keywords like ::foo - the namespace
-;; must be determined during analysis - the reader
-;; did not know
+;; to resolve keywords like ::foo when *ns-sym* isn't set (i.e. when
+;; not at the REPL) - the namespace must be determined during analysis
+;; because the reader did not know
 (def ^:dynamic *reader-ns-name* (gensym))
-(def ^:dynamic *reader-ns* (create-first-ns *reader-ns-name*))
 
-;; "refer" it from somehwere that it will be from the start
+;; "refer" it from somewhere that it will exist from the start
 (set! cljs.analyzer/namespaces cljs.core/namespaces)
-
-(defn reset-namespaces! []
-  (reset! namespaces
-    '{cljs.core {:name cljs.core}
-      cljs.user {:name cljs.user}}))
-
-(defn get-namespace [key]
-  (@namespaces key))
-
-(defn set-namespace [key val]
-  (swap! namespaces assoc key val))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
@@ -226,6 +212,8 @@
 
 (defn analyze-keyword
     [env sym]
+    ;; When not at the REPL, *ns-sym* is not set so the reader did not
+    ;; know the namespace of the keyword
     {:op :constant :env env
      :form (if (= (namespace sym) (name *reader-ns-name*))
                (keyword (-> env :ns :name name) (name sym))
@@ -678,7 +666,7 @@
       (println "**** Skipping analyze-deps ****")
       )
     (set! *cljs-ns* name)
-    (set! cljs.core/*ns* name)
+    (set! cljs.core/*ns-sym* name)
     ;;(load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
@@ -875,7 +863,7 @@
     (if (specials op)
       form
       (if-let [mac (and (symbol? op) (get-expander op env))]
-        (binding [cljs.core/*ns* (cljs.core/create-ns *cljs-ns*)]
+        (binding [cljs.core/*ns-sym* *cljs-ns*]
           ;;(println "// macroexpand-1, detected macro: " form "->" )
           (apply mac form env (rest form)))
         (if (symbol? op)
@@ -968,13 +956,13 @@
 ;;     (assert res (str "Can't find " f " in classpath"))
 ;;     (binding [*cljs-ns* 'cljs.user
 ;;               *cljs-file* (.getPath ^java.net.URL res)
-;;               cljs.core/*ns* *reader-ns*]
+;;               cljs.core/*ns-sym* *reader-ns-name*]
 ;;       (with-open [r (io/reader res)]
 ;;         (let [env (empty-env)
 ;;               pbr (clojure.lang.LineNumberingPushbackReader. r)
 ;;               eof (Object.)]
 ;;           (loop [r (read pbr false eof false)]
-;;             (let [env (assoc env :ns (get-namespace *cljs-ns*))]
+;;             (let [env (assoc env :ns (find-ns *cljs-ns*))]
 ;;               (when-not (identical? eof r)
 ;;                 (analyze env r)
 ;;                 (recur (read pbr false eof false))))))))))

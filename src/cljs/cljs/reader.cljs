@@ -303,6 +303,7 @@
               (subs token (inc (.indexOf token "/")) (.-length token)))
       (special-symbols token (symbol token)))))
 
+;; based on matchSymol in clojure/lang/LispReader.java
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
@@ -317,7 +318,9 @@
       (reader-error reader "Invalid token: " token)
       (if (and (not (nil? ns)) (> (.-length ns) 0))
         (keyword (.substring ns 0 (.indexOf ns "/")) name)
-        (keyword token)))))
+        (if (identical? ":" (first token))
+          (keyword *ns-sym* name)    ;; namespaced keyword using default
+          (keyword token))))))
 
 (defn desugar-meta
   [f]
