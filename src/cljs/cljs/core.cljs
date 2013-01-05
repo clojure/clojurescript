@@ -8040,7 +8040,7 @@ nil if the end of stream has been reached")
         `(do ~@(mapcat assign-impls impl-map)))
       (let [t (resolve tsym)
             prototype-prefix (fn [sym]
-                               `(cljs.core/.. ~tsym -prototype ~(to-property sym)))
+                               `(cljs.core/.. ~tsym cljs.core/-prototype ~(to-property sym)))
             assign-impls (fn [[p sigs]]
                            (warn-if-not-protocol p)
                            (let [psym (resolve p)
