@@ -36,10 +36,10 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 
 ### Bugs
 
-- numeric keywords are broken
 - no division ("/" symbol in general is problematic)
 - use of certain regexex causes hard hangs
 - escaping in regexes is broken
+- numeric keywords are broken
 - anonymous functions do not warn about arity
 - non-unicode symbol breakage
 - warnings during compile about *unchecked-if*
@@ -49,7 +49,7 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 
 - update to upstream ClojureScript
 - file I/O (at least on the node.js side)
-- misc functionality: require/use, var metadata, defn-, defonce
+- misc functionality: require, use, var metadata, :private def check
 - self-hosting (compile ClojureScript compiler using node.js hosted ClojureScript compiler)
 - optional optimizations (single JS file output, etc)
 

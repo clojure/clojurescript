@@ -7700,6 +7700,13 @@ nil if the end of stream has been reached")
          (cljs.core/let [~form temp#]
            ~@body)))))
 
+(clj-defmacro declare
+  "defs the supplied var names with no bindings, useful for making forward declarations."
+  {:added "1.0"}
+  [& names] `(do ~@(map #(list 'def (vary-meta % assoc :declared true)) names)))
+
+;; TODO: import?
+
 (clj-defmacro doto
   "Evaluates x then calls all of the methods and functions with the
   value of x supplied at the front of the given arguments.  The forms
@@ -7727,8 +7734,7 @@ nil if the end of stream has been reached")
   [name & args]
   (let [;; TODO: verify this works
         t (with-meta (gensym "target")
-            (meta name))
-       ]
+            (meta name))]
     `(cljs.core/fn [~t ~@args]
        (. ~t (~name ~@args)))))
 
@@ -7833,6 +7839,21 @@ nil if the end of stream has been reached")
   "Ignores body, yields nil"
   {:added "1.0"}
   [& body])
+
+(clj-defmacro defn-
+  "same as defn, yielding non-public def"
+  {:added "1.0"}
+  [name & decls]
+  ;; TODO: make this actually mean something
+  (list* `cljs.core/defn (with-meta name (assoc (meta name) :private true)) decls))
+
+(clj-defmacro defonce
+  "defs name to have the root value of the expr if the named var has
+  no root value, else expr is unevaluated"
+  {:added "1.0"}
+  [name expr]
+  `(cljs.core/when-not (cljs.core/resolve ~name)
+     (def ~name ~expr)))
 
 (clj-defmacro while
   "Repeatedly executes body while test expression is true. Presumes
