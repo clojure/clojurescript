@@ -591,21 +591,25 @@
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
    If EOF, throws if eof-is-error is true. Otherwise returns sentinel."
-  [reader eof-is-error sentinel is-recursive]
-  (let [ch (read-char reader)]
-    (cond
-     (nil? ch) (if eof-is-error (reader-error reader "EOF while reading") sentinel)
-     (whitespace? ch) (recur reader eof-is-error sentinel is-recursive)
-     (comment-prefix? ch) (recur (read-comment reader ch) eof-is-error sentinel is-recursive)
-     :else (let [f (macros ch)
-                 res
-                 (cond
-                  f (f reader ch)
-                  (number-literal? reader ch) (read-number reader ch)
-                  :else (read-symbol reader ch))]
-     (if (identical? res reader)
-       (recur reader eof-is-error sentinel is-recursive)
-       res)))))
+  ([reader]
+    (read reader true nil))
+  ([reader eof-is-error sentinel]
+    (read reader eof-is-error sentinel false))
+  ([reader eof-is-error sentinel is-recursive]
+    (let [ch (read-char reader)]
+      (cond
+       (nil? ch) (if eof-is-error (reader-error reader "EOF while reading") sentinel)
+       (whitespace? ch) (recur reader eof-is-error sentinel is-recursive)
+       (comment-prefix? ch) (recur (read-comment reader ch) eof-is-error sentinel is-recursive)
+       :else (let [f (macros ch)
+                   res
+                   (cond
+                    f (f reader ch)
+                    (number-literal? reader ch) (read-number reader ch)
+                    :else (read-symbol reader ch))]
+       (if (identical? res reader)
+         (recur reader eof-is-error sentinel is-recursive)
+         res))))))
 
 (defn read-string
   "Reads one object from the string s"

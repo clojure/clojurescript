@@ -10,10 +10,11 @@
 
 (ns cljs.compiler
   (:refer-clojure :exclude [munge macroexpand-1])
-  (:require ;; [clojure.java.io :as io]
+  (:require [cljs.io :as io]
             [clojure.string :as string]
             ;; [cljs.tagged-literals :as tags]
-            [cljs.analyzer :as ana])
+            [cljs.analyzer :as ana]
+            [cljs.reader :as reader])
   (:use-macros [cljs.compiler-macros :only [emit-wrap]])
   ;;(:import java.lang.StringBuilder)
   )
@@ -793,14 +794,15 @@
                (emits (interleave (concat segs (repeat nil))
                                   (concat args [nil]))))))
 
-;; (defn forms-seq
-;;   "Seq of forms in a Clojure or ClojureScript file."
-;;   ([f]
-;;      (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
-;;   ([f ^java.io.PushbackReader rdr]
-;;      (if-let [form (binding [*ns* ana/*reader-ns*] (read rdr nil nil))]
-;;        (lazy-seq (cons form (forms-seq f rdr)))
-;;        (.close rdr))))
+
+(defn forms-seq
+  "Seq of forms in a Clojure or ClojureScript file."
+  ([f]
+     (forms-seq f (push-back-reader (cljs.io/file-read f))))
+  ([f rdr]
+     (if-let [form (binding [cljs.core/*ns-sym* ana/*reader-ns-name*] (reader/read rdr nil nil))]
+       (lazy-seq (cons form (forms-seq f rdr)))
+       #_(close rdr))))
 
 ;; (defn rename-to-js
 ;;   "Change the file extension from .cljs to .js. Takes a File or a
@@ -813,6 +815,25 @@
 ;;   [^java.io.File f]
 ;;   (.mkdirs (.getParentFile (.getCanonicalFile f))))
 
+(defn compile-forms*
+  ([forms] (compile-forms* forms nil nil "" ""))
+  ([forms ns-name deps code output]
+    (if (seq forms)
+      (let [env (ana/empty-env)
+            ast (ana/analyze env (first forms))
+            js-str (emit-str ast)
+            code (str code js-str)
+            output (str output (with-out-str (js/eval js-str)))]
+        ;(print js-str)
+        (if (= (:op ast) :ns)
+          (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)) code output)
+          (recur (rest forms) ns-name deps code output)))
+      {:ns (or ns-name ana/*cljs-ns*)
+       :emit-str code
+       :output output
+       :provides [ns-name]
+       :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))})))
+
 ;; (defmacro with-core-cljs
 ;;   "Ensure that core.cljs has been loaded."
 ;;   [& body]
@@ -822,27 +843,12 @@
 
 ;; (defn compile-file* [src dest]
 ;;   (with-core-cljs
-;;     (with-open [out ^java.io.Writer (io/make-writer dest {})]
-;;       (binding [*out* out
-;;                 ana/*cljs-ns* 'cljs.user
-;;                 ana/*cljs-file* (.getPath ^java.io.File src)
-;;                 *data-readers* tags/*cljs-data-readers*
-;;                 *position* (atom [0 0])
-;;                 *emitted-provides* (atom #{})]
-;;         (loop [forms (forms-seq src)
-;;                ns-name nil
-;;                deps nil]
-;;           (if (seq forms)
-;;             (let [env (ana/empty-env)
-;;                   ast (ana/analyze env (first forms))]
-;;               (do (emit ast)
-;;                   (if (= (:op ast) :ns)
-;;                     (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
-;;                     (recur (rest forms) ns-name deps))))
-;;             {:ns (or ns-name 'cljs.user)
-;;              :provides [ns-name]
-;;              :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
-;;              :file dest}))))))
+;;     (binding [ana/*cljs-ns* 'cljs.user
+;;               ana/*cljs-file* src
+;;               *position* (atom [0 0])
+;;               *emitted-provides* (atom #{})]
+;;       (let [cf (merge (compile-forms* (forms-seq src)) {:file dest})]
+;;         (cljs.io/file-write dest (:emit-str cf))))))
 
 ;; (defn requires-compilation?
 ;;   "Return true if the src file requires compilation."

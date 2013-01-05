@@ -7293,6 +7293,25 @@ nil if the end of stream has been reached")
   "Creates a StringPushbackReader from a given string"
   (StringPushbackReader. s (atom 0) (atom nil)))
 
+;;;;;;;;;;;;;;;;;;; File loading ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Implicitly depends on cljs.compiler namespace
+(defn load-file*
+  "Sequentially read and evaluate the set of forms contained in the
+  file. Returns a compile-forms* map that contains the emitted
+  JavaScript string (:emit-str) and the output (:output)."
+  [name]
+  (cljs.compiler/compile-forms*
+    (cljs.compiler/forms-seq name)))
+
+(defn load-file
+  "Sequentially read and evaluate the set of forms contained in the
+  file."
+  [name]
+  (let [lf (load-file* name)]
+    (print (:output lf))
+    (dissoc lf :output :emit-str)))
+
 ;;;;;;;;;;;;;;;;;; Destructuring ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn destructure [bindings]
