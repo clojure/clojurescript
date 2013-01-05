@@ -8341,7 +8341,7 @@ nil if the end of stream has been reached")
        ~@(map method methods)
        (set! ~'*unchecked-if* false))))
 
-;; extend-protyocol actually comes from Clojure core.clj but really
+;; extend-protocol actually comes from Clojure core.clj but really
 ;; wants to be here in the file
 (defn- emit-extend-protocol [p specs]
   (let [impls (parse-impls specs)]
