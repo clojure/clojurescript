@@ -9,7 +9,8 @@
     (loop [str (reader/read r false :eof false)]
       (when (not= str :eof)
         (try
-          (let [res (comp/emit-str (ana/analyze js/env str))]
+          (let [env (ana/empty-env)
+                res (comp/emit-str (ana/analyze env str))]
             (js/eval res))
           (catch js/Error e
            (println e)
