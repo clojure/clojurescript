@@ -118,6 +118,13 @@
         c ; Print simple ASCII characters
         (format "\\u%04X" cp))))) ; Any other character is Unicode
 
+(defn- escape-pattern [^String pattern]
+  (-> pattern
+      ;; substitute \ with \\
+      (.split "\\") (.join "\\\\")
+      ;; substitute / with \/
+      (.split "/") (.join "\\/")))
+
 (defn- escape-string [^CharSequence s]
   (apply str (map #(escape-char %) s)))
 
@@ -207,9 +214,8 @@
   number (emit-constant [x] (emits x))
   boolean (emit-constant [x] (emits (if x "true" "false")))
   js/RegExp (emit-constant [x]
-      (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))
-            all-slashes (js/RegExp. "\\/" "g")]
-          (emits (str \/ (.replace pattern all-slashes "\\\\/") \/ flags))))
+      (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
+          (emits (str \/ (escape-pattern pattern) \/ flags))))
   string (emit-constant [x]
       (cond
        (keyword? x) (emit-constant-keyword x)
