@@ -1,0 +1,23 @@
+before_install:
+  - sudo apt-get install wget -qq
+  - sudo apt-get install unzip -qq
+
+before_script:
+  - echo "Fetching V8..."
+  - git clone --branch=master --depth=1 --quiet git://github.com/v8/v8.git v8 && cd v8
+  - echo "Building V8"
+  - make dependencies
+  - make native
+  - cd ./out/native/
+  - export V8_HOME=`pwd`
+  - cd ../../../
+  - echo "Fetching Spidermonkey"
+  - wget http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla-central/jsshell-linux-i686.zip
+  - unzip jsshell-linux-i686.zip -d spidermonkey
+  - cd spidermonkey
+  - export SPIDERMONKEY_HOME=`pwd`
+  - cd ../
+  - ./script/bootstrap
+
+script:
+  - ./script/test
