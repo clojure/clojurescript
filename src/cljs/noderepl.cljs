@@ -26,8 +26,12 @@
   (try
    (let [env (assoc (ana/empty-env) :context :expr)
          form (read-next-form text)
-         res (comp/emit-str (ana/analyze env form))]
-     (when *debug* (println "emit:" res))
+         body (ana/analyze env form)
+         res (comp/emit-str body)]
+     (when *debug*
+       (println "read:" form)
+       (println "analyzed:" (:form body))
+       (println "emit:" res))
      (repl-print (pr-str (js/eval res)) "rtn"))
    (catch js/Error e
      (repl-print (.-stack e) "err")
