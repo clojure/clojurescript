@@ -156,9 +156,6 @@
                         [(inc line) 0])))
   nil)
 
-(defn ^String emit-str [expr]
-  (with-out-str (emit expr)))
-
 (defn emit-provide [sym]
   (when-not (or (nil? *emitted-provides*) (contains? @*emitted-provides* sym))
     (swap! *emitted-provides* conj sym)
