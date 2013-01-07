@@ -14,7 +14,6 @@
   (assert (= ':foo (keyword "foo")))
   (assert (= ':bar/foo (keyword "bar" "foo")))
   (assert (= *ns-sym* (symbol (namespace ::foo))))
-  
 
   ;; symbols
   (assert (= 'mysym (symbol "mysym")))
@@ -26,6 +25,10 @@
   (assert (= {:a 1} (meta (with-meta 'blah {:a 1}))))
   (assert (= "cljs.user" (namespace (with-meta 'cljs.user/foo {:a 1}))))
   (assert (= "cljs.user" (namespace (with-meta (with-meta 'cljs.user/foo {:a 1}) {:b 2}))))
+
+  ;; regex
+  (assert (= '("/a" "/d" "/g") (re-seq #"/." "/abc/def/ghi")))
+  (assert (= 1 (count (take 2 (re-seq #"^$" ")))))
 
 
   ;; arrays
@@ -47,11 +50,10 @@
   (assert (= [20 10] ((fn [{:keys [a b]}] [b a]) {:a 10 :b 20})))
 
 
-  ;; with-out-str
-  (assert (= "blah\n" (with-out-str (println "blah"))))
+  ;; with-out-str, time, regex, for
   (assert (= "01234" (with-out-str (doseq [n (range 5)] (print n)))))
   
-  ;; try
+  ;; try, throw
   (assert (= 3 (try (+ 1 2) (catch js/Error e :exc))))
   (assert (= :exc (try (throw (js/Error. "err")) (catch js/Error e :exc))))
 
@@ -68,8 +70,6 @@
   (assert (= [20 300] (letfn [(twice [x] (* 2 x)) (thrice [x] (* 3 x))] [(twice 10) (thrice 100)])))
 
   ;; for
-  (assert (= '(2 4 6 8) (for [x [1 2 3 4]] (* x 2))))
-  (assert (= '(2 6) (for [x [1 2 3 4] :when (odd? x)] (* x 2))))
   (assert (= '([1 2] [3 6]) (for [x [1 2 3 4] :let [y (* x 2)] :when (odd? x)] [x y])))
 
   ;; while
@@ -137,5 +137,7 @@
   (assert (= "got a symbol and 1" (bar 'blah 1)))
   (assert (= "got a vector and 2" (bar [] 2)))
 
-  (println "All tests finished successfully")
-  )
+  ;; with-out-str, time, regex, for
+  (re-find #"Elapsed time: \d* msecs" (with-out-str (time (apply str (for [n (range 100)] (with-out-str (print (format "%d/" n))))))))
+
+  (println "All tests finished successfully"))

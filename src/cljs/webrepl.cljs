@@ -54,8 +54,11 @@
   (try
     (let [env (assoc (ana/empty-env) :context :expr)
           form (read-next-form text)
-          res (comp/emit-str (ana/analyze env form))]
-      (when *debug* (println "emit:" res))
+          _ (when *debug* (println "READ:" (pr-str form)))
+          body (ana/analyze env form)
+          _ (when *debug* (println "ANALYZED:" (pr-str (:form body))))
+          res (comp/emit-str body)
+          _ (when *debug* (println "EMITTED:" (pr-str res)))]
       (repl-print log (pr-str (js/eval res)) "rtn"))
     (catch js/Error e
       (repl-print log (.-stack e) "err")
@@ -78,7 +81,7 @@
        "http://github.com/kanaka/clojurescript"]])
     (println ";;   - A port of the ClojureScript compiler to ClojureScript")
     (pep log "(+ 1 2)")
-    (pep log "(def sqr (fn* [x] (* x x)))")
+    (pep log "(defn sqr [x] (* x x))")
     (pep log "(sqr 8)")
     (pep log "(defmacro unless [pred a b] `(if (not ~pred) ~a ~b))")
     (pep log "(unless false :yep :nope)")

@@ -36,12 +36,12 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 
 ### Bugs
 
-- no division ("/" symbol in general is problematic)
-- use of certain regexex causes hard hangs
-- escaping in regexes is broken
-- numeric keywords are broken
+- division symbol breaks namespaces atom (currently removed)
+- regexes with forward slashes are printed with extra escaping
+- numeric keywords (:2) are broken
 - anonymous functions do not warn about arity
 - non-unicode symbol breakage
+- hex numbers "0x7e7"
 - warnings during compile about *unchecked-if*
 
 
@@ -52,21 +52,15 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 - misc functionality: require, use, var metadata, :private def check
 - self-hosting (compile ClojureScript compiler using node.js hosted ClojureScript compiler)
 - optional optimizations (single JS file output, etc)
+- tagged reader literals
+- get test/cljs/cljs/core_test.cljs to load/run successfully
+- line numbered errors
+- single file output and performance optimizations (without unused code removal)
 
 ### Build
 
-You can build the ClojureScript analyzer and compiler with
-ClojureScript like this:
-
-```
-bin/cljsc src/cljs/cljs/compiler.cljs > compiler.cljs
-```
-
-However, that is not all that useful because it  does not have all the pieces
-necessary to run it under a JavaScript engine (e.g. browser or node.js).
-
 You can rebuild the ClojureScript analyzer, compiler, reader and
-browser/node.js bootstrap pieces with a web REPL like this:
+browser bootstrap pieces with a web REPL like this:
 
 ```
 cd web
@@ -74,7 +68,7 @@ cd web
 ```
 Now load the `web/jsrepl.html` file in a browser.
 
-For a REPL in nodejs, build the `src/cljs/noderepl.cljs` code:
+For a REPL in Node.js, build the `src/cljs/noderepl.cljs` code:
 
 ```
 cd node
