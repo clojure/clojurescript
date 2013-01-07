@@ -120,8 +120,8 @@
 
 (defn- escape-pattern [^String pattern]
   (-> pattern
-      ;; substitute \ with \\
-      (.split "\\") (.join "\\\\")
+      ;; substitute \/ with /
+      (.split "\\/") (.join "/")
       ;; substitute / with \/
       (.split "/") (.join "\\/")))
 
