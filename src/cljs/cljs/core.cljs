@@ -6301,7 +6301,10 @@ reduces them without incurring seq initialization"
               ; for their custom types.
               (satisfies? IPrintable obj) (apply write-all writer (-pr-seq obj opts))
 
-              (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
+              (regexp? obj) (write-all writer "#\""
+                                       ; Replace \/ with / since clojure does not escape it.
+                                       (.join (.split (.-source obj) "\\/") "/")
+                                       "\"")
 
               :else (write-all writer "#<" (str obj) ">")))))
 
