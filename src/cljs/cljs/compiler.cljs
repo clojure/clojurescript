@@ -801,7 +801,7 @@
 (defn forms-seq
   "Seq of forms in a Clojure or ClojureScript file."
   ([f]
-     (forms-seq f (push-back-reader (cljs.io/file-read f))))
+     (forms-seq f (reader/push-back-reader (cljs.io/file-read f))))
   ([f rdr]
      (if-let [form (binding [cljs.core/*ns-sym* ana/*reader-ns-name*] (reader/read rdr nil nil))]
        (lazy-seq (cons form (forms-seq f rdr)))

@@ -5,7 +5,7 @@
             [cljs.reader :as reader]))
 
 (defn ep [text]
-  (let [r (push-back-reader text)]
+  (let [r (reader/push-back-reader text)]
     (loop [str (reader/read r false :eof false)]
       (when (not= str :eof)
         (try
