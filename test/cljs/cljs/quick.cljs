@@ -28,7 +28,7 @@
 
   ;; regex
   (assert (= '("/a" "/d" "/g") (re-seq #"/." "/abc/def/ghi")))
-  (assert (= 1 (count (take 2 (re-seq #"^$" ")))))
+  (assert (= 1 (count (take 2 (re-seq #"^$" "")))))
 
 
   ;; arrays
