@@ -6301,7 +6301,10 @@ reduces them without incurring seq initialization"
               ; for their custom types.
               (satisfies? IPrintable obj) (apply write-all writer (-pr-seq obj opts))
 
-              (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
+              (regexp? obj) (write-all writer "#\""
+                                       ; Replace \/ with / since, clojure does not escapes it.
+                                       (.join (.split (.-source obj) "\\/") "/")
+                                       "\"")
 
               :else (write-all writer "#<" (str obj) ">")))))
 
@@ -6360,7 +6363,7 @@ reduces them without incurring seq initialization"
 (defn pr-str
   "pr to a string, returning it. Fundamental entrypoint to IPrintable."
   [& objs]
-  (pr-str-with-opts objs (pr-opts)))
+    (pr-str-with-opts objs (pr-opts)))
 
 (defn prn-str
   "Same as pr-str followed by (newline)"
