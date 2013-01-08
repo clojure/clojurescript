@@ -950,19 +950,18 @@
         (keyword? form) (analyze-keyword env form)
         :else {:op :constant :env env :form form}))))
 
-;; (defn analyze-file
-;;   [^String f]
-;;   (let [res (if (re-find #"^file://" f) (java.net.URL. f) (io/resource f))]
-;;     (assert res (str "Can't find " f " in classpath"))
-;;     (binding [*cljs-ns* 'cljs.user
-;;               *cljs-file* (.getPath ^java.net.URL res)
-;;               cljs.core/*ns-sym* *reader-ns-name*]
-;;       (with-open [r (io/reader res)]
-;;         (let [env (empty-env)
-;;               pbr (clojure.lang.LineNumberingPushbackReader. r)
-;;               eof (Object.)]
-;;           (loop [r (read pbr false eof false)]
-;;             (let [env (assoc env :ns (find-ns *cljs-ns*))]
-;;               (when-not (identical? eof r)
-;;                 (analyze env r)
-;;                 (recur (read pbr false eof false))))))))))
+;; TODO: Implicit dependency on cljs.reader.
+(defn analyze-file
+  [^String f]
+  (let [raw-string (cljs.core/file-read f)]
+    (binding [*cljs-ns* 'cljs.user
+              *cljs-file* f
+              cljs.core/*ns-sym* *reader-ns-name*]
+      (let [env (empty-env)
+            pbr (push-back-reader raw-string)
+            eof (js/Object.)]
+        (loop [r (cljs.reader/read pbr false eof false)]
+          (let [env (assoc env :ns (find-ns *cljs-ns*))]
+            (when-not (identical? eof r)
+              (analyze env r)
+              (recur (cljs.reader/read pbr false eof false)))))))))

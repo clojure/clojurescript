@@ -15,7 +15,7 @@
             ;; [cljs.tagged-literals :as tags]
             [cljs.analyzer :as ana]
             [cljs.reader :as reader])
-  (:use-macros [cljs.compiler-macros :only [emit-wrap]])
+  (:use-macros [cljs.compiler-macros :only [emit-wrap with-core-cljs]])
   ;;(:import java.lang.StringBuilder)
   )
 
@@ -797,26 +797,25 @@
                (emits (interleave (concat segs (repeat nil))
                                   (concat args [nil]))))))
 
-
 (defn forms-seq
   "Seq of forms in a Clojure or ClojureScript file."
   ([f]
-     (forms-seq f (reader/push-back-reader (cljs.io/file-read f))))
+     (forms-seq f (reader/push-back-reader (io/file-read f))))
   ([f rdr]
      (if-let [form (binding [cljs.core/*ns-sym* ana/*reader-ns-name*] (reader/read rdr nil nil))]
        (lazy-seq (cons form (forms-seq f rdr)))
        #_(close rdr))))
 
-;; (defn rename-to-js
-;;   "Change the file extension from .cljs to .js. Takes a File or a
-;;   String. Always returns a String."
-;;   [file-str]
-;;   (clojure.string/replace file-str #"\.cljs$" ".js"))
+(defn rename-to-js
+  "Change the file extension from .cljs to .js. Takes a File or a
+  String. Always returns a String."
+  [file-str]
+  (string/replace file-str #"\.cljs$" ".js"))
 
-;; (defn mkdirs
-;;   "Create all parent directories for the passed file."
-;;   [^java.io.File f]
-;;   (.mkdirs (.getParentFile (.getCanonicalFile f))))
+(defn mkdirs
+  "Create all parent directories for the passed file."
+  [^cljs.io.File f]
+  (.mkdirs (.getParentFile (.getCanonicalFile f))))
 
 (defn compile-forms*
   ([forms] (compile-forms* forms nil nil "" ""))
@@ -844,46 +843,59 @@
 ;;          (ana/analyze-file "cljs/core.cljs"))
 ;;        ~@body))
 
-;; (defn compile-file* [src dest]
-;;   (with-core-cljs
-;;     (binding [ana/*cljs-ns* 'cljs.user
-;;               ana/*cljs-file* src
-;;               *position* (atom [0 0])
-;;               *emitted-provides* (atom #{})]
-;;       (let [cf (merge (compile-forms* (forms-seq src)) {:file dest})]
-;;         (cljs.io/file-write dest (:emit-str cf))))))
+(defn ns-snap [ns]
+  (let [nss1 (dissoc (get @ana/namespaces ns) :requires-macros)
+        nss2 (reader/read-string
+               (pr-str (update-in nss1 [:defs] dissoc '/)))]
+    (emit-str (ana/analyze (ana/empty-env)
+      (list 'swap! 'cljs.core/namespaces 'assoc (list 'quote ns) (list 'quote nss2))))))
 
-;; (defn requires-compilation?
-;;   "Return true if the src file requires compilation."
-;;   [^java.io.File src ^java.io.File dest]
-;;   (or (not (.exists dest))
-;;       (> (.lastModified src) (.lastModified dest))))
 
-;; (defn compile-file
-;;   "Compiles src to a file of the same name, but with a .js extension,
-;;    in the src file's directory.
+(defn compile-file* [^cljs.io.File src ^cljs.io.File dest]
+  (with-core-cljs
+    (binding [ana/*cljs-ns* 'cljs.user
+              ana/*cljs-file* (.getPath src)
+              *position* (atom [0 0])
+              *emitted-provides* (atom #{})]
+      (let [cf (merge (compile-forms* (forms-seq src)) {:file (.getPath dest)})
+            ns-str (ns-snap (first (:provides cf)))
+            write-str (str (:emit-str cf)
+                           "\n// Analyzer namespace snapshot:\n"
+                           ns-str)]
+        (io/file-write dest write-str)
+        (dissoc cf :emit-str :output)))))
 
-;;    With dest argument, write file to provided location. If the dest
-;;    argument is a file outside the source tree, missing parent
-;;    directories will be created. The src file will only be compiled if
-;;    the dest file has an older modification time.
+(defn requires-compilation?
+  "Return true if the src file requires compilation."
+  [^cljs.io.File src ^cljs.io.File dest]
+  (or (not (.exists dest))
+      (> (.lastModified src) (.lastModified dest))))
 
-;;    Both src and dest may be either a String or a File.
+(defn compile-file
+  "Compiles src to a file of the same name, but with a .js extension,
+   in the src file's directory.
 
-;;    Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
-;;    If the file was not compiled returns only {:file ...}"
-;;   ([src]
-;;      (let [dest (rename-to-js src)]
-;;        (compile-file src dest)))
-;;   ([src dest]
-;;      (let [src-file (io/file src)
-;;            dest-file (io/file dest)]
-;;        (if (.exists src-file)
-;;          (if (requires-compilation? src-file dest-file)
-;;            (do (mkdirs dest-file)
-;;                (compile-file* src-file dest-file))
-;;            {:file dest-file})
-;;          (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
+   With dest argument, write file to provided location. If the dest
+   argument is a file outside the source tree, missing parent
+   directories will be created. The src file will only be compiled if
+   the dest file has an older modification time.
+
+   Both src and dest may be either a String or a File.
+
+   Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
+   If the file was not compiled returns only {:file ...}"
+  ([src]
+     (let [dest (rename-to-js src)]
+       (compile-file src dest)))
+  ([src dest]
+     (let [src-file (io/file src)
+           dest-file (io/file dest)]
+       (if (.exists src-file)
+         (if (requires-compilation? src-file dest-file)
+           (do (mkdirs dest-file)
+               (compile-file* src-file dest-file))
+           {:file dest-file})
+         (throw (js/Error. (str "The file " src " does not exist.")))))))
 
 ;; (comment
 ;;   ;; flex compile-file
@@ -894,57 +906,54 @@
 ;;     (compile-file "/tmp/somescript.cljs")
 ;;     (slurp "/tmp/somescript.js")))
 
-;; (defn path-seq
-;;   [file-str]
-;;   (->> java.io.File/separator
-;;        java.util.regex.Pattern/quote
-;;        re-pattern
-;;        (string/split file-str)))
+(defn path-seq
+  [file-str]
+  (string/split file-str io/path-separator))
 
-;; (defn to-path
-;;   ([parts]
-;;      (to-path parts java.io.File/separator))
-;;   ([parts sep]
-;;      (apply str (interpose sep parts))))
+(defn to-path
+  ([parts]
+     (to-path parts io/path-separator))
+  ([parts sep]
+     (apply str (interpose sep parts))))
 
-;; (defn to-target-file
-;;   "Given the source root directory, the output target directory and
-;;   file under the source root, produce the target file."
-;;   [^java.io.File dir ^String target ^java.io.File file]
-;;   (let [dir-path (path-seq (.getAbsolutePath dir))
-;;         file-path (path-seq (.getAbsolutePath file))
-;;         relative-path (drop (count dir-path) file-path)
-;;         parents (butlast relative-path)
-;;         parent-file (java.io.File. ^String (to-path (cons target parents)))]
-;;     (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
+(defn to-target-file
+  "Given the source root directory, the output target directory and
+  file under the source root, produce the target file."
+  [^cljs.io.File dir ^String target ^cljs.io.File file]
+  (let [dir-path (path-seq (.getAbsolutePath dir))
+        file-path (path-seq (.getAbsolutePath file))
+        relative-path (drop (count dir-path) file-path)
+        parents (butlast relative-path)
+        parent-file (io/file ^String (to-path (cons target parents)))]
+    (io/file parent-file ^String (rename-to-js (last relative-path)))))
 
-;; (defn cljs-files-in
-;;   "Return a sequence of all .cljs files in the given directory."
-;;   [dir]
-;;   (filter #(let [name (.getName ^java.io.File %)]
-;;              (and (.endsWith name ".cljs")
-;;                   (not= \. (first name))
-;;                   (not (contains? cljs-reserved-file-names name))))
-;;           (file-seq dir)))
+(defn cljs-files-in
+  "Return a sequence of all .cljs files in the given directory."
+  [dir]
+  (filter #(let [name (.getName ^cljs.io.File %)]
+             (and (re-find #"\.cljs$" name)
+                  (not= \. (first name))
+                  (not (contains? cljs-reserved-file-names name))))
+          (io/file-seq dir)))
 
-;; (defn compile-root
-;;   "Looks recursively in src-dir for .cljs files and compiles them to
-;;    .js files. If target-dir is provided, output will go into this
-;;    directory mirroring the source directory structure. Returns a list
-;;    of maps containing information about each file which was compiled
-;;    in dependency order."
-;;   ([src-dir]
-;;      (compile-root src-dir "out"))
-;;   ([src-dir target-dir]
-;;      (let [src-dir-file (io/file src-dir)]
-;;        (loop [cljs-files (cljs-files-in src-dir-file)
-;;               output-files []]
-;;          (if (seq cljs-files)
-;;            (let [cljs-file (first cljs-files)
-;;                  output-file ^java.io.File (to-target-file src-dir-file target-dir cljs-file)
-;;                  ns-info (compile-file cljs-file output-file)]
-;;              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
-;;            output-files)))))
+(defn compile-root
+  "Looks recursively in src-dir for .cljs files and compiles them to
+   .js files. If target-dir is provided, output will go into this
+   directory mirroring the source directory structure. Returns a list
+   of maps containing information about each file which was compiled
+   in dependency order."
+  ([src-dir]
+     (compile-root src-dir "out"))
+  ([src-dir target-dir]
+     (let [src-dir-file (io/file src-dir)]
+       (loop [cljs-files (cljs-files-in src-dir-file)
+              output-files []]
+         (if (seq cljs-files)
+           (let [cljs-file (first cljs-files)
+                 output-file ^cljs.io.File (to-target-file src-dir-file target-dir cljs-file)
+                 ns-info (compile-file cljs-file output-file)]
+             (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
+           output-files)))))
 
 ;; (comment
 ;;   ;; compile-root
