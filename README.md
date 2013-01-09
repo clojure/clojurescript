@@ -12,7 +12,7 @@ ClojureScript is a new compiler for [Clojure](http://clojure.org) that targets J
 
 ## Questions, Feedback? ##
 
-Please point all of your questions and feedback [here](http://groups.google.com/group/clojure).
+Please point all of your questions and feedback [here](http://groups.google.com/group/clojure).  The Jira bug/feature tracking application is located at <http://dev.clojure.org/jira/browse/CLJS>.
 
 ## Developers Welcome ##
 
