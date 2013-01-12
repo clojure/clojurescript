@@ -9,13 +9,13 @@
 (ns twitterbuzz.anneal)
 
 (defn exp [x]
-  (js/Math.exp x))
+  (.exp js/Math x))
 
 (defn abs [x]
-  (js/Math.abs x))
+  (.abs js/Math x))
 
 (defn random []
-  (js/Math.random))
+  (.random js/Math))
 
 (defn standard-prob [e e1 temp]
   (if (< e1 e)
