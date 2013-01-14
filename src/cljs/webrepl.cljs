@@ -71,7 +71,8 @@
 (set! (.-onload js/window) (fn []
   (let [log (.getElementById js/document "log")
         input (.getElementById js/document "input")
-        status (.getElementById js/document "status")]
+        status1 (.getElementById js/document "status1")
+        status2 (.getElementById js/document "status2")]
     (set! *print-fn* #(repl-print log % nil))
 
     (println ";; ClojureScript")
@@ -94,11 +95,14 @@
                   (do
                     (pep log (.-value input))
                     (js/setTimeout #(set! (.-value input) "") 0)
-                    (set! (.-src status) "blank.gif")
+                    (set! (.-visibility (.-style status1)) "visible")
+                    (set! (.-visibility (.-style status2)) "hidden")
                     (set! (.-innerText (.getElementById js/document "ns")) (prompt))))
                 (catch js/Error e
-                  (if (= (.-message e) "EOF while reading")
-                    (set! (.-src status) "dots.png")
+                  (if (re-find #"EOF while reading" (.-message e))
+                    (do
+                      (set! (.-visibility (.-style status1)) "hidden")
+                      (set! (.-visibility (.-style status2)) "visible"))
                     (repl-print log e "err")))))))
 
     (.focus input))))

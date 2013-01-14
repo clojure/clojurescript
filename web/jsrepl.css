@@ -1,0 +1,39 @@
+body {
+  font-family: Monaco,monospace;
+  font-size: 10pt;
+}
+.pad {
+  height: 20em;
+}
+#log {
+  height: 25em;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+#log table {
+  border-collapse: collapse;
+}
+#log td {
+  vertical-align: top;
+  padding: 0;
+}
+.ns {
+  float: left;
+}
+.cg {
+  color: #00b;
+}
+.err {
+  color: #b00;
+}
+.rtn {
+  color: #000;
+}
+textarea#input {
+  padding: 0;
+  margin: 0;
+  border: none;
+  width: 75%;
+  height: 6em;
+  background: #f3f3f3;
+}
