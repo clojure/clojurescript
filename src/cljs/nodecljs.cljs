@@ -18,6 +18,14 @@
         (recur (reader/read r false :eof false))))))
 
 (defn -main [file & args]
+  ;; Setup the print function
+  (set! *print-fn* (.-print (js/require "util")))
+
+  ;; Bootstrap an empty version of the cljs.user namespace
+  (swap! cljs.compiler/*emitted-provides* conj (symbol "cljs.user"))
+  (.provide js/goog "cljs.user")
+  (set! cljs.core/*ns-sym* (symbol "cljs.user"))
+
   ;(set! js/env (assoc js/env :context :expr))
   (let [fs (js/require "fs")
         text (.toString (.readFileSync fs file))]

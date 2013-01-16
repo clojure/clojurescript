@@ -69,6 +69,11 @@
  (ep log text))
 
 (set! (.-onload js/window) (fn []
+  ;; Bootstrap an empty version of the cljs.user namespace
+  (swap! cljs.compiler/*emitted-provides* conj (symbol "cljs.user"))
+  (.provide js/goog "cljs.user")
+  (set! cljs.core/*ns-sym* (symbol "cljs.user"))
+
   (let [log (.getElementById js/document "log")
         input (.getElementById js/document "input")
         status1 (.getElementById js/document "status1")

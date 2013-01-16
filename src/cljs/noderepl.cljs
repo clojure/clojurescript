@@ -24,23 +24,31 @@
 
 (defn ep [text]
   (try
-   (let [env (assoc (ana/empty-env) :context :expr)
-         form (read-next-form text)
-         _ (when *debug* (println "READ:" (pr-str form)))
-         body (ana/analyze env form)
-         _ (when *debug* (println "ANALYZED:" (pr-str (:form body))))
-         res (comp/emit-str body)
-         _ (when *debug* (println "EMITTED:" (pr-str res)))]
-     (repl-print (pr-str (js/eval res)) "rtn"))
-   (catch js/Error e
-     (repl-print (.-stack e) "err")
-     (set! *e e))))
+    (let [env (assoc (ana/empty-env) :context :expr)
+          form (read-next-form text)
+          _ (when *debug* (println "READ:" (pr-str form)))
+          body (ana/analyze env form)
+          _ (when *debug* (println "ANALYZED:" (pr-str (:form body))))
+          res (comp/emit-str body)
+          _ (when *debug* (println "EMITTED:" (pr-str res)))]
+      (repl-print (pr-str (js/eval res)) "rtn"))
+    (catch js/Error e
+      (repl-print (.-stack e) "err")
+      (set! *e e))))
 
 (defn pep [text]
   (postexpr text)
   (ep text))
 
 (defn -main [& args]
+  ;; Setup the print function
+  (set! *print-fn* (.-print (js/require "util")))
+
+  ;; Bootstrap an empty version of the cljs.user namespace
+  (swap! cljs.compiler/*emitted-provides* conj (symbol "cljs.user"))
+  (.provide js/goog "cljs.user")
+  (set! cljs.core/*ns-sym* (symbol "cljs.user"))
+
   (println ";; ClojureScript")
   (println ";;   - http://github.com/kanaka/clojurescript")
   (println ";;   - A port of the ClojureScript compiler to ClojureScript")
