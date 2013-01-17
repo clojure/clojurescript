@@ -5869,7 +5869,7 @@ reduces them without incurring seq initialization"
     (symbol? x)
     (let [x (str x)
           i (.lastIndexOf x "/")]
-      (if (< i 0)
+      (if (or (< i 0) (identical? x "/"))
         x
         (subs x (inc i))))
 
@@ -5887,7 +5887,8 @@ reduces them without incurring seq initialization"
     (symbol? x)
     (let [x (str x)
           i (.lastIndexOf x "/")]
-      (when (> i -1)
+      (if (or (< i 0) (identical? x "/"))
+        nil
         (subs x 0 i)))
   
     (keyword? x)

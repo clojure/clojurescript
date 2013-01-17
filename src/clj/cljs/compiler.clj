@@ -782,10 +782,16 @@
          (ana/analyze-file "cljs/core.cljs"))
        ~@body))
 
-(defn ns-snap [ns]
-  (let [nss1 (dissoc (get @ana/namespaces ns) :requires-macros)
-        nss2 (read-string (pr-str (update-in nss1
-                                             [:defs] dissoc '/)))]
+(defn ns-snap
+  "Snapshot the given namespace. Returns the JavaScript to update
+  cljs.core/namespace based on the snapshot."
+  [ns]
+  ;; Remove :requires-macros and munge '/ to work around an exception
+  ;; from read-string when trying to read 'cljs.core//
+  (let [nss1 (update-in (dissoc (get @ana/namespaces ns) :requires-macros)
+                        [:defs '/] assoc :name 'cljs.core/_SLASH_)
+        nss2 (update-in (read-string (pr-str nss1))
+                        [:defs '/] assoc :name (symbol "cljs.core//"))]
     (apply str
       (emit (ana/analyze (ana/empty-env)
         (list 'swap! 'cljs.core/namespaces 'assoc (list 'quote ns) (list 'quote nss2)))))))

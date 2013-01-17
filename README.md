@@ -36,8 +36,6 @@ goal of being fully self-hosting (i.e. ClojureScript-in-ClojureScript).
 
 ### Bugs
 
-- division symbol breaks namespaces atom (currently removed)
-- regexes with forward slashes are printed with extra escaping
 - numeric keywords (:2) are broken
 - anonymous functions do not warn about arity
 - non-unicode symbol breakage
