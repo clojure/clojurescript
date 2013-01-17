@@ -186,3 +186,13 @@ ul.footer-links {
     overflow-x: hidden !important;
     overflow-y: hidden !important;
 }
+
+h1 a {
+    text-decoration: none;
+    color: inherit;
+}
+
+h1 a:visited {
+    text-decoration: none;
+    color: inherit;
+}
