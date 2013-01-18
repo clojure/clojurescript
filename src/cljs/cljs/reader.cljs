@@ -8,6 +8,7 @@
 
 (ns cljs.reader
   (:require [goog.string :as gstring]
+            [clojure.string :as string]
             [cljs.analyzer :as ana]))
 
 (defprotocol PushbackReader
@@ -100,7 +101,6 @@ nil if the end of stream has been reached")
 (def int-pattern (re-pattern "([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?"))
 (def ratio-pattern (re-pattern "([-+]?[0-9]+)/([0-9]+)"))
 (def float-pattern (re-pattern "([-+]?[0-9]+(\\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?"))
-(def symbol-pattern (re-pattern "[:]?([^0-9/].*/)?([^0-9/][^/]*)"))
 
 (defn- re-find*
   [re s]
@@ -329,20 +329,19 @@ nil if the end of stream has been reached")
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
-        a (re-matches* symbol-pattern token)
-        token (aget a 0)
-        ns (aget a 1)
-        name (aget a 2)]
-    (if (or (and (not (undefined? ns))
-                 (identical? (. ns (substring (- (.-length ns) 2) (.-length ns))) ":/"))
-            (identical? (aget name (dec (.-length name))) ":")
-            (not (== (.indexOf token "::" 1) -1)))
-      (reader-error reader "Invalid token: " token)
-      (if (and (not (nil? ns)) (> (.-length ns) 0))
-        (keyword (.substring ns 0 (.indexOf ns "/")) name)
-        (if (identical? ":" (first token))
-          (keyword *ns-sym* name)    ;; namespaced keyword using default
-          (keyword token))))))
+        parts (string/split token #"/")
+        name (last parts)
+        ns (if (> (count parts) 1) (string/join \/ (butlast parts)))
+        issue (cond
+               (identical? (last ns) \:) "namespace can't ends with \":\""
+               (identical? (last name) \:) "name can't end with \":\""
+               (identical? (last name) \/) "name can't end with \"/\""
+               (> (count (string/split token #"::")) 1) "name can't contain \"::\"")]
+    (if issue
+      (reader-error reader "Invalid token (" issue "): " token)
+      (if (and (not ns) (identical? (first name) \:))
+        (keyword *ns-sym* (apply str (rest name)))    ;; namespaced keyword using default
+        (keyword ns name)))))
 
 (defn desugar-meta
   [f]
