@@ -1498,7 +1498,7 @@ reduces them without incurring seq initialization"
   ([name] (cond (keyword? name) name
                 (symbol? name) (str* "\uFDD0" "'" name)
                 :else (str* "\uFDD0" "'" name)))
-  ([ns name] (keyword (str* ns "/" name))))
+  ([ns name] (keyword (if ns (str* ns "/" name) name))))
 
 
 
