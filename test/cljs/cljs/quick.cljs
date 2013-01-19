@@ -15,6 +15,16 @@
   (assert (= ':bar/foo (keyword "bar" "foo")))
   (assert (= *ns-sym* (symbol (namespace ::foo))))
 
+  (assert (= (namespace :foo) nil) "ns isn't nil")
+  (assert (= (name :foo) "foo") "name isn't foo")
+  (assert (= (name ::foo) "foo") "name isn't foo")
+  (assert (= (namespace ::foo) (str *ns-sym*)) "wrong ns")
+
+  (assert (= (namespace :1) nil) "ns isn't nil")
+  (assert (= (name :1) \1) "name isn't 1")
+  (assert (= (namespace ::2) (str *ns-sym*)) "wrong ns")
+  (assert (= (name ::2) \2) "name isn't 2")
+
   ;; symbols
   (assert (= 'mysym (symbol "mysym")))
   (assert (= 'bar/mysym (symbol "bar" "mysym")))
