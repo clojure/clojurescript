@@ -36,6 +36,9 @@
   (assert (= "cljs.user" (namespace (with-meta 'cljs.user/foo {:a 1}))))
   (assert (= "cljs.user" (namespace (with-meta (with-meta 'cljs.user/foo {:a 1}) {:b 2}))))
 
+  ;; hexs
+  (assert (= 0x7e7 2023) "hexs are read and parsed")
+
   ;; regex
   (assert (= '("/a" "/d" "/g") (re-seq #"/." "/abc/def/ghi")))
   (assert (= 1 (count (take 2 (re-seq #"^$" "")))))
