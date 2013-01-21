@@ -5030,12 +5030,12 @@ reduces them without incurring seq initialization"
     (throw (js/Error. "red-black tree invariant violation"))))
 
 (defn- tree-map-kv-reduce [node f init]
-  (let [init (f init (.-key node) (.-val node))]
+  (let [init (if-not (nil? (.-left node))
+               (tree-map-kv-reduce (.-left node) f init)
+               init)]
     (if (reduced? init)
       @init
-      (let [init (if-not (nil? (.-left node))
-                   (tree-map-kv-reduce (.-left node) f init)
-                   init)]
+      (let [init (f init (.-key node) (.-val node))]
         (if (reduced? init)
           @init
           (let [init (if-not (nil? (.-right node))

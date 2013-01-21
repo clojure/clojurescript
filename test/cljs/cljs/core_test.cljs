@@ -1773,6 +1773,10 @@
     (let [x (fn [] "overwritten")]
       (assert (= "original" (y)))))
 
+  ;; CLJS-459: reduce-kv visit order
+  (assert (= (reduce-kv conj [] (sorted-map :foo 1 :bar 2))
+             [:bar 2 :foo 1]))
+
   ;; Test builtin implementations of IKVReduce
   (letfn [(kvr-test [data expect]
             (assert (= :reduced (reduce-kv (fn [_ _ _] (reduced :reduced))
