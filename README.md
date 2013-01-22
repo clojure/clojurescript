@@ -8,6 +8,7 @@ ClojureScript is a new compiler for [Clojure](http://clojure.org) that targets J
 * [Try it online](http://himera.herokuapp.com/index.html)
 * Read the [Quick Start](https://github.com/clojure/clojurescript/wiki/Quick-Start) guide.
 * Read the [Documentation](https://github.com/clojure/clojurescript/wiki).
+* Try a [tutorial](https://github.com/clojure/clojurescript/wiki).
 * Look at the [Sample Applications](https://github.com/clojure/clojurescript/tree/master/samples).
 
 ## Questions, Feedback? ##
