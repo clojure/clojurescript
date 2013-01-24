@@ -971,6 +971,20 @@
     ([x y & r] [:three r]))
   (assert (= [:three '(2)] (apply apply-multi-test [0 1 2])))
 
+  ;; custom hierarchy tests
+  (def my-map-hierarchy (atom (-> (make-hierarchy)
+                                  (derive (type (obj-map)) ::map)
+                                  (derive (type (array-map)) ::map)
+                                  (derive (type (hash-map)) ::map)
+                                  (derive (type (sorted-map)) ::map))))
+  (defmulti my-map? type :hierarchy my-map-hierarchy)
+  (defmethod my-map? ::map [_] true)
+  (defmethod my-map? :default [_] false)
+  (doseq [m [(obj-map) (array-map) (hash-map) (sorted-map)]]
+    (assert (my-map? m)))
+  (doseq [not-m [[] 1 "asdf" :foo]]
+    (assert (not (my-map? not-m))))
+
   ;; Range
   (assert (= (range 0 10 3) (list 0 3 6 9)))
   (assert (= (count (range 0 10 3)) 4))

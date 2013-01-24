@@ -7156,7 +7156,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn- find-and-cache-best-method
   [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
   (let [best-entry (reduce (fn [be [k _ :as e]]
-                             (if (isa? dispatch-val k)
+                             (if (isa? @hierarchy dispatch-val k)
                                (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
                                            e
                                            be)]
