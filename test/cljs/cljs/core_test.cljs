@@ -1262,6 +1262,20 @@
           (assert (= (count m1) 100))
           (assert (= (count m2) 100)))))
 
+  ;; CLJS-461: automatic map conversions
+  (loop [i 0 m (with-meta {} {:foo :bar}) result []]
+    (if (<= i (+ cljs.core.ObjMap/HASHMAP_THRESHOLD 2))
+      (recur (inc i) (assoc m (str i) i) (conj result (meta m)))
+      (let [n (inc (+ cljs.core.ObjMap/HASHMAP_THRESHOLD 2))
+            expected (repeat n {:foo :bar})]
+        (assert (= result expected)))))
+  (loop [i 0 m (with-meta {-1 :quux} {:foo :bar}) result []]
+    (if (<= i (+ cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 2))
+      (recur (inc i) (assoc m i i) (conj result (meta m)))
+      (let [n (inc (+ cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 2))
+            expected (repeat n {:foo :bar})]
+        (assert (= result expected)))))
+
   ;; TransientHashSet
   (loop [s (transient #{})
          i 0]
