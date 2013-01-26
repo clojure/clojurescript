@@ -7,7 +7,6 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl.rhino
-  (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
@@ -17,12 +16,11 @@
            [org.mozilla.javascript Context ScriptableObject]))
 
 (def current-repl-env (atom nil))
-(def loaded-libs (atom #{}))
 
 ;;todo - move to core.cljs, using js
 (def ^String bootjs (str "goog.require = function(rule){"
                          "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
-                         ".invoke(rule);}"))
+                         ".invoke(___repl_env, rule);}"))
 
 (defprotocol IEval
   (-eval [this env filename line]))
@@ -66,8 +64,8 @@
        :value (.toString ex)
        :stacktrace (stacktrace ex)})))
 
-(defn goog-require [rule]
-  (when-not (contains? @loaded-libs rule)
+(defn goog-require [repl-env rule]
+  (when-not (contains? @(:loaded-libs repl-env) rule)
     (let [repl-env @current-repl-env
           path (string/replace (comp/munge rule) \. java.io.File/separatorChar)
           cljs-path (str path ".cljs")
@@ -82,22 +80,22 @@
         (if-let [res (io/resource js-path)]
           (-eval (io/reader res) repl-env js-path 1)
           (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
-      (swap! loaded-libs conj rule))))
+      (swap! (:loaded-libs repl-env) conj rule))))
 
 (defn load-javascript [repl-env ns url]
-  (let [missing (remove #(contains? @loaded-libs %) ns)]
+  (let [missing (remove #(contains? @(:loaded-libs repl-env) %) ns)]
     (when (seq missing)
       (do (try 
             (-eval (io/reader url) repl-env (.toString url) 1)
             ;; TODO: don't show errors for goog/base.js line number 105
             (catch Throwable ex (println (.getMessage ex))))
-          (swap! loaded-libs (partial apply conj) missing)))))
+          (swap! (:loaded-libs repl-env) (partial apply conj) missing)))))
 
 (defn rhino-setup [repl-env]
   (let [env (ana/empty-env)
         scope (:scope repl-env)]
     (repl/load-file repl-env "cljs/core.cljs")
-    (swap! loaded-libs conj "cljs.core")
+    (swap! (:loaded-libs repl-env) conj "cljs.core")
     (repl/evaluate-form repl-env
                         env
                         "<cljs repl>"
@@ -110,7 +108,7 @@
                         "<cljs repl>"
                         '(set! *print-fn* (fn [x] (.print js/out x))))))
 
-(defrecord RhinoEnv []
+(defrecord RhinoEnv [loaded-libs]
   repl/IJavaScriptEnv
   (-setup [this]
     (rhino-setup this))
@@ -128,10 +126,13 @@
         scope (.initStandardObjects cx)
         base (io/resource "goog/base.js")
         deps (io/resource "goog/deps.js")
-        new-repl-env (merge (RhinoEnv.) {:cx cx :scope scope})]
+        new-repl-env (merge (RhinoEnv. (atom #{})) {:cx cx :scope scope})]
     (assert base "Can't find goog/base.js in classpath")
     (assert deps "Can't find goog/deps.js in classpath")
     (swap! current-repl-env (fn [old] new-repl-env))
+    (ScriptableObject/putProperty scope
+                                  "___repl_env"
+                                  (Context/javaToJS new-repl-env scope))
     (with-open [r (io/reader base)]
       (-eval r new-repl-env "goog/base.js" 1))
     (-eval bootjs new-repl-env "bootjs" 1)
