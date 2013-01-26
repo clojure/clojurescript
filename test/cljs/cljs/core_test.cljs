@@ -1797,5 +1797,10 @@
   (assert (= (assoc {} 154618822656 1 261993005056 1)
              {154618822656 1 261993005056 1}))
 
+  ;; CLJS-458
+
+  (assert (= (get-in {:a {:b 1}} [:a :b :c] :nothing-there)
+             :nothing-there))
+
   :ok
   )
