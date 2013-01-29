@@ -1820,5 +1820,9 @@
   (assert (= (get-in {:a {:b 1}} [:a :b :c] :nothing-there)
              :nothing-there))
 
+  ;; CLJS-464
+
+  (assert (nil? (get-in {:foo {:bar 2}} [:foo :bar :baz])))
+
   :ok
   )

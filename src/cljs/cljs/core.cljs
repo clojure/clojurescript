@@ -2731,7 +2731,7 @@ reduces them without incurring seq initialization"
   {:added "1.2"
    :static true}
   ([m ks]
-     (reduce get m ks))
+     (get-in m ks nil))
   ([m ks not-found]
      (loop [sentinel lookup-sentinel
             m m
