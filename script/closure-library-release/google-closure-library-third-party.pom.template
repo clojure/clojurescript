@@ -26,6 +26,11 @@
       <name>The Apache Software License, Version 2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
       <distribution>repo</distribution>
+      <comments>
+        Note: the Google Closure library third-party extensions
+        contain code under a variety of licenses, which may be found
+        in source-code comments in each file.
+      </comments>
     </license>
   </licenses>
 

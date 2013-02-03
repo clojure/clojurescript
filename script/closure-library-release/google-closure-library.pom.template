@@ -16,6 +16,14 @@
     team at http://clojure.org/
   </description>
 
+  <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>google-closure-library-third-party</artifactId>
+      <version>RELEASE_VERSION</version>
+    </dependency>
+  </dependencies>
+
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
