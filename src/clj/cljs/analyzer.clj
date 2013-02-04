@@ -151,9 +151,7 @@
   ([env sym] (resolve-var env sym nil))
   ([env sym confirm]
      (if (= (namespace sym) "js")
-       (do (when (some #{\.} (-> sym name str))
-             (warning env (str "Invalid js form " sym)))
-           {:name sym :ns 'js})
+       {:name sym :ns 'js}
        (let [s (str sym)
              lb (-> env :locals sym)]
          (cond

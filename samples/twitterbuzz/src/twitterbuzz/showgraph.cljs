@@ -45,7 +45,7 @@
   (+ (* unit-arg (- canvas-size avatar-size)) (/ avatar-size 2)))
 
 (defn log [& args]
-  (.log js/console (apply pr-str args)))
+  (js/console.log (apply pr-str args)))
 
 (def avatar-hover
   (doto

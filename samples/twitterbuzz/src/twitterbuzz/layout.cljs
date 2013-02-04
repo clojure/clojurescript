@@ -18,7 +18,7 @@
   (* x x))
 
 (defn sqrt [x]
-  (.sqrt js/Math x))
+  (js/Math.sqrt x))
 
 (defn dist [{x1 :x y1 :y} {x2 :x y2 :y}]
   (sqrt (+ (sqr (- x2 x1)) (sqr (- y2 y1)))))
