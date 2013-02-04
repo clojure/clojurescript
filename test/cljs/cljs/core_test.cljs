@@ -971,6 +971,20 @@
     ([x y & r] [:three r]))
   (assert (= [:three '(2)] (apply apply-multi-test [0 1 2])))
 
+  ;; custom hierarchy tests
+  (def my-map-hierarchy (atom (-> (make-hierarchy)
+                                  (derive (type (obj-map)) ::map)
+                                  (derive (type (array-map)) ::map)
+                                  (derive (type (hash-map)) ::map)
+                                  (derive (type (sorted-map)) ::map))))
+  (defmulti my-map? type :hierarchy my-map-hierarchy)
+  (defmethod my-map? ::map [_] true)
+  (defmethod my-map? :default [_] false)
+  (doseq [m [(obj-map) (array-map) (hash-map) (sorted-map)]]
+    (assert (my-map? m)))
+  (doseq [not-m [[] 1 "asdf" :foo]]
+    (assert (not (my-map? not-m))))
+
   ;; Range
   (assert (= (range 0 10 3) (list 0 3 6 9)))
   (assert (= (count (range 0 10 3)) 4))
@@ -1247,6 +1261,20 @@
                                    (range 100)))))
           (assert (= (count m1) 100))
           (assert (= (count m2) 100)))))
+
+  ;; CLJS-461: automatic map conversions
+  (loop [i 0 m (with-meta {} {:foo :bar}) result []]
+    (if (<= i (+ cljs.core.ObjMap/HASHMAP_THRESHOLD 2))
+      (recur (inc i) (assoc m (str i) i) (conj result (meta m)))
+      (let [n (inc (+ cljs.core.ObjMap/HASHMAP_THRESHOLD 2))
+            expected (repeat n {:foo :bar})]
+        (assert (= result expected)))))
+  (loop [i 0 m (with-meta {-1 :quux} {:foo :bar}) result []]
+    (if (<= i (+ cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 2))
+      (recur (inc i) (assoc m i i) (conj result (meta m)))
+      (let [n (inc (+ cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 2))
+            expected (repeat n {:foo :bar})]
+        (assert (= result expected)))))
 
   ;; TransientHashSet
   (loop [s (transient #{})
@@ -1759,6 +1787,10 @@
     (let [x (fn [] "overwritten")]
       (assert (= "original" (y)))))
 
+  ;; CLJS-459: reduce-kv visit order
+  (assert (= (reduce-kv conj [] (sorted-map :foo 1 :bar 2))
+             [:bar 2 :foo 1]))
+
   ;; Test builtin implementations of IKVReduce
   (letfn [(kvr-test [data expect]
             (assert (= :reduced (reduce-kv (fn [_ _ _] (reduced :reduced))
@@ -1782,6 +1814,15 @@
 
   (assert (= (assoc {} 154618822656 1 261993005056 1)
              {154618822656 1 261993005056 1}))
+
+  ;; CLJS-458
+
+  (assert (= (get-in {:a {:b 1}} [:a :b :c] :nothing-there)
+             :nothing-there))
+
+  ;; CLJS-464
+
+  (assert (nil? (get-in {:foo {:bar 2}} [:foo :bar :baz])))
 
   :ok
   )

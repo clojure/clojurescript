@@ -8,11 +8,12 @@ ClojureScript is a new compiler for [Clojure](http://clojure.org) that targets J
 * [Try it online](http://himera.herokuapp.com/index.html)
 * Read the [Quick Start](https://github.com/clojure/clojurescript/wiki/Quick-Start) guide.
 * Read the [Documentation](https://github.com/clojure/clojurescript/wiki).
+* Try a [tutorial](https://github.com/clojure/clojurescript/wiki).
 * Look at the [Sample Applications](https://github.com/clojure/clojurescript/tree/master/samples).
 
 ## Questions, Feedback? ##
 
-Please point all of your questions and feedback [here](http://groups.google.com/group/clojure).
+Please point all of your questions and feedback [here](http://groups.google.com/group/clojure).  The Jira bug/feature tracking application is located at <http://dev.clojure.org/jira/browse/CLJS>.
 
 ## Developers Welcome ##
 
