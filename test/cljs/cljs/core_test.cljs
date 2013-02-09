@@ -1421,6 +1421,10 @@
     (assert (= 500 (count m)))
     (assert (= 123 (m "foo123"))))
 
+  ;; comparator
+  (assert (= [1 1 2 2 3 5] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator <)))))
+  (assert (= [5 3 2 2 1 1] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator >)))))
+  
   ;; dot
   (let [s "abc"]
     (assert (= 3 (.-length s)))

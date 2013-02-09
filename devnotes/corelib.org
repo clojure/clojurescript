@@ -55,7 +55,7 @@ does what?
 * accessor
 * DONE aclone
 * add-classpath
-* add-watch
+* DONE add-watch
 * agent
 * agent-error
 * agent-errors
@@ -141,7 +141,7 @@ does what?
 * DONE comment
 * commute
 * DONE comp
-* TODO comparator
+* DONE comparator
 * DONE compare
 * DONE compare-and-set!
 * compile
@@ -264,7 +264,7 @@ macro currently expands into extend call
 * DONE hash
 * DONE hash-combine
 * DONE hash-map
-* TODO hash-set
+* DONE hash-set
 * DONE identical?
 * DONE identity
 * DONE if-let
@@ -489,10 +489,10 @@ as macro
 * DONE some-fn
 * DONE sort
 * DONE sort-by
-* TODO sorted-map
-* TODO sorted-map-by
-* TODO sorted-set
-* TODO sorted-set-by
+* DONE sorted-map
+* DONE sorted-map-by
+* DONE sorted-set
+* DONE sorted-set-by
 * TODO sorted?
 * TODO special-symbol?
 * spit
