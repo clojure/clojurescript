@@ -7349,3 +7349,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   [ex]
   (when (instance? ExceptionInfo ex)
     (.-cause ex)))
+
+(defn comparator
+  "Returns an JavaScript compatible comparator based upon pred."
+  [pred]
+  (fn [x y]
+    (cond (pred x y) -1 (pred y x) 1 :else 0)))
+

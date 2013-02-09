@@ -55,7 +55,7 @@ does what?
 * accessor
 * DONE aclone
 * add-classpath
-* add-watch
+* DONE add-watch
 * agent
 * agent-error
 * agent-errors
