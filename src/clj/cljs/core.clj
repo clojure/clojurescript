@@ -662,6 +662,7 @@
   (let [hinted-fields fields
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
+        pr-open (core/str "#" (.getNamespace rname) "." (.getName rname) "{")
         fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))]
     (let [gs (gensym)
           ksym (gensym "k")
@@ -718,7 +719,7 @@
                   `(~'-pr-writer [this# writer# opts#]
                                  (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# pr-writer "" " " "" opts# keyval#))]
                                    (pr-sequential-writer
-                                    writer# pr-pair# (core/str "#" ~(name rname) "{") ", " "}" opts#
+                                    writer# pr-pair# ~pr-open ", " "}" opts#
                                     (concat [~@(map #(list `vector (keyword %) %) base-fields)]
                                             ~'__extmap))))
                   ])

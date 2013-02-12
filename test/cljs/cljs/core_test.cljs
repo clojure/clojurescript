@@ -1730,7 +1730,7 @@
   ;;; pr-str records
 
   (defrecord PrintMe [a b])
-  (assert (= (pr-str (PrintMe. 1 2)) "#PrintMe{:a 1, :b 2}"))
+  (assert (= (pr-str (PrintMe. 1 2)) "#cljs.core-test.PrintMe{:a 1, :b 2}"))
 
   ;;; pr-str inst
 
