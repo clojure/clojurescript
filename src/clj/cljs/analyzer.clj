@@ -174,12 +174,9 @@
                  lb (-> env :locals prefix)]
              (if lb
                {:name (symbol (str (:name lb) suffix))}
-               (do
-                 (when confirm
-                   (confirm env prefix (symbol suffix)))
-                 (merge (get-in @namespaces [prefix :defs (symbol suffix)])
-                        {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-                         :ns prefix}))))
+               (merge (get-in @namespaces [prefix :defs (symbol suffix)])
+                 {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
+                  :ns prefix})))
 
            (get-in @namespaces [(-> env :ns :name) :uses sym])
            (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
