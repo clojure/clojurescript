@@ -7059,9 +7059,15 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   "Creates a hierarchy object for use with derive, isa? etc."
   [] {:parents {} :descendants {} :ancestors {}})
 
-(def
-  ^{:private true}
-  global-hierarchy (atom (make-hierarchy)))
+(def ^:private -global-hierarchy nil)
+
+(defn- get-global-hierarchy []
+  (when (nil? -global-hierarchy)
+    (set! -global-hierarchy (atom (make-hierarchy))))
+  -global-hierarchy)
+
+(defn- swap-global-hierarchy! [f & args]
+  (apply swap! (get-global-hierarchy) f args))
 
 (defn ^boolean isa?
   "Returns true if (= child parent), or child is directly or indirectly derived from
@@ -7069,7 +7075,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   relationship established via derive. h must be a hierarchy obtained
   from make-hierarchy, if not supplied defaults to the global
   hierarchy"
-  ([child parent] (isa? @global-hierarchy child parent))
+  ([child parent] (isa? @(get-global-hierarchy) child parent))
   ([h child parent]
      (or (= child parent)
          ;; (and (class? parent) (class? child)
@@ -7088,7 +7094,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   inheritance relationship or a relationship established via derive. h
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
-  ([tag] (parents @global-hierarchy tag))
+  ([tag] (parents @(get-global-hierarchy) tag))
   ([h tag] (not-empty (get (:parents h) tag))))
 
 (defn ancestors
@@ -7096,7 +7102,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   inheritance relationship or a relationship established via derive. h
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
-  ([tag] (ancestors @global-hierarchy tag))
+  ([tag] (ancestors @(get-global-hierarchy) tag))
   ([h tag] (not-empty (get (:ancestors h) tag))))
 
 (defn descendants
@@ -7105,7 +7111,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   from make-hierarchy, if not supplied defaults to the global
   hierarchy. Note: does not work on JavaScript type inheritance
   relationships."
-  ([tag] (descendants @global-hierarchy tag))
+  ([tag] (descendants @(get-global-hierarchy) tag))
   ([h tag] (not-empty (get (:descendants h) tag))))
 
 (defn derive
@@ -7117,7 +7123,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   ([tag parent]
    (assert (namespace parent))
    ;; (assert (or (class? tag) (and (instance? cljs.core.Named tag) (namespace tag))))
-   (swap! global-hierarchy derive tag parent) nil)
+   (swap-global-hierarchy! derive tag parent) nil)
   ([h tag parent]
    (assert (not= tag parent))
    ;; (assert (or (class? tag) (instance? clojure.lang.Named tag)))
@@ -7147,8 +7153,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   tag. h must be a hierarchy obtained from make-hierarchy, if not
   supplied defaults to, and modifies, the global hierarchy."
   ([tag parent]
-     ;; (alter-var-root #'global-hierarchy underive tag parent)
-     (swap! global-hierarchy underive tag parent) nil)
+    (swap-global-hierarchy! underive tag parent)
+    nil)
   ([h tag parent]
     (let [parentMap (:parents h)
           childsParents (if (parentMap tag)

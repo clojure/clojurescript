@@ -883,9 +883,6 @@
   (assert (= {:a 1} (meta (vary-meta [] assoc :a 1))))
   (assert (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
 
-  ;; multi-methods
-  (swap! global-hierarchy make-hierarchy)
-
   ;; hierarchy tests
   (derive ::rect ::shape)
   (derive ::square ::rect)
