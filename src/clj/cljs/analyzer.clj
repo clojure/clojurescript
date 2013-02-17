@@ -900,12 +900,10 @@
 (defn analyze-map
   [env form name]
   (let [expr-env (assoc env :context :expr)
-        simple-keys? (every? #(or (string? %) (keyword? %))
-                             (keys form))
         ks (disallowing-recur (vec (map #(analyze expr-env % name) (keys form))))
         vs (disallowing-recur (vec (map #(analyze expr-env % name) (vals form))))]
     (analyze-wrap-meta {:op :map :env env :form form
-                        :keys ks :vals vs :simple-keys? simple-keys?
+                        :keys ks :vals vs
                         :children (vec (interleave ks vs))}
                        name)))
 
