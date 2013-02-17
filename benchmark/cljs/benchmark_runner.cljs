@@ -78,6 +78,9 @@
 (simple-benchmark [coll (into [] (range 1000000))] (apply + coll) 1)
 (println)
 
+(println ";;; array-map")
+(simple-benchmark [coll (array-map)] (assoc coll :foo 'bar) 1000000)
+
 (println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
 (simple-benchmark [coll {'foo 1 'bar 2}] (get coll 'foo) 1000000)

@@ -3944,8 +3944,8 @@ reduces them without incurring seq initialization"
                                  (.push k)
                                  (.push v))
                                nil)
-          (with-meta
-            (assoc (into cljs.core.PersistentHashMap/EMPTY coll) k v)
+          (-with-meta
+            (-assoc (into cljs.core.PersistentHashMap/EMPTY coll) k v)
             meta))
 
         (identical? v (aget arr (inc idx)))
