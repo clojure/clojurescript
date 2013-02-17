@@ -158,12 +158,14 @@
                   (name x)
                   \"))
 
+;; TODO: we could optimize, call type constructor & inline all the properties of x - David
+
 (defmethod emit-constant clojure.lang.Symbol [x]
-           (emits \" "\\uFDD1" \'
-                  (if (namespace x)
-                    (str (namespace x) "/") "")
-                  (name x)
-                  \"))
+  (emits "cljs.core.symbol(")
+  (emit-constant (namespace x))
+  (emits ",")
+  (emit-constant (name x))
+  (emits ")"))
 
 (defn- emit-meta-constant [x & body]
   (if (meta x)

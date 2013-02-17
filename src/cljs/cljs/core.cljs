@@ -309,6 +309,50 @@
 (defprotocol IChunkedNext
   (-chunked-next [coll]))
 
+(defprotocol INamed
+  (-name [x])
+  (-namespace [x]))
+
+;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
+
+(declare list instance? symbol? hash-combine hash)
+
+(deftype Symbol [ns name str _hash _meta]
+  Object
+  (toString [_] str)
+  IEquiv
+  (-equiv [_ other]
+    (if (instance? Symbol other)
+      (identical? str (.-str other))
+      false))
+  IFn
+  (-invoke [sym coll]
+    (-lookup coll sym nil))
+  (-invoke [sym coll not-found]
+    (-lookup coll sym not-found))
+  IMeta
+  (-meta [_] _meta)
+  IWithMeta
+  (-with-meta [_ new-meta] (Symbol. ns name str _hash new-meta))
+  IHash
+  (-hash [_] _hash)
+  INamed
+  (-name [_] name)
+  (-namespace [_] ns)
+  IPrintWithWriter
+  (-pr-writer [o writer _] (-write writer str)))
+
+(defn symbol
+  ([name]
+     (if (symbol? name)
+       name
+       (symbol nil name)))
+  ([ns name]
+     (let [sym-str (if ns
+                     (str ns "/" name)
+                     name)]
+       (Symbol. ns name sym-str (hash-combine (hash ns) (hash name)) nil))))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
 (defn ^seq seq
@@ -1032,16 +1076,14 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean string? [x]
   (and ^boolean (goog/isString x)
-       (not (or (identical? (.charAt x 0) \uFDD0)
-                (identical? (.charAt x 0) \uFDD1)))))
+    (not (identical? (.charAt x 0) \uFDD0))))
 
 (defn ^boolean keyword? [x]
   (and ^boolean (goog/isString x)
        (identical? (.charAt x 0) \uFDD0)))
 
 (defn ^boolean symbol? [x]
-  (and ^boolean (goog/isString x)
-       (identical? (.charAt x 0) \uFDD1)))
+  (instance? Symbol x))
 
 (defn ^boolean number? [n]
   (goog/isNumber n))
@@ -1477,7 +1519,6 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (symbol? x) (. x (substring 2 (alength x)))
         (keyword? x) (str* ":" (. x (substring 2 (alength x))))
         (nil? x) ""
         :else (. x (toString))))
@@ -1505,15 +1546,6 @@ reduces them without incurring seq initialization"
                       x))
                 args)]
     (apply gstring/format fmt args)))
-
-(defn symbol
-  "Returns a Symbol with the given namespace and name."
-  ([name]
-     (cond
-      (symbol? name) name
-      (keyword? name) (str* "\uFDD1" "'" (subs name 2))
-      :else (str* "\uFDD1" "'" name)))
-  ([ns name] (symbol (str* ns "/" name))))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
@@ -5876,23 +5908,27 @@ reduces them without incurring seq initialization"
 (defn name
   "Returns the name String of a string, symbol or keyword."
   [x]
-  (cond
-    (string? x) x
-    (or (keyword? x) (symbol? x))
+  (if (satisfies? INamed x)
+    (-name x)
+    (cond
+      (string? x) x
+      (keyword? x)
       (let [i (.lastIndexOf x "/" (- (alength x) 2))]
         (if (< i 0)
           (subs x 2)
           (subs x (inc i))))
-    :else (throw (js/Error. (str "Doesn't support name: " x)))))
+      :else (throw (js/Error. (str "Doesn't support name: " x))))))
 
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
-  (if (or (keyword? x) (symbol? x))
-    (let [i (.lastIndexOf x "/" (- (alength x) 2))]
-      (when (> i -1)
-        (subs x 2 i)))
-    (throw (js/Error. (str "Doesn't support namespace: " x)))))
+  (if (satisfies? INamed x)
+    (-namespace x)
+    (if (keyword? x)
+      (let [i (.lastIndexOf x "/" (- (alength x) 2))]
+        (when (> i -1)
+          (subs x 2 i)))
+      (throw (js/Error. (str "Doesn't support namespace: " x))))))
 
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."

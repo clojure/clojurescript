@@ -1828,5 +1828,9 @@
 
   (assert (nil? (get-in {:foo {:bar 2}} [:foo :bar :baz])))
 
+  ;; symbol metadata
+
+  (assert (= (meta (with-meta 'foo {:tag 'int})) {:tag 'int}))
+
   :ok
   )
