@@ -3068,9 +3068,10 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (if (zero? cnt)
-      nil
-      (chunked-seq coll 0 0)))
+    (cond
+      (zero? cnt) nil
+      (< cnt 32) (array-seq tail)
+      :else (chunked-seq coll 0 0)))
 
   ICounted
   (-count [coll] cnt)
