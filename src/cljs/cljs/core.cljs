@@ -626,7 +626,7 @@ reduces them without incurring seq initialization"
   "Returns true if coll implements nth in constant time"
   [x] (satisfies? IIndexed x))
 
-(deftype IndexedSeq [a i]
+(deftype IndexedSeq [arr i]
   Object
   (toString [this]
     (pr-str this))
@@ -636,28 +636,28 @@ reduces them without incurring seq initialization"
 
   ASeq
   ISeq
-  (-first [_] (aget a i))
-  (-rest [_] (if (< (inc i) (alength a))
-               (IndexedSeq. a (inc i))
+  (-first [_] (aget arr i))
+  (-rest [_] (if (< (inc i) (alength arr))
+               (IndexedSeq. arr (inc i))
                (list)))
 
   INext
-  (-next [_] (if (< (inc i) (alength a))
-               (IndexedSeq. a (inc i))
+  (-next [_] (if (< (inc i) (alength arr))
+               (IndexedSeq. arr (inc i))
                nil))
 
   ICounted
-  (-count [_] (- (alength a) i))
+  (-count [_] (- (alength arr) i))
 
   IIndexed
   (-nth [coll n]
     (let [i (+ n i)]
-      (when (< i (alength a))
-        (aget a i))))
+      (when (< i (alength arr))
+        (aget arr i))))
   (-nth [coll n not-found]
     (let [i (+ n i)]
-      (if (< i (alength a))
-        (aget a i)
+      (if (< i (alength arr))
+        (aget arr i)
         not-found)))
 
   ISequential
@@ -672,12 +672,12 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [coll f]
-    (if (counted? a)
-      (ci-reduce a f (aget a i) (inc i))
-      (ci-reduce coll f (aget a i) 0)))
+    (if (counted? arr)
+      (ci-reduce arr f (aget arr i) (inc i))
+      (ci-reduce coll f (aget arr i) 0)))
   (-reduce [coll f start]
-    (if (counted? a)
-      (ci-reduce a f start i)
+    (if (counted? arr)
+      (ci-reduce arr f start i)
       (ci-reduce coll f start 0)))
 
   IHash
