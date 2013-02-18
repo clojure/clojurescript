@@ -1742,7 +1742,7 @@ reduces them without incurring seq initialization"
                       (.push arr (-first xs))
                       (recur (-next xs)))
                     arr))))]
-    (loop [i (alength arr) r ()]
+    (loop [i (alength arr) ^not-native r ()]
       (if (> i 0)
         (recur (dec i) (-conj r (aget arr (dec i))))
         r))))
