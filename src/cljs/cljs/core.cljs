@@ -3786,7 +3786,7 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj) 0 0))
 
-(set! cljs.core.ObjMap/HASHMAP_THRESHOLD 32)
+(set! cljs.core.ObjMap/HASHMAP_THRESHOLD 8)
 
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
@@ -4057,7 +4057,7 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentArrayMap/EMPTY (PersistentArrayMap. nil 0 (array) nil))
 
-(set! cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 16)
+(set! cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 8)
 
 (set! cljs.core.PersistentArrayMap/fromArrays
       (fn [ks vs]
