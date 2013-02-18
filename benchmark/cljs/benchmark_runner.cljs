@@ -97,6 +97,12 @@
 (simple-benchmark [coll (array-map :foo :bar :baz :woz)] (-lookup coll :baz) 1000000)
 (simple-benchmark [coll (array-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
 (println)
+(def data-atom (atom {:x 0}))
+
+(println ";;; small map in atom")
+(simple-benchmark [coll (atom {:x 0})] (swap! coll update-in [:x] inc) 100000)
+(simple-benchmark [coll (atom (array-map :x 0))] (swap! coll update-in [:x] inc) 100000)
+(println)
 
 (println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
