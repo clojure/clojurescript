@@ -590,13 +590,15 @@
                  (not (:dynamic info))
                  (:fn-var info))
         protocol (:protocol info)
-        proto? (let [tag (infer-tag (first (:args expr)))]
-                 (and protocol tag
-                      (or ana/*cljs-static-fns*
-                          (:protocol-inline env))
-                      (or (= protocol tag)
-                          (when-let [ps (:protocols (ana/resolve-existing-var (dissoc env :locals) tag))]
-                            (ps protocol)))))
+        tag      (infer-tag (first (:args expr)))
+        proto? (and protocol tag
+                 (or (and ana/*cljs-static-fns* protocol (= tag 'not-native)) 
+                     (and
+                       (or ana/*cljs-static-fns*
+                           (:protocol-inline env))
+                       (or (= protocol tag)
+                           (when-let [ps (:protocols (ana/resolve-existing-var (dissoc env :locals) tag))]
+                             (ps protocol))))))
         opt-not? (and (= (:name info) 'cljs.core/not)
                       (= (infer-tag (first (:args expr))) 'boolean))
         ns (:ns info)

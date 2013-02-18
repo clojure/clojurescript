@@ -1736,9 +1736,12 @@ reduces them without incurring seq initialization"
   (let [arr (if (instance? IndexedSeq xs)
               (.-arr xs)
               (let [arr (array)]
-                (doseq [x xs]
-                  (.push arr x))
-                arr))]
+                (loop [^not-native xs xs]
+                  (if-not (nil? xs)
+                    (do
+                      (.push arr (-first xs))
+                      (recur (-next xs)))
+                    arr))))]
     (loop [i (alength arr) r ()]
       (if (> i 0)
         (recur (dec i) (-conj r (aget arr (dec i))))
