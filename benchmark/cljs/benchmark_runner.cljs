@@ -8,6 +8,10 @@
 
 (simple-benchmark [x 1] (identity x) 1000000)
 
+(println ";; symbol construction")
+(simple-benchmark [] (symbol 'foo) 1000000)
+(println)
+
 (println ";; array-reduce & ci-reduce")
 (def arr (let [arr (array)]
            (dotimes [i 1000000]

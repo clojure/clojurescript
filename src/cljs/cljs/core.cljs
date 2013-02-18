@@ -317,7 +317,7 @@
 
 (declare list instance? symbol? hash-combine hash)
 
-(deftype Symbol [ns name str _hash _meta]
+(deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
   (toString [_] str)
   IEquiv
@@ -335,7 +335,12 @@
   IWithMeta
   (-with-meta [_ new-meta] (Symbol. ns name str _hash new-meta))
   IHash
-  (-hash [_] _hash)
+  (-hash [_]
+    (if (== _hash -1)
+      (do
+        (set! _hash (hash-combine (hash ns) (hash name)))
+        _hash)
+      _hash))
   INamed
   (-name [_] name)
   (-namespace [_] ns)
@@ -348,10 +353,10 @@
        name
        (symbol nil name)))
   ([ns name]
-     (let [sym-str (if ns
+     (let [sym-str (if-not (nil? ns)
                      (str ns "/" name)
                      name)]
-       (Symbol. ns name sym-str (hash-combine (hash ns) (hash name)) nil))))
+       (Symbol. ns name sym-str -1 nil))))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
