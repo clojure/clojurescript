@@ -1732,14 +1732,17 @@ reduces them without incurring seq initialization"
     (rseq coll)
     (reduce conj () coll)))
 
-(defn list
-  ([] ())
-  ([x] (conj () x))
-  ([x y] (conj (list y) x))
-  ([x y z] (conj (list y z) x))
-  ([x y z & items]
-     (conj (conj (conj (reduce conj () (reverse items))
-                       z) y) x)))
+(defn list [& xs]
+  (let [arr (if (instance? IndexedSeq xs)
+              (.-arr xs)
+              (let [arr (array)]
+                (doseq [x xs]
+                  (.push arr x))
+                arr))]
+    (loop [i (alength arr) r ()]
+      (if (> i 0)
+        (recur (dec i) (-conj r (aget arr (dec i))))
+        r))))
 
 (deftype Cons [meta first rest ^:mutable __hash]
   IList

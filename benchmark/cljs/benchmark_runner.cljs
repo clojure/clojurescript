@@ -80,8 +80,8 @@
 
 (println ";; apply")
 (simple-benchmark [coll (into [] (range 1000000))] (apply + coll) 1)
-(simple-benchmark [] (list 1 2 3 4 5) 100000)
-(simple-benchmark [xs (seq [1 2 3 4 5])] (apply list xs) 100000)
+(simple-benchmark [] (list 1 2 3 4 5) 1000000)
+(simple-benchmark [xs (seq [1 2 3 4 5])] (apply list xs) 100000) ;; slow
 (println)
 
 (println ";;; obj-map")
