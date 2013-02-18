@@ -88,8 +88,8 @@
 (println)
 
 (println ";; update-in")
-(simple-benchmark [coll {:foo 1}] (update-in coll [:x] inc) 1000000)
-(simple-benchmark [coll {:foo 1} ks (array-seq (array :x))] (update-in coll ks inc) 1000000)
+(simple-benchmark [coll {:foo 1} ks [:foo]] (update-in coll ks inc) 1000000)
+(simple-benchmark [coll (array-map :foo 1) ks [:foo]] (update-in coll ks inc) 1000000)
 (println)
 
 (println ";;; obj-map")
