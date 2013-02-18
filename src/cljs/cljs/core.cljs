@@ -3895,8 +3895,9 @@ reduces them without incurring seq initialization"
         ^boolean (pred k (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(defn- array-extend-kv [arr k v]
-  (let [l (alength arr)
+(defn- array-map-extend-kv [m k v]
+  (let [arr (.-arr m)
+        l (alength arr)
         narr (make-array (+ l 2))]
     (loop [i 0]
       (when (< i l)
@@ -3967,7 +3968,7 @@ reduces them without incurring seq initialization"
         (if (< cnt cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD)
           (PersistentArrayMap. meta
                                (inc cnt)
-                               (array-extend-kv arr k v)
+                               (array-map-extend-kv coll k v)
                                nil)
           (-with-meta
             (-assoc (into cljs.core.PersistentHashMap/EMPTY coll) k v)
