@@ -75,10 +75,20 @@
   argv as arguments"}
   *main-cli-fn* nil)
 
+(declare pr-str)
+
+(defn type [x]
+  (when-not (nil? x)
+    (.-constructor x)))
+
 (defn missing-protocol [proto obj]
-  (js/Error
-   (.join (array "No protocol method " proto
-                 " defined for type " (goog/typeOf obj) ": " obj) "")))
+  (let [ty (type obj)
+        ty (if (and ty (.-cljs$lang$type ty))
+             (pr-str ty)
+             (goog/typeOf obj))]
+   (js/Error.
+     (.join (array "No protocol method " proto
+                   " defined for type " ty ": " obj) ""))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
@@ -416,10 +426,6 @@
          (recur y (first more) (next more))
          (= y (first more)))
        false)))
-
-(defn type [x]
-  (when-not (nil? x)
-    (.-constructor x)))
 
 (defn ^boolean instance? [t o]
   (js* "(~{o} instanceof ~{t})"))
