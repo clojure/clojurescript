@@ -3870,21 +3870,15 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentArrayMap
 
-(defn equiv-nil [k k']
+(defn- equiv-nil [k k']
   (nil? k'))
 
-(defn equiv-identical [k k']
-  (identical? k k'))
-
-(defn equiv-default [k k']
-  (= k k'))
-
-(defn equiv-pred [x]
+(defn- equiv-pred [x]
   (cond
-    ^boolean (goog/isString x) equiv-identical
+    ^boolean (goog/isString x) identical?
     (nil? x) equiv-nil
-    (number? x) equiv-identical
-    :else equiv-default))
+    (number? x) identical?
+    :else =))
 
 (defn- array-map-index-of [m k]
   (let [arr  (.-arr m)
@@ -3896,9 +3890,7 @@ reduces them without incurring seq initialization"
         ^boolean (pred k (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(declare TransientArrayMap)
-
-(defn array-extend-kv [arr k v]
+(defn- array-extend-kv [arr k v]
   (let [l (alength arr)
         narr (make-array (+ l 2))]
     (loop [i 0]
@@ -3908,6 +3900,8 @@ reduces them without incurring seq initialization"
     (aset narr l k)
     (aset narr (inc l) v)
     narr))
+
+(declare TransientArrayMap)
 
 (deftype PersistentArrayMap [meta cnt arr ^:mutable __hash]
   Object
