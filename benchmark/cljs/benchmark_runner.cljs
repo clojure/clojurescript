@@ -80,6 +80,8 @@
 
 (println ";; apply")
 (simple-benchmark [coll (into [] (range 1000000))] (apply + coll) 1)
+(simple-benchmark [] (list 1 2 3 4 5) 100000)
+(simple-benchmark [xs (seq [1 2 3 4 5])] (apply list xs) 100000)
 (println)
 
 (println ";;; obj-map")
@@ -98,11 +100,6 @@
 (simple-benchmark [coll (array-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
 (println)
 (def data-atom (atom {:x 0}))
-
-(println ";;; small map in atom")
-(simple-benchmark [coll (atom {:x 0})] (swap! coll update-in [:x] inc) 100000)
-(simple-benchmark [coll (atom (array-map :x 0))] (swap! coll update-in [:x] inc) 100000)
-(println)
 
 (println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
