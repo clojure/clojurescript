@@ -3870,16 +3870,44 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentArrayMap
 
+(defn equiv-nil [k k']
+  (nil? k'))
+
+(defn equiv-identical [k k']
+  (identical? k k'))
+
+(defn equiv-default [k k']
+  (= k k'))
+
+(defn equiv-pred [x]
+  (cond
+    ^boolean (goog/isString x) equiv-identical
+    (nil? x) equiv-nil
+    (number? x) equiv-identical
+    :else equiv-default))
+
 (defn- array-map-index-of [m k]
-  (let [arr (.-arr m)
-        len (alength arr)]
+  (let [arr  (.-arr m)
+        len  (alength arr)
+        pred (equiv-pred k)]
     (loop [i 0]
       (cond
         (<= len i) -1
-        (= (aget arr i) k) i
+        ^boolean (pred k (aget arr i)) i
         :else (recur (+ i 2))))))
 
 (declare TransientArrayMap)
+
+(defn array-extend-kv [arr k v]
+  (let [l (alength arr)
+        narr (make-array (+ l 2))]
+    (loop [i 0]
+      (when (< i l)
+        (aset narr i (aget arr i))
+        (recur (inc i))))
+    (aset narr l k)
+    (aset narr (inc l) v)
+    narr))
 
 (deftype PersistentArrayMap [meta cnt arr ^:mutable __hash]
   Object
@@ -3940,9 +3968,7 @@ reduces them without incurring seq initialization"
         (if (< cnt cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD)
           (PersistentArrayMap. meta
                                (inc cnt)
-                               (doto (aclone arr)
-                                 (.push k)
-                                 (.push v))
+                               (array-extend-kv arr k v)
                                nil)
           (-with-meta
             (-assoc (into cljs.core.PersistentHashMap/EMPTY coll) k v)

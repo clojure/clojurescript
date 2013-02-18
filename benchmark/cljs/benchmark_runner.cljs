@@ -79,13 +79,19 @@
 (println)
 
 (println ";;; obj-map")
-(simple-benchmark [coll (obj-map)] (assoc coll :foo 'bar) 1000000)
+(simple-benchmark [coll (obj-map)] (assoc coll :foo :bar) 1000000)
 (simple-benchmark [coll (obj-map :foo :bar)] (-lookup coll :foo) 1000000)
+(simple-benchmark [coll (obj-map :foo :bar)] (assoc coll :baz :woz) 1000000)
+(simple-benchmark [coll (obj-map :foo :bar :baz :woz)] (-lookup coll :baz) 1000000)
+(simple-benchmark [coll (obj-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
 (println)
 
 (println ";;; array-map")
-(simple-benchmark [coll (array-map)] (assoc coll :foo 'bar) 1000000)
+(simple-benchmark [coll (array-map)] (assoc coll :foo :bar) 1000000)
 (simple-benchmark [coll (array-map :foo :bar)] (-lookup coll :foo) 1000000)
+(simple-benchmark [coll (array-map :foo :bar)] (assoc coll :baz :woz) 1000000)
+(simple-benchmark [coll (array-map :foo :bar :baz :woz)] (-lookup coll :baz) 1000000)
+(simple-benchmark [coll (array-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
 (println)
 
 (println ";;; map / record ops")
