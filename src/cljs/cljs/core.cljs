@@ -1947,9 +1947,9 @@ reduces them without incurring seq initialization"
 
 (defn array-chunk
   ([arr]
-     (array-chunk arr 0 (alength arr)))
+     (ArrayChunk. arr 0 (alength arr)))
   ([arr off]
-     (array-chunk arr off (alength arr)))
+     (ArrayChunk. arr off (alength arr)))
   ([arr off end]
      (ArrayChunk. arr off end)))
 
@@ -3240,8 +3240,8 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-coll __hash)))
 
 (defn chunked-seq
-  ([vec i off] (chunked-seq vec (array-for vec i) i off nil))
-  ([vec node i off] (chunked-seq vec node i off nil))
+  ([vec i off] (ChunkedSeq. vec (array-for vec i) i off nil nil))
+  ([vec node i off] (ChunkedSeq. vec node i off nil nil))
   ([vec node i off meta]
      (ChunkedSeq. vec node i off meta nil)))
 
