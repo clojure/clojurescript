@@ -64,6 +64,13 @@
 (simple-benchmark [coll (reduce conj [] (range (+ 32768 33)))] (pop coll) 100000)
 (println)
 
+(println ";;; chunked seqs")
+(let [v (seq (into [] (range 64)))]
+  (simple-benchmark [] (-first v) 1000000)
+  (simple-benchmark [] (-next v) 1000000)
+  (simple-benchmark [] (-rest v) 1000000))
+(println)
+
 (println ";;; transients")
 (print "transient vector, conj! 1000000 items")
 (time
