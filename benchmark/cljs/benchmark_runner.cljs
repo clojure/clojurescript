@@ -49,6 +49,7 @@
 (simple-benchmark [coll [1 2 3]] (conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (-conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (seq coll) 1000000)
+(simple-benchmark [coll [1 2 3]] (-seq coll) 1000000)
 (simple-benchmark [coll (seq [1 2 3])] (first coll) 1000000)
 (simple-benchmark [coll (seq [1 2 3])] (-first coll) 1000000)
 (simple-benchmark [coll (seq [1 2 3])] (rest coll) 1000000)
@@ -84,6 +85,11 @@
 (simple-benchmark [xs (array-seq (array 1 2 3 4 5))] (apply list xs) 1000000)
 (simple-benchmark [xs (list 1 2 3 4 5)] (apply list xs) 1000000)
 (simple-benchmark [xs [1 2 3 4 5]] (apply list xs) 1000000) ;; slow
+(println)
+
+(println ";; update-in")
+(simple-benchmark [coll {:foo 1}] (update-in coll [:x] inc) 1000000)
+(simple-benchmark [coll {:foo 1} ks (array-seq (array :x))] (update-in coll ks inc) 1000000)
 (println)
 
 (println ";;; obj-map")

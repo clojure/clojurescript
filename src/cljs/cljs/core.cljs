@@ -2809,11 +2809,26 @@ reduces them without incurring seq initialization"
   and any supplied args and return the new value, and returns a new
   nested structure.  If any levels do not exist, hash-maps will be
   created."
-  ([m [k & ks] f & args]
+  ([m [k & ks] f]
    (if ks
-     (assoc m k (apply update-in (get m k) ks f args))
-     (assoc m k (apply f (get m k) args)))))
-
+     (assoc m k (update-in (get m k) ks f))
+     (assoc m k (f (get m k)))))
+  ([m [k & ks] f a]
+   (if ks
+     (assoc m k (update-in (get m k) ks f a))
+     (assoc m k (f (get m k) a))))
+  ([m [k & ks] f a b]
+   (if ks
+     (assoc m k (update-in (get m k) ks f a b))
+     (assoc m k (f (get m k) a b))))
+  ([m [k & ks] f a b c]
+   (if ks
+     (assoc m k (update-in (get m k) ks f a b c))
+     (assoc m k (f (get m k) a b c))))
+  ([m [k & ks] f a b c & args]
+   (if ks
+     (assoc m k (apply update-in (get m k) ks f a b c args))
+     (assoc m k (apply f (get m k) a b c args)))))
 
 ;;; Vector
 ;;; DEPRECATED
