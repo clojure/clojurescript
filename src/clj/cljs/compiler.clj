@@ -294,7 +294,8 @@
   (if-let [tag (get-tag e)]
     tag
     (case (:op e)
-      :let (infer-tag (:ret e))
+      :let (infer-tag (:expr e))
+      :do  (infer-tag (:ret e))
       :if (let [then-tag (infer-tag (:then e))
                 else-tag (infer-tag (:else e))]
             (when (= then-tag else-tag)
