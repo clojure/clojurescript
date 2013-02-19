@@ -1831,5 +1831,10 @@
 
   (assert (= (meta (with-meta 'foo {:tag 'int})) {:tag 'int}))
 
+  ;; CLJS-467
+
+  (assert (= (reduce-kv + 0 (apply hash-map (range 1000)))
+             (reduce + (range 1000))))
+
   :ok
   )
