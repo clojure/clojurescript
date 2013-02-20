@@ -3153,19 +3153,22 @@ reduces them without incurring seq initialization"
       ())))
 
 (set! cljs.core.PersistentVector/EMPTY_NODE (pv-fresh-node nil))
-(set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
+
+(set! cljs.core.PersistentVector/EMPTY
+  (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
+
 (set! cljs.core.PersistentVector/fromArray
-      (fn [xs no-clone]
-        (let [l (alength xs)
-              xs (if (identical? no-clone true) xs (aclone xs))]
-          (if (< l 32)
-            (PersistentVector. nil l 5 cljs.core.PersistentVector/EMPTY_NODE xs nil)
-            (let [node (.slice xs 0 32)
-                  v (PersistentVector. nil 32 5 cljs.core.PersistentVector/EMPTY_NODE node nil)]
-             (loop [i 32 out (-as-transient v)]
-               (if (< i l)
-                 (recur (inc i) (conj! out (aget xs i)))
-                 (persistent! out))))))))
+  (fn [xs ^boolean no-clone]
+    (let [l (alength xs)
+          xs (if no-clone xs (aclone xs))]
+      (if (< l 32)
+        (PersistentVector. nil l 5 cljs.core.PersistentVector/EMPTY_NODE xs nil)
+        (let [node (.slice xs 0 32)
+              v (PersistentVector. nil 32 5 cljs.core.PersistentVector/EMPTY_NODE node nil)]
+          (loop [i 32 out (-as-transient v)]
+            (if (< i l)
+              (recur (inc i) (conj! out (aget xs i)))
+              (persistent! out))))))))
 
 (defn vec [coll]
   (-persistent!
@@ -4059,14 +4062,11 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 8)
 
-(set! cljs.core.PersistentArrayMap/fromArrays
-      (fn [ks vs]
-        (let [len (count ks)]
-          (loop [i   0
-                 out (transient cljs.core.PersistentArrayMap/EMPTY)]
-            (if (< i len)
-              (recur (inc i) (assoc! out (aget ks i) (aget vs i)))
-              (persistent! out))))))
+(set! cljs.core.PersistentArrayMap/fromArray
+  (fn [arr ^boolean no-clone]
+    (let [arr (if no-clone arr (aclone arr))] 
+      (let [cnt (/ (alength arr) 2)]
+        (PersistentArrayMap. nil cnt arr nil)))))
 
 (declare array->transient-hash-map)
 
@@ -5738,7 +5738,7 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o]
-    (PersistentHashSet. meta (assoc hash-map o nil) nil))
+    (PersistentHashSet. meta (-assoc hash-map o nil) nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.PersistentHashSet/EMPTY meta))
@@ -5758,7 +5758,7 @@ reduces them without incurring seq initialization"
   (-seq [coll] (keys hash-map))
 
   ICounted
-  (-count [coll] (count (seq coll)))
+  (-count [coll] (-count hash-map))
 
   ILookup
   (-lookup [coll v]
@@ -5770,7 +5770,7 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (PersistentHashSet. meta (dissoc hash-map v) nil))
+    (PersistentHashSet. meta (-dissoc hash-map v) nil))
 
   IFn
   (-invoke [coll k]
@@ -5779,18 +5779,23 @@ reduces them without incurring seq initialization"
     (-lookup coll k not-found))
 
   IEditableCollection
-  (-as-transient [coll] (TransientHashSet. (transient hash-map))))
+  (-as-transient [coll] (TransientHashSet. (-as-transient hash-map))))
 
-(set! cljs.core.PersistentHashSet/EMPTY (PersistentHashSet. nil (hash-map) 0))
+(set! cljs.core.PersistentHashSet/EMPTY
+  (PersistentHashSet. nil cljs.core.PersistentArrayMap/EMPTY 0))
 
 (set! cljs.core.PersistentHashSet/fromArray
-      (fn [items]
-        (let [len (count items)]
-          (loop [i   0
-                 out (transient cljs.core.PersistentHashSet/EMPTY)]
-            (if (< i len)
-              (recur (inc i) (conj! out (aget items i)))
-              (persistent! out))))))
+  (fn [items ^boolean no-clone]
+    (let [len (alength items)]
+     (if (<= (/ len 2) cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD)
+       (let [arr (if no-clone items (aclone items))]
+         (PersistentHashSet. nil
+           (cljs.core.PersistentArrayMap/fromArray arr true) nil))
+       (loop [i 0
+              out (transient cljs.core.PersistentHashSet/EMPTY)]
+         (if (< i len)
+           (recur (+ i 2) (conj! out (aget items i)))
+           (persistent! out)))))))
 
 (deftype TransientHashSet [^:mutable transient-map]
   ITransientCollection
@@ -5902,12 +5907,25 @@ reduces them without incurring seq initialization"
 
 (defn hash-set
   ([] cljs.core.PersistentHashSet/EMPTY)
-  ([& keys]
-    (loop [in (seq keys)
-           out (transient cljs.core.PersistentHashSet/EMPTY)]
-      (if (seq in)
-        (recur (next in) (conj! out (first in)))
-        (persistent! out)))))
+  ([& ^not-native keys]
+     (if (and (instance? IndexedSeq keys)
+              (< (alength (.-arr keys)) cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD))
+       (let [karr (.-arr keys)
+             klen (alength karr)
+             alen (* 2 klen)
+             arr  (make-array alen)]
+         (loop [ki 0]
+           (if (< ki klen)
+             (let [ai (* 2 ki)]
+               (aset arr ai (aget karr ki))
+               (aset arr (inc ai) nil)
+               (recur (inc ki)))
+             (cljs.core.PersistentHashSet/fromArray arr true))))
+       (loop [in keys
+              ^not-native out (-as-transient cljs.core.PersistentHashSet/EMPTY)]
+         (if-not (nil? in)
+           (recur (-next in) (-conj! out (-first in)))
+           (-persistent! out))))))
 
 (defn set
   "Returns a set of the distinct elements of coll."

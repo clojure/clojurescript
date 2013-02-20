@@ -252,11 +252,9 @@
                "})")
 
         (<= (count keys) array-map-threshold)
-        (emits "cljs.core.PersistentArrayMap.fromArrays(["
-               (comma-sep keys)
-               "],["
-               (comma-sep vals)
-               "])")
+        (emits "cljs.core.PersistentArrayMap.fromArray(["
+               (comma-sep (interleave keys vals))
+               "], true)")
 
         :else
         (emits "cljs.core.PersistentHashMap.fromArrays(["
@@ -279,7 +277,7 @@
     (if (empty? items)
       (emits "cljs.core.PersistentHashSet.EMPTY")
       (emits "cljs.core.PersistentHashSet.fromArray(["
-             (comma-sep items) "])"))))
+             (comma-sep (interleave items (repeat "null"))) "], true)"))))
 
 (defmethod emit :constant
   [{:keys [form env]}]

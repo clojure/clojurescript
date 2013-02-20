@@ -108,6 +108,7 @@
 (println)
 
 (println ";;; array-map")
+(simple-benchmark [] {[1] true [2] true [3] true} 1000000)
 (simple-benchmark [coll (array-map)] (assoc coll :foo :bar) 1000000)
 (simple-benchmark [coll (array-map :foo :bar)] (-lookup coll :foo) 1000000)
 (simple-benchmark [coll (array-map :foo :bar)] (assoc coll :baz :woz) 1000000)
@@ -170,9 +171,11 @@
 (println)
 
 (println ";;; set ops")
-(simple-benchmark [] #{} 100000) ;; SLOW
-(simple-benchmark [] #{1 2 3} 100000) ;; SLOW
-(simple-benchmark [coll #{1 2 3}] (conj coll 4) 100000) ;; SLOW
+(simple-benchmark [] #{} 1000000)
+(simple-benchmark [] #{1 2 3} 1000000)
+(simple-benchmark [v [1 2 3]] (set v) 1000000)
+(simple-benchmark [] (hash-set 1 2 3) 1000000)
+(simple-benchmark [coll #{1 2 3}] (conj coll 4) 1000000)
 (println)
 
 (println ";;; seq ops")
