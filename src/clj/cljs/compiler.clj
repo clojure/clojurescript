@@ -231,8 +231,8 @@
   (emit-wrap env
     (emits "cljs.core.with_meta(" expr "," meta ")")))
 
-(def ^:private array-map-threshold 16)
-(def ^:private obj-map-threshold 32)
+(def ^:private array-map-threshold 8)
+(def ^:private obj-map-threshold 8)
 
 (defmethod emit :map
   [{:keys [env keys vals]}]
