@@ -154,7 +154,7 @@
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
                  ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
                  IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
-                 ISeqable ISequential IList IRecord IReversible ISorted IPrintable IWriter
+                 ISeqable ISequential IList IRecord IReversible ISorted IPrintWithWriter IWriter
                  IPrintWithWriter IPending IWatchable IEditableCollection ITransientCollection
                  ITransientAssociative ITransientMap ITransientVector ITransientSet
                  IMultiFn IChunkedSeq IChunkedNext IComparable])

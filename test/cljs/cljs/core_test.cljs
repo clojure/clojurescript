@@ -1732,14 +1732,6 @@
   (defrecord PrintMe [a b])
   (assert (= (pr-str (PrintMe. 1 2)) "#PrintMe{:a 1, :b 2}"))
 
-  ;;; pr-str backwards compatibility
-
-  (deftype PrintMeBackwardsCompat [a b]
-    IPrintable
-    (-pr-seq [_ _] (list (str "<<<" a " " b ">>>"))))
-
-  (assert (= (pr-str (PrintMeBackwardsCompat. 1 2)) "<<<1 2>>>"))
-
   ;;; pr-str inst
 
   (assert (= (pr-str (js/Date. "2010-11-12T13:14:15.666-05:00"))
