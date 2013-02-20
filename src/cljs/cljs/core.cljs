@@ -2830,100 +2830,6 @@ reduces them without incurring seq initialization"
      (assoc m k (apply update-in (get m k) ks f a b c args))
      (assoc m k (apply f (get m k) a b c args)))))
 
-;;; Vector
-;;; DEPRECATED
-;;; in favor of PersistentVector
-(deftype Vector [meta array ^:mutable __hash]
-  Object
-  (toString [this]
-    (pr-str this))
-
-  IWithMeta
-  (-with-meta [coll meta] (Vector. meta array __hash))
-
-  IMeta
-  (-meta [coll] meta)
-
-  IStack
-  (-peek [coll]
-    (let [count (alength array)]
-      (when (> count 0)
-        (aget array (dec count)))))
-  (-pop [coll]
-    (if (> (alength array) 0)
-      (let [new-array (aclone array)]
-        (. new-array (pop))
-        (Vector. meta new-array nil))
-      (throw (js/Error. "Can't pop empty vector"))))
-
-  ICollection
-  (-conj [coll o]
-    (let [new-array (aclone array)]
-      (.push new-array o)
-      (Vector. meta new-array nil)))
-
-  IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
-
-  ISequential
-  IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
-
-  IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
-
-  ISeqable
-  (-seq [coll]
-    (when (> (alength array) 0)
-      (let [vector-seq
-             (fn vector-seq [i]
-               (lazy-seq
-                 (when (< i (alength array))
-                   (cons (aget array i) (vector-seq (inc i))))))]
-        (vector-seq 0))))
-
-  ICounted
-  (-count [coll] (alength array))
-
-  IIndexed
-  (-nth [coll n]
-    (if (and (<= 0 n) (< n (alength array)))
-      (aget array n)
-      #_(throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
-  (-nth [coll n not-found]
-    (if (and (<= 0 n) (< n (alength array)))
-      (aget array n)
-      not-found))
-
-  ILookup
-  (-lookup [coll k] (-nth coll k nil))
-  (-lookup [coll k not-found] (-nth coll k not-found))
-
-  IAssociative
-  (-assoc [coll k v]
-    (let [new-array (aclone array)]
-      (aset new-array k v)
-      (Vector. meta new-array nil)))
-
-  IVector
-  (-assoc-n [coll n val] (-assoc coll n val))
-
-  IReduce
-  (-reduce [v f]
-    (ci-reduce array f))
-  (-reduce [v f start]
-    (ci-reduce array f start))
-
-  IFn
-  (-invoke [coll k]
-    (-lookup coll k))
-  (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
-
-(set! cljs.core.Vector/EMPTY (Vector. nil (array) 0))
-
-(set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs nil)))
-
 ;;; PersistentVector
 
 (deftype VectorNode [edit arr])
@@ -3274,7 +3180,7 @@ reduces them without incurring seq initialization"
     (build-subvec meta (-assoc-n v end o) start (inc end) nil))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
+  (-empty [coll] (with-meta cljs.core.PersistentVector/EMPTY meta))
 
   ISequential
   IEquiv
@@ -6605,9 +6511,6 @@ reduces them without incurring seq initialization"
   EmptyList
   (-pr-seq [coll opts] (list "()"))
 
-  Vector
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "[" " " "]" opts coll))
-
   PersistentVector
   (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "[" " " "]" opts coll))
 
@@ -6740,9 +6643,6 @@ reduces them without incurring seq initialization"
 
   EmptyList
   (-pr-writer [coll writer opts] (-write writer "()"))
-
-  Vector
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
 
   PersistentVector
   (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
