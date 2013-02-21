@@ -114,12 +114,12 @@ does what?
 * bound-fn*
 * bound?
 * DONE butlast
-* TODO byte
+* DONE byte
 * byte-array
 * bytes
 * DONE case
 * cast
-* char
+* DONE char
 * char-array
 * char-escape-string
 * char-name-string
@@ -197,7 +197,7 @@ For macros only, uses clojure.core version
 * dosync
 * DONE dotimes
 * DONE doto
-* TODO double
+* DONE double
 * DONE double-array
 * TODO doubles
 * DONE drop
@@ -232,7 +232,7 @@ macro currently expands into extend call
 * find-var
 * DONE first
 * DONE flatten
-* float
+* DONE float
 * float-array
 * float?
 * floats
@@ -479,7 +479,7 @@ as macro
 * set-error-mode!
 * set-validator!
 * DONE set?
-* short
+* DONE short
 * short-array
 * shorts
 * TODO shuffle
@@ -525,27 +525,27 @@ as macro
 * DONE tree-seq
 * DONE true?
 * DONE type - returns JS constructor
-* TODO unchecked-add
-* TODO unchecked-add-int
-* TODO unchecked-byte
-* TODO unchecked-char
-* TODO unchecked-dec
-* TODO unchecked-dec-int
-* TODO unchecked-divide-int
-* TODO unchecked-double
-* TODO unchecked-float
-* TODO unchecked-inc
-* TODO unchecked-inc-int
-* TODO unchecked-int
-* TODO unchecked-long
-* TODO unchecked-multiply
-* TODO unchecked-multiply-int
-* TODO unchecked-negate
-* TODO unchecked-negate-int
-* TODO unchecked-remainder-int
-* TODO unchecked-short
-* TODO unchecked-subtract
-* TODO unchecked-subtract-int
+* DONE unchecked-add
+* DONE unchecked-add-int
+* DONE unchecked-byte
+* DONE unchecked-char
+* DONE unchecked-dec
+* DONE unchecked-dec-int
+* DONE unchecked-divide-int
+* DONE unchecked-double
+* DONE unchecked-float
+* DONE unchecked-inc
+* DONE unchecked-inc-int
+* DONE unchecked-int
+* DONE unchecked-long
+* DONE unchecked-multiply
+* DONE unchecked-multiply-int
+* DONE unchecked-negate
+* DONE unchecked-negate-int
+* DONE unchecked-remainder-int
+* DONE unchecked-short
+* DONE unchecked-subtract
+* DONE unchecked-subtract-int
 * DONE underive
 * unquote
 * unquote-splicing

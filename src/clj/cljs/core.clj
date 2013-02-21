@@ -19,6 +19,14 @@
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
+                            byte char short int long float double
+                            unchecked-byte unchecked-char unchecked-short unchecked-int
+                            unchecked-long unchecked-float unchecked-double
+                            unchecked-add unchecked-add-int unchecked-dec unchecked-dec-int
+                            unchecked-divide unchecked-divide-int unchecked-inc unchecked-inc-int
+                            unchecked-multiply unchecked-multiply-int unchecked-negate unchecked-negate-int
+                            unchecked-subtract unchecked-subtract-int unchecked-remainder-int
+
                             bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
                             bit-test bit-shift-left bit-shift-right bit-xor])
   (:require clojure.walk))
@@ -223,6 +231,60 @@
   ([x] x)
   ([x y] (list 'js* "(~{} + ~{})" x y))
   ([x y & more] `(+ (+ ~x ~y) ~@more)))
+
+(defmacro byte [x] x)
+(defmacro char [x] x)
+(defmacro short [x] x)
+(defmacro float [x] x)
+(defmacro double [x] x)
+
+(defmacro unchecked-byte [x] x)
+(defmacro unchecked-char [x] x)
+(defmacro unchecked-short [x] x)
+(defmacro unchecked-float [x] x)
+(defmacro unchecked-double [x] x)
+
+(defmacro unchecked-add
+  ([& xs] `(+ ~@xs)))
+
+(defmacro unchecked-add-int
+  ([& xs] `(+ ~@xs)))
+
+(defmacro unchecked-dec
+  ([x] `(dec ~x)))
+
+(defmacro unchecked-dec-int
+  ([x] `(dec ~x)))
+
+(defmacro unchecked-divide-int
+  ([& xs] `(/ ~@xs)))
+
+(defmacro unchecked-inc
+  ([x] `(inc ~x)))
+
+(defmacro unchecked-inc-int
+  ([x] `(inc ~x)))
+
+(defmacro unchecked-multiply
+  ([& xs] `(* ~@xs)))
+
+(defmacro unchecked-multiply-int
+  ([& xs] `(* ~@xs)))
+
+(defmacro unchecked-negate
+  ([x] `(- ~x)))
+
+(defmacro unchecked-negate-int
+  ([x] `(- ~x)))
+
+(defmacro unchecked-remainder-int
+  ([x n] `(mod ~x n)))
+
+(defmacro unchecked-subtract
+  ([& xs] `(- ~@xs)))
+
+(defmacro unchecked-subtract-int
+  ([& xs] `(- ~@xs)))
 
 (defmacro -
   ([x] (list 'js* "(- ~{})" x))
@@ -1130,7 +1192,7 @@
          (~print-fn (str ~bs-str ", " ~expr-str ", "
                          ~iterations " runs, " elapsed# " msecs"))))))
 
-(def cs (into [] (map (comp symbol core/str char) (range 97 118))))
+(def cs (into [] (map (comp symbol core/str core/char) (range 97 118))))
 
 (defn gen-apply-to-helper
   ([] (gen-apply-to-helper 1))

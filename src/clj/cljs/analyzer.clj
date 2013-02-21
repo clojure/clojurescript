@@ -383,6 +383,8 @@
                                 {:name fld
                                  :field true
                                  :mutable (-> fld meta :mutable)
+                                 :unsynchronized-mutable (-> fld meta :unsynchronized-mutable)
+                                 :volatile-mutable (-> fld meta :volatile-mutable)
                                  :tag (-> fld meta :tag)
                                  :shadow (m fld)}))
                        locals fields)
@@ -554,7 +556,9 @@
                          (let [local (-> env :locals target)]
                            (assert (or (nil? local)
                                        (and (:field local)
-                                            (:mutable local)))
+                                            (or (:mutable local)
+                                                (:unsynchronized-mutable local)
+                                                (:volatile-mutable local))))
                                    "Can't set! local var or non-mutable field"))
                          (analyze-symbol enve target))
 

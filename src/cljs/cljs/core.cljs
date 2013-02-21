@@ -1361,6 +1361,88 @@ reduces them without incurring seq initialization"
   ([x y & more]
    (reduce min (cljs.core/min x y) more)))
 
+(defn byte [x] x)
+(defn char [x] x)
+(defn short [x] x)
+(defn float [x] x)
+(defn double [x] x)
+
+(defn unchecked-byte [x] x)
+(defn unchecked-char [x] x)
+(defn unchecked-short [x] x)
+(defn unchecked-float [x] x)
+(defn unchecked-double [x] x)
+
+(defn unchecked-add
+  "Returns the sum of nums. (+) returns 0."
+  ([] 0)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-add x y))
+  ([x y & more] (reduce unchecked-add (cljs.core/unchecked-add x y) more)))
+
+(defn unchecked-add-int
+  "Returns the sum of nums. (+) returns 0."
+  ([] 0)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-add-int x y))
+  ([x y & more] (reduce unchecked-add-int (cljs.core/unchecked-add-int x y) more)))
+
+(defn unchecked-dec [x]
+  (cljs.core/unchecked-dec x))
+
+(defn unchecked-dec-int [x]
+  (cljs.core/unchecked-dec-int x))
+
+(defn unchecked-divide-int
+  "If no denominators are supplied, returns 1/numerator,
+  else returns numerator divided by all of the denominators."
+  ([x] (unchecked-divide-int 1 x))
+  ([x y] (js* "(~{x} / ~{y})")) ;; FIXME: waiting on cljs.core//
+  ([x y & more] (reduce unchecked-divide-int (unchecked-divide-int x y) more)))
+
+(defn unchecked-inc [x]
+  (cljs.core/unchecked-inc x))
+
+(defn unchecked-inc-int [x]
+  (cljs.core/unchecked-inc-int x))
+
+(defn unchecked-multiply
+  "Returns the product of nums. (*) returns 1."
+  ([] 1)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-multiply x y))
+  ([x y & more] (reduce unchecked-multiply (cljs.core/unchecked-multiply x y) more)))
+
+(defn unchecked-multiply-int
+  "Returns the product of nums. (*) returns 1."
+  ([] 1)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-multiply-int x y))
+  ([x y & more] (reduce unchecked-multiply-int (cljs.core/unchecked-multiply-int x y) more)))
+
+(defn unchecked-negate [x]
+  (cljs.core/unchecked-negate x))
+
+(defn unchecked-negate-int [x]
+  (cljs.core/unchecked-negate-int ~x))
+
+(defn unchecked-remainder-int [x n]
+  (cljs.core/unchecked-remainder-int x n))
+
+(defn unchecked-substract
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result."
+  ([x] (cljs.core/unchecked-subtract x))
+  ([x y] (cljs.core/unchecked-subtract x y))
+  ([x y & more] (reduce unchecked-substract (cljs.core/unchecked-subtract x y) more)))
+
+(defn unchecked-substract-int
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result."
+  ([x] (cljs.core/unchecked-subtract-int x))
+  ([x y] (cljs.core/unchecked-subtract-int x y))
+  ([x y & more] (reduce unchecked-substract-int (cljs.core/unchecked-subtract-int x y) more)))
+
 (defn- fix [q]
   (if (>= q 0)
     (Math/floor q)
@@ -1371,7 +1453,17 @@ reduces them without incurring seq initialization"
   [x]
   (fix x))
 
+(defn unchecked-int
+  "Coerce to int by stripping decimal places."
+  [x]
+  (fix x))
+
 (defn long
+  "Coerce to long by stripping decimal places. Identical to `int'."
+  [x]
+  (fix x))
+
+(defn unchecked-long
   "Coerce to long by stripping decimal places. Identical to `int'."
   [x]
   (fix x))
