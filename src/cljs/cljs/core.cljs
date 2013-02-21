@@ -2131,6 +2131,27 @@ reduces them without incurring seq initialization"
           (recur (inc i) (next xs))))
       ret))
 
+(defn int-array
+  ([size-or-seq]
+     (cond
+      (number? size-or-seq) (int-array size-or-seq nil)
+      (seq? size-or-seq) (into-array size-or-seq)
+      :else (throw (js/Error. "int-array called with something other than size or ISeq"))))
+  ([size init-val-or-seq]
+     (let [a (make-array size)]
+       (if (seq? init-val-or-seq)
+         (let [s (seq init-val-or-seq)]
+           (loop [i 0 s s]
+             (if (and s (< i size))
+               (do
+                 (aset a i (first s))
+                 (recur (inc i) (next s)))
+               a)))
+         (do
+           (dotimes [i size]
+             (aset a i init-val-or-seq))
+           a)))))
+
 (defn long-array
   ([size-or-seq]
      (cond

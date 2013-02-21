@@ -278,7 +278,7 @@ macro currently expands into extend call
 * DONE instance?
 does what?
 * DONE int
-* int-array
+* DONE int-array
 * DONE integer?
 * DONE interleave
 * intern
