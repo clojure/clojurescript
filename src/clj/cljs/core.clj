@@ -278,7 +278,7 @@
   ([x] `(- ~x)))
 
 (defmacro unchecked-remainder-int
-  ([x n] `(mod ~x n)))
+  ([x n] `(mod ~x ~n)))
 
 (defmacro unchecked-subtract
   ([& xs] `(- ~@xs)))

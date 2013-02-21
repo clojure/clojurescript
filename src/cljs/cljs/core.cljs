@@ -1424,7 +1424,9 @@ reduces them without incurring seq initialization"
   (cljs.core/unchecked-negate x))
 
 (defn unchecked-negate-int [x]
-  (cljs.core/unchecked-negate-int ~x))
+  (cljs.core/unchecked-negate-int x))
+
+(declare mod)
 
 (defn unchecked-remainder-int [x n]
   (cljs.core/unchecked-remainder-int x n))
