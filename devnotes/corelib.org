@@ -243,7 +243,7 @@ macro currently expands into extend call
 * DONE fnil
 * DONE for
 * DONE force
-* format
+* DONE format
 * DONE frequencies
 * future
 * future-call
@@ -477,7 +477,7 @@ as macro
 * DONE set
 * set-error-handler!
 * set-error-mode!
-* set-validator!
+* DONE set-validator!
 * DONE set?
 * DONE short
 * short-array
