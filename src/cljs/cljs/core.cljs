@@ -1470,6 +1470,15 @@ reduces them without incurring seq initialization"
   [x]
   (fix x))
 
+(defn booleans [x] x)
+(defn bytes [x] x)
+(defn chars [x] x)
+(defn shorts [x] x)
+(defn ints [x] x)
+(defn floats [x] x)
+(defn doubles [x] x)
+(defn longs [x] x)
+
 (defn js-mod
   "Modulus of num and div with original javascript behavior. i.e. bug for negative numbers"
   [n d]

@@ -109,14 +109,14 @@ does what?
 * DONE bit-xor
 * DONE boolean
 * boolean-array
-* booleans
+* DONE booleans
 * bound-fn
 * bound-fn*
 * bound?
 * DONE butlast
 * DONE byte
 * byte-array
-* bytes
+* DONE bytes
 * DONE case
 * cast
 * DONE char
@@ -124,15 +124,15 @@ does what?
 * char-escape-string
 * char-name-string
 * char?
-* chars
-* chunk
-* chunk-append
-* chunk-buffer
-* chunk-cons
-* chunk-first
-* chunk-next
-* chunk-rest
-* chunked-seq?
+* DONE chars
+* DONE chunk
+* DONE chunk-append
+* DONE chunk-buffer
+* DONE chunk-cons
+* DONE chunk-first
+* DONE chunk-next
+* DONE chunk-rest
+* DONE chunked-seq?
 * class
 * class?
 * clear-agent-errors
@@ -199,7 +199,7 @@ For macros only, uses clojure.core version
 * DONE doto
 * DONE double
 * DONE double-array
-* TODO doubles
+* DONE doubles
 * DONE drop
 * DONE drop-last
 * DONE drop-while
@@ -235,7 +235,7 @@ macro currently expands into extend call
 * DONE float
 * float-array
 * float?
-* floats
+* DONE floats
 * flush
 * DONE fn
 * DONE fn?
@@ -285,7 +285,7 @@ does what?
 * DONE interpose
 * DONE into
 * DONE into-array
-* ints
+* DONE ints
 * io!
 * DONE isa?
 does what?
@@ -316,7 +316,7 @@ does what?
 * locking
 * DONE long
 * DONE long-array
-* TODO longs
+* DONE longs
 * DONE loop
 * macroexpand
 * macroexpand-1
@@ -481,8 +481,8 @@ as macro
 * DONE set?
 * DONE short
 * short-array
-* shorts
-* TODO shuffle
+* DONE shorts
+* DONE shuffle
 * shutdown-agents
 * slurp
 * DONE some
