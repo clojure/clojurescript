@@ -371,6 +371,9 @@
   ([x y] (list 'js* "(~{} | ~{})" x y))
   ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
 
+(defmacro int [x]
+  `(bit-or ~x 0))
+
 (defmacro bit-xor
   ([x y] (list 'js* "(~{} ^ ~{})" x y))
   ([x y & more] `(bit-xor (bit-xor ~x ~y) ~@more)))

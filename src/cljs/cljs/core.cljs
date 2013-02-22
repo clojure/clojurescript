@@ -1453,7 +1453,7 @@ reduces them without incurring seq initialization"
 (defn int
   "Coerce to int by stripping decimal places."
   [x]
-  (fix x))
+  (bit-or x 0))
 
 (defn unchecked-int
   "Coerce to int by stripping decimal places."
