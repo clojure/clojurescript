@@ -353,7 +353,7 @@
     (emits mname)
     (if init
       (emits " = " init)
-      (emits " = undefined"))
+      (emits " = (typeof " mname " != 'undefined') ? " mname " : undefined"))
     (when-not (= :expr (:context env)) (emitln ";"))
     (when export
       (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))))
