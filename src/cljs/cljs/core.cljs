@@ -40,6 +40,8 @@
   [x]
   (js* "(~{x} != null && ~{x} !== false)"))
 
+(def not-native nil)
+
 (defn ^boolean identical?
   "Tests if 2 arguments are the same object"
   [x y]
