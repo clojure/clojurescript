@@ -1828,5 +1828,10 @@
   (assert (= (reduce-kv + 0 (apply hash-map (range 1000)))
              (reduce + (range 1000))))
 
+  ;; CLJS-477
+
+  (assert (= [js/undefined 1 2] ((fn [& more] more) js/undefined 1 2)))
+  (assert (= [js/undefined 4 5] ((fn [a b & more] more) 1 2 js/undefined 4 5)))
+
   :ok
   )
