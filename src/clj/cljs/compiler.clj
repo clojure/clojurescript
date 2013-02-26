@@ -432,7 +432,7 @@
                (emits mname ".cljs$lang$applyTo = ")
                (emit-apply-to (assoc f :name name))
                (emitln ";")
-               (emitln mname ".cljs$lang$arity$variadic = " delegate-name ";")
+               (emitln mname ".cljs$core$IFn$_invoke$arity$variadic = " delegate-name ";")
                (emitln "return " mname ";")
                (emitln "})()"))))
 
@@ -483,7 +483,7 @@
           (doseq [[n meth] ms]
             (if (:variadic meth)
               (do (emitln "default:")
-                  (emitln "return " n ".cljs$lang$arity$variadic("
+                  (emitln "return " n ".cljs$core$IFn$_invoke$arity$variadic("
                           (comma-sep (butlast maxparams))
                           (when (> (count maxparams) 1) ", ")
                           "cljs.core.array_seq(arguments, " max-fixed-arity "));"))
@@ -501,8 +501,8 @@
             (doseq [[n meth] ms]
               (let [c (count (:params meth))]
                 (if (:variadic meth)
-                  (emitln mname ".cljs$lang$arity$variadic = " n ".cljs$lang$arity$variadic;")
-                  (emitln mname ".cljs$lang$arity$" c " = " n ";")))))
+                  (emitln mname ".cljs$core$IFn$_invoke$arity$variadic = " n ".cljs$core$IFn$_invoke$arity$variadic;")
+                  (emitln mname ".cljs$core$IFn$_invoke$arity$" c " = " n ";")))))
           (emitln "return " mname ";")
           (emitln "})()")))
       (when loop-locals
@@ -623,7 +623,7 @@
              ;; direct dispatch to variadic case
              (and variadic? (> arity mfa))
              [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge name) ".cljs$lang$arity$variadic"))))
+                             (fn [name] (symbol (str (munge name) ".cljs$core$IFn$_invoke$arity$variadic"))))
               {:max-fixed-arity mfa}]
 
              ;; direct dispatch to specific arity case
@@ -631,7 +631,7 @@
              (let [arities (map count mps)]
                (if (some #{arity} arities)
                  [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge name) ".cljs$lang$arity$" arity)))) nil]
+                             (fn [name] (symbol (str (munge name) ".cljs$core$IFn$_invoke$arity$" arity)))) nil]
                  [f nil]))))
           [f nil])]
     (emit-wrap env
@@ -658,7 +658,7 @@
        
        :else
        (if (and ana/*cljs-static-fns* (= (:op f) :var))
-         (let [fprop (str ".cljs$lang$arity$" (count args))]
+         (let [fprop (str ".cljs$core$IFn$_invoke$arity$" (count args))]
            (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : " f ".call(" (comma-sep (cons "null" args)) "))"))
          (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
 

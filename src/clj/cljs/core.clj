@@ -1201,8 +1201,8 @@
 (defn gen-apply-to-helper
   ([] (gen-apply-to-helper 1))
   ([n]
-     (let [prop (symbol (core/str "-cljs$lang$arity$" n))
-           f (symbol (core/str "cljs$lang$arity$" n))]
+     (let [prop (symbol (core/str "-cljs$core$IFn$_invoke$arity$" n))
+           f (symbol (core/str "cljs$core$IFn$_invoke$arity$" n))]
        (if (core/<= n 20)
          `(let [~(cs (core/dec n)) (-first ~'args)
                 ~'args (-rest ~'args)]
