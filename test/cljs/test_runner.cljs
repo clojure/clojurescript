@@ -8,7 +8,8 @@
             [cljs.macro-test :as macro-test]
             [cljs.letfn-test :as letfn-test]
             [foo.ns-shadow-test :as ns-shadow-test]
-            [cljs.top-level :as top-level]))
+            [cljs.top-level :as top-level]
+            [cljs.reducers-test :as reducers-test]))
 
 (set! *print-fn* js/print)
 
@@ -22,6 +23,7 @@
 (letfn-test/test-letfn)
 (ns-shadow-test/test-shadow)
 (top-level/test)
+(reducers-test/test-all)
 
 (println "Tests completed without exception")
 

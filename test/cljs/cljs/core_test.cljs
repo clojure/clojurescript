@@ -1796,6 +1796,7 @@
     (kvr-test (hash-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
     (kvr-test (array-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
     (kvr-test [:v0 :v1] [0 :v0 1 :v1]))
+  (assert (= {:init :val} (reduce-kv assoc {:init :val} nil)))
 
   ;; data conveying exception
   (assert (= {:foo 1}
