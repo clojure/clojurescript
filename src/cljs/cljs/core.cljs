@@ -486,6 +486,10 @@
     ([_ f] (f))
     ([_ f start] start))
 
+  IKVReduce
+  (-kv-reduce [_ f init]
+    init)
+
   IHash
   (-hash [o] 0))
 
