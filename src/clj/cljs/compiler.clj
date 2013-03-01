@@ -160,12 +160,14 @@
                   (name x)
                   \"))
 
+;; TODO: we could optimize, call type constructor & inline all the properties of x - David
+
 (defmethod emit-constant clojure.lang.Symbol [x]
-           (emits \" "\\uFDD1" \'
-                  (if (namespace x)
-                    (str (namespace x) "/") "")
-                  (name x)
-                  \"))
+  (emits "cljs.core.symbol(")
+  (emit-constant (namespace x))
+  (emits ",")
+  (emit-constant (name x))
+  (emits ")"))
 
 (defn- emit-meta-constant [x & body]
   (if (meta x)
@@ -244,38 +246,37 @@
   (emit-wrap env
     (emits "cljs.core.with_meta(" expr "," meta ")")))
 
-(def ^:private array-map-threshold 16)
-(def ^:private obj-map-threshold 32)
+(def ^:private array-map-threshold 8)
+(def ^:private obj-map-threshold 8)
 
 (defmethod emit :map
-  [{:keys [env simple-keys? keys vals]}]
-  (emit-wrap env
-    (cond
-      (zero? (count keys))
-      (emits "cljs.core.ObjMap.EMPTY")
+  [{:keys [env keys vals]}]
+  (let [simple-keys? (every? #(or (string? %) (keyword? %)) keys)]
+    (emit-wrap env
+      (cond
+        (zero? (count keys))
+        (emits "cljs.core.ObjMap.EMPTY")
 
-      (and simple-keys? (<= (count keys) obj-map-threshold))
-      (emits "cljs.core.ObjMap.fromObject(["
-             (comma-sep keys) ; keys
-             "],{"
-             (comma-sep (map (fn [k v]
-                               (with-out-str (emit k) (print ":") (emit v)))
-                             keys vals)) ; js obj
-             "})")
+        (and simple-keys? (<= (count keys) obj-map-threshold))
+        (emits "cljs.core.ObjMap.fromObject(["
+               (comma-sep keys)          ; keys
+               "],{"
+               (comma-sep (map (fn [k v]
+                                 (with-out-str (emit k) (print ":") (emit v)))
+                               keys vals)) ; js obj
+               "})")
 
-      (<= (count keys) array-map-threshold)
-      (emits "cljs.core.PersistentArrayMap.fromArrays(["
-             (comma-sep keys)
-             "],["
-             (comma-sep vals)
-             "])")
+        (<= (count keys) array-map-threshold)
+        (emits "cljs.core.PersistentArrayMap.fromArray(["
+               (comma-sep (interleave keys vals))
+               "], true)")
 
-      :else
-      (emits "cljs.core.PersistentHashMap.fromArrays(["
-             (comma-sep keys)
-             "],["
-             (comma-sep vals)
-             "])"))))
+        :else
+        (emits "cljs.core.PersistentHashMap.fromArrays(["
+               (comma-sep keys)
+               "],["
+               (comma-sep vals)
+               "])")))))
 
 (defmethod emit :vector
   [{:keys [items env]}]
@@ -291,7 +292,7 @@
     (if (empty? items)
       (emits "cljs.core.PersistentHashSet.EMPTY")
       (emits "cljs.core.PersistentHashSet.fromArray(["
-             (comma-sep items) "])"))))
+             (comma-sep (interleave items (repeat "null"))) "], true)"))))
 
 (defmethod emit :constant
   [{:keys [form env]}]
@@ -306,7 +307,8 @@
   (if-let [tag (get-tag e)]
     tag
     (case (:op e)
-      :let (infer-tag (:ret e))
+      :let (infer-tag (:expr e))
+      :do  (infer-tag (:ret e))
       :if (let [then-tag (infer-tag (:then e))
                 else-tag (infer-tag (:else e))]
             (when (= then-tag else-tag)
@@ -361,14 +363,15 @@
 
 (defmethod emit :def
   [{:keys [name var init env doc export]}]
-  (emit-comment doc (:jsdoc init))
-  (emits var)
-  (if init
-    (emits " = " init)
-    (emits " = undefined"))
-  (when-not (= :expr (:context env)) (emitln ";"))
-  (when export
-    (emitln "goog.exportSymbol('" (munge export) "', " (munge name) ");")))
+  (let [mname (munge name)]
+    (emit-comment doc (:jsdoc init))
+    (emits var)
+    (if init
+      (emits " = " init)
+      (emits " = (typeof " mname " != 'undefined') ? " mname " : undefined"))
+    (when-not (= :expr (:context env)) (emitln ";"))
+    (when export
+      (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
@@ -434,7 +437,7 @@
                  (emitln "var self__ = this;"))
                (when variadic
                  (emitln "var " (last params) " = null;")
-                 (emitln "if (goog.isDef(var_args)) {")
+                 (emitln "if (arguments.length > " (dec (count params)) ") {")
                  (emitln "  " (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);")
                  (emitln "} "))
                (emitln "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");")
@@ -444,7 +447,7 @@
                (emits mname ".cljs$lang$applyTo = ")
                (emit-apply-to (assoc f :name name))
                (emitln ";")
-               (emitln mname ".cljs$lang$arity$variadic = " delegate-name ";")
+               (emitln mname ".cljs$core$IFn$_invoke$arity$variadic = " delegate-name ";")
                (emitln "return " mname ";")
                (emitln "})()"))))
 
@@ -495,7 +498,7 @@
           (doseq [[n meth] ms]
             (if (:variadic meth)
               (do (emitln "default:")
-                  (emitln "return " n ".cljs$lang$arity$variadic("
+                  (emitln "return " n ".cljs$core$IFn$_invoke$arity$variadic("
                           (comma-sep (butlast maxparams))
                           (when (> (count maxparams) 1) ", ")
                           "cljs.core.array_seq(arguments, " max-fixed-arity "));"))
@@ -513,8 +516,8 @@
             (doseq [[n meth] ms]
               (let [c (count (:params meth))]
                 (if (:variadic meth)
-                  (emitln mname ".cljs$lang$arity$variadic = " n ".cljs$lang$arity$variadic;")
-                  (emitln mname ".cljs$lang$arity$" c " = " n ";")))))
+                  (emitln mname ".cljs$core$IFn$_invoke$arity$variadic = " n ".cljs$core$IFn$_invoke$arity$variadic;")
+                  (emitln mname ".cljs$core$IFn$_invoke$arity$" c " = " n ";")))))
           (emitln "return " mname ";")
           (emitln "})()")))
       (when loop-locals
@@ -601,13 +604,15 @@
                  (not (:dynamic info))
                  (:fn-var info))
         protocol (:protocol info)
-        proto? (let [tag (infer-tag (first (:args expr)))]
-                 (and protocol tag
-                      (or ana/*cljs-static-fns*
-                          (:protocol-inline env))
-                      (or (= protocol tag)
-                          (when-let [ps (:protocols (ana/resolve-existing-var (dissoc env :locals) tag))]
-                            (ps protocol)))))
+        tag      (infer-tag (first (:args expr)))
+        proto? (and protocol tag
+                 (or (and ana/*cljs-static-fns* protocol (= tag 'not-native)) 
+                     (and
+                       (or ana/*cljs-static-fns*
+                           (:protocol-inline env))
+                       (or (= protocol tag)
+                           (when-let [ps (:protocols (ana/resolve-existing-var (dissoc env :locals) tag))]
+                             (ps protocol))))))
         opt-not? (and (= (:name info) 'cljs.core/not)
                       (= (infer-tag (first (:args expr))) 'boolean))
         ns (:ns info)
@@ -633,7 +638,7 @@
              ;; direct dispatch to variadic case
              (and variadic? (> arity mfa))
              [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge name) ".cljs$lang$arity$variadic"))))
+                             (fn [name] (symbol (str (munge name) ".cljs$core$IFn$_invoke$arity$variadic"))))
               {:max-fixed-arity mfa}]
 
              ;; direct dispatch to specific arity case
@@ -641,7 +646,7 @@
              (let [arities (map count mps)]
                (if (some #{arity} arities)
                  [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge name) ".cljs$lang$arity$" arity)))) nil]
+                             (fn [name] (symbol (str (munge name) ".cljs$core$IFn$_invoke$arity$" arity)))) nil]
                  [f nil]))))
           [f nil])]
     (emit-wrap env
@@ -668,7 +673,7 @@
        
        :else
        (if (and ana/*cljs-static-fns* (= (:op f) :var))
-         (let [fprop (str ".cljs$lang$arity$" (count args))]
+         (let [fprop (str ".cljs$core$IFn$_invoke$arity$" (count args))]
            (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : " f ".call(" (comma-sep (cons "null" args)) "))"))
          (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
 

@@ -8,6 +8,10 @@
 
 (simple-benchmark [x 1] (identity x) 1000000)
 
+(println ";; symbol construction")
+(simple-benchmark [] (symbol 'foo) 1000000)
+(println)
+
 (println ";; array-reduce & ci-reduce")
 (def arr (let [arr (array)]
            (dotimes [i 1000000]
@@ -45,6 +49,7 @@
 (simple-benchmark [coll [1 2 3]] (conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (-conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (seq coll) 1000000)
+(simple-benchmark [coll [1 2 3]] (-seq coll) 1000000)
 (simple-benchmark [coll (seq [1 2 3])] (first coll) 1000000)
 (simple-benchmark [coll (seq [1 2 3])] (-first coll) 1000000)
 (simple-benchmark [coll (seq [1 2 3])] (rest coll) 1000000)
@@ -57,6 +62,13 @@
 (simple-benchmark [coll (reduce conj [] (range (+ 32768 32)))] (conj coll :foo) 100000)
 (simple-benchmark [coll (reduce conj [] (range 40000))] (assoc coll 123 :foo) 100000)
 (simple-benchmark [coll (reduce conj [] (range (+ 32768 33)))] (pop coll) 100000)
+(println)
+
+(println ";;; chunked seqs")
+(let [v (seq (into [] (range 64)))]
+  (simple-benchmark [] (-first v) 1000000)
+  (simple-benchmark [] (-next v) 1000000)
+  (simple-benchmark [] (-rest v) 1000000))
 (println)
 
 (println ";;; transients")
@@ -76,20 +88,58 @@
 
 (println ";; apply")
 (simple-benchmark [coll (into [] (range 1000000))] (apply + coll) 1)
+(simple-benchmark [] (list 1 2 3 4 5) 1000000)
+(simple-benchmark [xs (array-seq (array 1 2 3 4 5))] (apply list xs) 1000000)
+(simple-benchmark [xs (list 1 2 3 4 5)] (apply list xs) 1000000)
+(simple-benchmark [xs [1 2 3 4 5]] (apply list xs) 1000000)
 (println)
+
+(println ";; update-in")
+(simple-benchmark [coll {:foo 1} ks [:foo]] (update-in coll ks inc) 1000000)
+(simple-benchmark [coll (array-map :foo 1) ks [:foo]] (update-in coll ks inc) 1000000)
+(println)
+
+(println ";;; obj-map")
+(simple-benchmark [coll (obj-map)] (assoc coll :foo :bar) 1000000)
+(simple-benchmark [coll (obj-map :foo :bar)] (-lookup coll :foo) 1000000)
+(simple-benchmark [coll (obj-map :foo :bar)] (assoc coll :baz :woz) 1000000)
+(simple-benchmark [coll (obj-map :foo :bar :baz :woz)] (-lookup coll :baz) 1000000)
+(simple-benchmark [coll (obj-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
+(println)
+
+(println ";;; array-map")
+(simple-benchmark [] {[1] true [2] true [3] true} 1000000)
+(simple-benchmark [coll (array-map)] (assoc coll :foo :bar) 1000000)
+(simple-benchmark [coll (array-map :foo :bar)] (-lookup coll :foo) 1000000)
+(simple-benchmark [coll (array-map :foo :bar)] (assoc coll :baz :woz) 1000000)
+(simple-benchmark [coll (array-map :foo :bar :baz :woz)] (-lookup coll :baz) 1000000)
+(simple-benchmark [coll (array-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
+(println)
+(def data-atom (atom {:x 0}))
 
 (println ";;; map / record ops")
 (simple-benchmark [coll {:foo 1 :bar 2}] (get coll :foo) 1000000)
+(simple-benchmark [coll {'foo 1 'bar 2}] (get coll 'foo) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (-lookup coll :foo nil) 1000000)
+(simple-benchmark [coll {'foo 1 'bar 2}] (-lookup coll 'foo nil) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (:foo coll) 1000000)
+(simple-benchmark [coll {'foo 1 'bar 2}] ('foo coll) 1000000)
 (defrecord Foo [bar baz])
 (simple-benchmark [coll (Foo. 1 2)] (:bar coll) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (assoc coll :baz 3) 100000)
+(simple-benchmark [coll {'foo 1 'bar 2}] (assoc coll 'baz 3) 100000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (assoc coll :foo 2) 100000)
+(simple-benchmark [coll {'foo 1 'bar 2}] (assoc coll 'foo 2) 100000)
 (simple-benchmark [coll {:foo 1 :bar 2}]
                   (loop [i 0 m coll]
                     (if (< i 100000)
                       (recur (inc i) (assoc m :foo 2))
+                      m))
+                  1)
+(simple-benchmark [coll {'foo 1 'bar 2}]
+                  (loop [i 0 m coll]
+                    (if (< i 100000)
+                      (recur (inc i) (assoc m 'foo 2))
                       m))
                   1)
 (println ";;; persistent hash maps")
@@ -121,9 +171,11 @@
 (println)
 
 (println ";;; set ops")
-(simple-benchmark [] #{} 100000)
-(simple-benchmark [] #{1 2 3} 100000)
-(simple-benchmark [coll #{1 2 3}] (conj coll 4) 100000)
+(simple-benchmark [] #{} 1000000)
+(simple-benchmark [] #{1 2 3} 1000000)
+(simple-benchmark [v [1 2 3]] (set v) 1000000)
+(simple-benchmark [] (hash-set 1 2 3) 1000000)
+(simple-benchmark [coll #{1 2 3}] (conj coll 4) 1000000)
 (println)
 
 (println ";;; seq ops")

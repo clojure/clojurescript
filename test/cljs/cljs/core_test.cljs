@@ -883,9 +883,6 @@
   (assert (= {:a 1} (meta (vary-meta [] assoc :a 1))))
   (assert (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
 
-  ;; multi-methods
-  (swap! global-hierarchy make-hierarchy)
-
   ;; hierarchy tests
   (derive ::rect ::shape)
   (derive ::square ::rect)
@@ -1643,14 +1640,16 @@
 
   ;; Chunked Sequences
 
-  (assert (= (hash (seq [1 2])) (hash (seq [1 2]))))
-  (assert (= 6 (reduce + (array-chunk (array 1 2 3)))))
-  (assert (instance? ChunkedSeq (seq [1 2 3])))
-  (assert (= '(1 2 3) (seq [1 2 3])))
-  (assert (= '(2 3 4) (map inc [1 2 3])))
-  (assert (= '(2) (filter even? [1 2 3])))
-  (assert (= '(1 3) (filter odd? [1 2 3])))
-  (assert (= '(1 2 3) (concat [1] [2] [3])))
+  (let [r (range 64)
+        v (into [] r)]
+    (assert (= (hash (seq v)) (hash (seq v))))
+    (assert (= 6 (reduce + (array-chunk (array 1 2 3)))))
+    (assert (instance? ChunkedSeq (seq v)))
+    (assert (= r (seq v)))
+    (assert (= (map inc r) (map inc v)))
+    (assert (= (filter even? r) (filter even? v)))
+    (assert (= (filter odd? r) (filter odd? v)))
+    (assert (= (concat r r r) (concat v v v))))
 
   ;; INext
 
@@ -1731,15 +1730,7 @@
   ;;; pr-str records
 
   (defrecord PrintMe [a b])
-  (assert (= (pr-str (PrintMe. 1 2)) "#PrintMe{:a 1, :b 2}"))
-
-  ;;; pr-str backwards compatibility
-
-  (deftype PrintMeBackwardsCompat [a b]
-    IPrintable
-    (-pr-seq [_ _] (list (str "<<<" a " " b ">>>"))))
-
-  (assert (= (pr-str (PrintMeBackwardsCompat. 1 2)) "<<<1 2>>>"))
+  (assert (= (pr-str (PrintMe. 1 2)) "#cljs.core-test.PrintMe{:a 1, :b 2}"))
 
   ;;; pr-str inst
 
@@ -1805,6 +1796,7 @@
     (kvr-test (hash-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
     (kvr-test (array-map :k0 :v0 :k1 :v1) [:k0 :v0 :k1 :v1])
     (kvr-test [:v0 :v1] [0 :v0 1 :v1]))
+  (assert (= {:init :val} (reduce-kv assoc {:init :val} nil)))
 
   ;; data conveying exception
   (assert (= {:foo 1}
@@ -1827,6 +1819,20 @@
   ;; CLJS-464
 
   (assert (nil? (get-in {:foo {:bar 2}} [:foo :bar :baz])))
+
+  ;; symbol metadata
+
+  (assert (= (meta (with-meta 'foo {:tag 'int})) {:tag 'int}))
+
+  ;; CLJS-467
+
+  (assert (= (reduce-kv + 0 (apply hash-map (range 1000)))
+             (reduce + (range 1000))))
+
+  ;; CLJS-477
+
+  (assert (= [js/undefined 1 2] ((fn [& more] more) js/undefined 1 2)))
+  (assert (= [js/undefined 4 5] ((fn [a b & more] more) 1 2 js/undefined 4 5)))
 
   :ok
   )

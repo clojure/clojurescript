@@ -186,12 +186,9 @@
                  lb (-> env :locals prefix)]
              (if lb
                {:name (symbol (str (:name lb) suffix))}
-               (do
-                 (when confirm
-                   (confirm env prefix (symbol suffix)))
-                 (merge (get-in @namespaces [prefix :defs (symbol suffix)])
-                        {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-                         :ns prefix}))))
+               (merge (get-in @namespaces [prefix :defs (symbol suffix)])
+                 {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
+                  :ns prefix})))
 
            (get-in @namespaces [(-> env :ns :name) :uses sym])
            (let [full-ns (get-in @namespaces [(-> env :ns :name) :uses sym])]
@@ -410,6 +407,8 @@
                                  :column (get-col fld env)
                                  :field true
                                  :mutable (-> fld meta :mutable)
+                                 :unsynchronized-mutable (-> fld meta :unsynchronized-mutable)
+                                 :volatile-mutable (-> fld meta :volatile-mutable)
                                  :tag (-> fld meta :tag)
                                  :shadow (m fld)}))
                        locals fields)
@@ -585,7 +584,9 @@
                          (let [local (-> env :locals target)]
                            (assert (or (nil? local)
                                        (and (:field local)
-                                            (:mutable local)))
+                                            (or (:mutable local)
+                                                (:unsynchronized-mutable local)
+                                                (:volatile-mutable local))))
                                    "Can't set! local var or non-mutable field"))
                          (analyze-symbol enve target))
 
@@ -935,12 +936,10 @@
 (defn analyze-map
   [env form name]
   (let [expr-env (assoc env :context :expr)
-        simple-keys? (every? #(or (string? %) (keyword? %))
-                             (keys form))
         ks (disallowing-recur (vec (map #(analyze expr-env % name) (keys form))))
         vs (disallowing-recur (vec (map #(analyze expr-env % name) (vals form))))]
     (analyze-wrap-meta {:op :map :env env :form form
-                        :keys ks :vals vs :simple-keys? simple-keys?
+                        :keys ks :vals vs
                         :children (vec (interleave ks vs))}
                        name)))
 

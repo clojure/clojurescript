@@ -19,6 +19,14 @@
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
+                            byte char short int long float double
+                            unchecked-byte unchecked-char unchecked-short unchecked-int
+                            unchecked-long unchecked-float unchecked-double
+                            unchecked-add unchecked-add-int unchecked-dec unchecked-dec-int
+                            unchecked-divide unchecked-divide-int unchecked-inc unchecked-inc-int
+                            unchecked-multiply unchecked-multiply-int unchecked-negate unchecked-negate-int
+                            unchecked-subtract unchecked-subtract-int unchecked-remainder-int
+
                             bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
                             bit-test bit-shift-left bit-shift-right bit-xor])
   (:require clojure.walk))
@@ -154,7 +162,7 @@
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
                  ILookup IAssociative IMap IMapEntry ISet IStack IVector IDeref
                  IDerefWithTimeout IMeta IWithMeta IReduce IKVReduce IEquiv IHash
-                 ISeqable ISequential IList IRecord IReversible ISorted IPrintable IWriter
+                 ISeqable ISequential IList IRecord IReversible ISorted IPrintWithWriter IWriter
                  IPrintWithWriter IPending IWatchable IEditableCollection ITransientCollection
                  ITransientAssociative ITransientMap ITransientVector ITransientSet
                  IMultiFn IChunkedSeq IChunkedNext IComparable])
@@ -223,6 +231,60 @@
   ([x] x)
   ([x y] (list 'js* "(~{} + ~{})" x y))
   ([x y & more] `(+ (+ ~x ~y) ~@more)))
+
+(defmacro byte [x] x)
+(defmacro char [x] x)
+(defmacro short [x] x)
+(defmacro float [x] x)
+(defmacro double [x] x)
+
+(defmacro unchecked-byte [x] x)
+(defmacro unchecked-char [x] x)
+(defmacro unchecked-short [x] x)
+(defmacro unchecked-float [x] x)
+(defmacro unchecked-double [x] x)
+
+(defmacro unchecked-add
+  ([& xs] `(+ ~@xs)))
+
+(defmacro unchecked-add-int
+  ([& xs] `(+ ~@xs)))
+
+(defmacro unchecked-dec
+  ([x] `(dec ~x)))
+
+(defmacro unchecked-dec-int
+  ([x] `(dec ~x)))
+
+(defmacro unchecked-divide-int
+  ([& xs] `(/ ~@xs)))
+
+(defmacro unchecked-inc
+  ([x] `(inc ~x)))
+
+(defmacro unchecked-inc-int
+  ([x] `(inc ~x)))
+
+(defmacro unchecked-multiply
+  ([& xs] `(* ~@xs)))
+
+(defmacro unchecked-multiply-int
+  ([& xs] `(* ~@xs)))
+
+(defmacro unchecked-negate
+  ([x] `(- ~x)))
+
+(defmacro unchecked-negate-int
+  ([x] `(- ~x)))
+
+(defmacro unchecked-remainder-int
+  ([x n] `(mod ~x ~n)))
+
+(defmacro unchecked-subtract
+  ([& xs] `(- ~@xs)))
+
+(defmacro unchecked-subtract-int
+  ([& xs] `(- ~@xs)))
 
 (defmacro -
   ([x] (list 'js* "(- ~{})" x))
@@ -308,6 +370,9 @@
 (defmacro bit-or
   ([x y] (list 'js* "(~{} | ~{})" x y))
   ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
+
+(defmacro int [x]
+  `(bit-or ~x 0))
 
 (defmacro bit-xor
   ([x y] (list 'js* "(~{} ^ ~{})" x y))
@@ -597,6 +662,7 @@
   (let [hinted-fields fields
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
+        pr-open (core/str "#" (.getNamespace rname) "." (.getName rname) "{")
         fields (conj fields '__meta '__extmap (with-meta '__hash {:mutable true}))]
     (let [gs (gensym)
           ksym (gensym "k")
@@ -653,7 +719,7 @@
                   `(~'-pr-writer [this# writer# opts#]
                                  (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# pr-writer "" " " "" opts# keyval#))]
                                    (pr-sequential-writer
-                                    writer# pr-pair# (core/str "#" ~(name rname) "{") ", " "}" opts#
+                                    writer# pr-pair# ~pr-open ", " "}" opts#
                                     (concat [~@(map #(list `vector (keyword %) %) base-fields)]
                                             ~'__extmap))))
                   ])
@@ -1095,7 +1161,7 @@
                prefer-table# (atom {})
                method-cache# (atom {})
                cached-hierarchy# (atom {})
-               hierarchy# (get ~options :hierarchy cljs.core/global-hierarchy)]
+               hierarchy# (get ~options :hierarchy (cljs.core/get-global-hierarchy))]
            (cljs.core/MultiFn. ~(name mm-name) ~dispatch-fn ~default hierarchy#
                                method-table# prefer-table# method-cache# cached-hierarchy#))))))
 
@@ -1130,13 +1196,13 @@
          (~print-fn (str ~bs-str ", " ~expr-str ", "
                          ~iterations " runs, " elapsed# " msecs"))))))
 
-(def cs (into [] (map (comp symbol core/str char) (range 97 118))))
+(def cs (into [] (map (comp symbol core/str core/char) (range 97 118))))
 
 (defn gen-apply-to-helper
   ([] (gen-apply-to-helper 1))
   ([n]
-     (let [prop (symbol (core/str "-cljs$lang$arity$" n))
-           f (symbol (core/str "cljs$lang$arity$" n))]
+     (let [prop (symbol (core/str "-cljs$core$IFn$_invoke$arity$" n))
+           f (symbol (core/str "cljs$core$IFn$_invoke$arity$" n))]
        (if (core/<= n 20)
          `(let [~(cs (core/dec n)) (-first ~'args)
                 ~'args (-rest ~'args)]

@@ -40,6 +40,8 @@
   [x]
   (js* "(~{x} != null && ~{x} !== false)"))
 
+(def not-native nil)
+
 (defn ^boolean identical?
   "Tests if 2 arguments are the same object"
   [x y]
@@ -75,10 +77,20 @@
   argv as arguments"}
   *main-cli-fn* nil)
 
+(declare pr-str)
+
+(defn type [x]
+  (when-not (nil? x)
+    (.-constructor x)))
+
 (defn missing-protocol [proto obj]
-  (js/Error
-   (.join (array "No protocol method " proto
-                 " defined for type " (goog/typeOf obj) ": " obj) "")))
+  (let [ty (type obj)
+        ty (if (and ty (.-cljs$lang$type ty))
+             (pr-str ty)
+             (goog/typeOf obj))]
+   (js/Error.
+     (.join (array "No protocol method " proto
+                   " defined for type " ty ": " obj) ""))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
@@ -250,12 +262,6 @@
   (-entry-key [coll entry])
   (-comparator [coll]))
 
-(defprotocol ^:deprecated IPrintable
-  "Do not use this.  It is kept for backwards compatibility with existing
-   user code that depends on it, but it has been superceded by IPrintWithWriter
-   User code that depends on this should be changed to use -pr-writer instead."
-  (-pr-seq [o opts]))
-
 (defprotocol IWriter
   (-write [writer s])
   (-flush [writer]))
@@ -308,6 +314,55 @@
 
 (defprotocol IChunkedNext
   (-chunked-next [coll]))
+
+(defprotocol INamed
+  (-name [x])
+  (-namespace [x]))
+
+;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
+
+(declare list instance? symbol? hash-combine hash)
+
+(deftype Symbol [ns name str ^:mutable _hash _meta]
+  Object
+  (toString [_] str)
+  IEquiv
+  (-equiv [_ other]
+    (if (instance? Symbol other)
+      (identical? str (.-str other))
+      false))
+  IFn
+  (-invoke [sym coll]
+    (-lookup coll sym nil))
+  (-invoke [sym coll not-found]
+    (-lookup coll sym not-found))
+  IMeta
+  (-meta [_] _meta)
+  IWithMeta
+  (-with-meta [_ new-meta] (Symbol. ns name str _hash new-meta))
+  IHash
+  (-hash [_]
+    (if (== _hash -1)
+      (do
+        (set! _hash (hash-combine (hash ns) (hash name)))
+        _hash)
+      _hash))
+  INamed
+  (-name [_] name)
+  (-namespace [_] ns)
+  IPrintWithWriter
+  (-pr-writer [o writer _] (-write writer str)))
+
+(defn symbol
+  ([name]
+     (if (symbol? name)
+       name
+       (symbol nil name)))
+  ([ns name]
+     (let [sym-str (if-not (nil? ns)
+                     (str ns "/" name)
+                     name)]
+       (Symbol. ns name sym-str -1 nil))))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
@@ -368,10 +423,6 @@
          (= y (first more)))
        false)))
 
-(defn type [x]
-  (when-not (nil? x)
-    (.-constructor x)))
-
 (defn ^boolean instance? [t o]
   (js* "(~{o} instanceof ~{t})"))
 
@@ -390,9 +441,6 @@
 
   ICollection
   (-conj [_ o] (list o))
-
-  ^:deprecation-nowarn IPrintable
-  (-pr-seq [o] (list "nil"))
 
   IPrintWithWriter
   (-pr-writer [o writer _] (-write writer "nil"))
@@ -437,6 +485,10 @@
   (-reduce
     ([_ f] (f))
     ([_ f start] start))
+
+  IKVReduce
+  (-kv-reduce [_ f init]
+    init)
 
   IHash
   (-hash [o] 0))
@@ -577,7 +629,7 @@ reduces them without incurring seq initialization"
   "Returns true if coll implements nth in constant time"
   [x] (satisfies? IIndexed x))
 
-(deftype IndexedSeq [a i]
+(deftype IndexedSeq [arr i]
   Object
   (toString [this]
     (pr-str this))
@@ -587,28 +639,28 @@ reduces them without incurring seq initialization"
 
   ASeq
   ISeq
-  (-first [_] (aget a i))
-  (-rest [_] (if (< (inc i) (alength a))
-               (IndexedSeq. a (inc i))
+  (-first [_] (aget arr i))
+  (-rest [_] (if (< (inc i) (alength arr))
+               (IndexedSeq. arr (inc i))
                (list)))
 
   INext
-  (-next [_] (if (< (inc i) (alength a))
-               (IndexedSeq. a (inc i))
+  (-next [_] (if (< (inc i) (alength arr))
+               (IndexedSeq. arr (inc i))
                nil))
 
   ICounted
-  (-count [_] (- (alength a) i))
+  (-count [_] (- (alength arr) i))
 
   IIndexed
   (-nth [coll n]
     (let [i (+ n i)]
-      (when (< i (alength a))
-        (aget a i))))
+      (when (< i (alength arr))
+        (aget arr i))))
   (-nth [coll n not-found]
     (let [i (+ n i)]
-      (if (< i (alength a))
-        (aget a i)
+      (if (< i (alength arr))
+        (aget arr i)
         not-found)))
 
   ISequential
@@ -623,12 +675,12 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [coll f]
-    (if (counted? a)
-      (ci-reduce a f (aget a i) (inc i))
-      (ci-reduce coll f (aget a i) 0)))
+    (if (counted? arr)
+      (ci-reduce arr f (aget arr i) (inc i))
+      (ci-reduce coll f (aget arr i) 0)))
   (-reduce [coll f start]
-    (if (counted? a)
-      (ci-reduce a f start i)
+    (if (counted? arr)
+      (ci-reduce arr f start i)
       (ci-reduce coll f start 0)))
 
   IHash
@@ -1032,16 +1084,14 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean string? [x]
   (and ^boolean (goog/isString x)
-       (not (or (identical? (.charAt x 0) \uFDD0)
-                (identical? (.charAt x 0) \uFDD1)))))
+    (not (identical? (.charAt x 0) \uFDD0))))
 
 (defn ^boolean keyword? [x]
   (and ^boolean (goog/isString x)
        (identical? (.charAt x 0) \uFDD0)))
 
 (defn ^boolean symbol? [x]
-  (and ^boolean (goog/isString x)
-       (identical? (.charAt x 0) \uFDD1)))
+  (instance? Symbol x))
 
 (defn ^boolean number? [n]
   (goog/isNumber n))
@@ -1317,6 +1367,90 @@ reduces them without incurring seq initialization"
   ([x y & more]
    (reduce min (cljs.core/min x y) more)))
 
+(defn byte [x] x)
+(defn char [x] x)
+(defn short [x] x)
+(defn float [x] x)
+(defn double [x] x)
+
+(defn unchecked-byte [x] x)
+(defn unchecked-char [x] x)
+(defn unchecked-short [x] x)
+(defn unchecked-float [x] x)
+(defn unchecked-double [x] x)
+
+(defn unchecked-add
+  "Returns the sum of nums. (+) returns 0."
+  ([] 0)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-add x y))
+  ([x y & more] (reduce unchecked-add (cljs.core/unchecked-add x y) more)))
+
+(defn unchecked-add-int
+  "Returns the sum of nums. (+) returns 0."
+  ([] 0)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-add-int x y))
+  ([x y & more] (reduce unchecked-add-int (cljs.core/unchecked-add-int x y) more)))
+
+(defn unchecked-dec [x]
+  (cljs.core/unchecked-dec x))
+
+(defn unchecked-dec-int [x]
+  (cljs.core/unchecked-dec-int x))
+
+(defn unchecked-divide-int
+  "If no denominators are supplied, returns 1/numerator,
+  else returns numerator divided by all of the denominators."
+  ([x] (unchecked-divide-int 1 x))
+  ([x y] (js* "(~{x} / ~{y})")) ;; FIXME: waiting on cljs.core//
+  ([x y & more] (reduce unchecked-divide-int (unchecked-divide-int x y) more)))
+
+(defn unchecked-inc [x]
+  (cljs.core/unchecked-inc x))
+
+(defn unchecked-inc-int [x]
+  (cljs.core/unchecked-inc-int x))
+
+(defn unchecked-multiply
+  "Returns the product of nums. (*) returns 1."
+  ([] 1)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-multiply x y))
+  ([x y & more] (reduce unchecked-multiply (cljs.core/unchecked-multiply x y) more)))
+
+(defn unchecked-multiply-int
+  "Returns the product of nums. (*) returns 1."
+  ([] 1)
+  ([x] x)
+  ([x y] (cljs.core/unchecked-multiply-int x y))
+  ([x y & more] (reduce unchecked-multiply-int (cljs.core/unchecked-multiply-int x y) more)))
+
+(defn unchecked-negate [x]
+  (cljs.core/unchecked-negate x))
+
+(defn unchecked-negate-int [x]
+  (cljs.core/unchecked-negate-int x))
+
+(declare mod)
+
+(defn unchecked-remainder-int [x n]
+  (cljs.core/unchecked-remainder-int x n))
+
+(defn unchecked-substract
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result."
+  ([x] (cljs.core/unchecked-subtract x))
+  ([x y] (cljs.core/unchecked-subtract x y))
+  ([x y & more] (reduce unchecked-substract (cljs.core/unchecked-subtract x y) more)))
+
+(defn unchecked-substract-int
+  "If no ys are supplied, returns the negation of x, else subtracts
+  the ys from x and returns the result."
+  ([x] (cljs.core/unchecked-subtract-int x))
+  ([x y] (cljs.core/unchecked-subtract-int x y))
+  ([x y & more] (reduce unchecked-substract-int (cljs.core/unchecked-subtract-int x y) more)))
+
 (defn- fix [q]
   (if (>= q 0)
     (Math/floor q)
@@ -1325,12 +1459,31 @@ reduces them without incurring seq initialization"
 (defn int
   "Coerce to int by stripping decimal places."
   [x]
+  (bit-or x 0))
+
+(defn unchecked-int
+  "Coerce to int by stripping decimal places."
+  [x]
   (fix x))
 
 (defn long
   "Coerce to long by stripping decimal places. Identical to `int'."
   [x]
   (fix x))
+
+(defn unchecked-long
+  "Coerce to long by stripping decimal places. Identical to `int'."
+  [x]
+  (fix x))
+
+(defn booleans [x] x)
+(defn bytes [x] x)
+(defn chars [x] x)
+(defn shorts [x] x)
+(defn ints [x] x)
+(defn floats [x] x)
+(defn doubles [x] x)
+(defn longs [x] x)
 
 (defn js-mod
   "Modulus of num and div with original javascript behavior. i.e. bug for negative numbers"
@@ -1477,7 +1630,6 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (symbol? x) (. x (substring 2 (alength x)))
         (keyword? x) (str* ":" (. x (substring 2 (alength x))))
         (nil? x) ""
         :else (. x (toString))))
@@ -1505,15 +1657,6 @@ reduces them without incurring seq initialization"
                       x))
                 args)]
     (apply gstring/format fmt args)))
-
-(defn symbol
-  "Returns a Symbol with the given namespace and name."
-  ([name]
-     (cond
-      (symbol? name) name
-      (keyword? name) (str* "\uFDD1" "'" (subs name 2))
-      :else (str* "\uFDD1" "'" name)))
-  ([ns name] (symbol (str* ns "/" name))))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
@@ -1689,14 +1832,20 @@ reduces them without incurring seq initialization"
     (rseq coll)
     (reduce conj () coll)))
 
-(defn list
-  ([] ())
-  ([x] (conj () x))
-  ([x y] (conj (list y) x))
-  ([x y z] (conj (list y z) x))
-  ([x y z & items]
-     (conj (conj (conj (reduce conj () (reverse items))
-                       z) y) x)))
+(defn list [& xs]
+  (let [arr (if (instance? IndexedSeq xs)
+              (.-arr xs)
+              (let [arr (array)]
+                (loop [^not-native xs xs]
+                  (if-not (nil? xs)
+                    (do
+                      (.push arr (-first xs))
+                      (recur (-next xs)))
+                    arr))))]
+    (loop [i (alength arr) ^not-native r ()]
+      (if (> i 0)
+        (recur (dec i) (-conj r (aget arr (dec i))))
+        r))))
 
 (deftype Cons [meta first rest ^:mutable __hash]
   IList
@@ -1898,9 +2047,9 @@ reduces them without incurring seq initialization"
 
 (defn array-chunk
   ([arr]
-     (array-chunk arr 0 (alength arr)))
+     (ArrayChunk. arr 0 (alength arr)))
   ([arr off]
-     (array-chunk arr off (alength arr)))
+     (ArrayChunk. arr off (alength arr)))
   ([arr off end]
      (ArrayChunk. arr off end)))
 
@@ -1996,6 +2145,27 @@ reduces them without incurring seq initialization"
           (aset ret i (to-array (first xs)))
           (recur (inc i) (next xs))))
       ret))
+
+(defn int-array
+  ([size-or-seq]
+     (cond
+      (number? size-or-seq) (int-array size-or-seq nil)
+      (seq? size-or-seq) (into-array size-or-seq)
+      :else (throw (js/Error. "int-array called with something other than size or ISeq"))))
+  ([size init-val-or-seq]
+     (let [a (make-array size)]
+       (if (seq? init-val-or-seq)
+         (let [s (seq init-val-or-seq)]
+           (loop [i 0 s s]
+             (if (and s (< i size))
+               (do
+                 (aset a i (first s))
+                 (recur (inc i) (next s)))
+               a)))
+         (do
+           (dotimes [i size]
+             (aset a i init-val-or-seq))
+           a)))))
 
 (defn long-array
   ([size-or-seq]
@@ -2760,105 +2930,26 @@ reduces them without incurring seq initialization"
   and any supplied args and return the new value, and returns a new
   nested structure.  If any levels do not exist, hash-maps will be
   created."
-  ([m [k & ks] f & args]
+  ([m [k & ks] f]
    (if ks
-     (assoc m k (apply update-in (get m k) ks f args))
-     (assoc m k (apply f (get m k) args)))))
-
-
-;;; Vector
-;;; DEPRECATED
-;;; in favor of PersistentVector
-(deftype Vector [meta array ^:mutable __hash]
-  Object
-  (toString [this]
-    (pr-str this))
-
-  IWithMeta
-  (-with-meta [coll meta] (Vector. meta array __hash))
-
-  IMeta
-  (-meta [coll] meta)
-
-  IStack
-  (-peek [coll]
-    (let [count (alength array)]
-      (when (> count 0)
-        (aget array (dec count)))))
-  (-pop [coll]
-    (if (> (alength array) 0)
-      (let [new-array (aclone array)]
-        (. new-array (pop))
-        (Vector. meta new-array nil))
-      (throw (js/Error. "Can't pop empty vector"))))
-
-  ICollection
-  (-conj [coll o]
-    (let [new-array (aclone array)]
-      (.push new-array o)
-      (Vector. meta new-array nil)))
-
-  IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
-
-  ISequential
-  IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
-
-  IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
-
-  ISeqable
-  (-seq [coll]
-    (when (> (alength array) 0)
-      (let [vector-seq
-             (fn vector-seq [i]
-               (lazy-seq
-                 (when (< i (alength array))
-                   (cons (aget array i) (vector-seq (inc i))))))]
-        (vector-seq 0))))
-
-  ICounted
-  (-count [coll] (alength array))
-
-  IIndexed
-  (-nth [coll n]
-    (if (and (<= 0 n) (< n (alength array)))
-      (aget array n)
-      #_(throw (js/Error. (str "No item " n " in vector of length " (alength array))))))
-  (-nth [coll n not-found]
-    (if (and (<= 0 n) (< n (alength array)))
-      (aget array n)
-      not-found))
-
-  ILookup
-  (-lookup [coll k] (-nth coll k nil))
-  (-lookup [coll k not-found] (-nth coll k not-found))
-
-  IAssociative
-  (-assoc [coll k v]
-    (let [new-array (aclone array)]
-      (aset new-array k v)
-      (Vector. meta new-array nil)))
-
-  IVector
-  (-assoc-n [coll n val] (-assoc coll n val))
-
-  IReduce
-  (-reduce [v f]
-    (ci-reduce array f))
-  (-reduce [v f start]
-    (ci-reduce array f start))
-
-  IFn
-  (-invoke [coll k]
-    (-lookup coll k))
-  (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
-
-(set! cljs.core.Vector/EMPTY (Vector. nil (array) 0))
-
-(set! cljs.core.Vector/fromArray (fn [xs] (Vector. nil xs nil)))
+     (assoc m k (update-in (get m k) ks f))
+     (assoc m k (f (get m k)))))
+  ([m [k & ks] f a]
+   (if ks
+     (assoc m k (update-in (get m k) ks f a))
+     (assoc m k (f (get m k) a))))
+  ([m [k & ks] f a b]
+   (if ks
+     (assoc m k (update-in (get m k) ks f a b))
+     (assoc m k (f (get m k) a b))))
+  ([m [k & ks] f a b c]
+   (if ks
+     (assoc m k (update-in (get m k) ks f a b c))
+     (assoc m k (f (get m k) a b c))))
+  ([m [k & ks] f a b c & args]
+   (if ks
+     (assoc m k (apply update-in (get m k) ks f a b c args))
+     (assoc m k (apply f (get m k) a b c args)))))
 
 ;;; PersistentVector
 
@@ -2945,7 +3036,7 @@ reduces them without incurring seq initialization"
              ret))))
 
 (declare tv-editable-root tv-editable-tail TransientVector deref
-         pr-sequential pr-sequential-writer pr-writer chunked-seq)
+         pr-sequential-writer pr-writer chunked-seq)
 
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
@@ -3004,9 +3095,10 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (if (zero? cnt)
-      nil
-      (chunked-seq coll 0 0)))
+    (cond
+      (zero? cnt) nil
+      (< cnt 32) (array-seq tail)
+      :else (chunked-seq coll 0 0)))
 
   ICounted
   (-count [coll] cnt)
@@ -3088,19 +3180,22 @@ reduces them without incurring seq initialization"
       ())))
 
 (set! cljs.core.PersistentVector/EMPTY_NODE (pv-fresh-node nil))
-(set! cljs.core.PersistentVector/EMPTY (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
+
+(set! cljs.core.PersistentVector/EMPTY
+  (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
+
 (set! cljs.core.PersistentVector/fromArray
-      (fn [xs no-clone]
-        (let [l (alength xs)
-              xs (if (identical? no-clone true) xs (aclone xs))]
-          (if (< l 32)
-            (PersistentVector. nil l 5 cljs.core.PersistentVector/EMPTY_NODE xs nil)
-            (let [node (.slice xs 0 32)
-                  v (PersistentVector. nil 32 5 cljs.core.PersistentVector/EMPTY_NODE node nil)]
-             (loop [i 32 out (-as-transient v)]
-               (if (< i l)
-                 (recur (inc i) (conj! out (aget xs i)))
-                 (persistent! out))))))))
+  (fn [xs ^boolean no-clone]
+    (let [l (alength xs)
+          xs (if no-clone xs (aclone xs))]
+      (if (< l 32)
+        (PersistentVector. nil l 5 cljs.core.PersistentVector/EMPTY_NODE xs nil)
+        (let [node (.slice xs 0 32)
+              v (PersistentVector. nil 32 5 cljs.core.PersistentVector/EMPTY_NODE node nil)]
+          (loop [i 32 out (-as-transient v)]
+            (if (< i l)
+              (recur (inc i) (conj! out (aget xs i)))
+              (persistent! out))))))))
 
 (defn vec [coll]
   (-persistent!
@@ -3175,8 +3270,8 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-coll __hash)))
 
 (defn chunked-seq
-  ([vec i off] (chunked-seq vec (array-for vec i) i off nil))
-  ([vec node i off] (chunked-seq vec node i off nil))
+  ([vec i off] (ChunkedSeq. vec (array-for vec i) i off nil nil))
+  ([vec node i off] (ChunkedSeq. vec node i off nil nil))
   ([vec node i off meta]
      (ChunkedSeq. vec node i off meta nil)))
 
@@ -3206,7 +3301,7 @@ reduces them without incurring seq initialization"
     (build-subvec meta (-assoc-n v end o) start (inc end) nil))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.Vector/EMPTY meta))
+  (-empty [coll] (with-meta cljs.core.PersistentVector/EMPTY meta))
 
   ISequential
   IEquiv
@@ -3721,7 +3816,7 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.ObjMap/EMPTY (ObjMap. nil (array) (js-obj) 0 0))
 
-(set! cljs.core.ObjMap/HASHMAP_THRESHOLD 32)
+(set! cljs.core.ObjMap/HASHMAP_THRESHOLD 8)
 
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
@@ -3838,14 +3933,37 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentArrayMap
 
+(defn- equiv-nil [k k']
+  (nil? k'))
+
+(defn- equiv-pred [x]
+  (cond
+    ^boolean (goog/isString x) identical?
+    (nil? x) equiv-nil
+    (number? x) identical?
+    :else =))
+
 (defn- array-map-index-of [m k]
-  (let [arr (.-arr m)
-        len (alength arr)]
+  (let [arr  (.-arr m)
+        len  (alength arr)
+        pred (equiv-pred k)]
     (loop [i 0]
       (cond
         (<= len i) -1
-        (= (aget arr i) k) i
+        ^boolean (pred k (aget arr i)) i
         :else (recur (+ i 2))))))
+
+(defn- array-map-extend-kv [m k v]
+  (let [arr (.-arr m)
+        l (alength arr)
+        narr (make-array (+ l 2))]
+    (loop [i 0]
+      (when (< i l)
+        (aset narr i (aget arr i))
+        (recur (inc i))))
+    (aset narr l k)
+    (aset narr (inc l) v)
+    narr))
 
 (declare TransientArrayMap)
 
@@ -3908,12 +4026,10 @@ reduces them without incurring seq initialization"
         (if (< cnt cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD)
           (PersistentArrayMap. meta
                                (inc cnt)
-                               (doto (aclone arr)
-                                 (.push k)
-                                 (.push v))
+                               (array-map-extend-kv coll k v)
                                nil)
-          (with-meta
-            (assoc (into cljs.core.PersistentHashMap/EMPTY coll) k v)
+          (-with-meta
+            (-assoc (into cljs.core.PersistentHashMap/EMPTY coll) k v)
             meta))
 
         (identical? v (aget arr (inc idx)))
@@ -3971,16 +4087,13 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentArrayMap/EMPTY (PersistentArrayMap. nil 0 (array) nil))
 
-(set! cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 16)
+(set! cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD 8)
 
-(set! cljs.core.PersistentArrayMap/fromArrays
-      (fn [ks vs]
-        (let [len (count ks)]
-          (loop [i   0
-                 out (transient cljs.core.PersistentArrayMap/EMPTY)]
-            (if (< i len)
-              (recur (inc i) (assoc! out (aget ks i) (aget vs i)))
-              (persistent! out))))))
+(set! cljs.core.PersistentArrayMap/fromArray
+  (fn [arr ^boolean no-clone]
+    (let [arr (if no-clone arr (aclone arr))] 
+      (let [cnt (/ (alength arr) 2)]
+        (PersistentArrayMap. nil cnt arr nil)))))
 
 (declare array->transient-hash-map)
 
@@ -4429,7 +4542,8 @@ reduces them without incurring seq initialization"
               (let [init (.kv-reduce node f init)]
                 (if (reduced? init)
                   @init
-                  (recur (inc i) init)))))
+                  (recur (inc i) init)))
+              (recur (inc i) init)))
           init)))))
 
 (defn- hash-collision-node-find-index [arr cnt key]
@@ -5651,7 +5765,7 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o]
-    (PersistentHashSet. meta (assoc hash-map o nil) nil))
+    (PersistentHashSet. meta (-assoc hash-map o nil) nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.PersistentHashSet/EMPTY meta))
@@ -5671,7 +5785,7 @@ reduces them without incurring seq initialization"
   (-seq [coll] (keys hash-map))
 
   ICounted
-  (-count [coll] (count (seq coll)))
+  (-count [coll] (-count hash-map))
 
   ILookup
   (-lookup [coll v]
@@ -5683,7 +5797,7 @@ reduces them without incurring seq initialization"
 
   ISet
   (-disjoin [coll v]
-    (PersistentHashSet. meta (dissoc hash-map v) nil))
+    (PersistentHashSet. meta (-dissoc hash-map v) nil))
 
   IFn
   (-invoke [coll k]
@@ -5692,18 +5806,23 @@ reduces them without incurring seq initialization"
     (-lookup coll k not-found))
 
   IEditableCollection
-  (-as-transient [coll] (TransientHashSet. (transient hash-map))))
+  (-as-transient [coll] (TransientHashSet. (-as-transient hash-map))))
 
-(set! cljs.core.PersistentHashSet/EMPTY (PersistentHashSet. nil (hash-map) 0))
+(set! cljs.core.PersistentHashSet/EMPTY
+  (PersistentHashSet. nil cljs.core.PersistentArrayMap/EMPTY 0))
 
 (set! cljs.core.PersistentHashSet/fromArray
-      (fn [items]
-        (let [len (count items)]
-          (loop [i   0
-                 out (transient cljs.core.PersistentHashSet/EMPTY)]
-            (if (< i len)
-              (recur (inc i) (conj! out (aget items i)))
-              (persistent! out))))))
+  (fn [items ^boolean no-clone]
+    (let [len (alength items)]
+     (if (<= (/ len 2) cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD)
+       (let [arr (if no-clone items (aclone items))]
+         (PersistentHashSet. nil
+           (cljs.core.PersistentArrayMap/fromArray arr true) nil))
+       (loop [i 0
+              out (transient cljs.core.PersistentHashSet/EMPTY)]
+         (if (< i len)
+           (recur (+ i 2) (conj! out (aget items i)))
+           (persistent! out)))))))
 
 (deftype TransientHashSet [^:mutable transient-map]
   ITransientCollection
@@ -5815,12 +5934,25 @@ reduces them without incurring seq initialization"
 
 (defn hash-set
   ([] cljs.core.PersistentHashSet/EMPTY)
-  ([& keys]
-    (loop [in (seq keys)
-           out (transient cljs.core.PersistentHashSet/EMPTY)]
-      (if (seq in)
-        (recur (next in) (conj! out (first in)))
-        (persistent! out)))))
+  ([& ^not-native keys]
+     (if (and (instance? IndexedSeq keys)
+              (< (alength (.-arr keys)) cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD))
+       (let [karr (.-arr keys)
+             klen (alength karr)
+             alen (* 2 klen)
+             arr  (make-array alen)]
+         (loop [ki 0]
+           (if (< ki klen)
+             (let [ai (* 2 ki)]
+               (aset arr ai (aget karr ki))
+               (aset arr (inc ai) nil)
+               (recur (inc ki)))
+             (cljs.core.PersistentHashSet/fromArray arr true))))
+       (loop [in keys
+              ^not-native out (-as-transient cljs.core.PersistentHashSet/EMPTY)]
+         (if-not (nil? in)
+           (recur (-next in) (-conj! out (-first in)))
+           (-persistent! out))))))
 
 (defn set
   "Returns a set of the distinct elements of coll."
@@ -5876,23 +6008,27 @@ reduces them without incurring seq initialization"
 (defn name
   "Returns the name String of a string, symbol or keyword."
   [x]
-  (cond
-    (string? x) x
-    (or (keyword? x) (symbol? x))
+  (if (satisfies? INamed x)
+    (-name x)
+    (cond
+      (string? x) x
+      (keyword? x)
       (let [i (.lastIndexOf x "/" (- (alength x) 2))]
         (if (< i 0)
           (subs x 2)
           (subs x (inc i))))
-    :else (throw (js/Error. (str "Doesn't support name: " x)))))
+      :else (throw (js/Error. (str "Doesn't support name: " x))))))
 
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
-  (if (or (keyword? x) (symbol? x))
-    (let [i (.lastIndexOf x "/" (- (alength x) 2))]
-      (when (> i -1)
-        (subs x 2 i)))
-    (throw (js/Error. (str "Doesn't support namespace: " x)))))
+  (if (satisfies? INamed x)
+    (-namespace x)
+    (if (keyword? x)
+      (let [i (.lastIndexOf x "/" (- (alength x) 2))]
+        (when (> i -1)
+          (subs x 2 i)))
+      (throw (js/Error. (str "Doesn't support namespace: " x))))))
 
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."
@@ -6207,15 +6343,6 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
-(defn ^:deprecated pr-sequential
-  "Do not use this.  It is kept for backwards compatibility with the
-   old IPrintable protocol."
-  [print-one begin sep end opts coll]
-  (concat [begin]
-          (flatten1
-            (interpose [sep] (map #(print-one % opts) coll)))
-          [end]))
-
 (defn pr-sequential-writer [writer print-one begin sep end opts coll]
   (-write writer begin)
   (when (seq coll)
@@ -6241,30 +6368,6 @@ reduces them without incurring seq initialization"
   (-write [_ s] (.append sb s))
   (-flush [_] nil))
 
-(defn- ^:deprecated pr-seq
-  "Do not use this.  It is kept for backwards compatibility with the
-   old IPrintable protocol."
-  [obj opts]
-  (cond
-    (nil? obj) (list "nil")
-    (undefined? obj) (list "#<undefined>")
-    :else (concat
-            (when (and (get opts :meta)
-                       (satisfies? IMeta obj)
-                       (meta obj))
-              (concat ["^"] (pr-seq (meta obj) opts) [" "]))
-            (cond
-             ;; handle CLJS ctors
-             (and (not (nil? obj))
-                  ^boolean (.-cljs$lang$type obj))
-             (.cljs$lang$ctorPrSeq obj obj)
-
-             (satisfies? IPrintable obj) (-pr-seq obj opts)
-
-             (regexp? obj) (list "#\"" (.-source obj) "\"")
-
-             :else (list "#<" (str obj) ">")))))
-
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
    configurable, allowing efficient implementations such as appending
@@ -6288,11 +6391,6 @@ reduces them without incurring seq initialization"
 
               ; Use the new, more efficient, IPrintWithWriter interface when possible.
               (satisfies? IPrintWithWriter obj) (-pr-writer obj writer opts)
-
-              ; Fall back on the deprecated IPrintable if necessary.  Note that this
-              ; will only happen when ClojureScript users have implemented -pr-seq
-              ; for their custom types.
-              (satisfies? IPrintable obj) (apply write-all writer (-pr-seq obj opts))
 
               (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
 
@@ -6351,7 +6449,7 @@ reduces them without incurring seq initialization"
    :dup *print-dup*})
 
 (defn pr-str
-  "pr to a string, returning it. Fundamental entrypoint to IPrintable."
+  "pr to a string, returning it. Fundamental entrypoint to IPrintWithWriter."
   [& objs]
   (pr-str-with-opts objs (pr-opts)))
 
@@ -6417,140 +6515,6 @@ reduces them without incurring seq initialization"
          (fn [match] (get char-escapes match)))
        \"))
 
-(extend-protocol ^:deprecation-nowarn IPrintable
-  boolean
-  (-pr-seq [bool opts] (list (str bool)))
-
-  number
-  (-pr-seq [n opts] (list (str n)))
-
-  array
-  (-pr-seq [a opts]
-    ^:deprecation-nowarn (pr-sequential pr-seq "#<Array [" ", " "]>" opts a))
-
-  string
-  (-pr-seq [obj opts]
-    (cond
-     (keyword? obj)
-     (list (str ":"
-                (when-let [nspc (namespace obj)]
-                  (str nspc "/"))
-                (name obj)))
-     (symbol? obj)
-     (list (str (when-let [nspc (namespace obj)]
-                  (str nspc "/"))
-                (name obj)))
-     :else (list (if (:readably opts)
-                   (quote-string obj)
-                   obj))))
-
-  function
-  (-pr-seq [this]
-    (list "#<" (str this) ">"))
-
-  js/Date
-  (-pr-seq [d _]
-    (let [normalize (fn [n len]
-                      (loop [ns (str n)]
-                        (if (< (count ns) len)
-                          (recur (str "0" ns))
-                          ns)))]
-      (list
-       (str "#inst \""
-            (.getUTCFullYear d)                   "-"
-            (normalize (inc (.getUTCMonth d)) 2)  "-"
-            (normalize (.getUTCDate d) 2)         "T"
-            (normalize (.getUTCHours d) 2)        ":"
-            (normalize (.getUTCMinutes d) 2)      ":"
-            (normalize (.getUTCSeconds d) 2)      "."
-            (normalize (.getUTCMilliseconds d) 3) "-"
-            "00:00\""))))
-
-  LazySeq
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  IndexedSeq
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  RSeq
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  PersistentQueue
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "#queue [" " " "]" opts (seq coll)))
-
-  PersistentTreeMapSeq
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  NodeSeq
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  ArrayNodeSeq
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  List
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  Cons
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  EmptyList
-  (-pr-seq [coll opts] (list "()"))
-
-  Vector
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "[" " " "]" opts coll))
-
-  PersistentVector
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "[" " " "]" opts coll))
-
-  ChunkedCons
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  ChunkedSeq
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll))
-
-  Subvec
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "[" " " "]" opts coll))
-
-  BlackNode
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "[" " " "]" opts coll))
-
-  RedNode
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "[" " " "]" opts coll))
-
-  ObjMap
-  (-pr-seq [coll opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential pr-seq "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential pr-pair "{" ", " "}" opts coll)))
-
-  HashMap
-  (-pr-seq [coll opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential pr-seq "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential pr-pair "{" ", " "}" opts coll)))
-
-  PersistentArrayMap
-  (-pr-seq [coll opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential pr-seq "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential pr-pair "{" ", " "}" opts coll)))
-
-  PersistentHashMap
-  (-pr-seq [coll opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential pr-seq "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential pr-pair "{" ", " "}" opts coll)))
-
-  PersistentTreeMap
-  (-pr-seq [coll opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential pr-seq "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential pr-pair "{" ", " "}" opts coll)))
-
-  PersistentHashSet
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "#{" " " "}" opts coll))
-
-  PersistentTreeSet
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "#{" " " "}" opts coll))
-
-  Range
-  (-pr-seq [coll opts] ^:deprecation-nowarn (pr-sequential pr-seq "(" " " ")" opts coll)))
-
 (extend-protocol IPrintWithWriter
   boolean
   (-pr-writer [bool writer opts] (-write writer (str bool)))
@@ -6560,7 +6524,7 @@ reduces them without incurring seq initialization"
 
   array
   (-pr-writer [a writer opts]
-    ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "#<Array [" ", " "]>" opts a))
+    (pr-sequential-writer writer pr-writer "#<Array [" ", " "]>" opts a))
 
   string
   (-pr-writer [obj writer opts]
@@ -6603,89 +6567,86 @@ reduces them without incurring seq initialization"
         "00:00\"")))
 
   LazySeq
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   IndexedSeq
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   RSeq
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   PersistentQueue
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "#queue [" " " "]" opts (seq coll)))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#queue [" " " "]" opts (seq coll)))
 
   PersistentTreeMapSeq
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   NodeSeq
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   ArrayNodeSeq
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   List
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   Cons
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   EmptyList
   (-pr-writer [coll writer opts] (-write writer "()"))
 
-  Vector
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
-
   PersistentVector
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
 
   ChunkedCons
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   ChunkedSeq
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   Subvec
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
 
   BlackNode
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
 
   RedNode
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
 
   ObjMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
+      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
 
   HashMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
+      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
 
   PersistentArrayMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
+      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
 
   PersistentHashMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
+      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
 
   PersistentTreeMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      ^:deprecation-nowarn (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
+      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
 
   PersistentHashSet
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
 
   PersistentTreeSet
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
 
   Range
-  (-pr-writer [coll writer opts] ^:deprecation-nowarn (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
 
 ;; IComparable
@@ -6704,10 +6665,6 @@ reduces them without incurring seq initialization"
 
   IMeta
   (-meta [_] meta)
-
-  ^:deprecation-nowarn IPrintable
-  (-pr-seq [a opts]
-    (concat  ["#<Atom: "] (-pr-seq state opts) ">"))
 
   IPrintWithWriter
   (-pr-writer [a writer opts]
@@ -7023,9 +6980,15 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   "Creates a hierarchy object for use with derive, isa? etc."
   [] {:parents {} :descendants {} :ancestors {}})
 
-(def
-  ^{:private true}
-  global-hierarchy (atom (make-hierarchy)))
+(def ^:private -global-hierarchy nil)
+
+(defn- get-global-hierarchy []
+  (when (nil? -global-hierarchy)
+    (set! -global-hierarchy (atom (make-hierarchy))))
+  -global-hierarchy)
+
+(defn- swap-global-hierarchy! [f & args]
+  (apply swap! (get-global-hierarchy) f args))
 
 (defn ^boolean isa?
   "Returns true if (= child parent), or child is directly or indirectly derived from
@@ -7033,7 +6996,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   relationship established via derive. h must be a hierarchy obtained
   from make-hierarchy, if not supplied defaults to the global
   hierarchy"
-  ([child parent] (isa? @global-hierarchy child parent))
+  ([child parent] (isa? @(get-global-hierarchy) child parent))
   ([h child parent]
      (or (= child parent)
          ;; (and (class? parent) (class? child)
@@ -7052,7 +7015,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   inheritance relationship or a relationship established via derive. h
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
-  ([tag] (parents @global-hierarchy tag))
+  ([tag] (parents @(get-global-hierarchy) tag))
   ([h tag] (not-empty (get (:parents h) tag))))
 
 (defn ancestors
@@ -7060,7 +7023,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   inheritance relationship or a relationship established via derive. h
   must be a hierarchy obtained from make-hierarchy, if not supplied
   defaults to the global hierarchy"
-  ([tag] (ancestors @global-hierarchy tag))
+  ([tag] (ancestors @(get-global-hierarchy) tag))
   ([h tag] (not-empty (get (:ancestors h) tag))))
 
 (defn descendants
@@ -7069,7 +7032,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   from make-hierarchy, if not supplied defaults to the global
   hierarchy. Note: does not work on JavaScript type inheritance
   relationships."
-  ([tag] (descendants @global-hierarchy tag))
+  ([tag] (descendants @(get-global-hierarchy) tag))
   ([h tag] (not-empty (get (:descendants h) tag))))
 
 (defn derive
@@ -7081,7 +7044,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   ([tag parent]
    (assert (namespace parent))
    ;; (assert (or (class? tag) (and (instance? cljs.core.Named tag) (namespace tag))))
-   (swap! global-hierarchy derive tag parent) nil)
+   (swap-global-hierarchy! derive tag parent) nil)
   ([h tag parent]
    (assert (not= tag parent))
    ;; (assert (or (class? tag) (instance? clojure.lang.Named tag)))
@@ -7111,8 +7074,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   tag. h must be a hierarchy obtained from make-hierarchy, if not
   supplied defaults to, and modifies, the global hierarchy."
   ([tag parent]
-     ;; (alter-var-root #'global-hierarchy underive tag parent)
-     (swap! global-hierarchy underive tag parent) nil)
+    (swap-global-hierarchy! underive tag parent)
+    nil)
   ([h tag parent]
     (let [parentMap (:parents h)
           childsParents (if (parentMap tag)
@@ -7295,10 +7258,6 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   IEquiv
   (-equiv [_ other]
     (and (instance? UUID other) (identical? uuid (.-uuid other))))
-
-  ^:deprecation-nowarn IPrintable
-  (-pr-seq [_ _]
-    (list (str "#uuid \"" uuid "\"")))
 
   IPrintWithWriter
   (-pr-writer [_ writer _]

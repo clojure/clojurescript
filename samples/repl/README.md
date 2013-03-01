@@ -27,7 +27,7 @@ There are currently four steps in starting a ClojureScript REPL.
 
 A browser-connected REPL works in much the same way as a normal REPL:
 forms are read from the console, evaluated and return values are
-printed. A major and useful difference form normal REPL usage is that
+printed. A major and useful difference from normal REPL usage is that
 all side-effects occur in the browser. You can show alerts, manipulate
 the dom and interact with running applications.
 
