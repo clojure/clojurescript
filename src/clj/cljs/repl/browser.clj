@@ -86,6 +86,9 @@
 (server/dispatch-on :get
                     (fn [{:keys [path]} _ _] (or (= path "/")
                                                 (.endsWith path ".js")
+                                                (.endsWith path ".css")
+                                                (.endsWith path ".jpg")
+                                                (.endsWith path ".png")
                                                 (.endsWith path ".html")))
                     send-static)
 
