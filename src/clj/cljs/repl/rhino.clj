@@ -102,11 +102,11 @@
                         '(ns cljs.user))
     (ScriptableObject/putProperty scope
                                   "out"
-                                  (Context/javaToJS System/out scope))
+                                  (Context/javaToJS *out* scope))
     (repl/evaluate-form repl-env
                         env
                         "<cljs repl>"
-                        '(set! *print-fn* (fn [x] (.print js/out x))))))
+                        '(set! *print-fn* (fn [x] (.write js/out x))))))
 
 (defrecord RhinoEnv [loaded-libs]
   repl/IJavaScriptEnv
