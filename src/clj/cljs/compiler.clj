@@ -839,10 +839,13 @@
      (let [src-file (io/file src)
            dest-file (io/file dest)]
        (if (.exists src-file)
-         (if (requires-compilation? src-file dest-file)
-           (do (mkdirs dest-file)
-               (compile-file* src-file dest-file))
-           (parse-ns src-file dest-file))
+         (try
+           (if (requires-compilation? src-file dest-file)
+             (do (mkdirs dest-file)
+                 (compile-file* src-file dest-file))
+             (parse-ns src-file dest-file))
+           (catch Exception e
+             (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
          (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
