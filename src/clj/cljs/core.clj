@@ -1152,7 +1152,7 @@
                       (conj (meta mm-name) m)
                       m)]
     (when (= (count options) 1)
-      (throw "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)"))
+      (throw (Exception. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")))
     (let [options   (apply hash-map options)
           default   (core/get options :default :default)]
       (check-valid-options options :default :hierarchy)
