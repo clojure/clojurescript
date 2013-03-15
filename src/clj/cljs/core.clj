@@ -28,7 +28,9 @@
                             unchecked-subtract unchecked-subtract-int unchecked-remainder-int
 
                             bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
-                            bit-test bit-shift-left bit-shift-right bit-xor])
+                            bit-test bit-shift-left bit-shift-right bit-xor
+
+                            cond-> cond->> as-> some-> some->>])
   (:require clojure.walk))
 
 (alias 'core 'clojure.core)
@@ -49,7 +51,8 @@
   extend-protocol fn for
   if-let if-not letfn
   memfn or
-  when when-first when-let when-not while])
+  when when-first when-let when-not while
+  cond-> cond->> as-> some-> some->>])
 
 (defmacro ^{:private true} assert-args [fnname & pairs]
   `(do (when-not ~(first pairs)
