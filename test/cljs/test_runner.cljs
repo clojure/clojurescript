@@ -11,7 +11,7 @@
             [cljs.top-level :as top-level]
             [cljs.reducers-test :as reducers-test]))
 
-(set! *print-fn* js/print)
+(set-print-fn! js/print)
 
 (core-test/test-stuff)
 (reader-test/test-reader)
