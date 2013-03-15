@@ -859,19 +859,22 @@
    Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
    If the file was not compiled returns only {:file ...}"
   ([src]
-     (let [dest (rename-to-js src)]
-       (compile-file src dest nil)))
+    (let [dest (rename-to-js src)]
+      (compile-file src dest nil)))
   ([src dest]
-     (compile-file src dest nil))
+    (compile-file src dest nil))
   ([src dest opts]
-     (let [src-file (io/file src)
+    (let [src-file (io/file src)
            dest-file (io/file dest)]
-       (if (.exists src-file)
-         (if (or (requires-compilation? src-file dest-file) (:source-map opts))
-           (do (mkdirs dest-file)
-               (compile-file* src-file dest-file opts))
-           (parse-ns src-file dest-file opts))
-         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
+      (if (.exists src-file)
+        (try
+          (if (or (requires-compilation? src-file dest-file) (:source-map opts))
+            (do (mkdirs dest-file)
+              (compile-file* src-file dest-file opts))
+            (parse-ns src-file dest-file opts))
+          (catch Exception e
+            (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
+        (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
   ;; flex compile-file
