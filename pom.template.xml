@@ -33,6 +33,11 @@
       <version>0.0-2029-2</version>
     </dependency>
     <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>data.json</artifactId>
+      <version>0.2.1</version>
+    </dependency>
+    <dependency>
       <groupId>org.mozilla</groupId>
       <artifactId>rhino</artifactId>
       <version>1.7R4</version>
