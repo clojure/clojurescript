@@ -33,10 +33,17 @@
     "volatile" "while" "with" "yield" "methods"
     "null"})
 
-(def ^:dynamic *position* nil)
+(def ^:dynamic *cljs-source-map* nil)
+(def ^:dynamic *cljs-gen-col* nil)
+(def ^:dynamic *cljs-gen-line* nil)
+
 (def ^:dynamic *emitted-provides* nil)
 (def ^:dynamic *lexical-renames* {})
 (def cljs-reserved-file-names #{"deps.cljs"})
+
+(defmacro ^:private debug-prn
+  [& args]
+  `(.println System/err (str ~@args)))
 
 (defonce ns-first-segments (atom '#{"cljs" "clojure"}))
 
@@ -101,16 +108,14 @@
 (defn emits [& xs]
   (doseq [x xs]
     (cond
-      (nil? x) nil
-      (map? x) (emit x)
-      (seq? x) (apply emits x)
-      (fn? x)  (x)
-      :else (do
-              (let [s (print-str x)]
-                (when *position*
-                  (swap! *position* (fn [[line column]]
-                                      [line (+ column (count s))])))
-                (print s)))))
+     (nil? x) nil
+     (map? x) (emit x)
+     (seq? x) (apply emits x)
+     (fn? x)  (x)
+     :else (let [s (print-str x)]
+             (when *cljs-gen-col*
+               (swap! *cljs-gen-col* (fn [col] (+ col (count s)))))
+             (print s))))
   nil)
 
 (defn ^String emit-str [expr]
@@ -118,14 +123,11 @@
 
 (defn emitln [& xs]
   (apply emits xs)
-  ;; Prints column-aligned line number comments; good test of *position*.
-  ;(when *position*
-  ;  (let [[line column] @*position*]
-  ;    (print (apply str (concat (repeat (- 120 column) \space) ["// " (inc line)])))))
   (println)
-  (when *position*
-    (swap! *position* (fn [[line column]]
-                        [(inc line) 0])))
+  (when *cljs-gen-line*
+    (swap! *cljs-gen-line* inc))
+  (when *cljs-gen-col*
+    (reset! *cljs-gen-col* 0))
   nil)
 
 (defn ^String emit-str [expr]
@@ -219,12 +221,25 @@
 
 (defmethod emit :var
   [{:keys [info env] :as arg}]
-  (let [n (:name info)
-        n (if (= (namespace n) "js")
-            (name n)
-            info)]
+  (let [var-name (:name info)
+        info (if (= (namespace var-name) "js")
+               (name var-name)
+               info)]
+    (when *cljs-source-map*
+      (when (and (:line env) (symbol? var-name))
+        (let [{:keys [line column]} env]
+          (swap! *cljs-source-map*
+            (fn [m]
+              (let [minfo {:gcol  @*cljs-gen-col*
+                           :gline @*cljs-gen-line*
+                           :name  var-name}]
+                (update-in m [line]
+                  (fnil (fn [m]
+                          (update-in m [(or column 0)]
+                            (fnil (fn [v] (conj v minfo)) [])))
+                    (sorted-map)))))))))
     (when-not (= :statement (:context env))
-      (emit-wrap env (emits (munge n))))))
+      (emit-wrap env (emits (munge info))))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
@@ -347,10 +362,10 @@
         (emitln "*/")))))
 
 (defmethod emit :def
-  [{:keys [name init env doc export]}]
+  [{:keys [name var init env doc export]}]
   (let [mname (munge name)]
     (emit-comment doc (:jsdoc init))
-    (emits mname)
+    (emits var)
     (when init
       (emits " = " init)
       ;; NOTE: JavaScriptCore does not like this under advanced compilation
@@ -774,29 +789,38 @@
          (ana/analyze-file "cljs/core.cljs"))
        ~@body))
 
-(defn compile-file* [src dest]
-  (with-core-cljs
-    (with-open [out ^java.io.Writer (io/make-writer dest {})]
-      (binding [*out* out
-                ana/*cljs-ns* 'cljs.user
-                ana/*cljs-file* (.getPath ^java.io.File src)
-                *data-readers* tags/*cljs-data-readers*
-                *position* (atom [0 0])
-                *emitted-provides* (atom #{})]
-        (loop [forms (forms-seq src)
-               ns-name nil
-               deps nil]
-          (if (seq forms)
-            (let [env (ana/empty-env)
-                  ast (ana/analyze env (first forms))]
-              (do (emit ast)
-                  (if (= (:op ast) :ns)
-                    (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
-                    (recur (rest forms) ns-name deps))))
-            {:ns (or ns-name 'cljs.user)
-             :provides [ns-name]
-             :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
-             :file dest}))))))
+(defn compile-file*
+  ([src dest] (compile-file* src dest nil))
+  ([src dest opts]
+     (with-core-cljs
+       (with-open [out ^java.io.Writer (io/make-writer dest {})]
+         (binding [*out* out
+                   ana/*cljs-ns* 'cljs.user
+                   ana/*cljs-file* (.getPath ^java.io.File src)
+                   *data-readers* tags/*cljs-data-readers*
+                   *emitted-provides* (atom #{})
+                   *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
+                   *cljs-gen-line* (atom 0)
+                   *cljs-gen-col* (atom 0)]
+           (loop [forms (forms-seq src)
+                  ns-name nil
+                  deps nil]
+             (if (seq forms)
+               (let [env (ana/empty-env)
+                     ast (ana/analyze env (first forms))]
+                 (do (emit ast)
+                     (if (= (:op ast) :ns)
+                       (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
+                       (recur (rest forms) ns-name deps))))
+               (merge
+                 {:ns (or ns-name 'cljs.user)
+                  :provides [ns-name]
+                  :requires (if (= ns-name 'cljs.core) (set (vals deps)) (conj (set (vals deps)) 'cljs.core))
+                  :file dest
+                  :source-file src
+                  :lines @*cljs-gen-line*}
+                 (when (:source-map opts)
+                   {:source-map @*cljs-source-map*})))))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."
@@ -804,7 +828,7 @@
   (or (not (.exists dest))
       (> (.lastModified src) (.lastModified dest))))
 
-(defn parse-ns [src dest]
+(defn parse-ns [src dest opts]
   (with-core-cljs
     (binding [ana/*cljs-ns* 'cljs.user]
       (loop [forms (forms-seq src)]
@@ -819,7 +843,9 @@
                  :requires (if (= ns-name 'cljs.core)
                              (set (vals deps))
                              (conj (set (vals deps)) 'cljs.core))
-                 :file dest})
+                 :file dest
+                 :source-file src
+                 :lines (-> dest io/reader line-seq count)})
               (recur (rest forms)))))))))
 
 (defn compile-file
@@ -836,20 +862,22 @@
    Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
    If the file was not compiled returns only {:file ...}"
   ([src]
-     (let [dest (rename-to-js src)]
-       (compile-file src dest)))
+    (let [dest (rename-to-js src)]
+      (compile-file src dest nil)))
   ([src dest]
-     (let [src-file (io/file src)
+    (compile-file src dest nil))
+  ([src dest opts]
+    (let [src-file (io/file src)
            dest-file (io/file dest)]
-       (if (.exists src-file)
-         (try
-           (if (requires-compilation? src-file dest-file)
-             (do (mkdirs dest-file)
-                 (compile-file* src-file dest-file))
-             (parse-ns src-file dest-file))
-           (catch Exception e
-             (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
-         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
+      (if (.exists src-file)
+        (try
+          (if (or (requires-compilation? src-file dest-file) (:source-map opts))
+            (do (mkdirs dest-file)
+              (compile-file* src-file dest-file opts))
+            (parse-ns src-file dest-file opts))
+          (catch Exception e
+            (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
+        (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
 
 (comment
   ;; flex compile-file
@@ -902,13 +930,15 @@
   ([src-dir]
      (compile-root src-dir "out"))
   ([src-dir target-dir]
+     (compile-root src-dir target-dir nil))
+  ([src-dir target-dir opts]
      (let [src-dir-file (io/file src-dir)]
        (loop [cljs-files (cljs-files-in src-dir-file)
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
                  output-file ^java.io.File (to-target-file src-dir-file target-dir cljs-file)
-                 ns-info (compile-file cljs-file output-file)]
+                 ns-info (compile-file cljs-file output-file opts)]
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
            output-files)))))
 

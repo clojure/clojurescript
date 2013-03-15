@@ -35,8 +35,10 @@
   "
   (:require [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
+            [cljs.source-map :as sm]
             [clojure.java.io :as io]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [clojure.data.json :as json])
   (:import java.io.File
            java.io.BufferedInputStream
            java.net.URL
@@ -52,6 +54,10 @@
            com.google.javascript.jscomp.Result
            com.google.javascript.jscomp.JSError
            com.google.javascript.jscomp.CommandLineRunner))
+
+(defmacro ^:private debug-prn
+  [& args]
+  `(.println System/err (str ~@args)))
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
@@ -230,6 +236,10 @@
   (-requires [this] "A list of namespaces that this JavaScript requires.")
   (-source [this] "The JavaScript source string."))
 
+(defprotocol ISourceMap
+  (-source-url [this] "Return the CLJS source url")
+  (-source-map [this] "Return the CLJS compiler generated JS source mapping"))
+
 (extend-protocol IJavaScript
   
   String
@@ -249,22 +259,32 @@
                     s
                     (slurp (io/reader (-url this))))))
 
-(defrecord JavaScriptFile [foreign ^URL url provides requires]
+(defrecord JavaScriptFile [foreign ^URL url ^URL source-url provides requires lines source-map]
   IJavaScript
   (-foreign? [this] foreign)
   (-url [this] url)
   (-provides [this] provides)
   (-requires [this] requires)
-  (-source [this] (slurp (io/reader url))))
+  (-source [this] (slurp (io/reader url)))
+  ISourceMap
+  (-source-url [this] source-url)
+  (-source-map [this] source-map))
 
-(defn javascript-file [foreign ^URL url provides requires]
-  (JavaScriptFile. foreign url (map name provides) (map name requires)))
+(defn javascript-file
+  ([foreign ^URL url provides requires]
+     (javascript-file foreign url nil provides requires nil nil))
+  ([foreign ^URL url source-url provides requires lines source-map]
+     (JavaScriptFile. foreign url source-url (map name provides) (map name requires) lines source-map)))
 
 (defn map->javascript-file [m]
-  (javascript-file (:foreign m)
-                   (to-url (:file m))
-                   (:provides m)
-                   (:requires m)))
+  (javascript-file
+    (:foreign m)
+    (to-url (:file m))
+    (to-url (:source-file m))
+    (:provides m)
+    (:requires m)
+    (:lines m)
+    (:source-map m)))
 
 (defn read-js
   "Read a JavaScript file returning a map of file information."
@@ -336,6 +356,7 @@
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
 
+;; cache from js file path to map of {:file .. :provides .. :requires ..}
 (def compiled-cljs (atom {}))
 
 (defn compiled-file
@@ -362,7 +383,7 @@
   [^File file {:keys [output-file] :as opts}]
   (if output-file
     (let [out-file (io/file (output-directory opts) output-file)]
-      (compiled-file (comp/compile-file file out-file)))
+      (compiled-file (comp/compile-file file out-file opts)))
     (compile-form-seq (comp/forms-seq file))))
 
 (defn compile-dir
@@ -371,7 +392,7 @@
   [^File src-dir opts]
   (let [out-dir (output-directory opts)]
     (map compiled-file
-         (comp/compile-root src-dir out-dir))))
+         (comp/compile-root src-dir out-dir opts))))
 
 (defn path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
@@ -688,7 +709,33 @@
         (when-let [name (:source-map opts)]
           (let [out (io/writer name)]
             (.appendTo (.getSourceMap closure-compiler) out name)
-            (.close out)))
+            (.close out))
+          (let [sm-json (-> (io/file name) slurp
+                            (json/read-str :key-fn keyword))
+                closure-source-map (sm/decode sm-json)]
+            (loop [sources (seq sources)
+                   merged (sorted-map-by
+                            (sm/source-compare
+                              (map (fn [source]
+                                     (if-let [^URL source-url (:source-url source)]
+                                       (.getPath source-url)
+                                       (let [^URL url (:url source)]
+                                         (.getPath url))))
+                                   sources)))]
+              (if sources
+                (let [source (first sources)]
+                  (recur (next sources)
+                    (let [path (.getPath ^URL (:url source))]
+                      (if-let [compiled (get @compiled-cljs path)] 
+                        (assoc merged (.getPath ^URL (:source-url source))
+                          (sm/merge-source-maps
+                            (:source-map compiled)
+                            (get closure-source-map path)))
+                        (assoc merged path (get closure-source-map path))))))
+                (let [out-name (str name ".merged")]
+                  (spit (io/file out-name)
+                    (sm/encode merged
+                      {:lines (+ (:lineCount sm-json) 2) :file (:file sm-json)})))))))
         source)
       (report-failure result))))
 
@@ -879,6 +926,11 @@
    (str ";(function(){\n" js "\n})();\n")
    js))
 
+(defn add-source-map-link [{:keys [source-map] :as opts} js]
+  (if source-map
+    (str js "\n//@ sourceMappingURL=" source-map ".merged")
+    js))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   [source opts]
@@ -911,6 +963,7 @@
                (apply optimize all-opts)
                (add-header all-opts)
                (add-wrapper all-opts)
+               (add-source-map-link all-opts)
                (output-one-file all-opts))
           (apply output-unoptimized all-opts js-sources))))))
 

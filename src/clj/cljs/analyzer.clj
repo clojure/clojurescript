@@ -65,6 +65,12 @@
              *cljs-warn-fn-deprecated* false]
      ~@body))
 
+(defn get-line [x env]
+  (or (-> x meta :line) (:line env)))
+
+(defn get-col [x env]
+  (or (-> x meta :column) (:column env)))
+
 (defn load-core []
   (when (not @-cljs-macros-loaded)
     (reset! -cljs-macros-loaded true)
@@ -96,10 +102,16 @@
   [& args]
   `(.println System/err (str ~@args)))
 
-(defn source-info [env]
-  (when-let [line (:line env)]
-    {:file *cljs-file*
-     :line line}))
+(defn source-info
+  ([env]
+     (when-let [line (:line env)]
+       {:file *cljs-file*
+        :line (get-line name env)
+        :column (get-col name env)}))
+  ([name env]
+     {:file *cljs-file*
+      :line (get-line name env)
+      :column (get-col name env)}))
 
 (defn message [env s]
   (str s (when (:line env)
@@ -264,7 +276,10 @@
         name (first cblock)
         locals (:locals catchenv)
         locals (if name
-                 (assoc locals name {:name name})
+                 (assoc locals name
+                   {:name name
+                    :line (get-line name env)
+                    :column (get-col name env)})
                  locals)
         catch (when cblock
                 (analyze (assoc catchenv :locals locals) `(do ~@(rest cblock))))
@@ -304,9 +319,14 @@
                   (update-in env [:ns :excludes] conj sym))
                 env)
           name (:name (resolve-var (dissoc env :locals) sym))
+          var-expr (assoc (analyze (-> env (dissoc :locals)
+                                       (assoc :context :expr)
+                                       (assoc :def-var true))
+                                   sym)
+                     :op :var)
           init-expr (when (contains? args :init)
                       (disallowing-recur
-                       (analyze (assoc env :context :expr) (:init args) sym)))
+                        (analyze (assoc env :context :expr) (:init args) sym)))
           fn-var? (and init-expr (= (:op init-expr) :fn))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
@@ -324,7 +344,7 @@
                    sym-meta
                    (when doc {:doc doc})
                    (when dynamic {:dynamic true})
-                   (source-info env)
+                   (source-info name env)
                    ;; the protocol a protocol fn belongs to
                    (when protocol
                      {:protocol protocol})
@@ -341,7 +361,7 @@
                       :max-fixed-arity (:max-fixed-arity init-expr)
                       :method-params (map :params (:methods init-expr))})))
       (merge {:env env :op :def :form form
-              :name name :doc doc :init init-expr}
+              :name name :var var-expr :doc doc :init init-expr}
              (when tag {:tag tag})
              (when dynamic {:dynamic true})
              (when export-as {:export export-as})
@@ -354,8 +374,10 @@
         body (next form)
         [locals params] (reduce (fn [[locals params] name]
                                   (let [param {:name name
+                                               :line (get-line name env)
+                                               :column (get-col name env)
                                                :tag (-> name meta :tag)
-                                               :shadow (locals name)}]
+                                               :shadow (when locals (locals name))}]
                                     [(assoc locals name param) (conj params param)]))
                                 [locals []] param-names)
         fixed-arity (count (if variadic (butlast params) params))
@@ -373,7 +395,7 @@
         ;;turn (fn [] ...) into (fn ([]...))
         meths (if (vector? (first meths)) (list meths) meths)
         locals (:locals env)
-        locals (if name (assoc locals name {:name name :shadow (locals name)}) locals)
+        locals (if (and locals name) (assoc locals name {:name name :shadow (locals name)}) locals)
         type (-> form meta ::type)
         fields (-> form meta ::fields)
         protocol-impl (-> form meta :protocol-impl)
@@ -381,6 +403,8 @@
         locals (reduce (fn [m fld]
                          (assoc m fld
                                 {:name fld
+                                 :line (get-line fld env)
+                                 :column (get-col fld env)
                                  :field true
                                  :mutable (-> fld meta :mutable)
                                  :unsynchronized-mutable (-> fld meta :unsynchronized-mutable)
@@ -426,6 +450,8 @@
         [meth-env bes]
         (reduce (fn [[{:keys [locals] :as env} bes] n]
                   (let [be {:name   n
+                            :line (get-line n env)
+                            :column (get-col n env)
                             :tag    (-> n meta :tag)
                             :local  true
                             :shadow (locals n)}]
@@ -467,6 +493,8 @@
                (let [init-expr (binding [*loop-lets* (cons {:params bes} (or *loop-lets* ()))]
                                  (analyze env init))
                      be {:name name
+                         :line (get-line name env)
+                         :column (get-col name env)
                          :init init-expr
                          :tag (or (-> name meta :tag)
                                   (-> init-expr :tag)
@@ -700,7 +728,7 @@
                        :num-fields (count fields))]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
-                 (source-info env)))))
+                 (source-info tsym env)))))
     {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
@@ -711,7 +739,7 @@
              (let [m (assoc (or m {}) :name t :type true)]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
-                 (source-info env)))))
+                 (source-info tsym env)))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
 
 ;; dot accessor code
@@ -843,7 +871,9 @@
         lb (-> env :locals sym)]
     (if lb
       (assoc ret :op :var :info lb)
-      (assoc ret :op :var :info (resolve-existing-var env sym)))))
+      (if-not (:def-var env)
+        (assoc ret :op :var :info (resolve-existing-var env sym))
+        (assoc ret :op :var :info (resolve-var env sym))))))
 
 (defn get-expander [sym env]
   (let [mvar
@@ -886,9 +916,11 @@
 
 (defn analyze-seq
   [env form name]
-  (let [env (assoc env :line
-                   (or (-> form meta :line)
-                       (:line env)))]
+  (let [env (assoc env
+              :line (or (-> form meta :line)
+                        (:line env))
+              :column (or (-> form meta :column)
+                          (:column env)))]
     (let [op (first form)]
       (assert (not (nil? op)) "Can't call nil")
       (let [mform (macroexpand-1 env form)]
