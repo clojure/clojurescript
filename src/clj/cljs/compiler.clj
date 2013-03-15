@@ -351,9 +351,12 @@
   (let [mname (munge name)]
     (emit-comment doc (:jsdoc init))
     (emits mname)
-    (if init
+    (when init
       (emits " = " init)
-      (emits " = (typeof " mname " != 'undefined') ? " mname " : undefined"))
+      ;; NOTE: JavaScriptCore does not like this under advanced compilation
+      ;; this change was primarily for REPL interactions - David
+      ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
+      )
     (when-not (= :expr (:context env)) (emitln ";"))
     (when export
       (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))))
