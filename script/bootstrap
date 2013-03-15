@@ -5,22 +5,22 @@ set -e
 mkdir -p lib
 
 echo "Fetching Clojure..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.5.0-beta1/clojure-1.5.0-beta1.zip
-unzip -qu clojure-1.5.0-beta1.zip
-echo "Copying clojure-1.5.0-beta1/clojure-1.5.0-beta1.jar to lib/clojure.jar..."
-cp clojure-1.5.0-beta1/clojure-1.5.0-beta1.jar lib/clojure.jar
+curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.5.1/clojure-1.5.1.zip
+unzip -qu clojure-1.5.1.zip
+echo "Copying clojure-1.5.1/clojure-1.5.1.jar to lib/clojure.jar..."
+cp clojure-1.5.1/clojure-1.5.1.jar lib/clojure.jar
 
 echo "Cleaning up Clojure directory..."
-rm -rf clojure-1.5.0-beta1/
+rm -rf clojure-1.5.1/
 echo "Cleaning up Clojure archive..."
-rm clojure-1.5.0-beta1.zip
+rm clojure-1.5.1.zip
 
 echo "Fetching data.json..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/data.json/0.2.0/data.json-0.2.0.jar
-echo "Copying data.json-0.2.0.jar to lib/data.json-0.2.0.jar..."
-cp data.json-0.2.0.jar lib/data.json-0.2.0.jar
+curl -O -s http://repo1.maven.org/maven2/org/clojure/data.json/0.2.0/data.json-0.2.1.jar
+echo "Copying data.json-0.2.1.jar to lib/data.json-0.2.1.jar..."
+cp data.json-0.2.1.jar lib/data.json-0.2.1.jar
 echo "Cleaning up data.json..."
-rm data.json-0.2.0.jar
+rm data.json-0.2.1.jar
 
 echo "Fetching Google Closure library..."
 mkdir -p closure/library
