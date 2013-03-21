@@ -213,9 +213,10 @@
          (remove nil?)
          (map #(drop 1 %))
          (reduce (fn [m ns]
-                   (if (= (first ns) "require")
-                     (conj-in m :requires (last ns))
-                     (conj-in m :provides (last ns))))
+                   (let [munged-ns (string/replace (last ns) "_" "-")]
+                     (if (= (first ns) "require")
+                       (conj-in m :requires munged-ns)
+                       (conj-in m :provides munged-ns))))
                  {:requires [] :provides []}))))
 
 ;; Protocols for IJavaScript and Compilable
