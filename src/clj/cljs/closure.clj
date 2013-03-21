@@ -279,8 +279,10 @@
 (defn map->javascript-file [m]
   (javascript-file
     (:foreign m)
-    (to-url (:file m))
-    (to-url (:source-file m))
+    (when-let [f (:file m)]
+      (to-url f))
+    (when-let [sf (:source-file m)]
+      (to-url sf))
     (:provides m)
     (:requires m)
     (:lines m)
