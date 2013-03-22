@@ -655,6 +655,11 @@
                                      {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
                                      [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
                                  (when alias
+                                   ;; we need to create a fake namespace so the reader knows about aliases
+                                   ;; for resolving keywords like ::f/bar
+                                   (binding [*ns* (create-ns name)]
+                                     (let [^clojure.lang.Namespace ns (create-ns lib)]
+                                       (clojure.core/alias alias (.name ns))))
                                    (let [alias-type (if macros? :macros :fns)]
                                      (assert (not (contains? (alias-type @aliases)
                                                              alias))
