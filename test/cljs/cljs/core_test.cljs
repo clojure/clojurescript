@@ -1047,6 +1047,8 @@
     (assert (= :fail (try (subvec v2 6 10) (catch js/Error e :fail))))
     (assert (= :fail (try (subvec v2 6 10) (catch js/Error e :fail))))
     (assert (= :fail (try (subvec v2 3 6) (catch js/Error e :fail))))
+    ;; no layered subvecs
+    (assert (identical? v1 (.-v (subvec s 1 4))))
     )
 
   ;; TransientVector

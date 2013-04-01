@@ -3359,13 +3359,15 @@ reduces them without incurring seq initialization"
     (-lookup coll k not-found)))
 
 (defn- build-subvec [meta v start end __hash]
-  (let [c (count v)]
-       (when (or (neg? start)
-                 (neg? end)
-                 (> start c)
-                 (> end c))
-         (throw (js/Error. "Index out of bounds")))
-       (Subvec. meta v start end __hash)))
+  (if (instance? Subvec v)
+    (recur meta (.-v v) (+ (.-start v) start) (+ (.-start v) end) __hash)
+    (let [c (count v)]
+      (when (or (neg? start)
+                (neg? end)
+                (> start c)
+                (> end c))
+        (throw (js/Error. "Index out of bounds")))
+      (Subvec. meta v start end __hash))))
 
 (defn subvec
   "Returns a persistent vector of the items in vector from
