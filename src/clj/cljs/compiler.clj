@@ -382,24 +382,17 @@
         delegate-name (str (munge name) "__delegate")
         params (map munge params)]
     (emitln "(function (" arglist "){")
-    (doseq [[i param] (map-indexed vector (butlast params))]
+    (doseq [[i param] (map-indexed vector (drop-last 2 params))]
       (emits "var " param " = cljs.core.first(")
-      (dotimes [_ i] (emits "cljs.core.next("))
-      (emits arglist ")")
-      (dotimes [_ i] (emits ")"))
-      (emitln ";"))
+      (emitln arglist ");")
+      (emitln arglist " = cljs.core.next(" arglist ");"))
     (if (< 1 (count params))
       (do
-        (emits "var " (last params) " = cljs.core.rest(")
-        (dotimes [_ (- (count params) 2)] (emits "cljs.core.next("))
-        (emits arglist)
-        (dotimes [_ (- (count params) 2)] (emits ")"))
-        (emitln ");")
+        (emitln "var " (last (butlast params)) " = cljs.core.first(" arglist ");")
+        (emitln "var " (last params) " = cljs.core.rest(" arglist ");")
         (emitln "return " delegate-name "(" (string/join ", " params) ");"))
       (do
-        (emits "var " (last params) " = ")
-        (emits "cljs.core.seq(" arglist ");")
-        (emitln ";")
+        (emitln "var " (last params) " = cljs.core.seq(" arglist ");")
         (emitln "return " delegate-name "(" (string/join ", " params) ");")))
     (emits "})")))
 

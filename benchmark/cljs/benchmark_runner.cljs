@@ -92,6 +92,8 @@
 (simple-benchmark [xs (array-seq (array 1 2 3 4 5))] (apply list xs) 1000000)
 (simple-benchmark [xs (list 1 2 3 4 5)] (apply list xs) 1000000)
 (simple-benchmark [xs [1 2 3 4 5]] (apply list xs) 1000000)
+(simple-benchmark [f (fn [a b & more])] (apply f (range 32)) 1000000)
+(simple-benchmark [f (fn [a b c d e f g h i j & more])] (apply f (range 32)) 1000000)
 (println)
 
 (println ";; update-in")
