@@ -815,7 +815,12 @@ reduces them without incurring seq initialization"
 
 (extend-type default
   IEquiv
-  (-equiv [x o] (identical? x o)))
+  (-equiv [x o] (identical? x o))
+
+  ILookup
+  (-lookup [x k] nil)
+
+  (-lookup [x k not-found] not-found))
 
 (defn conj
   "conj[oin]. Returns a new collection with the xs

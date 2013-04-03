@@ -1836,5 +1836,12 @@
   (assert (= [js/undefined 1 2] ((fn [& more] more) js/undefined 1 2)))
   (assert (= [js/undefined 4 5] ((fn [a b & more] more) 1 2 js/undefined 4 5)))
 
+  ;; CLJS-493
+
+  (assert (nil? (get 42 :anything)))
+  (assert (identical? (get 42 :anything :not-found) :not-found))
+  (assert (nil? (first (map get [42] [:anything]))))
+  (assert (identical? (first (map get [42] [:anything] [:not-found])) :not-found))
+
   :ok
   )
