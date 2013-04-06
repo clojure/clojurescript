@@ -207,6 +207,11 @@
 (defmacro coercive-= [x y]
   (bool-expr (list 'js* "(~{} == ~{})" x y)))
 
+;; internal - do not use.
+(defmacro coercive-boolean [x]
+  (with-meta (list 'js* "~{}" x)
+    {:tag 'boolean}))
+
 (defmacro true? [x]
   (bool-expr (list 'js* "~{} === true" x)))
 
@@ -991,7 +996,7 @@
                                 (conj (pop groups) (conj (peek groups) [k v]))
                                 (conj groups [k v])))
                             [] (partition 2 seq-exprs)))
-        err (fn [& msg] (throw (apply core/str msg)))
+        err (fn [& msg] (throw (ex-info (apply core/str msg) {})))
         emit-bind (fn emit-bind [[[bind expr & mod-pairs]
                                   & [[_ next-expr] :as next-groups]]]
                     (let [giter (gensym "iter__")
@@ -1012,11 +1017,49 @@
                                            (recur (rest ~gxs))))
                                      :else `(cons ~body-expr
                                                   (~giter (rest ~gxs)))))]
-                      `(fn ~giter [~gxs]
-                         (lazy-seq
-                           (loop [~gxs ~gxs]
-                             (when-first [~bind ~gxs]
-                               ~(do-mod mod-pairs)))))))]
+                      (if next-groups
+                        #_ "not the inner-most loop"
+                        `(fn ~giter [~gxs]
+                           (lazy-seq
+                            (loop [~gxs ~gxs]
+                              (when-first [~bind ~gxs]
+                                ~(do-mod mod-pairs)))))
+                        #_"inner-most loop"
+                        (let [gi (gensym "i__")
+                              gb (gensym "b__")
+                              do-cmod (fn do-cmod [[[k v :as pair] & etc]]
+                                        (cond
+                                          (= k :let) `(let ~v ~(do-cmod etc))
+                                          (= k :while) `(when ~v ~(do-cmod etc))
+                                          (= k :when) `(if ~v
+                                                         ~(do-cmod etc)
+                                                         (recur
+                                                           (unchecked-inc ~gi)))
+                                          (keyword? k)
+                                            (err "Invalid 'for' keyword " k)
+                                          :else
+                                            `(do (chunk-append ~gb ~body-expr)
+                                                 (recur (unchecked-inc ~gi)))))]
+                          `(fn ~giter [~gxs]
+                             (lazy-seq
+                               (loop [~gxs ~gxs]
+                                 (when-let [~gxs (seq ~gxs)]
+                                   (if (chunked-seq? ~gxs)
+                                     (let [c# ^not-native (chunk-first ~gxs)
+                                           size# (count c#)
+                                           ~gb (chunk-buffer size#)]
+                                       (if (coercive-boolean
+                                            (loop [~gi 0]
+                                              (if (< ~gi size#)
+                                                (let [~bind (-nth c# ~gi)]
+                                                  ~(do-cmod mod-pairs))
+                                                true)))
+                                         (chunk-cons
+                                           (chunk ~gb)
+                                           (~giter (chunk-rest ~gxs)))
+                                         (chunk-cons (chunk ~gb) nil)))
+                                     (let [~bind (first ~gxs)]
+                                       ~(do-mod mod-pairs)))))))))))]
     `(let [iter# ~(emit-bind (to-groups seq-exprs))]
        (iter# ~(second seq-exprs)))))
 
@@ -1028,14 +1071,15 @@
   (assert-args doseq
      (vector? seq-exprs) "a vector for its binding"
      (even? (count seq-exprs)) "an even number of forms in binding vector")
-  (let [step (fn step [recform exprs]
+  (let [err (fn [& msg] (throw (ex-info (apply core/str msg) {})))
+        step (fn step [recform exprs]
                (if-not exprs
                  [true `(do ~@body)]
                  (let [k (first exprs)
                        v (second exprs)
 
-                       seqsym (when-not (keyword? k) (gensym))
-                       recform (if (keyword? k) recform `(recur (next ~seqsym)))
+                       seqsym (gensym "seq__")
+                       recform (if (keyword? k) recform `(recur (next ~seqsym) nil 0 0))
                        steppair (step recform (nnext exprs))
                        needrec (steppair 0)
                        subform (steppair 1)]
@@ -1049,11 +1093,30 @@
                                              ~subform
                                              ~@(when needrec [recform]))
                                            ~recform)]
-                     :else [true `(loop [~seqsym (seq ~v)]
-                                    (when ~seqsym
-                                      (let [~k (first ~seqsym)]
-                                        ~subform
-                                        ~@(when needrec [recform]))))]))))]
+                     (keyword? k) (err "Invalid 'doseq' keyword" k)
+                     :else (let [chunksym (with-meta (gensym "chunk__")
+                                            {:tag 'not-native})
+                                 countsym (gensym "count__")
+                                 isym     (gensym "i__")
+                                 recform-chunk  `(recur ~seqsym ~chunksym ~countsym (unchecked-inc ~isym))
+                                 steppair-chunk (step recform-chunk (nnext exprs))
+                                 subform-chunk  (steppair-chunk 1)]
+                             [true `(loop [~seqsym   (seq ~v)
+                                           ~chunksym nil
+                                           ~countsym 0
+                                           ~isym     0]
+                                      (if (coercive-boolean (< ~isym ~countsym))
+                                        (let [~k (-nth ~chunksym ~isym)]
+                                          ~subform-chunk
+                                          ~@(when needrec [recform-chunk]))
+                                        (when-let [~seqsym (seq ~seqsym)]
+                                          (if (chunked-seq? ~seqsym)
+                                            (let [c# (chunk-first ~seqsym)]
+                                              (recur (chunk-rest ~seqsym) c#
+                                                     (count c#) 0))
+                                            (let [~k (first ~seqsym)]
+                                              ~subform
+                                              ~@(when needrec [recform]))))))])))))]
     (nth (step nil (seq seq-exprs)) 1)))
 
 (defmacro array [& rest]

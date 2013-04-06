@@ -206,4 +206,11 @@
 (simple-benchmark [r r] (last r) 1)
 (println)
 
+(println ";;; comprehensions")
+(simple-benchmark [xs (range 512)] (last (for [x xs y xs] (+ x y))) 10)
+(simple-benchmark [xs (vec (range 512))] (last (for [x xs y xs] (+ x y))) 10)
+(simple-benchmark [a (Box. 0) xs (range 512)] (doseq [x xs y xs] (set! a -val (+ (.-val a) x))) 100)
+(simple-benchmark [a (Box. 0) xs (vec (range 512))] (doseq [x xs y xs] (set! a -val (+ (.-val a) x))) 100)
+(println)
+
 (println "\n")

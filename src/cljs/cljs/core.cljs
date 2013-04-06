@@ -81,7 +81,7 @@
   argv as arguments"}
   *main-cli-fn* nil)
 
-(declare pr-str)
+(declare pr-str chunk-first chunk-rest)
 
 (defn type [x]
   (when-not (nil? x)
