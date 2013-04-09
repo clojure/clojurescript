@@ -1843,5 +1843,14 @@
   (assert (nil? (first (map get [42] [:anything]))))
   (assert (identical? (first (map get [42] [:anything] [:not-found])) :not-found))
 
+  ;; CLJS-481
+
+  (let [fs (atom [])]
+    (doseq [x (range 4)
+            :let [y (inc x)
+                  f (fn [] y)]]
+      (swap! fs conj f))
+    (assert (= (map #(%) @fs) '(1 2 3 4))))
+
   :ok
   )
