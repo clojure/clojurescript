@@ -968,12 +968,14 @@ reduces them without incurring seq initialization"
     (set! string-hash-cache-count (inc string-hash-cache-count))
     h))
 
+(declare number?)
+
 (defn check-string-hash-cache [k]
   (when (> string-hash-cache-count 255)
     (set! string-hash-cache (js-obj))
     (set! string-hash-cache-count 0))
   (let [h (aget string-hash-cache k)]
-    (if-not (nil? h)
+    (if (number? h)
       h
       (add-to-string-hash-cache k))))
 
