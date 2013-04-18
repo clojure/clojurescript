@@ -213,6 +213,9 @@
 (defmacro false? [x]
   (bool-expr (list 'js* "~{} === false" x)))
 
+(defmacro exists? [x]
+  (bool-expr (list 'js* "typeof ~{} !== 'undefined'" x)))
+
 (defmacro undefined? [x]
   (bool-expr (list 'js* "(void 0 === ~{})" x)))
 
