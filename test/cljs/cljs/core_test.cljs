@@ -1852,5 +1852,10 @@
       (swap! fs conj f))
     (assert (= (map #(%) @fs) '(1 2 3 4))))
 
+  ;; CLJS-495
+  (assert (false? (exists? js/jQuery)))
+  (def exists?-test-val 'foo)
+  (assert (exists? exists?-test-val))
+
   :ok
   )
