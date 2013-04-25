@@ -1105,7 +1105,7 @@ reduces them without incurring seq initialization"
   (instance? Symbol x))
 
 (defn ^boolean number? [n]
-  (goog/isNumber n))
+  (cljs.core/number? n))
 
 (defn ^boolean fn? [f]
   (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
@@ -1379,7 +1379,15 @@ reduces them without incurring seq initialization"
    (reduce min (cljs.core/min x y) more)))
 
 (defn byte [x] x)
-(defn char [x] x)
+
+(defn char
+  "Coerce to char"
+  [x]
+  (cond
+    (number? x) (.fromCharCode js/String x)
+    (and (string? x) (== (.-length x) 1)) x
+    :else (throw (js/Error. "Argument to char must be a character or number"))))
+
 (defn short [x] x)
 (defn float [x] x)
 (defn double [x] x)

@@ -1857,5 +1857,9 @@
   (def exists?-test-val 'foo)
   (assert (exists? exists?-test-val))
 
+  ;; CLJS-496
+  (assert (= (char 65) \A))
+  (assert (= (char \A) \A))
+
   :ok
   )
