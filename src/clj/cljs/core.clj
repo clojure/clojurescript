@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical? true? false? number? nil? str get
+                            satisfies? identical? true? false? number? nil? instance? symbol? str get
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -114,12 +114,12 @@
                                       (next bes)))
                              ret))))]
                     (cond
-                      (symbol? b) (-> bvec (conj b) (conj v))
+                      (core/symbol? b) (-> bvec (conj b) (conj v))
                       (vector? b) (pvec bvec b v)
                       (map? b) (pmap bvec b v)
                       :else (throw (new Exception (core/str "Unsupported binding form: " b))))))
          process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
-        (if (every? symbol? (map first bents))
+        (if (every? core/symbol? (map first bents))
           bindings
           (reduce process-entry [] bents))))
 
@@ -148,9 +148,9 @@
         `(loop* ~bindings ~@body)
         (let [vs (take-nth 2 (drop 1 bindings))
               bs (take-nth 2 bindings)
-              gs (map (fn [b] (if (symbol? b) b (gensym))) bs)
+              gs (map (fn [b] (if (core/symbol? b) b (gensym))) bs)
               bfs (reduce (fn [ret [b v g]]
-                            (if (symbol? b)
+                            (if (core/symbol? b)
                               (conj ret g v)
                               (conj ret g v b g)))
                           [] (map vector bs vs gs))]
@@ -227,8 +227,14 @@
 (defmacro identical? [a b]
   (bool-expr (list 'js* "(~{} === ~{})" a b)))
 
+(defmacro instance? [t o]
+  (bool-expr (list 'js* "(~{} instanceof ~{})" o t)))
+
 (defmacro number? [x]
   (bool-expr (list 'js* "typeof ~{} === 'number'" x)))
+
+(defmacro symbol? [x]
+  (bool-expr `(instance? Symbol ~x)))
 
 (defmacro aget
   ([a i]
@@ -643,7 +649,7 @@
 
 (defn collect-protocols [impls env]
   (->> impls
-      (filter symbol?)
+      (filter core/symbol?)
       (map #(:name (cljs.analyzer/resolve-var (dissoc env :locals) %)))
       (into #{})))
 
@@ -918,12 +924,12 @@
         pairs (reduce (fn [m [test expr]]
                         (cond
                          (seq? test) (reduce (fn [m test]
-                                               (let [test (if (symbol? test)
+                                               (let [test (if (core/symbol? test)
                                                             (list 'quote test)
                                                             test)]
                                                  (assoc-test m test expr)))
                                              m test)
-                         (symbol? test) (assoc-test m (list 'quote test) expr)
+                         (core/symbol? test) (assoc-test m (list 'quote test) expr)
                          :else (assoc-test m test expr)))
                       {} (partition 2 clauses))
         esym (gensym)]

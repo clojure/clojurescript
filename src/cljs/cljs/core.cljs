@@ -428,7 +428,7 @@
        false)))
 
 (defn ^boolean instance? [t o]
-  (js* "(~{o} instanceof ~{t})"))
+  (cljs.core/instance? t o))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
@@ -3966,6 +3966,17 @@ reduces them without incurring seq initialization"
         (nil? (aget arr i)) i
         :else (recur (+ i 2))))))
 
+(defn- array-map-index-of-symbol? [arr m k]
+  (let [len  (alength arr)
+        kstr (.-str k)]
+    (loop [i 0]
+      (cond
+        (<= len i) -1
+        (let [k' (aget arr i)]
+          (and (symbol? k')
+               (identical? kstr (.-str k')))) i
+        :else (recur (+ i 2))))))
+
 (defn- array-map-index-of-identical? [arr m k]
   (let [len (alength arr)]
     (loop [i 0]
@@ -3987,6 +3998,8 @@ reduces them without incurring seq initialization"
     (cond
       (or ^boolean (goog/isString k) (number? k))
       (array-map-index-of-identical? arr m k)
+
+      (symbol? k) (array-map-index-of-symbol? arr m k)
 
       (nil? k)
       (array-map-index-of-nil? arr m k)

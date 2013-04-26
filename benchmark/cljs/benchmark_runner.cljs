@@ -117,6 +117,21 @@
 (simple-benchmark [coll (array-map :foo :bar :baz :woz)] (-lookup coll :baz) 1000000)
 (simple-benchmark [coll (array-map :foo :bar :baz :woz :lol :rofl)] (-lookup coll :lol) 1000000)
 (println)
+
+(println ";;; array-map w/ symbols")
+(let [a 'foo
+      b 'bar
+      c 'baz
+      d 'woz
+      e 'lol
+      f 'rofl]
+  (simple-benchmark [coll (array-map)] (assoc coll a b) 1000000)
+  (simple-benchmark [coll (array-map a b)] (-lookup coll a) 1000000)
+  (simple-benchmark [coll (array-map a b)] (assoc coll c d) 1000000)
+  (simple-benchmark [coll (array-map a b c d)] (-lookup coll c) 1000000)
+  (simple-benchmark [coll (array-map a b c d e f)] (-lookup coll e) 1000000))
+(println)
+
 (def data-atom (atom {:x 0}))
 
 (println ";;; map / record ops")
