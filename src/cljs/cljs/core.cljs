@@ -3954,25 +3954,40 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentArrayMap
 
-(defn- equiv-nil [k k']
-  (nil? k'))
-
-(defn- equiv-pred [x]
-  (cond
-    ^boolean (goog/isString x) identical?
-    (nil? x) equiv-nil
-    (number? x) identical?
-    :else =))
-
-(defn- array-map-index-of [m k]
-  (let [arr  (.-arr m)
-        len  (alength arr)
-        pred (equiv-pred k)]
+(defn- array-map-index-of-nil? [arr m k]
+  (let [len (alength arr)]
     (loop [i 0]
       (cond
         (<= len i) -1
-        ^boolean (pred k (aget arr i)) i
+        (nil? (aget arr i)) i
         :else (recur (+ i 2))))))
+
+(defn- array-map-index-of-identical? [arr m k]
+  (let [len (alength arr)]
+    (loop [i 0]
+      (cond
+        (<= len i) -1
+        (identical? k (aget arr i)) i
+        :else (recur (+ i 2))))))
+
+(defn- array-map-index-of-equiv? [arr m k]
+  (let [len (alength arr)]
+    (loop [i 0]
+      (cond
+        (<= len i) -1
+        (= k (aget arr i)) i
+        :else (recur (+ i 2))))))
+
+(defn- array-map-index-of [m k]
+  (let [arr (.-arr m)]
+    (cond
+      (or ^boolean (goog/isString k) (number? k))
+      (array-map-index-of-identical? arr m k)
+
+      (nil? k)
+      (array-map-index-of-nil? arr m k)
+
+      :else (array-map-index-of-equiv? arr m k))))
 
 (defn- array-map-extend-kv [m k v]
   (let [arr (.-arr m)
