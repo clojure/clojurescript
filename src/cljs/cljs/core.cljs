@@ -4060,23 +4060,19 @@ reduces them without incurring seq initialization"
       (cond
         (== idx -1)
         (if (< cnt cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD)
-          (PersistentArrayMap. meta
-                               (inc cnt)
-                               (array-map-extend-kv coll k v)
-                               nil)
-          (-with-meta
-            (-assoc (into cljs.core.PersistentHashMap/EMPTY coll) k v)
-            meta))
+          (let [arr (array-map-extend-kv coll k v)]
+            (PersistentArrayMap. meta (inc cnt) arr nil))
+          (-> (into cljs.core.PersistentHashMap/EMPTY coll)
+            (-assoc k v)
+            (-with-meta meta)))
 
         (identical? v (aget arr (inc idx)))
         coll
 
         :else
-        (PersistentArrayMap. meta
-                             cnt
-                             (doto (aclone arr)
-                               (aset (inc idx) v))
-                             nil))))
+        (let [arr (doto (aclone arr)
+                    (aset (inc idx) v))]
+          (PersistentArrayMap. meta cnt arr nil)))))
 
   (-contains-key? [coll k]
     (not (== (array-map-index-of coll k) -1)))
