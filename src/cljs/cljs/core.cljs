@@ -1029,8 +1029,12 @@ reduces them without incurring seq initialization"
   "Return true if x satisfies IVector"
   [x] (satisfies? IVector x))
 
+(declare ChunkedCons ChunkedSeq)
+
 (defn ^boolean chunked-seq?
-  [x] (satisfies? IChunkedSeq x))
+  [x]
+  (or (instance? ChunkedCons x)
+      (instance? ChunkedSeq x)))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj
