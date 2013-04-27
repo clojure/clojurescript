@@ -6439,19 +6439,21 @@ reduces them without incurring seq initialization"
   [fmt & args]
   (print (apply format fmt args)))
 
-(def ^:private char-escapes {"\"" "\\\""
-                             "\\" "\\\\"
-                             "\b" "\\b"
-                             "\f" "\\f"
-                             "\n" "\\n"
-                             "\r" "\\r"
-                             "\t" "\\t"})
+(def ^:private char-escapes
+  (js-obj
+    "\"" "\\\""
+    "\\" "\\\\"
+    "\b" "\\b"
+    "\f" "\\f"
+    "\n" "\\n"
+    "\r" "\\r"
+    "\t" "\\t"))
 
 (defn ^:private quote-string
   [s]
   (str \"
        (.replace s (js/RegExp "[\\\\\"\b\f\n\r\t]" "g")
-         (fn [match] (get char-escapes match)))
+         (fn [match] (aget char-escapes match)))
        \"))
 
 (extend-protocol IPrintWithWriter
