@@ -212,6 +212,10 @@
   (with-meta (list 'js* "~{}" x)
     {:tag 'boolean}))
 
+;; internal - do not use.
+(defmacro truth_ [x]
+  (list 'js* "(~{} != null && ~{} !== false)" x x))
+
 ;; internal - do not use
 (defmacro js-arguments []
   (list 'js* "arguments"))
@@ -324,6 +328,11 @@
   ([x y & more] `(* (* ~x ~y) ~@more)))
 
 (defmacro /
+  ([x] `(/ 1 ~x))
+  ([x y] (list 'js* "(~{} / ~{})" x y))
+  ([x y & more] `(/ (/ ~x ~y) ~@more)))
+
+(defmacro divide
   ([x] `(/ 1 ~x))
   ([x y] (list 'js* "(~{} / ~{})" x y))
   ([x y & more] `(/ (/ ~x ~y) ~@more)))

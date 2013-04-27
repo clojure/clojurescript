@@ -42,7 +42,7 @@
 (defn truth_
   "Internal - do not use!"
   [x]
-  (js* "(~{x} != null && ~{x} !== false)"))
+  (cljs.core/truth_ x))
 
 (def not-native nil)
 
@@ -1313,7 +1313,7 @@ reduces them without incurring seq initialization"
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."
   ([x] (/ 1 x))
-  ([x y] (js* "(~{x} / ~{y})")) ;; FIXME: waiting on cljs.core//
+  ([x y] (cljs.core/divide x y)) ;; FIXME: waiting on cljs.core//
   ([x y & more] (reduce / (/ x y) more)))
 
 (defn ^boolean <
@@ -1426,7 +1426,7 @@ reduces them without incurring seq initialization"
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."
   ([x] (unchecked-divide-int 1 x))
-  ([x y] (js* "(~{x} / ~{y})")) ;; FIXME: waiting on cljs.core//
+  ([x y] (cljs.core/divide x y)) ;; FIXME: waiting on cljs.core//
   ([x y & more] (reduce unchecked-divide-int (unchecked-divide-int x y) more)))
 
 (defn unchecked-inc [x]
