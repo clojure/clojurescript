@@ -3845,117 +3845,6 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.ObjMap/fromObject (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
-;;; HashMap
-;;; DEPRECATED
-;;; in favor of PersistentHashMap
-
-; The keys field is an array of all keys of this map, in no particular
-; order. Each key is hashed and the result used as a property name of
-; hashobj. Each values in hashobj is actually a bucket in order to handle hash
-; collisions. A bucket is an array of alternating keys (not their hashes) and
-; vals.
-(deftype HashMap [meta count hashobj ^:mutable __hash]
-  Object
-  (toString [this]
-    (pr-str this))
-
-  IWithMeta
-  (-with-meta [coll meta] (HashMap. meta count hashobj __hash))
-
-  IMeta
-  (-meta [coll] meta)
-
-  ICollection
-  (-conj [coll entry]
-    (if (vector? entry)
-      (-assoc coll (-nth entry 0) (-nth entry 1))
-      (reduce -conj
-              coll
-              entry)))
-
-  IEmptyableCollection
-  (-empty [coll] (with-meta cljs.core.HashMap/EMPTY meta))
-
-  IEquiv
-  (-equiv [coll other] (equiv-map coll other))
-
-  IHash
-  (-hash [coll] (caching-hash coll hash-imap __hash))
-
-  ISeqable
-  (-seq [coll]
-    (when (pos? count)
-      (let [hashes (.sort (js-keys hashobj))]
-        (mapcat #(map vec (partition 2 (aget hashobj %)))
-                hashes))))
-
-  ICounted
-  (-count [coll] count)
-
-  ILookup
-  (-lookup [coll k] (-lookup coll k nil))
-  (-lookup [coll k not-found]
-    (let [bucket (aget hashobj (hash k))
-          i (when bucket (scan-array 2 k bucket))]
-      (if i
-        (aget bucket (inc i))
-        not-found)))
-
-  IAssociative
-  (-assoc [coll k v]
-    (let [h (hash k)
-          bucket (aget hashobj h)]
-      (if bucket
-        (let [new-bucket (aclone bucket)
-              new-hashobj (goog.object/clone hashobj)]
-          (aset new-hashobj h new-bucket)
-          (if-let [i (scan-array 2 k new-bucket)]
-            (do                         ; found key, replace
-              (aset new-bucket (inc i) v)
-              (HashMap. meta count new-hashobj nil))
-            (do                         ; did not find key, append
-              (.push new-bucket k v)
-              (HashMap. meta (inc count) new-hashobj nil))))
-        (let [new-hashobj (goog.object/clone hashobj)] ; did not find bucket
-          (aset new-hashobj h (array k v))
-          (HashMap. meta (inc count) new-hashobj nil)))))
-  (-contains-key? [coll k]
-    (let [bucket (aget hashobj (hash k))
-          i (when bucket (scan-array 2 k bucket))]
-      (if i
-        true
-        false)))
-
-  IMap
-  (-dissoc [coll k]
-    (let [h (hash k)
-          bucket (aget hashobj h)
-          i (when bucket (scan-array 2 k bucket))]
-      (if (not i)
-        coll ; key not found, return coll unchanged
-        (let [new-hashobj (goog.object/clone hashobj)]
-          (if (> 3 (alength bucket))
-            (js-delete new-hashobj h)
-            (let [new-bucket (aclone bucket)]
-              (.splice new-bucket i 2)
-              (aset new-hashobj h new-bucket)))
-          (HashMap. meta (dec count) new-hashobj nil)))))
-
-  IFn
-  (-invoke [coll k]
-    (-lookup coll k))
-  (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
-
-(set! cljs.core.HashMap/EMPTY (HashMap. nil 0 (js-obj) 0))
-
-(set! cljs.core.HashMap/fromArrays (fn [ks vs]
-  (let [len (alength ks)]
-    (loop [i 0, out cljs.core.HashMap/EMPTY]
-      (if (< i len)
-        (recur (inc i) (assoc out (aget ks i) (aget vs i)))
-        out)))))
-
 ;;; PersistentArrayMap
 
 (defn- array-map-index-of-nil? [arr m k]
@@ -6664,11 +6553,6 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
 
   ObjMap
-  (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
-
-  HashMap
   (-pr-writer [coll writer opts]
     (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
       (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
