@@ -212,6 +212,13 @@
   (with-meta (list 'js* "~{}" x)
     {:tag 'boolean}))
 
+;; internal - do not use
+(defmacro js-arguments []
+  (list 'js* "arguments"))
+
+(defmacro js-delete [obj key]
+  (list 'js* "delete ~{}[~{}]" obj key))
+
 (defmacro true? [x]
   (bool-expr (list 'js* "~{} === true" x)))
 
