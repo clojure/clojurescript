@@ -3202,7 +3202,7 @@ reduces them without incurring seq initialization"
       (RSeq. coll (dec cnt) nil)
       ())))
 
-(set! cljs.core.PersistentVector/EMPTY_NODE (pv-fresh-node nil))
+(set! cljs.core.PersistentVector/EMPTY_NODE (VectorNode. nil (make-array 32)))
 
 (set! cljs.core.PersistentVector/EMPTY
   (PersistentVector. nil 0 5 cljs.core.PersistentVector/EMPTY_NODE (array) 0))
