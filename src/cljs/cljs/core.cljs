@@ -5868,7 +5868,8 @@ reduces them without incurring seq initialization"
   (-invoke [coll k not-found]
     (-lookup coll k not-found)))
 
-(set! cljs.core.PersistentTreeSet/EMPTY (PersistentTreeSet. nil (sorted-map) 0))
+(set! cljs.core.PersistentTreeSet/EMPTY
+  (PersistentTreeSet. nil cljs.core.PersistentTreeMap/EMPTY 0))
 
 (defn hash-set
   ([] cljs.core.PersistentHashSet/EMPTY)
