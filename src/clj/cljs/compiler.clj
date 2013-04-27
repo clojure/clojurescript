@@ -364,17 +364,16 @@
 (defmethod emit :def
   [{:keys [name var init env doc export]}]
   (let [mname (munge name)]
-    (emit-comment doc (:jsdoc init))
-    (emits var)
     (when init
+      (emit-comment doc (:jsdoc init))
+      (emits var)
       (emits " = " init)
       ;; NOTE: JavaScriptCore does not like this under advanced compilation
       ;; this change was primarily for REPL interactions - David
       ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
-      )
-    (when-not (= :expr (:context env)) (emitln ";"))
-    (when export
-      (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))))
+      (when-not (= :expr (:context env)) (emitln ";"))
+      (when export
+        (emitln "goog.exportSymbol('" (munge export) "', " mname ");")))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
