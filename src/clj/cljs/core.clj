@@ -16,6 +16,7 @@
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies? identical? true? false? number? nil? instance? symbol? str get
+                            make-array
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -1149,6 +1150,10 @@
    (concat
     (list 'js* (core/str "[" xs-str "]"))
     rest)))
+
+(defmacro make-array
+  [size]
+  `(js/Array. ~size))
 
 (defmacro js-obj [& rest]
   (let [kvs-str (->> (repeat "~{}:~{}")
