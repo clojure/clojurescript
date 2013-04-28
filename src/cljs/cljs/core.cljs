@@ -443,17 +443,10 @@
   IEmptyableCollection
   (-empty [_] nil)
 
-  ICollection
-  (-conj [_ o] (list o))
-
   IIndexed
   (-nth
    ([_ n] nil)
    ([_ n not-found] not-found))
-
-  ISeq
-  (-first [_] nil)
-  (-rest [_] (list))
 
   INext
   (-next [_] nil)
@@ -462,9 +455,6 @@
   (-lookup
    ([o k] nil)
    ([o k not-found] not-found))
-
-  IAssociative
-  (-assoc [_ k v] (hash-map k v))
 
   IMap
   (-dissoc [_ k] nil)
@@ -824,11 +814,13 @@ reduces them without incurring seq initialization"
   'added'. (conj nil item) returns (item).  The 'addition' may
   happen at different 'places' depending on the concrete type."
   ([coll x]
-     (-conj coll x))
+    (if-not (nil? coll)
+      (-conj coll x)
+      (list x)))
   ([coll x & xs]
-     (if xs
-       (recur (conj coll x) (first xs) (next xs))
-       (conj coll x))))
+    (if xs
+      (recur (conj coll x) (first xs) (next xs))
+      (conj coll x))))
 
 (defn empty
   "Returns an empty collection of the same category as coll, or nil"
@@ -899,7 +891,9 @@ reduces them without incurring seq initialization"
    val(s). When applied to a vector, returns a new vector that
    contains val at index."
   ([coll k v]
-     (-assoc coll k v))
+    (if-not (nil? coll)
+      (-assoc coll k v)
+      (hash-map k v)))
   ([coll k v & kvs]
      (let [ret (assoc coll k v)]
        (if kvs
@@ -2863,9 +2857,11 @@ reduces them without incurring seq initialization"
   "Returns a new coll consisting of to-coll with all of the items of
   from-coll conjoined."
   [to from]
-  (if (satisfies? IEditableCollection to)
-    (persistent! (reduce -conj! (transient to) from))
-    (reduce -conj to from)))
+  (if-not (nil? to)
+    (if (satisfies? IEditableCollection to)
+      (persistent! (reduce -conj! (transient to) from))
+      (reduce -conj to from))
+    (reduce conj () from)))
 
 (defn mapv
   "Returns a vector consisting of the result of applying f to the
@@ -3355,7 +3351,7 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [coll key val]
     (let [v-pos (+ start key)]
-      (build-subvec meta (-assoc v v-pos val)
+      (build-subvec meta (assoc v v-pos val)
                start (max end (inc v-pos))
                nil)))
 
@@ -3593,7 +3589,7 @@ reduces them without incurring seq initialization"
   (-meta [coll] meta)
 
   ISeq
-  (-first [coll] (-first front))
+  (-first [coll] (first front))
   (-rest  [coll]
     (if-let [f1 (next front)]
       (PersistentQueueSeq. meta f1 rear nil)
@@ -3633,7 +3629,7 @@ reduces them without incurring seq initialization"
   (-rest [coll] (rest (seq coll)))
 
   IStack
-  (-peek [coll] (-first front))
+  (-peek [coll] (first front))
   (-pop [coll]
     (if front
       (if-let [f1 (next front)]
@@ -5700,7 +5696,7 @@ reduces them without incurring seq initialization"
 
   ICollection
   (-conj [coll o]
-    (PersistentHashSet. meta (-assoc hash-map o nil) nil))
+    (PersistentHashSet. meta (assoc hash-map o nil) nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.PersistentHashSet/EMPTY meta))
