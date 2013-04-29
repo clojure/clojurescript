@@ -517,19 +517,8 @@
 
 (extend-type function
   Fn
-
   IMeta
-  (-meta [_] nil)
-
-  IWithMeta
-  (-with-meta [f meta]
-    (with-meta
-      (reify
-        Fn
-        IFn
-        (-invoke [_ & args]
-          (apply f args)))
-      meta)))
+  (-meta [_] nil))
 
 (extend-type default
   IHash
@@ -912,11 +901,21 @@ reduces them without incurring seq initialization"
          (recur ret (first ks) (next ks))
          ret))))
 
+(declare fn?)
+
 (defn with-meta
   "Returns an object of the same type and value as obj, with
   map m as its metadata."
   [o meta]
-  (-with-meta o meta))
+  (if (and (fn? o) (not (satisfies? IWithMeta o)))
+    (with-meta
+      (reify
+        Fn
+        IFn
+        (-invoke [_ & args]
+          (apply o args)))
+      meta)
+    (-with-meta o meta)))
 
 (defn meta
   "Returns the metadata of obj, returns nil if there is no metadata."
