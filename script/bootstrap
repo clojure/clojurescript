@@ -16,11 +16,11 @@ echo "Cleaning up Clojure archive..."
 rm clojure-1.5.1.zip
 
 echo "Fetching data.json..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/data.json/0.2.1/data.json-0.2.1.jar
-echo "Copying data.json-0.2.1.jar to lib/data.json-0.2.1.jar..."
-cp data.json-0.2.1.jar lib/data.json-0.2.1.jar
+curl -O -s http://repo1.maven.org/maven2/org/clojure/data.json/0.2.2/data.json-0.2.2.jar
+echo "Copying data.json-0.2.2.jar to lib/data.json-0.2.2.jar..."
+cp data.json-0.2.2.jar lib/data.json-0.2.2.jar
 echo "Cleaning up data.json..."
-rm data.json-0.2.1.jar
+rm data.json-0.2.2.jar
 
 echo "Fetching Google Closure library..."
 mkdir -p closure/library
