@@ -2020,10 +2020,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (lazy-seq-value coll)
-    (if-not (nil? x)
-      coll
-      ())))
+    (seq (lazy-seq-value coll))))
 
 (declare ArrayChunk)
 
