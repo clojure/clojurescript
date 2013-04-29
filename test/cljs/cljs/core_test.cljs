@@ -269,14 +269,12 @@
   (assert (= "harriet" (-lookup "abcd" 4 "harriet")))
   (assert (= 4 (-lookup (array 1 2 3 4) 3)))
   (assert (= "zot" (-lookup (array 1 2 3 4) 4 "zot")))
-  (assert (= 10 (-reduce (array 1 2 3 4) +)))
-  (assert (= 20 (-reduce (array 1 2 3 4) + 10)))
-  (assert (= "cabd" (let
-                        [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
-                      (-reduce "abcd" jumble))))
-  (assert (= "cafrogbd" (let
-                            [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
-                          (-reduce "abcd" jumble "frog"))))
+  (assert (= 10 (reduce + (array 1 2 3 4))))
+  (assert (= 20 (reduce + 10 (array 1 2 3 4))))
+  (assert (= "cabd" (let [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
+                      (reduce jumble "abcd"))))
+  (assert (= "cafrogbd" (let [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
+                          (reduce jumble "frog" "abcd"))))
   (assert (= [0 0 1 0 1]
                [(bit-and 1 0)
                 (bit-and 0 0)

@@ -703,21 +703,17 @@ reduces them without incurring seq initialization"
        (if (< n (alength array)) (aget array n)))
     ([array n not-found]
        (if (< n (alength array)) (aget array n)
-           not-found)))
+         not-found)))
 
   ILookup
   (-lookup
     ([array k]
-       (aget array k))
+      (when (< k (alength array))
+        (aget array k)))
     ([array k not-found]
-       (-nth array k not-found)))
-
-  IReduce
-  (-reduce
-    ([array f]
-       (ci-reduce array f))
-    ([array f start]
-       (ci-reduce array f start))))
+      (if (< k (alength array))
+        (aget array k)
+        not-found))))
 
 (declare with-meta)
 
@@ -1257,12 +1253,28 @@ reduces them without incurring seq initialization"
   applying f to that result and the 2nd item, etc. If coll contains no
   items, returns val and f is not called."
   ([f coll]
-     (if (satisfies? IReduce coll)
+     (cond
+       (satisfies? IReduce coll)
        (-reduce coll f)
+
+       (or ^boolean (goog.isArray coll)
+           (and ^boolean (goog.isString coll)
+                (not (keyword? coll))))
+       (ci-reduce coll f)
+
+       :else
        (seq-reduce f coll)))
   ([f val coll]
-     (if (satisfies? IReduce coll)
+     (cond
+       (satisfies? IReduce coll)
        (-reduce coll f val)
+
+       (or ^boolean (goog.isArray coll)
+           (and ^boolean (goog.isString coll)
+                (not (keyword? coll))))
+       (ci-reduce coll f val)
+       
+       :else
        (seq-reduce f val coll))))
 
 (defn reduce-kv
@@ -1906,24 +1918,20 @@ reduces them without incurring seq initialization"
   IIndexed
   (-nth
     ([string n]
-       (if (< n (-count string)) (.charAt string n)))
+       (if (< n (.-length string)) (.charAt string n)))
     ([string n not-found]
-       (if (< n (-count string)) (.charAt string n)
-           not-found)))
+       (if (< n (.-length string)) (.charAt string n)
+         not-found)))
 
   ILookup
   (-lookup
     ([string k]
-       (-nth string k))
-    ([string k not_found]
-       (-nth string k not_found)))
-
-  IReduce
-  (-reduce
-    ([string f]
-       (ci-reduce string f))
-    ([string f start]
-       (ci-reduce string f start))))
+      (when (< k (.-length string))
+        (aget string k)))
+    ([string k not-found]
+      (if (< k (.-length string))
+        (aget string k)
+        not-found))))
 
 (deftype Keyword [k]
   IFn
@@ -1948,11 +1956,11 @@ reduces them without incurring seq initialization"
        (get coll (.toString this) not-found))))
 
 (set! js/String.prototype.apply
-      (fn
-        [s args]
-        (if (< (count args) 2)
-          (get (aget args 0) s)
-          (get (aget args 0) s (aget args 1)))))
+  (fn
+    [s args]
+    (if (< (alength args) 2)
+      (get (aget args 0) s)
+      (get (aget args 0) s (aget args 1)))))
 
 ; could use reify
 ;;; LazySeq ;;;
