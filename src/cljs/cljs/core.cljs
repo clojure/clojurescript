@@ -376,9 +376,18 @@
   Strings."
   [coll]
   (when-not (nil? coll)
-    (if (satisfies? ASeq coll)
-      coll
-      (-seq coll))))
+    (cond
+      (satisfies? ISeqable coll)
+      (-seq coll)
+      
+      ^boolean (goog.isArray coll)
+      (array-seq coll 0)
+
+      (and ^boolean (goog.isString coll)
+        (not (keyword? coll)))
+      (prim-seq coll 0)
+
+      :else (throw (js/Error. (str coll "is not ISeqable"))))))
 
 (defn first
   "Returns the first item in the collection. Calls seq on its
@@ -698,9 +707,6 @@ reduces them without incurring seq initialization"
      (prim-seq array i)))
 
 (extend-type array
-  ISeqable
-  (-seq [array] (array-seq array 0))
-
   ICounted
   (-count [a] (alength a))
 
@@ -1912,9 +1918,6 @@ reduces them without incurring seq initialization"
 (extend-type string
   IHash
   (-hash [o] (goog.string/hashCode o))
-
-  ISeqable
-  (-seq [string] (prim-seq string 0))
 
   ICounted
   (-count [s] (alength s))
