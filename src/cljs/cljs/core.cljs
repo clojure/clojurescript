@@ -370,7 +370,7 @@
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
-(declare array-seq prim-seq keyword?)
+(declare array-seq prim-seq string? keyword?)
 
 (defn ^seq seq
   "Returns a seq on the collection. If the collection is
@@ -382,11 +382,8 @@
       (satisfies? ISeqable coll)
       (-seq coll)
       
-      ^boolean (goog.isArray coll)
-      (array-seq coll 0)
-
-      (and ^boolean (goog.isString coll)
-        (not (keyword? coll)))
+      (or ^boolean (goog.isArray coll)
+        (string? coll))
       (prim-seq coll 0)
 
       :else (throw (js/Error. (str coll "is not ISeqable"))))))
@@ -454,18 +451,8 @@
   IEmptyableCollection
   (-empty [_] nil)
 
-  IIndexed
-  (-nth
-   ([_ n] nil)
-   ([_ n not-found] not-found))
-
   INext
   (-next [_] nil)
-
-  ILookup
-  (-lookup
-   ([o k] nil)
-   ([o k not-found] not-found))
 
   IMap
   (-dissoc [_ k] nil)
@@ -482,11 +469,6 @@
 
   IWithMeta
   (-with-meta [_ meta] nil)
-
-  IReduce
-  (-reduce
-    ([_ f] (f))
-    ([_ f start] start))
 
   IKVReduce
   (-kv-reduce [_ f init]
@@ -662,13 +644,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [coll f]
-    (if (counted? arr)
-      (ci-reduce arr f (aget arr i) (inc i))
-      (ci-reduce coll f (aget arr i) 0)))
+    (array-reduce arr f (aget arr i) (inc i)))
   (-reduce [coll f start]
-    (if (counted? arr)
-      (ci-reduce arr f start i)
-      (ci-reduce coll f start 0)))
+    (array-reduce arr f start i))
 
   IHash
   (-hash [coll] (hash-coll coll))
@@ -695,25 +673,7 @@ reduces them without incurring seq initialization"
 
 (extend-type array
   ICounted
-  (-count [a] (alength a))
-
-  IIndexed
-  (-nth
-    ([array n]
-       (if (< n (alength array)) (aget array n)))
-    ([array n not-found]
-       (if (< n (alength array)) (aget array n)
-         not-found)))
-
-  ILookup
-  (-lookup
-    ([array k]
-      (when (< k (alength array))
-        (aget array k)))
-    ([array k not-found]
-      (if (< k (alength array))
-        (aget array k)
-        not-found))))
+  (-count [a] (alength a)))
 
 (declare with-meta)
 
@@ -787,12 +747,7 @@ reduces them without incurring seq initialization"
 
 (extend-type default
   IEquiv
-  (-equiv [x o] (identical? x o))
-
-  ILookup
-  (-lookup [x k] nil)
-
-  (-lookup [x k not-found] not-found))
+  (-equiv [x o] (identical? x o)))
 
 (defn conj
   "conj[oin]. Returns a new collection with the xs
@@ -853,22 +808,61 @@ reduces them without incurring seq initialization"
   in O(n) time, for sequences."
   ([coll n]
      (when-not (nil? coll)
-       (if (satisfies? IIndexed coll)
+       (cond
+         (satisfies? IIndexed coll)
          (-nth coll (.floor js/Math n))
+
+         (or ^boolean (goog.isArray coll)
+           (string? coll))
+         (when (< n (.-length coll))
+           (aget coll n))
+         
+         :else
          (linear-traversal-nth coll (.floor js/Math n)))))
   ([coll n not-found]
      (if-not (nil? coll)
-       (if (satisfies? IIndexed coll)
+       (cond
+         (satisfies? IIndexed coll)
          (-nth coll (.floor js/Math n) not-found)
+
+         (or ^boolean (goog.isArray coll)
+           (string? coll))
+         (if (< n (.-length coll))
+           (aget coll n)
+           not-found)
+         
+         :else
          (linear-traversal-nth coll (.floor js/Math n) not-found))
        not-found)))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
   ([o k]
-     (-lookup o k))
+    (when-not (nil? o)
+      (cond
+        (satisfies? ILookup o)
+        (-lookup o k)
+
+        (or ^boolean (goog.isArray o)
+          (string? o))
+        (when (< k (.-length o))
+          (aget o k))
+        
+        :else nil)))
   ([o k not-found]
-     (-lookup o k not-found)))
+    (if-not (nil? o)
+      (cond
+        (satisfies? ILookup o)
+        (-lookup o k not-found)
+
+        (or ^boolean (goog.isArray o)
+          (string? o))
+        (if (< k (.-length o))
+          (aget o k)
+          not-found)
+
+        :else not-found)
+      not-found)))
 
 (defn assoc
   "assoc[iate]. When applied to a map, returns a new map of the
@@ -1118,7 +1112,7 @@ reduces them without incurring seq initialization"
   range of indexes. 'contains?' operates constant or logarithmic time;
   it will not perform a linear search for a value.  See also 'some'."
   [coll v]
-  (if (identical? (-lookup coll v lookup-sentinel) lookup-sentinel)
+  (if (identical? (get coll v lookup-sentinel) lookup-sentinel)
     false
     true))
 
@@ -1128,7 +1122,7 @@ reduces them without incurring seq initialization"
   (when (and (not (nil? coll))
              (associative? coll)
              (contains? coll k))
-    [k (-lookup coll k)]))
+    [k (get coll k)]))
 
 (defn ^boolean distinct?
   "Returns true if no two of the arguments are ="
@@ -1258,9 +1252,8 @@ reduces them without incurring seq initialization"
        (-reduce coll f)
 
        (or ^boolean (goog.isArray coll)
-           (and ^boolean (goog.isString coll)
-                (not (keyword? coll))))
-       (ci-reduce coll f)
+         (string? coll))
+       (array-reduce coll f)
 
        :else
        (seq-reduce f coll)))
@@ -1270,9 +1263,8 @@ reduces them without incurring seq initialization"
        (-reduce coll f val)
 
        (or ^boolean (goog.isArray coll)
-           (and ^boolean (goog.isString coll)
-                (not (keyword? coll))))
-       (ci-reduce coll f val)
+           (string? coll))
+       (array-reduce coll f val)
        
        :else
        (seq-reduce f val coll))))
@@ -1295,7 +1287,8 @@ reduces them without incurring seq initialization"
   ([] 0)
   ([x] x)
   ([x y] (cljs.core/+ x y))
-  ([x y & more] (reduce + (cljs.core/+ x y) more)))
+  ([x y & more]
+    (reduce + (cljs.core/+ x y) more)))
 
 (defn -
   "If no ys are supplied, returns the negation of x, else subtracts
@@ -1913,25 +1906,7 @@ reduces them without incurring seq initialization"
   (-hash [o] (goog.string/hashCode o))
 
   ICounted
-  (-count [s] (alength s))
-
-  IIndexed
-  (-nth
-    ([string n]
-       (if (< n (.-length string)) (.charAt string n)))
-    ([string n not-found]
-       (if (< n (.-length string)) (.charAt string n)
-         not-found)))
-
-  ILookup
-  (-lookup
-    ([string k]
-      (when (< k (.-length string))
-        (aget string k)))
-    ([string k not-found]
-      (if (< k (.-length string))
-        (aget string k)
-        not-found))))
+  (-count [s] (alength s)))
 
 (deftype Keyword [k]
   IFn
@@ -6518,7 +6493,7 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [a writer opts]
     (-write writer "#<Atom: ")
-    (-pr-writer state writer opts)
+    (pr-writer state writer opts)
     (-write writer ">"))
 
   IWatchable

@@ -25,7 +25,9 @@
   ([f init coll]
      (if (map? coll)
        (-kv-reduce coll f init)
-       (-reduce coll f init))))
+       (if-not (nil? coll)
+         (-reduce coll f init)
+         init))))
 
 #_
 (defprotocol CollFold

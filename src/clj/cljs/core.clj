@@ -456,12 +456,6 @@
          (set! ~hash-key h#)
          h#))))
 
-(defmacro get
-  ([coll k]
-     `(-lookup ~coll ~k nil))
-  ([coll k not-found]
-     `(-lookup ~coll ~k ~not-found)))
-
 ;;; internal -- reducers-related macros
 
 (defn- do-curried
