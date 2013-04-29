@@ -2014,7 +2014,11 @@ reduces them without incurring seq initialization"
   (-hash [coll] (caching-hash coll hash-coll __hash))
 
   ISeqable
-  (-seq [coll] (seq (lazy-seq-value coll))))
+  (-seq [coll]
+    (lazy-seq-value coll)
+    (if-not (nil? x)
+      coll
+      ())))
 
 (declare ArrayChunk)
 
