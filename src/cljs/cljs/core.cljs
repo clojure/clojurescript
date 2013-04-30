@@ -56,6 +56,9 @@
   [x]
   (coercive-= x nil))
 
+(defn ^boolean array? [x]
+  (cljs.core/array? x))
+
 (defn ^boolean not
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
@@ -386,7 +389,7 @@
       (satisfies? ISeqable coll false)
       (-seq ^not-native coll)
 
-      ^boolean (goog/isArray coll)
+      (array? coll)
       (IndexedSeq. coll 0)
 
       (string? coll)
@@ -818,7 +821,7 @@ reduces them without incurring seq initialization"
          (satisfies? IIndexed coll false)
          (-nth ^not-native coll (.floor js/Math n))
 
-         ^boolean (goog/isArray coll)
+         (array? coll)
          (when (< n (.-length coll))
            (aget coll n))
          
@@ -834,7 +837,7 @@ reduces them without incurring seq initialization"
          (satisfies? IIndexed coll false)
          (-nth ^not-native coll (.floor js/Math n) not-found)
 
-         ^boolean (goog/isArray coll)
+         (array? coll)
          (if (< n (.-length coll))
            (aget coll n)
            not-found)
@@ -856,7 +859,7 @@ reduces them without incurring seq initialization"
         (satisfies? ILookup o false)
         (-lookup ^not-native o k)
 
-        ^boolean (goog/isArray o)
+        (array? o)
         (when (< k (.-length o))
           (aget o k))
         
@@ -871,7 +874,7 @@ reduces them without incurring seq initialization"
         (satisfies? ILookup o false)
         (-lookup ^not-native o k not-found)
 
-        ^boolean (goog/isArray o)
+        (array? o)
         (if (< k (.-length o))
           (aget o k)
           not-found)
@@ -1273,7 +1276,7 @@ reduces them without incurring seq initialization"
        (satisfies? IReduce coll false)
        (-reduce ^not-native coll f)
 
-       ^boolean (goog/isArray coll)
+       (array? coll)
        (array-reduce coll f)
 
        (string? coll)
@@ -1286,7 +1289,7 @@ reduces them without incurring seq initialization"
        (satisfies? IReduce coll false)
        (-reduce ^not-native coll f val)
 
-       ^boolean (goog/isArray coll)
+       (array? coll)
        (array-reduce coll f val)
       
        (string? coll)
@@ -6269,7 +6272,7 @@ reduces them without incurring seq initialization"
               (or (identical? (type obj) js/Boolean) (number? obj))
               (-write writer (str obj))
 
-              (identical? (type obj) js/Array)
+              (array? obj)
               (pr-sequential-writer writer pr-writer "#<Array [" ", " "]>" opts obj)
 
               ^boolean (goog/isString obj)
@@ -6763,7 +6766,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
                   (coll? x)
                   (into (empty x) (map thisfn x))
 
-                  (goog/isArray x)
+                  (array? x)
                   (vec (map thisfn x))
                    
                   (identical? (type x) js/Object)

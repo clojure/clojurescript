@@ -230,6 +230,9 @@
 (defmacro false? [x]
   (bool-expr (list 'js* "~{} === false" x)))
 
+(defmacro array? [x]
+  (bool-expr (list 'js* "~{} instanceof Array" x)))
+
 (defmacro exists? [x]
   (bool-expr (list 'js* "typeof ~{} !== 'undefined'" x)))
 
