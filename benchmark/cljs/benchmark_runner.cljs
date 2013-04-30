@@ -31,6 +31,15 @@
 (simple-benchmark [coll [1 2 3]] (satisfies? ISeq coll) 1000000)
 (println)
 
+(println ";;; array & string ops")
+(simple-benchmark [coll (array 1 2 3)] (seq coll) 1000000)
+(simple-benchmark [coll "foobar"] (seq coll) 1000000)
+(simple-benchmark [coll (array 1 2 3)] (first coll) 1000000)
+(simple-benchmark [coll "foobar"] (first coll) 1000000)
+(simple-benchmark [coll (array 1 2 3)] (nth coll 2) 1000000)
+(simple-benchmark [coll "foobar"] (nth coll 2) 1000000)
+(println)
+
 (println ";;; list ops")
 (simple-benchmark [coll (list 1 2 3)] (first coll) 1000000)
 (simple-benchmark [coll (list 1 2 3)] (-first coll) 1000000)
