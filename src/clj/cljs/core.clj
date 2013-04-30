@@ -825,21 +825,29 @@
 
 (defmacro satisfies?
   "Returns true if x satisfies the protocol"
-  [psym x]
-  (let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
-        prefix (protocol-prefix p)
-        xsym (bool-expr (gensym))
-        [part bit] (fast-path-protocols p)
-        msym (symbol (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
-    `(let [~xsym ~x]
-       (if ~xsym
-         (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
+  ([psym x] `(satisfies? ~psym ~x true))
+  ([psym x check-native]
+    (let [p          (:name
+                       (cljs.analyzer/resolve-var
+                         (dissoc &env :locals) psym))
+          prefix     (protocol-prefix p)
+          xsym       (bool-expr (gensym))
+          [part bit] (fast-path-protocols p)
+          msym       (symbol
+                       (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
+      `(let [~xsym ~x]
+         (if ~xsym
+           (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
                  ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
-           true
-           (if (coercive-not (. ~xsym ~msym))
-             (cljs.core/type_satisfies_ ~psym ~xsym)
-             false))
-         (cljs.core/type_satisfies_ ~psym ~xsym)))))
+             true
+             ~(if check-native
+                `(if (coercive-not (. ~xsym ~msym))
+                   (cljs.core/type_satisfies_ ~psym ~xsym)
+                   false)
+                false))
+           ~(if check-native
+              `(cljs.core/type_satisfies_ ~psym ~xsym)
+              false))))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core/LazySeq nil false (fn [] ~@body) nil))
