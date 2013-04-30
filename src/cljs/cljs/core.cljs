@@ -370,7 +370,11 @@
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
-(declare array-seq prim-seq string? keyword?)
+(declare array-seq prim-seq keyword? IndexedSeq)
+
+(defn ^boolean string? [x]
+  (and ^boolean (goog/isString x)
+    (not (identical? (.charAt x 0) \uFDD0))))
 
 (defn ^seq seq
   "Returns a seq on the collection. If the collection is
@@ -379,12 +383,14 @@
   [coll]
   (when-not (nil? coll)
     (cond
-      (satisfies? ISeqable coll)
+      (satisfies? ISeqable coll false)
       (-seq coll)
-      
-      (or ^boolean (goog.isArray coll)
-        (string? coll))
-      (prim-seq coll 0)
+
+      ^boolean (goog/isArray coll)
+      (IndexedSeq. coll 0)
+
+      (string? coll)
+      (IndexedSeq. coll 0)
 
       :else (throw (js/Error. (str coll "is not ISeqable"))))))
 
@@ -393,7 +399,7 @@
   argument. If coll is nil, returns nil."
   [coll]
   (when-not (nil? coll)
-    (if (satisfies? ISeq coll)
+    (if (satisfies? ISeq coll false)
       (-first coll)
       (let [s (seq coll)]
         (when-not (nil? s)
@@ -404,7 +410,7 @@
   argument."
   [coll]
   (if-not (nil? coll)
-    (if (satisfies? ISeq coll)
+    (if (satisfies? ISeq coll false)
       (-rest coll)
       (let [s (seq coll)]
         (if-not (nil? s)
@@ -417,7 +423,7 @@
   argument.  If there are no more items, returns nil"
   [coll]
   (when-not (nil? coll)
-    (if (satisfies? INext coll)
+    (if (satisfies? INext coll false)
       (-next coll)
       (seq (rest coll)))))
 
@@ -505,7 +511,7 @@
 (extend-type default
   IHash
   (-hash [o]
-    (goog.getUid o)))
+    (goog/getUid o)))
 
 ;;this is primitive because & emits call to array-seq
 (defn inc
@@ -809,11 +815,14 @@ reduces them without incurring seq initialization"
   ([coll n]
      (when-not (nil? coll)
        (cond
-         (satisfies? IIndexed coll)
+         (satisfies? IIndexed coll false)
          (-nth coll (.floor js/Math n))
 
-         (or ^boolean (goog.isArray coll)
-           (string? coll))
+         ^boolean (goog/isArray coll)
+         (when (< n (.-length coll))
+           (aget coll n))
+         
+         (string? coll)
          (when (< n (.-length coll))
            (aget coll n))
          
@@ -822,11 +831,15 @@ reduces them without incurring seq initialization"
   ([coll n not-found]
      (if-not (nil? coll)
        (cond
-         (satisfies? IIndexed coll)
+         (satisfies? IIndexed coll false)
          (-nth coll (.floor js/Math n) not-found)
 
-         (or ^boolean (goog.isArray coll)
-           (string? coll))
+         ^boolean (goog/isArray coll)
+         (if (< n (.-length coll))
+           (aget coll n)
+           not-found)
+         
+         (string? coll)
          (if (< n (.-length coll))
            (aget coll n)
            not-found)
@@ -840,11 +853,14 @@ reduces them without incurring seq initialization"
   ([o k]
     (when-not (nil? o)
       (cond
-        (satisfies? ILookup o)
+        (satisfies? ILookup o false)
         (-lookup o k)
 
-        (or ^boolean (goog.isArray o)
-          (string? o))
+        ^boolean (goog/isArray o)
+        (when (< k (.-length o))
+          (aget o k))
+        
+        (string? o)
         (when (< k (.-length o))
           (aget o k))
         
@@ -852,11 +868,15 @@ reduces them without incurring seq initialization"
   ([o k not-found]
     (if-not (nil? o)
       (cond
-        (satisfies? ILookup o)
+        (satisfies? ILookup o false)
         (-lookup o k not-found)
 
-        (or ^boolean (goog.isArray o)
-          (string? o))
+        ^boolean (goog/isArray o)
+        (if (< k (.-length o))
+          (aget o k)
+          not-found)
+        
+        (string? o)
         (if (< k (.-length o))
           (aget o k)
           not-found)
@@ -1077,10 +1097,6 @@ reduces them without incurring seq initialization"
 (defn ^boolean boolean [x]
   (if x true false))
 
-(defn ^boolean string? [x]
-  (and ^boolean (goog/isString x)
-    (not (identical? (.charAt x 0) \uFDD0))))
-
 (defn ^boolean keyword? [x]
   (and ^boolean (goog/isString x)
        (identical? (.charAt x 0) \uFDD0)))
@@ -1150,12 +1166,18 @@ reduces them without incurring seq initialization"
   [x y]
   (cond
    (identical? x y) 0
+
    (nil? x) -1
+
    (nil? y) 1
-   (identical? (type x) (type y)) (if (satisfies? IComparable x)
-                                    (-compare x y)
-                                    (garray/defaultCompare x y))
-   :else (throw (js/Error. "compare on non-nil objects of different types"))))
+
+   (identical? (type x) (type y))
+   (if (satisfies? IComparable x false)
+     (-compare x y)
+     (garray/defaultCompare x y))
+
+   :else
+   (throw (js/Error. "compare on non-nil objects of different types"))))
 
 (defn ^:private compare-indexed
   "Compare indexed collection."
@@ -1248,22 +1270,26 @@ reduces them without incurring seq initialization"
   items, returns val and f is not called."
   ([f coll]
      (cond
-       (satisfies? IReduce coll)
+       (satisfies? IReduce coll false)
        (-reduce coll f)
 
-       (or ^boolean (goog.isArray coll)
-         (string? coll))
+       ^boolean (goog/isArray coll)
        (array-reduce coll f)
 
+       (string? coll)
+       (array-reduce coll f)
+       
        :else
        (seq-reduce f coll)))
   ([f val coll]
      (cond
-       (satisfies? IReduce coll)
+       (satisfies? IReduce coll false)
        (-reduce coll f val)
 
-       (or ^boolean (goog.isArray coll)
-           (string? coll))
+       ^boolean (goog/isArray coll)
+       (array-reduce coll f val)
+      
+       (string? coll)
        (array-reduce coll f val)
        
        :else
@@ -1894,7 +1920,7 @@ reduces them without incurring seq initialization"
   "Returns a new seq where x is the first element and seq is the rest."
   [x coll]
   (if (or (nil? coll)
-          (satisfies? ISeq coll))
+          (satisfies? ISeq coll false))
     (Cons. nil x coll nil)
     (Cons. nil x (seq coll) nil)))
 
@@ -2097,7 +2123,7 @@ reduces them without incurring seq initialization"
   (-chunked-rest s))
 
 (defn chunk-next [s]
-  (if (satisfies? IChunkedNext s)
+  (if (satisfies? IChunkedNext s false)
     (-chunked-next s)
     (seq (-chunked-rest s))))
 
@@ -2822,7 +2848,7 @@ reduces them without incurring seq initialization"
   from-coll conjoined."
   [to from]
   (if-not (nil? to)
-    (if (satisfies? IEditableCollection to)
+    (if (satisfies? IEditableCollection to false)
       (persistent! (reduce -conj! (transient to) from))
       (reduce -conj to from))
     (reduce conj () from)))
@@ -5841,7 +5867,7 @@ reduces them without incurring seq initialization"
 (defn name
   "Returns the name String of a string, symbol or keyword."
   [x]
-  (if (satisfies? INamed x)
+  (if (satisfies? INamed x false)
     (-name x)
     (cond
       (string? x) x
@@ -5855,7 +5881,7 @@ reduces them without incurring seq initialization"
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
-  (if (satisfies? INamed x)
+  (if (satisfies? INamed x false)
     (-namespace x)
     (if (keyword? x)
       (let [i (.lastIndexOf x "/" (- (alength x) 2))]
@@ -6237,7 +6263,7 @@ reduces them without incurring seq initialization"
               (.cljs$lang$ctorPrWriter obj obj writer opts)
               
               ; Use the new, more efficient, IPrintWithWriter interface when possible.
-              (satisfies? IPrintWithWriter obj)
+              (satisfies? IPrintWithWriter obj false)
               (-pr-writer obj writer opts)
               
               (or (identical? (type obj) js/Boolean) (number? obj))
@@ -6506,7 +6532,7 @@ reduces them without incurring seq initialization"
     (set! (.-watches this) (dissoc watches key)))
 
   IHash
-  (-hash [this] (goog.getUid this)))
+  (-hash [this] (goog/getUid this)))
 
 (defn atom
   "Creates and returns an Atom with an initial value of x and zero or
@@ -6737,7 +6763,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
                   (coll? x)
                   (into (empty x) (map thisfn x))
 
-                  (goog.isArray x)
+                  (goog/isArray x)
                   (vec (map thisfn x))
                    
                   (identical? (type x) js/Object)
@@ -7036,7 +7062,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-dispatch [mf args] (do-dispatch mf dispatch-fn args))
 
   IHash
-  (-hash [this] (goog.getUid this)))
+  (-hash [this] (goog/getUid this)))
 
 (set! cljs.core.MultiFn.prototype.call
       (fn [_ & args]
