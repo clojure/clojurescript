@@ -41,12 +41,14 @@ if [ "$1" = "--closure-library-head" ] ; then
         svn checkout -q --non-interactive http://closure-library.googlecode.com/svn/trunk/ ./
     fi
 else
-    echo "Fetching Google Closure library..."
-    f=closure-library-20120710-r2029.zip
-    curl -O -s "http://closure-library.googlecode.com/files/$f"
-    unzip -qu "$f"
-    echo "Cleaning up Google Closure library archive..."
-    rm "$f"
+    curl -O -s http://repo1.maven.org/maven2/org/clojure/google-closure-library/0.0-2029-2/google-closure-library-0.0-2029-2.jar
+    cp google-closure-library-0.0-2029-2.jar ../../lib/google-closure-library-0.0-2029-2.jar
+    rm google-closure-library-0.0-2029-2.jar
+
+    echo "Fetching Google Closure third party library..."
+    curl -O -s http://repo1.maven.org/maven2/org/clojure/google-closure-library-third-party/0.0-2029-2/google-closure-library-third-party-0.0-2029-2.jar
+    cp google-closure-library-third-party-0.0-2029-2.jar ../../lib/google-closure-library-third-party-0.0-2029-2.jar
+    rm google-closure-library-third-party-0.0-2029-2.jar
 fi
 cd ..
 
@@ -58,9 +60,12 @@ unzip -qu compiler-latest.zip
 echo "Cleaning up Google Closure compiler archive..."
 rm compiler-latest.zip
 cd ../..
-echo "Building lib/goog.jar..."
-echo "jar cf ./lib/goog.jar -C closure/library/closure/ goog"
-jar cf ./lib/goog.jar -C closure/library/closure/ goog
+
+if [ "$1" = "--closure-library-head" ] ; then
+    echo "Building lib/goog.jar..."
+    echo "jar cf ./lib/goog.jar -C closure/library/closure/ goog"
+    jar cf ./lib/goog.jar -C closure/library/closure/ goog
+fi
 
 echo "Fetching Rhino..."
 curl -O -s http://ftp.mozilla.org/pub/mozilla.org/js/rhino1_7R3.zip
