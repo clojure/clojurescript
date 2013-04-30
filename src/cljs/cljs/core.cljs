@@ -384,7 +384,7 @@
   (when-not (nil? coll)
     (cond
       (satisfies? ISeqable coll false)
-      (-seq coll)
+      (-seq ^not-native coll)
 
       ^boolean (goog/isArray coll)
       (IndexedSeq. coll 0)
@@ -400,7 +400,7 @@
   [coll]
   (when-not (nil? coll)
     (if (satisfies? ISeq coll false)
-      (-first coll)
+      (-first ^not-native coll)
       (let [s (seq coll)]
         (when-not (nil? s)
           (-first s))))))
@@ -411,7 +411,7 @@
   [coll]
   (if-not (nil? coll)
     (if (satisfies? ISeq coll false)
-      (-rest coll)
+      (-rest ^not-native coll)
       (let [s (seq coll)]
         (if-not (nil? s)
           (-rest s)
@@ -424,7 +424,7 @@
   [coll]
   (when-not (nil? coll)
     (if (satisfies? INext coll false)
-      (-next coll)
+      (-next ^not-native coll)
       (seq (rest coll)))))
 
 (defn ^boolean =
@@ -816,7 +816,7 @@ reduces them without incurring seq initialization"
      (when-not (nil? coll)
        (cond
          (satisfies? IIndexed coll false)
-         (-nth coll (.floor js/Math n))
+         (-nth ^not-native coll (.floor js/Math n))
 
          ^boolean (goog/isArray coll)
          (when (< n (.-length coll))
@@ -832,7 +832,7 @@ reduces them without incurring seq initialization"
      (if-not (nil? coll)
        (cond
          (satisfies? IIndexed coll false)
-         (-nth coll (.floor js/Math n) not-found)
+         (-nth ^not-native coll (.floor js/Math n) not-found)
 
          ^boolean (goog/isArray coll)
          (if (< n (.-length coll))
@@ -854,7 +854,7 @@ reduces them without incurring seq initialization"
     (when-not (nil? o)
       (cond
         (satisfies? ILookup o false)
-        (-lookup o k)
+        (-lookup ^not-native o k)
 
         ^boolean (goog/isArray o)
         (when (< k (.-length o))
@@ -869,7 +869,7 @@ reduces them without incurring seq initialization"
     (if-not (nil? o)
       (cond
         (satisfies? ILookup o false)
-        (-lookup o k not-found)
+        (-lookup ^not-native o k not-found)
 
         ^boolean (goog/isArray o)
         (if (< k (.-length o))
@@ -1173,7 +1173,7 @@ reduces them without incurring seq initialization"
 
    (identical? (type x) (type y))
    (if (satisfies? IComparable x false)
-     (-compare x y)
+     (-compare ^not-native x y)
      (garray/defaultCompare x y))
 
    :else
@@ -1271,7 +1271,7 @@ reduces them without incurring seq initialization"
   ([f coll]
      (cond
        (satisfies? IReduce coll false)
-       (-reduce coll f)
+       (-reduce ^not-native coll f)
 
        ^boolean (goog/isArray coll)
        (array-reduce coll f)
@@ -1284,7 +1284,7 @@ reduces them without incurring seq initialization"
   ([f val coll]
      (cond
        (satisfies? IReduce coll false)
-       (-reduce coll f val)
+       (-reduce ^not-native coll f val)
 
        ^boolean (goog/isArray coll)
        (array-reduce coll f val)
@@ -5868,7 +5868,7 @@ reduces them without incurring seq initialization"
   "Returns the name String of a string, symbol or keyword."
   [x]
   (if (satisfies? INamed x false)
-    (-name x)
+    (-name ^not-native x)
     (cond
       (string? x) x
       (keyword? x)
@@ -5882,7 +5882,7 @@ reduces them without incurring seq initialization"
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
   (if (satisfies? INamed x false)
-    (-namespace x)
+    (-namespace ^not-native x)
     (if (keyword? x)
       (let [i (.lastIndexOf x "/" (- (alength x) 2))]
         (when (> i -1)
@@ -6264,7 +6264,7 @@ reduces them without incurring seq initialization"
               
               ; Use the new, more efficient, IPrintWithWriter interface when possible.
               (satisfies? IPrintWithWriter obj false)
-              (-pr-writer obj writer opts)
+              (-pr-writer ^not-native obj writer opts)
               
               (or (identical? (type obj) js/Boolean) (number? obj))
               (-write writer (str obj))

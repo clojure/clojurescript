@@ -301,7 +301,8 @@
 
 (defn get-tag [e]
   (or (-> e :tag)
-      (-> e :info :tag)))
+      (-> e :info :tag)
+      (-> e :form meta :tag)))
 
 (defn infer-tag [e]
   (if-let [tag (get-tag e)]
