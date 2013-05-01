@@ -158,6 +158,10 @@
 (simple-benchmark [coll {'foo 1 'bar 2}] (-lookup coll 'foo nil) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (:foo coll) 1000000)
 (simple-benchmark [coll {'foo 1 'bar 2}] ('foo coll) 1000000)
+(let [kw  :foo
+      sym 'foo]
+  (simple-benchmark [coll {:foo 1 :bar 2}] (kw coll) 1000000)
+  (simple-benchmark [coll {'foo 1 'bar 2}] (sym coll) 1000000))
 (defrecord Foo [bar baz])
 (simple-benchmark [coll (Foo. 1 2)] (:bar coll) 1000000)
 (simple-benchmark [coll {:foo 1 :bar 2}] (assoc coll :baz 3) 100000)
@@ -176,6 +180,8 @@
                       (recur (inc i) (assoc m 'foo 2))
                       m))
                   1)
+(println)
+
 (println ";;; persistent hash maps")
 (def pmap (into cljs.core.PersistentHashMap/EMPTY
             [[:a 0] [:b 1] [:c 2] [:d 3] [:e 4] [:f 5] [:g 6] [:h 7]
