@@ -181,7 +181,9 @@
     (emits ",")
     (emit-constant symstr)
     (emits ",")
-    (emit-constant (goog-string-hash symstr))
+    (emit-constant (clojure.lang.Util/hashCombine
+                     (unchecked-int (goog-string-hash ns))
+                     (unchecked-int (goog-string-hash name))))
     (emits ",")
     (emit-constant nil)
     (emits ")")))
