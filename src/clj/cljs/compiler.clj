@@ -160,14 +160,31 @@
                   (name x)
                   \"))
 
-;; TODO: we could optimize, call type constructor & inline all the properties of x - David
+(def ^:const goog-hash-max 0x100000000)
+
+(defn goog-string-hash [s]
+  (reduce
+    (fn [r c]
+      (mod (+ (* 31 r) (int c)) goog-hash-max))
+    0 s))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
-  (emits "cljs.core.symbol(")
-  (emit-constant (namespace x))
-  (emits ",")
-  (emit-constant (name x))
-  (emits ")"))
+  (let [ns     (namespace x)
+        name   (name x)
+        symstr (if-not (nil? ns)
+                 (str ns "/" name)
+                 name)]
+    (emits "new cljs.core.Symbol(")
+    (emit-constant ns)
+    (emits ",")
+    (emit-constant name)
+    (emits ",")
+    (emit-constant symstr)
+    (emits ",")
+    (emit-constant (goog-string-hash symstr))
+    (emits ",")
+    (emit-constant nil)
+    (emits ")")))
 
 (defn- emit-meta-constant [x & body]
   (if (meta x)
