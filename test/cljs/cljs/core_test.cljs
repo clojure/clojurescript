@@ -1859,5 +1859,10 @@
   (assert (= (char 65) \A))
   (assert (= (char \A) \A))
 
+  ;; compile time run symbol hash codes
+  
+  (assert (= (hash 'foo) (hash (symbol "foo"))))
+  (assert (= (hash 'foo/bar) (hash (symbol "foo" "bar"))))
+
   :ok
   )
