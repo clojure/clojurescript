@@ -862,6 +862,28 @@
   calls."
   `(new cljs.core/Delay (atom {:done false, :value nil}) (fn [] ~@body)))
 
+(defmacro with-redefs
+  "binding => var-symbol temp-value-expr
+
+  Temporarily redefines vars while executing the body.  The
+  temp-value-exprs will be evaluated and each resulting value will
+  replace in parallel the root value of its var.  After the body is
+  executed, the root values of all the vars will be set back to their
+  old values. Useful for mocking out functions during testing."
+  [bindings & body]
+  (let [names (take-nth 2 bindings)
+        vals (take-nth 2 (drop 1 bindings))
+        tempnames (map (comp gensym name) names)
+        binds (map vector names vals)
+        resets (reverse (map vector names tempnames))
+        bind-value (fn [[k v]] (list 'set! k v))]
+    `(let [~@(interleave tempnames names)]
+       (try
+        ~@(map bind-value binds)
+        ~@body
+        (finally
+         ~@(map bind-value resets))))))
+
 (defmacro binding
   "binding => var-symbol init-expr
 
@@ -871,22 +893,9 @@
   are made in parallel (unlike let); all init-exprs are evaluated
   before the vars are bound to their new values."
   [bindings & body]
-  (let [names (take-nth 2 bindings)
-        vals (take-nth 2 (drop 1 bindings))
-        tempnames (map (comp gensym name) names)
-        binds (map vector names vals)
-        resets (reverse (map vector names tempnames))]
+  (let [names (take-nth 2 bindings)]
     (cljs.analyzer/confirm-bindings &env names)
-    `(let [~@(interleave tempnames names)]
-       (try
-        ~@(map
-           (fn [[k v]] (list 'set! k v))
-           binds)
-        ~@body
-        (finally
-         ~@(map
-            (fn [[k v]] (list 'set! k v))
-            resets))))))
+    `(with-redefs ~bindings ~@body)))
 
 (defmacro condp
   "Takes a binary predicate, an expression, and a set of clauses.

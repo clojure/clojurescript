@@ -18,6 +18,7 @@
 (string-test/test-string)
 (data-test/test-data)
 (binding-test/test-binding)
+(binding-test/test-with-redefs)
 (ns-test/test-ns)
 (macro-test/test-macros)
 (letfn-test/test-letfn)
