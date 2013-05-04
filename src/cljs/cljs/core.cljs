@@ -91,8 +91,6 @@
   argv as arguments"}
   *main-cli-fn* nil)
 
-(declare pr-str chunk-first chunk-rest)
-
 (defn type [x]
   (when-not (nil? x)
     (.-constructor x)))
@@ -607,7 +605,7 @@ reduces them without incurring seq initialization"
                (recur nval (inc n))))
            val)))))
 
-(declare hash-coll cons pr-str RSeq)
+(declare hash-coll cons RSeq)
 
 (defn ^boolean counted?
   "Returns true if coll implements count in constant time"
@@ -1753,7 +1751,7 @@ reduces them without incurring seq initialization"
                (next s)))
       h)))
 
-(declare name)
+(declare name chunk-first chunk-rest)
 
 (defn- extend-object!
   "Takes a JavaScript object and a map of names to functions and
