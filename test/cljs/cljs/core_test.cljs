@@ -1864,5 +1864,7 @@
   (assert (= (hash 'foo) (hash (symbol "foo"))))
   (assert (= (hash 'foo/bar) (hash (symbol "foo" "bar"))))
 
+  (assert (= (lazy-cat [1] [2] [3]) '(1 2 3)))
+
   :ok
   )
