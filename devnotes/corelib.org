@@ -299,11 +299,10 @@ does what?
 * DONE keyword
 * DONE keyword?
 * DONE last
-* TODO lazy-cat
+* DONE lazy-cat
 * DONE lazy-seq
 * DONE let
 * DONE letfn
-** TODO needs compiler letfn*
 * line-seq
 * DONE list
 * DONE list*
@@ -494,7 +493,7 @@ as macro
 * DONE sorted-set
 * DONE sorted-set-by
 * TODO sorted?
-* TODO special-symbol?
+* DONE special-symbol?
 * spit
 * DONE split-at
 * DONE split-with

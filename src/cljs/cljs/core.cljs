@@ -7169,3 +7169,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (fn [x y]
     (cond (pred x y) -1 (pred y x) 1 :else 0)))
 
+(defn ^boolean special-symbol? [x]
+  (contains?
+    '#{if def fn* do let* loop* letfn* throw try*
+       recur new set! ns deftype* defrecord* . js* & quote}
+    x))
