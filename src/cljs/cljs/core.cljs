@@ -59,9 +59,16 @@
 (defn ^boolean array? [x]
   (cljs.core/array? x))
 
+(defn ^boolean number? [n]
+  (cljs.core/number? n))
+
 (defn ^boolean not
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
+
+(defn ^boolean string? [x]
+  (and ^boolean (goog/isString x)
+    (not (identical? (.charAt x 0) \uFDD0))))
 
 (set! *unchecked-if* true)
 (defn ^boolean type_satisfies_
@@ -328,7 +335,13 @@
 
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 
-(declare list instance? symbol? hash-combine hash)
+(declare list hash-combine hash Symbol)
+
+(defn ^boolean instance? [t o]
+  (cljs.core/instance? t o))
+
+(defn ^boolean symbol? [x]
+  (instance? Symbol x))
 
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
@@ -373,11 +386,7 @@
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
-(declare array-seq prim-seq keyword? IndexedSeq)
-
-(defn ^boolean string? [x]
-  (and ^boolean (goog/isString x)
-    (not (identical? (.charAt x 0) \uFDD0))))
+(declare array-seq prim-seq IndexedSeq)
 
 (defn ^seq seq
   "Returns a seq on the collection. If the collection is
@@ -443,9 +452,6 @@
          (recur y (first more) (next more))
          (= y (first more)))
        false)))
-
-(defn ^boolean instance? [t o]
-  (cljs.core/instance? t o))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
@@ -914,7 +920,8 @@ reduces them without incurring seq initialization"
          (recur ret (first ks) (next ks))
          ret))))
 
-(declare fn?)
+(defn ^boolean fn? [f]
+  (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
 
 (defn with-meta
   "Returns an object of the same type and value as obj, with
@@ -970,8 +977,6 @@ reduces them without incurring seq initialization"
     (aset string-hash-cache k h)
     (set! string-hash-cache-count (inc string-hash-cache-count))
     h))
-
-(declare number?)
 
 (defn check-string-hash-cache [k]
   (when (> string-hash-cache-count 255)
@@ -1103,15 +1108,6 @@ reduces them without incurring seq initialization"
 (defn ^boolean keyword? [x]
   (and ^boolean (goog/isString x)
        (identical? (.charAt x 0) \uFDD0)))
-
-(defn ^boolean symbol? [x]
-  (instance? Symbol x))
-
-(defn ^boolean number? [n]
-  (cljs.core/number? n))
-
-(defn ^boolean fn? [f]
-  (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
 
 (defn ^boolean ifn? [f]
   (or (fn? f) (satisfies? IFn f)))
