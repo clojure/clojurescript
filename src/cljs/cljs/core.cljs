@@ -402,6 +402,9 @@
       (string? coll)
       (IndexedSeq. coll 0)
 
+      (type_satisfies_ ILookup coll)
+      (-seq coll)
+
       :else (throw (js/Error. (str coll "is not ISeqable"))))))
 
 (defn first
@@ -870,6 +873,9 @@ reduces them without incurring seq initialization"
         (string? o)
         (when (< k (.-length o))
           (aget o k))
+
+        (type_satisfies_ ILookup o)
+        (-lookup o k)
         
         :else nil)))
   ([o k not-found]
@@ -887,6 +893,9 @@ reduces them without incurring seq initialization"
         (if (< k (.-length o))
           (aget o k)
           not-found)
+
+        (type_satisfies_ ILookup o)
+        (-lookup o k not-found)
 
         :else not-found)
       not-found)))
@@ -1276,6 +1285,9 @@ reduces them without incurring seq initialization"
        (string? coll)
        (array-reduce coll f)
        
+       (type_satisfies_ IReduce coll)
+       (-reduce coll f)
+
        :else
        (seq-reduce f coll)))
   ([f val coll]
@@ -1289,6 +1301,9 @@ reduces them without incurring seq initialization"
        (string? coll)
        (array-reduce coll f val)
        
+       (type_satisfies_ IReduce coll)
+       (-reduce coll f val)
+
        :else
        (seq-reduce f val coll))))
 

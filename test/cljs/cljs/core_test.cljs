@@ -1866,5 +1866,25 @@
 
   (assert (= (lazy-cat [1] [2] [3]) '(1 2 3)))
 
+  ;; r1798 core fn protocol regression
+  (extend-type object
+    ISeqable
+    (-seq [coll]
+      (map #(vector % (aget coll %)) (js-keys coll)))
+
+    ILookup
+    (-lookup
+      ([coll k]
+        (-lookup coll k nil))
+      ([coll k not-found]
+        (if-let [v (aget coll k)]
+          v
+          not-found))))
+
+  (assert (= (seq (js-obj "foo" 1 "bar" 2)) '(["foo" 1] ["bar" 2])))
+  (assert (= (get (js-obj "foo" 1) "foo") 1))
+  (assert (= (get (js-obj "foo" 1) "bar" ::not-found) ::not-found))
+  (assert (= (reduce (fn [s [k v]] (+ s v)) 0 (js-obj "foo" 1 "bar" 2)) 3))
+
   :ok
   )
