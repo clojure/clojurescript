@@ -397,10 +397,12 @@
       (-seq ^not-native coll)
 
       (array? coll)
-      (IndexedSeq. coll 0)
+      (when-not (zero? (alength coll))
+        (IndexedSeq. coll 0))
 
       (string? coll)
-      (IndexedSeq. coll 0)
+      (when-not (zero? (alength coll))
+        (IndexedSeq. coll 0))
 
       (type_satisfies_ ILookup coll)
       (-seq coll)
