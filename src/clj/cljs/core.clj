@@ -258,8 +258,13 @@
      (let [astr (apply core/str (repeat (count idxs) "[~{}]"))]
       `(~'js* ~(core/str "(~{}[~{}]" astr ")") ~a ~i ~@idxs))))
 
-(defmacro aset [a i v]
-  (list 'js* "(~{}[~{}] = ~{})" a i v))
+(defmacro aset
+  ([a i v]
+    (list 'js* "(~{}[~{}] = ~{})" a i v))
+  ([a idx idx2 & idxv]
+    (let [n    (core/dec (count idxv))
+          astr (apply core/str (repeat n "[~{}]"))]
+      `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~a ~idx ~idx2 ~@idxv))))
 
 (defmacro +
   ([] 0)

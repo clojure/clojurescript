@@ -672,7 +672,11 @@
     (assert (= (aget a 0 1) 2))
     (assert (= (apply aget a [0 1]) 2))
     (assert (= (aget a 1 1) 5))
-    (assert (= (apply aget a [1 1]) 5)))
+    (assert (= (apply aget a [1 1]) 5))
+    (aset a 0 0 "foo")
+    (assert (= (aget a 0 0) "foo"))
+    (apply aset a [0 0 "bar"])
+    (assert (= (aget a 0 0) "bar")))
 
   ;; sort
   (assert (= [1 2 3 4 5] (sort [5 3 1 4 2])))

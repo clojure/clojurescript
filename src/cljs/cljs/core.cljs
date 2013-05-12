@@ -145,8 +145,10 @@
 
 (defn aset
   "Sets the value at the index."
-  [array i val]
-  (cljs.core/aset array i val))
+  ([array i val]
+    (cljs.core/aset array i val))
+  ([array idx idx2 & idxv]
+    (apply aset (aget array idx) idx2 idxv)))
 
 (defn alength
   "Returns the length of the array. Works on arrays of all types."
