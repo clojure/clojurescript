@@ -188,48 +188,6 @@
     (emit-constant nil)
     (emits ")")))
 
-(defn- emit-meta-constant [x & body]
-  (if (meta x)
-    (do
-      (emits "cljs.core.with_meta(" body ",")
-      (emit-constant (meta x))
-      (emits ")"))
-    (emits body)))
-
-(defmethod emit-constant clojure.lang.PersistentList$EmptyList [x]
-  (emit-meta-constant x "cljs.core.List.EMPTY"))
-
-(defmethod emit-constant clojure.lang.PersistentList [x]
-  (emit-meta-constant x
-    (concat ["cljs.core.list("]
-            (comma-sep (map #(fn [] (emit-constant %)) x))
-            [")"])))
-
-(defmethod emit-constant clojure.lang.Cons [x]
-  (emit-meta-constant x
-    (concat ["cljs.core.list("]
-            (comma-sep (map #(fn [] (emit-constant %)) x))
-            [")"])))
-
-(defmethod emit-constant clojure.lang.IPersistentVector [x]
-  (emit-meta-constant x
-    (concat ["cljs.core.vec(["]
-            (comma-sep (map #(fn [] (emit-constant %)) x))
-            ["])"])))
-
-(defmethod emit-constant clojure.lang.IPersistentMap [x]
-  (emit-meta-constant x
-    (concat ["cljs.core.hash_map("]
-            (comma-sep (map #(fn [] (emit-constant %))
-                            (apply concat x)))
-            [")"])))
-
-(defmethod emit-constant clojure.lang.PersistentHashSet [x]
-  (emit-meta-constant x
-    (concat ["cljs.core.set(["]
-            (comma-sep (map #(fn [] (emit-constant %)) x))
-            ["])"])))
-
 (defmacro emit-wrap [env & body]
   `(let [env# ~env]
      (when (= :return (:context env#)) (emits "return "))
@@ -296,6 +254,13 @@
                "],["
                (comma-sep vals)
                "])")))))
+
+(defmethod emit :list
+  [{:keys [items env]}]
+  (emit-wrap env
+    (if (empty? items)
+      (emits "cljs.core.List.EMPTY")
+      (emits "cljs.core.list(" (comma-sep items) ")"))))
 
 (defmethod emit :vector
   [{:keys [items env]}]

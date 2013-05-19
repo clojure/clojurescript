@@ -546,7 +546,7 @@
 
 (defmethod parse 'quote
   [_ env [_ x] _]
-  {:op :constant :env env :form x})
+  (analyze (assoc env :quoted? true) x))
 
 (defmethod parse 'new
   [_ env [_ ctor & args :as form] _]
@@ -872,13 +872,15 @@
 (defn analyze-symbol
   "Finds the var associated with sym"
   [env sym]
-  (let [ret {:env env :form sym}
-        lb (-> env :locals sym)]
-    (if lb
-      (assoc ret :op :var :info lb)
-      (if-not (:def-var env)
-        (assoc ret :op :var :info (resolve-existing-var env sym))
-        (assoc ret :op :var :info (resolve-var env sym))))))
+  (if (:quoted? env)
+    {:op :constant :env env :form sym}
+    (let [ret {:env env :form sym}
+          lb (-> env :locals sym)]
+      (if lb
+        (assoc ret :op :var :info lb)
+        (if-not (:def-var env)
+          (assoc ret :op :var :info (resolve-existing-var env sym))
+          (assoc ret :op :var :info (resolve-var env sym)))))))
 
 (defn get-expander [sym env]
   (let [mvar
@@ -919,22 +921,26 @@
              :else form))
           form)))))
 
+(declare analyze-list)
+
 (defn analyze-seq
   [env form name]
-  (let [env (assoc env
-              :line (or (-> form meta :line)
-                        (:line env))
-              :column (or (-> form meta :column)
-                          (:column env)))]
-    (let [op (first form)]
-      (assert (not (nil? op)) "Can't call nil")
-      (let [mform (macroexpand-1 env form)]
-        (if (identical? form mform)
-          (wrapping-errors env
-            (if (specials op)
-              (parse op env form name)
-              (parse-invoke env form)))
-          (analyze env mform name))))))
+  (if (:quoted? env)
+    (analyze-list env form name)
+    (let [env (assoc env
+                :line (or (-> form meta :line)
+                          (:line env))
+                :column (or (-> form meta :column)
+                            (:column env)))]
+      (let [op (first form)]
+        (assert (not (nil? op)) "Can't call nil")
+        (let [mform (macroexpand-1 env form)]
+          (if (identical? form mform)
+            (wrapping-errors env
+              (if (specials op)
+                (parse op env form name)
+                (parse-invoke env form)))
+            (analyze env mform name)))))))
 
 (declare analyze-wrap-meta)
 
@@ -947,6 +953,12 @@
                         :keys ks :vals vs
                         :children (vec (interleave ks vs))}
                        name)))
+
+(defn analyze-list
+  [env form name]
+  (let [expr-env (assoc env :context :expr)
+        items (disallowing-recur (doall (map #(analyze expr-env % name) form)))]
+    (analyze-wrap-meta {:op :list :env env :form form :items items :children items} name)))
 
 (defn analyze-vector
   [env form name]
@@ -961,11 +973,12 @@
     (analyze-wrap-meta {:op :set :env env :form form :items items :children items} name)))
 
 (defn analyze-wrap-meta [expr name]
-  (let [form (:form expr)]
-    (if (meta form)
+  (let [form (:form expr)
+        m (dissoc (meta form) :line :column)]
+    (if (seq m)
       (let [env (:env expr) ; take on expr's context ourselves
             expr (assoc-in expr [:env :context] :expr) ; change expr to :expr
-            meta-expr (analyze-map (:env expr) (meta form) name)]
+            meta-expr (analyze-map (:env expr) m name)]
         {:op :meta :env env :form form
          :meta meta-expr :expr expr :children [meta-expr expr]})
       expr)))
@@ -991,6 +1004,7 @@
         (vector? form) (analyze-vector env form name)
         (set? form) (analyze-set env form name)
         (keyword? form) (analyze-keyword env form)
+        (= form ()) (analyze-list env form name)
         :else {:op :constant :env env :form form})))))
 
 (defn analyze-file
