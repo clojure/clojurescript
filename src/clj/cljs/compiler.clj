@@ -232,16 +232,7 @@
     (emit-wrap env
       (cond
         (zero? (count keys))
-        (emits "cljs.core.ObjMap.EMPTY")
-
-        (and simple-keys? (<= (count keys) obj-map-threshold))
-        (emits "cljs.core.ObjMap.fromObject(["
-               (comma-sep keys)          ; keys
-               "],{"
-               (comma-sep (map (fn [k v]
-                                 (with-out-str (emit k) (print ":") (emit v)))
-                               keys vals)) ; js obj
-               "})")
+        (emits "cljs.core.PersistentArrayMap.EMPTY")
 
         (<= (count keys) array-map-threshold)
         (emits "cljs.core.PersistentArrayMap.fromArray(["

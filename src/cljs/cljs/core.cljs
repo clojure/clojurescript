@@ -3784,7 +3784,7 @@ reduces them without incurring seq initialization"
           (recur (inc i) (assoc! out k (aget so k))))
         (with-meta (persistent! (assoc! out k v)) mm)))))
 
-;;; ObjMap
+;;; ObjMap - DEPRECATED
 
 (defn- obj-clone [obj ks]
   (let [new-obj (js-obj)
@@ -4162,10 +4162,10 @@ reduces them without incurring seq initialization"
         tcoll)
       (throw (js/Error. "dissoc! after persistent!")))))
 
-(declare TransientHashMap)
+(declare TransientHashMap PersistentHashMap)
 
 (defn- array->transient-hash-map [len arr]
-  (loop [out (transient {})
+  (loop [out (transient cljs.core.PersistentHashMap/EMPTY)
          i   0]
     (if (< i len)
       (recur (assoc! out (aget arr i) (aget arr (inc i))) (+ i 2))
