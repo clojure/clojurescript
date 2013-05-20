@@ -169,7 +169,7 @@
                  ISeqable ISequential IList IRecord IReversible ISorted IPrintWithWriter IWriter
                  IPrintWithWriter IPending IWatchable IEditableCollection ITransientCollection
                  ITransientAssociative ITransientMap ITransientVector ITransientSet
-                 IMultiFn IChunkedSeq IChunkedNext IComparable])
+                 IMultiFn IChunkedSeq IChunkedNext IComparable INamed])
           (iterate (fn [[p b]]
                      (if (core/== 2147483648 b)
                        [(core/inc p) 1]
