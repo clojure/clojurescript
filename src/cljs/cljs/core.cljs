@@ -725,7 +725,11 @@ reduces them without incurring seq initialization"
 
 (extend-type array
   ICounted
-  (-count [a] (alength a)))
+  (-count [a] (alength a))
+
+  IReduce
+  (-reduce [col f] (array-reduce col f))
+  (-reduce [col f start] (array-reduce col f start)))
 
 (declare with-meta)
 
@@ -1868,7 +1872,11 @@ reduces them without incurring seq initialization"
   (-seq [coll] coll)
 
   ICounted
-  (-count [coll] count))
+  (-count [coll] count)
+
+  IReduce
+  (-reduce [col f] (seq-reduce f col))
+  (-reduce [col f start] (seq-reduce f start col)))
 
 (deftype EmptyList [meta]
   Object

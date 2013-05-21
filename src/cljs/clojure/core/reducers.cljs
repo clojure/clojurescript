@@ -225,7 +225,7 @@
 (defn append!
   ".adds x to acc and returns acc"
   [acc x]
-  (doto acc (.add x)))
+  (doto acc (.push x)))
 
 (defn foldcat
   "Equivalent to (fold cat append! coll)"
