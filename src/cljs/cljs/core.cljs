@@ -6446,6 +6446,14 @@ reduces them without incurring seq initialization"
 
               (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
 
+              ^boolean (goog/isObject obj)
+              (let [pr-pair
+                    (fn [keyval]
+                      (pr-sequential-writer writer pr-writer "" ": " "" opts keyval))]
+                (pr-sequential-writer
+                  writer pr-pair "#<Object {" ", " "}>" opts
+                  (map #(vector % (aget obj %)) (js-keys obj))))
+
               :else (write-all writer "#<" (str obj) ">")))))
 
 (defn pr-seq-writer [objs writer opts]
