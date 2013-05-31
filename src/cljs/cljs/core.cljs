@@ -3085,6 +3085,9 @@ reduces them without incurring seq initialization"
             (pv-aset ret subidx node-to-insert)
             ret))))))
 
+(defn- vector-index-out-of-bounds [i cnt]
+  (throw (js/Error. (str "No item " i " in vector of length " cnt))))
+
 (defn- array-for [pv i]
   (if (and (<= 0 i) (< i (.-cnt pv)))
     (if (>= i (tail-off pv))
@@ -3095,7 +3098,7 @@ reduces them without incurring seq initialization"
           (recur (pv-aget node (bit-and (bit-shift-right-zero-fill i level) 0x01f))
                  (- level 5))
           (.-arr node))))
-    (throw (js/Error. (str "No item " i " in vector of length " (.-cnt pv))))))
+    (vector-index-out-of-bounds i (.-cnt pv))))
 
 (defn- do-assoc [pv level node i val]
   (let [ret (pv-clone-node node)]
@@ -3251,9 +3254,9 @@ reduces them without incurring seq initialization"
 
   IFn
   (-invoke [coll k]
-    (-lookup coll k))
+    (-nth coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found))
+    (-nth coll k not-found))
 
   IEditableCollection
   (-as-transient [coll]
@@ -3414,9 +3417,13 @@ reduces them without incurring seq initialization"
 
   IIndexed
   (-nth [coll n]
-    (-nth v (+ start n)))
+    (if (or (neg? n) (<= end (+ start n)))
+      (vector-index-out-of-bounds n (- end start))
+      (-nth v (+ start n))))
   (-nth [coll n not-found]
-    (-nth v (+ start n) not-found))
+    (if (or (neg? n) (<= end (+ start n)))
+      not-found
+      (-nth v (+ start n) not-found)))
 
   ILookup
   (-lookup [coll k] (-nth coll k nil))
@@ -3440,9 +3447,9 @@ reduces them without incurring seq initialization"
 
   IFn
   (-invoke [coll k]
-    (-lookup coll k))
+    (-nth coll k))
   (-invoke [coll k not-found]
-    (-lookup coll k not-found)))
+    (-nth coll k not-found)))
 
 (defn- build-subvec [meta v start end __hash]
   (if (instance? Subvec v)

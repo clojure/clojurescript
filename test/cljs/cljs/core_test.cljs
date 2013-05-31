@@ -1029,6 +1029,10 @@
     (assert (= 95 (peek stack1)))
     (assert (= 94 (peek stack2))))
 
+  ;; CLJS-513
+  (let [sentinel (js-obj)]
+    (assert (identical? sentinel (try ([] 0) (catch js/Error _ sentinel)))))
+
   ;; subvec
   (let [v1 (vec (range 10))
         v2 (vec (range 5))
@@ -1056,6 +1060,11 @@
     (assert (= :fail (try (subvec v2 3 6) (catch js/Error e :fail))))
     ;; no layered subvecs
     (assert (identical? v1 (.-v (subvec s 1 4))))
+    ;; CLJS-513
+    (let [sentinel (js-obj)
+          s (subvec [0 1 2 3] 1 2)]
+      (assert (identical? sentinel (try (s -1) (catch js/Error _ sentinel))))
+      (assert (identical? sentinel (try (s 1) (catch js/Error _ sentinel)))))  
     )
 
   ;; TransientVector
