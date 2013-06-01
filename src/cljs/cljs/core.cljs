@@ -3976,6 +3976,57 @@ reduces them without incurring seq initialization"
 
 (declare TransientArrayMap)
 
+(deftype PersistentArrayMapSeq [arr i _meta]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  
+  IMeta
+  (-meta [coll] _meta)
+
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (PersistentArrayMapSeq. arr i new-meta))
+
+  ICounted
+  (-count [coll]
+    (/ (- (alength arr) i) 2))
+
+  ISeqable
+  (-seq [coll] coll)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  ICollection
+  (-conj [coll o]
+    (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY _meta))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+  
+  ISeq
+  (-first [coll]
+    [(aget arr i) (aget arr (inc i))])
+
+  (-rest [coll]
+    (if (< i (- (alength arr) 2))
+      (PersistentArrayMapSeq. arr (+ i 2) _meta)
+      ()))
+
+  INext
+  (-next [coll]
+    (when (< i (- (alength arr) 2))
+      (PersistentArrayMapSeq. arr (+ i 2) _meta))))
+
+(defn persistent-array-map-seq [arr i _meta]
+  (when (<= i (- (alength arr) 2))
+    (PersistentArrayMapSeq. arr i _meta)))
+
 (deftype PersistentArrayMap [meta cnt arr ^:mutable __hash]
   Object
   (toString [coll]
@@ -4004,15 +4055,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (when (pos? cnt)
-      (let [len (alength arr)
-            array-map-seq
-            (fn array-map-seq [i]
-              (lazy-seq
-               (when (< i len)
-                 (cons [(aget arr i) (aget arr (inc i))]
-                       (array-map-seq (+ i 2))))))]
-        (array-map-seq 0))))
+    (persistent-array-map-seq arr 0 nil))
 
   ICounted
   (-count [coll] cnt)
@@ -5684,20 +5727,122 @@ reduces them without incurring seq initialization"
          (recur (nnext in) (assoc out (first in) (second in)))
          out))))
 
+(deftype KeySeq [^not-native mseq _meta]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+
+  IMeta
+  (-meta [coll] _meta)
+
+  IWithMeta
+  (-with-meta [coll new-meta] (KeySeq. mseq new-meta))
+
+  ISeqable
+  (-seq [coll] coll)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  ICollection
+  (-conj [coll o]
+    (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY _meta))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+  
+  ISeq
+  (-first [coll]
+    (let [^not-native me (-first mseq)]
+      (-key me)))
+
+  (-rest [coll]
+    (let [nseq (if (satisfies? INext mseq)
+                 (-next mseq)
+                 (next mseq))]
+      (if-not (nil? nseq)
+        (KeySeq. nseq _meta)
+        ())))
+
+  INext
+  (-next [coll]
+    (let [nseq (if (satisfies? INext mseq)
+                 (-next mseq)
+                 (next mseq))]
+      (when-not (nil? nseq)
+        (KeySeq. nseq _meta)))))
+
 (defn keys
   "Returns a sequence of the map's keys."
   [hash-map]
-  (seq (map first hash-map)))
+  (let [mseq (seq hash-map)]
+    (when-not (nil? mseq)
+      (KeySeq. mseq nil))))
 
 (defn key
   "Returns the key of the map entry."
   [map-entry]
   (-key map-entry))
 
+(deftype ValSeq [^not-native mseq _meta]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+
+  IMeta
+  (-meta [coll] _meta)
+
+  IWithMeta
+  (-with-meta [coll new-meta] (ValSeq. mseq new-meta))
+
+  ISeqable
+  (-seq [coll] coll)
+
+  ISequential
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  ICollection
+  (-conj [coll o]
+    (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (with-meta cljs.core.List/EMPTY _meta))
+
+  IHash
+  (-hash [coll] (hash-coll coll))
+
+  ISeq
+  (-first [coll]
+    (let [^not-native me (-first mseq)]
+      (-val me)))
+
+  (-rest [coll]
+    (let [nseq (if (satisfies? INext mseq)
+                 (-next mseq)
+                 (next mseq))]
+      (if-not (nil? nseq)
+        (ValSeq. nseq _meta)
+        ())))
+
+  INext
+  (-next [coll]
+    (let [nseq (if (satisfies? INext mseq)
+                 (-next mseq)
+                 (next mseq))]
+      (when-not (nil? nseq)
+        (ValSeq. nseq _meta)))))
+
 (defn vals
   "Returns a sequence of the map's values."
   [hash-map]
-  (seq (map second hash-map)))
+  (let [mseq (seq hash-map)]
+    (when-not (nil? mseq)
+      (ValSeq. mseq nil))))
 
 (defn val
   "Returns the value in the map entry."
@@ -6028,14 +6173,14 @@ reduces them without incurring seq initialization"
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."
   [keys vals]
-    (loop [map {}
+    (loop [map (transient {})
            ks (seq keys)
            vs (seq vals)]
       (if (and ks vs)
-        (recur (assoc map (first ks) (first vs))
+        (recur (assoc! map (first ks) (first vs))
                (next ks)
                (next vs))
-        map)))
+        (persistent! map))))
 
 (defn max-key
   "Returns the x for which (k x), a number, is greatest."
@@ -6597,6 +6742,15 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts]
     (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
       (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+
+  KeySeq
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+
+  ValSeq
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+
+  PersistentArrayMapSeq
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   PersistentArrayMap
   (-pr-writer [coll writer opts]

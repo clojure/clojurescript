@@ -4,7 +4,7 @@ rm -rf out
 mkdir -p out
 
 #bin/cljsc benchmark > out/core-benchmark.js
-bin/cljsc benchmark "{:optimizations :advanced}" >out/core-advanced-benchmark.js
+bin/cljsc benchmark "{:optimizations :advanced :output-wrapper true}" >out/core-advanced-benchmark.js
 
 if [ "$V8_HOME" = "" ]; then
   echo "V8_HOME not set, skipping V8 benchmarks"

@@ -182,6 +182,10 @@
                   1)
 (println)
 
+(println ";;; zipmap")
+(simple-benchmark [m {:a 1 :b 2 :c 3}] (zipmap (keys m) (map inc (vals m))) 100000)
+(println)
+
 (println ";;; persistent hash maps")
 (def pmap (into cljs.core.PersistentHashMap/EMPTY
             [[:a 0] [:b 1] [:c 2] [:d 3] [:e 4] [:f 5] [:g 6] [:h 7]
