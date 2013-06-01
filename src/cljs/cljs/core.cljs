@@ -5779,9 +5779,8 @@ reduces them without incurring seq initialization"
 (defn keys
   "Returns a sequence of the map's keys."
   [hash-map]
-  (let [mseq (seq hash-map)]
-    (when-not (nil? mseq)
-      (KeySeq. mseq nil))))
+  (when-let [mseq (seq hash-map)]
+    (KeySeq. mseq nil)))
 
 (defn key
   "Returns the key of the map entry."
@@ -5840,9 +5839,8 @@ reduces them without incurring seq initialization"
 (defn vals
   "Returns a sequence of the map's values."
   [hash-map]
-  (let [mseq (seq hash-map)]
-    (when-not (nil? mseq)
-      (ValSeq. mseq nil))))
+  (when-let [mseq (seq hash-map)]
+    (ValSeq. mseq nil)))
 
 (defn val
   "Returns the value in the map entry."
