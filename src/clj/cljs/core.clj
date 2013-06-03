@@ -672,6 +672,13 @@
       (map #(:name (cljs.analyzer/resolve-var (dissoc env :locals) %)))
       (into #{})))
 
+(defn- build-positional-factory
+  [rsym rname fields]
+  (let [fn-name (symbol (core/str '-> rsym))]
+    `(defn ~fn-name
+       [~@fields]
+       (new ~rname ~@fields))))
+
 (defmacro deftype [t fields & impls]
   (let [r (:name (cljs.analyzer/resolve-var (dissoc &env :locals) t))
         [fpps pmasks] (prepare-protocol-masks &env t impls)
@@ -686,12 +693,14 @@
          (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
          (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
          (extend-type ~t ~@(dt->et t impls fields true))
+         ~(build-positional-factory t r fields)
          ~t)
       `(do
          (deftype* ~t ~fields ~pmasks)
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
          (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opts#] (-write writer# ~(core/str r))))
+         ~(build-positional-factory t r fields)
          ~t))))
 
 (defn- emit-defrecord
@@ -769,13 +778,6 @@
       `(do
          (~'defrecord* ~tagname ~hinted-fields ~pmasks)
          (extend-type ~tagname ~@(dt->et tagname impls fields true))))))
-
-(defn- build-positional-factory
-  [rsym rname fields]
-  (let [fn-name (symbol (core/str '-> rsym))]
-    `(defn ~fn-name
-       [~@fields]
-       (new ~rname ~@fields))))
 
 (defn- build-map-factory
   [rsym rname fields]

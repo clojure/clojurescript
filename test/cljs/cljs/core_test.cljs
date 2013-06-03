@@ -1904,5 +1904,10 @@
   (assert (= (get (js-obj "foo" 1) "bar" ::not-found) ::not-found))
   (assert (= (reduce (fn [s [k v]] (+ s v)) 0 (js-obj "foo" 1 "bar" 2)) 3))
 
+  ;; CLJS-515
+  (deftype PositionalFactoryTest [x])
+
+  (assert (== 1 (.-x (->PositionalFactoryTest 1))))
+
   :ok
   )
