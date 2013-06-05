@@ -1762,7 +1762,7 @@ reduces them without incurring seq initialization"
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
   ([name] (cond (keyword? name) name
-                (symbol? name) (str* "\uFDD0" ":" (subs name 2))
+                (symbol? name) (str* "\uFDD0" ":" (cljs.core/name name))
                 :else (str* "\uFDD0" ":" name)))
   ([ns name] (keyword (str* ns "/" name))))
 

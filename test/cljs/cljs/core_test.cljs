@@ -220,6 +220,11 @@
   ; symbol
   (assert (= 'a (symbol 'a)))
 
+  ; keyword
+  (assert (= :a (keyword "a")))
+  (assert (= :a (keyword 'a)))
+  (assert (= :a/b (keyword 'a 'b)))
+
   ;; format
   (assert (= "01: 2.000000" (format "%02d: %.6f" 1 2)))
 
