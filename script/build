@@ -52,8 +52,7 @@ if [ "$HUDSON" = "true" ]; then
     git tag -f "$TAG"
     git push origin "$TAG"
 
-    mvn gpg:sign-and-deploy-file -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile="$POM_FILE" -Dfile="$JAR_FILE"
-    mvn nexus:staging-close nexus:staging-release -DtargetRepositoryId=releases -Dnexus.promote.autoSelectOverride=true
+    mvn gpg:sign-and-deploy-file -Dgpg.keyname=958AE602 -Durl=https://oss.sonatype.org/service/local/staging/deploy/maven2/ -DrepositoryId=sonatype-nexus-staging -DpomFile="$POM_FILE" -Dfile="$JAR_FILE"
 else
     echo "Skipping Maven deployment and Git push because we are not on Hudson."
 fi
