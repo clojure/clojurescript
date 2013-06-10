@@ -1909,5 +1909,8 @@
 
   (assert (== 1 (.-x (->PositionalFactoryTest 1))))
 
+  ;; CLJS-518
+  (assert (nil? (:test "test")))
+
   :ok
   )

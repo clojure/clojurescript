@@ -2010,14 +2010,13 @@ reduces them without incurring seq initialization"
   IFn
   (invoke [_ coll]
     (when-not (nil? coll)
-      (let [strobj (.-strobj coll)]
-        (if (nil? strobj)
-          (-lookup coll k nil)
-          (aget strobj k)))))
+      (when (satisfies? ILookup coll)
+        (-lookup coll k nil))))
   (invoke [_ coll not-found]
     (if (nil? coll)
       not-found
-      (-lookup coll k not-found))))
+      (when (satisfies? ILookup coll)
+        (-lookup coll k not-found)))))
 
 ;;hrm
 (extend-type js/String
