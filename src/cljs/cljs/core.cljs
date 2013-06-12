@@ -1746,7 +1746,7 @@ reduces them without incurring seq initialization"
   ([s start] (.substring s start))
   ([s start end] (.substring s start end)))
 
-(declare map)
+(declare map name)
 
 (defn format
   "Formats a string using goog.string.format."
@@ -1765,8 +1765,6 @@ reduces them without incurring seq initialization"
                 (symbol? name) (str* "\uFDD0" ":" (cljs.core/name name))
                 :else (str* "\uFDD0" ":" name)))
   ([ns name] (keyword (str* ns "/" name))))
-
-
 
 (defn- equiv-sequential
   "Assumes x is sequential. Returns true if x equals y, otherwise
