@@ -730,16 +730,6 @@
                (emits (interleave (concat segs (repeat nil))
                                   (concat args [nil]))))))
 
-(defn forms-seq
-  "Seq of forms in a Clojure or ClojureScript file."
-  ([f]
-     (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
-  ([f ^java.io.PushbackReader rdr]
-    (lazy-seq
-      (if-let [form (binding [*ns* (create-ns ana/*cljs-ns*)] (read rdr nil nil))]
-        (cons form (forms-seq f rdr))
-        (.close rdr)))))
-
 (defn rename-to-js
   "Change the file extension from .cljs to .js. Takes a File or a
   String. Always returns a String."
@@ -771,7 +761,7 @@
                    *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
                    *cljs-gen-line* (atom 0)
                    *cljs-gen-col* (atom 0)]
-           (loop [forms (forms-seq src)
+           (loop [forms (ana/forms-seq src)
                   ns-name nil
                   deps nil]
              (if (seq forms)
@@ -800,7 +790,7 @@
 (defn parse-ns [src dest opts]
   (with-core-cljs
     (binding [ana/*cljs-ns* 'cljs.user]
-      (loop [forms (forms-seq src)]
+      (loop [forms (ana/forms-seq src)]
         (if (seq forms)
           (let [env (ana/empty-env)
                 ast (ana/analyze env (first forms))]

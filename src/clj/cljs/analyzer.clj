@@ -1008,6 +1008,16 @@
         (= form ()) (analyze-list env form name)
         :else {:op :constant :env env :form form})))))
 
+(defn forms-seq
+  "Seq of forms in a Clojure or ClojureScript file."
+  ([f]
+     (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
+  ([f ^java.io.PushbackReader rdr]
+    (lazy-seq
+      (if-let [form (binding [*ns* (create-ns *cljs-ns*)] (read rdr nil nil))]
+        (cons form (forms-seq f rdr))
+        (.close rdr)))))
+
 ;; TODO: CLJS-519, refactor, could use forms-seq from compiler
 ;; eliminate *reader-ns* and *reader-ns-name*, seems redundant now that
 ;; we know to use *cljs-ns* when reading - David
