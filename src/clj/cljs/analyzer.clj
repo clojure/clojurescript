@@ -25,6 +25,7 @@
 ;; to resolve keywords like ::foo - the namespace
 ;; must be determined during analysis - the reader
 ;; did not know
+;; TODO: probably remove, see bottom of file - David
 (def ^:dynamic *reader-ns-name* (gensym))
 (def ^:dynamic *reader-ns* (create-ns *reader-ns-name*))
 
@@ -1006,6 +1007,10 @@
         (keyword? form) (analyze-keyword env form)
         (= form ()) (analyze-list env form name)
         :else {:op :constant :env env :form form})))))
+
+;; TODO: CLJS-519, refactor, could use forms-seq from compiler
+;; eliminate *reader-ns* and *reader-ns-name*, seems redundant now that
+;; we know to use *cljs-ns* when reading - David
 
 (defn analyze-file
   [^String f]

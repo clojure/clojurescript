@@ -735,9 +735,10 @@
   ([f]
      (forms-seq f (clojure.lang.LineNumberingPushbackReader. (io/reader f))))
   ([f ^java.io.PushbackReader rdr]
-     (if-let [form (binding [*ns* ana/*reader-ns*] (read rdr nil nil))]
-       (lazy-seq (cons form (forms-seq f rdr)))
-       (.close rdr))))
+    (lazy-seq
+      (if-let [form (binding [*ns* (create-ns ana/*cljs-ns*)] (read rdr nil nil))]
+        (cons form (forms-seq f rdr))
+        (.close rdr)))))
 
 (defn rename-to-js
   "Change the file extension from .cljs to .js. Takes a File or a
