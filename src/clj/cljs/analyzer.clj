@@ -22,13 +22,6 @@
 (declare confirm-bindings)
 (declare ^:dynamic *cljs-file*)
 
-;; to resolve keywords like ::foo - the namespace
-;; must be determined during analysis - the reader
-;; did not know
-;; TODO: probably remove, see bottom of file - David
-(def ^:dynamic *reader-ns-name* (gensym))
-(def ^:dynamic *reader-ns* (create-ns *reader-ns-name*))
-
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
 
@@ -236,9 +229,7 @@
 (defn analyze-keyword
     [env sym]
     {:op :constant :env env
-     :form (if (= (namespace sym) (name *reader-ns-name*))
-               (keyword (-> env :ns :name name) (name sym))
-               sym)})
+     :form sym})
 
 (defmulti parse (fn [op & rest] op))
 
@@ -1018,17 +1009,12 @@
         (cons form (forms-seq f rdr))
         (.close rdr)))))
 
-;; TODO: CLJS-519, refactor, could use forms-seq from compiler
-;; eliminate *reader-ns* and *reader-ns-name*, seems redundant now that
-;; we know to use *cljs-ns* when reading - David
-
 (defn analyze-file
   [^String f]
   (let [res (if (re-find #"^file://" f) (java.net.URL. f) (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))
     (binding [*cljs-ns* 'cljs.user
-              *cljs-file* (.getPath ^java.net.URL res)
-              *ns* *reader-ns*]
+              *cljs-file* (.getPath ^java.net.URL res)]
       (with-open [r (io/reader res)]
         (let [env (empty-env)
               pbr (clojure.lang.LineNumberingPushbackReader. r)
