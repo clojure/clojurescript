@@ -18,8 +18,14 @@
 (declare resolve-var)
 (declare resolve-existing-var)
 (declare warning)
-(def ^:dynamic *cljs-warn-on-undeclared* false)
 (declare confirm-bindings)
+(def ^:dynamic *cljs-warnings*
+  {:undeclared false
+   :redef true
+   :dynamic true
+   :fn-var true
+   :fn-deprecated true
+   :protocol-deprecated true})
 (declare ^:dynamic *cljs-file*)
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
@@ -38,12 +44,6 @@
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
-(def ^:dynamic *cljs-warn-on-redef* true)
-(def ^:dynamic *cljs-warn-on-dynamic* true)
-(def ^:dynamic *cljs-warn-on-fn-var* true)
-(def ^:dynamic *cljs-warn-fn-arity* true)
-(def ^:dynamic *cljs-warn-fn-deprecated* true)
-(def ^:dynamic *cljs-warn-protocol-deprecated* true)
 (def ^:dynamic *unchecked-if* (atom false))
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
@@ -51,12 +51,13 @@
 (def  -cljs-macros-loaded (atom false))
 
 (defmacro no-warn [& body]
-  `(binding [*cljs-warn-on-undeclared* false
-             *cljs-warn-on-redef* false
-             *cljs-warn-on-dynamic* false
-             *cljs-warn-on-fn-var* false
-             *cljs-warn-fn-arity* false
-             *cljs-warn-fn-deprecated* false]
+  `(binding [*cljs-warnings*
+             {:redef false
+              :dynamic false
+              :fn-arity false
+              :fn-var false
+              :fn-deprecated false
+              :protocol-deprecated false}]
      ~@body))
 
 (defn get-line [x env]
@@ -134,7 +135,7 @@
          (throw (error ~env (.getMessage err#) err#))))))
 
 (defn confirm-var-exists [env prefix suffix]
-  (when *cljs-warn-on-undeclared*
+  (when (:undeclared *cljs-warnings*)
     (let [crnt-ns (-> env :ns :name)]
       (when (= prefix crnt-ns)
         (when-not (-> @namespaces crnt-ns :defs suffix)
@@ -211,7 +212,7 @@
   (doseq [name names]
     (let [env (merge env {:ns (@namespaces *cljs-ns*)})
           ev (resolve-existing-var env name)]
-      (when (and *cljs-warn-on-dynamic*
+      (when (and (:dynamic *cljs-warnings*)
                  ev (not (-> ev :dynamic)))
         (warning env
           (str "WARNING: " (:name ev) " not declared ^:dynamic"))))))
@@ -303,7 +304,7 @@
                            (core-name? env sym))
                       (get-in @namespaces [ns-name :uses sym]))
                 (let [ev (resolve-existing-var (dissoc env :locals) sym)]
-                  (when *cljs-warn-on-redef*
+                  (when (:redef *cljs-warnings*)
                     (warning env
                       (str "WARNING: " sym " already refers to: " (symbol (str (:ns ev)) (str sym))
                            " being replaced by: " (symbol (str ns-name) (str sym)))))
@@ -324,7 +325,7 @@
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
       (when-let [v (get-in @namespaces [ns-name :defs sym])]
-        (when (and *cljs-warn-on-fn-var*
+        (when (and (:fn-var *cljs-warnings*)
                    (not (-> sym meta :declared))
                    (and (:fn-var v) (not fn-var?)))
           (warning env
@@ -847,14 +848,14 @@
          fexpr (analyze enve f)
          argexprs (vec (map #(analyze enve %) args))
          argc (count args)]
-     (if (and *cljs-warn-fn-arity* (-> fexpr :info :fn-var))
+     (if (and (:fn-arity *cljs-warnings*) (-> fexpr :info :fn-var))
        (let [{:keys [variadic max-fixed-arity method-params name]} (:info fexpr)]
          (when (and (not (some #{argc} (map count method-params)))
                     (or (not variadic)
                         (and variadic (< argc max-fixed-arity))))
            (warning env
              (str "WARNING: Wrong number of args (" argc ") passed to " name)))))
-     (if (and *cljs-warn-fn-deprecated* (-> fexpr :info :deprecated)
+     (if (and (:fn-deprecated *cljs-warnings*) (-> fexpr :info :deprecated)
               (not (-> form meta :deprecation-nowarn)))
        (warning env
          (str "WARNING: " (-> fexpr :info :name) " is deprecated.")))

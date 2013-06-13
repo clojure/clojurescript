@@ -950,8 +950,8 @@
               (or (and (= (opts :optimizations) :advanced))
                   (:static-fns opts)
                   ana/*cljs-static-fns*)
-              ana/*cljs-warn-on-undeclared*
-              (true? (opts :warnings))]
+              ana/*cljs-warnings*
+              (assoc ana/*cljs-warnings* :undeclared (true? (opts :warnings)))]
       (let [compiled (-compile source all-opts)
             js-sources (concat
                          (apply add-dependencies all-opts

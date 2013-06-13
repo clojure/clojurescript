@@ -66,11 +66,13 @@
      (try
        (let [ast (ana/analyze env form)
              js (comp/emit-str ast)
-             wrap-js (comp/emit-str (binding [ana/*cljs-warn-on-undeclared* false
-                                              ana/*cljs-warn-on-redef* false
-                                              ana/*cljs-warn-on-dynamic* false
-                                              ana/*cljs-warn-on-fn-var* false
-                                              ana/*cljs-warn-fn-arity* false]
+             wrap-js (comp/emit-str (binding [ana/*cljs-warnings*
+                                              (merge ana/*cljs-warnings*
+                                                {:undeclared false
+                                                 :redef false
+                                                 :dynamic false
+                                                 :fn-var false
+                                                 :fn-arity false})]
                                    (ana/analyze env (wrap form))))]
          (when (= (:op ast) :ns)
            (load-dependencies repl-env (into (vals (:requires ast))
@@ -165,7 +167,8 @@
   (prn "Type: " :cljs/quit " to quit")
   (binding [ana/*cljs-ns* 'cljs.user
             *cljs-verbose* verbose
-            ana/*cljs-warn-on-undeclared* warn-on-undeclared
+            ana/*cljs-warnings* (assoc ana/*cljs-warnings*
+                                  :undeclared warn-on-undeclared)
             ana/*cljs-static-fns* static-fns]
     (when analyze-path
       (analyze-source analyze-path))

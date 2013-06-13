@@ -548,13 +548,13 @@
                             (drop-while seq? (next s)))
                      ret))
         warn-if-not-protocol #(when-not (= 'Object %)
-                                (if cljs.analyzer/*cljs-warn-on-undeclared*
+                                (if (:undeclared cljs.analyzer/*cljs-warnings*)
                                   (if-let [var (cljs.analyzer/resolve-existing-var (dissoc &env :locals) %)]
                                     (do
                                      (when-not (:protocol-symbol var)
                                        (cljs.analyzer/warning &env
                                          (core/str "WARNING: Symbol " % " is not a protocol")))
-                                     (when (and cljs.analyzer/*cljs-warn-protocol-deprecated*
+                                     (when (and (:protocol-deprecated cljs.analyzer/*cljs-warnings*)
                                                 (-> var :deprecated)
                                                 (not (-> % meta :deprecation-nowarn)))
                                        (cljs.analyzer/warning &env
