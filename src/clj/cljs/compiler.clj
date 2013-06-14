@@ -16,8 +16,6 @@
             [cljs.analyzer :as ana])
   (:import java.lang.StringBuilder))
 
-(declare munge)
-
 (def js-reserved
   #{"abstract" "boolean" "break" "byte" "case"
     "catch" "char" "class" "const" "continue"

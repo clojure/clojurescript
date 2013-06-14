@@ -15,10 +15,14 @@
             [cljs.tagged-literals :as tags])
   (:import java.lang.StringBuilder))
 
-(declare resolve-var)
-(declare resolve-existing-var)
-(declare warning)
-(declare confirm-bindings)
+(def ^:dynamic *cljs-ns* 'cljs.user)
+(def ^:dynamic *cljs-file* nil)
+(def ^:dynamic *unchecked-if* (atom false))
+(def ^:dynamic *cljs-static-fns* false)
+(def ^:dynamic *cljs-macros-path* "/cljs/core")
+(def ^:dynamic *cljs-macros-is-classpath* true)
+(def -cljs-macros-loaded (atom false))
+
 (def ^:dynamic *cljs-warnings*
   {:undeclared false
    :redef true
@@ -26,7 +30,6 @@
    :fn-var true
    :fn-deprecated true
    :protocol-deprecated true})
-(declare ^:dynamic *cljs-file*)
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
@@ -41,14 +44,6 @@
 
 (defn set-namespace [key val]
   (swap! namespaces assoc key val))
-
-(def ^:dynamic *cljs-ns* 'cljs.user)
-(def ^:dynamic *cljs-file* nil)
-(def ^:dynamic *unchecked-if* (atom false))
-(def ^:dynamic *cljs-static-fns* false)
-(def ^:dynamic *cljs-macros-path* "/cljs/core")
-(def ^:dynamic *cljs-macros-is-classpath* true)
-(def  -cljs-macros-loaded (atom false))
 
 (defmacro no-warn [& body]
   `(binding [*cljs-warnings*
