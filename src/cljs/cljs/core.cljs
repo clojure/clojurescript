@@ -2233,10 +2233,9 @@ reduces them without incurring seq initialization"
 
 (defn int-array
   ([size-or-seq]
-     (cond
-      (number? size-or-seq) (int-array size-or-seq nil)
-      (seq? size-or-seq) (into-array size-or-seq)
-      :else (throw (js/Error. "int-array called with something other than size or ISeq"))))
+     (if (number? size-or-seq)
+       (int-array size-or-seq nil)
+       (into-array size-or-seq)))
   ([size init-val-or-seq]
      (let [a (make-array size)]
        (if (seq? init-val-or-seq)
@@ -2254,10 +2253,9 @@ reduces them without incurring seq initialization"
 
 (defn long-array
   ([size-or-seq]
-     (cond
-      (number? size-or-seq) (long-array size-or-seq nil)
-      (seq? size-or-seq) (into-array size-or-seq)
-      :else (throw (js/Error. "long-array called with something other than size or ISeq"))))
+     (if (number? size-or-seq)
+       (long-array size-or-seq nil)
+       (into-array size-or-seq)))
   ([size init-val-or-seq]
      (let [a (make-array size)]
        (if (seq? init-val-or-seq)
@@ -2275,10 +2273,9 @@ reduces them without incurring seq initialization"
 
 (defn double-array
   ([size-or-seq]
-     (cond
-      (number? size-or-seq) (double-array size-or-seq nil)
-      (seq? size-or-seq) (into-array size-or-seq)
-      :else (throw (js/Error. "double-array called with something other than size or ISeq"))))
+     (if (number? size-or-seq)
+       (double-array size-or-seq nil)
+       (into-array size-or-seq)))
   ([size init-val-or-seq]
      (let [a (make-array size)]
        (if (seq? init-val-or-seq)
@@ -2296,10 +2293,9 @@ reduces them without incurring seq initialization"
 
 (defn object-array
   ([size-or-seq]
-     (cond
-      (number? size-or-seq) (object-array size-or-seq nil)
-      (seq? size-or-seq) (into-array size-or-seq)
-      :else (throw (js/Error. "object-array called with something other than size or ISeq"))))
+     (if (number? size-or-seq)
+       (object-array size-or-seq nil)
+       (into-array size-or-seq)))
   ([size init-val-or-seq]
      (let [a (make-array size)]
        (if (seq? init-val-or-seq)
