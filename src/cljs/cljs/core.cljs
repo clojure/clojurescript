@@ -525,6 +525,10 @@
   IHash
   (-hash [o] 0))
 
+;; TODO: we should remove this and handle date equality checking
+;; by some other means, probably by adding a new primitive type
+;; case to the hash table lookup - David
+
 (extend-type js/Date
   IEquiv
   (-equiv [o other]
