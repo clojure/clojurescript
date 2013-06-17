@@ -525,12 +525,6 @@
   IHash
   (-hash [o] 0))
 
-(extend-type js/Date
-  IEquiv
-  (-equiv [o other]
-    (and (instance? js/Date other)
-         (identical? (.toString o) (.toString other)))))
-
 (extend-type number
   IEquiv
   (-equiv [x o] (identical? x o))
