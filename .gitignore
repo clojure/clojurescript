@@ -3,11 +3,13 @@
 /.DS_Store
 /classes
 /lib
+/target
 closure
 /core.js
 /coreadvanced.js
 /coresimple.js
 /out
+/pom.xml
 .repl
 *.swp
 *.zip

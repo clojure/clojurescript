@@ -90,4 +90,100 @@
     <developerConnection>scm:git:git@github.com:clojure/clojurescript.git</developerConnection>
     <url>https://github.com/clojure/clojurescript</url>
   </scm>
+
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <clojure.source.dir>src/clj</clojure.source.dir>
+    <cljs.source.dir>src/cljs</cljs.source.dir>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+	<!-- Add Clojure sources to the project's source directories -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>add-clojure-source-dirs</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+              <goal>add-resource</goal>
+            </goals>
+            <configuration>
+              <sources>
+		<source>${clojure.source.dir}</source>
+		<source>${cljs.source.dir}</source>
+              </sources>
+              <resources>
+		<resource>
+		  <directory>${clojure.source.dir}</directory>
+		</resource>
+                <resource>
+                  <directory>${cljs.source.dir}</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.4</version>
+        <configuration>
+          <keyname>Clojure/core</keyname>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>sonatype-oss-release</id>
+      <!-- This profile is enabled automatically by the Sonatype
+           oss-parent POM when invoking the Maven Release Plugin -->
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>2.7</version>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.4.4</version>
+            <executions>
+              <execution>
+                <id>default-deploy</id>
+                <phase>deploy</phase>
+                <!-- By default, this is the phase deploy goal will bind to -->
+                <goals>
+                  <goal>deploy</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <!-- The Base URL of Nexus instance where we want to stage -->
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <!-- The server "id" element from settings to use authentication from -->
+              <serverId>sonatype-nexus-staging</serverId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
