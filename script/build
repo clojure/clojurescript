@@ -30,7 +30,8 @@ sed -e s/CLOJURESCRIPT_VERSION/0.0-$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
 
 # For Hudson server
 if [ "$HUDSON" = "true" ]; then
-    mvn --fail-at-end clean deploy -Psonatype-oss-release
+    mvn --fail-at-end -Psonatype-oss-release \
+        clean deploy nexus-staging:release
 
     echo "Creating tag $TAG"
     git tag -f "$TAG"
