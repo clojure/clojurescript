@@ -608,8 +608,10 @@
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
   (assert (symbol? name) "Namespaces must be named by a symbol.")
-  (let [docstring (if (string? (first args)) (first args) nil)
+  (let [docstring (if (string? (first args)) (first args))
         args      (if docstring (next args) args)
+        metadata  (if (map? (first args)) (first args))
+        args      (if metadata (next args) args)
         excludes
         (reduce (fn [s [k exclude xs]]
                   (if (= k :refer-clojure)
