@@ -1111,9 +1111,7 @@ reduces them without incurring seq initialization"
 (declare ChunkedCons ChunkedSeq)
 
 (defn ^boolean chunked-seq?
-  [x]
-  (or (instance? ChunkedCons x)
-      (instance? ChunkedSeq x)))
+  [x] (satisfies? IChunkedSeq x false))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj
