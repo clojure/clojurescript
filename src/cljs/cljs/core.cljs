@@ -728,9 +728,6 @@ reduces them without incurring seq initialization"
      (prim-seq array i)))
 
 (extend-type array
-  ICounted
-  (-count [a] (alength a))
-
   IReduce
   (-reduce [col f] (array-reduce col f))
   (-reduce [col f start] (array-reduce col f start)))
@@ -841,9 +838,22 @@ reduces them without incurring seq initialization"
   "Returns the number of items in the collection. (count nil) returns
   0.  Also works on strings, arrays, and Maps"
   [coll]
-  (if (counted? coll)
-    (-count coll)
-    (accumulating-seq-count coll)))
+  (if-not (nil? coll)
+    (cond
+      (satisfies? ICounted coll false)
+      (-count ^not-native coll)
+
+      (array? coll)
+      (alength coll)
+    
+      (string? coll)
+      (alength coll)
+
+      (type_satisfies_ ICounted coll)
+      (-count coll)
+
+      :else (accumulating-seq-count coll))
+    0))
 
 (defn- linear-traversal-nth
   ([coll n]
@@ -883,6 +893,9 @@ reduces them without incurring seq initialization"
          (string? coll)
          (when (< n (.-length coll))
            (aget coll n))
+
+         (type_satisfies_ IIndexed coll)
+         (-lookup coll n)
          
          :else
          (linear-traversal-nth coll (.floor js/Math n)))))
@@ -902,6 +915,9 @@ reduces them without incurring seq initialization"
            (aget coll n)
            not-found)
          
+         (type_satisfies_ IIndexed coll)
+         (-lookup coll n)
+
          :else
          (linear-traversal-nth coll (.floor js/Math n) not-found))
        not-found)))
@@ -2003,10 +2019,7 @@ reduces them without incurring seq initialization"
 
 (extend-type string
   IHash
-  (-hash [o] (goog.string/hashCode o))
-
-  ICounted
-  (-count [s] (alength s)))
+  (-hash [o] (goog.string/hashCode o)))
 
 (deftype Keyword [k]
   IFn
