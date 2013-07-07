@@ -895,7 +895,7 @@ reduces them without incurring seq initialization"
            (aget coll n))
 
          (type_satisfies_ IIndexed coll)
-         (-lookup coll n)
+         (-nth coll n)
          
          :else
          (linear-traversal-nth coll (.floor js/Math n)))))
@@ -916,7 +916,7 @@ reduces them without incurring seq initialization"
            not-found)
          
          (type_satisfies_ IIndexed coll)
-         (-lookup coll n)
+         (-nth coll n)
 
          :else
          (linear-traversal-nth coll (.floor js/Math n) not-found))
