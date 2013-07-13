@@ -3302,6 +3302,8 @@ reduces them without incurring seq initialization"
 
 (defn vector [& args] (vec args))
 
+(declare subvec)
+
 (deftype ChunkedSeq [vec node i off meta ^:mutable __hash]
   Object
   (toString [coll]
@@ -3368,7 +3370,14 @@ reduces them without incurring seq initialization"
         nil
         s)))
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash)))
+  (-hash [coll] (caching-hash coll hash-coll __hash))
+
+  IReduce
+  (-reduce [coll f]
+    (ci-reduce (subvec vec (+ i off) (count vec)) f))
+
+  (-reduce [coll f start]
+    (ci-reduce (subvec vec (+ i off) (count vec)) f start)))
 
 (defn chunked-seq
   ([vec i off] (ChunkedSeq. vec (array-for vec i) i off nil nil))
