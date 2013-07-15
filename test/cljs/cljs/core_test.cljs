@@ -1917,5 +1917,14 @@
   ;; CLJS-518
   (assert (nil? (:test "test")))
 
+  ;; CLJS-541
+  (letfn [(f! [x] (print \f) x)
+          (g! [x] (print \g) x)]
+    (assert (== "ffgfg"
+                (with-out-str
+                  (instance? Symbol (f! 'foo))
+                  (max (f! 5) (g! 10))
+                  (min (f! 5) (g! 10))))))
+
   :ok
   )

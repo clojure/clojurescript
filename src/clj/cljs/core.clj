@@ -215,6 +215,7 @@
 
 ;; internal - do not use.
 (defmacro truth_ [x]
+  (assert (clojure.core/symbol? x) "x is substituted twice")
   (list 'js* "(~{} != null && ~{} !== false)" x x))
 
 ;; internal - do not use
@@ -243,7 +244,13 @@
   (bool-expr (list 'js* "(~{} === ~{})" a b)))
 
 (defmacro instance? [t o]
-  (bool-expr (list 'js* "(~{} instanceof ~{})" o t)))
+  ;; Google Closure warns about some references to RegExp, so
+  ;; (instance? RegExp ...) needs to be inlined, but the expansion
+  ;; should preserve the order of argument evaluation.
+  (bool-expr (if (clojure.core/symbol? t)
+               (list 'js* "(~{} instanceof ~{})" o t)
+               `(let [t# ~t o# ~o]
+                  (~'js* "(~{} instanceof ~{})" o# t#)))))
 
 (defmacro number? [x]
   (bool-expr (list 'js* "typeof ~{} === 'number'" x)))
@@ -388,12 +395,14 @@
 
 (defmacro max
   ([x] x)
-  ([x y] (list 'js* "((~{} > ~{}) ? ~{} : ~{})" x y x y))
+  ([x y] `(let [x# ~x, y# ~y]
+            (~'js* "((~{} > ~{}) ? ~{} : ~{})" x# y# x# y#)))
   ([x y & more] `(max (max ~x ~y) ~@more)))
 
 (defmacro min
   ([x] x)
-  ([x y] (list 'js* "((~{} < ~{}) ? ~{} : ~{})" x y x y))
+  ([x y] `(let [x# ~x, y# ~y]
+            (~'js* "((~{} < ~{}) ? ~{} : ~{})" x# y# x# y#)))
   ([x y & more] `(min (min ~x ~y) ~@more)))
 
 (defmacro js-mod [num div]
@@ -457,6 +466,7 @@
 
 ;; internal
 (defmacro caching-hash [coll hash-fn hash-key]
+  (assert (clojure.core/symbol? hash-key) "hash-key is substituted twice")
   `(let [h# ~hash-key]
      (if-not (nil? h#)
        h#
