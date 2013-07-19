@@ -383,7 +383,9 @@
         ;;turn (fn [] ...) into (fn ([]...))
         meths (if (vector? (first meths)) (list meths) meths)
         locals (:locals env)
-        locals (if (and locals name) (assoc locals name {:name name :shadow (locals name)}) locals)
+        name-var (if name
+                   {:name name :shadow (locals name)}) 
+        locals (if (and locals name) (assoc locals name name-var) locals)
         type (-> form meta ::type)
         fields (-> form meta ::fields)
         protocol-impl (-> form meta :protocol-impl)
@@ -421,7 +423,7 @@
                   (no-warn (doall (map #(analyze-fn-method menv locals % type) meths)))
                   methods)]
     ;;todo - validate unique arities, at most one variadic, variadic takes max required args
-    {:env env :op :fn :form form :name name :methods methods :variadic variadic
+    {:env env :op :fn :form form :name name-var :methods methods :variadic variadic
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity
