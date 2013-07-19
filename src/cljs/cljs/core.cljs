@@ -371,6 +371,9 @@
 (defn ^boolean symbol? [x]
   (instance? Symbol x))
 
+(defn- hash-symbol [sym]
+  (hash-combine (hash (.-ns sym)) (hash (.-name sym))))
+
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
   (toString [_] str)
@@ -389,12 +392,8 @@
   IWithMeta
   (-with-meta [_ new-meta] (Symbol. ns name str _hash new-meta))
   IHash
-  (-hash [_]
-    (if (== _hash -1)
-      (do
-        (set! _hash (hash-combine (hash ns) (hash name)))
-        _hash)
-      _hash))
+  (-hash [sym]
+    (caching-hash sym hash-symbol _hash))
   INamed
   (-name [_] name)
   (-namespace [_] ns)
@@ -410,7 +409,7 @@
      (let [sym-str (if-not (nil? ns)
                      (str ns "/" name)
                      name)]
-       (Symbol. ns name sym-str -1 nil))))
+       (Symbol. ns name sym-str nil nil))))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
