@@ -25,12 +25,12 @@
     <dependency>
       <groupId>com.google.javascript</groupId>
       <artifactId>closure-compiler</artifactId>
-      <version>r2180</version>
+      <version>v20130603</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>google-closure-library</artifactId>
-      <version>0.0-2029-2</version>
+      <version>0.0-20130212-95c19e7f0f5f</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
