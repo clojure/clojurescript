@@ -2,25 +2,30 @@
 
 set -e
 
+CLOJURE_RELEASE="1.5.1"
+DJSON_RELEASE="0.2.2"
+GCLOSURE_LIB_RELEASE="0.0-20130212-95c19e7f0f5f"
+RHINO_RELEASE="1_7R3"
+
 mkdir -p lib
 
 echo "Fetching Clojure..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/1.5.1/clojure-1.5.1.zip
-unzip -qu clojure-1.5.1.zip
-echo "Copying clojure-1.5.1/clojure-1.5.1.jar to lib/clojure.jar..."
-cp clojure-1.5.1/clojure-1.5.1.jar lib/clojure.jar
+curl -O -s http://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.zip
+unzip -qu clojure-$CLOJURE_RELEASE.zip
+echo "Copying clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar to lib/clojure.jar..."
+cp clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar lib/clojure.jar
 
 echo "Cleaning up Clojure directory..."
-rm -rf clojure-1.5.1/
+rm -rf clojure-$CLOJURE_RELEASE/
 echo "Cleaning up Clojure archive..."
-rm clojure-1.5.1.zip
+rm clojure-$CLOJURE_RELEASE.zip
 
 echo "Fetching data.json..."
-curl -O -s http://repo1.maven.org/maven2/org/clojure/data.json/0.2.2/data.json-0.2.2.jar
-echo "Copying data.json-0.2.2.jar to lib/data.json-0.2.2.jar..."
-cp data.json-0.2.2.jar lib/data.json-0.2.2.jar
+curl -O -s http://repo1.maven.org/maven2/org/clojure/data.json/$DJSON_RELEASE/data.json-$DJSON_RELEASE.jar
+echo "Copying data.json-$DJSON_RELEASE.jar to lib/data.json-$DJSON_RELEASE.jar..."
+cp data.json-$DJSON_RELEASE.jar lib/data.json-$DJSON_RELEASE.jar
 echo "Cleaning up data.json..."
-rm data.json-0.2.2.jar
+rm data.json-$DJSON_RELEASE.jar
 
 echo "Fetching Google Closure library..."
 mkdir -p closure/library
@@ -41,14 +46,14 @@ if [ "$1" = "--closure-library-head" ] ; then
         svn checkout -q --non-interactive http://closure-library.googlecode.com/svn/trunk/ ./
     fi
 else
-    curl -O -s http://repo1.maven.org/maven2/org/clojure/google-closure-library/0.0-2029-2/google-closure-library-0.0-2029-2.jar
-    cp google-closure-library-0.0-2029-2.jar ../../lib/google-closure-library-0.0-2029-2.jar
-    rm google-closure-library-0.0-2029-2.jar
+    curl -O -s http://repo1.maven.org/maven2/org/clojure/google-closure-library/$GCLOSURE_LIB_RELEASE/google-closure-library-$GCLOSURE_LIB_RELEASE.jar
+    cp google-closure-library-$GCLOSURE_LIB_RELEASE.jar ../../lib/google-closure-library-$GCLOSURE_LIB_RELEASE.jar
+    rm google-closure-library-$GCLOSURE_LIB_RELEASE.jar
 
     echo "Fetching Google Closure third party library..."
-    curl -O -s http://repo1.maven.org/maven2/org/clojure/google-closure-library-third-party/0.0-2029-2/google-closure-library-third-party-0.0-2029-2.jar
-    cp google-closure-library-third-party-0.0-2029-2.jar ../../lib/google-closure-library-third-party-0.0-2029-2.jar
-    rm google-closure-library-third-party-0.0-2029-2.jar
+    curl -O -s http://repo1.maven.org/maven2/org/clojure/google-closure-library-third-party/$GCLOSURE_LIB_RELEASE/google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
+    cp google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar ../../lib/google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
+    rm google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
 fi
 cd ..
 
@@ -68,14 +73,14 @@ if [ "$1" = "--closure-library-head" ] ; then
 fi
 
 echo "Fetching Rhino..."
-curl -O -s http://ftp.mozilla.org/pub/mozilla.org/js/rhino1_7R3.zip
-unzip -qu rhino1_7R3.zip
-echo "Copying rhino1_7R3/js.jar to lib/js.jar..."
-cp rhino1_7R3/js.jar lib/js.jar
+curl -O -s http://ftp.mozilla.org/pub/mozilla.org/js/rhino$RHINO_RELEASE.zip
+unzip -qu rhino$RHINO_RELEASE.zip
+echo "Copying rhino$RHINO_RELEASE/js.jar to lib/js.jar..."
+cp rhino$RHINO_RELEASE/js.jar lib/js.jar
 echo "Cleaning up Rhino directory..."
-rm -rf rhino1_7R3/
+rm -rf rhino$RHINO_RELEASE/
 echo "Cleaning up Rhino archive..."
-rm rhino1_7R3.zip
+rm rhino$RHINO_RELEASE.zip
 
 echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
 cp closure/compiler/compiler.jar lib
