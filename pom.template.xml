@@ -42,6 +42,11 @@
       <artifactId>rhino</artifactId>
       <version>1.7R4</version>
     </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>tools.reader</artifactId>
+      <version>0.7.5</version>
+    </dependency>
   </dependencies>
 
   <developers>

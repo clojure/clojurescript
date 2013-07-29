@@ -85,4 +85,11 @@ rm rhino$RHINO_RELEASE.zip
 echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
 cp closure/compiler/compiler.jar lib
 
+echo "Fetching tools.reader [0.7.5]..."
+curl -O -s "http://repo1.maven.org/maven2/org/clojure/tools.reader/0.7.5/tools.reader-0.7.5.jar"
+
+echo "Moving tools.reader.jar to lib/tools.reader.jar"
+
+mv tools.reader-0.7.5.jar lib/tools.reader-0.7.5.jar
+
 echo "[Bootstrap Completed]"

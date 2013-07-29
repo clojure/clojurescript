@@ -12,6 +12,7 @@
   (:refer-clojure :exclude [munge macroexpand-1])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [clojure.tools.reader :as reader]
             [cljs.tagged-literals :as tags]
             [cljs.analyzer :as ana])
   (:import java.lang.StringBuilder))
@@ -754,7 +755,7 @@
          (binding [*out* out
                    ana/*cljs-ns* 'cljs.user
                    ana/*cljs-file* (.getPath ^java.io.File src)
-                   *data-readers* tags/*cljs-data-readers*
+                   reader/*data-readers* tags/*cljs-data-readers*
                    *emitted-provides* (atom #{})
                    *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
                    *cljs-gen-line* (atom 0)
