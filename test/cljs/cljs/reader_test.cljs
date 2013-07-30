@@ -15,6 +15,7 @@
   (assert (= "foo" (reader/read-string "\"foo\"")))
   (assert (= :hello (reader/read-string ":hello")))
   (assert (= 'goodbye (reader/read-string "goodbye")))
+  (assert (= '% (reader/read-string "%")))
   (assert (= #{1 2 3} (reader/read-string "#{1 2 3}")))
   (assert (= '(7 8 9) (reader/read-string "(7 8 9)")))
   (assert (= '(deref foo) (reader/read-string "@foo")))

@@ -396,7 +396,6 @@ nil if the end of stream has been reached")
    (identical? c \{) read-map
    (identical? c \}) read-unmatched-delimiter
    (identical? c \\) read-char
-   (identical? c \%) not-implemented
    (identical? c \#) read-dispatch
    :else nil))
 
