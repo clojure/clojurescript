@@ -43,7 +43,11 @@
 
   ;; inst
   (let [est-inst (reader/read-string "#inst \"2010-11-12T13:14:15.666-05:00\"")
-        utc-inst (reader/read-string "#inst \"2010-11-12T18:14:15.666-00:00\"")]
+        utc-inst (reader/read-string "#inst \"2010-11-12T18:14:15.666-00:00\"")
+        pad (fn [n]
+                (if (< n 10)
+                  (str "0" n)
+                  n))]
 
     (assert (= (.valueOf (js/Date. "2010-11-12T13:14:15.666-05:00"))
                (.valueOf est-inst)))
@@ -55,9 +59,18 @@
                (.valueOf utc-inst)))
 
     (doseq [month (range 1 13) day (range 1 29) hour (range 1 23)]
-      (let [s (str "#inst \"2010-" month "-" day "T" hour ":14:15.666-06:00\"")]
+      (let [s (str "#inst \"2010-" (pad month) "-" (pad day) "T" (pad hour) ":14:15.666-06:00\"")]
         (assert (= (-> s reader/read-string .valueOf)
                    (-> s reader/read-string pr-str reader/read-string .valueOf))))))
+
+  (let [insts [(reader/read-string "#inst \"2012\"")
+               (reader/read-string "#inst \"2012-01\"")
+               (reader/read-string "#inst \"2012-01-01\"")
+               (reader/read-string "#inst \"2012-01-01T00\"")
+               (reader/read-string "#inst \"2012-01-01T00:00:00.000\"")
+               (reader/read-string "#inst \"2012-01-01T00:00:00.000123456\"")
+               (reader/read-string "#inst \"2012-01-01T00:00:00.000123456789+00:00\"")]]
+    (assert (apply = (map #(.valueOf %) insts))))
 
   ;; uuid literals
   (let [u (reader/read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")]
