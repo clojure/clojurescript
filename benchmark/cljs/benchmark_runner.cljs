@@ -227,7 +227,20 @@
 (println)
 
 (println ";;; reader")
+(def strings
+  (take 10 (iterate (fn [s] (str s "string")) "string")))
+
+(def big-str-data 
+  (pr-str {:nils (repeat 10 nil)
+           :bools (concat (repeat 5 false) (repeat 5 true))
+           :ints (range 10000 10100)
+           :floats (map #(float (/ % 7)) (range 0 100))
+           :keywords (map keyword strings)
+           :symbols (map symbol strings)
+           :strings strings}))
+
 (simple-benchmark [s "{:foo [1 2 3]}"] (reader/read-string s) 1000)
+(simple-benchmark [s big-str-data] (reader/read-string s) 1000)
 (println)
 
 (println ";;; range")
@@ -256,3 +269,5 @@
 (println)
 
 (println "\n")
+
+
