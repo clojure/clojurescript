@@ -29,6 +29,7 @@
    :redef true
    :dynamic true
    :fn-var true
+   :fn-arity true
    :fn-deprecated true
    :protocol-deprecated true})
 
@@ -48,10 +49,11 @@
 
 (defmacro no-warn [& body]
   `(binding [*cljs-warnings*
-             {:redef false
+             {:undeclared false
+              :redef false
               :dynamic false
-              :fn-arity false
               :fn-var false
+              :fn-arity false
               :fn-deprecated false
               :protocol-deprecated false}]
      ~@body))
