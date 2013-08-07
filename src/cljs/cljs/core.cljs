@@ -115,6 +115,11 @@
      (.join (array "No protocol method " proto
                    " defined for type " ty ": " obj) ""))))
 
+(defn type->str [ty]
+  (if-let [s (.-cljs$lang$ctorStr ty)]
+    s
+    (str ty)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn aclone
@@ -901,7 +906,12 @@ reduces them without incurring seq initialization"
          (-nth coll n)
          
          :else
-         (linear-traversal-nth coll (.floor js/Math n)))))
+         (if (satisfies? ISeq coll)
+           (linear-traversal-nth coll (.floor js/Math n))
+           (throw
+             (js/Error.
+               (str "nth not supported on this type "
+                 (type->str (type coll)))))))))
   ([coll n not-found]
      (if-not (nil? coll)
        (cond
@@ -922,7 +932,12 @@ reduces them without incurring seq initialization"
          (-nth coll n)
 
          :else
-         (linear-traversal-nth coll (.floor js/Math n) not-found))
+         (if (satisfies? ISeq coll)
+           (linear-traversal-nth coll (.floor js/Math n) not-found)
+           (throw
+             (js/Error.
+               (str "nth not supported on this type "
+                 (type->str (type coll)))))))
        not-found)))
 
 (defn get
