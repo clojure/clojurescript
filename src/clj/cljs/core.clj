@@ -526,10 +526,9 @@
         this-sym (gensym "_")
         locals (keys (:locals &env))
         ns     (-> &env :ns :name)
-        munge  cljs.compiler/munge
-        ns-t   (list 'js* (core/str (munge ns) "." (munge t)))]
+        munge  cljs.compiler/munge]
     `(do
-       (when (undefined? ~ns-t)
+       (when-not (exists? (. ~ns ~(symbol (core/str "-" t))))
          (deftype ~t [~@locals ~meta-sym]
            IWithMeta
            (~'-with-meta [~this-sym ~meta-sym]
@@ -839,7 +838,7 @@
                                         sigs))))]
     `(do
        (set! ~'*unchecked-if* true)
-       (def ~psym (~'js* "{}"))
+       (def ~psym (js-obj))
        ~@(map method methods)
        (set! ~'*unchecked-if* false))))
 
