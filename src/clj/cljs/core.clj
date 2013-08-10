@@ -188,7 +188,7 @@
   (let [strs (->> (repeat (count xs) "cljs.core.str(~{})")
                   (interpose ",")
                   (apply core/str))]
-   (concat (list 'js* (core/str "[" strs "].join('')")) xs)))
+    (list* 'js* (core/str "[" strs "].join('')") xs)))
 
 (defn bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
@@ -538,10 +538,13 @@
            ~@impls))
        (new ~t ~@locals nil))))
 
+(defmacro ^:private js-this []
+  (list 'js* "this"))
+
 (defmacro this-as
   "Defines a scope where JavaScript's implicit \"this\" is bound to the name provided."
   [name & body]
-  `(let [~name (~'js* "this")]
+  `(let [~name (js-this)]
      ~@body))
 
 (defn to-property [sym]
@@ -1177,9 +1180,7 @@
                     (take (count rest))
                     (interpose ",")
                     (apply core/str))]
-   (concat
-    (list 'js* (core/str "[" xs-str "]"))
-    rest)))
+    (list* 'js* (core/str "[" xs-str "]") rest)))
 
 (defmacro make-array
   [size]
@@ -1190,9 +1191,7 @@
                      (take (quot (count rest) 2))
                      (interpose ",")
                      (apply core/str))]
-    (concat
-     (list 'js* (core/str "{" kvs-str "}"))
-     rest)))
+    (list* 'js* (core/str "{" kvs-str "}") rest)))
 
 (defmacro alength [a]
   (list 'js* "~{}.length" a))

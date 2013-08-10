@@ -832,7 +832,8 @@
            enve (assoc env :context :expr)
            argexprs (vec (map #(analyze enve %) args))]
        {:env env :op :js :segs (seg jsform) :args argexprs
-        :tag (-> form meta :tag) :form form :children argexprs}))
+        :tag (-> form meta :tag) :form form :children argexprs
+        :js-op (-> form meta :js-op)}))
     (let [interp (fn interp [^String s]
                    (let [idx (.indexOf s "~{")]
                      (if (= -1 idx)
@@ -841,7 +842,7 @@
                              inner (:name (resolve-existing-var env (symbol (subs s (+ 2 idx) end))))]
                          (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
       {:env env :op :js :form form :code (apply str (interp jsform))
-       :tag (-> form meta :tag)})))
+       :tag (-> form meta :tag) :js-op (-> form meta :js-op)})))
 
 (defn parse-invoke
   [env [f & args :as form]]
@@ -903,7 +904,15 @@
       form
       (if-let [mac (and (symbol? op) (get-expander op env))]
         (binding [*ns* (create-ns *cljs-ns*)]
-          (apply mac form env (rest form)))
+          (let [form' (apply mac form env (rest form))]
+            (if (seq? form')
+              (let [sym' (first form')
+                    sym  (first form)]
+                (if (= sym' 'js*)
+                  (vary-meta form' assoc
+                    :js-op (if (namespace sym) sym (symbol "cljs.core" (str sym))))
+                  form'))
+              form')))
         (if (symbol? op)
           (let [opname (str op)]
             (cond
