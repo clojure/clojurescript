@@ -550,19 +550,24 @@
 (defn to-property [sym]
   (symbol (core/str "-" sym)))
 
-(defn warn-and-update-protocol [p env]
+(defn warn-and-update-protocol [p type env]
   (when-not (= 'Object p)
-    (if (:undeclared cljs.analyzer/*cljs-warnings*)
-      (if-let [var (cljs.analyzer/resolve-existing-var (dissoc env :locals) p)]
-        (do
-          (when-not (:protocol-symbol var)
-            (cljs.analyzer/warning env
-              (core/str "WARNING: Symbol " p " is not a protocol")))
-          (when (and (:protocol-deprecated cljs.analyzer/*cljs-warnings*)
-                  (-> var :deprecated)
-                  (not (-> p meta :deprecation-nowarn)))
-            (cljs.analyzer/warning env
-              (core/str "WARNING: Protocol " p " is deprecated"))))
+    (if-let [var (cljs.analyzer/resolve-existing-var (dissoc env :locals) p)]
+      (do
+        (when-not (:protocol-symbol var)
+          (cljs.analyzer/warning env
+            (core/str "WARNING: Symbol " p " is not a protocol")))
+        (when (and (:protocol-deprecated cljs.analyzer/*cljs-warnings*)
+                (-> var :deprecated)
+                (not (-> p meta :deprecation-nowarn)))
+          (cljs.analyzer/warning env
+            (core/str "WARNING: Protocol " p " is deprecated")))
+        (when (:protocol-symbol var)
+          (swap! cljs.analyzer/namespaces
+            (fn [ns]
+              (update-in ns [(:ns var) :defs (symbol (name p)) :impls]
+                conj type)))))
+      (when (:undeclared cljs.analyzer/*cljs-warnings*)
         (cljs.analyzer/warning env
           (core/str "WARNING: Can't resolve protocol symbol " p))))))
 
@@ -579,7 +584,7 @@
     (if (base-type tsym)
       (let [t (base-type tsym)
             assign-impls (fn [[p sigs]]
-                           (warn-and-update-protocol p &env)
+                           (warn-and-update-protocol p tsym &env)
                            (let [psym (resolve p)
                                  pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.indexOf (core/str psym) "/")))]
                              (cons `(aset ~psym ~t true)
@@ -591,7 +596,7 @@
             prototype-prefix (fn [sym]
                                `(.. ~tsym -prototype ~(to-property sym)))
             assign-impls (fn [[p sigs]]
-                           (warn-and-update-protocol p &env)
+                           (warn-and-update-protocol p t &env)
                            (let [psym (resolve p)
                                  pprefix (protocol-prefix psym)]
                              (if (= p 'Object)

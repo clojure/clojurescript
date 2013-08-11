@@ -341,7 +341,8 @@
                      {:protocol protocol})
                    ;; symbol for reified protocol
                    (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
-                     {:protocol-symbol protocol-symbol})
+                     {:protocol-symbol protocol-symbol
+                      :impls #{}})
                    (when fn-var?
                      {:fn-var true
                       ;; protocol implementation context
