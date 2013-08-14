@@ -6,6 +6,7 @@ CLOJURE_RELEASE="1.5.1"
 DJSON_RELEASE="0.2.2"
 GCLOSURE_LIB_RELEASE="0.0-20130212-95c19e7f0f5f"
 RHINO_RELEASE="1_7R3"
+TREADER_RELEASE="0.7.6"
 
 mkdir -p lib
 
@@ -85,11 +86,11 @@ rm rhino$RHINO_RELEASE.zip
 echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
 cp closure/compiler/compiler.jar lib
 
-echo "Fetching tools.reader [0.7.5]..."
-curl -O -s "http://repo1.maven.org/maven2/org/clojure/tools.reader/0.7.5/tools.reader-0.7.5.jar"
+echo "Fetching tools.reader $TREADER_RELEASE ..."
+curl -O -s http://repo1.maven.org/maven2/org/clojure/tools.reader/$TREADER_RELEASE/tools.reader-$TREADER_RELEASE.jar
 
 echo "Moving tools.reader.jar to lib/tools.reader.jar"
 
-mv tools.reader-0.7.5.jar lib/tools.reader-0.7.5.jar
+mv tools.reader-$TREADER_RELEASE.jar lib/tools.reader-$TREADER_RELEASE.jar
 
 echo "[Bootstrap Completed]"
