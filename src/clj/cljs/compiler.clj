@@ -117,9 +117,6 @@
              (print s))))
   nil)
 
-(defn ^String emit-str [expr]
-  (with-out-str (emit expr)))
-
 (defn emitln [& xs]
   (apply emits xs)
   (println)
