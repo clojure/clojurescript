@@ -78,25 +78,51 @@
 ;; For consistency, the three arg version has been implemented to
 ;; mimic Java's behavior.
 
+(defn- pop-last-while-empty
+  [v]
+  (loop [v v]
+    (if (= "" (peek v))
+      (recur (pop v))
+      v)))
+
+(defn- discard-trailing-if-needed
+  [limit v]
+  (if (= 0 limit)
+    (pop-last-while-empty v)
+    v))
+
+(defn- split-with-empty-regex
+  [s limit]
+  (if (or (<= limit 0) (>= limit (+ 2 (count s))))
+    (conj (vec (cons "" (map str (seq s)))) "")
+    (condp = limit
+      1 (vector s)
+      2 (vector "" s)
+      (let [c (- limit 2)]
+        (conj (vec (cons "" (subvec (vec (map str (seq s))) 0 c))) (subs s c))))))
+
 (defn split
   "Splits string on a regular expression. Optional argument limit is
   the maximum number of splits. Not lazy. Returns vector of the splits."
   ([s re]
-     (vec (.split (str s) re)))
-  ([s re limit]
-     (if (< limit 1)
-       (vec (.split (str s) re))
-       (loop [s s
-              limit limit
-              parts []]
-         (if (= limit 1)
-           (conj parts s)
-           (if-let [m (re-find re s)]
-             (let [index (.indexOf s m)]
-               (recur (.substring s (+ index (count m)))
-                      (dec limit)
-                      (conj parts (.substring s 0 index))))
-             (conj parts s)))))))
+     (split s re 0))
+    ([s re limit]
+     (discard-trailing-if-needed limit
+       (if (= (str re) "/(?:)/")
+         (split-with-empty-regex s limit)
+         (if (< limit 1)
+           (vec (.split (str s) re))
+           (loop [s s
+                  limit limit
+                  parts []]
+             (if (= limit 1)
+               (conj parts s)
+               (if-let [m (re-find re s)]
+                 (let [index (.indexOf s m)]
+                   (recur (.substring s (+ index (count m)))
+                          (dec limit)
+                          (conj parts (.substring s 0 index))))
+                 (conj parts s)))))))))
 
 (defn split-lines
   "Splits s on \n or \r\n."
