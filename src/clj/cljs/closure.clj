@@ -642,6 +642,9 @@
                                               (:provides %)
                                               (:requires %))
                              (assoc :group (:group %))) required-js)
+                   [(when ana/*real-keywords*
+                      (let [url (to-url (str (output-directory opts) "/constants_table.js"))]
+                        (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
                    required-cljs
                    inputs)))))
 
@@ -953,6 +956,9 @@
               ana/*cljs-warnings*
               (assoc ana/*cljs-warnings* :undeclared (true? (opts :warnings)))]
       (let [compiled (-compile source all-opts)
+            ; Cause the constants table file to be written
+            const-table (when ana/*real-keywords*
+                          (comp/emit-constants-table-to-file @ana/*constant-table* (str (output-directory all-opts) "/constants_table.js")))
             js-sources (concat
                          (apply add-dependencies all-opts
                             (concat (if (coll? compiled) compiled [compiled])

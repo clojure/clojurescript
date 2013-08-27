@@ -1192,9 +1192,7 @@ reduces them without incurring seq initialization"
 (defn ^boolean boolean [x]
   (if x true false))
 
-(defn ^boolean keyword? [x]
-  (and ^boolean (goog/isString x)
-       (identical? (.charAt x 0) \uFDD0)))
+(declare keyword?)
 
 (defn ^boolean ifn? [f]
   (or (fn? f) (satisfies? IFn f)))
@@ -1766,7 +1764,7 @@ reduces them without incurring seq initialization"
   one arg, returns the concatenation of the str values of the args."
   ([] "")
   ([x] (cond
-        (keyword? x) (str* ":" (. x (substring 2 (alength x))))
+        (keyword? x) (str* ":" (.-fqn x))
         (nil? x) ""
         :else (. x (toString))))
   ([x & ys]
@@ -1794,13 +1792,7 @@ reduces them without incurring seq initialization"
                 args)]
     (apply gstring/format fmt args)))
 
-(defn keyword
-  "Returns a Keyword with the given namespace and name.  Do not use :
-  in the keyword strings, it will be added automatically."
-  ([name] (cond (keyword? name) name
-                (symbol? name) (str* "\uFDD0" ":" (cljs.core/name name))
-                :else (str* "\uFDD0" ":" name)))
-  ([ns name] (keyword (str* ns "/" name))))
+(declare keyword)
 
 (defn- equiv-sequential
   "Assumes x is sequential. Returns true if x equals y, otherwise
@@ -2045,36 +2037,48 @@ reduces them without incurring seq initialization"
   IHash
   (-hash [o] (goog.string/hashCode o)))
 
-(deftype Keyword [k]
+(deftype Keyword [ns name fqn ^:mutable _hash]
+  Object
+  (toString [_] fqn)
+  IEquiv
+  (-equiv [_ other]
+    (if (instance? Keyword other)
+      (identical? fqn (.-fqn other))
+      false))
   IFn
-  (invoke [_ coll]
+  (invoke [kw coll]
     (when-not (nil? coll)
       (when (satisfies? ILookup coll)
-        (-lookup coll k nil))))
-  (invoke [_ coll not-found]
+        (-lookup coll kw nil))))
+  (invoke [kw coll not-found]
     (if (nil? coll)
       not-found
       (when (satisfies? ILookup coll)
-        (-lookup coll k not-found)))))
+        (-lookup coll kw not-found))))
+  IHash
+  (-hash [_]
+    ; This was checking if _hash == -1, should it stay that way?
+    (if (nil? _hash)
+      (do
+        (set! _hash (hash-combine (hash ns) (hash name)))
+        _hash)
+      _hash))
+  INamed
+  (-name [_] name)
+  (-namespace [_] ns)
+  IPrintWithWriter
+  (-pr-writer [o writer _] (-write writer (str ":" fqn))))
 
-;;hrm
-(extend-type js/String
-  IFn
-  (-invoke
-    ([this coll]
-       (get coll (.toString this)))
-    ([this coll not-found]
-       (get coll (.toString this) not-found))))
+(defn ^boolean keyword? [x]
+  (js* "~{} instanceof ~{}" x Keyword))
 
-(set! js/String.prototype.apply
-  (fn
-    [s args]
-    (if (< (alength args) 2)
-      (get (aget args 0) s)
-      (get (aget args 0) s (aget args 1)))))
-
-; could use reify
-;;; LazySeq ;;;
+(defn keyword
+  "Returns a Keyword with the given namespace and name.  Do not use :
+  in the keyword strings, it will be added automatically."
+  ([name] (cond (keyword? name) (Keyword. nil name name nil)
+                (symbol? name)  (Keyword. nil (cljs.core/name name) (cljs.core/name name) nil)
+                :else (Keyword. nil name name nil)))
+  ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))
 
 (defn- lazy-seq-value [lazy-seq]
   (let [x (.-x lazy-seq)]
