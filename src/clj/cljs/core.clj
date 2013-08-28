@@ -753,7 +753,7 @@
                   `(~'-lookup [this# k#] (-lookup this# k# nil))
                   `(~'-lookup [this# ~ksym else#]
                               (cond
-                               ~@(mapcat (fn [f] [`(identical? ~ksym ~(keyword f)) f]) base-fields)
+                               ~@(mapcat (fn [f] [`(keyword-identical? ~ksym ~(keyword f)) f]) base-fields)
                                :else (get ~'__extmap ~ksym else#)))
                   'ICounted
                   `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
@@ -766,7 +766,7 @@
                                       entry#)))
                   'IAssociative
                   `(~'-assoc [this# k# ~gs]
-                             (condp identical? k#
+                             (condp keyword-identical? k#
                                ~@(mapcat (fn [fld]
                                            [(keyword fld) (list* `new tagname (replace {fld gs '__hash nil} fields))])
                                          base-fields)

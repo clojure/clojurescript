@@ -149,16 +149,6 @@
   (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
     (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags)))
 
-(defmethod emit-constant clojure.lang.Keyword [x]
-  (if ana/*real-keywords*
-    (let [value (get @ana/*constant-table* x)]
-      (emits value))
-    (emits \" "\\uFDD0" \:
-           (if (namespace x)
-             (str (namespace x) "/") "")
-           (name x)
-           \")))
-
 (def ^:const goog-hash-max 0x100000000)
 
 (defn goog-string-hash [s]
@@ -166,6 +156,27 @@
     (fn [r c]
       (mod (+ (* 31 r) (int c)) goog-hash-max))
     0 s))
+
+(defmethod emit-constant clojure.lang.Keyword [x]
+  (if ana/*track-constants*
+    (let [value (get @ana/*constant-table* x)]
+      (emits "cljs.core." value))
+    (let [ns   (namespace x)
+          name (name x)]
+      (emits "new cljs.core.Keyword(")
+      (emit-constant ns)
+      (emits ",")
+      (emit-constant name)
+      (emits ",")
+      (emit-constant (if ns
+                       (str ns "/" name)
+                       name))
+      (emits ",")
+      (emit-constant (+ (clojure.lang.Util/hashCombine
+                          (unchecked-int (goog-string-hash ns))
+                          (unchecked-int (goog-string-hash name)))
+                         0x9e3779b9))
+      (emits ")"))))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
   (let [ns     (namespace x)
@@ -630,9 +641,7 @@
          (emits (first args) "." pimpl "(" (comma-sep args) ")"))
 
        keyword?
-       (if ana/*real-keywords*
-         (emits f ".call(" (comma-sep (cons "null" args)) ")")
-         (emits "(new cljs.core.Keyword(" f ")).call(" (comma-sep (cons "null" args)) ")"))
+       (emits f ".call(" (comma-sep (cons "null" args)) ")")
        
        variadic-invoke
        (let [mfa (:max-fixed-arity variadic-invoke)]
@@ -777,8 +786,10 @@
                   :provides [ns-name]
                   :requires (if (= ns-name 'cljs.core)
                               (set (vals deps))
-                              (set (remove nil? (conj (set (vals deps)) 'cljs.core
-                                                      (when ana/*real-keywords* 'constants-table)))))
+                              (set
+                                (remove nil?
+                                  (conj (set (vals deps)) 'cljs.core
+                                    (when ana/*track-constants* 'constants-table)))))
                   :file dest
                   :source-file src
                   :lines @*cljs-gen-line*}
@@ -913,11 +924,13 @@
   ;; files will be compiled to js.
   )
 
+;; TODO: needs fixing, table will include other things than keywords - David
+
 (defn emit-constants-table [table]
   (doseq [[keyword value] table]
-    (let [ns (namespace keyword)
+    (let [ns   (namespace keyword)
           name (name keyword)]
-      (emits value "=new cljs.core.Keyword(")
+      (emits "cljs.core." value " = new cljs.core.Keyword(")
       (emit-constant ns)
       (emits ",")
       (emit-constant name)

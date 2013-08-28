@@ -24,7 +24,7 @@
 (def ^:dynamic *cljs-macros-is-classpath* true)
 (def -cljs-macros-loaded (atom false))
 
-(def ^:dynamic *real-keywords* true)
+(def ^:dynamic *track-constants* false)
 (def ^:dynamic *constant-table* (atom {}))
 
 (def ^:dynamic *cljs-warnings*
@@ -36,27 +36,25 @@
    :fn-deprecated true
    :protocol-deprecated true})
 
-(def keyword_counter (atom 0))
+(def constant-counter (atom 0))
 
-(defn genid
-  "Returns a new symbol with a unique name. If a prefix string is
-  supplied, the name is prefix# where # is some unique number. If
-  prefix is not supplied, the prefix is 'K__'."
-  ([] (genid "K__"))
-  ([prefix-string]
-     (when (nil? keyword_counter)
-       (set! keyword_counter (atom 0)))
-     (symbol (str prefix-string (swap! keyword_counter inc)))))
+(defn gen-constant-id [value]
+  (let [prefix (cond
+                 (keyword? value) "constant$keyword$"
+                 :else
+                 (throw
+                   (Exception. (str "constant type " (type value) " not supported"))))]
+    (symbol (str prefix (swap! constant-counter inc)))))
 
 (defn reset-constant-table! []
   (reset! *constant-table* {}))
 
-(defn register-constant! [k]
+(defn register-constant! [val]
   (swap! *constant-table*
-         (fn [table]
-           (if (get table k)
-             table
-             (assoc table k (genid))))))
+    (fn [table]
+      (if (get table val)
+        table
+        (assoc table val (gen-constant-id val))))))
 
 (defonce namespaces (atom '{cljs.core {:name cljs.core}
                             cljs.user {:name cljs.user}}))
@@ -250,9 +248,10 @@
 (defmacro disallowing-recur [& body]
   `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
 
+;; TODO: move this logic out - David
 (defn analyze-keyword
     [env sym]
-    (when *real-keywords*
+    (when *track-constants*
       (register-constant! sym))
     {:op :constant :env env
      :form sym})

@@ -57,6 +57,8 @@
 
 (def not-native nil)
 
+(declare instance? Keyword)
+
 (defn ^boolean identical?
   "Tests if 2 arguments are the same object"
   [x y]
@@ -1192,8 +1194,6 @@ reduces them without incurring seq initialization"
 (defn ^boolean boolean [x]
   (if x true false))
 
-(declare keyword?)
-
 (defn ^boolean ifn? [f]
   (or (fn? f) (satisfies? IFn f)))
 
@@ -1745,33 +1745,19 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;; basics ;;;;;;;;;;;;;;;;;;
 
-(defn- str*
-  "Internal - do not use!"
-  ([] "")
-  ([x] (cond
-        (nil? x) ""
-        :else (. x (toString))))
-  ([x & ys]
-     ((fn [sb more]
-        (if more
-          (recur (. sb  (append (str* (first more)))) (next more))
-          (str* sb)))
-      (gstring/StringBuffer. (str* x)) ys)))
-
 (defn str
   "With no args, returns the empty string. With one arg x, returns
   x.toString().  (str nil) returns the empty string. With more than
   one arg, returns the concatenation of the str values of the args."
   ([] "")
-  ([x] (cond
-        (keyword? x) (str* ":" (.-fqn x))
-        (nil? x) ""
-        :else (. x (toString))))
+  ([x] (if (nil? x)
+         ""
+         (.toString x)))
   ([x & ys]
      ((fn [sb more]
         (if more
           (recur (. sb  (append (str (first more)))) (next more))
-          (str* sb)))
+          (.toString sb)))
       (gstring/StringBuffer. (str x)) ys)))
 
 (defn subs
@@ -1785,14 +1771,7 @@ reduces them without incurring seq initialization"
 (defn format
   "Formats a string using goog.string.format."
   [fmt & args]
-  (let [args (map (fn [x]
-                    (if (or (keyword? x) (symbol? x))
-                      (str x)
-                      x))
-                args)]
-    (apply gstring/format fmt args)))
-
-(declare keyword)
+  (apply gstring/format fmt args))
 
 (defn- equiv-sequential
   "Assumes x is sequential. Returns true if x equals y, otherwise
@@ -2039,7 +2018,8 @@ reduces them without incurring seq initialization"
 
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
-  (toString [_] fqn)
+  (toString [_] (str ":" fqn))
+  
   IEquiv
   (-equiv [_ other]
     (if (instance? Keyword other)
@@ -2060,7 +2040,8 @@ reduces them without incurring seq initialization"
     ; This was checking if _hash == -1, should it stay that way?
     (if (nil? _hash)
       (do
-        (set! _hash (hash-combine (hash ns) (hash name)))
+        (set! _hash (+ (hash-combine (hash ns) (hash name))
+                        0x9e3779b9))
         _hash)
       _hash))
   INamed
@@ -2070,14 +2051,23 @@ reduces them without incurring seq initialization"
   (-pr-writer [o writer _] (-write writer (str ":" fqn))))
 
 (defn ^boolean keyword? [x]
-  (js* "~{} instanceof ~{}" x Keyword))
+  (instance? Keyword x))
+
+(defn ^boolean keyword-identical? [x y]
+  (if (identical? x y)
+    true
+    (if (and (keyword? x)
+             (keyword? y))
+      (identical? (.-fqn x) (.-fqn y))
+      false)))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
-  ([name] (cond (keyword? name) (Keyword. nil name name nil)
-                (symbol? name)  (Keyword. nil (cljs.core/name name) (cljs.core/name name) nil)
-                :else (Keyword. nil name name nil)))
+  ([name] (cond
+            (keyword? name)(Keyword. nil name name nil)
+            (symbol? name) (Keyword. nil (cljs.core/name name) (cljs.core/name name) nil)
+            :else (Keyword. nil name name nil)))
   ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))
 
 (defn- lazy-seq-value [lazy-seq]
@@ -3980,6 +3970,17 @@ reduces them without incurring seq initialization"
         (nil? (aget arr i)) i
         :else (recur (+ i 2))))))
 
+(defn- array-map-index-of-keyword? [arr m k]
+  (let [len  (alength arr)
+        kstr (.-fqn k)]
+    (loop [i 0]
+      (cond
+        (<= len i) -1
+        (let [k' (aget arr i)]
+          (and (keyword? k')
+               (identical? kstr (.-fqn k')))) i
+        :else (recur (+ i 2))))))
+
 (defn- array-map-index-of-symbol? [arr m k]
   (let [len  (alength arr)
         kstr (.-str k)]
@@ -4010,6 +4011,8 @@ reduces them without incurring seq initialization"
 (defn- array-map-index-of [m k]
   (let [arr (.-arr m)]
     (cond
+      (keyword? k) (array-map-index-of-keyword? arr m k)
+
       (or ^boolean (goog/isString k) (number? k))
       (array-map-index-of-identical? arr m k)
 
@@ -4291,9 +4294,10 @@ reduces them without incurring seq initialization"
 (declare create-inode-seq create-array-node-seq reset! create-node atom deref)
 
 (defn ^boolean key-test [key other]
-  (if ^boolean (goog/isString key)
-    (identical? key other)
-    (= key other)))
+  (cond
+    (identical? key other) true
+    (keyword-identical? key other) true
+    :else (= key other)))
 
 (defn- mask [hash shift]
   (bit-and (bit-shift-right-zero-fill hash shift) 0x01f))
@@ -6230,25 +6234,16 @@ reduces them without incurring seq initialization"
   [x]
   (if (satisfies? INamed x false)
     (-name ^not-native x)
-    (cond
-      (string? x) x
-      (keyword? x)
-      (let [i (.lastIndexOf x "/" (- (alength x) 2))]
-        (if (< i 0)
-          (subs x 2)
-          (subs x (inc i))))
-      :else (throw (js/Error. (str "Doesn't support name: " x))))))
+    (if (string? x)
+      x
+      (throw (js/Error. (str "Doesn't support name: " x))))))
 
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
   (if (satisfies? INamed x false)
     (-namespace ^not-native x)
-    (if (keyword? x)
-      (let [i (.lastIndexOf x "/" (- (alength x) 2))]
-        (when (> i -1)
-          (subs x 2 i)))
-      (throw (js/Error. (str "Doesn't support namespace: " x))))))
+    (throw (js/Error. (str "Doesn't support namespace: " x)))))
 
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."
@@ -6633,21 +6628,9 @@ reduces them without incurring seq initialization"
               (pr-sequential-writer writer pr-writer "#<Array [" ", " "]>" opts obj)
 
               ^boolean (goog/isString obj)
-              (cond
-                (keyword? obj)
-                (do
-                  (-write writer ":")
-                  (when-let [nspc (namespace obj)]
-                    (write-all writer (str nspc) "/"))
-                  (-write writer (name obj)))
-                (symbol? obj)
-                (do
-                  (when-let [nspc (namespace obj)]
-                    (write-all writer (str nspc) "/"))
-                  (-write writer (name obj)))
-                :else (if (:readably opts)
-                        (-write writer (quote-string obj))
-                        (-write writer obj)))
+              (if (:readably opts)
+                (-write writer (quote-string obj))
+                (-write writer obj))
 
               (fn? obj)
               (write-all writer "#<" (str obj) ">")

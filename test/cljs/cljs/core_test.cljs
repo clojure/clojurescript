@@ -1867,9 +1867,9 @@
   ;; CLJS-493
 
   (assert (nil? (get 42 :anything)))
-  (assert (identical? (get 42 :anything :not-found) :not-found))
+  (assert (= (get 42 :anything :not-found) :not-found))
   (assert (nil? (first (map get [42] [:anything]))))
-  (assert (identical? (first (map get [42] [:anything] [:not-found])) :not-found))
+  (assert (= (first (map get [42] [:anything] [:not-found])) :not-found))
 
   ;; CLJS-481
 
