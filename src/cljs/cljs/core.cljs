@@ -7364,7 +7364,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-dispatch [mf args]))
 
 (defn- do-dispatch
-  [mf dispatch-fn args]
+  [mf name dispatch-fn args]
   (let [dispatch-val (apply dispatch-fn args)
         target-fn (-get-method mf dispatch-val)]
     (when-not target-fn
@@ -7415,7 +7415,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
 
-  (-dispatch [mf args] (do-dispatch mf dispatch-fn args))
+  (-dispatch [mf args] (do-dispatch mf name dispatch-fn args))
 
   IHash
   (-hash [this] (goog/getUid this)))
