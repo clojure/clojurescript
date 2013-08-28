@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical? true? false? number? nil? instance? symbol? str get
+                            satisfies? identical? true? false? number? nil? instance? symbol? keyword? str get
                             make-array
 
                             aget aset
@@ -257,6 +257,9 @@
 
 (defmacro symbol? [x]
   (bool-expr `(instance? Symbol ~x)))
+
+(defmacro keyword? [x]
+  (bool-expr `(instance? Keyword ~x)))
 
 (defmacro aget
   ([a i]
@@ -1055,7 +1058,7 @@
      (even? (count seq-exprs)) "an even number of forms in binding vector")
   (let [to-groups (fn [seq-exprs]
                     (reduce (fn [groups [k v]]
-                              (if (keyword? k)
+                              (if (core/keyword? k)
                                 (conj (pop groups) (conj (peek groups) [k v]))
                                 (conj groups [k v])))
                             [] (partition 2 seq-exprs)))
@@ -1071,7 +1074,7 @@
                                      (= k :when) `(if ~v
                                                     ~(do-mod etc)
                                                     (recur (rest ~gxs)))
-                                     (keyword? k) (err "Invalid 'for' keyword " k)
+                                     (core/keyword? k) (err "Invalid 'for' keyword " k)
                                      next-groups
                                       `(let [iterys# ~(emit-bind next-groups)
                                              fs# (seq (iterys# ~next-expr))]
@@ -1098,7 +1101,7 @@
                                                          ~(do-cmod etc)
                                                          (recur
                                                            (unchecked-inc ~gi)))
-                                          (keyword? k)
+                                          (core/keyword? k)
                                             (err "Invalid 'for' keyword " k)
                                           :else
                                             `(do (chunk-append ~gb ~body-expr)
@@ -1142,7 +1145,7 @@
                        v (second exprs)
 
                        seqsym (gensym "seq__")
-                       recform (if (keyword? k) recform `(recur (next ~seqsym) nil 0 0))
+                       recform (if (core/keyword? k) recform `(recur (next ~seqsym) nil 0 0))
                        steppair (step recform (nnext exprs))
                        needrec (steppair 0)
                        subform (steppair 1)]
@@ -1156,7 +1159,7 @@
                                              ~subform
                                              ~@(when needrec [recform]))
                                            ~recform)]
-                     (keyword? k) (err "Invalid 'doseq' keyword" k)
+                     (core/keyword? k) (err "Invalid 'doseq' keyword" k)
                      :else (let [chunksym (with-meta (gensym "chunk__")
                                             {:tag 'not-native})
                                  countsym (gensym "count__")
