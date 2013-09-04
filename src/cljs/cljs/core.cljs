@@ -438,7 +438,7 @@
       (when-not (zero? (alength coll))
         (IndexedSeq. coll 0))
 
-      (type_satisfies_ ILookup coll)
+      (type_satisfies_ ISeqable coll)
       (-seq coll)
 
       :else (throw (js/Error. (str coll "is not ISeqable"))))))
