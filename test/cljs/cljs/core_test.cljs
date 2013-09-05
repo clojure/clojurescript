@@ -1938,5 +1938,10 @@
   (assert (= #{1 2} (hash-set 1 2 2)))
   (assert (= #{1 2} (apply hash-set [1 2 2])))
 
+  ;; CLJS-585
+  (assert (= (last (map identity (into [] (range 32)))) 31))
+  (assert (= (into #{} (range 32))
+             (set (map identity (into [] (range 32))))))
+
   :ok
   )

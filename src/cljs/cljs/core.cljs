@@ -2204,6 +2204,14 @@ reduces them without incurring seq initialization"
         ()
         more)))
 
+  INext
+  (-next [coll]
+    (if (> (-count chunk) 1)
+      (ChunkedCons. (-drop-first chunk) more meta nil)
+      (let [more (-seq more)]
+        (when-not (nil? more)
+          more))))
+
   IChunkedSeq
   (-chunked-first [coll] chunk)
   (-chunked-rest [coll]
@@ -6157,16 +6165,19 @@ reduces them without incurring seq initialization"
 (defn set
   "Returns a set of the distinct elements of coll."
   [coll]
-  (if-not (nil? coll)
-    (let [^not-native in (seq coll)]
-      (if (instance? IndexedSeq in)
-        (set-from-indexed-seq in)
-        (loop [in in
-               ^not-native out (-as-transient #{})]
-          (if-not (nil? in)
-            (recur (-next in) (-conj! out (-first in)))
-            (-persistent! out)))))
-    #{}))
+  (let [^not-native in (seq coll)]
+    (cond
+      (nil? in) #{}
+
+      (instance? IndexedSeq in)
+      (set-from-indexed-seq in)
+
+      :else
+      (loop [in in
+              ^not-native out (-as-transient #{})]
+        (if-not (nil? in)
+          (recur (-next in) (-conj! out (-first in)))
+          (-persistent! out))))))
 
 (defn hash-set
   ([] #{})
