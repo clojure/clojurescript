@@ -833,9 +833,10 @@
           (if (or (requires-compilation? src-file dest-file) (:source-map opts))
             (do (mkdirs dest-file)
               (compile-file* src-file dest-file opts))
-            (do
-              (ana/analyze-file src-file)
-              (parse-ns src-file dest-file opts)))
+            (let [ns-info (parse-ns src-file dest-file opts)]
+              (when-not (contains? @ana/namespaces (:ns ns-info))
+                (ana/analyze-file src-file))
+              ns-info))
           (catch Exception e
             (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
