@@ -941,7 +941,10 @@
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts] (build source opts false))
   ([source opts reset]
-    (when reset
+    (when (or reset
+              (= (:optimizations opts) :advanced)
+              (:optimize-constants opts))
+      (ana/reset-constant-table!)
       (ana/reset-namespaces!))
     (let [opts (if (= :nodejs (:target opts))
                  (merge {:optimizations :simple} opts)
@@ -952,11 +955,11 @@
                      :ups-foreign-libs (:foreign-libs ups-deps)
                      :ups-externs (:externs ups-deps))]
       (binding [ana/*cljs-static-fns*
-                (or (and (= (opts :optimizations) :advanced))
+                (or (= (opts :optimizations) :advanced)
                     (:static-fns opts)
                     ana/*cljs-static-fns*)
                 ana/*track-constants*
-                (or (and (= (opts :optimizations) :advanced))
+                (or (= (opts :optimizations) :advanced)
                     (:optimize-constants opts)
                     ana/*track-constants*)
                 ana/*cljs-warnings*
