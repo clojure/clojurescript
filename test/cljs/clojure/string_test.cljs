@@ -34,6 +34,9 @@
   (assert (= ["a" "b" "c"] (s/split "a-b-c" #"-" 4)))
   (assert (vector? (s/split "abc" #"-")))
   (assert (= ["a-b-c"] (s/split "a-b-c" #"x" 2)))
+  (assert (= ["" "a" "b" "c" ""] (s/split "abc" (re-pattern "") 5)))
+  (assert (= ["a"] (s/split "ab" #"b")))
+  (assert (= [] (s/split "ab" #"ab")))
   ;; split-lines
   (let [result (s/split-lines "one\ntwo\r\nthree")]
     (assert (= ["one" "two" "three"] result))

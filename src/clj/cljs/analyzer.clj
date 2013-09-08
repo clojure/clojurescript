@@ -957,7 +957,7 @@
 (defn analyze-seq
   [env form name]
   (if (:quoted? env)
-    (analyze-list env form name)
+    (analyze-list env form)
     (let [env (assoc env
                 :line (or (-> form meta :line)
                           (:line env))
@@ -976,40 +976,39 @@
 (declare analyze-wrap-meta)
 
 (defn analyze-map
-  [env form name]
+  [env form]
   (let [expr-env (assoc env :context :expr)
-        ks (disallowing-recur (vec (map #(analyze expr-env % name) (keys form))))
-        vs (disallowing-recur (vec (map #(analyze expr-env % name) (vals form))))]
+        ks (disallowing-recur (vec (map #(analyze expr-env %) (keys form))))
+        vs (disallowing-recur (vec (map #(analyze expr-env %) (vals form))))]
     (analyze-wrap-meta {:op :map :env env :form form
                         :keys ks :vals vs
-                        :children (vec (interleave ks vs))}
-                       name)))
+                        :children (vec (interleave ks vs))})))
 
 (defn analyze-list
-  [env form name]
+  [env form]
   (let [expr-env (assoc env :context :expr)
-        items (disallowing-recur (doall (map #(analyze expr-env % name) form)))]
-    (analyze-wrap-meta {:op :list :env env :form form :items items :children items} name)))
+        items (disallowing-recur (doall (map #(analyze expr-env %) form)))]
+    (analyze-wrap-meta {:op :list :env env :form form :items items :children items})))
 
 (defn analyze-vector
-  [env form name]
+  [env form]
   (let [expr-env (assoc env :context :expr)
-        items (disallowing-recur (vec (map #(analyze expr-env % name) form)))]
-    (analyze-wrap-meta {:op :vector :env env :form form :items items :children items} name)))
+        items (disallowing-recur (vec (map #(analyze expr-env %) form)))]
+    (analyze-wrap-meta {:op :vector :env env :form form :items items :children items})))
 
 (defn analyze-set
-  [env form name]
+  [env form ]
   (let [expr-env (assoc env :context :expr)
-        items (disallowing-recur (vec (map #(analyze expr-env % name) form)))]
-    (analyze-wrap-meta {:op :set :env env :form form :items items :children items} name)))
+        items (disallowing-recur (vec (map #(analyze expr-env %) form)))]
+    (analyze-wrap-meta {:op :set :env env :form form :items items :children items})))
 
-(defn analyze-wrap-meta [expr name]
+(defn analyze-wrap-meta [expr]
   (let [form (:form expr)
         m (dissoc (meta form) :line :column)]
     (if (seq m)
       (let [env (:env expr) ; take on expr's context ourselves
             expr (assoc-in expr [:env :context] :expr) ; change expr to :expr
-            meta-expr (analyze-map (:env expr) m name)]
+            meta-expr (analyze-map (:env expr) m)]
         {:op :meta :env env :form form
          :meta meta-expr :expr expr :children [meta-expr expr]})
       expr)))
@@ -1031,11 +1030,11 @@
        (cond
         (symbol? form) (analyze-symbol env form)
         (and (seq? form) (seq form)) (analyze-seq env form name)
-        (map? form) (analyze-map env form name)
-        (vector? form) (analyze-vector env form name)
-        (set? form) (analyze-set env form name)
+        (map? form) (analyze-map env form)
+        (vector? form) (analyze-vector env form)
+        (set? form) (analyze-set env form)
         (keyword? form) (analyze-keyword env form)
-        (= form ()) (analyze-list env form name)
+        (= form ()) (analyze-list env form)
         :else {:op :constant :env env :form form})))))
 
 (defn forms-seq
@@ -1047,12 +1046,16 @@
       (if-let [form (binding [*ns* (create-ns *cljs-ns*)] (reader/read rdr nil nil))]
         (cons form (forms-seq f rdr))))))
 
-(defn analyze-file
-  [^String f]
-  (let [res (if (re-find #"^file://" f) (java.net.URL. f) (io/resource f))]
+(defn analyze-file [f]
+  (let [res (cond
+              (instance? java.io.File f) f
+              (re-find #"^file://" f) (java.net.URL. f)
+              :else (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))
     (binding [*cljs-ns* 'cljs.user
-              *cljs-file* (.getPath ^java.net.URL res)]
+              *cljs-file* (if (instance? java.io.File res)
+                            (.getPath ^java.io.File res)
+                            (.getPath ^java.net.URL res))]
       (with-open [r (io/reader res)]
         (let [env (empty-env)
               pbr (clojure.lang.LineNumberingPushbackReader. r)

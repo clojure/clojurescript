@@ -1933,5 +1933,19 @@
                   (max (f! 5) (g! 10))
                   (min (f! 5) (g! 10))))))
 
+  ;; CLJS-582
+  (assert (= #{1 2} (set [1 2 2])))
+  (assert (= #{1 2} (hash-set 1 2 2)))
+  (assert (= #{1 2} (apply hash-set [1 2 2])))
+
+  ;; CLJS-585
+  (assert (= (last (map identity (into [] (range 32)))) 31))
+  (assert (= (into #{} (range 32))
+             (set (map identity (into [] (range 32))))))
+
+  ;; CLJS-580
+  (def foo580 {:a (fn []) :b (fn [] (foo580 :a))})
+  (assert (nil? (((:b foo580)))))
+
   :ok
   )

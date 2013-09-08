@@ -440,7 +440,7 @@
       (when-not (zero? (alength coll))
         (IndexedSeq. coll 0))
 
-      (type_satisfies_ ILookup coll)
+      (type_satisfies_ ISeqable coll)
       (-seq coll)
 
       :else (throw (js/Error. (str coll "is not ISeqable"))))))
@@ -2197,6 +2197,14 @@ reduces them without incurring seq initialization"
       (if (nil? more)
         ()
         more)))
+
+  INext
+  (-next [coll]
+    (if (> (-count chunk) 1)
+      (ChunkedCons. (-drop-first chunk) more meta nil)
+      (let [more (-seq more)]
+        (when-not (nil? more)
+          more))))
 
   IChunkedSeq
   (-chunked-first [coll] chunk)
@@ -6156,32 +6164,32 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentTreeSet/EMPTY
   (PersistentTreeSet. nil cljs.core.PersistentTreeMap/EMPTY 0))
 
-(defn hash-set
-  ([] cljs.core.PersistentHashSet/EMPTY)
-  ([& ^not-native keys]
-     (if (and (instance? IndexedSeq keys)
-              (< (alength (.-arr keys)) cljs.core.PersistentArrayMap/HASHMAP_THRESHOLD))
-       (let [karr (.-arr keys)
-             klen (alength karr)
-             alen (* 2 klen)
-             arr  (make-array alen)]
-         (loop [ki 0]
-           (if (< ki klen)
-             (let [ai (* 2 ki)]
-               (aset arr ai (aget karr ki))
-               (aset arr (inc ai) nil)
-               (recur (inc ki)))
-             (cljs.core.PersistentHashSet/fromArray arr true))))
-       (loop [in keys
-              ^not-native out (-as-transient cljs.core.PersistentHashSet/EMPTY)]
-         (if-not (nil? in)
-           (recur (-next in) (-conj! out (-first in)))
-           (-persistent! out))))))
+(defn set-from-indexed-seq [iseq]
+  (let [arr (.-arr iseq)
+        ret (areduce arr i ^not-native res (-as-transient #{})
+              (-conj! res (aget arr i)))]
+    (-persistent! ^not-native ret)))
 
 (defn set
   "Returns a set of the distinct elements of coll."
   [coll]
-  (apply hash-set coll))
+  (let [^not-native in (seq coll)]
+    (cond
+      (nil? in) #{}
+
+      (instance? IndexedSeq in)
+      (set-from-indexed-seq in)
+
+      :else
+      (loop [in in
+              ^not-native out (-as-transient #{})]
+        (if-not (nil? in)
+          (recur (-next in) (-conj! out (-first in)))
+          (-persistent! out))))))
+
+(defn hash-set
+  ([] #{})
+  ([& keys] (set keys)))
 
 (defn sorted-set
   "Returns a new sorted set with supplied keys."
