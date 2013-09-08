@@ -784,24 +784,28 @@
       (> (.lastModified src) (.lastModified dest))))
 
 (defn parse-ns [src dest opts]
-  (with-core-cljs
-    (binding [ana/*cljs-ns* 'cljs.user]
-      (loop [forms (ana/forms-seq src)]
-        (if (seq forms)
-          (let [env (ana/empty-env)
-                ast (ana/analyze env (first forms))]
-            (if (= (:op ast) :ns)
-              (let [ns-name (:name ast)
-                    deps    (merge (:uses ast) (:requires ast))]
-                {:ns (or ns-name 'cljs.user)
-                 :provides [ns-name]
-                 :requires (if (= ns-name 'cljs.core)
-                             (set (vals deps))
-                             (conj (set (vals deps)) 'cljs.core))
-                 :file dest
-                 :source-file src
-                 :lines (-> dest io/reader line-seq count)})
-              (recur (rest forms)))))))))
+  (let [namespaces' @ana/namespaces
+        ret
+        (with-core-cljs
+          (binding [ana/*cljs-ns* 'cljs.user]
+            (loop [forms (ana/forms-seq src)]
+              (if (seq forms)
+                (let [env (ana/empty-env)
+                      ast (ana/analyze env (first forms))]
+                  (if (= (:op ast) :ns)
+                    (let [ns-name (:name ast)
+                          deps    (merge (:uses ast) (:requires ast))]
+                      {:ns (or ns-name 'cljs.user)
+                       :provides [ns-name]
+                       :requires (if (= ns-name 'cljs.core)
+                                   (set (vals deps))
+                                   (conj (set (vals deps)) 'cljs.core))
+                       :file dest
+                       :source-file src
+                       :lines (-> dest io/reader line-seq count)})
+                    (recur (rest forms))))))))]
+    (reset! ana/namespaces namespaces')
+    ret))
 
 (defn compile-file
   "Compiles src to a file of the same name, but with a .js extension,
@@ -823,13 +827,15 @@
     (compile-file src dest nil))
   ([src dest opts]
     (let [src-file (io/file src)
-           dest-file (io/file dest)]
+          dest-file (io/file dest)]
       (if (.exists src-file)
         (try
           (if (or (requires-compilation? src-file dest-file) (:source-map opts))
             (do (mkdirs dest-file)
               (compile-file* src-file dest-file opts))
-            (parse-ns src-file dest-file opts))
+            (do
+              (ana/analyze-file src-file)
+              (parse-ns src-file dest-file opts)))
           (catch Exception e
             (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))

@@ -1020,12 +1020,16 @@
       (if-let [form (binding [*ns* (create-ns *cljs-ns*)] (reader/read rdr nil nil))]
         (cons form (forms-seq f rdr))))))
 
-(defn analyze-file
-  [^String f]
-  (let [res (if (re-find #"^file://" f) (java.net.URL. f) (io/resource f))]
+(defn analyze-file [f]
+  (let [res (cond
+              (instance? java.io.File f) f
+              (re-find #"^file://" f) (java.net.URL. f)
+              :else (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))
     (binding [*cljs-ns* 'cljs.user
-              *cljs-file* (.getPath ^java.net.URL res)]
+              *cljs-file* (if (instance? java.io.File res)
+                            (.getPath ^java.io.File res)
+                            (.getPath ^java.net.URL res))]
       (with-open [r (io/reader res)]
         (let [env (empty-env)
               pbr (clojure.lang.LineNumberingPushbackReader. r)
