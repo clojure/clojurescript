@@ -936,39 +936,41 @@
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
-  [source opts]
-  (ana/reset-namespaces!)
-  (let [opts (if (= :nodejs (:target opts))
-               (merge {:optimizations :simple} opts)
-               opts)
-        ups-deps (get-upstream-deps)
-        all-opts (assoc opts 
-                   :ups-libs (:libs ups-deps)
-                   :ups-foreign-libs (:foreign-libs ups-deps)
-                   :ups-externs (:externs ups-deps))]
-    (binding [ana/*cljs-static-fns*
-              (or (and (= (opts :optimizations) :advanced))
-                  (:static-fns opts)
-                  ana/*cljs-static-fns*)
-              ana/*cljs-warnings*
-              (assoc ana/*cljs-warnings* :undeclared (true? (opts :warnings)))]
-      (let [compiled (-compile source all-opts)
-            js-sources (concat
-                         (apply add-dependencies all-opts
-                            (concat (if (coll? compiled) compiled [compiled])
-                                    (when (= :nodejs (:target all-opts))
-                                      [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
-                         (when (= :nodejs (:target all-opts))
-                           [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
-            optim (:optimizations all-opts)]
-        (if (and optim (not= optim :none))
-          (->> js-sources
-               (apply optimize all-opts)
-               (add-header all-opts)
-               (add-wrapper all-opts)
-               (add-source-map-link all-opts)
-               (output-one-file all-opts))
-          (apply output-unoptimized all-opts js-sources))))))
+  ([source opts] (build source opts false))
+  ([source opts reset]
+    (when reset
+      (ana/reset-namespaces!))
+    (let [opts (if (= :nodejs (:target opts))
+                 (merge {:optimizations :simple} opts)
+                 opts)
+          ups-deps (get-upstream-deps)
+          all-opts (assoc opts 
+                     :ups-libs (:libs ups-deps)
+                     :ups-foreign-libs (:foreign-libs ups-deps)
+                     :ups-externs (:externs ups-deps))]
+      (binding [ana/*cljs-static-fns*
+                (or (and (= (opts :optimizations) :advanced))
+                    (:static-fns opts)
+                    ana/*cljs-static-fns*)
+                ana/*cljs-warnings*
+                (assoc ana/*cljs-warnings* :undeclared (true? (opts :warnings)))]
+        (let [compiled (-compile source all-opts)
+              js-sources (concat
+                           (apply add-dependencies all-opts
+                             (concat (if (coll? compiled) compiled [compiled])
+                               (when (= :nodejs (:target all-opts))
+                                 [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
+                            (when (= :nodejs (:target all-opts))
+                              [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
+              optim (:optimizations all-opts)]
+          (if (and optim (not= optim :none))
+            (->> js-sources
+              (apply optimize all-opts)
+              (add-header all-opts)
+              (add-wrapper all-opts)
+              (add-source-map-link all-opts)
+              (output-one-file all-opts))
+            (apply output-unoptimized all-opts js-sources)))))))
 
 (comment
 
