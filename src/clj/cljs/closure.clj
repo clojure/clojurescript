@@ -515,7 +515,7 @@
   (concat
    (mapcat #(load-library % true) ups-libs) ;upstream deps
    (mapcat load-library libs)
-   (mapcat #(load-foreign-library % true) ups-flibs) ;upstream deps
+   (map #(load-foreign-library % true) ups-flibs) ;upstream deps
    (map load-foreign-library foreign-libs)))
 
 (comment
