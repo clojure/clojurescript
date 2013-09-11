@@ -9,7 +9,6 @@
 (ns cljs.core
   (:require [goog.string :as gstring]
             [goog.string.StringBuffer :as gstringbuf]
-            [goog.string.format]
             [goog.object :as gobject]
             [goog.array :as garray]))
 
@@ -1762,11 +1761,6 @@ reduces them without incurring seq initialization"
   ([s start end] (.substring s start end)))
 
 (declare map name)
-
-(defn format
-  "Formats a string using goog.string.format."
-  [fmt & args]
-  (apply gstring/format fmt args))
 
 (defn- equiv-sequential
   "Assumes x is sequential. Returns true if x equals y, otherwise
@@ -6749,11 +6743,6 @@ reduces them without incurring seq initialization"
   [& objs]
   (pr-with-opts objs (pr-opts))
   (newline (pr-opts)))
-
-(defn printf
-  "Prints formatted output, as per format"
-  [fmt & args]
-  (print (apply format fmt args)))
 
 (extend-protocol IPrintWithWriter
   LazySeq
