@@ -733,11 +733,6 @@ reduces them without incurring seq initialization"
   ([array i]
      (prim-seq array i)))
 
-(extend-type array
-  IReduce
-  (-reduce [col f] (array-reduce col f))
-  (-reduce [col f start] (array-reduce col f start)))
-
 (declare with-meta seq-reduce)
 
 (deftype RSeq [ci i meta]
