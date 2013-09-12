@@ -79,8 +79,7 @@
   [x] (if x false true))
 
 (defn ^boolean string? [x]
-  (and ^boolean (goog/isString x)
-    (not (identical? (.charAt x 0) \uFDD0))))
+  (goog/isString x))
 
 (set! *unchecked-if* true)
 (defn ^boolean type_satisfies_
