@@ -22,7 +22,7 @@
   (fn [_]
     (throw (js/Error. "No *print-fn* fn set for evaluation environment"))))
 
-(defn ^:export set-print-fn!
+(defn set-print-fn!
   "Set *print-fn* to f."
   [f] (set! *print-fn* f))
 
