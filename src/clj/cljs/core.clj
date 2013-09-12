@@ -15,7 +15,7 @@
                             memfn ns or proxy proxy-super pvalues refer-clojure reify sync time
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
-                            satisfies? identical? true? false? number? nil? instance? symbol? keyword? str get
+                            satisfies? identical? true? false? number? nil? instance? symbol? keyword? string? str get
                             make-array
 
                             aget aset
@@ -233,6 +233,9 @@
 
 (defmacro array? [x]
   (bool-expr (list 'js* "~{} instanceof Array" x)))
+
+(defmacro string? [x]
+  (bool-expr (list 'js* "typeof ~{} === 'string'" x)))
 
 (defmacro exists? [x]
   (bool-expr (list 'js* "typeof ~{} !== 'undefined'" x)))
