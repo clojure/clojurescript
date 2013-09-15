@@ -9,11 +9,13 @@
 (ns cljs.repl.browser
   (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.java.io :as io]
+            [clojure.string :as string]
             [cljs.compiler :as comp]
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
             [cljs.repl.server :as server])
-  (:import cljs.repl.IJavaScriptEnv))
+  (:import cljs.repl.IJavaScriptEnv
+           [java.util.regex Pattern]))
 
 (defonce browser-state (atom {:return-value-fn nil
                               :client-js nil}))
@@ -63,21 +65,32 @@
   (if (and (:static-dir opts)
            (not= "/favicon.ico" path))
     (let [path   (if (= "/" path) "/index.html" path)
-          st-dir (:static-dir opts)]
-      (if-let [local-path (seq (for [x (if (string? st-dir) [st-dir] st-dir)
-                                     :when (.exists (io/file (str x path)))]
-                                 (str x path)))]
-        (server/send-and-close conn 200 (slurp (first local-path))
-                        (condp #(.endsWith %2 %1) path
-                          ".html" "text/html"
-                          ".css" "text/css"
-                          ".html" "text/html"
-                          ".jpg" "image/jpeg"
-                          ".js" "text/javascript"
-                          ".cljs" "text/clojurescript"
-                          ".map" "application/json"
-                          ".png" "image/png"
-                          "text/plain"))
+          st-dir (:static-dir opts)
+          local-path (cond->
+                       (seq (for [x (if (string? st-dir) [st-dir] st-dir)
+                                  :when (.exists (io/file (str x path)))]
+                              (str x path)))
+                       (complement nil?) first)
+          local-path (if (nil? local-path)
+                       (cond
+                         (re-find #".jar" path)
+                         (io/resource (second (string/split path #".jar!/")))
+                         (re-find (Pattern/compile. (System/getProperty "user.dir")) path)
+                         (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
+                         :else nil)
+                       local-path)]
+      (if local-path
+        (server/send-and-close conn 200 (slurp local-path)
+          (condp #(.endsWith %2 %1) path
+            ".html" "text/html"
+            ".css" "text/css"
+            ".html" "text/html"
+            ".jpg" "image/jpeg"
+            ".js" "text/javascript"
+            ".cljs" "text/clojurescript"
+            ".map" "application/json"
+            ".png" "image/png"
+            "text/plain"))
         (server/send-404 conn path)))
     (server/send-404 conn path)))
 
