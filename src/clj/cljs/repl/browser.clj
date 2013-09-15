@@ -74,6 +74,8 @@
                           ".html" "text/html"
                           ".jpg" "image/jpeg"
                           ".js" "text/javascript"
+                          ".cljs" "text/clojurescript"
+                          ".map" "application/json"
                           ".png" "image/png"
                           "text/plain"))
         (server/send-404 conn path)))
@@ -86,6 +88,7 @@
 (server/dispatch-on :get
                     (fn [{:keys [path]} _ _] (or (= path "/")
                                                 (.endsWith path ".js")
+                                                (.endsWith path ".cljs")
                                                 (.endsWith path ".map")
                                                 (.endsWith path ".html")))
                     send-static)
