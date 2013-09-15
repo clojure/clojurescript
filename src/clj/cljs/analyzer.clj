@@ -395,7 +395,17 @@
                                                :line (get-line name env)
                                                :column (get-col name env)
                                                :tag (-> name meta :tag)
-                                               :shadow (when locals (locals name))}]
+                                               :shadow (when locals (locals name))
+                                               ;; Give the fn params the same shape
+                                               ;; as a :var, so it gets routed
+                                               ;; correctly in the compiler
+                                               :op :var
+                                               :env (merge (select-keys env [:context])
+                                                           {:line (get-line name env)
+                                                            :column (get-col name env)})
+                                               :info {:name name
+                                                      :shadow (when locals (locals name))}
+                                               :binding-form? true}]
                                     [(assoc locals name param) (conj params param)]))
                                 [locals []] param-names)
         fixed-arity (count (if variadic (butlast params) params))
@@ -520,7 +530,15 @@
                                   (-> init-expr :tag)
                                   (-> init-expr :info :tag))
                          :local true
-                         :shadow (-> env :locals name)}
+                         :shadow (-> env :locals name)
+                         ;; Give let* bindings same shape as var so
+                         ;; they get routed correctly in the compiler
+                         :op :var
+                         :env {:line (get-line name env)
+                               :column (get-col name env)}
+                         :info {:name name
+                                :shadow (-> env :locals name)}
+                         :binding-form? true}
                      be (if (= (:op init-expr) :fn)
                           (merge be
                             {:fn-var true

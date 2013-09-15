@@ -46,17 +46,22 @@
 
 (defonce ns-first-segments (atom '#{"cljs" "clojure"}))
 
+; Helper fn
+(defn shadow-depth [s]
+  (let [{:keys [name info]} s]
+    (loop [d 0, {:keys [shadow]} info]
+      (cond
+       shadow (recur (inc d) shadow)
+       (@ns-first-segments (str name)) (inc d)
+       :else d))))
+
 (defn munge
   ([s] (munge s js-reserved))
   ([s reserved]
     (if (map? s)
       ; Unshadowing
       (let [{:keys [name field] :as info} s
-            depth (loop [d 0, {:keys [shadow]} info]
-                    (cond
-                      shadow (recur (inc d) shadow)
-                      (@ns-first-segments (str name)) (inc d)
-                      :else d))
+            depth (shadow-depth s)
             renamed (*lexical-renames* (System/identityHashCode s))
             munged-name (munge (cond field (str "self__." name)
                                      renamed renamed
@@ -220,13 +225,23 @@
               (let [minfo {:gcol  @*cljs-gen-col*
                            :gline @*cljs-gen-line*
                            :name  var-name}]
-                (update-in m [line]
+                ; Dec the line number for 0-indexed line numbers.
+                ; tools.reader has 0-indexed line number, chrome
+                ; expects 1-indexed source maps.
+                (update-in m [(dec line)]
                   (fnil (fn [m]
                           (update-in m [(or column 0)]
                             (fnil (fn [v] (conj v minfo)) [])))
                     (sorted-map)))))))))
-    (when-not (= :statement (:context env))
-      (emit-wrap env (emits (munge info))))))
+    ; We need a way to write bindings out to source maps and javascript
+    ; without getting wrapped in an emit-wrap calls, otherwise we get
+    ; e.g. (function greet(return x, return y) {}).
+    (if (:binding-form? arg)
+      ; Emit the arg map so shadowing is properly handled when munging
+      ; (prevents duplicate fn-param-names)
+      (emits (munge arg))
+      (when-not (= :statement (:context env))
+        (emit-wrap env (emits (munge info)))))))
 
 (defmethod emit :meta
   [{:keys [expr meta env]}]
@@ -364,27 +379,57 @@
 (defn emit-apply-to
   [{:keys [name params env]}]
   (let [arglist (gensym "arglist__")
-        delegate-name (str (munge name) "__delegate")
-        params (map munge params)]
+        delegate-name (str (munge name) "__delegate")]
     (emitln "(function (" arglist "){")
     (doseq [[i param] (map-indexed vector (drop-last 2 params))]
-      (emits "var " param " = cljs.core.first(")
+      (emits "var ")
+      (emit param)
+      (emits " = cljs.core.first(")
       (emitln arglist ");")
       (emitln arglist " = cljs.core.next(" arglist ");"))
     (if (< 1 (count params))
       (do
-        (emitln "var " (last (butlast params)) " = cljs.core.first(" arglist ");")
-        (emitln "var " (last params) " = cljs.core.rest(" arglist ");")
-        (emitln "return " delegate-name "(" (string/join ", " params) ");"))
+        (emits "var ")
+        (emit (last (butlast params)))
+        (emitln " = cljs.core.first(" arglist ");")
+        (emits "var ")
+        (emit (last params))
+        (emitln " = cljs.core.rest(" arglist ");")
+        (emits "return " delegate-name "(")
+        (doseq [param params]
+          (emit param)
+          (when-not (= param (last params)) (emits ",")))
+        (emitln ");"))
       (do
-        (emitln "var " (last params) " = cljs.core.seq(" arglist ");")
-        (emitln "return " delegate-name "(" (string/join ", " params) ");")))
+        (emits "var ")
+        (emit (last params))
+        (emitln " = cljs.core.seq(" arglist ");")
+        (emits "return " delegate-name "(")
+        (doseq [param params]
+          (emit param)
+          (when-not (= param (last params)) (emits ",")))
+        (emitln ");")))
     (emits "})")))
+
+(defn emit-fn-params [params]
+  (doseq [param params]
+    (emit param)
+    ; Avoid extraneous comma (function greet(x, y, z,)
+    (when-not (= param (last params))
+      (emits ","))))
 
 (defn emit-fn-method
   [{:keys [type name variadic params expr env recurs max-fixed-arity]}]
   (emit-wrap env
-             (emitln "(function " (munge name) "(" (comma-sep (map munge params)) "){")
+             ; Should we emit source-map for this inner declaration?
+             ; It may be unnecessary.
+             ;                   hello.core.greet = (function greet(){})
+             ; e.g. Do we need a source-map entry for this? --^
+
+             ; If so, we can't just munge the name and spit out a string.
+             (emits "(function " (munge name) "(")
+             (emit-fn-params params)
+             (emits "){")
              (when type
                (emitln "var self__ = this;"))
              (when recurs (emitln "while(true){"))
@@ -399,10 +444,13 @@
   (emit-wrap env
              (let [name (or name (gensym))
                    mname (munge name)
-                   params (map munge params)
                    delegate-name (str mname "__delegate")]
                (emitln "(function() { ")
-               (emitln "var " delegate-name " = function (" (comma-sep params) "){")
+               (emits "var " delegate-name " = function (")
+               (doseq [param params]
+                 (emit param)
+                 (when-not (= param (last params)) (emits ",")))
+               (emits "){")
                (when recurs (emitln "while(true){"))
                (emits expr)
                (when recurs
@@ -417,11 +465,19 @@
                (when type
                  (emitln "var self__ = this;"))
                (when variadic
-                 (emitln "var " (last params) " = null;")
+                 (emits "var ")
+                 (emit (last params))
+                 (emits " = null;")
                  (emitln "if (arguments.length > " (dec (count params)) ") {")
-                 (emitln "  " (last params) " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);")
+                 (emits "  ")
+                 (emit (last params))
+                 (emits " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);")
                  (emitln "} "))
-               (emitln "return " delegate-name ".call(" (string/join ", " (cons "this" params)) ");")
+               (emits "return " delegate-name ".call(this,")
+               (doseq [param params]
+                 (emit param)
+                 (when-not (= param (last params)) (emits ",")))
+               (emits ");")
                (emitln "};")
 
                (emitln mname ".cljs$lang$maxFixedArity = " max-fixed-arity ";")
@@ -453,7 +509,7 @@
         (let [has-name? (and name true)
               name (or name (gensym))
               mname (munge name)
-              maxparams (map munge (apply max-key count (map :params methods)))
+              maxparams (apply max-key count (map :params methods))
               mmap (into {}
                      (map (fn [method]
                             [(munge (symbol (str mname "__" (count (:params method)))))
@@ -474,7 +530,9 @@
                                                       (concat (butlast maxparams) ['var_args])
                                                       maxparams)) "){")
           (when variadic
-            (emitln "var " (last maxparams) " = var_args;"))
+            (emits "var ")
+            (emit (last maxparams))
+            (emitln " = var_args;"))
           (emitln "switch(arguments.length){")
           (doseq [[n meth] ms]
             (if (:variadic meth)
@@ -540,7 +598,9 @@
                                                       (gensym (str (:name %) "-")))
                                              bindings)))]
       (doseq [{:keys [init] :as binding} bindings]
-        (emitln "var " (munge binding) " = " init ";"))
+        (emits "var ")
+        (emit binding) ; Binding will be treated as a var
+        (emits " = " init ";"))
       (when is-loop (emitln "while(true){"))
       (emits expr)
       (when is-loop
