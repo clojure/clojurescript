@@ -738,10 +738,9 @@
                             (:source-map compiled)
                             (get closure-source-map path)))
                         (assoc merged path (get closure-source-map path))))))
-                (let [out-name (str name ".merged")]
-                  (spit (io/file out-name)
-                    (sm/encode merged
-                      {:lines (+ (:lineCount sm-json) 2) :file (:file sm-json)})))))))
+                (spit (io/file name)
+                  (sm/encode merged
+                    {:lines (+ (:lineCount sm-json) 2) :file (:file sm-json)}))))))
         source)
       (report-failure result))))
 
@@ -934,7 +933,7 @@
 
 (defn add-source-map-link [{:keys [source-map] :as opts} js]
   (if source-map
-    (str js "\n//@ sourceMappingURL=" source-map ".merged")
+    (str js "\n//@ sourceMappingURL=" source-map)
     js))
 
 (defn build

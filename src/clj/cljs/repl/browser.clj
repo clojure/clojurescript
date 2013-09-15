@@ -86,6 +86,7 @@
 (server/dispatch-on :get
                     (fn [{:keys [path]} _ _] (or (= path "/")
                                                 (.endsWith path ".js")
+                                                (.endsWith path ".map")
                                                 (.endsWith path ".html")))
                     send-static)
 
