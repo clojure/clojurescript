@@ -75,7 +75,7 @@
                        (cond
                          (re-find #".jar" path)
                          (io/resource (second (string/split path #".jar!/")))
-                         (re-find (Pattern/compile. (System/getProperty "user.dir")) path)
+                         (re-find (Pattern/compile (System/getProperty "user.dir")) path)
                          (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
                          :else nil)
                        local-path)]
