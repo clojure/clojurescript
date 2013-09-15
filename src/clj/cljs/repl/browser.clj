@@ -87,7 +87,7 @@
             ".html" "text/html"
             ".jpg" "image/jpeg"
             ".js" "text/javascript"
-            ".cljs" "text/clojurescript"
+            ".cljs" "text/x-clojure"
             ".map" "application/json"
             ".png" "image/png"
             "text/plain"))
