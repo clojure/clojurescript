@@ -153,9 +153,9 @@
       [] lines)))
 
 (defn encode
-  "Take an internal nested sorce map representation represented as
-   nested sorted maps of file, line, column and return a source map v3
-   JSON string."
+  "Take an internal source map representation represented as nested
+   sorted maps of file, line, column and return a source map v3 JSON
+   string."
   [m opts]
   (let [lines (atom [[]])
         names->idx (atom {})
