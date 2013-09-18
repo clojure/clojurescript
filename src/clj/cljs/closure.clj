@@ -722,12 +722,13 @@
             (loop [sources (seq sources)
                    merged (sorted-map-by
                             (sm/source-compare
-                              (map (fn [source]
-                                     (if-let [^URL source-url (:source-url source)]
-                                       (.getPath source-url)
-                                       (let [^URL url (:url source)]
-                                         (.getPath url))))
-                                   sources)))]
+                              (remove nil?
+                                (map (fn [source]
+                                       (if-let [^URL source-url (:source-url source)]
+                                         (.getPath source-url)
+                                         (if-let [^URL url (:url source)]
+                                           (.getPath url))))
+                                  sources))))]
               (if sources
                 (let [source (first sources)]
                   (recur (next sources)
