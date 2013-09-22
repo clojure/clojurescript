@@ -2021,8 +2021,9 @@ reduces them without incurring seq initialization"
   (invoke [kw coll not-found]
     (if (nil? coll)
       not-found
-      (when (satisfies? ILookup coll)
-        (-lookup coll kw not-found))))
+      (if (satisfies? ILookup coll)
+        (-lookup coll kw not-found)
+        not-found)))
   IHash
   (-hash [_]
     ; This was checking if _hash == -1, should it stay that way?

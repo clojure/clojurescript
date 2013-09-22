@@ -193,6 +193,8 @@
   (assert (= 2 ({:b 1} :a 2)))
   (assert (= 2 ({} :a 2)))
   (assert (= nil (:a {})))
+  (assert (= nil (:a "")))
+  (assert (= 2 (:a "" 2)))
   (assert (= 2 (#{1 2 3} 2)))
   (assert (zero? (hash (aget (js-obj) "foo"))))
 
