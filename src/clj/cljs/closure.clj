@@ -732,13 +732,15 @@
               (if sources
                 (let [source (first sources)]
                   (recur (next sources)
-                    (let [path (.getPath ^URL (:url source))]
-                      (if-let [compiled (get @compiled-cljs path)] 
-                        (assoc merged (.getPath ^URL (:source-url source))
-                          (sm/merge-source-maps
-                            (:source-map compiled)
-                            (get closure-source-map path)))
-                        (assoc merged path (get closure-source-map path))))))
+                    (if-let [url (:url source)]
+                      (let [path (.getPath ^URL url)]
+                        (if-let [compiled (get @compiled-cljs path)] 
+                          (assoc merged (.getPath ^URL (:source-url source))
+                            (sm/merge-source-maps
+                              (:source-map compiled)
+                              (get closure-source-map path)))
+                          (assoc merged path (get closure-source-map path))))
+                      merged)))
                 (spit (io/file name)
                   (sm/encode merged
                     {:lines (+ (:lineCount sm-json) 2) :file (:file sm-json)}))))))
