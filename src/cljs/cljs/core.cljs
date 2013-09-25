@@ -7087,7 +7087,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   ([x] (js->clj x {:keywordize-keys false}))
   ([x & opts]
     (cond
-      (satisfies? x IEncodeClojure)
+      (satisfies? IEncodeClojure x)
       (-js->clj x (apply array-map opts))
 
       (seq opts)
