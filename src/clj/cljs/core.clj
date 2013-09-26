@@ -885,7 +885,7 @@
               false))))))
 
 (defmacro lazy-seq [& body]
-  `(new cljs.core/LazySeq nil false (fn [] ~@body) nil))
+  `(new cljs.core/LazySeq nil (fn [] ~@body) nil nil))
 
 (defmacro delay [& body]
   "Takes a body of expressions and yields a Delay object that will

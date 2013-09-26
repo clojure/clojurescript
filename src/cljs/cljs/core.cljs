@@ -2062,21 +2062,21 @@ reduces them without incurring seq initialization"
   ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))
 
 
-(deftype LazySeq [meta ^:mutable realized ^:mutable x ^:mutable __hash]
+(deftype LazySeq [meta ^:mutable fn ^:mutable s ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
 
   (sval [coll]
-    (if ^boolean realized
-      x
+    (if (nil? fn)
+      s
       (do
-        (set! x (x))
-        (set! realized true)
-        x)))
+        (set! s (fn))
+        (set! fn nil)
+        s)))
 
   IWithMeta
-  (-with-meta [coll meta] (LazySeq. meta realized x __hash))
+  (-with-meta [coll meta] (LazySeq. meta fn s __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -2084,19 +2084,19 @@ reduces them without incurring seq initialization"
   ISeq
   (-first [coll]
     (-seq coll)
-    (when-not (nil? x)
-      (-first ^not-native x)))
+    (when-not (nil? s)
+      (-first ^not-native s)))
   (-rest [coll]
     (-seq coll)
-    (if-not (nil? x)
-      (-rest ^not-native x)
+    (if-not (nil? s)
+      (-rest ^not-native s)
       ()))
 
   INext
   (-next [coll]
     (-seq coll)
-    (when-not (nil? x)
-      (-next ^not-native x)))
+    (when-not (nil? s)
+      (-next ^not-native s)))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -2114,13 +2114,13 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (.sval coll)
-    (when-not (nil? x)
-      (loop [ls x]
+    (when-not (nil? s)
+      (loop [ls s]
         (if (instance? LazySeq ls)
           (recur (.sval ls))
-          (do (set! x ls)
-            (when-not (nil? x)
-              (-seq ^not-native x)))))))
+          (do (set! s ls)
+            (when-not (nil? s)
+              (-seq ^not-native s)))))))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
