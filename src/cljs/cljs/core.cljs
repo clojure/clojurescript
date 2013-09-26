@@ -2061,19 +2061,19 @@ reduces them without incurring seq initialization"
             :else (Keyword. nil name name nil)))
   ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))
 
-(defn- lazy-seq-value [lazy-seq]
-  (let [x (.-x lazy-seq)]
-    (if ^boolean (.-realized lazy-seq)
-      x
-      (do
-        (set! (.-x lazy-seq) (x))
-        (set! (.-realized lazy-seq) true)
-        (.-x lazy-seq)))))
 
-(deftype LazySeq [meta realized x ^:mutable __hash]
+(deftype LazySeq [meta ^:mutable realized ^:mutable x ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
+
+  (sval [coll]
+    (if ^boolean realized
+      x
+      (do
+        (set! x (x))
+        (set! realized true)
+        x)))
 
   IWithMeta
   (-with-meta [coll meta] (LazySeq. meta realized x __hash))
@@ -2082,11 +2082,21 @@ reduces them without incurring seq initialization"
   (-meta [coll] meta)
 
   ISeq
-  (-first [coll] (first (lazy-seq-value coll)))
-  (-rest [coll] (rest (lazy-seq-value coll)))
+  (-first [coll]
+    (-seq coll)
+    (when-not (nil? x)
+      (-first ^not-native x)))
+  (-rest [coll]
+    (-seq coll)
+    (if-not (nil? x)
+      (-rest ^not-native x)
+      ()))
 
   INext
-  (-next [coll] (-seq (-rest coll)))
+  (-next [coll]
+    (-seq coll)
+    (when-not (nil? x)
+      (-next ^not-native x)))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -2103,7 +2113,14 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll]
-    (seq (lazy-seq-value coll)))
+    (.sval coll)
+    (when-not (nil? x)
+      (loop [ls x]
+        (if (instance? LazySeq ls)
+          (recur (.sval ls))
+          (do (set! x ls)
+            (when-not (nil? x)
+              (-seq ^not-native x)))))))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))

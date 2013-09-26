@@ -1948,5 +1948,8 @@
   (def foo580 {:a (fn []) :b (fn [] (foo580 :a))})
   (assert (nil? (((:b foo580)))))
 
+  ;; CLJS-587
+  (assert (== (first (filter #(== % 9999) (range))) 9999))
+
   :ok
   )
