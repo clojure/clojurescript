@@ -2056,7 +2056,7 @@ reduces them without incurring seq initialization"
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
   ([name] (cond
-            (keyword? name)(Keyword. nil name name nil)
+            (keyword? name) name
             (symbol? name) (Keyword. nil (cljs.core/name name) (cljs.core/name name) nil)
             :else (Keyword. nil name name nil)))
   ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))

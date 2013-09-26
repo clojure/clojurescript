@@ -230,6 +230,7 @@
   (assert (= :a (keyword "a")))
   (assert (= :a (keyword 'a)))
   (assert (= :a/b (keyword 'a 'b)))
+  (assert (= :a (keyword :a)))
 
   (assert (= {:a :b} (get {[1 2 3] {:a :b}, 4 5} [1 2 3])))
   (assert (= :a (nth [:a :b :c :d] 0)))
