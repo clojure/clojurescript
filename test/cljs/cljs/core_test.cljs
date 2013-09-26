@@ -713,6 +713,7 @@
                (js->clj (js* "[[{\"a\":1,\"b\":2}, {\"a\":1,\"b\":2}]]") :keywordize-keys true)))
   (assert (= [[{:a 1, :b 2} {:a 1, :b 2}]]
                (js->clj [[{:a 1, :b 2} {:a 1, :b 2}]])))
+  (assert (= (js->clj nil) nil))
 
   ;; clj->js
   (assert (= (clj->js 'a) "a"))
