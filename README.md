@@ -19,7 +19,14 @@ is also a community run [ClojureScript user mailing list](http://groups.google.c
 
 ## Developers Welcome ##
 
-ClojureScript operates under the same license as Clojure. All contributors must have a signed CA (Contributor's Agreement) and submit their patch via the appropriate channels. If you're interested in contributing to the project, please see the [contributing](http://clojure.org/contributing) page on [clojure.org](http://clojure.org).
+ClojureScript operates under the same license as Clojure. All
+contributors must have a signed CA (Contributor's Agreement) and
+submit their patch via the appropriate channels. If you're interested
+in contributing to the project, please see the
+[contributing](http://clojure.org/contributing) page on
+[clojure.org](http://clojure.org). For more information about working
+on the compiler and testing check the
+[Developer section of the wiki](http://github.com/clojure/clojurescript/wiki/Developers).
 
 ## License ##
 
