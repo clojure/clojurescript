@@ -9,7 +9,7 @@
   :resource-paths ["src/cljs"]
   :test-paths ["test/cljs"]
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/data.json "0.2.2"]
+                 [org.clojure/data.json "0.2.3"]
                  [org.clojure/tools.reader "0.7.8"]
                  [org.clojure/google-closure-library "0.0-20130212-95c19e7f0f5f"]
                  [com.google.javascript/closure-compiler "v20130603"]
