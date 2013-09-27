@@ -1074,10 +1074,8 @@
               *cljs-file* (if (instance? java.io.File res)
                             (.getPath ^java.io.File res)
                             (.getPath ^java.net.URL res))]
-      (with-open [rdr (io/reader res)]
-        (let [env (empty-env)]
-          (loop [forms (seq (forms-seq rdr))]
-            (when forms
-              (let [env (assoc env :ns (get-namespace *cljs-ns*))]
-                (analyze env (first forms))
-                (recur (next forms))))))))))
+      (let [env (empty-env)]
+        (with-open [rdr (io/reader res)]
+          (doseq [form (seq (forms-seq rdr))]
+            (let [env (assoc env :ns (get-namespace *cljs-ns*))]
+              (analyze env form))))))))
