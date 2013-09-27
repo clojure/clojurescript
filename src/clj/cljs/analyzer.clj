@@ -13,7 +13,8 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [cljs.tagged-literals :as tags]
-            [clojure.tools.reader :as reader])
+            [clojure.tools.reader :as reader]
+            [clojure.tools.reader.reader-types :as readers])
   (:import java.lang.StringBuilder))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
@@ -1057,12 +1058,14 @@
 
 (defn forms-seq
   "Seq of forms in a Clojure or ClojureScript file."
-  ([f]
-     (forms-seq f (clojure.tools.reader.reader-types/indexing-push-back-reader (slurp f))))
-  ([f rdr]
-     (lazy-seq
-      (if-let [form (binding [*ns* (create-ns *cljs-ns*)] (reader/read rdr nil nil))]
-        (cons form (forms-seq f rdr))))))
+  [f]
+  (let [rdr (readers/indexing-push-back-reader (slurp f) 1 f)
+        forms-seq*
+        (fn forms-seq* []
+          (lazy-seq
+            (if-let [form (binding [*ns* (create-ns *cljs-ns*)] (reader/read rdr nil nil))]
+              (cons form (forms-seq*)))))]
+    (forms-seq*)))
 
 (defn analyze-file [f]
   (let [res (cond
@@ -1075,7 +1078,6 @@
                             (.getPath ^java.io.File res)
                             (.getPath ^java.net.URL res))]
       (let [env (empty-env)]
-        (with-open [rdr (io/reader res)]
-          (doseq [form (seq (forms-seq rdr))]
-            (let [env (assoc env :ns (get-namespace *cljs-ns*))]
-              (analyze env form))))))))
+        (doseq [form (seq (forms-seq res))]
+          (let [env (assoc env :ns (get-namespace *cljs-ns*))]
+            (analyze env form)))))))
