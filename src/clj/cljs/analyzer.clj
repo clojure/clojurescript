@@ -1074,12 +1074,10 @@
               *cljs-file* (if (instance? java.io.File res)
                             (.getPath ^java.io.File res)
                             (.getPath ^java.net.URL res))]
-      (with-open [r (io/reader res)]
-        (let [env (empty-env)
-              pbr (clojure.lang.LineNumberingPushbackReader. r)
-              eof (Object.)]
-          (loop [r (read pbr false eof false)]
-            (let [env (assoc env :ns (get-namespace *cljs-ns*))]
-              (when-not (identical? eof r)
-                (analyze env r)
-                (recur (read pbr false eof false))))))))))
+      (with-open [rdr (io/reader res)]
+        (let [env (empty-env)]
+          (loop [forms (seq (forms-seq rdr))]
+            (when forms
+              (let [env (assoc env :ns (get-namespace *cljs-ns*))]
+                (analyze env (first forms))
+                (recur (next forms))))))))))
