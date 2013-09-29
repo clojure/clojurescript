@@ -663,6 +663,13 @@
       (warning env
         (str "WARNING: Referred var " lib "/" sym " does not exist")))))
 
+(defn check-uses-macros [uses-macros env]
+  (doseq [[sym lib] uses-macros]
+    (when (and (:undeclared *cljs-warnings*)
+               (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)))
+      (warning env
+        (str "WARNING: Referred macro " lib "/" sym " does not exist")))))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
   (assert (symbol? name) "Namespaces must be named by a symbol.")
@@ -757,6 +764,8 @@
     (load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
       (clojure.core/require nsym))
+    (when (seq uses-macros)
+      (check-uses-macros uses-macros env))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :doc] docstring)
