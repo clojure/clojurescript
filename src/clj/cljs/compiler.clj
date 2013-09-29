@@ -870,7 +870,7 @@
             (loop [forms (ana/forms-seq src)]
               (if (seq forms)
                 (let [env (ana/empty-env)
-                      ast (ana/analyze env (first forms))]
+                      ast (ana/no-warn (ana/analyze env (first forms)))]
                   (if (= (:op ast) :ns)
                     (let [ns-name (:name ast)
                           deps    (merge (:uses ast) (:requires ast))]

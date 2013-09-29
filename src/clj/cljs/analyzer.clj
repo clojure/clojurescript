@@ -656,6 +656,13 @@
         (when (io/resource relpath)
           (analyze-file relpath))))))
 
+(defn check-uses [uses env]
+  (doseq [[sym lib] uses]
+    (when (and (:undeclared *cljs-warnings*)
+               (= (get-in @namespaces [lib :defs sym] ::not-found) ::not-found))
+      (warning env
+        (str "WARNING: Referred var " lib "/" sym " does not exist")))))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
   (assert (symbol? name) "Namespaces must be named by a symbol.")
@@ -744,6 +751,8 @@
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (seq @deps)
       (analyze-deps @deps))
+    (when (seq uses)
+      (check-uses uses env))
     (set! *cljs-ns* name)
     (load-core)
     (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
