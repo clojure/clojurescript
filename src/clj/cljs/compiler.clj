@@ -874,14 +874,16 @@
                   (if (= (:op ast) :ns)
                     (let [ns-name (:name ast)
                           deps    (merge (:uses ast) (:requires ast))]
-                      {:ns (or ns-name 'cljs.user)
-                       :provides [ns-name]
-                       :requires (if (= ns-name 'cljs.core)
-                                   (set (vals deps))
-                                   (conj (set (vals deps)) 'cljs.core))
-                       :file dest
-                       :source-file src
-                       :lines (-> dest io/reader line-seq count)})
+                      (merge
+                        {:ns (or ns-name 'cljs.user)
+                         :provides [ns-name]
+                         :requires (if (= ns-name 'cljs.core)
+                                     (set (vals deps))
+                                     (conj (set (vals deps)) 'cljs.core))
+                         :file dest
+                         :source-file src}
+                        (when (.exists ^java.io.File dest)
+                          {:lines (-> (io/reader dest) line-seq count)})))
                     (recur (rest forms))))))))]
     (reset! ana/namespaces namespaces')
     ret))
@@ -909,14 +911,17 @@
           dest-file (io/file dest)]
       (if (.exists src-file)
         (try
-          (if (or (requires-compilation? src-file dest-file) (:source-map opts))
-            (do (mkdirs dest-file)
-              (compile-file* src-file dest-file opts))
-            (let [ns-info (parse-ns src-file dest-file opts)]
-              (when-not (contains? @ana/namespaces (:ns ns-info))
-                (with-core-cljs
-                  (ana/analyze-file src-file)))
-              ns-info))
+          (let [{ns :ns :as ns-info} (parse-ns src-file dest-file opts)]
+            (if (or (requires-compilation? src-file dest-file) (:source-map opts))
+              (do (mkdirs dest-file)
+                (when (contains? @ana/namespaces ns)
+                  (swap! ana/namespaces dissoc ns))
+                (compile-file* src-file dest-file opts))
+              (do
+                (when-not (contains? @ana/namespaces ns)
+                  (with-core-cljs
+                    (ana/analyze-file src-file)))
+                ns-info)))
           (catch Exception e
             (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
