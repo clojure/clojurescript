@@ -168,21 +168,16 @@
   (let [sym (symbol name)]
     (get (:requires (:ns env)) sym sym)))
 
+;; TODO: our internal conventions around data structures
+;; should probably be changed so we don't special case
+;; cljs.core namespaces, they won't be properly checked
 (defn confirm-ns [env ns-sym]
-  ;; ignore if ns-nsym is same as env ns
-  (if (= (-> env :ns :name) ns-sym)
-    ns-sym
-    (condp get ns-sym
-      '#{cljs.core goog Math} :>> identity
-      (-> env :ns :requires) :>> identity
-      ;; our internal conventions around data structures
-      ;; should not be allowed elsewhere
-      (if-not (== (.indexOf (str ns-sym) "cljs.core") -1)
-        ns-sym
-        (do (when (:undeclared *cljs-warnings*)
-              (warning env
-                (str "WARNING: No such namespace: " ns-sym)))
-          ns-sym)))))
+  (when (and (nil? (get '#{cljs.core goog Math} ns-sym))
+             (nil? (get (-> env :ns :requires) ns-sym)) 
+             (:undeclared *cljs-warnings*)
+             (== (.indexOf (str ns-sym) "cljs.core") -1))
+    (warning env
+      (str "WARNING: No such namespace: " ns-sym))))
 
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
@@ -207,7 +202,8 @@
                  ns (if (= "clojure.core" ns) "cljs.core" ns)
                  full-ns (resolve-ns-alias env ns)]
              (when confirm
-               (confirm-ns env full-ns)
+               (when (not= (-> env :ns :name) full-ns)
+                 (confirm-ns env full-ns))
                (confirm env full-ns (symbol (name sym))))
              (merge (get-in @namespaces [full-ns :defs (symbol (name sym))])
                     {:name (symbol (str full-ns) (str (name sym)))
