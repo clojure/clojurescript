@@ -168,6 +168,19 @@
   (let [sym (symbol name)]
     (get (:requires (:ns env)) sym sym)))
 
+(defn confirm-ns [env ns-sym]
+  (condp get ns-sym
+    '#{cljs.core goog Math} :>> identity
+    (-> env :ns :requires) :>> identity
+    ;; our internal conventions around data structures
+    ;; should not be allowed elsewhere
+    (if-not (== (.indexOf (str ns-sym) "cljs.core") -1)
+      ns-sym
+      (do (when (:undeclared *cljs-warnings*)
+            (warning env
+              (str "WARNING: No such namespace: " ns-sym)))
+        ns-sym))))
+
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
   [env sym]
@@ -191,6 +204,7 @@
                  ns (if (= "clojure.core" ns) "cljs.core" ns)
                  full-ns (resolve-ns-alias env ns)]
              (when confirm
+               (confirm-ns env full-ns)
                (confirm env full-ns (symbol (name sym))))
              (merge (get-in @namespaces [full-ns :defs (symbol (name sym))])
                     {:name (symbol (str full-ns) (str (name sym)))
@@ -730,8 +744,10 @@
                                          (error-msg spec ":refer must be followed by a sequence of symbols in :require / :require-macros"))
                                  (when-not macros?
                                    (swap! deps conj lib))
-                                 (merge (when alias {rk {alias lib}})
-                                        (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
+                                 (merge
+                                   (when alias
+                                     {rk (merge {alias lib} {lib lib})})
+                                   (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
         use->require (fn use->require [[lib kw referred :as spec]]
                        (assert (and (symbol? lib) (= :only kw) (sequential? referred) (every? symbol? referred))
                                (error-msg spec "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))
