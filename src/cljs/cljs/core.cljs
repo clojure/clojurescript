@@ -1969,7 +1969,8 @@ reduces them without incurring seq initialization"
   (-rest [coll] (if (nil? rest) () rest))
 
   INext
-  (-next [coll] (if (nil? rest) nil (-seq rest)))
+  (-next [coll]
+    (if (nil? rest) nil (seq rest)))
 
   ICollection
   (-conj [coll o] (Cons. nil o coll __hash))
@@ -2085,18 +2086,18 @@ reduces them without incurring seq initialization"
   (-first [coll]
     (-seq coll)
     (when-not (nil? s)
-      (-first ^not-native s)))
+      (first s)))
   (-rest [coll]
     (-seq coll)
     (if-not (nil? s)
-      (-rest ^not-native s)
+      (rest s)
       ()))
 
   INext
   (-next [coll]
     (-seq coll)
     (when-not (nil? s)
-      (-next ^not-native s)))
+      (next s)))
 
   ICollection
   (-conj [coll o] (cons o coll))
@@ -2119,8 +2120,7 @@ reduces them without incurring seq initialization"
         (if (instance? LazySeq ls)
           (recur (.sval ls))
           (do (set! s ls)
-            (when-not (nil? s)
-              (-seq ^not-native s)))))))
+            (seq s))))))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))

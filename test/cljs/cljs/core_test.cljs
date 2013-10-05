@@ -1951,5 +1951,14 @@
   ;; CLJS-587
   (assert (== (first (filter #(== % 9999) (range))) 9999))
 
+  ;; LazySeq regressions
+
+  ;; CLJS-604
+  (assert (= () (concat nil [])))
+  (assert (= () (concat [] [])))
+
+  ;; CLJS-600
+  (assert (= "foobar" (apply str (concat "foo" "bar"))))
+
   :ok
   )
