@@ -169,17 +169,20 @@
     (get (:requires (:ns env)) sym sym)))
 
 (defn confirm-ns [env ns-sym]
-  (condp get ns-sym
-    '#{cljs.core goog Math} :>> identity
-    (-> env :ns :requires) :>> identity
-    ;; our internal conventions around data structures
-    ;; should not be allowed elsewhere
-    (if-not (== (.indexOf (str ns-sym) "cljs.core") -1)
-      ns-sym
-      (do (when (:undeclared *cljs-warnings*)
-            (warning env
-              (str "WARNING: No such namespace: " ns-sym)))
-        ns-sym))))
+  ;; ignore if ns-nsym is same as env ns
+  (if (= (-> env :ns :name) ns-sym)
+    ns-sym
+    (condp get ns-sym
+      '#{cljs.core goog Math} :>> identity
+      (-> env :ns :requires) :>> identity
+      ;; our internal conventions around data structures
+      ;; should not be allowed elsewhere
+      (if-not (== (.indexOf (str ns-sym) "cljs.core") -1)
+        ns-sym
+        (do (when (:undeclared *cljs-warnings*)
+              (warning env
+                (str "WARNING: No such namespace: " ns-sym)))
+          ns-sym)))))
 
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
