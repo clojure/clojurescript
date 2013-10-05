@@ -668,7 +668,8 @@
     (when-not (contains? @namespaces dep)
       (let [relpath (ns->relpath dep)]
         (when (io/resource relpath)
-          (analyze-file relpath))))))
+          (no-warn
+            (analyze-file relpath)))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]

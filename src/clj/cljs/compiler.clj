@@ -862,31 +862,33 @@
   (or (not (.exists dest))
       (> (.lastModified src) (.lastModified dest))))
 
-(defn parse-ns [src dest opts]
-  (let [namespaces' @ana/namespaces
-        ret
-        (with-core-cljs
-          (binding [ana/*cljs-ns* 'cljs.user]
-            (loop [forms (ana/forms-seq src)]
-              (if (seq forms)
-                (let [env (ana/empty-env)
-                      ast (ana/no-warn (ana/analyze env (first forms)))]
-                  (if (= (:op ast) :ns)
-                    (let [ns-name (:name ast)
-                          deps    (merge (:uses ast) (:requires ast))]
-                      (merge
-                        {:ns (or ns-name 'cljs.user)
-                         :provides [ns-name]
-                         :requires (if (= ns-name 'cljs.core)
-                                     (set (vals deps))
-                                     (conj (set (vals deps)) 'cljs.core))
-                         :file dest
-                         :source-file src}
-                        (when (.exists ^java.io.File dest)
-                          {:lines (-> (io/reader dest) line-seq count)})))
-                    (recur (rest forms))))))))]
-    (reset! ana/namespaces namespaces')
-    ret))
+(defn parse-ns
+  ([src] (parse-ns src nil nil))
+  ([src dest opts]
+    (let [namespaces' @ana/namespaces
+          ret
+          (with-core-cljs
+            (binding [ana/*cljs-ns* 'cljs.user]
+              (loop [forms (ana/forms-seq src)]
+                (if (seq forms)
+                  (let [env (ana/empty-env)
+                        ast (ana/no-warn (ana/analyze env (first forms)))]
+                    (if (= (:op ast) :ns)
+                      (let [ns-name (:name ast)
+                            deps    (merge (:uses ast) (:requires ast))]
+                        (merge
+                          {:ns (or ns-name 'cljs.user)
+                           :provides [ns-name]
+                           :requires (if (= ns-name 'cljs.core)
+                                       (set (vals deps))
+                                       (conj (set (vals deps)) 'cljs.core))
+                           :file dest
+                           :source-file src}
+                          (when (and dest (.exists ^java.io.File dest))
+                            {:lines (-> (io/reader dest) line-seq count)})))
+                      (recur (rest forms))))))))]
+      (reset! ana/namespaces namespaces')
+      ret)))
 
 (defn compile-file
   "Compiles src to a file of the same name, but with a .js extension,
@@ -912,7 +914,7 @@
       (if (.exists src-file)
         (try
           (let [{ns :ns :as ns-info} (parse-ns src-file dest-file opts)]
-            (if (or (requires-compilation? src-file dest-file) (:source-map opts))
+            (if (or (requires-compilation? src-file dest-file))
               (do (mkdirs dest-file)
                 (when (contains? @ana/namespaces ns)
                   (swap! ana/namespaces dissoc ns))
@@ -948,16 +950,13 @@
   ([parts sep]
      (apply str (interpose sep parts))))
 
-(defn to-target-file
-  "Given the source root directory, the output target directory and
-  file under the source root, produce the target file."
-  [^java.io.File dir ^String target ^java.io.File file]
-  (let [dir-path (path-seq (.getAbsolutePath dir))
-        file-path (path-seq (.getAbsolutePath file))
-        relative-path (drop (count dir-path) file-path)
-        parents (butlast relative-path)
-        parent-file (java.io.File. ^String (to-path (cons target parents)))]
-    (java.io.File. parent-file ^String (rename-to-js (last relative-path)))))
+(defn ^java.io.File to-target-file
+  [target cljs-file]
+  (let [relative-path (string/split (str (:ns (parse-ns cljs-file))) #"\.")
+        parents (butlast relative-path)]
+    (io/file
+      (io/file (to-path (cons target parents)))
+      (str (last relative-path) ".js"))))
 
 (defn cljs-files-in
   "Return a sequence of all .cljs files in the given directory."
@@ -984,7 +983,7 @@
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
-                 output-file ^java.io.File (to-target-file src-dir-file target-dir cljs-file)
+                 output-file (to-target-file target-dir cljs-file)
                  ns-info (compile-file cljs-file output-file opts)]
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
            output-files)))))
