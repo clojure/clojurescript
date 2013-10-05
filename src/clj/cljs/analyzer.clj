@@ -714,6 +714,7 @@
                                    ;; for resolving keywords like ::f/bar
                                    (binding [*ns* (create-ns name)]
                                      (let [^clojure.lang.Namespace ns (create-ns lib)]
+                                       (ns-unalias *ns* alias)
                                        (clojure.core/alias alias (.name ns))))
                                    (let [alias-type (if macros? :macros :fns)]
                                      (assert (not (contains? (alias-type @aliases)
