@@ -174,8 +174,7 @@
 (defn confirm-ns [env ns-sym]
   (when (and (nil? (get '#{cljs.core goog Math} ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym)) 
-             (:undeclared *cljs-warnings*)
-             (== (.indexOf (str ns-sym) "cljs.core") -1))
+             (:undeclared *cljs-warnings*))
     (warning env
       (str "WARNING: No such namespace: " ns-sym))))
 
