@@ -66,14 +66,7 @@
      (try
        (let [ast (ana/analyze env form)
              js (comp/emit-str ast)
-             wrap-js (comp/emit-str (binding [ana/*cljs-warnings*
-                                              (merge ana/*cljs-warnings*
-                                                {:undeclared false
-                                                 :redef false
-                                                 :dynamic false
-                                                 :fn-var false
-                                                 :fn-arity false})]
-                                   (ana/analyze env (wrap form))))]
+             wrap-js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form))))]
          (when (= (:op ast) :ns)
            (load-dependencies repl-env (into (vals (:requires ast))
                                              (distinct (vals (:uses ast))))))
@@ -93,16 +86,11 @@
          (.printStackTrace ex)
          (println (str ex))))))
 
-(defn load-stream [repl-env filename stream]
-  (with-open [r (io/reader stream)]
-    (let [env (ana/empty-env)
-          pbr (clojure.lang.LineNumberingPushbackReader. r)
-          eof (Object.)]
-      (loop [r (read pbr false eof false)]
-        (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
-          (when-not (identical? eof r)
-            (evaluate-form repl-env env filename r)
-            (recur (read pbr false eof false))))))))
+(defn load-stream [repl-env filename res]
+  (let [env (ana/empty-env)]
+    (doseq [form (ana/forms-seq res)]
+      (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
+        (evaluate-form repl-env env filename form)))))
 
 (defn load-file
   [repl-env f]
