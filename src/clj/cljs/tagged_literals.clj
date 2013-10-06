@@ -4,7 +4,7 @@
 (defn read-queue
   [form]
   (assert (vector? form) "Queue literal expects a vector for its elements.")
-  (list 'cljs.core/into 'cljs.core.PersistentQueue/EMPTY form))
+  (list 'cljs.core/into 'cljs.core.PersistentQueue.EMPTY form))
 
 (defn read-uuid
   [form]
