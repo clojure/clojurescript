@@ -679,7 +679,7 @@
              ;; direct dispatch to variadic case
              (and variadic? (> arity mfa))
              [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge name) ".cljs$core$IFn$_invoke$arity$variadic"))))
+                             (fn [name] (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$variadic"))))
               {:max-fixed-arity mfa}]
 
              ;; direct dispatch to specific arity case
@@ -687,7 +687,7 @@
              (let [arities (map count mps)]
                (if (some #{arity} arities)
                  [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge name) ".cljs$core$IFn$_invoke$arity$" arity)))) nil]
+                             (fn [name] (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$" arity)))) nil]
                  [f nil]))))
           [f nil])]
     (emit-wrap env
