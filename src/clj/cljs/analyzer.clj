@@ -273,7 +273,8 @@
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name]
-  (assert (>= (count form) 3) "Too few arguments to if")
+  (when (< (count form) 3)
+    (throw (error env "Too few arguments to if")))
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
         then-expr (analyze env then)
         else-expr (analyze env else)]
@@ -315,7 +316,8 @@
                 (analyze (assoc catchenv :locals locals) `(do ~@(rest cblock))))
         body (if name (pop body) body)
         try (analyze (if (or name finally) catchenv env) `(do ~@body))]
-    (when name (assert (not (namespace name)) "Can't qualify symbol in catch"))
+    (when (and name (namespace name))
+      (throw (error env "Can't qualify symbol in catch")))
     {:env env :op :try* :form form
      :try try
      :finally finally
@@ -336,7 +338,8 @@
         protocol (-> sym meta :protocol)
         dynamic (-> sym meta :dynamic)
         ns-name (-> env :ns :name)]
-    (assert (not (namespace sym)) "Can't def ns-qualified name")
+    (when (namespace sym)
+      (throw (error env "Can't def ns-qualified name")))
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (get-in @namespaces [ns-name :uses sym]))
@@ -486,7 +489,8 @@
 
 (defmethod parse 'letfn*
   [op env [_ bindings & exprs :as form] name]
-  (assert (and (vector? bindings) (even? (count bindings))) "bindings must be vector of even number of elements")
+  (when-not (and (vector? bindings) (even? (count bindings))) 
+    (throw (error env "bindings must be vector of even number of elements")))
   (let [n->fexpr (into {} (map (juxt first second) (partition 2 bindings)))
         names    (keys n->fexpr)
         context  (:context env)
@@ -523,7 +527,8 @@
 
 (defn analyze-let
   [encl-env [_ bindings & exprs :as form] is-loop]
-  (assert (and (vector? bindings) (even? (count bindings))) "bindings must be vector of even number of elements")
+  (when-not (and (vector? bindings) (even? (count bindings))) 
+    (throw (error encl-env "bindings must be vector of even number of elements")))
   (let [context (:context encl-env)
         [bes env]
         (disallowing-recur
@@ -532,7 +537,8 @@
                 bindings (seq (partition 2 bindings))]
            (if-let [[name init] (first bindings)]
              (do
-               (assert (not (or (namespace name) (.contains (str name) "."))) (str "Invalid local name: " name))
+               (when (or (namespace name) (.contains (str name) "."))
+                 (throw (error encl-env (str "Invalid local name: " name))))
                (let [init-expr (binding [*loop-lets* (cons {:params bes} (or *loop-lets* ()))]
                                  (analyze env init))
                      be {:name name
@@ -587,8 +593,10 @@
   (let [context (:context env)
         frame (first *recur-frames*)
         exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs)))]
-    (assert frame "Can't recur here")
-    (assert (= (count exprs) (count (:params frame))) "recur argument count mismatch")
+    (when-not frame 
+      (throw (error env "Can't recur here")))
+    (when-not (= (count exprs) (count (:params frame))) 
+      (throw (error env "recur argument count mismatch")))
     (reset! (:flag frame) true)
     (assoc {:env env :op :recur :form form}
       :frame frame
@@ -601,7 +609,8 @@
 
 (defmethod parse 'new
   [_ env [_ ctor & args :as form] _]
-  (assert (symbol? ctor) "First arg to new must be a symbol")
+  (when-not (symbol? ctor) 
+    (throw (error env "First arg to new must be a symbol")))
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          ctorexpr (analyze enve ctor)
@@ -633,12 +642,12 @@
                        (symbol? target)
                        (do
                          (let [local (-> env :locals target)]
-                           (assert (or (nil? local)
-                                       (and (:field local)
-                                            (or (:mutable local)
-                                                (:unsynchronized-mutable local)
-                                                (:volatile-mutable local))))
-                                   "Can't set! local var or non-mutable field"))
+                           (when-not (or (nil? local)
+                                         (and (:field local)
+                                              (or (:mutable local)
+                                                  (:unsynchronized-mutable local)
+                                                  (:volatile-mutable local))))
+                             (throw (error env "Can't set! local var or non-mutable field"))))
                          (analyze-symbol enve target))
 
                        :else
@@ -647,7 +656,8 @@
                            (when (:field targetexpr)
                              targetexpr))))
            valexpr (analyze enve val)]
-       (assert targetexpr "set! target must be a field or a symbol naming a var")
+       (when-not targetexpr 
+         (throw (error env "set! target must be a field or a symbol naming a var")))
        (cond
         (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
         :else {:env env :op :set! :form form :target targetexpr :val valexpr
@@ -685,7 +695,8 @@
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
-  (assert (symbol? name) "Namespaces must be named by a symbol.")
+  (when-not (symbol? name) 
+    (throw (error env "Namespaces must be named by a symbol.")))
   (let [docstring (if (string? (first args)) (first args))
         args      (if docstring (next args) args)
         metadata  (if (map? (first args)) (first args))
@@ -694,8 +705,10 @@
         (reduce (fn [s [k exclude xs]]
                   (if (= k :refer-clojure)
                     (do
-                      (assert (= exclude :exclude) "Only [:refer-clojure :exclude (names)] form supported")
-                      (assert (not (seq s)) "Only one :refer-clojure form is allowed per namespace definition")
+                      (when-not (= exclude :exclude) 
+                        (throw (error env "Only [:refer-clojure :exclude (names)] form supported")))
+                      (when (seq s)
+                        (throw (error env "Only one :refer-clojure form is allowed per namespace definition")))
                       (into s xs))
                     s))
                 #{} args)
@@ -704,19 +717,19 @@
         valid-forms (atom #{:use :use-macros :require :require-macros :import})
         error-msg (fn [spec msg] (str msg "; offending spec: " (pr-str spec)))
         parse-require-spec (fn parse-require-spec [macros? spec]
-                             (assert (or (symbol? spec) (vector? spec))
-                                     (error-msg spec "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))
+                             (when-not (or (symbol? spec) (vector? spec))
+                               (throw (error env (error-msg spec "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))))
                              (when (vector? spec)
-                               (assert (symbol? (first spec))
-                                       (error-msg spec "Library name must be specified as a symbol in :require / :require-macros"))
-                               (assert (odd? (count spec))
-                                       (error-msg spec "Only :as alias and :refer (names) options supported in :require"))
-                               (assert (every? #{:as :refer} (map first (partition 2 (next spec))))
-                                       (error-msg spec "Only :as and :refer options supported in :require / :require-macros"))
-                               (assert (let [fs (frequencies (next spec))]
-                                         (and (<= (fs :as 0) 1)
-                                              (<= (fs :refer 0) 1)))
-                                       (error-msg spec "Each of :as and :refer options may only be specified once in :require / :require-macros")))
+                               (when-not (symbol? (first spec))
+                                 (throw (error env (error-msg spec "Library name must be specified as a symbol in :require / :require-macros"))))
+                               (when-not (odd? (count spec))
+                                 (throw (error env (error-msg spec "Only :as alias and :refer (names) options supported in :require"))))
+                               (when-not (every? #{:as :refer} (map first (partition 2 (next spec))))
+                                 (throw (error env (error-msg spec "Only :as and :refer options supported in :require / :require-macros"))))
+                               (when-not (let [fs (frequencies (next spec))]
+                                           (and (<= (fs :as 0) 1)
+                                                (<= (fs :refer 0) 1)))
+                                 (throw (error env (error-msg spec "Each of :as and :refer options may only be specified once in :require / :require-macros")))))
                              (if (symbol? spec)
                                (recur macros? [spec])
                                (let [[lib & opts] spec
@@ -730,17 +743,16 @@
                                        (ns-unalias *ns* alias)
                                        (clojure.core/alias alias (.name ns))))
                                    (let [alias-type (if macros? :macros :fns)]
-                                     (assert (not (contains? (alias-type @aliases)
-                                                             alias))
-                                             (error-msg spec ":as alias must be unique"))
+                                     (when (contains? (alias-type @aliases) alias)
+                                       (throw (error env (error-msg spec ":as alias must be unique"))))
                                      (swap! aliases
                                             update-in [alias-type]
                                             conj alias)))
-                                 (assert (or (symbol? alias) (nil? alias))
-                                         (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))
-                                 (assert (or (and (sequential? referred) (every? symbol? referred))
-                                             (nil? referred))
-                                         (error-msg spec ":refer must be followed by a sequence of symbols in :require / :require-macros"))
+                                 (when-not (or (symbol? alias) (nil? alias))
+                                   (throw (error env (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))))
+                                 (when-not (or (and (sequential? referred) (every? symbol? referred))
+                                               (nil? referred))
+                                   (throw (error env (error-msg spec ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
                                  (when-not macros?
                                    (swap! deps conj lib))
                                  (merge
@@ -748,12 +760,12 @@
                                      {rk (merge {alias lib} {lib lib})})
                                    (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
         use->require (fn use->require [[lib kw referred :as spec]]
-                       (assert (and (symbol? lib) (= :only kw) (sequential? referred) (every? symbol? referred))
-                               (error-msg spec "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))
+                       (when-not (and (symbol? lib) (= :only kw) (sequential? referred) (every? symbol? referred))
+                         (throw (error env (error-msg spec "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))))
                        [lib :refer referred])
         parse-import-spec (fn parse-import-spec [spec]
-                            (assert (and (symbol? spec) (nil? (namespace spec)))
-                                    (error-msg spec "Only lib.Ctor specs supported in :import"))
+                            (when-not (and (symbol? spec) (nil? (namespace spec)))
+                              (throw (error env (error-msg spec "Only lib.Ctor specs supported in :import"))))
                             (swap! deps conj spec)
                             (let [ctor-sym (symbol (last (string/split (str spec) #"\.")))]
                               {:import  {ctor-sym spec}
@@ -765,10 +777,10 @@
                       :import         parse-import-spec}
         {uses :use requires :require uses-macros :use-macros requires-macros :require-macros imports :import :as params}
         (reduce (fn [m [k & libs]]
-                  (assert (#{:use :use-macros :require :require-macros :import} k)
-                          "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")
-                  (assert (@valid-forms k)
-                          (str "Only one " k " form is allowed per namespace definition"))
+                  (when-not (#{:use :use-macros :require :require-macros :import} k)
+                    (throw (error env "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")))
+                  (when-not (@valid-forms k)
+                    (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
                   (swap! valid-forms disj k)
                   (apply merge-with merge m (map (spec-parsers k) libs)))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
@@ -900,7 +912,8 @@
 
 (defmethod parse 'js*
   [op env [_ jsform & args :as form] _]
-  (assert (string? jsform))
+  (when-not (string? jsform)
+    (throw (error env "Invalid js* form")))
   (if args
     (disallowing-recur
      (let [seg (fn seg [^String s]
@@ -1017,7 +1030,8 @@
                 :column (or (-> form meta :column)
                             (:column env)))]
       (let [op (first form)]
-        (assert (not (nil? op)) "Can't call nil")
+        (when (nil? op)
+          (throw (error env "Can't call nil")))
         (let [mform (macroexpand-1 env form)]
           (if (identical? form mform)
             (wrapping-errors env
