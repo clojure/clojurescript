@@ -2597,6 +2597,7 @@ reduces them without incurring seq initialization"
   "Takes a function f and fewer than the normal arguments to f, and
   returns a fn that takes a variable number of additional args. When
   called, the returned function calls f with args + additional args."
+  ([f] f)
   ([f arg1]
    (fn [& args] (apply f arg1 args)))
   ([f arg1 arg2]
