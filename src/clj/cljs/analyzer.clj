@@ -478,7 +478,10 @@
                   ;; lets us optimize self calls
                   (no-warn (doall (map #(analyze-fn-method menv locals % type) meths)))
                   methods)]
-    ;;todo - validate unique arities, at most one variadic, variadic takes max required args
+    ;;todo - at most one variadic, variadic takes max required args
+    (let [param-counts (map (comp count :params) methods)]
+      (when (not= (distinct param-counts) param-counts)
+        (throw (error env "Can't have 2 overloads with same arity"))))
     {:env env :op :fn :form form :name name-var :methods methods :variadic variadic
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
