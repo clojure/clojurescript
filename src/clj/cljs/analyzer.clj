@@ -168,9 +168,6 @@
   (let [sym (symbol name)]
     (get (:requires (:ns env)) sym sym)))
 
-;; TODO: our internal conventions around data structures
-;; should probably be changed so we don't special case
-;; cljs.core namespaces, they won't be properly checked
 (defn confirm-ns [env ns-sym]
   (when (and (nil? (get '#{cljs.core goog Math} ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym)) 
