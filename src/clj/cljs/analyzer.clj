@@ -339,6 +339,9 @@
         ns-name (-> env :ns :name)]
     (when (namespace sym)
       (throw (error env "Can't def ns-qualified name")))
+    (when-let [doc (:doc args)]
+      (when-not (string? doc)
+        (throw (error env "Too many arguments to def"))))
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (get-in @namespaces [ns-name :uses sym]))
