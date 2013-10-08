@@ -253,7 +253,7 @@
 
 (declare analyze analyze-symbol analyze-seq)
 
-(def specials '#{if def fn* do let* loop* letfn* throw try* recur new set! ns deftype* defrecord* . js* & quote})
+(def specials '#{if def fn* do let* loop* letfn* throw try recur new set! ns deftype* defrecord* . js* & quote})
 
 (def ^:dynamic *recur-frames* nil)
 (def ^:dynamic *loop-lets* nil)
@@ -290,38 +290,40 @@
      :throw throw-expr
      :children [throw-expr]}))
 
-(defmethod parse 'try*
+(defmethod parse 'try
   [op env [_ & body :as form] name]
-  (let [body (vec body)
-        catchenv (update-in env [:context] #(if (= :expr %) :return %))
-        tail (peek body)
-        fblock (when (and (seq? tail) (= 'finally (first tail)))
-                  (rest tail))
-        finally (when fblock
-                  (analyze (assoc env :context :statement) `(do ~@fblock)))
-        body (if finally (pop body) body)
-        tail (peek body)
-        cblock (when (and (seq? tail)
-                          (= 'catch (first tail)))
-                 (rest tail))
-        name (first cblock)
+  (let [catchenv (update-in env [:context] #(if (= :expr %) :return %))
+        catch? (every-pred seq? #(= (first %) 'catch))
+        finally? (every-pred seq? #(= (first %) 'finally))
+        [body tail] (split-with (complement (some-fn catch? finally?)) body)
+        [cblocks [fblock]] (split-with catch? tail)
+        finally (when (seq fblock)
+                  (analyze (assoc env :context :statement) `(do ~@(rest fblock))))
+        e (when (seq cblocks) (gensym "e"))
+        cblock (when e
+                 `(cljs.core/cond
+                   ~@(mapcat
+                      (fn [[_ type name & cb]]
+                        (when name (assert (not (namespace name)) "Can't qualify symbol in catch"))
+                        `[(cljs.core/instance? ~type ~e)
+                          (cljs.core/let [~name ~e] ~@cb)])
+                      cblocks)
+                   :else (throw ~e)))
         locals (:locals catchenv)
-        locals (if name
-                 (assoc locals name
-                   {:name name
-                    :line (get-line name env)
-                    :column (get-col name env)})
+        locals (if e
+                 (assoc locals e
+                        {:name e
+                         :line (get-line e env)
+                         :column (get-col e env)})
                  locals)
         catch (when cblock
-                (analyze (assoc catchenv :locals locals) `(do ~@(rest cblock))))
-        body (if name (pop body) body)
-        try (analyze (if (or name finally) catchenv env) `(do ~@body))]
-    (when (and name (namespace name))
-      (throw (error env "Can't qualify symbol in catch")))
-    {:env env :op :try* :form form
+                (analyze (assoc catchenv :locals locals) cblock))
+        try (analyze (if (or e finally) catchenv env) `(do ~@body))]
+
+    {:env env :op :try :form form
      :try try
      :finally finally
-     :name name
+     :name e
      :catch catch
      :children [try catch finally]}))
 

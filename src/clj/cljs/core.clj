@@ -1001,36 +1001,6 @@
         ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
         :else ~default))))
 
-(defmacro try
-  "(try expr* catch-clause* finally-clause?)
-
-   Special Form
-
-   catch-clause => (catch protoname name expr*)
-   finally-clause => (finally expr*)
-
-  Catches and handles JavaScript exceptions."
-  [& forms]
-  (let [catch? #(and (seq? %) (= (first %) 'catch))
-        [body catches] (split-with (complement catch?) forms)
-        [catches fin] (split-with catch? catches)
-        e (gensym "e")]
-    (assert (every? #(clojure.core/> (count %) 2) catches) "catch block must specify a prototype and a name")
-    (if (seq catches)
-      `(~'try*
-        ~@body
-        (catch ~e
-            (cond
-             ~@(mapcat
-                (fn [[_ type name & cb]]
-                  `[(instance? ~type ~e) (let [~name ~e] ~@cb)])
-                catches)
-             :else (throw ~e)))
-        ~@fin)
-      `(~'try*
-        ~@body
-        ~@fin))))
-
 (defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to
   logical true."

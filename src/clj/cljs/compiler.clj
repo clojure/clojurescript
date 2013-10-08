@@ -571,7 +571,7 @@
     (emit ret)
     (when (and statements (= :expr context)) (emits "})()"))))
 
-(defmethod emit :try*
+(defmethod emit :try
   [{:keys [env try catch name finally]}]
   (let [context (:context env)]
     (if (or name finally)
