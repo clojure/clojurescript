@@ -37,6 +37,12 @@
    :fn-deprecated true
    :protocol-deprecated true})
 
+(defn munge-path [ss]
+  (clojure.lang.Compiler/munge (str ss)))
+
+(defn ns->relpath [s]
+  (str (string/replace (munge-path s) \. \/) ".cljs"))
+
 (def constant-counter (atom 0))
 
 (defn gen-constant-id [value]
@@ -170,7 +176,10 @@
 
 (defn confirm-ns [env ns-sym]
   (when (and (nil? (get '#{cljs.core goog Math} ns-sym))
-             (nil? (get (-> env :ns :requires) ns-sym)) 
+             (nil? (get (-> env :ns :requires) ns-sym))
+             ;; macros may refer to namespaces never explicitly required
+             ;; confirm that the library at least exists
+             (nil? (io/resource (ns->relpath ns-sym)))
              (:undeclared *cljs-warnings*))
     (warning env
       (str "WARNING: No such namespace: " ns-sym))))
@@ -667,12 +676,6 @@
         (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
         :else {:env env :op :set! :form form :target targetexpr :val valexpr
                :children [targetexpr valexpr]})))))
-
-(defn munge-path [ss]
-  (clojure.lang.Compiler/munge (str ss)))
-
-(defn ns->relpath [s]
-  (str (string/replace (munge-path s) \. \/) ".cljs"))
 
 (declare analyze-file)
 
