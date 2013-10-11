@@ -521,7 +521,7 @@ nil if the end of stream has been reached")
 (defn ^:private read-queue
   [elems]
   (if (vector? elems)
-    (into cljs.core.PersistentQueue/EMPTY elems)
+    (into cljs.core.PersistentQueue.EMPTY elems)
     (reader-error nil "Queue literal expects a vector for its elements.")))
 
 
