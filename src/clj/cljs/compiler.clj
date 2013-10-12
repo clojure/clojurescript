@@ -698,7 +698,7 @@
        proto?
        (let [pimpl (str (munge (protocol-prefix protocol))
                         (munge (name (:name info))) "$arity$" (count args))]
-         (emits (first args) "." pimpl "(" (comma-sep args) ")"))
+         (emits (first args) "." pimpl "(" (comma-sep (cons "null" (rest args))) ")"))
 
        keyword?
        (emits f ".call(" (comma-sep (cons "null" args)) ")")

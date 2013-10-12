@@ -630,13 +630,15 @@
                                                       `(set! ~(prototype-prefix 'apply)
                                                              ~(with-meta
                                                                 `(fn ~[this-sym argsym]
-                                                                   (.apply (.-call ~this-sym) ~this-sym
-                                                                           (.concat (array ~this-sym) (aclone ~argsym))))
+                                                                   (this-as ~this-sym
+                                                                     (.apply (.-call ~this-sym) ~this-sym
+                                                                       (.concat (array ~this-sym) (aclone ~argsym)))))
                                                                 (meta form)))])
                                                    (let [pf (core/str pprefix f)
                                                          adapt-params (fn [[[targ & args :as sig] & body]]
-                                                                        (cons (vec (cons (vary-meta targ assoc :tag t) args))
-                                                                              body))]
+                                                                        `(~(vec (cons (vary-meta targ assoc :tag t) args))
+                                                                           (this-as ~targ
+                                                                             ~@body)))]
                                                      (if (vector? (first meths))
                                                        [`(set! ~(prototype-prefix (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@(adapt-params meths)) (meta form)))]
                                                        (map (fn [[sig & body :as meth]]
