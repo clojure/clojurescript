@@ -2,8 +2,7 @@
 
 ClojureScript is a new compiler for [Clojure](http://clojure.org) that targets JavaScript. It is designed to emit JavaScript code which is compatible with the advanced compilation mode of the [Google Closure](http://code.google.com/closure/) optimizing compiler.
 
-Releases and dependency information
-----
+## Releases and dependency information ##
 
 Latest stable release: 0.0-1934
 
