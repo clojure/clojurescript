@@ -318,6 +318,9 @@
                   true 'boolean
                   false 'boolean
                   nil)
+      :var (if (:init e)
+             (infer-tag (:init e))
+             (infer-tag (:info e)))
       nil)))
 
 (defn safe-test? [e]
