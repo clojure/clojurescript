@@ -577,15 +577,23 @@
         (cljs.analyzer/warning env
           (core/str "WARNING: Can't resolve protocol symbol " p))))))
 
+(defn resolve-var [env sym]
+  (let [ret (-> (dissoc env :locals)
+              (cljs.analyzer/resolve-var sym)
+              :name)]
+    (assert ret (core/str "Can't resolve: " sym))
+    ret))
+
+(defn ->impl-map [impls]
+  (loop [ret {} s impls]
+    (if (seq s)
+      (recur (assoc ret (first s) (take-while seq? (next s)))
+        (drop-while seq? (next s)))
+      ret)))
+
 (defmacro extend-type [tsym & impls]
-  (let [resolve #(let [ret (:name (cljs.analyzer/resolve-var (dissoc &env :locals) %))]
-                   (assert ret (core/str "Can't resolve: " %))
-                   ret)
-        impl-map (loop [ret {} s impls]
-                   (if (seq s)
-                     (recur (assoc ret (first s) (take-while seq? (next s)))
-                            (drop-while seq? (next s)))
-                     ret))
+  (let [resolve   (partial resolve-var &env)
+        impl-map  (->impl-map impls)
         skip-flag (set (-> tsym meta :skip-protocol-flag))]
     (if (base-type tsym)
       (let [t (base-type tsym)
