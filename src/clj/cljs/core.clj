@@ -591,21 +591,24 @@
         (drop-while seq? (next s)))
       ret)))
 
+(defn base-assign-impls [env resolve tsym type [p sigs]]
+  (warn-and-update-protocol p tsym env)
+  (let [psym       (resolve p)
+        pfn-prefix (subs (core/str psym) 0
+                     (clojure.core/inc (.indexOf (core/str psym) "/")))]
+    (cons `(aset ~psym ~type true)
+      (map (fn [[f & meths :as form]]
+             `(aset ~(symbol (core/str pfn-prefix f))
+                ~type ~(with-meta `(fn ~@meths) (meta form))))
+        sigs))))
+
 (defmacro extend-type [tsym & impls]
-  (let [resolve   (partial resolve-var &env)
+  (let [env       &env
+        resolve   (partial resolve-var env)
         impl-map  (->impl-map impls)
         skip-flag (set (-> tsym meta :skip-protocol-flag))]
-    (if (base-type tsym)
-      (let [t (base-type tsym)
-            assign-impls (fn [[p sigs]]
-                           (warn-and-update-protocol p tsym &env)
-                           (let [psym (resolve p)
-                                 pfn-prefix (subs (core/str psym) 0 (clojure.core/inc (.indexOf (core/str psym) "/")))]
-                             (cons `(aset ~psym ~t true)
-                                   (map (fn [[f & meths :as form]]
-                                          `(aset ~(symbol (core/str pfn-prefix f)) ~t ~(with-meta `(fn ~@meths) (meta form))))
-                                        sigs))))]
-        `(do ~@(mapcat assign-impls impl-map)))
+    (if-let [type (base-type tsym)]
+      `(do ~@(mapcat #(base-assign-impls env resolve tsym type %) impl-map))
       (let [t (resolve tsym)
             prototype-prefix (fn [sym]
                                `(.. ~tsym -prototype ~(to-property sym)))
