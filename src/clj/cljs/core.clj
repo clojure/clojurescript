@@ -602,6 +602,9 @@
                 ~type ~(with-meta `(fn ~@meths) (meta form))))
         sigs))))
 
+(defn prototype-prefix [tsym sym]
+  `(.. ~tsym -prototype ~(to-property sym)))
+
 (defmacro extend-type [tsym & impls]
   (let [env       &env
         resolve   (partial resolve-var env)
@@ -610,8 +613,6 @@
     (if-let [type (base-type tsym)]
       `(do ~@(mapcat #(base-assign-impls env resolve tsym type %) impl-map))
       (let [t (resolve tsym)
-            prototype-prefix (fn [sym]
-                               `(.. ~tsym -prototype ~(to-property sym)))
             assign-impls (fn [[p sigs]]
                            (warn-and-update-protocol p t &env)
                            (let [psym (resolve p)
@@ -621,11 +622,11 @@
                                                     (let [[tname & args] sig]
                                                       (list (vec args) (list* 'this-as (vary-meta tname assoc :tag t) body))))]
                                  (map (fn [[f & meths :as form]]
-                                        `(set! ~(prototype-prefix f)
+                                        `(set! ~(prototype-prefix tsym f)
                                                ~(with-meta `(fn ~@(map adapt-params meths)) (meta form))))
                                       sigs))
                                (concat (when-not (skip-flag psym)
-                                         [`(set! ~(prototype-prefix pprefix) true)])
+                                         [`(set! ~(prototype-prefix tsym pprefix) true)])
                                        (mapcat (fn [[f & meths :as form]]
                                                  (if (= psym 'cljs.core/IFn)
                                                    (let [adapt-params (fn [[[targ & args :as sig] & body]]
@@ -637,8 +638,8 @@
                                                          meths (map adapt-params meths)
                                                          this-sym (with-meta 'self__ {:tag t})
                                                          argsym (gensym "args")]
-                                                     [`(set! ~(prototype-prefix 'call) ~(with-meta `(fn ~@meths) (meta form)))
-                                                      `(set! ~(prototype-prefix 'apply)
+                                                     [`(set! ~(prototype-prefix tsym 'call) ~(with-meta `(fn ~@meths) (meta form)))
+                                                      `(set! ~(prototype-prefix tsym 'apply)
                                                              ~(with-meta
                                                                 `(fn ~[this-sym argsym]
                                                                    (this-as ~this-sym
@@ -651,9 +652,9 @@
                                                                            (this-as ~targ
                                                                              ~@body)))]
                                                      (if (vector? (first meths))
-                                                       [`(set! ~(prototype-prefix (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@(adapt-params meths)) (meta form)))]
+                                                       [`(set! ~(prototype-prefix tsym (core/str pf "$arity$" (count (first meths)))) ~(with-meta `(fn ~@(adapt-params meths)) (meta form)))]
                                                        (map (fn [[sig & body :as meth]]
-                                                              `(set! ~(prototype-prefix (core/str pf "$arity$" (count sig)))
+                                                              `(set! ~(prototype-prefix tsym (core/str pf "$arity$" (count sig)))
                                                                      ~(with-meta `(fn ~(adapt-params meth)) (meta form))))
                                                             meths)))))
                                                sigs)))))]
