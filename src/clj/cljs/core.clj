@@ -46,12 +46,12 @@
                  :imported)))
 
 (import-macros clojure.core
- [-> ->> ..  and assert comment cond
+ [-> ->> .. assert comment cond
   declare defn defn-
   doto
   extend-protocol fn for
   if-let if-not letfn
-  memfn or
+  memfn
   when when-first when-let when-not while
   cond-> cond->> as-> some-> some->>])
 
@@ -192,6 +192,28 @@
 
 (defn bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
+
+(defmacro and
+  "Evaluates exprs one at a time, from left to right. If a form
+  returns logical false (nil or false), and returns that value and
+  doesn't evaluate any of the other expressions, otherwise it returns
+  the value of the last expr. (and) returns true."
+  ([] true)
+  ([x] x)
+  ([x & next]
+   `(let [and# ~x]
+      (if and# (and ~@next) and#))))
+
+(defmacro or
+  "Evaluates exprs one at a time, from left to right. If a form
+  returns a logical true value, or returns that value and doesn't
+  evaluate any of the other expressions, otherwise it returns the
+  value of the last expression. (or) returns nil."
+  ([] nil)
+  ([x] x)
+  ([x & next]
+      `(let [or# ~x]
+         (if or# or# (or ~@next)))))
 
 (defmacro nil? [x]
   `(coercive-= ~x nil))
