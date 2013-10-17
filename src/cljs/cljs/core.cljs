@@ -6564,7 +6564,7 @@ reduces them without incurring seq initialization"
         match-idx (.search s re)
         match-str (if (coll? match-data) (first match-data) match-data)
         post-match (subs s (+ match-idx (count match-str)))]
-    (when match-data (lazy-seq (cons match-data (re-seq re post-match))))))
+    (when match-data (lazy-seq (cons match-data (when (seq post-match) (re-seq re post-match)))))))
 
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."

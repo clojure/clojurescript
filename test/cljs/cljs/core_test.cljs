@@ -1960,5 +1960,8 @@
   ;; CLJS-600
   (assert (= "foobar" (apply str (concat "foo" "bar"))))
 
+  ;; CLJS-608
+  (assert (= '("") (re-seq #"\s*" "")))
+
   :ok
   )
