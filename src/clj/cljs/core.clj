@@ -32,7 +32,8 @@
                             bit-test bit-shift-left bit-shift-right bit-xor
 
                             cond-> cond->> as-> some-> some->>])
-  (:require clojure.walk))
+  (:require clojure.walk)
+  (:require cljs.compiler))
 
 (alias 'core 'clojure.core)
 
@@ -193,6 +194,11 @@
 (defn bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
 
+(defn simple-bool-expr? [ast]
+  (core/and
+    (#{:var :invoke :constant :dot} (:op ast))
+    (= (cljs.compiler/infer-tag ast) 'boolean)))
+
 (defmacro and
   "Evaluates exprs one at a time, from left to right. If a form
   returns logical false (nil or false), and returns that value and
@@ -201,8 +207,15 @@
   ([] true)
   ([x] x)
   ([x & next]
-   `(let [and# ~x]
-      (if and# (and ~@next) and#))))
+    (let [forms (concat [x] next)]
+      (if (every? simple-bool-expr?
+            (map #(cljs.analyzer/analyze &env %) forms))
+        (let [and-str (->> (repeat (count forms) "~{}")
+                        (interpose " && ")
+                        (apply core/str))]
+          (bool-expr `(~'js* ~and-str ~@forms)))
+        `(let [and# ~x]
+           (if and# (and ~@next) and#))))))
 
 (defmacro or
   "Evaluates exprs one at a time, from left to right. If a form
@@ -212,8 +225,15 @@
   ([] nil)
   ([x] x)
   ([x & next]
-      `(let [or# ~x]
-         (if or# or# (or ~@next)))))
+    (let [forms (concat [x] next)]
+      (if (every? simple-bool-expr?
+            (map #(cljs.analyzer/analyze &env %) forms))
+        (let [or-str (->> (repeat (count forms) "~{}")
+                        (interpose " || ")
+                        (apply core/str))]
+          (bool-expr `(~'js* ~or-str ~@forms)))
+        `(let [or# ~x]
+           (if or# or# (or ~@next)))))))
 
 (defmacro nil? [x]
   `(coercive-= ~x nil))
@@ -925,14 +945,15 @@
                        (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
       `(let [~xsym ~x]
          (if ~xsym
-           (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))
-                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
-             true
-             ~(if check-native
-                `(if (coercive-not (. ~xsym ~msym))
-                   (cljs.core/type_satisfies_ ~psym ~xsym)
-                   false)
-                false))
+           (let [bit# ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))]
+             (if (or bit#
+                     ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+               true
+               ~(if check-native
+                  `(if (coercive-not (. ~xsym ~msym))
+                     (cljs.core/type_satisfies_ ~psym ~xsym)
+                     false)
+                  false)))
            ~(if check-native
               `(cljs.core/type_satisfies_ ~psym ~xsym)
               false))))))
