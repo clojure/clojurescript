@@ -957,11 +957,13 @@
                      :ups-foreign-libs (:foreign-libs ups-deps)
                      :ups-externs (:externs ups-deps))]
       (binding [ana/*cljs-static-fns*
-                (or (= (opts :optimizations) :advanced)
+                (or (and (= (:optimizations opts) :advanced)
+                         (not (false? (:static-fns opts))))
                     (:static-fns opts)
                     ana/*cljs-static-fns*)
                 ana/*track-constants*
-                (or (= (opts :optimizations) :advanced)
+                (or (and (= (:optimizations opts) :advanced)
+                         (not (false? (:optimize-constants opts))))
                     (:optimize-constants opts)
                     ana/*track-constants*)
                 ana/*cljs-warnings*
