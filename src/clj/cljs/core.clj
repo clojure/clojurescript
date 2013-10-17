@@ -585,7 +585,7 @@
         (when-not (:protocol-symbol var)
           (cljs.analyzer/warning env
             (core/str "WARNING: Symbol " p " is not a protocol")))
-        (when (and (:protocol-deprecated cljs.analyzer/*cljs-warnings*)
+        (when (core/and (:protocol-deprecated cljs.analyzer/*cljs-warnings*)
                 (-> var :deprecated)
                 (not (-> p meta :deprecation-nowarn)))
           (cljs.analyzer/warning env
