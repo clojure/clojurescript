@@ -1749,11 +1749,10 @@ reduces them without incurring seq initialization"
          ""
          (.toString x)))
   ([x & ys]
-     ((fn [sb more]
-        (if more
-          (recur (. sb  (append (str (first more)))) (next more))
-          (.toString sb)))
-      (gstring/StringBuffer. (str x)) ys)))
+    (loop [sb (gstring/StringBuffer. (str x)) more ys]
+      (if more
+        (recur (. sb  (append (str (first more)))) (next more))
+        (.toString sb)))))
 
 (defn subs
   "Returns the substring of s beginning at start inclusive, and ending
