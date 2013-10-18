@@ -482,7 +482,8 @@
   structures define -equiv (and thus =) as a value, not an identity,
   comparison."
   ([x] true)
-  ([x y] (or (identical? x y) (-equiv x y)))
+  ([x y] (or (identical? x y)
+             ^boolean (-equiv x y)))
   ([x y & more]
      (if (= x y)
        (if (next more)
@@ -1077,7 +1078,7 @@ reduces them without incurring seq initialization"
 
     (string? o)
     (check-string-hash-cache o)
-    
+
     :else
     (-hash o)))
 

@@ -451,7 +451,9 @@
         meths (if (vector? (first meths)) (list meths) meths)
         locals (:locals env)
         name-var (if name
-                   {:name name :shadow (locals name)}) 
+                   {:name name
+                    :shadow (locals name)
+                    :tag (-> name meta :tag)}) 
         locals (if (and locals name) (assoc locals name name-var) locals)
         type (-> form meta ::type)
         fields (-> form meta ::fields)
