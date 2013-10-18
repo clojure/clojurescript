@@ -312,8 +312,10 @@
       :do  (infer-tag (:ret e))
       :if (let [then-tag (infer-tag (:then e))
                 else-tag (infer-tag (:else e))]
-            (when (= then-tag else-tag)
-              then-tag))
+            (if (= then-tag else-tag)
+              then-tag
+              (if (every? '#{boolean seq} [then-tag else-tag])
+                'seq)))
       :constant (case (:form e)
                   true 'boolean
                   false 'boolean

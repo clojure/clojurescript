@@ -194,10 +194,10 @@
 (defn bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
 
-(defn simple-bool-expr? [ast]
+(defn simple-test-expr? [ast]
   (core/and
     (#{:var :invoke :constant :dot} (:op ast))
-    (= (cljs.compiler/infer-tag ast) 'boolean)))
+    ('#{boolean seq} (cljs.compiler/infer-tag ast))))
 
 (defmacro and
   "Evaluates exprs one at a time, from left to right. If a form
@@ -208,7 +208,7 @@
   ([x] x)
   ([x & next]
     (let [forms (concat [x] next)]
-      (if (every? simple-bool-expr?
+      (if (every? simple-test-expr?
             (map #(cljs.analyzer/analyze &env %) forms))
         (let [and-str (->> (repeat (count forms) "~{}")
                         (interpose " && ")
@@ -226,7 +226,7 @@
   ([x] x)
   ([x & next]
     (let [forms (concat [x] next)]
-      (if (every? simple-bool-expr?
+      (if (every? simple-test-expr?
             (map #(cljs.analyzer/analyze &env %) forms))
         (let [or-str (->> (repeat (count forms) "~{}")
                         (interpose " || ")
