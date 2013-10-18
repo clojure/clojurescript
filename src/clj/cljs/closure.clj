@@ -384,10 +384,11 @@
   returns a JavaScriptFile. In either case the return value satisfies
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
-  (if output-file
-    (let [out-file (io/file (output-directory opts) output-file)]
-      (compiled-file (comp/compile-file file out-file opts)))
-    (compile-form-seq (ana/forms-seq file))))
+    (if output-file
+      (let [out-file (io/file (output-directory opts) output-file)]
+        (compiled-file (comp/compile-file file out-file opts)))
+      (binding [ana/*cljs-file* (.getPath ^java.io.File file)]
+        (compile-form-seq (ana/forms-seq file)))))
 
 (defn compile-dir
   "Recursively compile all cljs files under the given source
