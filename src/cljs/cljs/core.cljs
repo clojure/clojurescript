@@ -2020,16 +2020,11 @@ reduces them without incurring seq initialization"
       (identical? fqn (.-fqn other))
       false))
   IFn
-  (invoke [kw coll]
-    (when-not (nil? coll)
-      (when (satisfies? ILookup coll)
-        (-lookup coll kw nil))))
-  (invoke [kw coll not-found]
-    (if (nil? coll)
-      not-found
-      (if (satisfies? ILookup coll)
-        (-lookup coll kw not-found)
-        not-found)))
+  (-invoke [kw coll]
+    (get coll kw nil))
+  (-invoke [kw coll not-found]
+    (get coll kw not-found))
+
   IHash
   (-hash [_]
     ; This was checking if _hash == -1, should it stay that way?
@@ -2039,9 +2034,11 @@ reduces them without incurring seq initialization"
                         0x9e3779b9))
         _hash)
       _hash))
+
   INamed
   (-name [_] name)
   (-namespace [_] ns)
+
   IPrintWithWriter
   (-pr-writer [o writer _] (-write writer (str ":" fqn))))
 
