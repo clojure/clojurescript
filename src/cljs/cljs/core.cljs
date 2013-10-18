@@ -462,8 +462,8 @@
     (if (satisfies? ISeq coll false)
       (-rest ^not-native coll)
       (let [s (seq coll)]
-        (if-not (nil? s)
-          (-rest s)
+        (if s
+          (-rest ^not-native s)
           ())))
     ()))
 
