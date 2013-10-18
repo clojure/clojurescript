@@ -56,6 +56,7 @@
 (simple-benchmark [coll [1 2 3]] (nth coll 0) 1000000)
 (simple-benchmark [coll [1 2 3]] (-nth coll 0) 1000000)
 (simple-benchmark [coll [1 2 3]] (-nth ^not-native coll 0) 1000000)
+(simple-benchmark [coll [1 2 3]] (coll 0) 1000000)
 (simple-benchmark [coll [1 2 3]] (conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (-conj coll 4) 1000000)
 (simple-benchmark [coll [1 2 3]] (seq coll) 1000000)
