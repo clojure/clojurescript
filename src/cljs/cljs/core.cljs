@@ -541,15 +541,7 @@
 
 (extend-type number
   IEquiv
-  (-equiv [x o] (identical? x o))
-
-  IHash
-  (-hash [o] (js-mod (.floor js/Math o) 2147483647)))
-
-(extend-type boolean
-  IHash
-  (-hash [o]
-    (if (identical? o true) 1 0)))
+  (-equiv [x o] (identical? x o)))
 
 (declare with-meta)
 
@@ -1071,12 +1063,23 @@ reduces them without incurring seq initialization"
       h
       (add-to-string-hash-cache k))))
 
-(defn hash
-  ([o] (hash o true))
-  ([o ^boolean check-cache]
-     (if (and ^boolean (goog/isString o) check-cache)
-       (check-string-hash-cache o)
-       (-hash o))))
+(defn hash [o]
+  (cond
+    (satisfies? IHash o false)
+    (-hash ^not-native o)
+
+    (number? o)
+    (js-mod (.floor js/Math o) 2147483647)
+
+    (true? o) 1
+
+    (false? o) 0
+
+    (string? o)
+    (check-string-hash-cache o)
+    
+    :else
+    (-hash o)))
 
 (defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
@@ -1781,7 +1784,12 @@ reduces them without incurring seq initialization"
                    (bit-shift-right seed 2))))
 
 (defn- hash-coll [coll]
-  (reduce #(hash-combine %1 (hash %2 false)) (hash (first coll) false) (next coll)))
+  (if (seq coll)
+    (loop [res (hash (first coll)) s (next coll)]
+      (if (nil? s)
+        res
+        (recur (hash-combine res (hash (first s))) (next s))))
+    0))
 
 (declare key val)
 
@@ -2001,10 +2009,6 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean list? [x]
   (satisfies? IList x))
-
-(extend-type string
-  IHash
-  (-hash [o] (goog.string/hashCode o)))
 
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
