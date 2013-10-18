@@ -675,21 +675,21 @@
             ~(with-meta `(fn ~@(map #(adapt-obj-params type %) meths)) (meta form))))
     sigs))
 
-(defn ifn-invoke-methods [type-sym meths]
+(defn ifn-invoke-methods [type type-sym [f & meths :as form]]
   (map
     (fn [meth]
       (let [arity (count (first meth))]
         `(set! ~(prototype-prefix type-sym
                   (symbol (core/str "cljs$core$IFn$_invoke$arity$" arity)))
-           (fn ~meth))))
-    meths))
+           ~(with-meta `(fn ~meth) (meta form)))))
+    (map #(adapt-ifn-invoke-params type %) meths)))
 
 (defn add-ifn-methods [type type-sym [f & meths :as form]]
-  (let [meths'   (map #(adapt-ifn-params type %) meths)
+  (let [meths    (map #(adapt-ifn-params type %) meths)
         this-sym (with-meta 'self__ {:tag type})
         argsym   (gensym "args")]
     (concat
-      [`(set! ~(prototype-prefix type-sym 'call) ~(with-meta `(fn ~@meths') (meta form)))
+      [`(set! ~(prototype-prefix type-sym 'call) ~(with-meta `(fn ~@meths) (meta form)))
        `(set! ~(prototype-prefix type-sym 'apply)
           ~(with-meta
              `(fn ~[this-sym argsym]
@@ -697,8 +697,7 @@
                   (.apply (.-call ~this-sym) ~this-sym
                     (.concat (array ~this-sym) (aclone ~argsym)))))
              (meta form)))]
-      (ifn-invoke-methods type-sym
-        (map #(adapt-ifn-invoke-params type %) meths)))))
+      (ifn-invoke-methods type type-sym form))))
 
 (defn add-proto-methods* [pprefix type type-sym [f & meths :as form]]
   (let [pf (core/str pprefix f)]
