@@ -68,7 +68,7 @@
                       (net/transmit
                        repl-connection
                        :evaluate-javascript
-                       (.getResponseText e/currentTarget
+                       (.getResponseText (.-currentTarget e)
                                          ()))))
 
       (net/register-service repl-connection
