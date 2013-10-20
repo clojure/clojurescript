@@ -706,7 +706,7 @@
          (emits (first args) "." pimpl "(" (comma-sep (cons "null" (rest args))) ")"))
 
        keyword?
-       (emits f ".call(" (comma-sep (cons "null" args)) ")")
+       (emits f ".cljs$core$IFn$_invoke$arity$" (count args) "(" (comma-sep args) ")")
        
        variadic-invoke
        (let [mfa (:max-fixed-arity variadic-invoke)]
