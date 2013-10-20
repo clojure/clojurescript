@@ -880,7 +880,7 @@ reduces them without incurring seq initialization"
      (when-not (nil? coll)
        (cond
          (satisfies? IIndexed coll false)
-         (-nth ^not-native coll (.floor js/Math n))
+         (-nth ^not-native coll n)
 
          (array? coll)
          (when (< n (.-length coll))
@@ -895,7 +895,7 @@ reduces them without incurring seq initialization"
          
          :else
          (if (satisfies? ISeq coll)
-           (linear-traversal-nth coll (.floor js/Math n))
+           (linear-traversal-nth coll n)
            (throw
              (js/Error.
                (str "nth not supported on this type "
@@ -904,7 +904,7 @@ reduces them without incurring seq initialization"
      (if-not (nil? coll)
        (cond
          (satisfies? IIndexed coll false)
-         (-nth ^not-native coll (.floor js/Math n) not-found)
+         (-nth ^not-native coll n not-found)
 
          (array? coll)
          (if (< n (.-length coll))
@@ -921,7 +921,7 @@ reduces them without incurring seq initialization"
 
          :else
          (if (satisfies? ISeq coll)
-           (linear-traversal-nth coll (.floor js/Math n) not-found)
+           (linear-traversal-nth coll n not-found)
            (throw
              (js/Error.
                (str "nth not supported on this type "
