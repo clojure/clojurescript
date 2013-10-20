@@ -16,7 +16,7 @@
   (let [conn (net/xhr-connection)
         url  (str "/reflect?" query-param)]
     (event/listen conn :success (fn [e]
-                                  (let [resp (.getResponseText e/currentTarget ())]
+                                  (let [resp (.getResponseText (.-currentTarget e) ())]
                                     (cb resp))))
     (event/listen conn :error #(println "Reflection query failed."))
     (net/transmit conn url)))
