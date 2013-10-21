@@ -983,9 +983,9 @@
           (if (and optim (not= optim :none))
             (->> js-sources
               (apply optimize all-opts)
-              (add-header all-opts)
               (add-wrapper all-opts)
               (add-source-map-link all-opts)
+              (add-header all-opts)
               (output-one-file all-opts))
             (apply output-unoptimized all-opts js-sources)))))))
 
