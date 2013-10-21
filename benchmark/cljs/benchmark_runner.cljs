@@ -164,22 +164,22 @@
       sym 'foo]
   (simple-benchmark [coll {:foo 1 :bar 2}] (kw coll) 1000000)
   (simple-benchmark [coll {'foo 1 'bar 2}] (sym coll) 1000000))
-(defrecord Foo [bar baz])
-(simple-benchmark [coll (Foo. 1 2)] (:bar coll) 1000000)
-(simple-benchmark [coll {:foo 1 :bar 2}] (assoc coll :baz 3) 100000)
-(simple-benchmark [coll {'foo 1 'bar 2}] (assoc coll 'baz 3) 100000)
-(simple-benchmark [coll {:foo 1 :bar 2}] (assoc coll :foo 2) 100000)
-(simple-benchmark [coll {'foo 1 'bar 2}] (assoc coll 'foo 2) 100000)
 (simple-benchmark [coll {:foo 1 :bar 2}]
                   (loop [i 0 m coll]
                     (if (< i 100000)
                       (recur (inc i) (assoc m :foo 2))
                       m))
                   1)
-(simple-benchmark [coll {'foo 1 'bar 2}]
+
+(defrecord Foo [bar baz])
+(simple-benchmark [coll (Foo. 1 2)] (:bar coll) 1000000)
+(simple-benchmark [coll (Foo. 1 2)] (-lookup coll :bar) 1000000)
+(simple-benchmark [coll (Foo. 1 2)] (assoc coll :bar 2) 1000000)
+(simple-benchmark [coll (Foo. 1 2)] (assoc coll :baz 3) 1000000)
+(simple-benchmark [coll (Foo. 1 2)]
                   (loop [i 0 m coll]
-                    (if (< i 100000)
-                      (recur (inc i) (assoc m 'foo 2))
+                    (if (< i 1000000)
+                      (recur (inc i) (assoc m :bar 2))
                       m))
                   1)
 (println)
