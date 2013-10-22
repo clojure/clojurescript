@@ -628,6 +628,8 @@
   (assert (= (re-seq (re-pattern "foo") "foo bar foo baz foo zot") (list "foo" "foo" "foo")))
   (assert (= (re-seq (re-pattern "f(.)o") "foo bar foo baz foo zot") (list ["foo" "o"] ["foo" "o"] ["foo" "o"])))
   (assert (= (re-matches (re-pattern "(?i)foo") "Foo") "Foo"))
+  ; new RegExp("").source => "(?:)" on webkit-family envs, "" elsewhere
+  (assert (#{"#\"\"" "#\"(?:)\""} (pr-str #"")))
 
   ;; destructuring
   (assert (= [2 1] (let [[a b] [1 2]] [b a])))

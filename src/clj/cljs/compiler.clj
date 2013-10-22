@@ -151,8 +151,10 @@
   (emits (wrap-in-double-quotes (escape-char x))))
 
 (defmethod emit-constant java.util.regex.Pattern [x]
-  (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
-    (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags)))
+  (if (= "" (str x))
+    (emits "(new RegExp(\"\"))")
+    (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
+      (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
 
 (def ^:const goog-hash-max 0x100000000)
 
