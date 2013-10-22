@@ -708,8 +708,7 @@ reduces them without incurring seq initialization"
   (-rseq [coll]
     (let [c (-count coll)]
       (if (pos? c)
-        (RSeq. coll (dec c) nil)
-        ()))))
+        (RSeq. coll (dec c) nil)))))
 
 (defn prim-seq
   ([prim]
@@ -749,8 +748,7 @@ reduces them without incurring seq initialization"
     (-nth ci i))
   (-rest [coll]
     (if (pos? i)
-      (RSeq. ci (dec i) nil)
-      ()))
+      (RSeq. ci (dec i) nil)))
 
   ICounted
   (-count [coll] (inc i))
@@ -1933,7 +1931,7 @@ reduces them without incurring seq initialization"
 (defn ^boolean reversible? [coll]
   (satisfies? IReversible coll))
 
-(defn rseq [coll]
+(defn ^seq rseq [coll]
   (-rseq coll))
 
 (defn reverse
@@ -3315,8 +3313,7 @@ reduces them without incurring seq initialization"
   IReversible
   (-rseq [coll]
     (if (pos? cnt)
-      (RSeq. coll (dec cnt) nil)
-      ())))
+      (RSeq. coll (dec cnt) nil))))
 
 (set! cljs.core.PersistentVector.EMPTY_NODE (VectorNode. nil (make-array 32)))
 
@@ -6147,7 +6144,8 @@ reduces them without incurring seq initialization"
 
   IReversible
   (-rseq [coll]
-    (map key (rseq tree-map)))
+    (if (pos? (count tree-map))
+      (map key (rseq tree-map))))
 
   ICounted
   (-count [coll] (count tree-map))

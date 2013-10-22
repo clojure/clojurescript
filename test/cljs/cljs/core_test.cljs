@@ -1025,7 +1025,10 @@
   (let [pv (vec (range 97))]
     (assert (= (nth pv 96) 96))
     (assert (= (nth pv 97 nil) nil))
-    (assert (= (pv 96) 96)))
+    (assert (= (pv 96) 96))
+    (assert (nil? (rseq [])))
+    (assert (= (reverse pv) (rseq pv))))
+
 
   (let [pv (vec (range 33))]
     (assert (= pv
@@ -1328,6 +1331,7 @@
     (assert (identical? compare (.-comp m1)))
     (assert (zero? (count m1)))
     (assert (zero? (count m2)))
+    (assert (nil? (rseq m1)))
     (let [m1 (assoc m1 :foo 1 :bar 2 :quux 3)
           m2 (assoc m2 :foo 1 :bar 2 :quux 3)]
       (assert (= (count m1) 3))
@@ -1374,6 +1378,7 @@
     (assert (identical? compare (-comparator s1)))
     (assert (zero? (count s1)))
     (assert (zero? (count s2)))
+    (assert (nil? (rseq s1)))
     (let [s1 (conj s1 1 2 3)
           s2 (conj s2 1 2 3)
           s3 (conj s3 1 2 3 7 8 9)
