@@ -734,8 +734,8 @@
                   (recur (next sources)
                     (if-let [url (:url source)]
                       (let [path (.getPath ^URL url)]
-                        (if-let [compiled (get @compiled-cljs path)] 
-                          (assoc merged (.getPath ^URL (:source-url source))
+                        (if-let [compiled (get @compiled-cljs path)]
+                          (assoc merged (when-let [source-url (:source-url source)] (.getPath ^URL source-url))
                             (sm/merge-source-maps
                               (:source-map compiled)
                               (get closure-source-map path)))
