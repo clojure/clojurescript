@@ -833,6 +833,7 @@
          (binding [*out* out
                    ana/*cljs-ns* 'cljs.user
                    ana/*cljs-file* (.getPath ^java.io.File src)
+                   reader/*alias-map* (or reader/*alias-map* {})
                    reader/*data-readers* tags/*cljs-data-readers*
                    *emitted-provides* (atom #{})
                    *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))

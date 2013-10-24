@@ -88,7 +88,7 @@
 
 (defn load-stream [repl-env filename res]
   (let [env (ana/empty-env)]
-    (doseq [form (ana/forms-seq res)]
+    (doseq [form (ana/forms-seq res filename)]
       (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
         (evaluate-form repl-env env filename form)))))
 
@@ -120,14 +120,6 @@
            (if (string? ret)
              (println ret)
              (prn nil))))))
-
-(defn- read-next-form []
-  (try {:status :success :form (binding [*ns* (create-ns ana/*cljs-ns*)
-                                         *data-readers* tags/*cljs-data-readers*]
-                                 (read))}
-       (catch Exception e
-         (println (.getMessage e))
-         {:status :error})))
 
 (def default-special-fns
   (let [load-file-fn (fn [repl-env file] (load-file repl-env file))]
@@ -162,20 +154,29 @@
       (analyze-source analyze-path))
     (let [env {:context :expr :locals {}}
           special-fns (merge default-special-fns special-fns)
-          is-special-fn? (set (keys special-fns))]
+          is-special-fn? (set (keys special-fns))
+          read-error (Object.)]
       (-setup repl-env)
-      (loop []
+      (loop [forms (ana/forms-seq *in* "NO_SOURCE_FILE")]
         (print (str "ClojureScript:" ana/*cljs-ns* "> "))
         (flush)
-        (let [{:keys [status form]} (read-next-form)]
+        (let [form (try
+                     (binding [*data-readers* tags/*cljs-data-readers*]
+                       (first forms))
+                     (catch Exception e
+                       (println (.getMessage e))
+                       read-error))]
           (cond
+           (identical? form read-error) (recur (ana/forms-seq *in* "NO_SOURCE_FILE"))
+           
            (= form :cljs/quit) :quit
 
-           (= status :error) (recur)
-
            (and (seq? form) (is-special-fn? (first form)))
-           (do (apply (get special-fns (first form)) repl-env (rest form)) (newline) (recur))
+           (do (apply (get special-fns (first form)) repl-env (rest form))
+               (newline)
+               (recur (rest forms)))
 
            :else
-           (do (eval-and-print repl-env env form) (recur)))))
+           (do (eval-and-print repl-env env form)
+               (recur (rest forms))))))
       (-tear-down repl-env))))

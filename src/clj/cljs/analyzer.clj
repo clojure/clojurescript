@@ -15,7 +15,8 @@
             [cljs.tagged-literals :as tags]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers])
-  (:import java.lang.StringBuilder))
+  (:import java.lang.StringBuilder
+           java.io.File))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
@@ -696,8 +697,8 @@
       (warning env
         (str "WARNING: Referred var " lib "/" sym " does not exist")))))
 
-(defn check-uses-macros [uses-macros env]
-  (doseq [[sym lib] uses-macros]
+(defn check-use-macros [use-macros env]
+  (doseq [[sym lib] use-macros]
     (when (and (:undeclared *cljs-warnings*)
                (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)))
       (warning env
@@ -745,21 +746,15 @@
                                (let [[lib & opts] spec
                                      {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
                                      [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
+                                 (when-not (or (symbol? alias) (nil? alias))
+                                   (throw (error env (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))))
                                  (when alias
-                                   ;; we need to create a fake namespace so the reader knows about aliases
-                                   ;; for resolving keywords like ::f/bar
-                                   (binding [*ns* (create-ns name)]
-                                     (let [^clojure.lang.Namespace ns (create-ns lib)]
-                                       (ns-unalias *ns* alias)
-                                       (clojure.core/alias alias (.name ns))))
                                    (let [alias-type (if macros? :macros :fns)]
                                      (when (contains? (alias-type @aliases) alias)
                                        (throw (error env (error-msg spec ":as alias must be unique"))))
                                      (swap! aliases
                                             update-in [alias-type]
                                             conj alias)))
-                                 (when-not (or (symbol? alias) (nil? alias))
-                                   (throw (error env (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))))
                                  (when-not (or (and (sequential? referred) (every? symbol? referred))
                                                (nil? referred))
                                    (throw (error env (error-msg spec ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
@@ -785,7 +780,7 @@
                       :use            (comp (partial parse-require-spec false) use->require)
                       :use-macros     (comp (partial parse-require-spec true) use->require)
                       :import         parse-import-spec}
-        {uses :use requires :require uses-macros :use-macros requires-macros :require-macros imports :import :as params}
+        {uses :use requires :require use-macros :use-macros require-macros :require-macros imports :import :as params}
         (reduce (fn [m [k & libs]]
                   (when-not (#{:use :use-macros :require :require-macros :import} k)
                     (throw (error env "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")))
@@ -800,24 +795,21 @@
       (check-uses uses env))
     (set! *cljs-ns* name)
     (load-core)
-    (doseq [nsym (concat (vals requires-macros) (vals uses-macros))]
+    (doseq [nsym (concat (vals require-macros) (vals use-macros))]
       (clojure.core/require nsym))
-    (when (seq uses-macros)
-      (check-uses-macros uses-macros env))
+    (when (seq use-macros)
+      (check-use-macros use-macros env))
     (swap! namespaces #(-> %
                            (assoc-in [name :name] name)
                            (assoc-in [name :doc] docstring)
                            (assoc-in [name :excludes] excludes)
                            (assoc-in [name :uses] uses)
                            (assoc-in [name :requires] requires)
-                           (assoc-in [name :uses-macros] uses-macros)
-                           (assoc-in [name :requires-macros]
-                                     (into {} (map (fn [[alias nsym]]
-                                                     [alias (find-ns nsym)])
-                                                   requires-macros)))
+                           (assoc-in [name :use-macros] use-macros)
+                           (assoc-in [name :require-macros] require-macros)
                            (assoc-in [name :imports] imports)))
     {:env env :op :ns :form form :name name :doc docstring :uses uses :requires requires :imports imports
-     :uses-macros uses-macros :requires-macros requires-macros :excludes excludes}))
+     :use-macros use-macros :require-macros require-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
   [_ env [_ tsym fields pmasks :as form] _]
@@ -986,16 +978,16 @@
         (when-not (or (-> env :locals sym)        ;locals hide macros
                       (and (or (-> env :ns :excludes sym)
                                (get-in @namespaces [(-> env :ns :name) :excludes sym]))
-                           (not (or (-> env :ns :uses-macros sym)
-                                    (get-in @namespaces [(-> env :ns :name) :uses-macros sym])))))
+                           (not (or (-> env :ns :use-macros sym)
+                                    (get-in @namespaces [(-> env :ns :name) :use-macros sym])))))
           (if-let [nstr (namespace sym)]
             (when-let [ns (cond
                            (= "clojure.core" nstr) (find-ns 'cljs.core)
                            (.contains nstr ".") (find-ns (symbol nstr))
                            :else
-                           (-> env :ns :requires-macros (get (symbol nstr))))]
+                           (some-> env :ns :require-macros (get (symbol nstr)) find-ns))]
               (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
-            (if-let [nsym (-> env :ns :uses-macros sym)]
+            (if-let [nsym (-> env :ns :use-macros sym)]
               (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) sym)
               (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym))))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
@@ -1100,41 +1092,60 @@
   ([env form] (analyze env form nil))
   ([env form name]
    (wrapping-errors env
-     (let [form (if (instance? clojure.lang.LazySeq form)
-                  (or (seq form) ())
-                  form)]
-       (load-core)
-       (cond
-        (symbol? form) (analyze-symbol env form)
-        (and (seq? form) (seq form)) (analyze-seq env form name)
-        (map? form) (analyze-map env form)
-        (vector? form) (analyze-vector env form)
-        (set? form) (analyze-set env form)
-        (keyword? form) (analyze-keyword env form)
-        (= form ()) (analyze-list env form)
-        :else {:op :constant :env env :form form})))))
+     (binding [reader/*alias-map* (or reader/*alias-map* {})]
+       (let [form (if (instance? clojure.lang.LazySeq form)
+                    (or (seq form) ())
+                    form)]
+         (load-core)
+         (cond
+          (symbol? form) (analyze-symbol env form)
+          (and (seq? form) (seq form)) (analyze-seq env form name)
+          (map? form) (analyze-map env form)
+          (vector? form) (analyze-vector env form)
+          (set? form) (analyze-set env form)
+          (keyword? form) (analyze-keyword env form)
+          (= form ()) (analyze-list env form)
+          :else {:op :constant :env env :form form}))))))
+
+(defn- source-path
+  "Returns a path suitable for providing to tools.reader as a 'filename'."
+  [x]
+  (cond
+   (instance? File) (.getAbsolutePath ^File x)
+   (instance? java.net.URL) (-> ^java.net.URL x .toURI File. .getAbsolutePath)
+   :default (str x)))
 
 (defn forms-seq
-  "Seq of forms in a Clojure or ClojureScript file."
-  [f]
-  (let [rdr (readers/indexing-push-back-reader (slurp f) 1 f)
-        forms-seq*
-        (fn forms-seq* []
-          (lazy-seq
-            (if-let [form (binding [*ns* (create-ns *cljs-ns*)] (reader/read rdr nil nil))]
-              (cons form (forms-seq*)))))]
-    (forms-seq*)))
+  "Seq of Clojure/ClojureScript forms from [f], which can be anything for which
+`clojure.java.io/reader` can produce a `java.io.Reader`. Optionally accepts a [filename]
+argument, which the reader will use in any emitted errors."
+  ([f] (forms-seq f (source-path f)))
+  ([f filename]
+     ;; TODO `f` is definitely not always a file, is often just a reader.  What to provide
+     ;; for a filename then?
+     (let [rdr (readers/indexing-push-back-reader (java.io.PushbackReader. (io/reader f)) 1 filename)
+           forms-seq*
+           (fn forms-seq* []
+             (lazy-seq
+              (if-let [form (binding [*ns* (create-ns *cljs-ns*)
+                                      reader/*alias-map* (merge
+                                                          (-> @namespaces *cljs-ns* :requires)
+                                                          (-> @namespaces *cljs-ns* :require-macros))]
+                              (reader/read rdr nil nil))]
+                (cons form (forms-seq*)))))]
+       (forms-seq*))))
 
 (defn analyze-file [f]
   (let [res (cond
-              (instance? java.io.File f) f
-              (re-find #"^file://" f) (java.net.URL. f)
-              :else (io/resource f))]
+             (instance? File f) f
+             (re-find #"^file://" f) (java.net.URL. f)
+             :else (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))
     (binding [*cljs-ns* 'cljs.user
-              *cljs-file* (if (instance? java.io.File res)
-                            (.getPath ^java.io.File res)
-                            (.getPath ^java.net.URL res))]
+              *cljs-file* (if (instance? File res)
+                            (.getPath ^File res)
+                            (.getPath ^java.net.URL res))
+              reader/*alias-map* (or reader/*alias-map* {})]
       (let [env (empty-env)]
         (doseq [form (seq (forms-seq res))]
           (let [env (assoc env :ns (get-namespace *cljs-ns*))]
