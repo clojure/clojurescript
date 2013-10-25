@@ -2020,7 +2020,7 @@ reduces them without incurring seq initialization"
       false))
   IFn
   (-invoke [kw coll]
-    (get coll kw nil))
+    (get coll kw))
   (-invoke [kw coll not-found]
     (get coll kw not-found))
 

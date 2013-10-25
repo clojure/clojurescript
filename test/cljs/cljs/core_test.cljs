@@ -1971,5 +1971,14 @@
   ;; CLJS-608
   (assert (= '("") (re-seq #"\s*" "")))
 
+  ;; CLJS-638
+
+  (deftype KeywordTest []
+    ILookup
+    (-lookup [o k] :nothing)
+    (-lookup [o k not-found] not-found))
+
+  (assert (= (:a (KeywordTest.)) :nothing))
+
   :ok
   )
