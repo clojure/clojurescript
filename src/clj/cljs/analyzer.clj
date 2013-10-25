@@ -30,13 +30,50 @@
 (def ^:dynamic *constant-table* (atom {}))
 
 (def ^:dynamic *cljs-warnings*
-  {:undeclared false
+  {:undeclared-var false
+   :undeclared-ns false
+   :undeclared-ns-form true
    :redef true
    :dynamic true
    :fn-var true
    :fn-arity true
    :fn-deprecated true
-   :protocol-deprecated true})
+   :protocol-deprecated true
+   :undeclared-protocol-symbol true
+   :invalid-protocol-symbol true})
+
+(declare message namespaces)
+
+(defn ^:private default-warning-handler [warning-type env & [extra]]
+  (when (warning-type *cljs-warnings*)
+      (let [s (condp = warning-type
+                :undeclared-var (str "WARNING: Use of undeclared Var " (:prefix extra) "/" (:suffix extra))
+                :undeclared-ns (str "WARNING: No such namespace: " (:ns-sym extra))
+                :dynamic (str "WARNING: " (:name extra) " not declared ^:dynamic")
+                :redef   (str "WARNING: " (:sym extra) " already refers to: " (symbol (str (:ns extra)) (str (:sym extra)))
+                              " being replaced by: " (symbol (str (:ns-name extra)) (str (:sym extra))))
+                :fn-var (str "WARNING: " (symbol (str (:ns-name extra)) (str (:sym extra)))
+                             " no longer fn, references are stale")
+                :fn-arity (str "WARNING: Wrong number of args (" (:argc extra) ") passed to " (or (:ctor extra)
+                                                                                                  (:name extra)))
+                :fn-deprecated (str "WARNING: " (-> extra :fexpr :info :name) " is deprecated.")
+                :undeclared-ns-form (str "WARNING: Referred " (:type extra) " " (:lib extra) "/" (:sym extra) " does not exist")
+                :protocol-deprecated (str "WARNING: Protocol " (:protocol extra) " is deprecated")
+                :undeclared-protocol-symbol (str "WARNING: Can't resolve protocol symbol " (:protocol extra))
+                :invalid-protocol-symbol (str "WARNING: Symbol " (:protocol extra) " is not a protocol"))]
+        (when s
+          (binding [*out* *err*]
+            (println (message env s)))))))
+
+(def ^:dynamic *cljs-warning-handlers*
+  [default-warning-handler])
+
+(defn with-warning-handlers [handlers]
+  (binding [*cljs-warning-handlers* handlers]))
+
+(defmacro with-warning-handlers [handlers & body]
+  `(binding [*cljs-warning-handlers* ~handlers]
+     ~@body))
 
 (defn munge-path [ss]
   (clojure.lang.Compiler/munge (str ss)))
@@ -79,15 +116,14 @@
   (swap! namespaces assoc key val))
 
 (defmacro no-warn [& body]
-  `(binding [*cljs-warnings*
-             {:undeclared false
-              :redef false
-              :dynamic false
-              :fn-var false
-              :fn-arity false
-              :fn-deprecated false
-              :protocol-deprecated false}]
-     ~@body))
+  (let [no-warnings (zipmap (keys *cljs-warnings*) (repeat false))]
+    `(binding [*cljs-warnings* ~no-warnings]
+       ~@body)))
+
+(defmacro all-warn [& body]
+  (let [all-warnings (zipmap (keys *cljs-warnings*) (repeat true))]
+    `(binding [*cljs-warnings* ~all-warnings]
+       ~@body)))
 
 (defn get-line [x env]
   (or (-> x meta :line) (:line env)))
@@ -141,9 +177,9 @@
   (str s (when (:line env)
            (str " at line " (:line env) " " *cljs-file*))))
 
-(defn warning [env s]
-  (binding [*out* *err*]
-    (println (message env s))))
+(defn warning [warning-type env extra]
+  (doseq [handler *cljs-warning-handlers*]
+    (handler warning-type env extra)))
 
 (defn error
   ([env s] (error env s nil))
@@ -164,12 +200,11 @@
          (throw (error ~env (.getMessage err#) err#))))))
 
 (defn confirm-var-exists [env prefix suffix]
-  (when (:undeclared *cljs-warnings*)
+  (when (:undeclared-var *cljs-warnings*)
     (let [crnt-ns (-> env :ns :name)]
       (when (= prefix crnt-ns)
         (when-not (-> @namespaces crnt-ns :defs suffix)
-          (warning env
-            (str "WARNING: Use of undeclared Var " prefix "/" suffix)))))))
+          (warning :undeclared-var env {:prefix prefix :suffix suffix}))))))
 
 (defn resolve-ns-alias [env name]
   (let [sym (symbol name)]
@@ -182,8 +217,7 @@
              ;; confirm that the library at least exists
              (nil? (io/resource (ns->relpath ns-sym)))
              (:undeclared *cljs-warnings*))
-    (warning env
-      (str "WARNING: No such namespace: " ns-sym))))
+    (warning :undeclared-ns env {:ns-sym ns-sym})))
 
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
@@ -257,8 +291,7 @@
           ev (resolve-existing-var env name)]
       (when (and (:dynamic *cljs-warnings*)
                  ev (not (-> ev :dynamic)))
-        (warning env
-          (str "WARNING: " (:name ev) " not declared ^:dynamic"))))))
+        (warning :dynamic env {:ev ev})))))
 
 (declare analyze analyze-symbol analyze-seq)
 
@@ -359,9 +392,7 @@
                       (get-in @namespaces [ns-name :uses sym]))
                 (let [ev (resolve-existing-var (dissoc env :locals) sym)]
                   (when (:redef *cljs-warnings*)
-                    (warning env
-                      (str "WARNING: " sym " already refers to: " (symbol (str (:ns ev)) (str sym))
-                           " being replaced by: " (symbol (str ns-name) (str sym)))))
+                    (warning :redef env {:ev ev :sym sym :ns-name ns-name}))
                   (swap! namespaces update-in [ns-name :excludes] conj sym)
                   (update-in env [:ns :excludes] conj sym))
                 env)
@@ -382,9 +413,7 @@
         (when (and (:fn-var *cljs-warnings*)
                    (not (-> sym meta :declared))
                    (and (:fn-var v) (not fn-var?)))
-          (warning env
-            (str "WARNING: " (symbol (str ns-name) (str sym))
-                 " no longer fn, references are stale"))))
+          (warning :fn-var env {:ns-name ns-name :sym sym})))
       (swap! namespaces assoc-in [ns-name :defs sym]
                  (merge 
                    {:name name}
@@ -636,9 +665,8 @@
          argexprs (vec (map #(analyze enve %) args))
          known-num-fields (:num-fields (resolve-existing-var env ctor))
          argc (count args)]
-     (when (and known-num-fields (not= known-num-fields argc))
-       (warning env
-         (str "WARNING: Wrong number of args (" argc ") passed to " ctor)))
+     (when (and known-num-fields (not= known-num-fields argc) (:fn-arity *cljs-warnings*))
+       (warning :fn-arity env {:argc argc :ctor ctor}))
 
      {:env env :op :new :form form :ctor ctorexpr :args argexprs
       :children (into [ctorexpr] argexprs)})))
@@ -694,17 +722,15 @@
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
-    (when (and (:undeclared *cljs-warnings*)
+    (when (and (:undeclared-ns *cljs-warnings*)
                (= (get-in @namespaces [lib :defs sym] ::not-found) ::not-found))
-      (warning env
-        (str "WARNING: Referred var " lib "/" sym " does not exist")))))
+      (warning :undeclared-ns-form env {:type :var :lib lib :sym sym}))))
 
 (defn check-use-macros [use-macros env]
   (doseq [[sym lib] use-macros]
-    (when (and (:undeclared *cljs-warnings*)
+    (when (and (:undeclared-ns *cljs-warnings*)
                (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)))
-      (warning env
-        (str "WARNING: Referred macro " lib "/" sym " does not exist")))))
+      (warning :undeclared-ns env {:type :macro :lib lib :sym sym}))))
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
@@ -958,12 +984,11 @@
          (when (and (not (some #{argc} (map count method-params)))
                     (or (not variadic)
                         (and variadic (< argc max-fixed-arity))))
-           (warning env
-             (str "WARNING: Wrong number of args (" argc ") passed to " name)))))
+           (warning :fn-arity env {:name name
+                                   :argc argc}))))
      (if (and (:fn-deprecated *cljs-warnings*) (-> fexpr :info :deprecated)
               (not (-> form meta :deprecation-nowarn)))
-       (warning env
-         (str "WARNING: " (-> fexpr :info :name) " is deprecated.")))
+       (warning :fn-deprecated env {:fexpr fexpr}))
      {:env env :op :invoke :form form :f fexpr :args argexprs
       :tag (or (-> fexpr :info :tag) (-> form meta :tag)) :children (into [fexpr] argexprs)})))
 

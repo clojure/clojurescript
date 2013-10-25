@@ -606,21 +606,18 @@
     (if-let [var (cljs.analyzer/resolve-existing-var (dissoc env :locals) p)]
       (do
         (when-not (:protocol-symbol var)
-          (cljs.analyzer/warning env
-            (core/str "WARNING: Symbol " p " is not a protocol")))
+          (cljs.analyzer/warning :invalid-protocol-symbol env {:protocol p}))
         (when (core/and (:protocol-deprecated cljs.analyzer/*cljs-warnings*)
                 (-> var :deprecated)
                 (not (-> p meta :deprecation-nowarn)))
-          (cljs.analyzer/warning env
-            (core/str "WARNING: Protocol " p " is deprecated")))
+          (cljs.analyzer/warning :protocol-deprecated env {:protocol p}))
         (when (:protocol-symbol var)
           (swap! cljs.analyzer/namespaces
             (fn [ns]
               (update-in ns [(:ns var) :defs (symbol (name p)) :impls]
                 conj type)))))
       (when (:undeclared cljs.analyzer/*cljs-warnings*)
-        (cljs.analyzer/warning env
-          (core/str "WARNING: Can't resolve protocol symbol " p))))))
+        (cljs.analyzer/warning :undeclared-protocol-symbol env {:protocol p})))))
 
 (defn resolve-var [env sym]
   (let [ret (-> (dissoc env :locals)

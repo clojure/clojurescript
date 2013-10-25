@@ -973,7 +973,11 @@
                     (:optimize-constants opts)
                     ana/*track-constants*)
                 ana/*cljs-warnings*
-                (assoc ana/*cljs-warnings* :undeclared (true? (opts :warnings)))]
+                (let [enabled? (true? (opts :warnings))]
+                  (merge ana/*cljs-warnings*
+                         {:undeclared-var enabled?
+                          :undeclared-ns enabled?
+                          :undeclared-ns-form enabled?}))]
         (let [compiled (-compile source all-opts)
               const-table (when ana/*track-constants*
                             (comp/emit-constants-table-to-file @ana/*constant-table*
