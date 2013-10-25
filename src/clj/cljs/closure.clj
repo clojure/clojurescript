@@ -939,7 +939,9 @@
 
 (defn add-source-map-link [{:keys [source-map output-to] :as opts} js]
   (if source-map
-    (str js "\n//@ sourceMappingURL=" (path-relative-to (io/file output-to) {:url source-map}))
+      (if (= output-to :print)
+        (str js "\n//# sourceMappingURL=" source-map)
+        (str js "\n//# sourceMappingURL=" (path-relative-to (io/file output-to) {:url source-map})))
     js))
 
 (defn build
