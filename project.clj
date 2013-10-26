@@ -7,7 +7,8 @@
   :jvm-opts ^:replace ["-server"]
   :source-paths ["src/clj"]
   :resource-paths ["src/cljs"]
-  :test-paths ["test/cljs"]
+  :test-paths ["test/cljs"
+               "test/clj"]
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/data.json "0.2.3"]
                  [org.clojure/tools.reader "0.7.10"]
