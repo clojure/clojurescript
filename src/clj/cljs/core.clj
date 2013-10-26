@@ -196,7 +196,7 @@
 
 (defn simple-test-expr? [ast]
   (core/and
-    (#{:var :invoke :constant :dot} (:op ast))
+    (#{:var :invoke :constant :dot :js} (:op ast))
     ('#{boolean seq} (cljs.compiler/infer-tag ast))))
 
 (defmacro and
@@ -210,7 +210,7 @@
     (let [forms (concat [x] next)]
       (if (every? simple-test-expr?
             (map #(cljs.analyzer/analyze &env %) forms))
-        (let [and-str (->> (repeat (count forms) "~{}")
+        (let [and-str (->> (repeat (count forms) "(~{})")
                         (interpose " && ")
                         (apply core/str))]
           (bool-expr `(~'js* ~and-str ~@forms)))
@@ -228,7 +228,7 @@
     (let [forms (concat [x] next)]
       (if (every? simple-test-expr?
             (map #(cljs.analyzer/analyze &env %) forms))
-        (let [or-str (->> (repeat (count forms) "~{}")
+        (let [or-str (->> (repeat (count forms) "(~{})")
                         (interpose " || ")
                         (apply core/str))]
           (bool-expr `(~'js* ~or-str ~@forms)))
