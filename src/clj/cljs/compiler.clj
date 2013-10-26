@@ -14,8 +14,10 @@
             [clojure.string :as string]
             [clojure.tools.reader :as reader]
             [cljs.tagged-literals :as tags]
-            [cljs.analyzer :as ana])
-  (:import java.lang.StringBuilder))
+            [cljs.analyzer :as ana]
+            [cljs.source-map :as sm])
+  (:import java.lang.StringBuilder
+           java.io.File))
 
 (def js-reserved
   #{"abstract" "boolean" "break" "byte" "case"
@@ -825,6 +827,9 @@
          (ana/analyze-file "cljs/core.cljs"))
        ~@body))
 
+(defn url-path [^File f]
+  (.getPath (.toURL (.toURI f))))
+
 (defn compile-file*
   ([src dest] (compile-file* src dest nil))
   ([src dest opts]
@@ -849,20 +854,32 @@
                      (if (= (:op ast) :ns)
                        (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
                        (recur (rest forms) ns-name deps))))
-               (merge
-                 {:ns (or ns-name 'cljs.user)
-                  :provides [ns-name]
-                  :requires (if (= ns-name 'cljs.core)
-                              (set (vals deps))
-                              (set
-                                (remove nil?
-                                  (conj (set (vals deps)) 'cljs.core
-                                    (when ana/*track-constants* 'constants-table)))))
-                  :file dest
-                  :source-file src
-                  :lines @*cljs-gen-line*}
-                 (when (:source-map opts)
-                   {:source-map @*cljs-source-map*})))))))))
+               (do
+                 (when (and (:source-map opts)
+                            (= (:optimizations opts) :none))
+                   (let [sm-file (io/file (str (.getPath ^java.io.File dest) ".map"))]
+                     (emits "\n//@ sourceMappingURL=" (.getName sm-file))
+                     (spit sm-file
+                       (sm/encode {(url-path src) @*cljs-source-map*}
+                         {:lines (+ @*cljs-gen-line* 2)
+                          :file  (url-path dest)}))))
+                 (merge
+                   {:ns (or ns-name 'cljs.user)
+                    :provides [ns-name]
+                    :requires (if (= ns-name 'cljs.core)
+                                (set (vals deps))
+                                (set
+                                  (remove nil?
+                                    (conj (set (vals deps)) 'cljs.core
+                                      (when ana/*track-constants* 'constants-table)))))
+                    :file dest
+                    :source-file src
+                    :lines (+ @*cljs-gen-line*
+                             (if (and (:source-map opts)
+                                   (= (:optimizations opts) :none))
+                               2 0))}
+                   (when (:source-map opts)
+                     {:source-map @*cljs-source-map*}))))))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."
