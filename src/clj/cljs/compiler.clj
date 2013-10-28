@@ -862,7 +862,7 @@
                  (when (and (:source-map opts)
                             (= (:optimizations opts) :none))
                    (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                     (emits "\n//@ sourceMappingURL=" (.getName sm-file))
+                     (emits "\n//# sourceMappingURL=" (.getName sm-file))
                      (spit sm-file
                        (sm/encode {(url-path src) @*cljs-source-map*}
                          {:lines (+ @*cljs-gen-line* 2)
