@@ -368,7 +368,7 @@
 
    Compiled files are cached so they will only be read once."
   [m]
-  (let [path (.getAbsolutePath (:file m))
+  (let [path (.getAbsolutePath ^File (:file m))
         js (if (:provides m)
              (map->javascript-file m)
              (if-let [js (get @compiled-cljs path)]
@@ -948,11 +948,10 @@
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts] (build source opts false))
   ([source opts reset]
-    (when (or reset
-              (= (:optimizations opts) :advanced)
-              (:optimize-constants opts))
+    (when reset
       (ana/reset-constant-table!)
-      (ana/reset-namespaces!))
+      (ana/reset-namespaces!)
+      (comp/reset-compiled-cljs!))
     (let [opts (if (= :nodejs (:target opts))
                  (merge {:optimizations :simple} opts)
                  opts)
@@ -986,12 +985,17 @@
                              [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
                optim (:optimizations all-opts)]
           (if (and optim (not= optim :none))
-            (->> js-sources
-              (apply optimize all-opts)
-              (add-wrapper all-opts)
-              (add-source-map-link all-opts)
-              (add-header all-opts)
-              (output-one-file all-opts))
+            (do
+              (when-let [fname (:source-map all-opts)]
+                (assert (string? fname)
+                  (str ":source-map must name a file when using :whitespace, "
+                       ":simple, or :advanced optimizations")))
+              (->> js-sources
+                (apply optimize all-opts)
+                (add-wrapper all-opts)
+                (add-source-map-link all-opts)
+                (add-header all-opts)
+                (output-one-file all-opts)))
             (apply output-unoptimized all-opts js-sources)))))))
 
 (comment
