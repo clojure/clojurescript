@@ -24,6 +24,15 @@
   (-load [this ns url] "load code at url into the environment")
   (-tear-down [this] "dispose of the environment"))
 
+(defn- env->opts
+  "Returns a hash-map containing all of the entries in [repl-env], translating
+:working-dir to :output-dir."
+  [repl-env]
+  ; some bits in cljs.closure use the options value as an ifn :-/
+  (-> (into {} repl-env)
+      (assoc :optimizations (get repl-env :optimizations :none))
+      (assoc :output-dir (get repl-env :working-dir ".repl"))))
+
 (defn load-namespace
   "Load a namespace and all of its dependencies into the evaluation environment.
   The environment is responsible for ensuring that each namespace is loaded once and
@@ -33,8 +42,8 @@
                      (= (first sym) 'quote))
               (second sym)
               sym)
-        opts {:output-dir (get repl-env :working-dir ".repl")}
-        deps (->> (cljsc/add-dependencies opts {:requires [(name sym)] :type :seed})
+        deps (->> (cljsc/add-dependencies (env->opts repl-env)
+                                          {:requires [(name sym)] :type :seed})
                   (remove (comp #{["goog"]} :provides))
                   (remove (comp #{:seed} :type))
                   (map #(select-keys % [:provides :url])))]
