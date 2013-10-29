@@ -279,8 +279,11 @@
 (defmacro string? [x]
   (bool-expr (list 'js* "typeof ~{} === 'string'" x)))
 
+;; TODO: x must be a symbol, not an arbitrary expression
 (defmacro exists? [x]
-  (bool-expr (list 'js* "typeof ~{} !== 'undefined'" x)))
+  (bool-expr
+    (list 'js* "typeof ~{} !== 'undefined'"
+      (vary-meta x assoc :cljs.analyzer/no-resolve true))))
 
 (defmacro undefined? [x]
   (bool-expr (list 'js* "(void 0 === ~{})" x)))
@@ -576,7 +579,7 @@
         ns     (-> &env :ns :name)
         munge  cljs.compiler/munge]
     `(do
-       (when-not (exists? (. ~ns ~(symbol (core/str "-" t))))
+       (when-not (exists? ~(symbol (core/str ns) (core/str t)))
          (deftype ~t [~@locals ~meta-sym]
            IWithMeta
            (~'-with-meta [~this-sym ~meta-sym]

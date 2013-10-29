@@ -247,7 +247,9 @@
                      :ns full-ns})))))))
 
 (defn resolve-existing-var [env sym]
-  (resolve-var env sym confirm-var-exists))
+  (if-not (-> sym meta ::no-resolve)
+    (resolve-var env sym confirm-var-exists)
+    (resolve-var env sym)))
 
 (defn confirm-bindings [env names]
   (doseq [name names]
