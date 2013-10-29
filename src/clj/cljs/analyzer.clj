@@ -937,7 +937,10 @@
                        (list s)
                        (let [end (.indexOf s "}" idx)
                              inner (:name (resolve-existing-var env (symbol (subs s (+ 2 idx) end))))]
-                         (cons (subs s 0 idx) (cons inner (interp (subs s (inc end)))))))))]
+                         (lazy-seq
+                           (cons (subs s 0 idx)
+                             (cons inner
+                               (interp (subs s (inc end))))))))))]
       {:env env :op :js :form form :code (apply str (interp jsform))
        :tag (-> form meta :tag) :js-op (-> form meta :js-op)})))
 
