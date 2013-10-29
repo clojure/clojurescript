@@ -872,10 +872,8 @@
                               :provides [ns-name]
                               :requires (if (= ns-name 'cljs.core)
                                           (set (vals deps))
-                                          (set
-                                            (remove nil?
-                                              (conj (set (vals deps)) 'cljs.core
-                                                (when ana/*track-constants* 'constants-table)))))
+                                          (cond-> (conj (set (vals deps)) 'cljs.core)
+                                            ana/*track-constants* (conj 'constants-table)))
                               :file dest
                               :source-file src
                               :lines (+ @*cljs-gen-line*
@@ -918,7 +916,8 @@
                            :provides [ns-name]
                            :requires (if (= ns-name 'cljs.core)
                                        (set (vals deps))
-                                       (conj (set (vals deps)) 'cljs.core))
+                                       (cond-> (conj (set (vals deps)) 'cljs.core)
+                                         ana/*track-constants* (conj 'constants-table)))
                            :file dest
                            :source-file src}
                           (when (and dest (.exists ^File dest))
