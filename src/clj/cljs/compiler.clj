@@ -50,7 +50,9 @@
   [& args]
   `(.println System/err (str ~@args)))
 
-(defonce ns-first-segments (atom '#{"cljs" "clojure"}))
+(defn ns-first-segments []
+  (letfn [(get-first-ns-segment [ns] (first (string/split (str ns) #"\.")))]
+    (map get-first-ns-segment (keys @ana/namespaces))))
 
 ; Helper fn
 (defn shadow-depth [s]
@@ -58,7 +60,7 @@
     (loop [d 0, {:keys [shadow]} info]
       (cond
        shadow (recur (inc d) shadow)
-       (@ns-first-segments (str name)) (inc d)
+       (some #{(str name)} (ns-first-segments)) (inc d)
        :else d))))
 
 (defn munge
@@ -744,7 +746,6 @@
 
 (defmethod emit :ns
   [{:keys [name requires uses requires-macros env]}]
-  (swap! ns-first-segments conj (first (string/split (str name) #"\.")))
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
