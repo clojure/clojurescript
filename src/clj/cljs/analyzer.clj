@@ -925,7 +925,9 @@
                    (if (= -1 idx)
                      (list s)
                      (let [end (.indexOf s "}" idx)]
-                       (cons (subs s 0 idx) (seg (subs s (inc end))))))))
+                       (lazy-seq
+                         (cons (subs s 0 idx)
+                           (seg (subs s (inc end)))))))))
            enve (assoc env :context :expr)
            argexprs (vec (map #(analyze enve %) args))]
        {:env env :op :js :segs (seg jsform) :args argexprs
