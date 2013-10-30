@@ -4693,7 +4693,7 @@ reduces them without incurring seq initialization"
     (if (== hash collision-hash)
       (let [idx (hash-collision-node-find-index arr cnt key)]
         (if (== idx -1)
-          (let [len (alength arr)
+          (let [len     (* 2 cnt)
                 new-arr (make-array (+ len 2))]
             (array-copy arr 0 new-arr 0 len)
             (aset new-arr len key)

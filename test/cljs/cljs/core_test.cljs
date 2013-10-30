@@ -1980,5 +1980,12 @@
 
   (assert (= (:a (KeywordTest.)) :nothing))
 
+  ;; CLJS-648 (CLJ-1285)
+  (let [a (reify IHash (-hash [_] 42))
+        b (reify IHash (-hash [_] 42))
+        s (set (range 128))]
+    (assert (= (-> (conj s a b) transient (disj! a) persistent! (conj a))
+               (-> (conj s a b) transient (disj! a) persistent! (conj a)))))
+
   :ok
   )
