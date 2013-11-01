@@ -82,7 +82,7 @@
   (goog/isString x))
 
 (set! *unchecked-if* true)
-(defn ^boolean type_satisfies_
+(defn ^boolean native-satisfies?
   "Internal - do not use!"
   [p x]
   (let [x (if (nil? x) nil x)]
@@ -427,7 +427,7 @@
   [coll]
   (when-not (nil? coll)
     (cond
-      (satisfies? ISeqable coll false)
+      (implements? ISeqable coll)
       (-seq ^not-native coll)
 
       (array? coll)
@@ -438,7 +438,7 @@
       (when-not (zero? (alength coll))
         (IndexedSeq. coll 0))
 
-      (type_satisfies_ ISeqable coll)
+      (native-satisfies? ISeqable coll)
       (-seq coll)
 
       :else (throw (js/Error. (str coll "is not ISeqable"))))))
@@ -448,7 +448,7 @@
   argument. If coll is nil, returns nil."
   [coll]
   (when-not (nil? coll)
-    (if (satisfies? ISeq coll false)
+    (if (implements? ISeq coll)
       (-first ^not-native coll)
       (let [s (seq coll)]
         (when-not (nil? s)
@@ -459,7 +459,7 @@
   argument."
   [coll]
   (if-not (nil? coll)
-    (if (satisfies? ISeq coll false)
+    (if (implements? ISeq coll)
       (-rest ^not-native coll)
       (let [s (seq coll)]
         (if s
@@ -472,7 +472,7 @@
   argument.  If there are no more items, returns nil"
   [coll]
   (when-not (nil? coll)
-    (if (satisfies? INext coll false)
+    (if (implements? INext coll)
       (-next ^not-native coll)
       (seq (rest coll)))))
 
@@ -834,7 +834,7 @@ reduces them without incurring seq initialization"
   [coll]
   (if-not (nil? coll)
     (cond
-      (satisfies? ICounted coll false)
+      (implements? ICounted coll)
       (-count ^not-native coll)
 
       (array? coll)
@@ -843,7 +843,7 @@ reduces them without incurring seq initialization"
       (string? coll)
       (alength coll)
 
-      (type_satisfies_ ICounted coll)
+      (native-satisfies? ICounted coll)
       (-count coll)
 
       :else (accumulating-seq-count coll))
@@ -877,7 +877,7 @@ reduces them without incurring seq initialization"
   ([coll n]
      (when-not (nil? coll)
        (cond
-         (satisfies? IIndexed coll false)
+         (implements? IIndexed coll)
          (-nth ^not-native coll n)
 
          (array? coll)
@@ -888,7 +888,7 @@ reduces them without incurring seq initialization"
          (when (< n (.-length coll))
            (aget coll n))
 
-         (type_satisfies_ IIndexed coll)
+         (native-satisfies? IIndexed coll)
          (-nth coll n)
          
          :else
@@ -901,7 +901,7 @@ reduces them without incurring seq initialization"
   ([coll n not-found]
      (if-not (nil? coll)
        (cond
-         (satisfies? IIndexed coll false)
+         (implements? IIndexed coll)
          (-nth ^not-native coll n not-found)
 
          (array? coll)
@@ -914,7 +914,7 @@ reduces them without incurring seq initialization"
            (aget coll n)
            not-found)
          
-         (type_satisfies_ IIndexed coll)
+         (native-satisfies? IIndexed coll)
          (-nth coll n)
 
          :else
@@ -931,7 +931,7 @@ reduces them without incurring seq initialization"
   ([o k]
     (when-not (nil? o)
       (cond
-        (satisfies? ILookup o false)
+        (implements? ILookup o)
         (-lookup ^not-native o k)
 
         (array? o)
@@ -942,14 +942,14 @@ reduces them without incurring seq initialization"
         (when (< k (.-length o))
           (aget o k))
 
-        (type_satisfies_ ILookup o)
+        (native-satisfies? ILookup o)
         (-lookup o k)
         
         :else nil)))
   ([o k not-found]
     (if-not (nil? o)
       (cond
-        (satisfies? ILookup o false)
+        (implements? ILookup o)
         (-lookup ^not-native o k not-found)
 
         (array? o)
@@ -962,7 +962,7 @@ reduces them without incurring seq initialization"
           (aget o k)
           not-found)
 
-        (type_satisfies_ ILookup o)
+        (native-satisfies? ILookup o)
         (-lookup o k not-found)
 
         :else not-found)
@@ -1064,7 +1064,7 @@ reduces them without incurring seq initialization"
 
 (defn hash [o]
   (cond
-    (satisfies? IHash o false)
+    (implements? IHash o)
     (-hash ^not-native o)
 
     (number? o)
@@ -1126,7 +1126,7 @@ reduces them without incurring seq initialization"
 (declare ChunkedCons ChunkedSeq)
 
 (defn ^boolean chunked-seq?
-  [x] (satisfies? IChunkedSeq x false))
+  [x] (implements? IChunkedSeq x))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj
@@ -1251,7 +1251,7 @@ reduces them without incurring seq initialization"
    (nil? y) 1
 
    (identical? (type x) (type y))
-   (if (satisfies? IComparable x false)
+   (if (implements? IComparable x)
      (-compare ^not-native x y)
      (garray/defaultCompare x y))
 
@@ -1349,7 +1349,7 @@ reduces them without incurring seq initialization"
   items, returns val and f is not called."
   ([f coll]
      (cond
-       (satisfies? IReduce coll false)
+       (implements? IReduce coll)
        (-reduce ^not-native coll f)
 
        (array? coll)
@@ -1358,14 +1358,14 @@ reduces them without incurring seq initialization"
        (string? coll)
        (array-reduce coll f)
        
-       (type_satisfies_ IReduce coll)
+       (native-satisfies? IReduce coll)
        (-reduce coll f)
 
        :else
        (seq-reduce f coll)))
   ([f val coll]
      (cond
-       (satisfies? IReduce coll false)
+       (implements? IReduce coll)
        (-reduce ^not-native coll f val)
 
        (array? coll)
@@ -1374,7 +1374,7 @@ reduces them without incurring seq initialization"
        (string? coll)
        (array-reduce coll f val)
        
-       (type_satisfies_ IReduce coll)
+       (native-satisfies? IReduce coll)
        (-reduce coll f val)
 
        :else
@@ -2002,7 +2002,7 @@ reduces them without incurring seq initialization"
   "Returns a new seq where x is the first element and seq is the rest."
   [x coll]
   (if (or (nil? coll)
-          (satisfies? ISeq coll false))
+          (implements? ISeq coll))
     (Cons. nil x coll nil)
     (Cons. nil x (seq coll) nil)))
 
@@ -2254,7 +2254,7 @@ reduces them without incurring seq initialization"
   (-chunked-rest s))
 
 (defn chunk-next [s]
-  (if (satisfies? IChunkedNext s false)
+  (if (implements? IChunkedNext s)
     (-chunked-next s)
     (seq (-chunked-rest s))))
 
@@ -2976,7 +2976,7 @@ reduces them without incurring seq initialization"
   from-coll conjoined."
   [to from]
   (if-not (nil? to)
-    (if (satisfies? IEditableCollection to false)
+    (if (implements? IEditableCollection to)
       (persistent! (reduce -conj! (transient to) from))
       (reduce -conj to from))
     (reduce conj () from)))
@@ -6248,7 +6248,7 @@ reduces them without incurring seq initialization"
 (defn name
   "Returns the name String of a string, symbol or keyword."
   [x]
-  (if (satisfies? INamed x false)
+  (if (implements? INamed x)
     (-name ^not-native x)
     (if (string? x)
       x
@@ -6257,7 +6257,7 @@ reduces them without incurring seq initialization"
 (defn namespace
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
-  (if (satisfies? INamed x false)
+  (if (implements? INamed x)
     (-namespace ^not-native x)
     (throw (js/Error. (str "Doesn't support namespace: " x)))))
 
@@ -6634,7 +6634,7 @@ reduces them without incurring seq initialization"
               (.cljs$lang$ctorPrWriter obj obj writer opts)
               
               ; Use the new, more efficient, IPrintWithWriter interface when possible.
-              (satisfies? IPrintWithWriter obj false)
+              (implements? IPrintWithWriter obj)
               (-pr-writer ^not-native obj writer opts)
               
               (or (identical? (type obj) js/Boolean) (number? obj))

@@ -951,32 +951,47 @@
        ~@(map method methods)
        (set! ~'*unchecked-if* false))))
 
+(defmacro implements?
+  "EXPERIMENTAL"
+  [psym x]
+  (let [p          (:name
+                    (cljs.analyzer/resolve-var
+                      (dissoc &env :locals) psym))
+        prefix     (protocol-prefix p)
+        xsym       (bool-expr (gensym))
+        [part bit] (fast-path-protocols p)
+        msym       (symbol
+                      (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
+    `(let [~xsym ~x]
+       (if ~xsym
+         (let [bit# ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))]
+           (if (or bit#
+                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+             true
+             false))
+         false))))
+
 (defmacro satisfies?
   "Returns true if x satisfies the protocol"
-  ([psym x] `(satisfies? ~psym ~x true))
-  ([psym x check-native]
-    (let [p          (:name
-                       (cljs.analyzer/resolve-var
-                         (dissoc &env :locals) psym))
-          prefix     (protocol-prefix p)
-          xsym       (bool-expr (gensym))
-          [part bit] (fast-path-protocols p)
-          msym       (symbol
-                       (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
-      `(let [~xsym ~x]
-         (if ~xsym
-           (let [bit# ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))]
-             (if (or bit#
-                     ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
-               true
-               ~(if check-native
-                  `(if (coercive-not (. ~xsym ~msym))
-                     (cljs.core/type_satisfies_ ~psym ~xsym)
-                     false)
-                  false)))
-           ~(if check-native
-              `(cljs.core/type_satisfies_ ~psym ~xsym)
-              false))))))
+  [psym x]
+  (let [p          (:name
+                     (cljs.analyzer/resolve-var
+                       (dissoc &env :locals) psym))
+         prefix     (protocol-prefix p)
+         xsym       (bool-expr (gensym))
+         [part bit] (fast-path-protocols p)
+         msym       (symbol
+                      (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
+    `(let [~xsym ~x]
+       (if ~xsym
+         (let [bit# ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))]
+           (if (or bit#
+                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+             true
+             (if (coercive-not (. ~xsym ~msym))
+               (cljs.core/native-satisfies? ~psym ~xsym)
+               false)))
+         (cljs.core/native-satisfies? ~psym ~xsym)))))
 
 (defmacro lazy-seq [& body]
   `(new cljs.core/LazySeq nil (fn [] ~@body) nil nil))
