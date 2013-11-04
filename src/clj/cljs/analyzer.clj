@@ -836,11 +836,11 @@
                          (throw (error env (error-msg spec "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))))
                        [lib :refer referred])
         parse-import-spec (fn parse-import-spec [spec]
-                            (when-not (or (and (vector? spec)
+                            (when-not (or (and (sequential? spec)
                                                (every? symbol? spec))
                                           (and (symbol? spec) (nil? (namespace spec))))
                               (throw (error env (error-msg spec "Only lib.ns.Ctor or [lib.ns Ctor*] spec supported in :import"))))
-                            (let [import-map (if (vector? spec)
+                            (let [import-map (if (sequential? spec)
                                                (->> (rest spec)
                                                  (map #(vector % (symbol (str (first spec) "." %))))
                                                  (into {}))
