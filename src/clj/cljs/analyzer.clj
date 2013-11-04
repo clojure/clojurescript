@@ -93,10 +93,6 @@
   [warning-type extra]
   (str "Can't resolve protocol symbol " (:protocol extra)))
 
-(defmethod default-warning-handler* :undeclared-protocol-symbol
-  [warning-type extra]
-  (str "Can't resolve protocol symbol " (:protocol extra)))
-
 (defmethod default-warning-handler* :invalid-protocol-symbol
   [warning-type extra]
   (str "Symbol " (:protocol extra) " is not a protocol"))
