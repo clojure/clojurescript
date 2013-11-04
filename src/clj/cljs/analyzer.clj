@@ -44,26 +44,65 @@
 
 (declare message namespaces)
 
-(defn ^:private default-warning-handler [warning-type env & [extra]]
+(defmulti default-warning-handler* (fn [warning-type & _] warning-type))
+
+(defmethod default-warning-handler* :undeclared-var
+  [warning-type extra]
+  (str "Use of undeclared Var " (:prefix extra) "/" (:suffix extra)))
+
+(defmethod default-warning-handler* :undeclared-ns
+  [warning-type extra]
+  (str "No such namespace: " (:ns-sym extra)))
+
+(defmethod default-warning-handler* :dynamic
+  [warning-type extra]
+  (str (:name extra) " not declared ^:dynamic"))
+
+(defmethod default-warning-handler* :redef
+  [warning-type extra]
+  (str (:sym extra) " already refers to: " (symbol (str (:ns extra)) (str (:sym extra)))
+    " being replaced by: " (symbol (str (:ns-name extra)) (str (:sym extra)))))
+
+(defmethod default-warning-handler* :fn-var
+  [warning-type extra]
+  (str (symbol (str (:ns-name extra)) (str (:sym extra)))
+    " no longer fn, references are stale"))
+
+(defmethod default-warning-handler* :fn-arity
+  [warning-type extra]
+  (str "Wrong number of args (" (:argc extra) ") passed to "
+    (or (:ctor extra)
+      (:name extra))))
+
+(defmethod default-warning-handler* :fn-deprecated
+  [warning-type extra]
+  (str (-> extra :fexpr :info :name) " is deprecated."))
+
+(defmethod default-warning-handler* :undeclared-ns-form
+  [warning-type extra]
+  (str "Referred " (:type extra) " " (:lib extra) "/" (:sym extra) " does not exist"))
+
+(defmethod default-warning-handler* :protocol-deprecated
+  [warning-type extra]
+  (str "Protocol " (:protocol extra) " is deprecated"))
+
+(defmethod default-warning-handler* :undeclared-protocol-symbol
+  [warning-type extra]
+  (str "Can't resolve protocol symbol " (:protocol extra)))
+
+(defmethod default-warning-handler* :undeclared-protocol-symbol
+  [warning-type extra]
+  (str "Can't resolve protocol symbol " (:protocol extra)))
+
+(defmethod default-warning-handler* :invalid-protocol-symbol
+  [warning-type extra]
+  (str "Symbol " (:protocol extra) " is not a protocol"))
+
+(defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
-      (let [s (condp = warning-type
-                :undeclared-var (str "WARNING: Use of undeclared Var " (:prefix extra) "/" (:suffix extra))
-                :undeclared-ns (str "WARNING: No such namespace: " (:ns-sym extra))
-                :dynamic (str "WARNING: " (:name extra) " not declared ^:dynamic")
-                :redef   (str "WARNING: " (:sym extra) " already refers to: " (symbol (str (:ns extra)) (str (:sym extra)))
-                              " being replaced by: " (symbol (str (:ns-name extra)) (str (:sym extra))))
-                :fn-var (str "WARNING: " (symbol (str (:ns-name extra)) (str (:sym extra)))
-                             " no longer fn, references are stale")
-                :fn-arity (str "WARNING: Wrong number of args (" (:argc extra) ") passed to " (or (:ctor extra)
-                                                                                                  (:name extra)))
-                :fn-deprecated (str "WARNING: " (-> extra :fexpr :info :name) " is deprecated.")
-                :undeclared-ns-form (str "WARNING: Referred " (:type extra) " " (:lib extra) "/" (:sym extra) " does not exist")
-                :protocol-deprecated (str "WARNING: Protocol " (:protocol extra) " is deprecated")
-                :undeclared-protocol-symbol (str "WARNING: Can't resolve protocol symbol " (:protocol extra))
-                :invalid-protocol-symbol (str "WARNING: Symbol " (:protocol extra) " is not a protocol"))]
-        (when s
-          (binding [*out* *err*]
-            (println (message env s)))))))
+    (when-let [s (default-warning-handler* warning-type extra)]
+      (binding [*out* *err*]
+        (println (message env (str "WARNING: " s)))))))
 
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])
