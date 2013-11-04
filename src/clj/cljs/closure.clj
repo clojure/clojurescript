@@ -746,7 +746,9 @@
                       merged)))
                 (spit (io/file name)
                   (sm/encode merged
-                    {:lines (+ (:lineCount sm-json) 2) :file (:file sm-json)}))))))
+                    {:lines (+ (:lineCount sm-json) 2)
+                     :file (:file sm-json)
+                     :output-dir (:output-dir opts)}))))))
         source)
       (report-failure result))))
 
@@ -989,7 +991,8 @@
               (when-let [fname (:source-map all-opts)]
                 (assert (string? fname)
                   (str ":source-map must name a file when using :whitespace, "
-                       ":simple, or :advanced optimizations")))
+                       ":simple, or :advanced optimizations"))
+                (doall (map #(source-on-disk all-opts %) js-sources)))
               (->> js-sources
                 (apply optimize all-opts)
                 (add-wrapper all-opts)
