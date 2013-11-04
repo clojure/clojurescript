@@ -32,8 +32,9 @@
                             bit-test bit-shift-left bit-shift-right bit-xor
 
                             cond-> cond->> as-> some-> some->>])
-  (:require clojure.walk)
-  (:require cljs.compiler))
+  (:require clojure.walk
+            cljs.compiler
+            [cljs.env :as env]))
 
 (alias 'core 'clojure.core)
 
@@ -612,7 +613,7 @@
                 (not (-> p meta :deprecation-nowarn)))
           (cljs.analyzer/warning :protocol-deprecated env {:protocol p}))
         (when (:protocol-symbol var)
-          (swap! cljs.analyzer/namespaces
+          (swap! env/*compiler* update-in [:cljs.analyzer/namespaces]
             (fn [ns]
               (update-in ns [(:ns var) :defs (symbol (name p)) :impls]
                 conj type)))))

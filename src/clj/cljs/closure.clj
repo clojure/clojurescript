@@ -36,6 +36,7 @@
   (:require [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
             [cljs.source-map :as sm]
+            [cljs.env :as env]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.data.json :as json])
@@ -359,9 +360,6 @@
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))
 
-;; cache from js file path to map of {:file .. :provides .. :requires ..}
-(def compiled-cljs (atom {}))
-
 (defn compiled-file
   "Given a map with at least a :file key, return a map with
    {:file .. :provides .. :requires ..}.
@@ -371,10 +369,10 @@
   (let [path (.getAbsolutePath ^File (:file m))
         js (if (:provides m)
              (map->javascript-file m)
-             (if-let [js (get @compiled-cljs path)]
+             (if-let [js (get-in @env/*compiler* [::compiled-cljs path])]
                js
                (read-js (:file m))))]
-    (do (swap! compiled-cljs (fn [old] (assoc old path js)))
+    (do (swap! env/*compiler* update-in [::compiled-cljs] assoc path js)
         js)))
 
 (defn compile-file
@@ -650,7 +648,7 @@
                                               (:provides %)
                                               (:requires %))
                              (assoc :group (:group %))) required-js)
-                   [(when ana/*track-constants*
+                   [(when (-> @env/*compiler* :opts :emit-constants)
                       (let [url (to-url (str (output-directory opts) "/constants_table.js"))]
                         (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
                    required-cljs
@@ -742,7 +740,7 @@
                   (recur (next sources)
                     (if-let [url (:url source)]
                       (let [path (.getPath ^URL url)]
-                        (if-let [compiled (get @compiled-cljs path)]
+                        (if-let [compiled (get-in @env/*compiler* [::compiled-cljs path])]
                           (if-let [source-url (:source-url source)]
                             (assoc merged (.getPath ^URL source-url)
                               (sm/merge-source-maps
@@ -960,64 +958,68 @@
         (str js "\n//# sourceMappingURL=" (path-relative-to (io/file output-to) {:url source-map})))
     js))
 
+
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
-  ([source opts] (build source opts false))
-  ([source opts reset]
-    (when reset
-      (ana/reset-constant-table!)
-      (ana/reset-namespaces!)
-      (comp/reset-compiled-cljs!))
-    (let [opts (if (= :nodejs (:target opts))
-                 (merge {:optimizations :simple} opts)
-                 opts)
-          ups-deps (get-upstream-deps)
-          all-opts (assoc opts 
-                     :ups-libs (:libs ups-deps)
-                     :ups-foreign-libs (:foreign-libs ups-deps)
-                     :ups-externs (:externs ups-deps))]
-      (binding [ana/*cljs-static-fns*
-                (or (and (= (:optimizations opts) :advanced)
-                         (not (false? (:static-fns opts))))
-                    (:static-fns opts)
-                    ana/*cljs-static-fns*)
-                ana/*track-constants*
-                (or (and (= (:optimizations opts) :advanced)
-                         (not (false? (:optimize-constants opts))))
-                    (:optimize-constants opts)
-                    ana/*track-constants*)
-                ana/*cljs-warnings*
-                (let [enabled? (true? (opts :warnings))]
-                  (merge ana/*cljs-warnings*
-                         {:undeclared-var enabled?
-                          :undeclared-ns enabled?
-                          :undeclared-ns-form enabled?}))]
-        (let [compiled (-compile source all-opts)
-              const-table (when ana/*track-constants*
-                            (comp/emit-constants-table-to-file @ana/*constant-table*
-                              (str (output-directory all-opts) "/constants_table.js")))
-              js-sources (concat
-                           (apply add-dependencies all-opts
-                             (concat (if (coll? compiled) compiled [compiled])
-                               (when (= :nodejs (:target all-opts))
-                                 [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
-                           (when (= :nodejs (:target all-opts))
-                             [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
-               optim (:optimizations all-opts)]
-          (if (and optim (not= optim :none))
-            (do
-              (when-let [fname (:source-map all-opts)]
-                (assert (string? fname)
-                  (str ":source-map must name a file when using :whitespace, "
-                       ":simple, or :advanced optimizations"))
-                (doall (map #(source-on-disk all-opts %) js-sources)))
-              (->> js-sources
-                (apply optimize all-opts)
-                (add-wrapper all-opts)
-                (add-source-map-link all-opts)
-                (add-header all-opts)
-                (output-one-file all-opts)))
-            (apply output-unoptimized all-opts js-sources)))))))
+  ([source opts] (build source opts (if (bound? #'env/*compiler*)
+                                      env/*compiler*
+                                      (env/default-compiler-env))))
+  ([source opts compiler-env]
+     (env/with-compiler-env compiler-env
+       (let [opts (if (= :nodejs (:target opts))
+                    (merge {:optimizations :simple} opts)
+                    opts)
+             ups-deps (get-upstream-deps)
+             all-opts (assoc opts 
+                        :ups-libs (:libs ups-deps)
+                        :ups-foreign-libs (:foreign-libs ups-deps)
+                        :ups-externs (:externs ups-deps))
+             emit-constants (or (and (= (:optimizations opts) :advanced)
+                                     (not (false? (:optimize-constants opts))))
+                                (:optimize-constants opts))]
+         (swap! compiler-env assoc-in [:opts :emit-constants] emit-constants)
+         (binding [ana/*cljs-static-fns*
+                   (or (and (= (:optimizations opts) :advanced)
+                            (not (false? (:static-fns opts))))
+                       (:static-fns opts)
+                       ana/*cljs-static-fns*)
+                   ana/*cljs-warnings*
+                   (let [enabled? (true? (opts :warnings))]
+                     (merge ana/*cljs-warnings*
+                            {:undeclared-var enabled?
+                             :undeclared-ns enabled?
+                             :undeclared-ns-form enabled?}))]
+           (let [compiled (-compile source all-opts)
+
+                 ; the constants_table.js file is not used directly here, is picked up by
+                 ; add-dependencies below
+                 _ (when emit-constants
+                     (comp/emit-constants-table-to-file (::ana/constant-table @compiler-env)
+                                                        (str (output-directory all-opts) "/constants_table.js")))
+                 js-sources (concat
+                             (apply add-dependencies all-opts
+                                    (concat (if (coll? compiled) compiled [compiled])
+                                            (when (= :nodejs (:target all-opts))
+                                              [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
+                             (when (= :nodejs (:target all-opts))
+                               [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
+                 optim (:optimizations all-opts)]
+             (if (and optim (not= optim :none))
+               (do
+                 (when-let [fname (:source-map all-opts)]
+                   (assert (string? fname)
+                           (str ":source-map must name a file when using :whitespace, "
+                                ":simple, or :advanced optimizations"))
+                   (doall (map #(source-on-disk all-opts %) js-sources)))
+                 (->> js-sources
+                      (apply optimize all-opts)
+                      (add-wrapper all-opts)
+                      (add-source-map-link all-opts)
+                      (add-header all-opts)
+                      (output-one-file all-opts)))
+               (apply output-unoptimized all-opts js-sources))))))))
+  
 
 (comment
 

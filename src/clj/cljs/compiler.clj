@@ -13,6 +13,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.tools.reader :as reader]
+            [cljs.env :as env]
             [cljs.tagged-literals :as tags]
             [cljs.analyzer :as ana]
             [cljs.source-map :as sm])
@@ -58,10 +59,6 @@
 (def ^:dynamic *emitted-provides* nil)
 (def ^:dynamic *lexical-renames* {})
 (def cljs-reserved-file-names #{"deps.cljs"})
-(def compiled-cljs (atom {}))
-
-(defn reset-compiled-cljs! []
-  (reset! compiled-cljs {}))
 
 (defmacro ^:private debug-prn
   [& args]
@@ -69,7 +66,7 @@
 
 (defn ns-first-segments []
   (letfn [(get-first-ns-segment [ns] (first (string/split (str ns) #"\.")))]
-    (map get-first-ns-segment (keys @ana/namespaces))))
+    (map get-first-ns-segment (keys (::ana/namespaces @env/*compiler*)))))
 
 ; Helper fn
 (defn shadow-depth [s]
@@ -190,8 +187,8 @@
     0 s))
 
 (defmethod emit-constant clojure.lang.Keyword [x]
-  (if ana/*track-constants*
-    (let [value (get @ana/*constant-table* x)]
+  (if (-> @env/*compiler* :opts :emit-constants)
+    (let [value (-> @env/*compiler* ::ana/constant-table x)]
       (emits "cljs.core." value))
     (let [ns   (namespace x)
           name (name x)]
@@ -843,7 +840,7 @@
 (defmacro with-core-cljs
   "Ensure that core.cljs has been loaded."
   [& body]
-  `(do (when-not (:defs (get @ana/namespaces 'cljs.core))
+  `(do (when-not (get-in @@#'env/*compiler* [::ana/namespaces 'cljs.core :defs])
          (ana/analyze-file "cljs/core.cljs"))
        ~@body))
 
@@ -890,7 +887,8 @@
                               :requires (if (= ns-name 'cljs.core)
                                           (set (vals deps))
                                           (cond-> (conj (set (vals deps)) 'cljs.core)
-                                            ana/*track-constants* (conj 'constants-table)))
+                                            (get-in @env/*compiler* [:opts :emit-constants])
+                                            (conj 'constants-table)))
                               :file dest
                               :source-file src
                               :lines (+ @*cljs-gen-line*
@@ -899,7 +897,7 @@
                                          2 0))}
                             (when (:source-map opts)
                               {:source-map @*cljs-source-map*}))]
-                   (swap! compiled-cljs assoc (.getAbsolutePath ^File src) ret)
+                   (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getAbsolutePath ^File src) ret)
                    ret)))))))))
 
 (defn compiled-by-version [^File f]
@@ -921,12 +919,12 @@
              (:source-map opts)
              (if (= (:optimizations opts) :none)
                (not (.exists (io/file (str (.getPath dest) ".map"))))
-               (not (get @compiled-cljs (.getAbsolutePath src))))))))
+               (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath src)])))))))
 
 (defn parse-ns
   ([src] (parse-ns src nil nil))
   ([src dest opts]
-    (let [namespaces' @ana/namespaces
+    (let [namespaces' (::ana/namespaces @env/*compiler*)
           ret
           (with-core-cljs
             (binding [ana/*cljs-ns* 'cljs.user]
@@ -943,13 +941,16 @@
                            :requires (if (= ns-name 'cljs.core)
                                        (set (vals deps))
                                        (cond-> (conj (set (vals deps)) 'cljs.core)
-                                         ana/*track-constants* (conj 'constants-table)))
+                                         (get-in @env/*compiler* [:opts :emit-constants])
+                                         (conj 'constants-table)))
                            :file dest
                            :source-file src}
                           (when (and dest (.exists ^File dest))
                             {:lines (-> (io/reader dest) line-seq count)})))
                       (recur (rest forms))))))))]
-      (reset! ana/namespaces namespaces')
+      ;; TODO this _was_ a reset! of the old ana/namespaces atom; should we capture and
+      ;; then restore the entirety of env/*compiler* here instead?
+      (swap! env/*compiler* assoc ::ana/namespaces namespaces')
       ret)))
 
 (defn compile-file
@@ -978,11 +979,11 @@
           (let [{ns :ns :as ns-info} (parse-ns src-file dest-file opts)]
             (if (or (requires-compilation? src-file dest-file opts))
               (do (mkdirs dest-file)
-                (when (contains? @ana/namespaces ns)
-                  (swap! ana/namespaces dissoc ns))
+                (when (contains? (::ana/namespaces @env/*compiler*) ns)
+                  (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                 (compile-file* src-file dest-file opts))
               (do
-                (when-not (contains? @ana/namespaces ns)
+                (when-not (contains? (::ana/namespaces @env/*compiler*) ns)
                   (with-core-cljs
                     (ana/analyze-file src-file)))
                 ns-info)))

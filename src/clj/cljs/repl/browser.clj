@@ -243,16 +243,19 @@
                   support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
-  (let [opts (merge (BrowserEnv.)
+  (let [compiler-env (cljs.env/default-compiler-env)
+        opts (merge (BrowserEnv.)
                     {:port          9000
                      :optimizations :simple
                      :working-dir   ".repl"
                      :serve-static  true
                      :static-dir    ["." "out/"]
                      :preloaded-libs   []
-                     :src           "src/"}
+                     :src           "src/"
+                     :cljs.env/compiler compiler-env}
                     opts)]
-    (do (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))
+    (cljs.env/with-compiler-env compiler-env
+      (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))
         (reset! loaded-libs @preloaded-libs)
         (swap! browser-state
                (fn [old] (assoc old :client-js
