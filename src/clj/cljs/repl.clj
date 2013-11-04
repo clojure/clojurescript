@@ -173,13 +173,15 @@
         (flush)
         (let [form (try
                      (binding [*data-readers* tags/*cljs-data-readers*]
-                       (first forms))
+                       (if (seq forms)
+                         (first forms)
+                         :cljs/quit))
                      (catch Exception e
                        (println (.getMessage e))
                        read-error))]
           (cond
            (identical? form read-error) (recur (ana/forms-seq *in* "NO_SOURCE_FILE"))
-           
+
            (= form :cljs/quit) :quit
 
            (and (seq? form) (is-special-fn? (first form)))

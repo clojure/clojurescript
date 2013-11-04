@@ -1204,12 +1204,15 @@ argument, which the reader will use in any emitted errors."
            forms-seq*
            (fn forms-seq* []
              (lazy-seq
-              (if-let [form (binding [*ns* (create-ns *cljs-ns*)
-                                      reader/*alias-map* (merge
-                                                          (-> @namespaces *cljs-ns* :requires)
-                                                          (-> @namespaces *cljs-ns* :require-macros))]
-                              (reader/read rdr nil nil))]
-                (cons form (forms-seq*)))))]
+              (let [eof-sentinel (Object.)
+                    form (binding [*ns* (create-ns *cljs-ns*)
+                                   reader/*alias-map* (merge
+                                                       (-> @namespaces *cljs-ns* :requires)
+                                                       (-> @namespaces *cljs-ns* :require-macros))]
+                           (reader/read rdr nil eof-sentinel))]
+                (if (identical? form eof-sentinel)
+                  nil
+                  (cons form (forms-seq*))))))]
        (forms-seq*))))
 
 (defn analyze-file [f]
