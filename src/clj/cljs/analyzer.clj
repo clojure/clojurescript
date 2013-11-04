@@ -1189,8 +1189,8 @@
   "Returns a path suitable for providing to tools.reader as a 'filename'."
   [x]
   (cond
-   (instance? File) (.getAbsolutePath ^File x)
-   (instance? java.net.URL) (-> ^java.net.URL x .toURI File. .getAbsolutePath)
+   (instance? File x) (.getAbsolutePath ^File x)
+   (instance? java.net.URL x) (-> ^java.net.URL x .toURI File. .getAbsolutePath)
    :default (str x)))
 
 (defn forms-seq
