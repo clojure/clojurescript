@@ -836,12 +836,19 @@
                          (throw (error env (error-msg spec "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))))
                        [lib :refer referred])
         parse-import-spec (fn parse-import-spec [spec]
-                            (when-not (and (symbol? spec) (nil? (namespace spec)))
-                              (throw (error env (error-msg spec "Only lib.Ctor specs supported in :import"))))
-                            (swap! deps conj spec)
-                            (let [ctor-sym (symbol (last (string/split (str spec) #"\.")))]
-                              {:import  {ctor-sym spec}
-                               :require {ctor-sym spec}}))
+                            (when-not (or (and (vector? spec)
+                                               (every? symbol? spec))
+                                          (and (symbol? spec) (nil? (namespace spec))))
+                              (throw (error env (error-msg spec "Only lib.ns.Ctor or [lib.ns Ctor*] spec supported in :import"))))
+                            (let [import-map (if (vector? spec)
+                                               (->> (rest spec)
+                                                 (map #(vector % (symbol (str (first spec) "." %))))
+                                                 (into {}))
+                                               {(symbol (last (string/split (str spec) #"\."))) spec})]
+                              (doseq [[_ spec] import-map]
+                                (swap! deps conj spec))
+                              {:import  import-map
+                               :require import-map}))
         spec-parsers {:require        (partial parse-require-spec false)
                       :require-macros (partial parse-require-spec true)
                       :use            (comp (partial parse-require-spec false) use->require)

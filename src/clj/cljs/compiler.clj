@@ -755,7 +755,6 @@
 (defmethod emit :deftype*
   [{:keys [t fields pmasks]}]
   (let [fields (map munge fields)]
-    (emit-provide t)
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
@@ -770,7 +769,6 @@
 (defmethod emit :defrecord*
   [{:keys [t fields pmasks]}]
   (let [fields (concat (map munge fields) '[__meta __extmap])]
-    (emit-provide t)
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
