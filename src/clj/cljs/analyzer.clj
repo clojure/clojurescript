@@ -40,7 +40,10 @@
    :fn-deprecated true
    :protocol-deprecated true
    :undeclared-protocol-symbol true
-   :invalid-protocol-symbol true})
+   :invalid-protocol-symbol true
+   :multiple-variadic-overloads true
+   :variadic-max-arity true
+   :overload-arity true})
 
 (declare message namespaces)
 
@@ -97,6 +100,18 @@
 (defmethod default-warning-handler* :invalid-protocol-symbol
   [warning-type extra]
   (str "Symbol " (:protocol extra) " is not a protocol"))
+
+(defmethod default-warning-handler* :multiple-variadic-overloads
+  [warning-type extra]
+  (str (:name extra) ": Can't have more than 1 variadic overload"))
+
+(defmethod default-warning-handler* :variadic-max-arity
+  [warning-type extra]
+  (str (:name extra) ": Can't have fixed arity function with more params than variadic function"))
+
+(defmethod default-warning-handler* :overload-arity
+  [warning-type extra]
+  (str (:name extra) ": Can't have 2 overloads with same arity"))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -562,10 +577,16 @@
                   ;; lets us optimize self calls
                   (no-warn (doall (map #(analyze-fn-method menv locals % type) meths)))
                   methods)]
-    ;;todo - at most one variadic, variadic takes max required args
-    (let [param-counts (map (comp count :params) methods)]
-      (when (not= (distinct param-counts) param-counts)
-        (throw (error env "Can't have 2 overloads with same arity"))))
+    (let [variadic-methods (filter :variadic methods)
+          variadic-params (count (:params (first variadic-methods)))
+          param-counts (map (comp count :params) methods)]
+      (when (and (:multiple-variadic-overloads *cljs-warnings*) (< 1 (count variadic-methods)))
+        (warning :multiple-variadic-overloads env {:name name-var}))
+      (when (and (:variadic-max-arity *cljs-warnings*)
+                 (not (or (zero? variadic-params) (= variadic-params (+ 1 max-fixed-arity)))))
+        (warning :variadic-max-arity env {:name name-var}))
+      (when (and (:overload-arity *cljs-warnings*) (not= (distinct param-counts) param-counts))
+        (warning :overload-arity env {:name name-var})))
     {:env env :op :fn :form form :name name-var :methods methods :variadic variadic
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
