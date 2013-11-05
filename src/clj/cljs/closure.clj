@@ -423,7 +423,10 @@
           (when (and (.exists out-file)
                      (= (comp/compiled-by-version out-file)
                         (comp/clojurescript-version)))
-            (compiled-file {:file out-file}))))
+            (compile-file
+              (io/file (output-directory opts)
+                (last (string/split (.getPath ^URL this) #"\.jar!/")))
+              opts))))
       (let [file-on-disk (jar-file-to-disk this (output-directory opts))]
         (-compile file-on-disk opts))))
 
