@@ -27,8 +27,8 @@ REVISION=${REVISION:0:${#REVISION}-9} # drop the last 9 characters
 TAG=r$REVISION
 
 sed -e s/CLOJURESCRIPT_VERSION/0.0-$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
-sed -i "" 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major 0, :minor 0, :qualifier '"$REVISION"'})/' src/clj/cljs/compiler.clj
-sed -i "" 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""0.0-$REVISION"\"')/' src/cljs/cljs/core.cljs
+sed -ie 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major 0, :minor 0, :qualifier '"$REVISION"'})/' src/clj/cljs/compiler.clj
+sed -ie 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""0.0-$REVISION"\"')/' src/cljs/cljs/core.cljs
 
 # For Hudson server
 if [ "$HUDSON" = "true" ]; then
