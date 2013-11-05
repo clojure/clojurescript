@@ -1010,11 +1010,13 @@
   ([parts]
      (to-path parts File/separator))
   ([parts sep]
-     (apply str (interpose sep parts))))
+    (apply str (interpose sep parts))))
 
 (defn ^File to-target-file
   [target cljs-file]
-  (let [relative-path (string/split (str (:ns (parse-ns cljs-file))) #"\.")
+  (let [relative-path (string/split
+                        (ana/munge-path
+                          (str (:ns (parse-ns cljs-file)))) #"\.")
         parents (butlast relative-path)]
     (io/file
       (io/file (to-path (cons target parents)))

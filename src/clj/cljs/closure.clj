@@ -876,9 +876,16 @@
   updated IJavaScript with the new location."
   [opts js]
   (let [url ^URL (-url js)]
-    (if (or (not url) (= (.getProtocol url) "jar"))
+    (if (or (not url)
+            (= (.getProtocol url) "jar"))
       (write-javascript opts js)
-      js)))
+      (let [out-file (if-let [ns (and (:source-map opts)
+                                      (first (:provides js)))]
+                       (io/file (io/file (output-directory opts))
+                         (ana/ns->relpath ns)))]
+        (when (and out-file (not (.exists ^File out-file)))
+          (spit out-file (slurp (:source-url js))))
+        js))))
 
 (comment
   (write-javascript {} "goog.provide('demo');\nalert('hello');\n")
