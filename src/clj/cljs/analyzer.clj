@@ -386,13 +386,36 @@
   [op env [_ & body :as form] name]
   (let [catchenv (update-in env [:context] #(if (= :expr %) :return %))
         catch? (every-pred seq? #(= (first %) 'catch))
+        default? (every-pred catch? #(= (second %) :default))
         finally? (every-pred seq? #(= (first %) 'finally))
-        [body tail] (split-with (complement (some-fn catch? finally?)) body)
-        [cblocks [fblock]] (split-with catch? tail)
+
+        {:keys [body cblocks dblock fblock]}
+        (loop [parser {:state :start :forms body
+                       :body [] :cblocks [] :dblock nil :fblock nil}]
+          (if (seq? (:forms parser))
+            (let [[form & forms*] (:forms parser)
+                  parser* (assoc parser :forms forms*)]
+              (case (:state parser)
+                :start (cond
+                         (catch? form) (recur (assoc parser :state :catches))
+                         (finally? form) (recur (assoc parser :state :finally))
+                         :else (recur (update-in parser* [:body] conj form)))
+                :catches (cond
+                           (default? form) (recur (assoc parser* :dblock form :state :finally))
+                           (catch? form) (recur (update-in parser* [:cblocks] conj form))
+                           (finally? form) (recur (assoc parser :state :finally))
+                           :else (throw (error env "Invalid try form")))
+                :finally (recur (assoc parser* :fblock form :state :done))
+                :done (throw (error env "Unexpected form after finally"))))
+            parser))
+
         finally (when (seq fblock)
                   (analyze (assoc env :context :statement) `(do ~@(rest fblock))))
-        e (when (seq cblocks) (gensym "e"))
-        cblock (when e
+        e (when (or (seq cblocks) dblock) (gensym "e"))
+        default (if-let [[_ _ name & cb] dblock]
+                  `(cljs.core/let [~name ~e] ~@cb)
+                  `(throw ~e))
+        cblock (if (seq cblocks)
                  `(cljs.core/cond
                    ~@(mapcat
                       (fn [[_ type name & cb]]
@@ -400,7 +423,8 @@
                         `[(cljs.core/instance? ~type ~e)
                           (cljs.core/let [~name ~e] ~@cb)])
                       cblocks)
-                   :else (throw ~e)))
+                   :else ~default)
+                 default)
         locals (:locals catchenv)
         locals (if e
                  (assoc locals e

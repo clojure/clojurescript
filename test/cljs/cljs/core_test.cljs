@@ -473,18 +473,13 @@
     (assert (empty? e-hmap))
     (assert (= {:b :c} (meta e-hmap))))
 
-  ;;this fails in v8 advanced mode - what's e?
-  #_(let [a (atom nil)]
-    (assert (= 1 (try* 1)))
-    (assert (= 2 (try* 1 (throw 3) (catch e 2))))
-    (assert (= 3 (try* 1 (throw 3) (catch e e))))
-    (assert (= 1 (try* 1 (finally (reset! a 42)))))
-    (assert (= 42 (deref a))))
-
   (let [a (atom nil)]
     (assert (= 1 (try 1)))
     (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 2))))
     (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 1 2))))
+    (assert (= 2 (try 1 (throw (js/Error.)) (catch js/Error e 2) (catch :default e 3))))
+    (assert (= 3 (try 1 (throw true) (catch js/Error e 2) (catch :default e 3))))
+    (assert (= 2 (try 1 (throw 2) (catch js/Error e 3) (catch :default e e))))
     (assert (= 1 (try 1 (finally (reset! a 42)))))
     (assert (= 42 (deref a))))
 
