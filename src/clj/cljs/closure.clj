@@ -413,12 +413,16 @@
         (spit out-file content)
         out-file)))
 
+;; TODO: it would be nice if we could consolidate requires-compilation?
+;; logic - David
 (defn compile-from-jar
   "Compile a file from a jar."
   [this {:keys [output-file] :as opts}]
   (or (when output-file
         (let [out-file (io/file (output-directory opts) output-file)]
-          (when (.exists out-file)
+          (when (and (.exists out-file)
+                     (= (comp/compiled-by-version out-file)
+                        (comp/clojurescript-version)))
             (compiled-file {:file out-file}))))
       (let [file-on-disk (jar-file-to-disk this (output-directory opts))]
         (-compile file-on-disk opts))))

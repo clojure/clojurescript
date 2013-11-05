@@ -864,6 +864,7 @@
                    *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
                    *cljs-gen-line* (atom 0)
                    *cljs-gen-col* (atom 0)]
+           (emitln "// Compiled by ClojureScript " (clojurescript-version))
            (loop [forms (ana/forms-seq src)
                   ns-name nil
                   deps nil]
@@ -901,12 +902,21 @@
                    (swap! compiled-cljs assoc (.getAbsolutePath ^File src) ret)
                    ret)))))))))
 
+(defn compiled-by-version [^File f]
+  (let [match (->> (io/reader f)
+                line-seq first
+                (re-matches #".*ClojureScript (.*)$"))]
+    (and match (second match))))
+
 (defn requires-compilation?
   "Return true if the src file requires compilation."
   ([src dest] (requires-compilation? src dest nil))
   ([^File src ^File dest opts]
     (or (not (.exists dest))
         (> (.lastModified src) (.lastModified dest))
+        (let [version' (compiled-by-version dest)
+              version  (clojurescript-version)]
+          (and version (not= version version')))
         (and opts
              (:source-map opts)
              (if (= (:optimizations opts) :none)
