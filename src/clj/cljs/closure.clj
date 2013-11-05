@@ -995,7 +995,7 @@
                  ; the constants_table.js file is not used directly here, is picked up by
                  ; add-dependencies below
                  _ (when emit-constants
-                     (comp/emit-constants-table-to-file (::ana/constant-table @compiler-env)
+                     (comp/emit-constants-table-to-file (::ana/constant-table @env/*compiler*)
                                                         (str (output-directory all-opts) "/constants_table.js")))
                  js-sources (concat
                              (apply add-dependencies all-opts
