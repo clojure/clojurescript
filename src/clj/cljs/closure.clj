@@ -725,19 +725,26 @@
           (let [sm-json (-> (io/file name) slurp
                             (json/read-str :key-fn keyword))
                 closure-source-map (sm/decode sm-json)]
-            (loop [sources (seq sources)
-                   merged (sorted-map-by
-                            (sm/source-compare
-                              (remove nil?
-                                (map (fn [source]
-                                       (if-let [^URL source-url (:source-url source)]
-                                         (.getPath source-url)
-                                         (if-let [^URL url (:url source)]
-                                           (.getPath url))))
-                                  sources))))]
+            (loop [sources  (seq sources)
+                   relpaths {}
+                   merged   (sorted-map-by
+                              (sm/source-compare
+                                (remove nil?
+                                  (map (fn [source]
+                                         (if-let [^URL source-url (:source-url source)]
+                                           (.getPath source-url)
+                                           (if-let [^URL url (:url source)]
+                                             (.getPath url))))
+                                    sources))))]
               (if sources
                 (let [source (first sources)]
-                  (recur (next sources)
+                  (recur
+                    (next sources)
+                    (let [{:keys [provides source-url]} source]
+                      (if (and provides source-url)
+                        (assoc relpaths (.getPath ^URL source-url)
+                          (ana/ns->relpath (first provides)))
+                        relpaths))
                     (if-let [url (:url source)]
                       (let [path (.getPath ^URL url)]
                         (if-let [compiled (get-in @env/*compiler* [::compiled-cljs path])]
@@ -753,7 +760,8 @@
                   (sm/encode merged
                     {:lines (+ (:lineCount sm-json) 2)
                      :file (:file sm-json)
-                     :output-dir (:output-dir opts)}))))))
+                     :output-dir (:output-dir opts)
+                     :relpaths relpaths}))))))
         source)
       (report-failure result))))
 

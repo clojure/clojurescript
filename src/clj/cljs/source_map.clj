@@ -152,13 +152,13 @@
             [] cols)))
       [] lines)))
 
-(defn relativize-path [path output-dir]
+(defn relativize-path [path {:keys [output-dir relpaths]}]
   (cond
     (re-find #"\.jar!/" path)
     (str output-dir (second (string/split path #"\.jar!")))    
 
     :else
-    (string/replace path (str (System/getProperty "user.dir") "/") "")))
+    (str output-dir "/" (get relpaths path))))
 
 (defn encode
   "Take an internal source map representation represented as nested
@@ -203,8 +203,8 @@
         "file" (:file opts)
         "sources" (into []
                     (let [paths (keys m)
-                          f (if-let [output-dir (:output-dir opts)]
-                              #(relativize-path % output-dir)
+                          f (if (:output-dir opts)
+                              #(relativize-path % opts)
                               #(last (string/split % #"/")))]
                       (map f paths)))
         "lineCount" (:lines opts)
