@@ -54,7 +54,12 @@ this namespace."
 
 (defmacro ensure
   [& body]
-  `(binding [*compiler* (if-not (nil? *compiler*)
-                          *compiler*
-                          (default-compiler-env))]
-     ~@body))
+  `(let [val# *compiler*]
+     (if (nil? val#)
+       (push-thread-bindings
+         (hash-map (var *compiler*) (default-compiler-env))))
+     (try
+       ~@body
+       (finally
+         (if (nil? val#)
+           (pop-thread-bindings))))))
