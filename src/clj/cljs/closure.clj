@@ -971,9 +971,11 @@
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
-  ([source opts] (build source opts (if (bound? #'env/*compiler*)
-                                      env/*compiler*
-                                      (env/default-compiler-env))))
+  ([source opts]
+    (build source opts
+      (if-not (nil? env/*compiler*)
+        env/*compiler*
+        (env/default-compiler-env))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [opts (if (= :nodejs (:target opts))

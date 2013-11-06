@@ -833,7 +833,7 @@
 (defmacro with-core-cljs
   "Ensure that core.cljs has been loaded."
   [& body]
-  `(do (when-not (get-in @@#'env/*compiler* [::ana/namespaces 'cljs.core :defs])
+  `(do (when-not (get-in @env/*compiler* [::ana/namespaces 'cljs.core :defs])
          (ana/analyze-file "cljs/core.cljs"))
        ~@body))
 

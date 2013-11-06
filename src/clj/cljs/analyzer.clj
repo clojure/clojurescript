@@ -154,12 +154,12 @@
 ;; compiler-env atoms/maps they're using already; this value will yield only
 ;; `default-namespaces` when accessed outside the scope of a
 ;; compilation/analysis call
-(def namespaces (reify clojure.lang.IDeref
-                  (deref [_] (if (bound? #'env/*compiler*)
-                               (::namespaces @env/*compiler*)
-                               ;; TODO maybe this should throw an exception
-                               ;; instead of returning the default namespaces
-                               default-namespaces))))
+(def namespaces
+  (reify clojure.lang.IDeref
+    (deref [_]
+      (if-not (nil? env/*compiler*)
+        (::namespaces @env/*compiler*)
+        default-namespaces))))
 
 (defn get-namespace [key]
   (get-in @env/*compiler* [::namespaces key]))
@@ -1263,7 +1263,7 @@ argument, which the reader will use in any emitted errors."
                             (.getPath ^File res)
                             (.getPath ^java.net.URL res))
               reader/*alias-map* (or reader/*alias-map* {})
-              env/*compiler* (if (bound? #'env/*compiler*)
+              env/*compiler* (if-not (nil? env/*compiler*)
                                env/*compiler*
                                (env/default-compiler-env))]
       (let [env (empty-env)]
