@@ -127,7 +127,11 @@
 (defn- wrap-in-double-quotes [x]
   (str \" x \"))
 
-(defmulti emit :op)
+(defmulti emit* :op)
+
+(defn emit [ast]
+  (env/ensure
+    (emit* ast)))
 
 (defn emits [& xs]
   (doseq [x xs]
@@ -226,9 +230,9 @@
      ~@body
      (when-not (= :expr (:context env#)) (emitln ";"))))
 
-(defmethod emit :no-op [m])
+(defmethod emit* :no-op [m])
 
-(defmethod emit :var
+(defmethod emit* :var
   [{:keys [info env] :as arg}]
   (let [var-name (:name info)
         info (if (= (namespace var-name) "js")
@@ -260,7 +264,7 @@
       (when-not (= :statement (:context env))
         (emit-wrap env (emits (munge info)))))))
 
-(defmethod emit :meta
+(defmethod emit* :meta
   [{:keys [expr meta env]}]
   (emit-wrap env
     (emits "cljs.core.with_meta(" expr "," meta ")")))
@@ -268,7 +272,7 @@
 (def ^:private array-map-threshold 8)
 (def ^:private obj-map-threshold 8)
 
-(defmethod emit :map
+(defmethod emit* :map
   [{:keys [env keys vals]}]
   (let [simple-keys? (every? #(or (string? %) (keyword? %)) keys)]
     (emit-wrap env
@@ -288,14 +292,14 @@
                (comma-sep vals)
                "])")))))
 
-(defmethod emit :list
+(defmethod emit* :list
   [{:keys [items env]}]
   (emit-wrap env
     (if (empty? items)
       (emits "cljs.core.List.EMPTY")
       (emits "cljs.core.list(" (comma-sep items) ")"))))
 
-(defmethod emit :vector
+(defmethod emit* :vector
   [{:keys [items env]}]
   (emit-wrap env
     (if (empty? items)
@@ -303,7 +307,7 @@
       (emits "cljs.core.PersistentVector.fromArray(["
              (comma-sep items) "], true)"))))
 
-(defmethod emit :set
+(defmethod emit* :set
   [{:keys [items env]}]
   (emit-wrap env
     (if (empty? items)
@@ -311,7 +315,7 @@
       (emits "cljs.core.PersistentHashSet.fromArray(["
              (comma-sep (interleave items (repeat "null"))) "], true)"))))
 
-(defmethod emit :constant
+(defmethod emit* :constant
   [{:keys [form env]}]
   (when-not (= :statement (:context env))
     (emit-wrap env (emit-constant form))))
@@ -350,7 +354,7 @@
             (not (or (and (string? form) (= form ""))
                      (and (number? form) (zero? form)))))))))
 
-(defmethod emit :if
+(defmethod emit* :if
   [{:keys [test then else env unchecked]}]
   (let [context (:context env)
         checked (not (or unchecked (safe-test? test)))]
@@ -363,7 +367,7 @@
         (emitln "{" then "} else")
         (emitln "{" else "}")))))
 
-(defmethod emit :throw
+(defmethod emit* :throw
   [{:keys [throw env]}]
   (if (= :expr (:context env))
     (emits "(function(){throw " throw "})()")
@@ -384,7 +388,7 @@
             (print-comment-lines e)))
         (emitln "*/")))))
 
-(defmethod emit :def
+(defmethod emit* :def
   [{:keys [name var init env doc export]}]
   (let [mname (munge name)]
     (when init
@@ -510,7 +514,7 @@
                (emitln "return " mname ";")
                (emitln "})()"))))
 
-(defmethod emit :fn
+(defmethod emit* :fn
   [{:keys [name env methods max-fixed-arity variadic recur-frames loop-lets]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
@@ -584,7 +588,7 @@
       (when loop-locals
         (emitln ";})(" (comma-sep loop-locals) "))")))))
 
-(defmethod emit :do
+(defmethod emit* :do
   [{:keys [statements ret env]}]
   (let [context (:context env)]
     (when (and statements (= :expr context)) (emits "(function (){"))
@@ -593,7 +597,7 @@
     (emit ret)
     (when (and statements (= :expr context)) (emits "})()"))))
 
-(defmethod emit :try
+(defmethod emit* :try
   [{:keys [env try catch name finally]}]
   (let [context (:context env)]
     (if (or name finally)
@@ -630,13 +634,13 @@
         (emitln "}")))
     (when (= :expr context) (emits "})()"))))
 
-(defmethod emit :let [ast]
+(defmethod emit* :let [ast]
   (emit-let ast false))
 
-(defmethod emit :loop [ast]
+(defmethod emit* :loop [ast]
   (emit-let ast true))
 
-(defmethod emit :recur
+(defmethod emit* :recur
   [{:keys [frame exprs env]}]
   (let [temps (vec (take (count exprs) (repeatedly gensym)))
         params (:params frame)]
@@ -648,7 +652,7 @@
     (emitln "continue;")
     (emitln "}")))
 
-(defmethod emit :letfn
+(defmethod emit* :letfn
   [{:keys [bindings expr env]}]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
@@ -660,7 +664,7 @@
 (defn protocol-prefix [psym]
   (symbol (str (-> (str psym) (.replace \. \$) (.replace \/ \$)) "$")))
 
-(defmethod emit :invoke
+(defmethod emit* :invoke
   [{:keys [f args env] :as expr}]
   (let [info (:info f)
         fn? (and ana/*cljs-static-fns*
@@ -740,18 +744,18 @@
            (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : " f ".call(" (comma-sep (cons "null" args)) "))"))
          (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
 
-(defmethod emit :new
+(defmethod emit* :new
   [{:keys [ctor args env]}]
   (emit-wrap env
              (emits "(new " ctor "("
                     (comma-sep args)
                     "))")))
 
-(defmethod emit :set!
+(defmethod emit* :set!
   [{:keys [target val env]}]
   (emit-wrap env (emits target " = " val)))
 
-(defmethod emit :ns
+(defmethod emit* :ns
   [{:keys [name requires uses requires-macros env]}]
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
@@ -759,7 +763,7 @@
   (doseq [lib (into (vals requires) (distinct (vals uses)))]
     (emitln "goog.require('" (munge lib) "');")))
 
-(defmethod emit :deftype*
+(defmethod emit* :deftype*
   [{:keys [t fields pmasks]}]
   (let [fields (map munge fields)]
     (emitln "")
@@ -773,7 +777,7 @@
       (emitln "this.cljs$lang$protocol_mask$partition" pno "$ = " pmask ";"))
     (emitln "})")))
 
-(defmethod emit :defrecord*
+(defmethod emit* :defrecord*
   [{:keys [t fields pmasks]}]
   (let [fields (concat (map munge fields) '[__meta __extmap])]
     (emitln "")
@@ -802,7 +806,7 @@
     (emitln "}")
     (emitln "})")))
 
-(defmethod emit :dot
+(defmethod emit* :dot
   [{:keys [target field method args env]}]
   (emit-wrap env
              (if field
@@ -811,7 +815,7 @@
                       (comma-sep args)
                       ")"))))
 
-(defmethod emit :js
+(defmethod emit* :js
   [{:keys [env code segs args]}]
   (emit-wrap env
              (if code
@@ -843,54 +847,55 @@
 (defn compile-file*
   ([src dest] (compile-file* src dest nil))
   ([src dest opts]
-     (with-core-cljs
-       (with-open [out ^java.io.Writer (io/make-writer dest {})]
-         (binding [*out* out
-                   ana/*cljs-ns* 'cljs.user
-                   ana/*cljs-file* (.getPath ^File src)
-                   reader/*alias-map* (or reader/*alias-map* {})
-                   reader/*data-readers* tags/*cljs-data-readers*
-                   *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
-                   *cljs-gen-line* (atom 0)
-                   *cljs-gen-col* (atom 0)]
-           (emitln "// Compiled by ClojureScript " (clojurescript-version))
-           (loop [forms (ana/forms-seq src)
-                  ns-name nil
-                  deps nil]
-             (if (seq forms)
-               (let [env (ana/empty-env)
-                     ast (ana/analyze env (first forms))]
-                 (do (emit ast)
-                     (if (= (:op ast) :ns)
-                       (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
-                       (recur (rest forms) ns-name deps))))
-               (do
-                 (when (and (:source-map opts)
-                            (= (:optimizations opts) :none))
-                   (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                     (emits "\n//# sourceMappingURL=" (.getName sm-file))
-                     (spit sm-file
-                       (sm/encode {(url-path src) @*cljs-source-map*}
-                         {:lines (+ @*cljs-gen-line* 2)
-                          :file  (url-path dest)}))))
-                 (let [ret (merge
-                             {:ns (or ns-name 'cljs.user)
-                              :provides [ns-name]
-                              :requires (if (= ns-name 'cljs.core)
-                                          (set (vals deps))
-                                          (cond-> (conj (set (vals deps)) 'cljs.core)
-                                            (get-in @env/*compiler* [:opts :emit-constants])
-                                            (conj 'constants-table)))
-                              :file dest
-                              :source-file src
-                              :lines (+ @*cljs-gen-line*
-                                       (if (and (:source-map opts)
-                                             (= (:optimizations opts) :none))
-                                         2 0))}
-                            (when (:source-map opts)
-                              {:source-map @*cljs-source-map*}))]
-                   (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getAbsolutePath ^File src) ret)
-                   ret)))))))))
+    (env/ensure
+      (with-core-cljs
+        (with-open [out ^java.io.Writer (io/make-writer dest {})]
+          (binding [*out* out
+                    ana/*cljs-ns* 'cljs.user
+                    ana/*cljs-file* (.getPath ^File src)
+                    reader/*alias-map* (or reader/*alias-map* {})
+                    reader/*data-readers* tags/*cljs-data-readers*
+                    *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
+                    *cljs-gen-line* (atom 0)
+                    *cljs-gen-col* (atom 0)]
+            (emitln "// Compiled by ClojureScript " (clojurescript-version))
+            (loop [forms (ana/forms-seq src)
+                   ns-name nil
+                   deps nil]
+              (if (seq forms)
+                (let [env (ana/empty-env)
+                      ast (ana/analyze env (first forms))]
+                  (do (emit ast)
+                    (if (= (:op ast) :ns)
+                      (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
+                      (recur (rest forms) ns-name deps))))
+                (do
+                  (when (and (:source-map opts)
+                          (= (:optimizations opts) :none))
+                    (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
+                      (emits "\n//# sourceMappingURL=" (.getName sm-file))
+                      (spit sm-file
+                        (sm/encode {(url-path src) @*cljs-source-map*}
+                          {:lines (+ @*cljs-gen-line* 2)
+                            :file  (url-path dest)}))))
+                  (let [ret (merge
+                              {:ns (or ns-name 'cljs.user)
+                               :provides [ns-name]
+                               :requires (if (= ns-name 'cljs.core)
+                                           (set (vals deps))
+                                           (cond-> (conj (set (vals deps)) 'cljs.core)
+                                             (get-in @env/*compiler* [:opts :emit-constants])
+                                             (conj 'constants-table)))
+                               :file dest
+                               :source-file src
+                               :lines (+ @*cljs-gen-line*
+                                        (if (and (:source-map opts)
+                                              (= (:optimizations opts) :none))
+                                          2 0))}
+                              (when (:source-map opts)
+                                {:source-map @*cljs-source-map*}))]
+                    (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getAbsolutePath ^File src) ret)
+                    ret))))))))))
 
 (defn compiled-by-version [^File f]
   (let [match (->> (io/reader f)
@@ -902,48 +907,50 @@
   "Return true if the src file requires compilation."
   ([src dest] (requires-compilation? src dest nil))
   ([^File src ^File dest opts]
-    (or (not (.exists dest))
-        (> (.lastModified src) (.lastModified dest))
+    (env/ensure
+      (or (not (.exists dest))
+          (> (.lastModified src) (.lastModified dest))
         (let [version' (compiled-by-version dest)
               version  (clojurescript-version)]
           (and version (not= version version')))
         (and opts
-             (:source-map opts)
+            (:source-map opts)
              (if (= (:optimizations opts) :none)
                (not (.exists (io/file (str (.getPath dest) ".map"))))
-               (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath src)])))))))
+               (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath src)]))))))))
 
 (defn parse-ns
   ([src] (parse-ns src nil nil))
   ([src dest opts]
-    (let [namespaces' (::ana/namespaces @env/*compiler*)
-          ret
-          (with-core-cljs
-            (binding [ana/*cljs-ns* 'cljs.user]
-              (loop [forms (ana/forms-seq src)]
-                (if (seq forms)
-                  (let [env (ana/empty-env)
-                        ast (ana/no-warn (ana/analyze env (first forms)))]
-                    (if (= (:op ast) :ns)
-                      (let [ns-name (:name ast)
-                            deps    (merge (:uses ast) (:requires ast))]
-                        (merge
-                          {:ns (or ns-name 'cljs.user)
-                           :provides [ns-name]
-                           :requires (if (= ns-name 'cljs.core)
-                                       (set (vals deps))
-                                       (cond-> (conj (set (vals deps)) 'cljs.core)
-                                         (get-in @env/*compiler* [:opts :emit-constants])
-                                         (conj 'constants-table)))
-                           :file dest
-                           :source-file src}
-                          (when (and dest (.exists ^File dest))
-                            {:lines (-> (io/reader dest) line-seq count)})))
-                      (recur (rest forms))))))))]
-      ;; TODO this _was_ a reset! of the old ana/namespaces atom; should we capture and
-      ;; then restore the entirety of env/*compiler* here instead?
-      (swap! env/*compiler* assoc ::ana/namespaces namespaces')
-      ret)))
+    (env/ensure
+      (let [namespaces' (::ana/namespaces @env/*compiler*)
+            ret
+            (with-core-cljs
+              (binding [ana/*cljs-ns* 'cljs.user]
+                (loop [forms (ana/forms-seq src)]
+                  (if (seq forms)
+                    (let [env (ana/empty-env)
+                          ast (ana/no-warn (ana/analyze env (first forms)))]
+                      (if (= (:op ast) :ns)
+                        (let [ns-name (:name ast)
+                              deps    (merge (:uses ast) (:requires ast))]
+                          (merge
+                            {:ns (or ns-name 'cljs.user)
+                             :provides [ns-name]
+                             :requires (if (= ns-name 'cljs.core)
+                                         (set (vals deps))
+                                         (cond-> (conj (set (vals deps)) 'cljs.core)
+                                           (get-in @env/*compiler* [:opts :emit-constants])
+                                           (conj 'constants-table)))
+                             :file dest
+                             :source-file src}
+                            (when (and dest (.exists ^File dest))
+                              {:lines (-> (io/reader dest) line-seq count)})))
+                        (recur (rest forms))))))))]
+        ;; TODO this _was_ a reset! of the old ana/namespaces atom; should we capture and
+        ;; then restore the entirety of env/*compiler* here instead?
+        (swap! env/*compiler* assoc ::ana/namespaces namespaces')
+        ret))))
 
 (defn compile-file
   "Compiles src to a file of the same name, but with a .js extension,

@@ -8,7 +8,8 @@
 
 (ns ^{:doc "A namespace that exists solely to provide a place for \"compiler\"
 state that is accessed/maintained by many different components."}
-  cljs.env)
+  cljs.env
+  (:refer-clojure :exclude [ensure]))
 
 ;; bit of a misnomer, but: an atom containing a map that serves as the bag of
 ;; state for the compiler, writ large (including analyzer, emitter, and
@@ -50,3 +51,10 @@ this namespace."
                                 (str "Compiler environment must be a map or atom containing a map, not "
                                      (class env#)))))]
      (binding [*compiler* env#] ~@body)))
+
+(defmacro ensure
+  [& body]
+  `(binding [*compiler* (if-not (nil? *compiler*)
+                          *compiler*
+                          (default-compiler-env))]
+     ~@body))
