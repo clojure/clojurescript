@@ -55,8 +55,6 @@
 (def ^:dynamic *cljs-source-map* nil)
 (def ^:dynamic *cljs-gen-col* nil)
 (def ^:dynamic *cljs-gen-line* nil)
-
-(def ^:dynamic *emitted-provides* nil)
 (def ^:dynamic *lexical-renames* {})
 (def cljs-reserved-file-names #{"deps.cljs"})
 
@@ -155,11 +153,6 @@
 
 (defn ^String emit-str [expr]
   (with-out-str (emit expr)))
-
-(defn emit-provide [sym]
-  (when-not (or (nil? *emitted-provides*) (contains? @*emitted-provides* sym))
-    (swap! *emitted-provides* conj sym)
-    (emitln "goog.provide('" (munge sym) "');")))
 
 (defmulti emit-constant class)
 (defmethod emit-constant nil [x] (emits "null"))
@@ -857,7 +850,6 @@
                    ana/*cljs-file* (.getPath ^File src)
                    reader/*alias-map* (or reader/*alias-map* {})
                    reader/*data-readers* tags/*cljs-data-readers*
-                   *emitted-provides* (atom #{})
                    *cljs-source-map* (when (:source-map opts) (atom (sorted-map)))
                    *cljs-gen-line* (atom 0)
                    *cljs-gen-col* (atom 0)]
