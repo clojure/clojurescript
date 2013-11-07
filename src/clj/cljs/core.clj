@@ -1285,6 +1285,19 @@
   [& xs]
   `[~@xs])
 
+(defmacro array-map
+  [& kvs]
+  (if (core/> (count kvs) 8)
+    `(hash-map ~@kvs)
+    `(cljs.core.PersistentArrayMap.fromArray (array ~@kvs) true)))
+
+(defmacro hash-map
+  [& kvs]
+  (let [pairs (partition 2 kvs)
+        ks    (map first pairs)
+        vs    (map second pairs)]
+    `(cljs.core.PersistentHashMap.fromArrays (array ~@ks) (array ~@vs))))
+
 (defmacro hash-set
   [& xs]
   `#{~@xs})
