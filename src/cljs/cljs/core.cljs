@@ -3342,7 +3342,10 @@ reduces them without incurring seq initialization"
            (-as-transient cljs.core.PersistentVector.EMPTY)
            coll)))
 
-(defn vector [& args] (vec args))
+(defn vector [& args]
+  (if (instance? IndexedSeq args)
+    (cljs.core.PersistentVector.fromArray (.-arr args) true)
+    (vec args)))
 
 (declare subvec)
 

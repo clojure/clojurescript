@@ -16,7 +16,7 @@
                             when when-first when-let when-not while with-bindings with-in-str
                             with-loading-context with-local-vars with-open with-out-str with-precision with-redefs
                             satisfies? identical? true? false? number? nil? instance? symbol? keyword? string? str get
-                            make-array
+                            make-array vector
 
                             aget aset
                             + - * / < <= > >= == zero? pos? neg? inc dec max min mod
@@ -156,7 +156,7 @@
                             (if (core/symbol? b)
                               (conj ret g v)
                               (conj ret g v b g)))
-                          [] (map vector bs vs gs))]
+                          [] (map core/vector bs vs gs))]
           `(let ~bfs
              (loop* ~(vec (interleave gs gs))
                (let ~(vec (interleave bs gs))
@@ -1013,8 +1013,8 @@
   (let [names (take-nth 2 bindings)
         vals (take-nth 2 (drop 1 bindings))
         tempnames (map (comp gensym name) names)
-        binds (map vector names vals)
-        resets (reverse (map vector names tempnames))
+        binds (map core/vector names vals)
+        resets (reverse (map core/vector names tempnames))
         bind-value (fn [[k v]] (list 'set! k v))]
     `(let [~@(interleave tempnames names)]
        (try
@@ -1275,6 +1275,10 @@
 (defmacro make-array
   [size]
   `(js/Array. ~size))
+
+(defmacro vector
+  [& xs]
+  `[~@xs])
 
 (defmacro js-obj [& rest]
   (let [kvs-str (->> (repeat "~{}:~{}")
