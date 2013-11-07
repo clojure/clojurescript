@@ -46,76 +46,76 @@
 
 (declare message namespaces)
 
-(defmulti default-warning-handler* (fn [warning-type & _] warning-type))
+(defmulti error-message (fn [warning-type & _] warning-type))
 
-(defmethod default-warning-handler* :undeclared-var
+(defmethod error-message :undeclared-var
   [warning-type extra]
   (str "Use of undeclared Var " (:prefix extra) "/" (:suffix extra)))
 
-(defmethod default-warning-handler* :undeclared-ns
+(defmethod error-message :undeclared-ns
   [warning-type extra]
   (str "No such namespace: " (:ns-sym extra)))
 
-(defmethod default-warning-handler* :dynamic
+(defmethod error-message :dynamic
   [warning-type extra]
   (str (:name extra) " not declared ^:dynamic"))
 
-(defmethod default-warning-handler* :redef
+(defmethod error-message :redef
   [warning-type extra]
   (str (:sym extra) " already refers to: " (symbol (str (:ns extra)) (str (:sym extra)))
     " being replaced by: " (symbol (str (:ns-name extra)) (str (:sym extra)))))
 
-(defmethod default-warning-handler* :fn-var
+(defmethod error-message :fn-var
   [warning-type extra]
   (str (symbol (str (:ns-name extra)) (str (:sym extra)))
     " no longer fn, references are stale"))
 
-(defmethod default-warning-handler* :fn-arity
+(defmethod error-message :fn-arity
   [warning-type extra]
   (str "Wrong number of args (" (:argc extra) ") passed to "
     (or (:ctor extra)
       (:name extra))))
 
-(defmethod default-warning-handler* :fn-deprecated
+(defmethod error-message :fn-deprecated
   [warning-type extra]
   (str (-> extra :fexpr :info :name) " is deprecated."))
 
-(defmethod default-warning-handler* :undeclared-ns-form
+(defmethod error-message :undeclared-ns-form
   [warning-type extra]
   (str "Referred " (:type extra) " " (:lib extra) "/" (:sym extra) " does not exist"))
 
-(defmethod default-warning-handler* :protocol-deprecated
+(defmethod error-message :protocol-deprecated
   [warning-type extra]
   (str "Protocol " (:protocol extra) " is deprecated"))
 
-(defmethod default-warning-handler* :undeclared-protocol-symbol
+(defmethod error-message :undeclared-protocol-symbol
   [warning-type extra]
   (str "Can't resolve protocol symbol " (:protocol extra)))
 
-(defmethod default-warning-handler* :invalid-protocol-symbol
+(defmethod error-message :invalid-protocol-symbol
   [warning-type extra]
   (str "Symbol " (:protocol extra) " is not a protocol"))
 
-(defmethod default-warning-handler* :multiple-variadic-overloads
+(defmethod error-message :multiple-variadic-overloads
   [warning-type extra]
   (str (:name extra) ": Can't have more than 1 variadic overload"))
 
-(defmethod default-warning-handler* :variadic-max-arity
+(defmethod error-message :variadic-max-arity
   [warning-type extra]
   (str (:name extra) ": Can't have fixed arity function with more params than variadic function"))
 
-(defmethod default-warning-handler* :overload-arity
+(defmethod error-message :overload-arity
   [warning-type extra]
   (str (:name extra) ": Can't have 2 overloads with same arity"))
 
-(defmethod default-warning-handler* :extending-base-js-type
+(defmethod error-message :extending-base-js-type
   [warning-type extra]
   (str "Extending an existing JavaScript type - use a different symbol name "
        "instead of " (:current-symbol extra) " e.g " (:suggested-symbol extra)))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
-    (when-let [s (default-warning-handler* warning-type extra)]
+    (when-let [s (error-message warning-type extra)]
       (binding [*out* *err*]
         (println (message env (str "WARNING: " s)))))))
 
