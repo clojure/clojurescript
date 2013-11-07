@@ -49,69 +49,69 @@
 (defmulti error-message (fn [warning-type & _] warning-type))
 
 (defmethod error-message :undeclared-var
-  [warning-type extra]
-  (str "Use of undeclared Var " (:prefix extra) "/" (:suffix extra)))
+  [warning-type info]
+  (str "Use of undeclared Var " (:prefix info) "/" (:suffix info)))
 
 (defmethod error-message :undeclared-ns
-  [warning-type extra]
-  (str "No such namespace: " (:ns-sym extra)))
+  [warning-type info]
+  (str "No such namespace: " (:ns-sym info)))
 
 (defmethod error-message :dynamic
-  [warning-type extra]
-  (str (:name extra) " not declared ^:dynamic"))
+  [warning-type info]
+  (str (:name info) " not declared ^:dynamic"))
 
 (defmethod error-message :redef
-  [warning-type extra]
-  (str (:sym extra) " already refers to: " (symbol (str (:ns extra)) (str (:sym extra)))
-    " being replaced by: " (symbol (str (:ns-name extra)) (str (:sym extra)))))
+  [warning-type info]
+  (str (:sym info) " already refers to: " (symbol (str (:ns info)) (str (:sym info)))
+    " being replaced by: " (symbol (str (:ns-name info)) (str (:sym info)))))
 
 (defmethod error-message :fn-var
-  [warning-type extra]
-  (str (symbol (str (:ns-name extra)) (str (:sym extra)))
+  [warning-type info]
+  (str (symbol (str (:ns-name info)) (str (:sym info)))
     " no longer fn, references are stale"))
 
 (defmethod error-message :fn-arity
-  [warning-type extra]
-  (str "Wrong number of args (" (:argc extra) ") passed to "
-    (or (:ctor extra)
-      (:name extra))))
+  [warning-type info]
+  (str "Wrong number of args (" (:argc info) ") passed to "
+    (or (:ctor info)
+      (:name info))))
 
 (defmethod error-message :fn-deprecated
-  [warning-type extra]
-  (str (-> extra :fexpr :info :name) " is deprecated."))
+  [warning-type info]
+  (str (-> info :fexpr :info :name) " is deprecated."))
 
 (defmethod error-message :undeclared-ns-form
-  [warning-type extra]
-  (str "Referred " (:type extra) " " (:lib extra) "/" (:sym extra) " does not exist"))
+  [warning-type info]
+  (str "Referred " (:type info) " " (:lib info) "/" (:sym info) " does not exist"))
 
 (defmethod error-message :protocol-deprecated
-  [warning-type extra]
-  (str "Protocol " (:protocol extra) " is deprecated"))
+  [warning-type info]
+  (str "Protocol " (:protocol info) " is deprecated"))
 
 (defmethod error-message :undeclared-protocol-symbol
-  [warning-type extra]
-  (str "Can't resolve protocol symbol " (:protocol extra)))
+  [warning-type info]
+  (str "Can't resolve protocol symbol " (:protocol info)))
 
 (defmethod error-message :invalid-protocol-symbol
-  [warning-type extra]
-  (str "Symbol " (:protocol extra) " is not a protocol"))
+  [warning-type info]
+  (str "Symbol " (:protocol info) " is not a protocol"))
 
 (defmethod error-message :multiple-variadic-overloads
-  [warning-type extra]
-  (str (:name extra) ": Can't have more than 1 variadic overload"))
+  [warning-type info]
+  (str (:name info) ": Can't have more than 1 variadic overload"))
 
 (defmethod error-message :variadic-max-arity
-  [warning-type extra]
-  (str (:name extra) ": Can't have fixed arity function with more params than variadic function"))
+  [warning-type info]
+  (str (:name info) ": Can't have fixed arity function with more params than variadic function"))
 
 (defmethod error-message :overload-arity
-  [warning-type extra]
-  (str (:name extra) ": Can't have 2 overloads with same arity"))
+  [warning-type info]
+  (str (:name info) ": Can't have 2 overloads with same arity"))
 
 (defmethod error-message :extending-base-js-type
-  [warning-type extra]
+  [warning-type info]
   (str "Extending an existing JavaScript type - use a different symbol name "
-       "instead of " (:current-symbol extra) " e.g " (:suggested-symbol extra)))
+       "instead of " (:current-symbol info) " e.g " (:suggested-symbol info)))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
