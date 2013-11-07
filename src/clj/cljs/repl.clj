@@ -161,7 +161,9 @@
     (binding [ana/*cljs-ns* 'cljs.user
               *cljs-verbose* verbose
               ana/*cljs-warnings* (assoc ana/*cljs-warnings*
-                                    :undeclared warn-on-undeclared)
+                                    :undeclared-var warn-on-undeclared
+                                    :undeclared-ns warn-on-undeclared
+                                    :undeclared-ns-form warn-on-undeclared)
               ana/*cljs-static-fns* static-fns]
       (when analyze-path
         (analyze-source analyze-path))
