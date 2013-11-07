@@ -572,6 +572,14 @@
       'boolean "boolean"
       'default "_"})
 
+(def #^:private js-base-type
+     {'js/Boolean "boolean"
+      'js/String "string"
+      'js/Array "array"
+      'js/Object "object"
+      'js/Number "number"
+      'js/Function "function"})
+
 (defmacro reify [& impls]
   (let [t      (gensym "t")
         meta-sym (gensym "meta")
@@ -736,6 +744,10 @@
         [type assign-impls] (if-let [type (base-type type-sym)]
                               [type base-assign-impls]
                               [(resolve type-sym) proto-assign-impls])]
+    (when (and (:extending-base-js-type cljs.analyzer/*cljs-warnings*)
+               (js-base-type type-sym))
+      (cljs.analyzer/warning :extending-base-js-type env
+          {:current-symbol type-sym :suggested-symbol (js-base-type type-sym)}))
     `(do ~@(mapcat #(assign-impls env resolve type-sym type %) impl-map))))
 
 (defn- prepare-protocol-masks [env impls]

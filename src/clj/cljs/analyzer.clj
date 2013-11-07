@@ -41,7 +41,8 @@
    :invalid-protocol-symbol true
    :multiple-variadic-overloads true
    :variadic-max-arity true
-   :overload-arity true})
+   :overload-arity true
+   :extending-base-js-type true})
 
 (declare message namespaces)
 
@@ -106,6 +107,11 @@
 (defmethod default-warning-handler* :overload-arity
   [warning-type extra]
   (str (:name extra) ": Can't have 2 overloads with same arity"))
+
+(defmethod default-warning-handler* :extending-base-js-type
+  [warning-type extra]
+  (str "Extending an existing JavaScript type - use a different symbol name "
+       "instead of " (:current-symbol extra) " e.g " (:suggested-symbol extra)))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
