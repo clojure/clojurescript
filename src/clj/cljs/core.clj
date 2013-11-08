@@ -1289,24 +1289,24 @@
   `(js/Array. ~size))
 
 (defmacro list
-  ([] ())
+  ([] `cljs.core.List.EMPTY)
   ([x & xs]
     `(-conj (list ~@xs) ~x)))
 
 (defmacro vector
-  ([] [])
+  ([] `cljs.core.PersistentVector.EMPTY)
   ([& xs]
-    `[~@xs]))
+    `(cljs.core.PersistentVector.fromArray (array ~@xs) true)))
 
 (defmacro array-map
-  ([] {})
+  ([] `cljs.core.PersistentArrayMap.EMPTY)
   ([& kvs]
     (if (core/> (count kvs) 8)
       `(hash-map ~@kvs)
       `(cljs.core.PersistentArrayMap.fromArray (array ~@kvs) true))))
 
 (defmacro hash-map
-  ([] {})
+  ([] `cljs.core.PersistentHashMap.EMPTY)
   ([& kvs]
     (let [pairs (partition 2 kvs)
            ks    (map first pairs)
@@ -1314,9 +1314,10 @@
       `(cljs.core.PersistentHashMap.fromArrays (array ~@ks) (array ~@vs)))))
 
 (defmacro hash-set
-  ([] #{})
+  ([] `cljs.core.PersistentHashSet.EMPTY)
   ([& xs]
-    `#{~@xs}))
+    `(cljs.core.PersistentHashSet.fromArray
+       (array ~@(interleave xs (repeat nil))) true)))
 
 (defmacro js-obj [& rest]
   (let [kvs-str (->> (repeat "~{}:~{}")
