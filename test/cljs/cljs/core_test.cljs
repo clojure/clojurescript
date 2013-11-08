@@ -1982,5 +1982,12 @@
     (assert (= (-> (conj s a b) transient (disj! a) persistent! (conj a))
                (-> (conj s a b) transient (disj! a) persistent! (conj a)))))
 
+  ;; CLJS-660
+
+  (assert (= (-> 'a.b keyword ((juxt namespace name))) [nil "a.b"]))
+  (assert (= (-> 'a.b/c keyword ((juxt namespace name))) ["a.b" "c"]))
+  (assert (= (-> "a.b" keyword ((juxt namespace name))) [nil "a.b"]))
+  (assert (= (-> "a.b/c" keyword ((juxt namespace name))) ["a.b" "c"]))
+
   :ok
   )

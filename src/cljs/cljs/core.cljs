@@ -2055,12 +2055,25 @@ reduces them without incurring seq initialization"
       (identical? (.-fqn x) (.-fqn y))
       false)))
 
+(defn namespace
+  "Returns the namespace String of a symbol or keyword, or nil if not present."
+  [x]
+  (if (implements? INamed x)
+    (-namespace ^not-native x)
+    (throw (js/Error. (str "Doesn't support namespace: " x)))))
+
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
   in the keyword strings, it will be added automatically."
   ([name] (cond
             (keyword? name) name
-            (symbol? name) (Keyword. nil (cljs.core/name name) (cljs.core/name name) nil)
+            (symbol? name) (Keyword.
+                             (cljs.core/namespace name)
+                             (cljs.core/name name) (.-str name) nil)
+            (string? name) (let [parts (.split name "/")]
+                             (if (== (alength parts) 2)
+                               (Keyword. (aget parts 0) (aget parts 1) name nil)
+                               (Keyword. nil (aget parts 0) name nil)))
             :else (Keyword. nil name name nil)))
   ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))
 
@@ -6259,13 +6272,6 @@ reduces them without incurring seq initialization"
     (if (string? x)
       x
       (throw (js/Error. (str "Doesn't support name: " x))))))
-
-(defn namespace
-  "Returns the namespace String of a symbol or keyword, or nil if not present."
-  [x]
-  (if (implements? INamed x)
-    (-namespace ^not-native x)
-    (throw (js/Error. (str "Doesn't support namespace: " x)))))
 
 (defn zipmap
   "Returns a map with the keys mapped to the corresponding vals."
