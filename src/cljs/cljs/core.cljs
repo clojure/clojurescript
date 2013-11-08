@@ -2073,8 +2073,7 @@ reduces them without incurring seq initialization"
             (string? name) (let [parts (.split name "/")]
                              (if (== (alength parts) 2)
                                (Keyword. (aget parts 0) (aget parts 1) name nil)
-                               (Keyword. nil (aget parts 0) name nil)))
-            :else (Keyword. nil name name nil)))
+                               (Keyword. nil (aget parts 0) name nil)))))
   ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))
 
 

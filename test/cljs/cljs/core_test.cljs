@@ -1989,5 +1989,10 @@
   (assert (= (-> "a.b" keyword ((juxt namespace name))) [nil "a.b"]))
   (assert (= (-> "a.b/c" keyword ((juxt namespace name))) ["a.b" "c"]))
 
+  ;; CLJS-663
+
+  (assert (= (keyword 123) nil))
+  (assert (= (keyword (js/Date.)) nil))
+
   :ok
   )
