@@ -1316,8 +1316,7 @@
 (defmacro hash-set
   ([] `cljs.core.PersistentHashSet.EMPTY)
   ([& xs]
-    `(cljs.core.PersistentHashSet.fromArray
-       (array ~@(interleave xs (repeat nil))) true)))
+    `(set (array ~@xs))))
 
 (defmacro js-obj [& rest]
   (let [kvs-str (->> (repeat "~{}:~{}")
