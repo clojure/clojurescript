@@ -893,7 +893,10 @@
                                       (first (:provides js)))]
                        (io/file (io/file (output-directory opts))
                          (ana/ns->relpath ns)))]
-        (when (and out-file (not (.exists ^File out-file)))
+        (when (and out-file
+                   (or (not (.exists ^File out-file))
+                       (> (.lastModified (io/file (:source-url js)))
+                          (.lastModified out-file))))
           (spit out-file (slurp (:source-url js))))
         js))))
 
