@@ -42,6 +42,18 @@
   (assert (= (into cljs.core.PersistentQueue.EMPTY [1 2])
              (reader/read-string "#queue [1 2]")))
 
+  ;; comments
+  (assert (= :threw (try
+                      (reader/read-string ";foo")
+                      :failed-to-throw
+                      (catch js/Error e :threw))))
+  (assert (= 3 (try
+                 (reader/read-string ";foo\n3")
+                 (catch js/Error e :threw))))
+  (assert (= 3 (try
+                 (reader/read-string ";foo\n3\n5")
+                 (catch js/Error e :threw))))
+
   ;; inst
   (let [est-inst (reader/read-string "#inst \"2010-11-12T13:14:15.666-05:00\"")
         utc-inst (reader/read-string "#inst \"2010-11-12T18:14:15.666-00:00\"")

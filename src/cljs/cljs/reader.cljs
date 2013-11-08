@@ -90,7 +90,7 @@ nil if the end of stream has been reached")
   [reader _]
   (loop []
     (let [ch (read-char reader)]
-      (if (or (identical? ch \n) (identical? ch \r) (nil? ch))
+      (if (or (identical? ch \newline) (identical? ch \return) (nil? ch))
         reader
         (recur)))))
 
