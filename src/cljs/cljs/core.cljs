@@ -30,6 +30,7 @@
   [f] (set! *print-fn* f))
 
 (def ^:dynamic *flush-on-newline* true)
+(def ^:dynamic *print-newline* true)
 (def ^:dynamic *print-readably* true)
 (def ^:dynamic *print-meta* false)
 (def ^:dynamic *print-dup* false)
@@ -39,6 +40,16 @@
    :readably *print-readably*
    :meta *print-meta*
    :dup *print-dup*})
+
+(declare into-array)
+
+(defn enable-console-print!
+  "Set *print-fn* to console.log"
+  []
+  (set! *print-newline* false)
+  (set! *print-fn*
+    (fn [& args]
+      (.apply js/console.log js/console (into-array args)))))
 
 (def
   ^{:doc "bound in a repl thread to the most recent value printed"}
@@ -6761,7 +6772,8 @@ reduces them without incurring seq initialization"
   "Same as print followed by (newline)"
   [& objs]
   (pr-with-opts objs (assoc (pr-opts) :readably false))
-  (newline (pr-opts)))
+  (when *print-newline*
+    (newline (pr-opts))))
 
 (defn println-str
   "println to a string, returning it"
@@ -6772,7 +6784,8 @@ reduces them without incurring seq initialization"
   "Same as pr followed by (newline)."
   [& objs]
   (pr-with-opts objs (pr-opts))
-  (newline (pr-opts)))
+  (when *print-newline*
+    (newline (pr-opts))))
 
 (extend-protocol IPrintWithWriter
   LazySeq
