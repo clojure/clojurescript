@@ -1994,5 +1994,13 @@
   (assert (= (keyword 123) nil))
   (assert (= (keyword (js/Date.)) nil))
 
+  ;; CLJS-647
+  (let [keys #(vec (js-keys %))
+        z "x"]
+    (assert (= ["x"]
+               (keys (js-obj "x" "y"))
+               (keys (js-obj (identity "x") "y"))
+               (keys (js-obj z "y")))))
+
   :ok
   )

@@ -33,6 +33,7 @@
 
                             cond-> cond->> as-> some-> some->>])
   (:require clojure.walk
+            clojure.set
             cljs.compiler
             [cljs.env :as env]))
 
@@ -1318,12 +1319,30 @@
   ([& xs]
     `(set (array ~@xs))))
 
-(defmacro js-obj [& rest]
+(defn js-obj* [kvs]
   (let [kvs-str (->> (repeat "~{}:~{}")
-                     (take (quot (count rest) 2))
+                     (take (count kvs))
                      (interpose ",")
                      (apply core/str))]
-    (list* 'js* (core/str "{" kvs-str "}") rest)))
+    (list* 'js* (core/str "{" kvs-str "}") (apply concat kvs))))
+
+(defmacro js-obj [& rest]
+  (let [sym-or-str? (fn [x] (core/or (core/symbol? x) (core/string? x)))
+        filter-on-keys (fn [f coll]
+                         (->> coll
+                              (filter (fn [[k _]] (f k)))
+                              (into {})))
+        kvs (into {} (map vec (partition 2 rest)))
+        sym-pairs (filter-on-keys core/symbol? kvs)
+        expr->local (zipmap
+                     (filter (complement sym-or-str?) (keys kvs))
+                     (repeatedly gensym))
+        obj (gensym "obj")]
+    `(let [~@(apply concat (clojure.set/map-invert expr->local))
+           ~obj ~(js-obj* (filter-on-keys core/string? kvs))]
+       ~@(map (fn [[k v]] `(aset ~obj ~k ~v)) sym-pairs)
+       ~@(map (fn [[k v]] `(aset ~obj ~v ~(core/get kvs k))) expr->local)
+       ~obj)))
 
 (defmacro alength [a]
   (core/list 'js* "~{}.length" a))
