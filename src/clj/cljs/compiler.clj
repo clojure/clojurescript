@@ -756,7 +756,7 @@
   (emit-wrap env (emits target " = " val)))
 
 (defmethod emit* :ns
-  [{:keys [name requires uses requires-macros env]}]
+  [{:keys [name requires uses require-macros env]}]
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))

@@ -1252,7 +1252,7 @@ argument, which the reader will use in any emitted errors."
                     form (binding [*ns* (create-ns *cljs-ns*)
                                    reader/*alias-map*
                                    (apply merge
-                                          ((juxt :requires :requires-macros)
+                                          ((juxt :requires :require-macros)
                                            (get-namespace *cljs-ns*)))]
                            (reader/read rdr nil eof-sentinel))]
                 (if (identical? form eof-sentinel)
