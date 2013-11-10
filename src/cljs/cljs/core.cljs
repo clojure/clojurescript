@@ -34,12 +34,14 @@
 (def ^:dynamic *print-readably* true)
 (def ^:dynamic *print-meta* false)
 (def ^:dynamic *print-dup* false)
+(def ^:dynamic *print-length* nil)
 
 (defn- pr-opts []
   {:flush-on-newline *flush-on-newline*
    :readably *print-readably*
    :meta *print-meta*
-   :dup *print-dup*})
+   :dup *print-dup*
+   :print-length *print-length*})
 
 (declare into-array)
 
@@ -6600,9 +6602,14 @@ reduces them without incurring seq initialization"
   (-write writer begin)
   (when (seq coll)
     (print-one (first coll) writer opts))
-  (doseq [o (next coll)]
+  (loop [coll (next coll) n (:print-length opts)]
+    (when (and coll (or (nil? n) (not (zero? n))))
+      (-write writer sep)
+      (print-one (first coll) writer opts)
+      (recur (next coll) (dec n))))
+  (when (:print-length opts)
     (-write writer sep)
-    (print-one o writer opts))
+    (print-one "..." writer opts))
   (-write writer end))
 
 (defn write-all [writer & ss]
