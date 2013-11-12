@@ -1302,7 +1302,7 @@
 (defmacro array-map
   ([] `cljs.core.PersistentArrayMap.EMPTY)
   ([& kvs]
-    (if (core/> (count kvs) 8)
+    (if (core/> (count kvs) 16)
       `(hash-map ~@kvs)
       `(cljs.core.PersistentArrayMap.fromArray (array ~@kvs) true))))
 
