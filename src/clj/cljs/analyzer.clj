@@ -1087,7 +1087,11 @@
   [env sym]
   (if (:quoted? env)
     {:op :constant :env env :form sym}
-    (let [ret {:env env :form sym}
+    (let [{:keys [line column]} (meta sym)
+          env (cond-> env
+                line (assoc :line line)
+                column (assoc :column column))
+          ret {:env env :form sym}
           lb (-> env :locals sym)]
       (if lb
         (assoc ret :op :var :info lb)
