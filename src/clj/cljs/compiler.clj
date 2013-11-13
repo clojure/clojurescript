@@ -130,6 +130,24 @@
 
 (defn emit [ast]
   (env/ensure
+    (when *source-map-data*
+      (let [{:keys [env]} ast]
+        (when (:line env)
+          (let [{:keys [line column]} env]
+            (swap! *source-map-data*
+              (fn [m]
+                (let [minfo (cond-> {:gcol (:gen-col m)
+                                     :gline (:gen-line m)}
+                              (= (:op ast) :var)
+                              (assoc :name (-> ast :info :name)))]
+                  ; Dec the line number for 0-indexed line numbers.
+                  ; tools.reader has 0-indexed line number, chrome
+                  ; expects 1-indexed source maps.
+                  (update-in m [:source-map (dec line)]
+                    (fnil (fn [line]
+                            (update-in line [(or column 0)]
+                              (fnil (fn [column] (conj column minfo)) [])))
+                      (sorted-map))))))))))
     (emit* ast)))
 
 (defn emits [& xs]
@@ -240,22 +258,6 @@
         info (if (= (namespace var-name) "js")
                (name var-name)
                info)]
-    (when *source-map-data*
-      (when (and (:line env) (symbol? var-name))
-        (let [{:keys [line column]} env]
-          (swap! *source-map-data*
-            (fn [m]
-              (let [minfo {:gcol  (:gen-col m)
-                           :gline (:gen-line m)
-                           :name  var-name}]
-                ; Dec the line number for 0-indexed line numbers.
-                ; tools.reader has 0-indexed line number, chrome
-                ; expects 1-indexed source maps.
-                (update-in m [:source-map (dec line)]
-                  (fnil (fn [line]
-                          (update-in line [(or column 0)]
-                            (fnil (fn [column] (conj column minfo)) [])))
-                    (sorted-map)))))))))
     ; We need a way to write bindings out to source maps and javascript
     ; without getting wrapped in an emit-wrap calls, otherwise we get
     ; e.g. (function greet(return x, return y) {}).
