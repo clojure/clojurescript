@@ -139,7 +139,7 @@
                 (let [minfo (cond-> {:gcol (:gen-col m)
                                      :gline (:gen-line m)}
                               (= (:op ast) :var)
-                              (assoc :name (-> ast :info :name)))]
+                              (assoc :name (str (-> ast :info :name))))]
                   ; Dec the line number for 0-indexed line numbers.
                   ; tools.reader has 0-indexed line number, chrome
                   ; expects 1-indexed source maps.
