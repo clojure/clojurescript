@@ -252,7 +252,8 @@
                      :static-dir    ["." "out/"]
                      :preloaded-libs   []
                      :src           "src/"
-                     :cljs.env/compiler compiler-env}
+                     :cljs.env/compiler compiler-env
+                     :source-map    true}
                     opts)]
     (cljs.env/with-compiler-env compiler-env
       (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))

@@ -211,21 +211,24 @@
         (doseq [[col infos] cols]
           (encode-cols infos source-idx line col))))
     (let [source-map-file-contents
-          {"version" 3
-           "file" (:file opts)
-           "sources" (into []
-                           (let [paths (keys m)
-                                 f (if (or (:output-dir opts) (:source-map-path opts))
-                                     #(relativize-path % opts)
-                                     #(last (string/split % #"/")))]
-                             (map f paths)))
-           "lineCount" (:lines opts)
-           "mappings" (->> (lines->segs @lines)
-                           (map #(string/join "," %))
-                           (string/join ";"))
-           "names" (into []
-                         (map (set/map-invert @names->idx)
-                              (range (count @names->idx))))}]
+          (cond-> {"version" 3
+                   "file" (:file opts)
+                   "sources" (into []
+                                   (let [paths (keys m)
+                                         f (if (or (:output-dir opts)
+                                                   (:source-map-path opts))
+                                             #(relativize-path % opts)
+                                             #(last (string/split % #"/")))]
+                                     (map f paths)))
+                   "lineCount" (:lines opts)
+                   "mappings" (->> (lines->segs @lines)
+                                   (map #(string/join "," %))
+                                   (string/join ";"))
+                   "names" (into []
+                                 (map (set/map-invert @names->idx)
+                                      (range (count @names->idx))))}
+                  (:sources-content opts)
+                  (assoc "sourcesContent" (:sources-content opts)))]
       (with-out-str
         (json/pprint
          source-map-file-contents

@@ -8,14 +8,18 @@
 
 (ns cljs.repl
   (:refer-clojure :exclude [load-file])
-  (:import java.io.File)
+  (:import java.io.File
+           javax.xml.bind.DatatypeConverter)
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
             [cljs.env :as env]
             [cljs.tagged-literals :as tags]
-            [cljs.closure :as cljsc]))
+            [cljs.closure :as cljsc]
+            [cljs.source-map :as sm]
+            [clojure.tools.reader :as reader]
+            [clojure.tools.reader.reader-types :as readers]))
 
 (def ^:dynamic *cljs-verbose* false)
 
@@ -76,7 +80,30 @@
      (try
        (let [ast (ana/analyze env form)
              js (comp/emit-str ast)
-             wrap-js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form))))]
+             wrap-js
+             (if (:source-map repl-env)
+               (binding [comp/*source-map-data*
+                         (atom {:source-map (sorted-map)
+                                :gen-col 0
+                                :gen-line 0})]
+                 (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form))))
+                       t (System/currentTimeMillis)]
+                   (str js
+                        "\n//@ sourceURL=repl-" t ".js"
+                        "\n//@ sourceMappingURL=data:application/json;base64,"
+                        (DatatypeConverter/printBase64Binary
+                         (.getBytes
+                          (sm/encode
+                           {(str "repl-" t ".cljs")
+                            (:source-map @comp/*source-map-data*)}
+                           {:lines (+ (:gen-line @comp/*source-map-data*) 3)
+                            :file  (str "repl-" t ".js")
+                            :sources-content
+                            [(or (:source (meta form))
+                                 ;; handle strings / primitives without metadata
+                                 (with-out-str (pr form)))]})
+                                "UTF-8")))))
+               (comp/emit-str (ana/no-warn (ana/analyze env (wrap form)))))]
          (when (= (:op ast) :ns)
            (load-dependencies repl-env (into (vals (:requires ast))
                                              (distinct (vals (:uses ast))))))
@@ -172,27 +199,34 @@
             is-special-fn? (set (keys special-fns))
             read-error (Object.)]
         (-setup repl-env)
-        (loop [forms (ana/forms-seq *in* "NO_SOURCE_FILE")]
+        (loop []
           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
           (flush)
-          (let [form (try
-                       (if (seq forms)
-                         (first forms)
-                         :cljs/quit)
+          (let [rdr (readers/source-logging-push-back-reader
+                     (java.io.PushbackReader. (io/reader *in*))
+                     1
+                     "NO_SOURCE_FILE")
+                form (try
+                       (binding [*ns* (create-ns ana/*cljs-ns*)
+                                 reader/*data-readers* tags/*cljs-data-readers*
+                                 reader/*alias-map*
+                                 (apply merge
+                                        ((juxt :requires :require-macros)
+                                         (ana/get-namespace ana/*cljs-ns*)))]
+                         (reader/read rdr nil read-error))
                        (catch Exception e
                          (println (.getMessage e))
                          read-error))]
             (cond
-              (identical? form read-error) (recur (ana/forms-seq *in* "NO_SOURCE_FILE"))
-              
-              (= form :cljs/quit) :quit
+             (identical? form read-error) (recur)
+             (= form :cljs/quit) :quit
 
-              (and (seq? form) (is-special-fn? (first form)))
-              (do (apply (get special-fns (first form)) repl-env (rest form))
-                (newline)
-                (recur (rest forms)))
+             (and (seq? form) (is-special-fn? (first form)))
+             (do (apply (get special-fns (first form)) repl-env (rest form))
+                 (newline)
+                 (recur))
 
-              :else
-              (do (eval-and-print repl-env env form)
-                (recur (rest forms))))))
+             :else
+             (do (eval-and-print repl-env env form)
+                 (recur)))))
         (-tear-down repl-env)))))
