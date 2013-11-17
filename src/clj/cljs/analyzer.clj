@@ -210,16 +210,15 @@
                *cljs-macros-is-classpath* false]
        ~@body)))
 
-(defn js-globals [syms]
-  (into {}
-    (map #(vector % {:name %}) syms)))
-
 (defn empty-env []
   (env/ensure
     {:ns (get-namespace *cljs-ns*)
      :context :statement
      :locals {}
-     :js-globals (js-globals '(alert window document))}))
+     :js-globals (into {}
+                   (map #(vector % {:name %})
+                     '(alert window document console escape unescape
+                       screen location navigator history location)))}))
 
 (defmacro ^:private debug-prn
   [& args]
