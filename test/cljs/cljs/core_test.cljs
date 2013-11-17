@@ -2002,5 +2002,12 @@
                (keys (js-obj (identity "x") "y"))
                (keys (js-obj z "y")))))
 
+  ;; CLJS-583
+
+  (def some-x 1)
+  (def some-y 1)
+
+  (assert (= (count #{some-x some-y}) 1))
+
   :ok
   )

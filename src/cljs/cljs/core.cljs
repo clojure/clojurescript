@@ -2447,10 +2447,10 @@ reduces them without incurring seq initialization"
 
 ;;; Transients
 
-(defn transient [coll]
+(defn ^not-native transient [coll]
   (-as-transient coll))
 
-(defn persistent! [tcoll]
+(defn ^not-native persistent! [tcoll]
   (-persistent! tcoll))
 
 (defn conj! [tcoll val]
@@ -6090,15 +6090,18 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentHashSet.fromArray
   (fn [items ^boolean no-clone]
     (let [len (alength items)]
-     (if (<= (/ len 2) cljs.core.PersistentArrayMap.HASHMAP_THRESHOLD)
-       (let [arr (if no-clone items (aclone items))]
-         (PersistentHashSet. nil
-           (cljs.core.PersistentArrayMap.fromArray arr true) nil))
+      (if (<= len cljs.core.PersistentArrayMap.HASHMAP_THRESHOLD)
+        (let [arr (if no-clone items (aclone items))]
+          (loop [i 0
+                 out (transient cljs.core.PersistentArrayMap.EMPTY)]
+            (if (< i len)
+              (recur (inc i) (-assoc! out (aget items i) nil))
+              (cljs.core.PersistentHashSet. nil (-persistent! out) nil))))
        (loop [i 0
               out (transient cljs.core.PersistentHashSet.EMPTY)]
          (if (< i len)
-           (recur (+ i 2) (conj! out (aget items i)))
-           (persistent! out)))))))
+           (recur (+ i 2) (-conj! out (aget items i)))
+           (-persistent! out)))))))
 
 (deftype TransientHashSet [^:mutable transient-map]
   ITransientCollection

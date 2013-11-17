@@ -314,13 +314,22 @@
             ", 5, cljs.core.PersistentVector.EMPTY_NODE, ["  (comma-sep items) "], null)")
           (emits "cljs.core.PersistentVector.fromArray([" (comma-sep items) "], true)"))))))
 
+(defn distinct-constants? [items]
+  (and (every? #(= (:op %) :constant) items)
+       (= (count (into #{} items)) (count items))))
+
 (defmethod emit* :set
   [{:keys [items env]}]
   (emit-wrap env
-    (if (empty? items)
+    (cond
+      (empty? items)
       (emits "cljs.core.PersistentHashSet.EMPTY")
-      (emits "cljs.core.PersistentHashSet.fromArray(["
-             (comma-sep (interleave items (repeat "null"))) "], true)"))))
+
+      (distinct-constants? items)
+      (emits "new cljs.core.PersistentHashSet(null, cljs.core.PersistentArrayMap.fromArray(["
+        (comma-sep (interleave items (repeat "null"))) "], true), null)")
+
+      :else (emits "cljs.core.PersistentHashSet.fromArray([" (comma-sep items) "], true)"))))
 
 (defmethod emit* :constant
   [{:keys [form env]}]

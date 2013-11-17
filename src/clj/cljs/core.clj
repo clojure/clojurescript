@@ -1314,14 +1314,18 @@
   ([] `cljs.core.PersistentHashMap.EMPTY)
   ([& kvs]
     (let [pairs (partition 2 kvs)
-           ks    (map first pairs)
-           vs    (map second pairs)]
+          ks    (map first pairs)
+          vs    (map second pairs)]
       `(cljs.core.PersistentHashMap.fromArrays (array ~@ks) (array ~@vs)))))
 
 (defmacro hash-set
   ([] `cljs.core.PersistentHashSet.EMPTY)
   ([& xs]
-    `(set (array ~@xs))))
+    (if (core/and (every? #(= (:op %) :constant)
+                    (map #(cljs.analyzer/analyze &env %) xs))
+                  (= (count (into #{} xs)) (count xs)))
+      `(cljs.core.PersistentHashSet. nil (cljs.core.PersistentArrayMap.fromArray (array ~@(interleave xs (repeat nil))) true) nil)
+      `(cljs.core.PersistentHashSet.fromArray (array ~@xs) true))))
 
 (defn js-obj* [kvs]
   (let [kvs-str (->> (repeat "~{}:~{}")
