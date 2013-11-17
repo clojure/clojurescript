@@ -761,7 +761,7 @@
                   (sm/encode merged
                     {:lines (+ (:lineCount sm-json) 2)
                      :file (:file sm-json)
-                     :output-dir (:output-dir opts)
+                     :output-dir (output-directory opts)
                      :relpaths relpaths}))))))
         source)
       (report-failure result))))
