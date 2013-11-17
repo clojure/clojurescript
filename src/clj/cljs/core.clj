@@ -1297,14 +1297,18 @@
 (defmacro vector
   ([] `cljs.core.PersistentVector.EMPTY)
   ([& xs]
-    `(cljs.core.PersistentVector.fromArray (array ~@xs) true)))
+    (let [cnt (count xs)]
+      (if (core/< cnt 32)
+        `(cljs.core.PersistentVector. nil ~cnt 5
+           cljs.core.PersistentVector.EMPTY_NODE (array ~@xs) nil)
+        `(cljs.core.PersistentVector.fromArray (array ~@xs) true)))))
 
 (defmacro array-map
   ([] `cljs.core.PersistentArrayMap.EMPTY)
   ([& kvs]
     (if (core/> (count kvs) 16)
       `(hash-map ~@kvs)
-      `(cljs.core.PersistentArrayMap.fromArray (array ~@kvs) true))))
+      `(cljs.core.PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil))))
 
 (defmacro hash-map
   ([] `cljs.core.PersistentHashMap.EMPTY)

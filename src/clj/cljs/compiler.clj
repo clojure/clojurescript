@@ -285,9 +285,9 @@
         (emits "cljs.core.PersistentArrayMap.EMPTY")
 
         (<= (count keys) array-map-threshold)
-        (emits "cljs.core.PersistentArrayMap.fromArray(["
+        (emits "new cljs.core.PersistentArrayMap(null, " (count keys) ", ["
                (comma-sep (interleave keys vals))
-               "], true)")
+               "], null)")
 
         :else
         (emits "cljs.core.PersistentHashMap.fromArrays(["
@@ -308,8 +308,11 @@
   (emit-wrap env
     (if (empty? items)
       (emits "cljs.core.PersistentVector.EMPTY")
-      (emits "cljs.core.PersistentVector.fromArray(["
-             (comma-sep items) "], true)"))))
+      (let [cnt (count items)]
+        (if (< cnt 32)
+          (emits "new cljs.core.PersistentVector(null, " cnt
+            ", 5, cljs.core.PersistentVector.EMPTY_NODE, ["  (comma-sep items) "], null)")
+          (emits "cljs.core.PersistentVector.fromArray([" (comma-sep items) "], true)"))))))
 
 (defmethod emit* :set
   [{:keys [items env]}]
