@@ -451,23 +451,17 @@
 (defn emit-fn-method
   [{:keys [type name variadic params expr env recurs max-fixed-arity]}]
   (emit-wrap env
-             ; Should we emit source-map for this inner declaration?
-             ; It may be unnecessary.
-             ;                   hello.core.greet = (function greet(){})
-             ; e.g. Do we need a source-map entry for this? --^
-
-             ; If so, we can't just munge the name and spit out a string.
-             (emits "(function " (munge name) "(")
-             (emit-fn-params params)
-             (emits "){")
-             (when type
-               (emitln "var self__ = this;"))
-             (when recurs (emitln "while(true){"))
-             (emits expr)
-             (when recurs
-               (emitln "break;")
-               (emitln "}"))
-             (emits "})")))
+    (emits "(function " (munge name) "(")
+    (emit-fn-params params)
+    (emits "){")
+    (when type
+      (emitln "var self__ = this;"))
+    (when recurs (emitln "while(true){"))
+    (emits expr)
+    (when recurs
+      (emitln "break;")
+      (emitln "}"))
+    (emits "})")))
 
 (defn emit-variadic-fn-method
   [{:keys [type name variadic params expr env recurs max-fixed-arity] :as f}]

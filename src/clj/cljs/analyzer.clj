@@ -210,8 +210,16 @@
                *cljs-macros-is-classpath* false]
        ~@body)))
 
+(defn js-globals [syms]
+  (into {}
+    (map #(vector % {:name %}) syms)))
+
 (defn empty-env []
-  {:ns (get-namespace *cljs-ns*) :context :statement :locals {}})
+  (env/ensure
+    {:ns (get-namespace *cljs-ns*)
+     :context :statement
+     :locals {}
+     :js-globals (js-globals '(alert window document))}))
 
 (defmacro ^:private debug-prn
   [& args]
@@ -561,7 +569,8 @@
         locals (:locals env)
         name-var (if name
                    {:name name
-                    :shadow (locals name)
+                    :info {:shadow (or (locals name)
+                                       (get-in env [:js-globals name]))}
                     :tag (-> name meta :tag)}) 
         locals (if (and locals name) (assoc locals name name-var) locals)
         type (-> form meta ::type)
