@@ -762,6 +762,7 @@
                     {:lines (+ (:lineCount sm-json) 2)
                      :file (:file sm-json)
                      :output-dir (output-directory opts)
+                     :source-map-path (:source-map-path opts)
                      :relpaths relpaths}))))))
         source)
       (report-failure result))))

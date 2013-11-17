@@ -152,13 +152,13 @@
             [] cols)))
       [] lines)))
 
-(defn relativize-path [path {:keys [output-dir relpaths]}]
+(defn relativize-path [path {:keys [output-dir source-map-path relpaths]}]
   (cond
     (re-find #"\.jar!/" path)
-    (str output-dir (second (string/split path #"\.jar!")))    
+    (str (or source-map-path output-dir) (second (string/split path #"\.jar!")))    
 
     :else
-    (str output-dir "/" (get relpaths path))))
+    (str (or source-map-path output-dir) "/" (get relpaths path))))
 
 (defn encode
   "Take an internal source map representation represented as nested
