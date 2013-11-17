@@ -218,7 +218,8 @@
      :js-globals (into {}
                    (map #(vector % {:name %})
                      '(alert window document console escape unescape
-                       screen location navigator history location)))}))
+                       screen location navigator history location
+                       global process require module exports)))}))
 
 (defmacro ^:private debug-prn
   [& args]
