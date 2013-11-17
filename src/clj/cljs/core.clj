@@ -1347,9 +1347,6 @@
 (defmacro alength [a]
   (core/list 'js* "~{}.length" a))
 
-(defmacro aclone [a]
-  (core/list 'js* "~{}.slice()" a))
-
 (defmacro amap
   "Maps an expression across an array a, using an index named idx, and
   return value named ret, initialized to a clone of a, then setting

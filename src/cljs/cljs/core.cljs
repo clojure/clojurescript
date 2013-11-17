@@ -140,8 +140,12 @@
 
 (defn aclone
   "Returns a javascript array, cloned from the passed in array"
-  [array-like]
-  (.slice array-like))
+  [arr]
+  (let [len (alength arr)
+        new-arr (make-array len)]
+    (dotimes [i len]
+      (aset new-arr i (aget arr i)))
+    new-arr))
 
 (defn array
   "Creates a new javascript array.
@@ -1161,7 +1165,7 @@ reduces them without incurring seq initialization"
 
 (defn- array-copy
   ([from i to j len]
-     (loop [i i j j len len]
+    (loop [i i j j len len]
        (if (zero? len)
          to
          (do (aset to j (aget from i))
@@ -3235,8 +3239,11 @@ reduces them without incurring seq initialization"
   ICollection
   (-conj [coll o]
     (if (< (- cnt (tail-off coll)) 32)
-      (let [new-tail (aclone tail)]
-        (.push new-tail o)
+      (let [len (alength tail)
+            new-tail (make-array (inc len))]
+        (dotimes [i len]
+          (aset new-tail i (aget tail i)))
+        (aset new-tail len o)
         (PersistentVector. meta (inc cnt) shift root new-tail nil))
       (let [root-overflow? (> (bit-shift-right-zero-fill cnt 5) (bit-shift-left 1 shift))
             new-shift (if root-overflow? (+ shift 5) shift)
