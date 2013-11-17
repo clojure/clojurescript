@@ -25,6 +25,7 @@
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
 (def ^:dynamic *cljs-macros-is-classpath* true)
+(def ^:dynamic *cljs-dep-set* (with-meta #{} {:dep-path []}))
 (def -cljs-macros-loaded (atom false))
 
 (def ^:dynamic *cljs-warnings*
@@ -804,13 +805,16 @@
 
 (declare analyze-file)
 
-(defn analyze-deps [deps]
-  (doseq [dep deps]
-    (when-not (contains? (::namespaces @env/*compiler*) dep)
-      (let [relpath (ns->relpath dep)]
-        (when (io/resource relpath)
-          (no-warn
-            (analyze-file relpath)))))))
+(defn analyze-deps [lib deps]
+  (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
+    (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
+      (str "Circular dependency detected " (-> *cljs-dep-set* meta :dep-path)))
+    (doseq [dep deps]
+      (when-not (contains? (::namespaces @env/*compiler*) dep)
+        (let [relpath (ns->relpath dep)]
+          (when (io/resource relpath)
+            (no-warn
+              (analyze-file relpath))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
@@ -917,7 +921,7 @@
                   (apply merge-with merge m (map (spec-parsers k) libs)))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (seq @deps)
-      (analyze-deps @deps))
+      (analyze-deps name @deps))
     (when (seq uses)
       (check-uses uses env))
     (set! *cljs-ns* name)
