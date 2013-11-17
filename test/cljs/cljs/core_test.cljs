@@ -2009,5 +2009,9 @@
 
   (assert (= (count #{some-x some-y}) 1))
 
+  ;; CLJS-584
+
+  (assert (= (count {some-x :foo some-y :bar}) 1))
+
   :ok
   )

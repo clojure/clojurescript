@@ -4256,10 +4256,18 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentArrayMap.HASHMAP_THRESHOLD 8)
 
 (set! cljs.core.PersistentArrayMap.fromArray
-  (fn [arr ^boolean no-clone]
+  (fn [arr ^boolean no-clone ^boolean no-check]
     (let [arr (if no-clone arr (aclone arr))] 
-      (let [cnt (/ (alength arr) 2)]
-        (PersistentArrayMap. nil cnt arr nil)))))
+      (if no-check
+        (let [cnt (/ (alength arr) 2)]
+          (PersistentArrayMap. nil cnt arr nil))
+        (let [len (alength arr)]
+          (loop [i 0
+                 ret (transient cljs.core.PersistentArrayMap.EMPTY)]
+            (if (< i len)
+              (recur (+ i 2)
+                (-assoc! ret (aget arr i) (aget arr (inc i))))
+              (-persistent! ret))))))))
 
 (declare array->transient-hash-map)
 
