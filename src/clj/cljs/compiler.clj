@@ -909,7 +909,7 @@
                         (sm/encode {(url-path src) (:source-map sm-data)}
                           {:lines (+ (:gen-line sm-data) 2)
                            :file (url-path dest)}))))
-                  (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getAbsolutePath ^File src) ret)
+                  (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getAbsolutePath ^File dest) ret)
                   ret)))))))))
 
 (defn compiled-by-version [^File f]
@@ -925,14 +925,14 @@
     (env/ensure
       (or (not (.exists dest))
           (> (.lastModified src) (.lastModified dest))
-        (let [version' (compiled-by-version dest)
-              version  (clojurescript-version)]
-          (and version (not= version version')))
-        (and opts
+          (let [version' (compiled-by-version dest)
+                version  (clojurescript-version)]
+            (and version (not= version version')))
+          (and opts
             (:source-map opts)
-             (if (= (:optimizations opts) :none)
-               (not (.exists (io/file (str (.getPath dest) ".map"))))
-               (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath src)]))))))))
+            (if (= (:optimizations opts) :none)
+              (not (.exists (io/file (str (.getPath dest) ".map"))))
+              (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))))))
 
 (defn parse-ns
   ([src] (parse-ns src nil nil))

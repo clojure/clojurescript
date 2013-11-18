@@ -748,7 +748,7 @@
                         relpaths))
                     (if-let [url (:url source)]
                       (let [path (.getPath ^URL url)]
-                        (if-let [compiled (get-in @env/*compiler* [::compiled-cljs path])]
+                        (if-let [compiled (get-in @env/*compiler* [::comp/compiled-cljs path])]
                           (if-let [source-url (:source-url source)]
                             (assoc merged (.getPath ^URL source-url)
                               (sm/merge-source-maps
