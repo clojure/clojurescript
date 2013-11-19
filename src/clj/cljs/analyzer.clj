@@ -43,7 +43,8 @@
    :multiple-variadic-overloads true
    :variadic-max-arity true
    :overload-arity true
-   :extending-base-js-type true})
+   :extending-base-js-type true
+   :invoke-ctor true})
 
 (declare message namespaces)
 
@@ -113,6 +114,10 @@
   [warning-type info]
   (str "Extending an existing JavaScript type - use a different symbol name "
        "instead of " (:current-symbol info) " e.g " (:suggested-symbol info)))
+
+(defmethod error-message :invoke-ctor
+  [warning-type info]
+  (str "Cannot invoke type constructor " (-> info :fexpr :info :name) " as function "))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -1086,16 +1091,19 @@
          fexpr (analyze enve f)
          argexprs (vec (map #(analyze enve %) args))
          argc (count args)]
-     (if (and (:fn-arity *cljs-warnings*) (-> fexpr :info :fn-var))
+     (when (and (:fn-arity *cljs-warnings*) (-> fexpr :info :fn-var))
        (let [{:keys [variadic max-fixed-arity method-params name]} (:info fexpr)]
          (when (and (not (some #{argc} (map count method-params)))
                     (or (not variadic)
                         (and variadic (< argc max-fixed-arity))))
            (warning :fn-arity env {:name name
                                    :argc argc}))))
-     (if (and (:fn-deprecated *cljs-warnings*) (-> fexpr :info :deprecated)
-              (not (-> form meta :deprecation-nowarn)))
+     (when (and (:fn-deprecated *cljs-warnings*) (-> fexpr :info :deprecated)
+                (not (-> form meta :deprecation-nowarn)))
        (warning :fn-deprecated env {:fexpr fexpr}))
+     (when (and (:invoke-ctor *cljs-warnings*)
+                (-> fexpr :info :type))
+       (warning :invoke-ctor env {:fexpr fexpr}))
      {:env env :op :invoke :form form :f fexpr :args argexprs
       :tag (or (-> fexpr :info :tag) (-> form meta :tag)) :children (into [fexpr] argexprs)})))
 
