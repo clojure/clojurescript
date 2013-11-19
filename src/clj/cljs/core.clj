@@ -908,18 +908,19 @@
          (~'defrecord* ~tagname ~hinted-fields ~pmasks)
          (extend-type ~tagname ~@(dt->et tagname impls fields true))))))
 
-(defn- build-map-factory
-  [rsym rname fields]
+(defn- build-map-factory [rsym rname fields]
   (let [fn-name (symbol (core/str 'map-> rsym))
-	ms (gensym)
-	ks (map keyword fields)
-	getters (map (fn [k] `(~k ~ms)) ks)]
-    `(defn ~fn-name
-       [~ms]
+        ms (gensym)
+        ks (map keyword fields)
+        getters (map (fn [k] `(~k ~ms)) ks)]
+    `(defn ~fn-name [~ms]
        (new ~rname ~@getters nil (dissoc ~ms ~@ks)))))
 
 (defmacro defrecord [rsym fields & impls]
-  (let [r (:name (cljs.analyzer/resolve-var (dissoc &env :locals) rsym))]
+  (let [rsym (vary-meta rsym assoc :internal-ctor true)
+        r    (vary-meta
+               (:name (cljs.analyzer/resolve-var (dissoc &env :locals) rsym))
+               assoc :internal-ctor true)]
     `(let []
        ~(emit-defrecord &env rsym r fields impls)
        (set! (.-cljs$lang$type ~r) true)

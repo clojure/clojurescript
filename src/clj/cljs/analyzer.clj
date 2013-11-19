@@ -758,9 +758,10 @@
          argexprs (vec (map #(analyze enve %) args))
          known-num-fields (:num-fields (resolve-existing-var env ctor))
          argc (count args)]
-     (when (and known-num-fields (not= known-num-fields argc) (:fn-arity *cljs-warnings*))
+     (when (and (:fn-arity *cljs-warnings*)
+                (not (-> ctor meta :internal-ctor))
+                known-num-fields (not= known-num-fields argc))
        (warning :fn-arity env {:argc argc :ctor ctor}))
-
      {:env env :op :new :form form :ctor ctorexpr :args argexprs
       :children (into [ctorexpr] argexprs)})))
 
@@ -961,7 +962,10 @@
   (let [t (:name (resolve-var (dissoc env :locals) tsym))]
     (swap! env/*compiler* update-in [::namespaces (-> env :ns :name) :defs tsym]
            (fn [m]
-             (let [m (assoc (or m {}) :name t :type true)]
+             (let [m (assoc (or m {})
+                       :name t
+                       :type true
+                       :num-fields (count fields))]
                (merge m
                  {:protocols (-> tsym meta :protocols)}
                  (source-info tsym env)))))
