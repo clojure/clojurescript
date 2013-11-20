@@ -388,7 +388,7 @@
 
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 
-(declare list hash-combine hash Symbol)
+(declare list hash-combine hash Symbol = compare)
 
 (defn ^boolean instance? [t o]
   (cljs.core/instance? t o))
@@ -398,6 +398,18 @@
 
 (defn- hash-symbol [sym]
   (hash-combine (hash (.-ns sym)) (hash (.-name sym))))
+
+(defn- compare-symbols [a b]
+  (cond
+   (= a b) 0
+   (and (not (.-ns a)) (.-ns b)) -1
+   (.-ns a) (if-not (.-ns b)
+              1
+              (let [nsc (compare (.-ns a) (.-ns b))]
+                (if (zero? nsc)
+                  (compare (.-name a) (.-name b))
+                  nsc)))
+   :default (compare (.-name a) (.-name b))))
 
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
@@ -6902,6 +6914,13 @@ reduces them without incurring seq initialization"
 
 ;; IComparable
 (extend-protocol IComparable
+  Symbol
+  (-compare [x y] (compare-symbols x y))
+
+  Keyword
+  ; keyword happens to have the same fields as Symbol, so this just works
+  (-compare [x y] (compare-symbols x y))
+
   Subvec
   (-compare [x y] (compare-indexed x y))
   

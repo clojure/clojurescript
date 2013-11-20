@@ -1640,11 +1640,11 @@
   (assert (= -1 (compare 'a 'b)))
   ;; cases involving ns
   (assert (= -1 (compare :b/a :c/a)))
-  #_(assert (= -1 (compare :c :a/b)))
-  #_(assert (=  1 (compare :a/b :c)))
+  (assert (= -1 (compare :c :a/b)))
+  (assert (=  1 (compare :a/b :c)))
   (assert (= -1 (compare 'b/a 'c/a)))
-  #_(assert (= -1 (compare 'c 'a/b)))
-  #_(assert (=  1 (compare 'a/b 'c)))
+  (assert (= -1 (compare 'c 'a/b)))
+  (assert (=  1 (compare 'a/b 'c)))
 
   ;; This is different from clj. clj gives -2 next 3 tests
   (assert (= -1 (compare "a" "c")))
