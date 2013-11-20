@@ -1419,10 +1419,12 @@
   (assert (false? (= nil fred)))
 
   ;; invalid tests, cannot set meta and extmap directly - David
-  ;; (def ethel (Person. "Ethel" "Mertz" {:married true} {:husband :fred}))
-  ;; (assert (= (meta ethel) {:married true}))
-  ;; (def ethel-too (Person. "Ethel" "Mertz" {:married true} {:husband :fred}))
-  ;; (assert (= ethel ethel-too))
+  (def ethel (with-meta (assoc (Person. "Ethel" "Mertz") :husband :fred)
+               {:married true}))
+  (assert (= (meta ethel) {:married true}))
+  (def ethel-too (with-meta (assoc (Person. "Ethel" "Mertz")  :husband :fred)
+                   {:married true}))
+  (assert (= ethel ethel-too))
 
   (assert (= (map->Person {:firstname "Fred" :lastname "Mertz"}) fred))
   (assert (= (->Person "Fred" "Mertz") fred))
