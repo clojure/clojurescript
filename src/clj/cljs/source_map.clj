@@ -152,13 +152,27 @@
             [] cols)))
       [] lines)))
 
-(defn relativize-path [path {:keys [output-dir source-map-path relpaths]}]
-  (cond
-    (re-find #"\.jar!/" path)
-    (str (or source-map-path output-dir) (second (string/split path #"\.jar!")))    
+(defn relativize-path [path {:keys [output-dir source-map-path source-map relpaths]}]
+  (let [bare-munged-path (cond
+                          (re-find #"\.jar!/" path)
+                          (str (or source-map-path output-dir) (second (string/split path #"\.jar!")))
 
-    :else
-    (str (or source-map-path output-dir) "/" (get relpaths path))))
+                          :else
+                          (str (or source-map-path output-dir) "/" (get relpaths path)))]
+    (cond source-map-path
+          bare-munged-path
+
+          :default
+          (let [unrelativized-jpath     (-> bare-munged-path
+                                            io/file
+                                            .toPath
+                                            .toAbsolutePath)
+                source-map-parent-jpath (-> source-map
+                                            io/file
+                                            .toPath
+                                            .toAbsolutePath
+                                            .getParent)]
+            (str (.relativize source-map-parent-jpath unrelativized-jpath))))))
 
 (defn encode
   "Take an internal source map representation represented as nested
@@ -197,24 +211,26 @@
       (doseq [[line cols] lines]
         (doseq [[col infos] cols]
           (encode-cols infos source-idx line col))))
-    (with-out-str
-      (json/pprint 
-       {"version" 3
-        "file" (:file opts)
-        "sources" (into []
-                    (let [paths (keys m)
-                          f (if (:output-dir opts)
-                              #(relativize-path % opts)
-                              #(last (string/split % #"/")))]
-                      (map f paths)))
-        "lineCount" (:lines opts)
-        "mappings" (->> (lines->segs @lines)
-                     (map #(string/join "," %))
-                     (string/join ";"))
-        "names" (into []
-                  (map (set/map-invert @names->idx)
-                    (range (count @names->idx))))}
-       :escape-slash false))))
+    (let [source-map-file-contents
+          {"version" 3
+           "file" (:file opts)
+           "sources" (into []
+                           (let [paths (keys m)
+                                 f (if (or (:output-dir opts) (:source-map-path opts))
+                                     #(relativize-path % opts)
+                                     #(last (string/split % #"/")))]
+                             (map f paths)))
+           "lineCount" (:lines opts)
+           "mappings" (->> (lines->segs @lines)
+                           (map #(string/join "," %))
+                           (string/join ";"))
+           "names" (into []
+                         (map (set/map-invert @names->idx)
+                              (range (count @names->idx))))}]
+      (with-out-str
+        (json/pprint
+         source-map-file-contents
+         :escape-slash false)))))
 
 ;; -----------------------------------------------------------------------------
 ;; Merging

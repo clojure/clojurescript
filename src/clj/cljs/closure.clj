@@ -720,9 +720,8 @@
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
         (when-let [name (:source-map opts)]
-          (let [out (io/writer name)]
-            (.appendTo (.getSourceMap closure-compiler) out name)
-            (.close out))
+          (with-open [out (io/writer name)]
+            (.appendTo (.getSourceMap closure-compiler) out name))
           (let [sm-json (-> (io/file name) slurp
                             (json/read-str :key-fn keyword))
                 closure-source-map (sm/decode sm-json)]
@@ -758,12 +757,13 @@
                           (assoc merged path (get closure-source-map path))))
                       merged)))
                 (spit (io/file name)
-                  (sm/encode merged
-                    {:lines (+ (:lineCount sm-json) 2)
-                     :file (:file sm-json)
-                     :output-dir (output-directory opts)
-                     :source-map-path (:source-map-path opts)
-                     :relpaths relpaths}))))))
+                      (sm/encode merged
+                                 {:lines (+ (:lineCount sm-json) 2)
+                                  :file (:file sm-json)
+                                  :output-dir (output-directory opts)
+                                  :source-map-path (:source-map-path opts)
+                                  :source-map (:source-map opts)
+                                  :relpaths relpaths}))))))
         source)
       (report-failure result))))
 
@@ -974,7 +974,70 @@
         (str js "\n//# sourceMappingURL=" (path-relative-to (io/file output-to) {:url source-map})))
     js))
 
+(defn absolute-path? [path]
+  (.isAbsolute (io/file path)))
 
+(defn absolute-parent [path]
+  (.getParent (.getAbsoluteFile (io/file path))))
+
+(defn in-same-dir? [path-1 path-2]
+  "Checks that path-1 and path-2 are siblings in the same logical directory."
+  (= (absolute-parent path-1)
+     (absolute-parent path-2)))
+
+(defn same-or-subdirectory-of? [dir path]
+  "Checks that path names a file or directory that is the dir or a subdirectory there of."
+  (let [dir-path  (.toAbsolutePath (.toPath (io/file dir)))
+        path-path (.toAbsolutePath (.toPath (io/file path)))]
+    (.startsWith path-path dir-path)))
+
+(defn check-output-to [{:keys [output-to] :as opts}]
+  (when (contains? opts :output-to)
+    (assert (or (string? output-to)
+                (= :print output-to))
+            (format ":output-to `%s` must specify a file or be `:print`"
+                    (pr-str output-to))))
+  true)
+
+(defn check-output-dir [{:keys [output-dir] :as opts}]
+  (when (contains? opts :output-dir)
+    (assert (string? output-dir)
+            (format ":output-dir `%s` must specify a directory"
+                    (pr-str output-dir)))
+    (assert (contains? opts :output-to)
+            (format ":output-dir cannot be specified without also specifying :output-to")))
+  true)
+
+(defn check-source-map [{:keys [output-to source-map output-dir] :as opts}]
+  "When :source-map is specified in opts, "
+  (when (contains? opts :source-map)
+    (assert (and (contains? opts :output-to)
+                 (contains? opts :output-dir))
+            ":source-map cannot be specied without also specifying :output-to and :output-dir")
+    (assert (string? source-map)
+            (format ":source-map `%s` must specify a file in the same directory as :output-to `%s`"
+                    (pr-str source-map)
+                    (pr-str output-to)))
+    (assert (same-or-subdirectory-of? (absolute-parent output-to) output-dir)
+            (format ":output-dir `%s` must specify a directory in :output-to's parent `%s`"
+                    (pr-str output-dir)
+                    (pr-str (absolute-parent output-to))))
+    (assert (in-same-dir? source-map output-to)
+            (format ":source-map `%s` must specify a file in the same directory as :output-to `%s`"
+                    (pr-str source-map)
+                    (pr-str output-to))))
+  true)
+
+(defn check-source-map-path [{:keys [source-map-path] :as opts}]
+  (when (contains? opts :source-map-path)
+    (assert (string? source-map-path)
+            (format ":source-map-path `%s` must be a directory"
+                    source-map-path))
+    (assert (and (contains? opts :output-to)
+                 (contains? opts :output-dir)
+                 (contains? opts :source-map))
+            ":source-map-path cannot be specified without also specifying :output-to, :output-dir, and :source-map"))
+  true)
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
@@ -996,6 +1059,10 @@
              emit-constants (or (and (= (:optimizations opts) :advanced)
                                      (not (false? (:optimize-constants opts))))
                                 (:optimize-constants opts))]
+         (check-output-to opts)
+         (check-output-dir opts)
+         (check-source-map opts)
+         (check-source-map-path opts)
          (swap! compiler-env assoc-in [:opts :emit-constants] emit-constants)
          (binding [ana/*cljs-static-fns*
                    (or (and (= (:optimizations opts) :advanced)

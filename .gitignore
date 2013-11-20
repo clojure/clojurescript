@@ -15,3 +15,6 @@ closure
 *.zip
 clojurescript_release_*
 closure-release-*
+.lein-repl-history
+.nrepl-port
+.nrepl-repl-history
