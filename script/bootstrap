@@ -61,7 +61,7 @@ cd ..
 echo "Fetching Google Closure compiler..."
 mkdir -p compiler
 cd compiler
-curl -O -s http://closure-compiler.googlecode.com/files/compiler-latest.zip
+curl -O -s http://dl.google.com/closure-compiler/compiler-latest.zip
 unzip -qu compiler-latest.zip
 echo "Cleaning up Google Closure compiler archive..."
 rm compiler-latest.zip
