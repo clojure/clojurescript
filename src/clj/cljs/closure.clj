@@ -987,8 +987,8 @@
 
 (defn same-or-subdirectory-of? [dir path]
   "Checks that path names a file or directory that is the dir or a subdirectory there of."
-  (let [dir-path  (.toAbsolutePath (.toPath (io/file dir)))
-        path-path (.toAbsolutePath (.toPath (io/file path)))]
+  (let [dir-path  (.getAbsolutePath (io/file dir))
+        path-path (.getAbsolutePath (io/file path))]
     (.startsWith path-path dir-path)))
 
 (defn check-output-to [{:keys [output-to] :as opts}]

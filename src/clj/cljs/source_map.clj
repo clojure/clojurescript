@@ -163,16 +163,15 @@
           bare-munged-path
 
           :default
-          (let [unrelativized-jpath     (-> bare-munged-path
+          (let [unrelativized-juri     (-> bare-munged-path
                                             io/file
-                                            .toPath
-                                            .toAbsolutePath)
-                source-map-parent-jpath (-> source-map
+                                            .toURI)
+                source-map-parent-juri (-> source-map
                                             io/file
-                                            .toPath
-                                            .toAbsolutePath
-                                            .getParent)]
-            (str (.relativize source-map-parent-jpath unrelativized-jpath))))))
+                                            .getAbsoluteFile
+                                            .getParentFile
+                                            .toURI)]
+            (str (.relativize source-map-parent-juri unrelativized-juri))))))
 
 (defn encode
   "Take an internal source map representation represented as nested
