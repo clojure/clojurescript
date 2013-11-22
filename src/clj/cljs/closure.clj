@@ -367,7 +367,7 @@
 
    Compiled files are cached so they will only be read once."
   [m]
-  (let [path (.getAbsolutePath ^File (:file m))
+  (let [path (.getPath (.toURL ^File (:file m)))
         js (if (:provides m)
              (map->javascript-file m)
              (if-let [js (get-in @env/*compiler* [::compiled-cljs path])]

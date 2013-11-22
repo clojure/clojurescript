@@ -886,7 +886,7 @@
                         (sm/encode {(url-path src) (:source-map sm-data)}
                           {:lines (+ (:gen-line sm-data) 2)
                            :file (url-path dest)}))))
-                  (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getAbsolutePath ^File dest) ret)
+                  (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getPath (.toURL ^File dest)) ret)
                   ret)))))))))
 
 (defn compiled-by-version [^File f]
