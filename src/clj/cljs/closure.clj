@@ -1003,30 +1003,28 @@
   (when (contains? opts :output-dir)
     (assert (string? output-dir)
             (format ":output-dir %s must specify a directory"
-                    (pr-str output-dir)))
-    (assert (contains? opts :output-to)
-            (format ":output-dir cannot be specified without also specifying :output-to")))
+                    (pr-str output-dir))))
   true)
 
 (defn check-source-map [{:keys [output-to source-map output-dir] :as opts}]
   "When :source-map is specified in opts, "
-  (when (contains? opts :source-map)
+  (when (and (contains? opts :source-map)
+             (not (= (:optimizations opts) :none)))
     (assert (and (contains? opts :output-to)
                  (contains? opts :output-dir))
-            ":source-map cannot be specied without also specifying :output-to and :output-dir")
-    (when-not (= (:optimizations opts) :none)
-      (assert (string? source-map)
-        (format ":source-map %s must specify a file in the same directory as :output-to %s if optimization setting applied"
-          (pr-str source-map)
-          (pr-str output-to)))
-      (assert (in-same-dir? source-map output-to)
-        (format ":source-map %s must specify a file in the same directory as :output-to %s if optimization setting applied"
-          (pr-str source-map)
-          (pr-str output-to)))
-      (assert (same-or-subdirectory-of? (absolute-parent output-to) output-dir)
-        (format ":output-dir %s must specify a directory in :output-to's parent %s if optimization setting applied"
-          (pr-str output-dir)
-          (pr-str (absolute-parent output-to))))))
+      ":source-map cannot be specied without also specifying :output-to and :output-dir if optimization setting applied")
+    (assert (string? source-map)
+      (format ":source-map %s must specify a file in the same directory as :output-to %s if optimization setting applied"
+        (pr-str source-map)
+        (pr-str output-to)))
+    (assert (in-same-dir? source-map output-to)
+      (format ":source-map %s must specify a file in the same directory as :output-to %s if optimization setting applied"
+        (pr-str source-map)
+        (pr-str output-to)))
+    (assert (same-or-subdirectory-of? (absolute-parent output-to) output-dir)
+      (format ":output-dir %s must specify a directory in :output-to's parent %s if optimization setting applied"
+        (pr-str output-dir)
+        (pr-str (absolute-parent output-to)))))
   true)
 
 (defn check-source-map-path [{:keys [source-map-path] :as opts}]
@@ -1034,10 +1032,10 @@
     (assert (string? source-map-path)
             (format ":source-map-path %s must be a directory"
                     source-map-path))
-    (assert (and (contains? opts :output-to)
-                 (contains? opts :output-dir)
-                 (contains? opts :source-map))
-            ":source-map-path cannot be specified without also specifying :output-to, :output-dir, and :source-map"))
+    (when-not (= (:optimizations opts) :none)
+      (assert (and (contains? opts :output-to)
+                   (contains? opts :source-map))
+        ":source-map-path cannot be specified without also specifying :output-to and :source-map if optimization setting applied")))
   true)
 
 (defn build
