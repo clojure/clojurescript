@@ -1313,7 +1313,7 @@
 
 (defn analyze-wrap-meta [expr]
   (let [form (:form expr)
-        m (dissoc (meta form) :line :column)]
+        m (dissoc (meta form) :line :column :end-column :end-line)]
     (if (seq m)
       (let [env (:env expr) ; take on expr's context ourselves
             expr (assoc-in expr [:env :context] :expr) ; change expr to :expr
