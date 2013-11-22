@@ -44,7 +44,8 @@
    :variadic-max-arity true
    :overload-arity true
    :extending-base-js-type true
-   :invoke-ctor true})
+   :invoke-ctor true
+   :invalid-arithmetic true})
 
 (declare message namespaces)
 
@@ -114,6 +115,10 @@
   [warning-type info]
   (str "Extending an existing JavaScript type - use a different symbol name "
        "instead of " (:current-symbol info) " e.g " (:suggested-symbol info)))
+
+(defmethod error-message :invalid-arithmetic
+  [warning-type info]
+  (str (:js-op info) ", all arguments must be numbers, got " (:types info) " instead."))
 
 (defmethod error-message :invoke-ctor
   [warning-type info]
@@ -376,7 +381,65 @@
 (defn analyze-keyword
   [env sym]
   (register-constant! sym)
-  {:op :constant :env env :form sym})
+  {:op :constant :env env :form sym :tag 'cljs.core/Keyword})
+
+(defn get-tag [e]
+  (or (-> e :tag)
+      (-> e :info :tag)
+      (-> e :form meta :tag)))
+
+(defn find-matching-method [f params]
+  ;; if local fn, need to look in :info
+  (let [methods (or (:methods f) (-> f :info :methods))
+        c       (count params)]
+    (some
+      (fn [m]
+        (and (or (== (:max-fixed-arity m) c)
+                 (:variadic m))
+             m))
+      methods)))
+
+(defn type? [env t]
+  ;; don't use resolve-existing-var to avoid warnings
+  (when (and t (symbol? t))
+    (-> (resolve-var env t) :info :type)))
+
+(defn infer-tag [env e]
+  (if-let [tag (get-tag e)]
+    tag
+    (case (:op e)
+      :recur 'ignore
+      :let (infer-tag env (:expr e))
+      :loop (infer-tag env (:expr e))
+      :do  (infer-tag env (:ret e))
+      :method (infer-tag env (:expr e))
+      :def (infer-tag env (:init e))
+      :invoke  (let [f (:f e)]
+                 (or (and (-> f :info :fn-var) (:tag f))
+                     (infer-tag env
+                       (assoc (find-matching-method f (:args e)) :op :method))
+                     'any))
+      :if (let [then-tag (infer-tag env (:then e))
+                else-tag (infer-tag env (:else e))]
+            (cond
+              (or (= then-tag else-tag)
+                  (= else-tag 'ignore)) then-tag
+              (= then-tag 'ignore) else-tag
+              (and (or (= 'clj then-tag) (type? env then-tag))
+                   (or (= 'clj else-tag) (type? env else-tag)))
+              'clj
+              :else
+              (if (every? '#{boolean seq} [then-tag else-tag])
+                'seq
+                'any)))
+      :constant (case (:form e)
+                  true 'boolean
+                  false 'boolean
+                  'any)
+      :var (if (:init e)
+             (infer-tag env (:init e))
+             (infer-tag env (:info e)))
+      nil)))
 
 (defmulti parse (fn [op & rest] op))
 
@@ -496,6 +559,7 @@
           init-expr (when (contains? args :init)
                       (disallowing-recur
                         (analyze (assoc env :context :expr) (:init args) sym)))
+          tag (or tag (:tag init-expr))
           fn-var? (and init-expr (= (:op init-expr) :fn))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
@@ -527,7 +591,8 @@
                  :protocol-inline (:protocol-inline init-expr)
                  :variadic (:variadic init-expr)
                  :max-fixed-arity (:max-fixed-arity init-expr)
-                 :method-params (map :params (:methods init-expr))})))
+                 :method-params (map :params (:methods init-expr))
+                 :methods (:methods init-expr)})))
       (merge {:env env :op :def :form form
               :name name :var var-expr :doc doc :init init-expr}
              (when tag {:tag tag})
@@ -574,10 +639,12 @@
         meths (if (vector? (first meths)) (list meths) meths)
         locals (:locals env)
         name-var (if name
-                   {:name name
-                    :info {:shadow (or (locals name)
-                                       (get-in env [:js-globals name]))}
-                    :tag (-> name meta :tag)}) 
+                   (merge
+                     {:name name
+                      :info {:shadow (or (locals name)
+                                       (get-in env [:js-globals name]))}}
+                     (when-let [tag (-> name meta :tag)]
+                       {:tag tag}))) 
         locals (if (and locals name) (assoc locals name name-var) locals)
         type (-> form meta ::type)
         fields (-> form meta ::fields)
@@ -605,10 +672,12 @@
         variadic (boolean (some :variadic methods))
         locals (if name
                  (update-in locals [name] assoc
-                            :fn-var true
-                            :variadic variadic
-                            :max-fixed-arity max-fixed-arity
-                            :method-params (map :params methods))
+                   ;; TODO: can we simplify? - David
+                   :fn-var true
+                   :variadic variadic
+                   :max-fixed-arity max-fixed-arity
+                   :method-params (map :params methods)
+                   :methods methods)
                  locals)
         methods (if name
                   ;; a second pass with knowledge of our function-ness/arity
@@ -705,11 +774,13 @@
                                 :shadow (-> env :locals name)}
                          :binding-form? true}
                      be (if (= (:op init-expr) :fn)
+                          ;; TODO: can we simplify - David
                           (merge be
                             {:fn-var true
                              :variadic (:variadic init-expr)
                              :max-fixed-arity (:max-fixed-arity init-expr)
-                             :method-params (map :params (:methods init-expr))})
+                             :method-params (map :params (:methods init-expr))
+                             :methods (:methods init-expr)})
                           be)]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)
@@ -768,7 +839,7 @@
                 known-num-fields (not= known-num-fields argc))
        (warning :fn-arity env {:argc argc :ctor ctor}))
      {:env env :op :new :form form :ctor ctorexpr :args argexprs
-      :children (into [ctorexpr] argexprs)})))
+      :children (into [ctorexpr] argexprs) :tag (-> ctorexpr :info :name)})))
 
 (defmethod parse 'set!
   [_ env [_ target val alt :as form] _]
@@ -1068,9 +1139,20 @@
                            (seg (subs s (inc end)))))))))
            enve (assoc env :context :expr)
            argexprs (vec (map #(analyze enve %) args))]
+       (when (and (-> form meta :numeric)
+                  (:invalid-arithmetic *cljs-warnings*))
+         (let [types (map #(infer-tag env %) argexprs)]
+           (when-not (every? (fn [t] (or (nil? t) ('#{any number} t))) types)
+             (warning :invalid-arithmetic env
+               {:js-op (-> form meta :js-op)
+                :types (into [] types)}))))
        {:env env :op :js :segs (seg jsform) :args argexprs
-        :tag (-> form meta :tag) :form form :children argexprs
-        :js-op (-> form meta :js-op)}))
+        :tag (or (-> form meta :tag)
+                 (and (-> form meta :numeric) 'number)
+                 nil)
+        :form form :children argexprs
+        :js-op (-> form meta :js-op)
+        :numeric (-> form meta :numeric)}))
     (let [interp (fn interp [^String s]
                    (let [idx (.indexOf s "~{")]
                      (if (= -1 idx)
@@ -1082,7 +1164,11 @@
                              (cons inner
                                (interp (subs s (inc end))))))))))]
       {:env env :op :js :form form :code (apply str (interp jsform))
-       :tag (-> form meta :tag) :js-op (-> form meta :js-op)})))
+       :tag (or (-> form meta :tag)
+                (and (-> form meta :numeric) 'number)
+                nil)
+       :js-op (-> form meta :js-op)
+       :numeric (-> form meta :numeric)})))
 
 (defn parse-invoke
   [env [f & args :as form]]
@@ -1105,13 +1191,13 @@
                 (-> fexpr :info :type))
        (warning :invoke-ctor env {:fexpr fexpr}))
      {:env env :op :invoke :form form :f fexpr :args argexprs
-      :tag (or (-> fexpr :info :tag) (-> form meta :tag)) :children (into [fexpr] argexprs)})))
+      :children (into [fexpr] argexprs)})))
 
 (defn analyze-symbol
   "Finds the var associated with sym"
   [env sym]
   (if (:quoted? env)
-    {:op :constant :env env :form sym}
+    {:op :constant :env env :form sym :tag 'cljs.core/Symbol}
     (let [{:keys [line column]} (meta sym)
           env (cond-> env
                 line (assoc :line line)
@@ -1142,7 +1228,7 @@
               (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) sym)
               (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym))))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
-      @mvar)))
+      (with-meta @mvar (meta mvar)))))
 
 (defn macroexpand-1 [env form]
   (env/ensure
@@ -1154,10 +1240,11 @@
             (let [form' (apply mac form env (rest form))]
               (if (seq? form')
                 (let [sym' (first form')
-                       sym  (first form)]
+                      sym  (first form)]
                   (if (= sym' 'js*)
-                    (vary-meta form' assoc
-                      :js-op (if (namespace sym) sym (symbol "cljs.core" (str sym))))
+                    (vary-meta form' merge
+                      (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
+                        (-> mac meta ::numeric) (assoc :numeric true)))
                     form'))
                 form')))
           (if (symbol? op)
@@ -1203,25 +1290,26 @@
         vs (disallowing-recur (vec (map #(analyze expr-env %) (vals form))))]
     (analyze-wrap-meta {:op :map :env env :form form
                         :keys ks :vals vs
-                        :children (vec (interleave ks vs))})))
+                        :children (vec (interleave ks vs))
+                        :tag 'cljs.core/IMap})))
 
 (defn analyze-list
   [env form]
   (let [expr-env (assoc env :context :expr)
         items (disallowing-recur (doall (map #(analyze expr-env %) form)))]
-    (analyze-wrap-meta {:op :list :env env :form form :items items :children items})))
+    (analyze-wrap-meta {:op :list :env env :form form :items items :children items :tag 'cljs.core/IList})))
 
 (defn analyze-vector
   [env form]
   (let [expr-env (assoc env :context :expr)
         items (disallowing-recur (vec (map #(analyze expr-env %) form)))]
-    (analyze-wrap-meta {:op :vector :env env :form form :items items :children items})))
+    (analyze-wrap-meta {:op :vector :env env :form form :items items :children items :tag 'cljs.core/IVector})))
 
 (defn analyze-set
   [env form ]
   (let [expr-env (assoc env :context :expr)
         items (disallowing-recur (vec (map #(analyze expr-env %) form)))]
-    (analyze-wrap-meta {:op :set :env env :form form :items items :children items})))
+    (analyze-wrap-meta {:op :set :env env :form form :items items :children items :tag 'cljs.core/ISet})))
 
 (defn analyze-wrap-meta [expr]
   (let [form (:form expr)
@@ -1234,6 +1322,14 @@
          :meta meta-expr :expr expr :children [meta-expr expr]})
       expr)))
 
+(defn infer-type [env ast]
+  (if-let [tag (and (not (:tag ast))
+                    (infer-tag env ast))]
+    (assoc ast :tag tag)
+    ast))
+
+(def ^:dynamic *passes* [infer-type])
+
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
   (one of :statement, :expr, :return), :ns (a symbol naming the
@@ -1245,20 +1341,28 @@
   ([env form name]
     (env/ensure
       (wrapping-errors env
-        (binding [reader/*alias-map* (or reader/*alias-map* {})]
-          (let [form (if (instance? clojure.lang.LazySeq form)
-                       (or (seq form) ())
-                       form)]
-            (load-core)
-            (cond
-              (symbol? form) (analyze-symbol env form)
-              (and (seq? form) (seq form)) (analyze-seq env form name)
-              (map? form) (analyze-map env form)
-              (vector? form) (analyze-vector env form)
-              (set? form) (analyze-set env form)
-              (keyword? form) (analyze-keyword env form)
-              (= form ()) (analyze-list env form)
-              :else {:op :constant :env env :form form})))))))
+        (reduce (fn [ast pass] (pass env ast))
+          (binding [reader/*alias-map* (or reader/*alias-map* {})]
+            (let [form (if (instance? clojure.lang.LazySeq form)
+                         (or (seq form) ())
+                         form)]
+              (load-core)
+              (cond
+                (symbol? form) (analyze-symbol env form)
+                (and (seq? form) (seq form)) (analyze-seq env form name)
+                (map? form) (analyze-map env form)
+                (vector? form) (analyze-vector env form)
+                (set? form) (analyze-set env form)
+                (keyword? form) (analyze-keyword env form)
+                (= form ()) (analyze-list env form)
+                :else
+                (let [tag (cond
+                            (number? form) 'number
+                            (string? form) 'string
+                            (true? form)   'boolean
+                            (false? form)  'boolean)]
+                  {:op :constant :env env :form form :tag tag}))))
+          *passes*)))))
 
 (defn- source-path
   "Returns a path suitable for providing to tools.reader as a 'filename'."
@@ -1305,3 +1409,4 @@ argument, which the reader will use in any emitted errors."
           (doseq [form (seq (forms-seq res))]
             (let [env (assoc env :ns (get-namespace *cljs-ns*))]
               (analyze env form))))))))
+

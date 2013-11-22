@@ -224,7 +224,7 @@
   (-empty [coll]))
 
 (defprotocol ICollection
-  (-conj [coll o]))
+  (^clj -conj [coll o]))
 
 #_(defprotocol IOrdinal
     (-index [coll]))
@@ -236,36 +236,36 @@
 
 (defprotocol ISeq
   (-first [coll])
-  (-rest [coll]))
+  (^clj -rest [coll]))
 
 (defprotocol INext
-  (-next [coll]))
+  (^clj-or-nil -next [coll]))
 
 (defprotocol ILookup
   (-lookup [o k] [o k not-found]))
 
 (defprotocol IAssociative
-  (-contains-key? [coll k])
+  (^boolean -contains-key? [coll k])
   #_(-entry-at [coll k])
-  (-assoc [coll k v]))
+  (^clj -assoc [coll k v]))
 
 (defprotocol IMap
   #_(-assoc-ex [coll k v])
-  (-dissoc [coll k]))
+  (^clj -dissoc [coll k]))
 
 (defprotocol IMapEntry
   (-key [coll])
   (-val [coll]))
 
 (defprotocol ISet
-  (-disjoin [coll v]))
+  (^clj -disjoin [coll v]))
 
 (defprotocol IStack
   (-peek [coll])
-  (-pop [coll]))
+  (^clj -pop [coll]))
 
 (defprotocol IVector
-  (-assoc-n [coll n val]))
+  (^clj -assoc-n [coll n val]))
 
 (defprotocol IDeref
  (-deref [o]))
@@ -274,10 +274,10 @@
   (-deref-with-timeout [o msec timeout-val]))
 
 (defprotocol IMeta
-  (-meta [o]))
+  (^clj-or-nil -meta [o]))
 
 (defprotocol IWithMeta
-  (-with-meta [o meta]))
+  (^clj -with-meta [o meta]))
 
 (defprotocol IReduce
   (-reduce [coll f] [coll f start]))
@@ -286,13 +286,13 @@
   (-kv-reduce [coll f init]))
 
 (defprotocol IEquiv
-  (-equiv [o other]))
+  (^boolean -equiv [o other]))
 
 (defprotocol IHash
   (-hash [o]))
 
 (defprotocol ISeqable
-  (-seq [o]))
+  (^clj-or-nil -seq [o]))
 
 (defprotocol ISequential
   "Marker interface indicating a persistent collection of sequential items")
@@ -304,11 +304,11 @@
   "Marker interface indicating a record object")
 
 (defprotocol IReversible
-  (-rseq [coll]))
+  (^clj -rseq [coll]))
 
 (defprotocol ISorted
-  (-sorted-seq [coll ascending?])
-  (-sorted-seq-from [coll k ascending?])
+  (^clj -sorted-seq [coll ascending?])
+  (^clj -sorted-seq-from [coll k ascending?])
   (-entry-key [coll entry])
   (-comparator [coll]))
 
@@ -325,7 +325,7 @@
   (-pr-writer [o writer opts]))
 
 (defprotocol IPending
-  (-realized? [d]))
+  (^boolean -realized? [d]))
 
 (defprotocol IWatchable
   (-notify-watches [this oldval newval])
@@ -333,27 +333,27 @@
   (-remove-watch [this key]))
 
 (defprotocol IEditableCollection
-  (-as-transient [coll]))
+  (^clj -as-transient [coll]))
 
 (defprotocol ITransientCollection
-  (-conj! [tcoll val])
-  (-persistent! [tcoll]))
+  (^clj -conj! [tcoll val])
+  (^clj -persistent! [tcoll]))
 
 (defprotocol ITransientAssociative
-  (-assoc! [tcoll key val]))
+  (^clj -assoc! [tcoll key val]))
 
 (defprotocol ITransientMap
-  (-dissoc! [tcoll key]))
+  (^clj -dissoc! [tcoll key]))
 
 (defprotocol ITransientVector
-  (-assoc-n! [tcoll n val])
-  (-pop! [tcoll]))
+  (^clj -assoc-n! [tcoll n val])
+  (^clj -pop! [tcoll]))
 
 (defprotocol ITransientSet
-  (-disjoin! [tcoll v]))
+  (^clj -disjoin! [tcoll v]))
 
 (defprotocol IComparable
-  (-compare [x y]))
+  (^number -compare [x y]))
 
 (defprotocol IChunk
   (-drop-first [coll]))
@@ -366,8 +366,8 @@
   (-chunked-next [coll]))
 
 (defprotocol INamed
-  (-name [x])
-  (-namespace [x]))
+  (^string -name [x])
+  (^string -namespace [x]))
 
 ;; Printing support
 

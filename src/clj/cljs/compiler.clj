@@ -344,34 +344,8 @@
   (when-not (= :statement (:context env))
     (emit-wrap env (emit-constant form))))
 
-(defn get-tag [e]
-  (or (-> e :tag)
-      (-> e :info :tag)
-      (-> e :form meta :tag)))
-
-(defn infer-tag [e]
-  (if-let [tag (get-tag e)]
-    tag
-    (case (:op e)
-      :let (infer-tag (:expr e))
-      :do  (infer-tag (:ret e))
-      :if (let [then-tag (infer-tag (:then e))
-                else-tag (infer-tag (:else e))]
-            (if (= then-tag else-tag)
-              then-tag
-              (if (every? '#{boolean seq} [then-tag else-tag])
-                'seq)))
-      :constant (case (:form e)
-                  true 'boolean
-                  false 'boolean
-                  nil)
-      :var (if (:init e)
-             (infer-tag (:init e))
-             (infer-tag (:info e)))
-      nil)))
-
-(defn safe-test? [e]
-  (let [tag (infer-tag e)]
+(defn safe-test? [env e]
+  (let [tag (ana/infer-tag env e)]
     (or (#{'boolean 'seq} tag)
         (when (= (:op e) :constant)
           (let [form (:form e)]
@@ -381,7 +355,7 @@
 (defmethod emit* :if
   [{:keys [test then else env unchecked]}]
   (let [context (:context env)
-        checked (not (or unchecked (safe-test? test)))]
+        checked (not (or unchecked (safe-test? env test)))]
     (if (= :expr context)
       (emits "(" (when checked "cljs.core.truth_") "(" test ")?" then ":" else ")")
       (do
@@ -689,17 +663,19 @@
                  (not (:dynamic info))
                  (:fn-var info))
         protocol (:protocol info)
-        tag      (infer-tag (first (:args expr)))
+        tag      (ana/infer-tag env (first (:args expr)))
         proto? (and protocol tag
                  (or (and ana/*cljs-static-fns* protocol (= tag 'not-native)) 
                      (and
                        (or ana/*cljs-static-fns*
                            (:protocol-inline env))
                        (or (= protocol tag)
-                           (when-let [ps (:protocols (ana/resolve-existing-var (dissoc env :locals) tag))]
-                             (ps protocol))))))
+                           ;; ignore new type hints for now - David
+                           (and (not ('#{any clj clj-or-nil} tag))
+                                (when-let [ps (:protocols (ana/resolve-existing-var (dissoc env :locals) tag))]
+                                  (ps protocol)))))))
         opt-not? (and (= (:name info) 'cljs.core/not)
-                      (= (infer-tag (first (:args expr))) 'boolean))
+                      (= (ana/infer-tag env (first (:args expr))) 'boolean))
         ns (:ns info)
         js? (= ns 'js)
         goog? (when ns

@@ -38,6 +38,7 @@
             [cljs.env :as env]))
 
 (alias 'core 'clojure.core)
+(alias 'ana 'cljs.analyzer)
 
 (defmacro import-macros [ns [& vars]]
   (core/let [ns (find-ns ns)
@@ -196,10 +197,10 @@
 (defn bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
 
-(defn simple-test-expr? [ast]
+(defn simple-test-expr? [env ast]
   (core/and
     (#{:var :invoke :constant :dot :js} (:op ast))
-    ('#{boolean seq} (cljs.compiler/infer-tag ast))))
+    ('#{boolean seq} (cljs.analyzer/infer-tag env ast))))
 
 (defmacro and
   "Evaluates exprs one at a time, from left to right. If a form
@@ -210,7 +211,7 @@
   ([x] x)
   ([x & next]
     (let [forms (concat [x] next)]
-      (if (every? simple-test-expr?
+      (if (every? #(simple-test-expr? &env %)
             (map #(cljs.analyzer/analyze &env %) forms))
         (let [and-str (->> (repeat (count forms) "(~{})")
                         (interpose " && ")
@@ -228,7 +229,7 @@
   ([x] x)
   ([x & next]
     (let [forms (concat [x] next)]
-      (if (every? simple-test-expr?
+      (if (every? #(simple-test-expr? &env %)
             (map #(cljs.analyzer/analyze &env %) forms))
         (let [or-str (->> (repeat (count forms) "(~{})")
                         (interpose " || ")
@@ -326,7 +327,7 @@
           astr (apply core/str (repeat n "[~{}]"))]
       `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~a ~idx ~idx2 ~@idxv))))
 
-(defmacro +
+(defmacro ^::ana/numeric +
   ([] 0)
   ([x] x)
   ([x y] (core/list 'js* "(~{} + ~{})" x y))
@@ -343,170 +344,170 @@
 (defmacro unchecked-float [x] x)
 (defmacro unchecked-double [x] x)
 
-(defmacro unchecked-add
+(defmacro ^::ana/numeric unchecked-add
   ([& xs] `(+ ~@xs)))
 
-(defmacro unchecked-add-int
+(defmacro ^::ana/numeric unchecked-add-int
   ([& xs] `(+ ~@xs)))
 
-(defmacro unchecked-dec
+(defmacro ^::ana/numeric unchecked-dec
   ([x] `(dec ~x)))
 
-(defmacro unchecked-dec-int
+(defmacro ^::ana/numeric unchecked-dec-int
   ([x] `(dec ~x)))
 
-(defmacro unchecked-divide-int
+(defmacro ^::ana/numeric unchecked-divide-int
   ([& xs] `(/ ~@xs)))
 
-(defmacro unchecked-inc
+(defmacro ^::ana/numeric unchecked-inc
   ([x] `(inc ~x)))
 
-(defmacro unchecked-inc-int
+(defmacro ^::ana/numeric unchecked-inc-int
   ([x] `(inc ~x)))
 
-(defmacro unchecked-multiply
+(defmacro ^::ana/numeric unchecked-multiply
   ([& xs] `(* ~@xs)))
 
-(defmacro unchecked-multiply-int
+(defmacro ^::ana/numeric unchecked-multiply-int
   ([& xs] `(* ~@xs)))
 
-(defmacro unchecked-negate
+(defmacro ^::ana/numeric unchecked-negate
   ([x] `(- ~x)))
 
-(defmacro unchecked-negate-int
+(defmacro ^::ana/numeric unchecked-negate-int
   ([x] `(- ~x)))
 
-(defmacro unchecked-remainder-int
+(defmacro ^::ana/numeric unchecked-remainder-int
   ([x n] `(mod ~x ~n)))
 
-(defmacro unchecked-subtract
+(defmacro ^::ana/numeric unchecked-subtract
   ([& xs] `(- ~@xs)))
 
-(defmacro unchecked-subtract-int
+(defmacro ^::ana/numeric unchecked-subtract-int
   ([& xs] `(- ~@xs)))
 
-(defmacro -
+(defmacro ^::ana/numeric -
   ([x] (core/list 'js* "(- ~{})" x))
   ([x y] (core/list 'js* "(~{} - ~{})" x y))
   ([x y & more] `(- (- ~x ~y) ~@more)))
 
-(defmacro *
+(defmacro ^::ana/numeric *
   ([] 1)
   ([x] x)
   ([x y] (core/list 'js* "(~{} * ~{})" x y))
   ([x y & more] `(* (* ~x ~y) ~@more)))
 
-(defmacro /
+(defmacro ^::ana/numeric /
   ([x] `(/ 1 ~x))
   ([x y] (core/list 'js* "(~{} / ~{})" x y))
   ([x y & more] `(/ (/ ~x ~y) ~@more)))
 
-(defmacro divide
+(defmacro ^::ana/numeric divide
   ([x] `(/ 1 ~x))
   ([x y] (core/list 'js* "(~{} / ~{})" x y))
   ([x y & more] `(/ (/ ~x ~y) ~@more)))
 
-(defmacro <
+(defmacro ^::ana/numeric <
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} < ~{})" x y)))
   ([x y & more] `(and (< ~x ~y) (< ~y ~@more))))
 
-(defmacro <=
+(defmacro ^::ana/numeric <=
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} <= ~{})" x y)))
   ([x y & more] `(and (<= ~x ~y) (<= ~y ~@more))))
 
-(defmacro >
+(defmacro ^::ana/numeric >
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} > ~{})" x y)))
   ([x y & more] `(and (> ~x ~y) (> ~y ~@more))))
 
-(defmacro >=
+(defmacro ^::ana/numeric >=
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} >= ~{})" x y)))
   ([x y & more] `(and (>= ~x ~y) (>= ~y ~@more))))
 
-(defmacro ==
+(defmacro ^::ana/numeric ==
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} === ~{})" x y)))
   ([x y & more] `(and (== ~x ~y) (== ~y ~@more))))
 
-(defmacro dec [x]
+(defmacro ^::ana/numeric dec [x]
   `(- ~x 1))
 
-(defmacro inc [x]
+(defmacro ^::ana/numeric inc [x]
   `(+ ~x 1))
 
-(defmacro zero? [x]
+(defmacro ^::ana/numeric zero? [x]
   `(== ~x 0))
 
-(defmacro pos? [x]
+(defmacro ^::ana/numeric pos? [x]
   `(> ~x 0))
 
-(defmacro neg? [x]
+(defmacro ^::ana/numeric neg? [x]
   `(< ~x 0))
 
-(defmacro max
+(defmacro ^::ana/numeric max
   ([x] x)
   ([x y] `(let [x# ~x, y# ~y]
             (~'js* "((~{} > ~{}) ? ~{} : ~{})" x# y# x# y#)))
   ([x y & more] `(max (max ~x ~y) ~@more)))
 
-(defmacro min
+(defmacro ^::ana/numeric min
   ([x] x)
   ([x y] `(let [x# ~x, y# ~y]
             (~'js* "((~{} < ~{}) ? ~{} : ~{})" x# y# x# y#)))
   ([x y & more] `(min (min ~x ~y) ~@more)))
 
-(defmacro js-mod [num div]
+(defmacro ^::ana/numeric js-mod [num div]
   (core/list 'js* "(~{} % ~{})" num div))
 
-(defmacro bit-not [x]
+(defmacro ^::ana/numeric bit-not [x]
   (core/list 'js* "(~ ~{})" x))
 
-(defmacro bit-and
+(defmacro ^::ana/numeric bit-and
   ([x y] (core/list 'js* "(~{} & ~{})" x y))
   ([x y & more] `(bit-and (bit-and ~x ~y) ~@more)))
 
 ;; internal do not use
-(defmacro unsafe-bit-and
+(defmacro ^::ana/numeric unsafe-bit-and
   ([x y] (bool-expr (core/list 'js* "(~{} & ~{})" x y)))
   ([x y & more] `(unsafe-bit-and (unsafe-bit-and ~x ~y) ~@more)))
 
-(defmacro bit-or
+(defmacro ^::ana/numeric bit-or
   ([x y] (core/list 'js* "(~{} | ~{})" x y))
   ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
 
-(defmacro int [x]
+(defmacro ^::ana/numeric int [x]
   `(bit-or ~x 0))
 
-(defmacro bit-xor
+(defmacro ^::ana/numeric bit-xor
   ([x y] (core/list 'js* "(~{} ^ ~{})" x y))
   ([x y & more] `(bit-xor (bit-xor ~x ~y) ~@more)))
 
-(defmacro bit-and-not
+(defmacro ^::ana/numeric bit-and-not
   ([x y] (core/list 'js* "(~{} & ~~{})" x y))
   ([x y & more] `(bit-and-not (bit-and-not ~x ~y) ~@more)))
 
-(defmacro bit-clear [x n]
+(defmacro ^::ana/numeric bit-clear [x n]
   (core/list 'js* "(~{} & ~(1 << ~{}))" x n))
 
-(defmacro bit-flip [x n]
+(defmacro ^::ana/numeric bit-flip [x n]
   (core/list 'js* "(~{} ^ (1 << ~{}))" x n))
 
-(defmacro bit-test [x n]
+(defmacro ^::ana/numeric bit-test [x n]
   (core/list 'js* "((~{} & (1 << ~{})) != 0)" x n))
 
-(defmacro bit-shift-left [x n]
+(defmacro ^::ana/numeric bit-shift-left [x n]
   (core/list 'js* "(~{} << ~{})" x n))
 
-(defmacro bit-shift-right [x n]
+(defmacro ^::ana/numeric bit-shift-right [x n]
   (core/list 'js* "(~{} >> ~{})" x n))
 
-(defmacro bit-shift-right-zero-fill [x n]
+(defmacro ^::ana/numeric bit-shift-right-zero-fill [x n]
   (core/list 'js* "(~{} >>> ~{})" x n))
 
-(defmacro bit-set [x n]
+(defmacro ^::ana/numeric bit-set [x n]
   (core/list 'js* "(~{} | (1 << ~{}))" x n))
 
 ;; internal
@@ -745,8 +746,8 @@
         [type assign-impls] (if-let [type (base-type type-sym)]
                               [type base-assign-impls]
                               [(resolve type-sym) proto-assign-impls])]
-    (when (and (:extending-base-js-type cljs.analyzer/*cljs-warnings*)
-               (js-base-type type-sym))
+    (when (core/and (:extending-base-js-type cljs.analyzer/*cljs-warnings*)
+                    (js-base-type type-sym))
       (cljs.analyzer/warning :extending-base-js-type env
           {:current-symbol type-sym :suggested-symbol (js-base-type type-sym)}))
     `(do ~@(mapcat #(assign-impls env resolve type-sym type %) impl-map))))
