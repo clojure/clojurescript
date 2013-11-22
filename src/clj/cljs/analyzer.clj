@@ -417,13 +417,14 @@
     tag
     (case (:op e)
       :recur 'ignore
+      :throw 'ignore
       :let (infer-tag env (:expr e))
       :loop (infer-tag env (:expr e))
       :do  (infer-tag env (:ret e))
       :method (infer-tag env (:expr e))
       :def (infer-tag env (:init e))
       :invoke  (let [f (:f e)]
-                 (or (and (-> f :info :fn-var) (:tag f))
+                 (or (and (-> f :info :fn-var) (:ret-tag f))
                      (infer-tag env
                        (assoc (find-matching-method f (:args e)) :op :method))
                      'any))
@@ -611,10 +612,13 @@
                         (:methods init-expr))})))
       (merge {:env env :op :def :form form
               :name name :var var-expr :doc doc :init init-expr}
-             (when tag {:tag tag})
-             (when dynamic {:dynamic true})
-             (when export-as {:export export-as})
-             (when init-expr {:children [init-expr]})))))
+        (when tag
+          (if fn-var?
+            {:ret-tag tag}
+            {:tag tag}))
+        (when dynamic {:dynamic true})
+        (when export-as {:export export-as})
+        (when init-expr {:children [init-expr]})))))
 
 (defn- analyze-fn-method [env locals form type]
   (let [param-names (first form)
@@ -660,7 +664,7 @@
                       :info {:shadow (or (locals name)
                                        (get-in env [:js-globals name]))}}
                      (when-let [tag (-> name meta :tag)]
-                       {:tag tag}))) 
+                       {:ret-tag tag}))) 
         locals (if (and locals name) (assoc locals name name-var) locals)
         type (-> form meta ::type)
         fields (-> form meta ::fields)
@@ -711,6 +715,7 @@
       (when (and (:overload-arity *cljs-warnings*) (not= (distinct param-counts) param-counts))
         (warning :overload-arity env {:name name-var})))
     {:env env :op :fn :form form :name name-var :methods methods :variadic variadic
+     :tag 'function
      :recur-frames *recur-frames* :loop-lets *loop-lets*
      :jsdoc [(when variadic "@param {...*} var_args")]
      :max-fixed-arity max-fixed-arity
@@ -730,7 +735,7 @@
                   (let [be {:name   n
                             :line (get-line n env)
                             :column (get-col n env)
-                            :tag    (-> n meta :tag)
+                            :ret-tag (-> n meta :tag)
                             :local  true
                             :shadow (locals n)}]
                     [(assoc-in env [:locals n] be)
