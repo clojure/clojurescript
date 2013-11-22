@@ -577,29 +577,34 @@
                    (and (:fn-var v) (not fn-var?)))
           (warning :fn-var env {:ns-name ns-name :sym sym})))
       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
-             (merge 
-              {:name name}
-              sym-meta
-              (when doc {:doc doc})
-              (when dynamic {:dynamic true})
-              (source-info name env)
-              ;; the protocol a protocol fn belongs to
-              (when protocol
-                {:protocol protocol})
-              ;; symbol for reified protocol
-              (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
-                {:protocol-symbol protocol-symbol
-                 :impls #{}})
-              (when fn-var?
-                {:fn-var true
-                 ;; protocol implementation context
-                 :protocol-impl (:protocol-impl init-expr)
-                 ;; inline protocol implementation context
-                 :protocol-inline (:protocol-inline init-expr)
-                 :variadic (:variadic init-expr)
-                 :max-fixed-arity (:max-fixed-arity init-expr)
-                 :method-params (map :params (:methods init-expr))
-                 :methods (:methods init-expr)})))
+        (merge 
+          {:name name}
+          sym-meta
+          (when doc {:doc doc})
+          (when dynamic {:dynamic true})
+          (source-info name env)
+          ;; the protocol a protocol fn belongs to
+          (when protocol
+            {:protocol protocol})
+          ;; symbol for reified protocol
+          (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
+            {:protocol-symbol protocol-symbol
+              :impls #{}})
+          (when fn-var?
+            {:fn-var true
+             ;; protocol implementation context
+             :protocol-impl (:protocol-impl init-expr)
+             ;; inline protocol implementation context
+             :protocol-inline (:protocol-inline init-expr)
+             :variadic (:variadic init-expr)
+             :max-fixed-arity (:max-fixed-arity init-expr)
+             :method-params (map :params (:methods init-expr))
+             :methods (map (fn [method]
+                             (let [tag (infer-tag env (assoc method :op :method))]
+                               (cond-> (select-keys method
+                                         [:max-fixed-arity :variadic])
+                                 tag (assoc :tag tag))))
+                        (:methods init-expr))})))
       (merge {:env env :op :def :form form
               :name name :var var-expr :doc doc :init init-expr}
              (when tag {:tag tag})
