@@ -402,7 +402,13 @@
 (defn type? [env t]
   ;; don't use resolve-existing-var to avoid warnings
   (when (and t (symbol? t))
-    (-> (resolve-var env t) :info :type)))
+    (let [var (resolve-var env t)]
+      (or (:type var)
+          (-> var :info :type)
+          ;; need to hard code some cases because of
+          ;; forward declaration - David
+          ('#{cljs.core/PersistentHashMap
+              cljs.core/List} t)))))
 
 (defn infer-tag [env e]
   (if-let [tag (get-tag e)]
@@ -425,8 +431,9 @@
               (or (= then-tag else-tag)
                   (= else-tag 'ignore)) then-tag
               (= then-tag 'ignore) else-tag
-              (and (or (= 'clj then-tag) (type? env then-tag))
-                   (or (= 'clj else-tag) (type? env else-tag)))
+              ;; TODO: temporary until we move not-native -> clj - David
+              (and (or ('#{clj not-native} then-tag) (type? env then-tag))
+                   (or ('#{clj not-native} else-tag) (type? env else-tag)))
               'clj
               :else
               (if (every? '#{boolean seq} [then-tag else-tag])

@@ -1303,7 +1303,9 @@
       (if (core/< cnt 32)
         `(cljs.core.PersistentVector. nil ~cnt 5
            cljs.core.PersistentVector.EMPTY_NODE (array ~@xs) nil)
-        `(cljs.core.PersistentVector.fromArray (array ~@xs) true)))))
+        (vary-meta
+          `(cljs.core.PersistentVector.fromArray (array ~@xs) true)
+          assoc :tag 'cljs.core/PersistentVector)))))
 
 (defmacro array-map
   ([] `cljs.core.PersistentArrayMap.EMPTY)
@@ -1327,7 +1329,9 @@
     (let [pairs (partition 2 kvs)
           ks    (map first pairs)
           vs    (map second pairs)]
-      `(cljs.core.PersistentHashMap.fromArrays (array ~@ks) (array ~@vs)))))
+      (vary-meta
+        `(cljs.core.PersistentHashMap.fromArrays (array ~@ks) (array ~@vs))
+        assoc :tag 'cljs.core/PersistentHashMap))))
 
 (defmacro hash-set
   ([] `cljs.core.PersistentHashSet.EMPTY)
@@ -1338,7 +1342,9 @@
       `(cljs.core.PersistentHashSet. nil
          (cljs.core.PersistentArrayMap. nil ~(count xs) (array ~@(interleave xs (repeat nil))) nil)
          nil)
-      `(cljs.core.PersistentHashSet.fromArray (array ~@xs) true))))
+      (vary-meta
+        `(cljs.core.PersistentHashSet.fromArray (array ~@xs) true)
+        assoc :tag 'cljs.core/PersistentHashSet))))
 
 (defn js-obj* [kvs]
   (let [kvs-str (->> (repeat "~{}:~{}")

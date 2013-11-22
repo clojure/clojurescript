@@ -2459,10 +2459,10 @@ reduces them without incurring seq initialization"
 
 ;;; Transients
 
-(defn ^not-native transient [coll]
+(defn transient [coll]
   (-as-transient coll))
 
-(defn ^not-native persistent! [tcoll]
+(defn persistent! [tcoll]
   (-persistent! tcoll))
 
 (defn conj! [tcoll val]
