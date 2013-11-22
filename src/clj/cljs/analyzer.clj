@@ -405,6 +405,7 @@
     (let [var (resolve-var env t)]
       (or (:type var)
           (-> var :info :type)
+          (:protocol-symbol var)
           ;; need to hard code some cases because of
           ;; forward declaration - David
           ('#{cljs.core/PersistentHashMap
