@@ -218,7 +218,7 @@
     [this a b c d e f g h i j k l m n o p q s t rest]))
 
 (defprotocol ICounted
-  (-count [coll] "constant time count"))
+  (^number -count [coll] "constant time count"))
 
 (defprotocol IEmptyableCollection
   (-empty [coll]))
@@ -854,13 +854,13 @@ reduces them without incurring seq initialization"
   [coll]
   (-empty coll))
 
-(defn- accumulating-seq-count [coll]
+(defn- ^number accumulating-seq-count [coll]
   (loop [s (seq coll) acc 0]
     (if (counted? s) ; assumes nil is counted, which it currently is
       (+ acc (-count s))
       (recur (next s) (inc acc)))))
 
-(defn count
+(defn ^number count
   "Returns the number of items in the collection. (count nil) returns
   0.  Also works on strings, arrays, and Maps"
   [coll]
@@ -1269,7 +1269,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
-(defn compare
+(defn ^number compare
   "Comparator. Returns a negative number, zero, or a positive number
   when x is logically 'less than', 'equal to', or 'greater than'
   y. Uses IComparable if available and google.array.defaultCompare for objects
@@ -1425,7 +1425,7 @@ reduces them without incurring seq initialization"
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
 
-(defn +
+(defn ^number +
   "Returns the sum of nums. (+) returns 0."
   ([] 0)
   ([x] x)
@@ -1433,14 +1433,14 @@ reduces them without incurring seq initialization"
   ([x y & more]
     (reduce + (cljs.core/+ x y) more)))
 
-(defn -
+(defn ^number -
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
   ([x] (cljs.core/- x))
   ([x y] (cljs.core/- x y))
   ([x y & more] (reduce - (cljs.core/- x y) more)))
 
-(defn *
+(defn ^number *
   "Returns the product of nums. (*) returns 1."
   ([] 1)
   ([x] x)
@@ -1449,7 +1449,7 @@ reduces them without incurring seq initialization"
 
 (declare divide)
 
-(defn /
+(defn ^number /
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."
   ([x] (/ 1 x))
@@ -1504,25 +1504,25 @@ reduces them without incurring seq initialization"
        (cljs.core/>= y (first more)))
      false)))
 
-(defn dec
+(defn ^number dec
   "Returns a number one less than num."
   [x] (- x 1))
 
-(defn max
+(defn ^number max
   "Returns the greatest of the nums."
   ([x] x)
   ([x y] (cljs.core/max x y))
   ([x y & more]
    (reduce max (cljs.core/max x y) more)))
 
-(defn min
+(defn ^number min
   "Returns the least of the nums."
   ([x] x)
   ([x y] (cljs.core/min x y))
   ([x y & more]
    (reduce min (cljs.core/min x y) more)))
 
-(defn byte [x] x)
+(defn ^number byte [x] x)
 
 (defn char
   "Coerce to char"
@@ -1532,109 +1532,109 @@ reduces them without incurring seq initialization"
     (and (string? x) (== (.-length x) 1)) x
     :else (throw (js/Error. "Argument to char must be a character or number"))))
 
-(defn short [x] x)
-(defn float [x] x)
-(defn double [x] x)
+(defn ^number short [x] x)
+(defn ^number float [x] x)
+(defn ^number double [x] x)
 
-(defn unchecked-byte [x] x)
-(defn unchecked-char [x] x)
-(defn unchecked-short [x] x)
-(defn unchecked-float [x] x)
-(defn unchecked-double [x] x)
+(defn ^number unchecked-byte [x] x)
+(defn ^number unchecked-char [x] x)
+(defn ^number unchecked-short [x] x)
+(defn ^number unchecked-float [x] x)
+(defn ^number unchecked-double [x] x)
 
-(defn unchecked-add
+(defn ^number unchecked-add
   "Returns the sum of nums. (+) returns 0."
   ([] 0)
   ([x] x)
   ([x y] (cljs.core/unchecked-add x y))
   ([x y & more] (reduce unchecked-add (cljs.core/unchecked-add x y) more)))
 
-(defn unchecked-add-int
+(defn ^number unchecked-add-int
   "Returns the sum of nums. (+) returns 0."
   ([] 0)
   ([x] x)
   ([x y] (cljs.core/unchecked-add-int x y))
   ([x y & more] (reduce unchecked-add-int (cljs.core/unchecked-add-int x y) more)))
 
-(defn unchecked-dec [x]
+(defn ^number unchecked-dec [x]
   (cljs.core/unchecked-dec x))
 
-(defn unchecked-dec-int [x]
+(defn ^number unchecked-dec-int [x]
   (cljs.core/unchecked-dec-int x))
 
-(defn unchecked-divide-int
+(defn ^number unchecked-divide-int
   "If no denominators are supplied, returns 1/numerator,
   else returns numerator divided by all of the denominators."
   ([x] (unchecked-divide-int 1 x))
   ([x y] (cljs.core/divide x y)) ;; FIXME: waiting on cljs.core//
   ([x y & more] (reduce unchecked-divide-int (unchecked-divide-int x y) more)))
 
-(defn unchecked-inc [x]
+(defn ^number unchecked-inc [x]
   (cljs.core/unchecked-inc x))
 
-(defn unchecked-inc-int [x]
+(defn ^number unchecked-inc-int [x]
   (cljs.core/unchecked-inc-int x))
 
-(defn unchecked-multiply
+(defn ^number unchecked-multiply
   "Returns the product of nums. (*) returns 1."
   ([] 1)
   ([x] x)
   ([x y] (cljs.core/unchecked-multiply x y))
   ([x y & more] (reduce unchecked-multiply (cljs.core/unchecked-multiply x y) more)))
 
-(defn unchecked-multiply-int
+(defn ^number unchecked-multiply-int
   "Returns the product of nums. (*) returns 1."
   ([] 1)
   ([x] x)
   ([x y] (cljs.core/unchecked-multiply-int x y))
   ([x y & more] (reduce unchecked-multiply-int (cljs.core/unchecked-multiply-int x y) more)))
 
-(defn unchecked-negate [x]
+(defn ^number unchecked-negate [x]
   (cljs.core/unchecked-negate x))
 
-(defn unchecked-negate-int [x]
+(defn ^number unchecked-negate-int [x]
   (cljs.core/unchecked-negate-int x))
 
 (declare mod)
 
-(defn unchecked-remainder-int [x n]
+(defn ^number unchecked-remainder-int [x n]
   (cljs.core/unchecked-remainder-int x n))
 
-(defn unchecked-substract
+(defn ^number unchecked-substract
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
   ([x] (cljs.core/unchecked-subtract x))
   ([x y] (cljs.core/unchecked-subtract x y))
   ([x y & more] (reduce unchecked-substract (cljs.core/unchecked-subtract x y) more)))
 
-(defn unchecked-substract-int
+(defn ^number unchecked-substract-int
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
   ([x] (cljs.core/unchecked-subtract-int x))
   ([x y] (cljs.core/unchecked-subtract-int x y))
   ([x y & more] (reduce unchecked-substract-int (cljs.core/unchecked-subtract-int x y) more)))
 
-(defn- fix [q]
+(defn- ^number fix [q]
   (if (>= q 0)
     (Math/floor q)
     (Math/ceil q)))
 
-(defn int
+(defn ^number int
   "Coerce to int by stripping decimal places."
   [x]
   (bit-or x 0))
 
-(defn unchecked-int
+(defn ^number unchecked-int
   "Coerce to int by stripping decimal places."
   [x]
   (fix x))
 
-(defn long
+(defn ^number long
   "Coerce to long by stripping decimal places. Identical to `int'."
   [x]
   (fix x))
 
-(defn unchecked-long
+(defn ^number unchecked-long
   "Coerce to long by stripping decimal places. Identical to `int'."
   [x]
   (fix x))
@@ -1648,90 +1648,90 @@ reduces them without incurring seq initialization"
 (defn doubles [x] x)
 (defn longs [x] x)
 
-(defn js-mod
+(defn ^number js-mod
   "Modulus of num and div with original javascript behavior. i.e. bug for negative numbers"
   [n d]
   (cljs.core/js-mod n d))
 
-(defn mod
+(defn ^number mod
   "Modulus of num and div. Truncates toward negative infinity."
   [n d]
   (js-mod (+ (js-mod n d) d) d))
 
-(defn quot
+(defn ^number quot
   "quot[ient] of dividing numerator by denominator."
   [n d]
   (let [rem (js-mod n d)]
     (fix (/ (- n rem) d))))
 
-(defn rem
+(defn ^number rem
   "remainder of dividing numerator by denominator."
   [n d]
   (let [q (quot n d)]
     (- n (* d q))))
 
-(defn rand
+(defn ^number rand
   "Returns a random floating point number between 0 (inclusive) and n (default 1) (exclusive)."
   ([]  (Math/random))
   ([n] (* n (rand))))
 
-(defn rand-int
+(defn ^number rand-int
   "Returns a random integer between 0 (inclusive) and n (exclusive)."
   [n] (fix (rand n)))
 
-(defn bit-xor
+(defn ^number bit-xor
   "Bitwise exclusive or"
   [x y] (cljs.core/bit-xor x y))
 
-(defn bit-and
+(defn ^number bit-and
   "Bitwise and"
   [x y] (cljs.core/bit-and x y))
 
-(defn bit-or
+(defn ^number bit-or
   "Bitwise or"
   [x y] (cljs.core/bit-or x y))
 
-(defn bit-and-not
+(defn ^number bit-and-not
   "Bitwise and"
   [x y] (cljs.core/bit-and-not x y))
 
-(defn bit-clear
+(defn ^number bit-clear
   "Clear bit at index n"
   [x n]
   (cljs.core/bit-clear x n))
 
-(defn bit-flip
+(defn ^number bit-flip
   "Flip bit at index n"
   [x n]
   (cljs.core/bit-flip x n))
 
-(defn bit-not
+(defn ^number bit-not
   "Bitwise complement"
   [x] (cljs.core/bit-not x))
 
-(defn bit-set
+(defn ^number bit-set
   "Set bit at index n"
   [x n]
   (cljs.core/bit-set x n))
 
-(defn bit-test
+(defn ^number bit-test
   "Test bit at index n"
   [x n]
   (cljs.core/bit-test x n))
 
-(defn bit-shift-left
+(defn ^number bit-shift-left
   "Bitwise shift left"
   [x n] (cljs.core/bit-shift-left x n))
 
-(defn bit-shift-right
+(defn ^number bit-shift-right
   "Bitwise shift right"
   [x n] (cljs.core/bit-shift-right x n))
 
-(defn bit-shift-right-zero-fill
+(defn ^number bit-shift-right-zero-fill
   "Bitwise shift right with zero fill"
   [x n] (cljs.core/bit-shift-right-zero-fill x n))
 
-(defn bit-count
+(defn ^number bit-count
   "Counts the number of bits set in n"
   [v]
   (let [v (- v (bit-and (bit-shift-right v 1) 0x55555555))
