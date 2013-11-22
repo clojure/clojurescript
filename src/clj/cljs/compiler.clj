@@ -671,7 +671,8 @@
                            (:protocol-inline env))
                        (or (= protocol tag)
                            ;; ignore new type hints for now - David
-                           (and (not ('#{any clj clj-or-nil} tag))
+                           (and (not (set? tag))
+                                (not ('#{any clj clj-or-nil} tag))
                                 (when-let [ps (:protocols (ana/resolve-existing-var (dissoc env :locals) tag))]
                                   (ps protocol)))))))
         opt-not? (and (= (:name info) 'cljs.core/not)

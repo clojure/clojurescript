@@ -12,6 +12,7 @@
   (:refer-clojure :exclude [macroexpand-1])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [clojure.set :as set]
             [cljs.env :as env]
             [cljs.tagged-literals :as tags]
             [clojure.tools.reader :as reader]
@@ -439,7 +440,9 @@
               :else
               (if (every? '#{boolean seq} [then-tag else-tag])
                 'seq
-                'any)))
+                (let [then-tag (if (set? then-tag) then-tag #{then-tag})
+                      else-tag (if (set? else-tag) else-tag #{else-tag})]
+                  (into then-tag else-tag)))))
       :constant (case (:form e)
                   true 'boolean
                   false 'boolean
@@ -852,7 +855,15 @@
                 known-num-fields (not= known-num-fields argc))
        (warning :fn-arity env {:argc argc :ctor ctor}))
      {:env env :op :new :form form :ctor ctorexpr :args argexprs
-      :children (into [ctorexpr] argexprs) :tag (-> ctorexpr :info :name)})))
+      :children (into [ctorexpr] argexprs)
+      :tag (let [name (-> ctorexpr :info :name)]
+             (or ('{js/Object object
+                    js/String string
+                    js/Array  array
+                    js/Number number
+                    js/Function function
+                    js/Boolean boolean} name)
+                 name))})))
 
 (defmethod parse 'set!
   [_ env [_ target val alt :as form] _]
@@ -1155,7 +1166,12 @@
        (when (and (-> form meta :numeric)
                   (:invalid-arithmetic *cljs-warnings*))
          (let [types (map #(infer-tag env %) argexprs)]
-           (when-not (every? (fn [t] (or (nil? t) ('#{any number} t))) types)
+           (when-not (every?
+                       (fn [t]
+                         (or (nil? t)
+                             (and (symbol? t) ('#{any number} t))
+                             (and (set? t) (set/subset? t '#{any number nil}))))
+                       types)
              (warning :invalid-arithmetic env
                {:js-op (-> form meta :js-op)
                 :types (into [] types)}))))

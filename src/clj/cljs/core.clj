@@ -1285,11 +1285,14 @@
                     (take (count rest))
                     (interpose ",")
                     (apply core/str))]
-    (list* 'js* (core/str "[" xs-str "]") rest)))
+    (vary-meta
+      (list* 'js* (core/str "[" xs-str "]") rest)
+      assoc :tag 'array)))
 
 (defmacro make-array
   [size]
-  `(js/Array. ~size))
+  (vary-meta `(js/Array. ~size)
+    assoc :tag 'array))
 
 (defmacro list
   ([] `cljs.core.List.EMPTY)
@@ -1351,7 +1354,9 @@
                      (take (count kvs))
                      (interpose ",")
                      (apply core/str))]
-    (list* 'js* (core/str "{" kvs-str "}") (apply concat kvs))))
+    (vary-meta
+      (list* 'js* (core/str "{" kvs-str "}") (apply concat kvs))
+      assoc :tag 'object)))
 
 (defmacro js-obj [& rest]
   (let [sym-or-str? (fn [x] (core/or (core/symbol? x) (core/string? x)))
@@ -1372,7 +1377,9 @@
        ~obj)))
 
 (defmacro alength [a]
-  (core/list 'js* "~{}.length" a))
+  (vary-meta
+    (core/list 'js* "~{}.length" a)
+    assoc :tag 'number))
 
 (defmacro amap
   "Maps an expression across an array a, using an index named idx, and

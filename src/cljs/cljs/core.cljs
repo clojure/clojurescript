@@ -138,6 +138,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
+(defn ^array make-array
+  ([size]
+     (js/Array. size))
+  ([type size]
+     (make-array size)))
+
 (defn aclone
   "Returns a javascript array, cloned from the passed in array"
   [arr]
@@ -147,17 +153,11 @@
       (aset new-arr i (aget arr i)))
     new-arr))
 
-(defn array
+(defn ^array array
   "Creates a new javascript array.
 @param {...*} var_args" ;;array is a special case, don't emulate this doc string
   [var-args]            ;; [& items]
   (.call (.-slice (.-prototype js/Array)) (cljs.core/js-arguments)))
-
-(defn make-array
-  ([size]
-     (js/Array. size))
-  ([type size]
-     (make-array size)))
 
 (declare apply)
 
@@ -175,14 +175,14 @@
   ([array idx idx2 & idxv]
     (apply aset (aget array idx) idx2 idxv)))
 
-(defn alength
+(defn ^number alength
   "Returns the length of the array. Works on arrays of all types."
   [array]
   (cljs.core/alength array))
 
 (declare reduce)
 
-(defn into-array
+(defn ^array into-array
   ([aseq]
      (into-array nil aseq))
   ([type aseq]
