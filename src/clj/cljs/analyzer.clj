@@ -423,11 +423,11 @@
       :do  (infer-tag env (:ret e))
       :method (infer-tag env (:expr e))
       :def (infer-tag env (:init e))
-      :invoke  (let [f (:f e)]
-                 (or (and (-> f :info :fn-var) (:ret-tag f))
-                     (infer-tag env
-                       (assoc (find-matching-method f (:args e)) :op :method))
-                     'any))
+      :invoke (let [{info :info :as f} (:f e)]
+                (or (and (:fn-var info) (:ret-tag info))
+                    (infer-tag env
+                      (assoc (find-matching-method f (:args e)) :op :method))
+                    'any))
       :if (let [then-tag (infer-tag env (:then e))
                 else-tag (infer-tag env (:else e))]
             (cond
@@ -571,8 +571,10 @@
           init-expr (when (contains? args :init)
                       (disallowing-recur
                         (analyze (assoc env :context :expr) (:init args) sym)))
-          tag (or tag (:tag init-expr))
           fn-var? (and init-expr (= (:op init-expr) :fn))
+          tag (if fn-var?
+                (or (:ret-tag init-expr) tag)
+                tag)
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
@@ -609,7 +611,9 @@
                                (cond-> (select-keys method
                                          [:max-fixed-arity :variadic])
                                  tag (assoc :tag tag))))
-                        (:methods init-expr))})))
+                        (:methods init-expr))})
+          (when (and fn-var? tag)
+            {:ret-tag tag})))
       (merge {:env env :op :def :form form
               :name name :var var-expr :doc doc :init init-expr}
         (when tag
