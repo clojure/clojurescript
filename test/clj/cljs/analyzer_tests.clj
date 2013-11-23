@@ -77,7 +77,42 @@
            (:tag (a/analyze test-env '(if true "foo" 1))))
          '#{number string})))
 
+(deftest fn-inference
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env
+                   '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
+                      (x :one)))))
+        'number))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env
+                   '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
+                      (x :one :two)))))
+        'string))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env
+                   '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
+                      (x :one :two :three)))))
+        'cljs.core/IList)))
+
 (deftest lib-inference
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(+ 1 2))))
+         'number))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(alength (array)))))
+         'number))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(aclone (array)))))
+         'array))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(count [1 2 3]))))
+         'number))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(into-array [1 2 3]))))
+         'array))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(js-obj))))
+         'object))
   (is (= (e/with-compiler-env test-cenv
            (:tag (a/analyze test-env '(-conj [] 1))))
          'clj))
