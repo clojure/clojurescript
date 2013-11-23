@@ -428,22 +428,26 @@
                     (infer-tag env
                       (assoc (find-matching-method f (:args e)) :op :method))
                     'any))
-      :if (let [then-tag (infer-tag env (:then e))
-                else-tag (infer-tag env (:else e))]
-            (cond
-              (or (= then-tag else-tag)
-                  (= else-tag 'ignore)) then-tag
-              (= then-tag 'ignore) else-tag
-              ;; TODO: temporary until we move not-native -> clj - David
-              (and (or ('#{clj not-native} then-tag) (type? env then-tag))
-                   (or ('#{clj not-native} else-tag) (type? env else-tag)))
-              'clj
-              :else
-              (if (every? '#{boolean seq} [then-tag else-tag])
-                'seq
-                (let [then-tag (if (set? then-tag) then-tag #{then-tag})
-                      else-tag (if (set? else-tag) else-tag #{else-tag})]
-                  (into then-tag else-tag)))))
+      :if (let [{{:keys [op form]} :test} e
+                then-tag (infer-tag env (:then e))]
+            (if (and (= op :constant)
+                     (not (#{nil false} form)))
+              then-tag
+              (let [else-tag (infer-tag env (:else e))]
+                (cond
+                  (or (= then-tag else-tag)
+                    (= else-tag 'ignore)) then-tag
+                  (= then-tag 'ignore) else-tag
+                  ;; TODO: temporary until we move not-native -> clj - David
+                  (and (or ('#{clj not-native} then-tag) (type? env then-tag))
+                    (or ('#{clj not-native} else-tag) (type? env else-tag)))
+                  'clj
+                  :else
+                  (if (every? '#{boolean seq} [then-tag else-tag])
+                    'seq
+                    (let [then-tag (if (set? then-tag) then-tag #{then-tag})
+                           else-tag (if (set? else-tag) else-tag #{else-tag})]
+                      (into then-tag else-tag)))))))
       :constant (case (:form e)
                   true 'boolean
                   false 'boolean
@@ -1179,7 +1183,11 @@
                        (fn [t]
                          (or (nil? t)
                              (and (symbol? t) ('#{any number} t))
-                             (and (set? t) (set/subset? t '#{any number nil}))))
+                             ;; TODO: type inference is not strong enough to detect that
+                             ;; when functions like first won't return nil, so variadic
+                             ;; numeric functions like cljs.core/< would produce a spurious
+                             ;; warning without this - David
+                             (and (set? t) (set/subset? t '#{any number nil clj-nil}))))
                        types)
              (warning :invalid-arithmetic env
                {:js-op (-> form meta :js-op)
@@ -1395,11 +1403,13 @@
                 (= form ()) (analyze-list env form)
                 :else
                 (let [tag (cond
+                            (nil? form)    'clj-nil
                             (number? form) 'number
                             (string? form) 'string
                             (true? form)   'boolean
                             (false? form)  'boolean)]
-                  {:op :constant :env env :form form :tag tag}))))
+                  (cond-> {:op :constant :env env :form form}
+                    tag (assoc :tag tag))))))
           *passes*)))))
 
 (defn- source-path

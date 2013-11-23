@@ -74,7 +74,7 @@
 
 (deftest if-inference
   (is (= (e/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(if true "foo" 1))))
+           (:tag (a/analyze test-env '(if x "foo" 1))))
          '#{number string})))
 
 (deftest fn-inference
@@ -125,3 +125,37 @@
   (is (= (e/with-compiler-env test-cenv
            (:tag (a/analyze test-env '(dissoc {:foo :bar} :foo))))
          'clj)))
+
+(deftest test-always-true-if
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(if 1 2 "foo"))))
+         'number)))
+
+;; will only work if the previous test works
+(deftest test-count
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(count []))))
+         'number)))
+
+(deftest test-numeric
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(dec x))))
+         'number))
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(int x))))
+         'number))
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(unchecked-int x))))
+         'number))
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(mod x y))))
+         'number))
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(quot x y))))
+         'number))
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(rem x y))))
+         'number))
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(bit-count n))))
+         'number)))
