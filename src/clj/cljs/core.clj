@@ -507,6 +507,9 @@
 (defmacro ^::ana/numeric bit-shift-right-zero-fill [x n]
   (core/list 'js* "(~{} >>> ~{})" x n))
 
+(defmacro ^::ana/numeric unsigned-bit-shift-right [x n]
+  (core/list 'js* "(~{} >>> ~{})" x n))
+
 (defmacro ^::ana/numeric bit-set [x n]
   (core/list 'js* "(~{} | (1 << ~{}))" x n))
 

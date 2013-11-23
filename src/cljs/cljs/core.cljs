@@ -1728,8 +1728,12 @@ reduces them without incurring seq initialization"
   [x n] (cljs.core/bit-shift-right x n))
 
 (defn ^number bit-shift-right-zero-fill
-  "Bitwise shift right with zero fill"
+  "DEPRECATED: Bitwise shift right with zero fill"
   [x n] (cljs.core/bit-shift-right-zero-fill x n))
+
+(defn ^number unsigned-bit-shift-right
+  "Bitwise shift right with zero fill"
+  [x n] (cljs.core/unsigned-bit-shift-right x n))
 
 (defn ^number bit-count
   "Counts the number of bits set in n"
