@@ -331,9 +331,11 @@
                  lb (-> env :locals prefix)]
              (if lb
                {:name (symbol (str (:name lb) suffix))}
-               (merge (get-in @env/*compiler* [::namespaces prefix :defs (symbol suffix)])
-                 {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-                  :ns prefix})))
+               (if-let [full-ns (get-in @env/*compiler* [::namespaces (-> env :ns :name) :imports prefix])]
+                 {:name (symbol (str full-ns) suffix)}
+                 (merge (get-in @env/*compiler* [::namespaces prefix :defs (symbol suffix)])
+                   {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
+                    :ns prefix}))))
 
            (get-in @env/*compiler* [::namespaces (-> env :ns :name) :uses sym])
            (let [full-ns (get-in @env/*compiler* [::namespaces (-> env :ns :name) :uses sym])]
