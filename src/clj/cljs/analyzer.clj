@@ -1425,12 +1425,15 @@
 argument, which the reader will use in any emitted errors."
   ([f] (forms-seq f (source-path f)))
   ([f filename]
-     (let [rdr (readers/indexing-push-back-reader (java.io.PushbackReader. (io/reader f)) 1 filename)
+     (let [rdr (readers/indexing-push-back-reader
+                 (java.io.PushbackReader. (io/reader f)) 1 filename)
+           data-readers tags/*cljs-data-readers*
            forms-seq*
            (fn forms-seq* []
              (lazy-seq
               (let [eof-sentinel (Object.)
                     form (binding [*ns* (create-ns *cljs-ns*)
+                                   reader/*data-readers* data-readers
                                    reader/*alias-map*
                                    (apply merge
                                           ((juxt :requires :require-macros)

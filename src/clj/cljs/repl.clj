@@ -176,24 +176,23 @@
           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
           (flush)
           (let [form (try
-                       (binding [*data-readers* tags/*cljs-data-readers*]
-                         (if (seq forms)
-                           (first forms)
-                           :cljs/quit))
+                       (if (seq forms)
+                         (first forms)
+                         :cljs/quit)
                        (catch Exception e
                          (println (.getMessage e))
                          read-error))]
             (cond
-             (identical? form read-error) (recur (ana/forms-seq *in* "NO_SOURCE_FILE"))
-             
-             (= form :cljs/quit) :quit
+              (identical? form read-error) (recur (ana/forms-seq *in* "NO_SOURCE_FILE"))
+              
+              (= form :cljs/quit) :quit
 
-             (and (seq? form) (is-special-fn? (first form)))
-             (do (apply (get special-fns (first form)) repl-env (rest form))
-                 (newline)
-                 (recur (rest forms)))
+              (and (seq? form) (is-special-fn? (first form)))
+              (do (apply (get special-fns (first form)) repl-env (rest form))
+                (newline)
+                (recur (rest forms)))
 
-             :else
-             (do (eval-and-print repl-env env form)
-                 (recur (rest forms))))))
+              :else
+              (do (eval-and-print repl-env env form)
+                (recur (rest forms))))))
         (-tear-down repl-env)))))

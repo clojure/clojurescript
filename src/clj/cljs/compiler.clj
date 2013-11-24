@@ -849,7 +849,6 @@
                     ana/*cljs-ns* 'cljs.user
                     ana/*cljs-file* (.getPath ^File src)
                     reader/*alias-map* (or reader/*alias-map* {})
-                    reader/*data-readers* tags/*cljs-data-readers*
                     *source-map-data* (when (:source-map opts)
                                         (atom
                                           {:source-map (sorted-map)
