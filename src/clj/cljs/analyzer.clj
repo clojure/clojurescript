@@ -331,11 +331,16 @@
                  lb (-> env :locals prefix)]
              (if lb
                {:name (symbol (str (:name lb) suffix))}
-               (if-let [full-ns (get-in @env/*compiler* [::namespaces (-> env :ns :name) :imports prefix])]
-                 {:name (symbol (str full-ns) suffix)}
-                 (merge (get-in @env/*compiler* [::namespaces prefix :defs (symbol suffix)])
-                   {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-                    :ns prefix}))))
+               (let [cur-ns (-> env :ns :name)]
+                 (if-let [full-ns (get-in @env/*compiler* [::namespaces cur-ns :imports prefix])]
+                   {:name (symbol (str full-ns) suffix)}
+                   (if-let [info (get-in @env/*compiler* [::namespaces cur-ns :defs prefix])]
+                     (merge info
+                       {:name (symbol (str cur-ns) (str sym))
+                        :ns cur-ns})
+                     (merge (get-in @env/*compiler* [::namespaces prefix :defs (symbol suffix)])
+                       {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
+                        :ns prefix}))))))
 
            (get-in @env/*compiler* [::namespaces (-> env :ns :name) :uses sym])
            (let [full-ns (get-in @env/*compiler* [::namespaces (-> env :ns :name) :uses sym])]
@@ -354,8 +359,8 @@
              (when confirm
                (confirm env full-ns sym))
              (merge (get-in @env/*compiler* [::namespaces full-ns :defs sym])
-                    {:name (symbol (str full-ns) (str sym))
-                     :ns full-ns})))))))
+               {:name (symbol (str full-ns) (str sym))
+                :ns full-ns})))))))
 
 (defn resolve-existing-var [env sym]
   (if-not (-> sym meta ::no-resolve)
