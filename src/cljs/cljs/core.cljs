@@ -514,8 +514,11 @@
   structures define -equiv (and thus =) as a value, not an identity,
   comparison."
   ([x] true)
-  ([x y] (or (identical? x y)
-             ^boolean (-equiv x y)))
+  ([x y]
+    (if (nil? x)
+      (nil? y)
+      (or (identical? x y)
+        ^boolean (-equiv x y))))
   ([x y & more]
      (if (= x y)
        (if (next more)
@@ -527,40 +530,8 @@
 (declare hash-map list equiv-sequential)
 
 (extend-type nil
-  IEquiv
-  (-equiv [_ o] (nil? o))
-
   ICounted
-  (-count [_] 0)
-
-  IEmptyableCollection
-  (-empty [_] nil)
-
-  INext
-  (-next [_] nil)
-
-  IMap
-  (-dissoc [_ k] nil)
-
-  ISet
-  (-disjoin [_ v] nil)
-
-  IStack
-  (-peek [_] nil)
-  (-pop [_] nil)
-
-  IMeta
-  (-meta [_] nil)
-
-  IWithMeta
-  (-with-meta [_ meta] nil)
-
-  IKVReduce
-  (-kv-reduce [_ f init]
-    init)
-
-  IHash
-  (-hash [o] 0))
+  (-count [_] 0))
 
 ;; TODO: we should remove this and handle date equality checking
 ;; by some other means, probably by adding a new primitive type
@@ -852,7 +823,8 @@ reduces them without incurring seq initialization"
 (defn empty
   "Returns an empty collection of the same category as coll, or nil"
   [coll]
-  (-empty coll))
+  (when-not (nil? coll)
+    (-empty coll)))
 
 (defn- accumulating-seq-count [coll]
   (loop [s (seq coll) acc 0]
@@ -1022,10 +994,11 @@ reduces them without incurring seq initialization"
   ([coll k]
      (-dissoc coll k))
   ([coll k & ks]
-     (let [ret (dissoc coll k)]
-       (if ks
-         (recur ret (first ks) (next ks))
-         ret))))
+    (when-not (nil? coll)
+      (let [ret (dissoc coll k)]
+        (if ks
+          (recur ret (first ks) (next ks))
+          ret)))))
 
 (defn ^boolean fn? [f]
   (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
@@ -1042,26 +1015,30 @@ reduces them without incurring seq initialization"
         (-invoke [_ & args]
           (apply o args)))
       meta)
-    (-with-meta o meta)))
+    (when-not (nil? o)
+      (-with-meta o meta))))
 
 (defn meta
   "Returns the metadata of obj, returns nil if there is no metadata."
   [o]
-  (when (satisfies? IMeta o)
+  (when (and (not (nil? o))
+             (satisfies? IMeta o))
     (-meta o)))
 
 (defn peek
   "For a list or queue, same as first, for a vector, same as, but much
   more efficient than, last. If the collection is empty, returns nil."
   [coll]
-  (-peek coll))
+  (when-not (nil? coll)
+    (-peek coll)))
 
 (defn pop
   "For a list or queue, returns a new list/queue without the first
   item, for a vector, returns a new vector without the last item.
   Note - not the same as next/butlast."
   [coll]
-  (-pop coll))
+  (when-not (nil? coll)
+    (-pop coll)))
 
 (defn disj
   "disj[oin]. Returns a new set of the same (hashed/sorted) type, that
@@ -1070,10 +1047,11 @@ reduces them without incurring seq initialization"
   ([coll k]
      (-disjoin coll k))
   ([coll k & ks]
-     (let [ret (disj coll k)]
-       (if ks
-         (recur ret (first ks) (next ks))
-         ret))))
+    (when-not (nil? coll)
+      (let [ret (disj coll k)]
+        (if ks
+          (recur ret (first ks) (next ks))
+          ret)))))
 
 ;; Simple caching of string hashcode
 (def string-hash-cache (js-obj))
@@ -1108,6 +1086,8 @@ reduces them without incurring seq initialization"
 
     (string? o)
     (check-string-hash-cache o)
+
+    (nil? o) 0
 
     :else
     (-hash o)))
@@ -1420,7 +1400,9 @@ reduces them without incurring seq initialization"
   and f is not called. Note that reduce-kv is supported on vectors,
   where the keys will be the ordinals."
   ([f init coll]
-     (-kv-reduce coll f init)))
+    (if-not (nil? coll)
+      (-kv-reduce coll f init)
+      init)))
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
