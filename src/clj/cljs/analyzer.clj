@@ -745,22 +745,41 @@
   (let [n->fexpr (into {} (map (juxt first second) (partition 2 bindings)))
         names    (keys n->fexpr)
         context  (:context env)
+        ;; first pass to collect information for recursive references
         [meth-env bes]
         (reduce (fn [[{:keys [locals] :as env} bes] n]
-                  (let [be {:name   n
-                            :line (get-line n env)
-                            :column (get-col n env)
-                            :ret-tag (-> n meta :tag)
-                            :local  true
-                            :shadow (locals n)}]
+                  (let [ret-tag (-> n meta :tag)
+                        fexpr (no-warn (analyze env (n->fexpr n)))
+                        be (cond->
+                             {:name n
+                              :fn-var true
+                              :line (get-line n env)
+                              :column (get-col n env)
+                              :local true
+                              :shadow (locals n)
+                              :variadic (:variadic fexpr)
+                              :max-fixed-arity (:max-fixed-arity fexpr)
+                              :method-params (map :params (:methods fexpr))
+                              :methods (:methods fexpr)}
+                             ret-tag (assoc :ret-tag ret-tag))]
                     [(assoc-in env [:locals n] be)
                      (conj bes be)]))
                 [env []] names)
         meth-env (assoc meth-env :context :expr)
-        bes (vec (map (fn [{:keys [name shadow] :as be}]
-                        (let [env (assoc-in meth-env [:locals name] shadow)]
-                          (assoc be :init (analyze env (n->fexpr name)))))
-                      bes))
+        ;; the real pass
+        [meth-env bes]
+        (reduce (fn [[meth-env bes] {:keys [name shadow] :as be}]
+                  (let [env (assoc-in meth-env [:locals name] shadow)
+                        fexpr (analyze env (n->fexpr name))
+                        be' (assoc be
+                              :init fexpr
+                              :variadic (:variadic fexpr)
+                              :max-fixed-arity (:max-fixed-arity fexpr)
+                              :method-params (map :params (:methods fexpr))
+                              :methods (:methods fexpr))]
+                    [(assoc-in env [:locals name] be')
+                     (conj bes be')]))
+          [meth-env []] bes)
         expr (analyze (assoc meth-env :context (if (= :expr context) :return context)) `(do ~@exprs))]
     {:env env :op :letfn :bindings bes :expr expr :form form
      :children (conj (vec (map :init bes)) expr)}))
