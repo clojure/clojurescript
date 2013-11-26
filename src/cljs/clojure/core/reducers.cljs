@@ -14,8 +14,21 @@
       :author "Rich Hickey"}
   clojure.core.reducers
   (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop flatten])
-  (:require [clojure.walk :as walk]
-            [cljs.core :as core]))
+  (:require [cljs.core :as core]))
+
+;;;;;;;;;;;;;; some fj stuff ;;;;;;;;;;
+(defn- fjtask [f]
+  f)
+
+(defn- fjinvoke [f]
+  (f))
+
+(defn- fjfork [task]
+  task)
+
+(defn- fjjoin [task]
+  (task))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn reduce
   "Like core/reduce except:
@@ -30,12 +43,9 @@
          (array? coll) (array-reduce coll f init)
          :else (-reduce coll f init)))))
 
-#_
 (defprotocol CollFold
   (coll-fold [coll n combinef reducef]))
 
-;;; TODO: update docstring for CLJS
-#_
 (defn fold
   "Reduces a collection using a (potentially parallel) reduce-combine
   strategy. The collection is partitioned into groups of approximately
@@ -45,13 +55,13 @@
   reducef). combinef must be associative, and, when called with no
   arguments, (combinef) must produce its identity element. These
   operations may be performed in parallel, but the results will
-  preserve order."
+  preserve order.
+
+  Note: Performing operations in parallel is currently not implemented."
   ([reducef coll] (fold reducef reducef coll))
   ([combinef reducef coll] (fold 512 combinef reducef coll))
   ([n combinef reducef coll]
      (coll-fold coll n combinef reducef)))
-
-(def fold reduce)
 
 (defn reducer
   "Given a reducible collection, and a transformation function xf,
@@ -79,9 +89,7 @@
        (-reduce [_ f1 init]
          (-reduce coll (xf f1) init))
 
-       #_
        CollFold
-       #_
        (coll-fold [_ n combinef reducef]
          (coll-fold coll n combinef (xf reducef))))))
 
@@ -188,7 +196,7 @@
 
   cljs.core/ISeqable
   (-seq [_] (concat (seq left) (seq right)))
-  
+
   cljs.core/IReduce
   (-reduce [this f1] (-reduce this f1 (f1)))
   (-reduce
@@ -197,9 +205,7 @@
      right f1
      (-reduce left f1 init)))
 
-  #_
   CollFold
-  #_
   (coll-fold
     [this n combinef reducef]
     (-reduce this reducef)))
@@ -263,7 +269,6 @@
 (into [] (r/flatten nil))
 )
 
-(comment
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; fold impls ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn- foldvec
   [v n combinef reducef]
@@ -282,20 +287,26 @@
          (combinef (f1) (fjjoin t2)))))))
 
 (extend-protocol CollFold
- Object
+ nil
+ (coll-fold
+  [coll n combinef reducef]
+  (combinef))
+
+ object
  (coll-fold
   [coll n combinef reducef]
   ;;can't fold, single reduce
   (reduce reducef (combinef) coll))
- 
- clojure.lang.IPersistentVector
+
+ cljs.core/IPersistentVector
  (coll-fold
   [v n combinef reducef]
   (foldvec v n combinef reducef))
 
- clojure.lang.PersistentHashMap
+ #_
+ cljs.core/PersistentHashMap
+ #_
  (coll-fold
   [m n combinef reducef]
   (.fold m n combinef reducef fjinvoke fjtask fjfork fjjoin)))
 
-)
