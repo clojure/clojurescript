@@ -17,7 +17,9 @@
   ([form] (to-ast 'cljs.user form))
   ([ns form]
     (let [env (assoc-in (ana/empty-env) [:ns :name] ns)]
-      (binding [ana/*passes* [elide-children simplify-env ana/infer-type]]
+      (binding [ana/*passes*
+                (or ana/*passes*
+                  [elide-children simplify-env ana/infer-type])]
         (ana/analyze env form)))))
 
 (comment

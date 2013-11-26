@@ -1400,7 +1400,7 @@
     (assoc ast :tag tag)
     ast))
 
-(def ^:dynamic *passes* [infer-type])
+(def ^:dynamic *passes* nil)
 
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
@@ -1436,7 +1436,7 @@
                             (false? form)  'boolean)]
                   (cond-> {:op :constant :env env :form form}
                     tag (assoc :tag tag))))))
-          *passes*)))))
+          (or *passes* [infer-type]))))))
 
 (defn- source-path
   "Returns a path suitable for providing to tools.reader as a 'filename'."
