@@ -1294,7 +1294,10 @@
 
 (defmacro make-array
   [size]
-  (vary-meta `(js/Array. ~size)
+  (vary-meta
+    (if (core/number? size)
+      `(array ~@(take size (repeat nil)))
+      `(js/Array. ~size))
     assoc :tag 'array))
 
 (defmacro list
