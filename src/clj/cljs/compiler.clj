@@ -140,12 +140,12 @@
                                      :gline (:gen-line m)}
                               (= (:op ast) :var)
                               (assoc :name (str (-> ast :info :name))))]
-                  ; Dec the line number for 0-indexed line numbers.
-                  ; tools.reader has 0-indexed line number, chrome
-                  ; expects 1-indexed source maps.
+                  ; Dec the line/column numbers for 0-indexing.
+                  ; tools.reader uses 1-indexed sources, chrome
+                  ; expects 0-indexed source maps.
                   (update-in m [:source-map (dec line)]
                     (fnil (fn [line]
-                            (update-in line [(or column 0)]
+                            (update-in line [(if column (dec column) 0)]
                               (fnil (fn [column] (conj column minfo)) [])))
                       (sorted-map))))))))))
     (emit* ast)))
