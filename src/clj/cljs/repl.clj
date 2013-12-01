@@ -89,8 +89,8 @@
                  (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form))))
                        t (System/currentTimeMillis)]
                    (str js
-                        "\n//@ sourceURL=repl-" t ".js"
-                        "\n//@ sourceMappingURL=data:application/json;base64,"
+                        "\n//# sourceURL=repl-" t ".js"
+                        "\n//# sourceMappingURL=data:application/json;base64,"
                         (DatatypeConverter/printBase64Binary
                          (.getBytes
                           (sm/encode
