@@ -35,6 +35,7 @@
 (def ^:dynamic *print-meta* false)
 (def ^:dynamic *print-dup* false)
 (def ^:dynamic *print-length* nil)
+(def ^:dynamic *print-level* nil)
 
 (defn- pr-opts []
   {:flush-on-newline *flush-on-newline*
@@ -6627,18 +6628,22 @@ reduces them without incurring seq initialization"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
 (defn pr-sequential-writer [writer print-one begin sep end opts coll]
-  (-write writer begin)
-  (when (seq coll)
-    (print-one (first coll) writer opts))
-  (loop [coll (next coll) n (:print-length opts)]
-    (when (and coll (or (nil? n) (not (zero? n))))
-      (-write writer sep)
-      (print-one (first coll) writer opts)
-      (recur (next coll) (dec n))))
-  (when (:print-length opts)
-    (-write writer sep)
-    (print-one "..." writer opts))
-  (-write writer end))
+  (binding [*print-level* (when-not (nil? *print-level*) (dec *print-level*))]
+    (if (and (not (nil? *print-level*)) (neg? *print-level*))
+      (-write writer "#")
+      (do
+        (-write writer begin)
+        (when (seq coll)
+          (print-one (first coll) writer opts))
+        (loop [coll (next coll) n (:print-length opts)]
+          (when (and coll (or (nil? n) (not (zero? n))))
+            (-write writer sep)
+            (print-one (first coll) writer opts)
+            (recur (next coll) (dec n))))
+        (when (:print-length opts)
+          (-write writer sep)
+          (print-one "..." writer opts))
+        (-write writer end)))))
 
 (defn write-all [writer & ss]
   (doseq [s ss]
@@ -6822,6 +6827,16 @@ reduces them without incurring seq initialization"
   (when *print-newline*
     (newline (pr-opts))))
 
+(defn print-map [m print-one writer opts]
+  (pr-sequential-writer
+    writer
+    (fn [e w opts]
+      (do (print-one (key e) w opts)
+          (-write w \space)
+          (print-one (val e) w opts)))
+    "{" ", " "}"
+    opts (seq m)))
+
 (extend-protocol IPrintWithWriter
   LazySeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
@@ -6873,8 +6888,7 @@ reduces them without incurring seq initialization"
 
   ObjMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (print-map coll pr-writer writer opts))
 
   KeySeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
@@ -6887,18 +6901,15 @@ reduces them without incurring seq initialization"
 
   PersistentArrayMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (print-map coll pr-writer writer opts))
 
   PersistentHashMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (print-map coll pr-writer writer opts))
 
   PersistentTreeMap
   (-pr-writer [coll writer opts]
-    (let [pr-pair (fn [keyval] (pr-sequential-writer writer pr-writer "" " " "" opts keyval))]
-      (pr-sequential-writer writer pr-pair "{" ", " "}" opts coll)))
+    (print-map coll pr-writer writer opts))
 
   PersistentHashSet
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
