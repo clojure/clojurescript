@@ -7146,7 +7146,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
                     (doseq [[k v] x]
                       (aset m (key->js k) (clj->js v)))
                     m)
-         (coll? x) (apply array (map clj->js x))
+         (coll? x) (let [arr (array)]
+                     (doseq [x (map clj->js x)]
+                       (.push arr x))
+                     arr)
          :else x))))
 
 (defprotocol IEncodeClojure
