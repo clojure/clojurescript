@@ -475,14 +475,6 @@
 
       :else (throw (js/Error. (str coll "is not ISeqable"))))))
 
-(defn ^seq sequence
-  "Coerces coll to a (possibly empty) sequence, if it is not already
-  one. Will not force a lazy seq. (sequence nil) yields ()"
-  [coll]
-   (if (seq? coll)
-     coll
-     (or (seq coll) ())))
-
 (defn first
   "Returns the first item in the collection. Calls seq on its
   argument. If coll is nil, returns nil."
@@ -1260,6 +1252,14 @@ reduces them without incurring seq initialization"
      false)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
+
+(defn ^seq sequence
+  "Coerces coll to a (possibly empty) sequence, if it is not already
+  one. Will not force a lazy seq. (sequence nil) yields ()"
+  [coll]
+   (if (seq? coll)
+     coll
+     (or (seq coll) ())))
 
 (defn ^number compare
   "Comparator. Returns a negative number, zero, or a positive number
