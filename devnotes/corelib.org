@@ -471,7 +471,7 @@ as macro
 * DONE seq
 * DONE seq?
 * seque
-* TODO sequence
+* DONE sequence
 * DONE sequential?
 * DONE set
 * set-error-handler!
@@ -492,7 +492,7 @@ as macro
 * DONE sorted-map-by
 * DONE sorted-set
 * DONE sorted-set-by
-* TODO sorted?
+* DONE sorted?
 * DONE special-symbol?
 * spit
 * DONE split-at
@@ -502,7 +502,7 @@ as macro
 * struct
 * struct-map
 * DONE subs
-* TODO subseq
+* DONE subseq
 * DONE subvec
 * TODO supers
 * DONE swap!
