@@ -6,8 +6,6 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(set! *warn-on-reflection* true)
-
 (ns cljs.analyzer
   (:refer-clojure :exclude [macroexpand-1])
   (:require [clojure.java.io :as io]
@@ -19,6 +17,8 @@
             [clojure.tools.reader.reader-types :as readers])
   (:import java.lang.StringBuilder
            java.io.File))
+
+(set! *warn-on-reflection* true)
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
