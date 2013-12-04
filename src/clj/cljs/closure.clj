@@ -135,10 +135,18 @@
                 :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
         compiler-options (doto (CompilerOptions.)
                            (.setCodingConvention (ClosureCodingConvention.)))]
-    (when (contains? opts :closure-warnings)
-      (doseq [[type level] (:closure-warnings opts)]
-        (. compiler-options
-          (setWarningLevel (type warning-types) (level check-level)))))
+    (doseq [[key val] (:closure-defines opts)]
+      (let [key (name key)]
+        (cond
+          (string? val) (.setDefineToStringLiteral compiler-options key val)
+          (integer? val) (.setDefineToIntegerLiteral compiler-options key val)
+          (float? val) (.setDefineToDoubleLiteral compiler-options key val)
+          (or (true? val)
+              (false? val)) (.setDefineToBooleanLiteral compiler-options key val)
+          :else (println "value for" key "must be string, int, float, or bool"))))
+    (doseq [[type level] (:closure-warnings opts)]
+      (. compiler-options
+        (setWarningLevel (type warning-types) (level check-level))))
     (when (contains? opts :source-map)
       (set! (.sourceMapOutputPath compiler-options)
             (:source-map opts))
