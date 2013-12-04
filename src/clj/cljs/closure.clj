@@ -54,6 +54,8 @@
            com.google.javascript.jscomp.JSSourceFile
            com.google.javascript.jscomp.Result
            com.google.javascript.jscomp.JSError
+           com.google.javascript.jscomp.CheckLevel
+           com.google.javascript.jscomp.DiagnosticGroups
            com.google.javascript.jscomp.CommandLineRunner))
 
 (defmacro ^:private debug-prn
@@ -91,7 +93,39 @@
     (set! (.printInputDelimiter compiler-options)
       (:print-input-delimiter opts))))
 
-(defn make-options
+(def check-level
+  {:error CheckLevel/ERROR
+   :warning CheckLevel/WARNING
+   :off CheckLevel/OFF})
+
+(def warning-types
+  {:access-controls DiagnosticGroups/ACCESS_CONTROLS
+   :ambiguous-function-decl DiagnosticGroups/AMBIGUOUS_FUNCTION_DECL
+   :debugger-statement-present DiagnosticGroups/DEBUGGER_STATEMENT_PRESENT
+   :check-regexp DiagnosticGroups/CHECK_REGEXP
+   :check-types DiagnosticGroups/CHECK_TYPES
+   :check-useless-code DiagnosticGroups/CHECK_USELESS_CODE
+   :check-variables DiagnosticGroups/CHECK_VARIABLES
+   :const DiagnosticGroups/CONST
+   :constant-property DiagnosticGroups/CONSTANT_PROPERTY
+   :deprecated DiagnosticGroups/DEPRECATED
+   :duplicate-message DiagnosticGroups/DUPLICATE_MESSAGE
+   :es5-strict DiagnosticGroups/ES5_STRICT
+   :externs-validation DiagnosticGroups/EXTERNS_VALIDATION
+   :fileoverview-jsdoc DiagnosticGroups/FILEOVERVIEW_JSDOC
+   :global-this DiagnosticGroups/GLOBAL_THIS
+   :internet-explorer-checks DiagnosticGroups/INTERNET_EXPLORER_CHECKS
+   :invalid-casts DiagnosticGroups/INVALID_CASTS
+   :missing-properties DiagnosticGroups/MISSING_PROPERTIES
+   :non-standard-jsdoc DiagnosticGroups/NON_STANDARD_JSDOC
+   :strict-module-dep-check DiagnosticGroups/STRICT_MODULE_DEP_CHECK
+   :tweaks DiagnosticGroups/TWEAKS
+   :undefined-names DiagnosticGroups/UNDEFINED_NAMES
+   :undefined-variables DiagnosticGroups/UNDEFINED_VARIABLES
+   :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
+   :visiblity DiagnosticGroups/VISIBILITY})
+
+(defn ^CompilerOptions make-options
   "Create a CompilerOptions object and set options from opts map."
   [opts]
   (let [level (case (:optimizations opts)
@@ -100,6 +134,10 @@
                 :simple CompilationLevel/SIMPLE_OPTIMIZATIONS)
         compiler-options (doto (CompilerOptions.)
                            (.setCodingConvention (ClosureCodingConvention.)))]
+    (when (contains? opts :closure-warnings)
+      (doseq [[type level] (:closure-warnings opts)]
+        (. compiler-options
+          (setWarningLevel (type warning-types) (level check-level)))))
     (when (contains? opts :source-map)
       (set! (.sourceMapOutputPath compiler-options)
             (:source-map opts))
