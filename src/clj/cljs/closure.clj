@@ -45,6 +45,7 @@
            java.net.URL
            java.util.logging.Level
            java.util.jar.JarFile
+           java.util.List
            com.google.common.collect.ImmutableList
            com.google.javascript.jscomp.CompilerOptions
            com.google.javascript.jscomp.CompilationLevel
@@ -164,8 +165,8 @@
     (map #(io/resource %)
          (filter #(do
                     (and 
-                      (.startsWith % lib-path)
-                      (.endsWith % ".js")))
+                      (.startsWith ^String % lib-path)
+                      (.endsWith ^String % ".js")))
                  (jar-entry-names jar-path)))))
 (declare to-url)
 (defn find-js-fs
@@ -173,13 +174,13 @@
   [path]
   (let [file (io/file path)]
     (when (.exists file)
-      (map to-url (filter #(.endsWith (.getName %) ".js") (file-seq (io/file path)))))))
+      (map to-url (filter #(.endsWith ^String (.getName ^File %) ".js") (file-seq (io/file path)))))))
 
 
 (defn find-js-classpath 
   "finds all js files on the classpath matching the path provided"
   [path]
-  (let [process-entry #(if (.endsWith % ".jar")
+  (let [process-entry #(if (.endsWith ^String % ".jar")
                            (find-js-jar % path)
                            (find-js-fs (str % "/" path)))
         cpath-list (let [sysp (System/getProperty  "java.class.path" )]
@@ -579,13 +580,13 @@
   "Create an index of Google dependencies by namespace and file name."
   []
   (letfn [(parse-list [s] (when (> (count s) 0)
-                            (-> (.substring s 1 (dec (count s)))
+                            (-> (.substring ^String s 1 (dec (count s)))
                                 (string/split #"'\s*,\s*'"))))]
     (->> (line-seq (io/reader (io/resource "goog/deps.js")))
          (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
          (remove nil?)
          (map #(drop 1 %))
-         (remove #(.startsWith (first %) "../../third_party"))
+         (remove #(.startsWith ^String (first %) "../../third_party"))
          (map #(hash-map :file (str "goog/"(first %))
                          :provides (parse-list (second %))
                          :requires (parse-list (last %))
@@ -747,12 +748,12 @@
   "Use the Closure Compiler to optimize one or more JavaScript files."
   [opts & sources]
   (let [closure-compiler (make-closure-compiler)
-        externs (load-externs opts)
+        ^List externs (load-externs opts)
         compiler-options (make-options opts)
         sources (if (= :whitespace (:optimizations opts))
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
-        inputs (map #(js-source-file (javascript-name %) %) sources)
+        ^List inputs (map #(js-source-file (javascript-name %) %) sources)
         result ^Result (.compile closure-compiler externs inputs compiler-options)]
     (if (.success result)
       ;; compiler.getSourceMap().reset()
