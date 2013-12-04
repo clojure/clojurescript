@@ -25,7 +25,7 @@
     <dependency>
       <groupId>com.google.javascript</groupId>
       <artifactId>closure-compiler</artifactId>
-      <version>v20130603</version>
+      <version>v20131014</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
