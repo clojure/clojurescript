@@ -155,4 +155,15 @@
               (catch js/Error e :ok))]
       (assert (= r :ok) (str "Failed to throw reader error for: " unicode-error))))
 
+  ;; CLJS-717
+
+  (assert (array? (reader/read-string "#js [1 2 3]")))
+  (assert (= (alength (reader/read-string "#js [1 2 3]")) 3))
+  (assert (= (seq (reader/read-string "#js [1 2 3]")) (seq [1 2 3])))
+  (assert (= (set (js-keys (reader/read-string "#js {:foo \"bar\" :baz \"woz\"}"))) #{"foo" "baz"}))
+  (assert (= (aget (reader/read-string "#js {:foo \"bar\"}") "foo") "bar"))
+  (assert (= (aget (reader/read-string "#js {\"foo\" \"bar\"}") "foo") "bar"))
+  (assert (array? (aget (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")))
+  (assert (= (seq (aget (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")) '(1 2 3)))
+
   :ok)

@@ -525,6 +525,27 @@ nil if the end of stream has been reached")
     (reader-error nil "Queue literal expects a vector for its elements.")))
 
 
+(defn ^:private read-js
+  [form]
+  (cond
+    (vector? form)
+    (let [arr (array)]
+      (doseq [x form]
+        (.push arr x))
+      arr)
+
+    (map? form)
+    (let [obj (js-obj)]
+      (doseq [[k v] form]
+        (aset obj (name k) v))
+      obj)
+    
+    :else
+    (reader-error nil
+      (str "JS literal expects a vector or map containing "
+           "only string or unqualified keyword keys"))))
+
+
 (defn ^:private read-uuid
   [uuid]
   (if (string? uuid)
@@ -533,7 +554,8 @@ nil if the end of stream has been reached")
 
 (def *tag-table* (atom {"inst"  read-date
                         "uuid"  read-uuid
-                        "queue" read-queue}))
+                        "queue" read-queue
+                        "js"    read-js}))
 
 (def *default-data-reader-fn*
   (atom nil))

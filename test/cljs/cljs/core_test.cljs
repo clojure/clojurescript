@@ -2016,5 +2016,16 @@
 
   (assert (= (count {some-x :foo some-y :bar}) 1))
 
+  ;; CLJS-717
+
+  (assert (array? #js [1 2 3]))
+  (assert (= (alength #js [1 2 3]) 3))
+  (assert (= (seq #js [1 2 3]) (seq [1 2 3])))
+  (assert (= (set (js-keys #js {:foo "bar" :baz "woz"})) #{"foo" "baz"}))
+  (assert (= (aget #js {:foo "bar"} "foo") "bar"))
+  (assert (= (aget #js {"foo" "bar"} "foo") "bar"))
+  (assert (array? (aget #js {"foo" #js [1 2 3]} "foo")))
+  (assert (= (seq (aget #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))
+
   :ok
   )
