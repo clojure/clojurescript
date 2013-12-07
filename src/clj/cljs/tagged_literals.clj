@@ -3,12 +3,14 @@
 
 (defn read-queue
   [form]
-  (assert (vector? form) "Queue literal expects a vector for its elements.")
+  (when-not (vector? form)
+    (throw (RuntimeException. "Queue literal expects a vector for its elements.")))
   (list 'cljs.core/into 'cljs.core.PersistentQueue.EMPTY form))
 
 (defn read-uuid
   [form]
-  (assert (string? form) "UUID literal expects a string as its representation.")
+  (when-not (string? form)
+    (throw (RuntimeException. "UUID literal expects a string as its representation.")))
   (try
     (let [uuid (java.util.UUID/fromString form)]
       (list (symbol "UUID.") form))
@@ -17,7 +19,8 @@
 
 (defn read-inst
   [form]
-  (assert (string? form) "Instance literal expects a string for its timestamp.")
+  (when-not (string? form)
+    (throw (RuntimeException. "Instance literal expects a string for its timestamp.")))
   (try
     (let [^java.util.Date d (inst/read-instant-date form)]
       (list (symbol "js/Date.") (.getTime d)))
@@ -31,11 +34,11 @@
 
 (defn read-js
   [form]
-  (assert (or (vector? form) (map? form))
-    "JavaScript literal must use map or vector notation")
-  (assert (or (not (map? form))
-              (every? valid-js-literal-key? (keys form)))
-    "JavaScript literal keys must be strings or unqualified keywords")
+  (when-not (or (vector? form) (map? form))
+    (throw (RuntimeException. "JavaScript literal must use map or vector notation")))
+  (when-not (or (not (map? form))
+                (every? valid-js-literal-key? (keys form)))
+    (throw (RuntimeException. "JavaScript literal keys must be strings or unqualified keywords")))
   (if (map? form)
     `(cljs.core/js-obj
        ~@(apply concat (map (fn [[k v]] [(name k) v]) form)))
