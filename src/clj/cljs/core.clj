@@ -279,6 +279,9 @@
 (defmacro array? [x]
   (bool-expr (core/list 'js* "~{} instanceof Array" x)))
 
+(defmacro object? [x]
+  (bool-expr (core/list 'js* "~{}.constructor === Object" x)))
+
 (defmacro string? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'string'" x)))
 

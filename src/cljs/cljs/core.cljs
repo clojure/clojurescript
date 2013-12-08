@@ -88,6 +88,9 @@
 (defn ^boolean array? [x]
   (cljs.core/array? x))
 
+(defn ^boolean object? [x]
+  (cljs.core/object? x))
+
 (defn ^boolean number? [n]
   (cljs.core/number? n))
 
@@ -6673,6 +6676,8 @@ reduces them without incurring seq initialization"
          (fn [match] (aget char-escapes match)))
        \"))
 
+(declare print-map)
+
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
    configurable, allowing efficient implementations such as appending
@@ -6702,8 +6707,15 @@ reduces them without incurring seq initialization"
               (or (identical? (type obj) js/Boolean) (number? obj))
               (-write writer (str obj))
 
+              (object? obj)
+              (do
+                (-write writer "#js ")
+                (print-map
+                  (map (fn [k] [(keyword k) (aget obj k)]) (js-keys obj))
+                  pr-writer writer opts))
+
               (array? obj)
-              (pr-sequential-writer writer pr-writer "#js [" " " "]>" opts obj)
+              (pr-sequential-writer writer pr-writer "#js [" " " "]" opts obj)
 
               ^boolean (goog/isString obj)
               (if (:readably opts)
