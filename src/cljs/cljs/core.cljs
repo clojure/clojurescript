@@ -6703,7 +6703,7 @@ reduces them without incurring seq initialization"
               (-write writer (str obj))
 
               (array? obj)
-              (pr-sequential-writer writer pr-writer "#<Array [" ", " "]>" opts obj)
+              (pr-sequential-writer writer pr-writer "#js [" " " "]>" opts obj)
 
               ^boolean (goog/isString obj)
               (if (:readably opts)
