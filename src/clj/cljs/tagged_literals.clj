@@ -30,6 +30,8 @@
       (and (keyword? k)
            (nil? (namespace k)))))
 
+(deftype JSValue [val])
+
 (defn read-js
   [form]
   (when-not (or (vector? form) (map? form))
@@ -37,10 +39,7 @@
   (when-not (or (not (map? form))
                 (every? valid-js-literal-key? (keys form)))
     (throw (RuntimeException. "JavaScript literal keys must be strings or unqualified keywords")))
-  (if (map? form)
-    `(cljs.core/js-obj
-       ~@(apply concat (map (fn [[k v]] [(name k) v]) form)))
-    `(cljs.core/array ~@form)))
+  (JSValue. form))
 
 (def ^:dynamic *cljs-data-readers*
   {'queue read-queue

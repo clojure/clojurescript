@@ -16,7 +16,8 @@
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers])
   (:import java.lang.StringBuilder
-           java.io.File))
+           java.io.File
+           [cljs.tagged_literals JSValue]))
 
 (set! *warn-on-reflection* true)
 
@@ -1383,7 +1384,24 @@
         items (disallowing-recur (vec (map #(analyze expr-env %) form)))]
     (analyze-wrap-meta {:op :set :env env :form form :items items :children items :tag 'cljs.core/ISet})))
 
+(defn analyze-js-value
+  [env ^JSValue form]
+  (let [val (.val form)
+        expr-env (assoc env :context :expr)
+        items (if (map? val)
+                (zipmap (keys val)
+                        (disallowing-recur (doall (map #(analyze expr-env %) (vals val)))))
+                (disallowing-recur (doall (map #(analyze expr-env %) val))))]
+    {:op :js-value
+     :js-type (if (map? val) :object :array)
+     :env env
+     :form form
+     :items items
+     :children items
+     :tag (if (map? val) 'object 'array)}))
+
 (defn analyze-wrap-meta [expr]
+
   (let [form (:form expr)
         m (dissoc (meta form) :line :column :end-column :end-line :source)]
     (if (seq m)
@@ -1426,6 +1444,7 @@
                 (vector? form) (analyze-vector env form)
                 (set? form) (analyze-set env form)
                 (keyword? form) (analyze-keyword env form)
+                (instance? JSValue form) (analyze-js-value env form)
                 (= form ()) (analyze-list env form)
                 :else
                 (let [tag (cond

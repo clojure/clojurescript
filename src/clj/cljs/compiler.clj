@@ -347,6 +347,20 @@
 
       :else (emits "cljs.core.PersistentHashSet.fromArray([" (comma-sep items) "], true)"))))
 
+(defmethod emit* :js-value
+  [{:keys [items js-type env]}]
+  (emit-wrap env
+    (if (= js-type :object)
+      (do
+        (emits "{")
+        (when-let [items (seq items)]
+          (let [[[k v] & r] items]
+            (emits "\"" (name k) "\": " v)
+            (doseq [[k v] r]
+              (emits ", \"" (name k) "\": " v))))
+        (emits "}"))
+      (emits "[" (comma-sep items) "]"))))
+
 (defmethod emit* :constant
   [{:keys [form env]}]
   (when-not (= :statement (:context env))
