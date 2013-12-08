@@ -244,6 +244,14 @@
     (emit-constant nil)
     (emits ")")))
 
+;; tagged literal support
+
+(defmethod emit-constant java.util.Date [^java.util.Date date]
+  (emits "new Date(" (.getTime date) ")"))
+
+(defmethod emit-constant java.util.UUID [^java.util.UUID uuid]
+  (emits "new cljs.core.UUID(\"" (.toString uuid) "\")"))
+
 (defmacro emit-wrap [env & body]
   `(let [env# ~env]
      (when (= :return (:context env#)) (emits "return "))

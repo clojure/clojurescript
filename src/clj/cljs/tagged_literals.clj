@@ -12,8 +12,7 @@
   (when-not (string? form)
     (throw (RuntimeException. "UUID literal expects a string as its representation.")))
   (try
-    (let [uuid (java.util.UUID/fromString form)]
-      (list (symbol "UUID.") form))
+    (java.util.UUID/fromString form)
     (catch Throwable e
       (throw (RuntimeException. (.getMessage e))))))
 
@@ -22,8 +21,7 @@
   (when-not (string? form)
     (throw (RuntimeException. "Instance literal expects a string for its timestamp.")))
   (try
-    (let [^java.util.Date d (inst/read-instant-date form)]
-      (list (symbol "js/Date.") (.getTime d)))
+    (inst/read-instant-date form)
     (catch Throwable e
       (throw (RuntimeException. (.getMessage e))))))
 
