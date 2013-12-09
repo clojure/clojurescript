@@ -921,7 +921,9 @@
          (check-output-dir opts)
          (check-source-map opts)
          (check-source-map-path opts)
-         (swap! compiler-env assoc-in [:opts :emit-constants] emit-constants)
+         (swap! compiler-env #(-> %
+                                  (assoc-in [:opts :emit-constants] emit-constants)
+                                  (assoc :target (:target opts))))
          (binding [ana/*cljs-static-fns*
                    (or (and (= (:optimizations opts) :advanced)
                             (not (false? (:static-fns opts))))

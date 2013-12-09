@@ -289,7 +289,9 @@
   (bool-expr (core/list 'js* "~{} === false" x)))
 
 (defmacro array? [x]
-  (bool-expr (core/list 'js* "~{} instanceof Array" x)))
+  (if (= :nodejs (:target @env/*compiler*))
+    (bool-expr `(.isArray js/Array ~x))
+    (bool-expr (core/list 'js* "~{} instanceof Array" x))))
 
 (defmacro string? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'string'" x)))
