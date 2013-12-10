@@ -969,6 +969,109 @@
                (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)))
       (warning :undeclared-ns env {:type :macro :lib lib :sym sym}))))
 
+(defn parse-ns-error-msg [spec msg]
+  (str msg "; offending spec: " (pr-str spec)))
+
+(defn basic-validate-ns-spec [env macros? spec]
+  (when-not (or (symbol? spec) (vector? spec))
+    (throw
+      (error env
+        (parse-ns-error-msg spec
+          "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))))
+  (when (vector? spec)
+    (when-not (symbol? (first spec))
+      (throw
+        (error env
+          (parse-ns-error-msg spec
+            "Library name must be specified as a symbol in :require / :require-macros"))))
+    (when-not (odd? (count spec))
+      (throw
+        (error env
+          (parse-ns-error-msg spec
+            "Only :as alias and :refer (names) options supported in :require"))))
+    (when-not (every? #{:as :refer} (map first (partition 2 (next spec))))
+      (throw
+        (error env
+          (parse-ns-error-msg spec
+            "Only :as and :refer options supported in :require / :require-macros"))))
+    (when-not (let [fs (frequencies (next spec))]
+                (and (<= (fs :as 0) 1)
+                     (<= (fs :refer 0) 1)))
+      (throw
+        (error env
+          (parse-ns-error-msg spec
+            "Each of :as and :refer options may only be specified once in :require / :require-macros"))))))
+
+(defn parse-ns-excludes [env args]
+  (reduce
+    (fn [s [k exclude xs]]
+      (if (= k :refer-clojure)
+        (do
+          (when-not (= exclude :exclude) 
+            (throw (error env "Only [:refer-clojure :exclude (names)] form supported")))
+          (when (seq s)
+            (throw (error env "Only one :refer-clojure form is allowed per namespace definition")))
+          (into s xs))
+        s))
+    #{} args))
+
+(defn use->require [env [lib kw referred :as spec]]
+  (when-not (and (symbol? lib) (= :only kw) (sequential? referred) (every? symbol? referred))
+    (throw
+      (error env
+        (parse-ns-error-msg spec
+          "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))))
+  [lib :refer referred])
+
+(defn parse-require-spec [env macros? deps aliases spec]
+  (if (symbol? spec)
+    (recur env macros? deps aliases [spec])
+    (do
+      (basic-validate-ns-spec env macros? spec)
+      (let [[lib & opts] spec
+            {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
+            [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
+        (when-not (or (symbol? alias) (nil? alias))
+          (throw
+            (error env
+              (parse-ns-error-msg spec
+                ":as must be followed by a symbol in :require / :require-macros"))))
+        (when alias
+          (let [alias-type (if macros? :macros :fns)]
+            (when (contains? (alias-type @aliases) alias)
+              (throw (error env (parse-ns-error-msg spec ":as alias must be unique"))))
+            (swap! aliases
+              update-in [alias-type]
+              conj alias)))
+        (when-not (or (and (sequential? referred)
+                           (every? symbol? referred))
+                      (nil? referred))
+          (throw
+            (error env
+              (parse-ns-error-msg spec
+                ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
+        (when-not macros?
+          (swap! deps conj lib))
+        (merge
+          (when alias
+            {rk (merge {alias lib} {lib lib})})
+          (when referred {uk (apply hash-map (interleave referred (repeat lib)))}))))))
+
+(defn parse-import-spec [env deps spec]
+  (when-not (or (and (sequential? spec)
+                     (every? symbol? spec))
+                (and (symbol? spec) (nil? (namespace spec))))
+    (throw (error env (parse-ns-error-msg spec "Only lib.ns.Ctor or [lib.ns Ctor*] spec supported in :import"))))
+  (let [import-map (if (sequential? spec)
+                     (->> (rest spec)
+                       (map #(vector % (symbol (str (first spec) "." %))))
+                       (into {}))
+                     {(symbol (last (string/split (str spec) #"\."))) spec})]
+    (doseq [[_ spec] import-map]
+      (swap! deps conj spec))
+    {:import  import-map
+     :require import-map}))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
   (when-not (symbol? name) 
@@ -977,81 +1080,17 @@
         args      (if docstring (next args) args)
         metadata  (if (map? (first args)) (first args))
         args      (if metadata (next args) args)
-        excludes
-        (reduce (fn [s [k exclude xs]]
-                  (if (= k :refer-clojure)
-                    (do
-                      (when-not (= exclude :exclude) 
-                        (throw (error env "Only [:refer-clojure :exclude (names)] form supported")))
-                      (when (seq s)
-                        (throw (error env "Only one :refer-clojure form is allowed per namespace definition")))
-                      (into s xs))
-                    s))
-                #{} args)
-        deps (atom #{})
-        aliases (atom {:fns #{} :macros #{}})
+        excludes  (parse-ns-excludes env args)
+        deps      (atom #{})
+        aliases   (atom {:fns #{} :macros #{}})
+        spec-parsers {:require        (partial parse-require-spec env false deps aliases)
+                      :require-macros (partial parse-require-spec env true deps aliases)
+                      :use            (comp (partial parse-require-spec env false deps aliases)
+                                            (partial use->require env))
+                      :use-macros     (comp (partial parse-require-spec env true deps aliases)
+                                            (partial use->require env))
+                      :import         (partial parse-import-spec env deps)}
         valid-forms (atom #{:use :use-macros :require :require-macros :import})
-        error-msg (fn [spec msg] (str msg "; offending spec: " (pr-str spec)))
-        parse-require-spec (fn parse-require-spec [macros? spec]
-                             (when-not (or (symbol? spec) (vector? spec))
-                               (throw (error env (error-msg spec "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))))
-                             (when (vector? spec)
-                               (when-not (symbol? (first spec))
-                                 (throw (error env (error-msg spec "Library name must be specified as a symbol in :require / :require-macros"))))
-                               (when-not (odd? (count spec))
-                                 (throw (error env (error-msg spec "Only :as alias and :refer (names) options supported in :require"))))
-                               (when-not (every? #{:as :refer} (map first (partition 2 (next spec))))
-                                 (throw (error env (error-msg spec "Only :as and :refer options supported in :require / :require-macros"))))
-                               (when-not (let [fs (frequencies (next spec))]
-                                           (and (<= (fs :as 0) 1)
-                                                (<= (fs :refer 0) 1)))
-                                 (throw (error env (error-msg spec "Each of :as and :refer options may only be specified once in :require / :require-macros")))))
-                             (if (symbol? spec)
-                               (recur macros? [spec])
-                               (let [[lib & opts] spec
-                                     {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
-                                     [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
-                                 (when-not (or (symbol? alias) (nil? alias))
-                                   (throw (error env (error-msg spec ":as must be followed by a symbol in :require / :require-macros"))))
-                                 (when alias
-                                   (let [alias-type (if macros? :macros :fns)]
-                                     (when (contains? (alias-type @aliases) alias)
-                                       (throw (error env (error-msg spec ":as alias must be unique"))))
-                                     (swap! aliases
-                                            update-in [alias-type]
-                                            conj alias)))
-                                 (when-not (or (and (sequential? referred) (every? symbol? referred))
-                                               (nil? referred))
-                                   (throw (error env (error-msg spec ":refer must be followed by a sequence of symbols in :require / :require-macros"))))
-                                 (when-not macros?
-                                   (swap! deps conj lib))
-                                 (merge
-                                   (when alias
-                                     {rk (merge {alias lib} {lib lib})})
-                                   (when referred {uk (apply hash-map (interleave referred (repeat lib)))})))))
-        use->require (fn use->require [[lib kw referred :as spec]]
-                       (when-not (and (symbol? lib) (= :only kw) (sequential? referred) (every? symbol? referred))
-                         (throw (error env (error-msg spec "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))))
-                       [lib :refer referred])
-        parse-import-spec (fn parse-import-spec [spec]
-                            (when-not (or (and (sequential? spec)
-                                               (every? symbol? spec))
-                                          (and (symbol? spec) (nil? (namespace spec))))
-                              (throw (error env (error-msg spec "Only lib.ns.Ctor or [lib.ns Ctor*] spec supported in :import"))))
-                            (let [import-map (if (sequential? spec)
-                                               (->> (rest spec)
-                                                 (map #(vector % (symbol (str (first spec) "." %))))
-                                                 (into {}))
-                                               {(symbol (last (string/split (str spec) #"\."))) spec})]
-                              (doseq [[_ spec] import-map]
-                                (swap! deps conj spec))
-                              {:import  import-map
-                               :require import-map}))
-        spec-parsers {:require        (partial parse-require-spec false)
-                      :require-macros (partial parse-require-spec true)
-                      :use            (comp (partial parse-require-spec false) use->require)
-                      :use-macros     (comp (partial parse-require-spec true) use->require)
-                      :import         parse-import-spec}
         {uses :use requires :require use-macros :use-macros require-macros :require-macros imports :import :as params}
         (reduce (fn [m [k & libs]]
                   (when-not (#{:use :use-macros :require :require-macros :import} k)
@@ -1072,14 +1111,14 @@
     (when (seq use-macros)
       (check-use-macros use-macros env))
     (swap! env/*compiler* update-in [::namespaces name] assoc
-           :name name
-           :doc docstring
-           :excludes excludes
-           :uses uses
-           :requires requires
-           :use-macros use-macros
-           :require-macros require-macros
-           :imports imports)
+      :name name
+      :doc docstring
+      :excludes excludes
+      :uses uses
+      :requires requires
+      :use-macros use-macros
+      :require-macros require-macros
+      :imports imports)
     {:env env :op :ns :form form :name name :doc docstring :uses uses :requires requires :imports imports
      :use-macros use-macros :require-macros require-macros :excludes excludes}))
 
