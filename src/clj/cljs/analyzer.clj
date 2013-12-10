@@ -973,12 +973,12 @@
   (str msg "; offending spec: " (pr-str spec)))
 
 (defn basic-validate-ns-spec [env macros? spec]
-  (when-not (or (symbol? spec) (vector? spec))
+  (when-not (or (symbol? spec) (sequential? spec))
     (throw
       (error env
         (parse-ns-error-msg spec
           "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))))
-  (when (vector? spec)
+  (when (sequential? spec)
     (when-not (symbol? (first spec))
       (throw
         (error env
@@ -1072,6 +1072,29 @@
     {:import  import-map
      :require import-map}))
 
+(defn desugar-ns-specs [args]
+  (let [{:keys [require] :as indexed}
+        (->> args
+          (map (fn [[k & specs]] [k (into [] specs)]))
+          (into {}))
+        sugar-keys #{:include-macros :refer-macros}
+        to-macro-specs
+        (fn [specs]
+          (->> specs
+            (filter #(and (sequential? %) (some sugar-keys %)))
+            (map #(->> % (remove #{:include-macros true})
+                         (map (fn [x] (if (= x :refer-macros) :refer x)))))))
+        remove-sugar
+        (fn [spec]
+          (if (and (sequential? spec) (some sugar-keys spec))
+            (let [[l & r] (split-with #(not (contains? sugar-keys %)) spec)]
+              (concat l (drop 2 r)))
+            spec))]
+    (if-let [require-specs (seq (to-macro-specs require))]
+      (map (fn [[k v]] (cons k (map remove-sugar v)))
+        (update-in indexed [:require-macros] (fnil into []) require-specs))
+      args)))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _]
   (when-not (symbol? name) 
@@ -1079,7 +1102,7 @@
   (let [docstring (if (string? (first args)) (first args))
         args      (if docstring (next args) args)
         metadata  (if (map? (first args)) (first args))
-        args      (if metadata (next args) args)
+        args      (desugar-ns-specs (if metadata (next args) args))
         excludes  (parse-ns-excludes env args)
         deps      (atom #{})
         aliases   (atom {:fns #{} :macros #{}})
