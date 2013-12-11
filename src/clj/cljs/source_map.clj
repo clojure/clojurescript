@@ -181,6 +181,7 @@
   (let [lines (atom [[]])
         names->idx (atom {})
         name-idx (atom 0)
+        preamble-lines (take (or (:preamble-line-count opts) 0) (repeat []))
         info->segv
         (fn [info source-idx line col]
           (let [segv [(:gcol info) source-idx line col]]
@@ -221,7 +222,7 @@
                                              #(last (string/split % #"/")))]
                                      (map f paths)))
                    "lineCount" (:lines opts)
-                   "mappings" (->> (lines->segs @lines)
+                   "mappings" (->> (lines->segs (concat preamble-lines @lines))
                                    (map #(string/join "," %))
                                    (string/join ";"))
                    "names" (into []

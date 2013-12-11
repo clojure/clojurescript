@@ -702,6 +702,16 @@
                    required-cljs
                    inputs)))))
 
+(defn preamble-from-paths [paths]
+  (str (apply str (map #(slurp (io/file %)) paths)) "\n"))
+
+(defn make-preamble [{:keys [target preamble hashbang]}]
+  (if preamble
+    (preamble-from-paths preamble)
+    (if (= :nodejs target)
+      (str "#!" (or hashbang "/usr/bin/env node") "\n")
+      "")))
+
 (comment
   ;; add dependencies to literal js
   (add-dependencies {} "goog.provide('test.app');\ngoog.require('cljs.core');")
@@ -762,7 +772,9 @@
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
         ^List inputs (map #(js-source-file (javascript-name %) %) sources)
-        result ^Result (.compile closure-compiler externs inputs compiler-options)]
+        result ^Result (.compile closure-compiler externs inputs compiler-options)
+        preamble (make-preamble opts)
+        preamble-line-count (- (count (.split #"\r?\n" preamble -1)) 1)]
     (if (.success result)
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
@@ -805,7 +817,8 @@
                       merged)))
                 (spit (io/file name)
                       (sm/encode merged
-                                 {:lines (+ (:lineCount sm-json) 2)
+                                 {:preamble-line-count preamble-line-count
+                                  :lines (+ (:lineCount sm-json) preamble-line-count 2)
                                   :file (:file sm-json)
                                   :output-dir (output-directory opts)
                                   :source-map-path (:source-map-path opts)
@@ -1004,10 +1017,8 @@
 
 (def get-upstream-deps (memoize get-upstream-deps*))
 
-(defn add-header [{:keys [hashbang target]} js]
-  (if (= :nodejs target)
-    (str "#!" (or hashbang "/usr/bin/env node") "\n" js)
-    js))
+(defn add-header [opts js]
+  (str (make-preamble opts) js))
 
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
   (if output-wrapper
