@@ -6418,7 +6418,8 @@ reduces them without incurring seq initialization"
         rng)))
 
   ISeq
-  (-first [rng] start)
+  (-first [rng]
+    (when-not (nil? (-seq rng)) start))
   (-rest [rng]
     (if-not (nil? (-seq rng))
       (Range. meta (+ start step) end step nil)

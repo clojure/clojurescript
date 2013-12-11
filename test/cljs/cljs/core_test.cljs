@@ -2033,5 +2033,9 @@
   (assert (= (apply list (drop-while (partial = 1) [1 2 3])) '(2 3)))
   (assert (= (set (drop 1 #js [1 2 3])) #{2 3}))
 
+  ;; CLJS-724
+
+  (assert (nil? (first (rest (rest (rest (range 3)))))))
+
   :ok
   )
