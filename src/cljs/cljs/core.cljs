@@ -1976,7 +1976,7 @@ reduces them without incurring seq initialization"
     (reduce conj () coll)))
 
 (defn list [& xs]
-  (let [arr (if (instance? IndexedSeq xs)
+  (let [arr (if (and (instance? IndexedSeq xs) (zero? (.-i xs)))
               (.-arr xs)
               (let [arr (array)]
                 (loop [^not-native xs xs]
@@ -3389,7 +3389,7 @@ reduces them without incurring seq initialization"
            coll)))
 
 (defn vector [& args]
-  (if (instance? IndexedSeq args)
+  (if (and (instance? IndexedSeq args) (zero? (.-i args)))
     (cljs.core.PersistentVector.fromArray (.-arr args) true)
     (vec args)))
 
@@ -6248,7 +6248,7 @@ reduces them without incurring seq initialization"
     (cond
       (nil? in) #{}
 
-      (instance? IndexedSeq in)
+      (and (instance? IndexedSeq in) (zero? (.-i in)))
       (set-from-indexed-seq in)
 
       :else

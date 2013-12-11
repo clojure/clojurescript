@@ -2027,5 +2027,11 @@
   (assert (array? (aget #js {"foo" #js [1 2 3]} "foo")))
   (assert (= (seq (aget #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))
 
+  ;; CLJS-725
+
+  (assert (= (apply vector (drop-while (partial = 1) [1 2 3])) [2 3]))
+  (assert (= (apply list (drop-while (partial = 1) [1 2 3])) '(2 3)))
+  (assert (= (set (drop 1 #js [1 2 3])) #{2 3}))
+
   :ok
   )
