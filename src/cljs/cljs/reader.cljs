@@ -383,7 +383,7 @@ nil if the end of stream has been reached")
   (cond
    (identical? c \") read-string*
    (identical? c \:) read-keyword
-   (identical? c \;) not-implemented ;; never hit this
+   (identical? c \;) read-comment
    (identical? c \') (wrapping-reader 'quote)
    (identical? c \@) (wrapping-reader 'deref)
    (identical? c \^) read-meta
