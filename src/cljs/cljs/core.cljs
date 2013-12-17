@@ -996,7 +996,8 @@ reduces them without incurring seq initialization"
   that does not contain a mapping for key(s)."
   ([coll] coll)
   ([coll k]
-     (-dissoc coll k))
+    (when-not (nil? coll)
+      (-dissoc coll k)))
   ([coll k & ks]
     (when-not (nil? coll)
       (let [ret (dissoc coll k)]

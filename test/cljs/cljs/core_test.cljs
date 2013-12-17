@@ -768,6 +768,7 @@
   ;; dissoc
   (assert (= {} (dissoc {1 2 3 4} 1 3)))
   (assert (= {1 2} (dissoc {1 2 3 4} 3)))
+  (assert (nil? (dissoc nil :foo)))
 
   ;; disj
   (assert (= #{1 2 3} (disj #{1 2 3})))
