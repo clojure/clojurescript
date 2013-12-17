@@ -703,7 +703,7 @@
                    inputs)))))
 
 (defn preamble-from-paths [paths]
-  (str (apply str (map #(slurp (io/file %)) paths)) "\n"))
+  (str (apply str (map #(slurp (io/resource %)) paths)) "\n"))
 
 (defn make-preamble [{:keys [target preamble hashbang]}]
   (if preamble
