@@ -774,6 +774,7 @@
   (assert (= #{1 2 3} (disj #{1 2 3})))
   (assert (= #{1 2} (disj #{1 2 3} 3)))
   (assert (= #{1} (disj #{1 2 3} 2 3)))
+  (assert (nil? (disj nil :foo)))
 
   ;; memoize
   (let [f (memoize (fn [] (rand)))]

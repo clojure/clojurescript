@@ -1050,7 +1050,8 @@ reduces them without incurring seq initialization"
   does not contain key(s)."
   ([coll] coll)
   ([coll k]
-     (-disjoin coll k))
+    (when-not (nil? coll)
+      (-disjoin coll k)))
   ([coll k & ks]
     (when-not (nil? coll)
       (let [ret (disj coll k)]
