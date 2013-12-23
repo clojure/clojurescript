@@ -2039,5 +2039,10 @@
 
   (assert (nil? (first (rest (rest (rest (range 3)))))))
 
+  ;; CLJS-730
+
+  (assert (true? (object? #js {})))
+  (assert (false? (object? nil)))
+
   :ok
   )
