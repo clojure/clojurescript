@@ -88,15 +88,17 @@
 (defn ^boolean array? [x]
   (cljs.core/array? x))
 
-(defn ^boolean object? [x]
-  (cljs.core/object? x))
-
 (defn ^boolean number? [n]
   (cljs.core/number? n))
 
 (defn ^boolean not
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
+
+(defn ^boolean object? [x]
+  (if-not (nil? x)
+    (identical? (.-constructor x) js/Object)
+    false))
 
 (defn ^boolean string? [x]
   (goog/isString x))
