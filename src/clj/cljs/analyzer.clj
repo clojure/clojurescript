@@ -1558,13 +1558,16 @@ argument, which the reader will use in any emitted errors."
              :else (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))
     (env/ensure
-      (binding [*cljs-ns* 'cljs.user
-                *cljs-file* (if (instance? File res)
-                              (.getPath ^File res)
-                              (.getPath ^java.net.URL res))
-                reader/*alias-map* (or reader/*alias-map* {})]
-        (let [env (empty-env)]
-          (doseq [form (seq (forms-seq res))]
-            (let [env (assoc env :ns (get-namespace *cljs-ns*))]
-              (analyze env form))))))))
+      (let [path (if (instance? File res)
+                   (.getPath ^File res)
+                   (.getPath ^java.net.URL res))]
+        (when-not (get-in @env/*compiler* [::analyzed-cljs path])
+          (binding [*cljs-ns* 'cljs.user
+                    *cljs-file* path
+                    reader/*alias-map* (or reader/*alias-map* {})]
+            (let [env (empty-env)]
+              (doseq [form (seq (forms-seq res))]
+                (let [env (assoc env :ns (get-namespace *cljs-ns*))]
+                  (analyze env form)))))
+          (swap! env/*compiler* assoc-in [::analyzed-cljs path] true))))))
 

@@ -907,7 +907,9 @@
                         (sm/encode {(url-path src) (:source-map sm-data)}
                           {:lines (+ (:gen-line sm-data) 2)
                            :file (url-path dest)}))))
-                  (swap! env/*compiler* update-in [::compiled-cljs] assoc (.getPath (.toURL ^File dest)) ret)
+                  (let [path (.getPath (.toURL ^File dest))]
+                    (swap! env/*compiler* assoc-in [::compiled-cljs path] ret)
+                    (swap! env/*compiler* assoc-in [::ana/analyzed-cljs path] true))
                   ret)))))))))
 
 (defn compiled-by-version [^File f]
@@ -938,28 +940,27 @@
     (env/ensure
       (let [namespaces' (::ana/namespaces @env/*compiler*)
             ret
-            (with-core-cljs
-              (binding [ana/*cljs-ns* 'cljs.user]
-                (loop [forms (ana/forms-seq src)]
-                  (if (seq forms)
-                    (let [env (ana/empty-env)
-                          ast (ana/no-warn (ana/analyze env (first forms)))]
-                      (if (= (:op ast) :ns)
-                        (let [ns-name (:name ast)
-                              deps    (merge (:uses ast) (:requires ast))]
-                          (merge
-                            {:ns (or ns-name 'cljs.user)
-                             :provides [ns-name]
-                             :requires (if (= ns-name 'cljs.core)
-                                         (set (vals deps))
-                                         (cond-> (conj (set (vals deps)) 'cljs.core)
-                                           (get-in @env/*compiler* [:opts :emit-constants])
-                                           (conj 'constants-table)))
-                             :file dest
-                             :source-file src}
-                            (when (and dest (.exists ^File dest))
-                              {:lines (-> (io/reader dest) line-seq count)})))
-                        (recur (rest forms))))))))]
+            (binding [ana/*cljs-ns* 'cljs.user]
+              (loop [forms (ana/forms-seq src)]
+                (if (seq forms)
+                  (let [env (ana/empty-env)
+                        ast (ana/no-warn (ana/analyze env (first forms)))]
+                    (if (= (:op ast) :ns)
+                      (let [ns-name (:name ast)
+                            deps    (merge (:uses ast) (:requires ast))]
+                        (merge
+                          {:ns (or ns-name 'cljs.user)
+                           :provides [ns-name]
+                           :requires (if (= ns-name 'cljs.core)
+                                       (set (vals deps))
+                                       (cond-> (conj (set (vals deps)) 'cljs.core)
+                                         (get-in @env/*compiler* [:opts :emit-constants])
+                                         (conj 'constants-table)))
+                           :file dest
+                           :source-file src}
+                          (when (and dest (.exists ^File dest))
+                            {:lines (-> (io/reader dest) line-seq count)})))
+                      (recur (rest forms)))))))]
         ;; TODO this _was_ a reset! of the old ana/namespaces atom; should we capture and
         ;; then restore the entirety of env/*compiler* here instead?
         (swap! env/*compiler* assoc ::ana/namespaces namespaces')
