@@ -28,6 +28,7 @@
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
 (def ^:dynamic *cljs-macros-is-classpath* true)
 (def ^:dynamic *cljs-dep-set* (with-meta #{} {:dep-path []}))
+(def ^:dynamic *analyze-deps* true)
 (def -cljs-macros-loaded (atom false))
 
 (def ^:dynamic *cljs-warnings*
@@ -1123,7 +1124,7 @@
                   (swap! valid-forms disj k)
                   (apply merge-with merge m (map (spec-parsers k) libs)))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
-    (when (seq @deps)
+    (when (and *analyze-deps* (seq @deps))
       (analyze-deps name @deps))
     (when (seq uses)
       (check-uses uses env))

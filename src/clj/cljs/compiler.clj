@@ -940,7 +940,8 @@
     (env/ensure
       (let [namespaces' (::ana/namespaces @env/*compiler*)
             ret
-            (binding [ana/*cljs-ns* 'cljs.user]
+            (binding [ana/*cljs-ns* 'cljs.user
+                      ana/*analyze-deps* false]
               (loop [forms (ana/forms-seq src)]
                 (if (seq forms)
                   (let [env (ana/empty-env)
