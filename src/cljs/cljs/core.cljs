@@ -6136,7 +6136,7 @@ reduces them without incurring seq initialization"
        (loop [i 0
               out (transient cljs.core.PersistentHashSet.EMPTY)]
          (if (< i len)
-           (recur (+ i 2) (-conj! out (aget items i)))
+           (recur (inc i) (-conj! out (aget items i)))
            (-persistent! out)))))))
 
 (deftype TransientHashSet [^:mutable transient-map]

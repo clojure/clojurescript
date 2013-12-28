@@ -1345,7 +1345,8 @@
 (defmacro hash-set
   ([] `cljs.core.PersistentHashSet.EMPTY)
   ([& xs]
-    (if (core/and (every? #(= (:op %) :constant)
+    (if (core/and (core/<= (count xs) 8)
+                  (every? #(= (:op %) :constant)
                     (map #(cljs.analyzer/analyze &env %) xs))
                   (= (count (into #{} xs)) (count xs)))
       `(cljs.core.PersistentHashSet. nil
