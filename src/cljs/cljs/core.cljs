@@ -223,6 +223,9 @@
     [this a b c d e f g h i j k l m n o p q s t]
     [this a b c d e f g h i j k l m n o p q s t rest]))
 
+(defprotocol ICloneable
+  (^clj -clone [value]))
+
 (defprotocol ICounted
   (^number -count [coll] "constant time count"))
 
@@ -420,6 +423,8 @@
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
   (toString [_] str)
+  ICloneable
+  (-clone [_] (Symbol. ns name str _hash _meta))
   IEquiv
   (-equiv [_ other]
     (if (instance? Symbol other)
@@ -457,6 +462,9 @@
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
 (declare array-seq prim-seq IndexedSeq)
+
+(defn clone [value]
+  (-clone value))
 
 (defn ^seq seq
   "Returns a seq on the collection. If the collection is
@@ -665,6 +673,9 @@ reduces them without incurring seq initialization"
   (toString [coll]
    (pr-str* coll))
 
+  ICloneable
+  (-clone [_] (IndexedSeq. arr i))
+
   ISeqable
   (-seq [this] this)
 
@@ -738,6 +749,9 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ICloneable
+  (-clone [_] (RSeq. ci i meta))
 
   IMeta
   (-meta [coll] meta)
@@ -1870,6 +1884,9 @@ reduces them without incurring seq initialization"
 
   IList
 
+  ICloneable
+  (-clone [_] (List. meta first rest count __hash))
+
   IWithMeta
   (-with-meta [coll meta] (List. meta first rest count __hash))
 
@@ -1923,6 +1940,9 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
 
   IList
+
+  ICloneable
+  (-clone [_] (EmptyList. meta))
 
   IWithMeta
   (-with-meta [coll meta] (EmptyList. meta))
@@ -2001,6 +2021,9 @@ reduces them without incurring seq initialization"
 
   IList
 
+  ICloneable
+  (-clone [_] (Cons. meta first rest __hash))
+
   IWithMeta
   (-with-meta [coll meta] (Cons. meta first rest __hash))
 
@@ -2051,6 +2074,9 @@ reduces them without incurring seq initialization"
   Object
   (toString [_] (str ":" fqn))
   
+  ICloneable
+  (-clone [_] (Keyword. ns name fqn _hash))
+
   IEquiv
   (-equiv [_ other]
     (if (instance? Keyword other)
@@ -3240,6 +3266,9 @@ reduces them without incurring seq initialization"
   (toString [coll]
     (pr-str* coll))
 
+  ICloneable
+  (-clone [_] (PersistentVector. meta cnt shift root tail __hash))
+
   IWithMeta
   (-with-meta [coll meta] (PersistentVector. meta cnt shift root tail __hash))
 
@@ -3496,6 +3525,9 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ICloneable
+  (-clone [_] (Subvec. meta v start end __hash))
 
   IWithMeta
   (-with-meta [coll meta] (build-subvec meta v start end __hash))
@@ -3820,6 +3852,9 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ICloneable
+  (-clone [coll] (PersistentQueue. meta count front rear __hash))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentQueue. meta count front rear __hash))
@@ -4177,6 +4212,9 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ICloneable
+  (-clone [_] (PersistentArrayMap. meta cnt arr __hash))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentArrayMap. meta cnt arr __hash))
@@ -5001,6 +5039,9 @@ reduces them without incurring seq initialization"
   (toString [coll]
     (pr-str* coll))
 
+  ICloneable
+  (-clone [_] (PersistentHashMap. meta cnt root has-nil? nil-val __hash))
+
   IWithMeta
   (-with-meta [coll meta] (PersistentHashMap. meta cnt root has-nil? nil-val __hash))
 
@@ -5728,7 +5769,6 @@ reduces them without incurring seq initialization"
   (toString [coll]
     (pr-str* coll))
 
-  Object
   (entry-at [coll k]
     (loop [t tree]
       (if-not (nil? t)
@@ -5736,6 +5776,9 @@ reduces them without incurring seq initialization"
           (cond (zero? c) t
                 (neg? c)  (recur (.-left t))
                 :else     (recur (.-right t)))))))
+
+  ICloneable
+  (-clone [_] (PersistentTreeMap. comp tree cnt meta __hash))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentTreeMap. comp tree cnt meta __hash))
@@ -6069,6 +6112,9 @@ reduces them without incurring seq initialization"
   (toString [coll]
     (pr-str* coll))
 
+  ICloneable
+  (-clone [_] (PersistentHashSet. meta hash-map __hash))
+
   IWithMeta
   (-with-meta [coll meta] (PersistentHashSet. meta hash-map __hash))
 
@@ -6180,6 +6226,9 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ICloneable
+  (-clone [_] (PersistentTreeSet. meta tree-map __hash))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentTreeSet. meta tree-map __hash))
@@ -6416,6 +6465,9 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ICloneable
+  (-clone [_] (Range. meta start end step __hash))
 
   IWithMeta
   (-with-meta [rng meta] (Range. meta start end step __hash))
@@ -7570,6 +7622,9 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 ;; UUID
 
 (deftype UUID [uuid]
+  ICloneable
+  (-clone [_] (UUID. uuid))
+
   IEquiv
   (-equiv [_ other]
     (and (instance? UUID other) (identical? uuid (.-uuid other))))
