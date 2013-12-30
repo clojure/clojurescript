@@ -11,7 +11,7 @@
                "test/clj"]
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/data.json "0.2.3"]
-                 [org.clojure/tools.reader "0.8.0"]
+                 [org.clojure/tools.reader "0.8.3"]
                  [org.clojure/google-closure-library "0.0-20130212-95c19e7f0f5f"]
                  [com.google.javascript/closure-compiler "v20131014"]
                  [org.mozilla/rhino "1.7R4"]]
