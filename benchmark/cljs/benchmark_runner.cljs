@@ -40,6 +40,13 @@
 (simple-benchmark [coll "foobar"] (nth coll 2) 1000000)
 (println)
 
+(defprotocol IFoo (foo [x]))
+
+(println ";;; cloning & specify")
+(simple-benchmark [coll [1 2 3]] (clone coll) 1000000)
+(simple-benchmark [coll [1 2 3]] (specify coll IFoo (foo [_] :bar)) 1000000)
+(println)
+
 (println ";;; list ops")
 (simple-benchmark [coll (list 1 2 3)] (first coll) 1000000)
 (simple-benchmark [coll (list 1 2 3)] (-first coll) 1000000)
