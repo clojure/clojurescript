@@ -603,6 +603,12 @@
            ~@impls))
        (new ~t ~@locals nil))))
 
+(defmacro specify [expr & impls]
+  (let [x (with-meta (gensym "x") {:extend :instance})]
+    `(let [~x (cljs.core/clone ~expr)]
+       (extend-type ~x ~@impls)
+       ~x)))
+
 (defmacro ^:private js-this []
   (core/list 'js* "this"))
 
@@ -658,8 +664,13 @@
                 ~type ~(with-meta `(fn ~@meths) (meta form))))
         sigs))))
 
-(defn prototype-prefix [tsym sym]
-  `(.. ~tsym -prototype ~(to-property sym)))
+(core/defmulti extend-prefix (fn [tsym sym] (-> tsym meta :extend)))
+
+(core/defmethod extend-prefix :instance
+  [tsym sym] `(.. ~tsym ~(to-property sym)))
+
+(core/defmethod extend-prefix :default
+  [tsym sym] `(.. ~tsym -prototype ~(to-property sym)))
 
 (defn adapt-obj-params [type [[this & args :as sig] & body]]
   (core/list (vec args)
@@ -685,7 +696,7 @@
 
 (defn add-obj-methods [type type-sym sigs]
   (map (fn [[f & meths :as form]]
-         `(set! ~(prototype-prefix type-sym f)
+         `(set! ~(extend-prefix type-sym f)
             ~(with-meta `(fn ~@(map #(adapt-obj-params type %) meths)) (meta form))))
     sigs))
 
@@ -693,8 +704,7 @@
   (map
     (fn [meth]
       (let [arity (count (first meth))]
-        `(set! ~(prototype-prefix type-sym
-                  (symbol (core/str "cljs$core$IFn$_invoke$arity$" arity)))
+        `(set! ~(extend-prefix type-sym (symbol (core/str "cljs$core$IFn$_invoke$arity$" arity)))
            ~(with-meta `(fn ~meth) (meta form)))))
     (map #(adapt-ifn-invoke-params type %) meths)))
 
@@ -703,8 +713,8 @@
         this-sym (with-meta 'self__ {:tag type})
         argsym   (gensym "args")]
     (concat
-      [`(set! ~(prototype-prefix type-sym 'call) ~(with-meta `(fn ~@meths) (meta form)))
-       `(set! ~(prototype-prefix type-sym 'apply)
+      [`(set! ~(extend-prefix type-sym 'call) ~(with-meta `(fn ~@meths) (meta form)))
+       `(set! ~(extend-prefix type-sym 'apply)
           ~(with-meta
              `(fn ~[this-sym argsym]
                 (this-as ~this-sym
@@ -718,10 +728,10 @@
     (if (vector? (first meths))
       ;; single method case
       (let [meth meths]
-        [`(set! ~(prototype-prefix type-sym (core/str pf "$arity$" (count (first meth))))
+        [`(set! ~(extend-prefix type-sym (core/str pf "$arity$" (count (first meth))))
             ~(with-meta `(fn ~@(adapt-proto-params type meth)) (meta form)))])
       (map (fn [[sig & body :as meth]]
-             `(set! ~(prototype-prefix type-sym (core/str pf "$arity$" (count sig)))
+             `(set! ~(extend-prefix type-sym (core/str pf "$arity$" (count sig)))
                 ~(with-meta `(fn ~(adapt-proto-params type meth)) (meta form))))
         meths))))
 
@@ -734,7 +744,7 @@
       (add-obj-methods type type-sym sigs)
       (concat
         (when-not (skip-flag psym)
-          [`(set! ~(prototype-prefix type-sym pprefix) true)])
+          [`(set! ~(extend-prefix type-sym pprefix) true)])
         (mapcat
           (fn [sig]
             (if (= psym 'cljs.core/IFn)

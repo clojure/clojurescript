@@ -2052,5 +2052,17 @@
                      [0 2] [1 2] [2 2] [3 2] [4 2] [0 1] [1 1]
                      [2 1] [3 1] [1 0] [2 0] [3 0]))))
 
+  (defprotocol IWoz
+    (-woz [this]))
+
+  (def noz [])
+
+  ;; CLJS-414
+
+  (assert (= (specify noz IWoz (-woz [_] :boz)) noz))
+  (assert (= (specify noz IWoz (-woz [this] this)) noz))
+  (assert (not (identical? (specify noz IWoz (-woz [_] :boz)) noz)))
+  (assert (= (-woz (specify noz IWoz (-woz [_] :boz))) :boz))
+
   :ok
   )
