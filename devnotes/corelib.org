@@ -438,7 +438,7 @@ dunno about regex
 * refer
 * refer-clojure
 * DONE reify
-* TODO specify - make a particular object extend a protocol
+* DONE specify - make a particular object extend a protocol
 * release-pending-sends
 * DONE rem
 * DONE remove
