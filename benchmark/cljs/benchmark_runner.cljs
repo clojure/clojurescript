@@ -45,6 +45,7 @@
 (println ";;; cloning & specify")
 (simple-benchmark [coll [1 2 3]] (clone coll) 1000000)
 (simple-benchmark [coll [1 2 3]] (specify coll IFoo (foo [_] :bar)) 1000000)
+(simple-benchmark [coll (specify [1 2 3] IFoo (foo [_] :bar))] (foo coll) 1000000)
 (println)
 
 (println ";;; list ops")
