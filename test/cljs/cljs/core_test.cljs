@@ -2060,8 +2060,8 @@
   ;; CLJS-414
 
   (assert (= (specify noz IWoz (-woz [_] :boz)) noz))
-  (assert (= (specify noz IWoz (-woz [this] this)) noz))
   (assert (not (identical? (specify noz IWoz (-woz [_] :boz)) noz)))
+  (assert (= (-woz (specify noz IWoz (-woz [this] this))) noz))
   (assert (= (-woz (specify noz IWoz (-woz [_] :boz))) :boz))
 
   :ok
