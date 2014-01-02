@@ -293,7 +293,7 @@
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
              (nil? (io/resource (ns->relpath ns-sym)))
-             (:undeclared *cljs-warnings*))
+             (:undeclared-ns *cljs-warnings*))
     (warning :undeclared-ns env {:ns-sym ns-sym})))
 
 (defn core-name?
@@ -960,7 +960,7 @@
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
-    (when (and (:undeclared *cljs-warnings*)
+    (when (and (:undeclared-ns-form *cljs-warnings*)
                (= (get-in @env/*compiler* [::namespaces lib :defs sym] ::not-found) ::not-found))
       (warning :undeclared-ns-form env {:type :var :lib lib :sym sym}))))
 
