@@ -2064,5 +2064,12 @@
   (assert (= (-woz (specify noz IWoz (-woz [this] this))) noz))
   (assert (= (-woz (specify noz IWoz (-woz [_] :boz))) :boz))
 
+  ;; CLJS-734
+
+  (assert (= (-> (transient []) (conj! 1 2) persistent!) [1 2]))
+  (assert (= (-> (transient #{1 2 3}) (disj! 1 2) persistent!) #{3}))
+  (assert (= (-> (transient {}) (assoc! :a 1 :b 2) persistent!) {:a 1 :b 2}))
+  (assert (= (-> (transient {:a 1 :b 2 :c 3}) (dissoc! :a :b) persistent!) {:c 3}))
+
   :ok
   )

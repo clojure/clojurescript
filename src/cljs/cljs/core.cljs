@@ -2500,20 +2500,44 @@ reduces them without incurring seq initialization"
 (defn persistent! [tcoll]
   (-persistent! tcoll))
 
-(defn conj! [tcoll val]
-  (-conj! tcoll val))
+(defn conj!
+  ([tcoll val]
+   (-conj! tcoll val))
+  ([tcoll val & vals]
+   (let [ntcoll (-conj! tcoll val)]
+     (if vals
+       (recur ntcoll (first vals) (next vals))
+       ntcoll))))
 
-(defn assoc! [tcoll key val]
-  (-assoc! tcoll key val))
+(defn assoc!
+  ([tcoll key val]
+   (-assoc! tcoll key val))
+  ([tcoll key val & kvs]
+   (let [ntcoll (-assoc! tcoll key val)]
+     (if kvs
+       (recur ntcoll (first kvs) (second kvs) (nnext kvs))
+       ntcoll))))
 
-(defn dissoc! [tcoll key]
-  (-dissoc! tcoll key))
+(defn dissoc!
+  ([tcoll key]
+   (-dissoc! tcoll key))
+  ([tcoll key & ks]
+   (let [ntcoll (-dissoc! tcoll key)]
+     (if ks
+       (recur ntcoll (first ks) (next ks))
+       ntcoll))))
 
 (defn pop! [tcoll]
   (-pop! tcoll))
 
-(defn disj! [tcoll val]
-  (-disjoin! tcoll val))
+(defn disj!
+  ([tcoll val]
+   (-disjoin! tcoll val))
+  ([tcoll val & vals]
+   (let [ntcoll (-disjoin! tcoll val)]
+     (if vals
+       (recur ntcoll (first vals) (next vals))
+       ntcoll))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
