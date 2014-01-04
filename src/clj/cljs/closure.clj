@@ -1126,6 +1126,7 @@
                             (not (false? (:static-fns opts))))
                        (:static-fns opts)
                        ana/*cljs-static-fns*)
+                   *assert* (not= (:elide-asserts opts) true)
                    ana/*cljs-warnings*
                    (let [enabled? (true? (opts :warnings))]
                      (merge ana/*cljs-warnings*
