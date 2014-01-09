@@ -859,6 +859,8 @@
           impls (concat
                  impls
                  ['IRecord
+                  'ICloneable
+                  `(~'-clone [this#] (new ~tagname ~@fields))
                   'IHash
                   `(~'-hash [this#] (caching-hash this# ~'hash-imap ~'__hash))
                   'IEquiv
