@@ -48,6 +48,7 @@
            java.util.List
            com.google.common.collect.ImmutableList
            com.google.javascript.jscomp.CompilerOptions
+           com.google.javascript.jscomp.CompilerOptions$LanguageMode
            com.google.javascript.jscomp.CompilationLevel
            com.google.javascript.jscomp.SourceMap$Format
            com.google.javascript.jscomp.SourceMap$DetailLevel
@@ -90,6 +91,19 @@
   [opts ^CompilerOptions compiler-options]
   (when (contains? opts :pretty-print)
     (set! (.prettyPrint compiler-options) (:pretty-print opts)))
+
+  (when (contains? opts :language-in)
+    (case (:language-in opts)
+      :ecmascript5        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
+      :ecmascript5-strict (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
+      :ecmascript3        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
+
+  (when (contains? opts :language-out)
+    (case (:language-out opts)
+      :ecmascript5        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
+      :ecmascript5-strict (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
+      :ecmascript3        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
+
   (when (contains? opts :print-input-delimiter)
     (set! (.printInputDelimiter compiler-options)
       (:print-input-delimiter opts))))
