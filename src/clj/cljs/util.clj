@@ -17,16 +17,18 @@
 (defn clojurescript-version 
   "Returns clojurescript version as a printable string."
   []
-  (str
-    (:major *clojurescript-version*)
-    "."
-    (:minor *clojurescript-version*)
-    (when-let [i (:incremental *clojurescript-version*)]
-      (str "." i))
-    (when-let [q (:qualifier *clojurescript-version*)]
-      (str "-" q))
-    (when (:interim *clojurescript-version*)
-      "-SNAPSHOT")))
+  (if (bound? #'*clojurescript-version*)
+    (str
+     (:major *clojurescript-version*)
+     "."
+     (:minor *clojurescript-version*)
+     (when-let [i (:incremental *clojurescript-version*)]
+       (str "." i))
+     (when-let [q (:qualifier *clojurescript-version*)]
+       (str "-" q))
+     (when (:interim *clojurescript-version*)
+       "-SNAPSHOT"))
+    ""))
 
 (defn compiled-by-version [^File f]
   (with-open [reader (io/reader f)]
