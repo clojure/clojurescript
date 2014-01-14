@@ -11,6 +11,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [cljs.compiler :as comp]
+            [cljs.util :as util]
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
             [cljs.repl.server :as server])
@@ -229,7 +230,8 @@
 
   port:           The port on which the REPL server will run. Defaults to 9000.
   working-dir:    The directory where the compiled REPL client JavaScript will
-                  be stored. Defaults to \".repl\".
+                  be stored. Defaults to \".repl\" with a ClojureScript version
+                  suffix, eg. \".repl-0.0-2138\".
   serve-static:   Should the REPL server attempt to serve static content?
                   Defaults to true.
   static-dir:     List of directories to search for static content. Defaults to
@@ -247,7 +249,7 @@
         opts (merge (BrowserEnv.)
                     {:port          9000
                      :optimizations :simple
-                     :working-dir   ".repl"
+                     :working-dir   (->> [".repl" (util/clojurescript-version)] (remove empty?) (string/join "-"))
                      :serve-static  true
                      :static-dir    ["." "out/"]
                      :preloaded-libs   []
