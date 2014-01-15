@@ -298,7 +298,7 @@
   ;;can't fold, single reduce
   (reduce reducef (combinef) coll))
 
- cljs.core/IPersistentVector
+ cljs.core/PersistentVector
  (coll-fold
   [v n combinef reducef]
   (foldvec v n combinef reducef))
