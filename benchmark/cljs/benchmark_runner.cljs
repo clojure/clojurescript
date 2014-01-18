@@ -1,6 +1,7 @@
 (ns cljs.benchmark-runner
   (:refer-clojure :exclude [println])
-  (:require [cljs.reader :as reader]))
+  (:require [cljs.reader :as reader]
+            [clojure.core.reducers :as r]))
 
 (def println print)
 
@@ -291,6 +292,9 @@
 (simple-benchmark [a (Box. 0) xs (range 512)] (doseq [x xs y xs] (set! a -val (+ (.-val a) x))) 4)
 (simple-benchmark [a (Box. 0) xs (vec (range 512))] (doseq [x xs y xs] (set! a -val (+ (.-val a) x))) 4)
 (println)
+
+(println ";; reducers")
+(simple-benchmark [xs (into [] (range 1000000))] (r/reduce + (r/map inc (r/map inc (r/map inc xs)))) 1)
 
 (println "\n")
 
