@@ -59,6 +59,10 @@
   when when-first when-let when-not while
   cond-> cond->> as-> some-> some->>])
 
+(defmacro defonce [x init]
+  `(when-not (exists? ~x)
+     (def ~x ~init)))
+
 (defmacro ^{:private true} assert-args [fnname & pairs]
   `(do (when-not ~(first pairs)
          (throw (IllegalArgumentException.
