@@ -423,8 +423,6 @@
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
   (toString [_] str)
-  ICloneable
-  (-clone [_] (Symbol. ns name str _hash _meta))
   IEquiv
   (-equiv [_ other]
     (if (instance? Symbol other)
@@ -2077,9 +2075,6 @@ reduces them without incurring seq initialization"
   Object
   (toString [_] (str ":" fqn))
   
-  ICloneable
-  (-clone [_] (Keyword. ns name fqn _hash))
-
   IEquiv
   (-equiv [_ other]
     (if (instance? Keyword other)
@@ -7649,9 +7644,6 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 ;; UUID
 
 (deftype UUID [uuid]
-  ICloneable
-  (-clone [_] (UUID. uuid))
-
   IEquiv
   (-equiv [_ other]
     (and (instance? UUID other) (identical? uuid (.-uuid other))))
