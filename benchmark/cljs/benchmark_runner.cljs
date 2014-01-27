@@ -298,4 +298,8 @@
 
 (println "\n")
 
-
+(println ";; multimethods")
+(defmulti simple-multi identity)
+(defmethod simple-multi :foo [x] x)
+(simple-benchmark [] (simple-multi :foo) 100000)
+(println "\n")
