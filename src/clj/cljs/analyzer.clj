@@ -1533,8 +1533,9 @@
 argument, which the reader will use in any emitted errors."
   ([f] (forms-seq f (source-path f)))
   ([f filename]
-     (let [rdr (readers/indexing-push-back-reader
-                 (java.io.PushbackReader. (io/reader f)) 1 filename)
+     (let [rdr (io/reader f)
+           pbr (readers/indexing-push-back-reader
+                (java.io.PushbackReader. rdr) 1 filename)
            data-readers tags/*cljs-data-readers*
            forms-seq*
            (fn forms-seq* []
@@ -1546,9 +1547,9 @@ argument, which the reader will use in any emitted errors."
                                    (apply merge
                                           ((juxt :requires :require-macros)
                                            (get-namespace *cljs-ns*)))]
-                           (reader/read rdr nil eof-sentinel))]
+                           (reader/read pbr nil eof-sentinel))]
                 (if (identical? form eof-sentinel)
-                  nil
+                  (.close rdr)
                   (cons form (forms-seq*))))))]
        (forms-seq*))))
 

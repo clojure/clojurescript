@@ -913,10 +913,10 @@
                   ret)))))))))
 
 (defn compiled-by-version [^File f]
-  (let [match (->> (io/reader f)
-                line-seq first
-                (re-matches #".*ClojureScript (.*)$"))]
-    (and match (second match))))
+  (with-open [reader (io/reader f)]
+    (let [match (->> reader line-seq first
+                     (re-matches #".*ClojureScript (.*)$"))]
+      (and match (second match)))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."
@@ -960,7 +960,8 @@
                            :file dest
                            :source-file src}
                           (when (and dest (.exists ^File dest))
-                            {:lines (-> (io/reader dest) line-seq count)})))
+                            {:lines (with-open [reader (io/reader dest)]
+                                      (-> reader line-seq count))})))
                       (recur (rest forms)))))))]
         ;; TODO this _was_ a reset! of the old ana/namespaces atom; should we capture and
         ;; then restore the entirety of env/*compiler* here instead?

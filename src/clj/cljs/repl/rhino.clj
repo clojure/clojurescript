@@ -78,15 +78,17 @@
         (binding [ana/*cljs-ns* 'cljs.user]
           (repl/load-stream repl-env cljs-path res))
         (if-let [res (io/resource js-path)]
-          (-eval (io/reader res) repl-env js-path 1)
+          (with-open [reader (io/reader res)]
+            (-eval reader repl-env js-path 1))
           (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
       (swap! (:loaded-libs repl-env) conj rule))))
 
 (defn load-javascript [repl-env ns url]
   (let [missing (remove #(contains? @(:loaded-libs repl-env) %) ns)]
     (when (seq missing)
-      (do (try 
-            (-eval (io/reader url) repl-env (.toString url) 1)
+      (do (try
+            (with-open [reader (io/reader url)]
+              (-eval reader repl-env (.toString url) 1))
             ;; TODO: don't show errors for goog/base.js line number 105
             (catch Throwable ex (println (.getMessage ex))))
           (swap! (:loaded-libs repl-env) (partial apply conj) missing)))))
@@ -137,8 +139,9 @@
       (-eval r new-repl-env "goog/base.js" 1))
     (-eval bootjs new-repl-env "bootjs" 1)
     ;; Load deps.js line-by-line to avoid 64K method limit
-    (doseq [^String line (line-seq (io/reader deps))]
-      (-eval line new-repl-env "goog/deps.js" 1))
+    (with-open [reader (io/reader deps)]
+      (doseq [^String line (line-seq reader)]
+        (-eval line new-repl-env "goog/deps.js" 1)))
     new-repl-env))
 
 (comment

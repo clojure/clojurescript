@@ -305,8 +305,8 @@
   (-provides [this] (map name (:provides this)))
   (-requires [this] (map name (:requires this)))
   (-source [this] (if-let [s (:source this)]
-                    s
-                    (slurp (io/reader (-url this))))))
+                    s (with-open [reader (io/reader (-url this))]
+                        (slurp reader)))))
 
 (defrecord JavaScriptFile [foreign ^URL url ^URL source-url provides requires lines source-map]
   IJavaScript
@@ -314,7 +314,9 @@
   (-url [this] url)
   (-provides [this] provides)
   (-requires [this] requires)
-  (-source [this] (slurp (io/reader url)))
+  (-source [this]
+    (with-open [reader (io/reader url)]
+      (slurp reader)))
   ISourceMap
   (-source-url [this] source-url)
   (-source-map [this] source-map))
@@ -453,8 +455,9 @@
 (defn jar-file-to-disk
   "Copy a file contained within a jar to disk. Return the created file."
   [url out-dir]
-  (let [out-file (io/file out-dir (path-from-jarfile url)) 
-        content (slurp (io/reader url))]
+  (let [out-file (io/file out-dir (path-from-jarfile url))
+        content (with-open [reader (io/reader url)]
+                  (slurp reader))]
     (do (comp/mkdirs out-file)
         (spit out-file content)
         out-file)))
@@ -555,10 +558,9 @@
   ([path cp-only?]
     (let [find-func (if cp-only? find-js-classpath find-js-resources)
           graph-node (fn [u]
-                       (-> (io/reader u)
-                         line-seq
-                         parse-js-ns
-                         (assoc :url u)))]
+                       (with-open [reader (io/reader u)]
+                         (-> reader line-seq parse-js-ns
+                             (assoc :url u))))]
     (let [js-sources (find-js-resources path)]
       (filter #(seq (:provides %)) (map graph-node js-sources))))))
 
@@ -590,15 +592,17 @@
   (letfn [(parse-list [s] (when (> (count s) 0)
                             (-> (.substring ^String s 1 (dec (count s)))
                                 (string/split #"'\s*,\s*'"))))]
-    (->> (line-seq (io/reader (io/resource "goog/deps.js")))
-         (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
-         (remove nil?)
-         (map #(drop 1 %))
-         (remove #(.startsWith ^String (first %) "../../third_party"))
-         (map #(hash-map :file (str "goog/"(first %))
-                         :provides (parse-list (second %))
-                         :requires (parse-list (last %))
-                         :group :goog)))))
+    (with-open [reader (io/reader (io/resource "goog/deps.js"))]
+      (->> (line-seq reader)
+           (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
+           (remove nil?)
+           (map #(drop 1 %))
+           (remove #(.startsWith ^String (first %) "../../third_party"))
+           (map #(hash-map :file (str "goog/"(first %))
+                           :provides (parse-list (second %))
+                           :requires (parse-list (last %))
+                           :group :goog))
+           (doall)))))
 
 (def goog-dependencies (memoize goog-dependencies*))
 
@@ -969,7 +973,8 @@
   ;; write something from a jar file to disk
   (source-on-disk {}
                   {:url (io/resource "goog/base.js")
-                   :source (slurp (io/reader (io/resource "goog/base.js")))})
+                   :source (with-open [reader (io/reader (io/resource "goog/base.js"))]
+                             (slurp reader))})
   ;; doesn't write a file that is already on disk
   (source-on-disk {} {:url (io/resource "cljs/core.cljs")})
   )
