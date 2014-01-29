@@ -607,11 +607,15 @@
            ~@impls))
        (new ~t ~@locals nil))))
 
-(defmacro specify [expr & impls]
+(defmacro specify! [expr & impls]
   (let [x (with-meta (gensym "x") {:extend :instance})]
-    `(let [~x (cljs.core/clone ~expr)]
+    `(let [~x ~expr]
        (extend-type ~x ~@impls)
        ~x)))
+
+(defmacro specify [expr & impls]
+  `(cljs.core/specify! (cljs.core/clone ~expr)
+     ~@impls))
 
 (defmacro ^:private js-this []
   (core/list 'js* "this"))
