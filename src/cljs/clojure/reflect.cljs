@@ -5,7 +5,7 @@
 
 (defn- evaluate-javascript [block]
   (let [result (try (js* "eval(~{block})")
-                    (catch js/Error e
+                    (catch :default e
                       (.log js/console e)))]
     result))
 
