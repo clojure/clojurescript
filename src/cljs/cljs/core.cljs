@@ -7039,6 +7039,9 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
+(defprotocol IAtom
+  (-reset! [o new-value]))
+
 (deftype Atom [state meta validator watches]
   IEquiv
   (-equiv [o other] (identical? o other))
@@ -7088,14 +7091,16 @@ reduces them without incurring seq initialization"
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
   [a new-value]
-  (let [validate (.-validator a)]
-    (when-not (nil? validate)
-      (assert (validate new-value) "Validator rejected reference state")))
-  (let [old-value (.-state a)]
-    (set! (.-state a) new-value)
-    (when-not (nil? (.-watches a))
-      (-notify-watches a old-value new-value)))
-  new-value)
+  (if (instance? Atom a)
+    (let [validate (.-validator a)]
+      (when-not (nil? validate)
+        (assert (validate new-value) "Validator rejected reference state"))
+      (let [old-value (.-state a)]
+        (set! (.-state a) new-value)
+        (when-not (nil? (.-watches a))
+          (-notify-watches a old-value new-value))
+        new-value))
+    (-reset! a new-value)))
 
 (defn swap!
   "Atomically swaps the value of atom to be:
