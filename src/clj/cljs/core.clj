@@ -1,4 +1,4 @@
-;   Copyright (c) Rich Hickey. All rights reserved.
+
 ;   The use and distribution terms for this software are covered by the
 ;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
 ;   which can be found in the file epl-v10.html at the root of this distribution.
@@ -45,7 +45,10 @@
              vars (map #(ns-resolve ns %) vars)
              syms (map (core/fn [^clojure.lang.Var v] (core/-> v .sym (with-meta {:macro true}))) vars)
              defs (map (core/fn [sym var]
-                                `(def ~sym (deref ~var))) syms vars)]
+                                `(do (def ~sym (deref ~var))
+                                     ;for AOT compilation
+                                     (alter-meta! (var ~sym) assoc :macro true)))
+                       syms vars)]
             `(do ~@defs
                  :imported)))
 
