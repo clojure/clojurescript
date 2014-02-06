@@ -2489,50 +2489,67 @@ reduces them without incurring seq initialization"
 
 ;;; Transients
 
-(defn transient [coll]
+(defn transient
+  "Returns a new, transient version of the collection, in constant time."
+  [coll]
   (-as-transient coll))
 
-(defn persistent! [tcoll]
+(defn persistent!
+  "Returns a new, persistent version of the transient collection, in
+  constant time. The transient collection cannot be used after this
+  call, any such use will throw an exception."
+  [tcoll]
   (-persistent! tcoll))
 
 (defn conj!
+  "Adds x to the transient collection, and return coll. The 'addition'
+  may happen at different 'places' depending on the concrete type."
   ([tcoll val]
-   (-conj! tcoll val))
+    (-conj! tcoll val))
   ([tcoll val & vals]
-   (let [ntcoll (-conj! tcoll val)]
-     (if vals
-       (recur ntcoll (first vals) (next vals))
-       ntcoll))))
+    (let [ntcoll (-conj! tcoll val)]
+      (if vals
+        (recur ntcoll (first vals) (next vals))
+        ntcoll))))
 
 (defn assoc!
+  "When applied to a transient map, adds mapping of key(s) to
+  val(s). When applied to a transient vector, sets the val at index.
+  Note - index must be <= (count vector). Returns coll."
   ([tcoll key val]
-   (-assoc! tcoll key val))
+    (-assoc! tcoll key val))
   ([tcoll key val & kvs]
-   (let [ntcoll (-assoc! tcoll key val)]
-     (if kvs
-       (recur ntcoll (first kvs) (second kvs) (nnext kvs))
-       ntcoll))))
+    (let [ntcoll (-assoc! tcoll key val)]
+      (if kvs
+        (recur ntcoll (first kvs) (second kvs) (nnext kvs))
+        ntcoll))))
 
 (defn dissoc!
+  "Returns a transient map that doesn't contain a mapping for key(s)."
   ([tcoll key]
-   (-dissoc! tcoll key))
+    (-dissoc! tcoll key))
   ([tcoll key & ks]
-   (let [ntcoll (-dissoc! tcoll key)]
-     (if ks
-       (recur ntcoll (first ks) (next ks))
-       ntcoll))))
+    (let [ntcoll (-dissoc! tcoll key)]
+      (if ks
+        (recur ntcoll (first ks) (next ks))
+        ntcoll))))
 
-(defn pop! [tcoll]
+(defn pop!
+  "Removes the last item from a transient vector. If
+  the collection is empty, throws an exception. Returns coll"
+  [tcoll]
   (-pop! tcoll))
 
 (defn disj!
+  "disj[oin]. Returns a transient set of the same (hashed/sorted) type, that
+  does not contain key(s)."
   ([tcoll val]
-   (-disjoin! tcoll val))
+    (-disjoin! tcoll val))
   ([tcoll val & vals]
-   (let [ntcoll (-disjoin! tcoll val)]
-     (if vals
-       (recur ntcoll (first vals) (next vals))
-       ntcoll))))
+    (let [ntcoll (-disjoin! tcoll val)]
+      (if vals
+        (recur ntcoll (first vals) (next vals))
+        ntcoll))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; apply ;;;;;;;;;;;;;;;;
