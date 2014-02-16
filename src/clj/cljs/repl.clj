@@ -78,47 +78,48 @@
      (evaluate-form repl-env env filename form identity))
   ([repl-env env filename form wrap]
      (try
-       (let [ast (ana/analyze env form)
-             js (comp/emit-str ast)
-             wrap-js
-             (if (:source-map repl-env)
-               (binding [comp/*source-map-data*
-                         (atom {:source-map (sorted-map)
-                                :gen-col 0
-                                :gen-line 0})]
-                 (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form))))
-                       t (System/currentTimeMillis)]
-                   (str js
-                        "\n//# sourceURL=repl-" t ".js"
-                        "\n//# sourceMappingURL=data:application/json;base64,"
-                        (DatatypeConverter/printBase64Binary
-                         (.getBytes
-                          (sm/encode
-                           {(str "repl-" t ".cljs")
-                            (:source-map @comp/*source-map-data*)}
-                           {:lines (+ (:gen-line @comp/*source-map-data*) 3)
-                            :file  (str "repl-" t ".js")
-                            :sources-content
-                            [(or (:source (meta form))
-                                 ;; handle strings / primitives without metadata
-                                 (with-out-str (pr form)))]})
-                                "UTF-8")))))
-               (comp/emit-str (ana/no-warn (ana/analyze env (wrap form)))))]
-         (when (= (:op ast) :ns)
-           (load-dependencies repl-env (into (vals (:requires ast))
-                                             (distinct (vals (:uses ast))))))
-         (when *cljs-verbose*
-           (print js))
-         (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
-           (case (:status ret)
-             ;;we eat ns errors because we know goog.provide() will throw when reloaded
-             ;;TODO - file bug with google, this is bs error
-             ;;this is what you get when you try to 'teach new developers'
-             ;;via errors (goog/base.js 104)
-             :error (display-error ret form)
-             :exception (display-error ret form
-                          #(prn "Error evaluating:" form :as js))
-             :success (:value ret))))
+       (binding [ana/*cljs-file* filename]
+         (let [ast (ana/analyze env form)
+               js (comp/emit-str ast)
+               wrap-js
+               (if (:source-map repl-env)
+                 (binding [comp/*source-map-data*
+                           (atom {:source-map (sorted-map)
+                                  :gen-col 0
+                                  :gen-line 0})]
+                   (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form))))
+                         t (System/currentTimeMillis)]
+                     (str js
+                          "\n//# sourceURL=repl-" t ".js"
+                          "\n//# sourceMappingURL=data:application/json;base64,"
+                          (DatatypeConverter/printBase64Binary
+                           (.getBytes
+                            (sm/encode
+                             {(str "repl-" t ".cljs")
+                              (:source-map @comp/*source-map-data*)}
+                             {:lines (+ (:gen-line @comp/*source-map-data*) 3)
+                              :file  (str "repl-" t ".js")
+                              :sources-content
+                              [(or (:source (meta form))
+                                   ;; handle strings / primitives without metadata
+                                   (with-out-str (pr form)))]})
+                            "UTF-8")))))
+                 (comp/emit-str (ana/no-warn (ana/analyze env (wrap form)))))]
+           (when (= (:op ast) :ns)
+             (load-dependencies repl-env (into (vals (:requires ast))
+                                               (distinct (vals (:uses ast))))))
+           (when *cljs-verbose*
+             (print js))
+           (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
+             (case (:status ret)
+               ;;we eat ns errors because we know goog.provide() will throw when reloaded
+               ;;TODO - file bug with google, this is bs error
+               ;;this is what you get when you try to 'teach new developers'
+               ;;via errors (goog/base.js 104)
+               :error (display-error ret form)
+               :exception (display-error ret form
+                                         #(prn "Error evaluating:" form :as js))
+               :success (:value ret)))))
        (catch Throwable ex
          (.printStackTrace ex)
          (println (str ex))))))
