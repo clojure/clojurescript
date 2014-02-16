@@ -3605,6 +3605,11 @@ reduces them without incurring seq initialization"
                                 (subvec-seq (inc i))))))]
       (subvec-seq start)))
 
+  IReversible
+  (-rseq [coll]
+    (if-not (== start end)
+      (RSeq. coll (dec (- end start)) nil)))
+
   ICounted
   (-count [coll] (- end start))
 

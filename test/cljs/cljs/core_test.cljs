@@ -1078,7 +1078,11 @@
           s (subvec [0 1 2 3] 1 2)]
       (assert (identical? sentinel (try (s -1) (catch js/Error _ sentinel))))
       (assert (identical? sentinel (try (s 1) (catch js/Error _ sentinel)))))  
-    )
+    ;; CLJS-765
+    (let [sv1 (subvec [0 1 2 3] 1 2)
+          sv2 (subvec [0 1 2 3] 1 1)]
+      (assert (= (rseq sv1) '(1)))
+      (assert (nil? (rseq sv2)))))
 
   ;; TransientVector
   (let [v1 (vec (range 15 48))
