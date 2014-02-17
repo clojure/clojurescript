@@ -1,8 +1,10 @@
-(ns nodehello)
+(ns nodehello
+  (:require [cljs.nodejs :as nodejs]))
 
 (defn -main [& args]
   (println (apply str (map [\space "world" "hello"] [2 0 1]))))
 
+(nodejs/enable-util-print!)
 (set! *main-cli-fn* -main)
 
 (comment

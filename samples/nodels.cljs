@@ -14,4 +14,5 @@
 (defn -main [& paths] 
   (dorun (map println (mapcat file-seq paths))))
 
+(nodejs/enable-util-print!)
 (set! *main-cli-fn* -main)
