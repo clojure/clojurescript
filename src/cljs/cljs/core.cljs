@@ -3391,18 +3391,21 @@ reduces them without incurring seq initialization"
 
   IAssociative
   (-assoc [coll k v]
-    (cond
-       (and (<= 0 k) (< k cnt))
-       (if (<= (tail-off coll) k)
-         (let [new-tail (aclone tail)]
-           (aset new-tail (bit-and k 0x01f) v)
-           (PersistentVector. meta cnt shift root new-tail nil))
-         (PersistentVector. meta cnt shift (do-assoc coll shift root k v) tail nil))
-       (== k cnt) (-conj coll v)
-       :else (throw (js/Error. (str "Index " k " out of bounds  [0," cnt "]")))))
+    (if (number? k)
+      (-assoc-n coll k v)
+      (throw (js/Error. "Vector's key for assoc must be a number."))))
 
   IVector
-  (-assoc-n [coll n val] (-assoc coll n val))
+  (-assoc-n [coll n val]
+    (cond
+       (and (<= 0 n) (< n cnt))
+       (if (<= (tail-off coll) n)
+         (let [new-tail (aclone tail)]
+           (aset new-tail (bit-and n 0x01f) val)
+           (PersistentVector. meta cnt shift root new-tail nil))
+         (PersistentVector. meta cnt shift (do-assoc coll shift root n val) tail nil))
+       (== n cnt) (-conj coll val)
+       :else (throw (js/Error. (str "Index " n " out of bounds  [0," cnt "]")))))
 
   IReduce
   (-reduce [v f]
@@ -3629,13 +3632,14 @@ reduces them without incurring seq initialization"
 
   IAssociative
   (-assoc [coll key val]
-    (let [v-pos (+ start key)]
-      (build-subvec meta (assoc v v-pos val)
-               start (max end (inc v-pos))
-               nil)))
+    (if (number? key)
+      (-assoc-n coll key val)
+      (throw (js/Error. "Subvec's key for assoc must be a number."))))
 
   IVector
-  (-assoc-n [coll n val] (-assoc coll n val))
+  (-assoc-n [coll n val]
+    (let [v-pos (+ start n)]
+      (build-subvec meta (assoc v v-pos val) start (max end (inc v-pos)) nil)))
 
   IReduce
   (-reduce [coll f]
