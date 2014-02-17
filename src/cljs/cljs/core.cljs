@@ -7061,8 +7061,11 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
-(defprotocol IAtom
+(defprotocol IReset
   (-reset! [o new-value]))
+
+(defprotocol ISwap
+  (-swap! [o f] [o f a] [o f a b] [o f a b xs]))
 
 (deftype Atom [state meta validator watches]
   IEquiv
@@ -7124,21 +7127,33 @@ reduces them without incurring seq initialization"
         new-value))
     (-reset! a new-value)))
 
+;; generic to all refs
+;; (but currently hard-coded to atom!)
+(defn deref
+  [o]
+  (-deref o))
+
 (defn swap!
   "Atomically swaps the value of atom to be:
   (apply f current-value-of-atom args). Note that f may be called
   multiple times, and thus should be free of side effects.  Returns
   the value that was swapped in."
   ([a f]
-     (reset! a (f (.-state a))))
+     (if (instance? Atom a)
+       (reset! a (f (.-state a)))
+       (-swap! a (deref a))))
   ([a f x]
-     (reset! a (f (.-state a) x)))
+     (if (instance? Atom a)
+       (reset! a (f (.-state a) x))
+       (-swap! a (f (deref a) x))))
   ([a f x y]
-     (reset! a (f (.-state a) x y)))
-  ([a f x y z]
-     (reset! a (f (.-state a) x y z)))
-  ([a f x y z & more]
-     (reset! a (apply f (.-state a) x y z more))))
+     (if (instance? Atom a)
+       (reset! a (f (.-state a) x y))
+       (-swap! a (f (deref a) x y))))
+  ([a f x y & more]
+     (if (instance? Atom a)
+       (reset! a (apply f (.-state a) x y more))
+       (-swap! a (f (deref a) x y more)))))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
@@ -7148,13 +7163,6 @@ reduces them without incurring seq initialization"
   (if (= (.-state a) oldval)
     (do (reset! a newval) true)
     false))
-
-;; generic to all refs
-;; (but currently hard-coded to atom!)
-
-(defn deref
-  [o]
-  (-deref o))
 
 (defn set-validator!
   "Sets the validator-fn for an atom. validator-fn must be nil or a
