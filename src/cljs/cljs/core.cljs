@@ -7141,19 +7141,19 @@ reduces them without incurring seq initialization"
   ([a f]
      (if (instance? Atom a)
        (reset! a (f (.-state a)))
-       (-swap! a (deref a))))
+       (-swap! a f)))
   ([a f x]
      (if (instance? Atom a)
        (reset! a (f (.-state a) x))
-       (-swap! a (f (deref a) x))))
+       (-swap! a f x)))
   ([a f x y]
      (if (instance? Atom a)
        (reset! a (f (.-state a) x y))
-       (-swap! a (f (deref a) x y))))
+       (-swap! a f x y)))
   ([a f x y & more]
      (if (instance? Atom a)
        (reset! a (apply f (.-state a) x y more))
-       (-swap! a (f (deref a) x y more)))))
+       (-swap! a f x y more))))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
