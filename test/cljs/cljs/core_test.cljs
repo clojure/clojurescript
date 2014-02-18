@@ -1957,6 +1957,7 @@
              (set (map identity (into [] (range 32))))))
 
   ;; CLJS-580
+  (def foo580)
   (def foo580 {:a (fn []) :b (fn [] (foo580 :a))})
   (assert (nil? (((:b foo580)))))
 

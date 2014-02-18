@@ -32,7 +32,8 @@
 (def -cljs-macros-loaded (atom false))
 
 (def ^:dynamic *cljs-warnings*
-  {:undeclared-var false
+  {:unprovided true
+   :undeclared-var false
    :undeclared-ns false
    :undeclared-ns-form true
    :redef true
@@ -53,6 +54,10 @@
 (declare message namespaces)
 
 (defmulti error-message (fn [warning-type & _] warning-type))
+
+(defmethod error-message :unprovided
+  [warning-type info]
+  (str "Required namespace not provided for " (clojure.string/join " " (:unprovided info))))
 
 (defmethod error-message :undeclared-var
   [warning-type info]
@@ -135,9 +140,6 @@
 
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])
-
-(defn with-warning-handlers [handlers]
-  (binding [*cljs-warning-handlers* handlers]))
 
 (defmacro with-warning-handlers [handlers & body]
   `(binding [*cljs-warning-handlers* ~handlers]
@@ -277,23 +279,21 @@
          (throw (error ~env (.getMessage err#) err#))))))
 
 (defn confirm-var-exists [env prefix suffix]
-  (when (:undeclared-var *cljs-warnings*)
-    (let [crnt-ns (-> env :ns :name)]
-      (when (= prefix crnt-ns)
-        (when-not (get-in @env/*compiler* [::namespaces crnt-ns :defs suffix])
-          (warning :undeclared-var env {:prefix prefix :suffix suffix}))))))
+  (let [crnt-ns (-> env :ns :name)]
+    (when (and (= prefix crnt-ns)
+               (not (get-in @env/*compiler* [::namespaces crnt-ns :defs suffix])))
+      (warning :undeclared-var env {:prefix prefix :suffix suffix}))))
 
 (defn resolve-ns-alias [env name]
   (let [sym (symbol name)]
     (get (:requires (:ns env)) sym sym)))
 
 (defn confirm-ns [env ns-sym]
-  (when (and (nil? (get '#{cljs.core goog Math} ns-sym))
+  (when (and (nil? (get '#{cljs.core goog Math goog.string} ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym))
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
-             (nil? (io/resource (ns->relpath ns-sym)))
-             (:undeclared-ns *cljs-warnings*))
+             (nil? (io/resource (ns->relpath ns-sym))))
     (warning :undeclared-ns env {:ns-sym ns-sym})))
 
 (defn core-name?
@@ -373,8 +373,7 @@
   (doseq [name names]
     (let [env (assoc env :ns (get-namespace *cljs-ns*))
           ev (resolve-existing-var env name)]
-      (when (and (:dynamic *cljs-warnings*)
-                 ev (not (-> ev :dynamic)))
+      (when (and ev (not (-> ev :dynamic)))
         (warning :dynamic env {:ev ev})))))
 
 (declare analyze analyze-symbol analyze-seq)
@@ -570,8 +569,7 @@
                            (core-name? env sym))
                       (get-in @env/*compiler* [::namespaces ns-name :uses sym]))
                 (let [ev (resolve-existing-var (dissoc env :locals) sym)]
-                  (when (:redef *cljs-warnings*)
-                    (warning :redef env {:ev ev :sym sym :ns-name ns-name}))
+                  (warning :redef env {:ev ev :sym sym :ns-name ns-name})
                   (swap! env/*compiler* update-in [::namespaces ns-name :excludes] conj sym)
                   (update-in env [:ns :excludes] conj sym))
                 env)
@@ -592,8 +590,7 @@
                       (if (= true export-val) name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
       (when-let [v (get-in @env/*compiler* [::namespaces ns-name :defs sym])]
-        (when (and (:fn-var *cljs-warnings*)
-                   (not (-> sym meta :declared))
+        (when (and (not (-> sym meta :declared))
                    (and (:fn-var v) (not fn-var?)))
           (warning :fn-var env {:ns-name ns-name :sym sym})))
       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
@@ -724,12 +721,11 @@
     (let [variadic-methods (filter :variadic methods)
           variadic-params (count (:params (first variadic-methods)))
           param-counts (map (comp count :params) methods)]
-      (when (and (:multiple-variadic-overloads *cljs-warnings*) (< 1 (count variadic-methods)))
+      (when (< 1 (count variadic-methods))
         (warning :multiple-variadic-overloads env {:name name-var}))
-      (when (and (:variadic-max-arity *cljs-warnings*)
-                 (not (or (zero? variadic-params) (= variadic-params (+ 1 max-fixed-arity)))))
+      (when (not (or (zero? variadic-params) (= variadic-params (+ 1 max-fixed-arity))))
         (warning :variadic-max-arity env {:name name-var}))
-      (when (and (:overload-arity *cljs-warnings*) (not= (distinct param-counts) param-counts))
+      (when (not= (distinct param-counts) param-counts)
         (warning :overload-arity env {:name name-var})))
     {:env env :op :fn :form form :name name-var :methods methods :variadic variadic
      :tag 'function
@@ -891,8 +887,7 @@
          argexprs (vec (map #(analyze enve %) args))
          known-num-fields (:num-fields (resolve-existing-var env ctor))
          argc (count args)]
-     (when (and (:fn-arity *cljs-warnings*)
-                (not (-> ctor meta :internal-ctor))
+     (when (and (not (-> ctor meta :internal-ctor))
                 known-num-fields (not= known-num-fields argc))
        (warning :fn-arity env {:argc argc :ctor ctor}))
      {:env env :op :new :form form :ctor ctorexpr :args argexprs
@@ -947,28 +942,36 @@
 
 (declare analyze-file)
 
-(defn analyze-deps [lib deps]
+(defn locate-src [relpath]
+  (or (io/resource relpath)
+      (let [root (:root @env/*compiler*)
+            root-path (when root (.getPath ^File root))
+            f (io/file (str root-path \/ relpath))]
+        (when (and (.exists f) (.isFile f))
+          f))))
+
+(defn analyze-deps [lib deps env]
   (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
     (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
       (str "Circular dependency detected " (-> *cljs-dep-set* meta :dep-path)))
     (doseq [dep deps]
-      (when-not (contains? (::namespaces @env/*compiler*) dep)
-        (let [relpath (ns->relpath dep)]
-          (when (io/resource relpath)
-            (no-warn
-              (analyze-file relpath))))))))
+      (when-not (or (contains? (::namespaces @env/*compiler*) dep)
+                    (contains? (:js-dependency-index @env/*compiler*) (name dep)))
+        (let [relpath (ns->relpath dep)
+              src (locate-src relpath)]
+          (if src
+            (analyze-file src)
+            (warning :undeclared-ns env {:ns-sym dep})))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
-    (when (and (:undeclared-ns-form *cljs-warnings*)
-               (= (get-in @env/*compiler* [::namespaces lib :defs sym] ::not-found) ::not-found))
-      (warning :undeclared-ns-form env {:type :var :lib lib :sym sym}))))
+    (when (= (get-in @env/*compiler* [::namespaces lib :defs sym] ::not-found) ::not-found)
+      (warning :undeclared-ns-form env {:type "var" :lib lib :sym sym}))))
 
 (defn check-use-macros [use-macros env]
   (doseq [[sym lib] use-macros]
-    (when (and (:undeclared-ns *cljs-warnings*)
-               (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)))
-      (warning :undeclared-ns env {:type :macro :lib lib :sym sym}))))
+    (when (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym))
+      (warning :undeclared-ns-form env {:type "macro" :lib lib :sym sym}))))
 
 (defn parse-ns-error-msg [spec msg]
   (str msg "; offending spec: " (pr-str spec)))
@@ -1125,7 +1128,7 @@
                   (apply merge-with merge m (map (spec-parsers k) libs)))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (and *analyze-deps* (seq @deps))
-      (analyze-deps name @deps))
+      (analyze-deps name @deps env))
     (when (seq uses)
       (check-uses uses env))
     (set! *cljs-ns* name)
@@ -1266,8 +1269,7 @@
                            (seg (subs s (inc end)))))))))
            enve (assoc env :context :expr)
            argexprs (vec (map #(analyze enve %) args))]
-       (when (and (-> form meta :numeric)
-                  (:invalid-arithmetic *cljs-warnings*))
+       (when (-> form meta :numeric)
          (let [types (map #(infer-tag env %) argexprs)]
            (when-not (every?
                        (fn [t]
@@ -1313,18 +1315,17 @@
          fexpr (analyze enve f)
          argexprs (vec (map #(analyze enve %) args))
          argc (count args)]
-     (when (and (:fn-arity *cljs-warnings*) (-> fexpr :info :fn-var))
+     (when (-> fexpr :info :fn-var)
        (let [{:keys [variadic max-fixed-arity method-params name]} (:info fexpr)]
          (when (and (not (some #{argc} (map count method-params)))
                     (or (not variadic)
                         (and variadic (< argc max-fixed-arity))))
            (warning :fn-arity env {:name name
                                    :argc argc}))))
-     (when (and (:fn-deprecated *cljs-warnings*) (-> fexpr :info :deprecated)
+     (when (and (-> fexpr :info :deprecated)
                 (not (-> form meta :deprecation-nowarn)))
        (warning :fn-deprecated env {:fexpr fexpr}))
-     (when (and (:invoke-ctor *cljs-warnings*)
-                (-> fexpr :info :type))
+     (when (-> fexpr :info :type)
        (warning :invoke-ctor env {:fexpr fexpr}))
      {:env env :op :invoke :form form :f fexpr :args argexprs
       :children (into [fexpr] argexprs)})))
@@ -1556,6 +1557,7 @@ argument, which the reader will use in any emitted errors."
 (defn analyze-file [f]
   (let [res (cond
              (instance? File f) f
+             (instance? java.net.URL f) f
              (re-find #"^file://" f) (java.net.URL. f)
              :else (io/resource f))]
     (assert res (str "Can't find " f " in classpath"))

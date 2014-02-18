@@ -180,7 +180,8 @@
 
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
-  [repl-env & {:keys [analyze-path verbose warn-on-undeclared special-fns static-fns]}]
+  [repl-env & {:keys [analyze-path verbose warn-on-undeclared special-fns static-fns] :as opts
+               :or {warn-on-undeclared true}}]
   (print "To quit, type: ")
   (prn :cljs/quit)
   (env/with-compiler-env
@@ -188,10 +189,12 @@
     (binding [ana/*cljs-ns* 'cljs.user
               *cljs-verbose* verbose
               ana/*cljs-warnings* (assoc ana/*cljs-warnings*
+                                    :unprovided warn-on-undeclared
                                     :undeclared-var warn-on-undeclared
                                     :undeclared-ns warn-on-undeclared
                                     :undeclared-ns-form warn-on-undeclared)
               ana/*cljs-static-fns* static-fns]
+      (swap! env/*compiler* assoc :js-dependency-index (cljsc/js-dependency-index opts))
       (when analyze-path
         (analyze-source analyze-path))
       (let [env {:context :expr :locals {}}

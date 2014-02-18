@@ -992,7 +992,7 @@
       (if (.exists src-file)
         (try
           (let [{ns :ns :as ns-info} (parse-ns src-file dest-file opts)]
-            (if (or (requires-compilation? src-file dest-file opts))
+            (if (requires-compilation? src-file dest-file opts)
               (do (mkdirs dest-file)
                 (when (contains? (::ana/namespaces @env/*compiler*) ns)
                   (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
@@ -1049,6 +1049,7 @@
   ([src-dir target-dir]
      (compile-root src-dir target-dir nil))
   ([src-dir target-dir opts]
+     (swap! env/*compiler* assoc :root src-dir)
      (let [src-dir-file (io/file src-dir)]
        (loop [cljs-files (cljs-files-in src-dir-file)
               output-files []]

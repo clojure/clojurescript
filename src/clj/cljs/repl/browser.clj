@@ -255,6 +255,7 @@
                      :cljs.env/compiler compiler-env
                      :source-map    true}
                     opts)]
+    (swap! compiler-env assoc :js-dependency-index (cljsc/js-dependency-index opts))
     (cljs.env/with-compiler-env compiler-env
       (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))
         (reset! loaded-libs @preloaded-libs)

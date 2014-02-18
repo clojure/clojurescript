@@ -8,23 +8,17 @@
 ;;  cljs-warnings tests
 ;;******************************************************************************
 
-(defn make-counter []
-  (let [counter (atom 0)]
-    {:counter counter
-     :f (fn [& args]
-          (swap! counter inc))}))
-
 (def warning-forms
   {:undeclared-var (let [v (gensym)] `(~v 1 2 3))
    :fn-arity '(do (defn x [a b] (+ a b))
                   (x 1 2 3 4))})
 
 (defn warn-count [form]
-  (let [{:keys [counter f]} (make-counter)
+  (let [counter (atom 0)
         tracker (fn [warning-type env & [extra]]
-                  (println "Warning: " warning-type)
-                  (println "\tenabled? " (warning-type a/*cljs-warnings*)))]
-    (a/with-warning-handlers [f]
+                  (when (warning-type a/*cljs-warnings*)
+                    (swap! counter inc)))]
+    (a/with-warning-handlers [tracker]
       (a/analyze (a/empty-env) form))
     @counter))
 

@@ -622,17 +622,16 @@
   the value is a list of directories containing third-party
   libraries."
   [opts requires]
-  (let [index (js-dependency-index opts)]
-    (loop [requires requires
-           visited (set requires)
-           deps #{}]
-      (if (seq requires)
-        (let [node (get index (first requires))
-              new-req (remove #(contains? visited %) (:requires node))]
-          (recur (into (rest requires) new-req)
-                 (into visited new-req)
-                 (conj deps node)))
-        (remove nil? deps)))))
+  (loop [requires requires
+         visited (set requires)
+         deps #{}]
+    (if (seq requires)
+      (let [node (get (@env/*compiler* :js-dependency-index) (first requires))
+            new-req (remove #(contains? visited %) (:requires node))]
+        (recur (into (rest requires) new-req)
+               (into visited new-req)
+               (conj deps node)))
+      (remove nil? deps))))
 
 (comment
   ;; find dependencies
@@ -657,24 +656,23 @@
 
   Only load dependencies from the classpath."
   [opts requires]
-  (let [index (js-dependency-index opts)]
-    (letfn [(ns->cp [s] (str (string/replace (munge s) \. \/) ".cljs"))
-            (cljs-deps [coll]
-              (->> coll
-                   (remove #(contains? index %))
-                   (map #(let [f (ns->cp %)] (hash-map :relative-path f :uri (io/resource f))))
-                   (remove #(nil? (:uri %)))))]
-      (loop [required-files (cljs-deps requires)
-             visited (set required-files)
-             js-deps #{}]
-        (if (seq required-files)
-          (let [next-file (first required-files)
-                js (get-compiled-cljs opts next-file)
-                new-req (remove #(contains? visited %) (cljs-deps (-requires js)))]
-            (recur (into (rest required-files) new-req)
-                   (into visited new-req)
-                   (conj js-deps js)))
-          (remove nil? js-deps))))))
+  (letfn [(ns->cp [s] (str (string/replace (munge s) \. \/) ".cljs"))
+          (cljs-deps [coll]
+                     (->> coll
+                          (remove (@env/*compiler* :js-dependency-index))
+                          (map #(let [f (ns->cp %)] (hash-map :relative-path f :uri (io/resource f))))
+                          (remove #(nil? (:uri %)))))]
+    (loop [required-files (cljs-deps requires)
+           visited (set required-files)
+           js-deps #{}]
+      (if (seq required-files)
+        (let [next-file (first required-files)
+              js (get-compiled-cljs opts next-file)
+              new-req (remove #(contains? visited %) (cljs-deps (-requires js)))]
+          (recur (into (rest required-files) new-req)
+                 (into visited new-req)
+                 (conj js-deps js)))
+        (remove nil? js-deps)))))
 
 (comment
   ;; only get cljs deps
@@ -692,7 +690,11 @@
   [opts & inputs]
   (let [requires (mapcat -requires inputs)
         required-cljs (remove (set inputs) (cljs-dependencies opts requires))
-        required-js (js-dependencies opts (set (concat (mapcat -requires required-cljs) requires)))]
+        required-js (js-dependencies opts (set (concat (mapcat -requires required-cljs) requires)))
+        provided (mapcat -provides (concat inputs required-cljs required-js))
+        unprovided (clojure.set/difference (set requires) (set provided) #{"constants-table"})]
+    (when (seq unprovided)
+      (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
     (cons (javascript-file nil (io/resource "goog/base.js") ["goog"] nil)
           (dependency-order
            (concat (map #(-> (javascript-file (:foreign %)
@@ -1126,6 +1128,8 @@
          (check-source-map opts)
          (check-source-map-path opts)
          (swap! compiler-env assoc-in [:opts :emit-constants] emit-constants)
+         ; JavaScript dependencies are found first so that they are known when resolving ns :refer
+         (swap! compiler-env assoc :js-dependency-index (js-dependency-index opts))
          (binding [ana/*cljs-static-fns*
                    (or (and (= (:optimizations opts) :advanced)
                             (not (false? (:static-fns opts))))
@@ -1133,9 +1137,10 @@
                        ana/*cljs-static-fns*)
                    *assert* (not= (:elide-asserts opts) true)
                    ana/*cljs-warnings*
-                   (let [enabled? (true? (opts :warnings))]
+                   (let [enabled? (true? (opts :warnings true))]
                      (merge ana/*cljs-warnings*
-                            {:undeclared-var enabled?
+                            {:unprovided enabled?
+                             :undeclared-var enabled?
                              :undeclared-ns enabled?
                              :undeclared-ns-form enabled?}))]
            (let [compiled (-compile source all-opts)
