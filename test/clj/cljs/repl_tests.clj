@@ -6,8 +6,7 @@
             [cljs.repl.rhino :as rhino])
     (:use clojure.test))
 
-
-(deftest file-info
+#_(deftest file-info
   (let [repl-env (rhino/repl-env)
         compiler-env (env/default-compiler-env)
         repl-env (assoc repl-env ::env/compiler compiler-env)]

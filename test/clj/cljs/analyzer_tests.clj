@@ -191,7 +191,7 @@
          'clj))
   (is (= (e/with-compiler-env test-cenv
            (:tag (a/analyze test-env '(dissoc {:foo :bar} :foo))))
-         'clj)))
+         '#{clj clj-nil})))
 
 (deftest test-always-true-if
   (is (= (e/with-compiler-env test-cenv
