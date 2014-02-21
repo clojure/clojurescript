@@ -7065,6 +7065,8 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
+(defprotocol IAtom)
+
 (defprotocol IReset
   (-reset! [o new-value]))
 
@@ -7072,6 +7074,8 @@ reduces them without incurring seq initialization"
   (-swap! [o f] [o f a] [o f a b] [o f a b xs]))
 
 (deftype Atom [state meta validator watches]
+  IAtom
+  
   IEquiv
   (-equiv [o other] (identical? o other))
 
