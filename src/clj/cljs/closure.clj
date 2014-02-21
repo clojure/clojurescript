@@ -712,11 +712,9 @@
   (str (apply str (map #(slurp (io/resource %)) paths)) "\n"))
 
 (defn make-preamble [{:keys [target preamble hashbang]}]
-  (if preamble
-    (preamble-from-paths preamble)
-    (if (= :nodejs target)
-      (str "#!" (or hashbang "/usr/bin/env node") "\n")
-      "")))
+  (str (when (= :nodejs target)
+         (str "#!" (or hashbang "/usr/bin/env node") "\n"))
+       (when preamble (preamble-from-paths preamble))))
 
 (comment
   ;; add dependencies to literal js
