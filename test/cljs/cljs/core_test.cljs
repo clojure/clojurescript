@@ -2076,7 +2076,6 @@
   (assert (= (-> (transient {}) (assoc! :a 1 :b 2) persistent!) {:a 1 :b 2}))
   (assert (= (-> (transient {:a 1 :b 2 :c 3}) (dissoc! :a :b) persistent!) {:c 3}))
 
-
   ;; CLJS-767
 
   (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
@@ -2085,6 +2084,12 @@
     (assert (= :fail (try (assoc (subvec [1 2 3] 2) n 4)
                        (catch js/Error e :fail))))
     (assert (= :fail (try (assoc (range 1 3) n 4)
+                       (catch js/Error e :fail)))))
+
+  ;; CLJS-768
+
+  (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
+    (assert (= :fail (try (assoc! (transient [1 2]) n 4)
                        (catch js/Error e :fail)))))
 
   :ok

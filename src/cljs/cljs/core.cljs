@@ -3773,7 +3773,10 @@ reduces them without incurring seq initialization"
       (throw (js/Error. "persistent! called twice"))))
 
   ITransientAssociative
-  (-assoc! [tcoll key val] (-assoc-n! tcoll key val))
+  (-assoc! [tcoll key val]
+    (if (number? key)
+      (-assoc-n! tcoll key val)
+      (throw (js/Error. "TransientVector's key for assoc! must be a number."))))
 
   ITransientVector
   (-assoc-n! [tcoll n val]
