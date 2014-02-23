@@ -186,7 +186,7 @@
   (print "To quit, type: ")
   (prn :cljs/quit)
   (env/with-compiler-env
-    (or (::env/compiler repl-env) (env/default-compiler-env))
+    (or (::env/compiler repl-env) (env/default-compiler-env opts))
     (binding [ana/*cljs-ns* 'cljs.user
               *cljs-verbose* verbose
               ana/*cljs-warnings* (assoc ana/*cljs-warnings*
@@ -195,7 +195,6 @@
                                     :undeclared-ns warn-on-undeclared
                                     :undeclared-ns-form warn-on-undeclared)
               ana/*cljs-static-fns* static-fns]
-      (swap! env/*compiler* assoc :js-dependency-index (cljsc/js-dependency-index opts))
       (when analyze-path
         (analyze-source analyze-path))
       (let [env {:context :expr :locals {}}

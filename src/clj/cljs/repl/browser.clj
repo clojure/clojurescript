@@ -243,7 +243,7 @@
                   support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
-  (let [compiler-env (cljs.env/default-compiler-env)
+  (let [compiler-env (cljs.env/default-compiler-env opts)
         opts (merge (BrowserEnv.)
                     {:port          9000
                      :optimizations :simple
@@ -255,7 +255,6 @@
                      :cljs.env/compiler compiler-env
                      :source-map    true}
                     opts)]
-    (swap! compiler-env assoc :js-dependency-index (cljsc/js-dependency-index opts))
     (cljs.env/with-compiler-env compiler-env
       (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))
         (reset! loaded-libs @preloaded-libs)

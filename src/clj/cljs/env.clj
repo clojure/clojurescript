@@ -9,6 +9,7 @@
 (ns ^{:doc "A namespace that exists solely to provide a place for \"compiler\"
 state that is accessed/maintained by many different components."}
   cljs.env
+  (:require [cljs.js-deps :refer (js-dependency-index)])
   (:refer-clojure :exclude [ensure]))
 
 ;; bit of a misnomer, but: an atom containing a map that serves as the bag of
@@ -22,6 +23,9 @@ state that is accessed/maintained by many different components."}
 ;;
 ;; Known slots in the compiler-env map:
 ;;
+;; * :options - the [options] map argument, provided to this fn (defaults to {})
+;; * :js-dependency-index - result from calling cljs.js-deps/js-dependency-index
+;;   with [options]
 ;; * :cljs.analyzer/constant-table - map of (currently only keyword) constant
 ;;   values to fixed ids
 ;; * :cljs.analyzer/namespaces - map of symbols to "namespace" maps
@@ -35,8 +39,10 @@ state that is accessed/maintained by many different components."}
 (def ^:dynamic *compiler* nil)
 
 (defn default-compiler-env
-  []
-  (atom {}))
+  ([] (default-compiler-env {}))
+  ([options]
+     (atom {:options options
+            :js-dependency-index (js-dependency-index options)})))
 
 (defmacro with-compiler-env
   "Evaluates [body] with [env] bound as the value of the `*compiler*` var in
