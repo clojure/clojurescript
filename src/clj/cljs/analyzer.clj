@@ -381,7 +381,7 @@
 (def specials '#{if def fn* do let* loop* letfn* throw try recur new set! ns deftype* defrecord* . js* & quote})
 
 (def ^:dynamic *recur-frames* nil)
-(def ^:dynamic *loop-lets* nil)
+(def ^:dynamic *loop-lets* ())
 
 (defmacro disallowing-recur [& body]
   `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
@@ -807,7 +807,7 @@
              (do
                (when (or (namespace name) (.contains (str name) "."))
                  (throw (error encl-env (str "Invalid local name: " name))))
-               (let [init-expr (binding [*loop-lets* (cons {:params bes} (or *loop-lets* ()))]
+               (let [init-expr (binding [*loop-lets* (cons {:params bes} *loop-lets*)]
                                  (analyze env init))
                      be {:name name
                          :line (get-line name env)
@@ -843,8 +843,8 @@
         expr
         (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)
                   *loop-lets* (cond
-                               is-loop (or *loop-lets* ())
-                               *loop-lets* (cons {:params bes} *loop-lets*))]
+                                is-loop *loop-lets*
+                                *loop-lets* (cons {:params bes} *loop-lets*))]
           (analyze (assoc env :context (if (= :expr context) :return context)) `(do ~@exprs)))]
     {:env encl-env :op (if is-loop :loop :let)
      :bindings bes :expr expr :form form
