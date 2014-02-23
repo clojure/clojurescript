@@ -1,4 +1,5 @@
-(ns cljs.core-test)
+(ns cljs.core-test
+  (:require [clojure.string :as s]))
 
 (defn test-stuff []
   ;; js primitives
@@ -2091,6 +2092,28 @@
   (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
     (assert (= :fail (try (assoc! (transient [1 2]) n 4)
                        (catch js/Error e :fail)))))
+
+  ;; Namespaced destructuring
+  
+  (let [{:keys [:a :b]} {:a 1 :b 2}]
+    (assert (= 1 a))
+    (assert (= 2 b)))
+
+  (let [{:keys [:a/b :c/d]} {:a/b 1 :c/d 2}]
+    (assert (= 1 b))
+    (assert (= 2 d)))
+
+  (let [{:keys [a/b c/d]} {:a/b 1 :c/d 2}]
+    (assert (= 1 b))
+    (assert (= 2 d)))
+
+  (let [{:syms [a/b c/d]} {'a/b 1 'c/d 2}]
+    (assert (= 1 b))
+    (assert (= 2 d)))
+
+  (let [{:keys [::s/x ::s/y]} {:clojure.string/x 1 :clojure.string/y 2}]
+    (assert (= x 1))
+    (assert (= y 2)))
 
   :ok
   )

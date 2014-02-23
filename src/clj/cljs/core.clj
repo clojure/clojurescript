@@ -115,7 +115,8 @@
                                                     (dissoc bes (key entry))
                                                     ((key entry) bes)))
                                           (dissoc b :as :or)
-                                          {:keys #(keyword (core/str %)), :strs core/str, :syms #(core/list `quote %)})]
+                                          {:keys #(if (core/keyword? %) % (keyword (core/str %))),
+                                           :strs core/str, :syms #(core/list `quote %)})]
                            (if (seq bes)
                              (core/let [bb (key (first bes))
                                         bk (val (first bes))
@@ -126,14 +127,17 @@
                                       (next bes)))
                              ret))))]
                     (core/cond
-                      (core/symbol? b) (-> bvec (conj b) (conj v))
+                      (core/symbol? b) (-> bvec (conj (if (namespace b) (symbol (name b)) b)) (conj v))
+                      (core/keyword? b) (-> bvec (conj (symbol (name b))) (conj v))
                       (vector? b) (pvec bvec b v)
                       (map? b) (pmap bvec b v)
                       :else (throw (new Exception (core/str "Unsupported binding form: " b))))))
          process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
         (if (every? core/symbol? (map first bents))
           bindings
-          (reduce process-entry [] bents))))
+          (if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
+            (throw (new Exception (core/str "Unsupported binding key: " (ffirst kwbs))))
+            (reduce process-entry [] bents)))))
 
 (defmacro let
   "binding => binding-form init-expr
