@@ -3261,16 +3261,28 @@ reduces them without incurring seq initialization"
 (defn- vector-index-out-of-bounds [i cnt]
   (throw (js/Error. (str "No item " i " in vector of length " cnt))))
 
-(defn- array-for [pv i]
-  (if (and (<= 0 i) (< i (.-cnt pv)))
-    (if (>= i (tail-off pv))
+(defn- first-array-for-longvec [pv]
+  ;; invariants: (count pv) > 32.
+  (loop [node (.-root pv)
+         level (.-shift pv)]
+    (if (pos? level)
+      (recur (pv-aget node 0) (- level 5))
+      (.-arr node))))
+
+(defn- unchecked-array-for [pv i]
+  ;; invariant: i is a valid index of pv (use array-for if unknown).
+  (if (>= i (tail-off pv))
       (.-tail pv)
       (loop [node (.-root pv)
              level (.-shift pv)]
         (if (pos? level)
           (recur (pv-aget node (bit-and (bit-shift-right-zero-fill i level) 0x01f))
                  (- level 5))
-          (.-arr node))))
+          (.-arr node)))))
+
+(defn- array-for [pv i]
+  (if (and (<= 0 i) (< i (.-cnt pv)))
+    (unchecked-array-for pv i)
     (vector-index-out-of-bounds i (.-cnt pv))))
 
 (defn- do-assoc [pv level node i val]
@@ -3324,7 +3336,7 @@ reduces them without incurring seq initialization"
      (== 1 cnt) (-with-meta cljs.core.PersistentVector.EMPTY meta)
      (< 1 (- cnt (tail-off coll)))
       (PersistentVector. meta (dec cnt) shift root (.slice tail 0 -1) nil)
-      :else (let [new-tail (array-for coll (- cnt 2))
+      :else (let [new-tail (unchecked-array-for coll (- cnt 2))
                   nr (pop-tail coll shift root)
                   new-root (if (nil? nr) cljs.core.PersistentVector.EMPTY_NODE nr)
                   cnt-1 (dec cnt)]
@@ -3365,8 +3377,8 @@ reduces them without incurring seq initialization"
   (-seq [coll]
     (cond
       (zero? cnt) nil
-      (< cnt 32) (array-seq tail)
-      :else (chunked-seq coll 0 0)))
+      (<= cnt 32) (IndexedSeq. tail 0)
+      :else (chunked-seq coll (first-array-for-longvec coll) 0 0)))
 
   ICounted
   (-count [coll] cnt)
@@ -3376,7 +3388,7 @@ reduces them without incurring seq initialization"
     (aget (array-for coll n) (bit-and n 0x01f)))
   (-nth [coll n not-found]
     (if (and (<= 0 n) (< n cnt))
-      (-nth coll n)
+      (aget (unchecked-array-for coll n) (bit-and n 0x01f))
       not-found))
 
   ILookup
@@ -3418,7 +3430,7 @@ reduces them without incurring seq initialization"
     (let [step-init (array 0 init)] ; [step 0 init init]
       (loop [i 0]
         (if (< i cnt)
-          (let [arr (array-for v i)
+          (let [arr (unchecked-array-for v i)
                 len (alength arr)]
             (let [init (loop [j 0 init (aget step-init 1)]
                          (if (< j len)
@@ -3530,21 +3542,17 @@ reduces them without incurring seq initialization"
   (-chunked-first [coll]
     (array-chunk node off))
   (-chunked-rest [coll]
-    (let [l (alength node)
-          s (when (< (+ i l) (-count vec))
-              (chunked-seq vec (+ i l) 0))]
-      (if (nil? s)
-        ()
-        s)))
+    (let [end (+ i (alength node))]
+      (if (< end (-count vec))
+        (chunked-seq vec (unchecked-array-for vec end) end 0)
+        ())))
 
   IChunkedNext
   (-chunked-next [coll]
-    (let [l (alength node)
-          s (when (< (+ i l) (-count vec))
-              (chunked-seq vec (+ i l) 0))]
-      (if (nil? s)
-        nil
-        s)))
+    (let [end (+ i (alength node))]
+      (when (< end (-count vec))
+        (chunked-seq vec (unchecked-array-for vec end) end 0))))
+
   IHash
   (-hash [coll] (caching-hash coll hash-coll __hash))
 
@@ -3714,23 +3722,21 @@ reduces them without incurring seq initialization"
       :else (do (pv-aset node subidx nil)
                 node))))
 
-(defn- editable-array-for [tv i]
-  (if (and (<= 0 i) (< i (.-cnt tv)))
-    (if (>= i (tail-off tv))
-      (.-tail tv)
-      (let [root (.-root tv)]
-        (loop [node  root
-               level (.-shift tv)]
-          (if (pos? level)
-            (recur (tv-ensure-editable
-                    (.-edit root)
-                    (pv-aget node
-                             (bit-and (bit-shift-right-zero-fill i level)
-                                      0x01f)))
-                   (- level 5))
-            (.-arr node)))))
-    (throw (js/Error.
-            (str "No item " i " in transient vector of length " (.-cnt tv))))))
+(defn- unchecked-editable-array-for [tv i]
+  ;; invariant: i is a valid index of tv.
+  (if (>= i (tail-off tv))
+    (.-tail tv)
+    (let [root (.-root tv)]
+      (loop [node  root
+             level (.-shift tv)]
+        (if (pos? level)
+          (recur (tv-ensure-editable
+                   (.-edit root)
+                   (pv-aget node
+                            (bit-and (bit-shift-right-zero-fill i level)
+                                     0x01f)))
+                 (- level 5))
+          (.-arr node))))))
 
 (deftype TransientVector [^:mutable cnt
                           ^:mutable shift
@@ -3814,7 +3820,7 @@ reduces them without incurring seq initialization"
         (== 1 cnt)                       (do (set! cnt 0) tcoll)
         (pos? (bit-and (dec cnt) 0x01f)) (do (set! cnt (dec cnt)) tcoll)
         :else
-        (let [new-tail (editable-array-for tcoll (- cnt 2))
+        (let [new-tail (unchecked-editable-array-for tcoll (- cnt 2))
               new-root (let [nr (tv-pop-tail tcoll shift root)]
                          (if-not (nil? nr)
                            nr
