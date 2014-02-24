@@ -2127,5 +2127,29 @@
   (assert (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
              ":a\n:b\n:c\n:d\n"))
 
+  ;; CLJS-728
+
+  (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
+    (assert (nil? (get [1 2] n)))
+    (assert (= :fail (try (nth [1 2] n) (catch js/Error e :fail))))
+    (assert (= 4 (get [1 2] n 4)))
+    (assert (= :fail (try (nth [1 2] n 4) (catch js/Error e :fail))))
+
+    (assert (nil? (get (subvec [1 2] 1) n)))
+    (assert (= :fail (try (nth (subvec [1 2] 1) n) (catch js/Error e :fail))))
+    (assert (= 4 (get (subvec [1 2] 1) n 4)))
+    (assert (= :fail (try (nth (subvec [1 2] 1) n 4) (catch js/Error e :fail))))
+
+    (assert (nil? (get (transient [1 2]) n)))
+    (assert (= :fail (try (nth (transient [1 2]) n) (catch js/Error e :fail))))
+    (assert (= 4 (get (transient [1 2]) n 4)))
+    (assert (= :fail (try (nth (transient [1 2]) n 4) (catch js/Error e :fail))))
+
+    (assert (nil? (get (range 1 3) n)))
+    (assert (= :fail (try (nth (range 1 3) n) (catch js/Error e :fail))))
+    (assert (= 4 (get (range 1 3) n 4)))
+    (assert (= :fail (try (nth (range 1 3) n 4) (catch js/Error e :fail)))))
+
+
   :ok
   )

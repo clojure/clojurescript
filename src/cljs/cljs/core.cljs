@@ -900,56 +900,63 @@ reduces them without incurring seq initialization"
   also works for strings, arrays, regex Matchers and Lists, and,
   in O(n) time, for sequences."
   ([coll n]
-     (when-not (nil? coll)
-       (cond
-         (implements? IIndexed coll)
-         (-nth ^not-native coll n)
+    (cond
+      (not (number? n))
+      (throw (js/Error. "index argument to nth must be a number"))
 
-         (array? coll)
-         (when (< n (.-length coll))
-           (aget coll n))
-         
-         (string? coll)
-         (when (< n (.-length coll))
-           (aget coll n))
+      (nil? coll)
+      coll
 
-         (native-satisfies? IIndexed coll)
-         (-nth coll n)
-         
-         :else
-         (if (satisfies? ISeq coll)
-           (linear-traversal-nth coll n)
-           (throw
-             (js/Error.
-               (str "nth not supported on this type "
-                 (type->str (type coll)))))))))
+      (implements? IIndexed coll)
+      (-nth ^not-native coll n)
+
+      (array? coll)
+      (when (< n (.-length coll))
+        (aget coll n))
+
+      (string? coll)
+      (when (< n (.-length coll))
+        (aget coll n))
+
+      (native-satisfies? IIndexed coll)
+      (-nth coll n)
+
+      (satisfies? ISeq coll)
+      (linear-traversal-nth coll n)
+
+      :else
+      (throw (js/Error. (str "nth not supported on this type "
+                          (type->str (type coll)))))))
   ([coll n not-found]
-     (if-not (nil? coll)
-       (cond
-         (implements? IIndexed coll)
-         (-nth ^not-native coll n not-found)
+    (cond
+      (not (number? n))
+      (throw (js/Error. "index argument to nth must be a number."))
 
-         (array? coll)
-         (if (< n (.-length coll))
-           (aget coll n)
-           not-found)
-         
-         (string? coll)
-         (if (< n (.-length coll))
-           (aget coll n)
-           not-found)
-         
-         (native-satisfies? IIndexed coll)
-         (-nth coll n)
+      (nil? coll)
+      not-found
 
-         :else
-         (if (satisfies? ISeq coll)
-           (linear-traversal-nth coll n not-found)
-           (throw
-             (js/Error.
-               (str "nth not supported on this type "
-                 (type->str (type coll)))))))
-       not-found)))
+      (implements? IIndexed coll)
+      (-nth ^not-native coll n not-found)
+
+      (array? coll)
+      (if (< n (.-length coll))
+        (aget coll n)
+        not-found)
+
+      (string? coll)
+      (if (< n (.-length coll))
+        (aget coll n)
+        not-found)
+
+      (native-satisfies? IIndexed coll)
+      (-nth coll n)
+
+      (satisfies? ISeq coll)
+      (linear-traversal-nth coll n not-found)
+
+      :else
+      (throw (js/Error. (str "nth not supported on this type "
+                          (type->str (type coll))))))))
 
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
@@ -3392,8 +3399,10 @@ reduces them without incurring seq initialization"
       not-found))
 
   ILookup
-  (-lookup [coll k] (-nth coll k nil))
-  (-lookup [coll k not-found] (-nth coll k not-found))
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found] (if (number? k)
+                                (-nth coll k not-found)
+                                not-found))
 
   IMapEntry
   (-key [coll]
@@ -3635,8 +3644,10 @@ reduces them without incurring seq initialization"
       (-nth v (+ start n) not-found)))
 
   ILookup
-  (-lookup [coll k] (-nth coll k nil))
-  (-lookup [coll k not-found] (-nth coll k not-found))
+  (-lookup [coll k] (-lookup coll k nil))
+  (-lookup [coll k not-found] (if (number? k)
+                                (-nth coll k not-found)
+                                not-found))
 
   IAssociative
   (-assoc [coll key val]
@@ -3856,9 +3867,11 @@ reduces them without incurring seq initialization"
       not-found))
 
   ILookup
-  (-lookup [coll k] (-nth coll k nil))
+  (-lookup [coll k] (-lookup coll k nil))
 
-  (-lookup [coll k not-found] (-nth coll k not-found))
+  (-lookup [coll k not-found] (if (number? k)
+                                (-nth coll k not-found)
+                                not-found))
 
   IFn
   (-invoke [coll k]
