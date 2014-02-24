@@ -909,10 +909,7 @@
         (env/default-compiler-env opts))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
-       (let [opts (if (= :nodejs (:target opts))
-                    (merge {:optimizations :simple} opts)
-                    opts)
-             ups-deps (get-upstream-deps)
+       (let [ups-deps (get-upstream-deps)
              all-opts (assoc opts 
                         :ups-libs (:libs ups-deps)
                         :ups-foreign-libs (:foreign-libs ups-deps)
@@ -966,7 +963,14 @@
                       (add-source-map-link all-opts)
                       (add-header all-opts)
                       (output-one-file all-opts)))
-               (apply output-unoptimized all-opts js-sources))))))))
+               (apply output-unoptimized all-opts js-sources))
+             ;; emit Node.js bootstrap script for :none & :whitespace optimizations
+             (when (and (= (:target opts) :nodejs)
+                     (#{:none :whitespace} (:optimizations opts)))
+               (let [outfile (io/file (io/file (output-directory opts))
+                               "goog/bootstrap/nodejs.js")]
+                 (comp/mkdirs outfile)
+                 (spit outfile (slurp (io/resource "cljs/nodejs.js")))))))))))
   
 
 (comment
