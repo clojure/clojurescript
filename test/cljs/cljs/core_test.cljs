@@ -2115,5 +2115,17 @@
     (assert (= x 1))
     (assert (= y 2)))
 
+  ;; CLJS-739
+
+  (defn cljs-739 [arr names]
+    (let [name (first names)]
+      (if name
+        (recur (conj arr (fn [] (println name)))
+          (rest names))
+        arr)))
+
+  (assert (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
+             ":a\n:b\n:c\n:d\n"))
+
   :ok
   )
