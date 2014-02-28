@@ -133,7 +133,7 @@ nil if the end of stream has been reached")
   (let [groups (re-find* ratio-pattern s)
         numinator (aget groups 1)
         denominator (aget groups 2)]
-    (/ (js/parseInt numinator) (js/parseInt denominator))))
+    (/ (js/parseInt numinator 10) (js/parseInt denominator 10))))
 
 (defn- match-float
   [s]
@@ -468,7 +468,7 @@ nil if the end of stream has been reached")
 (def ^:private timestamp-regex #"(\d\d\d\d)(?:-(\d\d)(?:-(\d\d)(?:[T](\d\d)(?::(\d\d)(?::(\d\d)(?:[.](\d+))?)?)?)?)?)?(?:[Z]|([-+])(\d\d):(\d\d))?")
 
 (defn ^:private parse-int [s]
-  (let [n (js/parseInt s)]
+  (let [n (js/parseInt s 10)]
     (if-not (js/isNaN n)
       n)))
 
