@@ -7620,6 +7620,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
                   method-table prefer-table method-cache cached-hierarchy]
+  IFn
+
   IMultiFn
   (-reset [mf]
     (swap! method-table (fn [mf] {}))
