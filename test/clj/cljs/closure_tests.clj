@@ -11,6 +11,14 @@
     (testing "with custom hashbang"
       (is (= "#!/bin/env node\n" (make-preamble {:target :nodejs
                                                  :hashbang "/bin/env node"}))))
+    (testing "with no hashbang"
+      (is (= "" (make-preamble {:target :nodejs
+                                :hashbang false})))
+      (testing "and preamble"
+        (is (= "var preamble1 = require(\"preamble1\");\n"
+              (make-preamble {:target :nodejs
+                              :hashbang false
+                              :preamble ["cljs/preamble1.js"]})))))
     (testing "with preamble"
       (is (= "#!/usr/bin/env node\nvar preamble1 = require(\"preamble1\");\n"
              (make-preamble {:target :nodejs

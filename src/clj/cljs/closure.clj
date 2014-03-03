@@ -510,7 +510,7 @@
   (str (apply str (map #(slurp (io/resource %)) paths)) "\n"))
 
 (defn make-preamble [{:keys [target preamble hashbang]}]
-  (str (when (= :nodejs target)
+  (str (when (and (= :nodejs target) (not (false? hashbang)))
          (str "#!" (or hashbang "/usr/bin/env node") "\n"))
        (when preamble (preamble-from-paths preamble))))
 
