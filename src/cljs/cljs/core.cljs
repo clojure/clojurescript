@@ -772,6 +772,12 @@ reduces them without incurring seq initialization"
     (-nth ci i))
   (-rest [coll]
     (if (pos? i)
+      (RSeq. ci (dec i) nil)
+      ()))
+  
+  INext
+  (-next [coll]
+    (when (pos? i)
       (RSeq. ci (dec i) nil)))
 
   ICounted

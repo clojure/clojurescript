@@ -2150,6 +2150,10 @@
     (assert (= 4 (get (range 1 3) n 4)))
     (assert (= :fail (try (nth (range 1 3) n 4) (catch js/Error e :fail)))))
 
+  ;; CLJS-778
+  (assert (= (-rest (rseq [0])) ()))
+  (assert (nil? (-next (rseq [0]))))
+  (assert (= (set (rseq [0])) #{0}))
 
   :ok
   )
