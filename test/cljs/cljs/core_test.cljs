@@ -2155,5 +2155,12 @@
   (assert (nil? (-next (rseq [0]))))
   (assert (= (set (rseq [0])) #{0}))
 
+  ;; CLJS-780
+  (def cljs-780 (atom {:foo (with-meta [] {:bar '(1 2 3)})}))
+  (swap! cljs-780 update-in [:foo] vary-meta update-in [:bar] vec)
+  (let [x (-> @cljs-780 :foo meta :bar)]
+    (assert (vector? x))
+    (assert (= x [1 2 3])))
+
   :ok
   )

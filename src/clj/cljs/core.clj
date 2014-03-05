@@ -1540,7 +1540,7 @@
          (~print-fn (str ~bs-str ", " ~expr-str ", "
                          ~iterations " runs, " elapsed# " msecs"))))))
 
-(def cs (into [] (map (comp symbol core/str core/char) (range 97 118))))
+(def cs (into [] (map (comp gensym core/str core/char) (range 97 118))))
 
 (defn gen-apply-to-helper
   ([] (gen-apply-to-helper 1))
