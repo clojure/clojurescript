@@ -28,3 +28,10 @@ else
   echo "Benchmarking with JavaScriptCore"
   "${JSC_HOME}/jsc" -f out/core-advanced-benchmark.js
 fi
+
+if [ "$NASHORN_HOME" = "" ]; then
+  echo "NASHORN_HOME not set, skipping JavaScriptCore benchmarks"
+else
+  echo "Benchmarking with Nashorn"
+  "${NASHORN_HOME}/jjs" out/core-advanced-benchmark.js
+fi
