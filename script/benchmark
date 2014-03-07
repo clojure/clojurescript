@@ -30,7 +30,7 @@ else
 fi
 
 if [ "$NASHORN_HOME" = "" ]; then
-  echo "NASHORN_HOME not set, skipping JavaScriptCore benchmarks"
+  echo "NASHORN_HOME not set, skipping Nashorn benchmarks"
 else
   echo "Benchmarking with Nashorn"
   "${NASHORN_HOME}/jjs" out/core-advanced-benchmark.js
