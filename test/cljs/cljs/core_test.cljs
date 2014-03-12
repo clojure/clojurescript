@@ -2162,5 +2162,9 @@
     (assert (vector? x))
     (assert (= x [1 2 3])))
 
+  ;; CLJS-782
+  (assert (= (.toString #uuid "550e8400-e29b-41d4-a716-446655440000")
+             "550e8400-e29b-41d4-a716-446655440000"))
+
   :ok
   )

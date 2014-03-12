@@ -7717,6 +7717,9 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 ;; UUID
 
 (deftype UUID [uuid]
+  Object
+  (toString [_] uuid)
+
   IEquiv
   (-equiv [_ other]
     (and (instance? UUID other) (identical? uuid (.-uuid other))))
