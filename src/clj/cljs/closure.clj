@@ -54,7 +54,7 @@
            com.google.javascript.jscomp.SourceMap$Format
            com.google.javascript.jscomp.SourceMap$DetailLevel
            com.google.javascript.jscomp.ClosureCodingConvention
-           com.google.javascript.jscomp.JSSourceFile
+           com.google.javascript.jscomp.SourceFile
            com.google.javascript.jscomp.Result
            com.google.javascript.jscomp.JSError
            com.google.javascript.jscomp.CheckLevel
@@ -79,13 +79,13 @@
 (defmulti js-source-file (fn [_ source] (class source)))
 
 (defmethod js-source-file String [^String name ^String source]
-  (JSSourceFile/fromCode name source))
+  (SourceFile/fromCode name source))
 
 (defmethod js-source-file File [_ ^File source]
-  (JSSourceFile/fromFile source))
+  (SourceFile/fromFile source))
 
 (defmethod js-source-file BufferedInputStream [^String name ^BufferedInputStream source]
-  (JSSourceFile/fromInputStream name source))
+  (SourceFile/fromInputStream name source))
 
 (defn set-options
   "TODO: Add any other options that we would like to support."
