@@ -3,6 +3,20 @@
             [clojure.string :as string])
   (:import java.io.File))
 
+; taken from pomegranate/dynapath
+; https://github.com/tobias/dynapath/blob/master/src/dynapath/util.clj
+(defn- all-classpath-urls
+  "Walks up the parentage chain for a ClassLoader, concatenating any URLs it retrieves.
+If no ClassLoader is provided, RT/baseLoader is assumed."
+  ([] (all-classpath-urls (clojure.lang.RT/baseLoader)))
+  ([cl]
+     (->> (iterate #(.getParent %) cl)
+       (take-while identity)
+       reverse
+       (filter (partial instance? java.net.URLClassLoader))
+       (mapcat #(.getURLs %))
+       distinct)))
+
 (defn jar-entry-names* [jar-path]
   (with-open [z (java.util.zip.ZipFile. jar-path)]
     (doall (map #(.getName %) (enumeration-seq (.entries z))))))
@@ -10,15 +24,13 @@
 (def jar-entry-names (memoize jar-entry-names*))
 
 (defn find-js-jar
-  "finds js resources from a given path in a jar file"
+  "Returns a seq of URLs of all JavaScript resources in the given jar"
   [jar-path lib-path]
-  (doall
-    (map #(io/resource %)
-         (filter #(do
-                    (and 
-                      (.startsWith ^String % lib-path)
-                      (.endsWith ^String % ".js")))
-                 (jar-entry-names jar-path)))))
+  (map io/resource
+    (filter #(and
+               (.endsWith ^String % ".js")
+               (.startsWith ^String % lib-path))
+      (jar-entry-names jar-path))))
 
 (defmulti to-url class)
 
@@ -33,23 +45,25 @@
     (when (.exists file)
       (map to-url (filter #(.endsWith ^String (.getName ^File %) ".js") (file-seq (io/file path)))))))
 
-
 (defn find-js-classpath 
-  "finds all js files on the classpath matching the path provided"
+  "Returns a seq of URLs of all JavaScript files on the classpath."
   [path]
-  (let [process-entry #(if (.endsWith ^String % ".jar")
-                           (find-js-jar % path)
-                           (find-js-fs (str % "/" path)))
-        cpath-list (let [sysp (System/getProperty  "java.class.path" )]
-                     (if (.contains sysp ";")
-                       (string/split sysp #";")
-                       (string/split sysp #":")))]
-    (doall (reduce #(let [p (process-entry %2)]
-                      (if p (concat %1 p) %1)) [] cpath-list))))
+  (->> (all-classpath-urls)
+    (map io/file)
+    (reduce
+      (fn [files jar-or-dir]
+        (->> (when (.exists jar-or-dir)
+              (if (.isDirectory jar-or-dir)
+                (find-js-fs (str (.getAbsolutePath jar-or-dir) "/" path))
+                (find-js-jar jar-or-dir path)))
+          (remove nil?)
+          (into files)))
+      [])))
 
 (defn find-js-resources [path]
-  "finds js resources in a given path on either the file system or
-   the classpath"
+  "Returns a seq of URLs to all JavaScript resources on the classpath or within
+a given (directory) path on the filesystem. [path] only applies to the latter
+case."
   (let [file (io/file path)]
     (if (.exists file)
       (find-js-fs path)
@@ -159,29 +173,35 @@
 
 (def load-foreign-library (memoize load-foreign-library*))
 
+(defn- library-graph-node
+  "Returns a map of :provides, :requires, and :url given a URL to a goog-style
+JavaScript library containing provide/require 'declarations'."
+  [url]
+  (with-open [reader (io/reader url)]
+    (-> reader line-seq parse-js-ns
+      (assoc :url url))))
+
 (defn load-library*
   "Given a path to a JavaScript library, which is a directory
   containing Javascript files, return a list of maps
   containing :provides, :requires, :file and :url."
-  ([path] (load-library* path false))
-  ([path cp-only?]
-    (let [find-func (if cp-only? find-js-classpath find-js-resources)
-          graph-node (fn [u]
-                       (with-open [reader (io/reader u)]
-                         (-> reader line-seq parse-js-ns
-                             (assoc :url u))))]
-    (let [js-sources (find-js-resources path)]
-      (filter #(seq (:provides %)) (map graph-node js-sources))))))
+  [path]
+  (->> (find-js-resources path)
+    (map library-graph-node)
+    (filter #(seq (:provides %)))))
 
 (def load-library (memoize load-library*))
 
-(defn library-dependencies [{libs :libs foreign-libs :foreign-libs
-                             ups-libs :ups-libs ups-flibs :ups-foreign-libs}]
+(defn library-dependencies
+  [{libs :libs foreign-libs :foreign-libs
+    ups-libs :ups-libs ups-flibs :ups-foreign-libs}]
   (concat
-   (mapcat #(load-library % true) ups-libs) ;upstream deps
-   (mapcat load-library libs)
-   (map #(load-foreign-library % true) ups-flibs) ;upstream deps
-   (map load-foreign-library foreign-libs)))
+    (mapcat load-library ups-libs) ;upstream deps
+    ; :libs are constrained to filesystem-only at this point; see
+    ; `find-classpath-lib` for goog-style JS library lookup
+    (mapcat load-library (filter #(.exists (io/file %)) libs))
+    (map #(load-foreign-library % true) ups-flibs) ;upstream deps
+    (map load-foreign-library foreign-libs)))
 
 (comment
   ;; load one library
@@ -225,9 +245,33 @@
 
 (def goog-dependencies (memoize goog-dependencies*))
 
-
 (defn js-dependency-index
   "Returns the index for all JavaScript dependencies. Lookup by
   namespace or file name."
   [opts]
-  (build-index (concat (goog-dependencies) (library-dependencies opts))))
+  ; (library-dependencies) will find all of the same libs returned by
+  ; (goog-dependencies), but the latter returns some additional/different
+  ; information (:file instead of :url, :group), so they're folded in last to
+  ; take precedence in the returned index.  It is likely that
+  ; (goog-dependencies), special-casing of them, goog/deps.js, etc can be
+  ; removed entirely, but verifying that can be a fight for another day.
+  (build-index (concat (library-dependencies opts) (goog-dependencies))))
+
+(defn find-classpath-lib
+  "Given [lib], a string or symbol naming a goog-style JavaScript library
+  (i.e. one that uses goog.provide and goog.require), look for a resource on the
+  classpath corresponding to [lib] and return a map via `library-graph-node`
+  that contains its relevant metadata.  The library found on the classpath
+  _must_ contain a `goog.provide` that matches [lib], or this fn will return nil
+  and print a warning."
+  [lib]
+  (when-let [lib-resource (some-> (name lib)
+                            (.replace \. \/)
+                            (.replace \- \_)
+                            (str ".js")
+                            io/resource)]
+    (let [{:keys [provides] :as lib-info} (library-graph-node lib-resource)]
+      (if (some #{(name lib)} provides)
+        lib-info
+        (println (format "WARNING: JavaScript file found on classpath for library `%s`, but does not contain a corresponding `goog.provide` declaration: %s"
+                   lib lib-resource))))))

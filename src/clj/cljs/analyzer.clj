@@ -12,6 +12,7 @@
             [clojure.string :as string]
             [clojure.set :as set]
             [cljs.env :as env]
+            [cljs.js-deps :as deps]
             [cljs.tagged-literals :as tags]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers])
@@ -974,7 +975,8 @@
       (str "Circular dependency detected " (-> *cljs-dep-set* meta :dep-path)))
     (doseq [dep deps]
       (when-not (or (contains? (::namespaces @env/*compiler*) dep)
-                    (contains? (:js-dependency-index @env/*compiler*) (name dep)))
+                    (contains? (:js-dependency-index @env/*compiler*) (name dep))
+                    (deps/find-classpath-lib dep))
         (let [relpath (ns->relpath dep)
               src (locate-src relpath)]
           (if src

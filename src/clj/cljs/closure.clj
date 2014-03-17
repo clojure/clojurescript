@@ -427,7 +427,8 @@
          visited (set requires)
          deps #{}]
     (if (seq requires)
-      (let [node (get (@env/*compiler* :js-dependency-index) (first requires))
+      (let [node (or (get (@env/*compiler* :js-dependency-index) (first requires))
+                   (deps/find-classpath-lib (first requires)))
             new-req (remove #(contains? visited %) (:requires node))]
         (recur (into (rest requires) new-req)
                (into visited new-req)
@@ -448,6 +449,15 @@
   (let [js-file (comp/rename-to-js relative-path)]
     (-compile uri (merge opts {:output-file js-file}))))
 
+(defn cljs-source-for-namespace
+  "Returns a map containing :relative-path, :uri referring to the resource that
+should contain the source for the given namespace name."
+  [ns]
+  (as-> (munge ns) %
+    (string/replace % \. \/)
+    (str % ".cljs")
+    {:relative-path % :uri (io/resource %)}))
+
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
   IJavaScripts which are the cljs dependencies. The returned list will
@@ -457,12 +467,12 @@
 
   Only load dependencies from the classpath."
   [opts requires]
-  (letfn [(ns->cp [s] (str (string/replace (munge s) \. \/) ".cljs"))
-          (cljs-deps [coll]
-                     (->> coll
-                          (remove (@env/*compiler* :js-dependency-index))
-                          (map #(let [f (ns->cp %)] (hash-map :relative-path f :uri (io/resource f))))
-                          (remove #(nil? (:uri %)))))]
+  (let [cljs-deps (fn [lib-names]
+                    (->> (remove #(or ((@env/*compiler* :js-dependency-index) %)
+                                    (deps/find-classpath-lib %))
+                           lib-names)
+                      (map cljs-source-for-namespace)
+                      (remove (comp nil? :uri))))]
     (loop [required-files (cljs-deps requires)
            visited (set required-files)
            js-deps #{}]
