@@ -951,28 +951,28 @@
                                               [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
                              (when (= :nodejs (:target all-opts))
                                [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
-                 optim (:optimizations all-opts)]
-             (if (and optim (not= optim :none))
-               (do
-                 (when-let [fname (:source-map all-opts)]
-                   (assert (string? fname)
-                           (str ":source-map must name a file when using :whitespace, "
-                                ":simple, or :advanced optimizations"))
-                   (doall (map #(source-on-disk all-opts %) js-sources)))
-                 (->> js-sources
-                      (apply optimize all-opts)
-                      (add-wrapper all-opts)
-                      (add-source-map-link all-opts)
-                      (add-header all-opts)
-                      (output-one-file all-opts)))
-               (apply output-unoptimized all-opts js-sources))
+                 optim (:optimizations all-opts)
+                 ret (if (and optim (not= optim :none))
+                       (do
+                         (when-let [fname (:source-map all-opts)]
+                           (assert (string? fname)
+                             (str ":source-map must name a file when using :whitespace, "
+                               ":simple, or :advanced optimizations"))
+                           (doall (map #(source-on-disk all-opts %) js-sources)))
+                         (->> js-sources
+                           (apply optimize all-opts)
+                           (add-wrapper all-opts)
+                           (add-source-map-link all-opts)
+                           (add-header all-opts)
+                           (output-one-file all-opts)))
+                       (apply output-unoptimized all-opts js-sources))]
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
              (when (and (= (:target opts) :nodejs)
-                     (#{:none :whitespace} (:optimizations opts)))
-               (let [outfile (io/file (io/file (output-directory opts))
-                               "goog/bootstrap/nodejs.js")]
+                        (#{:none :whitespace} (:optimizations opts)))
+               (let [outfile (io/file (io/file (output-directory opts)) "goog/bootstrap/nodejs.js")]
                  (comp/mkdirs outfile)
-                 (spit outfile (slurp (io/resource "cljs/nodejs.js")))))))))))
+                 (spit outfile (slurp (io/resource "cljs/nodejs.js")))))
+             ret))))))
   
 
 (comment
