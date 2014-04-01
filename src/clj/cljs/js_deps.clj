@@ -201,7 +201,10 @@
   (letfn [(parse-list [s] (when (> (count s) 0)
                             (-> (.substring ^String s 1 (dec (count s)))
                                 (string/split #"'\s*,\s*'"))))]
-    (with-open [reader (io/reader (io/resource "goog/deps.js"))]
+    (with-open [reader (io/reader
+                         (first
+                           (filter (fn [res] (re-find #"\/google-closure-library\/" (.getPath res)))
+                             (enumeration-seq (.getResources (ClassLoader/getSystemClassLoader) "goog/deps.js")))))]
       (->> (line-seq reader)
            (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
            (remove nil?)
