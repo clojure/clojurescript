@@ -203,7 +203,7 @@
                                 (string/split #"'\s*,\s*'"))))]
     (with-open [reader (io/reader
                          (first
-                           (filter (fn [res] (re-find #"\/google-closure-library\/" (.getPath res)))
+                           (filter (fn [res] (re-find #"(\/google-closure-library-0.0*|\/google-closure-library\/)" (.getPath res)))
                              (enumeration-seq (.getResources (ClassLoader/getSystemClassLoader) "goog/deps.js")))))]
       (->> (line-seq reader)
            (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
