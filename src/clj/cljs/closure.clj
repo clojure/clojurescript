@@ -493,7 +493,7 @@
         unprovided (clojure.set/difference (set requires) (set provided) #{"constants-table"})]
     (when (seq unprovided)
       (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
-    (cons (javascript-file nil (io/resource "goog/base.js") ["goog"] nil)
+    (cons (javascript-file nil (deps/goog-resource "goog/base.js") ["goog"] nil)
           (deps/dependency-order
            (concat (map #(-> (javascript-file (:foreign %)
                                               (or (:url %) (io/resource (:file %)))
@@ -771,8 +771,8 @@
   (write-javascript {} "goog.provide('demo');\nalert('hello');\n")
   ;; write something from a jar file to disk
   (source-on-disk {}
-                  {:url (io/resource "goog/base.js")
-                   :source (with-open [reader (io/reader (io/resource "goog/base.js"))]
+                  {:url (deps/goog-resource "goog/base.js")
+                   :source (with-open [reader (io/reader (deps/goog-resource "goog/base.js"))]
                              (slurp reader))})
   ;; doesn't write a file that is already on disk
   (source-on-disk {} {:url (io/resource "cljs/core.cljs")})
