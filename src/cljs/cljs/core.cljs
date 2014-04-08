@@ -7393,11 +7393,12 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   [f]
   (let [mem (atom {})]
     (fn [& args]
-      (if-let [v (get @mem args)]
-        v
-        (let [ret (apply f args)]
-          (swap! mem assoc args ret)
-          ret)))))
+      (let [v (get @mem args lookup-sentinel)]
+        (if (identical? v lookup-sentinel)
+          (let [ret (apply f args)]
+            (swap! mem assoc args ret)
+            ret)
+          v)))))
 
 (defn trampoline
   "trampoline can be used to convert algorithms requiring mutual
