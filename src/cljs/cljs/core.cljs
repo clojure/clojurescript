@@ -7613,21 +7613,141 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-prefer-method [mf dispatch-val dispatch-val-y])
   (-get-method [mf dispatch-val])
   (-methods [mf])
-  (-prefers [mf])
-  (-dispatch [mf args]))
+  (-prefers [mf]))
 
-(defn- do-dispatch
-  [mf name dispatch-fn args]
-  (let [dispatch-val (apply dispatch-fn args)
-        target-fn (-get-method mf dispatch-val)]
-    (when-not target-fn
-      (throw (js/Error. (str "No method in multimethod '" name "' for dispatch value: " dispatch-val))))
-    (apply target-fn args)))
+(defn- throw-no-method-error [name dispatch-val]
+  (throw (js/Error. (str "No method in multimethod '" name "' for dispatch value: " dispatch-val))))
 
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
                   method-table prefer-table method-cache cached-hierarchy]
   IFn
-
+  (-invoke [mf a]
+    (let [dispatch-val (dispatch-fn a)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a)))
+  (-invoke [mf a b]
+    (let [dispatch-val (dispatch-fn a b)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b)))
+  (-invoke [mf a b c]
+    (let [dispatch-val (dispatch-fn a b c)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c)))
+  (-invoke [mf a b c d]
+    (let [dispatch-val (dispatch-fn a b c d)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d)))
+  (-invoke [mf a b c d e]
+    (let [dispatch-val (dispatch-fn a b c d e)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e)))
+  (-invoke [mf a b c d e f]
+    (let [dispatch-val (dispatch-fn a b c d e f)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f)))
+  (-invoke [mf a b c d e f g]
+    (let [dispatch-val (dispatch-fn a b c d e f g)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g)))
+  (-invoke [mf a b c d e f g h]
+    (let [dispatch-val (dispatch-fn a b c d e f g h)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h)))
+  (-invoke [mf a b c d e f g h i]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i)))
+  (-invoke [mf a b c d e f g h i j]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j)))
+  (-invoke [mf a b c d e f g h i j k]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k)))
+  (-invoke [mf a b c d e f g h i j k l]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l)))
+  (-invoke [mf a b c d e f g h i j k l m]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m)))
+  (-invoke [mf a b c d e f g h i j k l m n]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m n)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m n)))
+  (-invoke [mf a b c d e f g h i j k l m n o]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m n o)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m n o)))
+  (-invoke [mf a b c d e f g h i j k l m n o p]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m n o p)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m n o p)))
+  (-invoke [mf a b c d e f g h i j k l m n o p q]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m n o p q)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m n o p q)))
+  (-invoke [mf a b c d e f g h i j k l m n o p q r]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m n o p q r)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m n o p q r)))
+  (-invoke [mf a b c d e f g h i j k l m n o p q r s]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m n o p q r s)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m n o p q r s)))
+  (-invoke [mf a b c d e f g h i j k l m n o p q r s t]
+    (let [dispatch-val (dispatch-fn a b c d e f g h i j k l m n o p q r s t)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn a b c d e f g h i j k l m n o p q r s t)))
+  (-invoke [mf a b c d e f g h i j k l m n o p q r s t rest]
+    (let [dispatch-val (apply dispatch-fn a b c d e f g h i j k l m n o p q r s t rest)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (apply target-fn a b c d e f g h i j k l m n o p q r s t rest)))
+    
   IMultiFn
   (-reset [mf]
     (swap! method-table (fn [mf] {}))
@@ -7670,20 +7790,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
 
-  (-dispatch [mf args] (do-dispatch mf name dispatch-fn args))
-
   IHash
   (-hash [this] (goog/getUid this)))
-
-(set! cljs.core.MultiFn.prototype.call
-      (fn [_ & args]
-        (this-as self
-          (-dispatch self args))))
-
-(set! cljs.core.MultiFn.prototype.apply
-      (fn [_ args]
-        (this-as self
-          (-dispatch self args))))
 
 (defn remove-all-methods
   "Removes all of the methods of multimethod."
