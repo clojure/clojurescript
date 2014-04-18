@@ -24,7 +24,9 @@
                (r/fold g f {:a 1 :b 2 :c 3})
                [#{:a :b :c} #{1 2 3}]))
     (let [m (into {} (for [x (range 2048)] [x (- x)]))]
-      (assert (= (r/reduce f (g) m) (r/fold g f m))))))
+      (assert (= (r/reduce f (g) m) (r/fold g f m)))))
+  ;; CLJS-792
+  (assert (= (into [] (r/map identity {})) [])))
 
 (defn test-all []
   (test-builtin-impls))

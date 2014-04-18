@@ -4388,7 +4388,13 @@ reduces them without incurring seq initialization"
               @init
               (recur (+ i 2) init)))
           init))))
-
+  
+  IReduce
+  (-reduce [coll f]
+    (seq-reduce f coll))
+  (-reduce [coll f start]
+    (seq-reduce f start coll))
+  
   IFn
   (-invoke [coll k]
     (-lookup coll k))
