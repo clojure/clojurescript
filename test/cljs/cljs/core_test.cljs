@@ -1795,6 +1795,9 @@
         uuid (UUID. uuid-str)]
     (assert (= (pr-str uuid) (str "#uuid \"" uuid-str "\""))))
 
+  ;;; pr-str PersistentQueueSeq - CLJS-800
+  (assert (= (pr-str (rest (conj cljs.core.PersistentQueue.EMPTY 1 2 3))) "(2 3)"))
+
   ;; CLJS-405
 
   (defprotocol IBar (-bar [this x]))
