@@ -678,6 +678,11 @@
 ;; library's base.js and one which calls goog.require to load your
 ;; code. See samples/hello/hello-dev.html for an example.
 
+(defn input-absolute-path
+  [^File input]
+  (let [abs-path (.getCanonicalPath (io/file ^URL (deps/-url input)))]
+    abs-path))
+
 (defn path-relative-to
   "Generate a string which is the path to input relative to base."
   [^File base input]
@@ -695,7 +700,9 @@
   [opts input]
   (letfn [(ns-list [coll] (when (seq coll) (apply str (interpose ", " (map #(str "'" (comp/munge %) "'") coll)))))]
     (str "goog.addDependency(\""
-         (path-relative-to (io/file (output-directory opts) "goog/base.js") input)
+         (if (= (get-in opts [:target]) :nodejs)
+          (input-absolute-path input)
+          (path-relative-to (io/file (output-directory opts) "goog/base.js") input))
          "\", ["
          (ns-list (deps/-provides input))
          "], ["

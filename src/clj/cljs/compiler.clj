@@ -774,6 +774,8 @@
 
 (defmethod emit* :ns
   [{:keys [name requires uses require-macros env]}]
+  (when (= (get-in env [:opts :target]) :nodejs)
+    (emitln "require('nclosure').nclosure();"))
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
@@ -881,7 +883,7 @@
                    ns-name nil
                    deps nil]
               (if (seq forms)
-                (let [env (ana/empty-env)
+                (let [env (ana/empty-env opts)
                       ast (ana/analyze env (first forms))]
                   (do (emit ast)
                     (if (= (:op ast) :ns)
