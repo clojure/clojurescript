@@ -226,16 +226,19 @@
                *cljs-macros-is-classpath* false]
        ~@body)))
 
-(defn empty-env []
-  (env/ensure
-    {:ns (get-namespace *cljs-ns*)
-     :context :statement
-     :locals {}
-     :js-globals (into {}
-                   (map #(vector % {:name %})
-                     '(alert window document console escape unescape
-                       screen location navigator history location
-                       global process require module exports)))}))
+(defn empty-env
+  ([] (empty-env {}))
+  ([opts]
+   (env/ensure
+     {:ns (get-namespace *cljs-ns*)
+      :context :statement
+      :locals {}
+      :opts opts
+      :js-globals (into {}
+                    (map #(vector % {:name %})
+                      '(alert window document console escape unescape
+                        screen location navigator history location
+                        global process require module exports)))})))
 
 (defmacro ^:private debug-prn
   [& args]
