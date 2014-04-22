@@ -2169,5 +2169,16 @@
   (assert (= (.toString #uuid "550e8400-e29b-41d4-a716-446655440000")
              "550e8400-e29b-41d4-a716-446655440000"))
 
+  ;; CLJS-784
+  (doseq [m [(array-map) (hash-map) (sorted-map)]]
+    (assert (= :ok
+               (try
+                 (conj m "foo")
+                 (catch js/Error _
+                   :ok))))
+    (assert (= {:foo 1} (conj m [:foo 1])))
+    (assert (= {:foo 1} (conj m {:foo 1})))
+    (assert (= {:foo 1} (conj m (list [:foo 1])))))
+
   :ok
   )

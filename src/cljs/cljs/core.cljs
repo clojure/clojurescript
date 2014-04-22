@@ -4302,7 +4302,14 @@ reduces them without incurring seq initialization"
   (-conj [coll entry]
     (if (vector? entry)
       (-assoc coll (-nth entry 0) (-nth entry 1))
-      (reduce -conj coll entry)))
+      (loop [ret coll es (seq entry)]
+        (if (nil? es)
+          ret
+          (let [e (first es)]
+            (if (vector? e)
+              (recur (-assoc ret (-nth e 0) (-nth e 1))
+                     (-next es))
+              (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
   (-empty [coll] (-with-meta cljs.core.PersistentArrayMap.EMPTY meta))
@@ -5128,7 +5135,14 @@ reduces them without incurring seq initialization"
   (-conj [coll entry]
     (if (vector? entry)
       (-assoc coll (-nth entry 0) (-nth entry 1))
-      (reduce -conj coll entry)))
+      (loop [ret coll es (seq entry)]
+        (if (nil? es)
+          ret
+          (let [e (first es)]
+            (if (vector? e)
+              (recur (-assoc ret (-nth e 0) (-nth e 1))
+                     (-next es))
+              (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
   (-empty [coll] (-with-meta cljs.core.PersistentHashMap.EMPTY meta))
@@ -5866,9 +5880,14 @@ reduces them without incurring seq initialization"
   (-conj [coll entry]
     (if (vector? entry)
       (-assoc coll (-nth entry 0) (-nth entry 1))
-      (reduce -conj
-              coll
-              entry)))
+      (loop [ret coll es (seq entry)]
+        (if (nil? es)
+          ret
+          (let [e (first es)]
+            (if (vector? e)
+              (recur (-assoc ret (-nth e 0) (-nth e 1))
+                     (-next es))
+              (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
   (-empty [coll] (with-meta cljs.core.PersistentTreeMap.EMPTY meta))
