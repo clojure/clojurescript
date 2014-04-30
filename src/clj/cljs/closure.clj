@@ -93,6 +93,9 @@
   (when (contains? opts :pretty-print)
     (set! (.prettyPrint compiler-options) (:pretty-print opts)))
 
+  (when (contains? opts :pseudo-names)
+    (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
+
   (when (contains? opts :language-in)
     (case (:language-in opts)
       :ecmascript5        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
