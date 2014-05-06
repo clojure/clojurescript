@@ -2179,6 +2179,20 @@
     (assert (= {:foo 1} (conj m [:foo 1])))
     (assert (= {:foo 1} (conj m {:foo 1})))
     (assert (= {:foo 1} (conj m (list [:foo 1])))))
+  
+  (doseq [mt [array-map hash-map sorted-map]]
+    (assert (= {:foo 1 :bar 2 :baz 3}
+               (conj (mt :foo 1)
+                     ((fn make-seq [from-seq]
+                        ;; this tests specifically for user defined seq's, that implement the bare minimum, i.e. no INext
+                        (when (seq from-seq)
+                          (reify
+                            ISeqable
+                            (-seq [this] this)
+                            ISeq
+                            (-first [this] (first from-seq))
+                            (-rest [this] (make-seq (rest from-seq))))))
+                      [[:bar 2] [:baz 3]])))))
 
   :ok
   )

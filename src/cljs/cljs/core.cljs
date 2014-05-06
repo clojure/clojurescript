@@ -4308,7 +4308,7 @@ reduces them without incurring seq initialization"
           (let [e (first es)]
             (if (vector? e)
               (recur (-assoc ret (-nth e 0) (-nth e 1))
-                     (-next es))
+                     (next es))
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
@@ -5141,7 +5141,7 @@ reduces them without incurring seq initialization"
           (let [e (first es)]
             (if (vector? e)
               (recur (-assoc ret (-nth e 0) (-nth e 1))
-                     (-next es))
+                     (next es))
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
@@ -5886,7 +5886,7 @@ reduces them without incurring seq initialization"
           (let [e (first es)]
             (if (vector? e)
               (recur (-assoc ret (-nth e 0) (-nth e 1))
-                     (-next es))
+                     (next es))
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
