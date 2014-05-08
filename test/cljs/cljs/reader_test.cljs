@@ -43,10 +43,8 @@
              (reader/read-string "#queue [1 2]")))
 
   ;; comments
-  (assert (= :threw (try
-                      (reader/read-string ";foo")
-                      :failed-to-throw
-                      (catch js/Error e :threw))))
+  (assert (nil? (reader/read-string ";foo")))
+  
   (assert (= 3 (try
                  (reader/read-string ";foo\n3")
                  (catch js/Error e :threw))))
@@ -165,5 +163,9 @@
   (assert (= (aget (reader/read-string "#js {\"foo\" \"bar\"}") "foo") "bar"))
   (assert (array? (aget (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")))
   (assert (= (seq (aget (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")) '(1 2 3)))
+
+  ;; CLJS-787
+  
+  (assert (nil? (reader/read-string "")))
 
   :ok)

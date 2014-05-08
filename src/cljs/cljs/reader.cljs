@@ -432,7 +432,7 @@ nil if the end of stream has been reached")
   "Reads one object from the string s"
   [s]
   (let [r (push-back-reader s)]
-    (read r true nil false)))
+    (read r false nil false)))
 
 
 ;; read instances
