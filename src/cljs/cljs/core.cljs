@@ -7146,7 +7146,8 @@ reduces them without incurring seq initialization"
     (doseq [[key f] watches]
       (f key this oldval newval)))
   (-add-watch [this key f]
-    (set! (.-watches this) (assoc watches key f)))
+    (set! (.-watches this) (assoc watches key f))
+    this)
   (-remove-watch [this key]
     (set! (.-watches this) (dissoc watches key)))
 
