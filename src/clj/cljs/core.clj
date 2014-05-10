@@ -1126,35 +1126,50 @@
            ~gexpr ~expr]
        ~(emit gpred gexpr clauses))))
 
+(defn- assoc-test [m test expr env]
+  (if (contains? m test)
+    (throw
+      (clojure.core/IllegalArgumentException.
+        (core/str "Duplicate case test constant '"
+          test "'"
+          (when (:line env)
+            (core/str " on line " (:line env) " "
+              cljs.analyzer/*cljs-file*)))))
+    (assoc m test expr)))
+
 (defmacro case [e & clauses]
-  (let [default (if (odd? (count clauses))
-                  (last clauses)
-                  `(throw (js/Error. (core/str "No matching clause: " ~e))))
-        assoc-test (fn assoc-test [m test expr]
-                         (if (contains? m test)
-                           (throw (clojure.core/IllegalArgumentException.
-                                   (core/str "Duplicate case test constant '"
-                                             test "'"
-                                             (when (:line &env)
-                                               (core/str " on line " (:line &env) " "
-                                                         cljs.analyzer/*cljs-file*)))))
-                           (assoc m test expr)))
-        pairs (reduce (fn [m [test expr]]
-                        (core/cond
-                         (seq? test) (reduce (fn [m test]
-                                               (let [test (if (core/symbol? test)
-                                                            (core/list 'quote test)
-                                                            test)]
-                                                 (assoc-test m test expr)))
-                                             m test)
-                         (core/symbol? test) (assoc-test m (core/list 'quote test) expr)
-                         :else (assoc-test m test expr)))
-                      {} (partition 2 clauses))
-        esym (gensym)]
-   `(let [~esym ~e]
-      (cond
-        ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
-        :else ~default))))
+  (core/let [default (if (odd? (count clauses))
+                       (last clauses)
+                       `(throw
+                          (js/Error.
+                            (core/str "No matching clause: " ~e))))
+             env     &env
+             pairs   (reduce
+                       (fn [m [test expr]]
+                         (core/cond
+                           (seq? test)
+                           (reduce
+                             (fn [m test]
+                               (let [test (if (core/symbol? test)
+                                            (core/list 'quote test)
+                                            test)]
+                                 (assoc-test m test expr env)))
+                             m test)
+                           (core/symbol? test)
+                           (assoc-test m (core/list 'quote test) expr env)
+                           :else
+                           (assoc-test m test expr env)))
+                     {} (partition 2 clauses))
+             esym (gensym)]
+    (if (every? (some-fn core/number? core/string?) (keys pairs))
+      (core/let [no-default (if (odd? (count clauses)) (butlast clauses) clauses)
+                 tests      (mapv #(if (seq? %) (vec %) [%]) (take-nth 2 no-default))
+                 thens      (vec (take-nth 2 (drop 1 no-default)))]
+        `(let [~esym ~e] (case* ~esym ~tests ~thens ~default)))
+      `(let [~esym ~e]
+         (cond
+           ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
+           :else ~default)))))
 
 (defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to
