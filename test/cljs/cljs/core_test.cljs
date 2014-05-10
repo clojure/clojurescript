@@ -2194,5 +2194,20 @@
                             (-rest [this] (make-seq (rest from-seq))))))
                       [[:bar 2] [:baz 3]])))))
 
+  ;; printing customization
+  (assert (= (binding [*print-length* 1] (str [1 2 3 4 5 6 7 8 9 0]))
+             "[1 ...]"))
+  (assert (= (binding [*print-length* 2] (str [1 2 3 4 5 6 7 8 9 0]))
+             "[1 2 ...]"))
+  (assert (= (binding [*print-length* 10] (str [1 2 3 4 5 6 7 8 9 0]))
+             "[1 2 3 4 5 6 7 8 9 0]"))
+  ;; CLJS-804
+  (assert (= (binding [*print-length* 10] (str {:foo "bar"}))
+             "{:foo \"bar\"}"))
+  (assert (= (binding [*print-length* 1] (str {:foo "bar" :baz "woz"}))
+             "{:foo \"bar\", ...}"))
+  (assert (= (binding [*print-length* 10] (str {:foo "bar" :baz "woz"}))
+             "{:foo \"bar\", :baz \"woz\"}"))
+
   :ok
   )
