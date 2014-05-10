@@ -1170,10 +1170,13 @@
         `(let [~esym ~e] (case* ~esym ~tests ~thens ~default)))
 
       (every? core/keyword? tests)
-      `(let [~esym ~e]
-         (cond
-           ~@(mapcat (fn [[m c]] `((cljs.core/keyword-identical? ~m ~esym) ~c)) pairs)
-           :else ~default))
+      (let [tests (->> tests
+                       (map #(.substring (core/str %) 1))
+                       vec
+                       (mapv #(if (seq? %) (vec %) [%])))
+            thens (vec (vals pairs))]
+        `(let [~esym (if (keyword? ~e) (.-fqn ~e) ~default)]
+           (case* ~esym ~tests ~thens ~default)))
       
       ;; equality
       :else
