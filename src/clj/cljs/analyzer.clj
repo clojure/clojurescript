@@ -378,7 +378,8 @@
 
 (declare analyze analyze-symbol analyze-seq)
 
-(def specials '#{if def fn* do let* loop* letfn* throw try recur new set! ns deftype* defrecord* . js* & quote})
+(def specials '#{if def fn* do let* loop* letfn* throw try recur new set!
+                 ns deftype* defrecord* . js* & quote case*})
 
 (def ^:dynamic *recur-frames* nil)
 (def ^:dynamic *loop-lets* ())
@@ -478,6 +479,23 @@
      :test test-expr :then then-expr :else else-expr
      :unchecked @*unchecked-if*
      :children [test-expr then-expr else-expr]}))
+
+(defmethod parse 'case*
+ [op env [_ sym tests thens default :as form] name]
+  (assert (symbol? sym) "case* must switch on symbol")
+  (assert (every? vector? tests) "case* tests must be grouped in vectors")
+  (let [expr-env (assoc env :context :expr)
+        v (disallowing-recur (analyze expr-env sym))
+        tests (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
+        thens (mapv #(analyze expr-env %) thens)
+        default (analyze expr-env default)]
+    (assert (every? (fn [t] (and (= :constant (:op t))
+                                 ((some-fn number? string?) (:form t))))
+                    (apply concat tests))
+            "case* tests must be numbers or strings")
+    {:env env :op :case* :form form
+     :v v :tests tests :thens thens :default default
+     :children (vec (concat [v] tests thens (if default [default])))}))
 
 (defmethod parse 'throw
   [op env [_ throw :as form] name]
