@@ -896,9 +896,9 @@
                   'ILookup
                   `(~'-lookup [this# k#] (-lookup this# k# nil))
                   `(~'-lookup [this# ~ksym else#]
-                              (cond
-                               ~@(mapcat (fn [f] [`(keyword-identical? ~ksym ~(keyword f)) f]) base-fields)
-                               :else (get ~'__extmap ~ksym else#)))
+                              (case ~ksym
+                                ~@(mapcat (fn [f] [(keyword f) f]) base-fields)
+                                (get ~'__extmap ~ksym else#)))
                   'ICounted
                   `(~'-count [this#] (+ ~(count base-fields) (count ~'__extmap)))
                   'ICollection
