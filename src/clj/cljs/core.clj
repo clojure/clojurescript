@@ -1160,12 +1160,23 @@
                            :else
                            (assoc-test m test expr env)))
                      {} (partition 2 clauses))
-             esym (gensym)]
-    (if (every? (some-fn core/number? core/string?) (keys pairs))
+             esym    (gensym)
+             tests   (keys pairs)]
+    (cond
+      (every? (some-fn core/number? core/string?) tests)
       (core/let [no-default (if (odd? (count clauses)) (butlast clauses) clauses)
                  tests      (mapv #(if (seq? %) (vec %) [%]) (take-nth 2 no-default))
                  thens      (vec (take-nth 2 (drop 1 no-default)))]
         `(let [~esym ~e] (case* ~esym ~tests ~thens ~default)))
+
+      (every? core/keyword? tests)
+      `(let [~esym ~e]
+         (cond
+           ~@(mapcat (fn [[m c]] `((cljs.core/keyword-identical? ~m ~esym) ~c)) pairs)
+           :else ~default))
+      
+      ;; equality
+      :else
       `(let [~esym ~e]
          (cond
            ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
