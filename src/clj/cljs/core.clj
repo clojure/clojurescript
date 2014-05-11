@@ -201,10 +201,31 @@
       (core/inc (core/quot c 32)))))
 
 (defmacro str [& xs]
-  (let [strs (->> (repeat (count xs) "cljs.core.str(~{})")
-                  (interpose ",")
+  ;; Eagerly stringify any string or char literals.
+  (let [clean-xs (reduce (fn [acc x]
+                     (core/cond
+                       (core/or (core/string? x) (core/char? x))
+                       (if (core/string? (peek acc))
+                         (conj (pop acc) (core/str (peek acc) x))
+                         (conj acc (core/str x)))
+                       (core/nil? x) acc
+                       :else (conj acc x)))
+                   [] xs)
+        ;; clean-xs now has no nils, chars, or string-adjoining-string. bools,
+        ;; ints and floats will be emitted literally to allow JS string coersion.
+        strs (->> clean-xs
+                  (map #(if (core/or (core/string? %) (core/integer? %)
+                                     (core/float? %) (core/true? %)
+                                     (core/false? %))
+                            "~{}"
+                            "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
+                  (interpose "+")
                   (apply core/str))]
-    (list* 'js* (core/str "[" strs "].join('')") xs)))
+    ;; Google closure advanced compile will stringify and concat strings and
+    ;; numbers at compilation time.
+    (list* 'js* (core/str (if (core/string? (first clean-xs)) "(" "(''+")
+                          strs ")")
+           clean-xs)))
 
 (defn bool-expr [e]
   (vary-meta e assoc :tag 'boolean))

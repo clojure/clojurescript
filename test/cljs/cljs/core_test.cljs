@@ -2212,5 +2212,9 @@
   ;; case keyword
   (assert (= (let [x "a"] (case x :a 1 "a")) "a"))
 
+  ;; CLJS-801
+  (assert (= "0atrue:key/wordsymb/olfalse[1 2 3 4]1234.56789"
+             (str 0 "a" true nil :key/word 'symb/ol false [1 2 3 4] 1234.5678 0x09)))
+
   :ok
   )
