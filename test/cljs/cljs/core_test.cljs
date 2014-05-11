@@ -2209,5 +2209,8 @@
   (assert (= (binding [*print-length* 10] (str {:foo "bar" :baz "woz"}))
              "{:foo \"bar\", :baz \"woz\"}"))
 
+  ;; case keyword
+  (assert (= (let [x "a"] (case x :a 1 "a")) "a"))
+
   :ok
   )
