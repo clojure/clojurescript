@@ -488,7 +488,7 @@
       (native-satisfies? ISeqable coll)
       (-seq coll)
 
-      :else (throw (js/Error. (str coll "is not ISeqable"))))))
+      :else (throw (js/Error. (str coll " is not ISeqable"))))))
 
 (defn first
   "Returns the first item in the collection. Calls seq on its
