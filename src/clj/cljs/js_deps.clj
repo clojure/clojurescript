@@ -52,17 +52,19 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
     (map io/file)
     (reduce
       (fn [files jar-or-dir]
-        (->> (when (.exists jar-or-dir)
-               (cond
-                 (.isDirectory jar-or-dir)
-                 (find-js-fs (str (.getAbsolutePath jar-or-dir) "/" path))
+        (let [name (.toLowerCase (.getName jar-or-dir))
+              ext  (.substring name (inc (.lastIndexOf name ".")))]
+          (->> (when (.exists jar-or-dir)
+                 (cond
+                   (.isDirectory jar-or-dir)
+                   (find-js-fs (str (.getAbsolutePath jar-or-dir) "/" path))
 
-                 (.endsWith (.getName jar-or-dir) ".jar")
-                 (find-js-jar jar-or-dir path)
+                   (#{"jar" "zip"} ext)
+                   (find-js-jar jar-or-dir path)
 
-                 :else nil))
-          (remove nil?)
-          (into files)))
+                   :else nil))
+            (remove nil?)
+            (into files))))
       [])))
 
 (defn find-js-resources [path]
