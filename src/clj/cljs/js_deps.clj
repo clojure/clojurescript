@@ -53,9 +53,14 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
     (reduce
       (fn [files jar-or-dir]
         (->> (when (.exists jar-or-dir)
-              (if (.isDirectory jar-or-dir)
-                (find-js-fs (str (.getAbsolutePath jar-or-dir) "/" path))
-                (find-js-jar jar-or-dir path)))
+               (cond
+                 (.isDirectory jar-or-dir)
+                 (find-js-fs (str (.getAbsolutePath jar-or-dir) "/" path))
+
+                 (.endsWith (.getName jar-or-dir) ".jar")
+                 (find-js-jar jar-or-dir path)
+
+                 :else nil))
           (remove nil?)
           (into files)))
       [])))
