@@ -544,12 +544,13 @@ nil if the end of stream has been reached")
     (UUID. uuid)
     (reader-error nil "UUID literal expects a string as its representation.")))
 
-(def *tag-table* (atom {"inst"  read-date
-                        "uuid"  read-uuid
-                        "queue" read-queue
-                        "js"    read-js}))
+(def ^:dynamic *tag-table*
+  (atom {"inst"  read-date
+         "uuid"  read-uuid
+         "queue" read-queue
+         "js"    read-js}))
 
-(def *default-data-reader-fn*
+(def ^:dynamic *default-data-reader-fn*
   (atom nil))
 
 (defn maybe-read-tagged-type
