@@ -399,6 +399,13 @@
     (-flush writer)
     (str sb)))
 
+;;;;;;;;;;;;;;;;;;; Murmur3 ;;;;;;;;;;;;;;;
+
+;; http://developer.classpath.org/doc/java/lang/Integer-source.html
+(defn int-rotate-left [x n]
+  (bit-or (bit-shift-left x n)
+          (unsigned-bit-shift-right x (- n))))
+
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 
 (declare list hash-combine hash Symbol = compare)

@@ -2216,5 +2216,12 @@
   (assert (= "0atrue:key/wordsymb/olfalse[1 2 3 4]1234.56789"
              (str 0 "a" true nil :key/word 'symb/ol false [1 2 3 4] 1234.5678 0x09)))
 
+  ;; int-rotate-left
+  (assert (== (int-rotate-left 0x87654321 4) 0x76543218))
+  (assert (== (int-rotate-left 0x87654321 8) 0x65432187))
+  (assert (== (int-rotate-left 0x80000000 1) 0x1))
+  (assert (== (int-rotate-left 0x78123456 4) -2128394905))
+  (assert (== (int-rotate-left 0xffffffff 4) -1))
+
   :ok
   )
