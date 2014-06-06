@@ -8,7 +8,7 @@
   :source-paths ["src/clj"]
   :resource-paths ["src/cljs"]
   :test-paths ["test/clj"]
-  :dependencies [[org.clojure/clojure "1.5.1"]
+  :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/data.json "0.2.3"]
                  [org.clojure/tools.reader "0.8.3"]
                  [org.clojure/google-closure-library "0.0-20130212-95c19e7f0f5f"]

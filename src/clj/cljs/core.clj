@@ -27,11 +27,14 @@
                             unchecked-divide unchecked-divide-int unchecked-inc unchecked-inc-int
                             unchecked-multiply unchecked-multiply-int unchecked-negate unchecked-negate-int
                             unchecked-subtract unchecked-subtract-int unchecked-remainder-int
+                            unsigned-bit-shift-right
 
                             bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
                             bit-test bit-shift-left bit-shift-right bit-xor
 
-                            cond-> cond->> as-> some-> some->>])
+                            cond-> cond->> as-> some-> some->>
+
+                            if-some when-some])
   (:require clojure.walk
             clojure.set
             cljs.compiler
@@ -60,7 +63,8 @@
   if-let if-not letfn
   memfn
   when when-first when-let when-not while
-  cond-> cond->> as-> some-> some->>])
+  cond-> cond->> as-> some-> some->>
+  if-some when-some])
 
 (defmacro defonce [x init]
   `(when-not (exists? ~x)

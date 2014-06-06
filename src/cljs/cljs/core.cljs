@@ -95,6 +95,10 @@
   "Returns true if x is logical false, false otherwise."
   [x] (if x false true))
 
+(defn ^boolean some?
+  "Returns true if x is not nil, false otherwise."
+  [x] (not (nil? x)))
+
 (defn ^boolean object? [x]
   (if-not (nil? x)
     (identical? (.-constructor x) js/Object)
