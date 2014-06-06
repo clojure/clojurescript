@@ -190,10 +190,11 @@
         filter-js (fn [paths]
                     (for [p paths u (deps/find-js-resources p)] u))
         add-target (fn [ext]
-                     (if (= :nodejs target)
-                       (cons (io/resource "cljs/nodejs_externs.js")
-                             (or ext []))
-                       ext))
+                     (cons (io/resource "cljs/externs.js")
+                       (if (= :nodejs target)
+                         (cons (io/resource "cljs/nodejs_externs.js")
+                           (or ext []))
+                         ext)))
         load-js (fn [ext]
                   (map #(js-source-file (.getFile %) (slurp %)) ext))]
     (let [js-sources (-> externs filter-js add-target load-js)

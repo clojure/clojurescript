@@ -402,9 +402,10 @@
 ;;;;;;;;;;;;;;;;;;; Murmur3 ;;;;;;;;;;;;;;;
 
 ;; http://developer.classpath.org/doc/java/lang/Integer-source.html
-(defn int-rotate-left [x n]
-  (bit-or (bit-shift-left x n)
-          (unsigned-bit-shift-right x (- n))))
+(defn ^number int-rotate-left [x n]
+  (cljs.core/bit-or
+    (cljs.core/bit-shift-left x n)
+    (cljs.core/unsigned-bit-shift-right x (- n))))
 
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 

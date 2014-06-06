@@ -2223,5 +2223,9 @@
   (assert (== (int-rotate-left 0x78123456 4) -2128394905))
   (assert (== (int-rotate-left 0xffffffff 4) -1))
 
+  ;; imul
+  (when (exists? Math/imul)
+    (assert (== (Math/imul 3 3) 9)))
+
   :ok
   )
