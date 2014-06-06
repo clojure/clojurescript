@@ -230,7 +230,7 @@ JavaScript library containing provide/require 'declarations'."
     (filter
       (fn [res]
         (re-find #"(\/google-closure-library-0.0*|\/google-closure-library\/)" (.getPath res)))
-      (enumeration-seq (.getResources (ClassLoader/getSystemClassLoader) path)))))
+      (enumeration-seq (.getResources (.getContextClassLoader (Thread/currentThread)) path)))))
 
 (defn goog-dependencies*
   "Create an index of Google dependencies by namespace and file name."
