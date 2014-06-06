@@ -407,6 +407,19 @@
     (cljs.core/bit-shift-left x n)
     (cljs.core/unsigned-bit-shift-right x (- n))))
 
+;; http://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul
+(if (exists? Math/imul)
+  (defn ^number imul [a b] (js/Math.imul a b))
+  (defn ^number imul [a b]
+    (let [ah (cljs.core/bit-and (cljs.core/unsigned-bit-shift-right a 16) 0xffff)
+          al (cljs.core/bit-and a 0xffff)
+          bh (cljs.core/bit-and (cljs.core/unsigned-bit-shift-right b 16) 0xffff)
+          bl (cljs.core/bit-and b 0xffff)]
+      (cljs.core/bit-or
+        (+ (* al bl)
+           (cljs.core/unsigned-bit-shift-right
+             (cljs.core/bit-shift-left (+ (* ah bl) (* al bh)) 16) 0)) 0))))
+
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 
 (declare list hash-combine hash Symbol = compare)

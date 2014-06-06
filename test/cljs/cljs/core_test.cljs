@@ -2224,8 +2224,11 @@
   (assert (== (int-rotate-left 0xffffffff 4) -1))
 
   ;; imul
-  (when (exists? Math/imul)
-    (assert (== (Math/imul 3 3) 9)))
+  (assert (== (imul 3 3) 9))
+  (assert (== (imul -1 8) -8))
+  (assert (== (imul -2 -2) 4))
+  (assert (== (imul 0xffffffff 5) -5))
+  (assert (== (imul 0xfffffffe 5) -10))
 
   :ok
   )
