@@ -1038,18 +1038,63 @@ reduces them without incurring seq initialization"
 (defn ^boolean fn? [f]
   (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
 
+(deftype MetaFn [afn meta]
+  IMeta
+  (-meta [_] meta)
+  IWithMeta
+  (-with-meta [_ new-meta]
+    (MetaFn. afn new-meta))
+  Fn
+  IFn
+  (-invoke [_ a]
+    (afn a))
+  (-invoke [_ a b]
+    (afn a b))
+  (-invoke [_ a b c]
+    (afn a b c))
+  (-invoke [_ a b c d]
+    (afn a b c d))
+  (-invoke [_ a b c d e]
+    (afn a b c d e))
+  (-invoke [_ a b c d e f]
+    (afn a b c d e f))
+  (-invoke [_ a b c d e f g]
+    (afn a b c d e f g))
+  (-invoke [_ a b c d e f g h]
+    (afn a b c d e f g h))
+  (-invoke [_ a b c d e f g h i]
+    (afn a b c d e f g h i))
+  (-invoke [_ a b c d e f g h i j]
+    (afn a b c d e f g h i j))
+  (-invoke [_ a b c d e f g h i j k]
+    (afn a b c d e f g h i j k))
+  (-invoke [_ a b c d e f g h i j k l]
+    (afn a b c d e f g h i j k l))
+  (-invoke [_ a b c d e f g h i j k l m]
+    (afn a b c d e f g h i j k l m))
+  (-invoke [_ a b c d e f g h i j k l m n]
+    (afn a b c d e f g h i j k l m n))
+  (-invoke [_ a b c d e f g h i j k l m n o]
+    (afn a b c d e f g h i j k l m n o))
+  (-invoke [_ a b c d e f g h i j k l m n o p]
+    (afn a b c d e f g h i j k l m n o p))
+  (-invoke [_ a b c d e f g h i j k l m n o p q]
+    (afn a b c d e f g h i j k l m n o p q))
+  (-invoke [_ a b c d e f g h i j k l m n o p q r]
+    (afn a b c d e f g h i j k l m n o p q r))
+  (-invoke [_ a b c d e f g h i j k l m n o p q r s]
+    (afn a b c d e f g h i j k l m n o p q r s))
+  (-invoke [_ a b c d e f g h i j k l m n o p q r s t]
+    (afn a b c d e f g h i j k l m n o p q r s t))
+  (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
+    (apply afn a b c d e f g h i j k l m n o p q r s t rest)))
+
 (defn with-meta
   "Returns an object of the same type and value as obj, with
   map m as its metadata."
   [o meta]
   (if (and (fn? o) (not (satisfies? IWithMeta o)))
-    (with-meta
-      (reify
-        Fn
-        IFn
-        (-invoke [_ & args]
-          (apply o args)))
-      meta)
+    (MetaFn. o meta)
     (when-not (nil? o)
       (-with-meta o meta))))
 
