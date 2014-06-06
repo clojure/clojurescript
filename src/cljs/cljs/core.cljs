@@ -403,22 +403,63 @@
 
 ;; http://developer.classpath.org/doc/java/lang/Integer-source.html
 (defn ^number int-rotate-left [x n]
-  (cljs.core/bit-or
-    (cljs.core/bit-shift-left x n)
-    (cljs.core/unsigned-bit-shift-right x (- n))))
+  (bit-or
+    (bit-shift-left x n)
+    (unsigned-bit-shift-right x (- n))))
 
 ;; http://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul
 (if (exists? Math/imul)
   (defn ^number imul [a b] (js/Math.imul a b))
   (defn ^number imul [a b]
-    (let [ah (cljs.core/bit-and (cljs.core/unsigned-bit-shift-right a 16) 0xffff)
-          al (cljs.core/bit-and a 0xffff)
-          bh (cljs.core/bit-and (cljs.core/unsigned-bit-shift-right b 16) 0xffff)
-          bl (cljs.core/bit-and b 0xffff)]
-      (cljs.core/bit-or
+    (let [ah (bit-and (unsigned-bit-shift-right a 16) 0xffff)
+          al (bit-and a 0xffff)
+          bh (bit-and (unsigned-bit-shift-right b 16) 0xffff)
+          bl (bit-and b 0xffff)]
+      (bit-or
         (+ (* al bl)
-           (cljs.core/unsigned-bit-shift-right
-             (cljs.core/bit-shift-left (+ (* ah bl) (* al bh)) 16) 0)) 0))))
+           (unsigned-bit-shift-right
+             (bit-shift-left (+ (* ah bl) (* al bh)) 16) 0)) 0))))
+
+;; http://smhasher.googlecode.com/svn/trunk/MurmurHash3.cpp
+(def m3-seed 0)
+(def m3-C1 0xcc9e2d51)
+(def m3-C2 0x1b873593)
+
+(defn ^number m3-mix-K1 [k1]
+  (-> k1 (imul m3-C1) (int-rotate-left 15) (imul m3-C2)))
+
+(defn ^number m3-mix-H1 [h1 k1]
+  (-> h1 (bit-xor k1) (int-rotate-left 13) (imul 5) (+ 0xe6546b64)))
+
+(defn ^number m3-fmix [h1 len]
+  (as-> h1 h1
+    (bit-xor h1 len)
+    (bit-xor h1 (unsigned-bit-shift-right h1 16))
+    (imul h1 0x85ebca6b)
+    (bit-xor h1 (unsigned-bit-shift-right h1 13))
+    (imul h1 0xc2b2ae35)
+    (bit-xor h1 (unsigned-bit-shift-right h1 16))))
+
+(defn ^number m3-hash-int [in]
+  (if (zero? in)
+    in
+    (let [k1 (m3-mix-K1 in)
+          h1 (m3-mix-H1 m3-seed k1)]
+      (m3-fmix h1 4))))
+
+(defn ^number m3-hash-unencoded-chars [in]
+  (let [h1 (loop [i 1 h1 m3-seed]
+             (if (< i (alength in))
+               (recur (+ i 2)
+                 (m3-mix-H1 h1
+                   (m3-mix-K1
+                     (bit-or (.charCodeAt in (dec i))
+                       (bit-shift-left (.charCodeAt in i) 16)))))
+               h1))
+        h1 (if (== (bit-and (alength in) 1) 1)
+             (bit-xor h1 (m3-mix-K1 (.charCodeAt in (dec (alength in)))))
+             h1)]
+    (m3-fmix h1 (imul 2 (alength in)))))
 
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 
