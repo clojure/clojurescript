@@ -463,7 +463,53 @@
 
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 
-(declare list hash-combine hash Symbol = compare)
+(declare list Symbol = compare)
+
+;; Simple caching of string hashcode
+(def string-hash-cache (js-obj))
+(def string-hash-cache-count 0)
+
+(defn add-to-string-hash-cache [k]
+  (let [h (goog.string/hashCode k)]
+    (aset string-hash-cache k h)
+    (set! string-hash-cache-count (inc string-hash-cache-count))
+    h))
+
+(defn check-string-hash-cache [k]
+  (when (> string-hash-cache-count 255)
+    (set! string-hash-cache (js-obj))
+    (set! string-hash-cache-count 0))
+  (let [h (aget string-hash-cache k)]
+    (if (number? h)
+      h
+      (add-to-string-hash-cache k))))
+
+(defn hash [o]
+  (cond
+    (implements? IHash o)
+    (-hash ^not-native o)
+
+    (number? o)
+    (js-mod (.floor js/Math o) 2147483647)
+
+    (true? o) 1
+
+    (false? o) 0
+
+    (string? o)
+    (check-string-hash-cache o)
+
+    (nil? o) 0
+
+    :else
+    (-hash o)))
+
+(defn hash-combine [seed hash]
+  ; a la boost
+  (bit-xor seed
+    (+ hash 0x9e3779b9
+      (bit-shift-left seed 6)
+      (bit-shift-right seed 2))))
 
 (defn ^boolean instance? [t o]
   (cljs.core/instance? t o))
@@ -1237,45 +1283,6 @@ reduces them without incurring seq initialization"
           (recur ret (first ks) (next ks))
           ret)))))
 
-;; Simple caching of string hashcode
-(def string-hash-cache (js-obj))
-(def string-hash-cache-count 0)
-
-(defn add-to-string-hash-cache [k]
-  (let [h (goog.string/hashCode k)]
-    (aset string-hash-cache k h)
-    (set! string-hash-cache-count (inc string-hash-cache-count))
-    h))
-
-(defn check-string-hash-cache [k]
-  (when (> string-hash-cache-count 255)
-    (set! string-hash-cache (js-obj))
-    (set! string-hash-cache-count 0))
-  (let [h (aget string-hash-cache k)]
-    (if (number? h)
-      h
-      (add-to-string-hash-cache k))))
-
-(defn hash [o]
-  (cond
-    (implements? IHash o)
-    (-hash ^not-native o)
-
-    (number? o)
-    (js-mod (.floor js/Math o) 2147483647)
-
-    (true? o) 1
-
-    (false? o) 0
-
-    (string? o)
-    (check-string-hash-cache o)
-
-    (nil? o) 0
-
-    :else
-    (-hash o)))
-
 (defn ^boolean empty?
   "Returns true if coll has no items - same as (not (seq coll)).
   Please use the idiom (seq x) rather than (not (empty? x))"
@@ -1989,12 +1996,6 @@ reduces them without incurring seq initialization"
              (nil? ys) false
              (= (first xs) (first ys)) (recur (next xs) (next ys))
              :else false)))))
-
-(defn hash-combine [seed hash]
-  ; a la boost
-  (bit-xor seed (+ hash 0x9e3779b9
-                   (bit-shift-left seed 6)
-                   (bit-shift-right seed 2))))
 
 (defn- hash-coll [coll]
   (if (seq coll)
