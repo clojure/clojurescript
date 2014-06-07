@@ -607,6 +607,43 @@
          (= y (first more)))
        false)))
 
+;;;;;;;;;;;;;;;;;;; Murmur3 Helpers ;;;;;;;;;;;;;;;;
+
+(defn ^number mix-collection-hash
+  "Mix final collection hash for ordered or unordered collections.
+   hash-basis is the combined collection hash, count is the number
+   of elements included in the basis. Note this is the hash code
+   consistent with =, different from .hashCode.
+   See http://clojure.org/data_structures#hash for full algorithms."
+  [hash-basis count]
+  (let [h1 m3-seed
+        k1 (m3-mix-K1 hash-basis)
+        h1 (m3-mix-H1 h1 k1)]
+    (m3-fmix h1 count)))
+
+(defn ^number hash-ordered-coll
+  "Returns the hash code, consistent with =, for an external ordered
+   collection implementing Iterable.
+   See http://clojure.org/data_structures#hash for full algorithms."
+  [coll]
+  (loop [n 0 hash-code 1 coll (seq coll)]
+    (if-not (nil? coll)
+      (recur (inc n) (+ (* 31 hash-code) (hash (first coll)))
+        (next coll))
+      (mix-collection-hash hash-code (imul 2 n)))))
+
+(defn ^number hash-unordered-coll
+  "Returns the hash code, consistent with =, for an external unordered
+   collection implementing Iterable. For maps, the iterator should
+   return map entries whose hash is computed as
+     (hash-ordered-coll [k v]).
+   See http://clojure.org/data_structures#hash for full algorithms."
+  [coll]
+  (loop [n 0 hash-code 0 coll (seq coll)]
+    (if-not (nil? coll)
+      (recur (inc n) (+ hash-code (hash (first coll))) (next coll))
+      (mix-collection-hash hash-code (imul 2 n)))))
+
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
 
@@ -789,7 +826,7 @@ reduces them without incurring seq initialization"
     (array-reduce arr f start i))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-ordered-coll coll))
 
   IReversible
   (-rseq [coll]
@@ -857,7 +894,7 @@ reduces them without incurring seq initialization"
   (-empty [coll] (with-meta cljs.core.List.EMPTY meta))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-ordered-coll coll))
 
   IReduce
   (-reduce [col f] (seq-reduce f col))
@@ -2047,7 +2084,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
   (-seq [coll] coll)
@@ -2175,7 +2212,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
   (-seq [coll] coll)
@@ -2307,7 +2344,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -2432,7 +2469,7 @@ reduces them without incurring seq initialization"
   (-empty [coll] (with-meta cljs.core.List.EMPTY meta))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash)))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash)))
 
 (defn chunk-cons [chunk rest]
   (if (zero? (-count chunk))
@@ -3495,7 +3532,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -3680,7 +3717,7 @@ reduces them without incurring seq initialization"
         (chunked-seq vec (unchecked-array-for vec end) end 0))))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   IReduce
   (-reduce [coll f]
@@ -3731,7 +3768,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -4030,7 +4067,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
   (-seq [coll] coll))
@@ -4076,7 +4113,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -4181,7 +4218,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-imap __hash))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -4371,7 +4408,7 @@ reduces them without incurring seq initialization"
   (-empty [coll] (with-meta cljs.core.List.EMPTY _meta))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-ordered-coll coll))
   
   ISeq
   (-first [coll]
@@ -4429,7 +4466,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-imap __hash))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -5154,7 +5191,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
@@ -5212,7 +5249,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-sequential coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
@@ -5268,7 +5305,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-imap __hash))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
   (-seq [coll]
@@ -5502,7 +5539,7 @@ reduces them without incurring seq initialization"
   (-empty [coll] (with-meta cljs.core.List.EMPTY meta))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   IMeta
   (-meta [coll] meta)
@@ -5656,7 +5693,7 @@ reduces them without incurring seq initialization"
   (-val [node] val)
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
@@ -5797,7 +5834,7 @@ reduces them without incurring seq initialization"
   (-val [node] val)
 
   IHash
-  (-hash [coll] (caching-hash coll hash-coll __hash))
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
 
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
@@ -6013,7 +6050,7 @@ reduces them without incurring seq initialization"
   (-equiv [coll other] (equiv-map coll other))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-imap __hash))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ICounted
   (-count [coll] cnt)
@@ -6175,7 +6212,7 @@ reduces them without incurring seq initialization"
   (-empty [coll] (with-meta cljs.core.List.EMPTY _meta))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-ordered-coll coll))
   
   ISeq
   (-first [coll]
@@ -6239,7 +6276,7 @@ reduces them without incurring seq initialization"
   (-empty [coll] (with-meta cljs.core.List.EMPTY _meta))
 
   IHash
-  (-hash [coll] (hash-coll coll))
+  (-hash [coll] (hash-ordered-coll coll))
 
   ISeq
   (-first [coll]
@@ -6349,7 +6386,7 @@ reduces them without incurring seq initialization"
              other)))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-iset __hash))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
   (-seq [coll] (keys hash-map))
@@ -6464,7 +6501,7 @@ reduces them without incurring seq initialization"
              other)))
 
   IHash
-  (-hash [coll] (caching-hash coll hash-iset __hash))
+  (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
   ISeqable
   (-seq [coll] (keys tree-map))
@@ -6722,7 +6759,7 @@ reduces them without incurring seq initialization"
   (-equiv [rng other] (equiv-sequential rng other))
 
   IHash
-  (-hash [rng] (caching-hash rng hash-coll __hash))
+  (-hash [rng] (caching-hash rng hash-ordered-coll __hash))
 
   ICounted
   (-count [rng]
