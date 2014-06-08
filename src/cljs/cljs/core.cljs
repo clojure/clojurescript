@@ -401,7 +401,7 @@
 
 ;;;;;;;;;;;;;;;;;;; Murmur3 ;;;;;;;;;;;;;;;
 
-;; http://developer.classpath.org/doc/java/lang/Integer-source.html
+;;http://hg.openjdk.java.net/jdk7u/jdk7u6/jdk/file/8c2c5d63a17e/src/share/classes/java/lang/Integer.java
 (defn ^number int-rotate-left [x n]
   (bit-or
     (bit-shift-left x n)
@@ -468,6 +468,16 @@
 ;; Simple caching of string hashcode
 (def string-hash-cache (js-obj))
 (def string-hash-cache-count 0)
+
+;;http://hg.openjdk.java.net/jdk7u/jdk7u6/jdk/file/8c2c5d63a17e/src/share/classes/java/lang/String.java
+(defn hash-string [s]
+  (let [len (alength s)]
+    (if (pos? len)
+      (loop [i 0 hash 0]
+        (if (< i len)
+          (recur (inc i) (+ (imul 31 hash) (.charCodeAt s i)))
+          hash))
+      0)))
 
 (defn add-to-string-hash-cache [k]
   (let [h (goog.string/hashCode k)]
