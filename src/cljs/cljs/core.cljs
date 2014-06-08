@@ -688,9 +688,9 @@
   [coll]
   (loop [n 0 hash-code 1 coll (seq coll)]
     (if-not (nil? coll)
-      (recur (inc n) (+ (* 31 hash-code) (hash (first coll)))
+      (recur (inc n) (bit-or (+ (imul 31 hash-code) (hash (first coll))) 0)
         (next coll))
-      (mix-collection-hash hash-code (imul 2 n)))))
+      (mix-collection-hash hash-code n))))
 
 (defn ^number hash-unordered-coll
   "Returns the hash code, consistent with =, for an external unordered
@@ -701,8 +701,8 @@
   [coll]
   (loop [n 0 hash-code 0 coll (seq coll)]
     (if-not (nil? coll)
-      (recur (inc n) (+ hash-code (hash (first coll))) (next coll))
-      (mix-collection-hash hash-code (imul 2 n)))))
+      (recur (inc n) (bit-or (+ hash-code (hash (first coll))) 0) (next coll))
+      (mix-collection-hash hash-code n))))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
