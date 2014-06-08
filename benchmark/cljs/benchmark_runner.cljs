@@ -208,6 +208,7 @@
              [:q 16] [:r 17] [:s 18] [:t 19] [:u 20] [:v 21] [:w 22] [:x 23]
              [:y 24] [:z 25] [:a0 26] [:b0 27] [:c0 28] [:d0 29] [:e0 30] [:f0 31]]))
 (simple-benchmark [key :f0] (hash key) 1000000)
+(simple-benchmark [key "f0"] (m3-hash-unencoded-chars key) 1000000)
 (simple-benchmark [key :unsynchronized-mutable] (hash key) 1000000)
 (def hash-coll-test
   (loop [i 0 r []]
@@ -215,6 +216,14 @@
       (recur (inc i) (conj r (str "foo" i)))
       r)))
 (simple-benchmark [coll hash-coll-test] (hash-coll coll) 100)
+(simple-benchmark [coll hash-coll-test] (hash-ordered-coll coll) 100)
+(def hash-imap-test
+  (loop [i 0 r {}]
+    (if (< i 1000)
+      (recur (inc i) (conj r [(keyword (str "foo" i)) i]))
+      r)))
+(simple-benchmark [coll hash-imap-test] (hash-imap coll) 100)
+(simple-benchmark [coll hash-imap-test] (hash-unordered-coll coll) 100)
 (simple-benchmark [coll pmap] (:f0 coll) 1000000)
 (simple-benchmark [coll pmap] (get coll :f0) 1000000)
 (simple-benchmark [coll pmap] (-lookup coll :f0 nil) 1000000)
