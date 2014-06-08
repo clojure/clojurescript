@@ -195,14 +195,6 @@
     (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
       (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
 
-(def ^:const goog-hash-max 0x100000000)
-
-(defn goog-string-hash [s]
-  (reduce
-    (fn [r c]
-      (mod (+ (* 31 r) (int c)) goog-hash-max))
-    0 s))
-
 (defmethod emit-constant clojure.lang.Keyword [x]
   (if (-> @env/*compiler* :opts :emit-constants)
     (let [value (-> @env/*compiler* ::ana/constant-table x)]
@@ -218,10 +210,7 @@
                        (str ns "/" name)
                        name))
       (emits ",")
-      (emit-constant (+ (clojure.lang.Util/hashCombine
-                          (unchecked-int (goog-string-hash ns))
-                          (unchecked-int (goog-string-hash name)))
-                         0x9e3779b9))
+      (emit-constant (hash x))
       (emits ")"))))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
@@ -237,9 +226,7 @@
     (emits ",")
     (emit-constant symstr)
     (emits ",")
-    (emit-constant (clojure.lang.Util/hashCombine
-                     (unchecked-int (goog-string-hash ns))
-                     (unchecked-int (goog-string-hash name))))
+    (emit-constant (hash x))
     (emits ",")
     (emit-constant nil)
     (emits ")")))

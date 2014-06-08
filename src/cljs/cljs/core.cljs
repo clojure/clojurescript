@@ -470,22 +470,24 @@
 (def string-hash-cache-count 0)
 
 ;;http://hg.openjdk.java.net/jdk7u/jdk7u6/jdk/file/8c2c5d63a17e/src/share/classes/java/lang/String.java
-(defn hash-string [s]
-  (let [len (alength s)]
-    (if (pos? len)
-      (loop [i 0 hash 0]
-        (if (< i len)
-          (recur (inc i) (+ (imul 31 hash) (.charCodeAt s i)))
-          hash))
-      0)))
+(defn hash-string* [s]
+  (if-not (nil? s)
+    (let [len (alength s)]
+      (if (pos? len)
+        (loop [i 0 hash 0]
+          (if (< i len)
+            (recur (inc i) (+ (imul 31 hash) (.charCodeAt s i)))
+            hash))
+        0))
+    0))
 
 (defn add-to-string-hash-cache [k]
-  (let [h (goog.string/hashCode k)]
+  (let [h (hash-string* k)]
     (aset string-hash-cache k h)
     (set! string-hash-cache-count (inc string-hash-cache-count))
     h))
 
-(defn check-string-hash-cache [k]
+(defn hash-string [k]
   (when (> string-hash-cache-count 255)
     (set! string-hash-cache (js-obj))
     (set! string-hash-cache-count 0))
@@ -507,7 +509,7 @@
     (false? o) 0
 
     (string? o)
-    (check-string-hash-cache o)
+    (m3-hash-int (hash-string o))
 
     (nil? o) 0
 
@@ -528,7 +530,9 @@
   (instance? Symbol x))
 
 (defn- hash-symbol [sym]
-  (hash-combine (hash (.-ns sym)) (hash (.-name sym))))
+  (hash-combine
+    (m3-hash-unencoded-chars (.-name sym))
+    (hash-string (.-ns sym))))
 
 (defn- compare-symbols [a b]
   (cond
@@ -2243,6 +2247,9 @@ reduces them without incurring seq initialization"
 (defn ^boolean list? [x]
   (satisfies? IList x))
 
+(defn hash-keyword [k]
+  (+ (hash-symbol k) 0x9e3779b9))
+
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
   (toString [_] (str ":" fqn))
@@ -2259,14 +2266,8 @@ reduces them without incurring seq initialization"
     (get coll kw not-found))
 
   IHash
-  (-hash [_]
-    ; This was checking if _hash == -1, should it stay that way?
-    (if (nil? _hash)
-      (do
-        (set! _hash (+ (hash-combine (hash ns) (hash name))
-                        0x9e3779b9))
-        _hash)
-      _hash))
+  (-hash [this]
+    (caching-hash this hash-keyword _hash))
 
   INamed
   (-name [_] name)
