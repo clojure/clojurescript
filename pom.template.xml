@@ -23,9 +23,14 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.6.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.google.javascript</groupId>
       <artifactId>closure-compiler</artifactId>
-      <version>v20131014</version>
+      <version>v20140508</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -45,7 +50,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.reader</artifactId>
-      <version>0.8.3</version>
+      <version>0.8.4</version>
     </dependency>
   </dependencies>
 
