@@ -15,10 +15,14 @@
   [coll]
   (reduce conj () coll))
 
+(def ^:private re-surrogate-pair
+  (js/RegExp. "([\\uD800-\\uDBFF])([\\uDC00-\\uDFFF])" "g"))
+
 (defn reverse
   "Returns s with its characters reversed."
   [s]
-  (.. s (split "") (reverse) (join "")))
+  (-> (.replace s re-surrogate-pair "$2$1")
+      (.. (split "") (reverse) (join ""))))
 
 (defn replace
   "Replaces all instance of match with replacement in s.

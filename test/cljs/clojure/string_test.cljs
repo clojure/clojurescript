@@ -6,6 +6,8 @@
   ;; reverse
   (assert (= "" (s/reverse "")))
   (assert (= "tab" (s/reverse "bat")))
+  ;; CLJS-814
+  (assert (= "c\uD834\uDD1Ea" (s/reverse "a\uD834\uDD1Ec"))) ;; U+1D11E MUSICAL SYMBOL G CLEF
   ;; replace
   (assert (= "faabar" (s/replace "foobar" \o \a)))
   (assert (= "barbarbar" (s/replace "foobarfoo" "foo" "bar")))
