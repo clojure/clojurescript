@@ -389,30 +389,27 @@
 
 (defmethod emit* :case*
   [{:keys [v tests thens default env]}]
-  (if (= (:context env) :expr)
+  (when (= (:context env) :expr)
     (emitln "(function(){"))
   (let [gs (gensym "caseval__")]
-    (emitln "var " gs ";")
-    (emits "switch (")
-    (emits v)
-    (emitln "){")
+    (when (= :expr (:context env))
+      (emitln "var " gs ";"))
+    (emitln "switch (" v ") {")
     (doseq [[ts then] (partition 2 (interleave tests thens))]
       (doseq [test ts]
         (emitln "case " test ":"))
-      (if (= (:context env) :statement)
-        (emitln then)
-        (emitln gs "=" then))
+      (if (= :expr (:context env))
+        (emitln gs "=" then)
+        (emitln then))
       (emitln "break;"))
     (when default
       (emitln "default:")
-      (if (= (:context env) :statement)
-        (emitln default)
-        (emitln gs "=" default)))
+      (if (= :expr (:context env))
+        (emitln gs "=" default)
+        (emitln default)))
     (emitln "}")
-    (condp = (:context env)
-      :expr (emitln "return " gs ";})()")
-      :return (emitln "return " gs ";")
-      :statement nil)))
+    (when (= :expr (:context env))
+      (emitln "return " gs ";})()"))))
 
 (defmethod emit* :throw
   [{:keys [throw env]}]

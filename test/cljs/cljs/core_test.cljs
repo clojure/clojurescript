@@ -2216,5 +2216,13 @@
   (assert (= "0atrue:key/wordsymb/olfalse[1 2 3 4]1234.56789"
              (str 0 "a" true nil :key/word 'symb/ol false [1 2 3 4] 1234.5678 0x09)))
 
+  ;; CLJS-812
+  (defn case-recur [value]
+    (case value
+      :a (recur :b)
+      :b 0))
+
+  (assert (= (case-recur :a) 0))
+
   :ok
   )
