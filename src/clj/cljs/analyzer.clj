@@ -599,6 +599,12 @@
                                    sym)
                      :op :var)
           init-expr (when (contains? args :init)
+                      (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
+                        (merge
+                          {:name name}
+                          sym-meta
+                          (when dynamic {:dynamic true})
+                          (source-info name env)))
                       (disallowing-recur
                         (analyze (assoc env :context :expr) (:init args) sym)))
           fn-var? (and init-expr (= (:op init-expr) :fn))
