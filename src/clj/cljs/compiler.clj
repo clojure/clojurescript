@@ -180,7 +180,7 @@
 
 (defmulti emit-constant class)
 (defmethod emit-constant nil [x] (emits "null"))
-(defmethod emit-constant Long [x] (emits x))
+(defmethod emit-constant Long [x] (emits "(" x ")"))
 (defmethod emit-constant Integer [x] (emits x)) ; reader puts Integers in metadata
 (defmethod emit-constant Double [x] (emits x))
 (defmethod emit-constant String [x]
