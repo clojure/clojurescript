@@ -491,7 +491,7 @@
         thens    (mapv #(analyze env %) thens)
         default  (analyze env default)]
     (assert (every? (fn [t] (and (= :constant (:op t))
-                              ((some-fn number? string?) (:form t))))
+                              ((some-fn number? string? char?) (:form t))))
               (apply concat tests))
       "case* tests must be numbers or strings")
     {:env env :op :case* :form form
