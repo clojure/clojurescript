@@ -7356,17 +7356,17 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
 
-(deftype Delay [state f]
+(deftype Delay [^:mutable f ^:mutable value]
   IDeref
   (-deref [_]
-    (:value (swap! state (fn [{:keys [done] :as curr-state}]
-                           (if done
-                             curr-state,
-                             {:done true :value (f)})))))
+    (when f
+      (set! value (f))
+      (set! f nil))
+    value)
 
   IPending
   (-realized? [d]
-    (:done @state)))
+    (not f)))
 
 (defn ^boolean delay?
   "returns true if x is a Delay created with delay"

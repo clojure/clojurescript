@@ -1068,7 +1068,7 @@
   invoke the body only the first time it is forced (with force or deref/@), and
   will cache the result and return it on all subsequent force
   calls."
-  `(new cljs.core/Delay (atom {:done false, :value nil}) (fn [] ~@body)))
+  `(new cljs.core/Delay (fn [] ~@body) nil))
 
 (defmacro with-redefs
   "binding => var-symbol temp-value-expr
