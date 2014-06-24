@@ -6925,11 +6925,14 @@ reduces them without incurring seq initialization"
 (defn re-matches
   "Returns the result of (re-find re s) if re fully matches s."
   [re s]
-  (let [matches (.exec re s)]
-    (when (= (first matches) s)
-      (if (== (count matches) 1)
-        (first matches)
-        (vec matches)))))
+  (if (string? s)
+    (let [matches (.exec re s)]
+      (when (= (first matches) s)
+        (if (== (count matches) 1)
+          (first matches)
+          (vec matches))))
+    (throw (js/TypeError. "re-matches must match against a string."))))
+
 
 (defn re-find
   "Returns the first regex match, if any, of s to re, using
@@ -6937,11 +6940,13 @@ reduces them without incurring seq initialization"
   substring, then any capturing groups if the regular expression contains
   capturing groups."
   [re s]
-  (let [matches (.exec re s)]
-    (when-not (nil? matches)
-      (if (== (count matches) 1)
-        (first matches)
-        (vec matches)))))
+  (if (string? s)
+    (let [matches (.exec re s)]
+      (when-not (nil? matches)
+        (if (== (count matches) 1)
+          (first matches)
+          (vec matches))))
+    (throw (js/TypeError. "re-find must match against a string."))))
 
 (defn re-seq
   "Returns a lazy sequence of successive matches of re in s."
