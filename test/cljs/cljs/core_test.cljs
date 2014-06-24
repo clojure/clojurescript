@@ -1,5 +1,6 @@
 (ns cljs.core-test
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [clojure.set :as set]))
 
 (defn test-stuff []
   ;; js primitives
@@ -2223,6 +2224,12 @@
       :b 0))
 
   (assert (= (case-recur :a) 0))
+
+  ;; CLJS-816
+  (assert (= (set/rename-keys {:a "one" :b "two"} {:a :z}) {:z "one" :b "two"}))
+  (assert (= (set/rename-keys {:a "one" :b "two"} {:a :z :c :y}) {:z "one" :b "two"}))
+  (assert (= (set/rename-keys {:a "one" :b "two" :c "three"} {:a :b :b :a})
+             {:a "two" :b "one" :c "three"}))
 
   :ok
   )
