@@ -299,6 +299,21 @@ nil if the end of stream has been reached")
      (identical? \" ch) (. buffer (toString))
      :default (recur (do (.append buffer ch) buffer) (read-char reader)))))
 
+(defn read-raw-string*
+  [reader _]
+  (loop [buffer (gstring/StringBuffer.)
+         ch (read-char reader)]
+    (cond
+      (nil? ch) (reader-error reader "EOF while reading")
+      (identical? "\\" ch) (do (.append buffer ch)
+                             (let [nch (read-char reader)]
+                               (if (nil? nch)
+                                 (reader-error reader "EOF while reading")
+                                 (recur (doto buffer (.append nch))
+                                        (read-char reader)))))
+      (identical? "\"" ch) (.toString buffer)
+      :else (recur (doto buffer (.append ch)) (read-char reader)))))
+
 (defn special-symbols [t not-found]
   (cond
    (identical? t "nil") nil
@@ -364,7 +379,7 @@ nil if the end of stream has been reached")
 
 (defn read-regex
   [rdr ch]
-  (-> (read-string* rdr ch) re-pattern))
+  (-> (read-raw-string* rdr ch) re-pattern))
 
 (defn read-discard
   [rdr _]
