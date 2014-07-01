@@ -1209,6 +1209,8 @@ reduces them without incurring seq initialization"
     (MetaFn. afn new-meta))
   Fn
   IFn
+  (-invoke [_]
+    (afn))
   (-invoke [_ a]
     (afn a))
   (-invoke [_ a b]
