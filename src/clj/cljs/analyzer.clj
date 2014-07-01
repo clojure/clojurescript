@@ -482,18 +482,18 @@
      :children [test-expr then-expr else-expr]}))
 
 (defmethod parse 'case*
- [op env [_ sym tests thens default :as form] name]
+  [op env [_ sym tests thens default :as form] name]
   (assert (symbol? sym) "case* must switch on symbol")
   (assert (every? vector? tests) "case* tests must be grouped in vectors")
   (let [expr-env (assoc env :context :expr)
-        v (disallowing-recur (analyze expr-env sym))
-        tests (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
-        thens (mapv #(analyze expr-env %) thens)
-        default (analyze expr-env default)]
+        v        (disallowing-recur (analyze expr-env sym))
+        tests    (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
+        thens    (mapv #(analyze env %) thens)
+        default  (analyze env default)]
     (assert (every? (fn [t] (and (= :constant (:op t))
-                                 ((some-fn number? string?) (:form t))))
-                    (apply concat tests))
-            "case* tests must be numbers or strings")
+                              ((some-fn number? string? char?) (:form t))))
+              (apply concat tests))
+      "case* tests must be numbers or strings")
     {:env env :op :case* :form form
      :v v :tests tests :thens thens :default default
      :children (vec (concat [v] tests thens (if default [default])))}))
