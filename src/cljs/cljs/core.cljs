@@ -4314,6 +4314,18 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.ObjMap.fromObject (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
+(deftype Iterator [^:mutable s]
+  Object
+  (next [_]
+    (if-not (nil? s)
+      (let [x (first s)]
+        (set! s (next s))
+        #js {:value x :done false})
+      #js {:value nil :done true})))
+
+(defn iterator [coll]
+  (Iterator. (seq coll)))
+
 ;;; PersistentArrayMap
 
 (defn- array-map-index-of-nil? [arr m k]
