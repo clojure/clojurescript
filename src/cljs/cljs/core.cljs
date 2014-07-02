@@ -4326,6 +4326,30 @@ reduces them without incurring seq initialization"
 (defn iterator [coll]
   (Iterator. (seq coll)))
 
+(deftype EntriesIterator [^:mutable s]
+  Object
+  (next [_]
+    (if-not (nil? s)
+      (let [[k v] (first s)]
+        (set! s (next s))
+        #js {:value #js [k v] :done false})
+      #js {:value nil :done true})))
+
+(defn entries-iterator [coll]
+  (EntriesIterator. (seq coll)))
+
+(deftype SetEntriesIterator [^:mutable s]
+  Object
+  (next [_]
+    (if-not (nil? s)
+      (let [x (first s)]
+        (set! s (next s))
+        #js {:value #js [x x] :done false})
+      #js {:value nil :done true})))
+
+(defn set-entries-iterator [coll]
+  (SetEntriesIterator. (seq coll)))
+
 ;;; PersistentArrayMap
 
 (defn- array-map-index-of-nil? [arr m k]
@@ -4458,10 +4482,25 @@ reduces them without incurring seq initialization"
   (when (<= i (- (alength arr) 2))
     (PersistentArrayMapSeq. arr i _meta)))
 
+(declare keys vals)
+
 (deftype PersistentArrayMap [meta cnt arr ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (iterator (keys coll)))
+  (entries [coll]
+    (entries-iterator (seq coll)))
+  (values [coll]
+    (iterator (vals coll)))
+  (has [coll k]
+    (contains? coll k))
+  (get [coll k]
+    (-lookup coll k))
+  (forEach [coll f]
+    (doseq [[k v] coll]
+      (f v k)))
 
   ICloneable
   (-clone [_] (PersistentArrayMap. meta cnt arr __hash))
@@ -5301,6 +5340,19 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (iterator (keys coll)))
+  (entries [coll]
+    (entries-iterator (seq coll)))
+  (values [coll]
+    (iterator (vals coll)))
+  (has [coll k]
+    (contains? coll k))
+  (get [coll k]
+    (-lookup coll k))
+  (forEach [coll f]
+    (doseq [[k v] coll]
+      (f v k)))
 
   ICloneable
   (-clone [_] (PersistentHashMap. meta cnt root has-nil? nil-val __hash))
@@ -6038,6 +6090,19 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (iterator (keys coll)))
+  (entries [coll]
+    (entries-iterator (seq coll)))
+  (values [coll]
+    (iterator (vals coll)))
+  (has [coll k]
+    (contains? coll k))
+  (get [coll k]
+    (-lookup coll k))
+  (forEach [coll f]
+    (doseq [[k v] coll]
+      (f v k)))
 
   (entry-at [coll k]
     (loop [t tree]
@@ -6386,6 +6451,17 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (iterator (seq coll)))
+  (entries [coll]
+    (set-entries-iterator (seq coll)))
+  (values [coll]
+    (iterator (seq coll)))
+  (has [coll k]
+    (contains? coll k))
+  (forEach [coll f]
+    (doseq [[k v] coll]
+      (f v k)))
 
   ICloneable
   (-clone [_] (PersistentHashSet. meta hash-map __hash))
@@ -6501,6 +6577,17 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (keys [coll]
+    (iterator (seq coll)))
+  (entries [coll]
+    (set-entries-iterator (seq coll)))
+  (values [coll]
+    (iterator (seq coll)))
+  (has [coll k]
+    (contains? coll k))
+  (forEach [coll f]
+    (doseq [[k v] coll]
+      (f v k)))
 
   ICloneable
   (-clone [_] (PersistentTreeSet. meta tree-map __hash))

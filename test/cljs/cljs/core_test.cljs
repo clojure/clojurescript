@@ -2252,12 +2252,66 @@
   (assert (= (set/rename-keys {:a "one" :b "two" :c "three"} {:a :b :b :a})
              {:a "two" :b "one" :c "three"}))
 
+  ;; basic iteration
+
   (def iter (iterator [1 2 3]))
 
   (assert (= (.-value (.next iter)) 1))
   (assert (= (.-value (.next iter)) 2))
   (assert (= (.-value (.next iter)) 3))
-  (assert (= (.-done (.next iter)) true))
+  (assert (.-done (.next iter)))
+
+  ;; ES6 Map
+
+  (assert (.has {:foo "bar"} :foo))
+  (assert (= (.get {:foo "bar"} :foo) "bar"))
+
+  ;; ES6 Map iteration
+
+  ;; keys
+  (def iter (.keys {:foo "bar" :baz "woz"}))
+  (assert (#{:foo :baz} (.-value (.next iter))))
+  (assert (#{:foo :baz} (.-value (.next iter))))
+  (assert (.-done (.next iter)))
+
+  ;; entries
+  (def eiter (.entries {:foo "bar" :baz "woz"}))
+  (assert (= (seq (.-value (.next eiter))) (seq #js [:foo "bar"])))
+  (assert (= (seq (.-value (.next eiter))) (seq #js [:baz "woz"])))
+  (assert (.-done (.next eiter)))
+  
+  ;; values
+  (def iter (.values {:foo "bar" :baz "woz"}))
+  (assert (#{"bar" "woz"} (.-value (.next iter))))
+  (assert (#{"bar" "woz"} (.-value (.next iter))))
+  (assert (.-done (.next iter)))
+
+  ;; ES6 Set
+
+  (assert (.has #{:cat :bird :dog} :bird))
+
+  ;; ES6 Set iteration
+
+  ;; keys
+  (def iter (.keys #{:cat :bird :dog}))
+  (assert (#{:cat :bird :dog} (.-value (.next iter))))
+  (assert (#{:cat :bird :dog} (.-value (.next iter))))
+  (assert (#{:cat :bird :dog} (.-value (.next iter))))
+  (assert (.-done (.next iter)))
+
+  ;; entries
+  (def iter (.entries #{:cat :bird :dog}))
+  (assert (#{[:cat :cat] [:bird :bird] [:dog :dog]} (seq (.-value (.next iter)))))
+  (assert (#{[:cat :cat] [:bird :bird] [:dog :dog]} (seq (.-value (.next iter)))))
+  (assert (#{[:cat :cat] [:bird :bird] [:dog :dog]} (seq (.-value (.next iter)))))
+  (assert (.-done (.next iter)))
+
+  ;; values
+  (def iter (.values #{:cat :bird :dog}))
+  (assert (#{:cat :bird :dog} (.-value (.next iter))))
+  (assert (#{:cat :bird :dog} (.-value (.next iter))))
+  (assert (#{:cat :bird :dog} (.-value (.next iter))))
+  (assert (.-done (.next iter)))
 
   ;; CLJS-810
   (let [not-strings [true false nil 1 (fn [])]]
