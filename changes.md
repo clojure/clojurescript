@@ -1,3 +1,17 @@
+## 0.0-2261
+
+### Changes
+* Dependency on Clojure 1.6.0
+
+### Enhancements
+* Murmur3 hashing for collections
+
+### Fixes
+* CLJS-817: Warning on use of undeclared var when creating recursive definition
+* CLJS-819: cljs.reader cannot handle character classes beginning with slashes in regex literals
+* CLJS-820: Missing invoke without arguments in MetaFn
+* CLJS-816: clojure.set/rename-keys accidentally deletes keys
+
 ## 0.0-2234
 
 ### Fixes
