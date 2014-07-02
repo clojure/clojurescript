@@ -2252,14 +2252,23 @@
   (assert (= (set/rename-keys {:a "one" :b "two" :c "three"} {:a :b :b :a})
              {:a "two" :b "one" :c "three"}))
 
-  ;; seq-iterator
-
   (def iter (iterator [1 2 3]))
 
   (assert (= (.-value (.next iter)) 1))
   (assert (= (.-value (.next iter)) 2))
   (assert (= (.-value (.next iter)) 3))
   (assert (= (.-done (.next iter)) true))
+
+  ;; CLJS-810
+  (let [not-strings [true false nil 1 (fn [])]]
+    (assert (every? #(= :failed (try (re-find #"." %)
+                                     (catch js/TypeError _ :failed))) not-strings))
+    (assert (every? #(= :failed (try (re-matches #"." %)
+                                     (catch js/TypeError _ :failed))) not-strings))
+    (assert (every? #(= :failed (try (re-find #"nomatch" %)
+                                     (catch js/TypeError _ :failed))) not-strings))
+    (assert (every? #(= :failed (try (re-matches #"nomatch" %)
+                                     (catch js/TypeError _ :failed))) not-strings)))
 
   :ok
   )
