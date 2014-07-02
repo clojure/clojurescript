@@ -4314,6 +4314,7 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.ObjMap.fromObject (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
+;; EXPERIMENTAL: subject to change
 (deftype Iterator [^:mutable s]
   Object
   (next [_]
@@ -4326,6 +4327,7 @@ reduces them without incurring seq initialization"
 (defn iterator [coll]
   (Iterator. (seq coll)))
 
+;; EXPERIMENTAL: subject to change
 (deftype EntriesIterator [^:mutable s]
   Object
   (next [_]
@@ -4338,6 +4340,7 @@ reduces them without incurring seq initialization"
 (defn entries-iterator [coll]
   (EntriesIterator. (seq coll)))
 
+;; EXPERIMENTAL: subject to change
 (deftype SetEntriesIterator [^:mutable s]
   Object
   (next [_]
@@ -4488,6 +4491,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (iterator (keys coll)))
   (entries [coll]
@@ -5340,6 +5345,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (iterator (keys coll)))
   (entries [coll]
@@ -6090,6 +6097,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (iterator (keys coll)))
   (entries [coll]
@@ -6451,6 +6460,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (iterator (seq coll)))
   (entries [coll]
@@ -6577,6 +6588,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+
+  ;; EXPERIMENTAL: subject to change
   (keys [coll]
     (iterator (seq coll)))
   (entries [coll]
