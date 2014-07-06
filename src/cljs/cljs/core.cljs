@@ -408,7 +408,8 @@
     (unsigned-bit-shift-right x (- n))))
 
 ;; http://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul
-(if (exists? Math/imul)
+(if (and (exists? Math/imul)
+         (not (zero? (Math/imul 0xffffffff 5))))
   (defn ^number imul [a b] (js/Math.imul a b))
   (defn ^number imul [a b]
     (let [ah (bit-and (unsigned-bit-shift-right a 16) 0xffff)
