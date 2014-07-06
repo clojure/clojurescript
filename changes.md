@@ -1,3 +1,12 @@
+## 0.0-2268
+
+### Changes
+* Experimental support for ES6 Map/Set interface
+
+### Fixes
+* CLJS-823: use non-native imul in Safari
+* CLJS-810: re-matches returns [] if string is nil
+
 ## 0.0-2261
 
 ### Changes
