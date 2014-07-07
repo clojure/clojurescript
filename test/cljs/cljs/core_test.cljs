@@ -1543,6 +1543,8 @@
              (hash (hash-map :b 2 :a 1))))
   (assert (= (hash {:start 133 :end 134})
              (hash (apply hash-map [:start 133 :end 134]))))
+  (assert (= (hash :a)
+             (hash (keyword "a"))))
 
   (defprotocol IHasFirst
     (-get-first [this]))

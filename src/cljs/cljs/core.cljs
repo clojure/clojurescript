@@ -2269,7 +2269,7 @@ reduces them without incurring seq initialization"
   (satisfies? IList x))
 
 (defn hash-keyword [k]
-  (+ (hash-symbol k) 0x9e3779b9))
+  (int (+ (hash-symbol k) 0x9e3779b9)))
 
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
