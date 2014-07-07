@@ -1802,19 +1802,19 @@ reduces them without incurring seq initialization"
 (defn unchecked-remainder-int [x n]
   (cljs.core/unchecked-remainder-int x n))
 
-(defn ^number unchecked-substract
+(defn ^number unchecked-subtract
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
   ([x] (cljs.core/unchecked-subtract x))
   ([x y] (cljs.core/unchecked-subtract x y))
-  ([x y & more] (reduce unchecked-substract (cljs.core/unchecked-subtract x y) more)))
+  ([x y & more] (reduce unchecked-subtract (cljs.core/unchecked-subtract x y) more)))
 
-(defn ^number unchecked-substract-int
+(defn ^number unchecked-subtract-int
   "If no ys are supplied, returns the negation of x, else subtracts
   the ys from x and returns the result."
   ([x] (cljs.core/unchecked-subtract-int x))
   ([x y] (cljs.core/unchecked-subtract-int x y))
-  ([x y & more] (reduce unchecked-substract-int (cljs.core/unchecked-subtract-int x y) more)))
+  ([x y & more] (reduce unchecked-subtract-int (cljs.core/unchecked-subtract-int x y) more)))
 
 (defn- ^number fix [q]
   (if (>= q 0)
