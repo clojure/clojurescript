@@ -143,6 +143,8 @@ perl -p -i -e 's/..\/..\/third_party\/closure\/goog\///go' \
     "$work_dir/closure/goog/deps.js"
 
 rm -f \
+    "$work_dir/third_party/goog/base.js" \
+    "$work_dir/third_party/goog/deps.js" \
     "$work_dir/third_party/closure/goog/base.js" \
     "$work_dir/third_party/closure/goog/deps.js"
 
