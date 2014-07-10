@@ -42,3 +42,8 @@ Set.prototype.values = function() {};
 Set.prototype.has = function(k) {};
 Set.prototype.forEach = function(f) {};
 
+/**
+ * @constructor;
+ */
+function IEquiv() {};
+IEquiv.prototype.equiv = function() {};

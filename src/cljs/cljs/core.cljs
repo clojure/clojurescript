@@ -550,26 +550,34 @@
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
   (toString [_] str)
+  (equiv [this other] (-equiv this other))
+
   IEquiv
   (-equiv [_ other]
     (if (instance? Symbol other)
       (identical? str (.-str other))
       false))
+
   IFn
   (-invoke [sym coll]
     (-lookup coll sym nil))
   (-invoke [sym coll not-found]
     (-lookup coll sym not-found))
+
   IMeta
   (-meta [_] _meta)
+
   IWithMeta
   (-with-meta [_ new-meta] (Symbol. ns name str _hash new-meta))
+
   IHash
   (-hash [sym]
     (caching-hash sym hash-symbol _hash))
+
   INamed
   (-name [_] name)
   (-namespace [_] ns)
+
   IPrintWithWriter
   (-pr-writer [o writer _] (-write writer str)))
 
@@ -837,6 +845,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ICloneable
   (-clone [_] (IndexedSeq. arr i))
@@ -914,6 +924,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ICloneable
   (-clone [_] (RSeq. ci i meta))
@@ -2061,6 +2073,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IList
 
@@ -2118,6 +2132,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IList
 
@@ -2198,6 +2214,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IList
 
@@ -2256,6 +2274,8 @@ reduces them without incurring seq initialization"
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
   (toString [_] (str ":" fqn))
+  (equiv [this other]
+    (-equiv this other))
   
   IEquiv
   (-equiv [_ other]
@@ -2316,7 +2336,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
-
+  (equiv [this other]
+    (-equiv this other))
   (sval [coll]
     (if (nil? fn)
       s
@@ -2430,6 +2451,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
   
   IWithMeta
   (-with-meta [coll m]
@@ -3492,6 +3515,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ICloneable
   (-clone [_] (PersistentVector. meta cnt shift root tail __hash))
@@ -3674,6 +3699,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IWithMeta
   (-with-meta [coll m]
@@ -3753,6 +3780,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ICloneable
   (-clone [_] (Subvec. meta v start end __hash))
@@ -4055,6 +4084,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentQueueSeq. meta front rear __hash))
@@ -4091,6 +4122,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ICloneable
   (-clone [coll] (PersistentQueue. meta count front rear __hash))
@@ -4142,6 +4175,9 @@ reduces them without incurring seq initialization"
 (set! cljs.core.PersistentQueue.EMPTY (PersistentQueue. nil 0 nil [] 0))
 
 (deftype NeverEquiv []
+  Object
+  (equiv [this other]
+    (-equiv this other))
   IEquiv
   (-equiv [o other] false))
 
@@ -4211,6 +4247,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IWithMeta
   (-with-meta [coll meta] (ObjMap. meta keys strobj update-count __hash))
@@ -4435,6 +4473,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
   
   IMeta
   (-meta [coll] _meta)
@@ -4492,6 +4532,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
@@ -5224,6 +5266,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IMeta
   (-meta [coll] meta)
@@ -5289,6 +5333,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IMeta
   (-meta [coll] meta)
@@ -5346,6 +5392,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
@@ -5593,6 +5641,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ISeqable
   (-seq [this] this)
@@ -6098,6 +6148,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
@@ -6291,6 +6343,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IMeta
   (-meta [coll] _meta)
@@ -6355,6 +6409,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   IMeta
   (-meta [coll] _meta)
@@ -6461,6 +6517,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
@@ -6589,6 +6647,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
@@ -6841,6 +6901,8 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
 
   ICloneable
   (-clone [_] (Range. meta start end step __hash))
@@ -7411,6 +7473,10 @@ reduces them without incurring seq initialization"
   (-swap! [o f] [o f a] [o f a b] [o f a b xs]))
 
 (deftype Atom [state meta validator watches]
+  Object
+  (equiv [this other]
+    (-equiv this other))
+
   IAtom
   
   IEquiv
@@ -8138,6 +8204,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (deftype UUID [uuid]
   Object
   (toString [_] uuid)
+  (equiv [this other]
+    (-equiv this other))
 
   IEquiv
   (-equiv [_ other]

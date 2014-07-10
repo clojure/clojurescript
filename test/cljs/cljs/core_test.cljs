@@ -2324,5 +2324,14 @@
     (assert (every? #(= :failed (try (re-matches #"nomatch" %)
                                      (catch js/TypeError _ :failed))) not-strings)))
 
+  ;; Object equiv
+  (assert (.equiv :foo :foo))
+  (assert (.equiv 'foo 'foo))
+  (assert (.equiv {:foo 1 :bar 2} {:foo 1 :bar 2}))
+  (assert (.equiv [1 2 3] [1 2 3]))
+  (assert (.equiv '(1 2 3) '(1 2 3)))
+  (assert (.equiv (map inc [1 2 3]) (map inc [1 2 3])))
+  (assert (.equiv #{:cat :dog :bird} #{:cat :dog :bird}))
+
   :ok
   )
