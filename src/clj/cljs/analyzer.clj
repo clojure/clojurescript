@@ -1395,32 +1395,33 @@
 
 (defn macroexpand-1 [env form]
   (env/ensure
-    (let [op (first form)]
-      (if (specials op)
-        form
-        (if-let [mac (and (symbol? op) (get-expander op env))]
-          (binding [*ns* (create-ns *cljs-ns*)]
-            (let [form' (apply mac form env (rest form))]
-              (if (seq? form')
-                (let [sym' (first form')
-                      sym  (first form)]
-                  (if (= sym' 'js*)
-                    (vary-meta form' merge
-                      (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
-                        (-> mac meta ::numeric) (assoc :numeric true)))
-                    form'))
-                form')))
-          (if (symbol? op)
-            (let [opname (str op)]
-              (cond
-                (= (first opname) \.) (let [[target & args] (next form)]
-                                        (with-meta (list* '. target (symbol (subs opname 1)) args)
-                                          (meta form)))
-                (= (last opname) \.) (with-meta
-                                       (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
-                                       (meta form))
-                :else form))
-            form))))))
+    (wrapping-errors env
+      (let [op (first form)]
+        (if (specials op)
+          form
+          (if-let [mac (and (symbol? op) (get-expander op env))]
+            (binding [*ns* (create-ns *cljs-ns*)]
+              (let [form' (apply mac form env (rest form))]
+                (if (seq? form')
+                  (let [sym' (first form')
+                        sym  (first form)]
+                    (if (= sym' 'js*)
+                      (vary-meta form' merge
+                                 (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
+                                         (-> mac meta ::numeric) (assoc :numeric true)))
+                      form'))
+                  form')))
+            (if (symbol? op)
+              (let [opname (str op)]
+                (cond
+                 (= (first opname) \.) (let [[target & args] (next form)]
+                                         (with-meta (list* '. target (symbol (subs opname 1)) args)
+                                           (meta form)))
+                 (= (last opname) \.) (with-meta
+                                        (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
+                                        (meta form))
+                 :else form))
+              form)))))))
 
 (declare analyze-list)
 
