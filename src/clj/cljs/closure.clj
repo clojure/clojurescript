@@ -986,7 +986,7 @@ should contain the source for the given namespace name."
                         (#{:none :whitespace} (:optimizations opts)))
                (let [outfile (io/file (io/file (output-directory opts)) "goog/bootstrap/nodejs.js")]
                  (comp/mkdirs outfile)
-                 (spit outfile (slurp (io/resource "cljs/nodejs.js")))))
+                 (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))
   
 
