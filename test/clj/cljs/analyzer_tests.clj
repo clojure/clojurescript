@@ -226,3 +226,14 @@
   (is (= (cljs.env/with-compiler-env test-cenv
            (:tag (a/analyze test-env '(bit-count n))))
          'number)))
+
+;; =============================================================================
+;; Catching errors during macroexpansion
+
+(deftest test-defn-error
+  (is (.startsWith
+        (try
+          (a/analyze test-env '(defn foo 123))
+          (catch Exception e
+            (.getMessage e)))
+        "Parameter declaration 123 should be a vector at line")))
