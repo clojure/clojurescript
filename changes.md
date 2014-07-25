@@ -1,3 +1,15 @@
+## 0.0-2277
+
+## Enhancements
+* All IEquiv implementor now export equiv Object method
+
+## Fixes
+* CLJS-824: Unsigned hash for keywords produced via keyword fn
+* CLJS-827: CLJS-827: wrap macro expansion in try/catch
+* CLJS-826: fix broken closure release script
+* CLJS-825: conflict between node js support files
+* typo in unchecked-subtract-int
+
 ## 0.0-2268
 
 ### Changes
