@@ -195,23 +195,27 @@
     (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
       (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
 
+(defn emits-keyword [kw]
+  (let [ns   (namespace kw)
+        name (name kw)]
+    (emits "new cljs.core.Keyword(")
+    (emit-constant ns)
+    (emits ",")
+    (emit-constant name)
+    (emits ",")
+    (emit-constant (if ns
+                     (str ns "/" name)
+                     name))
+    (emits ",")
+    (emit-constant (hash kw))
+    (emits ")")))
+
 (defmethod emit-constant clojure.lang.Keyword [x]
   (if (-> @env/*compiler* :opts :emit-constants)
     (let [value (-> @env/*compiler* ::ana/constant-table x)]
       (emits "cljs.core." value))
-    (let [ns   (namespace x)
-          name (name x)]
-      (emits "new cljs.core.Keyword(")
-      (emit-constant ns)
-      (emits ",")
-      (emit-constant name)
-      (emits ",")
-      (emit-constant (if ns
-                       (str ns "/" name)
-                       name))
-      (emits ",")
-      (emit-constant (hash x))
-      (emits ")"))))
+    (emits-keyword x)
+    ))
 
 (defmethod emit-constant clojure.lang.Symbol [x]
   (let [ns     (namespace x)
@@ -1077,15 +1081,9 @@
   (doseq [[keyword value] table]
     (let [ns   (namespace keyword)
           name (name keyword)]
-      (emits "cljs.core." value " = new cljs.core.Keyword(")
-      (emit-constant ns)
-      (emits ",")
-      (emit-constant name)
-      (emits ",")
-      (emit-constant (if ns
-                       (str ns "/" name)
-                       name))
-      (emits ");\n"))))
+      (emits "cljs.core." value " = ")
+      (emits-keyword keyword)
+      (emits ";\n"))))
 
 (defn emit-constants-table-to-file [table dest]
   (with-open [out ^java.io.Writer (io/make-writer dest {})]
