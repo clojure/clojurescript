@@ -169,7 +169,7 @@ if [ "$HUDSON" = "true" ]; then
             clean deploy
     )
 
-    echo "Now log in to https://oss.sonatype.org/ to close and release"
+    echo "Now log in to https://oss.sonatype.org/ to release"
     echo "the staging repository."
 else
     echo "Skipping deployment because we are not on Hudson."
