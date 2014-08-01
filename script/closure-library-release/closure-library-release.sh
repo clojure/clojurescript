@@ -166,7 +166,7 @@ if [ "$HUDSON" = "true" ]; then
         mvn --fail-at-end \
             -Psonatype-oss-release \
             -Dsource.skip=true \
-            clean deploy nexus-staging:close
+            clean deploy
     )
 
     echo "Now log in to https://oss.sonatype.org/ to close and release"
