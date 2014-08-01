@@ -155,12 +155,18 @@ perl -p -e "s/RELEASE_VERSION/$release_version/go" \
 if [ "$HUDSON" = "true" ]; then
     (
         cd "$third_party_project_dir"
-        mvn -Psonatype-oss-release clean deploy
+        mvn --fail-at-end \
+            -Psonatype-oss-release \
+            -Dsource.skip=true \
+            clean deploy
     )
 
     (
         cd "$project_dir"
-        mvn -Psonatype-oss-release clean deploy nexus-staging:close
+        mvn --fail-at-end \
+            -Psonatype-oss-release \
+            -Dsource.skip=true \
+            clean deploy nexus-staging:close
     )
 
     echo "Now log in to https://oss.sonatype.org/ to close and release"
