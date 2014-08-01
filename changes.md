@@ -1,3 +1,11 @@
+## 0.0-2280
+
+### Changes
+* depend on latest org.clojure/google-closure-library
+
+### Fixes
+* fix constants table bug where keywords did not include precomputed hash-code
+
 ## 0.0-2277
 
 ## Enhancements
