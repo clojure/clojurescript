@@ -6,6 +6,12 @@
   <packaging>jar</packaging>
   <name>Google Closure Library</name>
 
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>9</version>
+  </parent>
+
   <url>http://code.google.com/p/closure-library/</url>
 
   <description>
@@ -50,9 +56,9 @@
   </developers>
 
   <scm>
-    <connection>scm:svn:http://closure-library.googlecode.com/svn/trunk</connection>
-    <developerConnection>scm:svn:http://closure-library.googlecode.com/svn/trunk</developerConnection>
-    <url>http://code.google.com/p/closure-library/source/browse/#svn/trunk</url>
+    <connection>scm:https://github.com/google/closure-library.git</connection>
+    <developerConnection>scm:git:https://github.com/google/closure-library.git</developerConnection>
+    <url>https://github.com/google/closure-library</url>
   </scm>
 
   <issueManagement>

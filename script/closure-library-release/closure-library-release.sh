@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-# make-closure-library-jars.sh
+# closure-library-release.sh
 
 # ClojureScript depends on the Google Closure JavaScript Libraries,
 # but Google does not publish those libraries in a Maven repository.
-# This script builds release JAR and POM files for the Google Closure
-# Library and its third-party extensions.
+# This script builds generates Maven projects for the Google Closure
+# Library and, optionally, deploys them.
 
 # The Google Closure Libraries are divided into two parts: the main
 # library and third-party extensions. The main library is Apache
@@ -27,20 +27,6 @@
 # The last release ZIP made by Google was 20130212-95c19e7f0f5f. To
 # get newer versions, we have to go to the Git repository.
 
-# Usage:
-
-# 1. Clone the Google Closure Library Git repository
-#
-# 2. cd to the directory containing this script
-#
-# 3. Run this script with the path to the G.Closure Library
-#    as a command-line argument
-
-# If you are a Clojure release admin (you have the GPG key) then set
-# the environment variable SIGN_GOOGLE_CLOSURE_LIBRARY_RELEASE to sign
-# the releases with GPG.
-
-
 
 set -e
 
@@ -48,7 +34,7 @@ set -e
 
 POM_TEMPLATE_FILE="google-closure-library.pom.template"
 THIRD_PARTY_POM_TEMPLATE_FILE="google-closure-library-third-party.pom.template"
-RELEASE_KEY="Clojure/core (build.clojure.org Release Key version 2) <core@clojure.com>"
+GIT_CLONE_URL="git@github.com:google/closure-library.git"
 
 ### Functions
 
@@ -63,8 +49,6 @@ Git repository."
 
 ## Command-line validation
 
-closure_library_dir="$1"
-
 if [[ ! -e $POM_TEMPLATE_FILE || ! -e $THIRD_PARTY_POM_TEMPLATE_FILE ]]; then
     echo "This script must be run from the directory containing
 google-closure-library.pom.template and
@@ -72,24 +56,33 @@ google-closure-library-third-party.pom.template"
     exit 1
 fi
 
+## Fetch the Git repo
+
+closure_library_dir="closure-library"
+
 if [[ ! -d $closure_library_dir ]]; then
-    print_usage
-    exit 1
+    git clone "$GIT_CLONE_URL" "$closure_library_dir"
 fi
+
+(
+    cd "$closure_library_dir"
+    git clean -fdx
+    git checkout master
+    git pull
+)
 
 closure_library_base="$closure_library_dir/closure"
 third_party_base="$closure_library_dir/third_party/closure"
 
 if [[ ! -d $closure_library_base || ! -d $third_party_base ]]; then
     echo "$closure_library_dir does not look like the Closure library"
-    print_usage
     exit 1
 fi
 
 ## Working directory
 
 now=$(date "+%Y%m%d%H%M%S")
-work_dir="closure-release-${now}"
+work_dir="tmp-build"
 
 echo "Working directory: $work_dir" 
 
@@ -109,81 +102,69 @@ echo "Date: $commit_date"
 echo "Short SHA: $commit_short_sha"
 echo "Release version: $release_version"
 
-release_base="google-closure-library-${release_version}"
-jar_file="${release_base}.jar"
-pom_file="${release_base}.pom"
+## Creating directories
 
-third_party_release_base="google-closure-library-third-party-${release_version}"
-third_party_jar_file="${third_party_release_base}.jar"
-third_party_pom_file="${third_party_release_base}.pom"
+project_dir="$work_dir/google-closure-library"
+src_dir="$project_dir/src/main/resources"
 
-## Copy Closure source into working dir
+third_party_project_dir="$work_dir/google-closure-library-third-party"
+third_party_src_dir="$third_party_project_dir/src/main/resources"
 
-mkdir "$work_dir/closure"
+mkdir -p "$src_dir" "$third_party_src_dir"
+
+## Copy Closure sources
+
 cp -r \
     "$closure_library_dir/AUTHORS" \
     "$closure_library_dir/LICENSE" \
     "$closure_library_dir/README" \
     "$closure_library_dir/closure/goog" \
     "$closure_library_dir/closure/css" \
-    "$work_dir/closure"
+    "$src_dir"
 
-mkdir "$work_dir/third_party"
 cp -r \
     "$closure_library_dir/AUTHORS" \
     "$closure_library_dir/LICENSE" \
     "$closure_library_dir/README" \
     "$closure_library_dir/third_party/closure/goog" \
-    "$work_dir/third_party"
+    "$third_party_src_dir"
 
-
-## Modify deps.js for third-party JAR; see CLJS-276:
+## Modify main deps.js for third-party JAR; see CLJS-276:
 
 perl -p -i -e 's/..\/..\/third_party\/closure\/goog\///go' \
-    "$work_dir/closure/goog/deps.js"
+    "$src_dir/goog/deps.js"
+
+## Remove empty third-party deps.js and base.js
 
 rm -f \
-    "$work_dir/third_party/goog/base.js" \
-    "$work_dir/third_party/goog/deps.js" \
-    "$work_dir/third_party/closure/goog/base.js" \
-    "$work_dir/third_party/closure/goog/deps.js"
-
-## Build the JARs:
-
-(
-    cd "$work_dir/closure"
-    jar cf "../$jar_file" *
-)
-
-(
-    cd "$work_dir/third_party"
-    jar cf "../$third_party_jar_file" *
-)
+    "$third_party_src_dir/goog/deps.js" \
+    "$third_party_src_dir/goog/base.js"
 
 ## Generate the POM files:
 
 perl -p -e "s/RELEASE_VERSION/$release_version/go" \
     "$POM_TEMPLATE_FILE" \
-    > "$work_dir/$pom_file"
+    > "$project_dir/pom.xml"
 
 perl -p -e "s/RELEASE_VERSION/$release_version/go" \
     "$THIRD_PARTY_POM_TEMPLATE_FILE" \
-    > "$work_dir/$third_party_pom_file"
+    > "$third_party_project_dir/pom.xml"
 
-## Sign the files with GPG
+## Deploy the files if we are on Hudson
 
-if [[ -n "$SIGN_GOOGLE_CLOSURE_LIBRARY_RELEASE" ]]; then
+if [ "$HUDSON" = "true" ]; then
     (
-        cd "$work_dir"
-        for file in \
-            "$jar_file" \
-            "$third_party_jar_file" \
-            "$pom_file" \
-            "$third_party_pom_file"
-        do
-            gpg --verbose --armor --detach-sign \
-                --default-key "$RELEASE_KEY" \
-                "$file"
-        done
+        cd "$third_party_project_dir"
+        mvn -Psonatype-oss-release clean deploy
     )
+
+    (
+        cd "$project_dir"
+        mvn -Psonatype-oss-release clean deploy nexus-staging:close
+    )
+
+    echo "Now log in to https://oss.sonatype.org/ to close and release"
+    echo "the staging repository."
+else
+    echo "Skipping deployment because we are not on Hudson."
 fi
