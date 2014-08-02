@@ -222,11 +222,18 @@
     (if (< i 1000)
       (recur (inc i) (conj r [(keyword (str "foo" i)) i]))
       r)))
+(def hash-imap-int-test
+  (loop [i 0 r {}]
+    (if (< i 1000)
+      (recur (inc i) (conj r [i i]))
+      r)))
 (simple-benchmark [coll hash-imap-test] (hash-imap coll) 100)
 (simple-benchmark [coll hash-imap-test] (hash-unordered-coll coll) 100)
 (simple-benchmark [coll pmap] (:f0 coll) 1000000)
 (simple-benchmark [coll pmap] (get coll :f0) 1000000)
 (simple-benchmark [coll pmap] (-lookup coll :f0 nil) 1000000)
+(simple-benchmark [coll pmap] (-lookup ^not-native hash-imap-test :foo500 nil) 1000000)
+(simple-benchmark [coll pmap] (-lookup ^not-native hash-imap-int-test 500 nil) 1000000)
 (simple-benchmark [coll pmap] (assoc coll :g0 32) 1000000)
 (simple-benchmark [coll pmap]
                   (loop [i 0 m coll]
