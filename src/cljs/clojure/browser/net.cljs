@@ -11,12 +11,10 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.net
   (:require [clojure.browser.event :as event]
-            [goog.net.XhrIo :as gxhrio]
-            [goog.net.EventType :as gnet-event-type]
-            [goog.net.xpc.CfgFields :as gxpc-config-fields]
-            [goog.net.xpc.CrossPageChannel :as xpc]
-            #_[goog.net.WebSocket :as gwebsocket]
-            [goog.json :as gjson]))
+            [goog.json :as gjson])
+  (:import (goog.net XhrIo EventType)
+           (goog.net.xpc CfgFields CrossPageChannel)
+           goog.Uri))
 
 (def *timeout* 10000)
 
@@ -24,10 +22,10 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   (into {}
         (map
          (fn [[k v]]
-           [(keyword (. k (toLowerCase)))
+           [(keyword (.toLowerCase k))
             v])
          (merge
-          (js->clj goog.net.EventType)))))
+          (js->clj EventType)))))
 
 (defprotocol IConnection
   (connect
@@ -43,7 +41,7 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
     [this opt opt2 opt3 opt4 opt5])
   (close [this]))
 
-(extend-type goog.net.XhrIo
+(extend-type XhrIo
 
   IConnection
   (transmit
@@ -65,10 +63,10 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
     (into {}
           (map
            (fn [[k v]]
-             [(keyword (. k (toLowerCase)))
+             [(keyword (.toLowerCase k))
               v])
            (merge
-            (js->clj goog.net.EventType))))))
+            (js->clj EventType))))))
 
 ;; TODO jQuery/sinatra/RestClient style API: (get [uri]), (post [uri payload]), (put [uri payload]), (delete [uri])
 
@@ -76,19 +74,19 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   (into {}
         (map
          (fn [[k v]]
-           [(keyword (. k (toLowerCase)))
+           [(keyword (.toLowerCase k))
             v])
-         (js->clj goog.net.xpc.CfgFields))))
+         (js->clj CfgFields))))
 
 (defn xhr-connection
   "Returns an XhrIo connection"
   []
-  (goog.net.XhrIo.))
+  (XhrIo.))
 
 (defprotocol ICrossPageChannel
   (register-service [this service-name fn] [this service-name fn encode-json?]))
 
-(extend-type goog.net.xpc.CrossPageChannel
+(extend-type CrossPageChannel
 
   ICrossPageChannel
   (register-service
@@ -113,7 +111,7 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
     (.send this (name service-name) payload))
 
   (close [this]
-    (.close this ())))
+    (.close this)))
 
 (defn xpc-connection
   "When passed with a config hash-map, returns a parent
@@ -127,11 +125,11 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   per the CrossPageChannel API."
   ([]
      (when-let [config (.getParameterValue
-                        (goog.Uri. (.-href (.-location js/window)))
+                        (Uri. (.-href (.-location js/window)))
                         "xpc")]
-       (goog.net.xpc.CrossPageChannel. (gjson/parse config))))
+       (CrossPageChannel. (gjson/parse config))))
   ([config]
-     (goog.net.xpc.CrossPageChannel.
+     (CrossPageChannel.
       (reduce (fn [sum [k v]]
                 (if-let [field (get xpc-config-fields k)]
                   (doto sum (aset field v))

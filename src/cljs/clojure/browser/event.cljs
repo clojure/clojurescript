@@ -10,25 +10,24 @@
 events.  It is based on the Google Closure Library event system."
       :author "Bobby Calderwood"}
   clojure.browser.event
-  (:require [goog.events :as events]
-            [goog.events.EventTarget :as gevent-target]
-            [goog.events.EventType   :as gevent-type]))
+  (:require [goog.events :as events])
+  (:import (goog.events EventTarget EventType)))
 
-(defprotocol EventType
+(defprotocol IEventType
   (event-types [this]))
 
-(extend-protocol EventType
+(extend-protocol IEventType
 
-  goog.events.EventTarget
+  EventTarget
   (event-types
     [this]
     (into {}
           (map
            (fn [[k v]]
-             [(keyword (. k (toLowerCase)))
+             [(keyword (.toLowerCase k))
               v])
            (merge
-            (js->clj goog.events.EventType)))))
+            (js->clj EventType)))))
 
   js/Element
   (event-types
@@ -36,54 +35,54 @@ events.  It is based on the Google Closure Library event system."
     (into {}
           (map
            (fn [[k v]]
-             [(keyword (. k (toLowerCase)))
+             [(keyword (.toLowerCase k))
               v])
            (merge
-            (js->clj goog.events.EventType))))))
+            (js->clj EventType))))))
 
 (defn listen
   ([src type fn]
      (listen src type fn false))
   ([src type fn capture?]
-     (goog.events/listen src
-                         (get (event-types src) type type)
-                         fn
-                         capture?)))
+     (events/listen src
+                    (get (event-types src) type type)
+                    fn
+                    capture?)))
 
 (defn listen-once
   ([src type fn]
      (listen-once src type fn false))
   ([src type fn capture?]
-     (goog.events/listenOnce src
-                             (get (event-types src) type type)
-                             fn
-                             capture?)))
+     (events/listenOnce src
+                        (get (event-types src) type type)
+                        fn
+                        capture?)))
 
 (defn unlisten
   ([src type fn]
      (unlisten src type fn false))
   ([src type fn capture?]
-     (goog.events/unlisten src
-                           (get (event-types src) type type)
-                           fn
-                           capture?)))
+     (events/unlisten src
+                      (get (event-types src) type type)
+                      fn
+                      capture?)))
 
 (defn unlisten-by-key
   [key]
-  (goog.events/unlistenByKey key))
+  (events/unlistenByKey key))
 
 (defn dispatch-event
   [src event]
-  (goog.events/dispatchEvent src event))
+  (events/dispatchEvent src event))
 
 (defn expose [e]
-  (goog.events/expose e))
+  (events/expose e))
 
 (defn fire-listeners
   [obj type capture event])
 
 (defn total-listener-count []
-  (goog.events/getTotalListenerCount))
+  (events/getTotalListenerCount))
 
 ;; TODO
 (defn get-listener [src type listener opt_capt opt_handler]); ⇒ ?Listener
@@ -97,4 +96,3 @@ events.  It is based on the Google Closure Library event system."
 
 (defn remove-all [opt_obj opt_type opt_capt]); ⇒ number
 ;; TODO? (defn unlisten-with-wrapper [src wrapper listener opt_capt opt_handler])
-

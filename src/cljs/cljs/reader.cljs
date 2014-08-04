@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.reader
-  (:require [goog.string :as gstring]))
+  (:require [goog.string :as gstring])
+  (:import goog.string.StringBuffer))
 
 (defprotocol PushbackReader
   (read-char [reader] "Returns the next char from the Reader,
@@ -77,12 +78,12 @@ nil if the end of stream has been reached")
 
 (defn read-token
   [rdr initch]
-  (loop [sb (gstring/StringBuffer. initch)
+  (loop [sb (StringBuffer. initch)
          ch (read-char rdr)]
     (if (or (nil? ch)
             (whitespace? ch)
             (macro-terminating? ch))
-      (do (unread rdr ch) (. sb (toString)))
+      (do (unread rdr ch) (.toString sb))
       (recur (do (.append sb ch) sb) (read-char rdr)))))
 
 (defn skip-line
@@ -164,13 +165,13 @@ nil if the end of stream has been reached")
 
 (defn read-2-chars [reader]
   (.toString
-    (gstring/StringBuffer.
+    (StringBuffer.
       (read-char reader)
       (read-char reader))))
 
 (defn read-4-chars [reader]
   (.toString
-    (gstring/StringBuffer.
+    (StringBuffer.
       (read-char reader)
       (read-char reader)
       (read-char reader)
@@ -283,7 +284,7 @@ nil if the end of stream has been reached")
     (if (or (nil? ch) (whitespace? ch) (macros ch))
       (do
         (unread reader ch)
-        (let [s (. buffer (toString))]
+        (let [s (.toString buffer)]
           (or (match-number s)
               (reader-error reader "Invalid number format [" s "]"))))
       (recur (do (.append buffer ch) buffer) (read-char reader)))))
@@ -447,7 +448,7 @@ nil if the end of stream has been reached")
 (defn ^:private zero-fill-right-and-truncate [s width]
   (cond (= width (count s)) s
         (< width (count s)) (subs s 0 width)
-        :else (loop [b (gstring/StringBuffer. s)]
+        :else (loop [b (StringBuffer. s)]
                 (if (< (.getLength b) width)
                   (recur (.append b "0"))
                   (.toString b)))))

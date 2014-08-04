@@ -8,8 +8,8 @@
 
 (ns clojure.string
   (:refer-clojure :exclude [replace reverse])
-  (:require [goog.string :as gstring]
-            [goog.string.StringBuffer :as gstringbuf]))
+  (:require [goog.string :as gstring])
+  (:import goog.string.StringBuffer))
 
 (defn- seq-reverse
   [coll]
@@ -168,7 +168,7 @@
    If (cmap ch) is nil, append ch to the new string.
    If (cmap ch) is non-nil, append (str (cmap ch)) instead."
   [s cmap]
-  (let [buffer (gstring/StringBuffer.)
+  (let [buffer (StringBuffer.)
         length (.-length s)]
     (loop [index 0]
       (if (= length index)

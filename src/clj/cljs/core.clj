@@ -1002,7 +1002,7 @@
                          (. ~(first sig) ~slot ~@sig)
                          (let [x# (if (nil? ~(first sig)) nil ~(first sig))]
                            ((or
-                             (aget ~(fqn fname) (goog.typeOf x#))
+                             (aget ~(fqn fname) (goog/typeOf x#))
                              (aget ~(fqn fname) "_")
                              (throw (missing-protocol
                                      ~(core/str psym "." fname) ~(first sig))))
@@ -1385,23 +1385,23 @@
     assoc :tag 'array))
 
 (defmacro list
-  ([] `cljs.core.List.EMPTY)
+  ([] '(.-EMPTY cljs.core/List))
   ([x & xs]
     `(-conj (list ~@xs) ~x)))
 
 (defmacro vector
-  ([] `cljs.core.PersistentVector.EMPTY)
+  ([] '(.-EMPTY cljs.core/PersistentVector))
   ([& xs]
     (let [cnt (count xs)]
       (if (core/< cnt 32)
-        `(cljs.core.PersistentVector. nil ~cnt 5
-           cljs.core.PersistentVector.EMPTY_NODE (array ~@xs) nil)
+        `(cljs.core/PersistentVector. nil ~cnt 5
+           (.-EMPTY-NODE cljs.core/PersistentVector) (array ~@xs) nil)
         (vary-meta
-          `(cljs.core.PersistentVector.fromArray (array ~@xs) true)
+          `(.fromArray cljs.core/PersistentVector (array ~@xs) true)
           assoc :tag 'cljs.core/PersistentVector)))))
 
 (defmacro array-map
-  ([] `cljs.core.PersistentArrayMap.EMPTY)
+  ([] '(.-EMPTY cljs.core/PersistentArrayMap))
   ([& kvs]
     (core/cond
       (core/> (count kvs) 16)
@@ -1411,33 +1411,33 @@
         (core/and (every? #(= (:op %) :constant)
                     (map #(cljs.analyzer/analyze &env %) keys))
                   (= (count (into #{} keys)) (count keys))))
-      `(cljs.core.PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil)
+      `(cljs.core/PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil)
 
       :else
-      `(cljs.core.PersistentArrayMap.fromArray (array ~@kvs) true false))))
+      `(.fromArray cljs.core/PersistentArrayMap (array ~@kvs) true false))))
 
 (defmacro hash-map
-  ([] `cljs.core.PersistentHashMap.EMPTY)
+  ([] `(.-EMPTY cljs.core/PersistentHashMap))
   ([& kvs]
     (let [pairs (partition 2 kvs)
           ks    (map first pairs)
           vs    (map second pairs)]
       (vary-meta
-        `(cljs.core.PersistentHashMap.fromArrays (array ~@ks) (array ~@vs))
+        `(.fromArrays cljs.core/PersistentHashMap (array ~@ks) (array ~@vs))
         assoc :tag 'cljs.core/PersistentHashMap))))
 
 (defmacro hash-set
-  ([] `cljs.core.PersistentHashSet.EMPTY)
+  ([] `(.-EMPTY cljs.core/PersistentHashSet))
   ([& xs]
     (if (core/and (core/<= (count xs) 8)
                   (every? #(= (:op %) :constant)
                     (map #(cljs.analyzer/analyze &env %) xs))
                   (= (count (into #{} xs)) (count xs)))
-      `(cljs.core.PersistentHashSet. nil
-         (cljs.core.PersistentArrayMap. nil ~(count xs) (array ~@(interleave xs (repeat nil))) nil)
+      `(cljs.core/PersistentHashSet. nil
+         (cljs.core/PersistentArrayMap. nil ~(count xs) (array ~@(interleave xs (repeat nil))) nil)
          nil)
       (vary-meta
-        `(cljs.core.PersistentHashSet.fromArray (array ~@xs) true)
+        `(.fromArray cljs.core/PersistentHashSet (array ~@xs) true)
         assoc :tag 'cljs.core/PersistentHashSet))))
 
 (defn js-obj* [kvs]
@@ -1628,7 +1628,7 @@
   on a fresh StringBuffer.  Returns the string created by any nested
   printing calls."
   [& body]
-  `(let [sb# (goog.string/StringBuffer.)]
+  `(let [sb# (goog.string.StringBuffer.)]
      (binding [cljs.core/*print-fn* (fn [x#] (.append sb# x#))]
        ~@body)
      (cljs.core/str sb#)))
