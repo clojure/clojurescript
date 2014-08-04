@@ -357,26 +357,30 @@
   (when-not (= :statement (:context env))
     (emit-wrap env (emit-constant form))))
 
+(defn truthy-constant? [{:keys [op form]}]
+  (and (= op :constant)
+       form
+       (not (or (and (string? form) (= form ""))
+                (and (number? form) (zero? form))))))
+
 (defn safe-test? [env e]
   (let [tag (ana/infer-tag env e)]
-    (or (#{'boolean 'seq} tag)
-        (when (= (:op e) :constant)
-          (let [form (:form e)]
-            (not (or (and (string? form) (= form ""))
-                     (and (number? form) (zero? form)))))))))
+    (or (#{'boolean 'seq} tag) (truthy-constant? e))))
 
 (defmethod emit* :if
   [{:keys [test then else env unchecked]}]
   (let [context (:context env)
         checked (not (or unchecked (safe-test? env test)))]
-    (if (= :expr context)
-      (emits "(" (when checked "cljs.core.truth_") "(" test ")?" then ":" else ")")
-      (do
-        (if checked
-          (emitln "if(cljs.core.truth_(" test "))")
-          (emitln "if(" test ")"))
-        (emitln "{" then "} else")
-        (emitln "{" else "}")))))
+    (if (truthy-constant? test)
+      (emitln then)
+      (if (= :expr context)
+        (emits "(" (when checked "cljs.core.truth_") "(" test ")?" then ":" else ")")
+        (do
+          (if checked
+            (emitln "if(cljs.core.truth_(" test "))")
+            (emitln "if(" test ")"))
+          (emitln "{" then "} else")
+          (emitln "{" else "}"))))))
 
 (defmethod emit* :case*
   [{:keys [v tests thens default env]}]
