@@ -363,6 +363,10 @@
        (not (or (and (string? form) (= form ""))
                 (and (number? form) (zero? form))))))
 
+(defn falsey-constant? [{:keys [op form]}]
+  (and (= op :constant)
+       (or (false? form) (nil? form))))
+
 (defn safe-test? [env e]
   (let [tag (ana/infer-tag env e)]
     (or (#{'boolean 'seq} tag) (truthy-constant? e))))
@@ -371,8 +375,10 @@
   [{:keys [test then else env unchecked]}]
   (let [context (:context env)
         checked (not (or unchecked (safe-test? env test)))]
-    (if (truthy-constant? test)
-      (emitln then)
+    (cond
+      (truthy-constant? test) (emitln then)
+      (falsey-constant? test) (emitln else)
+      :else
       (if (= :expr context)
         (emits "(" (when checked "cljs.core.truth_") "(" test ")?" then ":" else ")")
         (do
