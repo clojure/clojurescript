@@ -333,7 +333,7 @@
                  suffix (subs s (inc idx))
                  lb (-> env :locals prefix)]
              (if lb
-               {:name (symbol (str (:name lb) suffix))}
+               {:name (symbol (str (:name lb)) suffix)}
                (let [cur-ns (-> env :ns :name)]
                  (if-let [full-ns (get-in @env/*compiler* [::namespaces cur-ns :imports prefix])]
                    {:name (symbol (str full-ns) suffix)}
