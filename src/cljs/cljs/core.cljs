@@ -7317,7 +7317,7 @@ reduces them without incurring seq initialization"
   "Returns a lazy sequence of lists like partition, but may include
   partitions with fewer than n items at the end.  Returns a stateful
   transducer when no collection is provided."
-  ([^long n]
+  ([n]
    (fn [f1]
      (let [a (array-list)]
        (fn
@@ -7333,7 +7333,7 @@ reduces them without incurring seq initialization"
               (f1 result)))
          ([result input]
             (.add a input)
-            (if (= n (.size a))
+            (if (== n (.size a))
               (let [v (vec (.toArray a))]
                 (.clear a)
                 (f1 result v))
