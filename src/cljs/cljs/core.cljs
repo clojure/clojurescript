@@ -2927,7 +2927,7 @@ reduces them without incurring seq initialization"
                (.hasNext iter))
         (when-not (reduced? (xform lt (.next iter)))
           (recur))))
-    (when (nil? (.-stepper lt))
+    (when-not (nil? (.-stepper lt))
       (xform lt))))
 
 (defn stepper [xform iter]
@@ -2966,7 +2966,7 @@ reduces them without incurring seq initialization"
                (.hasNext iter))
         (when-not (reduced? (xform lt (.next iter)))
           (recur))))
-    (when (nil? (.-stepper lt))
+    (when-not (nil? (.-stepper lt))
       (xform lt))))
 
 (defn multi-stepper
