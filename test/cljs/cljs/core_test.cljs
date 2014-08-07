@@ -2337,9 +2337,39 @@
   (assert (.equiv #{:cat :dog :bird} #{:cat :dog :bird}))
 
   ;; transducers
+  (assert (= (sequence (map inc) (array 1 2 3)) '(2 3 4)))
+  (assert (= (apply str (sequence (map #(.toUpperCase %)) "foo")) "FOO"))
   (assert (== (hash [1 2 3]) (hash (sequence (map inc) (range 3)))))
   (assert (= [1 2 3] (sequence (map inc) (range 3))))
   (assert (= (sequence (map inc) (range 3)) [1 2 3]))
-
+  (assert (= (sequence (remove even?) (range 10)) '(1 3 5 7 9)))
+  (assert (= (sequence (take 5) (range 10))
+             '(0 1 2 3 4)))
+  (assert (= (sequence (take-while #(< % 5)) (range 10))
+             '(0 1 2 3 4)))
+  (assert (= (sequence (drop 5) (range 10))
+             '(5 6 7 8 9)))
+  (assert (= (sequence (drop-while #(< % 5)) (range 10))
+             '(5 6 7 8 9)))
+  (assert (= (sequence (take-nth 2) (range 10))
+             '(0 2 4 6 8)))
+  (assert (= (sequence (replace {:foo :bar}) '(:foo 1 :foo 2))
+             '(:bar 1 :bar 2)))
+  (let [ret (into [] (map inc) (range 3))]
+    (assert (and (vector? ret)
+                 (= ret '(1 2 3)))))
+  (let [ret (into [] (filter even?) (range 10))]
+    (assert (and (vector? ret)
+                 (= ret '(0 2 4 6 8)))))
+  (assert (= (map inc (sequence (map inc) (range 3)))
+             '(2 3 4)))
+  (assert (= (sequence (dedupe) [1 1 2 2 3 3])
+             '(1 2 3)))
+  (assert (= (flatmap reverse [[3 2 1 0] [6 5 4] [9 8 7]])
+             (range 10)))
+  (assert (= (sequence (flatmap reverse) [[3 2 1 0] [6 5 4] [9 8 7]])
+             (range 10)))
+  (assert (= (seq (iteration (map inc) [1 2 3])) '(2 3 4)))
+  
   :ok
   )
