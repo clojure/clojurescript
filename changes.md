@@ -1,3 +1,12 @@
+## 0.0-2301
+
+### Changes
+* transducers
+
+### Fixes
+* eliminate dead branches in conditionals to prevent Closure warnings
+* bad var resolution if when local contained .
+
 ## 0.0-2280
 
 ### Changes
