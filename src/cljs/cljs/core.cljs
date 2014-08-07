@@ -2923,7 +2923,10 @@ reduces them without incurring seq initialization"
     (array? coll) (array-iter coll)
     :else (seq-iter (seq coll))))
 
-(declare lazy-transformer)
+(declare LazyTransformer)
+
+(defn lazy-transformer [stepper]
+  (LazyTransformer. stepper nil nil nil))
 
 (deftype Stepper [xform iter]
   Object
@@ -3051,9 +3054,6 @@ reduces them without incurring seq initialization"
     (if (nil? rest)
       nil
       (-seq rest))))
-
-(defn lazy-transformer [stepper]
-  (LazyTransformer. stepper nil nil nil))
 
 (set! (.-create LazyTransformer)
   (fn [xform coll]
