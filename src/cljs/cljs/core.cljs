@@ -7302,13 +7302,24 @@ reduces them without incurring seq initialization"
   ([k x y & more]
      (reduce #(min-key k %1 %2) (min-key k x y) more)))
 
+(deftype ArrayList [^:mutable arr]
+  Object
+  (add [_ x] (.push arr x))
+  (size [_] (alength arr))
+  (clear [_] (set! arr (array)))
+  (isEmpty [_] (zero? (alength arr)))
+  (toArray [_] arr))
+
+(defn array-list []
+  (ArrayList. (array)))
+
 (defn partition-all
   "Returns a lazy sequence of lists like partition, but may include
   partitions with fewer than n items at the end.  Returns a stateful
   transducer when no collection is provided."
   ([^long n]
    (fn [f1]
-     (let [a (array)]
+     (let [a (array-list)]
        (fn
          ([] (f1))
          ([result]
@@ -7498,21 +7509,6 @@ reduces them without incurring seq initialization"
   "Returns a vector of [(take-while pred coll) (drop-while pred coll)]"
   [pred coll]
   [(take-while pred coll) (drop-while pred coll)])
-
-(defn- clear-array [a]
-  (while (pos? (alength a))
-    (.pop a)))
-
-(deftype ArrayList [^:mutable arr]
-  Object
-  (add [_] (.push arr))
-  (size [_] (alength arr))
-  (clear [_] (set! arr []))
-  (isEmpty [_] (zero? (alength arr)))
-  (toArray [_] arr))
-
-(defn array-list []
-  (ArrayList. (array)))
 
 (defn partition-by
   "Applies f to each value in coll, splitting it each time f returns a
