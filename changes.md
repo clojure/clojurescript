@@ -1,3 +1,8 @@
+## 0.0-2307
+
+### Enhancement
+* Allow multi-arity anonymous fns to optimize
+
 ## 0.0-2301
 
 ### Changes
