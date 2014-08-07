@@ -7533,8 +7533,8 @@ reduces them without incurring seq initialization"
               (let [pval @pa
                     val (f input)]
                 (reset! pa val)
-                (if (or (identical? pval ::none)
-                      (= val pval))
+                (if (or (keyword-identical? pval ::none)
+                        (= val pval))
                   (do
                     (.add a input)
                     result)
