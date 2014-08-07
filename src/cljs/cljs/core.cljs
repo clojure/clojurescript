@@ -1664,7 +1664,7 @@ reduces them without incurring seq initialization"
   ([xform f coll] (transduce xform f (f) coll))
   ([xform f init coll]
      (let [f (xform (completing f))
-           ret (reduce coll f init)
+           ret (reduce f init coll)
            ret (f (if (reduced? ret) @ret ret))]
        (if (reduced? ret) @ret ret))))
 
