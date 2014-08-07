@@ -382,6 +382,14 @@
   (^string -name [x])
   (^string -namespace [x]))
 
+(defprotocol IAtom)
+
+(defprotocol IReset
+  (-reset! [o new-value]))
+
+(defprotocol ISwap
+  (-swap! [o f] [o f a] [o f a b] [o f a b xs]))
+
 ;; Printing support
 
 (deftype StringBufferWriter [sb]
@@ -1014,6 +1022,8 @@ reduces them without incurring seq initialization"
   "conj[oin]. Returns a new collection with the xs
   'added'. (conj nil item) returns (item).  The 'addition' may
   happen at different 'places' depending on the concrete type."
+  ([] [])
+  ([coll] coll)
   ([coll x]
     (if-not (nil? coll)
       (-conj coll x)
@@ -1637,6 +1647,26 @@ reduces them without incurring seq initialization"
     (if-not (nil? coll)
       (-kv-reduce coll f init)
       init)))
+
+(defn- completing [f]
+  (fn
+    ([] (f))
+    ([x] x)
+    ([x y] (f x y))))
+
+(defn transduce
+  "reduce with a transformation of f (xf). If init is not
+  supplied, (f) will be called to produce it. Returns the result of
+  applying (the transformed) xf to init and the first item in coll,
+  then applying xf to that result and the 2nd item, etc. If coll
+  contains no items, returns init and f is not called. Note that
+  certain transforms may inject or skip items."
+  ([xform f coll] (transduce xform f (f) coll))
+  ([xform f init coll]
+     (let [f (xform (completing f))
+           ret (reduce coll f init)
+           ret (f (if (reduced? ret) @ret ret))]
+       (if (reduced? ret) @ret ret))))
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
@@ -2705,6 +2735,8 @@ reduces them without incurring seq initialization"
 (defn conj!
   "Adds x to the transient collection, and return coll. The 'addition'
   may happen at different 'places' depending on the concrete type."
+  ([] (transient []))
+  ([coll] coll)
   ([tcoll val]
     (-conj! tcoll val))
   ([tcoll val & vals]
@@ -2834,6 +2866,219 @@ reduces them without incurring seq initialization"
 (defn not-empty
   "If coll is empty, returns nil, else coll"
   [coll] (when (seq coll) coll))
+
+(defn nil-iter []
+  (reify
+    Object
+    (hasNext [_] false)
+    (next [_] (js/Error. "No such element"))
+    (remove [_] (js/Error. "Unsupported operation"))))
+
+(deftype StringIter [s ^:mutable i]
+  Object
+  (hasNext [_] (< i (alength s)))
+  (next [_]
+    (let [ret (.charAt s i)]
+      (set! i (inc i))
+      ret))
+  (remove [_] (js/Error. "Unsupported operation")))
+
+(defn string-iter [x]
+  (StringIter. x 0))
+
+(deftype ArrayIter [s ^:mutable i]
+  Object
+  (hasNext [_] (< i (alength s)))
+  (next [_]
+    (let [ret (.aget s i)]
+      (set! i (inc i))
+      ret))
+  (remove [_] (js/Error. "Unsupported operation")))
+
+(defn array-iter [x]
+  (ArrayIter. x 0))
+
+(deftype SeqIter [^:mutable seq]
+  Object
+  (hasNext [_] (not (nil? seq)))
+  (next [_]
+    (let [first (first seq)]
+      (set! seq (next seq))
+      first))
+  (remove [_] (js/Error. "Unsupported operation")))
+
+(defn seq-iter [seq]
+  (SeqIter. seq))
+
+(defn iter [coll]
+  (cond
+    (nil? coll) (nil-iter)
+    (string? coll) (string-iter coll)
+    (array? coll) (array-iter coll)
+    :else (seq-iter (seq coll))))
+
+(declare lazy-transformer)
+
+(deftype Stepper [xform iter]
+  Object
+  (step [this lt]
+    (loop []
+      (if (and (not (nil? (.-stepper lt)))
+               (.hasNext iter))
+        (when-not (reduced? (xform lt (.next iter)))
+          (recur))))
+    (when (nil? (.-stepper lt))
+      (xform lt))))
+
+(defn stepper [xform iter]
+  (letfn [(stepfn
+            ([result]
+               (let [lt (if (reduced? result)
+                          @result
+                          result)]
+                 (set! (.-stepper lt) nil)
+                 result))
+            ([result input]
+               (let [lt result]
+                 (set! (.-first lt) input)
+                 (set! (.-rest lt) (lazy-transformer (.-stepper lt)))
+                 (set! (.-stepper lt) nil)
+                 (.-rest lt))))]
+   (Stepper. (xform stepfn) iter)))
+
+(deftype MultiStepper [xform iters nexts]
+  Object
+  (hasNext [_]
+    (loop [iters (seq iters)]
+      (if-not (nil? iters)
+        (let [iter (first iters)]
+          (if-not (.hasNext iter)
+            false
+            (recur (next iters))))
+        true)))
+  (next [_]
+    (dotimes [i (alength iters)]
+      (aset next i (.next (aget iters i))))
+    (prim-seq nexts 0))
+  (step [_ lt]
+    (loop []
+      (if (and (not (nil? (.-stepper lt)))
+               (.hasNext iter))
+        (when-not (reduced? (xform lt (.next iter)))
+          (recur))))
+    (when (nil? (.-stepper lt))
+      (xform lt))))
+
+(defn multi-stepper
+  ([xform iters]
+     (multi-stepper xform iters
+       (make-array (alength iters))))
+  ([xform iters nexts]
+     (letfn [(stepfn
+               ([result]
+                  (let [lt (if (reduced? result)
+                             @result
+                             result)]
+                    (set! (.-stepper lt) nil)
+                    lt))
+               ([result input]
+                  (let [lt result]
+                    (set! (.-first lt) input)
+                    (set! (.-rest lt) (lazy-transformer (.-stepper lt)))
+                    (set! (.-stepper lt) nil)
+                    (.-rest lt))))]
+       (MultiStepper. xform iters nexts))))
+
+(deftype LazyTransformer [^:mutable stepper ^:mutable first ^:mutable rest meta]
+  IWithMeta
+  (-with-meta [this new-meta]
+    (LazyTransformer. stepper first rest new-meta))
+
+  ICollection
+  (-conj [this o]
+    (cons o (-seq this)))
+
+  IEmptyableCollection
+  (-empty [this]
+    ())
+
+  ISequential
+  IEquiv
+  (-equiv [this other]
+    (let [s (-seq this)]
+      (if-not (nil? s)
+        (equiv-sequential this other)
+        (and (sequential? other)
+             (nil? (seq other))))))
+
+  IHash
+  (-hash [this]
+    (hash-ordered-coll this))
+
+  ISeqable
+  (-seq [this]
+    (when-not (nil? stepper)
+      (.step stepper this))
+    (if (nil? rest)
+      nil
+      this))
+
+  ISeq
+  (-first [this]
+    (when-not (nil? stepper)
+      (-seq this))
+    (if (nil? rest)
+      nil
+      first))
+
+  (-rest [this]
+    (when-not (nil? stepper)
+      (-seq this))
+    (if (nil? rest)
+      ()
+      rest))
+
+  INext
+  (-next [this]
+    (when-not (nil? stepper)
+      (-seq this))
+    (if (nil? rest)
+      nil
+      (-seq rest))))
+
+(defn lazy-transformer [stepper]
+  (LazyTransformer. stepper nil nil nil))
+
+(set! (.-create LazyTransformer)
+  (fn [xform coll]
+    (LazyTransformer. (stepper xform (iter coll)) nil nil nil)))
+
+(set! (.-createMulti LazyTransformer)
+  (fn [xform colls]
+    (let [iters (array)]
+      (doseq [coll colls]
+        (.push iters (iter coll)))
+      (LazyTransformer.
+        (multi-stepper xform iters (make-array (alength iters)))
+        nil nil nil))))
+
+(defn sequence
+  "Coerces coll to a (possibly empty) sequence, if it is not already
+  one. Will not force a lazy seq. (sequence nil) yields (), When a
+  transducer is supplied, returns a lazy sequence of applications of
+  the transform to the items in coll(s), i.e. to the set of first
+  items of each coll, followed by the set of second
+  items in each coll, until any one of the colls is exhausted.  Any
+  remaining items in other colls are ignored. The transform should accept
+  number-of-colls arguments"
+  ([coll]
+     (if (seq? coll)
+       coll
+       (or (seq coll) ())))
+  ([xform coll]
+     (.create LazyTransformer xform coll))
+  ([xform coll & colls]
+     (.createMulti LazyTransformer xform (to-array (cons coll colls)))))
 
 (defn ^boolean every?
   "Returns true if (pred x) is logical true for every x in coll, else
@@ -2977,7 +3222,17 @@ reduces them without incurring seq initialization"
 (defn keep
   "Returns a lazy sequence of the non-nil results of (f item). Note,
   this means false return values will be included.  f must be free of
-  side-effects."
+  side-effects.  Returns a transducer when no collection is provided."
+  ([f]
+   (fn [f1]
+     (fn
+       ([] (f1))
+       ([result] (f1 result))
+       ([result input]
+          (let [v (f input)]
+            (if (nil? v)
+              result
+              (f1 result v)))))))
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
@@ -2995,10 +3250,141 @@ reduces them without incurring seq initialization"
             (keep f (rest s))
             (cons x (keep f (rest s))))))))))
 
+;; =============================================================================
+;; Atom
+
+(deftype Atom [state meta validator watches]
+  Object
+  (equiv [this other]
+    (-equiv this other))
+
+  IAtom
+  
+  IEquiv
+  (-equiv [o other] (identical? o other))
+
+  IDeref
+  (-deref [_] state)
+
+  IMeta
+  (-meta [_] meta)
+
+  IWatchable
+  (-notify-watches [this oldval newval]
+    (doseq [[key f] watches]
+      (f key this oldval newval)))
+  (-add-watch [this key f]
+    (set! (.-watches this) (assoc watches key f))
+    this)
+  (-remove-watch [this key]
+    (set! (.-watches this) (dissoc watches key)))
+
+  IHash
+  (-hash [this] (goog/getUid this)))
+
+(defn atom
+  "Creates and returns an Atom with an initial value of x and zero or
+  more options (in any order):
+
+  :meta metadata-map
+
+  :validator validate-fn
+
+  If metadata-map is supplied, it will be come the metadata on the
+  atom. validate-fn must be nil or a side-effect-free fn of one
+  argument, which will be passed the intended new state on any state
+  change. If the new state is unacceptable, the validate-fn should
+  return false or throw an Error.  If either of these error conditions
+  occur, then the value of the atom will not change."
+  ([x] (Atom. x nil nil nil))
+  ([x & {:keys [meta validator]}] (Atom. x meta validator nil)))
+
+(declare pr-str)
+
+(defn reset!
+  "Sets the value of atom to newval without regard for the
+  current value. Returns newval."
+  [a new-value]
+  (if (instance? Atom a)
+    (let [validate (.-validator a)]
+      (when-not (nil? validate)
+        (assert (validate new-value) "Validator rejected reference state"))
+      (let [old-value (.-state a)]
+        (set! (.-state a) new-value)
+        (when-not (nil? (.-watches a))
+          (-notify-watches a old-value new-value))
+        new-value))
+    (-reset! a new-value)))
+
+;; generic to all refs
+;; (but currently hard-coded to atom!)
+(defn deref
+  [o]
+  (-deref o))
+
+(defn swap!
+  "Atomically swaps the value of atom to be:
+  (apply f current-value-of-atom args). Note that f may be called
+  multiple times, and thus should be free of side effects.  Returns
+  the value that was swapped in."
+  ([a f]
+     (if (instance? Atom a)
+       (reset! a (f (.-state a)))
+       (-swap! a f)))
+  ([a f x]
+     (if (instance? Atom a)
+       (reset! a (f (.-state a) x))
+       (-swap! a f x)))
+  ([a f x y]
+     (if (instance? Atom a)
+       (reset! a (f (.-state a) x y))
+       (-swap! a f x y)))
+  ([a f x y & more]
+     (if (instance? Atom a)
+       (reset! a (apply f (.-state a) x y more))
+       (-swap! a f x y more))))
+
+(defn compare-and-set!
+  "Atomically sets the value of atom to newval if and only if the
+  current value of the atom is identical to oldval. Returns true if
+  set happened, else false."
+  [a oldval newval]
+  (if (= (.-state a) oldval)
+    (do (reset! a newval) true)
+    false))
+
+(defn set-validator!
+  "Sets the validator-fn for an atom. validator-fn must be nil or a
+  side-effect-free fn of one argument, which will be passed the intended
+  new state on any state change. If the new state is unacceptable, the
+  validator-fn should return false or throw an Error. If the current state
+  is not acceptable to the new validator, an Error will be thrown and the
+  validator will not be changed."
+  [iref val]
+  (set! (.-validator iref) val))
+
+(defn get-validator
+  "Gets the validator-fn for a var/ref/agent/atom."
+  [iref]
+  (.-validator iref))
+
 (defn keep-indexed
   "Returns a lazy sequence of the non-nil results of (f index item). Note,
   this means false return values will be included.  f must be free of
-  side-effects."
+  side-effects.  Returns a stateful transducer when no collection is
+  provided."
+  ([f]
+   (fn [f1]
+     (let [ia (atom -1)]
+       (fn
+         ([] (f1))
+         ([result] (f1 result))
+         ([result input]
+            (let [i (swap! ia inc)
+                  v (f i input)]
+              (if (nil? v)
+                result
+                (f1 result v))))))))
   ([f coll]
      (letfn [(keepi [idx coll]
                (lazy-seq
@@ -3097,11 +3483,21 @@ reduces them without incurring seq initialization"
                              (some #(some % args) ps)))))))
 
 (defn map
-  "Returns a lazy sequence consisting of the result of applying f to the
-  set of first items of each coll, followed by applying f to the set
-  of second items in each coll, until any one of the colls is
+  "Returns a lazy sequence consisting of the result of applying f to
+  the set of first items of each coll, followed by applying f to the
+  set of second items in each coll, until any one of the colls is
   exhausted.  Any remaining items in other colls are ignored. Function
-  f should accept number-of-colls arguments."
+  f should accept number-of-colls arguments. Returns a transducer when
+  no collection is provided."
+  ([f]
+    (fn [f1]
+      (fn
+        ([] (f1))
+        ([result] (f1 result))
+        ([result input]
+           (f1 result (f input)))
+        ([result input & inputs]
+           (f1 result (apply f input inputs))))))
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
@@ -3135,22 +3531,51 @@ reduces them without incurring seq initialization"
 
 (defn take
   "Returns a lazy sequence of the first n items in coll, or all items if
-  there are fewer than n."
-  [n coll]
-  (lazy-seq
-   (when (pos? n)
-     (when-let [s (seq coll)]
-      (cons (first s) (take (dec n) (rest s)))))))
+  there are fewer than n.  Returns a stateful transducer when
+  no collection is provided."
+  ([n]
+     (fn [f1]
+       (let [na (atom n)]
+         (fn
+           ([] (f1))
+           ([result] (f1 result))
+           ([result input]
+              (let [n @na
+                    nn (swap! na dec)
+                    result (if (pos? n)
+                             (f1 result input)
+                             result)]
+                (if (not (pos? nn))
+                  (reduced result)
+                  result)))))))
+  ([n coll]
+     (lazy-seq
+       (when (pos? n)
+         (when-let [s (seq coll)]
+           (cons (first s) (take (dec n) (rest s))))))))
 
 (defn drop
-  "Returns a lazy sequence of all but the first n items in coll."
-  [n coll]
-  (let [step (fn [n coll]
-               (let [s (seq coll)]
-                 (if (and (pos? n) s)
-                   (recur (dec n) (rest s))
-                   s)))]
-    (lazy-seq (step n coll))))
+  "Returns a lazy sequence of all but the first n items in coll.
+  Returns a stateful transducer when no collection is provided."
+  ([n]
+     (fn [f1]
+       (let [na (atom n)]
+         (fn
+           ([] (f1))
+           ([result] (f1 result))
+           ([result input]
+              (let [n @na]
+                (swap! na dec)
+                (if (pos? n)
+                  result
+                  (f1 result input))))))))
+  ([n coll]
+     (let [step (fn [n coll]
+                  (let [s (seq coll)]
+                    (if (and (pos? n) s)
+                      (recur (dec n) (rest s))
+                      s)))]
+       (lazy-seq (step n coll)))))
 
 (defn drop-last
   "Return a lazy sequence of all but the last n (default 1) items in coll"
@@ -3167,15 +3592,29 @@ reduces them without incurring seq initialization"
       s)))
 
 (defn drop-while
-  "Returns a lazy sequence of the items in coll starting from the first
-  item for which (pred item) returns nil."
-  [pred coll]
-  (let [step (fn [pred coll]
-               (let [s (seq coll)]
-                 (if (and s (pred (first s)))
-                   (recur pred (rest s))
-                   s)))]
-    (lazy-seq (step pred coll))))
+  "Returns a lazy sequence of the items in coll starting from the
+  first item for which (pred item) returns logical false.  Returns a
+  stateful transducer when no collection is provided."
+  ([pred]
+     (fn [f1]
+       (let [da (atom true)]
+         (fn
+           ([] (f1))
+           ([result] (f1 result))
+           ([result input]
+              (let [drop? @da]
+                (if (and drop? (pred input))
+                  result
+                  (do
+                    (reset! da nil)
+                    (f1 result input)))))))))
+  ([pred coll]
+     (let [step (fn [pred coll]
+                  (let [s (seq coll)]
+                    (if (and s (pred (first s)))
+                      (recur pred (rest s))
+                      s)))]
+       (lazy-seq (step pred coll)))))
 
 (defn cycle
   "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
@@ -3251,7 +3690,17 @@ reduces them without incurring seq initialization"
 
 (defn filter
   "Returns a lazy sequence of the items in coll for which
-  (pred item) returns true. pred must be free of side-effects."
+  (pred item) returns true. pred must be free of side-effects.
+  Returns a transducer when no collection is provided."
+  ([pred]
+    (fn [f1]
+      (fn
+        ([] (f1))
+        ([result] (f1 result))
+        ([result input]
+           (if (pred input)
+             (f1 result input)
+             result)))))
   ([pred coll]
    (lazy-seq
     (when-let [s (seq coll)]
@@ -3270,9 +3719,11 @@ reduces them without incurring seq initialization"
 
 (defn remove
   "Returns a lazy sequence of the items in coll for which
-  (pred item) returns false. pred must be free of side-effects."
-  [pred coll]
-  (filter (complement pred) coll))
+  (pred item) returns false. pred must be free of side-effects.
+  Returns a transducer when no collection is provided."
+  ([pred] (filter (complement pred)))
+  ([pred coll]
+     (filter (complement pred) coll)))
 
 (defn tree-seq
   "Returns a lazy sequence of the nodes in a tree, via a depth-first walk.
@@ -3299,13 +3750,17 @@ reduces them without incurring seq initialization"
 
 (defn into
   "Returns a new coll consisting of to-coll with all of the items of
-  from-coll conjoined."
-  [to from]
-  (if-not (nil? to)
-    (if (implements? IEditableCollection to)
-      (persistent! (reduce -conj! (transient to) from))
-      (reduce -conj to from))
-    (reduce conj () from)))
+  from-coll conjoined. A transducer may be supplied."
+  ([to from]
+     (if-not (nil? to)
+       (if (implements? IEditableCollection to)
+         (with-meta (persistent! (reduce -conj! (transient to) from)) (meta to))
+         (reduce -conj to from))
+       (reduce conj () from)))
+  ([to xform from]
+     (if (implements? IEditableCollection to)
+       (with-meta (persistent! (transduce xform -conj! (transient to) from)) (meta to))
+       (transduce xform conj to from))))
 
 (defn mapv
   "Returns a vector consisting of the result of applying f to the
@@ -6778,16 +7233,19 @@ reduces them without incurring seq initialization"
 (defn replace
   "Given a map of replacement pairs and a vector/collection, returns a
   vector/seq with any elements = a key in smap replaced with the
-  corresponding val in smap"
-  [smap coll]
-  (if (vector? coll)
-    (let [n (count coll)]
-      (reduce (fn [v i]
-                (if-let [e (find smap (nth v i))]
-                  (assoc v i (second e))
-                  v))
-              coll (take n (iterate inc 0))))
-    (map #(if-let [e (find smap %)] (second e) %) coll)))
+  corresponding val in smap.  Returns a transducer when no collection
+  is provided."
+  ([smap]
+     (map #(if-let [e (find smap %)] (val e) %)))
+  ([smap coll]
+     (if (vector? coll)
+       (let [n (count coll)]
+         (reduce (fn [v i]
+                   (if-let [e (find smap (nth v i))]
+                     (assoc v i (second e))
+                     v))
+           coll (take n (iterate inc 0))))
+       (map #(if-let [e (find smap %)] (second e) %) coll))))
 
 (defn distinct
   "Returns a lazy sequence of the elements of coll with duplicates removed"
@@ -6846,7 +7304,29 @@ reduces them without incurring seq initialization"
 
 (defn partition-all
   "Returns a lazy sequence of lists like partition, but may include
-  partitions with fewer than n items at the end."
+  partitions with fewer than n items at the end.  Returns a stateful
+  transducer when no collection is provided."
+  ([^long n]
+   (fn [f1]
+     (let [a (array)]
+       (fn
+         ([] (f1))
+         ([result]
+            (let [result (if (.isEmpty a)
+                           result
+                           (let [v (vec (.toArray a))]
+                             ;;flushing ops must clear before invoking possibly
+                             ;;failing nested op, else infinite loop
+                             (.clear a)
+                             (f1 result v)))]
+              (f1 result)))
+         ([result input]
+            (.add a input)
+            (if (= n (.size a))
+              (let [v (vec (.toArray a))]
+                (.clear a)
+                (f1 result v))
+              result))))))
   ([n coll]
      (partition-all n n coll))
   ([n step coll]
@@ -6856,12 +7336,22 @@ reduces them without incurring seq initialization"
 
 (defn take-while
   "Returns a lazy sequence of successive items from coll while
-  (pred item) returns true. pred must be free of side-effects."
-  [pred coll]
-  (lazy-seq
-   (when-let [s (seq coll)]
-     (when (pred (first s))
-       (cons (first s) (take-while pred (rest s)))))))
+  (pred item) returns true. pred must be free of side-effects.
+  Returns a transducer when no collection is provided."
+  ([pred]
+     (fn [f1]
+       (fn
+         ([] (f1))
+         ([result] (f1 result))
+         ([result input]
+            (if (pred input)
+              (f1 result input)
+              (reduced result))))))
+  ([pred coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (when (pred (first s))
+           (cons (first s) (take-while pred (rest s))))))))
 
 (defn mk-bound-fn
   [sc test key]
@@ -6986,27 +7476,83 @@ reduces them without incurring seq initialization"
   ([start end step] (Range. nil start end step nil)))
 
 (defn take-nth
-  "Returns a lazy seq of every nth item in coll."
-  [n coll]
-  (lazy-seq
-   (when-let [s (seq coll)]
-     (cons (first s) (take-nth n (drop n s))))))
+  "Returns a lazy seq of every nth item in coll.  Returns a stateful
+  transducer when no collection is provided."
+  ([n]
+     (fn [f1]
+       (let [ia (atom -1)]
+         (fn
+           ([] (f1))
+           ([result] (f1 result))
+           ([result input]
+              (let [i (swap! ia inc)]
+                (if (zero? (rem i n))
+                  (f1 result input)
+                  result)))))))
+  ([n coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (cons (first s) (take-nth n (drop n s)))))))
 
 (defn split-with
   "Returns a vector of [(take-while pred coll) (drop-while pred coll)]"
   [pred coll]
   [(take-while pred coll) (drop-while pred coll)])
 
+(defn- clear-array [a]
+  (while (pos? (alength a))
+    (.pop a)))
+
+(deftype ArrayList [^:mutable arr]
+  Object
+  (add [_] (.push arr))
+  (size [_] (alength arr))
+  (clear [_] (set! arr []))
+  (isEmpty [_] (zero? (alength arr)))
+  (toArray [_] arr))
+
+(defn array-list []
+  (ArrayList. (array)))
+
 (defn partition-by
-  "Applies f to each value in coll, splitting it each time f returns
-   a new value.  Returns a lazy seq of partitions."
-  [f coll]
-  (lazy-seq
-   (when-let [s (seq coll)]
-     (let [fst (first s)
-           fv (f fst)
-           run (cons fst (take-while #(= fv (f %)) (next s)))]
-       (cons run (partition-by f (seq (drop (count run) s))))))))
+  "Applies f to each value in coll, splitting it each time f returns a
+   new value.  Returns a lazy seq of partitions.  Returns a stateful
+   transducer when no collection is provided."
+  ([f]
+     (fn [f1]
+       (let [a (array-list)
+             pa (atom ::none)]
+         (fn
+           ([] (f1))
+           ([result]
+              (let [result (if (.isEmpty a)
+                             result
+                             (let [v (vec (.toArray a))]
+                               ;;flushing ops must clear before invoking possibly
+                               ;;failing nested op, else infinite loop
+                               (.clear a)
+                               (f1 result v)))]
+                (f1 result)))
+           ([result input]
+              (let [pval @pa
+                    val (f input)]
+                (reset! pa val)
+                (if (or (identical? pval ::none)
+                      (= val pval))
+                  (do
+                    (.add a input)
+                    result)
+                  (let [v (vec (.toArray a))]
+                    (.clear a)
+                    (.add a input)
+                    (f1 result v)))))))))
+  ([f coll]
+     (lazy-seq
+       (when-let [s (seq coll)]
+         (let [fst (first s)
+               fv (f fst)
+               run (cons fst (take-while #(= fv (f %)) (next s)))]
+           (cons run (partition-by f (seq (drop (count run) s)))))))))
 
 (defn frequencies
   "Returns a map from distinct items in coll to the number of times
@@ -7366,6 +7912,9 @@ reduces them without incurring seq initialization"
   LazySeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
+  LazyTransformer
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+
   IndexedSeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
@@ -7446,8 +7995,13 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
 
   Range
-  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
+  Atom
+  (-pr-writer [a writer opts]
+    (-write writer "#<Atom: ")
+    (pr-writer (.-state a) writer opts)
+    (-write writer ">")))
 
 ;; IComparable
 (extend-protocol IComparable
@@ -7465,133 +8019,6 @@ reduces them without incurring seq initialization"
   (-compare [x y] (compare-indexed x y)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
-
-(defprotocol IAtom)
-
-(defprotocol IReset
-  (-reset! [o new-value]))
-
-(defprotocol ISwap
-  (-swap! [o f] [o f a] [o f a b] [o f a b xs]))
-
-(deftype Atom [state meta validator watches]
-  Object
-  (equiv [this other]
-    (-equiv this other))
-
-  IAtom
-  
-  IEquiv
-  (-equiv [o other] (identical? o other))
-
-  IDeref
-  (-deref [_] state)
-
-  IMeta
-  (-meta [_] meta)
-
-  IPrintWithWriter
-  (-pr-writer [a writer opts]
-    (-write writer "#<Atom: ")
-    (pr-writer state writer opts)
-    (-write writer ">"))
-
-  IWatchable
-  (-notify-watches [this oldval newval]
-    (doseq [[key f] watches]
-      (f key this oldval newval)))
-  (-add-watch [this key f]
-    (set! (.-watches this) (assoc watches key f))
-    this)
-  (-remove-watch [this key]
-    (set! (.-watches this) (dissoc watches key)))
-
-  IHash
-  (-hash [this] (goog/getUid this)))
-
-(defn atom
-  "Creates and returns an Atom with an initial value of x and zero or
-  more options (in any order):
-
-  :meta metadata-map
-
-  :validator validate-fn
-
-  If metadata-map is supplied, it will be come the metadata on the
-  atom. validate-fn must be nil or a side-effect-free fn of one
-  argument, which will be passed the intended new state on any state
-  change. If the new state is unacceptable, the validate-fn should
-  return false or throw an Error.  If either of these error conditions
-  occur, then the value of the atom will not change."
-  ([x] (Atom. x nil nil nil))
-  ([x & {:keys [meta validator]}] (Atom. x meta validator nil)))
-
-(defn reset!
-  "Sets the value of atom to newval without regard for the
-  current value. Returns newval."
-  [a new-value]
-  (if (instance? Atom a)
-    (let [validate (.-validator a)]
-      (when-not (nil? validate)
-        (assert (validate new-value) "Validator rejected reference state"))
-      (let [old-value (.-state a)]
-        (set! (.-state a) new-value)
-        (when-not (nil? (.-watches a))
-          (-notify-watches a old-value new-value))
-        new-value))
-    (-reset! a new-value)))
-
-;; generic to all refs
-;; (but currently hard-coded to atom!)
-(defn deref
-  [o]
-  (-deref o))
-
-(defn swap!
-  "Atomically swaps the value of atom to be:
-  (apply f current-value-of-atom args). Note that f may be called
-  multiple times, and thus should be free of side effects.  Returns
-  the value that was swapped in."
-  ([a f]
-     (if (instance? Atom a)
-       (reset! a (f (.-state a)))
-       (-swap! a f)))
-  ([a f x]
-     (if (instance? Atom a)
-       (reset! a (f (.-state a) x))
-       (-swap! a f x)))
-  ([a f x y]
-     (if (instance? Atom a)
-       (reset! a (f (.-state a) x y))
-       (-swap! a f x y)))
-  ([a f x y & more]
-     (if (instance? Atom a)
-       (reset! a (apply f (.-state a) x y more))
-       (-swap! a f x y more))))
-
-(defn compare-and-set!
-  "Atomically sets the value of atom to newval if and only if the
-  current value of the atom is identical to oldval. Returns true if
-  set happened, else false."
-  [a oldval newval]
-  (if (= (.-state a) oldval)
-    (do (reset! a newval) true)
-    false))
-
-(defn set-validator!
-  "Sets the validator-fn for an atom. validator-fn must be nil or a
-  side-effect-free fn of one argument, which will be passed the intended
-  new state on any state change. If the new state is unacceptable, the
-  validator-fn should return false or throw an Error. If the current state
-  is not acceptable to the new validator, an Error will be thrown and the
-  validator will not be changed."
-  [iref val]
-  (set! (.-validator iref) val))
-
-(defn get-validator
-  "Gets the validator-fn for a var/ref/agent/atom."
-  [iref]
-  (.-validator iref))
 
 (defn alter-meta!
   "Atomically sets the metadata for a namespace/var/ref/agent/atom to be:
@@ -7686,6 +8113,77 @@ reduces them without incurring seq initialization"
   "Returns true if a value has been produced for a promise, delay, future or lazy sequence."
   [d]
   (-realized? d))
+
+(defn- preserving-reduced
+  [f1]
+  #(let [ret (f1 %1 %2)]
+     (if (reduced? ret)
+       (reduced ret)
+       ret)))
+
+(defn flatmap
+  "maps f over coll and concatenates the results.  Thus function f
+  should return a collection.  Returns a transducer when no collection
+  is provided."
+  ([f]
+   (fn [f1]
+     (fn
+       ([] (f1))
+       ([result] (f1 result))
+       ([result input]
+          (reduce (preserving-reduced f1) result (f input))))))
+  ([f coll] (sequence (flatmap f) coll)))
+
+(defn dedupe
+  "Returns a lazy sequence removing consecutive duplicates in coll.
+  Returns a transducer when no collection is provided."
+  ([]
+   (fn [f1]
+     (let [pa (atom ::none)]
+       (fn
+         ([] (f1))
+         ([result] (f1 result))
+         ([result input]
+            (let [prior @pa]
+              (reset! pa input)
+              (if (= prior input)
+                result
+                (f1 result input))))))))
+  ([coll] (sequence (dedupe) coll)))
+
+(defn random-sample
+  "Returns items from coll with random probability of prob (0.0 -
+  1.0).  Returns a transducer when no collection is provided."
+  ([prob]
+     (filter (fn [_] (< (rand) prob))))
+  ([prob coll]
+     (filter (fn [_] (< (rand) prob)) coll)))
+
+(deftype Iteration [xform coll]
+   ISequential
+   
+   ISeqable
+   (-seq [_] (seq (sequence xform coll)))
+
+   IReduce
+   (-reduce [_ f init] (transduce xform f init coll))
+
+   IPrintWithWriter
+   (-pr-writer [coll writer opts]
+     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
+
+(defn iteration
+  "Returns an iterable/seqable/reducible sequence of applications of
+  the transducer to the items in coll. Note that these applications
+  will be performed every time iterator/seq/reduce is called."
+  [xform coll]
+  (Iteration. xform coll))
+
+(defn run!
+  "Runs the supplied procedure (via reduce), for purposes of side
+  effects, on successive items in the collection. Returns nil"
+  [proc coll]
+  (reduce #(proc %2) nil coll))
 
 (defprotocol IEncodeJS
   (-clj->js [x] "Recursively transforms clj values to JavaScript")
