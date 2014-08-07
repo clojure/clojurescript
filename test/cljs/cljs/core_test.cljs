@@ -1,4 +1,5 @@
 (ns cljs.core-test
+  (:refer-clojure :exclude [iter])
   (:require [clojure.string :as s]
             [clojure.set :as set]))
 
@@ -2334,6 +2335,11 @@
   (assert (.equiv '(1 2 3) '(1 2 3)))
   (assert (.equiv (map inc [1 2 3]) (map inc [1 2 3])))
   (assert (.equiv #{:cat :dog :bird} #{:cat :dog :bird}))
+
+  ;; transducers
+  (assert (== (hash [1 2 3]) (hash (sequence (map inc) (range 3)))))
+  (assert (= [1 2 3] (sequence (map inc) (range 3))))
+  (assert (= (sequence (map inc) (range 3)) [1 2 3]))
 
   :ok
   )
