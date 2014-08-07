@@ -2886,11 +2886,11 @@ reduces them without incurring seq initialization"
 (defn string-iter [x]
   (StringIter. x 0))
 
-(deftype ArrayIter [s ^:mutable i]
+(deftype ArrayIter [arr ^:mutable i]
   Object
-  (hasNext [_] (< i (alength s)))
+  (hasNext [_] (< i (alength arr)))
   (next [_]
-    (let [ret (.aget s i)]
+    (let [ret (aget arr i)]
       (set! i (inc i))
       ret))
   (remove [_] (js/Error. "Unsupported operation")))
