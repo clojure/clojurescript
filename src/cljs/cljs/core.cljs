@@ -775,6 +775,12 @@
   [r]
   (instance? Reduced r))
 
+;; generic to all refs
+;; (but currently hard-coded to atom!)
+(defn deref
+  [o]
+  (-deref o))
+
 (defn- ci-reduce
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
 reduces them without incurring seq initialization"
@@ -3315,12 +3321,6 @@ reduces them without incurring seq initialization"
           (-notify-watches a old-value new-value))
         new-value))
     (-reset! a new-value)))
-
-;; generic to all refs
-;; (but currently hard-coded to atom!)
-(defn deref
-  [o]
-  (-deref o))
 
 (defn swap!
   "Atomically swaps the value of atom to be:
