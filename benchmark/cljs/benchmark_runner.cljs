@@ -312,6 +312,17 @@
 (println ";; reducers")
 (simple-benchmark [xs (into [] (range 1000000))] (r/reduce + (r/map inc (r/map inc (r/map inc xs)))) 1)
 
+(dotimes [_ 10]
+  (let [xs (into [] (range 1000000))]
+    (time (r/reduce + (r/map inc (r/map inc (r/map inc xs))))))) 
+
+(println ";; transducers")
+(simple-benchmark [xs (into [] (range 1000000))] (transduce (comp (map inc) (map inc) (map inc)) + 0 xs) 1)
+
+(dotimes [_ 10]
+  (let [xs (into [] (range 1000000))]
+    (time (transduce (comp (map inc) (map inc) (map inc)) + 0 xs))))
+
 (println "\n")
 
 (println ";; multimethods")
