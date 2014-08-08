@@ -2904,24 +2904,36 @@ reduces them without incurring seq initialization"
 (defn array-iter [x]
   (ArrayIter. x 0))
 
-(deftype SeqIter [^:mutable seq]
+(def INIT #js {})
+(def START #js {})
+
+(deftype SeqIter [^:mutable _seq ^:mutable _next]
   Object
-  (hasNext [_] (not (nil? seq)))
-  (next [_]
-    (let [first (first seq)]
-      (set! seq (next seq))
-      first))
+  (hasNext [_]
+    (if (identical? _seq INIT)
+      (do
+        (set! _seq START)
+        (set! _next (seq _next)))
+      (if (identical? _seq _next)
+        (set! _next (next _seq))))
+    (not (nil? _next)))
+  (next [this]
+    (if-not (.hasNext this)
+      (throw (js/Error. "No such element"))
+      (do
+        (set! _seq _next)
+        (first _next))))
   (remove [_] (js/Error. "Unsupported operation")))
 
-(defn seq-iter [seq]
-  (SeqIter. seq))
+(defn seq-iter [coll]
+  (SeqIter. INIT coll))
 
 (defn iter [coll]
   (cond
     (nil? coll) (nil-iter)
     (string? coll) (string-iter coll)
     (array? coll) (array-iter coll)
-    :else (seq-iter (seq coll))))
+    :else (seq-iter coll)))
 
 (declare LazyTransformer)
 
@@ -2934,7 +2946,9 @@ reduces them without incurring seq initialization"
     (loop []
       (if (and (not (nil? (.-stepper lt)))
                (.hasNext iter))
-        (when-not (reduced? (xform lt (.next iter)))
+        (if (reduced? (xform lt (.next iter)))
+          (when-not (nil? (.-rest lt))
+            (set! (.. lt -rest -stepper) nil))
           (recur))))
     (when-not (nil? (.-stepper lt))
       (xform lt))))
@@ -2973,7 +2987,9 @@ reduces them without incurring seq initialization"
     (loop []
       (if (and (not (nil? (.-stepper lt)))
                (.hasNext iter))
-        (when-not (reduced? (xform lt (.next iter)))
+        (if (reduced? (apply xform (cons lt (.next iter))))
+          (when-not (nil? (.-rest lt))
+            (set! (.. lt -rest -stepper) nil))
           (recur))))
     (when-not (nil? (.-stepper lt))
       (xform lt))))
