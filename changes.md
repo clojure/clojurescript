@@ -1,3 +1,9 @@
+## 0.0-2311
+
+### Fixes
+* fix typo which broke browser REPL
+* lazier seq iterators a la CLJ-1497
+
 ## 0.0-2307
 
 ### Enhancement
