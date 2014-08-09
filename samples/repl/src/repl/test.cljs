@@ -8,7 +8,8 @@
 
 (ns repl.test
   (:require [clojure.browser.repl :as repl]
-            [clojure.reflect :as reflect]))
+            ;[clojure.reflect :as reflect]
+            ))
 
 (repl/connect "http://localhost:9000/repl")
 
