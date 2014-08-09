@@ -58,7 +58,7 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
        (.send this uri method content headers)))
 
 
-  event/EventType
+  event/IEventType
   (event-types [this]
     (into {}
           (map
