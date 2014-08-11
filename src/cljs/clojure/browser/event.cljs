@@ -27,18 +27,21 @@ events.  It is based on the Google Closure Library event system."
              [(keyword (.toLowerCase k))
               v])
            (merge
-            (js->clj EventType)))))
-
-  js/Element
-  (event-types
-    [this]
-    (into {}
-          (map
-           (fn [[k v]]
-             [(keyword (.toLowerCase k))
-              v])
-           (merge
             (js->clj EventType))))))
+
+(when (exists? js/Element)
+  (extend-protocol IEventType
+
+    js/Element
+    (event-types
+      [this]
+      (into {}
+            (map
+             (fn [[k v]]
+               [(keyword (.toLowerCase k))
+                v])
+             (merge
+              (js->clj EventType)))))))
 
 (defn listen
   ([src type fn]
