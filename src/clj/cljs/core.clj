@@ -860,7 +860,7 @@
 
 (defn- build-positional-factory
   [rsym rname fields]
-  (let [fn-name (symbol (core/str '-> rsym))]
+  (let [fn-name (with-meta (symbol (core/str '-> rsym)) (meta rsym))]
     `(defn ~fn-name
        [~@fields]
        (new ~rname ~@fields))))

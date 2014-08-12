@@ -1185,6 +1185,7 @@
                        :type true
                        :num-fields (count fields))]
                (merge m
+                 (dissoc (meta tsym) :protocols)
                  {:protocols (-> tsym meta :protocols)}
                  (source-info tsym env)))))
     {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
@@ -1199,6 +1200,7 @@
                        :type true
                        :num-fields (count fields))]
                (merge m
+                 (dissoc (meta tsym) :protocols)
                  {:protocols (-> tsym meta :protocols)}
                  (source-info tsym env)))))
     {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
