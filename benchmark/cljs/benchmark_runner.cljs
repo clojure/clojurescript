@@ -315,6 +315,10 @@
 (println ";; transducers")
 (simple-benchmark [xs (into [] (range 1000000))] (transduce (comp (map inc) (map inc) (map inc)) + 0 xs) 1)
 
+(println ";; primitive array reduce 1000000 many ops")
+(simple-benchmark [xs (into-array (range 1000000))]
+  (-> xs (.map inc) (.map inc) (.map inc) (.reduce (fn [a b] (+ a b)) 0)) 1)
+
 (println ";; reduce range 1000000 many ops")
 (simple-benchmark [xs (range 1000000)] (reduce + 0 (map inc (map inc (map inc xs)))) 1)
 
