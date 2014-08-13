@@ -8487,30 +8487,28 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   strings to keywords."
   ([x] (js->clj x {:keywordize-keys false}))
   ([x & opts]
-    (cond
-      (satisfies? IEncodeClojure x)
-      (-js->clj x (apply array-map opts))
+    (let [{:keys [keywordize-keys]} opts
+          keyfn (if keywordize-keys keyword str)
+          f (fn thisfn [x]
+              (cond
+                (satisfies? IEncodeClojure x)
+                (-js->clj x (apply array-map opts))
 
-      (seq opts)
-      (let [{:keys [keywordize-keys]} opts
-            keyfn (if keywordize-keys keyword str)
-            f (fn thisfn [x]
-                (cond
-                  (seq? x)
-                  (doall (map thisfn x))
+                (seq? x)
+                (doall (map thisfn x))
 
-                  (coll? x)
-                  (into (empty x) (map thisfn x))
+                (coll? x)
+                (into (empty x) (map thisfn x))
 
-                  (array? x)
-                  (vec (map thisfn x))
-                   
-                  (identical? (type x) js/Object)
-                  (into {} (for [k (js-keys x)]
-                             [(keyfn k) (thisfn (aget x k))]))
+                (array? x)
+                (vec (map thisfn x))
+                 
+                (identical? (type x) js/Object)
+                (into {} (for [k (js-keys x)]
+                           [(keyfn k) (thisfn (aget x k))]))
 
-                  :else x))]
-        (f x)))))
+                :else x))]
+      (f x))))
 
 (defn memoize
   "Returns a memoized version of a referentially transparent function. The
