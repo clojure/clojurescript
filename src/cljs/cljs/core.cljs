@@ -2057,12 +2057,15 @@ reduces them without incurring seq initialization"
   returns false."
   [x y]
   (boolean
-   (when (sequential? y)
-     (loop [xs (seq x) ys (seq y)]
-       (cond (nil? xs) (nil? ys)
-             (nil? ys) false
-             (= (first xs) (first ys)) (recur (next xs) (next ys))
-             :else false)))))
+    (when (sequential? y)
+      (if (and (counted? x) (counted? y)
+               (not (== (count x) (count y))))
+        false
+        (loop [xs (seq x) ys (seq y)]
+          (cond (nil? xs) (nil? ys)
+            (nil? ys) false
+            (= (first xs) (first ys)) (recur (next xs) (next ys))
+            :else false))))))
 
 (defn- hash-coll [coll]
   (if (seq coll)
