@@ -640,7 +640,7 @@
              :protocol-inline (:protocol-inline init-expr)
              :variadic (:variadic init-expr)
              :max-fixed-arity (:max-fixed-arity init-expr)
-             :method-params (map :params (:methods init-expr))
+             :method-params (map #(vec (map :name (:params %))) (:methods init-expr))
              :methods (map (fn [method]
                              (let [tag (infer-tag env (assoc method :op :method))]
                                (cond-> (select-keys method
