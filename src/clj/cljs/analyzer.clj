@@ -1604,6 +1604,6 @@ argument, which the reader will use in any emitted errors."
                (let [env (empty-env)]
                  (doseq [form (seq (forms-seq res))]
                    (let [env (assoc env :ns (get-namespace *cljs-ns*))]
-                     (analyze env form)))))
+                     (analyze env form nil opts)))))
              (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))))))
 

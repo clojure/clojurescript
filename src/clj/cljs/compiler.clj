@@ -905,7 +905,7 @@
                    deps nil]
               (if (seq forms)
                 (let [env (ana/empty-env)
-                      ast (ana/analyze env (first forms))]
+                      ast (ana/analyze env (first forms) nil opts)]
                   (do (emit ast)
                     (if (= (:op ast) :ns)
                       (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
@@ -968,7 +968,7 @@
               (loop [forms (ana/forms-seq src)]
                 (if (seq forms)
                   (let [env (ana/empty-env)
-                        ast (ana/no-warn (ana/analyze env (first forms)))]
+                        ast (ana/no-warn (ana/analyze env (first forms) nil opts))]
                     (if (= (:op ast) :ns)
                       (let [ns-name (:name ast)
                             deps    (merge (:uses ast) (:requires ast))]
