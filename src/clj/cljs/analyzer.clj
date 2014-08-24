@@ -470,7 +470,7 @@
 (defmulti parse (fn [op & rest] op))
 
 (defmethod parse 'if
-  [op env [_ test then else :as form] name]
+  [op env [_ test then else :as form] name _]
   (when (< (count form) 3)
     (throw (error env "Too few arguments to if")))
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
@@ -482,7 +482,7 @@
      :children [test-expr then-expr else-expr]}))
 
 (defmethod parse 'case*
-  [op env [_ sym tests thens default :as form] name]
+  [op env [_ sym tests thens default :as form] name _]
   (assert (symbol? sym) "case* must switch on symbol")
   (assert (every? vector? tests) "case* tests must be grouped in vectors")
   (let [expr-env (assoc env :context :expr)
@@ -499,14 +499,14 @@
      :children (vec (concat [v] tests thens (if default [default])))}))
 
 (defmethod parse 'throw
-  [op env [_ throw :as form] name]
+  [op env [_ throw :as form] name _]
   (let [throw-expr (disallowing-recur (analyze (assoc env :context :expr) throw))]
     {:env env :op :throw :form form
      :throw throw-expr
      :children [throw-expr]}))
 
 (defmethod parse 'try
-  [op env [_ & body :as form] name]
+  [op env [_ & body :as form] name _]
   (let [catchenv (update-in env [:context] #(if (= :expr %) :return %))
         catch? (every-pred seq? #(= (first %) 'catch))
         default? (every-pred catch? #(= (second %) :default))
@@ -567,7 +567,7 @@
      :children [try catch finally]}))
 
 (defmethod parse 'def
-  [op env form name]
+  [op env form name _]
   (let [pfn (fn
               ([_ sym] {:sym sym})
               ([_ sym init] {:sym sym :init init})
@@ -690,7 +690,7 @@
      :type type :form form :recurs @(:flag recur-frame) :expr expr}))
 
 (defmethod parse 'fn*
-  [op env [_ & args :as form] name]
+  [op env [_ & args :as form] name _]
   (let [[name meths] (if (symbol? (first args))
                        [(first args) (next args)]
                        [name (seq args)])
@@ -762,7 +762,7 @@
      :children (mapv :expr methods)}))
 
 (defmethod parse 'letfn*
-  [op env [_ bindings & exprs :as form] name]
+  [op env [_ bindings & exprs :as form] name _]
   (when-not (and (vector? bindings) (even? (count bindings))) 
     (throw (error env "bindings must be vector of even number of elements")))
   (let [n->fexpr (into {} (map (juxt first second) (partition 2 bindings)))
@@ -808,7 +808,7 @@
      :children (conj (vec (map :init bes)) expr)}))
 
 (defmethod parse 'do
-  [op env [_ & exprs :as form] _]
+  [op env [_ & exprs :as form] _ _]
   (let [statements (disallowing-recur
                      (seq (map #(analyze (assoc env :context :statement) %) (butlast exprs))))
         ret (if (<= (count exprs) 1)
@@ -876,15 +876,15 @@
      :children (conj (vec (map :init bes)) expr)}))
 
 (defmethod parse 'let*
-  [op encl-env form _]
+  [op encl-env form _ _]
   (analyze-let encl-env form false))
 
 (defmethod parse 'loop*
-  [op encl-env form _]
+  [op encl-env form _ _]
   (analyze-let encl-env form true))
 
 (defmethod parse 'recur
-  [op env [_ & exprs :as form] _]
+  [op env [_ & exprs :as form] _ _]
   (let [context (:context env)
         frame (first *recur-frames*)
         exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs)))]
@@ -899,11 +899,11 @@
       :children exprs)))
 
 (defmethod parse 'quote
-  [_ env [_ x] _]
+  [_ env [_ x] _ _]
   (analyze (assoc env :quoted? true) x))
 
 (defmethod parse 'new
-  [_ env [_ ctor & args :as form] _]
+  [_ env [_ ctor & args :as form] _ _]
   (when-not (symbol? ctor) 
     (throw (error env "First arg to new must be a symbol")))
   (disallowing-recur
@@ -927,7 +927,7 @@
                  name))})))
 
 (defmethod parse 'set!
-  [_ env [_ target val alt :as form] _]
+  [_ env [_ target val alt :as form] _ _]
   (let [[target val] (if alt
                        ;; (set! o -prop val)
                        [`(. ~target ~val) alt]
@@ -1126,7 +1126,7 @@
       args)))
 
 (defmethod parse 'ns
-  [_ env [_ name & args :as form] _]
+  [_ env [_ name & args :as form] _ opts]
   (when-not (symbol? name) 
     (throw (error env "Namespaces must be named by a symbol.")))
   (let [docstring (if (string? (first args)) (first args))
@@ -1176,7 +1176,7 @@
      :use-macros use-macros :require-macros require-macros :excludes excludes}))
 
 (defmethod parse 'deftype*
-  [_ env [_ tsym fields pmasks :as form] _]
+  [_ env [_ tsym fields pmasks :as form] _ _]
   (let [t (:name (resolve-var (dissoc env :locals) tsym))]
     (swap! env/*compiler* update-in [::namespaces (-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1191,7 +1191,7 @@
     {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
 
 (defmethod parse 'defrecord*
-  [_ env [_ tsym fields pmasks :as form] _]
+  [_ env [_ tsym fields pmasks :as form] _ _]
   (let [t (:name (resolve-var (dissoc env :locals) tsym))]
     (swap! env/*compiler* update-in [::namespaces (-> env :ns :name) :defs tsym]
            (fn [m]
@@ -1262,7 +1262,7 @@
   (throw (Error. (str "Unknown dot form of " (list* '. dot-form) " with classification " (classify-dot-form dot-form)))))
 
 (defmethod parse '.
-  [_ env [_ target & [field & member+] :as form] _]
+  [_ env [_ target & [field & member+] :as form] _ _]
   (disallowing-recur
    (let [{:keys [dot-action target method field args]} (build-dot-form [target field member+])
          enve        (assoc env :context :expr)
@@ -1282,7 +1282,7 @@
                        :tag (-> form meta :tag)})))))
 
 (defmethod parse 'js*
-  [op env [_ jsform & args :as form] _]
+  [op env [_ jsform & args :as form] _ _]
   (when-not (string? jsform)
     (throw (error env "Invalid js* form")))
   (if args
@@ -1428,24 +1428,25 @@
 (declare analyze-list)
 
 (defn analyze-seq
-  [env form name]
-  (if (:quoted? env)
-    (analyze-list env form)
-    (let [env (assoc env
-                :line (or (-> form meta :line)
-                          (:line env))
-                :column (or (-> form meta :column)
-                            (:column env)))]
-      (let [op (first form)]
-        (when (nil? op)
-          (throw (error env "Can't call nil")))
-        (let [mform (macroexpand-1 env form)]
-          (if (identical? form mform)
-            (wrapping-errors env
-              (if (specials op)
-                (parse op env form name)
-                (parse-invoke env form)))
-            (analyze env mform name)))))))
+  ([env form name] (analyze-seq env form name nil))
+  ([env form name opts]
+     (if (:quoted? env)
+       (analyze-list env form)
+       (let [env (assoc env
+                   :line (or (-> form meta :line)
+                           (:line env))
+                   :column (or (-> form meta :column)
+                             (:column env)))]
+         (let [op (first form)]
+           (when (nil? op)
+             (throw (error env "Can't call nil")))
+           (let [mform (macroexpand-1 env form)]
+             (if (identical? form mform)
+               (wrapping-errors env
+                 (if (specials op)
+                   (parse op env form name opts)
+                   (parse-invoke env form)))
+               (analyze env mform name opts))))))))
 
 (declare analyze-wrap-meta)
 
@@ -1520,7 +1521,8 @@
   nested exprs, must have :children [exprs...] entry. This will
   facilitate code walking without knowing the details of the op set."
   ([env form] (analyze env form nil))
-  ([env form name]
+  ([env form name] (analyze env form name nil))
+  ([env form name opts]
     (env/ensure
       (wrapping-errors env
         (reduce (fn [ast pass] (pass env ast))
@@ -1531,7 +1533,7 @@
               (load-core)
               (cond
                 (symbol? form) (analyze-symbol env form)
-                (and (seq? form) (seq form)) (analyze-seq env form name)
+                (and (seq? form) (seq form)) (analyze-seq env form name opts)
                 (map? form) (analyze-map env form)
                 (vector? form) (analyze-vector env form)
                 (set? form) (analyze-set env form)
@@ -1582,24 +1584,26 @@ argument, which the reader will use in any emitted errors."
                   (cons form (forms-seq*))))))]
        (forms-seq*))))
 
-(defn analyze-file [f]
-  (let [res (cond
-             (instance? File f) f
-             (instance? java.net.URL f) f
-             (re-find #"^file://" f) (java.net.URL. f)
-             :else (io/resource f))]
-    (assert res (str "Can't find " f " in classpath"))
-    (env/ensure
-      (let [path (if (instance? File res)
-                   (.getPath ^File res)
-                   (.getPath ^java.net.URL res))]
-        (when-not (get-in @env/*compiler* [::analyzed-cljs path])
-          (binding [*cljs-ns* 'cljs.user
-                    *cljs-file* path
-                    reader/*alias-map* (or reader/*alias-map* {})]
-            (let [env (empty-env)]
-              (doseq [form (seq (forms-seq res))]
-                (let [env (assoc env :ns (get-namespace *cljs-ns*))]
-                  (analyze env form)))))
-          (swap! env/*compiler* assoc-in [::analyzed-cljs path] true))))))
+(defn analyze-file
+  ([f] (analyze-file f nil))
+  ([f opts]
+     (let [res (cond
+                 (instance? File f) f
+                 (instance? java.net.URL f) f
+                 (re-find #"^file://" f) (java.net.URL. f)
+                 :else (io/resource f))]
+       (assert res (str "Can't find " f " in classpath"))
+       (env/ensure
+         (let [path (if (instance? File res)
+                      (.getPath ^File res)
+                      (.getPath ^java.net.URL res))]
+           (when-not (get-in @env/*compiler* [::analyzed-cljs path])
+             (binding [*cljs-ns* 'cljs.user
+                       *cljs-file* path
+                       reader/*alias-map* (or reader/*alias-map* {})]
+               (let [env (empty-env)]
+                 (doseq [form (seq (forms-seq res))]
+                   (let [env (assoc env :ns (get-namespace *cljs-ns*))]
+                     (analyze env form)))))
+             (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))))))
 
