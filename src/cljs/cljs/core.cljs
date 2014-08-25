@@ -2984,13 +2984,13 @@ reduces them without incurring seq initialization"
         true)))
   (next [_]
     (dotimes [i (alength iters)]
-      (aset next i (.next (aget iters i))))
+      (aset nexts i (.next (aget iters i))))
     (prim-seq nexts 0))
-  (step [_ lt]
+  (step [this lt]
     (loop []
       (if (and (not (nil? (.-stepper lt)))
-               (.hasNext iter))
-        (if (reduced? (apply xform (cons lt (.next iter))))
+               (.hasNext this))
+        (if (reduced? (apply xform (cons lt (.next this))))
           (when-not (nil? (.-rest lt))
             (set! (.. lt -rest -stepper) nil))
           (recur))))
@@ -3015,7 +3015,7 @@ reduces them without incurring seq initialization"
                     (set! (.-rest lt) (lazy-transformer (.-stepper lt)))
                     (set! (.-stepper lt) nil)
                     (.-rest lt))))]
-       (MultiStepper. xform iters nexts))))
+       (MultiStepper. (xform stepfn) iters nexts))))
 
 (deftype LazyTransformer [^:mutable stepper ^:mutable first ^:mutable rest meta]
   IWithMeta

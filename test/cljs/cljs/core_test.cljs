@@ -2402,5 +2402,10 @@
   (assert (= (sequence xform data)
              '(36 200 10)))
   
+  (def xf (map #(+ %1 %2)))
+
+  (assert (= (sequence xf [0 0] [1 2])
+             [1 2]))
+
   :ok
   )
