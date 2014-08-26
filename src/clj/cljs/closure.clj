@@ -924,10 +924,12 @@ should contain the source for the given namespace name."
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [ups-deps (get-upstream-deps)
-             all-opts (assoc opts 
-                        :ups-libs (:libs ups-deps)
-                        :ups-foreign-libs (:foreign-libs ups-deps)
-                        :ups-externs (:externs ups-deps))
+             all-opts (-> opts
+                        (assoc
+                          :ups-libs (:libs ups-deps)
+                          :ups-foreign-libs (:foreign-libs ups-deps)
+                          :ups-externs (:externs ups-deps))
+                        (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
              emit-constants (or (and (= (:optimizations opts) :advanced)
                                      (not (false? (:optimize-constants opts))))
                                 (:optimize-constants opts))]
