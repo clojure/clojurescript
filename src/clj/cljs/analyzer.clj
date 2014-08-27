@@ -1133,6 +1133,7 @@
         args      (if docstring (next args) args)
         metadata  (if (map? (first args)) (first args))
         args      (desugar-ns-specs (if metadata (next args) args))
+        name      (vary-meta name merge metadata)
         excludes  (parse-ns-excludes env args)
         deps      (atom #{})
         aliases   (atom {:fns #{} :macros #{}})

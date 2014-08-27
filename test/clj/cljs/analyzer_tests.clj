@@ -237,3 +237,36 @@
           (catch Exception e
             (.getMessage e)))
         "Parameter declaration 123 should be a vector at line")))
+
+;; =============================================================================
+;; Namespace metadata
+
+(deftest test-namespace-metadata
+  (binding [a/*cljs-ns* a/*cljs-ns*]
+    (is (= (do (a/analyze ns-env '(ns weeble {:foo bar}))
+               (meta a/*cljs-ns*))
+           {:foo 'bar}))
+
+    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble))
+               (meta a/*cljs-ns*))
+           {:foo 'bar}))
+
+    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble {:baz quux}))
+               (meta a/*cljs-ns*))
+           {:foo 'bar :baz 'quux}))
+
+    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble {:foo baz}))
+               (meta a/*cljs-ns*))
+           {:foo 'baz}))
+
+    (is (= (meta (:name (a/analyze ns-env '(ns weeble {:foo bar}))))
+           {:foo 'bar}))
+
+    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble))))
+           {:foo 'bar}))
+
+    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble {:baz quux}))))
+           {:foo 'bar :baz 'quux}))
+
+    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble {:foo baz}))))
+           {:foo 'baz}))))
