@@ -1641,3 +1641,6 @@
   (lazy-cat xs ys zs) === (concat (lazy-seq xs) (lazy-seq ys) (lazy-seq zs))"
   [& colls]
   `(concat ~@(map #(core/list `lazy-seq %) colls)))
+
+(defmacro js-str [s]
+  (core/list 'js* "''+~{}" s))
