@@ -2407,5 +2407,15 @@
   (assert (= (sequence xf [0 0] [1 2])
              [1 2]))
 
+  ;; CLJS-849
+  (let [xs [44 43 42 41 40 39 38 37 36 35 34 33 32 31 30 29 28 27 26 25 24]]
+    (loop [m  (transient (zipmap xs (repeat 1)))
+           xs xs]
+      (if-let [x (first xs)]
+        (if (contains? m x)
+          (recur (dissoc! m x) (next xs))
+          (throw (ex-info "CLJS-849 regression!"
+                   {:m (persistent! m) :xs xs}))))))
+
   :ok
   )

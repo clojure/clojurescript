@@ -5505,8 +5505,8 @@ reduces them without incurring seq initialization"
 
 (defn- pack-array-node [array-node edit idx]
   (let [arr     (.-arr array-node)
-        len     (* 2 (dec (.-cnt array-node)))
-        new-arr (make-array len)]
+        len     (alength arr)
+        new-arr (make-array (* 2 (dec (.-cnt array-node))))]
     (loop [i 0 j 1 bitmap 0]
       (if (< i len)
         (if (and (not (== i idx))
