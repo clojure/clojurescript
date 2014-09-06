@@ -13,7 +13,7 @@
       dependency info."
       :author "Rich Hickey"}
   clojure.core.reducers
-  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop flatten])
+  (:refer-clojure :exclude [reduce map mapcat filter remove take take-while drop flatten cat])
   (:require [cljs.core :as core]))
 
 ;;;;;;;;;;;;;; some fj stuff ;;;;;;;;;;

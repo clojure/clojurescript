@@ -1654,25 +1654,30 @@ reduces them without incurring seq initialization"
       (-kv-reduce coll f init)
       init)))
 
-(defn- completing [f]
-  (fn
-    ([] (f))
-    ([x] x)
-    ([x y] (f x y))))
+(defn identity [x] x)
+
+(defn completing
+  ([f] (completing f identity))
+  ([f cf]
+    (fn
+      ([] (f))
+      ([x] (cf x))
+      ([x y] (f x y)))))
 
 (defn transduce
   "reduce with a transformation of f (xf). If init is not
-  supplied, (f) will be called to produce it. Returns the result of
-  applying (the transformed) xf to init and the first item in coll,
+  supplied, (f) will be called to produce it. f should be a reducing
+  step function that accepts both 1 and 2 arguments, if it accepts
+  only 2 you can add the arity-1 with 'completing'. Returns the result
+  of applying (the transformed) xf to init and the first item in coll,
   then applying xf to that result and the 2nd item, etc. If coll
   contains no items, returns init and f is not called. Note that
   certain transforms may inject or skip items."
   ([xform f coll] (transduce xform f (f) coll))
   ([xform f init coll]
-     (let [f (xform (completing f))
-           ret (reduce f init coll)
-           ret (f (if (reduced? ret) @ret ret))]
-       (if (reduced? ret) @ret ret))))
+     (let [f (xform f)
+           ret (reduce f init coll)]
+       (f ret))))
 
 ;;; Math - variadic forms will not work until the following implemented:
 ;;; first, next, reduce
@@ -3143,8 +3148,6 @@ reduces them without incurring seq initialization"
   "Returns true if n is odd, throws an exception if n is not an integer"
   [n] (not (even? n)))
 
-(defn identity [x] x)
-
 (defn ^boolean complement
   "Takes a fn f and returns a fn that takes the same arguments as f,
   has the same effects, if any, and returns the opposite truth value."
@@ -3699,13 +3702,17 @@ reduces them without incurring seq initialization"
                     (cat (first colls) (rest colls))))))]
     (cat nil colls)))
 
+(declare cat)
+
 (defn mapcat
   "Returns the result of applying concat to the result of applying map
-  to f and colls.  Thus function f should return a collection."
-  ([f coll]
-    (flatten1 (map f coll)))
-  ([f coll & colls]
-    (flatten1 (apply map f coll colls))))
+  to f and colls.  Thus function f should return a collection. Returns
+  a transducer when no collections are provided"
+  {:added "1.0"
+   :static true}
+  ([f] (comp (map f) cat))
+  ([f & colls]
+     (apply concat (apply map f colls))))
 
 (defn filter
   "Returns a lazy sequence of the items in coll for which
@@ -3778,7 +3785,7 @@ reduces them without incurring seq initialization"
        (reduce conj () from)))
   ([to xform from]
      (if (implements? IEditableCollection to)
-       (with-meta (persistent! (transduce xform -conj! (transient to) from)) (meta to))
+       (with-meta (persistent! (transduce xform conj! (transient to) from)) (meta to))
        (transduce xform conj to from))))
 
 (defn mapv
@@ -7345,8 +7352,7 @@ reduces them without incurring seq initialization"
             (let [result (if (.isEmpty a)
                            result
                            (let [v (vec (.toArray a))]
-                             ;;flushing ops must clear before invoking possibly
-                             ;;failing nested op, else infinite loop
+                             ;;clear first!
                              (.clear a)
                              (f1 result v)))]
               (f1 result)))
@@ -7543,8 +7549,7 @@ reduces them without incurring seq initialization"
               (let [result (if (.isEmpty a)
                              result
                              (let [v (vec (.toArray a))]
-                               ;;flushing ops must clear before invoking possibly
-                               ;;failing nested op, else infinite loop
+                               ;;clear first!
                                (.clear a)
                                (f1 result v)))]
                 (f1 result)))
@@ -7559,8 +7564,10 @@ reduces them without incurring seq initialization"
                     result)
                   (let [v (vec (.toArray a))]
                     (.clear a)
-                    (.add a input)
-                    (f1 result v)))))))))
+                    (let [ret (f1 result v)]
+                      (when-not (reduced? ret)
+                        (.add a input))
+                      ret)))))))))
   ([f coll]
      (lazy-seq
        (when-let [s (seq coll)]
@@ -8136,18 +8143,17 @@ reduces them without incurring seq initialization"
        (reduced ret)
        ret)))
 
-(defn flatmap
-  "maps f over coll and concatenates the results.  Thus function f
-  should return a collection.  Returns a transducer when no collection
-  is provided."
-  ([f]
-   (fn [f1]
-     (fn
-       ([] (f1))
-       ([result] (f1 result))
-       ([result input]
-          (reduce (preserving-reduced f1) result (f input))))))
-  ([f coll] (sequence (flatmap f) coll)))
+(defn cat
+  "A transducer which concatenates the contents of each input, which must be a
+  collection, into the reduction."
+  {:added "1.7"}
+  [f1]
+  (let [rf1 (preserving-reduced f1)]  
+    (fn
+      ([] (f1))
+      ([result] (f1 result))
+      ([result input]
+         (reduce rf1 result input)))))
 
 (defn dedupe
   "Returns a lazy sequence removing consecutive duplicates in coll.
