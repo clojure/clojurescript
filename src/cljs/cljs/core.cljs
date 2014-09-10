@@ -8332,11 +8332,12 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   f on each element. The value at each key will be a vector of the
   corresponding elements, in the order they appeared in coll."
   [f coll]
-  (reduce
-   (fn [ret x]
-     (let [k (f x)]
-       (assoc ret k (conj (get ret k []) x))))
-   {} coll))
+  (persistent!
+    (reduce
+      (fn [ret x]
+        (let [k (f x)]
+          (assoc! ret k (conj (get ret k []) x))))
+      (transient {}) coll)))
 
 (defn make-hierarchy
   "Creates a hierarchy object for use with derive, isa? etc."
