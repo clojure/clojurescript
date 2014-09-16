@@ -279,11 +279,16 @@
          (throw err#)
          (throw (error ~env (.getMessage err#) err#))))))
 
+(defn implicit-import? [env prefix suffix]
+  (contains? '#{goog goog.object goog.string goog.array Math} prefix))
+
 (defn confirm-var-exists [env prefix suffix]
-  (let [crnt-ns (-> env :ns :name)]
-    (when (and (= prefix crnt-ns)
-               (not (get-in @env/*compiler* [::namespaces crnt-ns :defs suffix])))
-      (warning :undeclared-var env {:prefix prefix :suffix suffix}))))
+  (when (and (not (implicit-import? env prefix suffix))
+             (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
+                       (or (get (:requires (:ns env)) prefix)
+                           (get (:imports (:ns env)) prefix))))
+             (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
+    (warning :undeclared-var env {:prefix prefix :suffix suffix})))
 
 (defn resolve-ns-alias [env name]
   (let [sym (symbol name)]
