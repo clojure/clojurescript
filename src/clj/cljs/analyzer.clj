@@ -1345,11 +1345,10 @@
 (defn parse-invoke
   [env [f & args :as form]]
   (disallowing-recur
-   (let [enve     (assoc env :context :expr)
-         fexpr    (analyze enve f)
-         argexprs (vec (map #(analyze enve %) args))
-         argc     (count args)
-         fn-var?  (-> fexpr :info :fn-var)]
+   (let [enve    (assoc env :context :expr)
+         fexpr   (analyze enve f)
+         argc    (count args)
+         fn-var? (-> fexpr :info :fn-var)]
      (when fn-var?
        (let [{:keys [variadic max-fixed-arity method-params name]} (:info fexpr)]
          (when (and (not (some #{argc} (map count method-params)))
@@ -1363,8 +1362,9 @@
      (when (-> fexpr :info :type)
        (warning :invoke-ctor env {:fexpr fexpr}))
      (if (or (not *cljs-static-fns*) (not (symbol? f)) fn-var? (contains? (meta f) ::analyzed))
-       {:env env :op :invoke :form form :f fexpr :args argexprs
-        :children (into [fexpr] argexprs)}
+       (let [argexprs (vec (map #(analyze enve %) args))]
+         {:env env :op :invoke :form form :f fexpr :args argexprs
+          :children (into [fexpr] argexprs)})
        (let [arg-syms (take argc (repeatedly gensym))]
          (analyze env
            `(let [~@(vec (interleave arg-syms args))]
