@@ -1007,6 +1007,13 @@
                              (throw (missing-protocol
                                      ~(core/str psym "." fname) ~(first sig))))
                             ~@sig)))))
+        psym   (vary-meta psym assoc-in [:protocol-info :methods]
+                 (into {}
+                   (map
+                     (fn [[fname & sigs]]
+                       (let [sigs (take-while vector? sigs)]
+                         [fname (vec sigs)]))
+                     methods)))
         method (fn [[fname & sigs]]
                  (let [sigs (take-while vector? sigs)
                        slot (symbol (core/str prefix (name fname)))
