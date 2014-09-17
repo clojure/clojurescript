@@ -1384,7 +1384,10 @@
       (if lb
         (assoc ret :op :var :info lb)
         (if-not (:def-var env)
-          (assoc ret :op :var :info (resolve-existing-var env sym))
+          (assoc ret :op :var :info
+            (if-not (contains? (meta sym) ::analyzed)
+              (resolve-existing-var env sym)
+              (resolve-var env sym)))
           (assoc ret :op :var :info (resolve-var env sym)))))))
 
 (defn get-expander [sym env]
