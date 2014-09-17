@@ -51,6 +51,7 @@
    :extending-base-js-type true
    :invoke-ctor true
    :invalid-arithmetic true
+   :protocol-invalid-method true
    :protocol-duped-method true
    :protocol-multiple-impls true})
 
@@ -110,9 +111,13 @@
   [warning-type info]
   (str "Symbol " (:protocol info) " is not a protocol"))
 
+(defmethod error-message :protocol-invalid-method
+  [warning-type info]
+  (str "Bad method signature in protocol implementation " (:protocol info) " " (:fname info)))
+
 (defmethod error-message :protocol-duped-method
   [warning-type info]
-  (str "Duplicated methods in protocol implementation " (:protocol info)))
+  (str "Duplicated methods in protocol implementation " (:protocol info) " " (:fname info)))
 
 (defmethod error-message :protocol-multiple-impls
   [warning-type info]

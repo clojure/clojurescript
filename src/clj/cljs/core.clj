@@ -795,8 +795,19 @@
               (add-proto-methods* pprefix type type-sym sig)))
           sigs)))))
 
+(defn validate-impls [env impls]
+  (loop [protos #{} impls impls]
+    (when (seq impls)
+      (let [proto   (first impls)
+            methods (take-while seq? (next impls))
+            impls   (drop-while seq? (next impls))]
+        (when (contains? protos proto)
+          (ana/warning :protocol-multiple-impls env {:protocol proto}))
+        (recur (conj protos proto) impls)))))
+
 (defmacro extend-type [type-sym & impls]
   (let [env &env
+        _ (validate-impls env impls)
         resolve (partial resolve-var env)
         impl-map (->impl-map impls)
         [type assign-impls] (if-let [type (base-type type-sym)]
@@ -836,23 +847,21 @@
       merge annots)))
 
 (defn dt->et
-  ([env type specs fields]
-    (dt->et env type specs fields false))
-  ([env type specs fields inline]
+  ([type specs fields]
+    (dt->et type specs fields false))
+  ([type specs fields inline]
     (let [annots {:cljs.analyzer/type type
                   :cljs.analyzer/fields fields
                   :protocol-impl true
                   :protocol-inline inline}]
-      (loop [ret [] specs specs seen #{}]
+      (loop [ret [] specs specs]
         (if (seq specs)
           (let [p     (first specs)
-                _     (when (contains? seen p)
-                        (ana/warning :protocol-multiple-impls env {:protocol p}))
                 ret   (-> (conj ret p)
                         (into (reduce (partial annotate-specs annots) []
                                 (group-by first (take-while seq? (next specs))))))
                 specs (drop-while seq? (next specs))]
-            (recur ret specs (conj seen p)))
+            (recur ret specs))
           ret)))))
 
 (defn collect-protocols [impls env]
@@ -882,7 +891,7 @@
          (set! (.-cljs$lang$type ~t) true)
          (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
          (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
-         (extend-type ~t ~@(dt->et env t impls fields true))
+         (extend-type ~t ~@(dt->et t impls fields true))
          ~(build-positional-factory t r fields)
          ~t)
       `(do
@@ -969,7 +978,7 @@
                     :skip-protocol-flag fpps)]
       `(do
          (~'defrecord* ~tagname ~hinted-fields ~pmasks)
-         (extend-type ~tagname ~@(dt->et env tagname impls fields true))))))
+         (extend-type ~tagname ~@(dt->et tagname impls fields true))))))
 
 (defn- build-map-factory [rsym rname fields]
   (let [fn-name (symbol (core/str 'map-> rsym))
