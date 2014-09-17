@@ -50,7 +50,9 @@
    :overload-arity true
    :extending-base-js-type true
    :invoke-ctor true
-   :invalid-arithmetic true})
+   :invalid-arithmetic true
+   :protocol-duped-method true
+   :protocol-multiple-impls true})
 
 (declare message namespaces)
 
@@ -107,6 +109,14 @@
 (defmethod error-message :invalid-protocol-symbol
   [warning-type info]
   (str "Symbol " (:protocol info) " is not a protocol"))
+
+(defmethod error-message :protocol-duped-method
+  [warning-type info]
+  (str "Duplicated methods in protocol implementation " (:protocol info)))
+
+(defmethod error-message :protocol-multiple-impls
+  [warning-type info]
+  (str "Protocol " (:protocol info) " implemented multiple times"))
 
 (defmethod error-message :multiple-variadic-overloads
   [warning-type info]
@@ -238,9 +248,9 @@
                        screen location navigator history location
                        global process require module exports)))}))
 
-(defmacro ^:private debug-prn
+(defn debug-prn
   [& args]
-  `(.println System/err (str ~@args)))
+  (.println System/err (apply str args)))
 
 (defn source-info
   ([env]
