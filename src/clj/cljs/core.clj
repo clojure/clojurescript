@@ -795,6 +795,24 @@
               (add-proto-methods* pprefix type type-sym sig)))
           sigs)))))
 
+(defn validate-impl-sigs [env p method]
+  (when-not (= p 'Object)
+    (let [var (ana/resolve-var (dissoc env :locals) p)
+          minfo (-> var :protocol-info :methods)
+          [fname sigs] (if (core/vector? (second method))
+                         [(first method) [(second method)]]
+                         [(first method) (map first (rest method))])
+          decmeths (core/get minfo fname)]
+      (loop [sigs sigs seen #{}]
+        (when (seq sigs)
+          (let [sig (first sigs)
+                c   (count sig)]
+            (when (contains? seen c)
+              (ana/warning :protocol-duped-method env {:protocol p :fname fname}))
+            (when-not (some #{c} (map count decmeths))
+              (ana/warning :protocol-invalid-method env {:protocol p :fname fname}))
+            (recur (next sigs) (conj seen c))))))))
+
 (defn validate-impls [env impls]
   (loop [protos #{} impls impls]
     (when (seq impls)
@@ -803,6 +821,8 @@
             impls   (drop-while seq? (next impls))]
         (when (contains? protos proto)
           (ana/warning :protocol-multiple-impls env {:protocol proto}))
+        (core/doseq [method methods]
+          (validate-impl-sigs env proto method))
         (recur (conj protos proto) impls)))))
 
 (defmacro extend-type [type-sym & impls]
