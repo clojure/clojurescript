@@ -1,3 +1,8 @@
+## 0.0-2342
+
+### Changes
+* depend on tools.reader 0.8.9
+
 ## 0.0-2341
 
 ### Enhancements
