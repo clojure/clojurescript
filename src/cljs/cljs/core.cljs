@@ -223,9 +223,10 @@
     [this a b c d e f g h i j k l m n o]
     [this a b c d e f g h i j k l m n o p]
     [this a b c d e f g h i j k l m n o p q]
-    [this a b c d e f g h i j k l m n o p q s]
-    [this a b c d e f g h i j k l m n o p q s t]
-    [this a b c d e f g h i j k l m n o p q s t rest]))
+    [this a b c d e f g h i j k l m n o p q r]
+    [this a b c d e f g h i j k l m n o p q r s]
+    [this a b c d e f g h i j k l m n o p q r s t]
+    [this a b c d e f g h i j k l m n o p q r s t rest]))
 
 (defprotocol ICloneable
   (^clj -clone [value]))
@@ -4188,6 +4189,7 @@ reduces them without incurring seq initialization"
   IWithMeta
   (-with-meta [coll m]
     (chunked-seq vec node i off m))
+  IMeta
   (-meta [coll] meta)
 
   ISeqable
