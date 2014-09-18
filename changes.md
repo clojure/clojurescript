@@ -1,3 +1,18 @@
+## 0.0-2341
+
+### Enhancements
+* transducers
+
+### Fixes
+* CLJS-704: warn if protocol extended to type multiple times in extend-type
+* CLJS-702: warn if protocol doesn't match declared
+* CLJS-859: use https for the bootstrap script
+* CLJS-855: combinatorial code generation under advanced
+* CLJS-858: resolve-existing var does not check vars outside current ns
+* CLJS-852: same group-by as Clojure
+* CLJS-847: Safari toString fix
+* CLJS-846: preserve namespace metadata
+
 ## 0.0-2322
 
 ### Fixes
