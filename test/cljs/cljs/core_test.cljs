@@ -617,6 +617,8 @@
   (assert (= (distinct [#{} #{}]) [#{}]))
 
   ;;regexps
+  (let [r1 #"foo", r2 (re-pattern r1)]
+    (assert (= r1 r2)))
   (assert (= (str (re-pattern "f(.)o")) (str (js* "/f(.)o/"))))
   (assert (= (re-find (re-pattern "foo") "foo bar foo baz foo zot") "foo"))
   (assert (= (re-find (re-pattern "f(.)o") "foo bar foo baz foo zot") ["foo" "o"]))
