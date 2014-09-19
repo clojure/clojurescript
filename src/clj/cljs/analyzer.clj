@@ -991,19 +991,21 @@
         (when (and (.exists f) (.isFile f))
           f))))
 
-(defn analyze-deps [lib deps env]
-  (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
-    (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
-      (str "Circular dependency detected " (-> *cljs-dep-set* meta :dep-path)))
-    (doseq [dep deps]
-      (when-not (or (contains? (::namespaces @env/*compiler*) dep)
-                    (contains? (:js-dependency-index @env/*compiler*) (name dep))
-                    (deps/find-classpath-lib dep))
-        (let [relpath (util/ns->relpath dep)
-              src (locate-src relpath)]
-          (if src
-            (analyze-file src)
-            (warning :undeclared-ns env {:ns-sym dep})))))))
+(defn analyze-deps
+  ([lib deps env] (analyze-deps lib deps nil))
+  ([lib deps env opts]
+     (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
+       (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
+         (str "Circular dependency detected " (-> *cljs-dep-set* meta :dep-path)))
+       (doseq [dep deps]
+         (when-not (or (contains? (::namespaces @env/*compiler*) dep)
+                     (contains? (:js-dependency-index @env/*compiler*) (name dep))
+                     (deps/find-classpath-lib dep))
+           (let [relpath (util/ns->relpath dep)
+                 src (locate-src relpath)]
+             (if src
+               (analyze-file src)
+               (warning :undeclared-ns env {:ns-sym dep}))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
@@ -1171,7 +1173,7 @@
                   (apply merge-with merge m (map (spec-parsers k) libs)))
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (and *analyze-deps* (seq @deps))
-      (analyze-deps name @deps env))
+      (analyze-deps name @deps env opts))
     (when (seq uses)
       (check-uses uses env))
     (set! *cljs-ns* name)
@@ -1673,7 +1675,7 @@ argument, which the reader will use in any emitted errors."
                            (if forms
                              (let [form (first forms)
                                    env  (assoc env :ns (get-namespace *cljs-ns*))
-                                   ast  (analyze env form)]
+                                   ast  (analyze env form opts)]
                                (if (= (:op ast) :ns)
                                  (recur (:name ast) (next forms))
                                  (recur ns (next forms))))
