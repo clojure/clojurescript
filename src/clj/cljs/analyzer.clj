@@ -1640,9 +1640,15 @@ argument, which the reader will use in any emitted errors."
              (binding [*cljs-ns* 'cljs.user
                        *cljs-file* path
                        reader/*alias-map* (or reader/*alias-map* {})]
-               (let [env (empty-env)]
-                 (doseq [form (seq (forms-seq res))]
-                   (let [env (assoc env :ns (get-namespace *cljs-ns*))]
-                     (analyze env form nil opts)))))
-             (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))))))
+               (let [env (empty-env)
+                     ns  (loop [ns nil forms (seq (forms-seq res))]
+                           (if forms
+                             (let [form (first forms)
+                                   env  (assoc env :ns (get-namespace *cljs-ns*))
+                                   ast  (analyze env form)]
+                               (if (= (:op ast) :ns)
+                                 (recur (:name ast) (next forms))
+                                 (recur ns (next forms))))
+                             ns))]
+                 (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))))))))
 
