@@ -8,7 +8,8 @@
 
 (ns cljs.analyzer
   (:refer-clojure :exclude [macroexpand-1])
-  (:require [clojure.java.io :as io]
+  (:require [cljs.util :as util]
+            [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.set :as set]
             [cljs.env :as env]
@@ -1614,6 +1615,13 @@ argument, which the reader will use in any emitted errors."
                   (.close rdr)
                   (cons form (forms-seq*))))))]
        (forms-seq*))))
+
+(defn requires-analysis? [^File f ^File cache]
+  (or (not (.exists cache))
+      (> (.lastModified f) (.lastModified cache))
+      (let [version' (util/compiled-by-version cache)
+            version  (util/clojurescript-version)]
+        (and version (not= version version')))))
 
 (defn analyze-file
   ([f] (analyze-file f nil))
