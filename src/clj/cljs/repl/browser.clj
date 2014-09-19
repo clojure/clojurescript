@@ -182,7 +182,7 @@
   (-setup [this]
     (do (require 'cljs.repl.reflect)
         (repl/analyze-source (:src this))
-        (comp/with-core-cljs (server/start this))))
+        (comp/with-core-cljs nil (fn [] (server/start this)))))
   (-evaluate [_ _ _ js] (browser-eval js))
   (-load [this ns url] (load-javascript this ns url))
   (-tear-down [_]

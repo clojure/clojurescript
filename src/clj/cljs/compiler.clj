@@ -858,12 +858,13 @@
   [^File f]
   (.mkdirs (.getParentFile (.getCanonicalFile f))))
 
-(defmacro with-core-cljs
+(defn with-core-cljs
   "Ensure that core.cljs has been loaded."
-  [& body]
-  `(do (when-not (get-in @env/*compiler* [::ana/namespaces 'cljs.core :defs])
-         (ana/analyze-file "cljs/core.cljs"))
-       ~@body))
+  [opts body]
+  (do
+    (when-not (get-in @env/*compiler* [::ana/namespaces 'cljs.core :defs])
+      (ana/analyze-file "cljs/core.cljs" opts))
+    (body)))
 
 (defn url-path [^File f]
   (.getPath (.toURL (.toURI f))))
@@ -872,52 +873,53 @@
   ([src dest] (compile-file* src dest nil))
   ([src dest opts]
     (env/ensure
-      (with-core-cljs
-        (with-open [out ^java.io.Writer (io/make-writer dest {})]
-          (binding [*out* out
-                    ana/*cljs-ns* 'cljs.user
-                    ana/*cljs-file* (.getPath ^File src)
-                    reader/*alias-map* (or reader/*alias-map* {})
-                    *source-map-data* (when (:source-map opts)
-                                        (atom
-                                          {:source-map (sorted-map)
-                                           :gen-col 0
-                                           :gen-line 0}))]
-            (emitln "// Compiled by ClojureScript " (util/clojurescript-version))
-            (loop [forms (ana/forms-seq src)
-                   ns-name nil
-                   deps nil]
-              (if (seq forms)
-                (let [env (ana/empty-env)
-                      ast (ana/analyze env (first forms) nil opts)]
-                  (do (emit ast)
-                    (if (= (:op ast) :ns)
-                      (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
-                      (recur (rest forms) ns-name deps))))
-                (let [sm-data (when *source-map-data* @*source-map-data*)
-                      ret (merge
-                            {:ns (or ns-name 'cljs.user)
-                             :provides [ns-name]
-                             :requires (if (= ns-name 'cljs.core)
-                                         (set (vals deps))
-                                         (cond-> (conj (set (vals deps)) 'cljs.core)
-                                           (get-in @env/*compiler* [:opts :emit-constants])
-                                           (conj 'constants-table)))
-                             :file dest
-                             :source-file src}
-                            (when sm-data
-                              {:source-map (:source-map sm-data)}))]
-                  (when (and sm-data (= (:optimizations opts) :none))
-                    (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                      (emits "\n//# sourceMappingURL=" (.getName sm-file))
-                      (spit sm-file
-                        (sm/encode {(url-path src) (:source-map sm-data)}
-                          {:lines (+ (:gen-line sm-data) 2)
-                           :file (url-path dest)}))))
-                  (let [path (.getPath (.toURL ^File dest))]
-                    (swap! env/*compiler* assoc-in [::compiled-cljs path] ret)
-                    (swap! env/*compiler* assoc-in [::ana/analyzed-cljs path] true))
-                  ret)))))))))
+      (with-core-cljs opts
+        (fn []
+          (with-open [out ^java.io.Writer (io/make-writer dest {})]
+            (binding [*out* out
+                      ana/*cljs-ns* 'cljs.user
+                      ana/*cljs-file* (.getPath ^File src)
+                      reader/*alias-map* (or reader/*alias-map* {})
+                      *source-map-data* (when (:source-map opts)
+                                          (atom
+                                            {:source-map (sorted-map)
+                                             :gen-col 0
+                                             :gen-line 0}))]
+              (emitln "// Compiled by ClojureScript " (util/clojurescript-version))
+              (loop [forms (ana/forms-seq src)
+                     ns-name nil
+                     deps nil]
+                (if (seq forms)
+                  (let [env (ana/empty-env)
+                        ast (ana/analyze env (first forms) nil opts)]
+                    (do (emit ast)
+                        (if (= (:op ast) :ns)
+                          (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
+                          (recur (rest forms) ns-name deps))))
+                  (let [sm-data (when *source-map-data* @*source-map-data*)
+                        ret (merge
+                              {:ns (or ns-name 'cljs.user)
+                               :provides [ns-name]
+                               :requires (if (= ns-name 'cljs.core)
+                                           (set (vals deps))
+                                           (cond-> (conj (set (vals deps)) 'cljs.core)
+                                             (get-in @env/*compiler* [:opts :emit-constants])
+                                             (conj 'constants-table)))
+                               :file dest
+                               :source-file src}
+                              (when sm-data
+                                {:source-map (:source-map sm-data)}))]
+                    (when (and sm-data (= (:optimizations opts) :none))
+                      (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
+                        (emits "\n//# sourceMappingURL=" (.getName sm-file))
+                        (spit sm-file
+                          (sm/encode {(url-path src) (:source-map sm-data)}
+                            {:lines (+ (:gen-line sm-data) 2)
+                             :file (url-path dest)}))))
+                    (let [path (.getPath (.toURL ^File dest))]
+                      (swap! env/*compiler* assoc-in [::compiled-cljs path] ret)
+                      (swap! env/*compiler* assoc-in [::ana/analyzed-cljs path] true))
+                    ret))))))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."
@@ -966,8 +968,7 @@
                 (compile-file* src-file dest-file opts))
               (do
                 (when-not (contains? (::ana/namespaces @env/*compiler*) ns)
-                  (with-core-cljs
-                    (ana/analyze-file src-file)))
+                  (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
                 ns-info)))
           (catch Exception e
             (throw (ex-info (str "failed compiling file:" src) {:file src} e))))

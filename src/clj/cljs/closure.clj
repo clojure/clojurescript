@@ -296,11 +296,12 @@
 (defn compile-form-seq
   "Compile a sequence of forms to a JavaScript source string."
   [forms]
-  (comp/with-core-cljs
-    (with-out-str
-      (binding [ana/*cljs-ns* 'cljs.user]
-        (doseq [form forms]
-          (comp/emit (ana/analyze (ana/empty-env) form)))))))
+  (comp/with-core-cljs nil
+    (fn []
+      (with-out-str
+        (binding [ana/*cljs-ns* 'cljs.user]
+          (doseq [form forms]
+            (comp/emit (ana/analyze (ana/empty-env) form))))))))
 
 (defn output-directory [opts]
   (or (:output-dir opts) "out"))

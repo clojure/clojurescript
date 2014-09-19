@@ -1004,7 +1004,7 @@
            (let [relpath (util/ns->relpath dep)
                  src (locate-src relpath)]
              (if src
-               (analyze-file src)
+               (analyze-file src opts)
                (warning :undeclared-ns env {:ns-sym dep}))))))))
 
 (defn check-uses [uses env]
@@ -1653,6 +1653,10 @@ argument, which the reader will use in any emitted errors."
             version  (util/clojurescript-version)]
         (and version (not= version version')))))
 
+(defn cache-file [f output-dir]
+  (let [ns-info (parse-ns f)]
+    (io/file (util/to-target-file output-dir f ns-info) ".cache.edn")))
+
 (defn analyze-file
   ([f] (analyze-file f nil))
   ([f {:keys [output-dir] :as opts}]
@@ -1665,7 +1669,9 @@ argument, which the reader will use in any emitted errors."
        (env/ensure
          (let [path (if (instance? File res)
                       (.getPath ^File res)
-                      (.getPath ^java.net.URL res))]
+                      (.getPath ^java.net.URL res))
+               cache (if output-dir
+                       (cache-file f output-dir))]
            (when-not (get-in @env/*compiler* [::analyzed-cljs path])
              (binding [*cljs-ns* 'cljs.user
                        *cljs-file* path
