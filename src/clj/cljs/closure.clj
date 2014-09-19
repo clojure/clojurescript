@@ -33,7 +33,8 @@
    The produced output is either a single string of optimized
    JavaScript or a deps file for use during development.
   "
-  (:require [cljs.compiler :as comp]
+  (:require [cljs.util :as util]
+            [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
             [cljs.source-map :as sm]
             [cljs.env :as env]
@@ -364,8 +365,8 @@
   (or (when output-file
         (let [out-file (io/file (output-directory opts) output-file)]
           (when (and (.exists out-file)
-                     (= (comp/compiled-by-version out-file)
-                        (comp/clojurescript-version)))
+                     (= (util/compiled-by-version out-file)
+                        (util/clojurescript-version)))
             (compile-file
               (io/file (output-directory opts)
                 (last (string/split (.getPath ^URL this) #"\.jar!/")))

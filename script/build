@@ -29,8 +29,8 @@ TAG=r$REVISION
 sed -e s/CLOJURESCRIPT_VERSION/0.0-$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
 
 COMP_FILE=`mktemp /tmp/compiler.clj.XXXXXXXXXXX`
-sed -e 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major 0, :minor 0, :qualifier '"$REVISION"'})/' src/clj/cljs/compiler.clj > $COMP_FILE
-mv $COMP_FILE src/clj/cljs/compiler.clj
+sed -e 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major 0, :minor 0, :qualifier '"$REVISION"'})/' src/clj/cljs/util.clj > $COMP_FILE
+mv $COMP_FILE src/clj/cljs/util.clj
 
 CLJS_FILE=`mktemp /tmp/core.cljs.XXXXXXXXXXX`
 sed -e 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""0.0-$REVISION"\"')/' src/cljs/cljs/core.cljs > $CLJS_FILE
