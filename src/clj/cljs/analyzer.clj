@@ -162,12 +162,6 @@
   `(binding [*cljs-warning-handlers* ~handlers]
      ~@body))
 
-(defn munge-path [ss]
-  (clojure.lang.Compiler/munge (str ss)))
-
-(defn ns->relpath [s]
-  (str (string/replace (munge-path s) \. \/) ".cljs"))
-
 (def ^:private constant-counter (atom 0))
 
 (defn gen-constant-id [value]
@@ -315,7 +309,7 @@
              (nil? (get (-> env :ns :requires) ns-sym))
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
-             (nil? (io/resource (ns->relpath ns-sym))))
+             (nil? (io/resource (util/ns->relpath ns-sym))))
     (warning :undeclared-ns env {:ns-sym ns-sym})))
 
 (defn core-name?
@@ -1005,7 +999,7 @@
       (when-not (or (contains? (::namespaces @env/*compiler*) dep)
                     (contains? (:js-dependency-index @env/*compiler*) (name dep))
                     (deps/find-classpath-lib dep))
-        (let [relpath (ns->relpath dep)
+        (let [relpath (util/ns->relpath dep)
               src (locate-src relpath)]
           (if src
             (analyze-file src)
@@ -1616,6 +1610,40 @@ argument, which the reader will use in any emitted errors."
                   (cons form (forms-seq*))))))]
        (forms-seq*))))
 
+(defn parse-ns
+  ([src] (parse-ns src nil nil))
+  ([src dest opts]
+    (env/ensure
+      (let [namespaces' (::namespaces @env/*compiler*)
+            ret
+            (binding [*cljs-ns* 'cljs.user
+                      *analyze-deps* false]
+              (loop [forms (forms-seq src)]
+                (if (seq forms)
+                  (let [env (empty-env)
+                        ast (no-warn (analyze env (first forms) nil opts))]
+                    (if (= (:op ast) :ns)
+                      (let [ns-name (:name ast)
+                            deps    (merge (:uses ast) (:requires ast))]
+                        (merge
+                          {:ns (or ns-name 'cljs.user)
+                           :provides [ns-name]
+                           :requires (if (= ns-name 'cljs.core)
+                                       (set (vals deps))
+                                       (cond-> (conj (set (vals deps)) 'cljs.core)
+                                         (get-in @env/*compiler* [:opts :emit-constants])
+                                         (conj 'constants-table)))
+                           :file dest
+                           :source-file src}
+                          (when (and dest (.exists ^File dest))
+                            {:lines (with-open [reader (io/reader dest)]
+                                      (-> reader line-seq count))})))
+                      (recur (rest forms)))))))]
+        ;; TODO this _was_ a reset! of the old namespaces atom; should we capture and
+        ;; then restore the entirety of env/*compiler* here instead?
+        (swap! env/*compiler* assoc ::namespaces namespaces')
+        ret))))
+
 (defn requires-analysis? [^File f ^File cache]
   (or (not (.exists cache))
       (> (.lastModified f) (.lastModified cache))
@@ -1625,7 +1653,7 @@ argument, which the reader will use in any emitted errors."
 
 (defn analyze-file
   ([f] (analyze-file f nil))
-  ([f opts]
+  ([f {:keys [output-dir] :as opts}]
      (let [res (cond
                  (instance? File f) f
                  (instance? java.net.URL f) f

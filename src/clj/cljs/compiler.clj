@@ -935,40 +935,6 @@
               (not (.exists (io/file (str (.getPath dest) ".map"))))
               (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))))))
 
-(defn parse-ns
-  ([src] (parse-ns src nil nil))
-  ([src dest opts]
-    (env/ensure
-      (let [namespaces' (::ana/namespaces @env/*compiler*)
-            ret
-            (binding [ana/*cljs-ns* 'cljs.user
-                      ana/*analyze-deps* false]
-              (loop [forms (ana/forms-seq src)]
-                (if (seq forms)
-                  (let [env (ana/empty-env)
-                        ast (ana/no-warn (ana/analyze env (first forms) nil opts))]
-                    (if (= (:op ast) :ns)
-                      (let [ns-name (:name ast)
-                            deps    (merge (:uses ast) (:requires ast))]
-                        (merge
-                          {:ns (or ns-name 'cljs.user)
-                           :provides [ns-name]
-                           :requires (if (= ns-name 'cljs.core)
-                                       (set (vals deps))
-                                       (cond-> (conj (set (vals deps)) 'cljs.core)
-                                         (get-in @env/*compiler* [:opts :emit-constants])
-                                         (conj 'constants-table)))
-                           :file dest
-                           :source-file src}
-                          (when (and dest (.exists ^File dest))
-                            {:lines (with-open [reader (io/reader dest)]
-                                      (-> reader line-seq count))})))
-                      (recur (rest forms)))))))]
-        ;; TODO this _was_ a reset! of the old ana/namespaces atom; should we capture and
-        ;; then restore the entirety of env/*compiler* here instead?
-        (swap! env/*compiler* assoc ::ana/namespaces namespaces')
-        ret))))
-
 (defn compile-file
   "Compiles src to a file of the same name, but with a .js extension,
    in the src file's directory.
@@ -992,7 +958,7 @@
           dest-file (io/file dest)]
       (if (.exists src-file)
         (try
-          (let [{ns :ns :as ns-info} (parse-ns src-file dest-file opts)]
+          (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)]
             (if (requires-compilation? src-file dest-file opts)
               (do (mkdirs dest-file)
                 (when (contains? (::ana/namespaces @env/*compiler*) ns)
@@ -1006,29 +972,6 @@
           (catch Exception e
             (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
         (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))
-
-(defn path-seq
-  [file-str]
-  (->> File/separator
-       java.util.regex.Pattern/quote
-       re-pattern
-       (string/split file-str)))
-
-(defn to-path
-  ([parts]
-     (to-path parts File/separator))
-  ([parts sep]
-    (apply str (interpose sep parts))))
-
-(defn ^File to-target-file
-  [target cljs-file]
-  (let [relative-path (string/split
-                        (ana/munge-path
-                          (str (:ns (parse-ns cljs-file)))) #"\.")
-        parents (butlast relative-path)]
-    (io/file
-      (io/file (to-path (cons target parents)))
-      (str (last relative-path) ".js"))))
 
 (defn cljs-files-in
   "Return a sequence of all .cljs files in the given directory."
@@ -1056,7 +999,7 @@
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
-                 output-file (to-target-file target-dir cljs-file)
+                 output-file (util/to-target-file target-dir cljs-file (ana/parse-ns cljs-file))
                  ns-info (compile-file cljs-file output-file opts)]
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
            output-files)))))

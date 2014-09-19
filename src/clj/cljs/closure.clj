@@ -619,7 +619,7 @@ should contain the source for the given namespace name."
                     (let [{:keys [provides source-url]} source]
                       (if (and provides source-url)
                         (assoc relpaths (.getPath ^URL source-url)
-                          (ana/ns->relpath (first provides)))
+                          (util/ns->relpath (first provides)))
                         relpaths))
                     (if-let [url (:url source)]
                       (let [path (.getPath ^URL url)]
@@ -696,14 +696,14 @@ should contain the source for the given namespace name."
 (defn path-relative-to
   "Generate a string which is the path to input relative to base."
   [^File base input]
-  (let [base-path (comp/path-seq (.getCanonicalPath base))
-        input-path (comp/path-seq (.getCanonicalPath (io/file ^URL (deps/-url input))))
+  (let [base-path (util/path-seq (.getCanonicalPath base))
+        input-path (util/path-seq (.getCanonicalPath (io/file ^URL (deps/-url input))))
         count-base (count base-path)
         common (count (take-while true? (map #(= %1 %2) base-path input-path)))
         prefix (repeat (- count-base common 1) "..")]
     (if (= count-base common)
       (last input-path) ;; same file
-      (comp/to-path (concat prefix (drop common input-path)) "/"))))
+      (util/to-path (concat prefix (drop common input-path)) "/"))))
 
 (defn add-dep-string
   "Return a goog.addDependency string for an input."
@@ -773,7 +773,7 @@ should contain the source for the given namespace name."
       (let [out-file (if-let [ns (and (:source-map opts)
                                       (first (:provides js)))]
                        (io/file (io/file (output-directory opts))
-                         (ana/ns->relpath ns)))
+                         (util/ns->relpath ns)))
             source-url (:source-url js)]
         (when (and out-file source-url
                    (or (not (.exists ^File out-file))
