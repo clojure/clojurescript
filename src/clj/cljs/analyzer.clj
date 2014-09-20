@@ -1670,8 +1670,9 @@ argument, which the reader will use in any emitted errors."
          (let [path (if (instance? File res)
                       (.getPath ^File res)
                       (.getPath ^java.net.URL res))
-               cache (if output-dir
-                       (cache-file f output-dir))]
+               ;; cache (if output-dir
+               ;;         (cache-file res output-dir))
+               ]
            (when-not (get-in @env/*compiler* [::analyzed-cljs path])
              (binding [*cljs-ns* 'cljs.user
                        *cljs-file* path
