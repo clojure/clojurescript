@@ -54,10 +54,8 @@
     (apply str (interpose sep parts))))
 
 (defn ^File to-target-file
-  [target-dir cljs-file ns-info]
-  (let [relative-path (string/split
-                        (munge-path (str (:ns ns-info))) #"\.")
-        parents (butlast relative-path)]
-    (io/file
-      (io/file (to-path (cons target-dir parents)))
+  [target-dir ns-info]
+  (let [relative-path (string/split (munge-path (str (:ns ns-info))) #"\.")
+        parents       (butlast relative-path)]
+    (io/file (io/file (to-path (cons target-dir parents)))
       (str (last relative-path) ".js"))))

@@ -1655,7 +1655,7 @@ argument, which the reader will use in any emitted errors."
 
 (defn cache-file [f output-dir]
   (let [ns-info (parse-ns f)]
-    (io/file (util/to-target-file output-dir f ns-info) ".cache.edn")))
+    (io/file (util/to-target-file output-dir ns-info) ".cache.edn")))
 
 (defn analyze-file
   ([f] (analyze-file f nil))

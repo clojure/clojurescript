@@ -1000,7 +1000,7 @@
               output-files []]
          (if (seq cljs-files)
            (let [cljs-file (first cljs-files)
-                 output-file (util/to-target-file target-dir cljs-file (ana/parse-ns cljs-file))
+                 output-file (util/to-target-file target-dir (ana/parse-ns cljs-file))
                  ns-info (compile-file cljs-file output-file opts)]
              (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
            output-files)))))
