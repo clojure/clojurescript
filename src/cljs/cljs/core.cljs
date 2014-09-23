@@ -4108,30 +4108,41 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-    (ci-reduce v f))
-  (-reduce [v f start]
-    (ci-reduce v f start))
+    (-reduce v f (f)))
+  (-reduce [v f init]
+    (loop [i 0 step 0 init init]
+      (if (< i cnt)
+        (let [arr (unchecked-array-for v i)
+              len (alength arr)]
+          (let [init (loop [j 0 init init]
+                       (if (< j len)
+                         (let [init (f init (aget arr j))]
+                           (if (reduced? init)
+                             init
+                             (recur (inc j) init)))
+                         init))]
+            (if (reduced? init)
+              @init
+              (recur (+ i len) len init))))
+        init)))
 
   IKVReduce
   (-kv-reduce [v f init]
-    (let [step-init (array 0 init)] ; [step 0 init init]
-      (loop [i 0]
-        (if (< i cnt)
-          (let [arr (unchecked-array-for v i)
-                len (alength arr)]
-            (let [init (loop [j 0 init (aget step-init 1)]
-                         (if (< j len)
-                           (let [init (f init (+ j i) (aget arr j))]
-                             (if (reduced? init)
-                               init
-                               (recur (inc j) init)))
-                           (do (aset step-init 0 len)
-                               (aset step-init 1 init)
-                               init)))]
-              (if (reduced? init)
-                @init
-                (recur (+ i (aget step-init 0))))))
-          (aget step-init 1)))))
+    (loop [i 0 step 0 init init]
+      (if (< i cnt)
+        (let [arr (unchecked-array-for v i)
+              len (alength arr)]
+          (let [init (loop [j 0 init init]
+                       (if (< j len)
+                         (let [init (f init (+ j i) (aget arr j))]
+                           (if (reduced? init)
+                             init
+                             (recur (inc j) init)))
+                         init))]
+            (if (reduced? init)
+              @init
+              (recur (+ i len) len init))))
+        init)))
 
   IFn
   (-invoke [coll k]
