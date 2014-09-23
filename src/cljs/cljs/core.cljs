@@ -391,6 +391,9 @@
 (defprotocol ISwap
   (-swap! [o f] [o f a] [o f a b] [o f a b xs]))
 
+(defprotocol IIterable
+  (-iterator [coll]))
+
 ;; Printing support
 
 (deftype StringBufferWriter [sb]
@@ -604,6 +607,9 @@
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
 (declare array-seq prim-seq IndexedSeq)
+
+(defn iterable? [x]
+  (satisfies? IIterable x))
 
 (defn clone [value]
   (-clone value))
@@ -2942,7 +2948,9 @@ reduces them without incurring seq initialization"
     (nil? coll) (nil-iter)
     (string? coll) (string-iter coll)
     (array? coll) (array-iter coll)
-    :else (seq-iter coll)))
+    (iterable? coll) (-iterator coll)
+    (seqable? coll) (seq-iter coll)
+    :else (throw (js/Error. (str "Cannot create iterator from " coll)))))
 
 (declare LazyTransformer)
 
