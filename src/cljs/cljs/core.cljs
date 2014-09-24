@@ -4116,9 +4116,9 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [v f]
-    (-reduce v f (f)))
+    (ci-reduce v f))
   (-reduce [v f init]
-    (loop [i 0 step 0 init init]
+    (loop [i 0 init init]
       (if (< i cnt)
         (let [arr  (unchecked-array-for v i)
               len  (alength arr)
@@ -4131,12 +4131,12 @@ reduces them without incurring seq initialization"
                        init))]
           (if (reduced? init)
             @init
-            (recur (+ i len) len init)))
+            (recur (+ i len) init)))
         init)))
 
   IKVReduce
   (-kv-reduce [v f init]
-    (loop [i 0 step 0 init init]
+    (loop [i 0 init init]
       (if (< i cnt)
         (let [arr  (unchecked-array-for v i)
               len  (alength arr)
@@ -4149,7 +4149,7 @@ reduces them without incurring seq initialization"
                        init))]
           (if (reduced? init)
             @init
-            (recur (+ i len) len init)))
+            (recur (+ i len) init)))
         init)))
 
   IFn
