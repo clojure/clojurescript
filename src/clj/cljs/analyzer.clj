@@ -293,12 +293,17 @@
   (contains? '#{goog goog.object goog.string goog.array Math} prefix))
 
 (defn confirm-var-exists [env prefix suffix]
-  (when (and (not (implicit-import? env prefix suffix))
-             (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
-                       (or (get (:requires (:ns env)) prefix)
-                           (get (:imports (:ns env)) prefix))))
-             (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
-    (warning :undeclared-var env {:prefix prefix :suffix suffix})))
+  (let [sufstr (str suffix)
+        suffix (symbol
+                 (if (re-find #"\." sufstr)
+                   (first (string/split sufstr #"\."))
+                   suffix))]
+    (when (and (not (implicit-import? env prefix suffix))
+               (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
+                         (or (get (:requires (:ns env)) prefix)
+                             (get (:imports (:ns env)) prefix))))
+               (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
+      (warning :undeclared-var env {:prefix prefix :suffix suffix}))))
 
 (defn resolve-ns-alias [env name]
   (let [sym (symbol name)]
