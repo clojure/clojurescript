@@ -1,3 +1,9 @@
+## 0.0-2356
+
+### Fixes
+* fix var analysis so that some.ns/foo.bar is handled correctly
+* CLJS-854: cljs.reader could not read numbers under IE8
+
 ## 0.0-2342
 
 ### Changes
