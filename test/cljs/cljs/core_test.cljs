@@ -2257,7 +2257,7 @@
 
   ;; basic iteration
 
-  (def iter (iterator [1 2 3]))
+  (def iter (es6-iterator [1 2 3]))
 
   (assert (= (.-value (.next iter)) 1))
   (assert (= (.-value (.next iter)) 2))

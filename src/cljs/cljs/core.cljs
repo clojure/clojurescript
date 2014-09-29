@@ -4858,7 +4858,7 @@ reduces them without incurring seq initialization"
 (set! (.-fromObject ObjMap) (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
 
 ;; EXPERIMENTAL: subject to change
-(deftype Iterator [^:mutable s]
+(deftype ES6Iterator [^:mutable s]
   Object
   (next [_]
     (if-not (nil? s)
@@ -4867,11 +4867,11 @@ reduces them without incurring seq initialization"
         #js {:value x :done false})
       #js {:value nil :done true})))
 
-(defn iterator [coll]
-  (Iterator. (seq coll)))
+(defn es6-iterator [coll]
+  (ES6Iterator. (seq coll)))
 
 ;; EXPERIMENTAL: subject to change
-(deftype EntriesIterator [^:mutable s]
+(deftype ES6EntriesIterator [^:mutable s]
   Object
   (next [_]
     (if-not (nil? s)
@@ -4880,11 +4880,11 @@ reduces them without incurring seq initialization"
         #js {:value #js [k v] :done false})
       #js {:value nil :done true})))
 
-(defn entries-iterator [coll]
-  (EntriesIterator. (seq coll)))
+(defn es6-entries-iterator [coll]
+  (ES6EntriesIterator. (seq coll)))
 
 ;; EXPERIMENTAL: subject to change
-(deftype SetEntriesIterator [^:mutable s]
+(deftype ES6SetEntriesIterator [^:mutable s]
   Object
   (next [_]
     (if-not (nil? s)
@@ -4893,8 +4893,8 @@ reduces them without incurring seq initialization"
         #js {:value #js [x x] :done false})
       #js {:value nil :done true})))
 
-(defn set-entries-iterator [coll]
-  (SetEntriesIterator. (seq coll)))
+(defn es6-set-entries-iterator [coll]
+  (ES6SetEntriesIterator. (seq coll)))
 
 ;;; PersistentArrayMap
 
@@ -5041,11 +5041,11 @@ reduces them without incurring seq initialization"
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
-    (iterator (keys coll)))
+    (es6-iterator (keys coll)))
   (entries [coll]
-    (entries-iterator (seq coll)))
+    (es6-entries-iterator (seq coll)))
   (values [coll]
-    (iterator (vals coll)))
+    (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
   (get [coll k]
@@ -5889,11 +5889,11 @@ reduces them without incurring seq initialization"
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
-    (iterator (keys coll)))
+    (es6-iterator (keys coll)))
   (entries [coll]
-    (entries-iterator (seq coll)))
+    (es6-entries-iterator (seq coll)))
   (values [coll]
-    (iterator (vals coll)))
+    (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
   (get [coll k]
@@ -6645,11 +6645,11 @@ reduces them without incurring seq initialization"
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
-    (iterator (keys coll)))
+    (es6-iterator (keys coll)))
   (entries [coll]
-    (entries-iterator (seq coll)))
+    (es6-entries-iterator (seq coll)))
   (values [coll]
-    (iterator (vals coll)))
+    (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
   (get [coll k]
@@ -7014,11 +7014,11 @@ reduces them without incurring seq initialization"
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
-    (iterator (seq coll)))
+    (es6-iterator (seq coll)))
   (entries [coll]
-    (set-entries-iterator (seq coll)))
+    (es6-set-entries-iterator (seq coll)))
   (values [coll]
-    (iterator (seq coll)))
+    (es6-iterator (seq coll)))
   (has [coll k]
     (contains? coll k))
   (forEach [coll f]
@@ -7144,11 +7144,11 @@ reduces them without incurring seq initialization"
 
   ;; EXPERIMENTAL: subject to change
   (keys [coll]
-    (iterator (seq coll)))
+    (es6-iterator (seq coll)))
   (entries [coll]
-    (set-entries-iterator (seq coll)))
+    (es6-set-entries-iterator (seq coll)))
   (values [coll]
-    (iterator (seq coll)))
+    (es6-iterator (seq coll)))
   (has [coll k]
     (contains? coll k))
   (forEach [coll f]
