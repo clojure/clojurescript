@@ -104,6 +104,13 @@
        (persistent! v)
        (recur (inc i) (conj! v i))))))
 
+(println ";;; vector equality")
+(simple-benchmark
+  [a (into [] (range 1000000))
+   b (into [] (range 1000000))]
+  (= a b) 1)
+(println)
+
 (println ";;; reduce lazy-seqs, vectors, ranges")
 (simple-benchmark [coll (take 100000 (iterate inc 0))] (reduce + 0 coll) 1)
 (simple-benchmark [coll (range 1000000)] (reduce + 0 coll) 1)

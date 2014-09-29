@@ -4000,6 +4000,25 @@ reduces them without incurring seq initialization"
              (pv-aset ret subidx nil)
              ret))))
 
+(deftype RangedIterator [^:mutable i ^:mutable base ^:mutable arr v start end]
+  Object
+  (hasNext [this]
+    (< i end))
+  (next [this]
+    (when (== (- i base) 32)
+      (set! arr (unchecked-array-for v i))
+      (set! base (+ base 32)))
+    (let [ret (aget arr (bit-and i 0x01f))]
+      (set! i (inc i))
+      ret)))
+
+(defn ranged-iterator [v start end]
+  (let [i start]
+    (RangedIterator. i (- i (js-mod i 32))
+      (when (< start (count v))
+        (unchecked-array-for v i))
+      v start end)))
+
 (declare tv-editable-root tv-editable-tail TransientVector deref
          pr-sequential-writer pr-writer chunked-seq)
 
@@ -4061,7 +4080,21 @@ reduces them without incurring seq initialization"
 
   ISequential
   IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
+  (-equiv [coll other]
+    (if (instance? PersistentVector other)
+      (if (== cnt (count other))
+        (let [me-iter  (-iterator coll)
+              you-iter (-iterator other)]
+          (loop []
+            (if (.hasNext me-iter)
+              (let [x (.next me-iter)
+                    y (.next you-iter)]
+                (if (= x y)
+                  (recur)
+                  false))
+              true)))
+        false)
+      (equiv-sequential coll other)))
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
@@ -4165,7 +4198,11 @@ reduces them without incurring seq initialization"
   IReversible
   (-rseq [coll]
     (if (pos? cnt)
-      (RSeq. coll (dec cnt) nil))))
+      (RSeq. coll (dec cnt) nil)))
+
+  IIterable
+  (-iterator [this]
+    (ranged-iterator this 0 cnt)))
 
 (set! (.-EMPTY-NODE PersistentVector) (VectorNode. nil (make-array 32)))
 
