@@ -7589,7 +7589,14 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [rng f] (ci-reduce rng f))
-  (-reduce [rng f s] (ci-reduce rng f s)))
+  (-reduce [rng f init]
+    (loop [i start ret init]
+      (if (if (pos? step) (< i end) (> i end))
+        (let [ret (f ret i)]
+          (if (reduced? ret)
+            @ret
+            (recur (+ i step) ret)))
+        ret))))
 
 (defn range
   "Returns a lazy seq of nums from start (inclusive) to end
