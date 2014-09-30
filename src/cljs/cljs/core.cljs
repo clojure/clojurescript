@@ -5117,7 +5117,22 @@ reduces them without incurring seq initialization"
   (-empty [coll] (-with-meta (.-EMPTY PersistentArrayMap) meta))
 
   IEquiv
-  (-equiv [coll other] (equiv-map coll other))
+  (-equiv [coll other]
+    (if (implements? IMap other)
+      (let [alen (alength arr)
+            ^not-native other other]
+        (if (== cnt (-count other))
+          (loop [i 0]
+            (if (< i alen)
+              (let [v (-lookup other (aget arr i) lookup-sentinel)]
+                (if-not (identical? v lookup-sentinel)
+                  (if (= (aget arr (inc i)) v)
+                    (recur (+ i 2))
+                    false)
+                  false))
+              true))
+          false))
+      (equiv-map coll other)))
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
