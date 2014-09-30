@@ -5069,6 +5069,15 @@ reduces them without incurring seq initialization"
 
 (declare keys vals)
 
+(deftype PersistentArrayMapIterator [arr ^:mutable i cnt]
+  Object
+  (hasNext [_]
+    (< i cnt))
+  (next [_]
+    (let [ret [(aget arr i) (aget arr (inc i))]]
+      (set! i (+ i 2))
+      ret)))
+
 (deftype PersistentArrayMap [meta cnt arr ^:mutable __hash]
   Object
   (toString [coll]
@@ -5137,6 +5146,10 @@ reduces them without incurring seq initialization"
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
 
+  IIterable
+  (-iterator [this]
+    (PersistentArrayMapIterator. arr 0 (* cnt 2)))
+  
   ISeqable
   (-seq [coll]
     (persistent-array-map-seq arr 0 nil))
