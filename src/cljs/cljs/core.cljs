@@ -7499,6 +7499,17 @@ reduces them without incurring seq initialization"
        (take-while (mk-bound-fn sc start-test start-key)
                    (if ((mk-bound-fn sc end-test end-key) e) s (next s))))))
 
+(deftype RangeIterator [^:mutable i end step]
+  Object
+  (hasNext [_]
+    (if (pos? step)
+      (< i end)
+      (> i end)))
+  (next [_]
+    (let [ret i]
+      (set! i (+ i step))
+      ret)))
+
 (deftype Range [meta start end step ^:mutable __hash]
   Object
   (toString [coll]
@@ -7530,6 +7541,10 @@ reduces them without incurring seq initialization"
     (if-not (nil? (-seq rng))
       (Range. meta (+ start step) end step nil)
       ()))
+
+  IIterable
+  (-iterator [_]
+    (RangeIterator. start end step))
 
   INext
   (-next [rng]
