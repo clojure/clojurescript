@@ -862,6 +862,15 @@ reduces them without incurring seq initialization"
   "Returns true if coll implements nth in constant time"
   [x] (satisfies? IIndexed x))
 
+(deftype IndexedSeqIterator [arr ^:mutable i]
+  Object
+  (hasNext [_]
+    (< i (alength arr)))
+  (next [_]
+    (let [ret (aget arr i)]
+      (set! i (inc i))
+      ret)))
+
 (deftype IndexedSeq [arr i]
   Object
   (toString [coll]
@@ -904,6 +913,10 @@ reduces them without incurring seq initialization"
   ISequential
   IEquiv
   (-equiv [coll other] (equiv-sequential coll other))
+
+  IIterable
+  (-iterator [coll]
+    (IndexedSeqIterator. arr i))
 
   ICollection
   (-conj [coll o] (cons o coll))
