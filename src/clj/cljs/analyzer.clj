@@ -114,7 +114,11 @@
 
 (defmethod error-message :protocol-invalid-method
   [warning-type info]
-  (str "Bad method signature in protocol implementation " (:protocol info) " " (:fname info)))
+  (if (:no-such-method info)
+    (str "Bad method signature in protocol implementation, "
+      (:protocol info) " does not declare method called " (:fname info))
+    (str "Bad method signature in protocol implementation, "
+      (:protocol info) " " (:fname info) " does not declare arity " (:invalid-arity info))))
 
 (defmethod error-message :protocol-duped-method
   [warning-type info]

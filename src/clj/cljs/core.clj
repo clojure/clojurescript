@@ -802,15 +802,17 @@
           [fname sigs] (if (core/vector? (second method))
                          [(first method) [(second method)]]
                          [(first method) (map first (rest method))])
-          decmeths (core/get minfo fname)]
+          decmeths (core/get minfo fname ::not-found)]
+      (when (= decmeths ::not-found)
+        (ana/warning :protocol-invalid-method env {:protocol p :fname fname :no-such-method true}))
       (loop [sigs sigs seen #{}]
         (when (seq sigs)
           (let [sig (first sigs)
                 c   (count sig)]
             (when (contains? seen c)
               (ana/warning :protocol-duped-method env {:protocol p :fname fname}))
-            (when-not (some #{c} (map count decmeths))
-              (ana/warning :protocol-invalid-method env {:protocol p :fname fname}))
+            (when (core/and (not= decmeths ::not-found) (not (some #{c} (map count decmeths))))
+              (ana/warning :protocol-invalid-method env {:protocol p :fname fname :invalid-arity c}))
             (recur (next sigs) (conj seen c))))))))
 
 (defn validate-impls [env impls]
