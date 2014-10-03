@@ -1140,18 +1140,20 @@
           (map (fn [[k & specs]] [k (into [] specs)]))
           (into {}))
         sugar-keys #{:include-macros :refer-macros}
+        remove-from-spec
+        (fn [pred spec]
+          (if-not (and (sequential? spec) (some pred spec))
+            spec
+            (let [[l r] (split-with (complement pred) spec)]
+              (recur pred (concat l (drop 2 r))))))
         to-macro-specs
         (fn [specs]
           (->> specs
             (filter #(and (sequential? %) (some sugar-keys %)))
-            (map #(->> % (remove #{:include-macros true})
+            (map #(->> % (remove-from-spec #{:include-macros})
+                         (remove-from-spec #{:refer})
                          (map (fn [x] (if (= x :refer-macros) :refer x)))))))
-        remove-sugar
-        (fn [spec]
-          (if (and (sequential? spec) (some sugar-keys spec))
-            (let [[l & r] (split-with #(not (contains? sugar-keys %)) spec)]
-              (concat l (drop 2 r)))
-            spec))]
+        remove-sugar (partial remove-from-spec sugar-keys)]
     (if-let [require-specs (seq (to-macro-specs require))]
       (map (fn [[k v]] (cons k (map remove-sugar v)))
         (update-in indexed [:require-macros] (fnil into []) require-specs))
