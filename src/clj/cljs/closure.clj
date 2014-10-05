@@ -523,7 +523,10 @@ should contain the source for the given namespace name."
                    inputs)))))
 
 (defn preamble-from-paths [paths]
-  (str (apply str (map #(slurp (io/resource %)) paths)) "\n"))
+  (when-let [missing (seq (remove io/resource paths))]
+    (ana/warning :preamble-missing @env/*compiler* {:missing (sort missing)}))
+  (let [resources (remove nil? (map io/resource paths))]
+    (str (string/join (map slurp resources)) "\n")))
 
 (defn make-preamble [{:keys [target preamble hashbang]}]
   (str (when (and (= :nodejs target) (not (false? hashbang)))

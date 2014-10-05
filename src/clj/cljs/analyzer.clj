@@ -34,7 +34,8 @@
 (def -cljs-macros-loaded (atom false))
 
 (def ^:dynamic *cljs-warnings*
-  {:unprovided true
+  {:preamble-missing true
+   :unprovided true
    :undeclared-var false
    :undeclared-ns false
    :undeclared-ns-form true
@@ -60,9 +61,13 @@
 
 (defmulti error-message (fn [warning-type & _] warning-type))
 
+(defmethod error-message :preamble-missing
+  [warning-type info]
+  (str "Preamble resource file not found: " (string/join " " (:missing info))))
+
 (defmethod error-message :unprovided
   [warning-type info]
-  (str "Required namespace not provided for " (clojure.string/join " " (:unprovided info))))
+  (str "Required namespace not provided for " (string/join " " (:unprovided info))))
 
 (defmethod error-message :undeclared-var
   [warning-type info]
