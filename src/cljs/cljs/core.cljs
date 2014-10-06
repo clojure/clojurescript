@@ -3274,15 +3274,15 @@ reduces them without incurring seq initialization"
   this means false return values will be included.  f must be free of
   side-effects.  Returns a transducer when no collection is provided."
   ([f]
-   (fn [f1]
+   (fn [rf]
      (fn
-       ([] (f1))
-       ([result] (f1 result))
+       ([] (rf))
+       ([result] (rf result))
        ([result input]
           (let [v (f input)]
             (if (nil? v)
               result
-              (f1 result v)))))))
+              (rf result v)))))))
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
@@ -3418,17 +3418,17 @@ reduces them without incurring seq initialization"
   side-effects.  Returns a stateful transducer when no collection is
   provided."
   ([f]
-   (fn [f1]
+   (fn [rf]
      (let [ia (atom -1)]
        (fn
-         ([] (f1))
-         ([result] (f1 result))
+         ([] (rf))
+         ([result] (rf result))
          ([result input]
             (let [i (swap! ia inc)
                   v (f i input)]
               (if (nil? v)
                 result
-                (f1 result v))))))))
+                (rf result v))))))))
   ([f coll]
      (letfn [(keepi [idx coll]
                (lazy-seq
@@ -3534,14 +3534,14 @@ reduces them without incurring seq initialization"
   f should accept number-of-colls arguments. Returns a transducer when
   no collection is provided."
   ([f]
-    (fn [f1]
+    (fn [rf]
       (fn
-        ([] (f1))
-        ([result] (f1 result))
+        ([] (rf))
+        ([result] (rf result))
         ([result input]
-           (f1 result (f input)))
+           (rf result (f input)))
         ([result input & inputs]
-           (f1 result (apply f input inputs))))))
+           (rf result (apply f input inputs))))))
   ([f coll]
    (lazy-seq
     (when-let [s (seq coll)]
@@ -3578,16 +3578,16 @@ reduces them without incurring seq initialization"
   there are fewer than n.  Returns a stateful transducer when
   no collection is provided."
   ([n]
-     (fn [f1]
+     (fn [rf]
        (let [na (atom n)]
          (fn
-           ([] (f1))
-           ([result] (f1 result))
+           ([] (rf))
+           ([result] (rf result))
            ([result input]
               (let [n @na
                     nn (swap! na dec)
                     result (if (pos? n)
-                             (f1 result input)
+                             (rf result input)
                              result)]
                 (if (not (pos? nn))
                   (reduced result)
@@ -3602,17 +3602,17 @@ reduces them without incurring seq initialization"
   "Returns a lazy sequence of all but the first n items in coll.
   Returns a stateful transducer when no collection is provided."
   ([n]
-     (fn [f1]
+     (fn [rf]
        (let [na (atom n)]
          (fn
-           ([] (f1))
-           ([result] (f1 result))
+           ([] (rf))
+           ([result] (rf result))
            ([result input]
               (let [n @na]
                 (swap! na dec)
                 (if (pos? n)
                   result
-                  (f1 result input))))))))
+                  (rf result input))))))))
   ([n coll]
      (let [step (fn [n coll]
                   (let [s (seq coll)]
@@ -3640,18 +3640,18 @@ reduces them without incurring seq initialization"
   first item for which (pred item) returns logical false.  Returns a
   stateful transducer when no collection is provided."
   ([pred]
-     (fn [f1]
+     (fn [rf]
        (let [da (atom true)]
          (fn
-           ([] (f1))
-           ([result] (f1 result))
+           ([] (rf))
+           ([result] (rf result))
            ([result input]
               (let [drop? @da]
                 (if (and drop? (pred input))
                   result
                   (do
                     (reset! da nil)
-                    (f1 result input)))))))))
+                    (rf result input)))))))))
   ([pred coll]
      (let [step (fn [pred coll]
                   (let [s (seq coll)]
@@ -3741,13 +3741,13 @@ reduces them without incurring seq initialization"
   (pred item) returns true. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   ([pred]
-    (fn [f1]
+    (fn [rf]
       (fn
-        ([] (f1))
-        ([result] (f1 result))
+        ([] (rf))
+        ([result] (rf result))
         ([result input]
            (if (pred input)
-             (f1 result input)
+             (rf result input)
              result)))))
   ([pred coll]
    (lazy-seq
@@ -7431,24 +7431,24 @@ reduces them without incurring seq initialization"
   partitions with fewer than n items at the end.  Returns a stateful
   transducer when no collection is provided."
   ([n]
-   (fn [f1]
+   (fn [rf]
      (let [a (array-list)]
        (fn
-         ([] (f1))
+         ([] (rf))
          ([result]
             (let [result (if (.isEmpty a)
                            result
                            (let [v (vec (.toArray a))]
                              ;;clear first!
                              (.clear a)
-                             (f1 result v)))]
-              (f1 result)))
+                             (rf result v)))]
+              (rf result)))
          ([result input]
             (.add a input)
             (if (== n (.size a))
               (let [v (vec (.toArray a))]
                 (.clear a)
-                (f1 result v))
+                (rf result v))
               result))))))
   ([n coll]
      (partition-all n n coll))
@@ -7462,13 +7462,13 @@ reduces them without incurring seq initialization"
   (pred item) returns true. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   ([pred]
-     (fn [f1]
+     (fn [rf]
        (fn
-         ([] (f1))
-         ([result] (f1 result))
+         ([] (rf))
+         ([result] (rf result))
          ([result input]
             (if (pred input)
-              (f1 result input)
+              (rf result input)
               (reduced result))))))
   ([pred coll]
      (lazy-seq
@@ -7624,15 +7624,15 @@ reduces them without incurring seq initialization"
   "Returns a lazy seq of every nth item in coll.  Returns a stateful
   transducer when no collection is provided."
   ([n]
-     (fn [f1]
+     (fn [rf]
        (let [ia (atom -1)]
          (fn
-           ([] (f1))
-           ([result] (f1 result))
+           ([] (rf))
+           ([result] (rf result))
            ([result input]
               (let [i (swap! ia inc)]
                 (if (zero? (rem i n))
-                  (f1 result input)
+                  (rf result input)
                   result)))))))
   ([n coll]
      (lazy-seq
@@ -7649,19 +7649,19 @@ reduces them without incurring seq initialization"
    new value.  Returns a lazy seq of partitions.  Returns a stateful
    transducer when no collection is provided."
   ([f]
-     (fn [f1]
+     (fn [rf]
        (let [a (array-list)
              pa (atom ::none)]
          (fn
-           ([] (f1))
+           ([] (rf))
            ([result]
               (let [result (if (.isEmpty a)
                              result
                              (let [v (vec (.toArray a))]
                                ;;clear first!
                                (.clear a)
-                               (f1 result v)))]
-                (f1 result)))
+                               (rf result v)))]
+                (rf result)))
            ([result input]
               (let [pval @pa
                     val (f input)]
@@ -7673,7 +7673,7 @@ reduces them without incurring seq initialization"
                     result)
                   (let [v (vec (.toArray a))]
                     (.clear a)
-                    (let [ret (f1 result v)]
+                    (let [ret (rf result v)]
                       (when-not (reduced? ret)
                         (.add a input))
                       ret)))))))))
@@ -8246,8 +8246,8 @@ reduces them without incurring seq initialization"
   (-realized? d))
 
 (defn- preserving-reduced
-  [f1]
-  #(let [ret (f1 %1 %2)]
+  [rf]
+  #(let [ret (rf %1 %2)]
      (if (reduced? ret)
        (reduced ret)
        ret)))
@@ -8256,11 +8256,11 @@ reduces them without incurring seq initialization"
   "A transducer which concatenates the contents of each input, which must be a
   collection, into the reduction."
   {:added "1.7"}
-  [f1]
-  (let [rf1 (preserving-reduced f1)]  
+  [rf]
+  (let [rf1 (preserving-reduced rf)]  
     (fn
-      ([] (f1))
-      ([result] (f1 result))
+      ([] (rf))
+      ([result] (rf result))
       ([result input]
          (reduce rf1 result input)))))
 
@@ -8268,17 +8268,17 @@ reduces them without incurring seq initialization"
   "Returns a lazy sequence removing consecutive duplicates in coll.
   Returns a transducer when no collection is provided."
   ([]
-   (fn [f1]
+   (fn [rf]
      (let [pa (atom ::none)]
        (fn
-         ([] (f1))
-         ([result] (f1 result))
+         ([] (rf))
+         ([result] (rf result))
          ([result input]
             (let [prior @pa]
               (reset! pa input)
               (if (= prior input)
                 result
-                (f1 result input))))))))
+                (rf result input))))))))
   ([coll] (sequence (dedupe) coll)))
 
 (defn random-sample
@@ -8289,7 +8289,7 @@ reduces them without incurring seq initialization"
   ([prob coll]
      (filter (fn [_] (< (rand) prob)) coll)))
 
-(deftype Iteration [xform coll]
+(deftype Eduction [xform coll]
    ISequential
    
    ISeqable
@@ -8302,12 +8302,12 @@ reduces them without incurring seq initialization"
    (-pr-writer [coll writer opts]
      (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
-(defn iteration
-  "Returns an iterable/seqable/reducible sequence of applications of
-  the transducer to the items in coll. Note that these applications
+(defn eduction
+  "Returns a reducible/iterable/seqable application of
+  the transducer to the items in coll. Note that these applications	
   will be performed every time iterator/seq/reduce is called."
   [xform coll]
-  (Iteration. xform coll))
+  (Eduction. xform coll))
 
 (defn run!
   "Runs the supplied procedure (via reduce), for purposes of side
