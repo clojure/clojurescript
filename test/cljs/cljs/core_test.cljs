@@ -2369,7 +2369,7 @@
              (range 10)))
   (assert (= (sequence (mapcat reverse) [[3 2 1 0] [6 5 4] [9 8 7]])
              (range 10)))
-  (assert (= (seq (iteration (map inc) [1 2 3])) '(2 3 4)))
+  (assert (= (seq (eduction (map inc) [1 2 3])) '(2 3 4)))
   (assert (= (sequence (partition-by #{:split}) [1 2 3 :split 4 5 6])
              '([1 2 3] [:split] [4 5 6])))
   (assert (= (sequence (partition-all 3) '(1 2 3 4 5))
