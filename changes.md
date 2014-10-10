@@ -1,3 +1,10 @@
+## 0.0-2371
+
+### Fixes
+* CLJS-862: fix inconsistent re-pattern
+* CLJS-866: Faulty ns macro desugaring
+* CLJS-869: When preamble is not found in source directory, compiler does not report it
+
 ## 0.0-2356
 
 ### Fixes
