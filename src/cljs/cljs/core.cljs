@@ -782,6 +782,16 @@
   [r]
   (instance? Reduced r))
 
+(defn ensure-reduced
+  "If x is already reduced?, returns it, else returns (reduced x)"
+  [x]
+  (if (reduced? x) x (reduced x)))
+
+(defn unreduced
+  "If x is reduced?, returns (deref x), else returns x"
+  [x]
+  (if (reduced? x) (deref x) x))
+
 ;; generic to all refs
 ;; (but currently hard-coded to atom!)
 (defn deref
@@ -3590,7 +3600,7 @@ reduces them without incurring seq initialization"
                              (rf result input)
                              result)]
                 (if (not (pos? nn))
-                  (reduced result)
+                  (ensure-reduced result)
                   result)))))))
   ([n coll]
      (lazy-seq
@@ -7441,7 +7451,7 @@ reduces them without incurring seq initialization"
                            (let [v (vec (.toArray a))]
                              ;;clear first!
                              (.clear a)
-                             (rf result v)))]
+                             (unreduced (rf result v))))]
               (rf result)))
          ([result input]
             (.add a input)
@@ -7660,7 +7670,7 @@ reduces them without incurring seq initialization"
                              (let [v (vec (.toArray a))]
                                ;;clear first!
                                (.clear a)
-                               (rf result v)))]
+                               (unreduced (rf result v))))]
                 (rf result)))
            ([result input]
               (let [pval @pa
