@@ -894,7 +894,8 @@
 
 (defn- build-positional-factory
   [rsym rname fields]
-  (let [fn-name (with-meta (symbol (core/str '-> rsym)) (meta rsym))]
+  (let [fn-name (with-meta (symbol (core/str '-> rsym))
+                  (assoc (meta rsym) :factory :positional))]
     `(defn ~fn-name
        [~@fields]
        (new ~rname ~@fields))))
@@ -1003,7 +1004,8 @@
          (extend-type ~tagname ~@(dt->et tagname impls fields true))))))
 
 (defn- build-map-factory [rsym rname fields]
-  (let [fn-name (symbol (core/str 'map-> rsym))
+  (let [fn-name (with-meta (symbol (core/str 'map-> rsym))
+                  (assoc (meta rsym) :factory :map))
         ms (gensym)
         ks (map keyword fields)
         getters (map (fn [k] `(~k ~ms)) ks)]
