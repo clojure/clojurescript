@@ -625,12 +625,12 @@
       'js/Function "function"})
 
 (defmacro reify [& impls]
-  (let [t      (gensym "t")
+  (let [t        (with-meta (gensym "t") {:anonymous true})
         meta-sym (gensym "meta")
         this-sym (gensym "_")
-        locals (keys (:locals &env))
-        ns     (-> &env :ns :name)
-        munge  cljs.compiler/munge]
+        locals   (keys (:locals &env))
+        ns       (-> &env :ns :name)
+        munge    cljs.compiler/munge]
     `(do
        (when-not (exists? ~(symbol (core/str ns) (core/str t)))
          (deftype ~t [~@locals ~meta-sym]
