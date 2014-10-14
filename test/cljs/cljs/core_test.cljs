@@ -2427,5 +2427,10 @@
           (throw (ex-info "CLJS-849 regression!"
                    {:m (persistent! m) :xs xs}))))))
 
+  ;; CLJS-
+  (let [m (array-map 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10 10 11 11 12 12 13 13 14 14 15 15)]
+    (assert (instance? cljs.core/PersistentArrayMap m))
+    (assert (= (seq m) [[0 0] [1 1] [2 2] [3 3] [4 4] [5 5] [6 6] [7 7] [8 8] [9 9] [10 10] [11 11] [12 12] [13 13] [14 14] [15 15]])))
+
   :ok
   )

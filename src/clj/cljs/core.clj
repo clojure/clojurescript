@@ -1443,18 +1443,12 @@
 (defmacro array-map
   ([] '(.-EMPTY cljs.core/PersistentArrayMap))
   ([& kvs]
-    (core/cond
-      (core/> (count kvs) 16)
-      `(hash-map ~@kvs)
-      
-      (let [keys (map first (partition 2 kvs))]
-        (core/and (every? #(= (:op %) :constant)
-                    (map #(cljs.analyzer/analyze &env %) keys))
-                  (= (count (into #{} keys)) (count keys))))
-      `(cljs.core/PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil)
-
-      :else
-      `(.fromArray cljs.core/PersistentArrayMap (array ~@kvs) true false))))
+     (let [keys (map first (partition 2 kvs))]
+       (if (core/and (every? #(= (:op %) :constant)
+                       (map #(cljs.analyzer/analyze &env %) keys))
+                     (= (count (into #{} keys)) (count keys)))
+         `(cljs.core/PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil)
+         `(.fromArray cljs.core/PersistentArrayMap (array ~@kvs) true false)))))
 
 (defmacro hash-map
   ([] `(.-EMPTY cljs.core/PersistentHashMap))
