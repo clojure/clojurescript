@@ -1025,6 +1025,7 @@
       (emits ";\n"))))
 
 (defn emit-constants-table-to-file [table dest]
+  (io/make-parents dest)
   (with-open [out ^java.io.Writer (io/make-writer dest {})]
     (binding [*out* out]
       (emit-constants-table table))))
