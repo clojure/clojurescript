@@ -788,7 +788,7 @@
     (emitln "goog.require('" (munge lib) "');")))
 
 (defmethod emit* :deftype*
-  [{:keys [t fields pmasks]}]
+  [{:keys [t fields pmasks body]}]
   (let [fields (map munge fields)]
     (emitln "")
     (emitln "/**")
@@ -799,10 +799,11 @@
       (emitln "this." fld " = " fld ";"))
     (doseq [[pno pmask] pmasks]
       (emitln "this.cljs$lang$protocol_mask$partition" pno "$ = " pmask ";"))
-    (emitln "})")))
+    (emitln "})")
+    (emit body)))
 
 (defmethod emit* :defrecord*
-  [{:keys [t fields pmasks]}]
+  [{:keys [t fields pmasks body]}]
   (let [fields (concat (map munge fields) '[__meta __extmap])]
     (emitln "")
     (emitln "/**")
@@ -828,7 +829,8 @@
     (emit-constant nil)
     (emitln ";")
     (emitln "}")
-    (emitln "})")))
+    (emitln "})")
+    (emit body)))
 
 (defmethod emit* :dot
   [{:keys [target field method args env]}]

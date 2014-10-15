@@ -736,22 +736,8 @@
                        {:ret-tag tag}))) 
         locals (if (and locals name) (assoc locals name name-var) locals)
         type (-> form meta ::type)
-        fields (-> form meta ::fields)
         protocol-impl (-> form meta :protocol-impl)
         protocol-inline (-> form meta :protocol-inline)
-        locals (reduce (fn [m fld]
-                         (assoc m fld
-                                {:name fld
-                                 :line (get-line fld env)
-                                 :column (get-col fld env)
-                                 :field true
-                                 :mutable (-> fld meta :mutable)
-                                 :unsynchronized-mutable (-> fld meta :unsynchronized-mutable)
-                                 :volatile-mutable (-> fld meta :volatile-mutable)
-                                 :tag (-> fld meta :tag)
-                                 :shadow (m fld)}))
-                       locals fields)
-
         menv (if (> (count meths) 1) (assoc env :context :expr) env)
         menv (merge menv
                {:protocol-impl protocol-impl
@@ -1210,9 +1196,23 @@
     {:env env :op :ns :form form :name name :doc docstring :uses uses :requires requires :imports imports
      :use-macros use-macros :require-macros require-macros :excludes excludes}))
 
-(defmethod parse 'deftype*
-  [_ env [_ tsym fields pmasks :as form] _ _]
-  (let [t (:name (resolve-var (dissoc env :locals) tsym))]
+(defn parse-type
+  [op env [_ tsym fields pmasks body :as form]]
+  (let [t (:name (resolve-var (dissoc env :locals) tsym))
+        locals (reduce (fn [m fld]
+                         (assoc m fld
+                                {:name fld
+                                 :line (get-line fld env)
+                                 :column (get-col fld env)
+                                 :field true
+                                 :mutable (-> fld meta :mutable)
+                                 :unsynchronized-mutable (-> fld meta :unsynchronized-mutable)
+                                 :volatile-mutable (-> fld meta :volatile-mutable)
+                                 :tag (-> fld meta :tag)
+                                 :shadow (m fld)}))
+                       {} (if (= :defrecord* op)
+                            (concat fields '[__meta __extmap ^:mutable __hash])
+                            fields))]
     (swap! env/*compiler* update-in [::namespaces (-> env :ns :name) :defs tsym]
            (fn [m]
              (let [m (assoc (or m {})
@@ -1220,25 +1220,18 @@
                        :type true
                        :num-fields (count fields))]
                (merge m
-                 (dissoc (meta tsym) :protocols)
-                 {:protocols (-> tsym meta :protocols)}
-                 (source-info tsym env)))))
-    {:env env :op :deftype* :form form :t t :fields fields :pmasks pmasks}))
+                      (dissoc (meta tsym) :protocols)
+                      {:protocols (-> tsym meta :protocols)}
+                      (source-info tsym env)))))
+    {:op op :env env :form form :t t :fields fields :pmasks pmasks :body (analyze (assoc env :locals locals) body)}))
+
+(defmethod parse 'deftype*
+  [_ env form _ _]
+  (parse-type :deftype* env form))
 
 (defmethod parse 'defrecord*
-  [_ env [_ tsym fields pmasks :as form] _ _]
-  (let [t (:name (resolve-var (dissoc env :locals) tsym))]
-    (swap! env/*compiler* update-in [::namespaces (-> env :ns :name) :defs tsym]
-           (fn [m]
-             (let [m (assoc (or m {})
-                       :name t
-                       :type true
-                       :num-fields (count fields))]
-               (merge m
-                 (dissoc (meta tsym) :protocols)
-                 {:protocols (-> tsym meta :protocols)}
-                 (source-info tsym env)))))
-    {:env env :op :defrecord* :form form :t t :fields fields :pmasks pmasks}))
+  [_ env form _ _]
+  (parse-type :defrecord* env form) )
 
 ;; dot accessor code
 

@@ -873,7 +873,6 @@
     (dt->et type specs fields false))
   ([type specs fields inline]
     (let [annots {:cljs.analyzer/type type
-                  :cljs.analyzer/fields fields
                   :protocol-impl true
                   :protocol-inline inline}]
       (loop [ret [] specs specs]
@@ -908,22 +907,16 @@
         t (vary-meta t assoc
             :protocols protocols
             :skip-protocol-flag fpps) ]
-    (if (seq impls)
-      `(do
-         (deftype* ~t ~fields ~pmasks)
-         (set! (.-cljs$lang$type ~t) true)
-         (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
-         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
-         (extend-type ~t ~@(dt->et t impls fields true))
-         ~(build-positional-factory t r fields)
-         ~t)
-      `(do
-         (deftype* ~t ~fields ~pmasks)
-         (set! (.-cljs$lang$type ~t) true)
-         (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
-         (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opts#] (-write writer# ~(core/str r))))
-         ~(build-positional-factory t r fields)
-         ~t))))
+    `(do
+       (deftype* ~t ~fields ~pmasks
+         ~(if (seq impls)
+            `(extend-type ~t ~@(dt->et t impls fields))))
+       (set! (.-cljs$lang$type ~t) true)
+       (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
+       (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
+
+       ~(build-positional-factory t r fields)
+       ~t)))
 
 (defn- emit-defrecord
   "Do not use this directly - use defrecord"
@@ -1000,8 +993,8 @@
                     :protocols protocols
                     :skip-protocol-flag fpps)]
       `(do
-         (~'defrecord* ~tagname ~hinted-fields ~pmasks)
-         (extend-type ~tagname ~@(dt->et tagname impls fields true))))))
+         (~'defrecord* ~tagname ~hinted-fields ~pmasks
+           (extend-type ~tagname ~@(dt->et tagname impls fields true)))))))
 
 (defn- build-map-factory [rsym rname fields]
   (let [fn-name (with-meta (symbol (core/str 'map-> rsym))
