@@ -7087,7 +7087,7 @@ reduces them without incurring seq initialization"
              (assoc ret key entry)
              ret)
            (next keys)))
-        ret)))
+        (with-meta ret (meta map)))))
 
 ;;; PersistentHashSet
 
