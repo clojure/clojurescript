@@ -919,6 +919,10 @@ should contain the source for the given namespace name."
         ":source-map-path cannot be specified without also specifying :output-to and :source-map if optimization setting applied")))
   true)
 
+(defn check-output-wrapper [{:keys [output-wrapper optimizations]}]
+  (assert (not (and output-wrapper (= :whitespace optimizations)))
+          ":output-wrapper cannot be combined with :optimizations :whitespace"))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
@@ -942,6 +946,7 @@ should contain the source for the given namespace name."
          (check-output-dir opts)
          (check-source-map opts)
          (check-source-map-path opts)
+         (check-output-wrapper opts)
          (swap! compiler-env #(-> %
                                   (assoc-in [:opts :emit-constants] emit-constants)
                                   (assoc :target (:target opts))
