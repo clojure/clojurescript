@@ -6901,7 +6901,7 @@ reduces them without incurring seq initialization"
   "keyval => key val
   Returns a new array map with supplied mappings."
   [& keyvals]
-  (PersistentArrayMap. nil (quot (count keyvals) 2) (apply array keyvals) nil))
+  (.fromArray cljs.core/PersistentArrayMap (apply array keyvals) true false))
 
 (defn obj-map
   "keyval => key val

@@ -2257,6 +2257,9 @@
   (assert (= (set/rename-keys {:a "one" :b "two" :c "three"} {:a :b :b :a})
              {:a "two" :b "one" :c "three"}))
 
+  ;; CLJS-881
+  (assert (= [:foo] (keys (apply array-map [:foo 1 :foo 2]))))
+
   ;; basic iteration
 
   (def iter (es6-iterator [1 2 3]))
