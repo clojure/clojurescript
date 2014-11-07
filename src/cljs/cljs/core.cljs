@@ -1186,6 +1186,14 @@ reduces them without incurring seq initialization"
       (throw (js/Error. (str "nth not supported on this type "
                           (type->str (type coll))))))))
 
+(defn nthrest
+  "Returns the nth rest of coll, coll when n is 0."
+  [coll n]
+    (loop [n n xs coll]
+      (if (and (pos? n) (seq xs))
+        (recur (dec n) (rest xs))
+        xs)))
+
 (defn get
   "Returns the value mapped to key, not-found or nil if key not present."
   ([o k]
