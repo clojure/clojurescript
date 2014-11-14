@@ -691,6 +691,19 @@
          (= y (first more)))
        false)))
 
+;; EXPERIMENTAL: subject to change
+(deftype ES6Iterator [^:mutable s]
+  Object
+  (next [_]
+    (if-not (nil? s)
+      (let [x (first s)]
+        (set! s (next s))
+        #js {:value x :done false})
+      #js {:value nil :done true})))
+
+(defn es6-iterator [coll]
+  (ES6Iterator. (seq coll)))
+
 ;;;;;;;;;;;;;;;;;;; Murmur3 Helpers ;;;;;;;;;;;;;;;;
 
 (defn ^number mix-collection-hash
@@ -4940,19 +4953,6 @@ reduces them without incurring seq initialization"
 (set! (.-HASHMAP_THRESHOLD ObjMap) 8)
 
 (set! (.-fromObject ObjMap) (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
-
-;; EXPERIMENTAL: subject to change
-(deftype ES6Iterator [^:mutable s]
-  Object
-  (next [_]
-    (if-not (nil? s)
-      (let [x (first s)]
-        (set! s (next s))
-        #js {:value x :done false})
-      #js {:value nil :done true})))
-
-(defn es6-iterator [coll]
-  (ES6Iterator. (seq coll)))
 
 ;; EXPERIMENTAL: subject to change
 (deftype ES6EntriesIterator [^:mutable s]
