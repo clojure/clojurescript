@@ -367,10 +367,10 @@
         (emits "(" (when checked "cljs.core.truth_") "(" test ")?" then ":" else ")")
         (do
           (if checked
-            (emitln "if(cljs.core.truth_(" test "))")
-            (emitln "if(" test ")"))
-          (emitln "{" then "} else")
-          (emitln "{" else "}"))))))
+            (emitln "if(cljs.core.truth_(" test ")){")
+            (emitln "if(" test "){"))
+          (emitln then "} else {")
+          (emitln else "}"))))))
 
 (defmethod emit* :case*
   [{:keys [v tests thens default env]}]
@@ -478,7 +478,7 @@
   (emit-wrap env
     (emits "(function " (munge name) "(")
     (emit-fn-params params)
-    (emits "){")
+    (emitln "){")
     (when type
       (emitln "var self__ = this;"))
     (when recurs (emitln "while(true){"))
@@ -499,7 +499,7 @@
                (doseq [param params]
                  (emit param)
                  (when-not (= param (last params)) (emits ",")))
-               (emits "){")
+               (emitln "){")
                (when recurs (emitln "while(true){"))
                (emits expr)
                (when recurs
@@ -516,11 +516,11 @@
                (when variadic
                  (emits "var ")
                  (emit (last params))
-                 (emits " = null;")
+                 (emitln " = null;")
                  (emitln "if (arguments.length > " (dec (count params)) ") {")
                  (emits "  ")
                  (emit (last params))
-                 (emits " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);")
+                 (emitln " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);")
                  (emitln "} "))
                (emits "return " delegate-name ".call(this,")
                (doseq [param params]
@@ -612,11 +612,10 @@
 (defmethod emit* :do
   [{:keys [statements ret env]}]
   (let [context (:context env)]
-    (when (and statements (= :expr context)) (emits "(function (){"))
-    (when statements
-      (emits statements))
+    (when (and statements (= :expr context)) (emitln "(function (){"))
+    (doseq [s statements] (emitln s))
     (emit ret)
-    (when (and statements (= :expr context)) (emits "})()"))))
+    (when (and statements (= :expr context)) (emitln "})()"))))
 
 (defmethod emit* :try
   [{:keys [env try catch name finally]}]
@@ -647,7 +646,7 @@
       (doseq [{:keys [init] :as binding} bindings]
         (emits "var ")
         (emit binding) ; Binding will be treated as a var
-        (emits " = " init ";"))
+        (emitln " = " init ";"))
       (when is-loop (emitln "while(true){"))
       (emits expr)
       (when is-loop
