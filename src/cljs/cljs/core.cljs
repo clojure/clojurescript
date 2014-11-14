@@ -146,6 +146,8 @@
     s
     (str ty)))
 
+(def ITER_SYMBOL "@@iterator")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn ^array make-array
@@ -962,6 +964,8 @@ reduces them without incurring seq initialization"
       (if (pos? c)
         (RSeq. coll (dec c) nil)))))
 
+(es6-iterable IndexedSeq)
+
 (defn prim-seq
   ([prim]
      (prim-seq prim 0))
@@ -1029,6 +1033,8 @@ reduces them without incurring seq initialization"
   IReduce
   (-reduce [col f] (seq-reduce f col))
   (-reduce [col f start] (seq-reduce f start col)))
+
+(es6-iterable RSeq)
 
 (defn second
   "Same as (first (next x))"
@@ -2225,6 +2231,8 @@ reduces them without incurring seq initialization"
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
 
+(es6-iterable List)
+
 (deftype EmptyList [meta]
   Object
   (toString [coll]
@@ -2278,6 +2286,8 @@ reduces them without incurring seq initialization"
   (-reduce [coll f start] (seq-reduce f start coll)))
 
 (set! (.-EMPTY List) (EmptyList. nil))
+
+(es6-iterable EmptyList)
 
 (defn ^boolean reversible? [coll]
   (satisfies? IReversible coll))
@@ -2353,6 +2363,8 @@ reduces them without incurring seq initialization"
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
+
+(es6-iterable Cons)
 
 (defn cons
   "Returns a new seq where x is the first element and seq is the rest."
@@ -2493,6 +2505,8 @@ reduces them without incurring seq initialization"
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
 
+(es6-iterable LazySeq)
+
 (declare ArrayChunk)
 
 (deftype ChunkBuffer [^:mutable buf ^:mutable end]
@@ -2605,6 +2619,8 @@ reduces them without incurring seq initialization"
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash)))
+
+(es6-iterable ChunkedCons)
 
 (defn chunk-cons [chunk rest]
   (if (zero? (-count chunk))
@@ -3131,6 +3147,8 @@ reduces them without incurring seq initialization"
     (if (nil? rest)
       nil
       (-seq rest))))
+
+(es6-iterable LazyTransformer)
 
 (set! (.-create LazyTransformer)
   (fn [xform coll]
@@ -4282,6 +4300,8 @@ reduces them without incurring seq initialization"
               (recur (inc i) (conj! out (aget xs i)))
               (persistent! out))))))))
 
+(es6-iterable PersistentVector)
+
 (defn vec [coll]
   (-persistent!
    (reduce -conj!
@@ -4368,6 +4388,8 @@ reduces them without incurring seq initialization"
 
   (-reduce [coll f start]
     (ci-reduce (subvec vec (+ i off) (count vec)) f start)))
+
+(es6-iterable ChunkedSeq)
 
 (defn chunked-seq
   ([vec i off] (ChunkedSeq. vec (array-for vec i) i off nil nil))
@@ -4470,6 +4492,8 @@ reduces them without incurring seq initialization"
     (-nth coll k))
   (-invoke [coll k not-found]
     (-nth coll k not-found)))
+
+(es6-iterable Subvec)
 
 (defn- build-subvec [meta v start end __hash]
   (if (instance? Subvec v)
@@ -4719,6 +4743,8 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll] coll))
 
+(es6-iterable PersistentQueueSeq)
+
 (deftype PersistentQueue [meta count front rear ^:mutable __hash]
   Object
   (toString [coll]
@@ -4774,6 +4800,8 @@ reduces them without incurring seq initialization"
   (-count [coll] count))
 
 (set! (.-EMPTY PersistentQueue) (PersistentQueue. nil 0 nil [] 0))
+
+(es6-iterable PersistentQueue)
 
 (deftype NeverEquiv []
   Object
@@ -5110,6 +5138,8 @@ reduces them without incurring seq initialization"
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
 
+(es6-iterable PersistentArrayMapSeq)
+
 (defn persistent-array-map-seq [arr i _meta]
   (when (<= i (- (alength arr) 2))
     (PersistentArrayMapSeq. arr i _meta)))
@@ -5300,6 +5330,8 @@ reduces them without incurring seq initialization"
               (recur (+ i 2)
                 (-assoc! ret (aget arr i) (aget arr (inc i))))
               (-persistent! ret))))))))
+
+(es6-iterable PersistentArrayMap)
 
 (declare array->transient-hash-map)
 
@@ -5922,6 +5954,8 @@ reduces them without incurring seq initialization"
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
 
+(es6-iterable NodeSeq)
+
 (defn- create-inode-seq
   ([nodes]
      (create-inode-seq nodes 0 nil))
@@ -5975,6 +6009,8 @@ reduces them without incurring seq initialization"
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
+
+(es6-iterable ArrayNodeSeq)
 
 (defn- create-array-node-seq
   ([nodes] (create-array-node-seq nil nodes 0 nil))
@@ -6128,6 +6164,8 @@ reduces them without incurring seq initialization"
         (if (< i len)
           (recur (inc i) (-assoc! out (aget ks i) (aget vs i)))
           (persistent! out))))))
+
+(es6-iterable PersistentHashMap)
 
 (deftype TransientHashMap [^:mutable ^boolean edit
                            ^:mutable root
@@ -6291,6 +6329,8 @@ reduces them without incurring seq initialization"
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
+
+(es6-iterable PersistentTreeMapSeq)
 
 (defn- create-tree-map-seq [tree ascending? cnt]
   (PersistentTreeMapSeq. nil (tree-map-seq-push tree nil ascending?) ascending? cnt nil))
@@ -6500,6 +6540,8 @@ reduces them without incurring seq initialization"
   (-invoke [node k not-found]
     (-lookup node k not-found)))
 
+(es6-iterable BlackNode)
+
 (deftype RedNode [key val left right ^:mutable __hash]
   Object
   (add-left [node ins]
@@ -6640,6 +6682,8 @@ reduces them without incurring seq initialization"
 
   (-invoke [node k not-found]
     (-lookup node k not-found)))
+
+(es6-iterable RedNode)
 
 (defn- tree-map-add [comp tree k v found]
   (if (nil? tree)
@@ -6896,6 +6940,8 @@ reduces them without incurring seq initialization"
 
 (set! (.-EMPTY PersistentTreeMap) (PersistentTreeMap. compare nil 0 nil 0))
 
+(es6-iterable PersistentTreeMap)
+
 (defn hash-map
   "keyval => key val
   Returns a new hash map with supplied mappings."
@@ -6998,6 +7044,8 @@ reduces them without incurring seq initialization"
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
 
+(es6-iterable KeySeq)
+
 (defn keys
   "Returns a sequence of the map's keys."
   [hash-map]
@@ -7063,6 +7111,8 @@ reduces them without incurring seq initialization"
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
+
+(es6-iterable ValSeq)
 
 (defn vals
   "Returns a sequence of the map's values."
@@ -7210,6 +7260,8 @@ reduces them without incurring seq initialization"
            (recur (inc i) (-conj! out (aget items i)))
            (-persistent! out)))))))
 
+(es6-iterable PersistentHashSet)
+
 (deftype TransientHashSet [^:mutable transient-map]
   ITransientCollection
   (-conj! [tcoll o]
@@ -7337,6 +7389,8 @@ reduces them without incurring seq initialization"
 
 (set! (.-EMPTY PersistentTreeSet)
   (PersistentTreeSet. nil (.-EMPTY PersistentTreeMap) 0))
+
+(es6-iterable PersistentTreeSet)
 
 (defn set-from-indexed-seq [iseq]
   (let [arr (.-arr iseq)
@@ -7644,6 +7698,8 @@ reduces them without incurring seq initialization"
             @ret
             (recur (+ i step) ret)))
         ret))))
+
+(es6-iterable Range)
 
 (defn range
   "Returns a lazy seq of nums from start (inclusive) to end
@@ -8337,6 +8393,8 @@ reduces them without incurring seq initialization"
    IPrintWithWriter
    (-pr-writer [coll writer opts]
      (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
+
+(es6-iterable Eduction)
 
 (defn eduction
   "Returns a reducible/iterable/seqable application of

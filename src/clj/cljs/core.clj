@@ -1681,3 +1681,9 @@
 
 (defmacro js-str [s]
   (core/list 'js* "''+~{}" s))
+
+(defmacro es6-iterable [ty]
+  `(aset (.-prototype ~ty) cljs.core/ITER_SYMBOL
+     (fn []
+       (this-as this#
+         (cljs.core/es6-iterator this#)))))
