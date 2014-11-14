@@ -709,6 +709,22 @@
 (defn es6-iterator [coll]
   (ES6Iterator. (seq coll)))
 
+(declare es6-iterator-seq)
+
+(deftype ES6IteratorSeq [value iter]
+  ISeqable
+  (-seq [this] this)
+  ISeq
+  (-first [_] value)
+  (-rest [_]
+    (es6-iterator-seq iter)))
+
+(defn es6-iterator-seq [iter]
+  (let [v (.next iter)]
+    (if (.-done v)
+      ()
+      (ES6IteratorSeq. (.-value v) iter))))
+
 ;;;;;;;;;;;;;;;;;;; Murmur3 Helpers ;;;;;;;;;;;;;;;;
 
 (defn ^number mix-collection-hash
@@ -8221,6 +8237,9 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
 
   Range
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+
+  ES6IteratorSeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   Atom
