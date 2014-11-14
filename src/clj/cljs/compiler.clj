@@ -664,13 +664,11 @@
   [{:keys [frame exprs env]}]
   (let [temps (vec (take (count exprs) (repeatedly gensym)))
         params (:params frame)]
-    (emitln "{")
     (dotimes [i (count exprs)]
       (emitln "var " (temps i) " = " (exprs i) ";"))
     (dotimes [i (count exprs)]
       (emitln (munge (params i)) " = " (temps i) ";"))
-    (emitln "continue;")
-    (emitln "}")))
+    (emitln "continue;")))
 
 (defmethod emit* :letfn
   [{:keys [bindings expr env]}]
