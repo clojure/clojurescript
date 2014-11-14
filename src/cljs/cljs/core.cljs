@@ -717,19 +717,21 @@
 
 (declare es6-iterator-seq)
 
-(deftype ES6IteratorSeq [value iter]
+(deftype ES6IteratorSeq [value iter ^:mutable _rest]
   ISeqable
   (-seq [this] this)
   ISeq
   (-first [_] value)
   (-rest [_]
-    (es6-iterator-seq iter)))
+    (when (nil? _rest)
+      (set! _rest (es6-iterator-seq iter)))
+    _rest))
 
 (defn es6-iterator-seq [iter]
   (let [v (.next iter)]
     (if (.-done v)
       ()
-      (ES6IteratorSeq. (.-value v) iter))))
+      (ES6IteratorSeq. (.-value v) iter nil))))
 
 ;;;;;;;;;;;;;;;;;;; Murmur3 Helpers ;;;;;;;;;;;;;;;;
 
