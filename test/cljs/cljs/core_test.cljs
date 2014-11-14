@@ -975,6 +975,11 @@
   (assert (= 52 (area r)))
   (assert (= :oops (area {})))
 
+  ;; CLJS-863
+  (defmulti foo2 (fn []))
+  (defmethod foo2 :default [] :foo)
+  (assert (= :foo (foo2)))
+
   ;; remove method tests
   (assert (= 2 (count (methods bar))))
   (remove-method bar [::rect ::shape])

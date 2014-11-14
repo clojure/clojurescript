@@ -8753,6 +8753,12 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (deftype MultiFn [name dispatch-fn default-dispatch-val hierarchy
                   method-table prefer-table method-cache cached-hierarchy]
   IFn
+  (-invoke [mf]
+    (let [dispatch-val (dispatch-fn)
+          target-fn (-get-method mf dispatch-val)]
+      (when-not target-fn
+        (throw-no-method-error name dispatch-val))
+      (target-fn)))
   (-invoke [mf a]
     (let [dispatch-val (dispatch-fn a)
           target-fn (-get-method mf dispatch-val)]
