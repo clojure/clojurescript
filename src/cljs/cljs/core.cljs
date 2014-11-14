@@ -203,6 +203,12 @@
   ([type aseq]
      (reduce (fn [a x] (.push a x) a) (array) aseq)))
 
+(defn js-invoke
+  "Invoke JavaScript object method via string. Needed when the
+  string is not a valid unquoted property name."
+  [obj s & args]
+  (.apply (aget obj s) obj (into-array args)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 
 (defprotocol Fn
