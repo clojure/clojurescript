@@ -307,6 +307,9 @@
 (defmacro js-delete [obj key]
   (core/list 'js* "delete ~{}[~{}]" obj key))
 
+(defmacro js-in [key obj]
+  (core/list 'js* "~{} in ~{}" key obj))
+
 (defmacro true? [x]
   (bool-expr (core/list 'js* "~{} === true" x)))
 
