@@ -24,6 +24,6 @@
              (make-preamble {:target :nodejs
                              :preamble ["cljs/preamble1.js"]})))))
   (testing "preamble"
-    (is (= "var preamble1 = require(\"preamble1\");var preamble2 = require(\"preamble2\");\n"
+    (is (= "var preamble1 = require(\"preamble1\");\nvar preamble2 = require(\"preamble2\");\n"
            (make-preamble {:preamble ["cljs/preamble1.js"
                                       "cljs/preamble2.js"]})))))
