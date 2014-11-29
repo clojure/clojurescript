@@ -566,15 +566,15 @@
 
 (defn- compare-symbols [a b]
   (cond
-   (= a b) 0
+   (identical? (.-str a) (.-str b)) 0
    (and (not (.-ns a)) (.-ns b)) -1
    (.-ns a) (if-not (.-ns b)
               1
-              (let [nsc (compare (.-ns a) (.-ns b))]
-                (if (zero? nsc)
-                  (compare (.-name a) (.-name b))
+              (let [nsc (garray/defaultCompare (.-ns a) (.-ns b))]
+                (if (== 0 nsc)
+                  (garray/defaultCompare (.-name a) (.-name b))
                   nsc)))
-   :default (compare (.-name a) (.-name b))))
+   :default (garray/defaultCompare (.-name a) (.-name b))))
 
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
@@ -2418,6 +2418,18 @@ reduces them without incurring seq initialization"
 
 (defn hash-keyword [k]
   (int (+ (hash-symbol k) 0x9e3779b9)))
+
+(defn- compare-keywords [a b]
+  (cond
+   (identical? (.-fqn a) (.-fqn b)) 0
+   (and (not (.-ns a)) (.-ns b)) -1
+   (.-ns a) (if-not (.-ns b)
+              1
+              (let [nsc (garray/defaultCompare (.-ns a) (.-ns b))]
+                (if (== 0 nsc)
+                  (garray/defaultCompare (.-name a) (.-name b))
+                  nsc)))
+   :default (garray/defaultCompare (.-name a) (.-name b))))
 
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
@@ -8307,8 +8319,7 @@ reduces them without incurring seq initialization"
   (-compare [x y] (compare-symbols x y))
 
   Keyword
-  ; keyword happens to have the same fields as Symbol, so this just works
-  (-compare [x y] (compare-symbols x y))
+  (-compare [x y] (compare-keywords x y))
 
   Subvec
   (-compare [x y] (compare-indexed x y))
