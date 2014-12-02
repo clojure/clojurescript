@@ -60,7 +60,8 @@
            com.google.javascript.jscomp.JSError
            com.google.javascript.jscomp.CheckLevel
            com.google.javascript.jscomp.DiagnosticGroups
-           com.google.javascript.jscomp.CommandLineRunner))
+           com.google.javascript.jscomp.CommandLineRunner
+           com.google.javascript.jscomp.AnonymousFunctionNamingPolicy))
 
 (defmacro ^:private debug-prn
   [& args]
@@ -96,6 +97,15 @@
 
   (when (contains? opts :pseudo-names)
     (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
+
+  (when (contains? opts :anon-fn-naming-policy)
+    (let [policy (:anon-fn-naming-policy opts)]
+      (set! (.anonymousFunctionNaming compiler-options)
+        (case policy
+          :off AnonymousFunctionNamingPolicy/OFF
+          :unmapped AnonymousFunctionNamingPolicy/UNMAPPED
+          :mapped AnonymousFunctionNamingPolicy/MAPPED
+          (throw (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted")))))))
 
   (when (contains? opts :language-in)
     (case (:language-in opts)
