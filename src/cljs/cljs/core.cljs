@@ -8928,6 +8928,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
+  
+  INamed
+  (-name [this] (-name name))
+  (-namespace [this] (-namespace name))
 
   IHash
   (-hash [this] (goog/getUid this)))

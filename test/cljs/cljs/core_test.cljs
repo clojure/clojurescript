@@ -994,6 +994,14 @@
     ([x y] :two)
     ([x y & r] [:three r]))
   (assert (= [:three '(2)] (apply apply-multi-test [0 1 2])))
+  
+
+  ;; CLJS-469, helpful exception message on bad dispatch
+  (defmulti no-dispatch-value :test)
+  (try
+    (no-dispatch-value {:test :test})
+    (catch js/Error e
+      (assert (not= -1 (.indexOf (.-message e) "cljs.core-test/no-dispatch-value")))))
 
   ;; custom hierarchy tests
   (def my-map-hierarchy (atom (-> (make-hierarchy)
