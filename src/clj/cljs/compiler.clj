@@ -870,6 +870,7 @@
 (defn url-path [^File f]
   (.getPath (.toURL (.toURI f))))
 
+
 (defn compile-file*
   ([src dest] (compile-file* src dest nil))
   ([src dest opts]
@@ -912,7 +913,7 @@
                                 {:source-map (:source-map sm-data)}))]
                     (when (and sm-data (= (:optimizations opts) :none))
                       (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                        (emits "\n//# sourceMappingURL=" (.getName sm-file))
+                        (emits "\n//# sourceMappingURL=" (.getName sm-file) "?rel=" (System/currentTimeMillis))
                         (spit sm-file
                           (sm/encode {(url-path src) (:source-map sm-data)}
                             {:lines (+ (:gen-line sm-data) 2)

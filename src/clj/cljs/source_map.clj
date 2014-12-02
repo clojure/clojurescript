@@ -216,10 +216,12 @@
                    "file" (:file opts)
                    "sources" (into []
                                    (let [paths (keys m)
-                                         f (if (or (:output-dir opts)
+                                         f (comp
+                                            #(str % "?rel=" (System/currentTimeMillis))
+                                            (if (or (:output-dir opts)
                                                    (:source-map-path opts))
                                              #(relativize-path % opts)
-                                             #(last (string/split % #"/")))]
+                                             #(last (string/split % #"/"))))]
                                      (map f paths)))
                    "lineCount" (:lines opts)
                    "mappings" (->> (lines->segs (concat preamble-lines @lines))
