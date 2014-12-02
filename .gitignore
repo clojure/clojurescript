@@ -10,7 +10,7 @@ closure
 /coresimple.js
 /out
 /pom.xml
-.repl
+.repl*
 *.swp
 *.zip
 clojurescript_release_*
