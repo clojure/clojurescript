@@ -535,6 +535,9 @@
     (string? o)
     (m3-hash-int (hash-string o))
 
+    (instance? js/Date o)
+    (.valueOf o)
+
     (nil? o) 0
 
     :else
