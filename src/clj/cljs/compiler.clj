@@ -870,7 +870,6 @@
 (defn url-path [^File f]
   (.getPath (.toURL (.toURI f))))
 
-
 (defn compile-file*
   ([src dest] (compile-file* src dest nil))
   ([src dest opts]
