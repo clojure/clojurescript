@@ -1008,6 +1008,9 @@
         fqn (fn [n] (symbol (core/str ns-name "." n)))
         prefix (protocol-prefix p)
         methods (if (core/string? (first doc+methods)) (next doc+methods) doc+methods)
+        _ (core/doseq [[mname & arities] methods]
+            (when (some #{0} (map count arities))
+              (throw (Exception. (core/str "Invalid protocol, " psym " defines method " mname " with arity 0")))))
         expand-sig (fn [fname slot sig]
                      `(~sig
                        (if (and ~(first sig) (. ~(first sig) ~(symbol (core/str "-" slot)))) ;; Property access needed here.
