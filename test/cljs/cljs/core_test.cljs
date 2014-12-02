@@ -2448,5 +2448,9 @@
   (assert (= (test-map #inst "2013-12-19T05:00:00.000-00:00") 3))
   (assert (= (test-map #inst "2013-12-06T05:00:00.000-00:00") 6))
 
+  ;; CLJS-853
+
+  (assert (= {:foo true} (meta ^:foo (fn []))))
+
   :ok
   )
