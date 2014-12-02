@@ -622,7 +622,7 @@
            IMeta
            (~'-meta [~this-sym] ~meta-sym)
            ~@impls))
-       (new ~t ~@locals nil))))
+       (new ~t ~@locals ~(meta &form)))))
 
 (defmacro specify! [expr & impls]
   (let [x (with-meta (gensym "x") {:extend :instance})]
@@ -855,8 +855,8 @@
     (dt->et type specs fields false))
   ([type specs fields inline]
     (let [annots {:cljs.analyzer/type type
-                  :protocol-impl true
-                  :protocol-inline inline}]
+                  :cljs.analyzer/protocol-impl true
+                  :cljs.analyzer/protocol-inline inline}]
       (loop [ret [] specs specs]
         (if (seq specs)
           (let [p     (first specs)
