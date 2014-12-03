@@ -2460,5 +2460,11 @@
 
   (assert (= {:foo true} (meta ^:foo (fn []))))
 
+  ;; CLJS-807
+  (assert (= -1 -1N))
+  (assert (= 9.007199254740996E15 9007199254740995N))
+  (assert (= 1.5 1.5M))
+  (assert (= 4.9E-324 5E-324M))
+
   :ok
   )

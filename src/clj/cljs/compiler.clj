@@ -167,6 +167,8 @@
 (defmethod emit-constant Long [x] (emits "(" x ")"))
 (defmethod emit-constant Integer [x] (emits x)) ; reader puts Integers in metadata
 (defmethod emit-constant Double [x] (emits x))
+(defmethod emit-constant BigDecimal [x] (emits (.doubleValue ^BigDecimal x)))
+(defmethod emit-constant clojure.lang.BigInt [x] (emits (.doubleValue ^clojure.lang.BigInt x)))
 (defmethod emit-constant String [x]
   (emits (wrap-in-double-quotes (escape-string x))))
 (defmethod emit-constant Boolean [x] (emits (if x "true" "false")))
