@@ -385,9 +385,11 @@
            (recur env (get-in @env/*compiler* [::namespaces (-> env :ns :name) :imports sym]) confirm)
 
            :else
-           (let [full-ns (if (core-name? env sym)
-                           'cljs.core
-                           (-> env :ns :name))]
+           (let [cur-ns (-> env :ns :name)
+                 full-ns (cond
+                           (get-in @env/*compiler* [::namespaces cur-ns :defs sym]) cur-ns
+                           (core-name? env sym) 'cljs.core
+                           :else cur-ns)]
              (when confirm
                (confirm env full-ns sym))
              (merge (get-in @env/*compiler* [::namespaces full-ns :defs sym])
