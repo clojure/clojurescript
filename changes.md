@@ -1,3 +1,40 @@
+## 0.0-2411
+
+### Enhancements
+* forcing source maps to load for dynamic js reloads
+* All ISeqable types are now ES6 iterable
+* CLJS-863: Invalid arity error when calling 0-arity multimethod
+* CLJS-622: better error reporting for zero arity protocol methods
+* CLJS-506: expose more Closure minification knobs
+
+### Changes
+* CLJS-807: Emitter cannot emit BigInt or BigDecimal
+* CLJS-749: Ignore .repl-* given that CLJS version is appended by default.
+* CLJS-749: Append CLJS version to browser repl-env
+* CLJS-749: *clojurescript-version* is unbound return empty string
+* implement INamed for multi-method
+* revert CLJS-801
+* CLJS-888: Omit redundant {} around emitted recur
+* CLJS-888: Better placement of newlines in emitter
+* Join preambles with newline line to catch cases with files without newlines.
+* add js-in interop macro
+* Add nthrest
+* CLJS-510: Throw error when :output-wrapper and :optimizations :whitespace combined
+* CLJS-875: bump tools.reader dep to 0.8.10
+* CLJS-879: add `update` from Clojure 1.7
+* CLJS-857: change deftype*/defrecord* special forms to include their inline methods decls
+
+### Fixes
+* CLJS-885: relax type inference around numbers
+* fix var resolution bug pointed out by Brandon Bloom
+* CLJS-853: propagate read-time metadata on fn and reify forms at runtime
+* CLJS-716: support hashing of JavaScript dates
+* CLJS-814: clojure.string/reverse breaks surrogate pairs
+* Recursively check IEncodeClojure in js->clj
+* CLJS-873: non-higher-order calls to array-map should return PAMs
+* CLJS-881: check for duplicate keys in array-map
+* select-keys did not preserve metadata
+
 ## 0.0-2371
 
 ### Fixes
