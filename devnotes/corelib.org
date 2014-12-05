@@ -513,7 +513,7 @@ as macro
 * DONE take-last
 * DONE take-nth
 * DONE take-while
-* test
+* DONE test
 * the-ns
 * thread-bound?
 * DONE time
