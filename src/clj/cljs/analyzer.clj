@@ -1341,7 +1341,7 @@
                              ;; when functions like first won't return nil, so variadic
                              ;; numeric functions like cljs.core/< would produce a spurious
                              ;; warning without this - David
-                             (and (set? t) (set/subset? t '#{any number nil clj-nil}))))
+                             (and (set? t) (or (contains? t 'number) (contains? t 'any)))))
                        types)
              (warning :invalid-arithmetic env
                {:js-op (-> form meta :js-op)
