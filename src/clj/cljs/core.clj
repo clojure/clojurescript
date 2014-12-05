@@ -34,7 +34,7 @@
 
                             cond-> cond->> as-> some-> some->>
 
-                            if-some when-some])
+                            if-some when-some test])
   (:require clojure.walk
             clojure.set
             cljs.compiler
@@ -1667,3 +1667,15 @@
      (fn []
        (this-as this#
          (cljs.core/es6-iterator this#)))))
+
+(defmacro test
+  "Given a symbol, resolve it as a var, if a test is attached
+  to a var execute it."
+  [v]
+  (let [f (-> (dissoc &env :locals)
+            (ana/resolve-var v)
+            :test)]
+    `(let [f# ~f]
+       (if f#
+         (do (f#) :ok)
+         :no-test))))
