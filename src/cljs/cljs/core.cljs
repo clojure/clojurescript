@@ -624,9 +624,6 @@
   IMeta
   (-meta [_] _meta))
 
-(defn var [val sym meta]
-  (Var. val sym meta))
-
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
 (declare array-seq prim-seq IndexedSeq)

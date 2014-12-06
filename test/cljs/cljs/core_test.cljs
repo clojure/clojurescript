@@ -2466,5 +2466,17 @@
   (assert (= 1.5 1.5M))
   (assert (= 4.9E-324 5E-324M))
 
+  ;; vars
+
+  (defn var-test
+    "A docstring"
+    [a b]
+    (+ a b))
+
+  (def var-meta (meta #'var-test))
+
+  (assert (= (:doc var-meta) "A docstring"))
+  (assert (= (:arglists var-meta) '([a b])))
+
   :ok
   )

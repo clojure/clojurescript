@@ -413,7 +413,7 @@
 (declare analyze analyze-symbol analyze-seq)
 
 (def specials '#{if def fn* do let* loop* letfn* throw try recur new set!
-                 ns deftype* defrecord* . js* & quote case*})
+                 ns deftype* defrecord* . js* & quote case* var})
 
 (def ^:dynamic *recur-frames* nil)
 (def ^:dynamic *loop-lets* ())
@@ -501,6 +501,22 @@
       nil)))
 
 (defmulti parse (fn [op & rest] op))
+
+(defmethod parse 'var
+  [op env [_ sym :as form] _ _]
+  (let [var (resolve-var env sym)]
+    {:env env :op :var-special :form form
+     :var (analyze env sym)
+     :sym (analyze env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
+     :meta (analyze env
+             `(quote
+                {:ns ~(:ns var)
+                 :name ~(:name var)
+                 :doc ~(:doc var)
+                 :arglists ~(:arglists var)
+                 :file ~(:file var)
+                 :line ~(:line var)
+                 :column ~(:column var)}))}))
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name _]

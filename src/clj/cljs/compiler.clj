@@ -253,6 +253,11 @@
       (when-not (= :statement (:context env))
         (emit-wrap env (emits (munge info)))))))
 
+(defmethod emit* :var-special
+  [{:keys [env var sym meta] :as arg}]
+  (emit-wrap env
+    (emits "new cljs.core.Var(" var "," sym ","  meta ")")))
+
 (defmethod emit* :meta
   [{:keys [expr meta env]}]
   (emit-wrap env
