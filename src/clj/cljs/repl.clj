@@ -148,16 +148,12 @@
                              ret#))))))
 
 (defn- eval-and-print [repl-env env form]
-  (let [ret (evaluate-form repl-env
-                           (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
-                           "<cljs repl>"
-                           form
-                           (wrap-fn form))]
-    (try (prn (read-string ret))
-         (catch Exception e
-           (if (string? ret)
-             (println ret)
-             (prn nil))))))
+  (println
+    (evaluate-form repl-env
+      (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
+      "<cljs repl>"
+      form
+      (wrap-fn form))))
 
 (def default-special-fns
   (let [load-file-fn (fn [repl-env file] (load-file repl-env file))]

@@ -618,6 +618,15 @@
                      name)]
        (Symbol. ns name sym-str nil nil))))
 
+(deftype Var [val sym _meta]
+  IDeref
+  (-deref [_] val)
+  IMeta
+  (-meta [_] _meta))
+
+(defn var [val sym meta]
+  (Var. val sym meta))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
 (declare array-seq prim-seq IndexedSeq)
@@ -8257,7 +8266,12 @@ reduces them without incurring seq initialization"
   (-pr-writer [a writer opts]
     (-write writer "#<Atom: ")
     (pr-writer (.-state a) writer opts)
-    (-write writer ">")))
+    (-write writer ">"))
+
+  Var
+  (-pr-writer [a writer opts]
+    (-write writer "#'")
+    (pr-writer (.-sym a) writer opts)))
 
 ;; IComparable
 (extend-protocol IComparable

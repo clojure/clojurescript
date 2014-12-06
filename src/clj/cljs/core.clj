@@ -34,7 +34,7 @@
 
                             cond-> cond->> as-> some-> some->>
 
-                            if-some when-some test ns-interns])
+                            if-some when-some test ns-interns var])
   (:require clojure.walk
             clojure.set
             cljs.compiler
@@ -1668,6 +1668,16 @@
        (this-as this#
          (cljs.core/es6-iterator this#)))))
 
+(defmacro var [sym]
+  (core/let [{sym-ns :ns sym-name :name :as info} (ana/resolve-var &env sym)]
+    `(cljs.core/Var. ~sym
+       (symbol ~(name sym-ns) ~(name sym-name))
+       {:ns (symbol ~(name sym-ns))
+        :name (symbol ~(name sym-name))
+        :file ~(:file info)
+        :line ~(:line info)
+        :column ~(:column info)})))
+
 (defmacro ns-interns
   "Returns a map of the intern mappings for the namespace."
   [[quote ns]]
@@ -1675,5 +1685,6 @@
     "Argument to ns-interns must be a quoted symbol")
   `(into {}
      [~@(map
-          (fn [[sym _]] `[(symbol ~(name sym)) ~sym])
+          (fn [[sym _]] `[(symbol ~(name sym)) (var ~sym)])
           (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs]))]))
+
