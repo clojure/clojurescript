@@ -31,6 +31,8 @@
 (def ^:dynamic *cljs-macros-is-classpath* true)
 (def ^:dynamic *cljs-dep-set* (with-meta #{} {:dep-path []}))
 (def ^:dynamic *analyze-deps* true)
+(def ^:dynamic *load-tests* true)
+
 (def -cljs-macros-loaded (atom false))
 
 (def ^:dynamic *cljs-warnings*
@@ -624,11 +626,6 @@
                   (update-in env [:ns :excludes] conj sym))
                 env)
           name (:name (resolve-var (dissoc env :locals) sym))
-          var-expr (assoc (analyze (-> env (dissoc :locals)
-                                       (assoc :context :expr)
-                                       (assoc :def-var true))
-                                   sym)
-                     :op :var)
           init-expr (when (contains? args :init)
                       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
                         (merge
@@ -682,7 +679,13 @@
           (when (and fn-var? tag)
             {:ret-tag tag})))
       (merge {:env env :op :def :form form
-              :name name :var var-expr :doc doc :init init-expr}
+              :name name
+              :var (assoc (analyze (-> env (dissoc :locals)
+                                     (assoc :context :expr)
+                                     (assoc :def-var true))
+                            sym)
+                     :op :var)
+              :doc doc :init init-expr}
         (when tag
           (if fn-var?
             {:ret-tag tag}
@@ -1416,7 +1419,10 @@
             (if-not (contains? (meta sym) ::analyzed)
               (resolve-existing-var env sym)
               (resolve-var env sym)))
-          (assoc ret :op :var :info (resolve-var env sym)))))))
+          (let [ret (assoc ret :op :var :info (resolve-var env sym))]
+            (if-let [test (-> sym meta :test)]
+              (assoc ret :test (analyze env test))
+              ret)))))))
 
 (defn get-expander [sym env]
   (let [mvar

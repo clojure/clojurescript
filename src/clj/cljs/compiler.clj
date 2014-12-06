@@ -431,7 +431,11 @@
       ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
       (when-not (= :expr (:context env)) (emitln ";"))
       (when export
-        (emitln "goog.exportSymbol('" (munge export) "', " mname ");")))))
+        (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))
+      (when (and ana/*load-tests* (:test var))
+        (when (= :expr (:context env))
+          (emitln ";"))
+        (emits var ".cljs$lang$test = " (:test var))))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]

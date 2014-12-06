@@ -9038,3 +9038,12 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     '#{if def fn* do let* loop* letfn* throw try
        recur new set! ns deftype* defrecord* . js* & quote}
     x))
+
+(defn test
+  "test [v] finds fn at key :test in var metadata and calls it,
+  presuming failure will throw exception"
+  [v]
+  (let [f (.-cljs$lang$test v)]
+    (if f
+      (do (f) :ok)
+      :no-test)))
