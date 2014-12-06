@@ -508,15 +508,10 @@
     {:env env :op :var-special :form form
      :var (analyze env sym)
      :sym (analyze env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
-     :meta (analyze env
-             `(quote
-                {:ns ~(:ns var)
-                 :name ~(:name var)
-                 :doc ~(:doc var)
-                 :arglists ~(:arglists var)
-                 :file ~(:file var)
-                 :line ~(:line var)
-                 :column ~(:column var)}))}))
+     :meta (let [ks [:ns :name :doc :arglists :file :line :column]
+                 m (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
+                     :test `(.-cljs$lang$test ~sym))]
+            (analyze env m))}))
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name _]

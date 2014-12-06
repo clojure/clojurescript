@@ -2478,5 +2478,13 @@
   (assert (= (:doc var-meta) "A docstring"))
   (assert (= (:arglists var-meta) '([a b])))
 
+  (defn var-test-test
+    "A docstring"
+    {:test (fn [] :cool)}
+    [a b]
+    (+ a b))
+
+  (assert (= ((:test (meta #'var-test-test))) :cool))
+
   :ok
   )
