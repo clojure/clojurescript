@@ -662,20 +662,22 @@
              :info (-> protocol-symbol meta :protocol-info)
              :impls #{}})
           (when fn-var?
-            {:fn-var true
-             ;; protocol implementation context
-             :protocol-impl (:protocol-impl init-expr)
-             ;; inline protocol implementation context
-             :protocol-inline (:protocol-inline init-expr)
-             :variadic (:variadic init-expr)
-             :max-fixed-arity (:max-fixed-arity init-expr)
-             :method-params (map #(vec (map :name (:params %))) (:methods init-expr))
-             :methods (map (fn [method]
-                             (let [tag (infer-tag env (assoc method :op :method))]
-                               (cond-> (select-keys method
-                                         [:max-fixed-arity :variadic])
-                                 tag (assoc :tag tag))))
-                        (:methods init-expr))})
+            (let [params (map #(vec (map :name (:params %))) (:methods init-expr))]
+              {:fn-var true
+               ;; protocol implementation context
+               :protocol-impl (:protocol-impl init-expr)
+               ;; inline protocol implementation context
+               :protocol-inline (:protocol-inline init-expr)
+               :variadic (:variadic init-expr)
+               :max-fixed-arity (:max-fixed-arity init-expr)
+               :method-params params
+               :arglists params
+               :methods (map (fn [method]
+                               (let [tag (infer-tag env (assoc method :op :method))]
+                                 (cond-> (select-keys method
+                                           [:max-fixed-arity :variadic])
+                                   tag (assoc :tag tag))))
+                          (:methods init-expr))}) )
           (when (and fn-var? tag)
             {:ret-tag tag})))
       (merge {:env env :op :def :form form

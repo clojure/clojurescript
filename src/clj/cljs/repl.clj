@@ -229,3 +229,8 @@
              (do (eval-and-print repl-env env form)
                  (recur)))))
         (-tear-down repl-env)))))
+
+(defmacro doc
+  "Prints documentation for a var or special form given its name"
+  [sym]
+  `(cljs.repl/print-doc (meta (var ~sym))))

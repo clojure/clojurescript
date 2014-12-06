@@ -1675,6 +1675,8 @@
        (merge
          {:ns (symbol ~(name sym-ns))
           :name (symbol ~(name sym-name))
+          :doc ~(:doc info)
+          :arglists (quote ~(:arglists info))
           :file ~(:file info)
           :line ~(:line info)
           :column ~(:column info)}
