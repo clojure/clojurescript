@@ -1672,11 +1672,14 @@
   (core/let [{sym-ns :ns sym-name :name :as info} (ana/resolve-var &env sym)]
     `(cljs.core/Var. ~sym
        (symbol ~(name sym-ns) ~(name sym-name))
-       {:ns (symbol ~(name sym-ns))
-        :name (symbol ~(name sym-name))
-        :file ~(:file info)
-        :line ~(:line info)
-        :column ~(:column info)})))
+       (merge
+         {:ns (symbol ~(name sym-ns))
+          :name (symbol ~(name sym-name))
+          :file ~(:file info)
+          :line ~(:line info)
+          :column ~(:column info)}
+         ~(when (:test info)
+            `{:test (.-cljs$lang$test ~sym)})))))
 
 (defmacro ns-interns
   "Returns a map of the intern mappings for the namespace."
