@@ -622,7 +622,8 @@
         tag (-> sym meta :tag)
         protocol (-> sym meta :protocol)
         dynamic (-> sym meta :dynamic)
-        ns-name (-> env :ns :name)]
+        ns-name (-> env :ns :name)
+        locals (:locals env)]
     (when (namespace sym)
       (throw (error env "Can't def ns-qualified name")))
     (when-let [doc (:doc args)]
@@ -694,6 +695,8 @@
       (merge {:env env :op :def :form form
               :name name
               :var (assoc (analyze (-> env (dissoc :locals)
+                                     ;; if there's :test var metadata will need locals
+                                     (assoc :test-locals locals)
                                      (assoc :context :expr)
                                      (assoc :def-var true))
                             sym)
@@ -1434,7 +1437,7 @@
               (resolve-var env sym)))
           (let [ret (assoc ret :op :var :info (resolve-var env sym))]
             (if-let [test (-> sym meta :test)]
-              (assoc ret :test (analyze env test))
+              (assoc ret :test (analyze (assoc env :locals (:test-locals env)) test))
               ret)))))))
 
 (defn get-expander [sym env]

@@ -2486,5 +2486,14 @@
 
   (assert (= ((:test (meta #'var-test-test))) :cool))
 
+  (defn var-test-self-call
+    "A docstring"
+    {:test (fn bar ([] (bar 1)) ([n] n))}
+    [a b]
+    (+ a b))
+
+  (assert (= (.cljs$lang$test var-test-self-call) 1))
+  (assert (= (.cljs$lang$test var-test-self-call 2) 2))
+
   :ok
   )
