@@ -289,6 +289,9 @@
 (defmacro js-in [key obj]
   (core/list 'js* "~{} in ~{}" key obj))
 
+(defmacro js-debugger []
+  (core/list 'js* "debugger;"))
+
 (defmacro true? [x]
   (bool-expr (core/list 'js* "~{} === true" x)))
 
