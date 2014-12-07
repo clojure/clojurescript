@@ -13,24 +13,11 @@
 ;; =============================================================================
 ;; Utilities for assertions
 
-(defn get-possibly-unbound-var
-  "Like var-get but returns nil if the var is unbound."
-  [v]
-  (try
-    (var-get v)
-    (catch IllegalStateException e
-      nil)))
-
 (defn function?
   "Returns true if argument is a function or a symbol that resolves to
   a function (not a macro)."
-  [x]
-  (if (symbol? x)
-    (when-let [v (resolve x)]
-      (when-let [value (get-possibly-unbound-var v)]
-        (and (fn? value)
-             (not (:macro (meta v))))))
-    (fn? x)))
+  [menv x]
+  (:fn-var (ana/resolve-var menv x)))
 
 (defn assert-predicate
   "Returns generic assertion code for any functional predicate.  The
@@ -74,23 +61,23 @@
 ;; symbol in the test expression.
 
 (defmulti assert-expr 
-  (fn [env msg form]
+  (fn [env menv msg form]
     (cond
       (nil? form) :always-fail
       (seq? form) (first form)
       :else :default)))
 
-(defmethod assert-expr :always-fail [env msg form]
+(defmethod assert-expr :always-fail [env menv msg form]
   ;; nil test: always fail
   `(cljs.test/do-report ~env {:type :fail, :message ~msg}))
 
-(defmethod assert-expr :default [env msg form]
+(defmethod assert-expr :default [env menv msg form]
   (if (and (sequential? form)
-           (function? (first form)))
+           (function? menv (first form)))
     (assert-predicate env msg form)
     (assert-any env msg form)))
 
-(defmethod assert-expr 'instance? [env msg form]
+(defmethod assert-expr 'instance? [env menv msg form]
   ;; Test if x is an instance of y.
   `(let [klass# ~(nth form 1)
          object# ~(nth form 2)]
@@ -104,7 +91,7 @@
             :expected '~form, :actual (class object#)}))
        result#)))
 
-(defmethod assert-expr 'thrown? [env msg form]
+(defmethod assert-expr 'thrown? [env menv msg form]
   ;; (is (thrown? c expr))
   ;; Asserts that evaluating expr throws an exception of class c.
   ;; Returns the exception thrown.
@@ -121,7 +108,7 @@
             :expected '~form, :actual e#})
          e#))))
 
-(defmethod assert-expr 'thrown-with-msg? [env msg form]
+(defmethod assert-expr 'thrown-with-msg? [env menv msg form]
   ;; (is (thrown-with-msg? c re expr))
   ;; Asserts that evaluating expr throws an exception of class c.
   ;; Also asserts that the message string of the exception matches
@@ -148,7 +135,7 @@
   You don't call this."
   [env msg form]
   `(try
-     ~(cljs.test/assert-expr env msg form)
+     ~(cljs.test/assert-expr env &env msg form)
      (catch :default t#
        (cljs.test/do-report ~env
          {:type :error, :message ~msg,
