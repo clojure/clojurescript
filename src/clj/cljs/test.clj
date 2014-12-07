@@ -29,29 +29,33 @@
   (let [args (rest form)
         pred (first form)]
     `(let [values# (list ~@args)
-           result# (apply ~pred values#)]
-       (if result#
-         (cljs.test/do-report ~env
-           {:type :pass, :message ~msg,
-            :expected '~form, :actual (cons ~pred values#)})
-         (cljs.test/do-report ~env
-           {:type :fail, :message ~msg,
-            :expected '~form, :actual (list '~'not (cons '~pred values#))}))
-       result#)))
+           result# (apply ~pred values#)
+           env'# (if result#
+                   (cljs.test/do-report ~env
+                     {:type :pass, :message ~msg,
+                      :expected '~form, :actual (cons ~pred values#)})
+                   (cljs.test/do-report ~env
+                     {:type :fail, :message ~msg,
+                      :expected '~form, :actual (list '~'not (cons '~pred values#))}))]
+       (if (:return env'#)
+         env'#
+         result#))))
 
 (defn assert-any
   "Returns generic assertion code for any test, including macros, Java
   method calls, or isolated symbols."
   [env msg form]
-  `(let [value# ~form]
-     (if value#
-       (cljs.test/do-report ~env
-         {:type :pass, :message ~msg,
-          :expected '~form, :actual value#})
-       (cljs.test/do-report ~env
-         {:type :fail, :message ~msg,
-          :expected '~form, :actual value#}))
-     value#))
+  `(let [value# ~form
+         env'# (if value#
+                 (cljs.test/do-report ~env
+                   {:type :pass, :message ~msg,
+                    :expected '~form, :actual value#})
+                 (cljs.test/do-report ~env
+                   {:type :fail, :message ~msg,
+                    :expected '~form, :actual value#}))]
+     (if (:return env'#)
+       env'#
+       value#)))
 
 ;; =============================================================================
 ;; Assertion Methods
@@ -81,15 +85,17 @@
   ;; Test if x is an instance of y.
   `(let [klass# ~(nth form 1)
          object# ~(nth form 2)]
-     (let [result# (instance? klass# object#)]
-       (if result#
-         (cljs.test/do-report ~env
-           {:type :pass, :message ~msg,
-            :expected '~form, :actual (class object#)})
-         (cljs.test/do-report ~env
-           {:type :fail, :message ~msg,
-            :expected '~form, :actual (class object#)}))
-       result#)))
+     (let [result# (instance? klass# object#)
+           env'# (if result#
+                   (cljs.test/do-report ~env
+                     {:type :pass, :message ~msg,
+                      :expected '~form, :actual (class object#)})
+                   (cljs.test/do-report ~env
+                     {:type :fail, :message ~msg,
+                      :expected '~form, :actual (class object#)}))]
+       (if (:return env'#)
+         env'#
+         result#))))
 
 (defmethod assert-expr 'thrown? [env menv msg form]
   ;; (is (thrown? c expr))
@@ -105,8 +111,7 @@
        (catch ~klass e#
          (cljs.test/do-report ~env
            {:type :pass, :message ~msg,
-            :expected '~form, :actual e#})
-         e#))))
+            :expected '~form, :actual e#})))))
 
 (defmethod assert-expr 'thrown-with-msg? [env menv msg form]
   ;; (is (thrown-with-msg? c re expr))
@@ -120,15 +125,17 @@
        ~@body
        (cljs.test/do-report {:type :fail, :message ~msg, :expected '~form, :actual nil})
        (catch ~klass e#
-         (let [m# (.getMessage e#)]
-           (if (re-find ~re m#)
-             (cljs.test/do-report ~env
-               {:type :pass, :message ~msg,
-                :expected '~form, :actual e#})
-             (cljs.test/do-report ~env
-               {:type :fail, :message ~msg,
-                :expected '~form, :actual e#})))
-         e#))))
+         (let [m# (.getMessage e#)
+               env'# (if (re-find ~re m#)
+                       (cljs.test/do-report ~env
+                         {:type :pass, :message ~msg,
+                          :expected '~form, :actual e#})
+                       (cljs.test/do-report ~env
+                         {:type :fail, :message ~msg,
+                          :expected '~form, :actual e#}))]
+           (if (:return env'#)
+             env'#
+             e#))))))
 
 (defmacro try-expr
   "Used by the 'is' macro to catch unexpected exceptions.
@@ -160,7 +167,9 @@
   re-find) the regular expression re."
   ([form] `(cljs.test/is ~form nil))
   ([form msg]
-   `(fn [env#] (cljs.test/try-expr env# ~msg ~form))))
+   (if (contains? (:locals &env) 'cljs$lang$test$body)
+     `(fn [env#] (cljs.test/try-expr env# ~msg ~form))
+     `(cljs.test/try-expr (cljs.test/empty-env) ~msg ~form))))
 
 (defmacro testing
   "Adds a new string to the list of testing contexts.  May be nested,
@@ -192,22 +201,22 @@
                `(fn self#
                   ([] (self# (cljs.test/empty-env)))
                   ([env#]
-                   (let [ret# (reduce #(%2 %1) env# [~@body])]
+                   (let [~'cljs$lang$test$body nil
+                         ret# (reduce #(%2 %1) env# [~@body])]
                      (when cljs.test/*return*
                        ret#)))))
          (fn
            ([] (~name (cljs.test/empty-env)))
            ([env#]
-            (binding [cljs.test/*env* env#]
-              (cljs.test/test-var env# (.-cljs$lang$var ~name))))))
+            (cljs.test/test-var env# (.-cljs$lang$var ~name)))))
        (set! (.-cljs$lang$var ~name) (var ~name)))))
 
 (defmacro test-all-vars
   "Calls test-vars on every var interned in the namespace, with fixtures."
   ([ns]
-   `(cljs.test/test-vars (vals (ns-interns ns))))
+   `(cljs.test/test-vars (vals (ns-interns ~ns))))
   ([env ns]
-   `(cljs.test/test-vars ~env (vals (ns-interns ns)))))
+   `(cljs.test/test-vars ~env (vals (ns-interns ~ns)))))
 
 (defmacro test-ns
   "If the namespace defines a function named test-ns-hook, calls that.

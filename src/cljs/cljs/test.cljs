@@ -339,9 +339,6 @@
     :testing-contexts ()
     :reporter reporter}))
 
-(def ^:dynamic *return* false)
-(def ^:dynamic *env* (empty-env))
-
 ;; =============================================================================
 ;; Low-level functions
 
@@ -357,15 +354,15 @@
                (update-in [:testing-vars] conj v)
                (update-in [:report-counters :test] inc))]
      (try
-       (let [ret (t env)]
-         (when *return* ret))
+       (let [env' (t env)]
+         (when (:return env') env'))
        (catch :default e
-         (let [ret (do-report env
-                     {:type :error
-                      :message "Uncaught exception, not in assertion."
-                      :expected nil
-                      :actual e})]
-           (when *return* ret)))))))
+         (let [env' (do-report env
+                      {:type :error
+                       :message "Uncaught exception, not in assertion."
+                       :expected nil
+                       :actual e})]
+           (when (:return env') env')))))))
 
 (defn- default-fixture
   "The default, empty, fixture function.  Just calls its argument."
@@ -389,19 +386,22 @@
   appropriate fixtures applied."
   ([vars] (test-vars (empty-env) vars))
   ([env vars]
-   (reduce
-     (fn [env [ns vars]]
-       (let [once-fixture-fn (join-fixtures (:once-fixtures env))
-             each-fixture-fn (join-fixtures (:each-fixtures env))]
-         (once-fixture-fn
-           (fn []
-             (reduce
-               (fn [env v]
-                 (if (:test (meta v))
-                   (each-fixture-fn (fn [] (test-var env v)))
-                   env))
-               env vars)))))
-     env (group-by (comp :ns meta) vars))))
+   (let [return (:return env)
+         env' (reduce
+                (fn [env [ns vars]]
+                  (let [once-fixture-fn (join-fixtures (:once-fixtures env))
+                        each-fixture-fn (join-fixtures (:each-fixtures env))]
+                    (once-fixture-fn
+                      (fn []
+                        (reduce
+                          (fn [env v]
+                            (println "WTF" env v)
+                            (if (:test (meta v))
+                              (each-fixture-fn (fn [] (test-var env v)))
+                              env))
+                          env vars)))))
+                (assoc env :return true) (group-by (comp :ns meta) vars))]
+     (when return env'))))
 
 ;; =============================================================================
 ;; Running Tests, high level functions
