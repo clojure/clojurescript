@@ -167,7 +167,7 @@
   but must occur inside a test function (deftest)."
   [env string & body]
   `(fn [env#]
-     (reduce #(%1 %2)
+     (reduce #(%2 %1)
        (update-in env# [:testing-contexts] conj ~string)
        [~@body])))
 
@@ -192,7 +192,7 @@
                `(fn self#
                   ([] (self# (cljs.test/empty-env)))
                   ([env#]
-                   (let [ret# (reduce #(%1 %2) env# [~@body])]
+                   (let [ret# (reduce #(%2 %1) env# [~@body])]
                      (when cljs.test/*return*
                        ret#)))))
          (fn

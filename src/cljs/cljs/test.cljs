@@ -315,9 +315,21 @@
 (defn default-reporter []
   (DefaultReporter.))
 
+(defn file-and-line
+  [exception depth]
+  (if-let [stack (.-stack exception)]
+    ;; TODO: flesh out
+    {:file nil :line nil}
+    {:file (.-fileName exception)
+     :line (.-lineNumber exception)}))
+
 (defn do-report [env m]
   {:post [(map? %)]}
-  (-do-report (:reporter env) env m))
+  (let [m (case (:type m)
+            :fail (merge (file-and-line (js/Error.) 1) m)
+            :error (merge (file-and-line (:actual m) 0) m)
+            m)]
+   (-do-report (:reporter env) env m)))
 
 (defn empty-env
   ([] (empty-env (default-reporter)))
@@ -339,20 +351,21 @@
   ([v]
    (test-var (empty-env) v))
   ([env v]
+   {:pre [(map? env) (instance? Var v)]}
    (let [t (:test (meta v))
          env (-> env
                (update-in [:testing-vars] conj v)
                (update-in [:report-counters :test] inc))]
      (try
-       (t env)
+       (let [ret (t env)]
+         (when *return* ret))
        (catch :default e
          (let [ret (do-report env
                      {:type :error
                       :message "Uncaught exception, not in assertion."
                       :expected nil
                       :actual e})]
-           (when *return*
-             ret)))))))
+           (when *return* ret)))))))
 
 (defn- default-fixture
   "The default, empty, fixture function.  Just calls its argument."
