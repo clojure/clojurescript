@@ -61,7 +61,7 @@
   [seg source-map]
   (let [[gcol source line col name] seg]
    {:gcol   gcol
-    :source (aget source-map "sources" source)
+    :source (aget (.split (aget source-map "sources" source) "?") 0)
     :line   line
     :col    col
     :name   (when-let [name (-> seg meta :name)]
@@ -102,9 +102,10 @@
                       (sorted-map))))
             (sorted-map)))))
 
-(defn decode
+(defn decode-reverse
   "Convert a v3 source map JSON object into a nested sorted map 
-   organized as file, line, and column."
+   organized as file, line, and column that maps ClojureScript
+   source locations to the generated JavaScript."
   ([source-map]
      (decode (aget source-map "mappings") source-map))
   ([mappings source-map]
