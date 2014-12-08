@@ -203,7 +203,7 @@
                   ([env#]
                    (let [~'cljs$lang$test$body nil
                          ret# (reduce #(%2 %1) env# [~@body])]
-                     (when cljs.test/*return*
+                     (when (:return env#)
                        ret#)))))
          (fn
            ([] (~name (cljs.test/empty-env)))

@@ -395,7 +395,6 @@
                       (fn []
                         (reduce
                           (fn [env v]
-                            (println "WTF" env v)
                             (if (:test (meta v))
                               (each-fixture-fn (fn [] (test-var env v)))
                               env))
