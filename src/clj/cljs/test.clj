@@ -226,14 +226,13 @@
   Internally binds *report-counters* to a ref initialized to
   *initial-report-counters*.  Returns the final, dereferenced state of
   *report-counters*."
-  [[quote ns]]
+  [[quote ns :as form]]
   (assert (and (= quote 'quote) (symbol? ns)) "Argument to test-ns must be a quoted symbol")
-  `(let [env# (cljs.test/empty-env)]
-     (-> env#
-       (cljs.test/do-report env# {:type :begin-test-ns, :ns ~'~ns})
-       ;; If the namespace has a test-ns-hook function, call that:
-       ~(if-let [v (get-in @env/*compiler* [::ana/namespaces ns :defs 'test-ns-hook])]
-          `(~(symbol (name ns) "test-ns-hook"))
-          ;; Otherwise, just test every var in the namespace.
-          `(cljs.test/test-all-vars env# ns-obj))
-       (cljs.test/do-report env# {:type :end-test-ns, :ns ~'~ns}))))
+  `(-> (assoc (cljs.test/empty-env) :return true)
+     (cljs.test/do-report {:type :begin-test-ns, :ns ~form})
+     ;; If the namespace has a test-ns-hook function, call that:
+     ~(if-let [v (get-in @env/*compiler* [::ana/namespaces ns :defs 'test-ns-hook])]
+        `(~(symbol (name ns) "test-ns-hook"))
+        ;; Otherwise, just test every var in the namespace.
+        `(cljs.test/test-all-vars ~form))
+     (cljs.test/do-report {:type :end-test-ns, :ns ~form})))

@@ -303,9 +303,9 @@
   env)
 
 ;; Ignore these message types:
-(defmethod report :end-test-ns [env m])
-(defmethod report :begin-test-var [env m])
-(defmethod report :end-test-var [env m])
+(defmethod report :end-test-ns [env m] env)
+(defmethod report :begin-test-var [env m] env)
+(defmethod report :end-test-var [env m] env)
 
 (deftype DefaultReporter []
   ITestReporter
