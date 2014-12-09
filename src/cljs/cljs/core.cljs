@@ -2135,7 +2135,7 @@ reduces them without incurring seq initialization"
   ([] "")
   ([x] (if (nil? x)
          ""
-         (cljs.core/js-str x)))
+         (gstring/buildString x)))
   ([x & ys]
     (loop [sb (StringBuffer. (str x)) more ys]
       (if more
