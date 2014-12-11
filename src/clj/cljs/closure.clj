@@ -969,12 +969,16 @@ should contain the source for the given namespace name."
                    *assert* (not= (:elide-asserts opts) true)
                    ana/*load-tests* (not= (:load-tests opts) false)
                    ana/*cljs-warnings*
-                   (let [enabled? (true? (opts :warnings true))]
-                     (merge ana/*cljs-warnings*
-                            {:unprovided enabled?
-                             :undeclared-var enabled?
-                             :undeclared-ns enabled?
-                             :undeclared-ns-form enabled?}))]
+                   (let [warnings (opts :warnings true)]
+                     (merge
+                       ana/*cljs-warnings*
+                       (if (or (true? warnings)
+                               (false? warnings))
+                         (zipmap
+                           [:unprovided :undeclared-var
+                            :undeclared-ns :undeclared-ns-form]
+                           (repeat warnings))
+                         warnings)))]
            (let [compiled (-compile source all-opts)
 
                  ; the constants_table.js file is not used directly here, is picked up by
