@@ -447,6 +447,12 @@
     (assert (= {:a 1} (meta a)))
     (alter-meta! a assoc :b 2)
     (assert (= {:a 1 :b 2} (meta a))))
+  (let [v (volatile! 1)]
+    (assert (volatile? v))
+    (assert (not (volatile? (atom 1))))
+    (assert (= 2 (vreset! v 2)))
+    (assert (= 3 (vswap! v inc)))
+    (assert (= 3 @v)))
   (assert (nil? (empty nil)))
   (let [e-lazy-seq (empty (with-meta (lazy-seq (cons :a nil)) {:b :c}))]
     (assert (seq? e-lazy-seq))

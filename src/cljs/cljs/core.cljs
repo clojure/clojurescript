@@ -402,6 +402,9 @@
 (defprotocol ISwap
   (-swap! [o f] [o f a] [o f a b] [o f a b xs]))
 
+(defprotocol IVolatile
+  (-vreset! [o new-value]))
+
 (defprotocol IIterable
   (-iterator [coll]))
 
@@ -3496,6 +3499,28 @@ reduces them without incurring seq initialization"
   "Gets the validator-fn for a var/ref/agent/atom."
   [iref]
   (.-validator iref))
+
+(deftype Volatile [^:mutable state]
+  IVolatile
+  (-vreset! [_ new-state]
+    (set! state new-state))
+
+  IDeref
+  (-deref [_] state))
+
+(defn volatile!
+  "Creates and returns a Volatile with an initial value of val."
+  [val]
+  (Volatile. val))
+
+(defn volatile?
+  "Returns true if x is a volatile."
+  [x] (instance? Volatile x))
+
+(defn vreset!
+  "Sets the value of volatile to newval without regard for the
+   current value. Returns newval."
+  [vol newval]  (-vreset! vol newval))
 
 (defn keep-indexed
   "Returns a lazy sequence of the non-nil results of (f index item). Note,
@@ -8262,6 +8287,12 @@ reduces them without incurring seq initialization"
   Atom
   (-pr-writer [a writer opts]
     (-write writer "#<Atom: ")
+    (pr-writer (.-state a) writer opts)
+    (-write writer ">"))
+
+  Volatile
+  (-pr-writer [a writer opts]
+    (-write writer "#<Volatile: ")
     (pr-writer (.-state a) writer opts)
     (-write writer ">"))
 

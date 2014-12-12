@@ -34,7 +34,7 @@
 
                             cond-> cond->> as-> some-> some->>
 
-                            if-some when-some test ns-interns var])
+                            if-some when-some test ns-interns var vswap!])
   (:require clojure.walk
             clojure.set
             cljs.compiler
@@ -1681,3 +1681,9 @@
           (fn [[sym _]] `[(symbol ~(name sym)) (var ~sym)])
           (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs]))]))
 
+(defmacro vswap!
+  "Non-atomically swaps the value of the volatile as if:
+   (apply f current-value-of-vol args). Returns the value that
+   was swapped in."
+  [vol f & args]
+  `(-vreset! ~vol (~f (-deref ~vol) ~@args)))
