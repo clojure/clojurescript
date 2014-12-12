@@ -3529,12 +3529,12 @@ reduces them without incurring seq initialization"
   provided."
   ([f]
    (fn [rf]
-     (let [ia (atom -1)]
+     (let [ia (volatile! -1)]
        (fn
          ([] (rf))
          ([result] (rf result))
          ([result input]
-            (let [i (swap! ia inc)
+            (let [i (vswap! ia inc)
                   v (f i input)]
               (if (nil? v)
                 result
@@ -3689,13 +3689,13 @@ reduces them without incurring seq initialization"
   no collection is provided."
   ([n]
      (fn [rf]
-       (let [na (atom n)]
+       (let [na (volatile! n)]
          (fn
            ([] (rf))
            ([result] (rf result))
            ([result input]
               (let [n @na
-                    nn (swap! na dec)
+                    nn (vswap! na dec)
                     result (if (pos? n)
                              (rf result input)
                              result)]
@@ -3713,13 +3713,13 @@ reduces them without incurring seq initialization"
   Returns a stateful transducer when no collection is provided."
   ([n]
      (fn [rf]
-       (let [na (atom n)]
+       (let [na (volatile! n)]
          (fn
            ([] (rf))
            ([result] (rf result))
            ([result input]
               (let [n @na]
-                (swap! na dec)
+                (vswap! na dec)
                 (if (pos? n)
                   result
                   (rf result input))))))))
@@ -3751,7 +3751,7 @@ reduces them without incurring seq initialization"
   stateful transducer when no collection is provided."
   ([pred]
      (fn [rf]
-       (let [da (atom true)]
+       (let [da (volatile! true)]
          (fn
            ([] (rf))
            ([result] (rf result))
@@ -3760,7 +3760,7 @@ reduces them without incurring seq initialization"
                 (if (and drop? (pred input))
                   result
                   (do
-                    (reset! da nil)
+                    (vreset! da nil)
                     (rf result input)))))))))
   ([pred coll]
      (let [step (fn [pred coll]
@@ -7776,12 +7776,12 @@ reduces them without incurring seq initialization"
   transducer when no collection is provided."
   ([n]
      (fn [rf]
-       (let [ia (atom -1)]
+       (let [ia (volatile! -1)]
          (fn
            ([] (rf))
            ([result] (rf result))
            ([result input]
-              (let [i (swap! ia inc)]
+              (let [i (vswap! ia inc)]
                 (if (zero? (rem i n))
                   (rf result input)
                   result)))))))
@@ -7802,7 +7802,7 @@ reduces them without incurring seq initialization"
   ([f]
      (fn [rf]
        (let [a (array-list)
-             pa (atom ::none)]
+             pa (volatile! ::none)]
          (fn
            ([] (rf))
            ([result]
@@ -7816,7 +7816,7 @@ reduces them without incurring seq initialization"
            ([result input]
               (let [pval @pa
                     val (f input)]
-                (reset! pa val)
+                (vreset! pa val)
                 (if (or (keyword-identical? pval ::none)
                         (= val pval))
                   (do
@@ -8436,13 +8436,13 @@ reduces them without incurring seq initialization"
   Returns a transducer when no collection is provided."
   ([]
    (fn [rf]
-     (let [pa (atom ::none)]
+     (let [pa (volatile! ::none)]
        (fn
          ([] (rf))
          ([result] (rf result))
          ([result input]
             (let [prior @pa]
-              (reset! pa input)
+              (vreset! pa input)
               (if (= prior input)
                 result
                 (rf result input))))))))
