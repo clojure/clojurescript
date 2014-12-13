@@ -228,12 +228,6 @@
    [clojure.template :as temp]))
 
 ;; =============================================================================
-;; Protocols
-
-(defprotocol ITestReporter
-  (-do-report [_ env m]))
-
-;; =============================================================================
 ;; Default Reporting
 
 (defn testing-vars-str
@@ -266,15 +260,15 @@
    'is' call 'report' to indicate results.  The argument given to
    'report' will be a map with a :type key."
      :dynamic true}
-  report (fn [_ m] (:type m)))
+  report (fn [env m] [(:reporter env) (:type m)]))
 
 (defmethod report :default [env m]
   (prn m))
 
-(defmethod report :pass [env m]
+(defmethod report [::default :pass] [env m]
   (inc-report-counter env :pass))
 
-(defmethod report :fail [env m]
+(defmethod report [::default :fail] [env m]
   (println "\nFAIL in" (testing-vars-str env m))
   (when (seq (:testing-contexts env))
     (println (testing-contexts-str env)))
@@ -283,7 +277,7 @@
   (println "  actual:" (pr-str (:actual m)))
   (inc-report-counter env :fail))
 
-(defmethod report :error [env m]
+(defmethod report [::default :error] [env m]
   (println "\nERROR in" (testing-vars-str env m))
   (when (seq (:testing-contexts env))
     (println (testing-contexts-str env)))
@@ -292,28 +286,20 @@
   (print "  actual: ") (prn (:actual m))
   (inc-report-counter env :error))
 
-(defmethod report :summary [env m]
+(defmethod report [::default :summary] [env m]
   (println "\nRan" (:test m) "tests containing"
     (+ (:pass m) (:fail m) (:error m)) "assertions.")
   (println (:fail m) "failures," (:error m) "errors.")
   env)
 
-(defmethod report :begin-test-ns [env m]
+(defmethod report [::default :begin-test-ns] [env m]
   (println "\nTesting" (name (:ns m)))
   env)
 
 ;; Ignore these message types:
-(defmethod report :end-test-ns [env m] env)
-(defmethod report :begin-test-var [env m] env)
-(defmethod report :end-test-var [env m] env)
-
-(deftype DefaultReporter []
-  ITestReporter
-  (-do-report [_ env m]
-    (report env m)))
-
-(defn default-reporter []
-  (DefaultReporter.))
+(defmethod report [::default :end-test-ns] [env m] env)
+(defmethod report [::default :begin-test-var] [env m] env)
+(defmethod report [::default :end-test-var] [env m] env)
 
 (defn file-and-line
   [exception depth]
@@ -329,10 +315,10 @@
             :fail (merge (file-and-line (js/Error.) 1) m)
             :error (merge (file-and-line (:actual m) 0) m)
             m)]
-   (-do-report (:reporter env) env m)))
+   (report env m)))
 
 (defn empty-env
-  ([] (empty-env (default-reporter)))
+  ([] (empty-env ::default))
   ([reporter]
    {:report-counters {:test 0 :pass 0 :fail 0 :error 0}
     :testing-vars ()
