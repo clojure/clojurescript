@@ -111,6 +111,18 @@
   (= a b) 1)
 (println)
 
+(println ";;; keyword compare")
+(let [seed ["amelia" "olivia" "jessica" "emily" "lily" "ava" "isla" "sophie" "mia" "isabella" "evie" "poppy" "ruby" "grace" "sophia" "chloe" "freya" "isabelle" "ella" "charlotte" "scarlett" "daisy" "lola" "holly" "eva" "lucy" "millie" "phoebe" "layla" "maisie" "sienna" "alice" "florence" "lilly" "ellie" "erin" "elizabeth" "imogen" "summer" "molly" "hannah" "sofia" "abigail" "jasmine" "matilda" "megan" "rosie" "lexi" "lacey" "emma" "amelie" "maya" "gracie" "emilia" "georgia" "hollie" "evelyn" "eliza" "amber" "eleanor" "bella" "amy" "brooke" "leah" "esme" "harriet" "anna" "katie" "zara" "willow" "elsie" "annabelle" "bethany" "faith" "madison" "isabel" "rose" "julia" "martha" "maryam" "paige" "heidi" "maddison" "niamh" "skye" "aisha" "mollie" "ivy" "francesca" "darcey" "maria" "zoe" "keira" "sarah" "tilly" "isobel" "violet" "lydia" "sara" "caitlin"]]
+  (simple-benchmark
+    [arr (into-array (repeatedly 10000 #(keyword (rand-nth seed))))]
+    (.sort arr compare)
+    100)
+  (simple-benchmark
+    [arr (into-array (repeatedly 10000 #(keyword (rand-nth seed) (rand-nth seed))))]
+    (.sort arr compare)
+    100))
+(println)
+
 (println ";;; reduce lazy-seqs, vectors, ranges")
 (simple-benchmark [coll (take 100000 (iterate inc 0))] (reduce + 0 coll) 1)
 (simple-benchmark [coll (range 1000000)] (reduce + 0 coll) 1)
