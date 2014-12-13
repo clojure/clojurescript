@@ -220,6 +220,7 @@
   Defaults to current namespace if none given.  Returns a map
   summarizing test results."
   ([] `(run-tests (cljs.test/empty-env) '~ana/*cljs-ns*))
+  ([env] `(run-tests ~env '~ana/*cljs-ns*))
   ([env & namespaces]
    (assert (every?
              (fn [[quote ns]] (and (= quote 'quote) (symbol? ns)))

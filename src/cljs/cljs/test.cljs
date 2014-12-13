@@ -224,8 +224,8 @@
    For additional event types, see the examples in the code.
 "}
   cljs.test
-  (:require-macros
-   [clojure.template :as temp]))
+  (:require-macros [clojure.template :as temp])
+  (:require [clojure.string :as string]))
 
 ;; =============================================================================
 ;; Default Reporting
@@ -301,19 +301,40 @@
 (defmethod report [::default :begin-test-var] [env m] env)
 (defmethod report [::default :end-test-var] [env m] env)
 
-(defn file-and-line
-  [exception depth]
-  (if-let [stack (.-stack exception)]
-    ;; TODO: flesh out
-    {:file nil :line nil}
-    {:file (.-fileName exception)
-     :line (.-lineNumber exception)}))
+(defn js-line-and-column [stack-element]
+  (let [parts (.split stack-element ":")
+        cnt   (count parts)]
+    (println parts)
+    [(nth parts (- cnt 2)) (nth parts (dec cnt))]))
+
+(defn js-filename [stack-element]
+  (first (.split (last (.split stack-element "/out/")) ":")))
+
+(defn mapped-line-and-column [env filename line column]
+  (let [mapping (get-in (:source-maps env) [filename line column])]
+    (if mapping
+      (vec (map mapping [:source :line :col]))
+      [filename line column])))
+
+(defn file-and-line [env exception depth]
+  (let [stack (.-stack exception)]
+      (if (and stack (string? stack))
+        ;; TODO: flesh out
+        (let [stacktrace
+              (vec (map string/trim
+                     (string/split stack #"\n")))
+              stack-element (nth stacktrace depth)
+              fname (js-filename stack-element)
+              [line column] (js-line-and-column stack-element)]
+          {:file fname :line line :column column})
+        {:file (.-fileName exception)
+         :line (.-lineNumber exception)}))  )
 
 (defn do-report [env m]
   {:post [(map? %)]}
   (let [m (case (:type m)
-            :fail (merge (file-and-line (js/Error.) 1) m)
-            :error (merge (file-and-line (:actual m) 0) m)
+            :fail (merge (file-and-line env (js/Error.) 4) m)
+            :error (merge (file-and-line env (:actual m) 0) m)
             m)]
    (report env m)))
 
