@@ -304,7 +304,6 @@
 (defn js-line-and-column [stack-element]
   (let [parts (.split stack-element ":")
         cnt   (count parts)]
-    (println parts)
     [(nth parts (- cnt 2)) (nth parts (dec cnt))]))
 
 (defn js-filename [stack-element]
