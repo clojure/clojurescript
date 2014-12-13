@@ -8,7 +8,8 @@
 
 (ns cljs.test
   (:require [cljs.env :as env]
-            [cljs.analyzer :as ana]))
+            [cljs.analyzer :as ana]
+            [cljs.analyzer.api :as ana-api]))
 
 ;; =============================================================================
 ;; Utilities for assertions
@@ -234,12 +235,33 @@
         (assoc (:report-counters summary#) :type :summary))
       summary#)))
 
+(defmacro run-all-tests
+  "Runs all tests in all namespaces; prints results.
+  Optional argument is a regular expression; only namespaces with
+  names matching the regular expression (with re-matches) will be
+  tested."
+  ([] `(cljs.test/run-all-tests nil))
+  ([re]
+   `(cljs.test/run-tests (cljs.test/empty-env)
+      ~@(map
+          (fn [ns] `(quote ~ns))
+          (cond->> (ana-api/all-ns)
+            re (filter #(re-matches re (name %))))))))
+
 (defmacro test-all-vars
-  "Calls test-vars on every var interned in the namespace, with fixtures."
+  "Calls test-vars on every var with :test metadata interned in the
+  namespace, with fixtures."
   ([ns]
-   `(cljs.test/test-vars (vals (ns-interns ~ns))))
-  ([env ns]
-   `(cljs.test/test-vars ~env (vals (ns-interns ~ns)))))
+   `(cljs.test/test-all-vars
+      (cljs.test/empty-env) ~ns))
+  ([env [quote ns]]
+   `(cljs.test/test-vars ~env
+      [~@(map
+           (fn [[k _]]
+             `(var ~k))
+           (filter
+             (fn [[_ v]] (:test v))
+             (ana-api/ns-interns ns)))])))
 
 (defmacro test-ns
   "If the namespace defines a function named test-ns-hook, calls that.
