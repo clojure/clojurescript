@@ -211,6 +211,29 @@
             (cljs.test/test-var env# (.-cljs$lang$var ~name)))))
        (set! (.-cljs$lang$var ~name) (var ~name)))))
 
+;; =============================================================================
+;; Running Tests
+
+(defmacro run-tests
+  "Runs all tests in the given namespaces; prints results.
+  Defaults to current namespace if none given.  Returns a map
+  summarizing test results."
+  ([] `(run-tests (cljs.test/empty-env) '~ana/*cljs-ns*))
+  ([env & namespaces]
+   (assert (every?
+             (fn [[quote ns]] (and (= quote 'quote) (symbol? ns)))
+             namespaces)
+     "All arguments to run-tests must be quoted symbols")
+   `(let [summary# (apply merge-with +
+                     [~@(map
+                          (fn [ns]
+                            `(cljs.test/test-ns
+                               (assoc ~env :return true) ~ns))
+                          namespaces)])]
+      (do-report summary#
+        (assoc (:report-counters summary#) :type :summary))
+      summary#)))
+
 (defmacro test-all-vars
   "Calls test-vars on every var interned in the namespace, with fixtures."
   ([ns]
