@@ -225,15 +225,21 @@
              (fn [[quote ns]] (and (= quote 'quote) (symbol? ns)))
              namespaces)
      "All arguments to run-tests must be quoted symbols")
-   `(let [summary# (apply merge-with +
-                     [~@(map
-                          (fn [ns]
-                            `(cljs.test/test-ns
-                               (assoc ~env :return true) ~ns))
-                          namespaces)])]
-      (do-report summary#
-        (assoc (:report-counters summary#) :type :summary))
-      summary#)))
+   (let [env-sym (gensym "env")]
+     `(let [~env-sym (assoc ~env :return true)
+            summary# (reduce
+                       (fn [acc# res#]
+                         (merge-with +
+                           acc#
+                           (:report-counters res#)))
+                       {:test 0 :pass 0 :fail 0 :error 0}
+                       [~@(map
+                            (fn [ns]
+                              `(cljs.test/test-ns ~env-sym ~ns))
+                            namespaces)])]
+        (do-report ~env-sym
+          (assoc summary# :type :summary))
+        summary#))))
 
 (defmacro run-all-tests
   "Runs all tests in all namespaces; prints results.
