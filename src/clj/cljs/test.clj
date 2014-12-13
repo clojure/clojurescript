@@ -18,7 +18,7 @@
   "Returns true if argument is a function or a symbol that resolves to
   a function (not a macro)."
   [menv x]
-  (:fn-var (ana/resolve-var menv x)))
+  (:fn-var (ana-api/resolve menv x)))
 
 (defn assert-predicate
   "Returns generic assertion code for any functional predicate.  The
@@ -285,7 +285,7 @@
           env'# (-> (assoc env# :return true)
                   (cljs.test/do-report {:type :begin-test-ns, :ns ~form})
                   ;; If the namespace has a test-ns-hook function, call that:
-                  ~(if-let [v (get-in @env/*compiler* [::ana/namespaces ns :defs 'test-ns-hook])]
+                  ~(if-let [v (ana-api/ns-resolve ns 'test-ns-hook)]
                      `(~(symbol (name ns) "test-ns-hook"))
                      ;; Otherwise, just test every var in the namespace.
                      `(cljs.test/test-all-vars ~form))
