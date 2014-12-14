@@ -130,8 +130,8 @@
   segment map."
   [result segmap gline]
   (let [{:keys [gcol source line col name]} segmap
-        d {:line col
-           :col  line
+        d {:line line
+           :col col
            :source source}
         d (if name (assoc d :name name) d)]
     (update-in result [gline]

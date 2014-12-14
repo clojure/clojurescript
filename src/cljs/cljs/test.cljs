@@ -311,11 +311,22 @@
   (first (.split (last (.split stack-element "/out/")) ":")))
 
 (defn mapped-line-and-column [env filename line column]
-  (if-let [source-maps (:source-maps env)]
-    (if-let [mapping (get-in source-maps [filename line column])]
-      (vec (map mapping [:source :line :col]))
-      [filename line column])
-    [filename line column]))
+  (let [default [filename line column]]
+    (if-let [source-maps (:source-maps env)]
+      ;; source maps are 0 indexed for lines
+      (if-let [columns (get-in source-maps [filename (dec line)])]
+        (vec
+          (map
+            ;; source maps are 0 indexed for columns
+            ;; multiple segments may exist at column
+            ;; just take first
+            (first
+              (if-let [mapping (get columns (dec column))]
+                mapping
+                (second (first columns))))
+            [:source :line :col]))
+        default)
+      default)))
 
 (defn file-and-line [env exception depth]
   (let [stack (.-stack exception)]
