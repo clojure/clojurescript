@@ -1,7 +1,7 @@
 (ns test-runner
   (:require [cljs.test :as test :refer-macros [run-tests]]
             [cljs.core-test :as core-test]
-            [cljs.reader-test :as reader-test]
+            [cljs.reader-test]
             [cljs.binding-test]
             [cljs.ns-test]
             [clojure.string-test]
@@ -18,8 +18,8 @@
 (set-print-fn! js/print)
 
 (core-test/test-stuff)
-(reader-test/test-reader)
 (run-tests
+  'cljs.reader-test
   'clojure.string-test
   'clojure.data-test
   'cljs.letfn-test
