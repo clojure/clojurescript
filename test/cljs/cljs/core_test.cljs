@@ -2159,8 +2159,10 @@
           (rest names))
         arr)))
 
+  (set! *print-newline* true)
   (assert (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
              ":a\n:b\n:c\n:d\n"))
+  (set! *print-newline* false)
 
   ;; CLJS-728
 

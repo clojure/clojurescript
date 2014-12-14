@@ -1,5 +1,6 @@
 (ns test-runner
-  (:require [cljs.core-test :as core-test]
+  (:require [cljs.test :as test :refer-macros [run-tests]]
+            [cljs.core-test :as core-test]
             [cljs.reader-test :as reader-test]
             [cljs.binding-test :as binding-test]
             [cljs.ns-test :as ns-test]
@@ -13,11 +14,14 @@
             [cljs.keyword-test :as keyword-test]
             [cljs.import-test :as import-test]))
 
+(set! *print-newline* false)
 (set-print-fn! js/print)
 
 (core-test/test-stuff)
 (reader-test/test-reader)
-(string-test/test-string)
+(run-tests
+  (test/empty-env)
+  'clojure.string-test)
 (data-test/test-data)
 (binding-test/test-binding)
 (binding-test/test-with-redefs)
