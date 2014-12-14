@@ -4,8 +4,8 @@
             [cljs.reader-test :as reader-test]
             [cljs.binding-test :as binding-test]
             [cljs.ns-test :as ns-test]
-            [clojure.string-test :as string-test]
-            [clojure.data-test :as data-test]
+            [clojure.string-test]
+            [clojure.data-test]
             [cljs.macro-test :as macro-test]
             [cljs.letfn-test :as letfn-test]
             [foo.ns-shadow-test :as ns-shadow-test]
@@ -20,9 +20,8 @@
 (core-test/test-stuff)
 (reader-test/test-reader)
 (run-tests
-  (test/empty-env)
-  'clojure.string-test)
-(data-test/test-data)
+  'clojure.string-test
+  'clojure.data-test)
 (binding-test/test-binding)
 (binding-test/test-with-redefs)
 (ns-test/test-ns)
