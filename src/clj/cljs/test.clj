@@ -39,7 +39,7 @@
                      {:type :fail, :message ~msg,
                       :expected '~form, :actual (list '~'not (cons '~pred values#))}))]
        (if (:return env'#)
-         env'#
+         (assoc env'# :last-value result#)
          result#))))
 
 (defn assert-any
@@ -55,7 +55,7 @@
                    {:type :fail, :message ~msg,
                     :expected '~form, :actual value#}))]
      (if (:return env'#)
-       env'#
+       (assoc env'# :last-value value#)
        value#)))
 
 ;; =============================================================================
@@ -95,7 +95,7 @@
                      {:type :fail, :message ~msg,
                       :expected '~form, :actual (class object#)}))]
        (if (:return env'#)
-         env'#
+         (assoc env'# :last-value result#)
          result#))))
 
 (defmethod assert-expr 'thrown? [env menv msg form]
@@ -135,7 +135,7 @@
                          {:type :fail, :message ~msg,
                           :expected '~form, :actual e#}))]
            (if (:return env'#)
-             env'#
+             (assoc env'# :last-value e#)
              e#))))))
 
 (defmacro try-expr
@@ -175,11 +175,18 @@
 (defmacro testing
   "Adds a new string to the list of testing contexts.  May be nested,
   but must occur inside a test function (deftest)."
-  [env string & body]
-  `(fn [env#]
-     (reduce #(%2 %1)
-       (update-in env# [:testing-contexts] conj ~string)
-       [~@body])))
+  ([string & body]
+   (if (contains? (:locals &env) 'cljs$lang$test$body)
+     `(fn [env#]
+        (reduce #(%2 %1)
+          (update-in env# [:testing-contexts] conj ~string)
+          [~@body]))
+     `(:last-value
+       (reduce #(%2 %1)
+         (update-in (assoc (cljs.test/empty-env) :return true)
+           [:testing-contexts] conj ~string)
+         (let [~'cljs$lang$test$body nil]
+           [~@body]))))))
 
 ;; =============================================================================
 ;; Defining Tests
