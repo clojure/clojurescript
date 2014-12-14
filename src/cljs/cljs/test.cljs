@@ -364,25 +364,25 @@
 
 (defn test-var
   "If v has a function in its :test metadata, calls that function,
-   add v to :testing-vars property of env."
-  ([v]
-   (test-var (empty-env) v))
+  add v to :testing-vars property of env."
+  ([v] (test-var (empty-env) v))
   ([env v]
    {:pre [(map? env) (instance? Var v)]}
-   (let [t (:test (meta v))
-         env (-> env
-               (update-in [:testing-vars] conj v)
-               (update-in [:report-counters :test] inc))]
-     (try
-       (let [env' (t env)]
-         (when (:return env') env'))
-       (catch :default e
-         (let [env' (do-report env
-                      {:type :error
-                       :message "Uncaught exception, not in assertion."
-                       :expected nil
-                       :actual e})]
-           (when (:return env') env')))))))
+   (if-let [t (:test (meta v))]
+     (let [env (-> env
+                 (update-in [:testing-vars] conj v)
+                 (update-in [:report-counters :test] inc))]
+       (try
+         (let [env' (t env)]
+           (when (:return env') env'))
+         (catch :default e
+           (let [env' (do-report env
+                        {:type :error
+                         :message "Uncaught exception, not in assertion."
+                         :expected nil
+                         :actual e})]
+             (when (:return env') env')))))
+     env)))
 
 (defn- default-fixture
   "The default, empty, fixture function.  Just calls its argument."

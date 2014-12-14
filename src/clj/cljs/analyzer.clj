@@ -510,7 +510,7 @@
      :sym (analyze env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
      :meta (let [ks [:ns :name :doc :arglists :file :line :column]
                  m (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
-                     :test `(.-cljs$lang$test ~sym))]
+                     :test `(when ~sym (.-cljs$lang$test ~sym)))]
             (analyze env m))}))
 
 (defmethod parse 'if
