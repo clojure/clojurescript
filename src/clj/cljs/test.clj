@@ -179,27 +179,31 @@
   ([string & body]
    (if (contains? (:locals &env) 'cljs$lang$test$body)
      `(fn [env#]
-        (reduce
-          (fn [env'# thunk#]
-            (let [ret# (thunk#)]
-              (if (fn? ret#)
-                (ret# env'#)
-                env'#)))
-          (update-in env# [:testing-contexts] conj ~string)
-          [~@(map (fn [expr] `(fn [] ~expr)) body)]))
+        (update-in
+          (reduce
+            (fn [env'# thunk#]
+              (let [ret# (thunk#)]
+                (if (fn? ret#)
+                  (ret# env'#)
+                  env'#)))
+            (update-in env# [:testing-contexts] conj ~string)
+            [~@(map (fn [expr] `(fn [] ~expr)) body)])
+          [:testing-contexts] rest))
      ;; expression evaluation case
      `(let [~'cljs$lang$test$body nil]
         (:last-value
-         (reduce
-           (fn [env'# thunk#]
-             (let [ret# (thunk#)]
-               (if (fn? ret#)
-                 (ret# env'#)
-                 env'#)))
-           (update-in (assoc (cljs.test/empty-env) :return true)
-             [:testing-contexts] conj ~string)
-           (let [~'cljs$lang$test$body nil]
-             [~@(map (fn [expr] `(fn [] ~expr)) body)])))))))
+         (update-in
+           (reduce
+             (fn [env'# thunk#]
+               (let [ret# (thunk#)]
+                 (if (fn? ret#)
+                   (ret# env'#)
+                   env'#)))
+             (update-in (assoc (cljs.test/empty-env) :return true)
+               [:testing-contexts] conj ~string)
+             (let [~'cljs$lang$test$body nil]
+               [~@(map (fn [expr] `(fn [] ~expr)) body)]))
+           [:testing-contexts] rest))))))
 
 ;; =============================================================================
 ;; Defining Tests
