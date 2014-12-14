@@ -416,7 +416,13 @@
                         (reduce
                           (fn [env v]
                             (if (:test (meta v))
-                              (each-fixture-fn (fn [] (test-var env v)))
+                              (each-fixture-fn
+                                (fn []
+                                  (test-var
+                                    (assoc env
+                                      :testing-vars ()
+                                      :testing-contexts ())
+                                    v)))
                               env))
                           env vars)))))
                 (assoc env :return true) (group-by (comp :ns meta) vars))]

@@ -216,7 +216,11 @@
          (fn
            ([] (~name (cljs.test/empty-env)))
            ([env#]
-            (cljs.test/test-var env# (.-cljs$lang$var ~name)))))
+            (cljs.test/test-var
+              (assoc env#
+                :testing-vars ()
+                :testing-contexts ())
+              (.-cljs$lang$var ~name)))))
        (set! (.-cljs$lang$var ~name) (var ~name)))))
 
 ;; =============================================================================
