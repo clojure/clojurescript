@@ -304,16 +304,18 @@
 (defn js-line-and-column [stack-element]
   (let [parts (.split stack-element ":")
         cnt   (count parts)]
-    [(nth parts (- cnt 2)) (nth parts (dec cnt))]))
+    [(js/parseInt (nth parts (- cnt 2)))
+     (js/parseInt (nth parts (dec cnt)))]))
 
 (defn js-filename [stack-element]
   (first (.split (last (.split stack-element "/out/")) ":")))
 
 (defn mapped-line-and-column [env filename line column]
-  (let [mapping (get-in (:source-maps env) [filename line column])]
-    (if mapping
+  (if-let [source-maps (:source-maps env)]
+    (if-let [mapping (get-in source-maps [filename line column])]
       (vec (map mapping [:source :line :col]))
-      [filename line column])))
+      [filename line column])
+    [filename line column]))
 
 (defn file-and-line [env exception depth]
   (let [stack (.-stack exception)]
@@ -324,7 +326,8 @@
                      (string/split stack #"\n")))
               stack-element (nth stacktrace depth)
               fname (js-filename stack-element)
-              [line column] (js-line-and-column stack-element)]
+              [line column] (js-line-and-column stack-element)
+              [fname line column] (mapped-line-and-column env fname line column)]
           {:file fname :line line :column column})
         {:file (.-fileName exception)
          :line (.-lineNumber exception)}))  )
