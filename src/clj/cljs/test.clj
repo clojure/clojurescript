@@ -182,11 +182,16 @@
           (update-in env# [:testing-contexts] conj ~string)
           [~@body]))
      `(:last-value
-       (reduce #(%2 %1)
+       (reduce
+         (fn [env'# thunk#]
+           (let [ret# (thunk#)]
+             (if (fn? ret#)
+               (ret# env'#)
+               env'#)))
          (update-in (assoc (cljs.test/empty-env) :return true)
            [:testing-contexts] conj ~string)
          (let [~'cljs$lang$test$body nil]
-           [~@body]))))))
+           [~@(map (fn [expr] `(fn [] ~expr)) body)]))))))
 
 ;; =============================================================================
 ;; Defining Tests
