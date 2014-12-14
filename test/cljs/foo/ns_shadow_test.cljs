@@ -1,5 +1,6 @@
 (ns foo.ns-shadow-test
-  (:require baz))
+  (:require [cljs.test :refer-macros [deftest is]]
+            baz))
 
 (defn bar [] 1)
 
@@ -14,7 +15,7 @@
   ([] (baz 2))
   ([x] (quux 2)))
 
-(defn test-shadow []
-  (assert (= (quux 2) 3))
-  (assert (= (foo) 42))
-  (assert (= (baz) 3)))
+(deftest test-shadow
+  (is (= (quux 2) 3))
+  (is (= (foo) 42))
+  (is (= (baz) 3)))

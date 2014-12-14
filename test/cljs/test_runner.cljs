@@ -3,16 +3,16 @@
             [cljs.core-test :as core-test]
             [cljs.reader-test :as reader-test]
             [cljs.binding-test]
-            [cljs.ns-test :as ns-test]
+            [cljs.ns-test]
             [clojure.string-test]
             [clojure.data-test]
             [cljs.macro-test]
             [cljs.letfn-test]
-            [foo.ns-shadow-test :as ns-shadow-test]
+            [foo.ns-shadow-test]
             [cljs.top-level]
             [cljs.reducers-test]
             [cljs.keyword-test]
-            [cljs.import-test :as import-test]))
+            [cljs.import-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -27,11 +27,7 @@
   'cljs.binding-test
   'cljs.macro-test
   'cljs.top-level
-  'cljs.keyword-test)
-(ns-test/test-ns)
-(ns-shadow-test/test-shadow)
-(import-test/test-import)
-
-(println "Tests completed without exception")
-
-
+  'cljs.keyword-test
+  'cljs.ns-tst
+  'foo.ns-shadow-test
+  'cljs.import-test)
