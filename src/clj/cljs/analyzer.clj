@@ -1712,7 +1712,7 @@ argument, which the reader will use in any emitted errors."
              (binding [*cljs-ns* 'cljs.user
                        *cljs-file* path
                        reader/*alias-map* (or reader/*alias-map* {})]
-               (let [env (empty-env)
+               (let [env (assoc (empty-env) :build-options opts)
                      ns  (loop [ns nil forms (seq (forms-seq res))]
                            (if forms
                              (let [form (first forms)
