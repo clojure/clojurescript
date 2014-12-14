@@ -18,7 +18,7 @@
   "Returns true if argument is a function or a symbol that resolves to
   a function (not a macro)."
   [menv x]
-  (:fn-var (ana-api/resolve menv x)))
+  (and (symbol? x) (:fn-var (ana-api/resolve menv x))))
 
 (defn assert-predicate
   "Returns generic assertion code for any functional predicate.  The
