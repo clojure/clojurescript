@@ -1,8 +1,10 @@
 (ns cljs.keyword-test
-  (:require [cljs.keyword-other :as other])
-  (:require-macros [clojure.core :as cc]))
+  (:require-macros [clojure.core :as cc]
+                   [cljs.test :refer [deftest is]])
+  (:require [cljs.keyword-other :as other]
+            [cljs.test]))
 
-(defn test-keyword []
-  (assert (= ::bar :cljs.keyword-test/bar))
-  (assert (= ::other/foo :cljs.keyword-other/foo))
-  (assert (= ::cc/foo :clojure.core/foo)))
+(deftest test-keyword
+  (is (= ::bar :cljs.keyword-test/bar))
+  (is (= ::other/foo :cljs.keyword-other/foo))
+  (is (= ::cc/foo :clojure.core/foo)))

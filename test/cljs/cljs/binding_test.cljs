@@ -1,12 +1,13 @@
 (ns cljs.binding-test
-  (:require [cljs.binding-test-other-ns :as o]))
+  (:require [cljs.test :refer-macros [deftest is]]
+            [cljs.binding-test-other-ns :as o]))
 
-(defn test-binding []
-  (binding [o/*foo* 2]
-    (assert (= o/*foo* 2)))
-  (assert (= o/*foo* 1)))
+(deftest test-binding
+  (is (binding [o/*foo* 2]
+        (= o/*foo* 2)))
+  (is (= o/*foo* 1)))
 
-(defn test-with-redefs []
-  (with-redefs [o/bar 2]
-    (assert (= o/bar 2)))
-  (assert (= o/bar 10)))
+(deftest test-with-redefs
+  (is (with-redefs [o/bar 2]
+        (= o/bar 2)))
+  (is (= o/bar 10)))

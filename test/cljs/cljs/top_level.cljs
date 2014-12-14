@@ -1,5 +1,6 @@
 (ns cljs.top-level
-  (:refer-clojure :exclude [test]))
+  (:refer-clojure :exclude [test])
+  (:require [cljs.test :refer-macros [deftest is]]))
 
 (let [foo 1]
   (defn bar []
@@ -9,6 +10,6 @@
   (defn baz []
     foo))
 
-(defn test []
-  (assert (= (bar) 1))
-  (assert (= (baz) 2)))
+(deftest test
+  (is (= (bar) 1))
+  (is (= (baz) 2)))
