@@ -226,19 +226,28 @@
 ;; =============================================================================
 ;; Running Tests
 
+(defn ns? [x]
+  (and (seq? x) (= (first x) 'quote)))
+
 (defmacro run-tests
   "Runs all tests in the given namespaces; prints results.
   Defaults to current namespace if none given.  Returns a map
   summarizing test results."
   ([] `(run-tests (cljs.test/empty-env) '~ana/*cljs-ns*))
-  ([env] `(run-tests ~env '~ana/*cljs-ns*))
-  ([env & namespaces]
+  ([env-or-ns]
+   (if (ns? env-or-ns)
+     `(run-tests (cljs.test/empty-env) ~env-or-ns)
+     `(run-tests ~env-or-ns '~ana/*cljs-ns*)))
+  ([env-or-ns & namespaces]
    (assert (every?
              (fn [[quote ns]] (and (= quote 'quote) (symbol? ns)))
              namespaces)
      "All arguments to run-tests must be quoted symbols")
-   (let [env-sym (gensym "env")]
-     `(let [~env-sym (assoc ~env :return true)
+   (let [is-ns (ns? env-or-ns)
+         env-sym (gensym "env")]
+     `(let [~env-sym ~(if is-ns
+                        `(assoc (cljs.test/empty-env) :return true)
+                        `(assoc ~env-or-ns :return true))
             summary# (reduce
                        (fn [acc# res#]
                          (merge-with +
@@ -248,7 +257,9 @@
                        [~@(map
                             (fn [ns]
                               `(cljs.test/test-ns ~env-sym ~ns))
-                            namespaces)])]
+                            (if is-ns
+                              (concat [env-or-ns] namespaces)
+                              namespaces))])]
         (do-report ~env-sym
           (assoc summary# :type :summary))
         summary#))))
