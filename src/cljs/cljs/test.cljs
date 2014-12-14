@@ -312,9 +312,9 @@
 
 (defn mapped-line-and-column [env filename line column]
   (let [default [filename line column]]
-    (if-let [source-maps (:source-maps env)]
+    (if-let [source-map (:source-map env)]
       ;; source maps are 0 indexed for lines
-      (if-let [columns (get-in source-maps [filename (dec line)])]
+      (if-let [columns (get-in source-map [filename (dec line)])]
         (vec
           (map
             ;; source maps are 0 indexed for columns
