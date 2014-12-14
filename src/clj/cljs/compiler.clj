@@ -792,7 +792,7 @@
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
-  (doseq [lib (into (vals requires) (distinct (vals uses)))]
+  (doseq [lib (distinct (concat (vals requires) (vals uses)))]
     (emitln "goog.require('" (munge lib) "');")))
 
 (defmethod emit* :deftype*
