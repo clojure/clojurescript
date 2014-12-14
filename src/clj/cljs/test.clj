@@ -276,7 +276,7 @@
    `(cljs.test/test-vars ~env
       [~@(map
            (fn [[k _]]
-             `(var ~k))
+             `(var ~(symbol (name ns) (name k))))
            (filter
              (fn [[_ v]] (:test v))
              (ana-api/ns-interns ns)))])))
