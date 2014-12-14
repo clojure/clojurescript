@@ -170,6 +170,7 @@
   ([form msg]
    (if (contains? (:locals &env) 'cljs$lang$test$body)
      `(fn [env#] (cljs.test/try-expr env# ~msg ~form))
+     ;; expression evaluation case
      `(cljs.test/try-expr (cljs.test/empty-env) ~msg ~form))))
 
 (defmacro testing
@@ -178,20 +179,27 @@
   ([string & body]
    (if (contains? (:locals &env) 'cljs$lang$test$body)
      `(fn [env#]
-        (reduce #(%2 %1)
+        (reduce
+          (fn [env'# thunk#]
+            (let [ret# (thunk#)]
+              (if (fn? ret#)
+                (ret# env'#)
+                env'#)))
           (update-in env# [:testing-contexts] conj ~string)
-          [~@body]))
-     `(:last-value
-       (reduce
-         (fn [env'# thunk#]
-           (let [ret# (thunk#)]
-             (if (fn? ret#)
-               (ret# env'#)
-               env'#)))
-         (update-in (assoc (cljs.test/empty-env) :return true)
-           [:testing-contexts] conj ~string)
-         (let [~'cljs$lang$test$body nil]
-           [~@(map (fn [expr] `(fn [] ~expr)) body)]))))))
+          [~@(map (fn [expr] `(fn [] ~expr)) body)]))
+     ;; expression evaluation case
+     `(let [~'cljs$lang$test$body nil]
+        (:last-value
+         (reduce
+           (fn [env'# thunk#]
+             (let [ret# (thunk#)]
+               (if (fn? ret#)
+                 (ret# env'#)
+                 env'#)))
+           (update-in (assoc (cljs.test/empty-env) :return true)
+             [:testing-contexts] conj ~string)
+           (let [~'cljs$lang$test$body nil]
+             [~@(map (fn [expr] `(fn [] ~expr)) body)])))))))
 
 ;; =============================================================================
 ;; Defining Tests
