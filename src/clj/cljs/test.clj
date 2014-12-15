@@ -169,7 +169,9 @@
   ([form] `(cljs.test/is ~form nil))
   ([form msg]
    (if (contains? (:locals &env) 'cljs$lang$test$body)
-     `(fn [env#] (cljs.test/try-expr env# ~msg ~form))
+     `(with-meta
+        (fn [env#] (cljs.test/try-expr env# ~msg ~form))
+        {:cljs.test/step true})
      ;; expression evaluation case
      `(cljs.test/try-expr (cljs.test/empty-env) ~msg ~form))))
 
@@ -178,27 +180,20 @@
   but must occur inside a test function (deftest)."
   ([string & body]
    (if (contains? (:locals &env) 'cljs$lang$test$body)
-     `(fn [env#]
-        (update-in
-          (reduce
-            (fn [env'# thunk#]
-              (let [ret# (thunk#)]
-                (if (fn? ret#)
-                  (ret# env'#)
-                  env'#)))
-            (update-in env# [:testing-contexts] conj ~string)
-            [~@(map (fn [expr] `(fn [] ~expr)) body)])
-          [:testing-contexts] rest))
+     `(with-meta
+        (fn [env#]
+          (update-in
+            (reduce cljs.test/step
+              (update-in env# [:testing-contexts] conj ~string)
+              [~@(map (fn [expr] `(fn [] ~expr)) body)])
+            [:testing-contexts] rest))
+        {:cljs.test/step true})
      ;; expression evaluation case
      `(let [~'cljs$lang$test$body nil]
         (:last-value
          (update-in
            (reduce
-             (fn [env'# thunk#]
-               (let [ret# (thunk#)]
-                 (if (fn? ret#)
-                   (ret# env'#)
-                   env'#)))
+             cljs.test/step
              (update-in (assoc (cljs.test/empty-env) :return true)
                [:testing-contexts] conj ~string)
              (let [~'cljs$lang$test$body nil]
@@ -227,13 +222,10 @@
                   ([] (self# (cljs.test/empty-env)))
                   ([env#]
                    (let [~'cljs$lang$test$body nil
-                         ret# (reduce
-                                (fn [env'# thunk#]
-                                  (let [ret# (thunk#)]
-                                    (if (fn? ret#)
-                                      (ret# env'#)
-                                      env'#)))
-                                env# [~@(map (fn [expr] `(fn [] ~expr)) body)])]
+                         ret# (reduce cljs.test/step env#
+                                [~@(map
+                                     (fn [expr] `(fn [] ~expr))
+                                     body)])]
                      (when (:return env#)
                        ret#)))))
          (fn
