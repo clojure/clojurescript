@@ -2286,24 +2286,62 @@
     (is (= 1.5 1.5M))
     (is (= 4.9E-324 5E-324M))))
 
-(defn test-stuff []
+(deftest test-transient-edge-case-1
   (let [v1 (vec (range 15 48))
         v2 (vec (range 40 57))
         v1 (persistent! (assoc! (conj! (pop! (transient v1)) :foo) 0 :quux))
         v2 (persistent! (assoc! (conj! (transient v2) :bar) 0 :quux))
         v  (into v1 v2)]
-    (assert (= v (vec (concat [:quux] (range 16 47) [:foo]
-                              [:quux] (range 41 57) [:bar])))))
-  (loop [v  (transient [])
-         xs (range 100)]
-    (if-let [x (first xs)]
-      (recur
-       (condp #(%1 (mod %2 3)) x
-         #{0 2} (conj! v x)
-         #{1}   (assoc! v (count v) x))
-       (next xs))
-      (assert (= (vec (range 100)) (persistent! v)))))
+    (is (= v (vec (concat [:quux] (range 16 47) [:foo]
+                    [:quux] (range 41 57) [:bar]))))))
 
+(deftest test-transient-edge-case-2
+  (is (loop [v  (transient [])
+             xs (range 100)]
+        (if-let [x (first xs)]
+          (recur
+            (condp #(%1 (mod %2 3)) x
+              #{0 2} (conj! v x)
+              #{1}   (assoc! v (count v) x))
+            (next xs))
+          (= (vec (range 100)) (persistent! v))))))
+
+(deftest test-phm
+  (let [m (-> (->> (interleave (range 10) (range 10))
+                (apply assoc cljs.core.PersistentHashMap.EMPTY))
+            (dissoc 3 5 7))]
+    (testing "Testing PHM dissoc"
+      (is (= (count m) 7))
+      (is (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9}))))
+  (let [m (-> (->> (interleave (range 10) (range 10))
+                (apply assoc cljs.core.PersistentHashMap.EMPTY))
+            (conj [:foo 1]))]
+    (testing "Testing PHM conj"
+      (is (= (count m) 11))
+      (is (= m {0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 :foo 1}))))
+  (let [m (-> (->> (interleave (range 10) (range 10))
+                (apply assoc cljs.core.PersistentHashMap.EMPTY)
+                transient)
+            (conj! [:foo 1])
+            persistent!)]
+    (testing "Testing PHM conj!"
+      (is (= (count m) 11))
+      (is (= m {0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 :foo 1}))))
+  (let [tm (->> (interleave (range 10) (range 10))
+                (apply assoc cljs.core.PersistentHashMap.EMPTY)
+                transient)]
+    (testing "Testing transient PHM"
+      (is (loop [tm tm ks [3 5 7]]
+            (if-let [k (first ks)]
+              (recur (dissoc! tm k) (next ks))
+              (let [m (persistent! tm)]
+                (and (= (count m) 7)
+                     (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9}))))))))
+)
+
+(deftest test-phm-fixed-hash)
+
+(defn test-stuff []
   ;; PersistentHashMap & TransientHashMap
   (loop [m1 cljs.core.PersistentHashMap.EMPTY
          m2 (transient cljs.core.PersistentHashMap.EMPTY)
@@ -2326,32 +2364,6 @@
         (assert (= (map vector (range 100) (range 100)) (sort-by first (seq m1))))
         (assert (= (map vector (range 100) (range 100)) (sort-by first (seq m2))))
         (assert (not (contains? (dissoc m1 3) 3))))))
-  (let [m (-> (->> (interleave (range 10) (range 10))
-                   (apply assoc cljs.core.PersistentHashMap.EMPTY))
-              (dissoc 3 5 7))]
-    (assert (= (count m) 7))
-    (assert (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9})))
-  (let [m (-> (->> (interleave (range 10) (range 10))
-                   (apply assoc cljs.core.PersistentHashMap.EMPTY))
-              (conj [:foo 1]))]
-    (assert (= (count m) 11))
-    (assert (= m {0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 :foo 1})))
-  (let [m (-> (->> (interleave (range 10) (range 10))
-                   (apply assoc cljs.core.PersistentHashMap.EMPTY)
-                   transient)
-              (conj! [:foo 1])
-              persistent!)]
-    (assert (= (count m) 11))
-    (assert (= m {0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 :foo 1})))
-  (let [tm (->> (interleave (range 10) (range 10))
-                (apply assoc cljs.core.PersistentHashMap.EMPTY)
-                transient)]
-    (loop [tm tm ks [3 5 7]]
-      (if-let [k (first ks)]
-        (recur (dissoc! tm k) (next ks))
-        (let [m (persistent! tm)]
-          (assert (= (count m) 7))
-          (assert (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9}))))))
   (let [tm (-> (->> (interleave (range 10) (range 10))
                     (apply assoc cljs.core.PersistentHashMap.EMPTY))
                (dissoc 3 5 7)
@@ -2364,14 +2376,17 @@
       (assert (= 2 (try (persistent! tm) 1 (catch js/Error e 2))))
       (assert (= 2 (try (count tm) 1 (catch js/Error e 2))))
       (assert (= m {0 0 1 1 2 2 4 4 6 6 8 8 9 9}))))
+
   (deftype FixedHash [h v]
     IHash
     (-hash [this] h)
     IEquiv
     (-equiv [this other]
       (and (instance? FixedHash other) (= v (.-v other)))))
+
   (def fixed-hash-foo (FixedHash. 0 :foo))
   (def fixed-hash-bar (FixedHash. 0 :bar))
+
   (let [m (assoc cljs.core.PersistentHashMap.EMPTY
             fixed-hash-foo 1
             fixed-hash-bar 2)]
@@ -2382,6 +2397,7 @@
       (assert (= (get m fixed-hash-bar) 2))
       (assert (not (contains? m fixed-hash-foo)))
       (assert (= (count m) 1))))
+
   (let [m (into cljs.core.PersistentHashMap.EMPTY ; make sure we're testing
                 (zipmap (range 100) (range 100))) ; the correct map type
         m (assoc m fixed-hash-foo 1 fixed-hash-bar 2)]
@@ -2392,6 +2408,7 @@
       (assert (= (get m fixed-hash-bar) 2))
       (assert (not (contains? m fixed-hash-foo)))
       (assert (= (count m) 98))))
+
   (let [m (into cljs.core.PersistentHashMap.EMPTY ; make sure we're testing
                 (zipmap (range 100) (range 100))) ; the correct map type
         m (transient m)
