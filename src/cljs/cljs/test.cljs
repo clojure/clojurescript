@@ -359,6 +359,13 @@
     :testing-contexts ()
     :reporter reporter}))
 
+(defn step
+  [env thunk]
+  (let [ret (thunk)]
+    (if (and (fn? ret) (-> ret meta :cljs.test/step))
+      (ret env)
+      (assoc env :last-value ret))))
+
 ;; =============================================================================
 ;; Low-level functions
 
