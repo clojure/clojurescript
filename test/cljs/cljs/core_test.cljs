@@ -676,6 +676,12 @@
     ;; vary-meta
     (is (= {:a 1} (meta (vary-meta [] assoc :a 1))))
     (is (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
+    ;; comparator
+    (is (= [1 1 2 2 3 5] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator <)))))
+    (is (= [5 3 2 2 1 1] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator >)))))
+    (is (= (hash 'foo) (hash (symbol "foo"))))
+    (is (= (hash 'foo/bar) (hash (symbol "foo" "bar"))))
+    (is (= (lazy-cat [1] [2] [3]) '(1 2 3)))
     ))
 
 (deftest test-booleans
@@ -1123,6 +1129,9 @@
 (defmethod my-map? ::map [_] true)
 (defmethod my-map? :default [_] false)
 
+(defmulti foo2' identity)
+(defmethod foo2' 0 [x] x)
+
 (deftest test-multimethods-2
   (let [r (rect 4 13)
         c (circle 12)]
@@ -1136,13 +1145,11 @@
       ;; CLJS-863
       (is (= :foo (foo2)))
       ;; remove method tests
-      ;; TODO: these side-effects return fn values
-      ;; will interact badly with cljs.test need to fix - David
-      ;; (is (= 2 (count (methods bar))))
-      ;; (remove-method bar [::rect ::shape])
-      ;; (is (= 1 (count (methods bar))))
-      ;; (remove-all-methods bar)
-      ;; (is (zero? (count (methods bar))))
+      (is (= 2 (count (methods bar))))
+      (remove-method bar [::rect ::shape])
+      (is (= 1 (count (methods bar))))
+      (remove-all-methods bar)
+      (is (zero? (count (methods bar))))
       (is (= [:three '(2)] (apply apply-multi-test [0 1 2])))
       (is (try
             (no-dispatch-value {:test :test})
@@ -1154,6 +1161,8 @@
       (is (every? true?
             (for [not-m [[] 1 "asdf" :foo]]
               (not (my-map? not-m)))))
+      ;; multimethod hashing
+      (is (= foo2' (ffirst {foo2' 1})))
 )))
 
 (deftest test-range
@@ -1178,6 +1187,16 @@
     (is (= (count (range 0 0 0)) 0))
     (is (= (take 3 (range 1 0 0)) (list 1 1 1)))
     (is (= (take 3 (range 3 1 0)) (list 3 3 3)))
+    ))
+
+(deftest test-rseq
+  (testing "Testing RSeq"
+    (is (= '(3 2 1) (reverse (seq (array 1 2 3)))))
+    (is (= '(3 2 1) (reverse [1 2 3])))
+    (is (= '(4 3 2 1) (cons 4 (reverse [1 2 3]))))
+    (is (= 6 (reduce + (reverse [1 2 3]))))
+    (is (= '(4 3 2) (map inc (reverse [1 2 3]))))
+    (is (= '(4 2) (filter even? (reverse [1 2 3 4]))))
     ))
 
 (deftest test-sorted-map
@@ -1590,6 +1609,179 @@
     (is (=  1 (compare (subvec [1 2 4] 1) (subvec [1 2 3] 1)))))
   )
 
+(deftest test-dot
+  (let [s "abc"]
+   (testing "Testing dot operations"
+     (is (= 3 (.-length s)))
+     (is (= 3 (. s -length)))
+     (is (= 3 (. (str 138) -length)))
+     (is (= 3 (. "abc" -length)))
+     (is (= "bc" (.substring s 1)))
+     (is (= "bc" (.substring "abc" 1)))
+     (is (= "bc" ((memfn substring start) s 1)))
+     (is (= "bc" (. s substring 1)))
+     (is (= "bc" (. s (substring 1))))
+     (is (= "bc" (. s (substring 1 3))))
+     (is (= "bc" (.substring s 1 3)))
+     (is (= "ABC" (. s (toUpperCase))))
+     (is (= "ABC" (. "abc" (toUpperCase))))
+     (is (= "ABC" ((memfn toUpperCase) s)))
+     (is (= "BC" (. (. s (toUpperCase)) substring 1)))
+     (is (= 2 (.-length (. (. s (toUpperCase)) substring 1))))
+     )))
+
+(defrecord Person [firstname lastname])
+(defrecord A [])
+(defrecord C [a b c])
+(defrecord A' [x])
+(defrecord B' [x])
+
+(deftest test-records
+  (let [fred (Person. "Fred" "Mertz")
+        fred-too (Person. "Fred" "Mertz")
+        ethel (with-meta (assoc (Person. "Ethel" "Mertz") :husband :fred)
+                {:married true})
+        ethel-too (with-meta (assoc (Person. "Ethel" "Mertz")  :husband :fred)
+                    {:married true})
+        letters (C. "a" "b" "c")
+        more-letters (assoc letters :d "d" :e "e" :f "f")]
+    (testing "Testing records"
+      (is (= (:firstname fred) "Fred"))
+      (is (= fred fred-too))
+      (is (false? (= fred nil)))
+      (is (false? (= nil fred)))
+      (is (= (meta ethel) {:married true}))
+      (is (= ethel ethel-too))
+      (is (= (map->Person {:firstname "Fred" :lastname "Mertz"}) fred))
+      (is (= (->Person "Fred" "Mertz") fred))
+      (is (= (count fred) 2))
+      (is (= (count ethel) 3))
+      (is (= (conj fred {:wife :ethel :friend :ricky})
+                (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky})))
+      (is (= (conj fred {:lastname "Flintstone"})
+                (map->Person {:firstname "Fred" :lastname "Flintstone"})))
+      (is (= (assoc fred :lastname "Flintstone")
+                (map->Person {:firstname "Fred" :lastname "Flintstone"})))
+      (is (= (assoc fred :wife :ethel)
+                (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel})))
+      (is (= (dissoc ethel :husband)
+                (map->Person {:firstname "Ethel" :lastname "Mertz"})))
+      (is (= {:foo 'bar} (meta (with-meta (A.) {:foo 'bar}))))
+      (is (= 'bar (:foo (assoc (A.) :foo 'bar))))
+      (is (= (set (keys letters)) #{:a :b :c}))
+      (is (= (set (keys more-letters)) #{:a :b :c :d :e :f}))
+      (is (= (set (keys (dissoc more-letters :d))) #{:a :b :c :e :f}))
+      (is (= (set (keys (dissoc more-letters :d :e))) #{:a :b :c :f}))
+      (is (= (set (keys (dissoc more-letters :d :e :f))) #{:a :b :c}))
+      (is (not= (A'. nil) (B'. nil))))))
+
+(deftype FnLike []
+  IFn
+  (-invoke [_] :a)
+  (-invoke [_ a] :b)
+  (-invoke [_ a b] :c))
+
+(deftype FnLikeB [a]
+  IFn
+  (-invoke [_] a))
+
+(deftest test-ifn
+  (testing "Testing IFn implementations"
+    (is (= :a ((FnLike.))))
+    (is (= :b ((FnLike.) 1)))
+    (is (= :c ((FnLike.) 1 2)))
+    (is (= [:b :b :b] (map (FnLike.) [0 0 0])))
+    (is (= 1 ((FnLikeB. 1))))
+    ))
+
+(deftest test-case
+  (testing "Test case expr"
+    (let [x 1]
+      (is (= (case x 1 :one) :one)))
+    (let [x 1]
+      (is (= (case x 2 :two :default) :default)))
+    (let [x 1]
+      (is (= (try
+                   (case x 3 :three)
+                   (catch js/Error e
+                     :fail))
+                :fail)))
+    (let [x 1]
+      (is (= (case x
+                   (1 2 3) :ok
+                   :fail)
+                :ok)))
+    (let [x [:a :b]]
+      (is (= (case x
+                   [:a :b] :ok)
+                :ok)))
+    (let [a 'a]
+      (is (= (case a
+                   nil nil
+                   & :amp
+                   :none)
+                :none)))
+    (let [a '&]
+      (is (= (case a
+                   nil nil
+                   & :amp
+                   :none)
+                :amp)))
+    (let [foo 'a]
+      (testing "multiple match"
+        (is (= (case foo
+                 (a b c) :sym
+                 :none)
+              :sym))
+        (is (= (case foo
+                 (b c d) :sym
+                 :none)
+              :none))))
+    ))
+
+(defprotocol IHasFirst
+  (-get-first [this]))
+
+(defprotocol IFindsFirst
+  (-find-first [this other]))
+
+(deftype First [xs]
+  ISeqable
+  (-seq [this] (seq xs))
+  IIndexed
+  (-nth [this i] (nth xs i))
+  (-nth [this i not-found] (nth xs i not-found))
+  IFn
+  (-invoke [[x]] x)
+  (-invoke [this x] this)
+  Object
+  (toString [[x]] (str x))
+  IHasFirst
+  (-get-first [[x]] x)
+  IFindsFirst
+  (-find-first [_ [x]] x))
+
+(deftype DestructuringWithLocals [a]
+  IFindsFirst
+  (-find-first [_ [x y]]
+    [x y a]))
+
+(deftest test-protocol-method-destructuring
+  (testing "Testing protocol method destructuring"
+    (let [fv (First. [1 2 3])
+          fs (First. "asdf")]
+      (testing "basic operations"
+        (is (= (fv) 1))
+        (is (= (fs) \a))
+        (is (= (str fs) \a))
+        (is (= (-get-first fv) 1))
+        (is (= (-get-first fs) \a))
+        (is (= (-find-first fv [1]) 1))
+        (is (identical? (fv 1) fv))))
+    (let [t (DestructuringWithLocals. 1)]
+      (testing "with locals"
+        (is (= [2 3 1] (-find-first t [2 3])))))))
+
 ;; =============================================================================
 ;; Tickets
 
@@ -1606,6 +1798,493 @@
   (testing "Testing CLJS-513"
     (let [sentinel (js-obj)]
       (is (identical? sentinel (try ([] 0) (catch js/Error _ sentinel)))))))
+
+(defprotocol IFoo (foo [this]))
+
+(deftest test-reify-meta
+  (is (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
+            {:foo :bar})))
+
+;; hashing bug in many JS runtimes CLJ-118
+(deftest test-clj-118
+  (let [g #{(conj #{:2} :alt)}
+        h #{#{:2 :alt}}]
+    (is (= g h)))
+  (is (= (hash {:a 1 :b 2})
+            (hash {:b 2 :a 1})))
+  (is (= (hash (hash-map :a 1 :b 2))
+            (hash (hash-map :b 2 :a 1))))
+  (is (= (hash {:start 133 :end 134})
+            (hash (apply hash-map [:start 133 :end 134]))))
+  (is (= (hash :a)
+            (hash (keyword "a")))))
+
+(defprotocol IBar (-bar [this x]))
+
+(defn baz [f]
+  (reify
+    IBar
+    (-bar [_ x]
+      (f x))))
+
+(deftest test-405
+  (is (= 2 (-bar (baz inc) 1))))
+
+(let [x "original"]
+  (defn original-closure-stmt [] x))
+
+(deftest test-401-411
+  (let [x "overwritten"]
+    (is (= "original" (original-closure-stmt))))
+  (is (= "original" (let [x "original"
+                               oce (fn [] x)
+                               x "overwritten"]
+                           (oce)))))
+
+(deftest test-letfn-shadowing
+  (letfn [(x [] "original")
+          (y [] (x))]
+    (let [x (fn [] "overwritten")]
+      (is (= "original" (y))))))
+
+(deftest test-459
+  (is (= (reduce-kv conj [] (sorted-map :foo 1 :bar 2))
+        [:bar 2 :foo 1])))
+
+(deftest test-kv-reduce
+  (letfn [(kvr-test [data expect]
+            (and
+              (= :reduced
+                (reduce-kv
+                  (fn [_ _ _] (reduced :reduced))
+                  [] data))
+              (= (sort expect)
+                (sort
+                  (reduce-kv
+                    (fn [r k v] (-> r (conj [k v])))
+                    [] data)))))]
+    (testing "Testing IKVReduce"
+      (is (every? true?
+            (for [[data expect] [[(obj-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
+                                 [(hash-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
+                                 [(array-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
+                                 [[:v0 :v1] [[0 :v0] [1 :v1]]]]]
+              (kvr-test data expect))))
+      (is (= {:init :val} (reduce-kv assoc {:init :val} nil))))))
+
+(deftest test-data-conveying-exceptions
+  (is (= {:foo 1}
+             (try (throw (ex-info "asdf" {:foo 1}))
+                  (catch ExceptionInfo e
+                    (ex-data e)))))
+  (is (instance? js/Error (ex-info "asdf" {:foo 1})))
+  (is (not (instance? cljs.core.ExceptionInfo (js/Error.)))))
+
+(deftest test-435
+  (is (= (assoc {} 154618822656 1 261993005056 1)
+            {154618822656 1 261993005056 1})))
+
+(deftest test-458
+  (is (= (get-in {:a {:b 1}} [:a :b :c] :nothing-there)
+        :nothing-there)))
+
+(deftest test-464
+  (is (nil? (get-in {:foo {:bar 2}} [:foo :bar :baz]))))
+
+(deftest test-symbol-meta
+  (is (= (meta (with-meta 'foo {:tag 'int})) {:tag 'int})))
+
+(deftest test-467
+  (is (= (reduce-kv + 0 (apply hash-map (range 1000)))
+        (reduce + (range 1000)))))
+
+(deftest test-477
+  (is (= [js/undefined 1 2] ((fn [& more] more) js/undefined 1 2)))
+  (is (= [js/undefined 4 5] ((fn [a b & more] more) 1 2 js/undefined 4 5))))
+
+(deftest test-493
+  (is (nil? (get 42 :anything)))
+  (is (= (get 42 :anything :not-found) :not-found))
+  (is (nil? (first (map get [42] [:anything]))))
+  (is (= (first (map get [42] [:anything] [:not-found])) :not-found)))
+
+(deftest test-481
+  (let [fs (atom [])]
+    (doseq [x (range 4)
+            :let [y (inc x)
+                  f (fn [] y)]]
+      (swap! fs conj f))
+    (is (= (map #(%) @fs) '(1 2 3 4)))))
+
+(def exists?-test-val 'foo)
+
+(deftest test-495
+  (testing "Testing CLJS-495, exists?"
+    (is (false? (exists? js/jQuery)))
+    (is (exists? exists?-test-val))))
+
+(deftest test-496
+  (is (= (char 65) \A))
+  (is (= (char \A) \A)))
+
+(deftype PositionalFactoryTest [x])
+
+(deftest test-515
+  (is (== 1 (.-x (->PositionalFactoryTest 1)))))
+
+(deftest test-518
+  (is (nil? (:test "test"))))
+
+;; r1798 core fn protocol regression
+(extend-type object
+  ISeqable
+  (-seq [coll]
+    (map #(vector % (aget coll %)) (js-keys coll)))
+
+  ILookup
+  (-lookup
+    ([coll k]
+     (-lookup coll k nil))
+    ([coll k not-found]
+     (if-let [v (aget coll k)]
+       v
+       not-found))))
+
+(deftest test-extend-to-object
+  (is (= (seq (js-obj "foo" 1 "bar" 2)) '(["foo" 1] ["bar" 2])))
+  (is (= (get (js-obj "foo" 1) "foo") 1))
+  (is (= (get (js-obj "foo" 1) "bar" ::not-found) ::not-found))
+  (is (= (reduce (fn [s [k v]] (+ s v)) 0 (js-obj "foo" 1 "bar" 2)) 3)))
+
+(deftest test-541
+  (letfn [(f! [x] (print \f) x)
+          (g! [x] (print \g) x)]
+    (is (= "ffgfg"
+          (with-out-str
+            (instance? Symbol (f! 'foo))
+            (max (f! 5) (g! 10))
+            (min (f! 5) (g! 10)))))))
+
+(deftest test-582
+  (is (= #{1 2} (set [1 2 2])))
+  (is (= #{1 2} (hash-set 1 2 2)))
+  (is (= #{1 2} (apply hash-set [1 2 2]))))
+
+(deftest test-585
+  (is (= (last (map identity (into [] (range 32)))) 31))
+  (is (= (into #{} (range 32))
+            (set (map identity (into [] (range 32)))))))
+
+(def foo580)
+(def foo580 {:a (fn []) :b (fn [] (foo580 :a))})
+
+(deftest test-580
+  (is (nil? (((:b foo580))))))
+
+(deftest test-587
+  (is (== (first (filter #(== % 9999) (range))) 9999)))
+
+(deftest test-604
+  (is (= () (concat nil [])))
+  (is (= () (concat [] []))))
+
+(deftest test-600
+  (is (= "foobar" (apply str (concat "foo" "bar")))))
+
+(deftest test-608
+  (is (= '("") (re-seq #"\s*" ""))))
+
+(deftype KeywordTest []
+  ILookup
+  (-lookup [o k] :nothing)
+  (-lookup [o k not-found] not-found))
+
+(deftest tset-638
+  (is (= (:a (KeywordTest.)) :nothing)))
+
+(deftest test-648
+  (let [a (reify IHash (-hash [_] 42))
+        b (reify IHash (-hash [_] 42))
+        s (set (range 128))]
+    (testing "Testing CLJS-648 (CLJ-1285)"
+      (is (= (-> (conj s a b) transient (disj! a) persistent! (conj a))
+             (-> (conj s a b) transient (disj! a) persistent! (conj a)))))))
+
+(deftest test-660
+  (testing "Testing CLJS-660, namespace handling"
+    (is (= (-> 'a.b keyword ((juxt namespace name))) [nil "a.b"]))
+    (is (= (-> 'a.b/c keyword ((juxt namespace name))) ["a.b" "c"]))
+    (is (= (-> "a.b" keyword ((juxt namespace name))) [nil "a.b"]))
+    (is (= (-> "a.b/c" keyword ((juxt namespace name))) ["a.b" "c"]))))
+
+(deftest test-663
+  (testing "Testing CLJS-663, invalid keywords"
+    (is (= (keyword 123) nil))
+    (is (= (keyword (js/Date.)) nil))))
+
+(deftest test-647
+  (let [keys #(vec (js-keys %))
+        z "x"]
+    (testing "Testing CLJS-647, js-keys"
+      (assert (= ["x"]
+                (keys (js-obj "x" "y"))
+                (keys (js-obj (identity "x") "y"))
+                (keys (js-obj z "y")))))))
+
+
+(def some-x 1)
+(def some-y 1)
+
+(deftest test-583
+  (is (= (count #{some-x some-y}) 1)))
+
+(deftest test-584
+  (is (= (count {some-x :foo some-y :bar}) 1)))
+
+(deftest test-717
+  (testing "Testing CLJS-717, JS literals"
+    (is (array? #js [1 2 3]))
+    (is (= (alength #js [1 2 3]) 3))
+    (is (= (seq #js [1 2 3]) (seq [1 2 3])))
+    (is (= (set (js-keys #js {:foo "bar" :baz "woz"})) #{"foo" "baz"}))
+    (is (= (aget #js {:foo "bar"} "foo") "bar"))
+    (is (= (aget #js {"foo" "bar"} "foo") "bar"))
+    (is (array? (aget #js {"foo" #js [1 2 3]} "foo")))
+    (is (= (seq (aget #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))))
+
+(deftest test-725
+  (testing "Testing CLJS-725, drop"
+    (is (= (apply vector (drop-while (partial = 1) [1 2 3])) [2 3]))
+    (is (= (apply list (drop-while (partial = 1) [1 2 3])) '(2 3)))
+    (is (= (set (drop 1 #js [1 2 3])) #{2 3}))))
+
+(deftest test-724
+  (is (nil? (first (rest (rest (rest (range 3))))))))
+
+(deftest test-730
+  (testing "Testing CLJS-730, object? predicate"
+    (is (true? (object? #js {})))
+    (is (false? (object? nil)))))
+
+(deftest test-count-hash-set
+  (is
+    (== (count (hash-set [1 4] [2 4] [3 4] [0 3] [1 3] [2 3] [3 3]
+                 [0 2] [1 2] [2 2] [3 2] [4 2] [0 1] [1 1]
+                 [2 1] [3 1] [1 0] [2 0] [3 0]))
+      (count (list [1 4] [2 4] [3 4] [0 3] [1 3] [2 3] [3 3]
+               [0 2] [1 2] [2 2] [3 2] [4 2] [0 1] [1 1]
+               [2 1] [3 1] [1 0] [2 0] [3 0])))))
+
+(defprotocol IWoz
+  (-woz [this]))
+
+(def noz [])
+
+(deftest test-414
+  (testing "Testing CLJS-414, specify"
+    (is (= (specify noz IWoz (-woz [_] :boz)) noz))
+    (is (not (identical? (specify noz IWoz (-woz [_] :boz)) noz)))
+    (is (= (-woz (specify noz IWoz (-woz [this] this))) noz))
+    (is (= (-woz (specify noz IWoz (-woz [_] :boz))) :boz))))
+
+(deftest test-734
+  (testing "Testing CLJS-734, transient operations"
+    (is (= (-> (transient []) (conj! 1 2) persistent!) [1 2]))
+    (is (= (-> (transient #{1 2 3}) (disj! 1 2) persistent!) #{3}))
+    (is (= (-> (transient {}) (assoc! :a 1 :b 2) persistent!) {:a 1 :b 2}))
+    (is (= (-> (transient {:a 1 :b 2 :c 3}) (dissoc! :a :b) persistent!) {:c 3}))))
+
+(deftest test-767
+  (testing "Testing CLJS-767, invalid assoc"
+    (is (every? true?
+          (for [n [nil "-1" "" "0" "1" false true (js-obj)]]
+            (and
+              (= :fail (try (assoc [1 2] n 4)
+                            (catch js/Error e :fail)))
+              (= :fail (try (assoc (subvec [1 2 3] 2) n 4)
+                            (catch js/Error e :fail)))
+              (= :fail (try (assoc (range 1 3) n 4)
+                            (catch js/Error e :fail)))))))))
+
+(deftest test-768
+  (testing "Testing CLJS-768, invalid assoc!"
+    (is (every? true?
+          (for [n [nil "-1" "" "0" "1" false true (js-obj)]]
+            (= :fail (try (assoc! (transient [1 2]) n 4)
+                          (catch js/Error e :fail))))))))
+
+(defn cljs-739 [arr names]
+  (let [name (first names)]
+    (if name
+      (recur (conj arr (fn [] (println name)))
+        (rest names))
+      arr)))
+
+(deftest test-739
+  (testing "Testing CLJS-739, with-out-str"
+    (set! *print-newline* true)
+    (is (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
+          ":a\n:b\n:c\n:d\n"))
+    (set! *print-newline* false)))
+
+(deftest test-728
+  (testing "Testing CLJS-728, lookup with default"
+    (is (every? true?
+          (for [n [nil "-1" "" "0" "1" false true (js-obj)]]
+            (and
+              (nil? (get [1 2] n))
+              (= :fail (try (nth [1 2] n) (catch js/Error e :fail)))
+              (= 4 (get [1 2] n 4))
+              (= :fail (try (nth [1 2] n 4) (catch js/Error e :fail)))
+
+              (nil? (get (subvec [1 2] 1) n))
+              (= :fail (try (nth (subvec [1 2] 1) n) (catch js/Error e :fail)))
+              (= 4 (get (subvec [1 2] 1) n 4))
+              (= :fail (try (nth (subvec [1 2] 1) n 4) (catch js/Error e :fail)))
+
+              (nil? (get (transient [1 2]) n))
+              (= :fail (try (nth (transient [1 2]) n) (catch js/Error e :fail)))
+              (= 4 (get (transient [1 2]) n 4))
+              (= :fail (try (nth (transient [1 2]) n 4) (catch js/Error e :fail)))
+
+              (nil? (get (range 1 3) n))
+              (= :fail (try (nth (range 1 3) n) (catch js/Error e :fail)))
+              (= 4 (get (range 1 3) n 4))
+              (= :fail (try (nth (range 1 3) n 4) (catch js/Error e :fail))))))))
+  )
+
+(deftest test-778
+  (testing "Testing CLJS-778, -rest, -next RSeq"
+    (is (= (-rest (rseq [0])) ()))
+    (is (nil? (-next (rseq [0]))))
+    (is (= (set (rseq [0])) #{0}))))
+
+(def cljs-780 (atom {:foo (with-meta [] {:bar '(1 2 3)})}))
+
+(deftest test-780
+  (let [_ (swap! cljs-780 update-in [:foo] vary-meta update-in [:bar] vec)
+        x (-> @cljs-780 :foo meta :bar)]
+    (testing "Testing CLJS-780, update-in + vary-meta"
+      (is (vector? x))
+      (is (= x [1 2 3])))) )
+
+(deftest test-782
+  (testing "Testing CLJS-782, UUID toString"
+    (is (= (.toString #uuid "550e8400-e29b-41d4-a716-446655440000")
+          "550e8400-e29b-41d4-a716-446655440000"))))
+
+(deftest test-784
+  (testing "Testing CLJS-784, conj on maps"
+    (is (every? true?
+          (for [m [(array-map) (hash-map) (sorted-map)]]
+            (and (= :ok
+                      (try
+                        (conj m "foo")
+                        (catch js/Error _
+                          :ok)))
+                  (= {:foo 1} (conj m [:foo 1]))
+                  (= {:foo 1} (conj m {:foo 1}))
+                  (= {:foo 1} (conj m (list [:foo 1])))))))
+    (is (every? true?
+          (for [mt [array-map hash-map sorted-map]]
+            (= {:foo 1 :bar 2 :baz 3}
+              (conj (mt :foo 1)
+                ((fn make-seq [from-seq]
+                   ;; this tests specifically for user defined seq's, that implement the bare minimum, i.e. no INext
+                   (when (seq from-seq)
+                     (reify
+                       ISeqable
+                       (-seq [this] this)
+                       ISeq
+                       (-first [this] (first from-seq))
+                       (-rest [this] (make-seq (rest from-seq))))))
+                 [[:bar 2] [:baz 3]])))))))
+  )
+
+(deftest test-case-keyword
+  (is (= (let [x "a"] (case x :a 1 "a")) "a")))
+
+(deftest test-801
+  (testing "Testing CLJS-801, str"
+    (is (= "0atrue:key/wordsymb/olfalse[1 2 3 4]1234.56789"
+          (str 0 "a" true nil :key/word 'symb/ol false [1 2 3 4] 1234.5678 0x09)))))
+
+(defn case-recur [value]
+  (case value
+    :a (recur :b)
+    :b 0))
+
+(deftest test-812
+  (testing "Testing CLJS-812, case with recur"
+    (is (= (case-recur :a) 0))))
+
+(deftest test-816
+  (testing "Testing CLJS-816, rename-keys"
+    (is (= (set/rename-keys {:a "one" :b "two"} {:a :z}) {:z "one" :b "two"}))
+    (is (= (set/rename-keys {:a "one" :b "two"} {:a :z :c :y}) {:z "one" :b "two"}))
+    (is (= (set/rename-keys {:a "one" :b "two" :c "three"} {:a :b :b :a})
+          {:a "two" :b "one" :c "three"}))) )
+
+(deftest test-881
+  (testing "Testing CLJS-881, duplicate keys in array maps"
+    (is (= [:foo] (keys (apply array-map [:foo 1 :foo 2]))))))
+
+(deftest test-810
+  (let [not-strings [true false nil 1 (fn [])]]
+    (testing "Testing CLJS-810, exception on bad input to regex fns"
+      (is (every? #(= :failed (try (re-find #"." %)
+                                   (catch js/TypeError _ :failed))) not-strings))
+      (is (every? #(= :failed (try (re-matches #"." %)
+                                   (catch js/TypeError _ :failed))) not-strings))
+      (is (every? #(= :failed (try (re-find #"nomatch" %)
+                                   (catch js/TypeError _ :failed))) not-strings))
+      (is (every? #(= :failed (try (re-matches #"nomatch" %)
+                                   (catch js/TypeError _ :failed))) not-strings)))))
+
+(deftest test-849
+  (let [xs [44 43 42 41 40 39 38 37 36 35 34 33 32 31 30 29 28 27 26 25 24]]
+    (testing "Testing CLJS-849, transient contains?"
+      (is (loop [m (transient (zipmap xs (repeat 1)))
+                 xs xs]
+            (if-let [x (first xs)]
+              (if (contains? m x)
+                (recur (dissoc! m x) (next xs))
+                false)
+              true))))))
+
+(deftest test-large-array-map
+  (let [m (array-map 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10 10 11 11 12 12 13 13 14 14 15 15)]
+    (testing "Testing large array maps"
+      (is (instance? cljs.core/PersistentArrayMap m))
+      (is (= (seq m) [[0 0] [1 1] [2 2] [3 3] [4 4] [5 5] [6 6] [7 7] [8 8] [9 9] [10 10] [11 11] [12 12] [13 13] [14 14] [15 15]])))))
+
+(def test-map
+  {:a 1
+   :b 2
+   #inst "2013-12-19T05:00:00.000-00:00" 3
+   :d 4
+   :e 5
+   #inst "2013-12-06T05:00:00.000-00:00" 6
+   :g 7
+   :h 8
+   :i 9
+   :j 10})
+
+(deftest test-716
+  (testing "Testing CLJS-716, date as keys in maps"
+    (is (= (test-map #inst "2013-12-19T05:00:00.000-00:00") 3))
+    (is (= (test-map #inst "2013-12-06T05:00:00.000-00:00") 6))))
+
+(deftest test-853
+  (testing "Testing CLJS-853, function metadata"
+    (is (= {:foo true} (meta ^:foo (fn []))))))
+
+(deftest test-807 
+  (testing "Testing CLJS-807, big int, float, big dec literals"
+    (is (= -1 -1N))
+    (is (= 9.007199254740996E15 9007199254740995N))
+    (is (= 1.5 1.5M))
+    (is (= 4.9E-324 5E-324M))))
 
 (defn test-stuff []
   (let [v1 (vec (range 15 48))
@@ -1848,688 +2527,12 @@
                              s))))
             (assert (= s (set (remove #(zero? (mod % 3)) (range 100))))))))))
 
-  ;; defrecord
-  (defrecord Person [firstname lastname])
-  (def fred (Person. "Fred" "Mertz"))
-  (assert (= (:firstname fred) "Fred"))
-  (def fred-too (Person. "Fred" "Mertz"))
-  (assert (= fred fred-too))
-  (assert (false? (= fred nil)))
-  (assert (false? (= nil fred)))
-
-  ;; invalid tests, cannot set meta and extmap directly - David
-  (def ethel (with-meta (assoc (Person. "Ethel" "Mertz") :husband :fred)
-               {:married true}))
-  (assert (= (meta ethel) {:married true}))
-  (def ethel-too (with-meta (assoc (Person. "Ethel" "Mertz")  :husband :fred)
-                   {:married true}))
-  (assert (= ethel ethel-too))
-
-  (assert (= (map->Person {:firstname "Fred" :lastname "Mertz"}) fred))
-  (assert (= (->Person "Fred" "Mertz") fred))
-
-  (assert (= (count fred) 2))
-  (assert (= (count ethel) 3))
-
-  (defrecord A [])
-  (assert (= {:foo 'bar} (meta (with-meta (A.) {:foo 'bar}))))
-  (assert (= 'bar (:foo (assoc (A.) :foo 'bar))))
-
-  (defrecord C [a b c])
-  (def letters (C. "a" "b" "c"))
-  (assert (= (set (keys letters)) #{:a :b :c}))
-  (def more-letters (assoc letters :d "d" :e "e" :f "f"))
-  (assert (= (set (keys more-letters)) #{:a :b :c :d :e :f}))
-  (assert (= (set (keys (dissoc more-letters :d))) #{:a :b :c :e :f}))
-  (assert (= (set (keys (dissoc more-letters :d :e))) #{:a :b :c :f}))
-  (assert (= (set (keys (dissoc more-letters :d :e :f))) #{:a :b :c}))
-
   ;; ObjMap
-  (let [ks (map (partial str "foo") (range 500))
-        m  (apply obj-map (interleave ks (range 500)))]
-    (assert (instance? cljs.core.ObjMap m))
-    (assert (= 500 (count m)))
-    (assert (= 123 (m "foo123"))))
-
-  ;; comparator
-  (assert (= [1 1 2 2 3 5] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator <)))))
-  (assert (= [5 3 2 2 1 1] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator >)))))
-  
-  ;; dot
-  (let [s "abc"]
-    (assert (= 3 (.-length s)))
-    (assert (= 3 (. s -length)))
-    (assert (= 3 (. (str 138) -length)))
-    (assert (= 3 (. "abc" -length)))
-    (assert (= "bc" (.substring s 1)))
-    (assert (= "bc" (.substring "abc" 1)))
-    (assert (= "bc" ((memfn substring start) s 1)))
-    (assert (= "bc" (. s substring 1)))
-    (assert (= "bc" (. s (substring 1))))
-    (assert (= "bc" (. s (substring 1 3))))
-    (assert (= "bc" (.substring s 1 3)))
-    (assert (= "ABC" (. s (toUpperCase))))
-    (assert (= "ABC" (. "abc" (toUpperCase))))
-    (assert (= "ABC" ((memfn toUpperCase) s)))
-    (assert (= "BC" (. (. s (toUpperCase)) substring 1)))
-    (assert (= 2 (.-length (. (. s (toUpperCase)) substring 1)))))
-
-  (assert (= (conj fred {:wife :ethel :friend :ricky})
-             (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel :friend :ricky})))
-  (assert (= (conj fred {:lastname "Flintstone"})
-             (map->Person {:firstname "Fred" :lastname "Flintstone"})))
-  (assert (= (assoc fred :lastname "Flintstone")
-             (map->Person {:firstname "Fred" :lastname "Flintstone"})))
-  (assert (= (assoc fred :wife :ethel)
-             (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel})))
-  (assert (= (dissoc ethel :husband)
-             (map->Person {:firstname "Ethel" :lastname "Mertz"})))
-
-  (defrecord A [x])
-  (defrecord B [x])
-  (assert (not= (A. nil) (B. nil)))
-
-  (defprotocol IFoo (foo [this]))
-  (assert (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
-             {:foo :bar}))
-
-  (defmulti foo2 identity)
-  (defmethod foo2 0 [x] x)
-  (assert (= foo2 (ffirst {foo2 1})))
-
-  (defprotocol IMutate
-    (mutate [this]))
-
-  (deftype Mutate [^:mutable a]
-    IMutate
-    (mutate [_]
-      (set! a 'foo)))
-
-  ;; IFn
-  (deftype FnLike []
-    IFn
-    (-invoke [_] :a)
-    (-invoke [_ a] :b)
-    (-invoke [_ a b] :c))
-
-  (assert (= :a ((FnLike.))))
-  (assert (= :b ((FnLike.) 1)))
-  (assert (= :c ((FnLike.) 1 2)))
-
-  (assert (= [:b :b :b] (map (FnLike.) [0 0 0])))
-
-  (deftype FnLikeB [a]
-    IFn
-    (-invoke [_] a))
-
-  (assert (= 1 ((FnLikeB. 1))))
-
-  ;; hashing bug in many JS runtimes CLJ-118
-  (let [g #{(conj #{:2} :alt)}
-        h #{#{:2 :alt}}]
-    (assert (= g h)))
-  (assert (= (hash {:a 1 :b 2})
-             (hash {:b 2 :a 1})))
-  (assert (= (hash (hash-map :a 1 :b 2))
-             (hash (hash-map :b 2 :a 1))))
-  (assert (= (hash {:start 133 :end 134})
-             (hash (apply hash-map [:start 133 :end 134]))))
-  (assert (= (hash :a)
-             (hash (keyword "a"))))
-
-  (defprotocol IHasFirst
-    (-get-first [this]))
-
-  (defprotocol IFindsFirst
-    (-find-first [this other]))
-
-  (deftype First [xs]
-    ISeqable
-    (-seq [this] (seq xs))
-    IIndexed
-    (-nth [this i] (nth xs i))
-    (-nth [this i not-found] (nth xs i not-found))
-    IFn
-    (-invoke [[x]] x)
-    (-invoke [this x] this)
-    Object
-    (toString [[x]] (str x))
-    IHasFirst
-    (-get-first [[x]] x)
-    IFindsFirst
-    (-find-first [_ [x]] x))
-
-  (let [fv (First. [1 2 3])
-        fs (First. "asdf")]
-    (assert (= (fv) 1))
-    (assert (= (fs) \a))
-    (assert (= (str fs) \a))
-    (assert (= (-get-first fv) 1))
-    (assert (= (-get-first fs) \a))
-    (assert (= (-find-first fv [1]) 1))
-    (assert (identical? (fv 1) fv)))
-
-  (deftype DestructuringWithLocals [a]
-    IFindsFirst
-    (-find-first [_ [x y]]
-      [x y a]))
-
-  (let [t (DestructuringWithLocals. 1)]
-    (assert (= [2 3 1] (-find-first t [2 3]))))
-
-  (let [x 1]
-    (assert (= (case x 1 :one) :one)))
-  (let [x 1]
-    (assert (= (case x 2 :two :default) :default)))
-  (let [x 1]
-    (assert (= (try
-                 (case x 3 :three)
-                 (catch js/Error e
-                     :fail))
-               :fail)))
-  (let [x 1]
-    (assert (= (case x
-                 (1 2 3) :ok
-                 :fail)
-               :ok)))
-
-  (let [x [:a :b]]
-    (assert (= (case x
-                 [:a :b] :ok)
-               :ok)))
-
-  (let [a 'a]
-    (assert (= (case a
-                 nil nil
-                 & :amp
-                 :none)
-               :none)))
-
-  (let [a '&]
-    (assert (= (case a
-                 nil nil
-                 & :amp
-                 :none)
-               :amp)))
-
-  (let [foo 'a]
-    (assert (= (case foo
-                 (a b c) :sym
-                 :none)
-               :sym))
-    (assert (= (case foo
-                 (b c d) :sym
-                 :none)
-               :none)))
-
-  ;; RSeq
-
-  (assert (= '(3 2 1) (reverse (seq (array 1 2 3)))))
-  (assert (= '(3 2 1) (reverse [1 2 3])))
-  (assert (= '(4 3 2 1) (cons 4 (reverse [1 2 3]))))
-  (assert (= 6 (reduce + (reverse [1 2 3]))))
-  (assert (= '(4 3 2) (map inc (reverse [1 2 3]))))
-  (assert (= '(4 2) (filter even? (reverse [1 2 3 4]))))
-
-  ;; CLJS-405
-
-  (defprotocol IBar (-bar [this x]))
-
-  (defn baz [f]
-    (reify
-      IBar
-      (-bar [_ x]
-        (f x))))
-
-  (assert (= 2 (-bar (baz inc) 1)))
-
-  ;; CLJS-401 / CLJS-411
-
-  (let [x "original"]
-    (defn original-closure-stmt [] x))
-
-  (let [x "overwritten"]
-    (assert (= "original" (original-closure-stmt))))
-
-  (assert (= "original" (let [x "original"
-                              oce (fn [] x)
-                              x "overwritten"]
-                          (oce))))
-
-
-  (letfn [(x [] "original")
-          (y [] (x))]
-    (let [x (fn [] "overwritten")]
-      (assert (= "original" (y)))))
-
-  ;; CLJS-459: reduce-kv visit order
-  (assert (= (reduce-kv conj [] (sorted-map :foo 1 :bar 2))
-             [:bar 2 :foo 1]))
-
-  ;; Test builtin implementations of IKVReduce
-  (letfn [(kvr-test [data expect]
-            (assert
-              (= :reduced
-                (reduce-kv
-                  (fn [_ _ _] (reduced :reduced))
-                  [] data)))
-            (assert
-              (= (sort expect)
-                 (sort
-                   (reduce-kv
-                     (fn [r k v] (-> r (conj [k v])))
-                     [] data)))))]
-    (kvr-test (obj-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]])
-    (kvr-test (hash-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]])
-    (kvr-test (array-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]])
-    (kvr-test [:v0 :v1] [[0 :v0] [1 :v1]]))
-  (assert (= {:init :val} (reduce-kv assoc {:init :val} nil)))
-  
-  ;; data conveying exception
-  (assert (= {:foo 1}
-             (try (throw (ex-info "asdf" {:foo 1}))
-                  (catch ExceptionInfo e
-                    (ex-data e)))))
-  (assert (instance? js/Error (ex-info "asdf" {:foo 1})))
-  (assert (not (instance? cljs.core.ExceptionInfo (js/Error.))))
-
-  ;; CLJS-435
-
-  (assert (= (assoc {} 154618822656 1 261993005056 1)
-             {154618822656 1 261993005056 1}))
-
-  ;; CLJS-458
-
-  (assert (= (get-in {:a {:b 1}} [:a :b :c] :nothing-there)
-             :nothing-there))
-
-  ;; CLJS-464
-
-  (assert (nil? (get-in {:foo {:bar 2}} [:foo :bar :baz])))
-
-  ;; symbol metadata
-
-  (assert (= (meta (with-meta 'foo {:tag 'int})) {:tag 'int}))
-
-  ;; CLJS-467
-
-  (assert (= (reduce-kv + 0 (apply hash-map (range 1000)))
-             (reduce + (range 1000))))
-
-  ;; CLJS-477
-
-  (assert (= [js/undefined 1 2] ((fn [& more] more) js/undefined 1 2)))
-  (assert (= [js/undefined 4 5] ((fn [a b & more] more) 1 2 js/undefined 4 5)))
-
-  ;; CLJS-493
-
-  (assert (nil? (get 42 :anything)))
-  (assert (= (get 42 :anything :not-found) :not-found))
-  (assert (nil? (first (map get [42] [:anything]))))
-  (assert (= (first (map get [42] [:anything] [:not-found])) :not-found))
-
-  ;; CLJS-481
-
-  (let [fs (atom [])]
-    (doseq [x (range 4)
-            :let [y (inc x)
-                  f (fn [] y)]]
-      (swap! fs conj f))
-    (assert (= (map #(%) @fs) '(1 2 3 4))))
-
-  ;; CLJS-495
-  (assert (false? (exists? js/jQuery)))
-  (def exists?-test-val 'foo)
-  (assert (exists? exists?-test-val))
-
-  ;; CLJS-496
-  (assert (= (char 65) \A))
-  (assert (= (char \A) \A))
-
-  ;; compile time run symbol hash codes
-  
-  (assert (= (hash 'foo) (hash (symbol "foo"))))
-  (assert (= (hash 'foo/bar) (hash (symbol "foo" "bar"))))
-
-  (assert (= (lazy-cat [1] [2] [3]) '(1 2 3)))
-
-  ;; r1798 core fn protocol regression
-  (extend-type object
-    ISeqable
-    (-seq [coll]
-      (map #(vector % (aget coll %)) (js-keys coll)))
-
-    ILookup
-    (-lookup
-      ([coll k]
-        (-lookup coll k nil))
-      ([coll k not-found]
-        (if-let [v (aget coll k)]
-          v
-          not-found))))
-
-  (assert (= (seq (js-obj "foo" 1 "bar" 2)) '(["foo" 1] ["bar" 2])))
-  (assert (= (get (js-obj "foo" 1) "foo") 1))
-  (assert (= (get (js-obj "foo" 1) "bar" ::not-found) ::not-found))
-  (assert (= (reduce (fn [s [k v]] (+ s v)) 0 (js-obj "foo" 1 "bar" 2)) 3))
-
-  ;; CLJS-515
-  (deftype PositionalFactoryTest [x])
-
-  (assert (== 1 (.-x (->PositionalFactoryTest 1))))
-
-  ;; CLJS-518
-  (assert (nil? (:test "test")))
-
-  ;; CLJS-541
-  (letfn [(f! [x] (print \f) x)
-          (g! [x] (print \g) x)]
-    (assert (= "ffgfg"
-               (with-out-str
-                 (instance? Symbol (f! 'foo))
-                 (max (f! 5) (g! 10))
-                 (min (f! 5) (g! 10))))))
-
-  ;; CLJS-582
-  (assert (= #{1 2} (set [1 2 2])))
-  (assert (= #{1 2} (hash-set 1 2 2)))
-  (assert (= #{1 2} (apply hash-set [1 2 2])))
-
-  ;; CLJS-585
-  (assert (= (last (map identity (into [] (range 32)))) 31))
-  (assert (= (into #{} (range 32))
-             (set (map identity (into [] (range 32))))))
-
-  ;; CLJS-580
-  (def foo580)
-  (def foo580 {:a (fn []) :b (fn [] (foo580 :a))})
-  (assert (nil? (((:b foo580)))))
-
-  ;; CLJS-587
-  (assert (== (first (filter #(== % 9999) (range))) 9999))
-
-  ;; LazySeq regressions
-
-  ;; CLJS-604
-  (assert (= () (concat nil [])))
-  (assert (= () (concat [] [])))
-
-  ;; CLJS-600
-  (assert (= "foobar" (apply str (concat "foo" "bar"))))
-
-  ;; CLJS-608
-  (assert (= '("") (re-seq #"\s*" "")))
-
-  ;; CLJS-638
-
-  (deftype KeywordTest []
-    ILookup
-    (-lookup [o k] :nothing)
-    (-lookup [o k not-found] not-found))
-
-  (assert (= (:a (KeywordTest.)) :nothing))
-
-  ;; CLJS-648 (CLJ-1285)
-  (let [a (reify IHash (-hash [_] 42))
-        b (reify IHash (-hash [_] 42))
-        s (set (range 128))]
-    (assert (= (-> (conj s a b) transient (disj! a) persistent! (conj a))
-               (-> (conj s a b) transient (disj! a) persistent! (conj a)))))
-
-  ;; CLJS-660
-
-  (assert (= (-> 'a.b keyword ((juxt namespace name))) [nil "a.b"]))
-  (assert (= (-> 'a.b/c keyword ((juxt namespace name))) ["a.b" "c"]))
-  (assert (= (-> "a.b" keyword ((juxt namespace name))) [nil "a.b"]))
-  (assert (= (-> "a.b/c" keyword ((juxt namespace name))) ["a.b" "c"]))
-
-  ;; CLJS-663
-
-  (assert (= (keyword 123) nil))
-  (assert (= (keyword (js/Date.)) nil))
-
-  ;; CLJS-647
-  (let [keys #(vec (js-keys %))
-        z "x"]
-    (assert (= ["x"]
-               (keys (js-obj "x" "y"))
-               (keys (js-obj (identity "x") "y"))
-               (keys (js-obj z "y")))))
-
-  ;; CLJS-583
-
-  (def some-x 1)
-  (def some-y 1)
-
-  (assert (= (count #{some-x some-y}) 1))
-
-  ;; CLJS-584
-
-  (assert (= (count {some-x :foo some-y :bar}) 1))
-
-  ;; CLJS-717
-
-  (assert (array? #js [1 2 3]))
-  (assert (= (alength #js [1 2 3]) 3))
-  (assert (= (seq #js [1 2 3]) (seq [1 2 3])))
-  (assert (= (set (js-keys #js {:foo "bar" :baz "woz"})) #{"foo" "baz"}))
-  (assert (= (aget #js {:foo "bar"} "foo") "bar"))
-  (assert (= (aget #js {"foo" "bar"} "foo") "bar"))
-  (assert (array? (aget #js {"foo" #js [1 2 3]} "foo")))
-  (assert (= (seq (aget #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))
-
-  ;; CLJS-725
-
-  (assert (= (apply vector (drop-while (partial = 1) [1 2 3])) [2 3]))
-  (assert (= (apply list (drop-while (partial = 1) [1 2 3])) '(2 3)))
-  (assert (= (set (drop 1 #js [1 2 3])) #{2 3}))
-
-  ;; CLJS-724
-
-  (assert (nil? (first (rest (rest (rest (range 3)))))))
-
-  ;; CLJS-730
-
-  (assert (true? (object? #js {})))
-  (assert (false? (object? nil)))
-
-  (assert
-    (== (count (hash-set [1 4] [2 4] [3 4] [0 3] [1 3] [2 3] [3 3]
-                         [0 2] [1 2] [2 2] [3 2] [4 2] [0 1] [1 1]
-                         [2 1] [3 1] [1 0] [2 0] [3 0]))
-        (count (list [1 4] [2 4] [3 4] [0 3] [1 3] [2 3] [3 3]
-                     [0 2] [1 2] [2 2] [3 2] [4 2] [0 1] [1 1]
-                     [2 1] [3 1] [1 0] [2 0] [3 0]))))
-
-  (defprotocol IWoz
-    (-woz [this]))
-
-  (def noz [])
-
-  ;; CLJS-414
-
-  (assert (= (specify noz IWoz (-woz [_] :boz)) noz))
-  (assert (not (identical? (specify noz IWoz (-woz [_] :boz)) noz)))
-  (assert (= (-woz (specify noz IWoz (-woz [this] this))) noz))
-  (assert (= (-woz (specify noz IWoz (-woz [_] :boz))) :boz))
-
-  ;; CLJS-734
-
-  (assert (= (-> (transient []) (conj! 1 2) persistent!) [1 2]))
-  (assert (= (-> (transient #{1 2 3}) (disj! 1 2) persistent!) #{3}))
-  (assert (= (-> (transient {}) (assoc! :a 1 :b 2) persistent!) {:a 1 :b 2}))
-  (assert (= (-> (transient {:a 1 :b 2 :c 3}) (dissoc! :a :b) persistent!) {:c 3}))
-
-  ;; CLJS-767
-
-  (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
-    (assert (= :fail (try (assoc [1 2] n 4)
-                       (catch js/Error e :fail))))
-    (assert (= :fail (try (assoc (subvec [1 2 3] 2) n 4)
-                       (catch js/Error e :fail))))
-    (assert (= :fail (try (assoc (range 1 3) n 4)
-                       (catch js/Error e :fail)))))
-
-  ;; CLJS-768
-
-  (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
-    (assert (= :fail (try (assoc! (transient [1 2]) n 4)
-                       (catch js/Error e :fail)))))
-
-  ;; CLJS-739
-
-  (defn cljs-739 [arr names]
-    (let [name (first names)]
-      (if name
-        (recur (conj arr (fn [] (println name)))
-          (rest names))
-        arr)))
-
-  (set! *print-newline* true)
-  (assert (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
-             ":a\n:b\n:c\n:d\n"))
-  (set! *print-newline* false)
-
-  ;; CLJS-728
-
-  (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
-    (assert (nil? (get [1 2] n)))
-    (assert (= :fail (try (nth [1 2] n) (catch js/Error e :fail))))
-    (assert (= 4 (get [1 2] n 4)))
-    (assert (= :fail (try (nth [1 2] n 4) (catch js/Error e :fail))))
-
-    (assert (nil? (get (subvec [1 2] 1) n)))
-    (assert (= :fail (try (nth (subvec [1 2] 1) n) (catch js/Error e :fail))))
-    (assert (= 4 (get (subvec [1 2] 1) n 4)))
-    (assert (= :fail (try (nth (subvec [1 2] 1) n 4) (catch js/Error e :fail))))
-
-    (assert (nil? (get (transient [1 2]) n)))
-    (assert (= :fail (try (nth (transient [1 2]) n) (catch js/Error e :fail))))
-    (assert (= 4 (get (transient [1 2]) n 4)))
-    (assert (= :fail (try (nth (transient [1 2]) n 4) (catch js/Error e :fail))))
-
-    (assert (nil? (get (range 1 3) n)))
-    (assert (= :fail (try (nth (range 1 3) n) (catch js/Error e :fail))))
-    (assert (= 4 (get (range 1 3) n 4)))
-    (assert (= :fail (try (nth (range 1 3) n 4) (catch js/Error e :fail)))))
-
-  ;; CLJS-778
-  (assert (= (-rest (rseq [0])) ()))
-  (assert (nil? (-next (rseq [0]))))
-  (assert (= (set (rseq [0])) #{0}))
-
-  ;; CLJS-780
-  (def cljs-780 (atom {:foo (with-meta [] {:bar '(1 2 3)})}))
-  (swap! cljs-780 update-in [:foo] vary-meta update-in [:bar] vec)
-  (let [x (-> @cljs-780 :foo meta :bar)]
-    (assert (vector? x))
-    (assert (= x [1 2 3])))
-
-  ;; CLJS-782
-  (assert (= (.toString #uuid "550e8400-e29b-41d4-a716-446655440000")
-             "550e8400-e29b-41d4-a716-446655440000"))
-
-  ;; CLJS-784
-  (doseq [m [(array-map) (hash-map) (sorted-map)]]
-    (assert (= :ok
-               (try
-                 (conj m "foo")
-                 (catch js/Error _
-                   :ok))))
-    (assert (= {:foo 1} (conj m [:foo 1])))
-    (assert (= {:foo 1} (conj m {:foo 1})))
-    (assert (= {:foo 1} (conj m (list [:foo 1])))))
-  
-  (doseq [mt [array-map hash-map sorted-map]]
-    (assert (= {:foo 1 :bar 2 :baz 3}
-               (conj (mt :foo 1)
-                     ((fn make-seq [from-seq]
-                        ;; this tests specifically for user defined seq's, that implement the bare minimum, i.e. no INext
-                        (when (seq from-seq)
-                          (reify
-                            ISeqable
-                            (-seq [this] this)
-                            ISeq
-                            (-first [this] (first from-seq))
-                            (-rest [this] (make-seq (rest from-seq))))))
-                      [[:bar 2] [:baz 3]])))))
-
-  ;; case keyword
-  (assert (= (let [x "a"] (case x :a 1 "a")) "a"))
-
-  ;; CLJS-801
-  (assert (= "0atrue:key/wordsymb/olfalse[1 2 3 4]1234.56789"
-             (str 0 "a" true nil :key/word 'symb/ol false [1 2 3 4] 1234.5678 0x09)))
-
-  ;; CLJS-812
-  (defn case-recur [value]
-    (case value
-      :a (recur :b)
-      :b 0))
-
-  (assert (= (case-recur :a) 0))
-
-  ;; CLJS-816
-  (assert (= (set/rename-keys {:a "one" :b "two"} {:a :z}) {:z "one" :b "two"}))
-  (assert (= (set/rename-keys {:a "one" :b "two"} {:a :z :c :y}) {:z "one" :b "two"}))
-  (assert (= (set/rename-keys {:a "one" :b "two" :c "three"} {:a :b :b :a})
-             {:a "two" :b "one" :c "three"}))
-
-  ;; CLJS-881
-  (assert (= [:foo] (keys (apply array-map [:foo 1 :foo 2]))))
-
-
-  ;; CLJS-810
-  (let [not-strings [true false nil 1 (fn [])]]
-    (assert (every? #(= :failed (try (re-find #"." %)
-                                     (catch js/TypeError _ :failed))) not-strings))
-    (assert (every? #(= :failed (try (re-matches #"." %)
-                                     (catch js/TypeError _ :failed))) not-strings))
-    (assert (every? #(= :failed (try (re-find #"nomatch" %)
-                                     (catch js/TypeError _ :failed))) not-strings))
-    (assert (every? #(= :failed (try (re-matches #"nomatch" %)
-                                     (catch js/TypeError _ :failed))) not-strings)))
-
-  ;; CLJS-849
-  (let [xs [44 43 42 41 40 39 38 37 36 35 34 33 32 31 30 29 28 27 26 25 24]]
-    (loop [m  (transient (zipmap xs (repeat 1)))
-           xs xs]
-      (if-let [x (first xs)]
-        (if (contains? m x)
-          (recur (dissoc! m x) (next xs))
-          (throw (ex-info "CLJS-849 regression!"
-                   {:m (persistent! m) :xs xs}))))))
-
-  ;; CLJS-
-  (let [m (array-map 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10 10 11 11 12 12 13 13 14 14 15 15)]
-    (assert (instance? cljs.core/PersistentArrayMap m))
-    (assert (= (seq m) [[0 0] [1 1] [2 2] [3 3] [4 4] [5 5] [6 6] [7 7] [8 8] [9 9] [10 10] [11 11] [12 12] [13 13] [14 14] [15 15]])))
-
-  ;; CLJS-716
-  (def test-map
-    {:a 1
-     :b 2
-     #inst "2013-12-19T05:00:00.000-00:00" 3
-     :d 4
-     :e 5
-     #inst "2013-12-06T05:00:00.000-00:00" 6
-     :g 7
-     :h 8
-     :i 9
-     :j 10})
-
-  (assert (= (test-map #inst "2013-12-19T05:00:00.000-00:00") 3))
-  (assert (= (test-map #inst "2013-12-06T05:00:00.000-00:00") 6))
-
-  ;; CLJS-853
-
-  (assert (= {:foo true} (meta ^:foo (fn []))))
-
-  ;; CLJS-807
-  (assert (= -1 -1N))
-  (assert (= 9.007199254740996E15 9007199254740995N))
-  (assert (= 1.5 1.5M))
-  (assert (= 4.9E-324 5E-324M))
+  ;; (let [ks (map (partial str "foo") (range 500))
+  ;;       m  (apply obj-map (interleave ks (range 500)))]
+  ;;   (assert (instance? cljs.core.ObjMap m))
+  ;;   (assert (= 500 (count m)))
+  ;;   (assert (= 123 (m "foo123"))))
 
   ;; vars
 
