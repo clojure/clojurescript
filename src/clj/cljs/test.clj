@@ -90,10 +90,10 @@
            env'# (if result#
                    (cljs.test/do-report ~env
                      {:type :pass, :message ~msg,
-                      :expected '~form, :actual (class object#)})
+                      :expected '~form, :actual (type object#)})
                    (cljs.test/do-report ~env
                      {:type :fail, :message ~msg,
-                      :expected '~form, :actual (class object#)}))]
+                      :expected '~form, :actual (type object#)}))]
        (if (:return env'#)
          (assoc env'# :last-value result#)
          result#))))
