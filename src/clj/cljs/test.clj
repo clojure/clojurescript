@@ -265,9 +265,7 @@
                (fn [[_ v]] (:test v))
                (ana-api/ns-interns ns)))])
       (when (nil? env#)
-        (let [ret# (cljs.test/get-current-env)]
-          (cljs.test/clear-env!)
-          ret#)))))
+        (cljs.test/clear-env!)))))
 
 (defmacro test-ns
   "If the namespace defines a function named test-ns-hook, calls that.
