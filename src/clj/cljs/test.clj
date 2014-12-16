@@ -280,6 +280,7 @@
   ([ns] `(cljs.test/test-ns (cljs.test/empty-env) ~ns))
   ([env [quote ns :as form]]
    (assert (and (= quote 'quote) (symbol? ns)) "Argument to test-ns must be a quoted symbol")
+   (assert (ana-api/find-ns ns) (str "Namespace " ns " does not exist"))
    `(do
       (cljs.test/set-env! ~env)
       (cljs.test/do-report {:type :begin-test-ns, :ns ~form})

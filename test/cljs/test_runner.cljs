@@ -28,6 +28,6 @@
   'cljs.macro-test
   'cljs.top-level
   'cljs.keyword-test
-  'cljs.ns-tst
+  'cljs.ns-test
   'foo.ns-shadow-test
   'cljs.import-test)

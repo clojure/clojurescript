@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer.api
-  (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve])
+  (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns])
   (:require [cljs.env :as env]
             [cljs.analyzer :as ana]))
 
@@ -16,6 +16,9 @@
 
 (defn all-ns []
   (keys (get @env/*compiler* ::ana/namespaces)))
+
+(defn find-ns [sym]
+  (get-in @env/*compiler* [::ana/namespaces sym]))
 
 (defn ns-interns [ns]
   (get-in @env/*compiler* [::ana/namespaces ns :defs]))
