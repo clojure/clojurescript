@@ -951,8 +951,12 @@
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          ctorexpr (analyze enve ctor)
-         argexprs (vec (map #(analyze enve %) args))
-         known-num-fields (:num-fields (resolve-existing-var env ctor))
+         ctor-var (resolve-existing-var env ctor)
+         record-args
+         (when (and (:record ctor-var) (not (-> ctor meta :internal-ctor)))
+           (repeat 3 (analyze enve nil)))
+         argexprs (into (vec (map #(analyze enve %) args)) record-args)
+         known-num-fields (:num-fields ctor-var)
          argc (count args)]
      (when (and (not (-> ctor meta :internal-ctor))
                 known-num-fields (not= known-num-fields argc))
@@ -1244,7 +1248,8 @@
              (let [m (assoc (or m {})
                        :name t
                        :type true
-                       :num-fields (count fields))]
+                       :num-fields (count fields)
+                       :record (= :defrecord* op))]
                (merge m
                       (dissoc (meta tsym) :protocols)
                       {:protocols (-> tsym meta :protocols)}

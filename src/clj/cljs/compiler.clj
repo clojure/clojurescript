@@ -812,7 +812,7 @@
 
 (defmethod emit* :defrecord*
   [{:keys [t fields pmasks body]}]
-  (let [fields (concat (map munge fields) '[__meta __extmap])]
+  (let [fields (concat (map munge fields) '[__meta __extmap __hash])]
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
@@ -820,23 +820,13 @@
       (emitln "* @param {*} " fld))
     (emitln "* @param {*=} __meta ")
     (emitln "* @param {*=} __extmap")
+    (emitln "* @param {number|null} __hash")
     (emitln "*/")
     (emitln (munge t) " = (function (" (comma-sep fields) "){")
     (doseq [fld fields]
       (emitln "this." fld " = " fld ";"))
     (doseq [[pno pmask] pmasks]
       (emitln "this.cljs$lang$protocol_mask$partition" pno "$ = " pmask ";"))
-    (emitln "if(arguments.length>" (- (count fields) 2) "){")
-    (emitln "this.__meta = __meta;")
-    (emitln "this.__extmap = __extmap;")
-    (emitln "} else {")
-    (emits "this.__meta=")
-    (emit-constant nil)
-    (emitln ";")
-    (emits "this.__extmap=")
-    (emit-constant nil)
-    (emitln ";")
-    (emitln "}")
     (emitln "})")
     (emit body)))
 
