@@ -17,8 +17,6 @@
 (set! *print-newline* false)
 (set-print-fn! js/print)
 
-#_(core-test/test-stuff)
-
 (run-tests
   'cljs.core-test
   'cljs.reader-test
