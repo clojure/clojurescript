@@ -69,13 +69,12 @@
              (.valueOf (reader/read-string (pr-str est-inst)))))
       (is (= (.valueOf est-inst)
              (.valueOf utc-inst)))
-      (is (every? true?
-            (for [month (range 1 13)
-                  day   (range 1 29)
-                  hour  (range 1 23)]
-              (let [s (str "#inst \"2010-" (pad month) "-" (pad day) "T" (pad hour) ":14:15.666-06:00\"")]
-                (= (-> s reader/read-string .valueOf)
-                   (-> s reader/read-string pr-str reader/read-string .valueOf))))))))
+      (doseq [month (range 1 13)
+              day   (range 1 29)
+              hour  (range 1 23)]
+        (let [s (str "#inst \"2010-" (pad month) "-" (pad day) "T" (pad hour) ":14:15.666-06:00\"")]
+          (is (= (-> s reader/read-string .valueOf)
+                 (-> s reader/read-string pr-str reader/read-string .valueOf)))))))
  
   (let [u (reader/read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")]
     (testing "Testing reading UUID literals"
@@ -99,50 +98,48 @@
   ;; Unicode Tests
 
   (testing "Test reading unicode - strings, symbols, keywords"
-    (is (every? true?
-          (for [unicode
-                ["اختبار"                  ; arabic
-                 "ทดสอบ"                   ; thai
-                 "こんにちは"              ; japanese hiragana
-                 "你好"                    ; chinese traditional
-                 "אַ גוט יאָר"               ; yiddish
-                 "cześć"                   ; polish
-                 "привет"                  ; russian
+    (doseq [unicode
+            ["اختبار"                  ; arabic
+             "ทดสอบ"                   ; thai
+             "こんにちは"              ; japanese hiragana
+             "你好"                    ; chinese traditional
+             "אַ גוט יאָר"               ; yiddish
+             "cześć"                   ; polish
+             "привет"                  ; russian
 
-                 ;; RTL languages skipped below because tricky to insert
-                 ;;  ' and : at the "start"
+             ;; RTL languages skipped below because tricky to insert
+             ;;  ' and : at the "start"
 
-                 'ทดสอบ
-                 'こんにちは
-                 '你好
-                 'cześć
-                 'привет
+             'ทดสอบ
+             'こんにちは
+             '你好
+             'cześć
+             'привет
 
-                 :ทดสอบ
-                 :こんにちは
-                 :你好
-                 :cześć
-                 :привет
+             :ทดสอบ
+             :こんにちは
+             :你好
+             :cześć
+             :привет
 
                                         ;compound data
-                 {:привет :ru "你好" :cn}
-                 ]]
-            (let [input (pr-str unicode)
-                  read  (reader/read-string input)]
-              (= unicode read))))))
+             {:привет :ru "你好" :cn}
+             ]]
+      (let [input (pr-str unicode)
+            read  (reader/read-string input)]
+        (is (= unicode read)))))
 
   (testing "Testing unicode error cases"
-    (is (every? true?
-          (for [unicode-error
-                ["\"abc \\ua\""         ; truncated
-                 "\"abc \\x0z  ...etc\"" ; incorrect code
-                 "\"abc \\u0g00 ..etc\"" ; incorrect code
-                 ]]
-            (let [r (try
-                      (reader/read-string unicode-error)
-                      :failed-to-throw
-                      (catch js/Error e :ok))]
-              (= r :ok))))))
+    (doseq [unicode-error
+            ["\"abc \\ua\""         ; truncated
+             "\"abc \\x0z  ...etc\"" ; incorrect code
+             "\"abc \\u0g00 ..etc\"" ; incorrect code
+             ]]
+      (let [r (try
+                (reader/read-string unicode-error)
+                :failed-to-throw
+                (catch js/Error e :ok))]
+        (is (= r :ok)))))
 )
 
 (deftest test-717
