@@ -1155,12 +1155,10 @@
             (no-dispatch-value {:test :test})
             (catch js/Error e
               (not= -1 (.indexOf (.-message e) "cljs.core-test/no-dispatch-value")))))
-      (is (every? true?
-            (for [m [(obj-map) (array-map) (hash-map) (sorted-map)]]
-              (my-map? m))))
-      (is (every? true?
-            (for [not-m [[] 1 "asdf" :foo]]
-              (not (my-map? not-m)))))
+      (doseq [m [(obj-map) (array-map) (hash-map) (sorted-map)]]
+        (is (my-map? m)))
+      (doseq [not-m [[] 1 "asdf" :foo]]
+        (is (not (my-map? not-m))))
       ;; multimethod hashing
       (is (= foo2' (ffirst {foo2' 1})))
 )))
@@ -1481,16 +1479,15 @@
     (is (= (pr-str (PrintMe. 1 2)) "#cljs.core-test.PrintMe{:a 1, :b 2}"))
     (is (= (pr-str (js/Date. "2010-11-12T13:14:15.666-05:00"))
           "#inst \"2010-11-12T18:14:15.666-00:00\""))
-    (is (every? true?
-          (for [month (range 1 13)
-                day   (range 1 29)
-                hour  (range 1 23)]
-            (let [pad (fn [n]
-                        (if (< n 10)
-                          (str "0" n)
-                          n))
-                  inst (str "2010-" (pad month) "-" (pad day) "T" (pad hour) ":14:15.666-00:00")]
-              (= (pr-str (js/Date. inst)) (str "#inst \"" inst "\""))))))
+    (doseq [month (range 1 13)
+            day   (range 1 29)
+            hour  (range 1 23)]
+      (let [pad (fn [n]
+                  (if (< n 10)
+                    (str "0" n)
+                    n))
+            inst (str "2010-" (pad month) "-" (pad day) "T" (pad hour) ":14:15.666-00:00")]
+        (is (= (pr-str (js/Date. inst)) (str "#inst \"" inst "\"")))))
     (let [uuid-str "550e8400-e29b-41d4-a716-446655440000"
           uuid (UUID. uuid-str)]
       (is (= (pr-str uuid) (str "#uuid \"" uuid-str "\""))))
@@ -1864,12 +1861,11 @@
                     (fn [r k v] (-> r (conj [k v])))
                     [] data)))))]
     (testing "Testing IKVReduce"
-      (is (every? true?
-            (for [[data expect] [[(obj-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
-                                 [(hash-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
-                                 [(array-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
-                                 [[:v0 :v1] [[0 :v0] [1 :v1]]]]]
-              (kvr-test data expect))))
+      (doseq [[data expect] [[(obj-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
+                             [(hash-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
+                             [(array-map :k0 :v0 :k1 :v1) [[:k0 :v0] [:k1 :v1]]]
+                             [[:v0 :v1] [[0 :v0] [1 :v1]]]]]
+        (is (kvr-test data expect)))
       (is (= {:init :val} (reduce-kv assoc {:init :val} nil))))))
 
 (deftest test-data-conveying-exceptions
@@ -2096,22 +2092,19 @@
 
 (deftest test-767
   (testing "Testing CLJS-767, invalid assoc"
-    (is (every? true?
-          (for [n [nil "-1" "" "0" "1" false true (js-obj)]]
-            (and
-              (= :fail (try (assoc [1 2] n 4)
-                            (catch js/Error e :fail)))
-              (= :fail (try (assoc (subvec [1 2 3] 2) n 4)
-                            (catch js/Error e :fail)))
-              (= :fail (try (assoc (range 1 3) n 4)
-                            (catch js/Error e :fail)))))))))
+    (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
+      (is (= :fail (try (assoc [1 2] n 4)
+                        (catch js/Error e :fail))))
+      (is (= :fail (try (assoc (subvec [1 2 3] 2) n 4)
+                     (catch js/Error e :fail))))
+      (is (= :fail (try (assoc (range 1 3) n 4)
+                     (catch js/Error e :fail)))))))
 
 (deftest test-768
   (testing "Testing CLJS-768, invalid assoc!"
-    (is (every? true?
-          (for [n [nil "-1" "" "0" "1" false true (js-obj)]]
-            (= :fail (try (assoc! (transient [1 2]) n 4)
-                          (catch js/Error e :fail))))))))
+    (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
+      (is (= :fail (try (assoc! (transient [1 2]) n 4)
+                        (catch js/Error e :fail)))))))
 
 (defn cljs-739 [arr names]
   (let [name (first names)]
@@ -2129,28 +2122,26 @@
 
 (deftest test-728
   (testing "Testing CLJS-728, lookup with default"
-    (is (every? true?
-          (for [n [nil "-1" "" "0" "1" false true (js-obj)]]
-            (and
-              (nil? (get [1 2] n))
-              (= :fail (try (nth [1 2] n) (catch js/Error e :fail)))
-              (= 4 (get [1 2] n 4))
-              (= :fail (try (nth [1 2] n 4) (catch js/Error e :fail)))
+    (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]
+      (is (nil? (get [1 2] n)))
+      (is (= :fail (try (nth [1 2] n) (catch js/Error e :fail))))
+      (is (= 4 (get [1 2] n 4)))
+      (is (= :fail (try (nth [1 2] n 4) (catch js/Error e :fail))))
 
-              (nil? (get (subvec [1 2] 1) n))
-              (= :fail (try (nth (subvec [1 2] 1) n) (catch js/Error e :fail)))
-              (= 4 (get (subvec [1 2] 1) n 4))
-              (= :fail (try (nth (subvec [1 2] 1) n 4) (catch js/Error e :fail)))
+      (is (nil? (get (subvec [1 2] 1) n)))
+      (is (= :fail (try (nth (subvec [1 2] 1) n) (catch js/Error e :fail))))
+      (is (= 4 (get (subvec [1 2] 1) n 4)))
+      (is (= :fail (try (nth (subvec [1 2] 1) n 4) (catch js/Error e :fail))))
 
-              (nil? (get (transient [1 2]) n))
-              (= :fail (try (nth (transient [1 2]) n) (catch js/Error e :fail)))
-              (= 4 (get (transient [1 2]) n 4))
-              (= :fail (try (nth (transient [1 2]) n 4) (catch js/Error e :fail)))
+      (is (nil? (get (transient [1 2]) n)))
+      (is (= :fail (try (nth (transient [1 2]) n) (catch js/Error e :fail))))
+      (is (= 4 (get (transient [1 2]) n 4)))
+      (is (= :fail (try (nth (transient [1 2]) n 4) (catch js/Error e :fail))))
 
-              (nil? (get (range 1 3) n))
-              (= :fail (try (nth (range 1 3) n) (catch js/Error e :fail)))
-              (= 4 (get (range 1 3) n 4))
-              (= :fail (try (nth (range 1 3) n 4) (catch js/Error e :fail))))))))
+      (is (nil? (get (range 1 3) n)))
+      (is (= :fail (try (nth (range 1 3) n) (catch js/Error e :fail))))
+      (is (= 4 (get (range 1 3) n 4)))
+      (is (= :fail (try (nth (range 1 3) n 4) (catch js/Error e :fail))))))
   )
 
 (deftest test-778
@@ -2175,30 +2166,28 @@
 
 (deftest test-784
   (testing "Testing CLJS-784, conj on maps"
-    (is (every? true?
-          (for [m [(array-map) (hash-map) (sorted-map)]]
-            (and (= :ok
-                      (try
-                        (conj m "foo")
-                        (catch js/Error _
-                          :ok)))
-                  (= {:foo 1} (conj m [:foo 1]))
-                  (= {:foo 1} (conj m {:foo 1}))
-                  (= {:foo 1} (conj m (list [:foo 1])))))))
-    (is (every? true?
-          (for [mt [array-map hash-map sorted-map]]
-            (= {:foo 1 :bar 2 :baz 3}
-              (conj (mt :foo 1)
-                ((fn make-seq [from-seq]
-                   ;; this tests specifically for user defined seq's, that implement the bare minimum, i.e. no INext
-                   (when (seq from-seq)
-                     (reify
-                       ISeqable
-                       (-seq [this] this)
-                       ISeq
-                       (-first [this] (first from-seq))
-                       (-rest [this] (make-seq (rest from-seq))))))
-                 [[:bar 2] [:baz 3]])))))))
+    (doseq [m [(array-map) (hash-map) (sorted-map)]]
+      (is (= :ok
+            (try
+              (conj m "foo")
+              (catch js/Error _
+                :ok))))
+      (is (= {:foo 1} (conj m [:foo 1])))
+      (is (= {:foo 1} (conj m {:foo 1})))
+      (is (= {:foo 1} (conj m (list [:foo 1])))))
+    (doseq [mt [array-map hash-map sorted-map]]
+      (is (= {:foo 1 :bar 2 :baz 3}
+            (conj (mt :foo 1)
+              ((fn make-seq [from-seq]
+                 ;; this tests specifically for user defined seq's, that implement the bare minimum, i.e. no INext
+                 (when (seq from-seq)
+                   (reify
+                     ISeqable
+                     (-seq [this] this)
+                     ISeq
+                     (-first [this] (first from-seq))
+                     (-rest [this] (make-seq (rest from-seq))))))
+               [[:bar 2] [:baz 3]]))))))
   )
 
 (deftest test-case-keyword
