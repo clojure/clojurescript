@@ -508,9 +508,10 @@
     {:env env :op :var-special :form form
      :var (analyze env sym)
      :sym (analyze env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
-     :meta (let [ks [:ns :name :doc :arglists :file :line :column]
+     :meta (let [ks [:ns :name :doc :file :line :column]
                  m (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
-                     :test `(when ~sym (.-cljs$lang$test ~sym)))]
+                     :test `(when ~sym (.-cljs$lang$test ~sym))
+                     :arglists (:arglists var))]
             (analyze env m))}))
 
 (defmethod parse 'if
@@ -637,14 +638,14 @@
                   (swap! env/*compiler* update-in [::namespaces ns-name :excludes] conj sym)
                   (update-in env [:ns :excludes] conj sym))
                 env)
-          name (:name (resolve-var (dissoc env :locals) sym))
+          var-name (:name (resolve-var (dissoc env :locals) sym))
           init-expr (when (contains? args :init)
                       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
                         (merge
-                          {:name name}
+                          {:name var-name}
                           sym-meta
                           (when dynamic {:dynamic true})
-                          (source-info name env)))
+                          (source-info var-name env)))
                       (disallowing-recur
                         (analyze (assoc env :context :expr) (:init args) sym)))
           fn-var? (and init-expr (= (:op init-expr) :fn))
@@ -652,7 +653,7 @@
                 (or (:ret-tag init-expr) tag)
                 tag)
           export-as (when-let [export-val (-> sym meta :export)]
-                      (if (= true export-val) name export-val))
+                      (if (= true export-val) var-name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
       (when-let [v (get-in @env/*compiler* [::namespaces ns-name :defs sym])]
         (when (and (not (-> sym meta :declared))
@@ -660,11 +661,11 @@
           (warning :fn-var env {:ns-name ns-name :sym sym})))
       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
         (merge 
-          {:name name}
+          {:name var-name}
           sym-meta
           (when doc {:doc doc})
           (when dynamic {:dynamic true})
-          (source-info name env)
+          (source-info var-name env)
           ;; the protocol a protocol fn belongs to
           (when protocol
             {:protocol protocol})
@@ -683,7 +684,7 @@
                :variadic (:variadic init-expr)
                :max-fixed-arity (:max-fixed-arity init-expr)
                :method-params params
-               :arglists params
+               :arglists (:arglists sym-meta)
                :methods (map (fn [method]
                                (let [tag (infer-tag env (assoc method :op :method))]
                                  (cond-> (select-keys method
@@ -693,7 +694,7 @@
           (when (and fn-var? tag)
             {:ret-tag tag})))
       (merge {:env env :op :def :form form
-              :name name
+              :name var-name
               :var (assoc (analyze (-> env (dissoc :locals)
                                      ;; if there's :test var metadata will need locals
                                      (assoc :test-locals locals)
