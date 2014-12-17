@@ -389,7 +389,8 @@
              :message "Uncaught exception, not in assertion."
              :expected nil
              :actual e})))
-      (do-report {:type :end-test-var :var v}))))
+      (do-report {:type :end-test-var :var v})
+      (update-current-env! [:testing-vars] rest))))
 
 (defn- default-fixture
   "The default, empty, fixture function.  Just calls its argument."

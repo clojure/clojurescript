@@ -170,7 +170,7 @@
    `(do
       (cljs.test/update-current-env! [:testing-contexts] conj ~string)
       (let [ret# (do ~@body)]
-        (cljs.test/update-current-env! [:testing-contests] rest)
+        (cljs.test/update-current-env! [:testing-contexts] rest)
         ret#))))
 
 ;; =============================================================================
