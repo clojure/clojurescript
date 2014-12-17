@@ -1,3 +1,30 @@
+## 0.0-2496
+
+### Enhancements
+* cljs.test added, mirrors clojure.test
+* New cljs.analyzer.api namespace for easier access to analysis info from macros
+* New cljs.analyzer.api namespace for easier access to analysis info from macros
+* Support :test metadata on vars
+* Support static vars
+* cljs.source-map for client side source mapping
+* expose ClojureScript :warnings build option
+* CLJS-909: Add stable api for consumers of compiler data.
+
+### Changes
+* convert all ClojureScript tests to cljs.test
+* add volatile! from Clojure 1.7
+* stateful transducers use volatile!
+* added `js-debugger` macro, compiles to "debugger;"
+* CLJS-892: Improve performance of compare-symbols/compare-keywords
+* CLJS-696: remove arguments usage from defrecord constructor
+* unroll `partial`, copy & pasted from Clojure core.clj
+* optimize clojure.string/join
+
+### Fixes
+* fix `cljs.nodejs/enable-util-print!`, incorrectly monkey patched `cjls.core/string-print` instead of setting `cljs.core/*print-fn*`
+* cljs.reader bug, '/ incorrectly read
+* avoid emitting the same goog.require
+
 ## 0.0-2411
 
 ### Enhancements
