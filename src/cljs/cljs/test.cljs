@@ -283,8 +283,7 @@
      :dynamic true}
   report (fn [m] [(:reporter (get-current-env)) (:type m)]))
 
-(defmethod report :default [m]
-  (prn m))
+(defmethod report :default [m])
 
 (defmethod report [::default :pass] [m]
   (inc-report-counter! :pass))
