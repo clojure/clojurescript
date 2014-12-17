@@ -17,4 +17,4 @@
 
 ; Have ClojureScript print using Node's sys.print function
 (defn enable-util-print! []
-  (set! cljs.core/string-print (.-print (require "util"))))
+  (set! *print-fn* (.-print (require "util"))))
