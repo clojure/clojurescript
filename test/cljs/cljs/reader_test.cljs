@@ -162,3 +162,11 @@
         m  (re-find re " \u00a1   ")]
     (testing "Testing reading, CLJS-819"
       (is (= m " \u00a1")))))
+
+;; NOTE: issue uncovered by test.check
+
+(deftest test-slash-reading
+  (let [x '({/ 0})]
+    (testing "Testing '/ reading"
+      (is (= x (reader/read-string (pr-str x))))
+      (is (= (reader/read-string (pr-str x)) x)))))

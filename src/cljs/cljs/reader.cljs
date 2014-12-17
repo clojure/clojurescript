@@ -318,17 +318,20 @@ nil if the end of stream has been reached")
 
 (defn special-symbols [t not-found]
   (cond
-   (identical? t "nil") nil
-   (identical? t "true") true
-   (identical? t "false") false
-   :else not-found))
+    (identical? t "nil") nil
+    (identical? t "true") true
+    (identical? t "false") false
+    (identical? t "/") '/
+    :else not-found))
 
 (defn read-symbol
   [reader initch]
   (let [token (read-token reader initch)]
-    (if (gstring/contains token "/")
+    (if (and (gstring/contains token "/")
+             (not (== (.-length token) 1)))
       (symbol (subs token 0 (.indexOf token "/"))
-              (subs token (inc (.indexOf token "/")) (.-length token)))
+              (subs token (inc (.indexOf token "/"))
+                (.-length token)))
       (special-symbols token (symbol token)))))
 
 (defn read-keyword
