@@ -937,7 +937,8 @@
     (is (= (re-seq (re-pattern "f(.)o") "foo bar foo baz foo zot") (list ["foo" "o"] ["foo" "o"] ["foo" "o"])))
     (is (= (re-matches (re-pattern "(?i)foo") "Foo") "Foo"))
                                         ; new RegExp("").source => "(?:)" on webkit-family envs, "" elsewhere
-    (is (#{"#\"\"" "#\"(?:)\""} (pr-str #"")))))
+    (is (#{"#\"\"" "#\"(?:)\""} (pr-str #"")))
+    (is (= (re-find (re-pattern "[\u2028]") " \u2028 ") "\u2028")))) ; regression test for CLJS-889
 
 (deftest test-destructuring
   (testing "Testing destructuring"

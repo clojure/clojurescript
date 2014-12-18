@@ -8405,8 +8405,9 @@ reduces them without incurring seq initialization"
   [s]
   (if (instance? js/RegExp s)
     s
-    (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" s)]
-      (js/RegExp. pattern flags))))
+    (let [[prefix flags] (re-find #"^\(\?([idmsux]*)\)" s)
+          pattern (subs s (count prefix))]
+      (js/RegExp. pattern (or flags "")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Printing ;;;;;;;;;;;;;;;;
 
