@@ -15,7 +15,7 @@ unzip -v >/dev/null || { echo "The 'unzip' utility is missing, or not on your sy
 mkdir -p lib
 
 echo "Fetching Clojure..."
-curl -O -s https://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.zip
+curl -O -s https://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.zip || { echo "Download failed."; exit 1; }
 unzip -qu clojure-$CLOJURE_RELEASE.zip
 echo "Copying clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar to lib/clojure.jar..."
 cp clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar lib/clojure.jar
@@ -26,7 +26,7 @@ echo "Cleaning up Clojure archive..."
 rm clojure-$CLOJURE_RELEASE.zip
 
 echo "Fetching data.json..."
-curl -O -s https://repo1.maven.org/maven2/org/clojure/data.json/$DJSON_RELEASE/data.json-$DJSON_RELEASE.jar
+curl -O -s https://repo1.maven.org/maven2/org/clojure/data.json/$DJSON_RELEASE/data.json-$DJSON_RELEASE.jar || { echo "Download failed."; exit 1; }
 echo "Copying data.json-$DJSON_RELEASE.jar to lib/data.json-$DJSON_RELEASE.jar..."
 cp data.json-$DJSON_RELEASE.jar lib/data.json-$DJSON_RELEASE.jar
 echo "Cleaning up data.json..."
@@ -51,12 +51,12 @@ if [ "$1" = "--closure-library-head" ] ; then
         svn checkout -q --non-interactive https://closure-library.googlecode.com/svn/trunk/ ./
     fi
 else
-    curl -O -s https://repo1.maven.org/maven2/org/clojure/google-closure-library/$GCLOSURE_LIB_RELEASE/google-closure-library-$GCLOSURE_LIB_RELEASE.jar
+    curl -O -s https://repo1.maven.org/maven2/org/clojure/google-closure-library/$GCLOSURE_LIB_RELEASE/google-closure-library-$GCLOSURE_LIB_RELEASE.jar || { echo "Download failed."; exit 1; }
     cp google-closure-library-$GCLOSURE_LIB_RELEASE.jar ../../lib/google-closure-library-$GCLOSURE_LIB_RELEASE.jar
     rm google-closure-library-$GCLOSURE_LIB_RELEASE.jar
 
     echo "Fetching Google Closure third party library..."
-    curl -O -s https://repo1.maven.org/maven2/org/clojure/google-closure-library-third-party/$GCLOSURE_LIB_RELEASE/google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
+    curl -O -s https://repo1.maven.org/maven2/org/clojure/google-closure-library-third-party/$GCLOSURE_LIB_RELEASE/google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar || { echo "Download failed."; exit 1; }
     cp google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar ../../lib/google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
     rm google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
 fi
@@ -65,7 +65,7 @@ cd ..
 echo "Fetching Google Closure compiler..."
 mkdir -p compiler
 cd compiler
-curl -O -s https://dl.google.com/closure-compiler/compiler-latest.zip
+curl -O -s https://dl.google.com/closure-compiler/compiler-latest.zip || { echo "Download failed."; exit 1; }
 unzip -qu compiler-latest.zip
 echo "Cleaning up Google Closure compiler archive..."
 rm compiler-latest.zip
@@ -78,7 +78,7 @@ if [ "$1" = "--closure-library-head" ] ; then
 fi
 
 echo "Fetching Rhino..."
-curl -O -s https://ftp.mozilla.org/pub/mozilla.org/js/rhino$RHINO_RELEASE.zip
+curl -O -s https://ftp.mozilla.org/pub/mozilla.org/js/rhino$RHINO_RELEASE.zip || { echo "Download failed."; exit 1; }
 unzip -qu rhino$RHINO_RELEASE.zip
 echo "Copying rhino$RHINO_RELEASE/js.jar to lib/js.jar..."
 cp rhino$RHINO_RELEASE/js.jar lib/js.jar
@@ -91,10 +91,9 @@ echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
 cp closure/compiler/compiler.jar lib
 
 echo "Fetching tools.reader $TREADER_RELEASE ..."
-curl -O -s https://repo1.maven.org/maven2/org/clojure/tools.reader/$TREADER_RELEASE/tools.reader-$TREADER_RELEASE.jar
+curl -O -s https://repo1.maven.org/maven2/org/clojure/tools.reader/$TREADER_RELEASE/tools.reader-$TREADER_RELEASE.jar || { echo "Download failed."; exit 1; }
 
 echo "Moving tools.reader.jar to lib/tools.reader.jar"
-
 mv tools.reader-$TREADER_RELEASE.jar lib/tools.reader-$TREADER_RELEASE.jar
 
 echo "[Bootstrap Completed]"
