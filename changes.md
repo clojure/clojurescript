@@ -1,3 +1,8 @@
+## 0.0-2498
+
+### Fixes
+* Support cljs.test/use-fixtures
+
 ## 0.0-2496
 
 ### Enhancements
