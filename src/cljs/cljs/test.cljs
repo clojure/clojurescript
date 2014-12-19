@@ -73,27 +73,10 @@
        (is (= -1 (+ 3 -4)))))
 
    Note that, unlike RSpec, the \"testing\" macro may only be used
-   INSIDE a \"deftest\" or \"with-test\" form (see below).
+   INSIDE a \"deftest\" form (see below).
 
 
    DEFINING TESTS
-
-   There are two ways to define tests.  The \"with-test\" macro takes
-   a defn or def form as its first argument, followed by any number
-   of assertions.  The tests will be stored as metadata on the
-   definition.
-
-   (with-test
-       (defn my-function [x y]
-         (+ x y))
-     (is (= 4 (my-function 2 2)))
-     (is (= 7 (my-function 3 4))))
-
-   As of Clojure SVN rev. 1221, this does not work with defmacro.
-   See http://code.google.com/p/clojure/issues/detail?id=51
-
-   The other way lets you define tests separately from the rest of
-   your code, even in a different namespace:
 
    (deftest addition
      (is (= 4 (+ 2 2)))
@@ -137,14 +120,23 @@
    (defn test-ns-hook []
      (arithmetic))
 
+   \"run-tests\" also optionally takes a testing enviroment. A default
+   one is supplied for you by invoking \"empty-env\".  The test
+   environment contains everything needed to run tests including the
+   report results map. Fixtures must be present here if you want them
+   to run. Note that code that relies on \"test-ns\" will
+   automatically be supplied the appropriate defined fixtures.  For
+   example, this is done for you if you use \"run-tests\".
+
    Note: test-ns-hook prevents execution of fixtures (see below).
 
 
    OMITTING TESTS FROM PRODUCTION CODE
 
-   You can bind the variable \"*load-tests*\" to false when loading or
-   compiling code in production.  This will prevent any tests from
-   being created by \"with-test\" or \"deftest\".
+   You can set the ClojureScript compiler build option
+   \":load-tests\" to false when loading or compiling code in
+   production.  This will prevent any tests from being created by
+   or \"deftest\".
 
 
    FIXTURES
@@ -163,7 +155,7 @@
 
    Fixtures are attached to namespaces in one of two ways.  \"each\"
    fixtures are run repeatedly, once for each test function created
-   with \"deftest\" or \"with-test\".  \"each\" fixtures are useful for
+   with \"deftest\".  \"each\" fixtures are useful for
    establishing a consistent before/after state for each test, like
    clearing out database tables.
 
@@ -185,14 +177,6 @@
    are using test-ns-hook, fixture functions will *never* be run.
 
 
-   SAVING TEST OUTPUT TO A FILE
-
-   All the test reporting functions write to the var *test-out*.  By
-   default, this is the same as *out*, but you can rebind it to any
-   PrintWriter.  For example, it could be a file opened with
-   clojure.java.io/writer.
-
-
    EXTENDING TEST-IS (ADVANCED)
 
    You can extend the behavior of the \"is\" macro by defining new
@@ -200,8 +184,10 @@
    called during expansion of the \"is\" macro, so they should return
    quoted forms to be evaluated.
 
-   You can plug in your own test-reporting framework by rebinding
-   the \"report\" function: (report event)
+   You can plug in your own test-reporting framework by specifying a
+   :reporter key in the test environment. It is normally set to
+   :cljs.test/default. Set this to the desired key and supply custom
+   implementations of the \"report\" multimethod.
 
    The 'event' argument is a map.  It will always have a :type key,
    whose value will be a keyword signaling the type of event being
@@ -214,12 +200,9 @@
      :actual     A form representing what actually occurred
      :message    The string message given as an argument to 'is'
 
-   The \"testing\" strings will be a list in \"*testing-contexts*\", and
-   the vars being tested will be a list in \"*testing-vars*\".
-
-   Your \"report\" function should wrap any printing calls in the
-   \"with-test-out\" macro, which rebinds *out* to the current value
-   of *test-out*.
+   The \"testing\" strings will be a list in the :testing-contexts
+   property of the test environment, and the vars being tested will be
+   a list in the :testing-vars property of the test environment.
 
    For additional event types, see the examples in the code.
 "}
@@ -411,7 +394,8 @@
 
 (defn test-vars
   "Groups vars by their namespace and runs test-vars on them with
-  appropriate fixtures applied."
+  appropriate fixtures assuming they are present in the current
+  testing environment."
   [vars]
   (doseq [[ns vars] (group-by (comp :ns meta) vars)]
     (let [env (get-current-env)

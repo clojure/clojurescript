@@ -257,6 +257,12 @@
    `(let [env# (cljs.test/get-current-env)]
       (when (nil? env#)
         (cljs.test/set-env! (cljs.test/empty-env)))
+      ~(when (ana-api/ns-resolve ns 'cljs-test-once-fixtures)
+         `(cljs.test/update-current-env! [:once-fixtures] assoc '~ns
+            ~(symbol (name ns) "cljs-test-once-fixtures")))
+      ~(when (ana-api/ns-resolve ns 'cljs-test-each-fixtures)
+         `(cljs.test/update-current-env! [:each-fixtures] assoc '~ns
+            ~(symbol (name ns) "cljs-test-each-fixtures")))
       (cljs.test/test-vars
         [~@(map
              (fn [[k _]]
@@ -291,3 +297,18 @@
       (let [ret# (cljs.test/get-current-env)]
         (cljs.test/clear-env!)
         ret#))))
+
+;; =============================================================================
+;; Fixes
+
+(defmacro use-fixtures [type & fns]
+  (condp = type
+    :once
+    `(def ~'cljs-test-once-fixtures
+       [~@fns])
+    :each
+    `(def ~'cljs-test-each-fixtures
+       [~@fns])
+    :else
+    (throw
+      (Exception. "First argument to cljs.test/use-fixtures must be :once or :each"))))
