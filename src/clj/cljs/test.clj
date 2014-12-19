@@ -121,7 +121,7 @@
        ~@body
        (cljs.test/do-report {:type :fail, :message ~msg, :expected '~form, :actual nil})
        (catch ~klass e#
-         (let [m# (.getMessage e#)]
+         (let [m# (.-message e#)]
            (if (re-find ~re m#)
              (cljs.test/do-report
                {:type :pass, :message ~msg,
