@@ -2251,7 +2251,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (List. meta o coll (inc count) nil))
 
   IEmptyableCollection
-  (-empty [coll] (.-EMPTY List))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   ISequential
   IEquiv
@@ -4869,7 +4869,7 @@ reduces them without incurring seq initialization"
       (PersistentQueue. meta (inc count) (conj front o) [] nil)))
 
   IEmptyableCollection
-  (-empty [coll] (.-EMPTY PersistentQueue))
+  (-empty [coll] (with-meta (.-EMPTY PersistentQueue) meta))
 
   ISequential
   IEquiv
@@ -6933,7 +6933,7 @@ reduces them without incurring seq initialization"
               (throw (js/Error. "conj on a map takes map entries or seqables of map entries"))))))))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY PersistentTreeMap) meta))
+  (-empty [coll] (PersistentTreeMap. comp nil 0 meta 0))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -7421,7 +7421,7 @@ reduces them without incurring seq initialization"
     (PersistentTreeSet. meta (assoc tree-map o nil) nil))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY PersistentTreeSet) meta))
+  (-empty [coll] (PersistentTreeSet. meta (-empty tree-map) 0))
 
   IEquiv
   (-equiv [coll other]

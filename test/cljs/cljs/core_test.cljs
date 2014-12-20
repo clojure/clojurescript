@@ -745,9 +745,10 @@
     (let [e-list (empty '^{:b :c} (1 2 3))]
       (testing "list"
         (is (seq? e-list))
-        (is (empty? e-list))))
+        (is (empty? e-list))
+        (is (= {:b :c} (meta e-list)))))
     (let [e-elist (empty '^{:b :c} ())]
-      (testing "list with metadata"
+      (testing "empty list with metadata"
         (is (seq? e-elist))
         (is (empty? e-elist))
         (is (= :c (get (meta e-elist) :b)))))
@@ -770,7 +771,28 @@
       (testing "map with complex keys"
         (is (map? e-hmap))
         (is (empty? e-hmap))
-        (is (= {:b :c} (meta e-hmap)))))))
+        (is (= {:b :c} (meta e-hmap)))))
+    (let [smap (with-meta (sorted-map-by (comp - compare) 2 :a 1 :b 5 :c) {:b :c})
+          e-smap (empty smap)]
+      (testing "sorted-map-by"
+        (is (map? e-smap))
+        (is (empty? e-smap))
+        (is (= {:b :c} (meta e-smap)))
+        (is (identical? (-comparator smap) (-comparator e-smap)))
+        (is (= [[5 :c] [2 :a] [1 :b]] (seq (assoc e-smap 2 :a 1 :b 5 :c))))))
+    (let [sset (with-meta (sorted-set-by (comp - compare) 5 1 2) {:b :c})
+          e-sset (empty sset)]
+      (testing "sorted-set-by"
+        (is (set? e-sset))
+        (is (empty? e-sset))
+        (is (= {:b :c} (meta e-sset)))
+        (is (identical? (-comparator sset) (-comparator e-sset)))
+        (is (= [5 2 1] (seq (conj e-sset 5 1 2))))))
+    (let [e-queue (empty (with-meta (.-EMPTY PersistentQueue) {:b :c}))]
+      (testing "queue"
+        (is (identical? (type e-queue) PersistentQueue))
+        (is (empty? e-queue))
+        (is (= {:b :c} (meta e-queue)))))))
 
 (deftest test-try-catch
   (let [a (atom nil)]
