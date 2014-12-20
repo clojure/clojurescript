@@ -844,7 +844,7 @@ should contain the source for the given namespace name."
   []
   (let [classloader (. (Thread/currentThread) (getContextClassLoader))
         upstream-deps (map #(read-string (slurp %)) (enumeration-seq (. classloader (findResources "deps.cljs"))))]
-    (doseq [dep upstream-deps]
+    #_(doseq [dep upstream-deps]
       (println (str "Upstream deps.cljs found on classpath. " dep " This is an EXPERIMENTAL FEATURE and is not guarenteed to remain stable in future versions.")))
     (apply merge-with concat upstream-deps)))
 
