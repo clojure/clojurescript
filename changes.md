@@ -1,3 +1,17 @@
+## 0.0-2505
+
+### Changes
+* Stop generating random files for IJavaScript Strings
+* added :source-map-timestamp build flag to get cache busting source
+  map urls
+* Enhancements to bootstrap script
+* Stop warning about deps.cljs usage
+
+### Fixes
+* Fix Node.js source mapping regression introduced by commit 254e548
+* CLJS-914: thrown-with-msg? is unable to get message of exception
+* CLJS-915: On empty call, List and PersistentQueue do not retain meta, sorted-set/sorted map do not retain comparator
+
 ## 0.0-2498
 
 ### Fixes
