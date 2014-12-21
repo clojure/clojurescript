@@ -913,7 +913,10 @@
                                 {:source-map (:source-map sm-data)}))]
                     (when (and sm-data (= (:optimizations opts) :none))
                       (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                        (emits "\n//# sourceMappingURL=" (.getName sm-file) "?rel=" (System/currentTimeMillis))
+                        (emits "\n//# sourceMappingURL=" (.getName sm-file)
+                          (if (true? (:source-map-timestamp opts))
+                            (str "?rel=" (System/currentTimeMillis))
+                            ""))
                         (spit sm-file
                           (sm/encode {(url-path src) (:source-map sm-data)}
                             {:lines (+ (:gen-line sm-data) 2)
