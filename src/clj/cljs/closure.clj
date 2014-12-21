@@ -61,7 +61,9 @@
            com.google.javascript.jscomp.CheckLevel
            com.google.javascript.jscomp.DiagnosticGroups
            com.google.javascript.jscomp.CommandLineRunner
-           com.google.javascript.jscomp.AnonymousFunctionNamingPolicy))
+           com.google.javascript.jscomp.AnonymousFunctionNamingPolicy
+           java.security.MessageDigest
+           javax.xml.bind.DatatypeConverter))
 
 (defmacro ^:private debug-prn
   [& args]
@@ -757,8 +759,16 @@ should contain the source for the given namespace name."
   [js]
   (if-let [url ^URL (deps/-url js)]
     (path-from-jarfile url)
-    (str (random-string 5) ".js")))
-
+    (if (string? js)
+      (let [digest (MessageDigest/getInstance "SHA-1")]
+        (.reset digest)
+        (.update digest (.getBytes ^String js "utf8"))
+        (str
+          (->> (DatatypeConverter/printHexBinary (.digest digest))
+            (take 7)
+            (apply str))
+          ".js"))
+      (str (random-string 5) ".js"))))
 
 (defn write-javascript
   "Write a JavaScript file to disk. Only write if the file does not
