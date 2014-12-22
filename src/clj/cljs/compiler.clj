@@ -853,11 +853,6 @@
   [file-str]
   (clojure.string/replace file-str #"\.cljs$" ".js"))
 
-(defn mkdirs
-  "Create all parent directories for the passed file."
-  [^File f]
-  (.mkdirs (.getParentFile (.getCanonicalFile f))))
-
 (defn with-core-cljs
   "Ensure that core.cljs has been loaded."
   ([] (with-core-cljs nil))
@@ -967,7 +962,7 @@
         (try
           (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)]
             (if (requires-compilation? src-file dest-file opts)
-              (do (mkdirs dest-file)
+              (do (util/mkdirs dest-file)
                 (when (contains? (::ana/namespaces @env/*compiler*) ns)
                   (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                 (compile-file* src-file dest-file opts))

@@ -366,7 +366,7 @@
   (let [out-file (io/file out-dir (path-from-jarfile url))
         content (with-open [reader (io/reader url)]
                   (slurp reader))]
-    (do (comp/mkdirs out-file)
+    (do (util/mkdirs out-file)
         (spit out-file content)
         out-file)))
 
@@ -778,7 +778,7 @@ should contain the source for the given namespace name."
         out-name (output-path js)
         out-file (io/file out-dir out-name)]
     (do (when-not (.exists out-file)
-          (do (comp/mkdirs out-file)
+          (do (util/mkdirs out-file)
               (spit out-file (deps/-source js))))
         {:url (deps/to-url out-file) :requires (deps/-requires js)
          :provides (deps/-provides js) :group (:group js)})))
@@ -827,7 +827,7 @@ should contain the source for the given namespace name."
   [opts & sources]
   (let [disk-sources (map #(source-on-disk opts %) sources)]
     (let [goog-deps (io/file (output-directory opts) "goog/deps.js")]
-      (do (comp/mkdirs goog-deps)
+      (do (util/mkdirs goog-deps)
           (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
           (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
@@ -1022,7 +1022,7 @@ should contain the source for the given namespace name."
              (when (and (= (:target opts) :nodejs)
                         (#{:none :whitespace} (:optimizations opts)))
                (let [outfile (io/file (io/file (output-directory opts)) "goog/bootstrap/nodejs.js")]
-                 (comp/mkdirs outfile)
+                 (util/mkdirs outfile)
                  (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))
   

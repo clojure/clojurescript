@@ -16,7 +16,8 @@
             [cljs.js-deps :as deps]
             [cljs.tagged-literals :as tags]
             [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers])
+            [clojure.tools.reader.reader-types :as readers]
+            [clojure.edn :as edn])
   (:import java.lang.StringBuilder
            java.io.File
            java.net.URL
@@ -1692,7 +1693,7 @@ argument, which the reader will use in any emitted errors."
   ([src] (cache-file src "out"))
   ([src output-dir]
     (let [ns-info (parse-ns src)]
-      (io/file (str (util/to-target-file output-dir ns-info) ".cache.edn")))))
+      (io/file (str (util/to-target-file output-dir ns-info "cljs") ".cache.edn")))))
 
 (defn last-modified [src]
   (cond
@@ -1735,22 +1736,30 @@ argument, which the reader will use in any emitted errors."
                cache (when (and (:cache-analysis opts) output-dir)
                        (cache-file res output-dir))]
            (when-not (get-in @env/*compiler* [::analyzed-cljs path])
-             (binding [*cljs-ns* 'cljs.user
-                       *cljs-file* path
-                       reader/*alias-map* (or reader/*alias-map* {})]
-               (let [env (assoc (empty-env) :build-options opts)
-                     ns  (loop [ns nil forms (seq (forms-seq res))]
+             (if (or (not (:cache-analysis opts))
+                     (not output-dir)
+                     (requires-analysis? res output-dir))
+               (binding [*cljs-ns* 'cljs.user
+                        *cljs-file* path
+                        reader/*alias-map* (or reader/*alias-map* {})]
+                (let [env (assoc (empty-env) :build-options opts)
+                      ns (loop [ns nil forms (seq (forms-seq res))]
                            (if forms
                              (let [form (first forms)
-                                   env  (assoc env :ns (get-namespace *cljs-ns*))
-                                   ast  (analyze env form opts)]
+                                   env (assoc env :ns (get-namespace *cljs-ns*))
+                                   ast (analyze env form opts)]
                                (if (= (:op ast) :ns)
                                  (recur (:name ast) (next forms))
                                  (recur ns (next forms))))
                              ns))]
-                 (when cache
-                   (spit cache
-                     (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
-                       (pr-str (get-in @env/*compiler* [::namespaces ns])))))
-                 (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))))))))
+                  (when cache
+                    (util/mkdirs cache)
+                    (spit cache
+                      (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
+                        (pr-str (get-in @env/*compiler* [::namespaces ns])))))
+                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
+               (let [{:keys [ns]} (parse-ns res)]
+                 (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)
+                 (swap! env/*compiler* assoc-in [::namespaces ns]
+                   (edn/read-string (slurp cache)))))))))))
 

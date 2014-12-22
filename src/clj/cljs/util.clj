@@ -56,8 +56,16 @@
     (apply str (interpose sep parts))))
 
 (defn ^File to-target-file
-  [target-dir ns-info]
-  (let [relative-path (string/split (munge-path (str (:ns ns-info))) #"\.")
-        parents       (butlast relative-path)]
-    (io/file (io/file (to-path (cons target-dir parents)))
-      (str (last relative-path) ".js"))))
+  ([target-dir ns-info]
+    (to-target-file target-dir ns-info "js"))
+  ([target-dir ns-info ext]
+    (let [relative-path (string/split (munge-path (str (:ns ns-info))) #"\.")
+          parents (butlast relative-path)]
+      (io/file (io/file (to-path (cons target-dir parents)))
+        (str (last relative-path) (str "." ext))))))
+
+(defn mkdirs
+  "Create all parent directories for the passed file."
+  [^File f]
+  (.mkdirs (.getParentFile (.getCanonicalFile f))))
+
