@@ -1657,12 +1657,13 @@ argument, which the reader will use in any emitted errors."
 
 (defn parse-ns
   ([src] (parse-ns src nil nil))
+  ([src opts] (parse-ns src nil opts))
   ([src dest opts]
     (env/ensure
       (let [namespaces' (::namespaces @env/*compiler*)
             ret
             (binding [*cljs-ns* 'cljs.user
-                      *analyze-deps* false]
+                      *analyze-deps* (or (:analyze-deps opts) false)]
               (loop [forms (forms-seq src)]
                 (if (seq forms)
                   (let [env (empty-env)
@@ -1686,7 +1687,8 @@ argument, which the reader will use in any emitted errors."
                       (recur (rest forms)))))))]
         ;; TODO this _was_ a reset! of the old namespaces atom; should we capture and
         ;; then restore the entirety of env/*compiler* here instead?
-        (swap! env/*compiler* assoc ::namespaces namespaces')
+        (when-not (false? (:restore opts))
+          (swap! env/*compiler* assoc ::namespaces namespaces'))
         ret))))
 
 (defn cache-file
@@ -1758,7 +1760,9 @@ argument, which the reader will use in any emitted errors."
                       (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
                         (pr-str (get-in @env/*compiler* [::namespaces ns])))))
                   (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
-               (let [{:keys [ns]} (parse-ns res)]
+               ;; we want want to keep dependency analysis information
+               ;; don't revert the environment - David
+               (let [{:keys [ns]} (parse-ns res {:restore false :analyze-deps true})]
                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)
                  (swap! env/*compiler* assoc-in [::namespaces ns]
                    (edn/read-string (slurp cache)))))))))))
