@@ -1,7 +1,11 @@
 (ns cljs.js-deps
   (:require [clojure.java.io :as io]
             [clojure.string :as string])
-  (:import java.io.File))
+  (:import java.io.File
+           java.net.URL
+           java.net.URLClassLoader
+           java.util.zip.ZipFile
+           java.util.zip.ZipEntry))
 
 ; taken from pomegranate/dynapath
 ; https://github.com/tobias/dynapath/blob/master/src/dynapath/util.clj
@@ -10,16 +14,24 @@
 If no ClassLoader is provided, RT/baseLoader is assumed."
   ([] (all-classpath-urls (clojure.lang.RT/baseLoader)))
   ([cl]
-     (->> (iterate #(.getParent %) cl)
+     (->> (iterate #(.getParent ^ClassLoader %) cl)
        (take-while identity)
        reverse
-       (filter (partial instance? java.net.URLClassLoader))
-       (mapcat #(.getURLs %))
+       (filter (partial instance? URLClassLoader))
+       (mapcat #(.getURLs ^URLClassLoader %))
        distinct)))
 
+(defn ^ZipFile zip-file [jar-path]
+  (cond
+    (instance? File jar-path) (ZipFile. ^File jar-path)
+    (string? jar-path) (ZipFile. ^String jar-path)
+    :else
+    (throw
+      (IllegalArgumentException. (str "Cannot construct zipfile from " jar-path)))))
+
 (defn jar-entry-names* [jar-path]
-  (with-open [z (java.util.zip.ZipFile. jar-path)]
-    (doall (map #(.getName %) (enumeration-seq (.entries z))))))
+  (with-open [z (zip-file jar-path)]
+    (doall (map #(.getName ^ZipEntry %) (enumeration-seq (.entries ^ZipFile z))))))
 
 (def jar-entry-names (memoize jar-entry-names*))
 
@@ -52,12 +64,12 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
     (map io/file)
     (reduce
       (fn [files jar-or-dir]
-        (let [name (.toLowerCase (.getName jar-or-dir))
+        (let [name (.toLowerCase (.getName ^File jar-or-dir))
               ext  (.substring name (inc (.lastIndexOf name ".")))]
-          (->> (when (.exists jar-or-dir)
+          (->> (when (.exists ^File jar-or-dir)
                  (cond
-                   (.isDirectory jar-or-dir)
-                   (find-js-fs (str (.getAbsolutePath jar-or-dir) "/" path))
+                   (.isDirectory ^File jar-or-dir)
+                   (find-js-fs (str (.getAbsolutePath ^File jar-or-dir) "/" path))
 
                    (#{"jar" "zip"} ext)
                    (find-js-jar jar-or-dir path)
@@ -229,7 +241,7 @@ JavaScript library containing provide/require 'declarations'."
   (first
     (filter
       (fn [res]
-        (re-find #"(\/google-closure-library-0.0*|\/google-closure-library\/)" (.getPath res)))
+        (re-find #"(\/google-closure-library-0.0*|\/google-closure-library\/)" (.getPath ^URL res)))
       (enumeration-seq (.getResources (.getContextClassLoader (Thread/currentThread)) path)))))
 
 (defn goog-dependencies*
