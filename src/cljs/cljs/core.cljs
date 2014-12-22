@@ -174,7 +174,13 @@
   "Creates a new javascript array.
 @param {...*} var_args" ;;array is a special case, don't emulate this doc string
   [var-args]            ;; [& items]
-  (.. js/Array -prototype -slice (call (cljs.core/js-arguments))))
+  (let [a (js/Array. (alength (cljs.core/js-arguments)))]
+    (loop [i 0]
+      (if (< i (alength a))
+        (do
+          (aset a i (aget (cljs.core/js-arguments) i))
+          (recur (inc i)))
+        a))))
 
 (declare apply)
 

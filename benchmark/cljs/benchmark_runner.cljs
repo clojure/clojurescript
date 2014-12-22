@@ -290,7 +290,7 @@
 (def strings
   (take 10 (iterate (fn [s] (str s "string")) "string")))
 
-(def big-str-data 
+(def big-str-data
   (pr-str {:nils (repeat 10 nil)
            :bools (concat (repeat 5 false) (repeat 5 true))
            :ints (range 10000 10100)
@@ -351,3 +351,10 @@
 (defmethod simple-multi :foo [x] x)
 (simple-benchmark [] (simple-multi :foo) 1000000)
 (println "\n")
+
+
+(println ";; higher-order variadic function calls")
+;; Deliberately frustrates static-fn optimization and macros
+(simple-benchmark [f array] (f 1 2 3 4 5 6 7 8 9 0) 100000)
+(simple-benchmark [f vector] (f 1 2 3 4 5 6 7 8 9 0) 100000)
+(simple-benchmark [] (= 1 1 1 1 1 1 1 1 1 0) 100000)

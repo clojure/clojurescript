@@ -498,6 +498,20 @@
       (emitln "}"))
     (emits "})")))
 
+(defn emit-arguments-to-array
+  "Emit code that copies function arguments into an array starting at an index.
+  Returns name of var holding the array."
+  [startslice]
+  (assert (and (>= startslice 0) (integer? startslice)))
+  (let [mname (munge (gensym))
+        i (str mname "__i")
+        a (str mname "__a")]
+    (emitln "var " i " = 0, "
+                   a " = new Array(arguments.length -  " startslice ");")
+    (emitln "while (" i " < " a ".length) {"
+      a "[" i "] = arguments[" i " + " startslice "]; ++" i ";}")
+    a))
+
 (defn emit-variadic-fn-method
   [{:keys [type name variadic params expr env recurs max-fixed-arity] :as f}]
   (emit-wrap env
@@ -528,9 +542,8 @@
                  (emit (last params))
                  (emitln " = null;")
                  (emitln "if (arguments.length > " (dec (count params)) ") {")
-                 (emits "  ")
-                 (emit (last params))
-                 (emitln " = cljs.core.array_seq(Array.prototype.slice.call(arguments, " (dec (count params)) "),0);")
+                 (let [a (emit-arguments-to-array (dec (count params)))]
+                   (emitln "  " (last params) " = new cljs.core.IndexedSeq(" a ",0);"))
                  (emitln "} "))
                (emits "return " delegate-name ".call(this,")
                (doseq [param params]
@@ -595,10 +608,16 @@
           (doseq [[n meth] ms]
             (if (:variadic meth)
               (do (emitln "default:")
-                  (emitln "return " n ".cljs$core$IFn$_invoke$arity$variadic("
-                          (comma-sep (butlast maxparams))
-                          (when (> (count maxparams) 1) ", ")
-                          "cljs.core.array_seq(arguments, " max-fixed-arity "));"))
+                  (let [restarg (munge (gensym))]
+                    (emitln "var " restarg " = null;")
+                    (emitln "if (arguments.length > " max-fixed-arity ") {")
+                    (let [a (emit-arguments-to-array max-fixed-arity)]
+                      (emitln restarg " = new cljs.core.IndexedSeq(" a ",0);"))
+                    (emitln "}")
+                    (emitln "return " n ".cljs$core$IFn$_invoke$arity$variadic("
+                            (comma-sep (butlast maxparams))
+                            (when (> (count maxparams) 1) ", ")
+                            restarg ");")))
               (let [pcnt (count (:params meth))]
                 (emitln "case " pcnt ":")
                 (emitln "return " n ".call(this" (if (zero? pcnt) nil
