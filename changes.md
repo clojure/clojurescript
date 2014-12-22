@@ -1,3 +1,8 @@
+## 0.0-2511
+
+### Enhancements
+* analysis caching via :cache-analysis build flag
+
 ## 0.0-2505
 
 ### Changes
