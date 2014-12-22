@@ -919,7 +919,11 @@
                     (let [path (.getPath (.toURL ^File dest))]
                       (swap! env/*compiler* assoc-in [::compiled-cljs path] ret)
                       (swap! env/*compiler* assoc-in [::ana/analyzed-cljs path] true))
-                    ret))))))))))
+                    (let [{:keys [output-dir cache-analysis]} opts]
+                      (when (and (true? cache-analysis) output-dir)
+                        (ana/write-analysis-cache ns-name
+                          (ana/cache-file src output-dir)))
+                      ret)))))))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."

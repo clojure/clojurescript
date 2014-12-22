@@ -1716,11 +1716,17 @@ argument, which the reader will use in any emitted errors."
       (let [out-src (util/to-target-file output-dir (parse-ns src))]
         (if (not (.exists out-src))
           true
-          (or
-            (> (last-modified src) (last-modified cache))
+          (if (> (last-modified src) (last-modified cache))
+            true
             (let [version' (util/compiled-by-version cache)
                   version (util/clojurescript-version)]
               (and version (not= version version')))))))))
+
+(defn write-analysis-cache [ns cache-file]
+  (util/mkdirs cache-file)
+  (spit cache-file
+    (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
+      (pr-str (get-in @env/*compiler* [::namespaces ns])))))
 
 (defn analyze-file
   ([f] (analyze-file f nil))
@@ -1755,14 +1761,11 @@ argument, which the reader will use in any emitted errors."
                                  (recur ns (next forms))))
                              ns))]
                   (when cache
-                    (util/mkdirs cache)
-                    (spit cache
-                      (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
-                        (pr-str (get-in @env/*compiler* [::namespaces ns])))))
+                    (write-analysis-cache ns cache))
                   (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
                ;; we want want to keep dependency analysis information
                ;; don't revert the environment - David
-               (let [{:keys [ns]} (parse-ns res {:restore false :analyze-deps true})]
+               (let [{:keys [ns]} (parse-ns res (merge opts {:restore false :analyze-deps true}))]
                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)
                  (swap! env/*compiler* assoc-in [::namespaces ns]
                    (edn/read-string (slurp cache)))))))))))
