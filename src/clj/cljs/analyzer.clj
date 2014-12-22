@@ -19,6 +19,7 @@
             [clojure.tools.reader.reader-types :as readers])
   (:import java.lang.StringBuilder
            java.io.File
+           java.net.URL
            [cljs.tagged_literals JSValue]))
 
 (set! *warn-on-reflection* true)
@@ -1687,16 +1688,36 @@ argument, which the reader will use in any emitted errors."
         (swap! env/*compiler* assoc ::namespaces namespaces')
         ret))))
 
-(defn requires-analysis? [^File f ^File cache]
-  (or (not (.exists cache))
-      (> (.lastModified f) (.lastModified cache))
-      (let [version' (util/compiled-by-version cache)
-            version  (util/clojurescript-version)]
-        (and version (not= version version')))))
+(defn cache-file
+  ([src] (cache-file src "out"))
+  ([src output-dir]
+    (let [ns-info (parse-ns src)]
+      (io/file (str (util/to-target-file output-dir ns-info) ".cache.edn")))))
 
-(defn cache-file [f output-dir]
-  (let [ns-info (parse-ns f)]
-    (io/file (util/to-target-file output-dir ns-info) ".cache.edn")))
+(defn last-modified [src]
+  (cond
+    (instance? File src) (.lastModified ^File src)
+    (instance? URL src) (.getLastModified (.openConnection ^URL src))
+    :else
+    (throw
+      (IllegalArgumentException. (str "Cannot get last modified for " src)))))
+
+(defn requires-analysis?
+  ([src] (requires-analysis? src "out"))
+  ([src output-dir]
+    (let [cache (cache-file src output-dir)]
+      (requires-analysis? src cache output-dir)))
+  ([src ^File cache output-dir]
+    (if (not (.exists cache))
+      true
+      (let [out-src (util/to-target-file output-dir (parse-ns src))]
+        (if (not (.exists out-src))
+          true
+          (or
+            (> (last-modified src) (last-modified cache))
+            (let [version' (util/compiled-by-version cache)
+                  version (util/clojurescript-version)]
+              (and version (not= version version')))))))))
 
 (defn analyze-file
   ([f] (analyze-file f nil))
@@ -1711,9 +1732,8 @@ argument, which the reader will use in any emitted errors."
          (let [path (if (instance? File res)
                       (.getPath ^File res)
                       (.getPath ^java.net.URL res))
-               ;; cache (if output-dir
-               ;;         (cache-file res output-dir))
-               ]
+               cache (when (and (:cache-analysis opts) output-dir)
+                       (cache-file res output-dir))]
            (when-not (get-in @env/*compiler* [::analyzed-cljs path])
              (binding [*cljs-ns* 'cljs.user
                        *cljs-file* path
@@ -1728,5 +1748,9 @@ argument, which the reader will use in any emitted errors."
                                  (recur (:name ast) (next forms))
                                  (recur ns (next forms))))
                              ns))]
+                 (when cache
+                   (spit cache
+                     (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
+                       (pr-str (get-in @env/*compiler* [::namespaces ns])))))
                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))))))))
 
