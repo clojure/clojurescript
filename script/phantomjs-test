@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if [ "$CLOJURESCRIPT_HOME" = "" ]; then
+  CLOJURESCRIPT_HOME="`dirname $0`/.."
+fi
+
+CLJSC_CP='';
+for next in script: lib/*: src/clj: src/cljs: test/cljs; do
+  CLJSC_CP="${CLJSC_CP}${CLOJURESCRIPT_HOME}/${next}"
+done
+
+java -server -cp "$CLJSC_CP" clojure.main -m phantomjs-repl-test.run $1
