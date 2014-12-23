@@ -428,7 +428,7 @@
     (let [env (assoc env :ns (get-namespace *cljs-ns*))
           ev (resolve-existing-var env name)]
       (when (and ev (not (-> ev :dynamic)))
-        (warning :dynamic env {:ev ev})))))
+        (warning :dynamic env {:ev ev :name (:name ev)})))))
 
 (defn ns-dependents
   ([ns] (ns-dependents ns 0 (atom (sorted-map))))
