@@ -234,10 +234,12 @@
                                       (range (count @names->idx))))}
                   (:sources-content opts)
                   (assoc "sourcesContent" (:sources-content opts)))]
-      (with-out-str
-        (json/pprint
-         source-map-file-contents
-         :escape-slash false)))))
+      (if (true? (:source-map-pretty-print opts))
+        (with-out-str
+          (json/pprint
+            source-map-file-contents
+            :escape-slash false))
+        (json/write-str source-map-file-contents)))))
 
 ;; -----------------------------------------------------------------------------
 ;; Merging
