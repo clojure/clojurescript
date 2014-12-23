@@ -8380,14 +8380,16 @@ reduces them without incurring seq initialization"
       (deref a)
       ;=> 1"
   [iref key f]
-  (-add-watch iref key f))
+  (-add-watch iref key f)
+  iref)
 
 (defn remove-watch
   "Alpha - subject to change.
 
   Removes a watch (set by add-watch) from a reference"
   [iref key]
-  (-remove-watch iref key))
+  (-remove-watch iref key)
+  iref)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; gensym ;;;;;;;;;;;;;;;;
 ;; Internal - do not use!
