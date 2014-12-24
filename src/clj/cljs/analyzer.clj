@@ -40,8 +40,8 @@
 (def ^:dynamic *cljs-warnings*
   {:preamble-missing true
    :unprovided true
-   :undeclared-var false
-   :undeclared-ns false
+   :undeclared-var true
+   :undeclared-ns true
    :undeclared-ns-form true
    :redef true
    :dynamic true
