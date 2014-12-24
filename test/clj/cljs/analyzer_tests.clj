@@ -107,8 +107,9 @@
 (def test-cenv (atom {}))
 (def test-env (assoc-in (a/empty-env) [:ns :name] 'cljs.core))
 
-(e/with-compiler-env test-cenv
-  (a/analyze-file (io/file "src/cljs/cljs/core.cljs")))
+(a/no-warn
+  (e/with-compiler-env test-cenv
+    (a/analyze-file (io/file "src/cljs/cljs/core.cljs"))))
 
 (deftest basic-inference
   (is (= (e/with-compiler-env test-cenv
@@ -140,8 +141,9 @@
          'function)))
 
 (deftest if-inference
-  (is (= (e/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(if x "foo" 1))))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(if x "foo" 1)))))
          '#{number string})))
 
 (deftest method-inference
@@ -210,26 +212,33 @@
          'number)))
 
 (deftest test-numeric
-  (is (= (cljs.env/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(dec x))))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(dec x)))))
          'number))
-  (is (= (cljs.env/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(int x))))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(int x)))))
          'number))
-  (is (= (cljs.env/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(unchecked-int x))))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(unchecked-int x)))))
          'number))
-  (is (= (cljs.env/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(mod x y))))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(mod x y)))))
          'number))
-  (is (= (cljs.env/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(quot x y))))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(quot x y)))))
          'number))
-  (is (= (cljs.env/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(rem x y))))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(rem x y)))))
          'number))
-  (is (= (cljs.env/with-compiler-env test-cenv
-           (:tag (a/analyze test-env '(bit-count n))))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(bit-count n)))))
          'number)))
 
 ;; =============================================================================
