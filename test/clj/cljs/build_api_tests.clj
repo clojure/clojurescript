@@ -6,9 +6,9 @@
    [cljs.analyzer]))
 
 (deftest test-target-file-for-cljs-ns
-  (is (= (.getPath (target-file-for-cljs-ns nil 'example.core-lib))
+  (is (= (.getPath (target-file-for-cljs-ns 'example.core-lib nil))
          "out/example/core_lib.js"))
-  (is (= (.getPath (target-file-for-cljs-ns "output" 'example.core-lib))
+  (is (= (.getPath (target-file-for-cljs-ns 'example.core-lib "output"))
          "output/example/core_lib.js")))
 
 (deftest test-cljs-dependents-for-macro-namespaces
