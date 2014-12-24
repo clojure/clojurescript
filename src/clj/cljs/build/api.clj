@@ -12,8 +12,8 @@
   For example: a build script may need to how to invalidate compiled
   files so that they will be recompiled."
   (:require [cljs.util :as util]
-            [cljs.analyzer :as ana]
             [cljs.env :as env]
+            [cljs.analyzer :as ana]
             [cljs.closure]
             [clojure.set :refer [intersection]])
   (:import java.io.File))
@@ -59,3 +59,31 @@
          (filter (fn [x] (not-empty
                          (intersection namespaces-set (-> x :require-macros vals set))))
                  (vals (:cljs.analyzer/namespaces @env/*compiler*))))))
+
+(defn cljs-ns-dependents
+  "Given a namespace symbol return a seq of all dependent
+  namespaces sorted in dependency order. Will include
+  transient dependents."
+  [ns]
+  (ana/ns-dependents ns))
+
+(comment
+
+  (def test-cenv (atom {}))
+  (def test-env (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
+
+  (binding [ana/*cljs-ns* 'cljs.user]
+    (env/with-compiler-env test-cenv
+      (ana/no-warn
+        (ana/analyze test-env
+         '(ns cljs.user
+            (:use [clojure.string :only [join]]))))))
+
+  (env/with-compiler-env test-cenv
+    (ns-dependents 'clojure.string))
+
+  (map
+    #(target-file-for-cljs-ns % "out-dev")
+    (env/with-compiler-env test-cenv
+     (ns-dependents 'clojure.string)))
+  )
