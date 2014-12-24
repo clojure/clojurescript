@@ -2531,6 +2531,10 @@
             (is (= s (set (remove #(zero? (mod % 3)) (range 100))))))))))
 )
 
+(deftest test-921-var-meta-name
+  (testing "testing CLJS-921, :name var metadata should be unqualified"
+    (is (= (-> (var first) meta :name) 'first))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
