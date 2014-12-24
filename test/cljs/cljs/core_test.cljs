@@ -2542,10 +2542,26 @@
   (-remove-watch [this key]))
 
 (deftest test-920-watch-ops-return-ref
-  (testing "tesing CLJS-92, add-watch/return-watch should return reference"
+  (testing "tesing CLJS-920, add-watch/return-watch should return reference"
     (let [w (MyWatchable.)]
       (is (identical? (add-watch w :foo (fn [])) w))
       (is (identical? (remove-watch w :foo) w)))))
+
+(deftype MyCustomAtom [^:mutable state]
+  IDeref
+  (-deref [_] state)
+  IReset
+  (-reset! [_ newval]
+    (set! state newval)))
+
+(deftest test-919-generic-cas
+  (testing "testing CLJS-919, CAS should on custom atom types"
+    (let [a0 (MyCustomAtom. 10)
+          a1 (MyCustomAtom. 0)]
+      (compare-and-set! a0 0 20)
+      (compare-and-set! a1 0 20)
+      (is (== @a0 10))
+      (is (== @a1 20)))))
 
 (comment
   ;; ObjMap

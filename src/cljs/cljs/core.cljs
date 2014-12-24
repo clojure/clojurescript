@@ -3507,7 +3507,7 @@ reduces them without incurring seq initialization"
   "Atomically sets the value of atom to newval if and only if the
   current value of the atom is equal to oldval. Returns true if
   set happened, else false."
-  [a oldval newval]
+  [^not-native a oldval newval]
   (if (= (-deref a) oldval)
     (do (reset! a newval) true)
     false))
