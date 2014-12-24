@@ -12,28 +12,32 @@
   For example: a build script may need to how to invalidate compiled
   files so that they will be recompiled."
   (:require [cljs.util :as util]
-            [cljs.analyzer]
+            [cljs.analyzer :as ana]
             [cljs.env :as env]
             [cljs.closure]
-            [clojure.set :refer [intersection]]))
+            [clojure.set :refer [intersection]])
+  (:import java.io.File))
 
-(defn target-file-for-cljs-ns
+(defn ^File target-file-for-cljs-ns
   "Given an output directory and a clojurescript namespace return the
   compilation target file for that namespace.
 
   For example:
   (target-file-from-cljs-ns \"resources/out\" 'example.core) ->
   <File: \"resources/out/example/core.js\">"
-  [output-dir ns-sym]
-  (util/to-target-file (cljs.closure/output-directory { :output-dir output-dir })
-                       {:ns ns-sym }))
+  ([ns-sym] (target-file-for-cljs-ns ns-sym nil))
+  ([ns-sym output-dir]
+    (util/to-target-file
+      (util/output-directory {:output-dir output-dir})
+      {:ns ns-sym})))
 
 (defn mark-cljs-ns-for-recompile!
   "Backdates a cljs target file so that it the cljs compiler will recompile it."
-  [output-dir ns-sym]
-  (let [s (target-file-for-cljs-ns output-dir ns-sym)]
-    (when (.exists s)
-      (.setLastModified s 5000))))
+  ([ns-sym] (mark-cljs-ns-for-recompile! ns-sym nil))
+  ([ns-sym output-dir]
+    (let [s (target-file-for-cljs-ns output-dir ns-sym)]
+      (when (.exists s)
+        (.setLastModified s 5000)))))
 
 (defn cljs-dependents-for-macro-namespaces
   "Takes a list of Clojure (.clj) namespaces that define macros and

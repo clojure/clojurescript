@@ -315,9 +315,6 @@
           (doseq [form forms]
             (comp/emit (ana/analyze (ana/empty-env) form))))))))
 
-(defn output-directory [opts]
-  (or (:output-dir opts) "out"))
-
 (defn compiled-file
   "Given a map with at least a :file key, return a map with
    {:file .. :provides .. :requires ..}.
@@ -341,7 +338,7 @@
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
     (if output-file
-      (let [out-file (io/file (output-directory opts) output-file)]
+      (let [out-file (io/file (util/output-directory opts) output-file)]
         (compiled-file (comp/compile-file file out-file opts)))
       (binding [ana/*cljs-file* (.getPath ^java.io.File file)]
         (compile-form-seq (ana/forms-seq file)))))
@@ -350,7 +347,7 @@
   "Recursively compile all cljs files under the given source
   directory. Return a list of JavaScriptFiles."
   [^File src-dir opts]
-  (let [out-dir (output-directory opts)]
+  (let [out-dir (util/output-directory opts)]
     (map compiled-file
          (comp/compile-root src-dir out-dir opts))))
 
@@ -376,15 +373,15 @@
   "Compile a file from a jar."
   [this {:keys [output-file] :as opts}]
   (or (when output-file
-        (let [out-file (io/file (output-directory opts) output-file)]
+        (let [out-file (io/file (util/output-directory opts) output-file)]
           (when (and (.exists out-file)
                      (= (util/compiled-by-version out-file)
                         (util/clojurescript-version)))
             (compile-file
-              (io/file (output-directory opts)
+              (io/file (util/output-directory opts)
                 (last (string/split (.getPath ^URL this) #"\.jar!/")))
               opts))))
-      (let [file-on-disk (jar-file-to-disk this (output-directory opts))]
+      (let [file-on-disk (jar-file-to-disk this (util/output-directory opts))]
         (-compile file-on-disk opts))))
 
 (extend-protocol Compilable
@@ -529,7 +526,7 @@ should contain the source for the given namespace name."
                                               (:requires %))
                              (assoc :group (:group %))) required-js)
                    [(when (-> @env/*compiler* :opts :emit-constants)
-                      (let [url (deps/to-url (str (output-directory opts) "/constants_table.js"))]
+                      (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
                         (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
                    required-cljs
                    inputs)))))
@@ -653,7 +650,7 @@ should contain the source for the given namespace name."
                                  {:preamble-line-count preamble-line-count
                                   :lines (+ (:lineCount sm-json) preamble-line-count 2)
                                   :file (:file sm-json)
-                                  :output-dir (output-directory opts)
+                                  :output-dir (util/output-directory opts)
                                   :source-map-path (:source-map-path opts)
                                   :source-map (:source-map opts)
                                   :relpaths relpaths}))))))
@@ -726,7 +723,7 @@ should contain the source for the given namespace name."
   [opts input]
   (letfn [(ns-list [coll] (when (seq coll) (apply str (interpose ", " (map #(str "'" (comp/munge %) "'") coll)))))]
     (str "goog.addDependency(\""
-         (path-relative-to (io/file (output-directory opts) "goog/base.js") input)
+         (path-relative-to (io/file (util/output-directory opts) "goog/base.js") input)
          "\", ["
          (ns-list (deps/-provides input))
          "], ["
@@ -774,7 +771,7 @@ should contain the source for the given namespace name."
   "Write a JavaScript file to disk. Only write if the file does not
   already exist. Return IJavaScript for the file on disk."
   [opts js]
-  (let [out-dir (io/file (output-directory opts))
+  (let [out-dir (io/file (util/output-directory opts))
         out-name (output-path js)
         out-file (io/file out-dir out-name)]
     (do (when-not (.exists out-file)
@@ -796,7 +793,7 @@ should contain the source for the given namespace name."
       ;; when source maps enabled
       (let [out-file (if-let [ns (and (:source-map opts)
                                       (first (:provides js)))]
-                       (io/file (io/file (output-directory opts))
+                       (io/file (io/file (util/output-directory opts))
                          (util/ns->relpath ns)))
             source-url (:source-url js)]
         (when (and out-file source-url
@@ -826,7 +823,7 @@ should contain the source for the given namespace name."
    libraries."
   [opts & sources]
   (let [disk-sources (map #(source-on-disk opts %) sources)]
-    (let [goog-deps (io/file (output-directory opts) "goog/deps.js")]
+    (let [goog-deps (io/file (util/output-directory opts) "goog/deps.js")]
       (do (util/mkdirs goog-deps)
           (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
           (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
@@ -995,7 +992,7 @@ should contain the source for the given namespace name."
                  ; add-dependencies below
                  _ (when emit-constants
                      (comp/emit-constants-table-to-file (::ana/constant-table @env/*compiler*)
-                                                        (str (output-directory all-opts) "/constants_table.js")))
+                                                        (str (util/output-directory all-opts) "/constants_table.js")))
                  js-sources (concat
                              (apply add-dependencies all-opts
                                     (concat (if (coll? compiled) compiled [compiled])
@@ -1021,7 +1018,7 @@ should contain the source for the given namespace name."
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
              (when (and (= (:target opts) :nodejs)
                         (#{:none :whitespace} (:optimizations opts)))
-               (let [outfile (io/file (io/file (output-directory opts)) "goog/bootstrap/nodejs.js")]
+               (let [outfile (io/file (io/file (util/output-directory opts)) "goog/bootstrap/nodejs.js")]
                  (util/mkdirs outfile)
                  (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))
