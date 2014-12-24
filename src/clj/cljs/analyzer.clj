@@ -515,7 +515,7 @@
                  m (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
                      :name `(quote ~(symbol (name (:name var))))
                      :test `(when ~sym (.-cljs$lang$test ~sym))
-                     :arglists (:arglists var))]
+                     :arglists (map with-meta (:arglists var) (:arglists-meta var)))]
             (analyze env m))}))
 
 (defmethod parse 'if
@@ -689,6 +689,7 @@
                :max-fixed-arity (:max-fixed-arity init-expr)
                :method-params params
                :arglists (:arglists sym-meta)
+               :arglists-meta (doall (map meta (:arglists sym-meta)))
                :methods (map (fn [method]
                                (let [tag (infer-tag env (assoc method :op :method))]
                                  (cond-> (select-keys method
