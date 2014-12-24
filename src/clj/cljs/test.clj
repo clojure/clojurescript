@@ -9,7 +9,8 @@
 (ns cljs.test
   (:require [cljs.env :as env]
             [cljs.analyzer :as ana]
-            [cljs.analyzer.api :as ana-api]))
+            [cljs.analyzer.api :as ana-api]
+            [clojure.template :as temp]))
 
 ;; =============================================================================
 ;; Utilities for assertions
@@ -162,6 +163,30 @@
   ([form] `(cljs.test/is ~form nil))
   ([form msg]
    `(cljs.test/try-expr ~msg ~form)))
+
+(defmacro are
+  "Checks multiple assertions with a template expression.
+  See clojure.template/do-template for an explanation of
+  templates.
+
+  Example: (are [x y] (= x y)  
+                2 (+ 1 1)
+                4 (* 2 2))
+  Expands to: 
+           (do (is (= 2 (+ 1 1)))
+               (is (= 4 (* 2 2))))
+
+  Note: This breaks some reporting features, such as line numbers."
+  [argv expr & args]
+  (if (or
+        ;; (are [] true) is meaningless but ok
+        (and (empty? argv) (empty? args))
+        ;; Catch wrong number of args
+        (and (pos? (count argv))
+          (pos? (count args))
+          (zero? (mod (count args) (count argv)))))
+    `(clojure.template/do-template ~argv (is ~expr) ~@args)
+    (throw (IllegalArgumentException. "The number of args doesn't match are's argv."))))
 
 (defmacro testing
   "Adds a new string to the list of testing contexts.  May be nested,
