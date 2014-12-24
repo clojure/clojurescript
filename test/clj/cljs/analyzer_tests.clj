@@ -144,6 +144,11 @@
            (:tag (a/analyze test-env '(if x "foo" 1))))
          '#{number string})))
 
+(deftest method-inference
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '(.foo js/bar))))
+         'any)))
+
 (deftest fn-inference
   (is (= (e/with-compiler-env test-cenv
            (:tag (a/analyze test-env
