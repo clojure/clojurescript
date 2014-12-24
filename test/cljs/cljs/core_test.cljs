@@ -2535,6 +2535,18 @@
   (testing "testing CLJS-921, :name var metadata should be unqualified"
     (is (= (-> (var first) meta :name) 'first))))
 
+(deftype MyWatchable []
+  IWatchable
+  (-notify-watches [this oldval newval])
+  (-add-watch [this key f])
+  (-remove-watch [this key]))
+
+(deftest test-920-watch-ops-return-ref
+  (testing "tesing CLJS-92, add-watch/return-watch should return reference"
+    (let [w (MyWatchable.)]
+      (is (identical? (add-watch w :foo (fn [])) w))
+      (is (identical? (remove-watch w :foo) w)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
