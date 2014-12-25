@@ -10,20 +10,23 @@
   (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
+            [cljs.env :as env]
+            [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.repl :as repl]
             [cljs.closure :as cljsc])
   (:import cljs.repl.IJavaScriptEnv
            java.net.Socket
+           java.lang.StringBuilder
            [java.io BufferedReader BufferedWriter]))
 
 (def current-repl-env (atom nil))
 (def loaded-libs (atom #{}))
 
 (defn socket [host port]
-  (let [socket (java.net.Socket. host port)
-        in (io/reader socket)
-        out (io/writer socket)]
+  (let [socket (Socket. host port)
+        in     (io/reader socket)
+        out    (io/writer socket)]
     {:socket socket :in in :out out}))
 
 (defn close-socket [s]
@@ -37,12 +40,12 @@
   (.flush out))
 
 (defn read-response [^BufferedReader in]
-  (let [sb (java.lang.StringBuilder.)]
+  (let [sb (StringBuilder.)]
     (loop [sb sb c (.read in)]
       (cond
        (= c 1) (let [ret (str sb)]
                  (print ret)
-                 (recur (java.lang.StringBuilder.) (.read in)))
+                 (recur (StringBuilder.) (.read in)))
        (= c 0) (str sb)
        :else (do
                (.append sb (char c))
@@ -56,18 +59,16 @@
   (node-eval ctx (slurp url)))
 
 (defn setup [repl-env]
-  (let [env {:context :statement :locals {} :ns (@comp/namespaces comp/*cljs-ns*)}
+  (let [env   (ana/empty-env)
         scope (:scope repl-env)]
     (repl/load-file repl-env "cljs/core.cljs")
     (swap! loaded-libs conj "cljs.core")
     (repl/evaluate-form repl-env
-                        env
-                        "<cljs repl>"
-                        '(ns cljs.user))
+      env "<cljs repl>"
+      '(ns cljs.user))
     (repl/evaluate-form repl-env
-                        env
-                        "<cljs repl>"
-                        '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))))
+      env "<cljs repl>"
+      '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))))
 
 (extend-protocol repl/IJavaScriptEnv
   clojure.lang.IPersistentMap
@@ -81,8 +82,8 @@
 (defn repl-env
   [& {:keys [host port] :or {host "localhost" port 5001}}]
   (let [repl-env (socket host port)
-        base (io/resource "goog/base.js")
-        deps (io/resource "goog/deps.js")]
+        base     (io/resource "goog/base.js")
+        deps     (io/resource "goog/deps.js")]
     (node-eval repl-env (slurp (io/reader base)))
     (node-eval repl-env (slurp (io/reader deps)))
     repl-env))
