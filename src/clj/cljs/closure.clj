@@ -1022,7 +1022,10 @@ should contain the source for the given namespace name."
                  (util/mkdirs outfile)
                  (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))
-  
+
+;; for backwards compatibility
+(defn output-directory [opts]
+  (util/output-directory opts))
 
 (comment
 
