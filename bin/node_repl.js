@@ -5,7 +5,10 @@ var net     = require("net"),
     vm      = require("vm"),
     context = vm.createContext();
 
-context.require = require;
+context.require   = require;
+context.global    = global;
+context.process   = process;
+context.__dirname = __dirname;
 
 net.createServer(function (socket) {
     var buffer = "", ret;
