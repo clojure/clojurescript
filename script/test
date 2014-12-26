@@ -14,7 +14,7 @@ if [ "$V8_HOME" = "" ]; then
 else
   echo "Testing with V8"
   "${V8_HOME}/d8" builds/out-adv/core-advanced-test.js
-  ran=$[ran+1]
+  ran=$((ran+1))
 fi
 
 if [ "$SPIDERMONKEY_HOME" = "" ]; then
@@ -22,7 +22,7 @@ if [ "$SPIDERMONKEY_HOME" = "" ]; then
 else
   echo "Testing with SpiderMonkey"
   ${SPIDERMONKEY_HOME}/js -f builds/out-adv/core-advanced-test.js
-  ran=$[ran+1]
+  ran=$((ran+1))
 fi
 
 if [ "$JSC_HOME" = "" ]; then
@@ -30,7 +30,7 @@ if [ "$JSC_HOME" = "" ]; then
 else
   echo "Testing with JavaScriptCore"
   "${JSC_HOME}/jsc" -f builds/out-adv/core-advanced-test.js
-  ran=$[ran+1]
+  ran=$((ran+1))
 fi
 
 if [ "$NASHORN_HOME" = "" ]; then
@@ -38,7 +38,7 @@ if [ "$NASHORN_HOME" = "" ]; then
 else
   echo "Testing with Nashorn"
   "${NASHORN_HOME}/jjs" builds/out-adv/core-advanced-test.js
-  ran=$[ran+1]
+  ran=$((ran+1))
 fi
 
 echo "Tested with $ran out of $possible possible js targets"
