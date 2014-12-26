@@ -34,7 +34,7 @@ a more powerful alternative to Clojure's standard format function.
 See documentation for pprint and cl-format for more information or 
 complete documentation on the the clojure web site on github."}
     cljs.pprint
-    (:require [clojure.walk :only [walk]]))
+    (:require [clojure.walk :refer [walk]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions for digesting formats in the various
