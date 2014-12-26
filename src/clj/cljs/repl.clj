@@ -175,10 +175,9 @@
     (doseq [file (comp/cljs-files-in src-dir)]
       (ana/analyze-file (str "file://" (.getAbsolutePath file))))))
 
-(defn repl
-  "Note - repl will reload core.cljs every time, even if supplied old repl-env"
-  [repl-env & {:keys [analyze-path verbose warn-on-undeclared special-fns static-fns] :as opts
-               :or {warn-on-undeclared true}}]
+(defn repl*
+  [repl-env {:keys [analyze-path verbose warn-on-undeclared special-fns static-fns] :as opts
+             :or {warn-on-undeclared true}}]
   (print "To quit, type: ")
   (prn :cljs/quit)
   (env/with-compiler-env
@@ -202,33 +201,38 @@
           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
           (flush)
           (let [rdr (readers/source-logging-push-back-reader
-                     (java.io.PushbackReader. (io/reader *in*))
-                     1
-                     "NO_SOURCE_FILE")
+                      (java.io.PushbackReader. (io/reader *in*))
+                      1
+                      "NO_SOURCE_FILE")
                 form (try
                        (binding [*ns* (create-ns ana/*cljs-ns*)
                                  reader/*data-readers* tags/*cljs-data-readers*
                                  reader/*alias-map*
                                  (apply merge
-                                        ((juxt :requires :require-macros)
-                                         (ana/get-namespace ana/*cljs-ns*)))]
+                                   ((juxt :requires :require-macros)
+                                     (ana/get-namespace ana/*cljs-ns*)))]
                          (reader/read rdr nil read-error))
                        (catch Exception e
                          (println (.getMessage e))
                          read-error))]
             (cond
-             (identical? form read-error) (recur)
-             (= form :cljs/quit) :quit
+              (identical? form read-error) (recur)
+              (= form :cljs/quit) :quit
 
-             (and (seq? form) (is-special-fn? (first form)))
-             (do (apply (get special-fns (first form)) repl-env (rest form))
-                 (newline)
-                 (recur))
+              (and (seq? form) (is-special-fn? (first form)))
+              (do (apply (get special-fns (first form)) repl-env (rest form))
+                  (newline)
+                  (recur))
 
-             :else
-             (do (eval-and-print repl-env env form)
-                 (recur)))))
+              :else
+              (do (eval-and-print repl-env env form)
+                  (recur)))))
         (-tear-down repl-env)))))
+
+(defn repl
+  "Note - repl will reload core.cljs every time, even if supplied old repl-env"
+  [repl-env & {:as opts}]
+  (repl* repl-env opts))
 
 (defmacro doc
   "Prints documentation for a var or special form given its name"
