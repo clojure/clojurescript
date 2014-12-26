@@ -234,6 +234,9 @@
   [repl-env & {:as opts}]
   (repl* repl-env opts))
 
+;; =============================================================================
+;; ClojureScript REPL interaction support
+
 (defmacro doc
   "Prints documentation for a var or special form given its name"
   [sym]
