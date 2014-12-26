@@ -131,11 +131,12 @@
         (evaluate-form repl-env env filename form)))))
 
 (defn load-file
-  [repl-env f]
-  (binding [ana/*cljs-ns* 'cljs.user]
-    (let [res (if (= \/ (first f)) f (io/resource f))]
-      (assert res (str "Can't find " f " in classpath"))
-      (load-stream repl-env f res))))
+  ([repl-env f] (load-file repl-env f nil))
+  ([repl-env f opts]
+    (binding [ana/*cljs-ns* 'cljs.user]
+      (let [res (if (= \/ (first f)) f (io/resource f))]
+        (assert res (str "Can't find " f " in classpath"))
+        (load-stream repl-env f res)))))
 
 (defn- wrap-fn [form]
   (cond (and (seq? form) (= 'ns (first form))) identity
@@ -156,15 +157,28 @@
       (wrap-fn form))))
 
 (def default-special-fns
-  (let [load-file-fn (fn [repl-env file] (load-file repl-env file))]
-    {'in-ns (fn [_ quoted-ns]
-              (let [ns-name (second quoted-ns)]
-                (when-not (ana/get-namespace ns-name)
-                  (swap! env/*compiler* update-in [::ana/namespaces ns-name] {:name ns-name}))
-                (set! ana/*cljs-ns* ns-name)))
+  (let [load-file-fn
+        (fn self
+          ([repl-env file]
+            (self repl-env file nil))
+          ([repl-env file opts]
+            (load-file repl-env file opts)))]
+    {'in-ns
+     (fn self
+       ([_ quoted-ns]
+         (self _ quoted-ns nil))
+       ([_ quoted-ns opts]
+         (let [ns-name (second quoted-ns)]
+           (when-not (ana/get-namespace ns-name)
+             (swap! env/*compiler* update-in [::ana/namespaces ns-name] {:name ns-name}))
+           (set! ana/*cljs-ns* ns-name))))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
-     'load-namespace (fn [repl-env ns] (load-namespace repl-env ns))}))
+     'load-namespace
+     (fn self
+       ([repl-env ns] (self repl-env ns nil))
+       ([repl-env ns opts]
+         (load-namespace repl-env ns)))}))
 
 (defn analyze-source
   "Given a source directory, analyzes all .cljs files. Used to populate

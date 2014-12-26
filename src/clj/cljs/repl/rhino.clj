@@ -93,22 +93,24 @@
             (catch Throwable ex (println (.getMessage ex))))
           (swap! (:loaded-libs repl-env) (partial apply conj) missing)))))
 
-(defn rhino-setup [repl-env]
-  (let [env (ana/empty-env)
-        scope (:scope repl-env)]
-    (repl/load-file repl-env "cljs/core.cljs")
-    (swap! (:loaded-libs repl-env) conj "cljs.core")
-    (repl/evaluate-form repl-env
-                        env
-                        "<cljs repl>"
-                        '(ns cljs.user))
-    (ScriptableObject/putProperty scope
-                                  "out"
-                                  (Context/javaToJS *out* scope))
-    (repl/evaluate-form repl-env
-                        env
-                        "<cljs repl>"
-                        '(set! *print-fn* (fn [x] (.write js/out x))))))
+(defn rhino-setup
+  ([repl-env] (rhino-setup repl-env nil))
+  ([repl-env opts]
+    (let [env (ana/empty-env)
+          scope (:scope repl-env)]
+      (repl/load-file repl-env "cljs/core.cljs" opts)
+      (swap! (:loaded-libs repl-env) conj "cljs.core")
+      (repl/evaluate-form repl-env
+        env
+        "<cljs repl>"
+        '(ns cljs.user))
+      (ScriptableObject/putProperty scope
+        "out"
+        (Context/javaToJS *out* scope))
+      (repl/evaluate-form repl-env
+        env
+        "<cljs repl>"
+        '(set! *print-fn* (fn [x] (.write js/out x)))))))
 
 (defrecord RhinoEnv [loaded-libs]
   repl/IJavaScriptEnv
