@@ -69,5 +69,7 @@
   [^File f]
   (.mkdirs (.getParentFile (.getCanonicalFile f))))
 
-(defn output-directory [opts]
-  (or (:output-dir opts) "out"))
+(defn output-directory
+  ([opts] (output-directory opts "out"))
+  ([opts default]
+    (or (:output-dir opts) default)))
