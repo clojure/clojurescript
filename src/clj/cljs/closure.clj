@@ -949,7 +949,8 @@ should contain the source for the given namespace name."
         (env/default-compiler-env opts))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
-       (let [ups-deps (get-upstream-deps)
+       (let [compiler-stats (:compiler-stats opts)
+             ups-deps (get-upstream-deps)
              all-opts (-> opts
                         (assoc
                           :ups-libs (:libs ups-deps)
@@ -964,10 +965,11 @@ should contain the source for the given namespace name."
          (check-source-map opts)
          (check-source-map-path opts)
          (check-output-wrapper opts)
-         (swap! compiler-env #(-> %
-                                  (assoc-in [:opts :emit-constants] emit-constants)
-                                  (assoc :target (:target opts))
-                                  (assoc :js-dependency-index (deps/js-dependency-index all-opts))))
+         (swap! compiler-env
+           #(-> %
+             (assoc-in [:opts :emit-constants] emit-constants)
+             (assoc :target (:target opts))
+             (assoc :js-dependency-index (deps/js-dependency-index all-opts))))
          (binding [ana/*cljs-static-fns*
                    (or (and (= (:optimizations opts) :advanced)
                             (not (false? (:static-fns opts))))
@@ -986,20 +988,26 @@ should contain the source for the given namespace name."
                             :undeclared-ns :undeclared-ns-form]
                            (repeat warnings))
                          warnings)))]
-           (let [compiled (-compile source all-opts)
-
-                 ; the constants_table.js file is not used directly here, is picked up by
-                 ; add-dependencies below
+           (let [compiled (util/measure compiler-stats
+                            "Compile basic sources"
+                            (doall (-compile source all-opts)))
+                 ;; the constants_table.js file is not used directly here, is picked up by
+                 ;; add-dependencies below
                  _ (when emit-constants
-                     (comp/emit-constants-table-to-file (::ana/constant-table @env/*compiler*)
-                                                        (str (util/output-directory all-opts) "/constants_table.js")))
-                 js-sources (concat
-                             (apply add-dependencies all-opts
-                                    (concat (if (coll? compiled) compiled [compiled])
-                                            (when (= :nodejs (:target all-opts))
-                                              [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
-                             (when (= :nodejs (:target all-opts))
-                               [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
+                     (comp/emit-constants-table-to-file
+                       (::ana/constant-table @env/*compiler*)
+                       (str (util/output-directory all-opts) "/constants_table.js")))
+                 js-sources (util/measure compiler-stats
+                              "Add dependencies"
+                              (doall
+                                (concat
+                                 (apply add-dependencies all-opts
+                                   (concat
+                                     (if (coll? compiled) compiled [compiled])
+                                     (when (= :nodejs (:target all-opts))
+                                       [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
+                                 (when (= :nodejs (:target all-opts))
+                                   [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
                  optim (:optimizations all-opts)
                  ret (if (and optim (not= optim :none))
                        (do
@@ -1008,8 +1016,10 @@ should contain the source for the given namespace name."
                              (str ":source-map must name a file when using :whitespace, "
                                ":simple, or :advanced optimizations"))
                            (doall (map #(source-on-disk all-opts %) js-sources)))
-                         (->> js-sources
-                           (apply optimize all-opts)
+                         (->>
+                           (util/measure compiler-stats
+                             "Optimize sources"
+                             (apply optimize all-opts js-sources))
                            (add-wrapper all-opts)
                            (add-source-map-link all-opts)
                            (add-header all-opts)
