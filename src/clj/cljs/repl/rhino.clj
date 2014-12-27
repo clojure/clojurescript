@@ -13,38 +13,47 @@
             [cljs.analyzer :as ana]
             [cljs.repl :as repl]
             [cljs.util :as util])
-  (:import java.io.File
-           cljs.repl.IJavaScriptEnv
-           [org.mozilla.javascript Context ScriptableObject]))
+  (:import cljs.repl.IJavaScriptEnv
+           [java.io File Reader]
+           [org.mozilla.javascript Context ScriptableObject
+                                   RhinoException Undefined]))
 
 (def current-repl-env (atom nil))
 
 ;;todo - move to core.cljs, using js
-(def ^String bootjs (str "goog.require = function(rule){"
-                         "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
-                         ".invoke(___repl_env, __repl_opts, rule);}"))
+(def ^String bootjs
+  (str "goog.require = function(rule){"
+       "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
+       ".invoke(___repl_env, __repl_opts, rule);}"))
+
+;; =============================================================================
+;; Protocols
 
 (defprotocol IEval
   (-eval [this env filename line]))
 
 (extend-protocol IEval
-  
-  java.lang.String
+  String
   (-eval [this {:keys [cx scope]} filename line]
     (.evaluateString cx scope this filename line nil))
   
-  java.io.Reader
+  Reader
   (-eval [this {:keys [cx scope]} filename line]
     (.setOptimizationLevel ^Context cx -1)
-    (.evaluateReader cx scope this filename line nil))
-  )
+    (.evaluateReader cx scope this filename line nil)))
+
+;; =============================================================================
+;; Stacktrace & eval support
 
 (defmulti stacktrace class)
 
 (defmethod stacktrace :default [e]
-  (apply str (interpose "\n" (map #(str "        " (.toString %)) (.getStackTrace e)))))
+  (apply str
+    (interpose "\n"
+      (map #(str "        " (.toString %))
+        (.getStackTrace e)))))
 
-(defmethod stacktrace org.mozilla.javascript.RhinoException [e]
+(defmethod stacktrace RhinoException [^RhinoException e]
   (.getScriptStackTrace e))
 
 (defmulti eval-result class)
@@ -54,7 +63,9 @@
 
 (defmethod eval-result nil [_] "")
 
-(defmethod eval-result org.mozilla.javascript.Undefined [_] "")
+(defmethod eval-result Undefined [_] "")
+
+;; =============================================================================
 
 (defn rhino-eval
   [repl-env filename line js]
@@ -69,16 +80,14 @@
 
 (defn goog-require [repl-env opts rule]
   (when-not (contains? @(:loaded-libs repl-env) rule)
-    (let [repl-env @current-repl-env
-          path (string/replace (comp/munge rule) \. java.io.File/separatorChar)
+    (let [repl-env   @current-repl-env
+          path       (string/replace (comp/munge rule) \. File/separatorChar)
           cljsc-path (str (util/output-directory opts)
                        File/separator (str path ".js"))
-          cljs-path (str path ".cljs")
-          js-path (str "goog/"
-                    (-eval (str "goog.dependencies_.nameToPath['" rule "']")
-                      repl-env
-                      "<cljs repl>"
-                      1))]
+          cljs-path  (str path ".cljs")
+          js-path    (str "goog/"
+                       (-eval (str "goog.dependencies_.nameToPath['" rule "']")
+                         repl-env "<cljs repl>" 1))]
       (let [compiled (io/file cljsc-path)]
         (if (.exists compiled)
           ;; TODO: only take this path if analysis cache is available
@@ -91,40 +100,38 @@
             (if-let [res (io/resource js-path)]
               (with-open [reader (io/reader res)]
                 (-eval reader repl-env js-path 1))
-              (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))))
+              (throw
+                (Exception.
+                  (str "Cannot find " cljs-path
+                       " or " js-path " in classpath")))))))
       (swap! (:loaded-libs repl-env) conj rule))))
 
 (defn load-javascript [repl-env ns url]
   (let [missing (remove #(contains? @(:loaded-libs repl-env) %) ns)]
     (when (seq missing)
-      (do (try
-            (with-open [reader (io/reader url)]
-              (-eval reader repl-env (.toString url) 1))
-            ;; TODO: don't show errors for goog/base.js line number 105
-            (catch Throwable ex (println (.getMessage ex))))
-          (swap! (:loaded-libs repl-env) (partial apply conj) missing)))))
+      (do
+        (try
+          (with-open [reader (io/reader url)]
+            (-eval reader repl-env (.toString url) 1))
+          ;; TODO: don't show errors for goog/base.js line number 105
+          (catch Throwable ex (println (.getMessage ex))))
+        (swap! (:loaded-libs repl-env) (partial apply conj) missing)))))
 
 (defn rhino-setup
   ([repl-env] (rhino-setup repl-env nil))
   ([repl-env opts]
-    (let [env (ana/empty-env)
+    (let [env   (ana/empty-env)
           scope (:scope repl-env)]
-      (ScriptableObject/putProperty scope
-        "__repl_opts"
+      (ScriptableObject/putProperty scope "__repl_opts"
         (Context/javaToJS opts scope))
       (repl/load-file repl-env "cljs/core.cljs" opts)
       (swap! (:loaded-libs repl-env) conj "cljs.core")
-      (repl/evaluate-form repl-env
-        env
-        "<cljs repl>"
+      (repl/evaluate-form repl-env env "<cljs repl>"
         '(ns cljs.user))
       (ScriptableObject/putProperty scope
-        "out"
-        (Context/javaToJS *out* scope))
+        "out" (Context/javaToJS *out* scope))
       (binding [ana/*cljs-ns* 'cljs.core]
-        (repl/evaluate-form repl-env
-          env
-          "<cljs repl>"
+        (repl/evaluate-form repl-env env "<cljs repl>"
           '(set! *print-fn* (fn [x] (.write js/out x))))))))
 
 (defrecord RhinoEnv [loaded-libs]
@@ -152,8 +159,7 @@
     (assert deps "Can't find goog/deps.js in classpath")
     (swap! current-repl-env (fn [old] new-repl-env))
     (ScriptableObject/putProperty scope
-                                  "___repl_env"
-                                  (Context/javaToJS new-repl-env scope))
+      "___repl_env" (Context/javaToJS new-repl-env scope))
     (with-open [r (io/reader base)]
       (-eval r new-repl-env "goog/base.js" 1))
     (-eval bootjs new-repl-env "bootjs" 1)
