@@ -94,3 +94,7 @@
             (file? f) (filename f)
             (url? f) (path f))]
     (last (string/split s #"\."))))
+
+(defn debug-prn
+  [& args]
+  (.println System/err (apply str args)))

@@ -41,10 +41,6 @@
 
 (def cljs-reserved-file-names #{"deps.cljs"})
 
-(defmacro ^:private debug-prn
-  [& args]
-  `(.println System/err (str ~@args)))
-
 (defn ns-first-segments []
   (letfn [(get-first-ns-segment [ns] (first (string/split (str ns) #"\.")))]
     (map get-first-ns-segment (keys (::ana/namespaces @env/*compiler*)))))

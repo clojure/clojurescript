@@ -261,10 +261,6 @@
                        screen location navigator history location
                        global process require module exports)))}))
 
-(defn debug-prn
-  [& args]
-  (.println System/err (apply str args)))
-
 (defn source-info
   ([env]
      (when-let [line (:line env)]
