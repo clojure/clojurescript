@@ -1,21 +1,19 @@
 #!/bin/sh
 
-rm -rf out
-mkdir -p out
+rm -rf builds/out-adv
+mkdir -p builds/out-adv
 
 possible=4
 ran=0
 
 #bin/cljsc test >out/core-test.js
-bin/cljsc test "{:optimizations :advanced :output-wrapper true}" >out/core-advanced-test.js
+bin/cljsc test "{:optimizations :advanced :output-wrapper true :compiler-stats true}" > builds/out-adv/core-advanced-test.js
 
 if [ "$V8_HOME" = "" ]; then
   echo "V8_HOME not set, skipping V8 tests"
 else
   echo "Testing with V8"
-  "${V8_HOME}/d8" out/core-advanced-test.js
-  # TODO: figure out path problem when not in advanced mode
-  # "${V8_HOME}/d8" out/core-test.js
+  "${V8_HOME}/d8" builds/out-adv/core-advanced-test.js
   ran=$[ran+1]
 fi
 
@@ -23,7 +21,7 @@ if [ "$SPIDERMONKEY_HOME" = "" ]; then
   echo "SPIDERMONKEY_HOME not set, skipping SpiderMonkey tests"
 else
   echo "Testing with SpiderMonkey"
-  ${SPIDERMONKEY_HOME}/js -f out/core-advanced-test.js
+  ${SPIDERMONKEY_HOME}/js -f builds/out-adv/core-advanced-test.js
   ran=$[ran+1]
 fi
 
@@ -31,7 +29,7 @@ if [ "$JSC_HOME" = "" ]; then
   echo "JSC_HOME not set, skipping JavaScriptCore tests"
 else
   echo "Testing with JavaScriptCore"
-  "${JSC_HOME}/jsc" -f out/core-advanced-test.js
+  "${JSC_HOME}/jsc" -f builds/out-adv/core-advanced-test.js
   ran=$[ran+1]
 fi
 
@@ -39,7 +37,7 @@ if [ "$NASHORN_HOME" = "" ]; then
   echo "NASHORN_HOME not set, skipping Nashorn tests"
 else
   echo "Testing with Nashorn"
-  "${NASHORN_HOME}/jjs" out/core-advanced-test.js
+  "${NASHORN_HOME}/jjs" builds/out-adv/core-advanced-test.js
   ran=$[ran+1]
 fi
 
