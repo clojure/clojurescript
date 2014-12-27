@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# stop blowing compiled stuff
+#rm -rf builds/out-simp
+mkdir -p builds/out-simp
+
+possible=4
+ran=0
+
+#bin/cljsc test >out/core-test.js
+bin/cljsc test "{:optimizations :simple :static-fns true :output-dir \"builds/out-simp\" :cache-analysis true :output-wrapper true :compiler-stats true}" > builds/out-simp/core-simple-test.js
+
+if [ "$V8_HOME" = "" ]; then
+  echo "V8_HOME not set, skipping V8 tests"
+else
+  echo "Testing with V8"
+  "${V8_HOME}/d8" builds/out-simp/core-simple-test.js
+  ran=$[ran+1]
+fi
+
+if [ "$SPIDERMONKEY_HOME" = "" ]; then
+  echo "SPIDERMONKEY_HOME not set, skipping SpiderMonkey tests"
+else
+  echo "Testing with SpiderMonkey"
+  ${SPIDERMONKEY_HOME}/js -f builds/out-simp/core-simple-test.js
+  ran=$[ran+1]
+fi
+
+# commented out because of memory issue in JSC w/ nested fn calls - David
+#if [ "$JSC_HOME" = "" ]; then
+#  echo "JSC_HOME not set, skipping JavaScriptCore tests"
+#else
+#  echo "Testing with JavaScriptCore"
+#  "${JSC_HOME}/jsc" -f builds/out-simp/core-simple-test.js
+#  ran=$[ran+1]
+#fi
+
+if [ "$NASHORN_HOME" = "" ]; then
+  echo "NASHORN_HOME not set, skipping Nashorn tests"
+else
+  echo "Testing with Nashorn"
+  "${NASHORN_HOME}/jjs" builds/out-simp/core-simple-test.js
+  ran=$[ran+1]
+fi
+
+echo "Tested with $ran out of $possible possible js targets"
