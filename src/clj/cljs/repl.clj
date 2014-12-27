@@ -10,8 +10,7 @@
   (:refer-clojure :exclude [load-file])
   (:import java.io.File
            javax.xml.bind.DatatypeConverter)
-  (:require [clojure.string :as string]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
             [cljs.env :as env]
@@ -24,7 +23,7 @@
 (def ^:dynamic *cljs-verbose* false)
 
 (defprotocol IJavaScriptEnv
-  (-setup [this] "initialize the environment")
+  (-setup [this] [this opts] "initialize the environment")
   (-evaluate [this filename line js] "evaluate a javascript string")
   (-load [this ns url] "load code at url into the environment")
   (-tear-down [this] "dispose of the environment"))
@@ -42,23 +41,28 @@
   "Load a namespace and all of its dependencies into the evaluation environment.
   The environment is responsible for ensuring that each namespace is loaded once and
   only once."
-  [repl-env sym]
-  (let [sym (if (and (seq? sym)
-                     (= (first sym) 'quote))
-              (second sym)
-              sym)
-        deps (->> (cljsc/add-dependencies (env->opts repl-env)
-                                          {:requires [(name sym)] :type :seed})
-                  (remove (comp #{["goog"]} :provides))
-                  (remove (comp #{:seed} :type))
-                  (map #(select-keys % [:provides :url])))]
-    (doseq [{:keys [url provides]} deps]
-      (-load repl-env provides url))))
+  ([repl-env sym] (load-namespace repl-env sym nil))
+  ([repl-env sym opts]
+    (let [sym (if (and (seq? sym)
+                    (= (first sym) 'quote))
+                (second sym)
+                sym)
+          deps (->> (cljsc/add-dependencies
+                      ;; TODO: conceptually simpler to keep REPL environment
+                      ;; separate from build options map - David
+                      (merge (env->opts repl-env) opts)
+                      {:requires [(name sym)] :type :seed})
+                 (remove (comp #{["goog"]} :provides))
+                 (remove (comp #{:seed} :type))
+                 (map #(select-keys % [:provides :url])))]
+      (doseq [{:keys [url provides]} deps]
+        (-load repl-env provides url)))))
 
 (defn- load-dependencies
-  [repl-env requires]
-  (doseq [ns requires]
-    (load-namespace repl-env ns)))
+  ([repl-env requires] (load-dependencies repl-env requires nil))
+  ([repl-env requires opts]
+    (doseq [ns requires]
+      (load-namespace repl-env ns opts))))
 
 (defn- display-error
   ([ret form]
@@ -75,54 +79,59 @@
   string which is the ClojureScript return value. This string may or may
   not be readable by the Clojure reader."
   ([repl-env env filename form]
-     (evaluate-form repl-env env filename form identity))
+    (evaluate-form repl-env env filename form identity))
   ([repl-env env filename form wrap]
-     (try
-       (binding [ana/*cljs-file* filename]
-         (let [ast (ana/analyze env form)
-               js (comp/emit-str ast)
-               wrap-js
-               (if (:source-map repl-env)
-                 (binding [comp/*source-map-data*
-                           (atom {:source-map (sorted-map)
-                                  :gen-col 0
-                                  :gen-line 0})]
-                   (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form))))
-                         t (System/currentTimeMillis)]
-                     (str js
-                          "\n//# sourceURL=repl-" t ".js"
-                          "\n//# sourceMappingURL=data:application/json;base64,"
-                          (DatatypeConverter/printBase64Binary
-                           (.getBytes
-                            (sm/encode
-                             {(str "repl-" t ".cljs")
-                              (:source-map @comp/*source-map-data*)}
-                             {:lines (+ (:gen-line @comp/*source-map-data*) 3)
-                              :file  (str "repl-" t ".js")
-                              :sources-content
-                              [(or (:source (meta form))
-                                   ;; handle strings / primitives without metadata
-                                   (with-out-str (pr form)))]})
-                            "UTF-8")))))
-                 (comp/emit-str (ana/no-warn (ana/analyze env (wrap form)))))]
-           (when (= (:op ast) :ns)
-             (load-dependencies repl-env (into (vals (:requires ast))
-                                               (distinct (vals (:uses ast))))))
-           (when *cljs-verbose*
-             (print js))
-           (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
-             (case (:status ret)
-               ;;we eat ns errors because we know goog.provide() will throw when reloaded
-               ;;TODO - file bug with google, this is bs error
-               ;;this is what you get when you try to 'teach new developers'
-               ;;via errors (goog/base.js 104)
-               :error (display-error ret form)
-               :exception (display-error ret form
-                                         #(prn "Error evaluating:" form :as js))
-               :success (:value ret)))))
-       (catch Throwable ex
-         (.printStackTrace ex)
-         (println (str ex))))))
+    (evaluate-form repl-env env filename form wrap nil))
+  ([repl-env env filename form wrap opts]
+    (try
+      (binding [ana/*cljs-file* filename]
+        (let [ast (ana/analyze env form opts)
+              js (comp/emit-str ast)
+              wrap-js
+              ;; TODO: check opts as well - David
+              (if (:source-map repl-env)
+                (binding [comp/*source-map-data*
+                          (atom {:source-map (sorted-map)
+                                 :gen-col 0
+                                 :gen-line 0})]
+                  (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts)))
+                        t (System/currentTimeMillis)]
+                    (str js
+                      "\n//# sourceURL=repl-" t ".js"
+                      "\n//# sourceMappingURL=data:application/json;base64,"
+                      (DatatypeConverter/printBase64Binary
+                        (.getBytes
+                          (sm/encode
+                            {(str "repl-" t ".cljs")
+                             (:source-map @comp/*source-map-data*)}
+                            {:lines (+ (:gen-line @comp/*source-map-data*) 3)
+                             :file  (str "repl-" t ".js")
+                             :sources-content
+                                    [(or (:source (meta form))
+                                       ;; handle strings / primitives without metadata
+                                       (with-out-str (pr form)))]})
+                          "UTF-8")))))
+                (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts))))]
+          (when (= (:op ast) :ns)
+            (load-dependencies repl-env
+              (into (vals (:requires ast))
+                (distinct (vals (:uses ast))))
+              opts))
+          (when *cljs-verbose*
+            (print js))
+          (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
+            (case (:status ret)
+              ;;we eat ns errors because we know goog.provide() will throw when reloaded
+              ;;TODO - file bug with google, this is bs error
+              ;;this is what you get when you try to 'teach new developers'
+              ;;via errors (goog/base.js 104)
+              :error (display-error ret form)
+              :exception (display-error ret form
+                           #(prn "Error evaluating:" form :as js))
+              :success (:value ret)))))
+      (catch Throwable ex
+        (.printStackTrace ex)
+        (println (str ex))))))
 
 (defn load-stream [repl-env filename res]
   (let [env (ana/empty-env)]
@@ -133,10 +142,15 @@
 (defn load-file
   ([repl-env f] (load-file repl-env f nil))
   ([repl-env f opts]
-    (binding [ana/*cljs-ns* 'cljs.user]
-      (let [res (if (= \/ (first f)) f (io/resource f))]
-        (assert res (str "Can't find " f " in classpath"))
-        (load-stream repl-env f res)))))
+    (if (:output-dir opts)
+      (let [src (io/resource f)]
+        (comp/compile-file src
+          (cljsc/src-file->target-file src opts) opts)
+        (-evaluate repl-env f 0 (cljsc/src-file->goog-require src)))
+      (binding [ana/*cljs-ns* 'cljs.user]
+        (let [res (if (= \/ (first f)) f (io/resource f))]
+          (assert res (str "Can't find " f " in classpath"))
+          (load-stream repl-env f res))))))
 
 (defn- wrap-fn [form]
   (cond (and (seq? form) (= 'ns (first form))) identity
@@ -178,7 +192,7 @@
      (fn self
        ([repl-env ns] (self repl-env ns nil))
        ([repl-env ns opts]
-         (load-namespace repl-env ns)))}))
+         (load-namespace repl-env ns opts)))}))
 
 (defn analyze-source
   "Given a source directory, analyzes all .cljs files. Used to populate
@@ -204,13 +218,17 @@
                                     :undeclared-ns warn-on-undeclared
                                     :undeclared-ns-form warn-on-undeclared)
               ana/*cljs-static-fns* static-fns]
+      ;; TODO: the follow should become dead code when the REPL is
+      ;; sufficiently enhanced to understand :cache-analysis - David
       (when analyze-path
         (analyze-source analyze-path))
       (let [env {:context :expr :locals {}}
             special-fns (merge default-special-fns special-fns)
             is-special-fn? (set (keys special-fns))
             read-error (Object.)]
-        (-setup repl-env)
+        (if-not (nil? opts)
+          (-setup repl-env opts)
+          (-setup repl-env))
         (loop []
           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
           (flush)
@@ -234,7 +252,8 @@
               (= form :cljs/quit) :quit
 
               (and (seq? form) (is-special-fn? (first form)))
-              (do (apply (get special-fns (first form)) repl-env (rest form))
+              (do (apply (get special-fns (first form)) repl-env (rest form)
+                    opts)
                   (newline)
                   (recur))
 

@@ -12,4 +12,4 @@ done
 java -server -cp "$CLJSC_CP" clojure.main -e \
 "(require '[cljs.repl :as repl])
 (require '[cljs.repl.rhino :as rhino])
-(repl/repl (rhino/repl-env) :warn-on-undeclared true)"
+(repl/repl* (rhino/repl-env) {:warn-on-undeclared true :output-dir \".repl\" :cache-analysis true})"

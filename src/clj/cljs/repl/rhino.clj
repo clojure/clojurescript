@@ -11,8 +11,10 @@
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
-            [cljs.repl :as repl])
-  (:import cljs.repl.IJavaScriptEnv
+            [cljs.repl :as repl]
+            [cljs.util :as util])
+  (:import java.io.File
+           cljs.repl.IJavaScriptEnv
            [org.mozilla.javascript Context ScriptableObject]))
 
 (def current-repl-env (atom nil))
@@ -20,7 +22,7 @@
 ;;todo - move to core.cljs, using js
 (def ^String bootjs (str "goog.require = function(rule){"
                          "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
-                         ".invoke(___repl_env, rule);}"))
+                         ".invoke(___repl_env, __repl_opts, rule);}"))
 
 (defprotocol IEval
   (-eval [this env filename line]))
@@ -33,6 +35,7 @@
   
   java.io.Reader
   (-eval [this {:keys [cx scope]} filename line]
+    (.setOptimizationLevel ^Context cx -1)
     (.evaluateReader cx scope this filename line nil))
   )
 
@@ -64,23 +67,31 @@
        :value (.toString ex)
        :stacktrace (stacktrace ex)})))
 
-(defn goog-require [repl-env rule]
+(defn goog-require [repl-env opts rule]
   (when-not (contains? @(:loaded-libs repl-env) rule)
     (let [repl-env @current-repl-env
           path (string/replace (comp/munge rule) \. java.io.File/separatorChar)
+          cljsc-path (str (util/output-directory opts)
+                       File/separator (str path ".js"))
           cljs-path (str path ".cljs")
           js-path (str "goog/"
-                       (-eval (str "goog.dependencies_.nameToPath['" rule "']")
-                              repl-env
-                              "<cljs repl>"
-                              1))]
-      (if-let [res (io/resource cljs-path)]
-        (binding [ana/*cljs-ns* 'cljs.user]
-          (repl/load-stream repl-env cljs-path res))
-        (if-let [res (io/resource js-path)]
-          (with-open [reader (io/reader res)]
-            (-eval reader repl-env js-path 1))
-          (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))
+                    (-eval (str "goog.dependencies_.nameToPath['" rule "']")
+                      repl-env
+                      "<cljs repl>"
+                      1))]
+      (let [compiled (io/file cljsc-path)]
+        (if (.exists compiled)
+          ;; TODO: only take this path if analysis cache is available
+          ;; - David
+          (with-open [reader (io/reader compiled)]
+            (-eval reader repl-env cljsc-path 1))
+          (if-let [res (io/resource cljs-path)]
+            (binding [ana/*cljs-ns* 'cljs.user]
+              (repl/load-stream repl-env cljs-path res))
+            (if-let [res (io/resource js-path)]
+              (with-open [reader (io/reader res)]
+                (-eval reader repl-env js-path 1))
+              (throw (Exception. (str "Cannot find " cljs-path " or " js-path " in classpath")))))))
       (swap! (:loaded-libs repl-env) conj rule))))
 
 (defn load-javascript [repl-env ns url]
@@ -98,6 +109,9 @@
   ([repl-env opts]
     (let [env (ana/empty-env)
           scope (:scope repl-env)]
+      (ScriptableObject/putProperty scope
+        "__repl_opts"
+        (Context/javaToJS opts scope))
       (repl/load-file repl-env "cljs/core.cljs" opts)
       (swap! (:loaded-libs repl-env) conj "cljs.core")
       (repl/evaluate-form repl-env
@@ -107,15 +121,18 @@
       (ScriptableObject/putProperty scope
         "out"
         (Context/javaToJS *out* scope))
-      (repl/evaluate-form repl-env
-        env
-        "<cljs repl>"
-        '(set! *print-fn* (fn [x] (.write js/out x)))))))
+      (binding [ana/*cljs-ns* 'cljs.core]
+        (repl/evaluate-form repl-env
+          env
+          "<cljs repl>"
+          '(set! *print-fn* (fn [x] (.write js/out x))))))))
 
 (defrecord RhinoEnv [loaded-libs]
   repl/IJavaScriptEnv
   (-setup [this]
     (rhino-setup this))
+  (-setup [this opts]
+    (rhino-setup this opts))
   (-evaluate [this filename line js]
     (rhino-eval this filename line js))
   (-load [this ns url]
