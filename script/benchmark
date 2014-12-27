@@ -1,37 +1,34 @@
 #!/bin/sh
 
-rm -rf out
-mkdir -p out
+rm -rf builds/out-adv-bench
+mkdir -p builds/out-adv-bench
 
-#bin/cljsc benchmark > out/core-benchmark.js
-bin/cljsc benchmark "{:optimizations :advanced :output-wrapper true}" >out/core-advanced-benchmark.js
+bin/cljsc benchmark "{:optimizations :advanced :output-wrapper true :compiler-stats true}" > builds/out-adv-bench/core-advanced-benchmark.js
 
 if [ "$V8_HOME" = "" ]; then
   echo "V8_HOME not set, skipping V8 benchmarks"
 else
   echo "Benchmarking with V8"
-  "${V8_HOME}/d8" out/core-advanced-benchmark.js
-  # TODO: figure out path problem when not in advanced mode
-  # "${V8_HOME}/d8" out/core-benchmark.js
+  "${V8_HOME}/d8" builds/out-adv-bench/core-advanced-benchmark.js
 fi
 
 if [ "$SPIDERMONKEY_HOME" = "" ]; then
   echo "SPIDERMONKEY_HOME not set, skipping SpiderMonkey benchmarks"
 else
   echo "Benchmarking with SpiderMonkey"
-  "${SPIDERMONKEY_HOME}/js" -f out/core-advanced-benchmark.js
+  "${SPIDERMONKEY_HOME}/js" -f builds/out-adv-bench/core-advanced-benchmark.js
 fi
 
 if [ "$JSC_HOME" = "" ]; then
   echo "JSC_HOME not set, skipping JavaScriptCore benchmarks"
 else
   echo "Benchmarking with JavaScriptCore"
-  "${JSC_HOME}/jsc" -f out/core-advanced-benchmark.js
+  "${JSC_HOME}/jsc" -f builds/out-adv-bench/core-advanced-benchmark.js
 fi
 
 if [ "$NASHORN_HOME" = "" ]; then
   echo "NASHORN_HOME not set, skipping Nashorn benchmarks"
 else
   echo "Benchmarking with Nashorn"
-  "${NASHORN_HOME}/jjs" out/core-advanced-benchmark.js
+  "${NASHORN_HOME}/jjs" builds/out-adv-bench/core-advanced-benchmark.js
 fi
