@@ -425,7 +425,7 @@
         (emitln "*/")))))
 
 (defmethod emit* :def
-  [{:keys [name var init env doc export]}]
+  [{:keys [name var init env doc export test]}]
   (let [mname (munge name)]
     (when init
       (emit-comment doc (:jsdoc init))
@@ -437,10 +437,10 @@
       (when-not (= :expr (:context env)) (emitln ";"))
       (when export
         (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))
-      (when (and ana/*load-tests* (:test var))
+      (when (and ana/*load-tests* test)
         (when (= :expr (:context env))
           (emitln ";"))
-        (emitln var ".cljs$lang$test = " (:test var) ";")))))
+        (emitln var ".cljs$lang$test = " test ";")))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]

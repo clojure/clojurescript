@@ -683,7 +683,9 @@
       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
         (merge 
           {:name var-name}
-          sym-meta
+          ;; elide test metadata, as it includes non-valid EDN - David
+          (cond-> sym-meta
+            :test (-> (dissoc :test) (assoc :test true)))
           (when doc {:doc doc})
           (when dynamic {:dynamic true})
           (source-info var-name env)
@@ -717,14 +719,16 @@
             {:ret-tag tag})))
       (merge {:env env :op :def :form form
               :name var-name
-              :var (assoc (analyze (-> env (dissoc :locals)
-                                     ;; if there's :test var metadata will need locals
-                                     (assoc :test-locals locals)
-                                     (assoc :context :expr)
-                                     (assoc :def-var true))
-                            sym)
+              :var (assoc
+                     (analyze
+                       (-> env (dissoc :locals)
+                         (assoc :context :expr)
+                         (assoc :def-var true))
+                       sym)
                      :op :var)
               :doc doc :init init-expr}
+        (when-let [test (:test sym-meta)]
+          {:test (analyze (assoc env :context :expr) test)})
         (when tag
           (if fn-var?
             {:ret-tag tag}
@@ -1463,10 +1467,7 @@
             (if-not (contains? (meta sym) ::analyzed)
               (resolve-existing-var env sym)
               (resolve-var env sym)))
-          (let [ret (assoc ret :op :var :info (resolve-var env sym))]
-            (if-let [test (-> sym meta :test)]
-              (assoc ret :test (analyze (assoc env :locals (:test-locals env)) test))
-              ret)))))))
+          (assoc ret :op :var :info (resolve-var env sym)))))))
 
 (defn get-expander [sym env]
   (let [mvar
