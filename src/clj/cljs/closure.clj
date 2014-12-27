@@ -1023,9 +1023,34 @@ should contain the source for the given namespace name."
                  (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))
 
+;; =============================================================================
+;; Utilities
+
 ;; for backwards compatibility
 (defn output-directory [opts]
   (util/output-directory opts))
+
+(defn parse-js-ns [f]
+  (deps/parse-js-ns (line-seq (io/reader f))))
+
+(defn ^File src-file->target-file
+  "Given a ClojureScript source file return the target file. May optionally
+  provide build options with :output-dir specified."
+  ([src] (src-file->target-file src nil))
+  ([src opts]
+    (util/to-target-file
+      (util/output-directory opts)
+      (ana/parse-ns src))))
+
+(defn ^String src-file->goog-require [src]
+  (let [goog-ns
+        (case (util/ext src)
+          "cljs" (comp/munge (:ns (ana/parse-ns src)))
+          "js"   (-> (parse-js-ns src) :provides first)
+          (throw
+            (IllegalArgumentException.
+              (str "Can't create goog.require expression for " src))))]
+    (str "goog.require(\"" goog-ns "\");")))
 
 (comment
 
@@ -1038,12 +1063,12 @@ should contain the source for the given namespace name."
   (build "samples/hello/src" {:optimizations :advanced})
   (build "samples/hello/src" {:optimizations :advanced :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello.html' to see the result in action
-  
+
   ;; build a project without optimizations
   (build "samples/hello/src" {:output-dir "samples/hello/out" :output-to "samples/hello/hello.js"})
   ;; open 'samples/hello/hello-dev.html' to see the result in action
   ;; notice how each script was loaded individually
-  
+
   ;; build unoptimized from raw ClojureScript
   (build '[(ns hello.core)
            (defn ^{:export greet} greet [n] (str "Hola " n))

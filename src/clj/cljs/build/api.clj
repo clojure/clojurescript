@@ -14,8 +14,11 @@
   (:require [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
-            [cljs.closure]
-            [clojure.set :refer [intersection]])
+            [cljs.compiler :as comp]
+            [cljs.closure :as closure]
+            [clojure.set :refer [intersection]]
+            [cljs.js-deps :as js-deps]
+            [clojure.java.io :as io])
   (:import java.io.File))
 
 (defn ^File target-file-for-cljs-ns
@@ -66,6 +69,25 @@
   transient dependents."
   [ns]
   (ana/ns-dependents ns))
+
+(defn parse-js-ns
+  "Given a Google Closure style JavaScript file or resource return the namespace
+  information for the given file. Only returns the value extracted from the
+  first provide statement."
+  [f]
+  (closure/parse-js-ns f))
+
+(defn ^File src-file->target-file
+  "Given a ClojureScript source file return the target file. May optionally
+  provide build options with :output-dir specified."
+  ([src] (closure/src-file->target-file src))
+  ([src opts] (closure/src-file->target-file src opts)))
+
+(defn ^String src-file->goog-require
+  "Given a ClojureScript or Google Closure style JavaScript source file return
+  the goog.require statement for it."
+  [src]
+  (closure/src-file->goog-require src))
 
 (comment
 
