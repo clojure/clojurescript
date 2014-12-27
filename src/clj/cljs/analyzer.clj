@@ -19,7 +19,7 @@
             [clojure.tools.reader.reader-types :as readers]
             [clojure.edn :as edn])
   (:import java.lang.StringBuilder
-           java.io.File
+           [java.io File Reader PushbackReader]
            java.net.URL
            [cljs.tagged_literals JSValue]))
 
@@ -1654,26 +1654,29 @@
 `clojure.java.io/reader` can produce a `java.io.Reader`. Optionally accepts a [filename]
 argument, which the reader will use in any emitted errors."
   ([f] (forms-seq f (source-path f)))
-  ([f filename]
-     (let [rdr (io/reader f)
-           pbr (readers/indexing-push-back-reader
-                (java.io.PushbackReader. rdr) 1 filename)
-           data-readers tags/*cljs-data-readers*
-           forms-seq*
-           (fn forms-seq* []
-             (lazy-seq
+  ([f filename] (forms-seq f filename false))
+  ([f filename return-reader?]
+    (let [rdr (io/reader f)
+          pbr (readers/indexing-push-back-reader
+                (PushbackReader. rdr) 1 filename)
+          data-readers tags/*cljs-data-readers*
+          forms-seq*
+          (fn forms-seq* []
+            (lazy-seq
               (let [eof-sentinel (Object.)
                     form (binding [*ns* (create-ns *cljs-ns*)
                                    reader/*data-readers* data-readers
                                    reader/*alias-map*
                                    (apply merge
-                                          ((juxt :requires :require-macros)
-                                           (get-namespace *cljs-ns*)))]
+                                     ((juxt :requires :require-macros)
+                                       (get-namespace *cljs-ns*)))]
                            (reader/read pbr nil eof-sentinel))]
                 (if (identical? form eof-sentinel)
                   (.close rdr)
                   (cons form (forms-seq*))))))]
-       (forms-seq*))))
+      (if (true? return-reader?)
+        [(forms-seq*) rdr]
+        (forms-seq*)))))
 
 (defn parse-ns
   ([src] (parse-ns src nil nil))
@@ -1684,13 +1687,14 @@ argument, which the reader will use in any emitted errors."
             ret
             (binding [*cljs-ns* 'cljs.user
                       *analyze-deps* (or (:analyze-deps opts) false)]
-              (loop [forms (forms-seq src)]
+              (loop [[forms rdr] (forms-seq src (source-path src) true)]
                 (if (seq forms)
                   (let [env (empty-env)
                         ast (no-warn (analyze env (first forms) nil opts))]
                     (if (= (:op ast) :ns)
                       (let [ns-name (:name ast)
                             deps    (merge (:uses ast) (:requires ast))]
+                        (.close ^Reader rdr)
                         (merge
                           {:ns (or ns-name 'cljs.user)
                            :provides [ns-name]
