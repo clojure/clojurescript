@@ -18,7 +18,8 @@
             [cljs.closure :as cljsc]
             [cljs.source-map :as sm]
             [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers]))
+            [clojure.tools.reader.reader-types :as readers]
+            [cljs.util :as util]))
 
 (def ^:dynamic *cljs-verbose* false)
 
@@ -173,25 +174,25 @@
 (def default-special-fns
   (let [load-file-fn
         (fn self
-          ([repl-env file]
-            (self repl-env file nil))
-          ([repl-env file opts]
+          ([repl-env form]
+            (self repl-env form nil))
+          ([repl-env [_ file :as form] opts]
             (load-file repl-env file opts)))]
     {'in-ns
      (fn self
-       ([_ quoted-ns]
-         (self _ quoted-ns nil))
-       ([_ quoted-ns opts]
-         (let [ns-name (second quoted-ns)]
-           (when-not (ana/get-namespace ns-name)
-             (swap! env/*compiler* update-in [::ana/namespaces ns-name] {:name ns-name}))
-           (set! ana/*cljs-ns* ns-name))))
+       ([_ form]
+         (self _ form nil))
+       ([_ [_ [quote ns-name] :as form] _]
+         (util/debug-prn "in-ns " ns-name)
+         (when-not (ana/get-namespace ns-name)
+           (swap! env/*compiler* update-in [::ana/namespaces ns-name] {:name ns-name}))
+         (set! ana/*cljs-ns* ns-name)))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
      (fn self
-       ([repl-env ns] (self repl-env ns nil))
-       ([repl-env ns opts]
+       ([repl-env form] (self repl-env form nil))
+       ([repl-env [_ ns :as form] opts]
          (load-namespace repl-env ns opts)))}))
 
 (defn analyze-source
@@ -247,15 +248,17 @@
                        (catch Exception e
                          (println (.getMessage e))
                          read-error))]
+            ;; TODO: need to catch errors here too - David
             (cond
               (identical? form read-error) (recur)
               (= form :cljs/quit) :quit
 
               (and (seq? form) (is-special-fn? (first form)))
-              (do (apply (get special-fns (first form)) repl-env (rest form)
-                    opts)
-                  (newline)
-                  (recur))
+              (do
+                ((get special-fns (first form))
+                  repl-env form opts)
+                (newline)
+                (recur))
 
               :else
               (do (eval-and-print repl-env env form)
