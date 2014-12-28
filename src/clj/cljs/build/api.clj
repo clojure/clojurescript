@@ -86,8 +86,9 @@
 (defn ^String src-file->goog-require
   "Given a ClojureScript or Google Closure style JavaScript source file return
   the goog.require statement for it."
-  [src]
-  (closure/src-file->goog-require src))
+  ([src] (closure/src-file->goog-require src))
+  ([src options]
+    (closure/src-file->goog-require src options)))
 
 (comment
 

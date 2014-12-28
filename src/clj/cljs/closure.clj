@@ -1053,15 +1053,22 @@ should contain the source for the given namespace name."
       (util/output-directory opts)
       (ana/parse-ns src))))
 
-(defn ^String src-file->goog-require [src]
-  (let [goog-ns
-        (case (util/ext src)
-          "cljs" (comp/munge (:ns (ana/parse-ns src)))
-          "js"   (-> (parse-js-ns src) :provides first)
-          (throw
-            (IllegalArgumentException.
-              (str "Can't create goog.require expression for " src))))]
-    (str "goog.require(\"" goog-ns "\");")))
+(defn ^String src-file->goog-require
+  ([src] (src-file->goog-require src {:wrap true}))
+  ([src {:keys [wrap all-provides :as options]}]
+    (let [goog-ns
+          (case (util/ext src)
+            "cljs" (comp/munge (:ns (ana/parse-ns src)))
+            "js"   (cond-> (:provides (parse-js-ns src))
+                     (not all-provides) first)
+            (throw
+              (IllegalArgumentException.
+                (str "Can't create goog.require expression for " src))))]
+      (if (and (not all-provides) wrap)
+        (str "goog.require(\"" goog-ns "\");")
+        (if (vector? goog-ns)
+          goog-ns
+          (str goog-ns))))))
 
 (comment
 
