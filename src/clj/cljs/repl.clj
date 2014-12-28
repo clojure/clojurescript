@@ -231,6 +231,11 @@
         (if-not (nil? opts)
           (-setup repl-env opts)
           (-setup repl-env))
+        (evaluate-form repl-env env "<cljs repl>"
+          (with-meta
+            '(ns cljs.user
+              (:require [cljs.repl :refer-macros [doc]]))
+            {:line 1 :column 1}))
         (loop []
           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
           (flush)
