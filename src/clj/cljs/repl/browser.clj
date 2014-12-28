@@ -12,16 +12,19 @@
             [clojure.string :as string]
             [cljs.compiler :as comp]
             [cljs.util :as util]
+            [cljs.env :as env]
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
             [cljs.repl.server :as server])
   (:import cljs.repl.IJavaScriptEnv
            [java.util.regex Pattern]))
 
-(defonce browser-state (atom {:return-value-fn nil
-                              :client-js nil}))
+(defonce browser-state
+  (atom {:return-value-fn nil
+         :client-js nil}))
 
 (def loaded-libs (atom #{}))
+
 (def preloaded-libs (atom #{}))
 
 (defn- set-return-value-fn
@@ -35,10 +38,10 @@
   browser for evaluation. The return value function will be called
   when the return value is received."
   ([form return-value-fn]
-     (send-for-eval @(server/connection) form return-value-fn))
+    (send-for-eval @(server/connection) form return-value-fn))
   ([conn form return-value-fn]
-     (do (set-return-value-fn return-value-fn)
-         (server/send-and-close conn 200 form "text/javascript"))))
+    (set-return-value-fn return-value-fn)
+    (server/send-and-close conn 200 form "text/javascript")))
 
 (defn- return-value
   "Called by the server when a return value is received."
@@ -47,7 +50,7 @@
     (f val)))
 
 (defn repl-client-js []
-  (slurp @(:client-js @browser-state)))
+  (slurp (:client-js @browser-state)))
 
 (defn send-repl-client-page
   [request conn opts]
@@ -67,19 +70,21 @@
            (not= "/favicon.ico" path))
     (let [path   (if (= "/" path) "/index.html" path)
           st-dir (:static-dir opts)
-          local-path (cond->
-                       (seq (for [x (if (string? st-dir) [st-dir] st-dir)
-                                  :when (.exists (io/file (str x path)))]
-                              (str x path)))
-                       (complement nil?) first)
-          local-path (if (nil? local-path)
-                       (cond
-                         (re-find #".jar" path)
-                         (io/resource (second (string/split path #".jar!/")))
-                         (re-find (Pattern/compile (System/getProperty "user.dir")) path)
-                         (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
-                         :else nil)
-                       local-path)]
+          local-path
+          (cond->
+            (seq (for [x (if (string? st-dir) [st-dir] st-dir)
+                       :when (.exists (io/file (str x path)))]
+                   (str x path)))
+            (complement nil?) first)
+          local-path
+          (if (nil? local-path)
+            (cond
+              (re-find #".jar" path)
+              (io/resource (second (string/split path #".jar!/")))
+              (re-find (Pattern/compile (System/getProperty "user.dir")) path)
+              (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
+              :else nil)
+            local-path)]
       (if local-path
         (server/send-and-close conn 200 (slurp local-path)
           (condp #(.endsWith %2 %1) path
@@ -96,16 +101,19 @@
     (server/send-404 conn path)))
 
 (server/dispatch-on :get
-                    (fn [{:keys [path]} _ _] (.startsWith path "/repl"))
-                    send-repl-client-page)
+  (fn [{:keys [path]} _ _]
+    (.startsWith path "/repl"))
+  send-repl-client-page)
 
 (server/dispatch-on :get
-                    (fn [{:keys [path]} _ _] (or (= path "/")
-                                                (.endsWith path ".js")
-                                                (.endsWith path ".cljs")
-                                                (.endsWith path ".map")
-                                                (.endsWith path ".html")))
-                    send-static)
+  (fn [{:keys [path]} _ _]
+    (or
+      (= path "/")
+      (.endsWith path ".js")
+      (.endsWith path ".cljs")
+      (.endsWith path ".map")
+      (.endsWith path ".html")))
+  send-static)
 
 (defmulti handle-post (fn [m _ _ ] (:type m)))
 
@@ -114,23 +122,24 @@
 (def ordering (agent {:expecting nil :fns {}}))
 
 (defmethod handle-post :ready [_ conn _]
-  (do (reset! loaded-libs @preloaded-libs)
-      (send ordering (fn [_] {:expecting nil :fns {}}))
-      (send-for-eval conn
-                     (cljsc/-compile
-                      '[(ns cljs.user)
-                        (set! *print-fn* clojure.browser.repl/repl-print)] {})
-                     identity)))
+  (reset! loaded-libs @preloaded-libs)
+  (send ordering (fn [_] {:expecting nil :fns {}}))
+  (send-for-eval conn
+    (cljsc/-compile
+      '[(ns cljs.user)
+        (set! *print-fn* clojure.browser.repl/repl-print)] {})
+    identity))
 
 (defn add-in-order [{:keys [expecting fns]} order f]
-  {:expecting (or expecting order) :fns (assoc fns order f)})
+  {:expecting (or expecting order)
+   :fns (assoc fns order f)})
 
 (defn run-in-order [{:keys [expecting fns]}]
-  (loop [order expecting
-         fns fns]
+  (loop [order expecting fns fns]
     (if-let [f (get fns order)]
-      (do (f)
-          (recur (inc order) (dissoc fns order)))
+      (do
+        (f)
+        (recur (inc order) (dissoc fns order)))
       {:expecting order :fns fns})))
 
 (defn constrain-order
@@ -141,13 +150,17 @@
   (send-off ordering run-in-order))
 
 (defmethod handle-post :print [{:keys [content order]} conn _ ]
-  (do (constrain-order order (fn [] (do (print (read-string content))
-                                       (.flush *out*))))
-      (server/send-and-close conn 200 "ignore__")))
+  (constrain-order order
+    (fn []
+      (print (read-string content))
+      (.flush *out*)))
+  (server/send-and-close conn 200 "ignore__"))
 
 (defmethod handle-post :result [{:keys [content order]} conn _ ]
-  (constrain-order order (fn [] (do (return-value content)
-                                   (server/set-connection conn)))))
+  (constrain-order order
+    (fn []
+      (return-value content)
+      (server/set-connection conn))))
 
 (defn browser-eval
   "Given a string of JavaScript, evaluate it in the browser and return a map representing the
@@ -159,12 +172,13 @@
   [form]
   (let [return-value (promise)]
     (send-for-eval form
-                   (fn [val] (deliver return-value val)))
+      (fn [val] (deliver return-value val)))
     (let [ret @return-value]
-      (try (read-string ret)
-           (catch Exception e
-             {:status :error
-              :value (str "Could not read return value: " ret)})))))
+      (try
+        (read-string ret)
+        (catch Exception e
+          {:status :error
+           :value (str "Could not read return value: " ret)})))))
 
 (defn load-javascript
   "Accepts a REPL environment, a list of namespaces, and a URL for a
@@ -181,27 +195,29 @@
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
   (-setup [this]
-    (do (require 'cljs.repl.reflect)
-        (repl/analyze-source (:src this))
-        (comp/with-core-cljs nil (fn [] (server/start this)))))
+    (when (:src this)
+      (repl/analyze-source (:src this)))
+    (comp/with-core-cljs nil
+      (fn [] (server/start this))))
   (-evaluate [_ _ _ js] (browser-eval js))
   (-load [this ns url] (load-javascript this ns url))
   (-tear-down [_]
-    (do (server/stop)
-        (reset! server/state {})
-        (reset! browser-state {}))))
+    (server/stop)
+    (reset! server/state {})
+    (reset! browser-state {})))
 
 (defn compile-client-js [opts]
-  (cljsc/build '[(ns clojure.browser.repl.client
-                   (:require [goog.events :as event]
-                             [clojure.browser.repl :as repl]))
-                 (defn start [url]
-                   (event/listen js/window
-                                 "load"
-                                 (fn []
-                                   (repl/start-evaluator url))))]
-               {:optimizations (:optimizations opts)
-                :output-dir (:working-dir opts)}))
+  (cljsc/build
+    '[(ns clojure.browser.repl.client
+        (:require [goog.events :as event]
+                  [clojure.browser.repl :as repl]))
+      (defn start [url]
+        (event/listen js/window
+          "load"
+          (fn []
+            (repl/start-evaluator url))))]
+    {:optimizations (:optimizations opts)
+     :output-dir (:working-dir opts)}))
 
 (defn create-client-js-file [opts file-path]
   (let [file (io/file file-path)]
@@ -215,12 +231,18 @@
   [deps]
   (flatten (mapcat (juxt :provides :requires) deps)))
 
+;; TODO: the following is questionable as it triggers compilation
+;; this code should other means to determine the dependencies for a
+;; namespace - David
+
 (defn- always-preload
   "Return a list of all namespaces which are always loaded into the browser
   when using a browser-connected REPL."
   []
-  (let [cljs (provides-and-requires (cljsc/cljs-dependencies {} ["clojure.browser.repl"]))
-        goog (provides-and-requires (cljsc/js-dependencies {} cljs))]
+  (let [cljs (provides-and-requires
+               (cljsc/cljs-dependencies {} ["clojure.browser.repl"]))
+        goog (provides-and-requires
+               (cljsc/js-dependencies {} cljs))]
     (disj (set (concat cljs goog)) nil)))
 
 (defn repl-env
@@ -247,25 +269,32 @@
   [& {:as opts}]
   (let [compiler-env (cljs.env/default-compiler-env opts)
         opts (merge (BrowserEnv.)
-                    {:port          9000
-                     :optimizations :simple
-                     :working-dir   (->> [".repl" (util/clojurescript-version)] (remove empty?) (string/join "-"))
-                     :serve-static  true
-                     :static-dir    ["." "out/"]
-                     :preloaded-libs   []
-                     :src           "src/"
-                     :cljs.env/compiler compiler-env
-                     :source-map    true}
-                    opts)]
+               {:port           9000
+                :optimizations  :simple
+                :working-dir    (->> [".repl" (util/clojurescript-version)]
+                                  (remove empty?) (string/join "-"))
+                :serve-static   true
+                :static-dir     ["." "out/"]
+                :preloaded-libs []
+                :src            "src/"
+                ::env/compiler  compiler-env
+                :source-map     false}
+               opts)]
     (cljs.env/with-compiler-env compiler-env
-      (reset! preloaded-libs (set (concat (always-preload) (map str (:preloaded-libs opts)))))
-        (reset! loaded-libs @preloaded-libs)
-        (swap! browser-state
-               (fn [old] (assoc old :client-js
-                               (future (create-client-js-file
-                                        opts
-                                        (io/file (:working-dir opts) "client.js"))))))
-        opts)))
+      (reset! preloaded-libs
+        (set (concat
+               (always-preload)
+               (map str (:preloaded-libs opts)))))
+      (reset! loaded-libs @preloaded-libs)
+      (println "Compiling client js ...")
+      (swap! browser-state
+        (fn [old]
+          (assoc old :client-js
+            (create-client-js-file
+              opts
+              (io/file (:working-dir opts) "client.js")))))
+      (println "Waiting for browser to connect ...")
+      opts)))
 
 (comment
 
