@@ -9,5 +9,5 @@ for next in lib/*: src/clj: src/cljs: test/cljs; do
   CLJSC_CP="${CLJSC_CP}${CLOJURESCRIPT_HOME}/${next}"
 done
 
-java -server -cp "$CLJSC_CP" clojure.main
+java -server -cp "$CLJSC_CP" clojure.main "$@"
 
