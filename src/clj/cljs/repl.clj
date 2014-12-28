@@ -183,9 +183,8 @@
        ([_ form]
          (self _ form nil))
        ([_ [_ [quote ns-name] :as form] _]
-         (util/debug-prn "in-ns " ns-name)
          (when-not (ana/get-namespace ns-name)
-           (swap! env/*compiler* update-in [::ana/namespaces ns-name] {:name ns-name}))
+           (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name}))
          (set! ana/*cljs-ns* ns-name)))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
