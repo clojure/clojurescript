@@ -38,6 +38,9 @@
 
 (def ^:dynamic *source-map-data* nil)
 (def ^:dynamic *lexical-renames* {})
+;; NOTE: explicitly threading opts as cljs.analyzer is considerably more
+;; invasive given the current approach to emission - David
+(def ^:dynamic *build-options* nil)
 
 (def cljs-reserved-file-names #{"deps.cljs"})
 
@@ -785,7 +788,11 @@
 
 (defmethod emit* :ns
   [{:keys [name requires uses require-macros env]}]
+  (when-not (= (:optimizations *build-options*) :advanced)
+    (emitln "if(!goog.isProvided_('" (munge name) "')) {"))
   (emitln "goog.provide('" (munge name) "');")
+  (when-not (= (:optimizations *build-options*) :advanced)
+    (emitln "}"))
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
   (doseq [lib (distinct (concat (vals requires) (vals uses)))]

@@ -987,7 +987,8 @@ should contain the source for the given namespace name."
                            [:unprovided :undeclared-var
                             :undeclared-ns :undeclared-ns-form]
                            (repeat warnings))
-                         warnings)))]
+                         warnings)))
+                   comp/*build-options* opts]
            (let [compiled (util/measure compiler-stats
                             "Compile basic sources"
                             (doall (-compile source all-opts)))
