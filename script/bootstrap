@@ -3,7 +3,7 @@
 set -e
 
 CLOJURE_RELEASE="1.6.0"
-CLOSURE_RELEASE="v20140625"
+CLOSURE_RELEASE="20140625"
 DJSON_RELEASE="0.2.3"
 GCLOSURE_LIB_RELEASE="0.0-20140718-946a7d39"
 RHINO_RELEASE="1_7R3"
@@ -66,7 +66,10 @@ cd ..
 echo "Fetching Google Closure compiler..."
 mkdir -p compiler
 cd compiler
-curl --retry 3 -O -s https://repo1.maven.org/maven2/com/google/javascript/closure-compiler/$CLOSURE_RELEASE/closure-compiler-$CLOSURE_RELEASE.jar || { echo "Download failed."; exit 1; }
+curl --retry 3 -O -s http://dl.google.com/closure-compiler/compiler-$CLOSURE_RELEASE.zip || { echo "Download failed."; exit 1; }
+unzip -qu compiler-$CLOSURE_RELEASE.zip
+echo "Cleaning up Google Closure compiler archive..."
+rm compiler-$CLOSURE_RELEASE.zip
 cd ../..
 
 if [ "$1" = "--closure-library-head" ] ; then
@@ -86,7 +89,7 @@ echo "Cleaning up Rhino archive..."
 rm rhino$RHINO_RELEASE.zip
 
 echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
-cp closure/compiler/closure-compiler-$CLOSURE_RELEASE.jar lib
+cp closure/compiler/compiler.jar lib
 
 echo "Fetching tools.reader $TREADER_RELEASE ..."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/tools.reader/$TREADER_RELEASE/tools.reader-$TREADER_RELEASE.jar || { echo "Download failed."; exit 1; }
