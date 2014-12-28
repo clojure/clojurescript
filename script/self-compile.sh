@@ -1,4 +1,5 @@
 #!/bin/bash
 
 rm -rf classes
-repl -e
+mkdir classes
+repl -e "(compile 'cljs.repl) (compile 'cljs.core)"
