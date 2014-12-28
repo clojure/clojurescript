@@ -180,11 +180,13 @@
             (load-file repl-env file opts)))]
     {'in-ns
      (fn self
-       ([_ form]
-         (self _ form nil))
-       ([_ [_ [quote ns-name] :as form] _]
+       ([repl-env form]
+         (self repl-env form nil))
+       ([repl-env [_ [quote ns-name] :as form] _]
          (when-not (ana/get-namespace ns-name)
-           (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name}))
+           (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
+           (-evaluate repl-env "<cljs repl>" 1
+             (str "goog.provide('" (comp/munge ns-name) "');")))
          (set! ana/*cljs-ns* ns-name)))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
