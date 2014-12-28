@@ -174,26 +174,37 @@
 (def default-special-fns
   (let [load-file-fn
         (fn self
-          ([repl-env form]
-            (self repl-env form nil))
-          ([repl-env [_ file :as form] opts]
+          ([repl-env env form]
+            (self repl-env env form nil))
+          ([repl-env env [_ file :as form] opts]
             (load-file repl-env file opts)))]
     {'in-ns
      (fn self
-       ([repl-env form]
-         (self repl-env form nil))
-       ([repl-env [_ [quote ns-name] :as form] _]
+       ([repl-env env form]
+         (self repl-env env form nil))
+       ([repl-env env [_ [quote ns-name] :as form] _]
          (when-not (ana/get-namespace ns-name)
            (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
            (-evaluate repl-env "<cljs repl>" 1
              (str "goog.provide('" (comp/munge ns-name) "');")))
          (set! ana/*cljs-ns* ns-name)))
+     'require
+     (fn self
+       ([repl-env env form]
+         (self repl-env env form nil))
+       ([repl-env env [_ [quote spec]] opts]
+         (evaluate-form repl-env env "<cljs repl>"
+           (with-meta
+             `(~'ns ~ana/*cljs-ns*
+                (:require ~spec))
+             {:line 1 :column 1}))))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
      (fn self
-       ([repl-env form] (self repl-env form nil))
-       ([repl-env [_ ns :as form] opts]
+       ([repl-env env form]
+         (self env repl-env form nil))
+       ([repl-env env [_ ns :as form] opts]
          (load-namespace repl-env ns opts)))}))
 
 (defn analyze-source
@@ -262,7 +273,7 @@
               (and (seq? form) (is-special-fn? (first form)))
               (do
                 ((get special-fns (first form))
-                  repl-env form opts)
+                  repl-env env form opts)
                 (newline)
                 (recur))
 
