@@ -1,7 +1,6 @@
 process.env.NODE_DISABLE_COLORS = true;
 
-var net     = require("net"),
-    repl    = require("repl");
+var net = require("net");
 
 net.createServer(function (socket) {
     var buffer = "", ret;
@@ -37,4 +36,4 @@ net.createServer(function (socket) {
 
 }).listen(5001);
 
-console.log("repl.js listening on 5001")
+console.log("ClojureScript Node.js REPL server listening on 5001")

@@ -244,7 +244,7 @@
         (if-not (nil? opts)
           (-setup repl-env opts)
           (-setup repl-env))
-        #_(evaluate-form repl-env env "<cljs repl>"
+        (evaluate-form repl-env env "<cljs repl>"
           (with-meta
             '(ns cljs.user
               (:require [cljs.repl :refer-macros [doc]]))
