@@ -87,7 +87,8 @@
       ;; for bootstrap to load
       (let [core-js (closure/compile-file core
                       (assoc opts
-                        :output-file (closure/src-file->target-file core)))
+                        :output-file
+                        (closure/src-file->target-file core opts)))
             deps    (closure/add-dependencies opts core-js)]
         (apply closure/output-unoptimized
           (assoc opts
