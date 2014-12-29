@@ -13,6 +13,7 @@
   (:require [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
+            [cljs.analyzer.api :as ana-api]
             [cljs.env :as env]
             [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
@@ -183,7 +184,10 @@
       form
       (wrap-fn form))))
 
-(defn update-require-spec [specs & additions]
+(defn update-require-spec
+  "Given the specification portion of a ns form and require spec additions
+  return an updated specification."
+  [specs & additions]
   (let [[before [requires & other-specs]]
         (split-with
           (fn [[x _]] (not= :require x))
@@ -217,12 +221,14 @@
        ([repl-env env form]
          (self repl-env env form nil))
        ([repl-env env [_ [quote spec]] opts]
-         (evaluate-form repl-env env "<cljs repl>"
-           (with-meta
-             `(~'ns ~ana/*cljs-ns*
-                (:require ~spec))
-             {:line 1 :column 1})
-           identity opts)))
+         (let [original-specs (ana-api/ns-specs ana/*cljs-ns*)
+               new-specs      (update-require-spec original-specs spec)]
+           (evaluate-form repl-env env "<cljs repl>"
+             (with-meta
+               `(~'ns ~ana/*cljs-ns*
+                  ~@new-specs)
+               {:line 1 :column 1})
+             identity opts))))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
