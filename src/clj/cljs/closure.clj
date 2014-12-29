@@ -1045,12 +1045,11 @@ should contain the source for the given namespace name."
   (deps/parse-js-ns (line-seq (io/reader f))))
 
 (defn ^File src-file->target-file
-  "Given a ClojureScript source file return the target file. May optionally
-  provide build options with :output-dir specified."
   ([src] (src-file->target-file src nil))
   ([src opts]
     (util/to-target-file
-      (util/output-directory opts)
+      (when (:output-dir opts)
+        (util/output-directory opts))
       (ana/parse-ns src))))
 
 (defn ^String src-file->goog-require

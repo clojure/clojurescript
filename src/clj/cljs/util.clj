@@ -61,8 +61,9 @@
     (to-target-file target-dir ns-info "js"))
   ([target-dir ns-info ext]
     (let [relative-path (string/split (munge-path (str (:ns ns-info))) #"\.")
-          parents (butlast relative-path)]
-      (io/file (io/file (to-path (cons target-dir parents)))
+          parents (cond-> (butlast relative-path)
+                    target-dir (conj target-dir))]
+      (io/file (io/file (to-path parents))
         (str (last relative-path) (str "." ext))))))
 
 (defn mkdirs

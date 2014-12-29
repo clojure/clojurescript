@@ -88,7 +88,8 @@
       (let [core-js (closure/compile-file core
                       (assoc opts
                         :output-file
-                        (closure/src-file->target-file core opts)))
+                        (closure/src-file->target-file core)
+                        :static-fns true))
             deps    (closure/add-dependencies opts core-js)]
         (apply closure/output-unoptimized
           (assoc opts
