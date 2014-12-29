@@ -14,11 +14,13 @@
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.repl :as repl]
-            [cljs.closure :as cljsc])
+            [cljs.closure :as cljsc]
+            [cljs.closure :as closure]
+            [cljs.util :as util])
   (:import cljs.repl.IJavaScriptEnv
            java.net.Socket
            java.lang.StringBuilder
-           [java.io BufferedReader BufferedWriter]
+           [java.io File BufferedReader BufferedWriter]
            [java.lang ProcessBuilder UNIXProcess ProcessBuilder$Redirect]))
 
 (defn socket [host port]
@@ -65,26 +67,43 @@
 (defn setup
   ([repl-env] (setup repl-env nil))
   ([repl-env opts]
-    (println "Setting up Node.js REPL")
-    (let [bldr (ProcessBuilder. (into-array ["node"]))
-          _ (-> bldr
-              (.redirectInput (io/file (io/resource "cljs/repl/node_repl.js")))
-              (.redirectOutput ProcessBuilder$Redirect/INHERIT)
-              (.redirectError ProcessBuilder$Redirect/INHERIT))
+    (let [output-dir (io/file (:output-dir opts))
+          _    (.mkdirs output-dir)
+          bldr (ProcessBuilder. (into-array ["node"]))
+          _    (-> bldr
+                 (.redirectInput
+                   (io/file (io/resource "cljs/repl/node_repl.js")))
+                 (.redirectOutput ProcessBuilder$Redirect/INHERIT)
+                 (.redirectError ProcessBuilder$Redirect/INHERIT))
           proc (.start bldr)
-          env (ana/empty-env)]
+          env  (ana/empty-env)
+          core (io/resource "cljs/core.cljs")]
       ;; TODO: temporary hack, should wait till we can read the start string
       ;; from the process - David
       (Thread/sleep 1000)
       (reset! (:socket repl-env)
         (socket (:host repl-env) (:port repl-env)))
-      ;; bootstrap
-      (load-javascript repl-env nil (io/resource "cljs/bootstrap_node.js"))
-      ;; load core
-      (repl/load-file repl-env "cljs/core.cljs")
-      (repl/evaluate-form repl-env
-        env "<cljs repl>"
-        '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x))))))))
+      ;; compile cljs.core & its dependencies, goog/base.js must be available
+      ;; for bootstrap to load
+      (let [core-js (closure/compile-file core
+                      (assoc opts
+                        :output-file (closure/src-file->target-file core)))
+            deps    (closure/add-dependencies opts core-js)]
+        (apply closure/output-unoptimized opts deps))
+      ;; bootstrap, replace __dirname as __dirname won't be set
+      ;; properly due to how we are running it - David
+      (node-eval repl-env
+        (string/replace
+          (slurp (io/resource "cljs/bootstrap_node.js"))
+          "__dirname"
+          (str "\""
+            (.getName (.getCanonicalFile output-dir))
+            File/separator "goog" File/separator "bootstrap")))
+      ;(repl/load-file repl-env core)
+      ;(repl/evaluate-form repl-env
+      ;  env "<cljs repl>"
+      ;  '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))
+      )))
 
 (defrecord NodeEnv [host port socket loaded-libs]
   repl/IJavaScriptEnv
