@@ -32,6 +32,7 @@ Latest stable release: 0.0-2511
 * Read the [Documentation](https://github.com/clojure/clojurescript/wiki).
 * Try a [tutorial](https://github.com/clojure/clojurescript/wiki).
 * Look at the [Sample Applications](https://github.com/clojure/clojurescript/tree/master/samples).
+* [Companies using ClojureScript](https://github.com/clojure/clojurescript/wiki/Companies-Using-ClojureScript)
 
 ## Questions, Feedback? ##
 
