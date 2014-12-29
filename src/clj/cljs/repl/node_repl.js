@@ -6,7 +6,7 @@ var net     = require("net"),
     context = vm.createContext();
 
 context.require   = require;
-context.global    = global;
+context.global    = context;
 context.process   = process;
 context.__dirname = __dirname;
 
@@ -36,7 +36,6 @@ net.createServer(function (socket) {
                     ret = vm.runInContext(data, context, "repl");
                 } catch (x) {
                     console.log(x.stack);
-                    socket.write(x.stack+"\n");
                 }
             }
             if(ret !== undefined && ret !== null) {

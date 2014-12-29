@@ -98,7 +98,7 @@
           "__dirname"
           (str "\""
             (.getName (.getCanonicalFile output-dir))
-            File/separator "goog" File/separator "bootstrap")))
+            File/separator "goog" File/separator "bootstrap\"")))
       ;(repl/load-file repl-env core)
       ;(repl/evaluate-form repl-env
       ;  env "<cljs repl>"
