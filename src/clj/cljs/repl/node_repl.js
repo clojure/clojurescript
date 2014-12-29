@@ -1,25 +1,11 @@
 process.env.NODE_DISABLE_COLORS = true;
 
 var net     = require("net"),
-    repl    = require("repl"),
-    vm      = require("vm"),
-    context = vm.createContext();
-
-context.require   = require;
-context.global    = context;
-context.process   = process;
-context.__dirname = __dirname;
+    repl    = require("repl");
 
 net.createServer(function (socket) {
     var buffer = "", ret;
     socket.setEncoding("utf8");
-
-    // redefine console.log
-    context.node_repl_print = function(x) {
-        ret = vm.runInContext(x, context, "repl");
-        socket.write(ret.toString());
-        socket.write("\1");
-    };
 
     socket.on("data", function(data) {
         if(data[data.length-1] != "\0") {
@@ -33,11 +19,13 @@ net.createServer(function (socket) {
                 // not sure how \0's are getting through - David
                 data = data.replace(/\0/g, "");
                 try {
-                    ret = vm.runInContext(data, context, "repl");
+                    ret = process.binding('evals').NodeScript.runInThisContext.call(
+                           global, data, "repl");
                 } catch (x) {
                     console.log(x.stack);
                 }
             }
+            // TODO: can we just console.log? - David
             if(ret !== undefined && ret !== null) {
                 socket.write(ret.toString());        
             } else {
