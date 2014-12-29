@@ -144,7 +144,7 @@
   ([repl-env f] (load-file repl-env f nil))
   ([repl-env f opts]
     (if (:output-dir opts)
-      (let [src (io/resource f)]
+      (let [src (if (util/url? f) f (io/resource f))]
         (comp/compile-file src
           (cljsc/src-file->target-file src opts) opts)
         (-evaluate repl-env f 0 (cljsc/src-file->goog-require src)))
