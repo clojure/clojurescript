@@ -26,7 +26,7 @@
 (defprotocol IJavaScriptEnv
   (-setup [this] [this opts] "initialize the environment")
   (-evaluate [this filename line js] "evaluate a javascript string")
-  (-load [this ns url] "load code at url into the environment")
+  (-load [this provides url] "load code at url into the environment")
   (-tear-down [this] "dispose of the environment"))
 
 (defn- env->opts
@@ -44,26 +44,33 @@
   only once."
   ([repl-env sym] (load-namespace repl-env sym nil))
   ([repl-env sym opts]
-    (let [sym (if (and (seq? sym)
-                    (= (first sym) 'quote))
-                (second sym)
-                sym)
-          deps (->> (cljsc/add-dependencies
-                      ;; TODO: conceptually simpler to keep REPL environment
-                      ;; separate from build options map - David
-                      (merge (env->opts repl-env) opts)
-                      {:requires [(name sym)] :type :seed})
-                 (remove (comp #{["goog"]} :provides))
-                 (remove (comp #{:seed} :type))
-                 (map #(select-keys % [:provides :url])))]
-      (doseq [{:keys [url provides]} deps]
-        (-load repl-env provides url)))))
+   (let [sym      (if (and (seq? sym)
+                        (= (first sym) 'quote))
+                    (second sym)
+                    sym)
+         ;; TODO: add pre-condition to source-on-disk, the
+         ;; source must supply at least :url - David
+         sources  (cljsc/add-dependencies
+                    (merge (env->opts repl-env) opts)
+                    {:requires [(name sym)] :type :seed
+                     :url (:uri (cljsc/cljs-source-for-namespace sym))})
+         deps     (->> sources
+                    (remove (comp #{["goog"]} :provides))
+                    (remove (comp #{:seed} :type))
+                    (map #(select-keys % [:provides :url])))]
+     ;; for now only do this for REPLs that rely on disk - David
+     (when (:output-dir opts)
+       (doseq [source (map #(cljsc/source-on-disk opts %) sources)]
+         (-evaluate repl-env "<cljs repl>" 1
+           (cljsc/add-dep-string opts source))))
+     (doseq [{:keys [url provides]} deps]
+       (-load repl-env provides url)))))
 
 (defn- load-dependencies
   ([repl-env requires] (load-dependencies repl-env requires nil))
   ([repl-env requires opts]
-    (doseq [ns requires]
-      (load-namespace repl-env ns opts))))
+   (doseq [ns requires]
+     (load-namespace repl-env ns opts))))
 
 (defn- display-error
   ([ret form]
@@ -146,10 +153,13 @@
   ([repl-env f] (load-file repl-env f nil))
   ([repl-env f opts]
     (if (:output-dir opts)
-      (let [src (if (util/url? f) f (io/resource f))]
-        (comp/compile-file src
-          (cljsc/src-file->target-file src opts) opts)
-        (-evaluate repl-env f 0 (cljsc/src-file->goog-require src)))
+      (let [src (if (util/url? f) f (io/resource f))
+            compiled (cljsc/compile-file src
+                       (assoc opts
+                         :output-file
+                         (cljsc/src-file->target-file src)))]
+        (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
+        (-evaluate repl-env f 1 (cljsc/src-file->goog-require src)))
       (binding [ana/*cljs-ns* 'cljs.user]
         (let [res (if (= \/ (first f)) f (io/resource f))]
           (assert res (str "Can't find " f " in classpath"))
@@ -199,7 +209,8 @@
            (with-meta
              `(~'ns ~ana/*cljs-ns*
                 (:require ~spec))
-             {:line 1 :column 1}))))
+             {:line 1 :column 1})
+           identity opts)))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
@@ -247,8 +258,9 @@
         (evaluate-form repl-env env "<cljs repl>"
           (with-meta
             '(ns cljs.user
-              (:require [cljs.repl :refer-macros [doc]]))
-            {:line 1 :column 1}))
+               (:require [cljs.repl :refer-macros [doc]]))
+            {:line 1 :column 1})
+          identity opts)
         (loop []
           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
           (flush)

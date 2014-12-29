@@ -186,8 +186,8 @@
   namespaces. Will load the JavaScript file into the REPL environment
   if any of the namespaces have not already been loaded from the
   ClojureScript REPL."
-  [repl-env ns-list url]
-  (let [missing (remove #(contains? @loaded-libs %) ns-list)]
+  [repl-env provides url]
+  (let [missing (remove #(contains? @loaded-libs %) provides)]
     (when (seq missing)
       (browser-eval (slurp url))
       (swap! loaded-libs (partial apply conj) missing))))
@@ -200,7 +200,8 @@
     (comp/with-core-cljs nil
       (fn [] (server/start this))))
   (-evaluate [_ _ _ js] (browser-eval js))
-  (-load [this ns url] (load-javascript this ns url))
+  (-load [this provides url]
+    (load-javascript this provides url))
   (-tear-down [_]
     (server/stop)
     (reset! server/state {})

@@ -60,9 +60,10 @@
      :value (read-response in)}))
 
 (defn load-javascript
-  "Load a JavaScript file into the Node REPL process."
-  [repl-env ns url]
-  (node-eval repl-env (slurp url)))
+  "Load a Closure JavaScript file into the Node REPL process."
+  [repl-env provides url]
+  (node-eval repl-env
+    (str "goog.require('" (comp/munge (first provides)) "')")))
 
 (defn setup
   ([repl-env] (setup repl-env nil))
@@ -108,6 +109,9 @@
           (str "require('"
             (.getPath root-path)
             File/separator "node_repl_deps.js')")))
+      ;; monkey-patch isProvided_ to avoid useless warnings - David
+      (node-eval repl-env
+        (str "goog.isProvided_ = function(x) { return false; };"))
       (repl/evaluate-form repl-env
         env "<cljs repl>"
         '(do
@@ -123,8 +127,8 @@
     (setup this opts))
   (-evaluate [this filename line js]
     (node-eval this js))
-  (-load [this ns url]
-    (load-javascript this ns url))
+  (-load [this provides url]
+    (load-javascript this provides url))
   (-tear-down [this]
     (close-socket socket)))
 
