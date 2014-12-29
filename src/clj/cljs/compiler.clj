@@ -880,6 +880,7 @@
                       ana/*cljs-ns* 'cljs.user
                       ana/*cljs-file* (.getPath ^File src)
                       reader/*alias-map* (or reader/*alias-map* {})
+                      ana/*cljs-static-fns* (or ana/*cljs-static-fns* (:static-fns opts))
                       *source-map-data* (when (:source-map opts)
                                           (atom
                                             {:source-map (sorted-map)
