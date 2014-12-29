@@ -56,8 +56,7 @@
   (node-eval repl-env (slurp url)))
 
 (defn setup [repl-env]
-  (let [env   (ana/empty-env)
-        scope (:scope repl-env)]
+  (let [env (ana/empty-env)]
     (repl/load-file repl-env "cljs/core.cljs")
     (swap! (:loaded-libs repl-env) conj "cljs.core")
     (repl/evaluate-form repl-env
@@ -78,11 +77,9 @@
   (-tear-down [this]
     (close-socket socket)))
 
+(defn repl-env* [{:keys [host port] :or {host "localhost" port 5001}}]
+  (NodeEnv. (socket host port) (atom {})))
+
 (defn repl-env
-  [& {:keys [host port] :or {host "localhost" port 5001}}]
-  (let [repl-env (NodeEnv. (socket host port) (atom {}))
-        base     (io/resource "goog/base.js")
-        deps     (io/resource "goog/deps.js")]
-    (node-eval repl-env (slurp (io/reader base)))
-    (node-eval repl-env (slurp (io/reader deps)))
-    repl-env))
+  [& options]
+  (repl-env* options))
