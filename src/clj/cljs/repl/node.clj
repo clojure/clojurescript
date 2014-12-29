@@ -18,7 +18,8 @@
   (:import cljs.repl.IJavaScriptEnv
            java.net.Socket
            java.lang.StringBuilder
-           [java.io BufferedReader BufferedWriter]))
+           [java.io BufferedReader BufferedWriter]
+           [java.lang ProcessBuilder UNIXProcess ProcessBuilder$Redirect]))
 
 (defn socket [host port]
   (let [socket (Socket. host port)
@@ -48,25 +49,36 @@
                (.append sb (char c))
                (recur sb (.read in)))))))
 
-(defn node-eval [{{:keys [in out]} :socket :as repl-env} js]
-  (write out js)
-  {:status :success :value (read-response in)})
+(defn node-eval [repl-env js]
+  (let [{:keys [in out]} @(:socket repl-env)]
+    (write out js)
+    {:status :success
+     :value (read-response in)}))
 
 (defn load-javascript [repl-env ns url]
   (node-eval repl-env (slurp url)))
 
 (defn setup [repl-env]
-  (let [env (ana/empty-env)]
+  (println "Setting up Node.js REPL")
+  (let [bldr (ProcessBuilder. (into-array ["node"]))
+        _    (-> bldr
+               (.redirectInput (io/file (io/resource "cljs/repl/node_repl.js")))
+               (.redirectOutput ProcessBuilder$Redirect/INHERIT)
+               (.redirectError ProcessBuilder$Redirect/INHERIT))
+        proc (.start bldr)
+        env  (ana/empty-env)]
+    ;; TODO: temporary hack, should wait till we can read the start string
+    ;; from the process - David
+    (Thread/sleep 1000)
+    (reset! (:socket repl-env)
+      (socket (:host repl-env) (:port repl-env)))
     (repl/load-file repl-env "cljs/core.cljs")
     (swap! (:loaded-libs repl-env) conj "cljs.core")
     (repl/evaluate-form repl-env
       env "<cljs repl>"
-      '(ns cljs.user))
-    (repl/evaluate-form repl-env
-      env "<cljs repl>"
       '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))))
 
-(defrecord NodeEnv [socket loaded-libs]
+(defrecord NodeEnv [host port socket loaded-libs]
   repl/IJavaScriptEnv
   (-setup [this]
     (setup this))
@@ -78,8 +90,15 @@
     (close-socket socket)))
 
 (defn repl-env* [{:keys [host port] :or {host "localhost" port 5001}}]
-  (NodeEnv. (socket host port) (atom {})))
+  (NodeEnv. host port (atom nil) (atom {})))
 
 (defn repl-env
   [& options]
   (repl-env* options))
+
+(comment
+
+  (def bldr (ProcessBuilder. (into-array ["node"])))
+
+
+  )
