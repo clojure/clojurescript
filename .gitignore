@@ -19,3 +19,4 @@ closure-release-*
 .nrepl-port
 .nrepl-repl-history
 builds
+.cljs*
