@@ -106,9 +106,11 @@
           (str "require('"
             (.getPath root-path)
             File/separator "node_repl_deps.js')")))
-      ;(repl/evaluate-form repl-env
-      ;  env "<cljs repl>"
-      ;  '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))
+      (repl/evaluate-form repl-env
+        env "<cljs repl>"
+        '(do
+           (.require js/goog "cljs.core")
+           (set! *print-fn* (.-print (js/require "util")))))
       )))
 
 (defrecord NodeEnv [host port socket loaded-libs]
