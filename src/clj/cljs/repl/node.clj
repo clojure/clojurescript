@@ -20,9 +20,6 @@
            java.lang.StringBuilder
            [java.io BufferedReader BufferedWriter]))
 
-(def current-repl-env (atom nil))
-(def loaded-libs (atom #{}))
-
 (defn socket [host port]
   (let [socket (Socket. host port)
         in     (io/reader socket)
@@ -51,18 +48,18 @@
                (.append sb (char c))
                (recur sb (.read in)))))))
 
-(defn node-eval [{:keys [in out]} js]
+(defn node-eval [{{:keys [in out]} :socket :as repl-env} js]
   (write out js)
   {:status :success :value (read-response in)})
 
-(defn load-javascript [ctx ns url]
-  (node-eval ctx (slurp url)))
+(defn load-javascript [repl-env ns url]
+  (node-eval repl-env (slurp url)))
 
 (defn setup [repl-env]
   (let [env   (ana/empty-env)
         scope (:scope repl-env)]
     (repl/load-file repl-env "cljs/core.cljs")
-    (swap! loaded-libs conj "cljs.core")
+    (swap! (:loaded-libs repl-env) conj "cljs.core")
     (repl/evaluate-form repl-env
       env "<cljs repl>"
       '(ns cljs.user))
@@ -70,18 +67,20 @@
       env "<cljs repl>"
       '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))))
 
-(extend-protocol repl/IJavaScriptEnv
-  clojure.lang.IPersistentMap
-  (-setup [this] (setup this))
-  (-evaluate [this filename line js] (node-eval this js))
-  (-load [this ns url] (load-javascript this ns url))
-  (-tear-down [this] (close-socket this)))
-
-;; do we need to implement our own version of goog.require ? - David
+(defrecord NodeEnv [socket loaded-libs]
+  repl/IJavaScriptEnv
+  (-setup [this]
+    (setup this))
+  (-evaluate [this filename line js]
+    (node-eval this js))
+  (-load [this ns url]
+    (load-javascript this ns url))
+  (-tear-down [this]
+    (close-socket socket)))
 
 (defn repl-env
   [& {:keys [host port] :or {host "localhost" port 5001}}]
-  (let [repl-env (socket host port)
+  (let [repl-env (NodeEnv. (socket host port) (atom {}))
         base     (io/resource "goog/base.js")
         deps     (io/resource "goog/deps.js")]
     (node-eval repl-env (slurp (io/reader base)))
