@@ -49,39 +49,49 @@
                (.append sb (char c))
                (recur sb (.read in)))))))
 
-(defn node-eval [repl-env js]
+(defn node-eval
+  "Evaluate a JavaScript string in the Node REPL process."
+  [repl-env js]
   (let [{:keys [in out]} @(:socket repl-env)]
     (write out js)
     {:status :success
      :value (read-response in)}))
 
-(defn load-javascript [repl-env ns url]
+(defn load-javascript
+  "Load a JavaScript file into the Node REPL process."
+  [repl-env ns url]
   (node-eval repl-env (slurp url)))
 
-(defn setup [repl-env]
-  (println "Setting up Node.js REPL")
-  (let [bldr (ProcessBuilder. (into-array ["node"]))
-        _    (-> bldr
-               (.redirectInput (io/file (io/resource "cljs/repl/node_repl.js")))
-               (.redirectOutput ProcessBuilder$Redirect/INHERIT)
-               (.redirectError ProcessBuilder$Redirect/INHERIT))
-        proc (.start bldr)
-        env  (ana/empty-env)]
-    ;; TODO: temporary hack, should wait till we can read the start string
-    ;; from the process - David
-    (Thread/sleep 1000)
-    (reset! (:socket repl-env)
-      (socket (:host repl-env) (:port repl-env)))
-    (repl/load-file repl-env "cljs/core.cljs")
-    (swap! (:loaded-libs repl-env) conj "cljs.core")
-    (repl/evaluate-form repl-env
-      env "<cljs repl>"
-      '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))))
+(defn setup
+  ([repl-env] (setup repl-env nil))
+  ([repl-env opts]
+    (println "Setting up Node.js REPL")
+    (let [bldr (ProcessBuilder. (into-array ["node"]))
+          _ (-> bldr
+              (.redirectInput (io/file (io/resource "cljs/repl/node_repl.js")))
+              (.redirectOutput ProcessBuilder$Redirect/INHERIT)
+              (.redirectError ProcessBuilder$Redirect/INHERIT))
+          proc (.start bldr)
+          env (ana/empty-env)]
+      ;; TODO: temporary hack, should wait till we can read the start string
+      ;; from the process - David
+      (Thread/sleep 1000)
+      (reset! (:socket repl-env)
+        (socket (:host repl-env) (:port repl-env)))
+      ;; bootstrap
+      (load-javascript repl-env nil (io/resource "cljs/bootstrap_node.js"))
+      ;; load core
+      (repl/load-file repl-env "cljs/core.cljs")
+      (repl/evaluate-form repl-env
+        env "<cljs repl>"
+        '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x))))))))
 
 (defrecord NodeEnv [host port socket loaded-libs]
   repl/IJavaScriptEnv
   (-setup [this]
     (setup this))
+  (-setup [this opts]
+    (setup this opts))
   (-evaluate [this filename line js]
     (node-eval this js))
   (-load [this ns url]
