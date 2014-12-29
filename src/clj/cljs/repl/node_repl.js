@@ -2,6 +2,11 @@ process.env.NODE_DISABLE_COLORS = true;
 
 var net = require("net");
 
+try {
+    require("source-map-support").install();
+} catch(err) {
+}
+
 net.createServer(function (socket) {
     var buffer = "", ret;
     socket.setEncoding("utf8");

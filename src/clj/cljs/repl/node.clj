@@ -77,7 +77,9 @@
                  (.redirectError ProcessBuilder$Redirect/INHERIT))
           proc (.start bldr)
           env  (ana/empty-env)
-          core (io/resource "cljs/core.cljs")]
+          core (io/resource "cljs/core.cljs")
+          root-path (.getCanonicalFile output-dir)
+          rewrite-path (str (.getPath root-path) File/separator "goog")]
       ;; TODO: temporary hack, should wait till we can read the start string
       ;; from the process - David
       (Thread/sleep 300)
@@ -97,22 +99,19 @@
           deps))
       ;; bootstrap, replace __dirname as __dirname won't be set
       ;; properly due to how we are running it - David
-      (let [root-path (.getCanonicalFile output-dir)
-            rewrite-path (str (.getPath root-path) File/separator "goog")]
-        (node-eval repl-env
-          (-> (slurp (io/resource "cljs/bootstrap_node.js"))
-            (string/replace "__dirname"
-              (str "\"" (str rewrite-path File/separator "bootstrap") "\""))
-            (string/replace "./.." rewrite-path)))
-        (node-eval repl-env
-          (str "require('"
-            (.getPath root-path)
-            File/separator "node_repl_deps.js')")))
+      (node-eval repl-env
+        (-> (slurp (io/resource "cljs/bootstrap_node.js"))
+          (string/replace "__dirname"
+            (str "\"" (str rewrite-path File/separator "bootstrap") "\""))
+          (string/replace "./.." rewrite-path)))
+      (node-eval repl-env
+        (str "require('"
+          (.getPath root-path)
+          File/separator "node_repl_deps.js')"))
       ;; monkey-patch isProvided_ to avoid useless warnings - David
       (node-eval repl-env
         (str "goog.isProvided_ = function(x) { return false; };"))
-      (repl/evaluate-form repl-env
-        env "<cljs repl>"
+      (repl/evaluate-form repl-env env "<cljs repl>"
         '(do
            (.require js/goog "cljs.core")
            (set! *print-fn* (.-print (js/require "util")))))
