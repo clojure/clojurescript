@@ -22,3 +22,20 @@
       (and file
            (is (io/resource file))))))
 
+(deftest test-update-require-spec
+  (is (= (repl/update-require-spec
+           '()
+           '[cljs.reader :as reader])
+        '((:require [cljs.reader :as reader]))))
+  (is (= (repl/update-require-spec
+           '((:refer-clojure :exclude [==]))
+           '[cljs.reader :as reader])
+        '((:refer-clojure :exclude [==])
+          (:require [cljs.reader :as reader]))))
+  (is (= (repl/update-require-spec
+           '((:refer-clojure :exclude [==])
+              (:require [clojure.string :as clojure.string]))
+           '[cljs.reader :as reader])
+        '((:refer-clojure :exclude [==])
+          (:require [clojure.string :as clojure.string]
+                    [cljs.reader :as reader])))))

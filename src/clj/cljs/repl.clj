@@ -183,6 +183,18 @@
       form
       (wrap-fn form))))
 
+(defn update-require-spec [specs & additions]
+  (let [[before [requires & other-specs]]
+        (split-with
+          (fn [[x _]] (not= :require x))
+          specs)
+        requires'
+        `(:require
+           ~@(concat
+               (rest requires)
+               additions))]
+    (concat before [requires'] other-specs)))
+
 (def default-special-fns
   (let [load-file-fn
         (fn self
