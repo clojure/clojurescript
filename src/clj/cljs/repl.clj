@@ -140,6 +140,8 @@
       (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
         (evaluate-form repl-env env filename form)))))
 
+;; TODO: this should probably compile dependencies - David
+
 (defn load-file
   ([repl-env f] (load-file repl-env f nil))
   ([repl-env f opts]
@@ -242,7 +244,7 @@
         (if-not (nil? opts)
           (-setup repl-env opts)
           (-setup repl-env))
-        (evaluate-form repl-env env "<cljs repl>"
+        #_(evaluate-form repl-env env "<cljs repl>"
           (with-meta
             '(ns cljs.user
               (:require [cljs.repl :refer-macros [doc]]))

@@ -92,14 +92,14 @@
         (apply closure/output-unoptimized opts deps))
       ;; bootstrap, replace __dirname as __dirname won't be set
       ;; properly due to how we are running it - David
-      (node-eval repl-env
-        (string/replace
-          (slurp (io/resource "cljs/bootstrap_node.js"))
-          "__dirname"
-          (str "\""
-            (.getName (.getCanonicalFile output-dir))
-            File/separator "goog" File/separator "bootstrap\"")))
-      ;(repl/load-file repl-env core)
+      (let [rewrite-path (str (.getName (.getCanonicalFile output-dir))
+                           File/separator "goog")]
+        (node-eval repl-env
+          (-> (slurp (io/resource "cljs/bootstrap_node.js"))
+            (string/replace "__dirname"
+              (str "\"" (str rewrite-path File/separator "bootstrap") "\""))
+            (string/replace "./.." (str "." File/separator rewrite-path)))))
+      (repl/load-file repl-env core opts)
       ;(repl/evaluate-form repl-env
       ;  env "<cljs repl>"
       ;  '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))
