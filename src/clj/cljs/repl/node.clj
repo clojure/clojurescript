@@ -128,7 +128,7 @@
   (-load [this provides url]
     (load-javascript this provides url))
   (-tear-down [this]
-    (close-socket socket)))
+    (close-socket @socket)))
 
 (defn repl-env* [{:keys [host port] :or {host "localhost" port 5001}}]
   (NodeEnv. host port (atom nil)))
