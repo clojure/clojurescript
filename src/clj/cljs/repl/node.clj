@@ -7,7 +7,6 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl.node
-  (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.env :as env]
@@ -81,7 +80,7 @@
           core (io/resource "cljs/core.cljs")]
       ;; TODO: temporary hack, should wait till we can read the start string
       ;; from the process - David
-      (Thread/sleep 1000)
+      (Thread/sleep 300)
       (reset! (:socket repl-env)
         (socket (:host repl-env) (:port repl-env)))
       ;; compile cljs.core & its dependencies, goog/base.js must be available
@@ -119,7 +118,7 @@
            (set! *print-fn* (.-print (js/require "util")))))
       )))
 
-(defrecord NodeEnv [host port socket loaded-libs]
+(defrecord NodeEnv [host port socket]
   repl/IJavaScriptEnv
   (-setup [this]
     (setup this))
@@ -133,7 +132,7 @@
     (close-socket socket)))
 
 (defn repl-env* [{:keys [host port] :or {host "localhost" port 5001}}]
-  (NodeEnv. host port (atom nil) (atom {})))
+  (NodeEnv. host port (atom nil)))
 
 (defn repl-env
   [& options]
@@ -142,6 +141,5 @@
 (comment
 
   (def bldr (ProcessBuilder. (into-array ["node"])))
-
 
   )
