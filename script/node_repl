@@ -12,4 +12,4 @@ done
 java -server -cp $CLJSC_CP clojure.main -e \
 "(require '[cljs.repl :as repl])
 (require '[cljs.repl.node :as node])
-(repl/repl (node/repl-env $1))"
+(repl/repl* (node/repl-env $1) {:output-dir \".cljs_node_repl\"})"
