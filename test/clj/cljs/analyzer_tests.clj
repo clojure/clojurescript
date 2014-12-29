@@ -1,7 +1,9 @@
 (ns cljs.analyzer-tests
   (:require [clojure.java.io :as io]
             [cljs.analyzer :as a]
-            [cljs.env :as e])
+            [cljs.env :as e]
+            [cljs.env :as env]
+            [cljs.analyzer.api :as ana-api])
   (:use clojure.test))
 
 ;;******************************************************************************
@@ -284,3 +286,14 @@
 
     (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble {:foo baz}))))
            {:foo 'baz}))))
+
+(deftest test-namespace-specs
+  (a/no-warn
+    (ana-api/in-cljs-user test-cenv
+      (a/analyze test-env
+        '(ns foo.bar
+           (:refer-clojure :exclude [==])
+           (:require [clojure.string :as string])))
+      (is (= (ana-api/ns-specs 'foo.bar)
+            '((:refer-clojure :exclude [==])
+              (:require [clojure.string :as string])))))))

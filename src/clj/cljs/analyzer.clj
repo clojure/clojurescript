@@ -1237,6 +1237,7 @@
     (when (seq use-macros)
       (check-use-macros use-macros env))
     (swap! env/*compiler* update-in [::namespaces name] assoc
+      :specs args
       :name name
       :doc docstring
       :excludes excludes
