@@ -89,17 +89,23 @@
                       (assoc opts
                         :output-file (closure/src-file->target-file core)))
             deps    (closure/add-dependencies opts core-js)]
-        (apply closure/output-unoptimized opts deps))
+        (apply closure/output-unoptimized
+          (assoc opts
+            :output-to (.getPath (io/file output-dir "node_repl_deps.js")))
+          deps))
       ;; bootstrap, replace __dirname as __dirname won't be set
       ;; properly due to how we are running it - David
-      (let [rewrite-path (str (.getName (.getCanonicalFile output-dir))
-                           File/separator "goog")]
+      (let [root-path (.getCanonicalFile output-dir)
+            rewrite-path (str (.getPath root-path) File/separator "goog")]
         (node-eval repl-env
           (-> (slurp (io/resource "cljs/bootstrap_node.js"))
             (string/replace "__dirname"
               (str "\"" (str rewrite-path File/separator "bootstrap") "\""))
-            (string/replace "./.." (str "." File/separator rewrite-path)))))
-      (repl/load-file repl-env core opts)
+            (string/replace "./.." rewrite-path)))
+        (node-eval repl-env
+          (str "require('"
+            (.getPath root-path)
+            File/separator "node_repl_deps.js')")))
       ;(repl/evaluate-form repl-env
       ;  env "<cljs repl>"
       ;  '(set! *print-fn* (fn [x] (js/node_repl_print (pr-str x)))))
