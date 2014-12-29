@@ -910,7 +910,7 @@
                                :source-file src}
                               (when sm-data
                                 {:source-map (:source-map sm-data)}))]
-                    (when (and sm-data (#{:none nil} (:optimizations opts)))
+                    (when (and sm-data (contains? #{:none nil} (:optimizations opts)))
                       (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
                         (emits "\n//# sourceMappingURL=" (.getName sm-file)
                           (if (true? (:source-map-timestamp opts))
