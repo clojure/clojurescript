@@ -20,3 +20,4 @@ closure-release-*
 .nrepl-repl-history
 builds
 .cljs*
+node_modules

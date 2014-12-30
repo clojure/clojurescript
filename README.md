@@ -51,6 +51,18 @@ in contributing to the project, please see the
 on the compiler and testing check the
 [Developer section of the wiki](http://github.com/clojure/clojurescript/wiki/Developers).
 
+YourKit
+----
+
+<img src="http://www.yourkit.com/images/yklogo.png"></img>
+
+YourKit has given an open source license for their profiler, greatly simplifying the profiling of ClojureScript performance.
+
+YourKit supports open source projects with its full-featured Java Profiler.
+YourKit, LLC is the creator of <a href="http://www.yourkit.com/java/profiler/index.jsp">YourKit Java Profiler</a>
+and <a href="http://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profiler</a>,
+innovative and intelligent tools for profiling Java and .NET applications.
+
 ## License ##
 
     Copyright (c) Rich Hickey. All rights reserved. The use and
