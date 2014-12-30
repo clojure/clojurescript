@@ -869,6 +869,10 @@
 (defn url-path [^File f]
   (.getPath (.toURL (.toURI f))))
 
+(defn- build-affecting-options
+  [opts]
+  (select-keys opts [:static-fns :optimize-constants :elide-asserts]))
+
 (defn compile-file*
   ([src dest] (compile-file* src dest nil))
   ([src dest opts]
@@ -886,7 +890,7 @@
                                             {:source-map (sorted-map)
                                              :gen-col 0
                                              :gen-line 0}))]
-              (emitln "// Compiled by ClojureScript " (util/clojurescript-version))
+              (emitln "// Compiled by ClojureScript " (util/clojurescript-version) " " (pr-str (build-affecting-options opts)))
               (loop [forms (ana/forms-seq src)
                      ns-name nil
                      deps nil]
@@ -939,6 +943,8 @@
           (let [version' (util/compiled-by-version dest)
                 version  (util/clojurescript-version)]
             (and version (not= version version')))
+          (and opts
+               (not= (build-affecting-options opts) (build-affecting-options (util/build-options dest))))
           (and opts
             (:source-map opts)
             (if (= (:optimizations opts) :none)

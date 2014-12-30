@@ -8,7 +8,8 @@
 
 (ns cljs.util
   (:require [clojure.java.io :as io]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [clojure.edn :as edn])
   (:import [java.io File]
            [java.net URL]))
 
@@ -34,8 +35,14 @@
 (defn compiled-by-version [^File f]
   (with-open [reader (io/reader f)]
     (let [match (->> reader line-seq first
-                     (re-matches #".*ClojureScript (.*)$"))]
+                     (re-matches #".*ClojureScript (\d+\.\d+-\d+).*$"))]
       (and match (second match)))))
+
+(defn build-options [^File f]
+  (with-open [reader (io/reader f)]
+    (let [match (->> reader line-seq first
+                  (re-matches #".*ClojureScript \d+\.\d+-\d+ (.*)$"))]
+          (and match (edn/read-string (second match))))))
 
 (defn munge-path [ss]
   (clojure.lang.Compiler/munge (str ss)))
