@@ -357,24 +357,37 @@
 
 (deftest test-bit-operations
   (testing "Testing bit operations"
-    (is (= [0 0 1 0 1]
+    (is (= [1 0 0 40 43 49 49])
+        [(bit-xor 0 1)
+         (bit-xor 1 1)
+         (bit-xor 1 0)
+         (bit-xor 41 1)
+         (bit-xor 42 1)
+         (bit-xor 42 1 26)
+         (apply bit-xor [42 1 26])])
+    (is (= [0 0 1 0 1 1 1]
           [(bit-and 1 0)
            (bit-and 0 0)
            (bit-and 1 1)
            (bit-and 42 1)
-           (bit-and 41 1)]))
-    (is (= [1 0 1 43 41]
+           (bit-and 41 1)
+           (bit-and 41 1 27)
+           (apply bit-and [41 1 27])]))
+    (is (= [1 0 1 43 41 59 59]
           [(bit-or 1 0)
            (bit-or 0 0)
            (bit-or 1 1)
            (bit-or 42 1)
-           (bit-or 41 1)]))
-    (is (= [1 0 0 42 40]
+           (bit-or 41 1)
+           (bit-or 41 1 26)
+           (apply bit-or [41 1 26])]))
+    (is (= [1 0 0 42 32 32]
           [(bit-and-not 1 0)
            (bit-and-not 0 0)
            (bit-and-not 1 1)
            (bit-and-not 42 1)
-           (bit-and-not 41 1)]))
+           (bit-and-not 41 1 27)
+           (apply bit-and-not [41 1 27])]))
     (is (= [0 2 968 16649 0]
           [(bit-clear 1 0)
            (bit-clear 2 0)

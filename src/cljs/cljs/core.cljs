@@ -2031,19 +2031,27 @@ reduces them without incurring seq initialization"
 
 (defn bit-xor
   "Bitwise exclusive or"
-  [x y] (cljs.core/bit-xor x y))
+  ([x y] (cljs.core/bit-xor x y))
+  ([x y & more]
+     (reduce bit-xor (cljs.core/bit-xor x y) more)))
 
 (defn bit-and
   "Bitwise and"
-  [x y] (cljs.core/bit-and x y))
+  ([x y] (cljs.core/bit-and x y))
+  ([x y & more]
+     (reduce bit-and (cljs.core/bit-and x y) more)))
 
 (defn bit-or
   "Bitwise or"
-  [x y] (cljs.core/bit-or x y))
+  ([x y] (cljs.core/bit-or x y))
+  ([x y & more]
+     (reduce bit-or (cljs.core/bit-or x y) more)))
 
 (defn bit-and-not
   "Bitwise and"
-  [x y] (cljs.core/bit-and-not x y))
+  ([x y] (cljs.core/bit-and-not x y))
+  ([x y & more]
+     (reduce bit-and-not (cljs.core/bit-and-not x y) more)))
 
 (defn bit-clear
   "Clear bit at index n"
