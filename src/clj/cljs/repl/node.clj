@@ -9,18 +9,14 @@
 (ns cljs.repl.node
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
-            [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.repl :as repl]
-            [cljs.closure :as cljsc]
-            [cljs.closure :as closure]
-            [cljs.util :as util])
-  (:import cljs.repl.IJavaScriptEnv
-           java.net.Socket
+            [cljs.closure :as closure])
+  (:import java.net.Socket
            java.lang.StringBuilder
            [java.io File BufferedReader BufferedWriter]
-           [java.lang ProcessBuilder UNIXProcess ProcessBuilder$Redirect]))
+           [java.lang ProcessBuilder ProcessBuilder$Redirect]))
 
 (defn socket [host port]
   (let [socket (Socket. host port)
@@ -93,6 +89,8 @@
                         (closure/src-file->target-file core)
                         :static-fns true))
             deps    (closure/add-dependencies opts core-js)]
+        ;; output unoptimized code and the deps file
+        ;; for all compiled namespaces
         (apply closure/output-unoptimized
           (assoc opts
             :output-to (.getPath (io/file output-dir "node_repl_deps.js")))
@@ -104,6 +102,7 @@
           (string/replace "__dirname"
             (str "\"" (str rewrite-path File/separator "bootstrap") "\""))
           (string/replace "./.." rewrite-path)))
+      ;; load the deps file so we can goog.require cljs.core etc.
       (node-eval repl-env
         (str "require('"
           (.getPath root-path)
@@ -111,6 +110,7 @@
       ;; monkey-patch isProvided_ to avoid useless warnings - David
       (node-eval repl-env
         (str "goog.isProvided_ = function(x) { return false; };"))
+      ;; load cljs.core, setup printing
       (repl/evaluate-form repl-env env "<cljs repl>"
         '(do
            (.require js/goog "cljs.core")
@@ -137,8 +137,3 @@
   [& options]
   (repl-env* options))
 
-(comment
-
-  (def bldr (ProcessBuilder. (into-array ["node"])))
-
-  )
