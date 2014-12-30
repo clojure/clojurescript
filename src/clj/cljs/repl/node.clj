@@ -81,6 +81,7 @@
       (Thread/sleep 300)
       (reset! (:socket repl-env)
         (socket (:host repl-env) (:port repl-env)))
+      (reset! (:proc repl-env) proc)
       ;; compile cljs.core & its dependencies, goog/base.js must be available
       ;; for bootstrap to load
       (let [core-js (closure/compile-file core
@@ -117,7 +118,7 @@
            (set! *print-fn* (.-print (js/require "util")))))
       )))
 
-(defrecord NodeEnv [host port socket]
+(defrecord NodeEnv [host port socket proc]
   repl/IJavaScriptEnv
   (-setup [this]
     (setup this))
@@ -128,10 +129,11 @@
   (-load [this provides url]
     (load-javascript this provides url))
   (-tear-down [this]
+    (.destroy ^Process @proc)
     (close-socket @socket)))
 
 (defn repl-env* [{:keys [host port] :or {host "localhost" port 5001}}]
-  (NodeEnv. host port (atom nil)))
+  (NodeEnv. host port (atom nil) (atom nil)))
 
 (defn repl-env
   [& options]
