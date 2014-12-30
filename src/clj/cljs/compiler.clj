@@ -910,7 +910,7 @@
                                :source-file src}
                               (when sm-data
                                 {:source-map (:source-map sm-data)}))]
-                    (when (and sm-data (contains? #{:none nil} (:optimizations opts)))
+                    (when (and sm-data (= (:optimizations opts) :none))
                       (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
                         (emits "\n//# sourceMappingURL=" (.getName sm-file)
                           (if (true? (:source-map-timestamp opts))
@@ -964,8 +964,9 @@
   ([src dest]
     (compile-file src dest nil))
   ([src dest opts]
-    (let [src-file (io/file src)
-          dest-file (io/file dest)]
+    (let [src-file  (io/file src)
+          dest-file (io/file dest)
+          opts      (merge {:optimizations :none} opts)]
       (if (.exists src-file)
         (try
           (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)]
