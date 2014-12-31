@@ -34,6 +34,7 @@
 (def ^:dynamic *cljs-dep-set* (with-meta #{} {:dep-path []}))
 (def ^:dynamic *analyze-deps* true)
 (def ^:dynamic *load-tests* true)
+(def ^:dynamic *load-macros* true)
 
 (def -cljs-macros-loaded (atom false))
 
@@ -1231,11 +1232,12 @@
     (when (seq uses)
       (check-uses uses env))
     (set! *cljs-ns* name)
-    (load-core)
-    (doseq [nsym (concat (vals require-macros) (vals use-macros))]
-      (clojure.core/require nsym))
-    (when (seq use-macros)
-      (check-use-macros use-macros env))
+    (when *load-macros*
+      (load-core)
+      (doseq [nsym (concat (vals require-macros) (vals use-macros))]
+        (clojure.core/require nsym))
+      (when (seq use-macros)
+        (check-use-macros use-macros env)))
     (swap! env/*compiler* update-in [::namespaces name] assoc
       :specs args
       :name name
