@@ -1,6 +1,7 @@
 process.env.NODE_DISABLE_COLORS = true;
 
-var net = require("net");
+var net  = require("net");
+var PORT = 5001;
 
 try {
     require("source-map-support").install();
@@ -39,6 +40,6 @@ net.createServer(function (socket) {
         }
     });
 
-}).listen(5001);
+}).listen(PORT);
 
-console.log("ClojureScript Node.js REPL server listening on 5001")
+console.log("ClojureScript Node.js REPL server listening on", PORT);

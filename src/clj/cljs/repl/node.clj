@@ -66,7 +66,10 @@
     (let [output-dir (io/file (:output-dir opts))
           _    (.mkdirs output-dir)
           of   (io/file output-dir "node_repl.js")
-          _   (spit of (slurp (io/resource "cljs/repl/node_repl.js")))
+          _   (spit of
+                (string/replace (slurp (io/resource "cljs/repl/node_repl.js"))
+                  "var PORT = 5001;"
+                  (str "var PORT = " (:port repl-env) ";")))
           bldr (ProcessBuilder. (into-array ["node"]))
           _    (-> bldr
                  (.redirectInput of)
@@ -134,8 +137,13 @@
     (.destroy ^Process @proc)
     (close-socket @socket)))
 
-(defn repl-env* [{:keys [host port] :or {host "localhost" port 5001}}]
-  (NodeEnv. host port (atom nil) (atom nil)))
+(defn repl-env* [options]
+  (let [{:keys [host port]}
+        (merge
+          {:host "localhost"
+           :port (+ 49000 (rand-int 10000))}
+          options)]
+    (NodeEnv. host port (atom nil) (atom nil))))
 
 (defn repl-env
   [& {:as options}]
