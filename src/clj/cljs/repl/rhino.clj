@@ -139,7 +139,9 @@
         "out" (Context/javaToJS *out* scope))
       (binding [ana/*cljs-ns* 'cljs.core]
         (repl/evaluate-form repl-env env "<cljs repl>"
-          '(set! *print-fn* (fn [x] (.write js/out x))))))))
+          '(do
+             (set! (.-isProvided_ js/goog) (fn [_] false))
+             (set! *print-fn* (fn [x] (.write js/out x)))))))))
 
 (defrecord RhinoEnv [loaded-libs]
   repl/IJavaScriptEnv
