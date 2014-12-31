@@ -155,7 +155,7 @@
   ([repl-env f opts]
     (if (:output-dir opts)
       (let [src (if (util/url? f) f (io/resource f))
-            compiled (cljsc/compile-file src
+            compiled (cljsc/compile src
                        (assoc opts
                          :output-file
                          (cljsc/src-file->target-file src)))]
