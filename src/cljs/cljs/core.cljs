@@ -1587,14 +1587,6 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Seq fns ;;;;;;;;;;;;;;;;
 
-(defn ^seq sequence
-  "Coerces coll to a (possibly empty) sequence, if it is not already
-  one. Will not force a lazy seq. (sequence nil) yields ()"
-  [coll]
-   (if (seq? coll)
-     coll
-     (or (seq coll) ())))
-
 (defn ^number compare
   "Comparator. Returns a negative number, zero, or a positive number
   when x is logically 'less than', 'equal to', or 'greater than'
@@ -2022,15 +2014,6 @@ reduces them without incurring seq initialization"
   [n d]
   (let [q (quot n d)]
     (- n (* d q))))
-
-(defn ^number rand
-  "Returns a random floating point number between 0 (inclusive) and n (default 1) (exclusive)."
-  ([]  (Math/random))
-  ([n] (* n (rand))))
-
-(defn rand-int
-  "Returns a random integer between 0 (inclusive) and n (exclusive)."
-  [n] (fix (rand n)))
 
 (defn bit-xor
   "Bitwise exclusive or"
@@ -8475,6 +8458,8 @@ reduces them without incurring seq initialization"
                 result
                 (rf result input))))))))
   ([coll] (sequence (dedupe) coll)))
+
+(declare rand)
 
 (defn random-sample
   "Returns items from coll with random probability of prob (0.0 -

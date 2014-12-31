@@ -45,6 +45,7 @@
    :undeclared-ns true
    :undeclared-ns-form true
    :redef true
+   :redef-in-file true
    :dynamic true
    :fn-var true
    :fn-arity true
@@ -90,6 +91,10 @@
   [warning-type info]
   (str (:sym info) " already refers to: " (symbol (str (:ns info)) (str (:sym info)))
     " being replaced by: " (symbol (str (:ns-name info)) (str (:sym info)))))
+
+(defmethod error-message :redef-in-file
+  [warning-type info]
+  (str (:sym info) " at line " (:line info) " is being replaced"))
 
 (defmethod error-message :fn-var
   [warning-type info]
@@ -433,9 +438,13 @@
 
 (def ^:dynamic *recur-frames* nil)
 (def ^:dynamic *loop-lets* ())
+(def ^:dynamic *allow-redef* false)
 
 (defmacro disallowing-recur [& body]
   `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
+
+(defmacro allowing-redef [& body]
+  `(binding [*allow-redef* true] ~@body))
 
 ;; TODO: move this logic out - David
 (defn analyze-keyword
@@ -537,8 +546,8 @@
   (when (< (count form) 3)
     (throw (error env "Too few arguments to if")))
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
-        then-expr (analyze env then)
-        else-expr (analyze env else)]
+        then-expr (allowing-redef (analyze env then))
+        else-expr (allowing-redef (analyze env else))]
     {:env env :op :if :form form
      :test test-expr :then then-expr :else else-expr
      :unchecked @*unchecked-if*
@@ -648,6 +657,12 @@
     (when-let [doc (:doc args)]
       (when-not (string? doc)
         (throw (error env "Too many arguments to def"))))
+    (when-let [v (get-in @env/*compiler* [::namespaces ns-name :defs sym])]
+      (when (and (not *allow-redef*)
+                 (not (:declared v))
+                 (not (:declared sym-meta))
+                 (not= "<cljs repl>" *cljs-file*))
+        (warning :redef-in-file env {:sym sym :line (:line v)})))
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (get-in @env/*compiler* [::namespaces ns-name :uses sym]))
