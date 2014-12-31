@@ -65,10 +65,11 @@
   ([repl-env opts]
     (let [output-dir (io/file (:output-dir opts))
           _    (.mkdirs output-dir)
+          of   (io/file output-dir "node_repl.js")
+          _   (spit of (slurp (io/resource "cljs/repl/node_repl.js")))
           bldr (ProcessBuilder. (into-array ["node"]))
           _    (-> bldr
-                 (.redirectInput
-                   (io/file (io/resource "cljs/repl/node_repl.js")))
+                 (.redirectInput of)
                  (.redirectOutput ProcessBuilder$Redirect/INHERIT)
                  (.redirectError ProcessBuilder$Redirect/INHERIT))
           proc (.start bldr)
@@ -83,8 +84,9 @@
         (socket (:host repl-env) (:port repl-env)))
       (reset! (:proc repl-env) proc)
       ;; compile cljs.core & its dependencies, goog/base.js must be available
-      ;; for bootstrap to load
-      (let [core-js (closure/compile-file core
+      ;; for bootstrap to load, use new closure/compile as it can handle
+      ;; resources in JARs
+      (let [core-js (closure/compile core
                       (assoc opts
                         :output-file
                         (closure/src-file->target-file core)
@@ -136,6 +138,6 @@
   (NodeEnv. host port (atom nil) (atom nil)))
 
 (defn repl-env
-  [& options]
+  [& {:as options}]
   (repl-env* options))
 

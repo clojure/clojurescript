@@ -33,6 +33,7 @@
    The produced output is either a single string of optimized
    JavaScript or a deps file for use during development.
   "
+  (:refer-clojure :exclude [compile])
   (:require [cljs.util :as util]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
@@ -329,6 +330,11 @@
                (read-js (:file m))))]
     (do (swap! env/*compiler* update-in [::compiled-cljs] assoc path js)
         js)))
+
+(defn compile
+  "Given a Compilable, compile it and return an IJavaScript."
+  [compilable opts]
+  (-compile compilable opts))
 
 (defn compile-file
   "Compile a single cljs file. If no output-file is specified, returns
