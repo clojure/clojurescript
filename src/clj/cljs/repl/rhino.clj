@@ -10,18 +10,13 @@
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
-            [cljs.closure :as closure]
             [cljs.analyzer :as ana]
             [cljs.repl :as repl]
             [cljs.util :as util])
-  (:import cljs.repl.IJavaScriptEnv
-           [java.io File Reader]
+  (:import [java.io File Reader]
            [org.mozilla.javascript Context ScriptableObject
                                    RhinoException Undefined]))
 
-(def current-repl-env (atom nil))
-
-;;todo - move to core.cljs, using js
 (def ^String bootjs
   (str "goog.require = function(rule){"
        "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
@@ -80,49 +75,37 @@
        :stacktrace (stacktrace ex)})))
 
 (defn goog-require [repl-env opts rule]
-  (let [loaded-libs (:loaded-libs repl-env)]
-    (when-not (contains? @loaded-libs rule)
-     (let [repl-env @current-repl-env
-           path (string/replace (comp/munge rule) \. File/separatorChar)
-           cljsc-path (str (util/output-directory opts)
-                        File/separator (str path ".js"))
-           cljs-path (str path ".cljs")
-           js-path (str "goog/"
-                     (-eval (str "goog.dependencies_.nameToPath['" rule "']")
-                       repl-env "<cljs repl>" 1))]
-       (let [compiled (io/file cljsc-path)]
-         (if (.exists compiled)
-           ;; TODO: only take this path if analysis cache is available
-           ;; - David
-           (do
-             (with-open [reader (io/reader compiled)]
-               (-eval reader repl-env cljsc-path 1))
-             (swap! loaded-libs conj rule))
-           (if-let [res (io/resource cljs-path)]
-             (binding [ana/*cljs-ns* 'cljs.user]
-               (repl/load-stream repl-env cljs-path res)
-               (swap! loaded-libs conj rule))
-             (if-let [res (io/resource js-path)]
-               (with-open [reader (io/reader res)]
-                 (-eval reader repl-env js-path 1)
-                 (doseq [rule (closure/src-file->goog-require
-                                res {:all-provides true})]
-                   (swap! loaded-libs conj rule)))
-               (throw
-                 (Exception.
-                   (str "Cannot find " cljs-path
-                     " or " js-path " in classpath")))))))))))
+  (let [path (string/replace (comp/munge rule) \. File/separatorChar)
+        cljsc-path (str (util/output-directory opts)
+                     File/separator (str path ".js"))
+        cljs-path (str path ".cljs")
+        js-path (str "goog/"
+                  (-eval (str "goog.dependencies_.nameToPath['" rule "']")
+                    repl-env "<cljs repl>" 1))]
+    (let [compiled (io/file cljsc-path)]
+      (if (.exists compiled)
+        ;; TODO: only take this path if analysis cache is available
+        ;; - David
+        (do
+          (with-open [reader (io/reader compiled)]
+            (-eval reader repl-env cljsc-path 1)))
+        (if-let [res (io/resource cljs-path)]
+          (binding [ana/*cljs-ns* 'cljs.user]
+            (repl/load-stream repl-env cljs-path res))
+          (if-let [res (io/resource js-path)]
+            (with-open [reader (io/reader res)]
+              (-eval reader repl-env js-path 1))
+            (throw
+              (Exception.
+                (str "Cannot find " cljs-path
+                  " or " js-path " in classpath")))))))))
 
 (defn load-javascript [repl-env ns url]
-  (let [missing (remove #(contains? @(:loaded-libs repl-env) %) ns)]
-    (when (seq missing)
-      (do
-        (try
-          (with-open [reader (io/reader url)]
-            (-eval reader repl-env (.toString url) 1))
-          ;; TODO: don't show errors for goog/base.js line number 105
-          (catch Throwable ex (println (.getMessage ex))))
-        (swap! (:loaded-libs repl-env) (partial apply conj) missing)))))
+  (try
+    (with-open [reader (io/reader url)]
+      (-eval reader repl-env (.toString url) 1))
+    ;; TODO: don't show errors for goog/base.js line number 105
+    (catch Throwable ex (println (.getMessage ex)))))
 
 (defn rhino-setup
   ([repl-env] (rhino-setup repl-env nil))
@@ -132,7 +115,6 @@
       (ScriptableObject/putProperty scope "__repl_opts"
         (Context/javaToJS opts scope))
       (repl/load-file repl-env "cljs/core.cljs" opts)
-      (swap! (:loaded-libs repl-env) conj "cljs.core")
       (repl/evaluate-form repl-env env "<cljs repl>"
         '(ns cljs.user))
       (ScriptableObject/putProperty scope
@@ -143,7 +125,7 @@
              (set! (.-isProvided_ js/goog) (fn [_] false))
              (set! *print-fn* (fn [x] (.write js/out x)))))))))
 
-(defrecord RhinoEnv [loaded-libs]
+(defrecord RhinoEnv []
   repl/IJavaScriptEnv
   (-setup [this]
     (rhino-setup this))
@@ -163,10 +145,9 @@
         scope (.initStandardObjects cx)
         base (io/resource "goog/base.js")
         deps (io/resource "goog/deps.js")
-        new-repl-env (merge (RhinoEnv. (atom #{})) {:cx cx :scope scope})]
+        new-repl-env (merge (RhinoEnv.) {:cx cx :scope scope})]
     (assert base "Can't find goog/base.js in classpath")
     (assert deps "Can't find goog/deps.js in classpath")
-    (swap! current-repl-env (fn [old] new-repl-env))
     (ScriptableObject/putProperty scope
       "___repl_env" (Context/javaToJS new-repl-env scope))
     (with-open [r (io/reader base)]
