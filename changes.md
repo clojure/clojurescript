@@ -1,3 +1,32 @@
+## 0.0-2629
+
+### Enhancements
+* Add Node.js REPL
+* REPLs can now reuse build/analysis caching
+* in-ns, require, doc support in REPLs
+
+### Changes
+* add :verbose flag to compiler to output compiler activity
+* add *load-macros* to cljs.analyzer to optionally disable macro loading
+* errors during ns parsing always through
+* `cljs.util/compiled-by-version` needs to always return String
+* pin Closure Compiler in bootstrap script
+* refactor cljs.build.api namespace
+
+### Fixes
+* add cljs.test/are macro
+* CLJS-931 : cljs.compiler/requires-compilation? ignores changes to build options
+* CLJS-943: REPL require special fn is brittle
+* CLJS-941: Warn when a symbol is defined multiple times in a file
+* CLJS-942: Randomized port for Node.js REPL if port not specified
+* CLJS-675: QuickStart example not working properly
+* CLJS-935: script/noderepljs leaves node running after exit
+* CLJS-918: preserve :arglists metadata in analysis cache
+* CLJS-907: False positives from arithmetic checks
+* CLJS-919 compare-and-set! relies on Atom record structure instead of protocols
+* CLJS-920 add-watch/remove-watch should return reference, as in Clojure
+* CLJS-921: cljs.repl/doc output includes namespace twice
+
 ## 0.0-2511
 
 ### Enhancements
