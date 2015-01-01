@@ -230,7 +230,9 @@
           specs)
         requires'
         `(:require
-           ~@(concat
+           ~@(reduce
+               (fn [requires spec]
+                 (merge-require requires spec))
                (rest requires)
                additions))]
     (concat before [requires'] other-specs)))
@@ -258,7 +260,8 @@
          (self repl-env env form nil))
        ([repl-env env [_ [quote spec]] opts]
          (let [original-specs (ana-api/ns-specs ana/*cljs-ns*)
-               new-specs      (update-require-spec original-specs spec)]
+               new-specs (update-require-spec original-specs
+                           (if (symbol? spec) [spec] spec))]
            (evaluate-form repl-env env "<cljs repl>"
              (with-meta
                `(~'ns ~ana/*cljs-ns*
