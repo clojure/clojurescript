@@ -1153,12 +1153,13 @@
               (parse-ns-error-msg spec
                 ":as must be followed by a symbol in :require / :require-macros"))))
         (when alias
-          (let [alias-type (if macros? :macros :fns)]
-            (when (contains? (alias-type @aliases) alias)
+          (let [alias-type (if macros? :macros :fns)
+                lib'       ((alias-type @aliases) alias)]
+            (when (and (not (nil? lib')) (not= lib lib'))
               (throw (error env (parse-ns-error-msg spec ":as alias must be unique"))))
             (swap! aliases
               update-in [alias-type]
-              conj alias)))
+              conj [alias lib])))
         (when-not (or (and (sequential? referred)
                            (every? symbol? referred))
                       (nil? referred))
@@ -1224,7 +1225,7 @@
         name      (vary-meta name merge metadata)
         excludes  (parse-ns-excludes env args)
         deps      (atom #{})
-        aliases   (atom {:fns #{} :macros #{}})
+        aliases   (atom {:fns {} :macros {}})
         spec-parsers {:require        (partial parse-require-spec env false deps aliases)
                       :require-macros (partial parse-require-spec env true deps aliases)
                       :use            (comp (partial parse-require-spec env false deps aliases)
