@@ -39,3 +39,43 @@
         '((:refer-clojure :exclude [==])
           (:require [clojure.string :as clojure.string]
                     [cljs.reader :as reader])))))
+
+(deftest test-merge-spec
+  (is (= (repl/merge-spec
+           '[clojure.string :refer [join]]
+           '[clojure.string :refer [trim]])
+         '[clojure.string :refer [join trim]]))
+  (is (= (repl/merge-spec
+           '[cljs.repl :refer [print-doc]]
+           '[cljs.repl :refer-macros [doc]])
+        '[cljs.repl :refer [print-doc] :refer-macros [doc]]))
+  (is (= (repl/merge-spec
+           '[cljs.repl :refer [print-doc] :include-macros true]
+           '[cljs.repl :refer-macros [doc]])
+        '[cljs.repl :refer [print-doc] :refer-macros [doc] :include-macros true])))
+
+#_(deftest test-merge-require
+  (is (= (repl/merge-require
+           '[[cljs.reader :as r]
+             [clojure.string :refer [join]]
+             [cljs.repl :refer-macros [doc]]]
+           '[clojure.string :refer [trim]])
+        '[[cljs.reader :as r]
+          [clojure.string :refer [join trim]]
+          [cljs.repl :refer-macros [doc]]]))
+  (is (= (repl/merge-require
+           '[[cljs.reader :as r]
+             [clojure.string :refer [join]]
+             [cljs.repl :refer-macros [doc]]]
+           '[clojure.string :refer [join]])
+        '[[cljs.reader :as r]
+          [clojure.string :refer [join]]
+          [cljs.repl :refer-macros [doc]]]))
+  (is (= (repl/merge-require
+           '[[cljs.reader :as r]
+             [clojure.string :refer [join]]
+             [cljs.repl :refer-macros [doc]]]
+           '[clojure.string :refer [join trim]])
+        '[[cljs.reader :as r]
+          [clojure.string :refer [join trim]]
+          [cljs.repl :refer-macros [doc]]])))

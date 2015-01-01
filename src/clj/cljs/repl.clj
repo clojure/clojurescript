@@ -184,6 +184,27 @@
       form
       (wrap-fn form))))
 
+(def spec-sort
+  {:as 0
+   :refer 1
+   :refer-macros 2
+   :include-macros 3})
+
+(defn merge-spec [[lib & {:as aindex}] [_ & {:as bindex}]]
+  (let [merged-map
+        (merge-with
+          (fn [x y]
+            (if (vector? x)
+              (into x y)
+              y))
+          aindex bindex)]
+    (apply vector lib
+      (apply concat
+        (sort
+          (fn [[sa] [sb]]
+            (compare (spec-sort sa) (spec-sort sb)))
+          merged-map)))))
+
 (defn update-require-spec
   "Given the specification portion of a ns form and require spec additions
   return an updated specification."
