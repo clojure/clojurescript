@@ -45,7 +45,7 @@
    :undeclared-ns true
    :undeclared-ns-form true
    :redef true
-   :redef-in-file false
+   :redef-in-file true
    :dynamic true
    :fn-var true
    :fn-arity true
@@ -662,6 +662,7 @@
       (when (and (not *allow-redef*)
                  (not (:declared v))
                  (not (:declared sym-meta))
+                 (= (:file v) *cljs-file*)
                  (not= "<cljs repl>" *cljs-file*))
         (warning :redef-in-file env {:sym sym :line (:line v)})))
     (let [env (if (or (and (not= ns-name 'cljs.core)
