@@ -1060,30 +1060,36 @@
           f))))
 
 (defn analyze-deps
-  ([lib deps env] (analyze-deps lib deps nil))
+  ([lib deps env] (analyze-deps lib deps env))
   ([lib deps env opts]
      (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
        (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
          (str "Circular dependency detected " (-> *cljs-dep-set* meta :dep-path)))
        (doseq [dep deps]
          (when-not (or (contains? (::namespaces @env/*compiler*) dep)
-                     (contains? (:js-dependency-index @env/*compiler*) (name dep))
-                     (deps/find-classpath-lib dep))
+                       (contains? (:js-dependency-index @env/*compiler*) (name dep))
+                       (deps/find-classpath-lib dep))
            (let [relpath (util/ns->relpath dep)
                  src (locate-src relpath)]
              (if src
                (analyze-file src opts)
-               (warning :undeclared-ns env {:ns-sym dep}))))))))
+               (throw
+                 (error env
+                   (error-message :undeclared-ns {:ns-sym dep}))))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
     (when (= (get-in @env/*compiler* [::namespaces lib :defs sym] ::not-found) ::not-found)
-      (warning :undeclared-ns-form env {:type "var" :lib lib :sym sym}))))
+      (throw
+        (error env
+          (error-message :undeclared-ns-form {:type "var" :lib lib :sym sym}))))))
 
 (defn check-use-macros [use-macros env]
   (doseq [[sym lib] use-macros]
     (when (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym))
-      (warning :undeclared-ns-form env {:type "macro" :lib lib :sym sym}))))
+      (throw
+        (error env
+          (error-message :undeclared-ns-form {:type "macro" :lib lib :sym sym}))))))
 
 (defn parse-ns-error-msg [spec msg]
   (str msg "; offending spec: " (pr-str spec)))
@@ -1245,10 +1251,10 @@
                 {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (and *analyze-deps* (seq @deps))
       (analyze-deps name @deps env opts))
-    (when (seq uses)
+    (when (and *analyze-deps* (seq uses))
       (check-uses uses env))
     (set! *cljs-ns* name)
-    (when *load-macros*
+    (when (and *analyze-deps* *load-macros*)
       (load-core)
       (doseq [nsym (concat (vals require-macros) (vals use-macros))]
         (clojure.core/require nsym))
