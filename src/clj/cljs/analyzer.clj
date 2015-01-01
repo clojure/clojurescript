@@ -45,7 +45,7 @@
    :undeclared-ns true
    :undeclared-ns-form true
    :redef true
-   :redef-in-file true
+   :redef-in-file false
    :dynamic true
    :fn-var true
    :fn-arity true
