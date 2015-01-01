@@ -1,4 +1,5 @@
 (ns cljs.closure-tests
+  (:refer-clojure :exclude [compile])
   (:use cljs.closure)
   (:use clojure.test))
 
