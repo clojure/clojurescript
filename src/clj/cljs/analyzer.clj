@@ -20,7 +20,7 @@
             [clojure.edn :as edn])
   (:import java.lang.StringBuilder
            [java.io File Reader PushbackReader]
-           java.net.URL
+           [java.net URL]
            [cljs.tagged_literals JSValue]))
 
 (set! *warn-on-reflection* true)
@@ -35,6 +35,9 @@
 (def ^:dynamic *analyze-deps* true)
 (def ^:dynamic *load-tests* true)
 (def ^:dynamic *load-macros* true)
+
+;; log compiler activities
+(def ^:dynamic *verbose* false)
 
 (def -cljs-macros-loaded (atom false))
 
@@ -1781,14 +1784,14 @@ argument, which the reader will use in any emitted errors."
   ([f {:keys [output-dir] :as opts}]
      (let [res (cond
                  (instance? File f) f
-                 (instance? java.net.URL f) f
-                 (re-find #"^file://" f) (java.net.URL. f)
+                 (instance? URL f) f
+                 (re-find #"^file://" f) (URL. f)
                  :else (io/resource f))]
        (assert res (str "Can't find " f " in classpath"))
        (env/ensure
          (let [path (if (instance? File res)
                       (.getPath ^File res)
-                      (.getPath ^java.net.URL res))
+                      (.getPath ^URL res))
                cache (when (and (:cache-analysis opts) output-dir)
                        (cache-file res output-dir))]
            (when-not (get-in @env/*compiler* [::analyzed-cljs path])
@@ -1796,24 +1799,28 @@ argument, which the reader will use in any emitted errors."
                      (not output-dir)
                      (requires-analysis? res output-dir))
                (binding [*cljs-ns* 'cljs.user
-                        *cljs-file* path
-                        reader/*alias-map* (or reader/*alias-map* {})]
-                (let [env (assoc (empty-env) :build-options opts)
-                      ns (loop [ns nil forms (seq (forms-seq res))]
-                           (if forms
-                             (let [form (first forms)
-                                   env (assoc env :ns (get-namespace *cljs-ns*))
-                                   ast (analyze env form opts)]
-                               (if (= (:op ast) :ns)
-                                 (recur (:name ast) (next forms))
-                                 (recur ns (next forms))))
-                             ns))]
-                  (when cache
-                    (write-analysis-cache ns cache))
-                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
+                         *cljs-file* path
+                         reader/*alias-map* (or reader/*alias-map* {})]
+                 (when (or *verbose* (:verbose opts))
+                   (util/debug-prn "Analyzing " res))
+                 (let [env (assoc (empty-env) :build-options opts)
+                       ns (loop [ns nil forms (seq (forms-seq res))]
+                            (if forms
+                              (let [form (first forms)
+                                    env (assoc env :ns (get-namespace *cljs-ns*))
+                                    ast (analyze env form opts)]
+                                (if (= (:op ast) :ns)
+                                  (recur (:name ast) (next forms))
+                                  (recur ns (next forms))))
+                              ns))]
+                   (when cache
+                     (write-analysis-cache ns cache))
+                   (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
                ;; we want want to keep dependency analysis information
                ;; don't revert the environment - David
                (let [{:keys [ns]} (parse-ns res (merge opts {:restore false :analyze-deps true}))]
+                 (when (or *verbose* (:verbose opts))
+                   (util/debug-prn "Reading analysis cache for " res))
                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)
                  (swap! env/*compiler* assoc-in [::namespaces ns]
                    (edn/read-string (slurp cache)))))))))))

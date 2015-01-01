@@ -879,6 +879,8 @@
     (env/ensure
       (with-core-cljs opts
         (fn []
+          (when (or ana/*verbose* (:verbose opts))
+            (util/debug-prn "Compiling " src))
           (with-open [out ^java.io.Writer (io/make-writer dest {})]
             (binding [*out* out
                       ana/*cljs-ns* 'cljs.user
