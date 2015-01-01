@@ -873,6 +873,14 @@
   [opts]
   (select-keys opts [:static-fns :optimize-constants :elide-asserts]))
 
+(defn compiled-by-string
+  ([] (compiled-by-string nil))
+  ([opts]
+    (str "// Compiled by ClojureScript "
+      (util/clojurescript-version)
+      (when opts
+        (str " " (pr-str (build-affecting-options opts)))))))
+
 (defn compile-file*
   ([src dest] (compile-file* src dest nil))
   ([src dest opts]
@@ -892,7 +900,7 @@
                                             {:source-map (sorted-map)
                                              :gen-col 0
                                              :gen-line 0}))]
-              (emitln "// Compiled by ClojureScript " (util/clojurescript-version) " " (pr-str (build-affecting-options opts)))
+              (emitln (compiled-by-string opts))
               (loop [forms (ana/forms-seq src)
                      ns-name nil
                      deps nil]

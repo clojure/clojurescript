@@ -747,10 +747,15 @@ should contain the source for the given namespace name."
   (deps-file {} [{:url (deps/to-url "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
   )
 
-(defn output-one-file [{:keys [output-to]} js]
-  (cond (nil? output-to) js
-        (string? output-to) (spit output-to js)
-        :else (println js)))
+(defn output-one-file [{:keys [output-to] :as opts} js]
+  (cond
+    (nil? output-to) js
+
+    (string? output-to)
+    (spit output-to
+      (str (comp/compiled-by-string opts) "\n" js))
+
+    :else (println js)))
 
 (defn output-deps-file [opts sources]
   (output-one-file opts (deps-file opts sources)))
