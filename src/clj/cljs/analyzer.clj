@@ -218,7 +218,8 @@
 
 (defmacro no-warn [& body]
   (let [no-warnings (zipmap (keys *cljs-warnings*) (repeat false))]
-    `(binding [*cljs-warnings* ~no-warnings]
+    `(binding [*cljs-warnings* ~no-warnings
+               *analyze-deps* false]
        ~@body)))
 
 (defmacro all-warn [& body]
