@@ -195,7 +195,7 @@
         (merge-with
           (fn [x y]
             (if (vector? x)
-              (into x y)
+              (vec (distinct (into x y)))
               y))
           aindex bindex)]
     (apply vector lib
@@ -204,6 +204,21 @@
           (fn [[sa] [sb]]
             (compare (spec-sort sa) (spec-sort sb)))
           merged-map)))))
+
+(defn merge-require [requires [lib :as spec]]
+  (let [[before [match & after]]
+        (split-with
+          (fn [[lib' & _]]
+            (not= lib lib'))
+          requires)]
+    (if (nil? match)
+      ;; no match, append to end
+      (concat requires [spec])
+      (if (= match spec)
+        ;; dupe
+        requires
+        ;; merge
+        (concat before [(merge-spec match spec)] after)))))
 
 (defn update-require-spec
   "Given the specification portion of a ns form and require spec additions

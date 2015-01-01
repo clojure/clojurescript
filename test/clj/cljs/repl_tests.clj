@@ -54,7 +54,7 @@
            '[cljs.repl :refer-macros [doc]])
         '[cljs.repl :refer [print-doc] :refer-macros [doc] :include-macros true])))
 
-#_(deftest test-merge-require
+(deftest test-merge-require
   (is (= (repl/merge-require
            '[[cljs.reader :as r]
              [clojure.string :refer [join]]
