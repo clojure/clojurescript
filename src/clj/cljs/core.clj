@@ -1679,7 +1679,8 @@
     "Argument to ns-interns must be a quoted symbol")
   `(into {}
      [~@(map
-          (fn [[sym _]] `[(symbol ~(name sym)) (var ~sym)])
+          (fn [[sym _]]
+            `[(symbol ~(name sym)) (var ~(symbol (name ns) (name sym)))])
           (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs]))]))
 
 (defmacro vswap!
