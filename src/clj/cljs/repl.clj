@@ -261,10 +261,13 @@
      (fn self
        ([repl-env env form]
          (self repl-env env form nil))
-       ([repl-env env [_ [quote spec]] opts]
-         (let [original-specs (ana-api/ns-specs ana/*cljs-ns*)
-               new-specs (update-require-spec original-specs
-                           (if (symbol? spec) [spec] spec))]
+       ([repl-env env [_ & specs :as form] opts]
+         (let [new-specs
+               (reduce
+                 (fn [requires [quote spec]]
+                   (update-require-spec requires
+                     (if (symbol? spec) [spec] spec)))
+                 (ana-api/ns-specs ana/*cljs-ns*) specs)]
            (evaluate-form repl-env env "<cljs repl>"
              (with-meta
                `(~'ns ~ana/*cljs-ns*
