@@ -70,7 +70,7 @@
 (defn- load-dependencies
   ([repl-env requires] (load-dependencies repl-env requires nil))
   ([repl-env requires opts]
-   (doseq [ns requires]
+   (doseq [ns (distinct requires)]
      (load-namespace repl-env ns opts))))
 
 (defn- display-error
