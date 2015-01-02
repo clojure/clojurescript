@@ -287,14 +287,14 @@
       (ana/analyze-file (str "file://" (.getAbsolutePath file))))))
 
 (defn repl*
-  [repl-env {:keys [analyze-path verbose warn-on-undeclared special-fns static-fns] :as opts
+  [repl-env {:keys [analyze-path verbose-repl warn-on-undeclared special-fns static-fns] :as opts
              :or {warn-on-undeclared true}}]
   (print "To quit, type: ")
   (prn :cljs/quit)
   (env/with-compiler-env
     (or (::env/compiler repl-env) (env/default-compiler-env opts))
     (binding [ana/*cljs-ns* 'cljs.user
-              *cljs-verbose* verbose
+              *cljs-verbose* verbose-repl
               ana/*cljs-warnings* (assoc ana/*cljs-warnings*
                                     :unprovided warn-on-undeclared
                                     :undeclared-var warn-on-undeclared
