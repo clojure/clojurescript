@@ -752,8 +752,7 @@ should contain the source for the given namespace name."
     (nil? output-to) js
 
     (string? output-to)
-    (spit output-to
-      (str (comp/compiled-by-string opts) "\n" js))
+    (spit output-to js)
 
     :else (println js)))
 
