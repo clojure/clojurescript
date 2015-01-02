@@ -108,7 +108,10 @@
         (-> (slurp (io/resource "cljs/bootstrap_node.js"))
           (string/replace "__dirname"
             (str "\"" (str rewrite-path File/separator "bootstrap") "\""))
-          (string/replace "./.." rewrite-path)))
+          (string/replace "./.." rewrite-path)
+          (string/replace
+            "var CLJS_ROOT = \"./\";"
+            (str "var CLJS_ROOT = \"" (.getPath root-path) "/\";"))))
       ;; load the deps file so we can goog.require cljs.core etc.
       (node-eval repl-env
         (str "require('"

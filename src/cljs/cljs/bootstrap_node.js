@@ -42,6 +42,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var CLJS_ROOT = "./";
 
 
 /**
@@ -59,6 +60,15 @@ global.goog = {};
 global.CLOSURE_IMPORT_SCRIPT = function(src) {
   // Sources are always expressed relative to closure's base.js, but
   // require() is always relative to the current source.
+  if(CLJS_ROOT !== ".") {
+    var path = null;
+    if(src.substring(0, 3) == "../") {
+      path = CLJS_ROOT+src.substring(3);
+    } else {
+      path = CLJS_ROOT+"goog/"+src;
+    }
+    if(require.cache[path]) require.cache[path];
+  }
   require('./../' + src);
   return true;
 };
