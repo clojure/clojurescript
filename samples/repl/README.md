@@ -57,9 +57,9 @@ cd samples/repl
 and evaluate the following forms:
 
 ```clj
-(use 'cljs.closure)
+(require '[cljs.closure :as cljsc])
 (def opts {:output-to "main.js" :output-dir "out"})
-(build "src" opts)
+(cljsc/build "src" opts)
 ```
     
 ### Starting the REPL and connecting to the browser
