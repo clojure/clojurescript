@@ -120,18 +120,19 @@
       ;; monkey-patch isProvided_ to avoid useless warnings - David
       (node-eval repl-env
         (str "goog.isProvided_ = function(x) { return false; };"))
-      ;; load cljs.core, setup printing
-      (repl/evaluate-form repl-env env "<cljs repl>"
-        '(do
-           (.require js/goog "cljs.core")
-           (set! *print-fn* (.-print (js/require "util")))))
       ;; monkey-patch goog.require, skip all the loaded checks
       (repl/evaluate-form repl-env env "<cljs repl>"
         '(do
            (set! (.-require js/goog)
              (fn [name]
                (js/CLOSURE_IMPORT_SCRIPT
-                 (aget (.. js/goog -dependencies_ -nameToPath) name))))))
+                 (aget (.. js/goog -dependencies_ -nameToPath) name))))
+           nil))
+      ;; load cljs.core, setup printing
+      (repl/evaluate-form repl-env env "<cljs repl>"
+        '(do
+           (.require js/goog "cljs.core")
+           (set! *print-fn* (.-print (js/require "util")))))
       )))
 
 (defrecord NodeEnv [host port socket proc]
