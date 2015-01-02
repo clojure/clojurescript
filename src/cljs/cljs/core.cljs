@@ -2050,7 +2050,7 @@ reduces them without incurring seq initialization"
   [x n]
   (cljs.core/bit-set x n))
 
-(defn bit-test
+(defn ^boolean bit-test
   "Test bit at index n"
   [x n]
   (cljs.core/bit-test x n))

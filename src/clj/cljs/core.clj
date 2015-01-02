@@ -519,8 +519,8 @@
 (defmacro ^::ana/numeric bit-flip [x n]
   (core/list 'js* "(~{} ^ (1 << ~{}))" x n))
 
-(defmacro ^::ana/numeric bit-test [x n]
-  (core/list 'js* "((~{} & (1 << ~{})) != 0)" x n))
+(defmacro bit-test [x n]
+  (bool-expr (core/list 'js* "((~{} & (1 << ~{})) != 0)" x n)))
 
 (defmacro ^::ana/numeric bit-shift-left [x n]
   (core/list 'js* "(~{} << ~{})" x n))
