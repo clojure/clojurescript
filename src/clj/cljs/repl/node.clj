@@ -125,6 +125,13 @@
         '(do
            (.require js/goog "cljs.core")
            (set! *print-fn* (.-print (js/require "util")))))
+      ;; monkey-patch goog.require, skip all the loaded checks
+      (repl/evaluate-form repl-env env "<cljs repl>"
+        '(do
+           (set! (.-require js/goog)
+             (fn [name]
+               (js/CLOSURE_IMPORT_SCRIPT
+                 (aget (.. js/goog -dependencies_ -nameToPath) name))))))
       )))
 
 (defrecord NodeEnv [host port socket proc]

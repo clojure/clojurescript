@@ -67,7 +67,7 @@ global.CLOSURE_IMPORT_SCRIPT = function(src) {
     } else {
       path = CLJS_ROOT+"goog/"+src;
     }
-    if(require.cache[path]) require.cache[path];
+    if(require.cache[path]) delete require.cache[path];
   }
   require('./../' + src);
   return true;
