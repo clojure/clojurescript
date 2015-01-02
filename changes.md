@@ -1,3 +1,15 @@
+## 0.0-2644
+
+### Fixes
+* CLJS-953: require REPL special fn can only take one argument
+* CLJS-952: Bad type hinting on bit-test
+* CLJS-947: REPL require of goog namespaces does not work
+* CLJS-951: goog.require emitted multiple times under Node.js REPL
+* CLJS-946: goog.require in REPLs will not reload recompiled libs
+* CLJS-950: Revert adding compiled-by string to CLJS deps file
+* CLJS-929: Minor fixes to test script
+* CLJS-946: goog.require in REPLs will not reload recompiled libs
+
 ## 0.0-2629
 
 ### Enhancements
