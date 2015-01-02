@@ -27,7 +27,7 @@ net.createServer(function (socket) {
                     ret = process.binding('evals').NodeScript.runInThisContext.call(
                            global, data, "repl");
                 } catch (x) {
-                    console.log(x.stack);
+                    console.error(x.stack);
                 }
             }
             // TODO: can we just console.log? - David
