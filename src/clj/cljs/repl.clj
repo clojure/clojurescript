@@ -59,13 +59,15 @@
                     (remove (comp #{["goog"]} :provides))
                     (remove (comp #{:seed} :type))
                     (map #(select-keys % [:provides :url])))]
-     ;; for now only do this for REPLs that rely on disk - David
-     (when (:output-dir opts)
+     (if (:output-dir opts)
+       ;; REPLs that read from :output-dir just need to add deps,
+       ;; environment will handle actual loading - David
        (doseq [source (map #(cljsc/source-on-disk opts %) sources)]
          (-evaluate repl-env "<cljs repl>" 1
-           (cljsc/add-dep-string opts source))))
-     (doseq [{:keys [url provides]} deps]
-       (-load repl-env provides url)))))
+           (cljsc/add-dep-string opts source)))
+       ;; REPLs that stream must manually load each dep - David
+       (doseq [{:keys [url provides]} deps]
+         (-load repl-env provides url))))))
 
 (defn- load-dependencies
   ([repl-env requires] (load-dependencies repl-env requires nil))
