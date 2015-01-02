@@ -54,7 +54,8 @@
          sources  (cljsc/add-dependencies
                     (merge (env->opts repl-env) opts)
                     {:requires [(name sym)] :type :seed
-                     :url (:uri (cljsc/cljs-source-for-namespace sym))})
+                     :url (:uri (cljsc/source-for-namespace
+                                  sym env/*compiler*))})
          deps     (->> sources
                     (remove (comp #{["goog"]} :provides))
                     (remove (comp #{:seed} :type))
