@@ -795,14 +795,28 @@
     (emitln "}"))
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
-  (doseq [lib (distinct (vals requires))]
-    (if (-> requires meta :reload)
-      (emitln "goog.require('" (munge lib) "', true);")
-      (emitln "goog.require('" (munge lib) "');")))
-  (doseq [lib (remove (set (vals requires)) (distinct (vals uses)))]
-    (if (-> uses meta :reload)
-      (emitln "goog.require('" (munge lib) "', true);")
-      (emitln "goog.require('" (munge lib) "');"))))
+  (let [loaded-libs (munge 'cljs.core.*loaded-libs*)
+        loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))]
+    ;; requires
+    (when (-> requires meta :reload-all)
+      (emitln loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
+      (emitln loaded-libs " = cljs.core.set();"))
+    (doseq [lib (distinct (vals requires))]
+      (if (-> requires meta :reload)
+        (emitln "goog.require('" (munge lib) "', true);")
+        (emitln "goog.require('" (munge lib) "');")))
+    (when (-> requires meta :reload-all)
+      (emitln loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))
+    ;; uses
+    (when (-> uses meta :reload-all)
+      (emitln loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
+      (emitln loaded-libs " = cljs.core.set();"))
+    (doseq [lib (remove (set (vals requires)) (distinct (vals uses)))]
+      (if (-> uses meta :reload)
+        (emitln "goog.require('" (munge lib) "', true);")
+        (emitln "goog.require('" (munge lib) "');")))
+    (when (-> uses meta :reload-all)
+      (emitln loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
 (defmethod emit* :deftype*
   [{:keys [t fields pmasks body]}]
