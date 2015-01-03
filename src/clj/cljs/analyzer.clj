@@ -1246,15 +1246,24 @@
                                             (partial use->require env))
                       :import         (partial parse-import-spec env deps)}
         valid-forms (atom #{:use :use-macros :require :require-macros :import})
+        reload (atom {:use nil :require nil})
         {uses :use requires :require use-macros :use-macros require-macros :require-macros imports :import :as params}
-        (reduce (fn [m [k & libs]]
-                  (when-not (#{:use :use-macros :require :require-macros :import} k)
-                    (throw (error env "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")))
-                  (when-not (@valid-forms k)
-                    (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
-                  (swap! valid-forms disj k)
-                  (apply merge-with merge m (map (spec-parsers k) libs)))
-                {} (remove (fn [[r]] (= r :refer-clojure)) args))]
+        (reduce
+          (fn [m [k & libs]]
+            (when-not (#{:use :use-macros :require :require-macros :import} k)
+              (throw (error env "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")))
+            (when-not (@valid-forms k)
+              (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
+            (swap! valid-forms disj k)
+            (when (#{:use :require} k)
+              (when (some #{:reload} libs)
+                (swap! reload assoc k :reload))
+              (when (some #{:reload-all} libs)
+                (swap! reload assoc k :reload-all)))
+            (apply merge-with merge m
+              (map (spec-parsers k)
+                (remove #{:reload :reload-all} libs))))
+          {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (and *analyze-deps* (seq @deps))
       (analyze-deps name @deps env opts))
     (when (and *analyze-deps* (seq uses))
@@ -1290,7 +1299,14 @@
                 ns-info))
             ns-info)]
       (swap! env/*compiler* assoc-in [::namespaces name] ns-info)
-      (merge {:env env :op :ns :form form} ns-info))))
+      (merge {:env env :op :ns :form form}
+        (cond-> ns-info
+          (@reload :use)
+          (update-in [:uses]
+            (fn [m] (with-meta m {(@reload :use) true})))
+          (@reload :require)
+          (update-in [:requires]
+            (fn [m] (with-meta m {(@reload :require) true}))))))))
 
 (defn parse-type
   [op env [_ tsym fields pmasks body :as form]]
