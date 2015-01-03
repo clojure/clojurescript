@@ -1,3 +1,8 @@
+## 0.0-2657
+
+### Changes
+* Add require-macros REPL special fn
+
 ## 0.0-2655
 
 ### Changes
