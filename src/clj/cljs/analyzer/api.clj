@@ -16,7 +16,10 @@
    clojure.core/resolve"
   [env sym]
   {:pre [(map? env) (symbol? sym)]}
-  (ana/resolve-var env sym))
+  (try
+    (ana/resolve-var env sym
+      (ana/confirm-var-exists-throw))
+    (catch Exception e)))
 
 (defn all-ns
   "Return all the namespace analysis maps. Analagous to clojure.core/all-ns but
