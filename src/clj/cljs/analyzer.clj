@@ -311,18 +311,29 @@
 (defn implicit-import? [env prefix suffix]
   (contains? '#{goog goog.object goog.string goog.array Math} prefix))
 
-(defn confirm-var-exists [env prefix suffix]
-  (let [sufstr (str suffix)
-        suffix (symbol
-                 (if (re-find #"\." sufstr)
-                   (first (string/split sufstr #"\."))
-                   suffix))]
-    (when (and (not (implicit-import? env prefix suffix))
-               (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
-                         (or (get (:requires (:ns env)) prefix)
-                             (get (:imports (:ns env)) prefix))))
-               (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
-      (warning :undeclared-var env {:prefix prefix :suffix suffix}))))
+(defn confirm-var-exists
+  ([env prefix suffix]
+    (confirm-var-exists env prefix suffix
+      (fn [env prefix suffix]
+        (warning :undeclared-var env {:prefix prefix :suffix suffix}))))
+  ([env prefix suffix missing-fn]
+    (let [sufstr (str suffix)
+          suffix (symbol
+                   (if (re-find #"\." sufstr)
+                     (first (string/split sufstr #"\."))
+                     suffix))]
+      (when (and (not (implicit-import? env prefix suffix))
+              (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
+                     (or (get (:requires (:ns env)) prefix)
+                       (get (:imports (:ns env)) prefix))))
+              (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
+        (missing-fn env prefix suffix)))))
+
+(defn confirm-var-exists-throw []
+  (fn [env prefix suffix]
+    (confirm-var-exists env prefix suffix
+      (fn [env prefix suffix]
+        (throw (error env (str "Unable to resolve var: " suffix " in this context")))))))
 
 (defn resolve-ns-alias [env name]
   (let [sym (symbol name)]
@@ -534,7 +545,7 @@
 
 (defmethod parse 'var
   [op env [_ sym :as form] _ _]
-  (let [var (resolve-var env sym)]
+  (let [var (resolve-var env sym (confirm-var-exists-throw))]
     {:env env :op :var-special :form form
      :var (analyze env sym)
      :sym (analyze env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
