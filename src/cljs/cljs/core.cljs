@@ -17,7 +17,7 @@
 
 (def *unchecked-if* false)
 
-(def
+(defonce
   ^{:doc "Each runtime environment provides a different way to print output.
   Whatever function *print-fn* is bound to will be passed any
   Strings which should be printed." :dynamic true}
