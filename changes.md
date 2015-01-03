@@ -1,3 +1,17 @@
+## 0.0-2655
+
+### Changes
+* add defonced cljs.core/*loaded-libs* dynamic var
+* cljs.core/*print-fn* is now defonced
+* throw on (var foo) when foo is not defined
+* cljs.analyzer.api/resolve matches cljs.core/resolve if
+  var doesn't exist return nil
+
+### Fixes
+* require needs to respect Clojure semantics, do not
+  reload unless requested
+* add ns/require support for :reload & :reload-all
+
 ## 0.0-2644
 
 ### Fixes
