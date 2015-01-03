@@ -1280,7 +1280,7 @@
     (when (and *analyze-deps* (seq uses))
       (check-uses uses env))
     (set! *cljs-ns* name)
-    (when (and *analyze-deps* *load-macros*)
+    (when *load-macros*
       (load-core)
       (doseq [nsym (concat (vals require-macros) (vals use-macros))]
         (clojure.core/require nsym))
@@ -1747,6 +1747,10 @@ argument, which the reader will use in any emitted errors."
         (forms-seq*)))))
 
 (defn parse-ns
+  "Helper for parsing only the ns information from a ClojureScript source
+   file. By default does not load macros or perform any analysis of
+   dependencies. If provided :analyze-deps and :load-macros these will
+   be used for *analyze-deps* and *load-macros* bindings respectively."
   ([src] (parse-ns src nil nil))
   ([src opts] (parse-ns src nil opts))
   ([src dest opts]
@@ -1754,7 +1758,14 @@ argument, which the reader will use in any emitted errors."
       (let [namespaces' (::namespaces @env/*compiler*)
             ret
             (binding [*cljs-ns* 'cljs.user
-                      *analyze-deps* (or (:analyze-deps opts) false)]
+                      *analyze-deps*
+                      (or (when (contains? opts :analyze-deps)
+                            (:analyze-deps opts))
+                          false)
+                      *load-macros*
+                      (or (when (contains? opts :load-macros)
+                            (:load-macros opts))
+                          false)]
               (loop [[forms rdr] (forms-seq src (source-path src) true)]
                 (if (seq forms)
                   (let [env (empty-env)
@@ -1859,7 +1870,12 @@ argument, which the reader will use in any emitted errors."
                    (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
                ;; we want want to keep dependency analysis information
                ;; don't revert the environment - David
-               (let [{:keys [ns]} (parse-ns res (merge opts {:restore false :analyze-deps true}))]
+               (let [{:keys [ns]}
+                     (parse-ns res
+                       (merge opts
+                         {:restore false
+                          :analyze-deps true
+                          :load-macros true}))]
                  (when (or *verbose* (:verbose opts))
                    (util/debug-prn "Reading analysis cache for " res))
                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)
