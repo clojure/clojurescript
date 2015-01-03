@@ -287,14 +287,3 @@
 
     (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble {:foo baz}))))
            {:foo 'baz}))))
-
-(deftest test-namespace-specs
-  (a/no-warn
-    (ana-api/in-cljs-user test-cenv
-      (a/analyze test-env
-        '(ns foo.bar
-           (:refer-clojure :exclude [==])
-           (:require [clojure.string :as string])))
-      (is (= (ana-api/ns-specs 'foo.bar)
-            '((:refer-clojure :exclude [==])
-              (:require [clojure.string :as string])))))))

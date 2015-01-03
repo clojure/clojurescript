@@ -45,13 +45,6 @@
   {:pre [(symbol? ns) (symbol? sym)]}
   (get-in @env/*compiler* [::ana/namespaces ns :defs sym]))
 
-(defn ns-specs
-  "Given a namespace return all the original specs for a namspace as originally
-  provided in the source."
-  [ns]
-  {:pre [(symbol? ns)]}
-  (get-in @env/*compiler* [::ana/namespaces ns :specs]))
-
 (defmacro in-cljs-user
   "Binds cljs.analyzer/*cljs-ns* to 'cljs.user and uses the given compilation
   environment atom and runs body."

@@ -1232,6 +1232,7 @@
   (let [docstring (if (string? (first args)) (first args))
         args      (if docstring (next args) args)
         metadata  (if (map? (first args)) (first args))
+        form-meta (meta form)
         args      (desugar-ns-specs (if metadata (next args) args))
         name      (vary-meta name merge metadata)
         excludes  (parse-ns-excludes env args)
@@ -1265,18 +1266,31 @@
         (clojure.core/require nsym))
       (when (seq use-macros)
         (check-use-macros use-macros env)))
-    (swap! env/*compiler* update-in [::namespaces name] assoc
-      :specs args
-      :name name
-      :doc docstring
-      :excludes excludes
-      :uses uses
-      :requires requires
-      :use-macros use-macros
-      :require-macros require-macros
-      :imports imports)
-    {:env env :op :ns :form form :name name :doc docstring :uses uses :requires requires :imports imports
-     :use-macros use-macros :require-macros require-macros :excludes excludes}))
+    (let [ns-info
+          {:name name
+           :doc docstring
+           :excludes excludes
+           :use-macros use-macros
+           :require-macros require-macros
+           :uses uses
+           :requires requires
+           :imports imports}
+          ns-info
+          (if (:merge form-meta)
+            ;; for merging information in via require usage in REPLs
+            (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
+              (if (pos? (count ns-info'))
+                (let [merge-keys
+                      [:use-macros :require-macros :uses :requires :imports]]
+                  (merge
+                    ns-info'
+                    (merge-with merge
+                      (select-keys ns-info' merge-keys)
+                      (select-keys ns-info merge-keys))))
+                ns-info))
+            ns-info)]
+      (swap! env/*compiler* assoc-in [::namespaces name] ns-info)
+      (merge {:env env :op :ns :form form} ns-info))))
 
 (defn parse-type
   [op env [_ tsym fields pmasks body :as form]]

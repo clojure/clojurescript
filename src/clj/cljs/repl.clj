@@ -187,59 +187,6 @@
       form
       (wrap-fn form))))
 
-(def spec-sort
-  {:as 0
-   :refer 1
-   :refer-macros 2
-   :include-macros 3})
-
-(defn merge-spec [[lib & {:as aindex}] [_ & {:as bindex}]]
-  (let [merged-map
-        (merge-with
-          (fn [x y]
-            (if (vector? x)
-              (vec (distinct (into x y)))
-              y))
-          aindex bindex)]
-    (apply vector lib
-      (apply concat
-        (sort
-          (fn [[sa] [sb]]
-            (compare (spec-sort sa) (spec-sort sb)))
-          merged-map)))))
-
-(defn merge-require [requires [lib :as spec]]
-  (let [[before [match & after]]
-        (split-with
-          (fn [[lib' & _]]
-            (not= lib lib'))
-          requires)]
-    (if (nil? match)
-      ;; no match, append to end
-      (concat requires [spec])
-      (if (= match spec)
-        ;; dupe
-        requires
-        ;; merge
-        (concat before [(merge-spec match spec)] after)))))
-
-(defn update-require-spec
-  "Given the specification portion of a ns form and require spec additions
-  return an updated specification."
-  [specs & additions]
-  (let [[before [requires & other-specs]]
-        (split-with
-          (fn [[x _]] (not= :require x))
-          specs)
-        requires'
-        `(:require
-           ~@(reduce
-               (fn [requires spec]
-                 (merge-require requires spec))
-               (rest requires)
-               additions))]
-    (concat before [requires'] other-specs)))
-
 (def default-special-fns
   (let [load-file-fn
         (fn self
@@ -262,18 +209,12 @@
        ([repl-env env form]
          (self repl-env env form nil))
        ([repl-env env [_ & specs :as form] opts]
-         (let [new-specs
-               (reduce
-                 (fn [requires [quote spec]]
-                   (update-require-spec requires
-                     (if (symbol? spec) [spec] spec)))
-                 (ana-api/ns-specs ana/*cljs-ns*) specs)]
-           (evaluate-form repl-env env "<cljs repl>"
-             (with-meta
-               `(~'ns ~ana/*cljs-ns*
-                  ~@new-specs)
-               {:line 1 :column 1})
-             identity opts))))
+         (evaluate-form repl-env env "<cljs repl>"
+           (with-meta
+             `(~'ns ~ana/*cljs-ns*
+                (:require ~@(map (fn [[quote spec]] spec) specs)))
+             {:merge true :line 1 :column 1})
+           identity opts)))
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
