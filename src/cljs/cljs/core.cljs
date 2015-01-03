@@ -37,6 +37,8 @@
 (def ^:dynamic *print-length* nil)
 (def ^:dynamic *print-level* nil)
 
+(def ^:dynamic *loaded-libs* nil)
+
 (defn- pr-opts []
   {:flush-on-newline *flush-on-newline*
    :readably *print-readably*
