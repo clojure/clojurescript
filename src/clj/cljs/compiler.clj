@@ -795,8 +795,14 @@
     (emitln "}"))
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
-  (doseq [lib (distinct (concat (vals requires) (vals uses)))]
-    (emitln "goog.require('" (munge lib) "');")))
+  (doseq [lib (distinct (vals requires))]
+    (if (-> requires meta :reload)
+      (emitln "goog.require('" (munge lib) "', true);")
+      (emitln "goog.require('" (munge lib) "');")))
+  (doseq [lib (remove (set (vals requires)) (distinct (vals uses)))]
+    (if (-> uses meta :reload)
+      (emitln "goog.require('" (munge lib) "', true);")
+      (emitln "goog.require('" (munge lib) "');"))))
 
 (defmethod emit* :deftype*
   [{:keys [t fields pmasks body]}]

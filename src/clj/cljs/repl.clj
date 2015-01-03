@@ -212,7 +212,13 @@
          (evaluate-form repl-env env "<cljs repl>"
            (with-meta
              `(~'ns ~ana/*cljs-ns*
-                (:require ~@(map (fn [[quote spec]] spec) specs)))
+                (:require
+                  ~@(map
+                      (fn [quoted-spec-or-kw]
+                        (if (keyword? quoted-spec-or-kw)
+                          quoted-spec-or-kw
+                          (second quoted-spec-or-kw)))
+                      specs)))
              {:merge true :line 1 :column 1})
            identity opts)))
      'load-file load-file-fn
