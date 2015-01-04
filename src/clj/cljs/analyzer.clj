@@ -323,10 +323,11 @@
                      (first (string/split sufstr #"\."))
                      suffix))]
       (when (and (not (implicit-import? env prefix suffix))
-              (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
-                     (or (get (:requires (:ns env)) prefix)
-                       (get (:imports (:ns env)) prefix))))
-              (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
+                 (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
+                           (or (get (:requires (:ns env)) prefix)
+                           (get (:imports (:ns env)) prefix))))
+                 (not (and (= prefix 'cljs.core) (= suffix 'unquote)))
+                 (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
         (missing-fn env prefix suffix)))))
 
 (defn confirm-var-exists-throw []
