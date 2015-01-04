@@ -1024,7 +1024,8 @@
           opts      (merge {:optimizations :none} opts)]
       (if (.exists src-file)
         (try
-          (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)]
+          (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)
+                opts (if (= ns 'cljs.core) (assoc opts :static-fns true) opts)]
             (if (requires-compilation? src-file dest-file opts)
               (do (util/mkdirs dest-file)
                 (when (contains? (::ana/namespaces @env/*compiler*) ns)

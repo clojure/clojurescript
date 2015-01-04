@@ -30,13 +30,13 @@
        (str "-" q))
      (when (:interim *clojurescript-version*)
        "-SNAPSHOT"))
-    ""))
+    "0.0-0000"))
 
 (defn ^String compiled-by-version [^File f]
   (with-open [reader (io/reader f)]
     (let [match (->> reader line-seq first
                      (re-matches #".*ClojureScript (\d+\.\d+-\d+).*$"))]
-      (or (and match (second match)) ""))))
+      (or (and match (second match)) "0.0-0000"))))
 
 (defn build-options [^File f]
   (with-open [reader (io/reader f)]
