@@ -12,7 +12,8 @@
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.repl :as repl]
-            [cljs.closure :as closure])
+            [cljs.closure :as closure]
+            [clojure.data.json :as json])
   (:import java.net.Socket
            java.lang.StringBuilder
            [java.io File BufferedReader BufferedWriter]
@@ -51,8 +52,16 @@
   [repl-env js]
   (let [{:keys [in out]} @(:socket repl-env)]
     (write out js)
-    {:status :success
-     :value (read-response in)}))
+    (let [result (json/read-str
+                   (read-response in) :key-fn keyword)]
+      (condp = (:status result)
+        "success"
+        {:status :success
+         :value (:value result)}
+
+        "exception"
+        {:status :exception
+         :value (:value result)}))))
 
 (defn load-javascript
   "Load a Closure JavaScript file into the Node REPL process."

@@ -9,7 +9,10 @@ try {
 }
 
 net.createServer(function (socket) {
-    var buffer = "", ret;
+    var buffer = "",
+        ret    = null,
+        err    = null;
+
     socket.setEncoding("utf8");
 
     socket.on("data", function(data) {
@@ -25,17 +28,32 @@ net.createServer(function (socket) {
                 data = data.replace(/\0/g, "");
                 try {
                     ret = process.binding('evals').NodeScript.runInThisContext.call(
-                           global, data, "repl");
-                } catch (x) {
-                    console.error(x.stack);
+                        global, data, "repl");
+                } catch (e) {
+                    err = e;
                 }
             }
-            // TODO: can we just console.log? - David
-            if(ret !== undefined && ret !== null) {
-                socket.write(ret.toString());        
+
+            if(err) {
+                socket.write(JSON.stringify({
+                    status: "exception",
+                    value: err.stack
+                }));
+            } else if(ret !== undefined && ret !== null) {
+                socket.write(JSON.stringify({
+                    status: "success",
+                    value: ret.toString()
+                }));
             } else {
-                socket.write("nil");
+                socket.write(JSON.stringify({
+                    status: "success",
+                    value: null
+                }));
             }
+
+            ret = null;
+            err = null;
+
             socket.write("\0");
         }
     });
