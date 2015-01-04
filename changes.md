@@ -1,3 +1,13 @@
+## 0.0-2665
+
+### Changes
+* REPL -setup now must take opts
+* CLJS-916: Optimize use of js-arguments in array and variadic
+functions
+* special case `'cljs.core/unquote`
+* CLJS-945: Compile core with :static-fns true by default
+* CLJS-958: Node.js REPL: Upon error, last successfully item printed
+
 ## 0.0-2657
 
 ### Changes
