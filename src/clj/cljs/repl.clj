@@ -25,7 +25,7 @@
 (def ^:dynamic *cljs-verbose* false)
 
 (defprotocol IJavaScriptEnv
-  (-setup [this] [this opts] "initialize the environment")
+  (-setup [this opts] "initialize the environment")
   (-evaluate [this filename line js] "evaluate a javascript string")
   (-load [this provides url] "load code at url into the environment")
   (-tear-down [this] "dispose of the environment"))
@@ -279,9 +279,7 @@
             special-fns (merge default-special-fns special-fns)
             is-special-fn? (set (keys special-fns))
             read-error (Object.)]
-        (if-not (nil? opts)
-          (-setup repl-env opts)
-          (-setup repl-env))
+        (-setup repl-env opts)
         (evaluate-form repl-env env "<cljs repl>"
           (with-meta
             '(ns cljs.user

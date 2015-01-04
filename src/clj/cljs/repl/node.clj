@@ -152,8 +152,6 @@
 
 (defrecord NodeEnv [host port socket proc]
   repl/IJavaScriptEnv
-  (-setup [this]
-    (setup this))
   (-setup [this opts]
     (setup this opts))
   (-evaluate [this filename line js]

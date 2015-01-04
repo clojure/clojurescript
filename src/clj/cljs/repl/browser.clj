@@ -192,13 +192,16 @@
       (browser-eval (slurp url))
       (swap! loaded-libs (partial apply conj) missing))))
 
+(defn setup [repl-env opts]
+  (when (:src repl-env)
+    (repl/analyze-source (:src repl-env)))
+  (comp/with-core-cljs nil
+    (fn [] (server/start repl-env))))
+
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
-  (-setup [this]
-    (when (:src this)
-      (repl/analyze-source (:src this)))
-    (comp/with-core-cljs nil
-      (fn [] (server/start this))))
+  (-setup [this opts]
+    (setup this opts))
   (-evaluate [_ _ _ js] (browser-eval js))
   (-load [this provides url]
     (load-javascript this provides url))

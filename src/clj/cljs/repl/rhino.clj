@@ -107,28 +107,24 @@
     ;; TODO: don't show errors for goog/base.js line number 105
     (catch Throwable ex (println (.getMessage ex)))))
 
-(defn rhino-setup
-  ([repl-env] (rhino-setup repl-env nil))
-  ([repl-env opts]
-    (let [env   (ana/empty-env)
-          scope (:scope repl-env)]
-      (ScriptableObject/putProperty scope "__repl_opts"
-        (Context/javaToJS opts scope))
-      (repl/load-file repl-env "cljs/core.cljs" opts)
+(defn rhino-setup [repl-env opts]
+  (let [env   (ana/empty-env)
+        scope (:scope repl-env)]
+    (ScriptableObject/putProperty scope "__repl_opts"
+      (Context/javaToJS opts scope))
+    (repl/load-file repl-env "cljs/core.cljs" opts)
+    (repl/evaluate-form repl-env env "<cljs repl>"
+      '(ns cljs.user))
+    (ScriptableObject/putProperty scope
+      "out" (Context/javaToJS *out* scope))
+    (binding [ana/*cljs-ns* 'cljs.core]
       (repl/evaluate-form repl-env env "<cljs repl>"
-        '(ns cljs.user))
-      (ScriptableObject/putProperty scope
-        "out" (Context/javaToJS *out* scope))
-      (binding [ana/*cljs-ns* 'cljs.core]
-        (repl/evaluate-form repl-env env "<cljs repl>"
-          '(do
-             (set! (.-isProvided_ js/goog) (fn [_] false))
-             (set! *print-fn* (fn [x] (.write js/out x)))))))))
+        '(do
+           (set! (.-isProvided_ js/goog) (fn [_] false))
+           (set! *print-fn* (fn [x] (.write js/out x))))))))
 
 (defrecord RhinoEnv []
   repl/IJavaScriptEnv
-  (-setup [this]
-    (rhino-setup this))
   (-setup [this opts]
     (rhino-setup this opts))
   (-evaluate [this filename line js]
