@@ -1801,6 +1801,10 @@
       (testing "with locals"
         (is (= [2 3 1] (-find-first t [2 3])))))))
 
+(defprotocol IProtocolWithDocStrings
+  (-method1 [this] "some doc")
+  (-method2 [this] ""))
+
 ;; =============================================================================
 ;; Tickets
 
