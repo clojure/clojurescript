@@ -1750,8 +1750,9 @@ argument, which the reader will use in any emitted errors."
 (defn parse-ns
   "Helper for parsing only the ns information from a ClojureScript source
    file. By default does not load macros or perform any analysis of
-   dependencies. If provided :analyze-deps and :load-macros these will
-   be used for *analyze-deps* and *load-macros* bindings respectively."
+   dependencies. If opts parameter provided :analyze-deps and :load-macros keys
+   their values will be used for *analyze-deps* and *load-macros* bindings
+   respectively."
   ([src] (parse-ns src nil nil))
   ([src opts] (parse-ns src nil opts))
   ([src dest opts]
