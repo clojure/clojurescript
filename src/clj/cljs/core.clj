@@ -1013,7 +1013,7 @@
         prefix (protocol-prefix p)
         methods (if (core/string? (first doc+methods)) (next doc+methods) doc+methods)
         _ (core/doseq [[mname & arities] methods]
-            (when (some #{0} (map count arities))
+            (when (some #{0} (map count (filter vector? arities)))
               (throw (Exception. (core/str "Invalid protocol, " psym " defines method " mname " with arity 0")))))
         expand-sig (fn [fname slot sig]
                      `(~sig

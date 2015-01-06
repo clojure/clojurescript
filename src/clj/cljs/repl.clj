@@ -7,9 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl
+  (:import (java.io PushbackReader))
   (:refer-clojure :exclude [load-file])
-  (:import java.io.File
-           javax.xml.bind.DatatypeConverter)
   (:require [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
@@ -20,9 +19,74 @@
             [cljs.source-map :as sm]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
-            [cljs.util :as util]))
+            [cljs.util :as util])
+  (:import [java.io File PushbackReader]
+           [javax.xml.bind DatatypeConverter]))
 
 (def ^:dynamic *cljs-verbose* false)
+
+;; =============================================================================
+;; Copied over from clojure.main
+
+(defn skip-if-eol
+  "If the next character on stream s is a newline, skips it, otherwise
+  leaves the stream untouched. Returns :line-start, :stream-end, or :body
+  to indicate the relative location of the next character on s. The stream
+  must either be an instance of LineNumberingPushbackReader or duplicate
+  its behavior of both supporting .unread and collapsing all of CR, LF, and
+  CRLF to a single \\newline."
+  [s]
+  (let [c (.read s)]
+    (cond
+      (= c (int \newline)) :line-start
+      (= c -1) :stream-end
+      :else (do (.unread s c) :body))))
+
+(defn skip-whitespace
+  "Skips whitespace characters on stream s. Returns :line-start, :stream-end,
+  or :body to indicate the relative location of the next character on s.
+  Interprets comma as whitespace and semicolon as comment to end of line.
+  Does not interpret #! as comment to end of line because only one
+  character of lookahead is available. The stream must either be an
+  instance of LineNumberingPushbackReader or duplicate its behavior of both
+  supporting .unread and collapsing all of CR, LF, and CRLF to a single
+  \\newline."
+  [s]
+  (loop [c (.read s)]
+    (cond
+      (= c (int \newline)) :line-start
+      (= c -1) :stream-end
+      (= c (int \;)) (do (.readLine s) :line-start)
+      (or (Character/isWhitespace (char c)) (= c (int \,))) (recur (.read s))
+      :else (do (.unread s c) :body))))
+
+(defn repl-read
+  "Default :read hook for repl. Reads from *in* which must either be an
+  instance of LineNumberingPushbackReader or duplicate its behavior of both
+  supporting .unread and collapsing all of CR, LF, and CRLF into a single
+  \\newline. repl-read:
+    - skips whitespace, then
+      - returns request-prompt on start of line, or
+      - returns request-exit on end of stream, or
+      - reads an object from the input stream, then
+        - skips the next input character if it's end of line, then
+        - returns the object."
+  [request-prompt request-exit]
+  (or ({:line-start request-prompt :stream-end request-exit}
+        (skip-whitespace *in*))
+    (let [input (read)]
+      (skip-if-eol *in*)
+      input)))
+
+(defmacro with-read-known
+  "Evaluates body with *read-eval* set to a \"known\" value,
+   i.e. substituting true for :unknown if necessary."
+  [& body]
+  `(binding [*read-eval* (if (= :unknown *read-eval*) true *read-eval*)]
+     ~@body))
+
+;; =============================================================================
+;; CLJS Specifics
 
 (defprotocol IJavaScriptEnv
   (-setup [this opts] "initialize the environment")
@@ -278,6 +342,8 @@
       (let [env {:context :expr :locals {}}
             special-fns (merge default-special-fns special-fns)
             is-special-fn? (set (keys special-fns))
+            request-prompt (Object.)
+            request-exit (Object.)
             read-error (Object.)]
         (-setup repl-env opts)
         (evaluate-form repl-env env "<cljs repl>"
