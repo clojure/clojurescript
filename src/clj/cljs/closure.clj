@@ -848,7 +848,7 @@ should contain the source for the given namespace name."
   (let [disk-sources (map #(source-on-disk opts %) sources)]
     (let [goog-deps (io/file (util/output-directory opts) "goog/deps.js")]
       (do (util/mkdirs goog-deps)
-          (spit goog-deps (deps-file opts (filter #(= (:group %) :goog) disk-sources)))
+          (spit goog-deps (slurp (io/resource "goog/deps.js")))
           (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
 
 (comment
