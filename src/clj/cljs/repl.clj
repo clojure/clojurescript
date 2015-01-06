@@ -7,7 +7,6 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl
-  (:import (java.io PushbackReader))
   (:refer-clojure :exclude [load-file])
   (:require [clojure.java.io :as io]
             [cljs.compiler :as comp]
