@@ -2563,6 +2563,25 @@
       (is (== @a0 10))
       (is (== @a1 20)))))
 
+(deftest test-962-empty-literal-hashes
+  (testing "CLJS-962: empty literals should produce collections with correct hash codes"
+    (let [l ()
+          v []
+          s #{}
+          m {}]
+      (is (== (hash l) (hash v) (hash-ordered-coll ())))
+      (is (== (hash s) (hash m) (hash-unordered-coll #{})))))
+  (testing "CLJS-962: EMPTY collections should have correct hash codes"
+    (let [l   (.-EMPTY List)
+          pv  (.-EMPTY PersistentVector)
+          phs (.-EMPTY PersistentHashSet)
+          pts (.-EMPTY PersistentTreeSet)
+          pam (.-EMPTY PersistentArrayMap)
+          phm (.-EMPTY PersistentHashMap)
+          ptm (.-EMPTY PersistentTreeMap)]
+      (is (== (hash l) (hash pv) (hash-ordered-coll ())))
+      (is (apply == (hash-unordered-coll #{}) (map hash [phs pts pam phm ptm]))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
