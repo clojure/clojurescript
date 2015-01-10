@@ -2599,6 +2599,15 @@
       (is (== (hash l) (hash pv) (hash-ordered-coll ())))
       (is (apply == (hash-unordered-coll #{}) (map hash [phs pts pam phm ptm]))))))
 
+(deftest test-map-new-transducers
+  (testing "Test distinct, interpose, map-indexed transducers"
+    (is (= [1 2 3]
+           (transduce (distinct) conj [] [1 1 2 2 3 3])))
+    (is (= [1 :foo 2 :foo 3]
+           (transduce (interpose :foo) conj [] [1 2 3])))
+    (is (= [[0 1] [1 2] [2 3]]
+           (transduce (map-indexed (fn [i x] [i x])) conj [] [1 2 3])))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

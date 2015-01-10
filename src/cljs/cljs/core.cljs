@@ -3370,24 +3370,34 @@ reduces them without incurring seq initialization"
      ([a b c] (f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c)))
      ([a b c & ds] (apply f (if (nil? a) x a) (if (nil? b) y b) (if (nil? c) z c) ds)))))
 
+(declare volatile!)
+
 (defn map-indexed
   "Returns a lazy sequence consisting of the result of applying f to 0
   and the first item of coll, followed by applying f to 1 and the second
   item in coll, etc, until coll is exhausted. Thus function f should
   accept 2 arguments, index and item."
-  [f coll]
-  (letfn [(mapi [idx coll]
-            (lazy-seq
-             (when-let [s (seq coll)]
-               (if (chunked-seq? s)
-                 (let [c (chunk-first s)
-                       size (count c)
-                       b (chunk-buffer size)]
-                   (dotimes [i size]
-                     (chunk-append b (f (+ idx i) (-nth c i))))
-                   (chunk-cons (chunk b) (mapi (+ idx size) (chunk-rest s))))
-                 (cons (f idx (first s)) (mapi (inc idx) (rest s)))))))]
-    (mapi 0 coll)))
+  ([f]
+    (fn [rf]
+      (let [i (volatile! -1)]
+        (fn
+          ([] (rf))
+          ([result] (rf result))
+          ([result input]
+            (rf result (f (vswap! i inc) input)))))))
+  ([f coll]
+    (letfn [(mapi [idx coll]
+              (lazy-seq
+                (when-let [s (seq coll)]
+                  (if (chunked-seq? s)
+                    (let [c (chunk-first s)
+                          size (count c)
+                          b (chunk-buffer size)]
+                      (dotimes [i size]
+                        (chunk-append b (f (+ idx i) (-nth c i))))
+                      (chunk-cons (chunk b) (mapi (+ idx size) (chunk-rest s))))
+                    (cons (f idx (first s)) (mapi (inc idx) (rest s)))))))]
+      (mapi 0 coll))))
 
 (defn keep
   "Returns a lazy sequence of the non-nil results of (f item). Note,
@@ -3850,7 +3860,22 @@ reduces them without incurring seq initialization"
 
 (defn interpose
   "Returns a lazy seq of the elements of coll separated by sep"
-  [sep coll] (drop 1 (interleave (repeat sep) coll)))
+  ([sep]
+    (fn [rf]
+      (let [started (volatile! false)]
+        (fn
+          ([] (rf))
+          ([result] (rf result))
+          ([result input]
+            (if @started
+              (let [sepr (rf result sep)]
+                (if (reduced? sepr)
+                  sepr
+                  (rf sepr input)))
+              (do
+                (vreset! started true)
+                (rf result input))))))))
+  ([sep coll] (drop 1 (interleave (repeat sep) coll))))
 
 
 
@@ -7543,16 +7568,27 @@ reduces them without incurring seq initialization"
 
 (defn distinct
   "Returns a lazy sequence of the elements of coll with duplicates removed"
-  [coll]
-  (let [step (fn step [xs seen]
-               (lazy-seq
-                ((fn [[f :as xs] seen]
-                   (when-let [s (seq xs)]
-                     (if (contains? seen f)
-                       (recur (rest s) seen)
-                       (cons f (step (rest s) (conj seen f))))))
-                 xs seen)))]
-    (step coll #{})))
+  ([]
+    (fn [rf]
+      (let [seen (volatile! #{})]
+        (fn
+          ([] (rf))
+          ([result] (rf result))
+          ([result input]
+            (if (contains? @seen input)
+              result
+              (do (vswap! seen conj input)
+                  (rf result input))))))))
+  ([coll]
+    (let [step (fn step [xs seen]
+                 (lazy-seq
+                   ((fn [[f :as xs] seen]
+                      (when-let [s (seq xs)]
+                        (if (contains? seen f)
+                          (recur (rest s) seen)
+                          (cons f (step (rest s) (conj seen f))))))
+                     xs seen)))]
+      (step coll #{}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn butlast [s]
