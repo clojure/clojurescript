@@ -273,57 +273,57 @@
           ([repl-env env [_ file :as form] opts]
             (load-file repl-env file opts)))]
     {'in-ns
-                             (fn self
-                               ([repl-env env form]
-                                 (self repl-env env form nil))
-                               ([repl-env env [_ [quote ns-name] :as form] _]
-                                 (when-not (ana/get-namespace ns-name)
-                                   (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
-                                   (-evaluate repl-env "<cljs repl>" 1
-                                     (str "goog.provide('" (comp/munge ns-name) "');")))
-                                 (set! ana/*cljs-ns* ns-name)))
+     (fn self
+       ([repl-env env form]
+         (self repl-env env form nil))
+       ([repl-env env [_ [quote ns-name] :as form] _]
+         (when-not (ana/get-namespace ns-name)
+           (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
+           (-evaluate repl-env "<cljs repl>" 1
+             (str "goog.provide('" (comp/munge ns-name) "');")))
+         (set! ana/*cljs-ns* ns-name)))
      'require
-                             (fn self
-                               ([repl-env env form]
-                                 (self repl-env env form nil))
-                               ([repl-env env [_ & specs :as form] opts]
-                                 (evaluate-form repl-env env "<cljs repl>"
-                                   (with-meta
-                                     `(~'ns ~ana/*cljs-ns*
-                                        (:require
-                                          ~@(map
-                                              (fn [quoted-spec-or-kw]
-                                                (if (keyword? quoted-spec-or-kw)
-                                                  quoted-spec-or-kw
-                                                  (second quoted-spec-or-kw)))
-                                              specs)))
-                                     {:merge true :line 1 :column 1})
-                                   identity opts)))
+     (fn self
+       ([repl-env env form]
+         (self repl-env env form nil))
+       ([repl-env env [_ & specs :as form] opts]
+         (evaluate-form repl-env env "<cljs repl>"
+           (with-meta
+             `(~'ns ~ana/*cljs-ns*
+                (:require
+                  ~@(map
+                      (fn [quoted-spec-or-kw]
+                        (if (keyword? quoted-spec-or-kw)
+                          quoted-spec-or-kw
+                          (second quoted-spec-or-kw)))
+                      specs)))
+             {:merge true :line 1 :column 1})
+           identity opts)))
      'require-macros
-                             (fn self
-                               ([repl-env env form]
-                                 (self repl-env env form nil))
-                               ([repl-env env [_ & specs :as form] opts]
-                                 (evaluate-form repl-env env "<cljs repl>"
-                                   (with-meta
-                                     `(~'ns ~ana/*cljs-ns*
-                                        (:require-macros
-                                          ~@(map
-                                              (fn [quoted-spec-or-kw]
-                                                (if (keyword? quoted-spec-or-kw)
-                                                  quoted-spec-or-kw
-                                                  (second quoted-spec-or-kw)))
-                                              specs)))
-                                     {:merge true :line 1 :column 1})
-                                   identity opts)))
-     'load-file              load-file-fn
+     (fn self
+       ([repl-env env form]
+         (self repl-env env form nil))
+       ([repl-env env [_ & specs :as form] opts]
+         (evaluate-form repl-env env "<cljs repl>"
+           (with-meta
+             `(~'ns ~ana/*cljs-ns*
+                (:require-macros
+                  ~@(map
+                      (fn [quoted-spec-or-kw]
+                        (if (keyword? quoted-spec-or-kw)
+                          quoted-spec-or-kw
+                          (second quoted-spec-or-kw)))
+                      specs)))
+             {:merge true :line 1 :column 1})
+           identity opts)))
+     'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
-                             (fn self
-                               ([repl-env env form]
-                                 (self env repl-env form nil))
-                               ([repl-env env [_ ns :as form] opts]
-                                 (load-namespace repl-env ns opts)))}))
+     (fn self
+       ([repl-env env form]
+         (self env repl-env form nil))
+       ([repl-env env [_ ns :as form] opts]
+         (load-namespace repl-env ns opts)))}))
 
 (defn analyze-source
   "Given a source directory, analyzes all .cljs files. Used to populate
