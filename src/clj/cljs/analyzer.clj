@@ -1258,7 +1258,7 @@
                                             (partial use->require env))
                       :import         (partial parse-import-spec env deps)}
         valid-forms (atom #{:use :use-macros :require :require-macros :import})
-        reload (atom {:use nil :require nil})
+        reload (atom {:use nil :require nil :use-macros nil :require-macros nil})
         {uses :use requires :require use-macros :use-macros require-macros :require-macros imports :import :as params}
         (reduce
           (fn [m [k & libs]]
@@ -1267,7 +1267,7 @@
             (when-not (@valid-forms k)
               (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
             (swap! valid-forms disj k)
-            (when (#{:use :require} k)
+            (when-not (= :import k)
               (when (some #{:reload} libs)
                 (swap! reload assoc k :reload))
               (when (some #{:reload-all} libs)
@@ -1283,8 +1283,14 @@
     (set! *cljs-ns* name)
     (when *load-macros*
       (load-core)
-      (doseq [nsym (concat (vals require-macros) (vals use-macros))]
-        (clojure.core/require nsym))
+      (doseq [nsym (vals use-macros)]
+        (if-let [k (:use-macros @reload)]
+          (clojure.core/require nsym k)
+          (clojure.core/require nsym)))
+      (doseq [nsym (vals require-macros)]
+        (if-let [k (:require-macros @reload)]
+          (clojure.core/require nsym k)
+          (clojure.core/require nsym)))
       (when (seq use-macros)
         (check-use-macros use-macros env)))
     (let [ns-info
