@@ -4421,10 +4421,12 @@ reduces them without incurring seq initialization"
 (es6-iterable PersistentVector)
 
 (defn vec [coll]
-  (-persistent!
-   (reduce -conj!
-           (-as-transient (.-EMPTY PersistentVector))
-           coll)))
+  (if (array? coll)
+    (.fromArray PersistentVector coll true)
+    (-persistent!
+      (reduce -conj!
+        (-as-transient (.-EMPTY PersistentVector))
+        coll))))
 
 (defn vector [& args]
   (if (and (instance? IndexedSeq args) (zero? (.-i args)))
