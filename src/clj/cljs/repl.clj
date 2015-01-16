@@ -18,7 +18,8 @@
             [cljs.source-map :as sm]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
-            [cljs.util :as util])
+            [cljs.util :as util]
+            [clojure.stacktrace :as trace])
   (:import [java.io File PushbackReader]
            [javax.xml.bind DatatypeConverter]))
 
@@ -279,6 +280,9 @@
        ([repl-env env form]
          (self repl-env env form nil))
        ([repl-env env [_ [quote ns-name] :as form] _]
+         ;; guard against craziness like '5 which wreaks havoc
+         (when-not (and (= quote 'quote) (symbol? ns-name))
+           (throw (IllegalArgumentException. "Argument to in-ns must be a symbol.")))
          (when-not (ana/get-namespace ns-name)
            (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
            (-evaluate repl-env "<cljs repl>" 1
@@ -393,8 +397,13 @@
 
               (and (seq? form) (is-special-fn? (first form)))
               (do
-                ((get special-fns (first form))
-                  repl-env env form opts)
+                (try
+                  ((get special-fns (first form)) repl-env env form opts)
+                  (catch Throwable ex
+                    (println "Failed to execute special function:" (pr-str (first form)))
+                    (trace/print-cause-trace ex 12)))
+                ;; flush output which could include stack traces
+                (flush)
                 (newline)
                 (recur))
 
