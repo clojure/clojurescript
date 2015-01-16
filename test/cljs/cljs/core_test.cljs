@@ -2608,6 +2608,22 @@
     (is (= [[0 1] [1 2] [2 3]]
            (transduce (map-indexed (fn [i x] [i x])) conj [] [1 2 3])))))
 
+(deftest test-vec
+  (let [v (vec #js [1 2 3 4])]
+    (is (= (count v) 4))
+    (is (= (first v) 1))
+    (is (= (last v) 4))
+    (is (= v [1 2 3 4]))))
+
+(deftest test-phm-from-array
+  (let [m (.fromArray PersistentHashMap #js [1 2 3 4] true)]
+    (is (= (count m) 2))
+    (is (contains? m 1))
+    (is (contains? m 3))
+    (is (= (get m 1) 2))
+    (is (= (get m 3) 4))
+    (is (= m {1 2 3 4}))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
