@@ -6275,6 +6275,16 @@ reduces them without incurring seq initialization"
 
 (set! (.-EMPTY PersistentHashMap) (PersistentHashMap. nil 0 nil false nil empty-unordered-hash))
 
+(set! (.-fromArray PersistentHashMap)
+  (fn [arr ^boolean no-clone]
+    (let [arr (if no-clone arr (aclone arr))
+          len (alength arr)]
+      (loop [i 0 ret (transient (.-EMPTY PersistentHashMap))]
+        (if (< i len)
+          (recur (+ i 2)
+            (-assoc! ret (aget arr i) (aget arr (inc i))))
+          (-persistent! ret))))))
+
 (set! (.-fromArrays PersistentHashMap)
   (fn [ks vs]
     (let [len (alength ks)]
