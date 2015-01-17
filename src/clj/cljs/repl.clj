@@ -148,7 +148,8 @@
        (f)
        (println (:value ret))
        (when-let [st (:stacktrace ret)]
-         (println st)))))
+         (println st)
+         (flush)))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
@@ -209,7 +210,8 @@
               :success (:value ret)))))
       (catch Throwable ex
         (.printStackTrace ex)
-        (println (str ex))))))
+        (println (str ex))
+        (flush)))))
 
 (defn load-stream [repl-env filename res]
   (let [env (ana/empty-env)]
@@ -373,6 +375,8 @@
             {:line 1 :column 1})
           identity opts)
         (loop []
+          ;; try to let things flush before printing prompt
+          (Thread/sleep 10)
           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
           (flush)
           (let [rdr (readers/source-logging-push-back-reader
