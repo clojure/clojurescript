@@ -266,7 +266,6 @@
     (emits "cljs.core.with_meta(" expr "," meta ")")))
 
 (def ^:private array-map-threshold 8)
-(def ^:private obj-map-threshold 8)
 
 (defn distinct-keys? [keys]
   (and (every? #(= (:op %) :constant) keys)
@@ -274,27 +273,26 @@
 
 (defmethod emit* :map
   [{:keys [env keys vals]}]
-  (let [simple-keys? (every? #(or (string? %) (keyword? %)) keys)]
-    (emit-wrap env
-      (cond
-        (zero? (count keys))
-        (emits "cljs.core.PersistentArrayMap.EMPTY")
+  (emit-wrap env
+    (cond
+      (zero? (count keys))
+      (emits "cljs.core.PersistentArrayMap.EMPTY")
 
-        (<= (count keys) array-map-threshold)
-        (if (distinct-keys? keys)
-          (emits "new cljs.core.PersistentArrayMap(null, " (count keys) ", ["
-            (comma-sep (interleave keys vals))
-            "], null)")
-          (emits "new cljs.core.PersistentArrayMap.fromArray(["
-            (comma-sep (interleave keys vals))
-            "], true, false)"))        
+      (<= (count keys) array-map-threshold)
+      (if (distinct-keys? keys)
+        (emits "new cljs.core.PersistentArrayMap(null, " (count keys) ", ["
+          (comma-sep (interleave keys vals))
+          "], null)")
+        (emits "new cljs.core.PersistentArrayMap.fromArray(["
+          (comma-sep (interleave keys vals))
+          "], true, false)"))
 
-        :else
-        (emits "cljs.core.PersistentHashMap.fromArrays(["
-               (comma-sep keys)
-               "],["
-               (comma-sep vals)
-               "])")))))
+      :else
+      (emits "cljs.core.PersistentHashMap.fromArrays(["
+        (comma-sep keys)
+        "],["
+        (comma-sep vals)
+        "])"))))
 
 (defmethod emit* :list
   [{:keys [items env]}]
