@@ -186,9 +186,10 @@
             SourceMap$DetailLevel/ALL)
       (set! (.sourceMapFormat compiler-options)
             SourceMap$Format/V3))
-    (do (.setOptionsForCompilationLevel level compiler-options)
-        (set-options opts compiler-options)
-        compiler-options)))
+    (do
+      (.setOptionsForCompilationLevel level compiler-options)
+      (set-options opts compiler-options)
+      compiler-options)))
 
 (defn load-externs
   "Externs are JavaScript files which contain empty definitions of
@@ -220,8 +221,8 @@
 
 (defn ^com.google.javascript.jscomp.Compiler make-closure-compiler []
   (let [compiler (com.google.javascript.jscomp.Compiler.)]
-    (do (com.google.javascript.jscomp.Compiler/setLoggingLevel Level/WARNING)
-        compiler)))
+    (com.google.javascript.jscomp.Compiler/setLoggingLevel Level/WARNING)
+    compiler))
 
 (defn report-failure [^Result result]
   (let [errors (.errors result)
@@ -328,8 +329,8 @@
              (if-let [js (get-in @env/*compiler* [::compiled-cljs path])]
                js
                (read-js (:file m))))]
-    (do (swap! env/*compiler* update-in [::compiled-cljs] assoc path js)
-        js)))
+    (swap! env/*compiler* update-in [::compiled-cljs] assoc path js)
+    js))
 
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."
@@ -367,11 +368,11 @@
   "Copy a file contained within a jar to disk. Return the created file."
   [url out-dir]
   (let [out-file (io/file out-dir (path-from-jarfile url))
-        content (with-open [reader (io/reader url)]
-                  (slurp reader))]
-    (do (util/mkdirs out-file)
-        (spit out-file content)
-        out-file)))
+        content  (with-open [reader (io/reader url)]
+                   (slurp reader))]
+    (util/mkdirs out-file)
+    (spit out-file content)
+    out-file))
 
 ;; TODO: it would be nice if we could consolidate requires-compilation?
 ;; logic - David
@@ -794,14 +795,14 @@ should contain the source for the given namespace name."
   "Write a JavaScript file to disk. Only write if the file does not
   already exist. Return IJavaScript for the file on disk."
   [opts js]
-  (let [out-dir (io/file (util/output-directory opts))
+  (let [out-dir  (io/file (util/output-directory opts))
         out-name (output-path js)
         out-file (io/file out-dir out-name)]
-    (do (when-not (.exists out-file)
-          (do (util/mkdirs out-file)
-              (spit out-file (deps/-source js))))
-        {:url (deps/to-url out-file) :requires (deps/-requires js)
-         :provides (deps/-provides js) :group (:group js)})))
+    (when-not (.exists out-file)
+      (util/mkdirs out-file)
+      (spit out-file (deps/-source js)))
+    {:url      (deps/to-url out-file) :requires (deps/-requires js)
+     :provides (deps/-provides js) :group (:group js)}))
 
 (defn source-on-disk
   "Ensure that the given JavaScript exists on disk. Write in memory
@@ -845,11 +846,11 @@ should contain the source for the given namespace name."
    The deps file for the current project will include third-party
    libraries."
   [opts & sources]
-  (let [disk-sources (map #(source-on-disk opts %) sources)]
-    (let [goog-deps (io/file (util/output-directory opts) "goog/deps.js")]
-      (do (util/mkdirs goog-deps)
-          (spit goog-deps (slurp (io/resource "goog/deps.js")))
-          (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))))
+  (let [disk-sources (map #(source-on-disk opts %) sources)
+        goog-deps    (io/file (util/output-directory opts) "goog/deps.js")]
+    (util/mkdirs goog-deps)
+    (spit goog-deps (slurp (io/resource "goog/deps.js")))
+    (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))
 
 (comment
   

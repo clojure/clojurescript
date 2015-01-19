@@ -901,10 +901,9 @@
   ([] (with-core-cljs nil))
   ([opts] (with-core-cljs opts (fn [])))
   ([opts body]
-     (do
-       (when-not (get-in @env/*compiler* [::ana/namespaces 'cljs.core :defs])
-         (ana/analyze-file "cljs/core.cljs" opts))
-       (body))))
+    (when-not (get-in @env/*compiler* [::ana/namespaces 'cljs.core :defs])
+      (ana/analyze-file "cljs/core.cljs" opts))
+    (body)))
 
 (defn url-path [^File f]
   (.getPath (.toURL (.toURI f))))
@@ -947,10 +946,10 @@
                 (if (seq forms)
                   (let [env (ana/empty-env)
                         ast (ana/analyze env (first forms) nil opts)]
-                    (do (emit ast)
-                        (if (= (:op ast) :ns)
-                          (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
-                          (recur (rest forms) ns-name deps))))
+                    (emit ast)
+                    (if (= (:op ast) :ns)
+                      (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
+                      (recur (rest forms) ns-name deps)))
                   (let [sm-data (when *source-map-data* @*source-map-data*)
                         ret (merge
                               {:ns (or ns-name 'cljs.user)
@@ -1028,7 +1027,8 @@
           (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)
                 opts (if (= ns 'cljs.core) (assoc opts :static-fns true) opts)]
             (if (requires-compilation? src-file dest-file opts)
-              (do (util/mkdirs dest-file)
+              (do
+                (util/mkdirs dest-file)
                 (when (contains? (::ana/namespaces @env/*compiler*) ns)
                   (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                 (compile-file* src-file dest-file opts))
