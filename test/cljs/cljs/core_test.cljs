@@ -2624,6 +2624,19 @@
     (is (= (get m 3) 4))
     (is (= m {1 2 3 4}))))
 
+(defn foo-var [f]
+  (fn [x]
+    (f x)))
+
+(defn foo-set [x]
+  (first x))
+
+(deftest test-cljs-982-var-deref []
+  (let [f (foo-var #'foo-set)]
+    (is (= (f [1 2 3]) 1))
+    (set! foo-set (fn [x] :oops))
+    (is (= (f [1 2 3]) :oops))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

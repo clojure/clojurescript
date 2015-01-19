@@ -254,8 +254,10 @@
 
 (defmethod emit* :var-special
   [{:keys [env var sym meta] :as arg}]
-  (emit-wrap env
-    (emits "new cljs.core.Var(" var "," sym ","  meta ")")))
+  (let [{:keys [name]} (:info var)]
+    (emit-wrap env
+      (emits "new cljs.core.Var(function(){return " (munge name) ";},"
+        sym "," meta ")"))))
 
 (defmethod emit* :meta
   [{:keys [expr meta env]}]
