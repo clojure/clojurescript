@@ -531,25 +531,29 @@ should contain the source for the given namespace name."
   a new sequence of IJavaScript objects which includes the input list
   plus all dependencies in dependency order."
   [opts & inputs]
-  (let [requires (mapcat deps/-requires inputs)
+  (let [requires      (mapcat deps/-requires inputs)
         required-cljs (remove (set inputs) (cljs-dependencies opts requires))
-        required-js (js-dependencies opts (set (concat (mapcat deps/-requires required-cljs) requires)))
-        provided (mapcat deps/-provides (concat inputs required-cljs required-js))
-        unprovided (clojure.set/difference (set requires) (set provided) #{"constants-table"})]
+        required-js   (js-dependencies opts (set (concat (mapcat deps/-requires required-cljs) requires)))
+        provided      (mapcat deps/-provides (concat inputs required-cljs required-js))
+        unprovided    (clojure.set/difference (set requires) (set provided) #{"constants-table"})]
     (when (seq unprovided)
       (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
-    (cons (javascript-file nil (deps/goog-resource "goog/base.js") ["goog"] nil)
-          (deps/dependency-order
-           (concat (map #(-> (javascript-file (:foreign %)
-                                              (or (:url %) (io/resource (:file %)))
-                                              (:provides %)
-                                              (:requires %))
-                             (assoc :group (:group %))) required-js)
-                   [(when (-> @env/*compiler* :opts :emit-constants)
-                      (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
-                        (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
-                   required-cljs
-                   inputs)))))
+    (cons
+      (javascript-file nil (deps/goog-resource "goog/base.js") ["goog"] nil)
+      (deps/dependency-order
+        (concat
+          (map
+            (fn [{:keys [foreign url file provides requires group]}]
+              (let [url (or url (io/resource file))]
+                (assoc
+                  (javascript-file foreign url provides requires)
+                  :group group)))
+            required-js)
+          [(when (-> @env/*compiler* :opts :emit-constants)
+             (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
+               (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
+          required-cljs
+          inputs)))))
 
 (defn preamble-from-paths [paths]
   (when-let [missing (seq (remove io/resource paths))]
