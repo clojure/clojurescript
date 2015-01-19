@@ -68,6 +68,9 @@
 
 (declare message namespaces)
 
+(defn ast? [x]
+  (and (map? x) (contains? x :op)))
+
 (defmulti error-message (fn [warning-type & _] warning-type))
 
 (defmethod error-message :preamble-missing
