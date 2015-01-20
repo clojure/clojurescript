@@ -1,6 +1,7 @@
 process.env.NODE_DISABLE_COLORS = true;
 
 var net  = require("net");
+var vm   = require("vm");
 var PORT = 5001;
 
 try {
@@ -27,8 +28,7 @@ net.createServer(function (socket) {
                 // not sure how \0's are getting through - David
                 data = data.replace(/\0/g, "");
                 try {
-                    ret = process.binding('evals').NodeScript.runInThisContext.call(
-                        global, data, "repl");
+                    ret = vm.Script.runInThisContext.call(global, data, "repl");
                 } catch (e) {
                     err = e;
                 }

@@ -39,9 +39,9 @@
  * @nocompile
  */
 
-
-var fs = require('fs');
-var path = require('path');
+var fs        = require("fs");
+var vm        = require("vm");
+var path      = require("path");
 var CLJS_ROOT = "./";
 
 
@@ -76,8 +76,7 @@ global.CLOSURE_IMPORT_SCRIPT = function(src) {
 
 // Declared here so it can be used to require base.js
 function nodeGlobalRequire(file) {
-  process.binding('evals').NodeScript.runInThisContext.call(
-      global, fs.readFileSync(file), file);
+  vm.Script.runInThisContext.call(global, fs.readFileSync(file), file);
 }
 
 
