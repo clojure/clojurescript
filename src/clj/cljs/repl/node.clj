@@ -151,6 +151,9 @@
       )))
 
 (defrecord NodeEnv [host port socket proc]
+  repl/IReplEnvOptions
+  (-repl-options [this]
+    {:target :nodejs})
   repl/IJavaScriptEnv
   (-setup [this opts]
     (setup this opts))

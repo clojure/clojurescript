@@ -1016,7 +1016,6 @@ should contain the source for the given namespace name."
                             :undeclared-ns :undeclared-ns-form]
                            (repeat warnings))
                          warnings)))
-                   comp/*build-options* opts
                    ana/*verbose* (:verbose opts)]
            (let [compiled (util/measure compiler-stats
                             "Compile basic sources"

@@ -38,9 +38,6 @@
 
 (def ^:dynamic *source-map-data* nil)
 (def ^:dynamic *lexical-renames* {})
-;; NOTE: explicitly threading opts as cljs.analyzer is considerably more
-;; invasive given the current approach to emission - David
-(def ^:dynamic *build-options* nil)
 
 (def cljs-reserved-file-names #{"deps.cljs"})
 

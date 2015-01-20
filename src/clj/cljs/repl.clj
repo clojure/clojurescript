@@ -88,11 +88,19 @@
 ;; =============================================================================
 ;; CLJS Specifics
 
+(defprotocol IReplEnvOptions
+  (-repl-options [this] "Return default REPL options for a REPL Env"))
+
 (defprotocol IJavaScriptEnv
   (-setup [this opts] "initialize the environment")
   (-evaluate [this filename line js] "evaluate a javascript string")
   (-load [this provides url] "load code at url into the environment")
   (-tear-down [this] "dispose of the environment"))
+
+(extend-type
+  Object
+  IReplEnvOptions
+  (-repl-options [_] nil))
 
 (defn- env->opts
   "Returns a hash-map containing all of the entries in [repl-env], translating
@@ -343,78 +351,80 @@
       (ana/analyze-file (str "file://" (.getAbsolutePath file))))))
 
 (defn repl*
-  [repl-env {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
-             :or {warn-on-undeclared true}}]
+  [repl-env opts]
   (print "To quit, type: ")
   (prn :cljs/quit)
-  (env/with-compiler-env
-    (or (::env/compiler repl-env) (env/default-compiler-env opts))
-    (binding [ana/*cljs-ns* 'cljs.user
-              *cljs-verbose* repl-verbose
-              ana/*cljs-warnings* (assoc ana/*cljs-warnings*
-                                    :unprovided warn-on-undeclared
-                                    :undeclared-var warn-on-undeclared
-                                    :undeclared-ns warn-on-undeclared
-                                    :undeclared-ns-form warn-on-undeclared)
-              ana/*cljs-static-fns* static-fns]
-      ;; TODO: the follow should become dead code when the REPL is
-      ;; sufficiently enhanced to understand :cache-analysis - David
-      (when analyze-path
-        (analyze-source analyze-path))
-      (let [env {:context :expr :locals {}}
-            special-fns (merge default-special-fns special-fns)
-            is-special-fn? (set (keys special-fns))
-            request-prompt (Object.)
-            request-exit (Object.)
-            read-error (Object.)]
-        (-setup repl-env opts)
-        (evaluate-form repl-env env "<cljs repl>"
-          (with-meta
-            '(ns cljs.user
-               (:require [cljs.repl :refer-macros [doc]]))
-            {:line 1 :column 1})
-          identity opts)
-        (loop []
-          ;; try to let things flush before printing prompt
-          (Thread/sleep 10)
-          (print (str "ClojureScript:" ana/*cljs-ns* "> "))
-          (flush)
-          (let [rdr (readers/source-logging-push-back-reader
-                      (java.io.PushbackReader. (io/reader *in*))
-                      1
-                      "NO_SOURCE_FILE")
-                form (try
-                       (binding [*ns* (create-ns ana/*cljs-ns*)
-                                 reader/*data-readers* tags/*cljs-data-readers*
-                                 reader/*alias-map*
-                                 (apply merge
-                                   ((juxt :requires :require-macros)
-                                     (ana/get-namespace ana/*cljs-ns*)))]
-                         (reader/read rdr nil read-error))
-                       (catch Exception e
-                         (println (.getMessage e))
-                         read-error))]
-            ;; TODO: need to catch errors here too - David
-            (cond
-              (identical? form read-error) (recur)
-              (= form :cljs/quit) :quit
+  (let [{:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
+         :or   {warn-on-undeclared true}}
+        (merge (-repl-options repl-env) opts)]
+    (env/with-compiler-env
+     (or (::env/compiler repl-env) (env/default-compiler-env opts))
+     (binding [ana/*cljs-ns* 'cljs.user
+               *cljs-verbose* repl-verbose
+               ana/*cljs-warnings* (assoc ana/*cljs-warnings*
+                                     :unprovided warn-on-undeclared
+                                     :undeclared-var warn-on-undeclared
+                                     :undeclared-ns warn-on-undeclared
+                                     :undeclared-ns-form warn-on-undeclared)
+               ana/*cljs-static-fns* static-fns]
+       ;; TODO: the follow should become dead code when the REPL is
+       ;; sufficiently enhanced to understand :cache-analysis - David
+       (when analyze-path
+         (analyze-source analyze-path))
+       (let [env {:context :expr :locals {}}
+             special-fns (merge default-special-fns special-fns)
+             is-special-fn? (set (keys special-fns))
+             request-prompt (Object.)
+             request-exit (Object.)
+             read-error (Object.)]
+         (-setup repl-env opts)
+         (evaluate-form repl-env env "<cljs repl>"
+           (with-meta
+             '(ns cljs.user
+                (:require [cljs.repl :refer-macros [doc]]))
+             {:line 1 :column 1})
+           identity opts)
+         (loop []
+           ;; try to let things flush before printing prompt
+           (Thread/sleep 10)
+           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
+           (flush)
+           (let [rdr (readers/source-logging-push-back-reader
+                       (java.io.PushbackReader. (io/reader *in*))
+                       1
+                       "NO_SOURCE_FILE")
+                 form (try
+                        (binding [*ns* (create-ns ana/*cljs-ns*)
+                                  reader/*data-readers* tags/*cljs-data-readers*
+                                  reader/*alias-map*
+                                  (apply merge
+                                    ((juxt :requires :require-macros)
+                                      (ana/get-namespace ana/*cljs-ns*)))]
+                          (reader/read rdr nil read-error))
+                        (catch Exception e
+                          (println (.getMessage e))
+                          read-error))]
+             ;; TODO: need to catch errors here too - David
+             (cond
+               (identical? form read-error) (recur)
+               (= form :cljs/quit) :quit
 
-              (and (seq? form) (is-special-fn? (first form)))
-              (do
-                (try
-                  ((get special-fns (first form)) repl-env env form opts)
-                  (catch Throwable ex
-                    (println "Failed to execute special function:" (pr-str (first form)))
-                    (trace/print-cause-trace ex 12)))
-                ;; flush output which could include stack traces
-                (flush)
-                (newline)
-                (recur))
+               (and (seq? form) (is-special-fn? (first form)))
+               (do
+                 (try
+                   ((get special-fns (first form)) repl-env env form opts)
+                   (catch Throwable ex
+                     (println "Failed to execute special function:" (pr-str (first form)))
+                     (trace/print-cause-trace ex 12)))
+                 ;; flush output which could include stack traces
+                 (flush)
+                 (newline)
+                 (recur))
 
-              :else
-              (do (eval-and-print repl-env env form)
-                  (recur)))))
-        (-tear-down repl-env)))))
+               :else
+               (do (eval-and-print repl-env env form)
+                   (recur)))))
+         (-tear-down repl-env))))))
 
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
