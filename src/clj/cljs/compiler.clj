@@ -823,11 +823,7 @@
 
 (defmethod emit* :ns
   [{:keys [name requires uses require-macros env]}]
-  (when (= (:optimizations *build-options*) :none)
-    (emitln "if(!goog.isProvided_('" (munge name) "')) {"))
   (emitln "goog.provide('" (munge name) "');")
-  (when (= (:optimizations *build-options*) :none)
-    (emitln "}"))
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
   (load-libs requires)
