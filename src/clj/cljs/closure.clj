@@ -358,7 +358,7 @@
     (map compiled-file
          (comp/compile-root src-dir out-dir opts))))
 
-(defn path-from-jarfile
+(defn ^String path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
   from the root of the jar."
   [^URL url]
@@ -608,13 +608,9 @@ should contain the source for the given namespace name."
   [provides]
   (apply str (map #(str "goog.provide('" % "');\n") provides)))
 
-
 (defmethod js-source-file JavaScriptFile [_ js]
-           (when-let [url (deps/-url js)]
-             (js-source-file (javascript-name url)
-                             (if (deps/-foreign? js)
-                               (str (build-provides (deps/-provides js)) (slurp url))
-                               (io/input-stream url)))))
+  (when-let [url (deps/-url js)]
+    (js-source-file (javascript-name url) (io/input-stream url))))
 
 (defn optimize
   "Use the Closure Compiler to optimize one or more JavaScript files."
@@ -730,14 +726,15 @@ should contain the source for the given namespace name."
 ;; library's base.js and one which calls goog.require to load your
 ;; code. See samples/hello/hello-dev.html for an example.
 
-(defn path-relative-to
-  "Generate a string which is the path to input relative to base."
+(defn ^String path-relative-to
+  "Generate a string which is the path to the input IJavaScript relative
+  to the specified base file."
   [^File base input]
-  (let [base-path (util/path-seq (.getCanonicalPath base))
+  (let [base-path  (util/path-seq (.getCanonicalPath base))
         input-path (util/path-seq (.getCanonicalPath (io/file ^URL (deps/-url input))))
         count-base (count base-path)
-        common (count (take-while true? (map #(= %1 %2) base-path input-path)))
-        prefix (repeat (- count-base common 1) "..")]
+        common     (count (take-while true? (map #(= %1 %2) base-path input-path)))
+        prefix     (repeat (- count-base common 1) "..")]
     (if (= count-base common)
       (last input-path) ;; same file
       (util/to-path (concat prefix (drop common input-path)) "/"))))
@@ -777,14 +774,19 @@ should contain the source for the given namespace name."
 (defn output-deps-file [opts sources]
   (output-one-file opts (deps-file opts sources)))
 
-(defn ^String output-path
-  "Given an IJavaScript which is either in memory or in a jar file,
-  return the output path for this file relative to the working
+(defn ^String rel-output-path
+  "Given an IJavaScript which is either in memory, in a jar file,
+  or is a foreign lib, return the path relative to the output
   directory."
   [js]
-  (if-let [url ^URL (deps/-url js)]
-    (path-from-jarfile url)
-    (if (string? js)
+  (let [url (deps/-url js)]
+    (cond
+      url
+      (if (deps/-foreign? js)
+        (util/get-name url)
+        (path-from-jarfile url))
+
+      (string? js)
       (let [digest (MessageDigest/getInstance "SHA-1")]
         (.reset digest)
         (.update digest (.getBytes ^String js "utf8"))
@@ -793,43 +795,52 @@ should contain the source for the given namespace name."
             (take 7)
             (apply str))
           ".js"))
-      (str (random-string 5) ".js"))))
+
+      :else (str (random-string 5) ".js"))))
 
 (defn write-javascript
-  "Write a JavaScript file to disk. Only write if the file does not
-  already exist. Return IJavaScript for the file on disk."
+  "Write or copy a JavaScript file to output directory. Only write if the file
+  does not already exist. Return IJavaScript for the file on disk at the new
+  location."
   [opts js]
   (let [out-dir  (io/file (util/output-directory opts))
-        out-name (output-path js)
+        out-name (rel-output-path js)
         out-file (io/file out-dir out-name)]
     (when-not (.exists out-file)
       (util/mkdirs out-file)
       (spit out-file (deps/-source js)))
-    {:url      (deps/to-url out-file) :requires (deps/-requires js)
-     :provides (deps/-provides js) :group (:group js)}))
+    {:url      (deps/to-url out-file)
+     :requires (deps/-requires js)
+     :provides (deps/-provides js)
+     :group    (:group js)}))
+
+(defn write-js?
+  "Returns true if IJavaScript instance needs to be written/copied to output
+  directory. True when in memory, in a JAR, or if foreign library."
+  [js]
+  (let [url ^URL (deps/-url js)]
+    (or (not url)
+        (= (.getProtocol url) "jar")
+        (deps/-foreign? js))))
 
 (defn source-on-disk
-  "Ensure that the given JavaScript exists on disk. Write in memory
-  sources and files contained in jars to the working directory. Return
-  updated IJavaScript with the new location."
+  "Ensure that the given IJavaScript exists on disk in the output directory.
+  Return updated IJavaScript with the new location if necessary."
   [opts js]
-  (let [url ^URL (deps/-url js)]
-    (if (or (not url)
-            (= (.getProtocol url) "jar"))
-      (write-javascript opts js)
-      ;; always copy original sources to the output directory
-      ;; when source maps enabled
-      (let [out-file (if-let [ns (and (:source-map opts)
-                                      (first (:provides js)))]
-                       (io/file (io/file (util/output-directory opts))
-                         (util/ns->relpath ns)))
-            source-url (:source-url js)]
-        (when (and out-file source-url
-                   (or (not (.exists ^File out-file))
-                       (> (.lastModified (io/file source-url))
-                          (.lastModified out-file))))
-          (spit out-file (slurp source-url)))
-        js))))
+  (if (write-js? js)
+    (write-javascript opts js)
+    ;; always copy original ClojureScript sources to the output directory
+    ;; when source maps enabled
+    (let [out-file (if-let [ns (and (:source-map opts) (first (:provides js)))]
+                     (io/file (io/file (util/output-directory opts))
+                       (util/ns->relpath ns)))
+          source-url (:source-url js)]
+      (when (and out-file source-url
+                 (or (not (.exists ^File out-file))
+                     (> (.lastModified (io/file source-url))
+                        (.lastModified out-file))))
+        (spit out-file (slurp source-url)))
+      js)))
 
 (comment
   (write-javascript {} "goog.provide('demo');\nalert('hello');\n")
@@ -1048,7 +1059,11 @@ should contain the source for the given namespace name."
                          (->>
                            (util/measure compiler-stats
                              "Optimize sources"
-                             (apply optimize all-opts js-sources))
+                             (apply optimize all-opts
+                               (remove
+                                 #(and (satisfies? deps/IJavaScript %)
+                                       (deps/-foreign? %))
+                                 js-sources)))
                            (add-wrapper all-opts)
                            (add-source-map-link all-opts)
                            (add-header all-opts)

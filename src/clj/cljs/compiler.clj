@@ -812,9 +812,14 @@
         (emitln loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
         (emitln loaded-libs " = cljs.core.set();"))
       (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
-        (if (-> libs meta :reload)
+        (cond
+          (ana/foreign-dep? lib)
+          (emitln "cljs.core.load_file(\"" (munge (name lib)) ".js\");")
+
+          (-> libs meta :reload)
           (emitln "goog.require('" (munge lib) "', true);")
-          (emitln "goog.require('" (munge lib) "');")))
+
+          :else (emitln "goog.require('" (munge lib) "');")))
       (when (-> libs meta :reload-all)
         (emitln loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");")))))
 

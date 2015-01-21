@@ -148,6 +148,10 @@
     s
     (str ty)))
 
+(defn load-file [rule]
+  (when-not js/COMPILED
+    (cljs.core/load-file* rule)))
+
 (if (and (exists? js/Symbol)
          (identical? (goog/typeOf js/Symbol) "function"))
   (def ITER_SYMBOL (.-iterator js/Symbol))

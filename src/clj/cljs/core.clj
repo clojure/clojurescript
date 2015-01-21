@@ -38,7 +38,8 @@
   (:require clojure.walk
             clojure.set
             cljs.compiler
-            [cljs.env :as env]))
+            [cljs.env :as env])
+  (:import [java.io File]))
 
 (alias 'core 'clojure.core)
 (alias 'ana 'cljs.analyzer)
@@ -1689,3 +1690,10 @@
    was swapped in."
   [vol f & args]
   `(-vreset! ~vol (~f (-deref ~vol) ~@args)))
+
+(defmacro load-file* [s]
+  (core/let [{:keys [target output-dir]} (:options @env/*compiler*)]
+    (core/condp = target
+      ;; under Node.js, always relative to JVM working directory
+      :nodejs `(. js/goog (~'nodeGlobalRequire (str ~output-dir ~File/separator ~s)))
+      `(. js/goog (~'importScript_ (. js/goog (~'getPathFromDeps_ ~s)))))))
