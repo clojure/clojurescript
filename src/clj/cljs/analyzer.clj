@@ -1079,6 +1079,13 @@
         (when (and (.exists f) (.isFile f))
           f))))
 
+(defn foreign-dep? [dep]
+  {:pre [(symbol? dep)]}
+  (let [js-index (:js-dependency-index @env/*compiler*)]
+    (if-let [[_ {:keys [foreign]}] (find js-index (name dep))]
+      foreign
+      false)))
+
 (defn analyze-deps
   ([lib deps env] (analyze-deps lib deps env))
   ([lib deps env opts]
