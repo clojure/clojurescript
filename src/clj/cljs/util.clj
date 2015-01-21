@@ -103,6 +103,14 @@
             (url? f) (path f))]
     (last (string/split s #"\."))))
 
+(defn ^String get-name
+  "Given a file or url return the last component of the path."
+  [x]
+  {:pre [(or (file? x) (url? x))]}
+  (if (file? x)
+    (filename x)
+    (last (path-seq (path x)))))
+
 (defn debug-prn
   [& args]
   (.println System/err (apply str args)))
