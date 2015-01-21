@@ -58,9 +58,9 @@ global.goog = {};
  * @return {boolean} True if the script was imported, false otherwise.
  */
 global.CLOSURE_IMPORT_SCRIPT = function(src) {
-  // Sources are always expressed relative to closure's base.js, but
-  // require() is always relative to the current source.
-  if(CLJS_ROOT !== ".") {
+  // if CLJS_ROOT has been rewritten (by REPLs) need to compute require path
+  // so we can delete the old entry from the Node.js require cache
+  if(CLJS_ROOT !== "./") {
     var path = null;
     if(src.substring(0, 3) == "../") {
       path = CLJS_ROOT+src.substring(3);
@@ -69,6 +69,9 @@ global.CLOSURE_IMPORT_SCRIPT = function(src) {
     }
     if(require.cache[path]) delete require.cache[path];
   }
+
+  // Sources are always expressed relative to closure's base.js, but
+  // require() is always relative to the current source.
   require('./../' + src);
   return true;
 };
