@@ -18,8 +18,7 @@
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
             [clojure.edn :as edn])
-  (:import java.lang.StringBuilder
-           [java.io File Reader PushbackReader]
+  (:import [java.io File Reader PushbackReader]
            [java.net URL]
            [cljs.tagged_literals JSValue]))
 

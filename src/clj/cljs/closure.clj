@@ -47,9 +47,7 @@
            java.io.BufferedInputStream
            java.net.URL
            java.util.logging.Level
-           java.util.jar.JarFile
            java.util.List
-           com.google.common.collect.ImmutableList
            com.google.javascript.jscomp.CompilerOptions
            com.google.javascript.jscomp.CompilerOptions$LanguageMode
            com.google.javascript.jscomp.CompilationLevel
@@ -65,10 +63,6 @@
            com.google.javascript.jscomp.AnonymousFunctionNamingPolicy
            java.security.MessageDigest
            javax.xml.bind.DatatypeConverter))
-
-(defmacro ^:private debug-prn
-  [& args]
-  `(.println System/err (str ~@args)))
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
@@ -979,6 +973,10 @@ should contain the source for the given namespace name."
   (assert (not (and output-wrapper (= :whitespace optimizations)))
           ":output-wrapper cannot be combined with :optimizations :whitespace"))
 
+(defn foreign-source? [js]
+  (and (satisfies? deps/IJavaScript js)
+       (deps/-foreign? js)))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
@@ -1060,10 +1058,7 @@ should contain the source for the given namespace name."
                            (util/measure compiler-stats
                              "Optimize sources"
                              (apply optimize all-opts
-                               (remove
-                                 #(and (satisfies? deps/IJavaScript %)
-                                       (deps/-foreign? %))
-                                 js-sources)))
+                               (remove foreign-source? js-sources)))
                            (add-wrapper all-opts)
                            (add-source-map-link all-opts)
                            (add-header all-opts)

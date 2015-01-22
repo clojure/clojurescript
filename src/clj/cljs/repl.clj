@@ -11,7 +11,6 @@
   (:require [clojure.java.io :as io]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
-            [cljs.analyzer.api :as ana-api]
             [cljs.env :as env]
             [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
@@ -20,8 +19,7 @@
             [clojure.tools.reader.reader-types :as readers]
             [cljs.util :as util]
             [clojure.stacktrace :as trace])
-  (:import [java.io File PushbackReader]
-           [javax.xml.bind DatatypeConverter]))
+  (:import [javax.xml.bind DatatypeConverter]))
 
 (def ^:dynamic *cljs-verbose* false)
 

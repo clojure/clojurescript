@@ -16,8 +16,7 @@
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
             [cljs.repl.server :as server])
-  (:import cljs.repl.IJavaScriptEnv
-           [java.util.regex Pattern]))
+  (:import [java.util.regex Pattern]))
 
 (defonce browser-state
   (atom {:return-value-fn nil

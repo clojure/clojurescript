@@ -3,7 +3,6 @@
             [clojure.string :as string]
             [clojure.data.json :as json]
             [clojure.set :as set]
-            [clojure.pprint :as pp]
             [cljs.source-map.base64-vlq :as base64-vlq]))
 
 ;; =============================================================================
