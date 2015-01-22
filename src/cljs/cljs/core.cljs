@@ -9165,18 +9165,18 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (deftype ExceptionInfo [message data cause])
 
-;;; ExceptionInfo is a special case, do not emulate this
-(set! (.-prototype ExceptionInfo) (js/Error.))
-(set! (.. ExceptionInfo -prototype -constructor) ExceptionInfo)
-
 (defn ex-info
   "Alpha - subject to change.
   Create an instance of ExceptionInfo, an Error type that carries a
   map of additional data."
-  ([msg map]
-     (ExceptionInfo. msg map nil))
-  ([msg map cause]
-     (ExceptionInfo. msg map cause)))
+  ([msg data] (ex-info msg data nil))
+  ([msg data cause]
+    ;; this way each new ExceptionInfo instance will inherit
+    ;; stack property from newly created Error
+    (set! (.-prototype ExceptionInfo) (js/Error msg))
+    (set! (.. ExceptionInfo -prototype -name) "ExceptionInfo")
+    (set! (.. ExceptionInfo -prototype -constructor) ExceptionInfo)
+    (ExceptionInfo. msg data cause)))
 
 (defn ex-data
   "Alpha - subject to change.
