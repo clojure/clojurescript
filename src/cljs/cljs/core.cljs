@@ -148,10 +148,12 @@
     s
     (str ty)))
 
+;; INTERNAL - do not use
 (defn load-file [file]
   (when-not js/COMPILED
     (cljs.core/load-file* file)))
 
+;; INTERNAL - do not use
 (defn load-lib [lib]
   (when-not js/COMPILED
     (cljs.core/load-lib* lib)))
