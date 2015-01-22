@@ -1691,9 +1691,14 @@
   [vol f & args]
   `(-vreset! ~vol (~f (-deref ~vol) ~@args)))
 
-(defmacro load-file* [s]
+(defmacro load-file* [f]
   (core/let [{:keys [target output-dir]} (:options @env/*compiler*)]
     (core/condp = target
       ;; under Node.js, always relative to JVM working directory
-      :nodejs `(. js/goog (~'nodeGlobalRequire (str ~output-dir ~File/separator ~s)))
-      `(. js/goog (~'importScript_ (. js/goog (~'getPathFromDeps_ ~s)))))))
+      :nodejs `(. js/goog (~'nodeGlobalRequire (str ~output-dir ~File/separator ~f)))
+      `(. js/goog (~'importScript_ ~f)))))
+
+(defmacro load-lib* [lib]
+  `(. js/goog
+     (~'importScript_
+       (str js/goog.basePath (. js/goog (~'getPathFromDeps_ ~lib))))))

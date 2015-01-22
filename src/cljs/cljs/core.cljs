@@ -148,9 +148,13 @@
     s
     (str ty)))
 
-(defn load-file [rule]
+(defn load-file [file]
   (when-not js/COMPILED
-    (cljs.core/load-file* rule)))
+    (cljs.core/load-file* file)))
+
+(defn load-lib [lib]
+  (when-not js/COMPILED
+    (cljs.core/load-lib* lib)))
 
 (if (and (exists? js/Symbol)
          (identical? (goog/typeOf js/Symbol) "function"))
