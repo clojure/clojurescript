@@ -18,7 +18,8 @@
                                    RhinoException Undefined]))
 
 (def ^String bootjs
-  (str "goog.require = function(rule){"
+  (str "var global = this;"
+       "goog.require = function(rule){"
        "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
        ".invoke(___repl_env, __repl_opts, rule);}"))
 
@@ -75,13 +76,14 @@
        :stacktrace (stacktrace ex)})))
 
 (defn goog-require [repl-env opts rule]
-  (let [path (string/replace (comp/munge rule) \. File/separatorChar)
-        cljsc-path (str (util/output-directory opts)
-                     File/separator (str path ".js"))
-        cljs-path (str path ".cljs")
-        js-path (str "goog/"
-                  (-eval (str "goog.dependencies_.nameToPath['" rule "']")
-                    repl-env "<cljs repl>" 1))]
+  (let [path        (string/replace (comp/munge rule) \. File/separatorChar)
+        output-dir  (util/output-directory opts)
+        cljsc-path  (str output-dir File/separator (str path ".js"))
+        cljs-path   (str path ".cljs")
+        gpath       (-eval (str "goog.dependencies_.nameToPath['" rule "']")
+                      repl-env "<cljs repl>" 1)
+        js-path     (str "goog/" gpath)
+        js-out-path (io/file (str output-dir "/goog/" gpath))]
     (let [compiled (io/file cljsc-path)]
       (if (.exists compiled)
         ;; TODO: only take this path if analysis cache is available
@@ -95,10 +97,15 @@
           (if-let [res (io/resource js-path)]
             (with-open [reader (io/reader res)]
               (-eval reader repl-env js-path 1))
-            (throw
-              (Exception.
-                (str "Cannot find " cljs-path
-                  " or " js-path " in classpath")))))))))
+            (if (.exists js-out-path)
+              (with-open [reader (io/reader js-out-path)]
+                (-eval reader repl-env js-path 1))
+              (throw
+               (Exception.
+                 (str "Cannot find "
+                   cljs-path " or "
+                   js-path " or "
+                   (.getName js-out-path) " in classpath"))))))))))
 
 (defn load-javascript [repl-env ns url]
   (try
