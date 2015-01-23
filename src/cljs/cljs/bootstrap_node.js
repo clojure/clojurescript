@@ -79,7 +79,10 @@ global.CLOSURE_IMPORT_SCRIPT = function(src) {
 
 // Declared here so it can be used to require base.js
 function nodeGlobalRequire(file) {
-  return vm.Script.runInThisContext.call(global, fs.readFileSync(file), file);
+  var _module = global.module;
+  global.module = undefined;
+  vm.Script.runInThisContext.call(global, fs.readFileSync(file), file);
+  global.module = _module;
 }
 
 
