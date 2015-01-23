@@ -659,15 +659,17 @@ should contain the source for the given namespace name."
                             merged)
                           (assoc merged path (get closure-source-map path))))
                       merged)))
-                (spit (io/file name)
-                      (sm/encode merged
-                                 {:preamble-line-count preamble-line-count
-                                  :lines (+ (:lineCount sm-json) preamble-line-count 2)
-                                  :file (:file sm-json)
-                                  :output-dir (util/output-directory opts)
-                                  :source-map-path (:source-map-path opts)
-                                  :source-map (:source-map opts)
-                                  :relpaths relpaths}))))))
+                (spit
+                  (io/file name)
+                  (sm/encode merged
+                    {:preamble-line-count (+ preamble-line-count
+                                             (or (:foreign-deps-line-count opts) 0))
+                     :lines (+ (:lineCount sm-json) preamble-line-count 2)
+                     :file (:file sm-json)
+                     :output-dir (util/output-directory opts)
+                     :source-map-path (:source-map-path opts)
+                     :source-map (:source-map opts)
+                     :relpaths relpaths}))))))
         source)
       (report-failure result))))
 
@@ -894,12 +896,11 @@ should contain the source for the given namespace name."
 (defn add-header [opts js]
   (str (make-preamble opts) js))
 
-(defn add-foreign-deps [opts sources js]
+(defn foreign-deps-str [sources]
   (letfn [(to-js-str [ijs]
-            (util/debug-prn (into {} ijs))
             (let [url (or (:url-min ijs) (:url ijs))]
               (slurp url)))]
-    (apply str (concat (map to-js-str sources) [js]))))
+    (apply str (map to-js-str sources))))
 
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
   (if output-wrapper
@@ -1056,7 +1057,11 @@ should contain the source for the given namespace name."
                                    [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
                  optim (:optimizations all-opts)
                  ret (if (and optim (not= optim :none))
-                       (do
+                       (let [fdeps-str (foreign-deps-str
+                                         (filter foreign-source? js-sources))
+                             all-opts (assoc all-opts
+                                        :foreign-deps-line-count
+                                        (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
                          (when-let [fname (:source-map all-opts)]
                            (assert (string? fname)
                              (str ":source-map must name a file when using :whitespace, "
@@ -1069,8 +1074,7 @@ should contain the source for the given namespace name."
                                (remove foreign-source? js-sources)))
                            (add-wrapper all-opts)
                            (add-source-map-link all-opts)
-                           (add-foreign-deps all-opts
-                             (filter foreign-source? js-sources))
+                           (str fdeps-str)
                            (add-header all-opts)
                            (output-one-file all-opts)))
                        (apply output-unoptimized all-opts js-sources))]
