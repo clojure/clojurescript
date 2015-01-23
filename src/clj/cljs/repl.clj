@@ -19,7 +19,8 @@
             [clojure.tools.reader.reader-types :as readers]
             [cljs.util :as util]
             [clojure.stacktrace :as trace])
-  (:import [javax.xml.bind DatatypeConverter]))
+  (:import [java.io File PushbackReader]
+           [javax.xml.bind DatatypeConverter]))
 
 (def ^:dynamic *cljs-verbose* false)
 
@@ -388,7 +389,7 @@
            (print (str "ClojureScript:" ana/*cljs-ns* "> "))
            (flush)
            (let [rdr (readers/source-logging-push-back-reader
-                       (java.io.PushbackReader. (io/reader *in*))
+                       (PushbackReader. (io/reader *in*))
                        1
                        "NO_SOURCE_FILE")
                  form (try
