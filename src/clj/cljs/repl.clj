@@ -353,9 +353,12 @@
   [repl-env opts]
   (print "To quit, type: ")
   (prn :cljs/quit)
-  (let [{:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
+  (let [ups-deps (cljsc/get-upstream-deps)
+        {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
-        (merge (-repl-options repl-env) opts)]
+        (assoc (merge (-repl-options repl-env) opts)
+          :ups-libs (:libs ups-deps)
+          :ups-foreign-libs (:foreign-libs ups-deps))]
     (env/with-compiler-env
      (or (::env/compiler repl-env) (env/default-compiler-env opts))
      (binding [ana/*cljs-ns* 'cljs.user
