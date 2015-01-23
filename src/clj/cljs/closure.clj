@@ -893,6 +893,12 @@ should contain the source for the given namespace name."
 (defn add-header [opts js]
   (str (make-preamble opts) js))
 
+(defn add-foreign-deps [opts sources js]
+  (letfn [(to-js-str [ijs]
+            (let [url (or (:file-min ijs) (:file ijs))]
+              (slurp url)))]
+    (apply str (map to-js-str sources) [js])))
+
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
   (if output-wrapper
    (str ";(function(){\n" js "\n})();\n")
@@ -1062,6 +1068,8 @@ should contain the source for the given namespace name."
                            (add-wrapper all-opts)
                            (add-source-map-link all-opts)
                            (add-header all-opts)
+                           (add-foreign-deps all-opts
+                             (filter foreign-source? js-sources))
                            (output-one-file all-opts)))
                        (apply output-unoptimized all-opts js-sources))]
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
