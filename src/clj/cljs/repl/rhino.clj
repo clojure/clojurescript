@@ -131,6 +131,9 @@
            (set! *print-fn* (fn [x] (.write js/out x))))))))
 
 (defrecord RhinoEnv []
+  repl/IReplEnvOptions
+  (-repl-options [this]
+    {:require-foreign true})
   repl/IJavaScriptEnv
   (-setup [this opts]
     (rhino-setup this opts))
