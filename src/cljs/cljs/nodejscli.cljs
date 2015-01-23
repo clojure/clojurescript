@@ -13,5 +13,8 @@
   (:require [cljs.nodejs :as nodejs]))
 
 ; Call the user's main function
-(apply cljs.core/*main-cli-fn* (drop 2 (.-argv nodejs/process)))
+(if (or (nil? cljs.core/*main-cli-fn*)
+        (not (fn? cljs.core/*main-cli-fn*)))
+  (throw (js/Error. "cljs.core/*main-cli-fn* not set"))
+  (apply cljs.core/*main-cli-fn* (drop 2 (.-argv nodejs/process))))
 
