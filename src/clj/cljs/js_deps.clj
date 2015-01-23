@@ -185,10 +185,14 @@ case."
   and :provides), returns a map containing :provides, :requires, :file
   and :url"
   ([lib-spec] (load-foreign-library* lib-spec false))
-  ([lib-spec cp-only?] 
+  ([lib-spec cp-only?]
     (let [find-func (if cp-only? io/resource find-url)]
-      (merge lib-spec {:foreign true
-                       :url (find-func (:file lib-spec))}))))
+      (cond->
+        (merge lib-spec
+          {:foreign true
+           :url     (find-func (:file lib-spec))})
+        (:file-min lib-spec)
+        (assoc :url-min (find-func (:file-min lib-spec)))))))
 
 (def load-foreign-library (memoize load-foreign-library*))
 

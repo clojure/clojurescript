@@ -441,7 +441,7 @@
          deps #{}]
     (if (seq requires)
       (let [node (or (get (@env/*compiler* :js-dependency-index) (first requires))
-                   (deps/find-classpath-lib (first requires)))
+                     (deps/find-classpath-lib (first requires)))
             new-req (remove #(contains? visited %) (:requires node))]
         (recur (into (rest requires) new-req)
                (into visited new-req)
@@ -537,11 +537,11 @@ should contain the source for the given namespace name."
       (deps/dependency-order
         (concat
           (map
-            (fn [{:keys [foreign url file provides requires group]}]
+            (fn [{:keys [foreign url file provides requires] :as js-map}]
               (let [url (or url (io/resource file))]
-                (assoc
+                (merge
                   (javascript-file foreign url provides requires)
-                  :group group)))
+                  js-map)))
             required-js)
           [(when (-> @env/*compiler* :opts :emit-constants)
              (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
@@ -803,10 +803,11 @@ should contain the source for the given namespace name."
     (when-not (.exists out-file)
       (util/mkdirs out-file)
       (spit out-file (deps/-source js)))
-    {:url      (deps/to-url out-file)
-     :requires (deps/-requires js)
-     :provides (deps/-provides js)
-     :group    (:group js)}))
+    (merge js
+      {:url     (deps/to-url out-file)
+      :requires (deps/-requires js)
+      :provides (deps/-provides js)
+      :group    (:group js)})))
 
 (defn write-js?
   "Returns true if IJavaScript instance needs to be written/copied to output
@@ -895,9 +896,10 @@ should contain the source for the given namespace name."
 
 (defn add-foreign-deps [opts sources js]
   (letfn [(to-js-str [ijs]
-            (let [url (or (:file-min ijs) (:file ijs))]
+            (util/debug-prn (into {} ijs))
+            (let [url (or (:url-min ijs) (:url ijs))]
               (slurp url)))]
-    (apply str (map to-js-str sources) [js])))
+    (apply str (concat (map to-js-str sources) [js]))))
 
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
   (if output-wrapper
@@ -1067,9 +1069,9 @@ should contain the source for the given namespace name."
                                (remove foreign-source? js-sources)))
                            (add-wrapper all-opts)
                            (add-source-map-link all-opts)
-                           (add-header all-opts)
                            (add-foreign-deps all-opts
                              (filter foreign-source? js-sources))
+                           (add-header all-opts)
                            (output-one-file all-opts)))
                        (apply output-unoptimized all-opts js-sources))]
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
