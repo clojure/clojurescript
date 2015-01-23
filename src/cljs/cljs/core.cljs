@@ -153,11 +153,6 @@
   (when-not js/COMPILED
     (cljs.core/load-file* file)))
 
-;; INTERNAL - do not use
-(defn load-lib [lib]
-  (when-not js/COMPILED
-    (cljs.core/load-lib* lib)))
-
 (if (and (exists? js/Symbol)
          (identical? (goog/typeOf js/Symbol) "function"))
   (def ITER_SYMBOL (.-iterator js/Symbol))
