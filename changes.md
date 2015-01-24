@@ -1,3 +1,21 @@
+## 0.0-2719
+
+### Changes
+* CLJS-985: make ex-info not lose stack information
+* CLJS-984: Update Node.js REPL support to use public API
+* CLJS-963: do not bother computing goog/dep.js under :none
+
+### Fixes
+* CLJS-982: Var derefing should respect Clojure semantics
+* CLJS-980: ClojureScript REPL stacktraces overrun prompt in many cases
+* CLJS-979: ClojureScript REPL needs error handling for the special functions
+* CLJS-971: :reload should work for require-macros special fn
+* CLJS-980: ClojureScript REPL stacktraces overrun prompt in many cases
+* CLJS-979: ClojureScript REPL needs error handling for the special functions
+* CLJS-971: :reload should work for require-macros special fn
+* CLJS-936: Multi arity bitwise operators
+* CLJS-962: fix inconsistent hashing of empty collections
+
 ## 0.0-2665
 
 ### Changes
