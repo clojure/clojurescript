@@ -1,3 +1,11 @@
+## 0.0-2723
+
+### Enhancements
+* CLJS-851: simplify :none script inclusion if :main supplied
+* CLJS-983: make ExceptionInfo printable
+
+### Fixes
+
 ## 0.0-2719
 
 ### Changes
