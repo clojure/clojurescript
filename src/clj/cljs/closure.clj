@@ -770,6 +770,13 @@ should contain the source for the given namespace name."
 (defn output-deps-file [opts sources]
   (output-one-file opts (deps-file opts sources)))
 
+(defn output-main-file [opts]
+  (let [output-dir (util/output-directory opts)]
+    (output-one-file opts
+      (str "document.write('<script src=\"" output-dir "/goog/base.js\"></script>');"
+           "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');"
+           "document.write('<script>goog.require(\"" (comp/munge (:main opts)) "\");</script>');"))))
+
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
   or is a foreign lib, return the path relative to the output
@@ -858,11 +865,21 @@ should contain the source for the given namespace name."
    The deps file for the current project will include third-party
    libraries."
   [opts & sources]
-  (let [disk-sources (map #(source-on-disk opts %) sources)
-        goog-deps    (io/file (util/output-directory opts) "goog/deps.js")]
+  (let [disk-sources (remove #(= (:group %) :goog)
+                       (map #(source-on-disk opts %) sources))
+        goog-deps    (io/file (util/output-directory opts) "goog/deps.js")
+        main         (:main opts)]
     (util/mkdirs goog-deps)
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
-    (output-deps-file opts (remove #(= (:group %) :goog) disk-sources))))
+    (if (and main (not= (:target opts) :nodejs))
+      (do
+        (output-deps-file
+          (assoc opts :output-to
+            (str (util/output-directory opts)
+                 File/separator "cljs_deps.js"))
+          disk-sources)
+        (output-main-file opts))
+      (output-deps-file opts disk-sources))))
 
 (comment
   
