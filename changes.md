@@ -10,9 +10,6 @@
 * CLJS-980: ClojureScript REPL stacktraces overrun prompt in many cases
 * CLJS-979: ClojureScript REPL needs error handling for the special functions
 * CLJS-971: :reload should work for require-macros special fn
-* CLJS-980: ClojureScript REPL stacktraces overrun prompt in many cases
-* CLJS-979: ClojureScript REPL needs error handling for the special functions
-* CLJS-971: :reload should work for require-macros special fn
 * CLJS-936: Multi arity bitwise operators
 * CLJS-962: fix inconsistent hashing of empty collections
 
