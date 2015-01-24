@@ -1,3 +1,8 @@
+## 0.0-2725
+
+### Fixes
+* Fix Node.js support regression
+
 ## 0.0-2723
 
 ### Enhancements
