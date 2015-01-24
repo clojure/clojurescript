@@ -1913,6 +1913,8 @@
                   (catch ExceptionInfo e
                     (ex-data e)))))
   (is (instance? js/Error (ex-info "asdf" {:foo 1})))
+  (is (= (pr-str (ex-info "abc" {:x 1})) "#ExceptionInfo{:message \"abc\", :data {:x 1}}"))
+  (is (= (pr-str (ex-info "abc" {:x 1} "def")) "#ExceptionInfo{:message \"abc\", :data {:x 1}, :cause \"def\"}"))
   (is (not (instance? cljs.core.ExceptionInfo (js/Error.)))))
 
 (deftest test-435

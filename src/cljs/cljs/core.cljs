@@ -9165,6 +9165,17 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (deftype ExceptionInfo [message data cause])
 
+(defn- pr-writer-ex-info [obj writer opts]
+  (-write writer "#ExceptionInfo{:message ")
+  (pr-writer (.-message obj) writer opts)
+  (when (.-data obj)
+    (-write writer ", :data ")
+    (pr-writer (.-data obj) writer opts))
+  (when (.-cause obj)
+    (-write writer ", :cause ")
+    (pr-writer (.-cause obj) writer opts))
+  (-write writer "}"))
+
 (defn ex-info
   "Alpha - subject to change.
   Create an instance of ExceptionInfo, an Error type that carries a
@@ -9176,6 +9187,14 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (set! (.-prototype ExceptionInfo) (js/Error msg))
     (set! (.. ExceptionInfo -prototype -name) "ExceptionInfo")
     (set! (.. ExceptionInfo -prototype -constructor) ExceptionInfo)
+
+    ;; since we've changed the prototype, we need to
+    ;; re-establish protocol implementations here
+    (set! (.. ExceptionInfo -prototype -toString) pr-str*)
+    (extend-type ExceptionInfo
+      IPrintWithWriter
+      (-pr-writer [obj writer opts]
+        (pr-writer-ex-info obj writer opts)))
     (ExceptionInfo. msg data cause)))
 
 (defn ex-data
