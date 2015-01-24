@@ -808,15 +808,17 @@ should contain the source for the given namespace name."
   [opts js]
   (let [out-dir  (io/file (util/output-directory opts))
         out-name (rel-output-path js)
-        out-file (io/file out-dir out-name)]
+        out-file (io/file out-dir out-name)
+        ijs      {:url      (deps/to-url out-file)
+                  :requires (deps/-requires js)
+                  :provides (deps/-provides js)
+                  :group    (:group js)}]
     (when-not (.exists out-file)
       (util/mkdirs out-file)
       (spit out-file (deps/-source js)))
-    (merge js
-      {:url     (deps/to-url out-file)
-      :requires (deps/-requires js)
-      :provides (deps/-provides js)
-      :group    (:group js)})))
+    (if (map? js)
+      (merge js ijs)
+      ijs)))
 
 (defn write-js?
   "Returns true if IJavaScript instance needs to be written/copied to output
