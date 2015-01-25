@@ -916,9 +916,11 @@ should contain the source for the given namespace name."
 (defn add-header [opts js]
   (str (make-preamble opts) js))
 
-(defn foreign-deps-str [sources]
+(defn foreign-deps-str [opts sources]
   (letfn [(to-js-str [ijs]
-            (let [url (or (:url-min ijs) (:url ijs))]
+            (let [url (or (and (= (:optimizations opts) :advanced)
+                               (:url-min ijs))
+                          (:url ijs))]
               (slurp url)))]
     (apply str (map to-js-str sources))))
 
@@ -1077,7 +1079,7 @@ should contain the source for the given namespace name."
                                    [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
                  optim (:optimizations all-opts)
                  ret (if (and optim (not= optim :none))
-                       (let [fdeps-str (foreign-deps-str
+                       (let [fdeps-str (foreign-deps-str opts
                                          (filter foreign-source? js-sources))
                              all-opts (assoc all-opts
                                         :foreign-deps-line-count
