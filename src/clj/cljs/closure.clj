@@ -771,10 +771,11 @@ should contain the source for the given namespace name."
   (output-one-file opts (deps-file opts sources)))
 
 (defn output-main-file [opts]
-  (let [output-dir (util/output-directory opts)]
+  (let [asset-path (or (:asset-path opts)
+                       (util/output-directory opts))]
     (output-one-file opts
-      (str "document.write('<script src=\"" output-dir "/goog/base.js\"></script>');"
-           "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');"
+      (str "document.write('<script src=\"" asset-path "/goog/base.js\"></script>');"
+           "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');"
            "document.write('<script>goog.require(\"" (comp/munge (:main opts)) "\");</script>');"))))
 
 (defn ^String rel-output-path
