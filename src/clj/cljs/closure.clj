@@ -1079,11 +1079,11 @@ should contain the source for the given namespace name."
                                    [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
                  optim (:optimizations all-opts)
                  ret (if (and optim (not= optim :none))
-                       (let [fdeps-str (foreign-deps-str opts
+                       (let [fdeps-str (foreign-deps-str all-opts
                                          (filter foreign-source? js-sources))
-                             all-opts (assoc all-opts
-                                        :foreign-deps-line-count
-                                        (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
+                             all-opts  (assoc all-opts
+                                         :foreign-deps-line-count
+                                         (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
                          (when-let [fname (:source-map all-opts)]
                            (assert (string? fname)
                              (str ":source-map must name a file when using :whitespace, "
