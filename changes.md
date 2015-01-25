@@ -1,3 +1,8 @@
+## 0.0-2727
+
+### Fixes
+* Allow :main script imports to be configured via :asset-path
+
 ## 0.0-2725
 
 ### Fixes
