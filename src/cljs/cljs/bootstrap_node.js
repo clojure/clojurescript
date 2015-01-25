@@ -42,7 +42,7 @@
 var fs        = require("fs");
 var vm        = require("vm");
 var path      = require("path");
-var CLJS_ROOT = "./";
+var CLJS_ROOT = ".";
 
 
 /**
@@ -60,19 +60,19 @@ global.goog = {};
 global.CLOSURE_IMPORT_SCRIPT = function(src) {
   // if CLJS_ROOT has been rewritten (by REPLs) need to compute require path
   // so we can delete the old entry from the Node.js require cache
-  if(CLJS_ROOT !== "./") {
-    var path = null;
-    if(src.substring(0, 3) == "../") {
-      path = CLJS_ROOT+src.substring(3);
+  if(CLJS_ROOT !== ".") {
+    var cached = null;
+    if(src.substring(0, 2) == "..") {
+      cached = path.join(CLJS_ROOT, src.substring(3));
     } else {
-      path = CLJS_ROOT+"goog/"+src;
+      cached = path.join(CLJS_ROOT, "goog", src);
     }
-    if(require.cache[path]) delete require.cache[path];
+    if(require.cache[cached]) delete require.cache[cached];
   }
 
   // Sources are always expressed relative to closure's base.js, but
   // require() is always relative to the current source.
-  require('./../' + src);
+  require(path.join(".", "..", src));
   return true;
 };
 

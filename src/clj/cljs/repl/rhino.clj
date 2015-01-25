@@ -83,7 +83,9 @@
         gpath       (-eval (str "goog.dependencies_.nameToPath['" rule "']")
                       repl-env "<cljs repl>" 1)
         js-path     (str "goog/" gpath)
-        js-out-path (io/file (str output-dir "/goog/" gpath))]
+        js-out-path (io/file
+                      (util/path-join output-dir "goog"
+                        (string/replace gpath \/ File/separatorChar)))]
     (let [compiled (io/file cljsc-path)]
       (if (.exists compiled)
         ;; TODO: only take this path if analysis cache is available

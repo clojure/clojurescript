@@ -1074,7 +1074,7 @@
   (or (io/resource relpath)
       (let [root (:root @env/*compiler*)
             root-path (when root (.getPath ^File root))
-            f (io/file (str root-path \/ relpath))]
+            f (io/file (util/path-join root-path relpath))]
         (when (and (.exists f) (.isFile f))
           f))))
 

@@ -740,7 +740,9 @@ should contain the source for the given namespace name."
   [opts input]
   (letfn [(ns-list [coll] (when (seq coll) (apply str (interpose ", " (map #(str "'" (comp/munge %) "'") coll)))))]
     (str "goog.addDependency(\""
-         (path-relative-to (io/file (util/output-directory opts) "goog/base.js") input)
+         (path-relative-to
+           (io/file (util/output-directory opts)
+             (util/path-join "goog" "base.js")) input)
          "\", ["
          (ns-list (deps/-provides input))
          "], ["
@@ -870,7 +872,8 @@ should contain the source for the given namespace name."
   [opts & sources]
   (let [disk-sources (remove #(= (:group %) :goog)
                        (map #(source-on-disk opts %) sources))
-        goog-deps    (io/file (util/output-directory opts) "goog/deps.js")
+        goog-deps    (io/file (util/output-directory opts)
+                       (util/path-join "goog" "deps.js"))
         main         (:main opts)]
     (util/mkdirs goog-deps)
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
@@ -1103,7 +1106,8 @@ should contain the source for the given namespace name."
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
              (when (and (= (:target opts) :nodejs)
                         (#{:none :whitespace} (:optimizations opts)))
-               (let [outfile (io/file (io/file (util/output-directory opts)) "goog/bootstrap/nodejs.js")]
+               (let [outfile (io/file (io/file (util/output-directory opts))
+                               (util/path-join "goog" "bootstrap" "nodejs.js"))]
                  (util/mkdirs outfile)
                  (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))

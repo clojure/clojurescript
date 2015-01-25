@@ -240,7 +240,7 @@
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1 (cljsc/src-file->goog-require src)))
       (binding [ana/*cljs-ns* 'cljs.user]
-        (let [res (if (= \/ (first f)) f (io/resource f))]
+        (let [res (if (= File/separatorChar (first f)) f (io/resource f))]
           (assert res (str "Can't find " f " in classpath"))
           (load-stream repl-env f res))))))
 
