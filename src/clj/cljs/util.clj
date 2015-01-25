@@ -109,7 +109,7 @@
   {:pre [(or (file? x) (url? x))]}
   (if (file? x)
     (filename x)
-    (last (path-seq (path x)))))
+    (last (string/split (path x) #"\/"))))
 
 (defn debug-prn
   [& args]
