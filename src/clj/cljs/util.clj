@@ -128,5 +128,3 @@
          ret#)
        ~expr)))
 
-(defn path-join [& xs]
-  (apply str (interpose File/separator xs)))
