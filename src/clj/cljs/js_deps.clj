@@ -119,19 +119,25 @@ case."
 
 (defn build-index
   "Index a list of dependencies by namespace and file name. There can
-  be zero or more namespaces provided per file."
+  be zero or more namespaces provided per file. Upstream foreign libraies
+  will have their options merged with local foreign libraries to support
+  fine-grained overriding."
   [deps]
-  (reduce (fn [m next]
-            (let [provides (:provides next)]
-              (-> (if (seq provides)
-                    (reduce (fn [m* provide]
-                              (assoc m* provide next))
-                            m
-                            provides)
-                    m)
-                  (assoc (:file next) next))))
-          {}
-          deps))
+  (reduce
+    (fn [index dep]
+      (let [provides (:provides dep)
+            index'   (if (seq provides)
+                       (reduce
+                         (fn [index' provide]
+                           (if (:foreign dep)
+                             (update-in index' [provide] merge dep)
+                             (assoc index' provide dep)))
+                         index provides)
+                       index)]
+        (if (:foreign dep)
+          (update-in index' [(:file dep)] merge dep)
+          (assoc index' (:file dep) dep))))
+    {} deps))
 
 (defn dependency-order-visit
   [state ns-name]
