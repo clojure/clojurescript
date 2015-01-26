@@ -51,7 +51,8 @@
   "Evaluate a JavaScript string in the Node REPL process."
   [repl-env js]
   (let [{:keys [in out]} @(:socket repl-env)]
-    (write out js)
+    ;; escape backslash for Node.js under Windows
+    (write out (string/replace js "\\" "\\\\"))
     (let [result (json/read-str
                    (read-response in) :key-fn keyword)]
       (condp = (:status result)
