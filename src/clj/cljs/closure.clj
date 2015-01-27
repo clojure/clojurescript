@@ -777,7 +777,8 @@ should contain the source for the given namespace name."
     (output-one-file opts
       (str "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');"
            "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');"
-           "document.write('<script>goog.require(\"" (comp/munge (:main opts)) "\");</script>');"))))
+           "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
+            "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');"))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
