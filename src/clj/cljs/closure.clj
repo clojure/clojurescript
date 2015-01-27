@@ -473,8 +473,8 @@ should contain the source for the given namespace name."
 
 (defn source-for-namespace
   [ns compiler-env]
-  (let [ns-str (str (comp/munge ns))
-        path (string/replace ns-str \. File/separatorChar)
+  (let [ns-str  (str (comp/munge ns))
+        path    (string/replace ns-str \. \/)
         relpath (str path ".cljs")]
     (if-let [cljs-res (io/resource relpath)]
       {:relative-path relpath :uri cljs-res}
