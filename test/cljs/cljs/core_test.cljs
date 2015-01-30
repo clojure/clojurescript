@@ -2639,6 +2639,15 @@
     (set! foo-set (fn [x] :oops))
     (is (= (f [1 2 3]) :oops))))
 
+(deftest test-cljs-993
+  (is (nil? (binding [*print-level* 4])))
+  (is (= (binding [*print-level* 4] *print-level*) 4))
+  (is (nil? (try
+              (binding [*print-level* 4]
+                (throw (js/Error.)))
+              (catch js/Error e
+                *print-level*)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

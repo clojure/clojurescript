@@ -1117,11 +1117,11 @@
         resets (reverse (map core/vector names tempnames))
         bind-value (fn [[k v]] (core/list 'set! k v))]
     `(let [~@(interleave tempnames names)]
+       ~@(map bind-value binds)
        (try
-        ~@(map bind-value binds)
-        ~@body
+         ~@body
         (finally
-         ~@(map bind-value resets))))))
+          ~@(map bind-value resets))))))
 
 (defmacro binding
   "binding => var-symbol init-expr
