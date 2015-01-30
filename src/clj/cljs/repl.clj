@@ -204,10 +204,6 @@
             (print js))
           (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
             (case (:status ret)
-              ;;we eat ns errors because we know goog.provide() will throw when reloaded
-              ;;TODO - file bug with google, this is bs error
-              ;;this is what you get when you try to 'teach new developers'
-              ;;via errors (goog/base.js 104)
               :error (display-error ret form)
               :exception (display-error ret form
                            (if (:repl-verbose opts)
