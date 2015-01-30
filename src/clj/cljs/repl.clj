@@ -149,14 +149,13 @@
 
 (defn- display-error
   ([ret form]
-     (display-error ret form (constantly nil)))
+    (display-error ret form (constantly nil)))
   ([ret form f]
-     (when-not (and (seq? form) (= 'ns (first form)))
-       (f)
-       (println (:value ret))
-       (when-let [st (:stacktrace ret)]
-         (println st)
-         (flush)))))
+    (f)
+    (println (:value ret))
+    (when-let [st (:stacktrace ret)]
+      (println st)
+      (flush))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
