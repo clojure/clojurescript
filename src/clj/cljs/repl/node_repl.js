@@ -2,6 +2,7 @@ process.env.NODE_DISABLE_COLORS = true;
 
 var net  = require("net");
 var vm   = require("vm");
+var dom  = require("domain").create();
 var PORT = 5001;
 
 try {
@@ -16,6 +17,10 @@ net.createServer(function (socket) {
 
     socket.setEncoding("utf8");
 
+    dom.on("error", function(ue) {
+        console.error(ue.stack);
+    });
+
     socket.on("data", function(data) {
         if(data[data.length-1] != "\0") {
             buffer += data;
@@ -24,11 +29,14 @@ net.createServer(function (socket) {
                 data = buffer + data;
                 buffer = "";
             }
+
             if(data) {
                 // not sure how \0's are getting through - David
                 data = data.replace(/\0/g, "");
                 try {
-                    ret = vm.Script.runInThisContext.call(global, data, "repl");
+                    dom.run(function() {
+                        ret = vm.Script.runInThisContext.call(global, data, "repl");
+                    });
                 } catch (e) {
                     err = e;
                 }
