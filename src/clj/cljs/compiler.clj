@@ -908,9 +908,8 @@
 (defn url-path [^File f]
   (.getPath (.toURL (.toURI f))))
 
-(defn- build-affecting-options
-  [opts]
-  (select-keys opts [:static-fns :optimize-constants :elide-asserts]))
+(defn- build-affecting-options [opts]
+  (select-keys opts [:static-fns :optimize-constants :elide-asserts :target]))
 
 (defn compiled-by-string
   ([] (compiled-by-string nil))
