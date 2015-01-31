@@ -542,6 +542,7 @@
              (infer-tag env (:init e))
              (infer-tag env (:info e)))
       :dot 'any
+      :js 'any
       nil)))
 
 (defmulti parse (fn [op & rest] op))
