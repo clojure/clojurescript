@@ -57,7 +57,7 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
     (when (.exists file)
       (map to-url (filter #(.endsWith ^String (.getName ^File %) ".js") (file-seq (io/file path)))))))
 
-(defn find-js-classpath 
+(defn find-js-classpath
   "Returns a seq of URLs of all JavaScript files on the classpath."
   [path]
   (->> (all-classpath-urls)
@@ -86,7 +86,9 @@ case."
   (let [file (io/file path)]
     (if (.exists file)
       (find-js-fs path)
-      (find-js-classpath path))))
+      (do
+        (println "WARNING: js resource path" path "does not exist")
+        (find-js-classpath path)))))
 
 (defn parse-js-ns
   "Given the lines from a JavaScript source file, parse the provide
