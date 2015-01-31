@@ -656,6 +656,8 @@
      :catch catch
      :children [try catch finally]}))
 
+(declare get-expander)
+
 (defmethod parse 'def
   [op env form name _]
   (let [pfn (fn
@@ -686,7 +688,7 @@
                            (core-name? env sym))
                       (get-in @env/*compiler* [::namespaces ns-name :uses sym]))
                 (let [ev (resolve-existing-var (dissoc env :locals) sym)]
-                  (warning :redef env {:ev ev :sym sym :ns-name ns-name})
+                  (warning :redef env {:sym sym :ns (:ns ev) :ns-name ns-name})
                   (swap! env/*compiler* update-in [::namespaces ns-name :excludes] conj sym)
                   (update-in env [:ns :excludes] conj sym))
                 env)
