@@ -1,3 +1,17 @@
+## 0.0-2755
+
+### Enhancements
+* CLJS-948: simplify macro usage
+
+### Fixes
+* CLJS-927: real incremental compilation
+* Browser REPL regressions
+* CLJS-991: Wrong inference - inconsistent behavior?
+* CLJS-993: binding macro returns non-nil with empty body
+* CLJS-972: Node.js REPL eats errors in required ns when using require
+* CLJS-986: Add :target to the list of build options that should trigger recompilation
+* CLJS-976: Node REPL breaks from uncaught exceptions
+
 ## 0.0-2740
 
 ### Changes
