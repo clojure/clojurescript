@@ -1224,6 +1224,13 @@
     {:import  import-map
      :require import-map}))
 
+(defn macro-autoload-ns? [form]
+  (let [ns (if (sequential? form) (first form) form)
+        {:keys [use-macros require-macros]}
+        (get-in @env/*compiler* [::namespaces ns])]
+    (or (contains? use-macros ns)
+        (contains? require-macros ns))))
+
 (defn desugar-ns-specs [args]
   (let [{:keys [require] :as indexed}
         (->> args
@@ -1239,7 +1246,9 @@
         to-macro-specs
         (fn [specs]
           (->> specs
-            (filter #(and (sequential? %) (some sugar-keys %)))
+            (filter #(or (and (sequential? %)
+                              (some sugar-keys %))
+                         (macro-autoload-ns? %)))
             (map #(->> % (remove-from-spec #{:include-macros})
                          (remove-from-spec #{:refer})
                          (map (fn [x] (if (= x :refer-macros) :refer x)))))))
