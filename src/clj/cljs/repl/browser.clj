@@ -270,7 +270,11 @@
                   support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
-  (let [compiler-env (cljs.env/default-compiler-env opts)
+  (let [ups-deps (cljsc/get-upstream-deps)
+        opts (assoc opts
+               :ups-libs (:libs ups-deps)
+               :ups-foreign-libs (:foreign-libs ups-deps))
+        compiler-env (cljs.env/default-compiler-env opts)
         opts (merge (BrowserEnv.)
                {:port           9000
                 :optimizations  :simple

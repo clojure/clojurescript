@@ -92,18 +92,34 @@
   connection is made, the REPL will evaluate forms in the context of
   the document that called this function."
   [repl-server-url]
-  (let [repl-connection (net/xpc-connection
-                         {:peer_uri repl-server-url})]
+  (let [repl-connection
+        (net/xpc-connection
+          {:peer_uri repl-server-url})]
     (swap! xpc-connection (constantly repl-connection))
     (net/register-service repl-connection
-                          :evaluate-javascript
-                          (fn [js]
-                            (net/transmit
-                             repl-connection
-                             :send-result
-                             (evaluate-javascript repl-connection js))))
+      :evaluate-javascript
+      (fn [js]
+        (net/transmit
+          repl-connection
+          :send-result
+          (evaluate-javascript repl-connection js))))
     (net/connect repl-connection
-                 (constantly nil)
-                 (fn [iframe]
-                   (set! (.-display (.-style iframe))
-                         "none")))))
+      (constantly nil)
+      (fn [iframe]
+        (set! (.-display (.-style iframe))
+          "none")))
+    ;; Monkey-patch goog.require if running under optimizations :none - David
+    (when-not js/COMPILED
+      (set! *loaded-libs* (into #{} (js-keys (.. js/goog -dependencies_ -nameToPath))))
+      (set! (.-isProvided_ js/goog) (fn [_] false))
+      (set! (.-require js/goog)
+        (fn [name reload]
+          (when (or (not (contains? *loaded-libs* name)) reload)
+            (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
+            (.appendChild js/document.body
+              (let [script (.createElement js/document "script")]
+                (set! (.-type script) "text/javascript")
+                (set! (.-src script)
+                  (str js/goog.basePath
+                    (aget (.. js/goog -dependencies_ -nameToPath) name)))
+                script))))))))
