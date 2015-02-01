@@ -80,7 +80,7 @@
                 (string/replace (slurp (io/resource "cljs/repl/node_repl.js"))
                   "var PORT = 5001;"
                   (str "var PORT = " (:port repl-env) ";")))
-          bldr (ProcessBuilder. (into-array ["node"]))
+          bldr (ProcessBuilder. (into-array [(get opts :node-command "node")]))
           _    (-> bldr
                  (.redirectInput of)
                  (.redirectOutput ProcessBuilder$Redirect/INHERIT)
