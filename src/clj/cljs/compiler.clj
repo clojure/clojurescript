@@ -36,6 +36,7 @@
     "volatile" "while" "with" "yield" "methods"
     "null"})
 
+(def ^:dynamic *dependents* nil)
 (def ^:dynamic *source-map-data* nil)
 (def ^:dynamic *lexical-renames* {})
 
@@ -997,7 +998,12 @@
             (:source-map opts)
             (if (= (:optimizations opts) :none)
               (not (.exists (io/file (str (.getPath dest) ".map"))))
-              (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))))))
+              (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))
+          (let [{ns :ns} (ana/parse-ns src)
+                {:keys [recompile visited]}
+                (and *dependents* @*dependents*)]
+            (and (contains? recompile ns)
+                 (not (contains? visited ns))))))))
 
 (defn compile-file
   "Compiles src to a file of the same name, but with a .js extension,
@@ -1027,6 +1033,11 @@
                 opts (if (= ns 'cljs.core) (assoc opts :static-fns true) opts)]
             (if (requires-compilation? src-file dest-file opts)
               (do
+                (when *dependents*
+                  (swap! *dependents*
+                    (fn [{:keys [recompile visited]}]
+                      {:recompile (into recompile (ana/ns-dependents ns))
+                       :visited   (conj visited ns)})))
                 (util/mkdirs dest-file)
                 (when (contains? (::ana/namespaces @env/*compiler*) ns)
                   (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))

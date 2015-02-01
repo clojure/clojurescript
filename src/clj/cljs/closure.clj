@@ -1041,7 +1041,8 @@ should contain the source for the given namespace name."
              (assoc-in [:opts :emit-constants] emit-constants)
              (assoc :target (:target opts))
              (assoc :js-dependency-index (deps/js-dependency-index all-opts))))
-         (binding [ana/*cljs-static-fns*
+         (binding [comp/*dependents* (atom {:recompile #{} :visited #{}})
+                   ana/*cljs-static-fns*
                    (or (and (= (:optimizations opts) :advanced)
                             (not (false? (:static-fns opts))))
                        (:static-fns opts)
