@@ -110,7 +110,13 @@
           "none")))
     ;; Monkey-patch goog.require if running under optimizations :none - David
     (when-not js/COMPILED
-      (set! *loaded-libs* (into #{} (js-keys (.. js/goog -dependencies_ -nameToPath))))
+      (set! *loaded-libs*
+        (let [gntp (.. js/goog -dependencies_ -nameToPath)]
+          (into #{}
+            (filter
+              (fn [name]
+                (aget (.. js/goog -dependencies_ -visited) (aget gntp name)))
+              (js-keys gntp)))))
       (set! (.-isProvided_ js/goog) (fn [_] false))
       (set! (.-require js/goog)
         (fn [name reload]
