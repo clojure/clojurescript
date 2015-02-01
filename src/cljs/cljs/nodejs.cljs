@@ -18,3 +18,9 @@
 ; Have ClojureScript print using Node's sys.print function
 (defn enable-util-print! []
   (set! *print-fn* (.-print (require "util"))))
+
+; Export NodeJS globals.
+(.exportSymbol js/goog "setTimeout" js/setTimeout)
+(.exportSymbol js/goog "clearTimeout" js/clearTimeout)
+(.exportSymbol js/goog "setInterval" js/setInterval)
+(.exportSymbol js/goog "clearInterval" js/clearInterval)
