@@ -102,9 +102,7 @@
       (let [core-js (closure/compile core
                       (assoc opts
                         :output-file
-                        (closure/src-file->target-file core)
-                        ;:static-fns true
-                        ))
+                        (closure/src-file->target-file core)))
             deps    (closure/add-dependencies opts core-js)]
         ;; output unoptimized code and the deps file
         ;; for all compiled namespaces
