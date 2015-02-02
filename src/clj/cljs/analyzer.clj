@@ -1224,15 +1224,19 @@
     {:import  import-map
      :require import-map}))
 
+(declare parse-ns)
+
 (defn macro-autoload-ns?
   "Given a spec form check whether the spec namespace requires a macro file
    of the same name. If so return true."
   [form]
   (let [ns (if (sequential? form) (first form) form)
         {:keys [use-macros require-macros]}
-        (get-in @env/*compiler* [::namespaces ns])]
-    (or (contains? use-macros ns)
-        (contains? require-macros ns))))
+        (or (get-in @env/*compiler* [::namespaces ns])
+            (when-let [res (io/resource (util/ns->relpath ns))]
+              (:ast (parse-ns res))))]
+    (or (some #{ns} (vals use-macros))
+        (some #{ns} (vals require-macros)))))
 
 (defn desugar-ns-specs
   "Given an original set of ns specs desugar :include-macros and :refer-macros
@@ -1820,7 +1824,8 @@ argument, which the reader will use in any emitted errors."
                                          (get-in @env/*compiler* [:opts :emit-constants])
                                          (conj 'constants-table)))
                            :file dest
-                           :source-file src}
+                           :source-file src
+                           :ast ast}
                           (when (and dest (.exists ^File dest))
                             {:lines (with-open [reader (io/reader dest)]
                                       (-> reader line-seq count))})))
