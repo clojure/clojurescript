@@ -1224,14 +1224,22 @@
     {:import  import-map
      :require import-map}))
 
-(defn macro-autoload-ns? [form]
+(defn macro-autoload-ns?
+  "Given a spec form check whether the spec namespace requires a macro file
+   of the same name. If so return true."
+  [form]
   (let [ns (if (sequential? form) (first form) form)
         {:keys [use-macros require-macros]}
         (get-in @env/*compiler* [::namespaces ns])]
     (or (contains? use-macros ns)
         (contains? require-macros ns))))
 
-(defn desugar-ns-specs [args]
+(defn desugar-ns-specs
+  "Given an original set of ns specs desugar :include-macros and :refer-macros
+   usage into only primitive spec forms - :use, :require, :use-macros,
+   :require-macros. If a library includes a macro file of with the same name
+   as the namespace will also be desugared."
+  [args]
   (let [{:keys [require] :as indexed}
         (->> args
           (map (fn [[k & specs]] [k (into [] specs)]))
