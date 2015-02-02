@@ -1,3 +1,8 @@
+## 0.0-2758
+
+### Fixes
+* fix autoload macro enhancement
+
 ## 0.0-2755
 
 ### Enhancements
