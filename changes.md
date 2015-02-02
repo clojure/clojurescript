@@ -1,3 +1,8 @@
+## 0.0-2760
+
+### Fixes
+* ns spec handling regression
+
 ## 0.0-2758
 
 ### Fixes
