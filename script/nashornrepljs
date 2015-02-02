@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ "$CLOJURESCRIPT_HOME" = "" ]; then
+  CLOJURESCRIPT_HOME="`dirname $0`/.."
+fi
+
+CLJSC_CP=''
+for next in lib/*: src/clj: src/cljs: test/cljs; do
+  CLJSC_CP=$CLJSC_CP$CLOJURESCRIPT_HOME'/'$next
+done
+
+java -server -cp $CLJSC_CP clojure.main -e \
+"(require '[cljs.repl :as repl])
+(require '[cljs.repl.nashorn :as nashorn])
+(repl/repl* (nashorn/repl-env $1) {:output-dir \".cljs_nashorn_repl\" :cache-analysis true :source-map true})"
