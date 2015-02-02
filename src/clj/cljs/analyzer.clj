@@ -1255,6 +1255,11 @@
             spec
             (let [[l r] (split-with (complement pred) spec)]
               (recur pred (concat l (drop 2 r))))))
+        replace-refer-macros
+        (fn [spec]
+          (if-not (sequential? spec)
+            spec
+            (map (fn [x] (if (= x :refer-macros) :refer x)) spec)))
         to-macro-specs
         (fn [specs]
           (->> specs
@@ -1263,7 +1268,7 @@
                          (macro-autoload-ns? %)))
             (map #(->> % (remove-from-spec #{:include-macros})
                          (remove-from-spec #{:refer})
-                         (map (fn [x] (if (= x :refer-macros) :refer x)))))))
+                         (replace-refer-macros)))))
         remove-sugar (partial remove-from-spec sugar-keys)]
     (if-let [require-specs (seq (to-macro-specs require))]
       (map (fn [[k v]] (cons k (map remove-sugar v)))
