@@ -9,6 +9,7 @@
 (ns cljs.repl.node
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
+            [cljs.util :as util]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.repl :as repl]
@@ -70,6 +71,12 @@
   (node-eval repl-env
     (str "goog.require('" (comp/munge (first provides)) "')")))
 
+(defn seq->js-array [v]
+  (str "[" (apply str (interpose ", " (map pr-str v))) "]"))
+
+(defn platform-path [v]
+  (str "path.join.apply(null, " (seq->js-array v) ")"))
+
 (defn setup
   ([repl-env] (setup repl-env nil))
   ([repl-env opts]
@@ -88,8 +95,13 @@
           proc (.start bldr)
           env  (ana/empty-env)
           core (io/resource "cljs/core.cljs")
-          root-path (.getCanonicalFile output-dir)
-          rewrite-path (str (.getPath root-path) File/separator "goog")]
+          ;; represent paths as vectors so we can emit JS arrays, this is to
+          ;; paper over Windows issues with minimum hassle - David
+          path (.getPath (.getCanonicalFile output-dir))
+          [fc & cs] (rest (util/path-seq path)) ;; remove leading empty string
+          root (.substring path 0 (+ (.indexOf path fc) (count fc)))
+          root-path (vec (cons root cs))
+          rewrite-path (conj root-path "goog")]
       ;; TODO: temporary hack, should wait till we can read the start string
       ;; from the process - David
       (Thread/sleep 300)
@@ -114,19 +126,19 @@
       ;; properly due to how we are running it - David
       (node-eval repl-env
         (-> (slurp (io/resource "cljs/bootstrap_node.js"))
-          (string/replace "__dirname"
-            (str "\"" (str rewrite-path File/separator "bootstrap") "\""))
+          (string/replace "path.resolve(__dirname, '..', 'base.js')"
+            (platform-path (conj rewrite-path "bootstrap" ".." "base.js")))
           (string/replace
             "path.join(\".\", \"..\", src)"
-            (str "path.join(\"" rewrite-path "\", src)"))
+            (str "path.join(" (platform-path rewrite-path) ", src)"))
           (string/replace
             "var CLJS_ROOT = \".\";"
-            (str "var CLJS_ROOT = \"" (.getPath root-path) "\";"))))
+            (str "var CLJS_ROOT = " (platform-path root-path) ";"))))
       ;; load the deps file so we can goog.require cljs.core etc.
       (node-eval repl-env
-        (str "require('"
-          (.getPath root-path)
-          File/separator "node_repl_deps.js')"))
+        (str "require("
+             (platform-path (conj root-path "node_repl_deps.js"))
+             ")"))
       ;; monkey-patch isProvided_ to avoid useless warnings - David
       (node-eval repl-env
         (str "goog.isProvided_ = function(x) { return false; };"))
