@@ -151,7 +151,10 @@
 ;; INTERNAL - do not use
 (defn load-file [file]
   (when-not js/COMPILED
-    (cljs.core/load-file* file)))
+    (let [file (if (identical? js/process.platform "win32")
+                 (.replace file "\\" "\\\\")
+                 file)]
+      (cljs.core/load-file* file))))
 
 (if (and (exists? js/Symbol)
          (identical? (goog/typeOf js/Symbol) "function"))

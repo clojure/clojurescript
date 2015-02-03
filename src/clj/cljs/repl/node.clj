@@ -52,7 +52,7 @@
   [repl-env js]
   (let [{:keys [in out]} @(:socket repl-env)]
     ;; escape backslash for Node.js under Windows
-    (write out (string/replace js "\\" "\\\\"))
+    (write out js)
     (let [result (json/read-str
                    (read-response in) :key-fn keyword)]
       (condp = (:status result)
