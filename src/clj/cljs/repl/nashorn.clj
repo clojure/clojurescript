@@ -35,8 +35,10 @@
     (:require [cljs.repl]
               [cljs.repl.nashorn]))
 
-  (cljs.repl/repl (cljs.repl.nashorn/repl-env) :output-dir "resources/public/compiled"
-                  :cache-analysis true))
+  (cljs.repl/repl (cljs.repl.nashorn/repl-env)
+    :output-dir "resources/public/compiled"
+    :cache-analysis true)
+  )
 
 ;;
 ;; Invoke it with:
@@ -51,9 +53,11 @@
     (:require [cljs.repl.nashorn]
               [cemerick.piggieback]))
 
-  (cemerick.piggieback/cljs-repl :repl-env (cljs.repl.nashorn/repl-env)
-                                 :output-dir "resources/public/compiled"
-                                 :cache-analysis true))
+  (cemerick.piggieback/cljs-repl
+    :repl-env (cljs.repl.nashorn/repl-env)
+    :output-dir "resources/public/compiled"
+    :cache-analysis true)
+  )
 
 ;; Implementation
 
@@ -79,17 +83,20 @@
 (defn init-engine [engine output-dir debug]
   (eval-resource engine "goog/base.js" debug)
   (eval-resource engine "goog/deps.js" debug)
-  (eval-str engine "var global = this")  ; required by React
-  (eval-str engine (format (str "var nashorn_load = function(path) {"
-                             "  var outputPath = \"%s\" + \"/\" + path;"
-                             (when debug "  print(\"loading: \" + outputPath) ; ")
-                             "  load(outputPath);"
-                             "};")
-                        output-dir))
-  (eval-str engine (str "goog.global.CLOSURE_IMPORT_SCRIPT = function(path) {"
-                     " nashorn_load(\"goog/\" + path);"
-                     " return true;"
-                     "};"))
+  (eval-str engine "var global = this") ; required by React
+  (eval-str engine
+    (format
+      (str "var nashorn_load = function(path) {"
+           "  var outputPath = \"%s\" + \"/\" + path;"
+           (when debug "  print(\"loading: \" + outputPath) ; ")
+           "  load(outputPath);"
+           "};")
+      output-dir))
+  (eval-str engine
+    (str "goog.global.CLOSURE_IMPORT_SCRIPT = function(path) {"
+         " nashorn_load(\"goog/\" + path);"
+         " return true;"
+         "};"))
   (eval-str engine "goog.global.isProvided_ = function(name) { return false; };")
   engine)
 
@@ -97,28 +104,30 @@
   (eval-str engine (format "nashorn_load(\"%s\");" file)))
 
 ;; Create a minimal build of Clojurescript from the core library.
-;;
-;; Copied rom clj.cljs.repl.node.
+;; Copied from clj.cljs.repl.node.
 (defn bootstrap-repl [engine output-dir opts]
   (env/ensure
-   (let [deps-file ".nashorn_repl_deps.js"
-         core (io/resource "cljs/core.cljs")
-         core-js (closure/compile core
-                                  (assoc opts :output-file (closure/src-file->target-file core)))
-         deps (closure/add-dependencies opts core-js)]
-     ;; output unoptimized code and the deps file
-     ;; for all compiled namespaces
-     (apply closure/output-unoptimized
-            (assoc opts :output-to (.getPath (io/file output-dir deps-file)))
-            deps)
-     ;; load the deps file so we can goog.require cljs.core etc.
-     (load-js-file engine deps-file))))
+    (let [deps-file ".nashorn_repl_deps.js"
+          core (io/resource "cljs/core.cljs")
+          core-js (closure/compile core
+                    (assoc opts
+                      :output-file (closure/src-file->target-file core)))
+          deps (closure/add-dependencies opts core-js)]
+      ;; output unoptimized code and the deps file
+      ;; for all compiled namespaces
+      (apply closure/output-unoptimized
+        (assoc opts :output-to (.getPath (io/file output-dir deps-file)))
+        deps)
+      ;; load the deps file so we can goog.require cljs.core etc.
+      (load-js-file engine deps-file))))
 
 (defn load-ns [engine ns]
-  (eval-str engine (format "goog.require(\"%s\");" (comp/munge (first ns)))))
+  (eval-str engine
+    (format "goog.require(\"%s\");" (comp/munge (first ns)))))
 
 (defn- stacktrace  [^Exception e]
-  (apply str (interpose "\n" (map #(str " " (.toString %)) (.getStackTrace e)))))
+  (apply str
+    (interpose "\n" (map #(str " " (.toString %)) (.getStackTrace e)))))
 
 (def repl-filename "<cljs repl>")
 
@@ -132,19 +141,19 @@
       (if output-to
         (load-js-file engine output-to)
         (bootstrap-repl engine output-dir opts))
-      (repl/evaluate-form this env repl-filename  
-                          '(do                                  
-                             (.require js/goog "cljs.core")
-                             (set! cljs.core/*print-fn* js/print)))))
-
+      (repl/evaluate-form this env repl-filename
+        '(do
+           (.require js/goog "cljs.core")
+           (set! cljs.core/*print-fn* js/print)))))
   (-evaluate [{engine :engine :as this} filename line js]
     (when debug (println "Evaluating: " js))
-    (try {:status :success
-          :value (if-let [r (eval-str engine js)] (.toString r) "")}
-         (catch Throwable e
-           {:status :exception
-            :value (.toString e)
-            :stacktrace (stacktrace e)})))
+    (try
+      {:status :success
+       :value (if-let [r (eval-str engine js)] (.toString r) "")}
+      (catch Throwable e
+        {:status :exception
+         :value (.toString e)
+         :stacktrace (stacktrace e)})))
   (-load [{engine :engine :as this} ns url]
     (load-ns engine ns))
   (-tear-down [this]))
@@ -157,12 +166,8 @@
    :output-to   load this file initially into Nashorn, relative to output-dir.
                 Use a minimal bootstrapped cljs.core environment if not specified."
   [& {debug :debug :as opts}]
-
   (let [engine (create-engine)
-        compiler-env (env/default-compiler-env)
-        env (merge (NashornEnv. engine debug)
-                   {:cljs.env/compiler compiler-env}  ; required by cider middleware ?
-                   opts)]
-    env))
-
-  
+        compiler-env (env/default-compiler-env)]
+    (merge (NashornEnv. engine debug)
+      {:cljs.env/compiler compiler-env}  ; required by cider middleware ?
+      opts)))
