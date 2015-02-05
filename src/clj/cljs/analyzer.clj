@@ -63,7 +63,8 @@
    :invalid-arithmetic true
    :protocol-invalid-method true
    :protocol-duped-method true
-   :protocol-multiple-impls true})
+   :protocol-multiple-impls true
+   :single-segment-namespace true})
 
 (declare message namespaces)
 
@@ -172,6 +173,10 @@
 (defmethod error-message :invoke-ctor
   [warning-type info]
   (str "Cannot invoke type constructor " (-> info :fexpr :info :name) " as function "))
+
+(defmethod error-message :single-segment-namespace
+  [warning-type info]
+  (str (:name info) " is a single segment namespace"))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -1279,6 +1284,8 @@
   [_ env [_ name & args :as form] _ opts]
   (when-not (symbol? name) 
     (throw (error env "Namespaces must be named by a symbol.")))
+  (when (= 1 (count (string/split (clojure.core/name name) #"\.")))
+    (warning :single-segment-namespace env {:name name}))
   (let [docstring (if (string? (first args)) (first args))
         args      (if docstring (next args) args)
         metadata  (if (map? (first args)) (first args))
