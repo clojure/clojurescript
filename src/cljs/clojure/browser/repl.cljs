@@ -16,7 +16,12 @@
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.repl
   (:require [clojure.browser.net   :as net]
-            [clojure.browser.event :as event]))
+            [clojure.browser.event :as event]
+            ;; repl-connection callback will receive goog.require('cljs.repl')
+            ;; and monkey-patched require expects to be able to derive it
+            ;; via goog.basePath, so this namespace should be compiled together
+            ;; with clojure.browser.repl:
+            [cljs.repl]))
 
 (def xpc-connection (atom nil))
 
