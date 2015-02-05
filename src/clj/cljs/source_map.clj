@@ -78,9 +78,8 @@
       nseg)))
 
 (defn update-reverse-result
-  "Helper for decode. Take an internal source map representation
-   organized as nested sorted maps mapping file, line, and column
-   and update it based on a segment map and generated line number."
+  "Helper for decode-reverse. Take a source map and update it
+  based on a segment map."
   [result segmap gline]
   (let [{:keys [gcol source line col name]} segmap
         d {:gline gline
@@ -98,7 +97,7 @@
 
 (defn decode-reverse
   "Convert a v3 source map JSON object into a nested sorted map 
-   organized as file, line, and column. Not this source map
+   organized as file, line, and column. Note this source map
    maps from *original* source location to generated source location."
   ([source-map]
      (decode-reverse (:mappings source-map) source-map))
@@ -125,6 +124,48 @@
                          [result relseg]))))]
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
+
+(defn update-result
+  "Helper for decode. Take a source map and update it based on a
+  segment map."
+  [result segmap gline]
+  (let [{:keys [gcol source line col name]} segmap
+        d {:line line
+           :col col
+           :source source}
+        d (if name (assoc d :name name) d)]
+    (update-in result [gline]
+      (fnil (fn [m]
+              (update-in m [gcol]
+                (fnil #(conj % d) [])))
+        (sorted-map)))))
+
+(defn decode
+  "Convert a v3 source map JSON object into a nested sorted map
+   organized as file, line, and column. Note this source map
+   maps from *generated* source location to original source
+   location."
+  ([source-map]
+    (decode (:mappings source-map) source-map))
+  ([mappings source-map]
+    (let [relseg-init [0 0 0 0 0]
+          lines (seq (string/split mappings #";"))]
+      (loop [gline 0 lines lines relseg relseg-init result {}]
+        (if lines
+          (let [line (first lines)
+                [result relseg]
+                (if (string/blank? line)
+                  [result relseg]
+                  (let [segs (seq (string/split line #","))]
+                    (loop [segs segs relseg relseg result result]
+                      (if segs
+                        (let [seg (first segs)
+                              nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
+                          (recur (next segs) nrelseg
+                            (update-result result (seg->map nrelseg source-map) gline)))
+                        [result relseg]))))]
+            (recur (inc gline) (next lines) (assoc relseg 0 0) result))
+          result)))))
 
 ;; -----------------------------------------------------------------------------
 ;; Encoding
