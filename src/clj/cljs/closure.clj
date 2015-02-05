@@ -1011,6 +1011,10 @@ should contain the source for the given namespace name."
   (assert (not (and output-wrapper (= :whitespace optimizations)))
           ":output-wrapper cannot be combined with :optimizations :whitespace"))
 
+(defn check-node-target [{:keys [target optimizations] :as opts}]
+  (assert (not (and (= target :nodejs) (= optimizations :whitespace)))
+    (format ":nodejs target not compatible with :whitespace optimizations")))
+
 (defn foreign-source? [js]
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
@@ -1040,6 +1044,7 @@ should contain the source for the given namespace name."
          (check-source-map opts)
          (check-source-map-path opts)
          (check-output-wrapper opts)
+         (check-node-target opts)
          (swap! compiler-env
            #(-> %
              (assoc-in [:opts :emit-constants] emit-constants)
