@@ -627,7 +627,7 @@ should contain the source for the given namespace name."
             (.appendTo (.getSourceMap closure-compiler) out name))
           (let [sm-json (-> (io/file name) slurp
                             (json/read-str :key-fn keyword))
-                closure-source-map (sm/decode sm-json)]
+                closure-source-map (sm/decode-reverse sm-json)]
             (loop [sources  (seq sources)
                    relpaths {}
                    merged   (sorted-map-by

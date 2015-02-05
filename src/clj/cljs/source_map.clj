@@ -77,7 +77,7 @@
       (with-meta nseg {:name (+ name rname)})
       nseg)))
 
-(defn update-result
+(defn update-reverse-result
   "Helper for decode. Take an internal source map representation
    organized as nested sorted maps mapping file, line, and column
    and update it based on a segment map and generated line number."
@@ -96,11 +96,12 @@
                       (sorted-map))))
             (sorted-map)))))
 
-(defn decode
+(defn decode-reverse
   "Convert a v3 source map JSON object into a nested sorted map 
-   organized as file, line, and column."
+   organized as file, line, and column. Not this source map
+   maps from *original* source location to generated source location."
   ([source-map]
-     (decode (:mappings source-map) source-map))
+     (decode-reverse (:mappings source-map) source-map))
   ([mappings source-map]
      (let [{:keys [sources]} source-map
            relseg-init [0 0 0 0 0]
@@ -120,7 +121,7 @@
                          (let [seg (first segs)
                                nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
                            (recur (next segs) nrelseg
-                             (update-result result (seg->map nrelseg source-map) gline)))
+                             (update-reverse-result result (seg->map nrelseg source-map) gline)))
                          [result relseg]))))]
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
@@ -274,15 +275,19 @@
   ;; build with
   
   (require '[cljs.closure :as cljsc])
-  (cljsc/build "src" {:optimizations :simple :output-to "hello.js" :source-map "hello.js.map"})
+  (cljsc/build "src"
+    {:optimizations :simple
+     :output-to "hello.js"
+     :source-map "hello.js.map"
+     :output-dir "out"})
 
   ;; load source map
   (def raw-source-map
     (json/read-str (slurp (io/file "hello.js.map")) :key-fn keyword))
 
   ;; test it out
-  (first (decode raw-source-map))
+  (first (decode-reverse raw-source-map))
 
   ;; decoded source map preserves file order
-  (= (keys (decode raw-source-map)) (:sources raw-source-map))
+  (= (keys (decode-reverse raw-source-map)) (:sources raw-source-map))
   )
