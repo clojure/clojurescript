@@ -240,12 +240,16 @@
 
 (defn- always-preload
   "Return a list of all namespaces which are always loaded into the browser
-  when using a browser-connected REPL."
-  []
-  (let [cljs (provides-and-requires
-               (cljsc/cljs-dependencies {} ["clojure.browser.repl"]))
+  when using a browser-connected REPL.
+
+  Uses the working-dir (see repl-env) to output intermediate compilation."
+  [& [{:keys [working-dir]}]]
+  (let [opts (if working-dir {:output-dir working-dir}
+                 {})
+        cljs (provides-and-requires
+              (cljsc/cljs-dependencies opts ["clojure.browser.repl"]))
         goog (provides-and-requires
-               (cljsc/js-dependencies {} cljs))]
+               (cljsc/js-dependencies opts cljs))]
     (disj (set (concat cljs goog)) nil)))
 
 (defn repl-env
@@ -290,7 +294,7 @@
     (cljs.env/with-compiler-env compiler-env
       (reset! preloaded-libs
         (set (concat
-               (always-preload)
+               (always-preload opts)
                (map str (:preloaded-libs opts)))))
       (reset! loaded-libs @preloaded-libs)
       (println "Compiling client js ...")
