@@ -239,11 +239,11 @@
              (fn [[quote ns]] (and (= quote 'quote) (symbol? ns)))
              namespaces)
      "All arguments to run-tests must be quoted symbols")
-   (let [is-ns (ns? env-or-ns)]
-     `(do
-        ~(if is-ns
-           `(cljs.test/set-env! (cljs.test/empty-env))
-           `(cljs.test/set-env! ~env-or-ns))
+   (let [is-ns (ns? env-or-ns)
+         env   (gensym "env")]
+     `(let [~env ~(if is-ns
+                    `(cljs.test/empty-env)
+                    env-or-ns)]
         ;; TODO: support async - David
         (let [summary# (assoc
                          (reduce
@@ -254,7 +254,7 @@
                            {:test 0 :pass 0 :fail 0 :error 0}
                            [~@(map
                                 (fn [ns]
-                                  `(cljs.test/test-ns ~ns))
+                                  `(cljs.test/test-ns ~env ~ns))
                                 (if is-ns
                                   (concat [env-or-ns] namespaces)
                                   namespaces))])
