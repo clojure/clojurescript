@@ -259,7 +259,9 @@
                                   (concat [env-or-ns] namespaces)
                                   namespaces))])
                          :type :summary)]
+          (cljs.test/set-env! ~env)
           (do-report summary#)
+          (cljs.test/clear-env!)
           summary#)))))
 
 (defmacro run-all-tests
