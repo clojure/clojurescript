@@ -173,7 +173,7 @@
 (defn merge-source-maps
   "Merge an internal source map representation of a single
    ClojureScript file mapping original to generated with a
-   second source map mapping original JS to genereated JS.
+   second source map mapping original JS to generated JS.
    The is to support source maps that work through multiple
    compilation steps like Google Closure optimization passes."
   [cljs-map closure-map]
