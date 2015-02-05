@@ -166,3 +166,30 @@
                          [result relseg]))))]
              (recur (inc gline) (next lines) (assoc relseg 0 0) result))
            result)))))
+
+;; -----------------------------------------------------------------------------
+;; Merging
+
+(defn merge-source-maps
+  "Merge an internal source map representation of a single
+   ClojureScript file mapping original to generated with a
+   second source map mapping original JS to genereated JS.
+   The is to support source maps that work through multiple
+   compilation steps like Google Closure optimization passes."
+  [cljs-map closure-map]
+  (loop [line-map-seq (seq cljs-map) new-lines (sorted-map)]
+    (if line-map-seq
+      (let [[line col-map] (first line-map-seq)
+            new-cols
+            (loop [col-map-seq (seq col-map) new-cols (sorted-map)]
+              (if col-map-seq
+                (let [[col infos] (first col-map-seq)]
+                  (recur (next col-map-seq)
+                    (assoc new-cols col
+                      (reduce (fn [v {:keys [gline gcol]}]
+                                (into v (get-in closure-map [gline gcol])))
+                        [] infos))))
+                new-cols))]
+        (recur (next line-map-seq)
+          (assoc new-lines line new-cols)))
+      new-lines)))
