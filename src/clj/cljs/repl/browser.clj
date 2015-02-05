@@ -274,7 +274,7 @@
                   support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
-  (let [ups-deps (cljsc/get-upstream-deps)
+  (let [ups-deps (cljsc/get-upstream-deps (java.lang.ClassLoader/getSystemClassLoader))
         opts (assoc opts
                :ups-libs (:libs ups-deps)
                :ups-foreign-libs (:foreign-libs ups-deps))
