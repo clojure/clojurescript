@@ -291,7 +291,7 @@
    second source map mapping original JS to generated JS.
    The is to support source maps that work through multiple
    compilation steps like Google Closure optimization passes."
-  [cljs-map closure-map]
+  [cljs-map js-map]
   (loop [line-map-seq (seq cljs-map) new-lines (sorted-map)]
     (if line-map-seq
       (let [[line col-map] (first line-map-seq)
@@ -302,7 +302,7 @@
                   (recur (next col-map-seq)
                     (assoc new-cols col
                       (reduce (fn [v {:keys [gline gcol]}]
-                                (into v (get-in closure-map [gline gcol])))
+                                (into v (get-in js-map [gline gcol])))
                         [] infos))))
                 new-cols))]
         (recur (next line-map-seq)
