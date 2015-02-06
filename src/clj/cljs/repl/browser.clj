@@ -282,10 +282,12 @@
         opts (merge (BrowserEnv.)
                {:port           9000
                 :optimizations  :simple
-                :working-dir    (->> [".repl" (util/clojurescript-version)]
-                                  (remove empty?) (string/join "-"))
+                :working-dir    (or (:output-dir opts)
+                                    (->> [".repl" (util/clojurescript-version)]
+                                      (remove empty?) (string/join "-")))
                 :serve-static   true
-                :static-dir     ["." "out/"]
+                :static-dir     (cond-> ["." "out/"]
+                                  (:output-dir opts) (conj (:output-dir opts)))
                 :preloaded-libs []
                 :src            "src/"
                 ::env/compiler  compiler-env
