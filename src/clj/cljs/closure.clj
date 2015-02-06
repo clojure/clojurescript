@@ -173,6 +173,8 @@
     (doseq [[type level] (:closure-warnings opts)]
       (. compiler-options
         (setWarningLevel (type warning-types) (level check-level))))
+    (if-let [extra-annotations (:closure-extra-annotations opts)]
+      (. compiler-options (setExtraAnnotationNames (map name extra-annotations))))
     (when (contains? opts :source-map)
       (set! (.sourceMapOutputPath compiler-options)
             (:source-map opts))
