@@ -8160,10 +8160,7 @@ reduces them without incurring seq initialization"
 
 (declare print-map)
 
-(defn- pr-writer
-  "Prefer this to pr-seq, because it makes the printing function
-   configurable, allowing efficient implementations such as appending
-   to a StringBuffer."
+(defn- pr-writer-worker
   [obj writer opts]
   (cond
     (nil? obj) (-write writer "nil")
@@ -8230,6 +8227,15 @@ reduces them without incurring seq initialization"
               (-pr-writer obj writer opts)
 
               :else (write-all writer "#<" (str obj) ">")))))
+
+(defn- pr-writer
+  "Prefer this to pr-seq, because it makes the printing function
+   configurable, allowing efficient implementations such as appending
+   to a StringBuffer."
+  [obj writer opts]
+  (if-let [alt-worker (:alt-worker opts)]
+    (alt-worker obj writer (assoc opts :fallback-worker pr-writer-worker))
+    (pr-writer-worker obj writer opts)))
 
 (defn pr-seq-writer [objs writer opts]
   (pr-writer (first objs) writer opts)

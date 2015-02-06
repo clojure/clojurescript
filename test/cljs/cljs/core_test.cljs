@@ -1493,6 +1493,7 @@
 
 (deftest test-print-with-opts
   (testing "Testing printing with opts - :more-marker"
+    ; CLJS-1016
     (is (= (pr-str-with-opts [[1 2 3]] {:more-marker "<MORE-MARKER>" :print-length 0})
           "[<MORE-MARKER>]"))
     (is (= (pr-str-with-opts [[1 2 3]] {:more-marker "\u2026" :print-length 1})
@@ -1503,6 +1504,20 @@
           "(1 2 \u2026)"))
     (is (= (pr-str-with-opts [{:1 1 :2 2 :3 3}] {:more-marker "\u2026" :print-length 2})
           "{:1 1, :2 2, \u2026}")))
+
+  (testing "Testing printing with opts - :alt-worker"
+    ; CLJS-1010
+    (is (= (pr-str-with-opts [[1 2 3]] {:alt-worker (fn [obj writer opts] ((:fallback-worker opts) obj writer opts))})
+          "[1 2 3]"))
+    (is (= (pr-str-with-opts [[1 2 3]] {:alt-worker (fn [obj writer opts] (-write writer (str "<" obj ">")))})
+          "<[1 2 3]>"))
+    (is (= (pr-str-with-opts [[:start 1 2 [:middle] 3 4 :end] :standalone] {:alt-worker (fn [obj writer opts]
+                                                                                        (if (keyword? obj)
+                                                                                          (-write writer (str "|" (name obj) "|"))
+                                                                                          ((:fallback-worker opts) obj writer opts)))})
+          "[|start| 1 2 [|middle|] 3 4 |end|] |standalone|"))
+    (is (= (pr-str-with-opts [[1 2 3]] {:alt-worker (fn [obj writer opts])})
+          "")))
   )
 
 (defrecord PrintMe [a b])
