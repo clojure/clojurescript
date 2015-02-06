@@ -8109,17 +8109,21 @@ reduces them without incurring seq initialization"
       (-write writer "#")
       (do
         (-write writer begin)
-        (when (seq coll)
-          (print-one (first coll) writer opts))
-        (loop [coll (next coll) n (dec (:print-length opts))]
-          (if (and coll (or (nil? n) (not (zero? n))))
-            (do
-              (-write writer sep)
-              (print-one (first coll) writer opts)
-              (recur (next coll) (dec n)))
-            (when (and (seq coll) (zero? n))
-              (-write writer sep)
-              (-write writer "..."))))
+        (if (zero? (:print-length opts))
+          (when (seq coll)
+            (-write writer "..."))
+          (do
+            (when (seq coll)
+              (print-one (first coll) writer opts))
+            (loop [coll (next coll) n (dec (:print-length opts))]
+              (if (and coll (or (nil? n) (not (zero? n))))
+                (do
+                  (-write writer sep)
+                  (print-one (first coll) writer opts)
+                  (recur (next coll) (dec n)))
+                (when (and (seq coll) (zero? n))
+                  (-write writer sep)
+                  (-write writer "..."))))))
         (-write writer end)))))
 
 (defn write-all [writer & ss]

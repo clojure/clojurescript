@@ -1472,6 +1472,8 @@
 
 (deftest test-print-knobs
   (testing "Testing printing knobs"
+    (is (= (binding [*print-length* 0] (str [1 2 3 4 5 6 7 8 9 0]))
+              "[...]"))
     (is (= (binding [*print-length* 1] (str [1 2 3 4 5 6 7 8 9 0]))
               "[1 ...]"))
     (is (= (binding [*print-length* 2] (str [1 2 3 4 5 6 7 8 9 0]))
@@ -1481,6 +1483,8 @@
     ;; CLJS-804
     (is (= (binding [*print-length* 10] (str {:foo "bar"}))
               "{:foo \"bar\"}"))
+    (is (= (binding [*print-length* 0] (str {:foo "bar" :baz "woz"}))
+          "{...}"))
     (is (= (binding [*print-length* 1] (str {:foo "bar" :baz "woz"}))
               "{:foo \"bar\", ...}"))
     (is (= (binding [*print-length* 10] (str {:foo "bar" :baz "woz"}))
