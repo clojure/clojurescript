@@ -35,7 +35,7 @@ net.createServer(function (socket) {
                 data = data.replace(/\0/g, "");
                 try {
                     dom.run(function() {
-                        ret = vm.Script.runInThisContext.call(global, data, "repl");
+                        ret = vm.runInThisContext(data, "repl");
                     });
                 } catch (e) {
                     err = e;
