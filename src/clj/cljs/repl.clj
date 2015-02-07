@@ -148,13 +148,16 @@
      (load-namespace repl-env ns opts))))
 
 (defn- display-error
-  ([ret form]
-    (display-error ret form (constantly nil)))
-  ([ret form f]
+  ([ret form opts]
+    (display-error ret form (constantly nil) opts))
+  ([ret form f opts]
     (f)
     (println (:value ret))
     (when-let [st (:stacktrace ret)]
-      (println st)
+      (if (and (true? (:source-map opts))
+               (vector? st))
+        (println st)
+        (println st))
       (flush))))
 
 (defn evaluate-form
@@ -204,11 +207,12 @@
             (print js))
           (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
             (case (:status ret)
-              :error (display-error ret form)
+              :error (display-error ret form opts)
               :exception (display-error ret form
                            (if (:repl-verbose opts)
                              #(prn "Error evaluating:" form :as js)
-                             (constantly nil)))
+                             (constantly nil))
+                           opts)
               :success (:value ret)))))
       (catch Throwable ex
         (.printStackTrace ex)
