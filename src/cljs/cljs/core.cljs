@@ -68,6 +68,10 @@
   ^{:doc "bound in a repl thread to the third most recent value printed"}
   *3)
 
+(def
+  ^{:doc "bound in a repl thread to the most recent exception caught by the repl"}
+  *e)
+
 (defn truth_
   "Internal - do not use!"
   [x]
