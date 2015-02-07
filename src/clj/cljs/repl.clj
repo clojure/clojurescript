@@ -316,13 +316,17 @@
                              (set! *1 ret#)
                              ret#))))))
 
-(defn- eval-and-print [repl-env env form]
-  (println
-    (evaluate-form repl-env
-      (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
-      "<cljs repl>"
-      form
-      (wrap-fn form))))
+(defn- eval-and-print
+  ([repl-env env form]
+    (eval-and-print repl-env env form nil))
+  ([repl-env env form opts]
+    (println
+      (evaluate-form repl-env
+        (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
+        "<cljs repl>"
+        form
+        (wrap-fn form)
+        opts))))
 
 ;; Special REPL fns, these provide compatiblity with Clojure functions
 ;; that are not possible to reproduce given ClojureScript's compilation model
@@ -486,7 +490,7 @@
                  (recur))
 
                :else
-               (do (eval-and-print repl-env env form)
+               (do (eval-and-print repl-env env form opts)
                    (recur)))))
          (-tear-down repl-env))))))
 
