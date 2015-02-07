@@ -9,16 +9,19 @@
 (ns cljs.repl
   (:refer-clojure :exclude [load-file])
   (:require [clojure.java.io :as io]
+            [clojure.string :as string]
+            [clojure.data.json :as json]
+            [clojure.tools.reader :as reader]
+            [clojure.tools.reader.reader-types :as readers]
+            [clojure.stacktrace :as trace]
+            [clojure.repl :as cljrepl]
+            [cljs.util :as util]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
             [cljs.env :as env]
             [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
-            [cljs.source-map :as sm]
-            [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers]
-            [cljs.util :as util]
-            [clojure.stacktrace :as trace])
+            [cljs.source-map :as sm])
   (:import [java.io File PushbackReader]
            [javax.xml.bind DatatypeConverter]))
 
@@ -147,6 +150,66 @@
    (doseq [ns (distinct requires)]
      (load-namespace repl-env ns opts))))
 
+(defn read-source-map [f]
+  (sm/decode (json/read-str (slurp (io/file (str f ".map"))) :key-fn keyword)))
+
+(defn js-src->cljs-src [f]
+  (let [f (io/file f)
+        dir (.getParentFile f)
+        name (.getName f)]
+    (io/file dir (string/replace name ".js" ".cljs"))))
+
+(defn ns-info [f]
+  (ana/parse-ns (js-src->cljs-src f)))
+
+(defn mapped-line-and-column [source-map line column]
+  (let [default [line column]]
+    ;; source maps are 0 indexed for lines
+    (if-let [columns (get source-map (dec line))]
+      (vec
+        (map
+          ;; source maps are 0 indexed for columns
+          ;; multiple segments may exist at column
+          ;; just take first
+          (first
+            (if-let [mapping (get columns (dec column))]
+              mapping
+              (second (first columns))))
+          [:line :col]))
+      default)))
+
+(defn print-mapped-stacktrace [stacktrace]
+  (let [read-source-map' (memoize read-source-map)
+        ns-info' (memoize ns-info)]
+    (doseq [{:keys [function file line column] :as frame} stacktrace]
+      (let [[sm {:keys [ns source-file]}] ((juxt read-source-map' ns-info') file)
+            [line' column'] (mapped-line-and-column sm line column)
+            name' (if function
+                    (symbol (name ns) (cljrepl/demunge function))
+                    ns)]
+        (println (str name' " (" source-file ":" line' ":" column' ")"))))))
+
+(comment
+  (cljsc/build "samples/hello/src"
+    {:optimizations :none
+     :output-dir "samples/hello/out"
+     :output-to "samples/hello/out/hello.js"
+     :source-map true})
+
+  ;; line 2 column 1
+  (mapped-line-and-column
+    (read-source-map "samples/hello/out/hello/core.js") 2 1)
+
+  ;; hello.core
+  (:ns (ns-info "samples/hello/out/hello/core.js"))
+
+  (print-mapped-stacktrace
+    [{:file "samples/hello/out/hello/core.js"
+      :function "first"
+      :line 2
+      :column 1}])
+  )
+
 (defn- display-error
   ([ret form opts]
     (display-error ret form (constantly nil) opts))
@@ -156,7 +219,7 @@
     (when-let [st (:stacktrace ret)]
       (if (and (true? (:source-map opts))
                (vector? st))
-        (println st)
+        (print-mapped-stacktrace st)
         (println st))
       (flush))))
 
