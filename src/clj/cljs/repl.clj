@@ -186,7 +186,9 @@
             [line' column'] (mapped-line-and-column sm line column)
             name' (if function
                     (symbol (name ns) (cljrepl/demunge function))
-                    ns)]
+                    ns)
+            source-file (string/replace (.getCanonicalFile ^File source-file)
+                          (str (System/getProperty "user.dir") File/separator) "")]
         (println (str name' " (" source-file ":" line' ":" column' ")"))))))
 
 (comment
