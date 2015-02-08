@@ -151,45 +151,56 @@
      (load-namespace repl-env ns opts))))
 
 (defn read-source-map [f]
-  (sm/decode (json/read-str (slurp (io/file (str f ".map"))) :key-fn keyword)))
+  (let [smf (io/file (str f ".map"))]
+    (when (.exists smf)
+      (sm/decode (json/read-str (slurp smf) :key-fn keyword)))))
 
-(defn js-src->cljs-src [f]
+(defn ^File js-src->cljs-src [f]
   (let [f (io/file f)
         dir (.getParentFile f)
         name (.getName f)]
     (io/file dir (string/replace name ".js" ".cljs"))))
 
 (defn ns-info [f]
-  (ana/parse-ns (js-src->cljs-src f)))
+  (let [f' (js-src->cljs-src f)]
+    (when (.exists f')
+      (ana/parse-ns f'))))
 
 (defn mapped-line-and-column [source-map line column]
   (let [default [line column]]
     ;; source maps are 0 indexed for lines
     (if-let [columns (get source-map (dec line))]
       (vec
-        (map
-          ;; source maps are 0 indexed for columns
-          ;; multiple segments may exist at column
-          ;; just take first
-          (first
-            (if-let [mapping (get columns (dec column))]
-              mapping
-              (second (first columns))))
-          [:line :col]))
+        (map inc
+          (map
+           ;; source maps are 0 indexed for columns
+           ;; multiple segments may exist at column
+           ;; just take first
+           (first
+             (if-let [mapping (get columns (dec column))]
+               mapping
+               (second (first columns))))
+           [:line :col])))
       default)))
 
 (defn print-mapped-stacktrace [stacktrace]
   (let [read-source-map' (memoize read-source-map)
         ns-info' (memoize ns-info)]
     (doseq [{:keys [function file line column] :as frame} stacktrace]
-      (let [[sm {:keys [ns source-file]}] ((juxt read-source-map' ns-info') file)
-            [line' column'] (mapped-line-and-column sm line column)
-            name' (if function
+      (let [[sm {:keys [ns source-file] :as ns-info}] ((juxt read-source-map' ns-info') file)
+            [line' column'] (if ns-info
+                              (mapped-line-and-column sm line column)
+                              [line column])
+            name' (if (and ns-info function)
                     (symbol (name ns) (cljrepl/demunge function))
-                    ns)
-            source-file (string/replace (.getCanonicalFile ^File source-file)
-                          (str (System/getProperty "user.dir") File/separator) "")]
-        (println (str name' " (" source-file ":" line' ":" column' ")"))))))
+                    function)
+            file' (string/replace
+                    (.getCanonicalFile
+                      (if ns-info
+                        source-file
+                        (io/file file)))
+                    (str (System/getProperty "user.dir") File/separator) "")]
+        (println (str name' " (" file' ":" line' ":" column' ")"))))))
 
 (comment
   (cljsc/build "samples/hello/src"
