@@ -199,24 +199,25 @@
    print the ClojureScript stacktrace. The canonical stacktrace must be
    a vector of {:file <string> :function <string> :line <integer> :column <integer>}
    maps."
-  [stacktrace]
-  (let [read-source-map' (memoize read-source-map)
-        ns-info' (memoize ns-info)]
-    (doseq [{:keys [function file line column] :as frame} stacktrace]
-      (let [[sm {:keys [ns source-file] :as ns-info}] ((juxt read-source-map' ns-info') file)
-            [line' column'] (if ns-info
-                              (mapped-line-and-column sm line column)
-                              [line column])
-            name' (if (and ns-info function)
-                    (symbol (name ns) (cljrepl/demunge function))
-                    function)
-            file' (string/replace
-                    (.getCanonicalFile
-                      (if ns-info
-                        source-file
-                        (io/file file)))
-                    (str (System/getProperty "user.dir") File/separator) "")]
-        (println "\t" (str name' " (" file' ":" line' ":" column' ")"))))))
+  ([stacktrace] (print-mapped-stacktrace stacktrace nil))
+  ([stacktrace opts]
+    (let [read-source-map' (memoize read-source-map)
+          ns-info' (memoize ns-info)]
+      (doseq [{:keys [function file line column] :as frame} stacktrace]
+        (let [[sm {:keys [ns source-file] :as ns-info}] ((juxt read-source-map' ns-info') file)
+              [line' column'] (if ns-info
+                                (mapped-line-and-column sm line column)
+                                [line column])
+              name' (if (and ns-info function)
+                      (symbol (name ns) (cljrepl/demunge function))
+                      function)
+              file' (string/replace
+                      (.getCanonicalFile
+                        (if ns-info
+                          source-file
+                          (io/file file)))
+                      (str (System/getProperty "user.dir") File/separator) "")]
+          (println "\t" (str name' " (" file' ":" line' ":" column' ")")))))))
 
 (comment
   (cljsc/build "samples/hello/src"
@@ -248,7 +249,7 @@
     (when-let [st (:stacktrace ret)]
       (if (and (true? (:source-map opts))
                (vector? st))
-        (print-mapped-stacktrace st)
+        (print-mapped-stacktrace st opts)
         (println st))
       (flush))))
 
