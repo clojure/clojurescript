@@ -8,7 +8,8 @@
 
 (ns
 ^{:author "Stuart Sierra, with contributions and suggestions by 
-  Chas Emerick, Allen Rohner, Stuart Halloway, and David Nolen",
+  Chas Emerick, Allen Rohner, Stuart Halloway, David Nolen, and
+  Leon Grapenthin",
      :doc "A unit testing framework.
 
    ASSERTIONS
@@ -144,14 +145,17 @@
    Fixtures allow you to run code before and after tests, to set up
    the context in which tests should be run.
 
-   A fixture is just a function that calls another function passed as
-   an argument.  It looks like this:
+   A fixture is a map of one or two functions that run code before and
+   after tests.  It looks like this:
 
-   (defn my-fixture [f]
-      Perform setup, establish bindings, whatever.
-     (f)  Then call the function we were passed.
-      Tear-down / clean-up code here.
-    )
+   {:before (fn []
+              Perform setup, establish bindings, whatever.
+              )
+    :after (fn []
+             Tear-down / clean-up code here.
+             )}
+
+   Both are optional and can be left out.
 
    Fixtures are attached to namespaces in one of two ways.  \"each\"
    fixtures are run repeatedly, once for each test function created
@@ -161,9 +165,10 @@
 
    \"each\" fixtures can be attached to the current namespace like this:
    (use-fixtures :each fixture1 fixture2 ...)
-   The fixture1, fixture2 are just functions like the example above.
-   They can also be anonymous functions, like this:
-   (use-fixtures :each (fn [f] setup... (f) cleanup...))
+   The fixture1, fixture2 are just maps like the example above.
+   They can also be passed directly, like this:
+   (use-fixtures :each
+     {:before (fn [] setup...), :after (fn [] cleanup...)})
 
    The other kind of fixture, a \"once\" fixture, is only run once,
    around ALL the tests in the namespace.  \"once\" fixtures are useful
@@ -175,6 +180,21 @@
 
    Note: Fixtures and test-ns-hook are mutually incompatible.  If you
    are using test-ns-hook, fixture functions will *never* be run.
+
+
+   WRAPPING FIXTURES
+
+   Instead of a map, a fixture can be specified like this:
+
+   (defn my-fixture [f]
+      Perform setup, establish bindings, whatever.
+     (f)  Then call the function we were passed.
+      Tear-down / clean-up code here.
+    )
+
+   This style is incompatible with async tests. If an async test is
+   encountered, testing will be aborted. It can't be mixed with
+   fixtures specified as maps.
 
 
    EXTENDING TEST-IS (ADVANCED)
@@ -234,6 +254,12 @@
 
 (defn clear-env! []
   (set! *current-env* nil))
+
+(defn get-and-clear-env! []
+  "Like get-current-env, but cleans env before returning."
+  (let [env (cljs.test/get-current-env)]
+    (clear-env!)
+    env))
 
 (defn testing-vars-str
   "Returns a string representation of the current test.  Renders names
@@ -299,7 +325,8 @@
 
 ;; Ignore these message types:
 (defmethod report [::default :end-test-ns] [m])
-(defmethod report [::default :begin-test-var] [m])
+(defmethod report [::default :begin-test-var] [m]
+  #_(println ":begin-test-var" (testing-vars-str m)))
 (defmethod report [::default :end-test-var] [m])
 
 (defn js-line-and-column [stack-element]
@@ -352,60 +379,171 @@
     (report m)))
 
 ;; =============================================================================
+;; Async
+
+(defprotocol IAsyncTest
+  "Marker protocol denoting CPS function to begin asynchronous
+  testing.")
+
+(defn async?
+  "Returns whether x implements IAsyncTest."
+  [x]
+  (satisfies? IAsyncTest x))
+
+(defn run-block
+  "Invoke all functions in fns with no arguments. A fn can optionally
+  return
+  
+  an async test - is invoked with a continuation running left fns
+
+  a seq of fns tagged per block - are invoked immediately after fn"
+  [fns]
+  (when-first [f fns]
+    (let [obj (f)]
+      (if (async? obj)
+        (obj (let [d (delay (run-block (rest fns)))]
+               (fn []
+                 (if (realized? d)
+                   (println "WARNING: Async test called done more than one time.")
+                   @d))))
+        (recur (cond->> (rest fns)
+                 (::block? (meta obj)) (concat obj)))))))
+
+(defn block
+  "Tag a seq of fns to be picked up by run-block as injected
+  continuation.  See run-block."
+  [fns]
+  (some-> fns
+          (vary-meta assoc ::block? true)))
+
+;; =============================================================================
 ;; Low-level functions
+
+(defn test-var-block
+  "Like test-var, but returns a block for further composition and
+  later execution."
+  [v]
+  {:pre [(instance? Var v)]}
+  (if-let [t (:test (meta v))]
+    [(fn []
+       (update-current-env! [:testing-vars] conj v)
+       (update-current-env! [:report-counters :test] inc)
+       (do-report {:type :begin-test-var :var v})
+       (let [{:keys [async-disabled]} (get-current-env)]
+         (cond-> (try
+                   (t)
+                   (catch :default e
+                     (do-report
+                      {:type :error
+                       :message "Uncaught exception, not in assertion."
+                       :expected nil
+                       :actual e})))
+           async-disabled (-> async? not (assert async-disabled)))))
+     (fn []
+       (do-report {:type :end-test-var :var v})
+       (update-current-env! [:testing-vars] rest))]))
 
 (defn test-var
   "If v has a function in its :test metadata, calls that function,
   add v to :testing-vars property of env."
   [v]
-  {:pre [(instance? Var v)]}
-  (if-let [t (:test (meta v))]
-    (do
-      (update-current-env! [:testing-vars] conj v)
-      (update-current-env! [:report-counters :test] inc)
-      (do-report {:type :begin-test-var :var v})
-      (try
-        (t)
-        (catch :default e
-          (do-report
-            {:type :error
-             :message "Uncaught exception, not in assertion."
-             :expected nil
-             :actual e})))
-      (do-report {:type :end-test-var :var v})
-      (update-current-env! [:testing-vars] rest))))
+  (run-block (test-var-block v)))
 
 (defn- default-fixture
-  "The default, empty, fixture function.  Just calls its argument."
+  "The default, empty, fixture function.  Just calls its argument.
+
+  NOTE: Incompatible with map fixtures."
   [f]
   (f))
 
 (defn compose-fixtures
   "Composes two fixture functions, creating a new fixture function
-  that combines their behavior."
+  that combines their behavior.
+
+  NOTE: Incompatible with map fixtures."
   [f1 f2]
   (fn [g] (f1 (fn [] (f2 g)))))
 
 (defn join-fixtures
   "Composes a collection of fixtures, in order.  Always returns a valid
-  fixture function, even if the collection is empty."
+  fixture function, even if the collection is empty.
+
+  NOTE: Incompatible with map fixtures."
   [fixtures]
   (reduce compose-fixtures default-fixture fixtures))
+
+(defn- wrap-map-fixtures
+  "Wraps block in map-fixtures."
+  [map-fixtures block]
+  (concat (map :before map-fixtures)
+          block
+          (reverse (map :after map-fixtures))))
+
+(defn- fixtures-type
+  [coll]
+  (cond (empty? coll)
+        :none
+        (every? map? coll)
+        :map
+        (every? fn? coll)
+        :fn))
+
+(defn- execution-strategy
+  [once-fixtures each-fixtures]
+  (let [types (map fixtures-type [once-fixtures each-fixtures])
+        _ (assert (not-any? nil? types)
+                  "Fixtures may not be of mixed types")
+        types (->> types
+                   (remove #{:none})
+                   (distinct))
+        _ (assert (> 2 (count types)) "fixtures specified in :once and :each must be of the same type")]
+    (case (first types)
+      :map :async
+      :fn :sync
+      nil :async)))
+
+(defn test-vars-block
+  "Like test-vars, but returns a block for further composition and
+  later execution."
+  [vars]
+  (map
+   (fn [[ns vars]]
+     (fn []
+       (block
+        (let [env (get-current-env)
+              once-fixtures (get-in env [:once-fixtures ns])
+              each-fixtures (get-in env [:each-fixtures ns])]
+          (case (execution-strategy once-fixtures each-fixtures)
+            :async
+            (->> vars
+                 (filter (comp :test meta))
+                 (mapcat (comp (partial wrap-map-fixtures each-fixtures)
+                               test-var-block))
+                 (wrap-map-fixtures once-fixtures))
+            :sync
+            (do
+              (update-current-env! [:async-disabled]
+                                   (constantly
+                                    "Async tests require fixtures to be specified as maps"))
+              (let [each-fixture-fn (join-fixtures each-fixtures)]
+                [(fn []
+                   ((join-fixtures once-fixtures)
+                    (fn []
+                      (doseq [v vars]
+                        (when (:test (meta v))
+                          (each-fixture-fn
+                           (fn []
+                             (test-var v)))))))
+                   (update-current-env! [:async-disabled]
+                                        (constantly nil)))])))))))
+   (group-by (comp :ns meta) vars)))
 
 (defn test-vars
   "Groups vars by their namespace and runs test-vars on them with
   appropriate fixtures assuming they are present in the current
   testing environment."
   [vars]
-  (doseq [[ns vars] (group-by (comp :ns meta) vars)]
-    (let [env (get-current-env)
-          once-fixture-fn (join-fixtures (get-in env [:once-fixtures ns]))
-          each-fixture-fn (join-fixtures (get-in env [:each-fixtures ns]))]
-      (once-fixture-fn
-        (fn []
-          (doseq [v vars]
-            (when (:test (meta v))
-              (each-fixture-fn (fn [] (test-var v))))))))))
+  (run-block (test-vars-block vars)))
 
 ;; =============================================================================
 ;; Running Tests, high level functions

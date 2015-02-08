@@ -219,50 +219,75 @@
          (fn [] (cljs.test/test-var (.-cljs$lang$var ~name))))
        (set! (.-cljs$lang$var ~name) (var ~name)))))
 
+(defmacro async
+  "Wraps body as a CPS function that can be returned from a test to
+  continue asynchronously.  Binds done to a function that must be
+  invoked once and from an async context after any assertions.
+
+  (deftest example-with-timeout
+    (async done
+      (js/setTimeout (fn []
+                       ;; make assertions in async context...
+                       (done) ;; ...then call done
+                       )
+                     0)))"
+  [done & body]
+  `(reify
+     cljs.test/IAsyncTest
+     cljs.core/IFn
+     (~'-invoke [_# ~done]
+       ~@body)))
+
 ;; =============================================================================
 ;; Running Tests
 
 (defn ns? [x]
   (and (seq? x) (= (first x) 'quote)))
 
+(defmacro run-tests-block
+  "Like test-vars, but returns a block for further composition and
+  later execution."
+  [env-or-ns & namespaces]
+  (assert (every?
+           (fn [[quote ns]] (and (= quote 'quote) (symbol? ns)))
+           namespaces)
+          "All arguments to run-tests must be quoted symbols")
+  (let [is-ns (ns? env-or-ns)
+        env (gensym "env")
+        summary (gensym "summary")]
+    `(let [~env ~(if is-ns
+                   `(cljs.test/empty-env)
+                   env-or-ns)
+           ~summary (cljs.core/volatile!
+                     {:test 0 :pass 0 :fail 0 :error 0
+                      :type :summary})]
+       (concat ~@(map
+                  (fn [ns]
+                    `(concat (cljs.test/test-ns-block ~env ~ns)
+                             [(fn []
+                                (cljs.core/vswap!
+                                 ~summary
+                                 (partial merge-with +)
+                                 (:report-counters
+                                  (cljs.test/get-and-clear-env!))))]))
+                  (if is-ns
+                    (concat [env-or-ns] namespaces)
+                    namespaces))
+               [(fn []
+                   (cljs.test/set-env! ~env)
+                   (do-report (deref ~summary))
+                   (cljs.test/clear-env!))]))))
+
 (defmacro run-tests
   "Runs all tests in the given namespaces; prints results.
-  Defaults to current namespace if none given.  Returns a map
-  summarizing test results."
+  Defaults to current namespace if none given."
   ([] `(run-tests (cljs.test/empty-env) '~ana/*cljs-ns*))
   ([env-or-ns]
    (if (ns? env-or-ns)
      `(run-tests (cljs.test/empty-env) ~env-or-ns)
      `(run-tests ~env-or-ns '~ana/*cljs-ns*)))
   ([env-or-ns & namespaces]
-   (assert (every?
-             (fn [[quote ns]] (and (= quote 'quote) (symbol? ns)))
-             namespaces)
-     "All arguments to run-tests must be quoted symbols")
-   (let [is-ns (ns? env-or-ns)
-         env   (gensym "env")]
-     `(let [~env ~(if is-ns
-                    `(cljs.test/empty-env)
-                    env-or-ns)]
-        ;; TODO: support async - David
-        (let [summary# (assoc
-                         (reduce
-                           (fn [acc# res#]
-                             (merge-with +
-                               acc#
-                               (:report-counters res#)))
-                           {:test 0 :pass 0 :fail 0 :error 0}
-                           [~@(map
-                                (fn [ns]
-                                  `(cljs.test/test-ns ~env ~ns))
-                                (if is-ns
-                                  (concat [env-or-ns] namespaces)
-                                  namespaces))])
-                         :type :summary)]
-          (cljs.test/set-env! ~env)
-          (do-report summary#)
-          (cljs.test/clear-env!)
-          summary#)))))
+   `(cljs.test/run-block (run-tests-block ~env-or-ns ~@namespaces))))
 
 (defmacro run-all-tests
   "Runs all tests in all namespaces; prints results.
@@ -277,28 +302,52 @@
           (cond->> (ana-api/all-ns)
             re (filter #(re-matches re (name %))))))))
 
+(defmacro test-all-vars-block
+  ([[quote ns]]
+   `(let [env# (cljs.test/get-current-env)]
+      (concat
+       [(fn []
+          (when (nil? env#)
+            (cljs.test/set-env! (cljs.test/empty-env)))
+          ~(when (ana-api/ns-resolve ns 'cljs-test-once-fixtures)
+             `(cljs.test/update-current-env! [:once-fixtures] assoc '~ns
+                                             ~(symbol (name ns) "cljs-test-once-fixtures")))
+          ~(when (ana-api/ns-resolve ns 'cljs-test-each-fixtures)
+             `(cljs.test/update-current-env! [:each-fixtures] assoc '~ns
+                                             ~(symbol (name ns) "cljs-test-each-fixtures"))))]
+       (cljs.test/test-vars-block
+        [~@(map
+            (fn [[k _]]
+              `(var ~(symbol (name ns) (name k))))
+            (filter
+             (fn [[_ v]] (:test v))
+             (ana-api/ns-interns ns)))])
+       [(fn []
+          (when (nil? env#)
+            (cljs.test/clear-env!)))]))))
+
 (defmacro test-all-vars
   "Calls test-vars on every var with :test metadata interned in the
   namespace, with fixtures."
-  ([[quote ns]]
-   `(let [env# (cljs.test/get-current-env)]
-      (when (nil? env#)
-        (cljs.test/set-env! (cljs.test/empty-env)))
-      ~(when (ana-api/ns-resolve ns 'cljs-test-once-fixtures)
-         `(cljs.test/update-current-env! [:once-fixtures] assoc '~ns
-            ~(symbol (name ns) "cljs-test-once-fixtures")))
-      ~(when (ana-api/ns-resolve ns 'cljs-test-each-fixtures)
-         `(cljs.test/update-current-env! [:each-fixtures] assoc '~ns
-            ~(symbol (name ns) "cljs-test-each-fixtures")))
-      (cljs.test/test-vars
-        [~@(map
-             (fn [[k _]]
-               `(var ~(symbol (name ns) (name k))))
-             (filter
-               (fn [[_ v]] (:test v))
-               (ana-api/ns-interns ns)))])
-      (when (nil? env#)
-        (cljs.test/clear-env!)))))
+  [[quote ns :as form]]
+  `(cljs.test/run-block (test-all-vars-block ~form)))
+
+(defmacro test-ns-block
+  "Like test-ns, but returns a block for further composition and
+  later execution.  Does not clear the current env."
+  ([env [quote ns :as form]]
+   (assert (and (= quote 'quote) (symbol? ns)) "Argument to test-ns must be a quoted symbol")
+   (assert (ana-api/find-ns ns) (str "Namespace " ns " does not exist"))
+   `[(fn []
+       (cljs.test/set-env! ~env)
+       (cljs.test/do-report {:type :begin-test-ns, :ns ~form})
+       ;; If the namespace has a test-ns-hook function, call that:
+       ~(if-let [v (ana-api/ns-resolve ns 'test-ns-hook)]
+          `(~(symbol (name ns) "test-ns-hook"))
+          ;; Otherwise, just test every var in the namespace.
+          `(cljs.test/block (cljs.test/test-all-vars-block ~form))))
+     (fn []
+       (cljs.test/do-report {:type :end-test-ns, :ns ~form}))]))
 
 (defmacro test-ns
   "If the namespace defines a function named test-ns-hook, calls that.
@@ -306,24 +355,13 @@
   namespace object or a symbol.
 
   Internally binds *report-counters* to a ref initialized to
-  *initial-report-counters*.  Returns the final, dereferenced state of
-  *report-counters*."
+  *initial-report-counters*.  "
   ([ns] `(cljs.test/test-ns (cljs.test/empty-env) ~ns))
   ([env [quote ns :as form]]
-   (assert (and (= quote 'quote) (symbol? ns)) "Argument to test-ns must be a quoted symbol")
-   (assert (ana-api/find-ns ns) (str "Namespace " ns " does not exist"))
-   `(do
-      (cljs.test/set-env! ~env)
-      (cljs.test/do-report {:type :begin-test-ns, :ns ~form})
-      ;; If the namespace has a test-ns-hook function, call that:
-      ~(if-let [v (ana-api/ns-resolve ns 'test-ns-hook)]
-         `(~(symbol (name ns) "test-ns-hook"))
-         ;; Otherwise, just test every var in the namespace.
-         `(cljs.test/test-all-vars ~form))
-      (cljs.test/do-report {:type :end-test-ns, :ns ~form})
-      (let [ret# (cljs.test/get-current-env)]
-        (cljs.test/clear-env!)
-        ret#))))
+   `(cljs.test/run-block
+     (concat (cljs.test/test-ns-block ~env ~form)
+             [(fn []
+                (cljs.test/clear-env!))]))))
 
 ;; =============================================================================
 ;; Fixes
