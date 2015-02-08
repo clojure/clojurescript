@@ -8115,7 +8115,7 @@ reduces them without incurring seq initialization"
         (-write writer begin)
         (if (zero? (:print-length opts))
           (when (seq coll)
-            (-write writer "..."))
+            (-write writer (or (:more-marker opts) "...")))
           (do
             (when (seq coll)
               (print-one (first coll) writer opts))
@@ -8127,7 +8127,7 @@ reduces them without incurring seq initialization"
                   (recur (next coll) (dec n)))
                 (when (and (seq coll) (zero? n))
                   (-write writer sep)
-                  (-write writer "..."))))))
+                  (-write writer (or (:more-marker opts) "...")))))))
         (-write writer end)))))
 
 (defn write-all [writer & ss]

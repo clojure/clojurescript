@@ -1491,6 +1491,20 @@
               "{:foo \"bar\", :baz \"woz\"}")))
   )
 
+(deftest test-print-with-opts
+  (testing "Testing printing with opts - :more-marker"
+    (is (= (pr-str-with-opts [[1 2 3]] {:more-marker "<MORE-MARKER>" :print-length 0})
+          "[<MORE-MARKER>]"))
+    (is (= (pr-str-with-opts [[1 2 3]] {:more-marker "\u2026" :print-length 1})
+          "[1 \u2026]"))
+    (is (= (pr-str-with-opts [#{1 2 3}] {:more-marker "\u2026" :print-length 2})
+          "#{1 3 \u2026}"))
+    (is (= (pr-str-with-opts ['(1 2 3)] {:more-marker "\u2026" :print-length 2})
+          "(1 2 \u2026)"))
+    (is (= (pr-str-with-opts [{:1 1 :2 2 :3 3}] {:more-marker "\u2026" :print-length 2})
+          "{:1 1, :2 2, \u2026}")))
+  )
+
 (defrecord PrintMe [a b])
 
 (deftest test-pr-str
