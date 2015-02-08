@@ -62,7 +62,8 @@
            com.google.javascript.jscomp.CommandLineRunner
            com.google.javascript.jscomp.AnonymousFunctionNamingPolicy
            java.security.MessageDigest
-           javax.xml.bind.DatatypeConverter))
+           javax.xml.bind.DatatypeConverter
+           [java.nio.file Paths StandardWatchEventKinds WatchKey]))
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
@@ -1124,6 +1125,48 @@ should contain the source for the given namespace name."
                  (util/mkdirs outfile)
                  (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))
+
+(defn watch
+  "Given a source which can be compiled, watch it for changes invoking build
+   then it does."
+  ([source opts]
+    (watch source opts
+      (if-not (nil? env/*compiler*)
+        env/*compiler*
+        (env/default-compiler-env opts))))
+  ([source opts compiler-env]
+    (let [path (Paths/get (.toURI (io/file source)))
+          fs   (.getFileSystem path)]
+      (try
+        (println "Watching path:" path)
+        (let [service  (.newWatchService fs)
+              key nil]
+          (. path
+            (register service
+              (into-array [StandardWatchEventKinds/ENTRY_CREATE
+                           StandardWatchEventKinds/ENTRY_DELETE
+                           StandardWatchEventKinds/ENTRY_MODIFY])))
+          (loop [key nil]
+            (when (or (nil? key) (. ^WatchKey key reset))
+              (let [key (. service take)
+                    start (util/now)]
+                (when (seq (.pollEvents key))
+                  (print "Change detected, recompiling...")
+                  (build source opts compiler-env)
+                  (println " done. Elapsed"
+                    (util/to-secs (- (util/now) start)) "seconds"))
+                (recur key)))))
+        (catch Exception e
+          (.printStackTrace e)
+          (System/exit 1))))))
+
+(comment
+  (watch "samples/hello/src"
+    {:optimizations :none
+     :output-to "samples/hello/out/hello.js"
+     :output-dir "samples/hello/out"
+     :source-map true})
+  )
 
 ;; =============================================================================
 ;; Utilities

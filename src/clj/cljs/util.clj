@@ -128,3 +128,8 @@
          ret#)
        ~expr)))
 
+(defn now []
+  (System/nanoTime))
+
+(defn to-secs [nano]
+  (/ nano 1e9))
