@@ -200,7 +200,7 @@
                         source-file
                         (io/file file)))
                     (str (System/getProperty "user.dir") File/separator) "")]
-        (println (str name' " (" file' ":" line' ":" column' ")"))))))
+        (println "\t" (str name' " (" file' ":" line' ":" column' ")"))))))
 
 (comment
   (cljsc/build "samples/hello/src"
