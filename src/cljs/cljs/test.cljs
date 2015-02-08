@@ -475,9 +475,9 @@
 (defn- wrap-map-fixtures
   "Wraps block in map-fixtures."
   [map-fixtures block]
-  (concat (map :before map-fixtures)
+  (concat (keep :before map-fixtures)
           block
-          (reverse (map :after map-fixtures))))
+          (reverse (keep :after map-fixtures))))
 
 (defn- fixtures-type
   [coll]
