@@ -931,7 +931,7 @@ should contain the source for the given namespace name."
                                (:url-min ijs))
                           (:url ijs))]
               (slurp url)))]
-    (apply str (map to-js-str sources))))
+    (str (string/join "\n" (map to-js-str sources)) "\n")))
 
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
   (if output-wrapper
