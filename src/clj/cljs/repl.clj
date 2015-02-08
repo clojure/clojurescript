@@ -150,40 +150,56 @@
    (doseq [ns (distinct requires)]
      (load-namespace repl-env ns opts))))
 
-(defn read-source-map [f]
+(defn read-source-map
+  "Return the source map for the JavaScript source file."
+  [f]
   (let [smf (io/file (str f ".map"))]
     (when (.exists smf)
       (sm/decode (json/read-str (slurp smf) :key-fn keyword)))))
 
-(defn ^File js-src->cljs-src [f]
+(defn ^File js-src->cljs-src
+  "Map a JavaScript output file back to the original ClojureScript source
+   file."
+  [f]
   (let [f (io/file f)
         dir (.getParentFile f)
         name (.getName f)]
     (io/file dir (string/replace name ".js" ".cljs"))))
 
-(defn ns-info [f]
+(defn ns-info
+  "Given a path to a js source file return the ns info for the corresponding
+   ClojureScript file if it exists."
+  [f]
   (let [f' (js-src->cljs-src f)]
     (when (.exists f')
       (ana/parse-ns f'))))
 
-(defn mapped-line-and-column [source-map line column]
+(defn mapped-line-and-column
+  "Given a cljs.source-map source map data structure map a generated line
+   and column back to the original line and column."
+  [source-map line column]
   (let [default [line column]]
     ;; source maps are 0 indexed for lines
     (if-let [columns (get source-map (dec line))]
       (vec
         (map inc
           (map
-           ;; source maps are 0 indexed for columns
-           ;; multiple segments may exist at column
-           ;; just take first
-           (last
-             (if-let [mapping (get columns (dec column))]
-               mapping
-               (second (first columns))))
-           [:line :col])))
+            ;; source maps are 0 indexed for columns
+            ;; multiple segments may exist at column
+            ;; just take first
+            (last
+              (if-let [mapping (get columns (dec column))]
+                mapping
+                (second (first columns))))
+            [:line :col])))
       default)))
 
-(defn print-mapped-stacktrace [stacktrace]
+(defn print-mapped-stacktrace
+  "Given a vector representing the canonicalized JavaScript stacktrace
+   print the ClojureScript stacktrace. The canonical stacktrace must be
+   a vector of {:file <string> :function <string> :line <integer> :column <integer>}
+   maps."
+  [stacktrace]
   (let [read-source-map' (memoize read-source-map)
         ns-info' (memoize ns-info)]
     (doseq [{:keys [function file line column] :as frame} stacktrace]
