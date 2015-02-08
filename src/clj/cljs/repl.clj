@@ -176,7 +176,7 @@
            ;; source maps are 0 indexed for columns
            ;; multiple segments may exist at column
            ;; just take first
-           (first
+           (last
              (if-let [mapping (get columns (dec column))]
                mapping
                (second (first columns))))
