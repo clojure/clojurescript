@@ -1119,8 +1119,9 @@ should contain the source for the given namespace name."
              ret))))))
 
 (defn watch
-  "Given a source which can be compiled, watch it for changes invoking build
-   then it does."
+  "Given a source directory, produce runnable JavaScript. Watch the source
+   directory for changes rebuliding when necessary. Takes the same arguments as
+   cljs.closure/build."
   ([source opts]
     (watch source opts
       (if-not (nil? env/*compiler*)
