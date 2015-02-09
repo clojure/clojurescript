@@ -43,33 +43,24 @@
             [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.data.json :as json])
-  (:import java.io.File
-           java.io.BufferedInputStream
-           java.net.URL
-           java.util.logging.Level
-           java.util.List
-           com.google.javascript.jscomp.CompilerOptions
-           com.google.javascript.jscomp.CompilerOptions$LanguageMode
-           com.google.javascript.jscomp.CompilationLevel
-           com.google.javascript.jscomp.SourceMap$Format
-           com.google.javascript.jscomp.SourceMap$DetailLevel
-           com.google.javascript.jscomp.ClosureCodingConvention
-           com.google.javascript.jscomp.SourceFile
-           com.google.javascript.jscomp.Result
-           com.google.javascript.jscomp.JSError
-           com.google.javascript.jscomp.CheckLevel
-           com.google.javascript.jscomp.DiagnosticGroups
-           com.google.javascript.jscomp.CommandLineRunner
-           com.google.javascript.jscomp.AnonymousFunctionNamingPolicy
-           java.security.MessageDigest
-           javax.xml.bind.DatatypeConverter
+  (:import [java.io File BufferedInputStream]
+           [java.net URL]
+           [java.util.logging Level]
+           [java.util List Random]
+           [com.google.javascript.jscomp CompilerOptions CompilationLevel
+              CompilerOptions$LanguageMode SourceMap$Format
+              SourceMap$DetailLevel ClosureCodingConvention SourceFile
+              Result JSError CheckLevel DiagnosticGroups
+              CommandLineRunner AnonymousFunctionNamingPolicy]
+           [java.security MessageDigest]
+           [javax.xml.bind DatatypeConverter]
            [java.nio.file Paths StandardWatchEventKinds WatchKey]
            [com.sun.nio.file SensitivityWatchEventModifier]))
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
 (defn random-char []
-  (nth name-chars (.nextInt (java.util.Random.) (count name-chars))))
+  (nth name-chars (.nextInt (Random.) (count name-chars))))
 
 (defn random-string [length]
   (apply str (take length (repeatedly random-char))))
@@ -345,7 +336,7 @@
     (if output-file
       (let [out-file (io/file (util/output-directory opts) output-file)]
         (compiled-file (comp/compile-file file out-file opts)))
-      (binding [ana/*cljs-file* (.getPath ^java.io.File file)]
+      (binding [ana/*cljs-file* (.getPath ^File file)]
         (compile-form-seq (ana/forms-seq file)))))
 
 (defn compile-dir
