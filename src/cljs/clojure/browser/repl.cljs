@@ -131,6 +131,6 @@
               (let [script (.createElement js/document "script")]
                 (set! (.-type script) "text/javascript")
                 (set! (.-src script)
-                  (str js/goog.basePath
+                  (str "goog/"
                     (aget (.. js/goog -dependencies_ -nameToPath) name)))
                 script))))))))
