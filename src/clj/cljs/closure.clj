@@ -1152,9 +1152,11 @@ should contain the source for the given namespace name."
                     start (util/now)]
                 (when (seq (.pollEvents key))
                   (print "Change detected, recompiling...")
+                  (flush)
                   (build source opts compiler-env)
                   (println " done. Elapsed"
-                    (util/to-secs (- (util/now) start)) "seconds"))
+                    (util/to-secs (unchecked-subtract (util/now) start)) "seconds")
+                  (flush))
                 (recur key)))))
         (catch Exception e
           (.printStackTrace e)
@@ -1165,6 +1167,7 @@ should contain the source for the given namespace name."
     {:optimizations :none
      :output-to "samples/hello/out/hello.js"
      :output-dir "samples/hello/out"
+     :cache-analysis true
      :source-map true})
   )
 
