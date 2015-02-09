@@ -63,7 +63,8 @@
            com.google.javascript.jscomp.AnonymousFunctionNamingPolicy
            java.security.MessageDigest
            javax.xml.bind.DatatypeConverter
-           [java.nio.file Paths StandardWatchEventKinds WatchKey]))
+           [java.nio.file Paths StandardWatchEventKinds WatchKey]
+           [com.sun.nio.file SensitivityWatchEventModifier]))
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
@@ -1145,7 +1146,8 @@ should contain the source for the given namespace name."
             (register service
               (into-array [StandardWatchEventKinds/ENTRY_CREATE
                            StandardWatchEventKinds/ENTRY_DELETE
-                           StandardWatchEventKinds/ENTRY_MODIFY])))
+                           StandardWatchEventKinds/ENTRY_MODIFY])
+              (into-array [SensitivityWatchEventModifier/HIGH])))
           (loop [key nil]
             (when (or (nil? key) (. ^WatchKey key reset))
               (let [key (. service take)
