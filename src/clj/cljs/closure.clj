@@ -1155,7 +1155,10 @@ should contain the source for the given namespace name."
                 (when (seq (.pollEvents key))
                   (println "Change detected, recompiling...")
                   (flush)
-                  (buildf))
+                  (try
+                    (buildf)
+                    (catch Exception e
+                      (.printStackTrace e))))
                 (recur key)))))
         (catch Exception e
           (.printStackTrace e)
