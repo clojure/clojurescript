@@ -1131,10 +1131,10 @@ should contain the source for the given namespace name."
     (let [path   (Paths/get (.toURI (io/file source)))
           fs     (.getFileSystem path)
           buildf (fn []
-                   (let [start (util/now)]
+                   (let [start (System/nanoTime)]
                      (build source opts compiler-env)
                      (println "... done. Elapsed"
-                       (util/to-secs (unchecked-subtract (util/now) start)) "seconds")
+                       (/ (unchecked-subtract (System/nanoTime) start) 1e9) "seconds")
                      (flush)))]
       (try
         (println "Building...")
