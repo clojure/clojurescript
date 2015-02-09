@@ -1133,11 +1133,11 @@ should contain the source for the given namespace name."
           buildf (fn []
                    (let [start (util/now)]
                      (build source opts compiler-env)
-                     (println " done. Elapsed"
+                     (println "... done. Elapsed"
                        (util/to-secs (unchecked-subtract (util/now) start)) "seconds")
                      (flush)))]
       (try
-        (print "Building...")
+        (println "Building...")
         (flush)
         (buildf)
         (println "Watching path:" source)
@@ -1153,7 +1153,7 @@ should contain the source for the given namespace name."
             (when (or (nil? key) (. ^WatchKey key reset))
               (let [key (. service take)]
                 (when (seq (.pollEvents key))
-                  (print "Change detected, recompiling...")
+                  (println "Change detected, recompiling...")
                   (flush)
                   (buildf))
                 (recur key)))))
@@ -1167,7 +1167,8 @@ should contain the source for the given namespace name."
      :output-to "samples/hello/out/hello.js"
      :output-dir "samples/hello/out"
      :cache-analysis true
-     :source-map true})
+     :source-map true
+     :verbose true})
   )
 
 ;; =============================================================================
