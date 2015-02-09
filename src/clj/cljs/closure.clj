@@ -1128,10 +1128,19 @@ should contain the source for the given namespace name."
         env/*compiler*
         (env/default-compiler-env opts))))
   ([source opts compiler-env]
-    (let [path (Paths/get (.toURI (io/file source)))
-          fs   (.getFileSystem path)]
+    (let [path   (Paths/get (.toURI (io/file source)))
+          fs     (.getFileSystem path)
+          buildf (fn []
+                   (let [start (util/now)]
+                     (build source opts compiler-env)
+                     (println " done. Elapsed"
+                       (util/to-secs (unchecked-subtract (util/now) start)) "seconds")
+                     (flush)))]
       (try
-        (println "Watching path:" path)
+        (print "Building...")
+        (flush)
+        (buildf)
+        (println "Watching path:" source)
         (let [service  (.newWatchService fs)
               key nil]
           (. path
@@ -1142,15 +1151,11 @@ should contain the source for the given namespace name."
               (into-array [SensitivityWatchEventModifier/HIGH])))
           (loop [key nil]
             (when (or (nil? key) (. ^WatchKey key reset))
-              (let [key (. service take)
-                    start (util/now)]
+              (let [key (. service take)]
                 (when (seq (.pollEvents key))
                   (print "Change detected, recompiling...")
                   (flush)
-                  (build source opts compiler-env)
-                  (println " done. Elapsed"
-                    (util/to-secs (unchecked-subtract (util/now) start)) "seconds")
-                  (flush))
+                  (buildf))
                 (recur key)))))
         (catch Exception e
           (.printStackTrace e)
