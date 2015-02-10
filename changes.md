@@ -1,3 +1,28 @@
+## 0.0-2814
+
+### Enhancements
+* add simple source directory `cljs.closure/watch` watcher using java.nio
+* CLJS-1022: Concatenate foreign dependencies safely
+* CLJS-988: Support async testing in cljs.test
+* CLJS-1018: Add support for cljs.core/*e Modify the JavaScript that is sent for evaluation to wrap in a try and then catch any exception thrown, assign it to *e, and then rethrow.
+* CLJS-1012: Correct behavior when *print-length* is set to 0
+* Added new :closure-extra-annotations compiler option allowing to define extra JSDoc annotation used by closure libraries.
+* Mirrored source map support APIs on server/client
+* Unified source mapping support in REPLs
+* Nashorn REPL (thanks Pieter van Prooijen)
+
+### Fixes
+* CLJS-1023: regression, macro-autoload-ns? and ns-dependents need to throw on cyclic dependencies
+* fix require with browser REPL, set base path to "goog/"
+* CLJS-1020: off by one error in REPL source map support
+* Node.js 0.12 support
+* browser REPL needs to respect :output-dir
+* CLJS-1006: Implicit dependency of clojure.browser.repl on cljs.repl
+* CLJS-1005: Browser REPL creates 'out' directory no matter what
+* CLJS-1003: fix cljs.test run-tests do-report :summary issues
+* CLJS-1003: Cannot pass custom env to run-tests
+* Windows Node.js REPL issues
+
 ## 0.0-2760
 
 ### Fixes
