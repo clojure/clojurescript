@@ -34,6 +34,7 @@
 (def ^:dynamic *analyze-deps* true)
 (def ^:dynamic *load-tests* true)
 (def ^:dynamic *load-macros* true)
+(def ^:dynamic *macro-infer* true)
 
 ;; log compiler activities
 (def ^:dynamic *verbose* false)
@@ -1235,13 +1236,14 @@
   "Given a spec form check whether the spec namespace requires a macro file
    of the same name. If so return true."
   [form]
-  (let [ns (if (sequential? form) (first form) form)
-        {:keys [use-macros require-macros]}
-        (or (get-in @env/*compiler* [::namespaces ns])
-            (when-let [res (io/resource (util/ns->relpath ns))]
-              (:ast (parse-ns res))))]
-    (or (some #{ns} (vals use-macros))
-        (some #{ns} (vals require-macros)))))
+  (when *macro-infer*
+    (let [ns (if (sequential? form) (first form) form)
+         {:keys [use-macros require-macros]}
+         (or (get-in @env/*compiler* [::namespaces ns])
+           (when-let [res (io/resource (util/ns->relpath ns))]
+             (:ast (parse-ns res))))]
+      (or (some #{ns} (vals use-macros))
+          (some #{ns} (vals require-macros))))))
 
 (defn desugar-ns-specs
   "Given an original set of ns specs desugar :include-macros and :refer-macros
@@ -1811,6 +1813,10 @@ argument, which the reader will use in any emitted errors."
       (let [namespaces' (::namespaces @env/*compiler*)
             ret
             (binding [*cljs-ns* 'cljs.user
+                      *macro-infer*
+                      (or (when (contains? opts :macro-infer)
+                            (:macro-infer opts))
+                           false)
                       *analyze-deps*
                       (or (when (contains? opts :analyze-deps)
                             (:analyze-deps opts))

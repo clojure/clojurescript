@@ -1024,6 +1024,7 @@
   ([src dest]
     (compile-file src dest nil))
   ([src dest opts]
+    {:post [map?]}
     (let [src-file  (io/file src)
           dest-file (io/file dest)
           opts      (merge {:optimizations :none} opts)]
@@ -1033,15 +1034,16 @@
                 opts (if (= ns 'cljs.core) (assoc opts :static-fns true) opts)]
             (if (requires-compilation? src-file dest-file opts)
               (do
-                (when *dependents*
-                  (swap! *dependents*
-                    (fn [{:keys [recompile visited]}]
-                      {:recompile (into recompile (ana/ns-dependents ns))
-                       :visited   (conj visited ns)})))
                 (util/mkdirs dest-file)
                 (when (contains? (::ana/namespaces @env/*compiler*) ns)
                   (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
-                (compile-file* src-file dest-file opts))
+                (let [ret (compile-file* src-file dest-file opts)]
+                  (when *dependents*
+                    (swap! *dependents*
+                      (fn [{:keys [recompile visited]}]
+                        {:recompile (into recompile (ana/ns-dependents ns))
+                         :visited   (conj visited ns)})))
+                  ret))
               (do
                 (when-not (contains? (::ana/namespaces @env/*compiler*) ns)
                   (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
