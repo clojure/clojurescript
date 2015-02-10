@@ -241,9 +241,9 @@
   )
 
 (defn- display-error
-  ([ret form opts]
-    (display-error ret form (constantly nil) opts))
-  ([ret form f opts]
+  ([repl-env ret form opts]
+    (display-error repl-env ret form (constantly nil) opts))
+  ([repl-env ret form f opts]
     (f)
     (println (:value ret))
     (when-let [st (:stacktrace ret)]
@@ -300,8 +300,8 @@
             (print js))
           (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
             (case (:status ret)
-              :error (display-error ret form opts)
-              :exception (display-error ret form
+              :error (display-error repl-env ret form opts)
+              :exception (display-error repl-env ret form
                            (if (:repl-verbose opts)
                              #(prn "Error evaluating:" form :as js)
                              (constantly nil))
