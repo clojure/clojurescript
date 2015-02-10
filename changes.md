@@ -1,3 +1,8 @@
+## 0.0-2816
+
+### Fixes
+* CLJS-1001: reify did not elide reader metadata
+
 ## 0.0-2814
 
 ### Enhancements
