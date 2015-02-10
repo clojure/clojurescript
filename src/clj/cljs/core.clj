@@ -626,7 +626,7 @@
            IMeta
            (~'-meta [~this-sym] ~meta-sym)
            ~@impls))
-       (new ~t ~@locals ~(meta &form)))))
+       (new ~t ~@locals ~(ana/elide-reader-meta (meta &form))))))
 
 (defmacro specify! [expr & impls]
   (let [x (with-meta (gensym "x") {:extend :instance})]

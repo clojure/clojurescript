@@ -1707,9 +1707,12 @@
      :children items
      :tag (if (map? val) 'object 'array)}))
 
+(defn elide-reader-meta [m]
+  (dissoc m :file :line :column :end-column :end-line :source))
+
 (defn analyze-wrap-meta [expr]
   (let [form (:form expr)
-        m    (dissoc (meta form) :file :line :column :end-column :end-line :source)]
+        m    (elide-reader-meta (meta form))]
     (if (seq m)
       (let [env (:env expr) ; take on expr's context ourselves
             expr (assoc-in expr [:env :context] :expr) ; change expr to :expr
