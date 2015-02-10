@@ -186,7 +186,7 @@
           (map
             ;; source maps are 0 indexed for columns
             ;; multiple segments may exist at column
-            ;; just take first
+            ;; the last segment seems most accurate
             (last
               (if-let [mapping (get columns (dec column))]
                 mapping
