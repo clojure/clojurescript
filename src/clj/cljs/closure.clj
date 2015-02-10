@@ -54,7 +54,8 @@
               CommandLineRunner AnonymousFunctionNamingPolicy]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]
-           [java.nio.file Paths StandardWatchEventKinds WatchKey]
+           [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
+                          WatchEvent FileVisitor FileVisitResult]
            [com.sun.nio.file SensitivityWatchEventModifier]))
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
@@ -1128,41 +1129,53 @@ should contain the source for the given namespace name."
         env/*compiler*
         (env/default-compiler-env opts))))
   ([source opts compiler-env]
-    (let [path   (Paths/get (.toURI (io/file source)))
-          fs     (.getFileSystem path)
-          buildf (fn []
-                   (let [start (System/nanoTime)]
-                     (build source opts compiler-env)
-                     (println "... done. Elapsed"
-                       (/ (unchecked-subtract (System/nanoTime) start) 1e9) "seconds")
-                     (flush)))]
-      (try
+    (let [path (Paths/get (.toURI (io/file source)))
+          fs (.getFileSystem path)
+          service (.newWatchService fs)]
+      (letfn [(buildf []
+                (let [start (System/nanoTime)]
+                  (build source opts compiler-env)
+                  (println "... done. Elapsed"
+                    (/ (unchecked-subtract (System/nanoTime) start) 1e9) "seconds")
+                  (flush)))
+              (watch-all [^Path root]
+                (Files/walkFileTree root
+                  (reify
+                    FileVisitor
+                    (preVisitDirectory [_ dir _]
+                      (let [^Path dir dir]
+                        (. dir
+                          (register service
+                            (into-array [StandardWatchEventKinds/ENTRY_CREATE
+                                         StandardWatchEventKinds/ENTRY_DELETE
+                                         StandardWatchEventKinds/ENTRY_MODIFY])
+                            (into-array [SensitivityWatchEventModifier/HIGH]))))
+                      FileVisitResult/CONTINUE)
+                    (postVisitDirectory [_ dir exc]
+                      FileVisitResult/CONTINUE)
+                    (visitFile [_ file attrs]
+                      FileVisitResult/CONTINUE)
+                    (visitFileFailed [_ file exc]
+                      FileVisitResult/CONTINUE))))]
         (println "Building...")
         (flush)
         (buildf)
         (println "Watching path:" source)
-        (let [service  (.newWatchService fs)
-              key nil]
-          (. path
-            (register service
-              (into-array [StandardWatchEventKinds/ENTRY_CREATE
-                           StandardWatchEventKinds/ENTRY_DELETE
-                           StandardWatchEventKinds/ENTRY_MODIFY])
-              (into-array [SensitivityWatchEventModifier/HIGH])))
-          (loop [key nil]
-            (when (or (nil? key) (. ^WatchKey key reset))
-              (let [key (. service take)]
-                (when (seq (.pollEvents key))
-                  (println "Change detected, recompiling...")
-                  (flush)
-                  (try
-                    (buildf)
-                    (catch Exception e
-                      (.printStackTrace e))))
-                (recur key)))))
-        (catch Exception e
-          (.printStackTrace e)
-          (System/exit 1))))))
+        (watch-all path)
+        (loop [key nil]
+          (when (or (nil? key) (. ^WatchKey key reset))
+            (let [key (. service take)]
+              (when (some (fn [^WatchEvent e]
+                            (or (.. (. e context) toString (endsWith "cljs"))
+                                (.. (. e context) toString (endsWith "js"))))
+                      (seq (.pollEvents key)))
+                (println "Change detected, recompiling...")
+                (flush)
+                (try
+                  (buildf)
+                  (catch Exception e
+                    (.printStackTrace e))))
+              (recur key))))))))
 
 (comment
   (watch "samples/hello/src"
