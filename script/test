@@ -1,6 +1,8 @@
 #!/bin/sh
 
 rm -rf builds/out-adv
+rm -rf out
+rm -rf target
 mkdir -p builds/out-adv
 
 possible=4
