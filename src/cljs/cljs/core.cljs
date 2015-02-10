@@ -8160,7 +8160,7 @@ reduces them without incurring seq initialization"
 
 (declare print-map)
 
-(defn- pr-writer-worker
+(defn- pr-writer-impl
   [obj writer opts]
   (cond
     (nil? obj) (-write writer "nil")
@@ -8233,9 +8233,9 @@ reduces them without incurring seq initialization"
    configurable, allowing efficient implementations such as appending
    to a StringBuffer."
   [obj writer opts]
-  (if-let [alt-worker (:alt-worker opts)]
-    (alt-worker obj writer (assoc opts :fallback-worker pr-writer-worker))
-    (pr-writer-worker obj writer opts)))
+  (if-let [alt-impl (:alt-impl opts)]
+    (alt-impl obj writer (assoc opts :fallback-impl pr-writer-impl))
+    (pr-writer-impl obj writer opts)))
 
 (defn pr-seq-writer [objs writer opts]
   (pr-writer (first objs) writer opts)

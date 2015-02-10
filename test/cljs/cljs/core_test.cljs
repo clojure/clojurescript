@@ -1505,18 +1505,18 @@
     (is (= (pr-str-with-opts [{:1 1 :2 2 :3 3}] {:more-marker "\u2026" :print-length 2})
           "{:1 1, :2 2, \u2026}")))
 
-  (testing "Testing printing with opts - :alt-worker"
+  (testing "Testing printing with opts - :alt-impl"
     ; CLJS-1010
-    (is (= (pr-str-with-opts [[1 2 3]] {:alt-worker (fn [obj writer opts] ((:fallback-worker opts) obj writer opts))})
+    (is (= (pr-str-with-opts [[1 2 3]] {:alt-impl (fn [obj writer opts] ((:fallback-impl opts) obj writer opts))})
           "[1 2 3]"))
-    (is (= (pr-str-with-opts [[1 2 3]] {:alt-worker (fn [obj writer opts] (-write writer (str "<" obj ">")))})
+    (is (= (pr-str-with-opts [[1 2 3]] {:alt-impl (fn [obj writer opts] (-write writer (str "<" obj ">")))})
           "<[1 2 3]>"))
-    (is (= (pr-str-with-opts [[:start 1 2 [:middle] 3 4 :end] :standalone] {:alt-worker (fn [obj writer opts]
+    (is (= (pr-str-with-opts [[:start 1 2 [:middle] 3 4 :end] :standalone] {:alt-impl (fn [obj writer opts]
                                                                                         (if (keyword? obj)
                                                                                           (-write writer (str "|" (name obj) "|"))
-                                                                                          ((:fallback-worker opts) obj writer opts)))})
+                                                                                          ((:fallback-impl opts) obj writer opts)))})
           "[|start| 1 2 [|middle|] 3 4 |end|] |standalone|"))
-    (is (= (pr-str-with-opts [[1 2 3]] {:alt-worker (fn [obj writer opts])})
+    (is (= (pr-str-with-opts [[1 2 3]] {:alt-impl (fn [obj writer opts])})
           "")))
   )
 
