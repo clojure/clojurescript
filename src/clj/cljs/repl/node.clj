@@ -152,16 +152,17 @@
       (repl/evaluate-form repl-env env "<cljs repl>"
         '(do
            (.require js/goog "cljs.core")
-           (set! *print-fn* (.-print (js/require "util")))))
+           (enable-console-print!)))
       ;; redef goog.require to track loaded libs
       (repl/evaluate-form repl-env env "<cljs repl>"
-        '(set! (.-require js/goog)
-           (fn [name reload]
-             (when (or (not (contains? *loaded-libs* name)) reload)
-               (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
-               (js/CLOSURE_IMPORT_SCRIPT
-                 (aget (.. js/goog -dependencies_ -nameToPath) name))))))
-      )))
+        '(do
+           (set! *loaded-libs* #{"cljs.core"})
+           (set! (.-require js/goog)
+             (fn [name reload]
+               (when (or (not (contains? *loaded-libs* name)) reload)
+                 (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
+                 (js/CLOSURE_IMPORT_SCRIPT
+                   (aget (.. js/goog -dependencies_ -nameToPath) name))))))))))
 
 (defrecord NodeEnv [host port socket proc]
   repl/IReplEnvOptions

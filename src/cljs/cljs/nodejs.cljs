@@ -15,6 +15,8 @@
 (def require (js* "require"))
 (def process (js* "process"))
 
-; Have ClojureScript print using Node's sys.print function
 (defn enable-util-print! []
-  (set! *print-fn* (.-print (require "util"))))
+  (set! *print-newline* false)
+  (set! *print-fn*
+    (fn [& args]
+      (.apply (.-log js/console) js/console (into-array args)))))
