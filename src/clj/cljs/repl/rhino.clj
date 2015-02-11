@@ -121,8 +121,6 @@
     (ScriptableObject/putProperty scope "__repl_opts"
       (Context/javaToJS opts scope))
     (repl/load-file repl-env "cljs/core.cljs" opts)
-    (repl/evaluate-form repl-env env "<cljs repl>"
-      '(ns cljs.user))
     (ScriptableObject/putProperty scope
       "out" (Context/javaToJS *out* scope))
     (binding [ana/*cljs-ns* 'cljs.core]
