@@ -106,9 +106,10 @@
   (-repl-options [_] nil))
 
 (defprotocol IParseStacktrace
-  (-parse-stacktrace [repl-env stacktrace build-options]
-    "Given the original JavaScript stacktrace string and current compiler build
-     options, parse the stacktrace into the canonical form:
+  (-parse-stacktrace [repl-env stacktrace error build-options]
+    "Given the original JavaScript stacktrace string, the entire original error
+     value and current compiler build options, parse the stacktrace into the
+     canonical form:
 
      [{:file <string>
        :function <string>
@@ -273,7 +274,7 @@
       (if (and (true? (:source-map opts))
                (satisfies? IParseStacktrace repl-env))
         (print-mapped-stacktrace
-          (-parse-stacktrace repl-env st opts) opts)
+          (-parse-stacktrace repl-env st ret opts) opts)
         (println st))
       (flush))))
 
