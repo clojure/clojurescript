@@ -23,6 +23,7 @@
             [cljs.closure :as cljsc]
             [cljs.source-map :as sm])
   (:import [java.io File PushbackReader]
+           [java.net URL]
            [javax.xml.bind DatatypeConverter]))
 
 (def ^:dynamic *cljs-verbose* false)
@@ -91,18 +92,30 @@
 ;; CLJS Specifics
 
 (defprotocol IReplEnvOptions
-  (-repl-options [this] "Return default REPL options for a REPL Env"))
+  (-repl-options [repl-env] "Return default REPL options for a REPL Env"))
 
 (defprotocol IJavaScriptEnv
-  (-setup [this opts] "initialize the environment")
-  (-evaluate [this filename line js] "evaluate a javascript string")
-  (-load [this provides url] "load code at url into the environment")
-  (-tear-down [this] "dispose of the environment"))
+  (-setup [repl-env opts] "initialize the environment")
+  (-evaluate [repl-env filename line js] "evaluate a javascript string")
+  (-load [repl-env provides url] "load code at url into the environment")
+  (-tear-down [repl-env] "dispose of the environment"))
 
 (extend-type
   Object
   IReplEnvOptions
   (-repl-options [_] nil))
+
+(defprotocol IParseStacktrace
+  (-parse-stacktrace [repl-env stacktrace build-options]
+    "Given the original JavaScript stacktrace string and current compiler build
+     options, parse the stacktrace into the canonical form:
+
+     [{:file <string>
+       :function <string>
+       :line <integer>
+       :column <integer>}*]
+
+     :file must be a URL path (without protocol) relative to :output-dir."))
 
 (defn- env->opts
   "Returns a hash-map containing all of the entries in [repl-env], translating
@@ -197,14 +210,23 @@
 (defn print-mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace
    print the ClojureScript stacktrace. The canonical stacktrace must be
-   a vector of {:file <string> :function <string> :line <integer> :column <integer>}
-   maps."
+   in the form:
+
+    [{:file <string>
+      :function <string>
+      :line <integer>
+      :column <integer>}*]
+
+   :file must be a URL path (without protocol) relative to :output-dir."
   ([stacktrace] (print-mapped-stacktrace stacktrace nil))
   ([stacktrace opts]
     (let [read-source-map' (memoize read-source-map)
           ns-info' (memoize ns-info)]
       (doseq [{:keys [function file line column] :as frame} stacktrace]
-        (let [[sm {:keys [ns source-file] :as ns-info}] ((juxt read-source-map' ns-info') file)
+        ;; need to convert file, a relative URL style path, to host-specific file
+        (let [file (io/file (URL. (.toURL (io/file (util/output-directory opts))) file))
+              [sm {:keys [ns source-file] :as ns-info}]
+              ((juxt read-source-map' ns-info') file)
               [line' column'] (if ns-info
                                 (mapped-line-and-column sm line column)
                                 [line column])
@@ -234,10 +256,11 @@
   (:ns (ns-info "samples/hello/out/hello/core.js"))
 
   (print-mapped-stacktrace
-    [{:file "samples/hello/out/hello/core.js"
+    [{:file "hello/core.js"
       :function "first"
       :line 2
-      :column 1}])
+      :column 1}]
+    {:output-dir "samples/hello/out"})
   )
 
 (defn- display-error
@@ -248,8 +271,9 @@
     (println (:value ret))
     (when-let [st (:stacktrace ret)]
       (if (and (true? (:source-map opts))
-               (vector? st))
-        (print-mapped-stacktrace st opts)
+               (satisfies? IParseStacktrace repl-env))
+        (print-mapped-stacktrace
+          (-parse-stacktrace repl-env st opts) opts)
         (println st))
       (flush))))
 
