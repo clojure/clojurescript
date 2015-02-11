@@ -273,8 +273,10 @@
     (when-let [st (:stacktrace ret)]
       (if (and (true? (:source-map opts))
                (satisfies? IParseStacktrace repl-env))
-        (print-mapped-stacktrace
-          (-parse-stacktrace repl-env st ret opts) opts)
+        (let [cst (-parse-stacktrace repl-env st ret opts)]
+          (if (vector? cst)
+            (print-mapped-stacktrace cst opts)
+            (println st)))
         (println st))
       (flush))))
 
