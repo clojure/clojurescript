@@ -101,6 +101,20 @@
    \"(arithmetic addition)\", in failure reports.  You can use nested
    tests to set up a context shared by several tests.
 
+   DEFINING ASYNC TESTS
+
+   (deftest addition
+     (async done
+       (is (= 4 (+ 2 2)))
+       (is (= 7 (+ 3 4)))
+       (done)))
+
+   Async tests are constructed with the async macro. The first argument to
+   the macro is the test completion callback. The body of the async macro may
+   be any series of expressions. The completion callback must be invoked when
+   all assertions have run. There is no support for asynchronous coordination -
+   core.async is recommended for this. Note the body of the async test must be
+   truly asynchronous to avoid stack overflow.
 
    RUNNING TESTS
 
