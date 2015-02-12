@@ -1,2 +1,3 @@
-function require(){}
-function process(){}
+var global = {};
+function require(){};
+function process(){};

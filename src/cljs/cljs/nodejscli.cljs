@@ -12,7 +12,11 @@
 (ns cljs.nodejscli
   (:require [cljs.nodejs :as nodejs]))
 
-; Call the user's main function
+;; need to set js/goog.global if COMPILED
+(when ^boolean js/COMPILED
+  (set! js/goog.global js/global))
+
+;; Call the user's main function
 (if (or (nil? cljs.core/*main-cli-fn*)
         (not (fn? cljs.core/*main-cli-fn*)))
   (throw (js/Error. "cljs.core/*main-cli-fn* not set"))
