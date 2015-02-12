@@ -1,3 +1,28 @@
+## 0.0-2843
+
+### Enhancements
+* CLJS-1032: Node.js target should support :main
+* require cljs.test macro ns in cljs.test to get macro inference goodness
+* include :url entries to original sources in mapped stacktraces if it can be determined   from the classpath
+* support custom mapped stacktrace printing
+* provide data oriented stacktrace mapping api
+* CLJS-1025: make REPL source mapping infrastructure generic
+* CLJS-1010: Printing hook for cljs-devtools
+* CLJS-1016: make "..." marker configurable
+
+### Changes
+* CLJS-887: browser repl should serve CSS
+* CLJS-1031: Get Closure Compiler over https in the bootstrap script
+
+### Fixes
+* cljs.nodejscli ns needs to set `goog.global` when `COMPILED` is true, this fixes the fundamental issues for ASYNC-110
+* CLJS-967: "java.net.ConnectException: Connection refused" when running node repl
+* pass relevant source map options in the incremental compile case
+* add some missing source-map customization flags to optimized builds
+* fix missed Rhino REPL regression, the surrounding REPL infrastructure creates cljs.user for us
+* util.print has been deprecated in Node.js v0.12. Switch to console.log in Node.js REPLs.
+* change `cljs.closure/watch` so it correctly watches all subdirectories do not recompile unless changed path is a file with .cljs or .js extension
+
 ## 0.0-2816
 
 ### Fixes
