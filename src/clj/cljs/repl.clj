@@ -118,6 +118,11 @@
 
      :file must be a URL path (without protocol) relative to :output-dir."))
 
+(defprotocol IPrintStacktrace
+  (-print-stacktrace [repl-env stacktrace error build-options]
+    "Implementing REPL evaluation environments are given the opportunity to
+     print the mapped stacktrace themselves. This permits further processing."))
+
 (defn- env->opts
   "Returns a hash-map containing all of the entries in [repl-env], translating
 :working-dir to :output-dir."
@@ -295,7 +300,9 @@
                (satisfies? IParseStacktrace repl-env))
         (let [cst (-parse-stacktrace repl-env st ret opts)]
           (if (vector? cst)
-            (print-mapped-stacktrace cst opts)
+            (if (satisfies? IPrintStacktrace repl-env)
+              (-print-stacktrace repl-env cst ret opts)
+              (print-mapped-stacktrace cst opts))
             (println st)))
         (println st))
       (flush))))
