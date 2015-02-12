@@ -111,7 +111,8 @@
       (.endsWith path ".js")
       (.endsWith path ".cljs")
       (.endsWith path ".map")
-      (.endsWith path ".html")))
+      (.endsWith path ".html")
+      (.endsWith path ".css")))
   send-static)
 
 (defmulti handle-post (fn [m _ _ ] (:type m)))
