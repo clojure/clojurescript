@@ -772,11 +772,23 @@ should contain the source for the given namespace name."
 (defn output-main-file [opts]
   (let [asset-path (or (:asset-path opts)
                        (util/output-directory opts))]
-    (output-one-file opts
-      (str "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');"
-           "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');"
-           "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
-            "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');"))))
+    (case (:target opts)
+      :nodejs
+      (output-one-file opts
+        (str "var path = require(\"path\");\n"
+             "try {\n"
+             "    require(\"source-map-support\").install();\n"
+             "} catch(err) {\n"
+             "}\n"
+             "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
+             "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
+             "goog.require(\"" (comp/munge (:main opts)) "\");\n"
+             "goog.require(\"cljs.nodejscli\");\n"))
+      (output-one-file opts
+        (str "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
+             "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
+             "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
+             "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');\n")))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
@@ -875,7 +887,7 @@ should contain the source for the given namespace name."
         main         (:main opts)]
     (util/mkdirs goog-deps)
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
-    (if (and main (not= (:target opts) :nodejs))
+    (if main
       (do
         (output-deps-file
           (assoc opts :output-to
