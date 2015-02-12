@@ -223,7 +223,9 @@
       :line <integer>
       :column <integer>}*]
 
-   :file must be a URL path (without protocol) relative to :output-dir."
+   :file must be a URL path (without protocol) relative to :output-dir. The
+   returned mapped stacktrace will also contain :url entries to the original
+   sources if it can be determined from the classpath."
   ([stacktrace] (mapped-stacktrace stacktrace nil))
   ([stacktrace opts]
     (let [read-source-map' (memoize read-source-map)
@@ -245,11 +247,16 @@
                           (if ns-info
                             source-file
                             (io/file rfile)))
-                        (str (System/getProperty "user.dir") File/separator) "")]
-            {:function name'
-             :file     file'
-             :line     line'
-             :column   column'}))))))
+                        (str (System/getProperty "user.dir") File/separator) "")
+                url   (or (and ns-info (io/resource (util/ns->relpath ns)))
+                          (io/resource file))]
+            (merge
+              {:function name'
+               :file     (io/file file')
+               :line     line'
+               :column   column'}
+              (when url
+                {:url url}))))))))
 
 (defn print-mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace
@@ -267,13 +274,6 @@
      :output-to "samples/hello/out/hello.js"
      :source-map true})
 
-  ;; line 2 column 1
-  (mapped-line-and-column
-    (read-source-map "samples/hello/out/hello/core.js") 2 1)
-
-  ;; hello.core
-  (:ns (ns-info "samples/hello/out/hello/core.js"))
-
   (mapped-stacktrace
     [{:file "hello/core.js"
       :function "first"
@@ -287,6 +287,28 @@
       :line 2
       :column 1}]
     {:output-dir "samples/hello/out"})
+
+  ;; URL example
+
+  (cljsc/build "samples/hello/src"
+    {:optimizations :none
+     :output-dir "out"
+     :output-to "out/hello.js"
+     :source-map true})
+
+  (mapped-stacktrace
+    [{:file "cljs/core.js"
+      :function "first"
+      :line 2
+      :column 1}]
+    {:output-dir "out"})
+
+  (print-mapped-stacktrace
+    [{:file "cljs/core.js"
+      :function "first"
+      :line 2
+      :column 1}]
+    {:output-dir "out"})
   )
 
 (defn- display-error
