@@ -208,9 +208,9 @@
             [:line :col])))
       default)))
 
-(defn print-mapped-stacktrace
+(defn mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace
-   print the ClojureScript stacktrace. The canonical stacktrace must be
+   return the ClojureScript stacktrace. The canonical stacktrace must be
    in the form:
 
     [{:file <string>
@@ -219,28 +219,41 @@
       :column <integer>}*]
 
    :file must be a URL path (without protocol) relative to :output-dir."
-  ([stacktrace] (print-mapped-stacktrace stacktrace nil))
+  ([stacktrace] (mapped-stacktrace stacktrace nil))
   ([stacktrace opts]
     (let [read-source-map' (memoize read-source-map)
           ns-info' (memoize ns-info)]
-      (doseq [{:keys [function file line column] :as frame} stacktrace]
-        ;; need to convert file, a relative URL style path, to host-specific file
-        (let [file (io/file (URL. (.toURL (io/file (util/output-directory opts))) file))
-              [sm {:keys [ns source-file] :as ns-info}]
-              ((juxt read-source-map' ns-info') file)
-              [line' column'] (if ns-info
-                                (mapped-line-and-column sm line column)
-                                [line column])
-              name' (if (and ns-info function)
-                      (symbol (name ns) (cljrepl/demunge function))
-                      function)
-              file' (string/replace
-                      (.getCanonicalFile
-                        (if ns-info
-                          source-file
-                          (io/file file)))
-                      (str (System/getProperty "user.dir") File/separator) "")]
-          (println "\t" (str name' " (" file' ":" line' ":" column' ")")))))))
+      (vec
+        (for [{:keys [function file line column] :as frame} stacktrace]
+          ;; need to convert file, a relative URL style path, to host-specific file
+          (let [rfile (io/file (URL. (.toURL (io/file (util/output-directory opts))) file))
+                [sm {:keys [ns source-file] :as ns-info}]
+                ((juxt read-source-map' ns-info') rfile)
+                [line' column'] (if ns-info
+                                  (mapped-line-and-column sm line column)
+                                  [line column])
+                name' (if (and ns-info function)
+                        (symbol (name ns) (cljrepl/demunge function))
+                        function)
+                file' (string/replace
+                        (.getCanonicalFile
+                          (if ns-info
+                            source-file
+                            (io/file rfile)))
+                        (str (System/getProperty "user.dir") File/separator) "")]
+            {:function name'
+             :file     file'
+             :line     line'
+             :column   column'}))))))
+
+(defn print-mapped-stacktrace
+  "Given a vector representing the canonicalized JavaScript stacktrace
+   print the ClojureScript stacktrace. See mapped-stacktrace."
+  ([stacktrace] (print-mapped-stacktrace stacktrace nil))
+  ([stacktrace opts]
+    (doseq [{:keys [function file line column]}
+            (mapped-stacktrace stacktrace opts)]
+      (println "\t" (str function " (" file ":" line ":" column ")")))))
 
 (comment
   (cljsc/build "samples/hello/src"
@@ -255,6 +268,13 @@
 
   ;; hello.core
   (:ns (ns-info "samples/hello/out/hello/core.js"))
+
+  (mapped-stacktrace
+    [{:file "hello/core.js"
+      :function "first"
+      :line 2
+      :column 1}]
+    {:output-dir "samples/hello/out"})
 
   (print-mapped-stacktrace
     [{:file "hello/core.js"
