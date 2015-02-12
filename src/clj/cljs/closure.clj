@@ -51,7 +51,8 @@
               CompilerOptions$LanguageMode SourceMap$Format
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
-              CommandLineRunner AnonymousFunctionNamingPolicy]
+              CommandLineRunner AnonymousFunctionNamingPolicy
+              JSModule JSModuleGraph]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
