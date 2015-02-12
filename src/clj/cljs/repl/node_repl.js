@@ -15,6 +15,9 @@ net.createServer(function (socket) {
         ret    = null,
         err    = null;
 
+    socket.write("ready");
+    socket.write("\0");
+
     socket.setEncoding("utf8");
 
     dom.on("error", function(ue) {

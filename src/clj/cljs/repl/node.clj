@@ -102,12 +102,16 @@
           root (.substring path 0 (+ (.indexOf path fc) (count fc)))
           root-path (vec (cons root cs))
           rewrite-path (conj root-path "goog")]
-      ;; TODO: temporary hack, should wait till we can read the start string
-      ;; from the process - David
-      (Thread/sleep 300)
-      (reset! (:socket repl-env)
-        (socket (:host repl-env) (:port repl-env)))
       (reset! (:proc repl-env) proc)
+      (loop [r nil]
+        (when-not (= r "ready")
+          (Thread/sleep 50)
+          (try
+            (reset! (:socket repl-env) (socket (:host repl-env) (:port repl-env)))
+            (catch Exception e))
+          (if @(:socket repl-env)
+            (recur (read-response (:in @(:socket repl-env))))
+            (recur nil))))
       ;; compile cljs.core & its dependencies, goog/base.js must be available
       ;; for bootstrap to load, use new closure/compile as it can handle
       ;; resources in JARs
