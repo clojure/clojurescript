@@ -972,7 +972,9 @@
                         (spit sm-file
                           (sm/encode {(url-path src) (:source-map sm-data)}
                             {:lines (+ (:gen-line sm-data) 2)
-                             :file (url-path dest)}))))
+                             :file (url-path dest)
+                             :source-map-timestamp (:source-map-timestamp opts)
+                             :source-map-pretty-print (:source-map-pretty-print opts)}))))
                     (let [path (.getPath (.toURL ^File dest))]
                       (swap! env/*compiler* assoc-in [::compiled-cljs path] ret)
                       (swap! env/*compiler* assoc-in [::ana/analyzed-cljs path] true))
