@@ -1820,7 +1820,10 @@ argument, which the reader will use in any emitted errors."
   ([src opts] (parse-ns src nil opts))
   ([src dest opts]
     (env/ensure
-      (let [namespaces' (::namespaces @env/*compiler*)
+      (let [src (if (symbol? src)
+                  (io/resource (util/ns->relpath src))
+                  src)
+            namespaces' (::namespaces @env/*compiler*)
             ret
             (binding [*cljs-ns* 'cljs.user
                       *macro-infer*
