@@ -439,17 +439,20 @@
         (warning :dynamic env {:ev ev :name (:name ev)})))))
 
 (defn ns-dependents
-  ([ns] (ns-dependents ns 0 (atom (sorted-map))))
-  ([ns depth state]
-   (let [deps (set
+  ([ns]
+    (letfn [(get-deps [ns]
+              (set
                 (map first
                   (filter
                     (fn [[_ ns-info]]
                       (contains? (:requires ns-info) ns))
-                    (get @env/*compiler* ::namespaces))))]
+                    (get @env/*compiler* ::namespaces)))))]
+      (ns-dependents ns 0 (atom (sorted-map)) (memoize get-deps))))
+  ([ns depth state memo-get-deps]
+   (let [deps (memo-get-deps ns)]
      (swap! state update-in [depth] (fnil into #{}) deps)
      (doseq [dep deps]
-       (ns-dependents dep (inc depth) state))
+       (ns-dependents dep (inc depth) state memo-get-deps))
      (doseq [[<depth _] (subseq @state < depth)]
        (swap! state update-in [<depth] set/difference deps))
      (when (= depth 0)
