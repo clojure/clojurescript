@@ -22,7 +22,7 @@
             [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
             [cljs.source-map :as sm])
-  (:import [java.io File PushbackReader]
+  (:import [java.io File PushbackReader FileWriter]
            [java.net URL]
            [javax.xml.bind DatatypeConverter]))
 
@@ -562,6 +562,12 @@
                 (:require [cljs.repl :refer-macros [doc]]))
              {:line 1 :column 1})
            identity opts)
+         (when-let [src (:watch opts)]
+           (future
+             (let [log-file (io/file (util/output-directory opts) "watch.log")]
+               (println "Watch compilation log available at:" (str log-file))
+               (binding [*out* (FileWriter. log-file)]
+                 (cljsc/watch src (dissoc opts :watch))))))
          (loop []
            ;; try to let things flush before printing prompt
            (Thread/sleep 10)
