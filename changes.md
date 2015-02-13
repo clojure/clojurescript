@@ -1,3 +1,11 @@
+## 0.0-2850
+
+### Enhancements
+* CLJS-1035: REPLs should support watch recompilation
+
+### Fixes
+* CLJS-1037: cls.analyzer/ns-dependents fails for common cases
+
 ## 0.0-2843
 
 ### Enhancements
