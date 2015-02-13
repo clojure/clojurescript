@@ -447,7 +447,7 @@
                     (fn [[_ ns-info]]
                       (contains? (:requires ns-info) ns))
                     (get @env/*compiler* ::namespaces))))]
-     (swap! state assoc depth deps)
+     (swap! state update-in [depth] (fnil into #{}) deps)
      (doseq [dep deps]
        (ns-dependents dep (inc depth) state))
      (doseq [[<depth _] (subseq @state < depth)]
