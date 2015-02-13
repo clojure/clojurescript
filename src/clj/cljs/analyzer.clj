@@ -1804,11 +1804,15 @@ argument, which the reader will use in any emitted errors."
         (forms-seq*)))))
 
 (defn parse-ns
-  "Helper for parsing only the ns information from a ClojureScript source
-   file. By default does not load macros or perform any analysis of
-   dependencies. If opts parameter provided :analyze-deps and :load-macros keys
-   their values will be used for *analyze-deps* and *load-macros* bindings
-   respectively."
+  "Helper for parsing only the essential namespace information from a
+   ClojureScript source file and returning a cljs.closure/IJavaScript compatible
+   map _not_ a namespace AST node.
+
+   By default does not load macros or perform any analysis of dependencies. If
+   opts parameter provided :analyze-deps and :load-macros keys their values will
+   be used for *analyze-deps* and *load-macros* bindings respectively. This
+   function does _not_ side-effect the ambient compilation environment unless
+   requested via opts where :restore is false."
   ([src] (parse-ns src nil nil))
   ([src opts] (parse-ns src nil opts))
   ([src dest opts]
@@ -1895,6 +1899,14 @@ argument, which the reader will use in any emitted errors."
       (pr-str (get-in @env/*compiler* [::namespaces ns])))))
 
 (defn analyze-file
+  "Given a java.io.File, java.net.URL or a string identifying a resource on the
+   classpath attempt to analyze it.
+
+   This function side-effects the ambient compilation environment
+   `cljs.env/*compiler*` to aggregate analysis information. opts argument is
+   compiler options, if :cache-analysis true will cache analysis to
+   \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
+   meaningful value."
   ([f] (analyze-file f nil))
   ([f {:keys [output-dir] :as opts}]
      (let [res (cond
