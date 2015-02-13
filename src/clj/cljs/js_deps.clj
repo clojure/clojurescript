@@ -1,11 +1,9 @@
 (ns cljs.js-deps
   (:require [clojure.java.io :as io]
             [clojure.string :as string])
-  (:import java.io.File
-           java.net.URL
-           java.net.URLClassLoader
-           java.util.zip.ZipFile
-           java.util.zip.ZipEntry))
+  (:import [java.io File]
+           [java.net URL URLClassLoader]
+           [java.util.zip ZipFile ZipEntry]))
 
 ; taken from pomegranate/dynapath
 ; https://github.com/tobias/dynapath/blob/master/src/dynapath/util.clj
@@ -47,6 +45,8 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
 (defmulti to-url class)
 
 (defmethod to-url File [^File f] (.toURL (.toURI f)))
+
+(defmethod to-url URL [^URL url] url)
 
 (defmethod to-url String [s] (to-url (io/file s)))
 
