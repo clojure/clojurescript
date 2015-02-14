@@ -603,9 +603,6 @@ should contain the source for the given namespace name."
   (when-let [url (deps/-url js)]
     (js-source-file (javascript-name url) (io/input-stream url))))
 
-;; TODOs
-;; topo sort modules, so we can easily add dependency between modules
-
 (defn add-cljs-base-module
   ([modules] (add-cljs-base-module modules nil))
   ([modules opts]
