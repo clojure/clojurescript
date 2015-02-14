@@ -554,8 +554,10 @@
              is-special-fn? (set (keys special-fns))
              request-prompt (Object.)
              request-exit (Object.)
-             read-error (Object.)]
-         (-setup repl-env opts)
+             read-error (Object.)
+             opts (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
+                    (merge opts merge-opts)
+                    opts)]
          (evaluate-form repl-env env "<cljs repl>"
            (with-meta
              '(ns cljs.user
