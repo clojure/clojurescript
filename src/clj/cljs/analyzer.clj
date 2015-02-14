@@ -440,23 +440,14 @@
 
 (defn ns-dependents
   ([ns]
-    (letfn [(get-deps [ns]
-              (set
-                (map first
-                  (filter
-                    (fn [[_ ns-info]]
-                      (contains? (:requires ns-info) ns))
-                    (get @env/*compiler* ::namespaces)))))]
-      (ns-dependents ns 0 (atom (sorted-map)) (memoize get-deps))))
-  ([ns depth state memo-get-deps]
-   (let [deps (memo-get-deps ns)]
-     (swap! state update-in [depth] (fnil into #{}) deps)
-     (doseq [dep deps]
-       (ns-dependents dep (inc depth) state memo-get-deps))
-     (doseq [[<depth _] (subseq @state < depth)]
-       (swap! state update-in [<depth] set/difference deps))
-     (when (= depth 0)
-       (distinct (apply concat (vals @state)))))))
+    (util/topo-sort ns
+      (fn [ns]
+        (set
+          (map first
+            (filter
+              (fn [[_ ns-info]]
+                (contains? (:requires ns-info) ns))
+              (get @env/*compiler* ::namespaces))))))))
 
 (declare analyze analyze-symbol analyze-seq)
 

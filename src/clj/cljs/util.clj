@@ -9,6 +9,7 @@
 (ns cljs.util
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [clojure.set :as set]
             [clojure.edn :as edn])
   (:import [java.io File]
            [java.net URL]))
@@ -110,6 +111,19 @@
   (if (file? x)
     (filename x)
     (last (string/split (path x) #"\/"))))
+
+(defn topo-sort
+  ([x get-deps]
+    (topo-sort x 0 (atom (sorted-map)) (memoize get-deps)))
+  ([x depth state memo-get-deps]
+    (let [deps (memo-get-deps x)]
+      (swap! state update-in [depth] (fnil into #{}) deps)
+      (doseq [dep deps]
+        (topo-sort dep (inc depth) state memo-get-deps))
+      (doseq [[<depth _] (subseq @state < depth)]
+        (swap! state update-in [<depth] set/difference deps))
+      (when (= depth 0)
+        (distinct (apply concat (vals @state)))))))
 
 (defn debug-prn
   [& args]
