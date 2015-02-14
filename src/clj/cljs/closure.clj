@@ -606,6 +606,31 @@ should contain the source for the given namespace name."
 ;; TODOs
 ;; topo sort modules, so we can easily add dependency between modules
 
+(defn add-cljs-base-module
+  ([modules] (add-cljs-base-module modules nil))
+  ([modules opts]
+    (reduce
+      (fn [modules module-name]
+        (update-in modules [module-name :depends-on]
+          (fnil conj #{}) :cljs-base))
+      (assoc modules :cljs-base
+        {:output-to
+         (io/file
+           (util/output-directory opts)
+           "cljs_base.js")})
+      (keys modules))))
+
+(comment
+  (add-cljs-base-module
+    {:core
+     {:output-to "out/modules/core.js"
+      :entries '#{cljs.core}}
+     :landing
+     {:output-to "out/modules/reader.js"
+      :entries '#{cljs.reader}
+      :depends-on #{:core}}})
+  )
+
 (defn build-modules [sources opts]
   (let [find-entry (fn [sources entry]
                      (let [entry (name (comp/munge entry))]
