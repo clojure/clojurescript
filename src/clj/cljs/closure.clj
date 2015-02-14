@@ -659,13 +659,14 @@ should contain the source for the given namespace name."
                            (when (some #{entry} (:provides source))
                              source))
                         sources)))
-        base-module (JSModule. "cljs_base")
         [sources' modules]
         (reduce
-          (fn [[sources modules] [name module-desc]]
+          (fn [[sources ret] [name module-desc]]
             (let [{:keys [entries output-to depends-on]} module-desc
                   js-module (JSModule. (clojure.core/name name))
                   [sources' module-sources]
+                  ;; compute inputs for a closure module
+                  ;; as well as sources difference
                   (reduce
                     (fn [[sources ret] entry-sym]
                       (if-let [entry (find-entry sources entry-sym)]
@@ -676,13 +677,17 @@ should contain the source for the given namespace name."
                           (IllegalArgumentException.
                             (str "Could not find namespace " entry-sym)))))
                     [sources []] entries)]
+              ;; add inputs to module
               (doseq [^SourceFile module-source module-sources]
                 (.add js-module module-source))
-              [sources' (conj modules js-module)]))
-          [sources [base-module]] (:modules opts))]
-    ;; add anything left to base
+              [sources'
+               (conj ret
+                 [name (assoc module-desc :closure-module js-module)])]))
+          [sources []] (sort-modules (add-cljs-base-module (:modules opts))))
+        cljs-base-closure-module (get-in modules [:cljs-base :closure-module])]
+    ;; add anything left to :cljs-base module
     (doseq [^SourceFile source sources']
-      (.add base-module source))
+      (.add ^JSModule cljs-base-closure-module source))
     modules))
 
 (comment
@@ -692,22 +697,23 @@ should contain the source for the given namespace name."
      :output-to "out/hello.js"
      :source-map true})
 
-  (build-modules
-    [(map->javascript-file
-       (ana/parse-ns 'cljs.core (io/file "out/cljs/core.js") nil))
-     (map->javascript-file
-       (ana/parse-ns 'cljs.reader (io/file "out/cljs/reader.js") nil))]
-    {:optimizations :advanced
-     :output-dir "out"
-     :cache-analysis true
-     :modules
-     {:core
-      {:output-to "out/modules/core.js"
-       :entries '#{cljs.core}}
-      :landing
-      {:output-to "out/modules/reader.js"
-       :entries '#{cljs.reader}
-       :depends-on #{:core}}}})
+  (let [modules
+        (build-modules
+          [(map->javascript-file
+             (ana/parse-ns 'cljs.core (io/file "out/cljs/core.js") nil))
+           (map->javascript-file
+             (ana/parse-ns 'cljs.reader (io/file "out/cljs/reader.js") nil))]
+          {:optimizations  :advanced
+           :output-dir     "out"
+           :cache-analysis true
+           :modules        {:core
+                            {:output-to "out/modules/core.js"
+                             :entries   '#{cljs.core}}
+                            :landing
+                            {:output-to  "out/modules/reader.js"
+                             :entries    '#{cljs.reader}
+                             :depends-on #{:core}}}})]
+    modules)
   )
 
 (defn optimize
