@@ -628,6 +628,29 @@ should contain the source for the given namespace name."
       :depends-on #{:core}}})
   )
 
+(defn sort-modules [modules-with-base]
+  (letfn [(get-deps [module]
+            (reduce
+              (fn [ret [name {:keys [depends-on] :as module-desc}]]
+                (cond-> ret
+                  (contains? depends-on module) (conj name)))
+              [] modules-with-base))]
+    (vec (map (fn [module-name]
+                [module-name (module-name modules-with-base)])
+           (into [:cljs-base] (util/topo-sort :cljs-base get-deps))))))
+
+(comment
+  (sort-modules
+    (add-cljs-base-module
+      {:core
+       {:output-to "out/modules/core.js"
+        :entries   '#{cljs.core}}
+       :landing
+       {:output-to  "out/modules/reader.js"
+        :entries    '#{cljs.reader}
+        :depends-on #{:core}}}))
+  )
+
 (defn build-modules [sources opts]
   (let [find-entry (fn [sources entry]
                      (let [entry (name (comp/munge entry))]
