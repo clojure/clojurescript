@@ -680,6 +680,8 @@ should contain the source for the given namespace name."
               ;; add inputs to module
               (doseq [^SourceFile module-source module-sources]
                 (.add js-module module-source))
+              ;; add module dependencies, will always work
+              ;; since modules are already in dependency order
               (doseq [dep depends-on]
                 (if-let [parent-module (get-in (into {} ret) [dep :closure-module])]
                   (.addDependency js-module ^JSModule parent-module)
@@ -787,8 +789,7 @@ should contain the source for the given namespace name."
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
         ^List inputs (map #(js-source-file (javascript-name %) %) sources)
-        result ^Result (.compile closure-compiler externs inputs compiler-options)
-        ]
+        result ^Result (.compile closure-compiler externs inputs compiler-options)]
     (if (.success result)
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
