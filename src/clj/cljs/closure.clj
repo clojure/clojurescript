@@ -603,6 +603,68 @@ should contain the source for the given namespace name."
   (when-let [url (deps/-url js)]
     (js-source-file (javascript-name url) (io/input-stream url))))
 
+;; TODOs
+;; topo sort modules, so we can easily add dependency between modules
+
+(defn build-modules [sources opts]
+  (let [find-entry (fn [sources entry]
+                     (let [entry (name (comp/munge entry))]
+                       (some
+                         (fn [source]
+                           (when (some #{entry} (:provides source))
+                             source))
+                        sources)))
+        base-module (JSModule. "cljs_base")
+        [sources' modules]
+        (reduce
+          (fn [[sources modules] [name module-desc]]
+            (let [{:keys [entries output-to depends-on]} module-desc
+                  js-module (JSModule. (clojure.core/name name))
+                  [sources' module-sources]
+                  (reduce
+                    (fn [[sources ret] entry-sym]
+                      (if-let [entry (find-entry sources entry-sym)]
+                        [(remove #{entry} sources)
+                         (conj ret
+                           (js-source-file (javascript-name entry) entry))]
+                        (throw
+                          (IllegalArgumentException.
+                            (str "Could not find namespace " entry-sym)))))
+                    [sources []] entries)]
+              (doseq [^SourceFile module-source module-sources]
+                (.add js-module module-source))
+              [sources' (conj modules js-module)]))
+          [sources [base-module]] (:modules opts))]
+    ;; add anything left to base
+    (doseq [^SourceFile source sources']
+      (.add base-module source))
+    modules))
+
+(comment
+  (build "samples/hello/src"
+    {:optimizations :none
+     :output-dir "out"
+     :output-to "out/hello.js"
+     :source-map true})
+
+  (build-modules
+    [(map->javascript-file
+       (ana/parse-ns 'cljs.core (io/file "out/cljs/core.js") nil))
+     (map->javascript-file
+       (ana/parse-ns 'cljs.reader (io/file "out/cljs/reader.js") nil))]
+    {:optimizations :advanced
+     :output-dir "out"
+     :cache-analysis true
+     :modules
+     {:core
+      {:output-to "out/modules/core.js"
+       :entries '#{cljs.core}}
+      :landing
+      {:output-to "out/modules/reader.js"
+       :entries '#{cljs.reader}
+       :depends-on #{:core}}}})
+  )
+
 (defn optimize
   "Use the Closure Compiler to optimize one or more JavaScript files."
   [opts & sources]
