@@ -1,5 +1,6 @@
 (ns hello.core
-  (:require [hello.foo.bar :as bar]))
+  (:require [hello.foo.bar :as bar]
+            [cljs.reader :as reader]))
 
 (defn ^{:export greet} greet [n]
   (str "Hello " n))
