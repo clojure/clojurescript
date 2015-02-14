@@ -680,6 +680,11 @@ should contain the source for the given namespace name."
               ;; add inputs to module
               (doseq [^SourceFile module-source module-sources]
                 (.add js-module module-source))
+              (doseq [dep depends-on]
+                (if-let [parent-module (get-in (into {} ret) [dep :closure-module])]
+                  (.addDependency js-module ^JSModule parent-module)
+                  (throw (IllegalArgumentException.
+                           (str "Parent module " dep " does not exist")))))
               [sources'
                (conj ret
                  [name (assoc module-desc :closure-module js-module)])]))
