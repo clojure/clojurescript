@@ -716,6 +716,62 @@ should contain the source for the given namespace name."
     modules)
   )
 
+(defn emit-optimized-source-map
+  [^com.google.javascript.jscomp.Compiler closure-compiler sources name opts]
+  (with-open [out (io/writer name)]
+    (.appendTo (.getSourceMap closure-compiler) out name))
+  (let [preamble (make-preamble opts)
+        preamble-line-count (- (count (.split #"\r?\n" preamble -1)) 1)
+        sm-json (-> (io/file name) slurp
+                    (json/read-str :key-fn keyword))
+        closure-source-map (sm/decode-reverse sm-json)]
+    (loop [sources (seq sources)
+           relpaths {}
+           merged (sorted-map-by
+                    (sm/source-compare
+                      (remove nil?
+                        (map (fn [source]
+                               (if-let [^URL source-url (:source-url source)]
+                                 (.getPath source-url)
+                                 (if-let [^URL url (:url source)]
+                                   (.getPath url))))
+                          sources))))]
+      (if sources
+        (let [source (first sources)]
+          (recur
+            (next sources)
+            (let [{:keys [provides source-url]} source]
+              (if (and provides source-url)
+                (assoc relpaths
+                  (.getPath ^URL source-url)
+                  (util/ns->relpath (first provides)))
+                relpaths))
+            (if-let [url (:url source)]
+              (let [path (.getPath ^URL url)]
+                (if-let [compiled (get-in @env/*compiler* [::comp/compiled-cljs path])]
+                  (if-let [source-url (:source-url source)]
+                    (assoc merged
+                      (.getPath ^URL source-url)
+                      (sm/merge-source-maps
+                        (:source-map compiled)
+                        (get closure-source-map path)))
+                    merged)
+                  (assoc merged path (get closure-source-map path))))
+              merged)))
+        (spit
+          (io/file name)
+          (sm/encode merged
+            {:preamble-line-count (+ preamble-line-count
+                                     (or (:foreign-deps-line-count opts) 0))
+             :lines (+ (:lineCount sm-json) preamble-line-count 2)
+             :file (:file sm-json)
+             :output-dir (util/output-directory opts)
+             :source-map (:source-map opts)
+             :source-map-path (:source-map-path opts)
+             :source-map-timestamp (:source-map-timestamp opts)
+             :source-map-pretty-print (:source-map-pretty-print opts)
+             :relpaths relpaths}))))))
+
 (defn optimize
   "Use the Closure Compiler to optimize one or more JavaScript files."
   [opts & sources]
@@ -727,61 +783,12 @@ should contain the source for the given namespace name."
                   sources)
         ^List inputs (map #(js-source-file (javascript-name %) %) sources)
         result ^Result (.compile closure-compiler externs inputs compiler-options)
-        preamble (make-preamble opts)
-        preamble-line-count (- (count (.split #"\r?\n" preamble -1)) 1)]
+        ]
     (if (.success result)
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
         (when-let [name (:source-map opts)]
-          (with-open [out (io/writer name)]
-            (.appendTo (.getSourceMap closure-compiler) out name))
-          (let [sm-json (-> (io/file name) slurp
-                            (json/read-str :key-fn keyword))
-                closure-source-map (sm/decode-reverse sm-json)]
-            (loop [sources  (seq sources)
-                   relpaths {}
-                   merged   (sorted-map-by
-                              (sm/source-compare
-                                (remove nil?
-                                  (map (fn [source]
-                                         (if-let [^URL source-url (:source-url source)]
-                                           (.getPath source-url)
-                                           (if-let [^URL url (:url source)]
-                                             (.getPath url))))
-                                    sources))))]
-              (if sources
-                (let [source (first sources)]
-                  (recur
-                    (next sources)
-                    (let [{:keys [provides source-url]} source]
-                      (if (and provides source-url)
-                        (assoc relpaths (.getPath ^URL source-url)
-                          (util/ns->relpath (first provides)))
-                        relpaths))
-                    (if-let [url (:url source)]
-                      (let [path (.getPath ^URL url)]
-                        (if-let [compiled (get-in @env/*compiler* [::comp/compiled-cljs path])]
-                          (if-let [source-url (:source-url source)]
-                            (assoc merged (.getPath ^URL source-url)
-                              (sm/merge-source-maps
-                                (:source-map compiled)
-                                (get closure-source-map path)))
-                            merged)
-                          (assoc merged path (get closure-source-map path))))
-                      merged)))
-                (spit
-                  (io/file name)
-                  (sm/encode merged
-                    {:preamble-line-count (+ preamble-line-count
-                                             (or (:foreign-deps-line-count opts) 0))
-                     :lines (+ (:lineCount sm-json) preamble-line-count 2)
-                     :file (:file sm-json)
-                     :output-dir (util/output-directory opts)
-                     :source-map (:source-map opts)
-                     :source-map-path (:source-map-path opts)
-                     :source-map-timestamp (:source-map-timestamp opts)
-                     :source-map-pretty-print (:source-map-pretty-print opts)
-                     :relpaths relpaths}))))))
+          (emit-optimized-source-map closure-compiler sources name opts))
         source)
       (report-failure result))))
 
