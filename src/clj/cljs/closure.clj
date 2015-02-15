@@ -651,7 +651,12 @@ should contain the source for the given namespace name."
         :depends-on #{:core}}}))
   )
 
-(defn build-modules [sources opts]
+(defn build-modules
+  "Given a list of IJavaScript sources and compiler options return a _sequence_
+   of module name and module description pair tuples. The tuples will be sorted
+   in module dependency order. The module descriptions will be augmented with
+   a :closure-module entry holding the Closure JSModule."
+  [sources opts]
   (let [find-entry (fn [sources entry]
                      (let [entry (name (comp/munge entry))]
                        (some
@@ -691,11 +696,11 @@ should contain the source for the given namespace name."
                (conj ret
                  [name (assoc module-desc :closure-module js-module)])]))
           [sources []] (sort-modules (add-cljs-base-module (:modules opts))))
-        cljs-base-closure-module (get-in modules [:cljs-base :closure-module])]
+        cljs-base-closure-module (get-in (into {} modules) [:cljs-base :closure-module])]
     ;; add anything left to :cljs-base module
     (doseq [source sources']
       (.add ^JSModule cljs-base-closure-module
-        (js-source-file (javascript-name source))))
+        (js-source-file (javascript-name source) source)))
     modules))
 
 (comment
@@ -781,6 +786,27 @@ should contain the source for the given namespace name."
              :source-map-pretty-print (:source-map-pretty-print opts)
              :relpaths relpaths}))))))
 
+(defn optimize-modules
+  "Use the Closure Compiler to optimize one or more Closure JSModules."
+  [opts & sources]
+  {:pre [(and (contains? opts :modules)
+              (not (contains? opts :output-to)))]}
+  (let [closure-compiler (make-closure-compiler)
+        ^List externs (load-externs opts)
+        compiler-options (make-options opts)
+        sources (if (= :whitespace (:optimizations opts))
+                  (cons "var CLOSURE_NO_DEPS = true;" sources)
+                  sources)
+        modules (build-modules sources (:modules opts))
+        ^List inputs (map (comp :closure-module second) modules)
+        ^Result result (.compileModules closure-compiler externs inputs compiler-options)]
+    (if (.success result)
+      (vec
+        (for [[name {:keys [closure-module] :as module}] modules]
+          [name
+           (assoc module :source (.toSource ^JSModule closure-module))]))
+      (report-failure result))))
+
 (defn optimize
   "Use the Closure Compiler to optimize one or more JavaScript files."
   [opts & sources]
@@ -791,7 +817,7 @@ should contain the source for the given namespace name."
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
         ^List inputs (map #(js-source-file (javascript-name %) %) sources)
-        result ^Result (.compile closure-compiler externs inputs compiler-options)]
+        ^Result result (.compile closure-compiler externs inputs compiler-options)]
     (if (.success result)
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
@@ -918,6 +944,11 @@ should contain the source for the given namespace name."
              "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
              "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
              "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');\n")))))
+
+(defn output-modules
+  ([opts modules]
+    (doseq [{:keys [output-to closure-module]} modules]
+      (spit (io/file output-to) (.toSource ^JSModule closure-module)))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
@@ -1240,18 +1271,22 @@ should contain the source for the given namespace name."
                          (when-let [fname (:source-map all-opts)]
                            (assert (string? fname)
                              (str ":source-map must name a file when using :whitespace, "
-                               ":simple, or :advanced optimizations"))
+                                  ":simple, or :advanced optimizations"))
                            (doall (map #(source-on-disk all-opts %) js-sources)))
-                         (->>
-                           (util/measure compiler-stats
-                             "Optimize sources"
-                             (apply optimize all-opts
-                               (remove foreign-source? js-sources)))
-                           (add-wrapper all-opts)
-                           (add-source-map-link all-opts)
-                           (str fdeps-str)
-                           (add-header all-opts)
-                           (output-one-file all-opts)))
+                         (if (:modules opts)
+                           (->>
+                             (apply optimize-modules all-opts js-sources)
+                             (output-modules all-opts))
+                           (->>
+                             (util/measure compiler-stats
+                               "Optimize sources"
+                               (apply optimize all-opts
+                                 (remove foreign-source? js-sources)))
+                             (add-wrapper all-opts)
+                             (add-source-map-link all-opts)
+                             (str fdeps-str)
+                             (add-header all-opts)
+                             (output-one-file all-opts))))
                        (apply output-unoptimized all-opts js-sources))]
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
              (when (and (= (:target opts) :nodejs)
@@ -1261,6 +1296,16 @@ should contain the source for the given namespace name."
                  (util/mkdirs outfile)
                  (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
              ret))))))
+
+(comment
+  ;; testing modules
+  (build "samples/hello/src"
+    {:optimizations :advanced
+     :output-dir "samples/hello/out"
+     :modules
+     {:hello
+      {:output-to "samples/hello/out/hello.js"}}})
+  )
 
 (defn watch
   "Given a source directory, produce runnable JavaScript. Watch the source
