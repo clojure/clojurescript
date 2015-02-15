@@ -695,7 +695,7 @@ should contain the source for the given namespace name."
               [sources'
                (conj ret
                  [name (assoc module-desc :closure-module js-module)])]))
-          [sources []] (sort-modules (add-cljs-base-module (:modules opts))))
+          [sources []] (sort-modules (add-cljs-base-module (:modules opts) opts)))
         cljs-base-closure-module (get-in (into {} modules) [:cljs-base :closure-module])]
     ;; add anything left to :cljs-base module
     (doseq [source sources']
@@ -804,7 +804,7 @@ should contain the source for the given namespace name."
       (vec
         (for [[name {:keys [closure-module] :as module}] modules]
           [name
-           (assoc module :source (.toSource ^JSModule closure-module))]))
+           (assoc module :source (.toSource closure-compiler ^JSModule closure-module))]))
       (report-failure result))))
 
 (defn optimize
