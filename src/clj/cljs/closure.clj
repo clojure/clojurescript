@@ -666,9 +666,10 @@ should contain the source for the given namespace name."
                         sources)))
         [sources' modules]
         (reduce
-          (fn [[sources ret] [name module-desc]]
-            (let [{:keys [entries output-to depends-on]} module-desc
-                  js-module (JSModule. (clojure.core/name name))
+          (fn [[sources ret] [name {:keys [entries output-to depends-on] :as module-desc}]]
+            (assert (or (= name :cljs-base) (not (empty? entries)))
+              (str "Module " name " does not define any :entries"))
+            (let [js-module (JSModule. (clojure.core/name name))
                   [sources' module-sources]
                   ;; compute inputs for a closure module
                   ;; as well as sources difference
@@ -797,7 +798,7 @@ should contain the source for the given namespace name."
         sources (if (= :whitespace (:optimizations opts))
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
-        modules (build-modules sources (:modules opts))
+        modules (build-modules sources opts)
         ^List inputs (map (comp :closure-module second) modules)
         ^Result result (.compileModules closure-compiler externs inputs compiler-options)]
     (if (.success result)
@@ -946,9 +947,17 @@ should contain the source for the given namespace name."
              "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');\n")))))
 
 (defn output-modules
-  ([opts modules]
-    (doseq [{:keys [output-to closure-module]} modules]
-      (spit (io/file output-to) (.toSource ^JSModule closure-module)))))
+  "Given compiler options and a sequence of module name and module description
+   tuples output module sources to disk. Modules description must define
+   :output-to and supply :source entry with the JavaScript source to write
+   to disk."
+  [opts modules]
+  (doseq [[name {:keys [output-to source]}] modules]
+    (assert (not (nil? output-to))
+      (str "Module " name " does not define :output-to"))
+    (assert (not (nil? source))
+      (str "Module " name " did not supply :source"))
+    (spit (io/file output-to) source)))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
@@ -1273,7 +1282,7 @@ should contain the source for the given namespace name."
                              (str ":source-map must name a file when using :whitespace, "
                                   ":simple, or :advanced optimizations"))
                            (doall (map #(source-on-disk all-opts %) js-sources)))
-                         (if (:modules opts)
+                         (if (:modules all-opts)
                            (->>
                              (apply optimize-modules all-opts js-sources)
                              (output-modules all-opts))
@@ -1304,7 +1313,8 @@ should contain the source for the given namespace name."
      :output-dir "samples/hello/out"
      :modules
      {:hello
-      {:output-to "samples/hello/out/hello.js"}}})
+      {:output-to "samples/hello/out/hello.js"
+       :entries '#{hello.core}}}})
   )
 
 (defn watch
