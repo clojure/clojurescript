@@ -9,12 +9,14 @@
 (ns cljs.repl.nashorn
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [clojure.stacktrace]
             [cljs.analyzer :as ana]
             [cljs.env :as env]
             [cljs.repl :as repl]
             [cljs.compiler :as comp]
             [cljs.closure :as closure])
-  (:import [javax.script ScriptEngine ScriptEngineManager]))
+  (:import [javax.script ScriptEngine ScriptEngineManager ScriptException]
+           [jdk.nashorn.api.scripting NashornException]))
 
 ;; Nashorn Clojurescript repl binding.
 ;;
@@ -125,9 +127,18 @@
   (eval-str engine
     (format "goog.require(\"%s\");" (comp/munge (first ns)))))
 
-(defn- stacktrace  [^Exception e]
-  (apply str
-    (interpose "\n" (map #(str " " (.toString %)) (.getStackTrace e)))))
+;; Nashorn script stacktraces have a relative path which includes the output-dir
+(defn- strip-file-name [^String file-name output-dir]
+  (let [with-slash (str output-dir "/")]
+    (if (.startsWith file-name with-slash)
+      (string/replace-first file-name with-slash "")
+      file-name)))
+
+(defn- convert-stacktrace-element [^StackTraceElement el]
+  {:function (.getMethodName el)
+   :file (.getFileName el)
+   :line (.getLineNumber el)
+   :column 0})
 
 (def repl-filename "<cljs repl>")
 
@@ -144,28 +155,42 @@
       (repl/evaluate-form this env repl-filename
         '(do
            (.require js/goog "cljs.core")
-           (set! cljs.core/*print-fn* js/print)))))
+           (cljs.core/enable-console-print!)))))
   (-evaluate [{engine :engine :as this} filename line js]
     (when debug (println "Evaluating: " js))
     (try
       {:status :success
        :value (if-let [r (eval-str engine js)] (.toString r) "")}
+
+      ;; Stringify the stacktrace to edn for easy parsing in -parse-stacktrace
+      (catch ScriptException e
+        (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
+          {:status :exception
+           :value (.getMessage root-cause)
+           :stacktrace (pr-str (map convert-stacktrace-element
+                                    (NashornException/getScriptFrames root-cause)))}))
       (catch Throwable e
-        {:status :exception
-         :value (.toString e)
-         :stacktrace (stacktrace e)})))
+        (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
+          {:status :exception
+           :value (.getMessage root-cause)
+           :stacktrace (pr-str (map convert-stacktrace-element (.getStackTrace root-cause)))}))))
   (-load [{engine :engine :as this} ns url]
     (load-ns engine ns))
-  (-tear-down [this]))
+  (-tear-down [this])
+  repl/IParseStacktrace
+  (-parse-stacktrace [this frames-str ret {output-dir :output-dir}]
+    (when-let [frames (read-string frames-str)]
+      (vec (map #(update-in %1 [:file] (fn [s] (strip-file-name s output-dir))) frames)))))
 
 (defn repl-env 
   "Create a Nashorn repl-env for use with the repl/repl* method in Clojurescript and as the
-   :repl-env argument to piggieback/cljs-repl. Opts has the following extra parameters:
+   :repl-env argument to piggieback/cljs-repl. Besides the usual repl options (e.g. :source-map),
+   opts has the following extra parameters:
    
    :output-dir  the directory of the compiled files, e.g. \"resources/public/my-app\" (mandatory).
    :output-to   load this file initially into Nashorn, relative to output-dir.
                 Use a minimal bootstrapped cljs.core environment if not specified."
-  [& {debug :debug :as opts}]
+  [& {:keys [debug] :as opts}]
   (let [engine (create-engine)
         compiler-env (env/default-compiler-env)]
     (merge (NashornEnv. engine debug)
