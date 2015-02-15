@@ -693,8 +693,9 @@ should contain the source for the given namespace name."
           [sources []] (sort-modules (add-cljs-base-module (:modules opts))))
         cljs-base-closure-module (get-in modules [:cljs-base :closure-module])]
     ;; add anything left to :cljs-base module
-    (doseq [^SourceFile source sources']
-      (.add ^JSModule cljs-base-closure-module source))
+    (doseq [source sources']
+      (.add ^JSModule cljs-base-closure-module
+        (js-source-file (javascript-name source))))
     modules))
 
 (comment
