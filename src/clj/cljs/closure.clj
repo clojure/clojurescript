@@ -725,11 +725,12 @@ should contain the source for the given namespace name."
 
 (defn emit-optimized-source-map
   [^com.google.javascript.jscomp.Compiler closure-compiler sources name opts]
-  (with-open [out (io/writer name)]
-    (.appendTo (.getSourceMap closure-compiler) out name))
-  (let [preamble (make-preamble opts)
+  (let [name' (str name ".closure")
+        _ (with-open [out (io/writer name')]
+            (.appendTo (.getSourceMap closure-compiler) out name'))
+        preamble (make-preamble opts)
         preamble-line-count (- (count (.split #"\r?\n" preamble -1)) 1)
-        sm-json (-> (io/file name) slurp
+        sm-json (-> (io/file name') slurp
                     (json/read-str :key-fn keyword))
         closure-source-map (sm/decode-reverse sm-json)]
     (loop [sources (seq sources)
@@ -771,7 +772,7 @@ should contain the source for the given namespace name."
             {:preamble-line-count (+ preamble-line-count
                                      (or (:foreign-deps-line-count opts) 0))
              :lines (+ (:lineCount sm-json) preamble-line-count 2)
-             :file (:file sm-json)
+             :file name
              :output-dir (util/output-directory opts)
              :source-map (:source-map opts)
              :source-map-path (:source-map-path opts)
