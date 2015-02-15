@@ -800,6 +800,8 @@ should contain the source for the given namespace name."
                   sources)
         modules (build-modules sources opts)
         ^List inputs (map (comp :closure-module second) modules)
+        _ (doseq [^JSModule input inputs]
+            (.sortInputsByDeps input closure-compiler))
         ^Result result (.compileModules closure-compiler externs inputs compiler-options)]
     (if (.success result)
       (vec
@@ -1314,7 +1316,7 @@ should contain the source for the given namespace name."
      :modules
      {:hello
       {:output-to "samples/hello/out/hello.js"
-       :entries '#{hello.core}}}})
+       :entries '#{cljs.reader hello.core}}}})
   )
 
 (defn watch
