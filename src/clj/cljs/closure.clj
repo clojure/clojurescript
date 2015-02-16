@@ -1162,17 +1162,21 @@ should contain the source for the given namespace name."
              (not (= (:optimizations opts) :none)))
     (assert (and (contains? opts :output-to)
                  (contains? opts :output-dir))
-      ":source-map cannot be specied without also specifying :output-to and :output-dir if optimization setting applied")
-    (assert (string? source-map)
-      (format ":source-map %s must specify a file in the same directory as :output-to %s if optimization setting applied"
+      (str ":source-map cannot be specied without also specifying :output-to"
+           " and :output-dir if optimization setting applied"))
+    (assert (and (string? source-map) (nil? (:modules opts)))
+      (format (str ":source-map %s must specify a file in the same directory"
+                   " as :output-to %s if optimization setting applied")
         (pr-str source-map)
         (pr-str output-to)))
     (assert (in-same-dir? source-map output-to)
-      (format ":source-map %s must specify a file in the same directory as :output-to %s if optimization setting applied"
+      (format (str ":source-map %s must specify a file in the same directory as "
+                   ":output-to %s if optimization setting applied")
         (pr-str source-map)
         (pr-str output-to)))
     (assert (same-or-subdirectory-of? (absolute-parent output-to) output-dir)
-      (format ":output-dir %s must specify a directory in :output-to's parent %s if optimization setting applied"
+      (format (str ":output-dir %s must specify a directory in :output-to's"
+                   " parent %s if optimization setting applied")
         (pr-str output-dir)
         (pr-str (absolute-parent output-to)))))
   true)
@@ -1185,7 +1189,8 @@ should contain the source for the given namespace name."
     (when-not (= (:optimizations opts) :none)
       (assert (and (contains? opts :output-to)
                    (contains? opts :source-map))
-        ":source-map-path cannot be specified without also specifying :output-to and :source-map if optimization setting applied")))
+        (str ":source-map-path cannot be specified without also specifying "
+             ":output-to and :source-map if optimization setting applied"))))
   true)
 
 (defn check-output-wrapper [{:keys [output-wrapper optimizations]}]
