@@ -43,7 +43,7 @@
             [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.data.json :as json])
-  (:import [java.io File BufferedInputStream]
+  (:import [java.io File BufferedInputStream StringWriter]
            [java.net URL]
            [java.util.logging Level]
            [java.util List Random]
@@ -52,7 +52,7 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule JSModuleGraph]
+              JSModule JSModuleGraph SourceMap]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
@@ -171,8 +171,15 @@
     (if-let [extra-annotations (:closure-extra-annotations opts)]
       (. compiler-options (setExtraAnnotationNames (map name extra-annotations))))
     (when (contains? opts :source-map)
-      (set! (.sourceMapOutputPath compiler-options)
-            (:source-map opts))
+      (if (:modules opts)
+        ;; name is not actually used by Closur in :modules case,
+        ;; but we need to provide _something_ for Closure to not
+        ;; complain
+        (set! (.sourceMapOutputPath compiler-options)
+              (str (io/file (util/output-directory opts)
+                            "cljs_modules.map")))
+        (set! (.sourceMapOutputPath compiler-options)
+              (:source-map opts)))
       (set! (.sourceMapDetailLevel compiler-options)
             SourceMap$DetailLevel/ALL)
       (set! (.sourceMapFormat compiler-options)
@@ -802,12 +809,27 @@ should contain the source for the given namespace name."
         ^List inputs (map (comp :closure-module second) modules)
         _ (doseq [^JSModule input inputs]
             (.sortInputsByDeps input closure-compiler))
-        ^Result result (.compileModules closure-compiler externs inputs compiler-options)]
+        ^Result result (.compileModules closure-compiler externs inputs compiler-options)
+        ^SourceMap source-map (when (:source-map opts)
+                                (.getSourceMap closure-compiler))]
+    (assert (or (nil? (:source-map opts)) source-map)
+      "Could not create source maps for modules")
     (if (.success result)
       (vec
-        (for [[name {:keys [closure-module] :as module}] modules]
+        (for [[name {:keys [output-to closure-module] :as module}] modules]
           [name
-           (assoc module :source (.toSource closure-compiler ^JSModule closure-module))]))
+           (merge
+             (assoc module
+               :source
+               (do
+                 (when source-map (.reset source-map))
+                 (.toSource closure-compiler ^JSModule closure-module)))
+             (when source-map
+               (let [sw (StringWriter.)
+                     source-map-name (str output-to ".map.closure")]
+                 (.appendTo source-map sw source-map-name)
+                 {:source-map-json (.toString sw)
+                  :source-map-name source-map-name})))]))
       (report-failure result))))
 
 (defn optimize
@@ -954,12 +976,15 @@ should contain the source for the given namespace name."
    :output-to and supply :source entry with the JavaScript source to write
    to disk."
   [opts modules]
-  (doseq [[name {:keys [output-to source]}] modules]
+  (doseq [[name {:keys [output-to source] :as module-desc}] modules]
     (assert (not (nil? output-to))
       (str "Module " name " does not define :output-to"))
     (assert (not (nil? source))
       (str "Module " name " did not supply :source"))
-    (spit (io/file output-to) source)))
+    (spit (io/file output-to) source)
+    (when (:source-map opts)
+      (spit (io/file (:source-map-name module-desc))
+        (:source-map-json module-desc)))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
@@ -1160,23 +1185,24 @@ should contain the source for the given namespace name."
   "When :source-map is specified in opts, "
   (when (and (contains? opts :source-map)
              (not (= (:optimizations opts) :none)))
-    (assert (and (contains? opts :output-to)
+    (assert (and (or (contains? opts :output-to)
+                     (contains? opts :modules))
                  (contains? opts :output-dir))
-      (str ":source-map cannot be specied without also specifying :output-to"
-           " and :output-dir if optimization setting applied"))
-    (assert (and (string? source-map) (nil? (:modules opts)))
-      (format (str ":source-map %s must specify a file in the same directory"
-                   " as :output-to %s if optimization setting applied")
+      (str ":source-map cannot be specied without also specifying :output-dir "
+           "and either :output-to or :modules if optimization setting applied"))
+    (assert (or (nil? (:output-to opts)) (string? source-map))
+      (format (str ":source-map %s must specify a file in the same directory "
+                   "as :output-to %s if optimization setting applied")
         (pr-str source-map)
         (pr-str output-to)))
-    (assert (in-same-dir? source-map output-to)
+    (assert (or (nil? (:output-to opts)) (in-same-dir? source-map output-to))
       (format (str ":source-map %s must specify a file in the same directory as "
                    ":output-to %s if optimization setting applied")
         (pr-str source-map)
         (pr-str output-to)))
-    (assert (same-or-subdirectory-of? (absolute-parent output-to) output-dir)
-      (format (str ":output-dir %s must specify a directory in :output-to's"
-                   " parent %s if optimization setting applied")
+    (assert (or (nil? (:output-to opts)) (same-or-subdirectory-of? (absolute-parent output-to) output-dir))
+      (format (str ":output-dir %s must specify a directory in :output-to's "
+                   "parent %s if optimization setting applied")
         (pr-str output-dir)
         (pr-str (absolute-parent output-to)))))
   true)
@@ -1285,9 +1311,9 @@ should contain the source for the given namespace name."
                                          :foreign-deps-line-count
                                          (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
                          (when-let [fname (:source-map all-opts)]
-                           (assert (string? fname)
+                           (assert (or (nil? (:output-to all-opts)) (string? fname))
                              (str ":source-map must name a file when using :whitespace, "
-                                  ":simple, or :advanced optimizations"))
+                                  ":simple, or :advanced optimizations with :output-to"))
                            (doall (map #(source-on-disk all-opts %) js-sources)))
                          (if (:modules all-opts)
                            (->>
@@ -1318,6 +1344,7 @@ should contain the source for the given namespace name."
   (build "samples/hello/src"
     {:optimizations :advanced
      :output-dir "samples/hello/out"
+     :source-map true
      :modules
      {:hello
       {:output-to "samples/hello/out/hello.js"
