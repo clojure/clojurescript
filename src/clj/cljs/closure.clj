@@ -664,12 +664,12 @@ should contain the source for the given namespace name."
    be augmented with a :closure-module entry holding the Closure JSModule."
   [sources opts]
   (let [find-entry (fn [sources entry]
-                     (let [entry (name (comp/munge entry))]
-                       (some
-                         (fn [source]
-                           (when (some #{entry} (:provides source))
-                             source))
-                        sources)))
+                     (some
+                       (fn [source]
+                         (when (some #{(name entry) (name (comp/munge entry))}
+                                 (:provides source))
+                           source))
+                       sources))
         [sources' modules]
         (reduce
           (fn [[sources ret] [name {:keys [entries output-to depends-on] :as module-desc}]]
@@ -804,8 +804,10 @@ should contain the source for the given namespace name."
   "Use the Closure Compiler to optimize one or more Closure JSModules. Returns
    a dependency sorted list of module name and description tuples."
   [opts & sources]
-  {:pre [(and (contains? opts :modules)
-              (not (contains? opts :output-to)))]}
+  ;; the following pre-condition can't be enabled
+  ;; lein-cljsbuild adds :output-to?
+  #_{:pre [(and (contains? opts :modules)
+                (not (contains? opts :output-to)))]}
   (let [closure-compiler (make-closure-compiler)
         ^List externs (load-externs opts)
         compiler-options (make-options opts)
