@@ -519,11 +519,12 @@
 (defn analyze-source
   "Given a source directory, analyzes all .cljs files. Used to populate
   (:cljs.analyzer/namespaces compiler-env) so as to support code reflection."
-  [src-dir]
-  (if-let [src-dir (and (not (empty? src-dir))
-                     (File. src-dir))]
-    (doseq [file (comp/cljs-files-in src-dir)]
-      (ana/analyze-file (str "file://" (.getAbsolutePath file))))))
+  ([src-dir] (analyze-source src-dir nil))
+  ([src-dir opts]
+    (if-let [src-dir (and (not (empty? src-dir))
+                       (File. src-dir))]
+      (doseq [file (comp/cljs-files-in src-dir)]
+        (ana/analyze-file (str "file://" (.getAbsolutePath file)) opts)))))
 
 (defn repl*
   [repl-env opts]
@@ -547,8 +548,6 @@
                ana/*cljs-static-fns* static-fns]
        ;; TODO: the follow should become dead code when the REPL is
        ;; sufficiently enhanced to understand :cache-analysis - David
-       (when analyze-path
-         (analyze-source analyze-path))
        (let [env {:context :expr :locals {}}
              special-fns (merge default-special-fns special-fns)
              is-special-fn? (set (keys special-fns))
@@ -560,6 +559,8 @@
                     opts)]
          (comp/with-core-cljs opts
            (fn []
+             (when analyze-path
+               (analyze-source analyze-path opts))
              (evaluate-form repl-env env "<cljs repl>"
                (with-meta
                  '(ns cljs.user
