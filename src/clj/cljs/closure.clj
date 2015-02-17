@@ -672,6 +672,7 @@ should contain the source for the given namespace name."
                            (when (some matcher (:provides source))
                              source)))
                        sources))
+        used (atom {})
         [sources' modules]
         (reduce
           (fn [[sources ret] [name {:keys [entries output-to depends-on] :as module-desc}]]
@@ -684,10 +685,17 @@ should contain the source for the given namespace name."
                   (reduce
                     (fn [[sources ret] entry-sym]
                       (if-let [entry (find-entry sources entry-sym)]
-                        [(remove #{entry} sources) (conj ret entry)]
-                        (throw
-                          (IllegalArgumentException.
-                            (str "Could not find namespace " entry-sym)))))
+                        (do
+                          (swap! used assoc entry-sym name)
+                          [(remove #{entry} sources) (conj ret entry)])
+                        (if (contains? @used entry-sym)
+                          (throw
+                            (IllegalArgumentException.
+                              (str "Already used namespace " entry-sym " "
+                                   "in module " (get @used entry-sym))))
+                          (throw
+                            (IllegalArgumentException.
+                             (str "Could not find namespace " entry-sym))))))
                     [sources []] entries)
                   foreign-deps (atom [])]
               ;; add inputs to module
