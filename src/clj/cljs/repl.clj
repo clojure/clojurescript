@@ -558,58 +558,60 @@
              opts (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
                     (merge opts merge-opts)
                     opts)]
-         (evaluate-form repl-env env "<cljs repl>"
-           (with-meta
-             '(ns cljs.user
-                (:require [cljs.repl :refer-macros [doc]]))
-             {:line 1 :column 1})
-           identity opts)
-         (when-let [src (:watch opts)]
-           (future
-             (let [log-file (io/file (util/output-directory opts) "watch.log")]
-               (println "Watch compilation log available at:" (str log-file))
-               (binding [*out* (FileWriter. log-file)]
-                 (cljsc/watch src (dissoc opts :watch))))))
-         (loop []
-           ;; try to let things flush before printing prompt
-           (Thread/sleep 10)
-           (print (str "ClojureScript:" ana/*cljs-ns* "> "))
-           (flush)
-           (let [rdr (readers/source-logging-push-back-reader
-                       (PushbackReader. (io/reader *in*))
-                       1
-                       "NO_SOURCE_FILE")
-                 form (try
-                        (binding [*ns* (create-ns ana/*cljs-ns*)
-                                  reader/*data-readers* tags/*cljs-data-readers*
-                                  reader/*alias-map*
-                                  (apply merge
-                                    ((juxt :requires :require-macros)
-                                      (ana/get-namespace ana/*cljs-ns*)))]
-                          (reader/read rdr nil read-error))
-                        (catch Exception e
-                          (println (.getMessage e))
-                          read-error))]
-             ;; TODO: need to catch errors here too - David
-             (cond
-               (identical? form read-error) (recur)
-               (= form :cljs/quit) :quit
+         (comp/with-core-cljs opts
+           (fn []
+             (evaluate-form repl-env env "<cljs repl>"
+               (with-meta
+                 '(ns cljs.user
+                    (:require [cljs.repl :refer-macros [doc]]))
+                 {:line 1 :column 1})
+               identity opts)
+             (when-let [src (:watch opts)]
+               (future
+                 (let [log-file (io/file (util/output-directory opts) "watch.log")]
+                   (println "Watch compilation log available at:" (str log-file))
+                   (binding [*out* (FileWriter. log-file)]
+                     (cljsc/watch src (dissoc opts :watch))))))
+             (loop []
+               ;; try to let things flush before printing prompt
+               (Thread/sleep 10)
+               (print (str "ClojureScript:" ana/*cljs-ns* "> "))
+               (flush)
+               (let [rdr (readers/source-logging-push-back-reader
+                           (PushbackReader. (io/reader *in*))
+                           1
+                           "NO_SOURCE_FILE")
+                     form (try
+                            (binding [*ns* (create-ns ana/*cljs-ns*)
+                                      reader/*data-readers* tags/*cljs-data-readers*
+                                      reader/*alias-map*
+                                      (apply merge
+                                        ((juxt :requires :require-macros)
+                                          (ana/get-namespace ana/*cljs-ns*)))]
+                              (reader/read rdr nil read-error))
+                            (catch Exception e
+                              (println (.getMessage e))
+                              read-error))]
+                 ;; TODO: need to catch errors here too - David
+                 (cond
+                   (identical? form read-error) (recur)
+                   (= form :cljs/quit) :quit
 
-               (and (seq? form) (is-special-fn? (first form)))
-               (do
-                 (try
-                   ((get special-fns (first form)) repl-env env form opts)
-                   (catch Throwable ex
-                     (println "Failed to execute special function:" (pr-str (first form)))
-                     (trace/print-cause-trace ex 12)))
-                 ;; flush output which could include stack traces
-                 (flush)
-                 (newline)
-                 (recur))
+                   (and (seq? form) (is-special-fn? (first form)))
+                   (do
+                     (try
+                       ((get special-fns (first form)) repl-env env form opts)
+                       (catch Throwable ex
+                         (println "Failed to execute special function:" (pr-str (first form)))
+                         (trace/print-cause-trace ex 12)))
+                     ;; flush output which could include stack traces
+                     (flush)
+                     (newline)
+                     (recur))
 
-               :else
-               (do (eval-and-print repl-env env form opts)
-                   (recur)))))
+                   :else
+                   (do (eval-and-print repl-env env form opts)
+                       (recur)))))))
          (-tear-down repl-env))))))
 
 (defn repl
