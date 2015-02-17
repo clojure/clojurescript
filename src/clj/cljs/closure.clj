@@ -659,11 +659,9 @@ should contain the source for the given namespace name."
   )
 
 (defn build-modules
-  "Given a list of IJavaScript sources and compiler options return a modules
-   map containing :foreign-deps, a dependency sorted list of foreign deps,
-   and :modules, a dependecy sorted list of module name / description tuples.
-   The module descriptions will be augmented with a :closure-module entry
-   holding the Closure JSModule."
+  "Given a list of IJavaScript sources and compiler options return a dependency
+   sorted list of module name / description tuples. The module descriptions will
+   be augmented with a :closure-module entry holding the Closure JSModule."
   [sources opts]
   (let [find-entry (fn [sources entry]
                      (let [entry (name (comp/munge entry))]
@@ -717,8 +715,7 @@ should contain the source for the given namespace name."
         (.add ^JSModule cljs-base-closure-module
           (js-source-file (javascript-name source) source))
         (swap! foreign-deps conj source)))
-    {:foreign-deps @foreign-deps
-     :modules modules}))
+    (assoc-in modules [0 1 :foreign-deps] @foreign-deps)))
 
 (comment
   (build "samples/hello/src"
@@ -805,9 +802,7 @@ should contain the source for the given namespace name."
 
 (defn optimize-modules
   "Use the Closure Compiler to optimize one or more Closure JSModules. Returns
-   a modules map containing :foreign-deps, a dependency sorted list of foreign
-   dependencies, and :modules a dependency sorted list of module name and
-   description tuples."
+   a dependency sorted list of module name and description tuples."
   [opts & sources]
   {:pre [(and (contains? opts :modules)
               (not (contains? opts :output-to)))]}
@@ -817,7 +812,7 @@ should contain the source for the given namespace name."
         sources (if (= :whitespace (:optimizations opts))
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
-        {:keys [foreign-deps modules]} (build-modules sources opts)
+        modules (build-modules sources opts)
         ^List inputs (map (comp :closure-module second) modules)
         _ (doseq [^JSModule input inputs]
             (.sortInputsByDeps input closure-compiler))
@@ -827,23 +822,21 @@ should contain the source for the given namespace name."
     (assert (or (nil? (:source-map opts)) source-map)
       "Could not create source maps for modules")
     (if (.success result)
-      {:foreign-deps foreign-deps
-       :modules
-       (vec
-         (for [[name {:keys [output-to closure-module] :as module}] modules]
-           [name
-            (merge
-              (assoc module
-                :source
-                (do
-                  (when source-map (.reset source-map))
-                  (.toSource closure-compiler ^JSModule closure-module)))
-              (when source-map
-                (let [sw (StringWriter.)
-                      source-map-name (str output-to ".map.closure")]
-                  (.appendTo source-map sw source-map-name)
-                  {:source-map-json (.toString sw)
-                   :source-map-name source-map-name})))]))}
+      (vec
+        (for [[name {:keys [output-to closure-module] :as module}] modules]
+          [name
+           (merge
+             (assoc module
+               :source
+               (do
+                 (when source-map (.reset source-map))
+                 (.toSource closure-compiler ^JSModule closure-module)))
+             (when source-map
+               (let [sw (StringWriter.)
+                     source-map-name (str output-to ".map.closure")]
+                 (.appendTo source-map sw source-map-name)
+                 {:source-map-json (.toString sw)
+                  :source-map-name source-map-name})))]))
       (report-failure result))))
 
 (defn optimize
@@ -984,18 +977,23 @@ should contain the source for the given namespace name."
              "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
              "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');\n")))))
 
+(declare foreign-deps-str)
+
 (defn output-modules
   "Given compiler options and a sequence of module name and module description
    tuples output module sources to disk. Modules description must define
    :output-to and supply :source entry with the JavaScript source to write
    to disk."
-  [opts {:keys [foreign-deps modules]}]
-  (doseq [[name {:keys [output-to source] :as module-desc}] modules]
+  [opts modules]
+  (doseq [[name {:keys [output-to source foreign-deps] :as module-desc}] modules]
     (assert (not (nil? output-to))
       (str "Module " name " does not define :output-to"))
     (assert (not (nil? source))
       (str "Module " name " did not supply :source"))
-    (spit (io/file output-to) source)
+    (spit (io/file output-to)
+      (if-not (empty? foreign-deps)
+        (str (foreign-deps-str opts foreign-deps) "\n" source)
+        source))
     (when (:source-map opts)
       (spit (io/file (:source-map-name module-desc))
         (:source-map-json module-desc)))))
