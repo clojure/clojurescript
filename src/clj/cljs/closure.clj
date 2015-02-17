@@ -1188,7 +1188,7 @@ should contain the source for the given namespace name."
     (assert (and (or (contains? opts :output-to)
                      (contains? opts :modules))
                  (contains? opts :output-dir))
-      (str ":source-map cannot be specied without also specifying :output-dir "
+      (str ":source-map cannot be specified without also specifying :output-dir "
            "and either :output-to or :modules if optimization setting applied"))
     (assert (or (nil? (:output-to opts)) (string? source-map))
       (format (str ":source-map %s must specify a file in the same directory "
