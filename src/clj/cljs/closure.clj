@@ -659,9 +659,12 @@ should contain the source for the given namespace name."
   )
 
 (defn build-modules
-  "Given a list of IJavaScript sources and compiler options return a dependency
-   sorted list of module name / description tuples. The module descriptions will
-   be augmented with a :closure-module entry holding the Closure JSModule."
+  "Given a list of IJavaScript sources in dependency order and compiler options
+   return a dependency sorted list of module name / description tuples. The
+   module descriptions will be augmented with a :closure-module entry holding
+   the Closure JSModule. Each module description will also be augmented with
+   a :foreign-deps vector containing foreign IJavaScript sources in dependency
+   order."
   [sources opts]
   (let [find-entry (fn [sources entry]
                      (some
