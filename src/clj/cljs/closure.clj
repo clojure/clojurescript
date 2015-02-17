@@ -977,7 +977,7 @@ should contain the source for the given namespace name."
              "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
              "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');\n")))))
 
-(declare foreign-deps-str)
+(declare foreign-deps-str add-header)
 
 (defn output-modules
   "Given compiler options and a sequence of module name and module description
@@ -991,9 +991,12 @@ should contain the source for the given namespace name."
     (assert (not (nil? source))
       (str "Module " name " did not supply :source"))
     (spit (io/file output-to)
-      (if-not (empty? foreign-deps)
-        (str (foreign-deps-str opts foreign-deps) "\n" source)
-        source))
+      (let [source (if (= name :cljs-base)
+                     (add-header opts source)
+                     source)]
+        (if-not (empty? foreign-deps)
+          (str (foreign-deps-str opts foreign-deps) "\n" source)
+          source)))
     (when (:source-map opts)
       (spit (io/file (:source-map-name module-desc))
         (:source-map-json module-desc)))))
