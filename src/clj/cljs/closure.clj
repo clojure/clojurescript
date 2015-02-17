@@ -666,9 +666,11 @@ should contain the source for the given namespace name."
   (let [find-entry (fn [sources entry]
                      (some
                        (fn [source]
-                         (when (some #{(name entry) (name (comp/munge entry))}
-                                 (:provides source))
-                           source))
+                         (let [matcher
+                               (into #{}
+                                 [(name entry) (name (comp/munge entry))])]
+                           (when (some matcher (:provides source))
+                             source)))
                        sources))
         [sources' modules]
         (reduce
