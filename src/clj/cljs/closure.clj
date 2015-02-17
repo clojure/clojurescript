@@ -659,10 +659,11 @@ should contain the source for the given namespace name."
   )
 
 (defn build-modules
-  "Given a list of IJavaScript sources and compiler options return a _sequence_
-   of module name and module description pair tuples. The tuples will be sorted
-   in module dependency order. The module descriptions will be augmented with
-   a :closure-module entry holding the Closure JSModule."
+  "Given a list of IJavaScript sources and compiler options return a modules
+   map containing :foreign-deps, a dependency sorted list of foreign deps,
+   and :modules, a dependecy sorted list of module name / description tuples.
+   The module descriptions will be augmented with a :closure-module entry
+   holding the Closure JSModule."
   [sources opts]
   (let [find-entry (fn [sources entry]
                      (let [entry (name (comp/munge entry))]
@@ -683,16 +684,18 @@ should contain the source for the given namespace name."
                   (reduce
                     (fn [[sources ret] entry-sym]
                       (if-let [entry (find-entry sources entry-sym)]
-                        [(remove #{entry} sources)
-                         (conj ret
-                           (js-source-file (javascript-name entry) entry))]
+                        [(remove #{entry} sources) (conj ret entry)]
                         (throw
                           (IllegalArgumentException.
                             (str "Could not find namespace " entry-sym)))))
-                    [sources []] entries)]
+                    [sources []] entries)
+                  foreign-deps (atom [])]
               ;; add inputs to module
-              (doseq [^SourceFile module-source module-sources]
-                (.add js-module module-source))
+              (doseq [ijs module-sources]
+                (if-not (deps/-foreign? ijs)
+                  (.add js-module
+                    ^SourceFile (js-source-file (javascript-name ijs) ijs))
+                  (swap! foreign-deps conj ijs)))
               ;; add module dependencies, will always work
               ;; since modules are already in dependency order
               (doseq [dep depends-on]
@@ -702,14 +705,20 @@ should contain the source for the given namespace name."
                            (str "Parent module " dep " does not exist")))))
               [sources'
                (conj ret
-                 [name (assoc module-desc :closure-module js-module)])]))
+                 [name (assoc module-desc
+                         :closure-module js-module
+                         :foreign-deps @foreign-deps)])]))
           [sources []] (sort-modules (add-cljs-base-module (:modules opts) opts)))
-        cljs-base-closure-module (get-in (into {} modules) [:cljs-base :closure-module])]
+        cljs-base-closure-module (get-in (into {} modules) [:cljs-base :closure-module])
+        foreign-deps (atom [])]
     ;; add anything left to :cljs-base module
     (doseq [source sources']
-      (.add ^JSModule cljs-base-closure-module
-        (js-source-file (javascript-name source) source)))
-    modules))
+      (if-not (deps/-foreign? source)
+        (.add ^JSModule cljs-base-closure-module
+          (js-source-file (javascript-name source) source))
+        (swap! foreign-deps conj source)))
+    {:foreign-deps @foreign-deps
+     :modules modules}))
 
 (comment
   (build "samples/hello/src"
@@ -795,7 +804,10 @@ should contain the source for the given namespace name."
              :relpaths relpaths}))))))
 
 (defn optimize-modules
-  "Use the Closure Compiler to optimize one or more Closure JSModules."
+  "Use the Closure Compiler to optimize one or more Closure JSModules. Returns
+   a modules map containing :foreign-deps, a dependency sorted list of foreign
+   dependencies, and :modules a dependency sorted list of module name and
+   description tuples."
   [opts & sources]
   {:pre [(and (contains? opts :modules)
               (not (contains? opts :output-to)))]}
@@ -805,7 +817,7 @@ should contain the source for the given namespace name."
         sources (if (= :whitespace (:optimizations opts))
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
-        modules (build-modules sources opts)
+        {:keys [foreign-deps modules]} (build-modules sources opts)
         ^List inputs (map (comp :closure-module second) modules)
         _ (doseq [^JSModule input inputs]
             (.sortInputsByDeps input closure-compiler))
@@ -815,21 +827,23 @@ should contain the source for the given namespace name."
     (assert (or (nil? (:source-map opts)) source-map)
       "Could not create source maps for modules")
     (if (.success result)
-      (vec
-        (for [[name {:keys [output-to closure-module] :as module}] modules]
-          [name
-           (merge
-             (assoc module
-               :source
-               (do
-                 (when source-map (.reset source-map))
-                 (.toSource closure-compiler ^JSModule closure-module)))
-             (when source-map
-               (let [sw (StringWriter.)
-                     source-map-name (str output-to ".map.closure")]
-                 (.appendTo source-map sw source-map-name)
-                 {:source-map-json (.toString sw)
-                  :source-map-name source-map-name})))]))
+      {:foreign-deps foreign-deps
+       :modules
+       (vec
+         (for [[name {:keys [output-to closure-module] :as module}] modules]
+           [name
+            (merge
+              (assoc module
+                :source
+                (do
+                  (when source-map (.reset source-map))
+                  (.toSource closure-compiler ^JSModule closure-module)))
+              (when source-map
+                (let [sw (StringWriter.)
+                      source-map-name (str output-to ".map.closure")]
+                  (.appendTo source-map sw source-map-name)
+                  {:source-map-json (.toString sw)
+                   :source-map-name source-map-name})))]))}
       (report-failure result))))
 
 (defn optimize
@@ -975,7 +989,7 @@ should contain the source for the given namespace name."
    tuples output module sources to disk. Modules description must define
    :output-to and supply :source entry with the JavaScript source to write
    to disk."
-  [opts modules]
+  [opts {:keys [foreign-deps modules]}]
   (doseq [[name {:keys [output-to source] :as module-desc}] modules]
     (assert (not (nil? output-to))
       (str "Module " name " does not define :output-to"))
