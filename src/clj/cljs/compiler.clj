@@ -810,8 +810,8 @@
     (let [loaded-libs      (munge 'cljs.core.*loaded-libs*)
           loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))]
       (when (-> libs meta :reload-all)
-        (emitln loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
-        (emitln loaded-libs " = cljs.core.set();"))
+        (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
+        (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
       (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
         (cond
           ;; only emit if foreign lib under Node.js
@@ -829,7 +829,7 @@
           :else
           (emitln "goog.require('" (munge lib) "');")))
       (when (-> libs meta :reload-all)
-        (emitln loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");")))))
+        (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");")))))
 
 (defmethod emit* :ns
   [{:keys [name requires uses require-macros env]}]
