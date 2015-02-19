@@ -757,15 +757,13 @@ should contain the source for the given namespace name."
   )
 
 (defn emit-optimized-source-map
-  [^com.google.javascript.jscomp.Compiler closure-compiler sources name opts]
-  (let [name' (str name ".closure")
-        _ (with-open [out (io/writer name')]
-            (.appendTo (.getSourceMap closure-compiler) out name'))
-        preamble (make-preamble opts)
-        preamble-line-count (- (count (.split #"\r?\n" preamble -1)) 1)
-        sm-json (-> (io/file name') slurp
-                    (json/read-str :key-fn keyword))
-        closure-source-map (sm/decode-reverse sm-json)]
+  "Given a JSON parsed Google Closure JavaScript to JavaScript source map,
+   the entire list of original IJavaScript sources output a merged JavaScript
+   to ClojureScript source map file with the given file name. opts should
+   supply :preamble-line-count and :foreign-deps-line-count if they are
+   relevant."
+  [sm-json sources name opts]
+  (let [closure-source-map (sm/decode-reverse sm-json)]
     (loop [sources (seq sources)
            relpaths {}
            merged (sorted-map-by
@@ -802,9 +800,12 @@ should contain the source for the given namespace name."
         (spit
           (io/file name)
           (sm/encode merged
-            {:preamble-line-count (+ preamble-line-count
-                                     (or (:foreign-deps-line-count opts) 0))
-             :lines (+ (:lineCount sm-json) preamble-line-count 2)
+            {:preamble-line-count (+ (:preamble-line-count opts 0)
+                                     (:foreign-deps-line-count opts 0))
+             :lines (+ (:lineCount sm-json)
+                       (:preamble-line-count opts 0)
+                       (:foreign-deps-line-count opts 0)
+                       2)
              :file name
              :output-dir (util/output-directory opts)
              :source-map (:source-map opts)
@@ -869,7 +870,17 @@ should contain the source for the given namespace name."
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
         (when-let [name (:source-map opts)]
-          (emit-optimized-source-map closure-compiler sources name opts))
+          (let [name' (str name ".closure")]
+            (with-open [out (io/writer name')]
+              (.appendTo (.getSourceMap closure-compiler) out name'))
+            (emit-optimized-source-map
+              (-> (io/file name')
+                slurp
+                (json/read-str :key-fn keyword))
+              sources name
+              (assoc opts
+                :preamble-line-count
+                (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)))))
         source)
       (report-failure result))))
 
@@ -999,7 +1010,7 @@ should contain the source for the given namespace name."
    tuples output module sources to disk. Modules description must define
    :output-to and supply :source entry with the JavaScript source to write
    to disk."
-  [opts modules]
+  [opts js-sources modules]
   (doseq [[name {:keys [output-to source foreign-deps] :as module-desc}] modules]
     (assert (not (nil? output-to))
       (str "Module " name " does not define :output-to"))
@@ -1335,11 +1346,7 @@ should contain the source for the given namespace name."
                                    [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
                  optim (:optimizations all-opts)
                  ret (if (and optim (not= optim :none))
-                       (let [fdeps-str (foreign-deps-str all-opts
-                                         (filter foreign-source? js-sources))
-                             all-opts  (assoc all-opts
-                                         :foreign-deps-line-count
-                                         (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
+                       (do
                          (when-let [fname (:source-map all-opts)]
                            (assert (or (nil? (:output-to all-opts)) (string? fname))
                              (str ":source-map must name a file when using :whitespace, "
@@ -1348,17 +1355,22 @@ should contain the source for the given namespace name."
                          (if (:modules all-opts)
                            (->>
                              (apply optimize-modules all-opts js-sources)
-                             (output-modules all-opts))
-                           (->>
-                             (util/measure compiler-stats
-                               "Optimize sources"
-                               (apply optimize all-opts
-                                 (remove foreign-source? js-sources)))
-                             (add-wrapper all-opts)
-                             (add-source-map-link all-opts)
-                             (str fdeps-str)
-                             (add-header all-opts)
-                             (output-one-file all-opts))))
+                             (output-modules all-opts js-sources))
+                           (let [fdeps-str (foreign-deps-str all-opts
+                                             (filter foreign-source? js-sources))
+                                 all-opts  (assoc all-opts
+                                             :foreign-deps-line-count
+                                             (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
+                             (->>
+                               (util/measure compiler-stats
+                                 "Optimize sources"
+                                 (apply optimize all-opts
+                                   (remove foreign-source? js-sources)))
+                               (add-wrapper all-opts)
+                               (add-source-map-link all-opts)
+                               (str fdeps-str)
+                               (add-header all-opts)
+                               (output-one-file all-opts)))))
                        (apply output-unoptimized all-opts js-sources))]
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
              (when (and (= (:target opts) :nodejs)
