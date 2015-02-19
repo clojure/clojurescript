@@ -28,6 +28,7 @@
            [clojure.lang LineNumberingPushbackReader]))
 
 (def ^:dynamic *cljs-verbose* false)
+(def ^:dynamic *repl-opts* nil)
 
 ;; =============================================================================
 ;; Copied over from clojure.main
@@ -262,11 +263,11 @@
 (defn print-mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace
    print the ClojureScript stacktrace. See mapped-stacktrace."
-  ([stacktrace] (print-mapped-stacktrace stacktrace nil))
+  ([stacktrace] (print-mapped-stacktrace stacktrace *repl-opts*))
   ([stacktrace opts]
     (doseq [{:keys [function file line column]}
             (mapped-stacktrace stacktrace opts)]
-      (println "\t" (str function " (" file ":" line ":" column ")")))))
+      ((:print opts) "\t" (str function " (" file ":" line ":" column ")")))))
 
 (comment
   (cljsc/build "samples/hello/src"
@@ -317,7 +318,7 @@
     (display-error repl-env ret form (constantly nil) opts))
   ([repl-env ret form f opts]
     (f)
-    (println (:value ret))
+    ((:print opts) (:value ret))
     (when-let [st (:stacktrace ret)]
       (if (and (true? (:source-map opts))
                (satisfies? IParseStacktrace repl-env))
@@ -326,9 +327,9 @@
             (if (satisfies? IPrintStacktrace repl-env)
               (-print-stacktrace repl-env cst ret opts)
               (print-mapped-stacktrace cst opts))
-            (println st)))
-        (println st))
-      (flush))))
+            ((:print opts) st)))
+        ((:print opts) st))
+      ((:flush opts)))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
@@ -337,7 +338,7 @@
   ([repl-env env filename form]
     (evaluate-form repl-env env filename form identity))
   ([repl-env env filename form wrap]
-    (evaluate-form repl-env env filename form wrap nil))
+    (evaluate-form repl-env env filename form wrap *repl-opts*))
   ([repl-env env filename form wrap opts]
     (try
       (binding [ana/*cljs-file* filename]
@@ -374,7 +375,7 @@
                 (distinct (vals (:uses ast))))
               opts))
           (when *cljs-verbose*
-            (print js))
+            ((:print opts) js))
           (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
             (case (:status ret)
               :error (display-error repl-env ret form opts)
@@ -386,8 +387,8 @@
               :success (:value ret)))))
       (catch Throwable ex
         (.printStackTrace ex)
-        (println (str ex))
-        (flush)))))
+        ((:print opts) (str ex))
+        ((:flush opts))))))
 
 (defn load-stream [repl-env filename res]
   (let [env (ana/empty-env)]
@@ -553,6 +554,8 @@
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (assoc (merge (-repl-options repl-env) opts)
+          :print print
+          :flush flush
           :ups-libs (:libs ups-deps)
           :ups-foreign-libs (:foreign-libs ups-deps))]
     (env/with-compiler-env
@@ -564,7 +567,8 @@
                                      :undeclared-var warn-on-undeclared
                                      :undeclared-ns warn-on-undeclared
                                      :undeclared-ns-form warn-on-undeclared)
-               ana/*cljs-static-fns* static-fns]
+               ana/*cljs-static-fns* static-fns
+               *repl-opts* opts]
        ;; TODO: the follow should become dead code when the REPL is
        ;; sufficiently enhanced to understand :cache-analysis - David
        (let [env {:context :expr :locals {}}
@@ -626,7 +630,7 @@
                          (trace/print-cause-trace ex 12)))
                      ;; flush output which could include stack traces
                      (flush)
-                     (newline)
+                     (print)
                      (recur))
 
                    :else
