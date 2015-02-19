@@ -24,7 +24,8 @@
             [cljs.source-map :as sm])
   (:import [java.io File PushbackReader FileWriter]
            [java.net URL]
-           [javax.xml.bind DatatypeConverter]))
+           [javax.xml.bind DatatypeConverter]
+           [clojure.lang LineNumberingPushbackReader]))
 
 (def ^:dynamic *cljs-verbose* false)
 
@@ -526,10 +527,26 @@
       (doseq [file (comp/cljs-files-in src-dir)]
         (ana/analyze-file (str "file://" (.getAbsolutePath file)) opts)))))
 
+(defn repl-prompt []
+  (print (str "ClojureScript:" ana/*cljs-ns* "> ")))
+
+(defn repl-caught [e]
+  )
+
 (defn repl*
-  [repl-env opts]
-  (print "To quit, type: ")
-  (prn :cljs/quit)
+  [repl-env {:keys [init need-prompt prompt flush read eval print caught]
+             :or {init        #()
+                  need-prompt (if (instance? LineNumberingPushbackReader *in*)
+                                #(.atLineStart ^LineNumberingPushbackReader *in*)
+                                #(identity true))
+                  prompt      repl-prompt
+                  flush       flush
+                  read        repl-read
+                  eval        eval
+                  print       prn
+                  caught      repl-caught}
+             :as opts}]
+  (print "To quit, type: " :cljs/quit)
   (let [ups-deps (cljsc/get-upstream-deps)
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
@@ -576,7 +593,7 @@
              (loop []
                ;; try to let things flush before printing prompt
                (Thread/sleep 10)
-               (print (str "ClojureScript:" ana/*cljs-ns* "> "))
+               (prompt)
                (flush)
                (let [rdr (readers/source-logging-push-back-reader
                            (PushbackReader. (io/reader *in*))
