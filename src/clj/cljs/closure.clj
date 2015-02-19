@@ -1003,29 +1003,53 @@ should contain the source for the given namespace name."
              "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
              "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');\n")))))
 
-(declare foreign-deps-str add-header)
+(declare foreign-deps-str add-header add-source-map-link)
 
 (defn output-modules
-  "Given compiler options and a sequence of module name and module description
-   tuples output module sources to disk. Modules description must define
-   :output-to and supply :source entry with the JavaScript source to write
-   to disk."
+  "Given compiler options, original IJavaScript sources and a sequence of
+   module name and module description tuples output module sources to disk.
+   Modules description must define :output-to and supply :source entry with
+   the JavaScript source to write to disk."
   [opts js-sources modules]
   (doseq [[name {:keys [output-to source foreign-deps] :as module-desc}] modules]
     (assert (not (nil? output-to))
       (str "Module " name " does not define :output-to"))
     (assert (not (nil? source))
       (str "Module " name " did not supply :source"))
-    (spit (io/file output-to)
-      (let [source (if (= name :cljs-base)
-                     (add-header opts source)
-                     source)]
-        (if-not (empty? foreign-deps)
-          (str (foreign-deps-str opts foreign-deps) "\n" source)
-          source)))
-    (when (:source-map opts)
-      (spit (io/file (:source-map-name module-desc))
-        (:source-map-json module-desc)))))
+    (let [fdeps-str (when-not (empty? foreign-deps)
+                      (foreign-deps-str opts foreign-deps))
+          sm-name (when (:source-map opts)
+                    (str output-to ".map"))]
+      (spit (io/file output-to)
+        (as-> source source
+          (if (= name :cljs-base)
+            (add-header opts source)
+            source)
+          (if fdeps-str
+            (str fdeps-str "\n" source)
+            source)
+          (if sm-name
+            (add-source-map-link
+              (assoc opts
+                :output-to output-to
+                :source-map sm-name)
+              source)
+            source)))
+      (when (:source-map opts)
+        (let [sm-json-str (:source-map-json module-desc)
+              sm-json     (json/read-str sm-json-str :key-fn keyword)]
+          (spit (io/file (:source-map-name module-desc)) sm-json-str)
+          (emit-optimized-source-map sm-json js-sources sm-name
+            (merge opts
+              {:source-map sm-name
+               :preamble-line-count
+               (if (= name :cljs-base)
+                 (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
+                 0)
+               :foreign-deps-line-count
+               (if fdeps-str
+                 (- (count (.split #"\r?\n" fdeps-str -1)) 1)
+                 0)})))))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
@@ -1231,17 +1255,17 @@ should contain the source for the given namespace name."
                  (contains? opts :output-dir))
       (str ":source-map cannot be specified without also specifying :output-dir "
            "and either :output-to or :modules if optimization setting applied"))
-    (assert (or (nil? (:output-to opts)) (string? source-map))
+    (assert (or (nil? (:output-to opts)) (:modules opts) (string? source-map))
       (format (str ":source-map %s must specify a file in the same directory "
                    "as :output-to %s if optimization setting applied")
         (pr-str source-map)
         (pr-str output-to)))
-    (assert (or (nil? (:output-to opts)) (in-same-dir? source-map output-to))
+    (assert (or (nil? (:output-to opts)) (:modules opts) (in-same-dir? source-map output-to))
       (format (str ":source-map %s must specify a file in the same directory as "
                    ":output-to %s if optimization setting applied")
         (pr-str source-map)
         (pr-str output-to)))
-    (assert (or (nil? (:output-to opts)) (same-or-subdirectory-of? (absolute-parent output-to) output-dir))
+    (assert (or (nil? (:output-to opts)) (:modules opts) (same-or-subdirectory-of? (absolute-parent output-to) output-dir))
       (format (str ":output-dir %s must specify a directory in :output-to's "
                    "parent %s if optimization setting applied")
         (pr-str output-dir)
@@ -1348,7 +1372,7 @@ should contain the source for the given namespace name."
                  ret (if (and optim (not= optim :none))
                        (do
                          (when-let [fname (:source-map all-opts)]
-                           (assert (or (nil? (:output-to all-opts)) (string? fname))
+                           (assert (or (nil? (:output-to all-opts)) (:modules opts) (string? fname))
                              (str ":source-map must name a file when using :whitespace, "
                                   ":simple, or :advanced optimizations with :output-to"))
                            (doall (map #(source-on-disk all-opts %) js-sources)))
