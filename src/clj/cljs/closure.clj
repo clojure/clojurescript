@@ -870,13 +870,15 @@ should contain the source for the given namespace name."
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
         (when-let [name (:source-map opts)]
-          (let [name' (str name ".closure")]
-            (with-open [out (io/writer name')]
-              (.appendTo (.getSourceMap closure-compiler) out name'))
+          (let [name' (str name ".closure")
+                sw (StringWriter.)
+                sm-json-str (do
+                              (.appendTo (.getSourceMap closure-compiler) sw name')
+                              (.toString sw))]
+            (when (true? (:closure-source-map opts))
+              (spit (io/file name') sm-json-str))
             (emit-optimized-source-map
-              (-> (io/file name')
-                slurp
-                (json/read-str :key-fn keyword))
+              (json/read-str sm-json-str :key-fn keyword)
               sources name
               (assoc opts
                 :preamble-line-count
@@ -1038,7 +1040,8 @@ should contain the source for the given namespace name."
       (when (:source-map opts)
         (let [sm-json-str (:source-map-json module-desc)
               sm-json     (json/read-str sm-json-str :key-fn keyword)]
-          (spit (io/file (:source-map-name module-desc)) sm-json-str)
+          (when (true? (:closure-source-map opts))
+            (spit (io/file (:source-map-name module-desc)) sm-json-str))
           (emit-optimized-source-map sm-json js-sources sm-name
             (merge opts
               {:source-map sm-name
