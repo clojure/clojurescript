@@ -24,9 +24,11 @@
             [cljs.source-map :as sm])
   (:import [java.io File PushbackReader FileWriter]
            [java.net URL]
-           [javax.xml.bind DatatypeConverter]))
+           [javax.xml.bind DatatypeConverter]
+           [clojure.lang LineNumberingPushbackReader]))
 
 (def ^:dynamic *cljs-verbose* false)
+(def ^:dynamic *repl-opts* nil)
 
 ;; =============================================================================
 ;; Copied over from clojure.main
@@ -261,11 +263,11 @@
 (defn print-mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace
    print the ClojureScript stacktrace. See mapped-stacktrace."
-  ([stacktrace] (print-mapped-stacktrace stacktrace nil))
+  ([stacktrace] (print-mapped-stacktrace stacktrace *repl-opts*))
   ([stacktrace opts]
     (doseq [{:keys [function file line column]}
             (mapped-stacktrace stacktrace opts)]
-      (println "\t" (str function " (" file ":" line ":" column ")")))))
+      ((:print opts) "\t" (str function " (" file ":" line ":" column ")")))))
 
 (comment
   (cljsc/build "samples/hello/src"
@@ -316,7 +318,7 @@
     (display-error repl-env ret form (constantly nil) opts))
   ([repl-env ret form f opts]
     (f)
-    (println (:value ret))
+    ((:print opts) (:value ret))
     (when-let [st (:stacktrace ret)]
       (if (and (true? (:source-map opts))
                (satisfies? IParseStacktrace repl-env))
@@ -325,9 +327,9 @@
             (if (satisfies? IPrintStacktrace repl-env)
               (-print-stacktrace repl-env cst ret opts)
               (print-mapped-stacktrace cst opts))
-            (println st)))
-        (println st))
-      (flush))))
+            ((:print opts) st)))
+        ((:print opts) st))
+      ((:flush opts)))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
@@ -336,7 +338,7 @@
   ([repl-env env filename form]
     (evaluate-form repl-env env filename form identity))
   ([repl-env env filename form wrap]
-    (evaluate-form repl-env env filename form wrap nil))
+    (evaluate-form repl-env env filename form wrap *repl-opts*))
   ([repl-env env filename form wrap opts]
     (try
       (binding [ana/*cljs-file* filename]
@@ -373,7 +375,7 @@
                 (distinct (vals (:uses ast))))
               opts))
           (when *cljs-verbose*
-            (print js))
+            ((:print opts) js))
           (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
             (case (:status ret)
               :error (display-error repl-env ret form opts)
@@ -385,8 +387,8 @@
               :success (:value ret)))))
       (catch Throwable ex
         (.printStackTrace ex)
-        (println (str ex))
-        (flush)))))
+        ((:print opts) (str ex))
+        ((:flush opts))))))
 
 (defn load-stream [repl-env filename res]
   (let [env (ana/empty-env)]
@@ -426,17 +428,19 @@
                              (set! *e e#)
                              (throw e#)))))))
 
-(defn- eval-and-print
+(defn- eval-cljs
+  "Given a REPL evaluation environment, an analysis environment, and a
+   form, evaluate the form and return the result. The result is always the value
+   represented as a string."
   ([repl-env env form]
-    (eval-and-print repl-env env form nil))
+    (eval-cljs repl-env env form nil))
   ([repl-env env form opts]
-    (println
-      (evaluate-form repl-env
-        (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
-        "<cljs repl>"
-        form
-        (wrap-fn form)
-        opts))))
+   (evaluate-form repl-env
+     (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
+     "<cljs repl>"
+     form
+     (wrap-fn form)
+     opts)))
 
 ;; Special REPL fns, these provide compatiblity with Clojure functions
 ;; that are not possible to reproduce given ClojureScript's compilation model
@@ -526,14 +530,32 @@
       (doseq [file (comp/cljs-files-in src-dir)]
         (ana/analyze-file (str "file://" (.getAbsolutePath file)) opts)))))
 
+(defn repl-prompt []
+  (print (str "ClojureScript:" ana/*cljs-ns* "> ")))
+
+(defn repl-caught [e]
+  )
+
 (defn repl*
-  [repl-env opts]
-  (print "To quit, type: ")
-  (prn :cljs/quit)
+  [repl-env {:keys [init need-prompt prompt flush read eval print caught]
+             :or {init        #()
+                  need-prompt (if (instance? LineNumberingPushbackReader *in*)
+                                #(.atLineStart ^LineNumberingPushbackReader *in*)
+                                #(identity true))
+                  prompt      repl-prompt
+                  flush       flush
+                  read        repl-read
+                  eval        eval-cljs
+                  print       println
+                  caught      repl-caught}
+             :as opts}]
+  (print "To quit, type: " :cljs/quit)
   (let [ups-deps (cljsc/get-upstream-deps)
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (assoc (merge (-repl-options repl-env) opts)
+          :print print
+          :flush flush
           :ups-libs (:libs ups-deps)
           :ups-foreign-libs (:foreign-libs ups-deps))]
     (env/with-compiler-env
@@ -545,7 +567,8 @@
                                      :undeclared-var warn-on-undeclared
                                      :undeclared-ns warn-on-undeclared
                                      :undeclared-ns-form warn-on-undeclared)
-               ana/*cljs-static-fns* static-fns]
+               ana/*cljs-static-fns* static-fns
+               *repl-opts* opts]
        ;; TODO: the follow should become dead code when the REPL is
        ;; sufficiently enhanced to understand :cache-analysis - David
        (let [env {:context :expr :locals {}}
@@ -570,13 +593,13 @@
              (when-let [src (:watch opts)]
                (future
                  (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                   (println "Watch compilation log available at:" (str log-file))
+                   (print "Watch compilation log available at:" (str log-file))
                    (binding [*out* (FileWriter. log-file)]
                      (cljsc/watch src (dissoc opts :watch))))))
              (loop []
                ;; try to let things flush before printing prompt
                (Thread/sleep 10)
-               (print (str "ClojureScript:" ana/*cljs-ns* "> "))
+               (prompt)
                (flush)
                (let [rdr (readers/source-logging-push-back-reader
                            (PushbackReader. (io/reader *in*))
@@ -591,7 +614,7 @@
                                           (ana/get-namespace ana/*cljs-ns*)))]
                               (reader/read rdr nil read-error))
                             (catch Exception e
-                              (println (.getMessage e))
+                              (print (.getMessage e))
                               read-error))]
                  ;; TODO: need to catch errors here too - David
                  (cond
@@ -603,16 +626,17 @@
                      (try
                        ((get special-fns (first form)) repl-env env form opts)
                        (catch Throwable ex
-                         (println "Failed to execute special function:" (pr-str (first form)))
+                         (print "Failed to execute special function:" (pr-str (first form)))
                          (trace/print-cause-trace ex 12)))
                      ;; flush output which could include stack traces
                      (flush)
-                     (newline)
+                     (print)
                      (recur))
 
                    :else
-                   (do (eval-and-print repl-env env form opts)
-                       (recur)))))))
+                   (let [value (eval repl-env env form opts)]
+                     (print value)
+                     (recur)))))))
          (-tear-down repl-env))))))
 
 (defn repl
