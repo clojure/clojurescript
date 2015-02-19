@@ -427,17 +427,19 @@
                              (set! *e e#)
                              (throw e#)))))))
 
-(defn- eval-and-print
+(defn- eval-cljs
+  "Given a REPL evaluation environment, an analysis environment, and a
+   form, evaluate the form and return the result. The result is always the value
+   represented as a string."
   ([repl-env env form]
-    (eval-and-print repl-env env form nil))
+    (eval-cljs repl-env env form nil))
   ([repl-env env form opts]
-    (println
-      (evaluate-form repl-env
-        (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
-        "<cljs repl>"
-        form
-        (wrap-fn form)
-        opts))))
+   (evaluate-form repl-env
+     (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
+     "<cljs repl>"
+     form
+     (wrap-fn form)
+     opts)))
 
 ;; Special REPL fns, these provide compatiblity with Clojure functions
 ;; that are not possible to reproduce given ClojureScript's compilation model
@@ -542,8 +544,8 @@
                   prompt      repl-prompt
                   flush       flush
                   read        repl-read
-                  eval        eval
-                  print       prn
+                  eval        eval-cljs
+                  print       println
                   caught      repl-caught}
              :as opts}]
   (print "To quit, type: " :cljs/quit)
@@ -587,7 +589,7 @@
              (when-let [src (:watch opts)]
                (future
                  (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                   (println "Watch compilation log available at:" (str log-file))
+                   (print "Watch compilation log available at:" (str log-file))
                    (binding [*out* (FileWriter. log-file)]
                      (cljsc/watch src (dissoc opts :watch))))))
              (loop []
@@ -608,7 +610,7 @@
                                           (ana/get-namespace ana/*cljs-ns*)))]
                               (reader/read rdr nil read-error))
                             (catch Exception e
-                              (println (.getMessage e))
+                              (print (.getMessage e))
                               read-error))]
                  ;; TODO: need to catch errors here too - David
                  (cond
@@ -620,7 +622,7 @@
                      (try
                        ((get special-fns (first form)) repl-env env form opts)
                        (catch Throwable ex
-                         (println "Failed to execute special function:" (pr-str (first form)))
+                         (print "Failed to execute special function:" (pr-str (first form)))
                          (trace/print-cause-trace ex 12)))
                      ;; flush output which could include stack traces
                      (flush)
@@ -628,8 +630,9 @@
                      (recur))
 
                    :else
-                   (do (eval-and-print repl-env env form opts)
-                       (recur)))))))
+                   (let [value (eval repl-env env form opts)]
+                     (print value)
+                     (recur)))))))
          (-tear-down repl-env))))))
 
 (defn repl
