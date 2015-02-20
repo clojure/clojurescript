@@ -667,7 +667,71 @@
          (-tear-down repl-env)))))
 
 (defn repl
-  "Note - repl will reload core.cljs every time, even if supplied old repl-env"
+  "Generic, reusable, read-eval-print loop. By default, reads from *in* using
+  a c.t.r.reader-types/source-logging-push-back-reader,
+  writes to *out*, and prints exception summaries to *err*. If you use the
+  default :read hook, *in* must either be an instance of
+  c.t.r.reader-types/PushbackReader or duplicate its behavior of both supporting
+  unread and collapsing CR, LF, and CRLF into a single \\newline. Options
+  are sequential keyword-value pairs. The first argument is the JavaScript
+  evaluation environment, the second argument is an extended version of the
+  standard ClojureScript compiler options. In addition to ClojureScript compiler
+  build options it also take a set of options similar to clojure.main/repl with
+  adjustments for ClojureScript evalution and compilation model:
+
+  Available clojure.main/repl style options and their defaults:
+
+     - :init, function of no arguments, initialization hook called with
+       bindings for set!-able vars in place.
+       default: #()
+
+     - :need-prompt, function of no arguments, called before each
+       read-eval-print except the first, the user will be prompted if it
+       returns true.
+       default: #(if (c.t.r.readers-types/indexing-reader? *in*)
+                   (== (c.t.r.reader-types/get-column-number *in*) 1)
+                   (identity true))
+
+     - :prompt, function of no arguments, prompts for more input.
+       default: repl-prompt
+
+     - :flush, function of no arguments, flushes output
+       default: flush
+
+     - :read, function of two arguments, reads from *in*:
+         - returns its first argument to request a fresh prompt
+           - depending on need-prompt, this may cause the repl to prompt
+             before reading again
+         - returns its second argument to request an exit from the repl
+         - else returns the next object read from the input stream
+       default: repl-read
+
+     - :eval, function of one argument, returns the evaluation of its
+       argument. The eval function must take repl-env, the JavaScript evaluation
+       envrionment, env, the ClojureScript analysis environemnt, the form
+       and opts, the standard ClojureScript REPL/compiler options.
+       default: eval
+
+     - :print, function of one argument, prints its argument to the output
+       default: println
+
+     - :caught, function of two arguments, a throwable, called when
+       read, eval, or print throws an exception or error
+       default. The second argument is opts, the standard ClojureScript
+       REPL/compiler options. In the case of errors or exception in the
+       JavaScript target, these will be thrown as clojure.lang.IExceptionInfo
+       instances.
+       default: repl-caught
+
+     - :reader, the c.t.r reader to use.
+       default: c.t.r.read-types/source-logging-push-back-reader
+
+     - :print-no-newline, print without a newline.
+       deafult: print
+
+     - :source-map-inline, whether inline source maps should be enabled. Most
+       useful in browser context. Implies using a fresh reader for each form.
+       default: true"
   [repl-env & {:as opts}]
   (repl* repl-env opts))
 
