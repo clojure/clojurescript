@@ -1467,8 +1467,10 @@ should contain the source for the given namespace name."
           (when (or (nil? key) (. ^WatchKey key reset))
             (let [key (. service take)]
               (when (some (fn [^WatchEvent e]
-                            (or (.. (. e context) toString (endsWith "cljs"))
-                                (.. (. e context) toString (endsWith "js"))))
+                            (let [fstr (.. e context toString)]
+                              (and (or (. fstr (endsWith "cljs"))
+                                       (. fstr (endsWith "js")))
+                                   (not (. fstr (startsWith ".#"))))))
                       (seq (.pollEvents key)))
                 (println "Change detected, recompiling...")
                 (flush)
