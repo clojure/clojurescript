@@ -719,7 +719,7 @@
 
      - :eval, function of one argument, returns the evaluation of its
        argument. The eval function must take repl-env, the JavaScript evaluation
-       envrionment, env, the ClojureScript analysis environemnt, the form
+       environment, env, the ClojureScript analysis environment, the form
        and opts, the standard ClojureScript REPL/compiler options.
        default: eval
 
@@ -736,10 +736,10 @@
        default: repl-caught
 
      - :reader, the c.t.r reader to use.
-       default: c.t.r.read-types/source-logging-push-back-reader
+       default: c.t.r.reader-types/source-logging-push-back-reader
 
      - :print-no-newline, print without a newline.
-       deafult: print
+       default: print
 
      - :source-map-inline, whether inline source maps should be enabled. Most
        useful in browser context. Implies using a fresh reader for each form.
