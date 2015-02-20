@@ -537,7 +537,7 @@
 (defn repl-prompt []
   (print (str "ClojureScript:" ana/*cljs-ns* "> ")))
 
-(defn repl-caught [e opts]
+(defn repl-caught [e repl-env opts]
   (if (and (instance? IExceptionInfo e)
            (#{:js-eval-error :js-eval-exception} (:type (ex-data e))))
     (let [{:keys [type repl-env error form js]} (ex-data e)]
@@ -607,9 +607,12 @@
              is-special-fn? (set (keys special-fns))
              request-prompt (Object.)
              request-exit (Object.)
-             opts (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
-                    (merge opts merge-opts)
-                    opts)
+             opts (try
+                    (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
+                      (merge opts merge-opts)
+                      opts)
+                    (catch Throwable e
+                      (caught e repl-env opts)))
              read-eval-print
              (fn []
                (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
@@ -630,27 +633,34 @@
                        (print value))))))]
          (comp/with-core-cljs opts
            (fn []
-             (when analyze-path
-               (analyze-source analyze-path opts))
-             (evaluate-form repl-env env "<cljs repl>"
-               (with-meta
-                 '(ns cljs.user
-                    (:require [cljs.repl :refer-macros [doc]]))
-                 {:line 1 :column 1})
-               identity opts)
+             (try
+               (when analyze-path
+                 (analyze-source analyze-path opts))
+               (evaluate-form repl-env env "<cljs repl>"
+                 (with-meta
+                   '(ns cljs.user
+                      (:require [cljs.repl :refer-macros [doc]]))
+                   {:line 1 :column 1})
+                 identity opts)
+               (catch Throwable e
+                 (caught e repl-env opts)))
              (when-let [src (:watch opts)]
                (future
                  (let [log-file (io/file (util/output-directory opts) "watch.log")]
                    (print "Watch compilation log available at:" (str log-file))
-                   (binding [*out* (FileWriter. log-file)]
-                     (cljsc/watch src (dissoc opts :watch))))))
+                   (try
+                     (binding [*out* (FileWriter. log-file)]
+                       (cljsc/watch src (dissoc opts :watch)))
+                     (catch Throwable e
+                       (caught e repl-env opts))))))
              (binding [*in* (if (true? (:source-map-inline opts))
                               *in*
                               (reader))]
                (try
                  (init)
                  (catch Throwable e
-                   (caught e opts)))
+                   (caught e repl-env opts)))
+               ;; try to let things flush before printing prompt
                (prompt)
                (flush)
                (loop []
@@ -658,7 +668,7 @@
                    (try
                      (identical? (read-eval-print) request-exit)
                      (catch Throwable e
-                       (caught e opts)
+                       (caught e repl-env opts)
                        nil))
                    (when (need-prompt)
                      (prompt)
@@ -715,12 +725,13 @@
      - :print, function of one argument, prints its argument to the output
        default: println
 
-     - :caught, function of two arguments, a throwable, called when
-       read, eval, or print throws an exception or error
-       default. The second argument is opts, the standard ClojureScript
-       REPL/compiler options. In the case of errors or exception in the
-       JavaScript target, these will be thrown as clojure.lang.IExceptionInfo
-       instances.
+     - :caught, function of three arguments, a throwable, called when
+       read, eval, or print throws an exception or error default. The second
+       argument is the JavaScript evaluation environment this permits context
+       sensitive handling if necessary. The third argument is opts, the standard
+       ClojureScript REPL/compiler options. In the case of errors or exception
+       in the JavaScript target, these will be thrown as
+       clojure.lang.IExceptionInfo instances.
        default: repl-caught
 
      - :reader, the c.t.r reader to use.
