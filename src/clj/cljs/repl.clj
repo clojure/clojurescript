@@ -25,7 +25,7 @@
   (:import [java.io File PushbackReader FileWriter]
            [java.net URL]
            [javax.xml.bind DatatypeConverter]
-           [clojure.lang LineNumberingPushbackReader]))
+           [clojure.lang IExceptionInfo]))
 
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *repl-opts* nil)
@@ -41,11 +41,11 @@
   its behavior of both supporting .unread and collapsing all of CR, LF, and
   CRLF to a single \\newline."
   [s]
-  (let [c (.read s)]
+  (let [c (readers/read-char s)]
     (case c
       \newline :line-start
       nil :stream-end
-      (do (.unread s c) :body))))
+      (do (readers/unread s c) :body))))
 
 (defn skip-whitespace
   "Skips whitespace characters on stream s. Returns :line-start, :stream-end,
@@ -57,14 +57,14 @@
   supporting .unread and collapsing all of CR, LF, and CRLF to a single
   \\newline."
   [s]
-  (loop [c (.read s)]
+  (loop [c (readers/read-char s)]
     (case c
       \newline :line-start
       nil :stream-end
-      \; (do (.readLine s) :line-start)
+      \; (do (readers/read-line s) :line-start)
       (if (or (Character/isWhitespace c) (identical? c \,))
-        (recur (.read s))
-        (do (.unread s c) :body)))))
+        (recur (readers/read-char s))
+        (do (readers/unread s c) :body)))))
 
 (defn repl-read
   "Default :read hook for repl. Reads from *in* which must either be an
@@ -77,19 +77,17 @@
       - reads an object from the input stream, then
         - skips the next input character if it's end of line, then
         - returns the object."
-  [request-prompt request-exit]
-  (or ({:line-start request-prompt :stream-end request-exit}
-        (skip-whitespace *in*))
-    (let [input (read)]
-      (skip-if-eol *in*)
-      input)))
-
-(defmacro with-read-known
-  "Evaluates body with *read-eval* set to a \"known\" value,
-   i.e. substituting true for :unknown if necessary."
-  [& body]
-  `(binding [*read-eval* (if (= :unknown *read-eval*) true *read-eval*)]
-     ~@body))
+  ([request-prompt request-exit]
+   (repl-read request-prompt request-exit *repl-opts*))
+  ([request-prompt request-exit opts]
+   (binding [*in* (if (true? (:source-map-inline opts))
+                    ((:reader opts))
+                    *in*)]
+     (or ({:line-start request-prompt :stream-end request-exit}
+          (skip-whitespace *in*))
+        (let [input (reader/read)]
+          (skip-if-eol *in*)
+          input)))))
 
 ;; =============================================================================
 ;; CLJS Specifics
@@ -341,55 +339,57 @@
   ([repl-env env filename form wrap]
     (evaluate-form repl-env env filename form wrap *repl-opts*))
   ([repl-env env filename form wrap opts]
-    (try
-      (binding [ana/*cljs-file* filename]
-        (let [ast (ana/analyze env form opts)
-              js (comp/emit-str ast)
-              wrap-js
-              ;; TODO: check opts as well - David
-              (if (:source-map repl-env)
-                (binding [comp/*source-map-data*
-                          (atom {:source-map (sorted-map)
-                                 :gen-col 0
-                                 :gen-line 0})]
-                  (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts)))
-                        t (System/currentTimeMillis)]
-                    (str js
-                      "\n//# sourceURL=repl-" t ".js"
-                      "\n//# sourceMappingURL=data:application/json;base64,"
-                      (DatatypeConverter/printBase64Binary
-                        (.getBytes
-                          (sm/encode
-                            {(str "repl-" t ".cljs")
-                             (:source-map @comp/*source-map-data*)}
-                            {:lines (+ (:gen-line @comp/*source-map-data*) 3)
-                             :file  (str "repl-" t ".js")
-                             :sources-content
-                                    [(or (:source (meta form))
-                                       ;; handle strings / primitives without metadata
-                                       (with-out-str (pr form)))]})
-                          "UTF-8")))))
-                (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts))))]
-          (when (= (:op ast) :ns)
-            (load-dependencies repl-env
-              (into (vals (:requires ast))
-                (distinct (vals (:uses ast))))
-              opts))
-          (when *cljs-verbose*
-            ((:print opts) js))
-          (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
-            (case (:status ret)
-              :error (display-error repl-env ret form opts)
-              :exception (display-error repl-env ret form
-                           (if (:repl-verbose opts)
-                             #(prn "Error evaluating:" form :as js)
-                             (constantly nil))
-                           opts)
-              :success (:value ret)))))
-      (catch Throwable ex
-        (.printStackTrace ex)
-        ((:print opts) (str ex))
-        ((:flush opts))))))
+   (binding [ana/*cljs-file* filename]
+     (let [ast (ana/analyze env form opts)
+           js (comp/emit-str ast)
+           wrap-js
+           ;; TODO: check opts as well - David
+           (if (:source-map repl-env)
+             (binding [comp/*source-map-data*
+                       (atom {:source-map (sorted-map)
+                              :gen-col 0
+                              :gen-line 0})]
+               (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts)))
+                     t (System/currentTimeMillis)]
+                 (str js
+                   "\n//# sourceURL=repl-" t ".js"
+                   "\n//# sourceMappingURL=data:application/json;base64,"
+                   (DatatypeConverter/printBase64Binary
+                     (.getBytes
+                       (sm/encode
+                         {(str "repl-" t ".cljs")
+                          (:source-map @comp/*source-map-data*)}
+                         {:lines (+ (:gen-line @comp/*source-map-data*) 3)
+                          :file (str "repl-" t ".js")
+                          :sources-content
+                          [(or (:source (meta form))
+                             ;; handle strings / primitives without metadata
+                             (with-out-str (pr form)))]})
+                       "UTF-8")))))
+             (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts))))]
+       (when (= (:op ast) :ns)
+         (load-dependencies repl-env
+           (into (vals (:requires ast))
+             (distinct (vals (:uses ast))))
+           opts))
+       (when *cljs-verbose*
+         ((:print opts) js))
+       (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
+         (case (:status ret)
+           :error (throw
+                    (ex-info (:value ret)
+                      {:type :js-eval-error
+                       :error ret
+                       :repl-env repl-env
+                       :form form}))
+           :exception (throw
+                        (ex-info (:value ret)
+                          {:type :js-eval-exception
+                           :error ret
+                           :repl-env repl-env
+                           :form form
+                           :js js}))
+           :success (:value ret)))))))
 
 (defn load-stream [repl-env filename res]
   (let [env (ana/empty-env)]
@@ -416,18 +416,21 @@
           (load-stream repl-env f res))))))
 
 (defn- wrap-fn [form]
-  (cond (and (seq? form) (= 'ns (first form))) identity
-        ('#{*1 *2 *3 *e} form) (fn [x] `(cljs.core.pr-str ~x))
-        :else (fn [x] `(cljs.core.pr-str
-                         (try
-                           (let [ret# ~x]
-                             (set! *3 *2)
-                             (set! *2 *1)
-                             (set! *1 ret#)
-                             ret#)
-                           (catch :default e#
-                             (set! *e e#)
-                             (throw e#)))))))
+  (cond
+    (and (seq? form) (= 'ns (first form))) identity
+    ('#{*1 *2 *3 *e} form) (fn [x] `(cljs.core.pr-str ~x))
+    :else
+    (fn [x]
+      `(cljs.core.pr-str
+         (try
+           (let [ret# ~x]
+             (set! *3 *2)
+             (set! *2 *1)
+             (set! *1 ret#)
+             ret#)
+           (catch :default e#
+             (set! *e e#)
+             (throw e#)))))))
 
 (defn- eval-cljs
   "Given a REPL evaluation environment, an analysis environment, and a
@@ -534,42 +537,67 @@
 (defn repl-prompt []
   (print (str "ClojureScript:" ana/*cljs-ns* "> ")))
 
-(defn repl-caught [e]
-  )
+(defn repl-caught [e opts]
+  (if (and (instance? IExceptionInfo e)
+           (#{:js-eval-error :js-eval-exception} (:type (ex-data e))))
+    (let [{:keys [type repl-env error form js]} (ex-data e)]
+      (case type
+        :js-eval-error
+        (display-error repl-env error form opts)
+
+        :js-eval-exception
+        (display-error repl-env error form
+          (if (:repl-verbose opts)
+            #(prn "Error evaluating:" form :as js)
+            (constantly nil))
+          opts)))
+    (binding [*out* *err*]
+      (.printStackTrace e))))
 
 (defn repl*
-  [repl-env {:keys [init need-prompt prompt flush read eval print print-no-newline caught]
-             :or {init        #()
-                  need-prompt (if (instance? LineNumberingPushbackReader *in*)
-                                #(.atLineStart ^LineNumberingPushbackReader *in*)
-                                #(identity true))
-                  prompt      repl-prompt
-                  flush       flush
-                  read        repl-read
-                  eval        eval-cljs
-                  print       println
-                  caught      repl-caught
-                  print-no-newline print}
+  [repl-env {:keys [init need-prompt prompt flush read eval print caught reader print-no-newline source-map-inline]
+             :or {init #()
+                  need-prompt #(if (readers/indexing-reader? *in*)
+                                 (== (readers/get-column-number *in*) 1)
+                                 (identity true))
+                  prompt repl-prompt
+                  flush flush
+                  read repl-read
+                  eval eval-cljs
+                  print println
+                  caught repl-caught
+                  reader #(readers/source-logging-push-back-reader
+                           (PushbackReader. (io/reader *in*))
+                           1 "NO_SOURCE_FILE")
+                  print-no-newline print
+                  source-map-inline true}
              :as opts}]
   (print "To quit, type: " :cljs/quit)
   (let [ups-deps (cljsc/get-upstream-deps)
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (assoc (merge (-repl-options repl-env) opts)
-          :print print
-          :print-no-newline print-no-newline
+          :init init
+          :need-prompt prompt
           :flush flush
+          :read read
+          :print print
+          :caught caught
+          :reader reader
+          :print-no-newline print-no-newline
+          :source-map-inline source-map-inline
           :ups-libs (:libs ups-deps)
           :ups-foreign-libs (:foreign-libs ups-deps))]
     (env/with-compiler-env
      (or (::env/compiler repl-env) (env/default-compiler-env opts))
      (binding [ana/*cljs-ns* 'cljs.user
                *cljs-verbose* repl-verbose
-               ana/*cljs-warnings* (assoc ana/*cljs-warnings*
-                                     :unprovided warn-on-undeclared
-                                     :undeclared-var warn-on-undeclared
-                                     :undeclared-ns warn-on-undeclared
-                                     :undeclared-ns-form warn-on-undeclared)
+               ana/*cljs-warnings*
+               (assoc ana/*cljs-warnings*
+                 :unprovided warn-on-undeclared
+                 :undeclared-var warn-on-undeclared
+                 :undeclared-ns warn-on-undeclared
+                 :undeclared-ns-form warn-on-undeclared)
                ana/*cljs-static-fns* static-fns
                *repl-opts* opts]
        ;; TODO: the follow should become dead code when the REPL is
@@ -579,10 +607,27 @@
              is-special-fn? (set (keys special-fns))
              request-prompt (Object.)
              request-exit (Object.)
-             read-error (Object.)
              opts (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
                     (merge opts merge-opts)
-                    opts)]
+                    opts)
+             read-eval-print
+             (fn []
+               (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
+                                     reader/*data-readers* tags/*cljs-data-readers*
+                                     reader/*alias-map*
+                                     (apply merge
+                                       ((juxt :requires :require-macros)
+                                         (ana/get-namespace ana/*cljs-ns*)))]
+                             (repl-read request-prompt request-exit))]
+                 (or ({request-exit request-exit
+                       :cljs/quit request-exit
+                       request-prompt request-prompt} input)
+                   (if (and (seq? input) (is-special-fn? (first input)))
+                     (do
+                       ((get special-fns (first input)) repl-env env input opts)
+                       (print nil))
+                     (let [value (eval repl-env env input opts)]
+                       (print value))))))]
          (comp/with-core-cljs opts
            (fn []
              (when analyze-path
@@ -599,48 +644,27 @@
                    (print "Watch compilation log available at:" (str log-file))
                    (binding [*out* (FileWriter. log-file)]
                      (cljsc/watch src (dissoc opts :watch))))))
-             (loop []
-               ;; try to let things flush before printing prompt
-               (Thread/sleep 10)
+             (binding [*in* (if (true? (:source-map-inline opts))
+                              *in*
+                              (reader))]
+               (try
+                 (init)
+                 (catch Throwable e
+                   (caught e opts)))
                (prompt)
                (flush)
-               (let [rdr (readers/source-logging-push-back-reader
-                           (PushbackReader. (io/reader *in*))
-                           1
-                           "NO_SOURCE_FILE")
-                     form (try
-                            (binding [*ns* (create-ns ana/*cljs-ns*)
-                                      reader/*data-readers* tags/*cljs-data-readers*
-                                      reader/*alias-map*
-                                      (apply merge
-                                        ((juxt :requires :require-macros)
-                                          (ana/get-namespace ana/*cljs-ns*)))]
-                              (reader/read rdr nil read-error))
-                            (catch Exception e
-                              (print (.getMessage e))
-                              read-error))]
-                 ;; TODO: need to catch errors here too - David
-                 (cond
-                   (identical? form read-error) (recur)
-                   (= form :cljs/quit) :quit
-
-                   (and (seq? form) (is-special-fn? (first form)))
-                   (do
-                     (try
-                       ((get special-fns (first form)) repl-env env form opts)
-                       (catch Throwable ex
-                         (print "Failed to execute special function:" (pr-str (first form)))
-                         (trace/print-cause-trace ex 12)))
-                     ;; flush output which could include stack traces
-                     (flush)
-                     (print)
-                     (recur))
-
-                   :else
-                   (let [value (eval repl-env env form opts)]
-                     (print value)
-                     (recur)))))))
-         (-tear-down repl-env))))))
+               (loop []
+                 (when-not
+                   (try
+                     (identical? (read-eval-print) request-exit)
+                     (catch Throwable e
+                       (caught e opts)
+                       nil))
+                   (when (need-prompt)
+                     (prompt)
+                     (flush))
+                   (recur)))))))
+         (-tear-down repl-env)))))
 
 (defn repl
   "Note - repl will reload core.cljs every time, even if supplied old repl-env"
