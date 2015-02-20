@@ -42,10 +42,10 @@
   CRLF to a single \\newline."
   [s]
   (let [c (.read s)]
-    (cond
-      (= c (int \newline)) :line-start
-      (= c -1) :stream-end
-      :else (do (.unread s c) :body))))
+    (case c
+      \newline :line-start
+      nil :stream-end
+      (do (.unread s c) :body))))
 
 (defn skip-whitespace
   "Skips whitespace characters on stream s. Returns :line-start, :stream-end,
@@ -58,12 +58,13 @@
   \\newline."
   [s]
   (loop [c (.read s)]
-    (cond
-      (= c (int \newline)) :line-start
-      (= c -1) :stream-end
-      (= c (int \;)) (do (.readLine s) :line-start)
-      (or (Character/isWhitespace (char c)) (= c (int \,))) (recur (.read s))
-      :else (do (.unread s c) :body))))
+    (case c
+      \newline :line-start
+      nil :stream-end
+      \; (do (.readLine s) :line-start)
+      (if (or (Character/isWhitespace c) (identical? c \,))
+        (recur (.read s))
+        (do (.unread s c) :body)))))
 
 (defn repl-read
   "Default :read hook for repl. Reads from *in* which must either be an
