@@ -612,7 +612,8 @@
                       (merge opts merge-opts)
                       opts)
                     (catch Throwable e
-                      (caught e repl-env opts)))
+                      (caught e repl-env opts)
+                      opts))
              read-eval-print
              (fn []
                (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
