@@ -2681,6 +2681,19 @@
               (catch js/Error e
                 *print-level*)))))
 
+(defn meta-test-fn
+  "A docstring"
+  {:foo :bar, :baz 12345, :whatever "String Metadata"}
+  [a b]
+  (+ a b))
+
+(deftest test-cljs-1046
+  (let [m (meta #'meta-test-fn)]
+    (is (= "A docstring" (:doc m)))
+    (is (= :bar (:foo m)))
+    (is (= 12345 (:baz m)))
+    (is (= "String Metadata" (:whatever m)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

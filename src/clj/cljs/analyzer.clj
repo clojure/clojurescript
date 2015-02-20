@@ -554,11 +554,16 @@
      :var (analyze env sym)
      :sym (analyze env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
      :meta (let [ks [:ns :doc :file :line :column]
-                 m (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
-                     :name `(quote ~(symbol (name (:name var))))
-                     :test `(when ~sym (.-cljs$lang$test ~sym))
-                     :arglists (map with-meta (:arglists var) (:arglists-meta var)))]
-            (analyze env m))}))
+                 m (merge
+                     (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
+                       :name `(quote ~(symbol (name (:name var))))
+                       :test `(when ~sym (.-cljs$lang$test ~sym))
+                       :arglists (map with-meta (:arglists var) (:arglists-meta var)))
+                     (let [user-meta (:meta var)
+                           uks (keys user-meta)]
+                       (zipmap uks
+                         (map #(list 'quote (get user-meta %)) uks))))]
+             (analyze env m))}))
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name _]
@@ -720,6 +725,7 @@
           ;; elide test metadata, as it includes non-valid EDN - David
           (cond-> sym-meta
             :test (-> (dissoc :test) (assoc :test true)))
+          {:meta (dissoc sym-meta :test)}
           (when doc {:doc doc})
           (when dynamic {:dynamic true})
           (source-info var-name env)
