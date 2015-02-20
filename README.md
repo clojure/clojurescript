@@ -34,6 +34,23 @@ Latest stable release: 0.0-2850
 * Look at the [Sample Applications](https://github.com/clojure/clojurescript/tree/master/samples).
 * [Companies using ClojureScript](https://github.com/clojure/clojurescript/wiki/Companies-Using-ClojureScript)
 
+### Getting Up and Running with Leiningen
+
+The simplest way to try ClojureScript is using the [Leiningen](http://leiningen.org/) [mies emplate](https://github.com/swannodette/mies).
+
+Create a new project:
+
+```
+lein new mies hello-world
+cd hello-world
+```
+
+Start ClojureScript compiler in the development mode:
+
+```
+lein cljsbuild auto
+```
+
 ## Questions, Feedback? ##
 
 Please point all of your questions and feedback
