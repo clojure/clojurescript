@@ -538,7 +538,7 @@
   )
 
 (defn repl*
-  [repl-env {:keys [init need-prompt prompt flush read eval print caught]
+  [repl-env {:keys [init need-prompt prompt flush read eval print print-no-newline caught]
              :or {init        #()
                   need-prompt (if (instance? LineNumberingPushbackReader *in*)
                                 #(.atLineStart ^LineNumberingPushbackReader *in*)
@@ -548,7 +548,8 @@
                   read        repl-read
                   eval        eval-cljs
                   print       println
-                  caught      repl-caught}
+                  caught      repl-caught
+                  print-no-newline print}
              :as opts}]
   (print "To quit, type: " :cljs/quit)
   (let [ups-deps (cljsc/get-upstream-deps)
@@ -556,6 +557,7 @@
          :or   {warn-on-undeclared true}}
         (assoc (merge (-repl-options repl-env) opts)
           :print print
+          :print-no-newline print-no-newline
           :flush flush
           :ups-libs (:libs ups-deps)
           :ups-foreign-libs (:foreign-libs ups-deps))]

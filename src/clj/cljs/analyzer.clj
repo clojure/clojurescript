@@ -36,6 +36,8 @@
 (def ^:dynamic *load-macros* true)
 (def ^:dynamic *macro-infer* true)
 
+(def ^:dynamic *file-defs* nil)
+
 ;; log compiler activities
 (def ^:dynamic *verbose* false)
 
@@ -48,7 +50,7 @@
    :undeclared-ns true
    :undeclared-ns-form true
    :redef true
-   :redef-in-file false
+   :redef-in-file true
    :dynamic true
    :fn-var true
    :fn-arity true
@@ -687,9 +689,11 @@
       (when (and (not *allow-redef*)
                  (not (:declared v))
                  (not (:declared sym-meta))
-                 (= (:file v) *cljs-file*)
-                 (not= "<cljs repl>" *cljs-file*))
+                 *file-defs*
+                 (get @*file-defs* sym))
         (warning :redef-in-file env {:sym sym :line (:line v)})))
+    (when *file-defs*
+      (swap! *file-defs* conj sym))
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (get-in @env/*compiler* [::namespaces ns-name :uses sym]))
@@ -1912,6 +1916,7 @@ argument, which the reader will use in any emitted errors."
    meaningful value."
   ([f] (analyze-file f nil))
   ([f {:keys [output-dir] :as opts}]
+   (binding [*file-defs* (atom #{})]
      (let [res (cond
                  (instance? File f) f
                  (instance? URL f) f
@@ -1958,5 +1963,5 @@ argument, which the reader will use in any emitted errors."
                    (util/debug-prn "Reading analysis cache for " res))
                  (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)
                  (swap! env/*compiler* assoc-in [::namespaces ns]
-                   (edn/read-string (slurp cache)))))))))))
+                   (edn/read-string (slurp cache))))))))))))
 
