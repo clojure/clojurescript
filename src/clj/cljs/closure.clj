@@ -822,6 +822,11 @@ should contain the source for the given namespace name."
   ;; lein-cljsbuild adds :output-to?
   #_{:pre [(and (contains? opts :modules)
                 (not (contains? opts :output-to)))]}
+  (assert (= (count (:modules opts))
+             (count (into #{}
+                      (map (comp :output-to second)
+                        (:modules opts)))))
+    "Each :output-to of :modules must be unique")
   (let [closure-compiler (make-closure-compiler)
         ^List externs (load-externs opts)
         compiler-options (make-options opts)
