@@ -814,12 +814,17 @@
         (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
       (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
         (cond
-          ;; only emit if foreign lib under Node.js
           (ana/foreign-dep? lib)
+          ;; under node.js we load foreign libs globally
           (if (= :nodejs (get-in @env/*compiler* [:options :target]))
             (let [js-index (:js-dependency-index @env/*compiler*)
                   ijs-url  (get-in js-index [(name lib) :url])]
               (emitln "cljs.core.load_file(\"" (util/get-name ijs-url) "\");"))
+            ;; otherwise only include if set in the options to do so,
+            ;; in the browser unnecessary due to the fact that goog.require
+            ;; there works by writing all deps as script tags, this doesn't
+            ;; work in Rhino-like environment where we do a proper goog.require
+            ;; on demand
             (when (get-in @env/*compiler* [:options :require-foreign])
               (emitln "goog.require('" (munge lib) "');")))
 
