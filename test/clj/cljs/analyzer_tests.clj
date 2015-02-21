@@ -256,6 +256,15 @@
         "Parameter declaration 123 should be a vector at line")))
 
 ;; =============================================================================
+;; ns desugaring
+
+(deftest test-cljs-975
+  (let [spec '((:require [bar :refer [baz] :refer-macros [quux]] :reload))]
+    (is (= (a/desugar-ns-specs spec)
+           '((:require-macros (bar :refer [quux]) :reload)
+             (:require (bar :refer [baz]) :reload))))))
+
+;; =============================================================================
 ;; Namespace metadata
 
 (deftest test-namespace-metadata

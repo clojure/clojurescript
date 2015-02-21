@@ -1271,18 +1271,29 @@
           (if-not (sequential? spec)
             spec
             (map (fn [x] (if (= x :refer-macros) :refer x)) spec)))
+        reload-spec? #(#{:reload :reload-all} %)
         to-macro-specs
         (fn [specs]
           (->> specs
-            (filter #(or (and (sequential? %)
-                              (some sugar-keys %))
-                         (macro-autoload-ns? %)))
-            (map #(->> % (remove-from-spec #{:include-macros})
-                         (remove-from-spec #{:refer})
-                         (replace-refer-macros)))))
+            (filter
+              (fn [x]
+                (or (and (sequential? x)
+                         (some sugar-keys x))
+                    (reload-spec? x)
+                    (macro-autoload-ns? x))))
+            (map (fn [x]
+                   (if-not (reload-spec? x)
+                     (->> x (remove-from-spec #{:include-macros})
+                            (remove-from-spec #{:refer})
+                            (replace-refer-macros))
+                     x)))))
         remove-sugar (partial remove-from-spec sugar-keys)]
     (if-let [require-specs (seq (to-macro-specs require))]
-      (map (fn [[k v]] (cons k (map remove-sugar v)))
+      (map (fn [x]
+             (if-not (reload-spec? x)
+               (let [[k v] x]
+                 (cons k (map remove-sugar v)))
+               x))
         (update-in indexed [:require-macros] (fnil into []) require-specs))
       args)))
 
