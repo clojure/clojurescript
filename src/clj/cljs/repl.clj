@@ -590,7 +590,7 @@
                   print-no-newline print
                   source-map-inline true}
              :as opts}]
-  (print "To quit, type: " :cljs/quit)
+  (print "To quit, type:" :cljs/quit)
   (let [ups-deps (cljsc/get-upstream-deps)
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
