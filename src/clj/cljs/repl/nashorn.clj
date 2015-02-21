@@ -155,7 +155,20 @@
       (repl/evaluate-form this env repl-filename
         '(do
            (.require js/goog "cljs.core")
-           (cljs.core/enable-console-print!)))))
+           (cljs.core/enable-console-print!)))
+      ;; monkey-patch goog.isProvided_ to suppress useless errors
+      (repl/evaluate-form this env repl-filename
+        '(set! js/goog.isProvided_ (fn [ns] false)))
+      ;; monkey-patch goog.require to be more sensible
+      (repl/evaluate-form this env repl-filename
+        '(do
+           (set! *loaded-libs* #{"cljs.core"})
+           (set! (.-require js/goog)
+             (fn [name reload]
+               (when (or (not (contains? *loaded-libs* name)) reload)
+                 (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
+                 (js/CLOSURE_IMPORT_SCRIPT
+                   (aget (.. js/goog -dependencies_ -nameToPath) name)))))))))
   (-evaluate [{engine :engine :as this} filename line js]
     (when debug (println "Evaluating: " js))
     (try
