@@ -138,6 +138,5 @@
        (let [start# (. System (nanoTime))
              ret# ~expr]
          (debug-prn (str ~msg ", elapsed time: " (/ (double (- (. System (nanoTime)) start#)) 1000000.0) " msecs"))
-         (debug-prn "")
          ret#)
        ~expr)))
