@@ -1,3 +1,6 @@
+## 0.0-2913
+* Support custom :output-to for :cljs-base module
+
 ## 0.0-2911
 
 ### Enhancements
