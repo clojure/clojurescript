@@ -613,20 +613,24 @@ should contain the source for the given namespace name."
 (defn add-cljs-base-module
   ([modules] (add-cljs-base-module modules nil))
   ([modules opts]
-    (reduce
-      (fn [modules module-name]
-        (update-in modules [module-name :depends-on]
-          (fnil conj #{}) :cljs-base))
-      (assoc modules :cljs-base
-        {:output-to
+   (reduce
+     (fn [modules module-name]
+       (if-not (= module-name :cljs-base)
+         (update-in modules [module-name :depends-on]
+           (fnil conj #{}) :cljs-base)
+         modules))
+     (update-in modules [:cljs-base :output-to]
+       (fnil io/file
          (io/file
            (util/output-directory opts)
-           "cljs_base.js")})
-      (keys modules))))
+           "cljs_base.js")))
+     (keys modules))))
 
 (comment
   (add-cljs-base-module
-    {:core
+    {:cljs-base
+     {:output-to "out/modules/base.js"}
+     :core
      {:output-to "out/modules/core.js"
       :entries '#{cljs.core}}
      :landing
@@ -649,7 +653,9 @@ should contain the source for the given namespace name."
 (comment
   (sort-modules
     (add-cljs-base-module
-      {:core
+      {:cljs-base
+       {:output-to "out/module/base.js"}
+       :core
        {:output-to "out/modules/core.js"
         :entries   '#{cljs.core}}
        :landing
