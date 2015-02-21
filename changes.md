@@ -1,3 +1,29 @@
+## 0.0-2911
+
+### Enhancements
+* CLJS-1042: Google Closure Modules :source-map support
+* CLJS-1041: Google Closure Modules :foreign-libs support
+* Google Closure Modules support via :modules
+* CLJS-1040: Source-mapped script stack frames for the Nashorn repl
+
+### Changes
+* CLJS-960: On carriage return REPLs should always show new REPL prompt
+* CLJS-941: Warn when a symbol is defined multiple times in a file
+* REPLs now support parameterization a la clojure.main/repl
+* all REPLs analyze cljs.core before entering loop
+* can emit :closure-source-map option for preserving JS->JS map
+* REPLs can now merge new REPL/compiler options via -setup
+
+### Fixes
+* CLJS-998: Nashorn REPL does not support require special fn
+* CLJS-1052: Cannot require ns from within the ns at the REPL for reloading purposes
+* CLJS-975: preserve :reload & :reload-all in ns macro sugar
+* CLJS-1039: Under Emacs source directory watching triggers spurious recompilation
+* CLJS-1046: static vars do not respect user compile time metadata
+* CLJS-989: ClojureScript REPL loops on EOF signal
+* fix DCE regression for trivial programs
+* CLJS-1036: use getResources not findResources in get-upstream-deps*
+
 ## 0.0-2850
 
 ### Enhancements
