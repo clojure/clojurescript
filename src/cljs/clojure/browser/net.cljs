@@ -12,9 +12,9 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   clojure.browser.net
   (:require [clojure.browser.event :as event]
             [goog.json :as gjson])
-  (:import (goog.net XhrIo EventType)
-           (goog.net.xpc CfgFields CrossPageChannel)
-           goog.Uri))
+  (:import [goog.net XhrIo EventType WebSocket]
+           [goog.net.xpc CfgFields CrossPageChannel]
+           [goog Uri]))
 
 (def *timeout* 10000)
 
@@ -140,11 +140,10 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
 ;; WebSocket is not supported in the 3/23/11 release of Google
 ;; Closure, but will be included in the next release.
 
-#_(defprotocol IWebSocket
-    (open? [this]))
+(defprotocol IWebSocket
+  (open? [this]))
 
-#_(extend-type goog.net.WebSocket
-
+(extend-type WebSocket
   IWebSocket
   (open? [this]
     (.isOpen this ()))
@@ -152,9 +151,9 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   IConnection
   (connect
     ([this url]
-       (connect this url nil))
+     (connect this url nil))
     ([this url protocol]
-       (.open this url protocol)))
+     (.open this url protocol)))
 
   (transmit [this message]
     (.send this message))
@@ -162,20 +161,20 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
   (close [this]
     (.close this ()))
 
-  event/EventType
+  event/IEventType
   (event-types [this]
     (into {}
-          (map
-           (fn [[k v]]
-             [(keyword (. k (toLowerCase)))
-              v])
-           (merge
-            (js->clj goog.net.WebSocket/EventType))))))
+      (map
+        (fn [[k v]]
+          [(keyword (. k (toLowerCase)))
+           v])
+        (merge
+          (js->clj WebSocket.EventType))))))
 
-#_(defn websocket-connection
+(defn websocket-connection
   ([]
      (websocket-connection nil nil))
   ([auto-reconnect?]
      (websocket-connection auto-reconnect? nil))
   ([auto-reconnect? next-reconnect-fn]
-     (goog.net.WebSocket. auto-reconnect? next-reconnect-fn)))
+     (WebSocket. auto-reconnect? next-reconnect-fn)))
