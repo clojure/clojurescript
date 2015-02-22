@@ -817,7 +817,7 @@
         :doc "Evaluates test. If not the singular values nil or false,
   evaluates and yields then, otherwise, evaluates and yields else. If
   else is not supplied it defaults to nil."}
-    new {:forms [(Classname. args*) (new Classname args*)]
+    new {:forms [(Constructor. args*) (new Constructor args*)]
          :url "java_interop#new"
          :doc "The args, if any, are evaluated from left to right, and
   passed to the JavaScript constructor. The constructed object is
@@ -829,7 +829,7 @@
   the bindings of the recursion point to the values of the exprs.
   Execution then jumps back to the recursion point, a loop or fn method."}
     set! {:forms[(set! var-symbol expr)
-                 (set! (. instance-expr instanceFieldName-symbol) expr)]
+                 (set! (.- instance-expr instanceFieldName-symbol) expr)]
           :url "vars#set"
           :doc "Used to set vars and JavaScript object fields"}
     throw {:forms [(throw expr)]
