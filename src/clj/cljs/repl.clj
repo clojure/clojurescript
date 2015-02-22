@@ -966,6 +966,8 @@ str-or-pattern."
          (when ret
            (let [ret (update-in ret [:value]
                        (fn [msg]
+                         ;; give REPL environments a chance to fix or
+                         ;; or elide redundant information
                          (if (satisfies? IParseErrorMessage repl-env)
                            (-parse-error-message repl-env msg ret *repl-opts*)
                            msg)))]
