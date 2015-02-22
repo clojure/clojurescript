@@ -114,6 +114,17 @@
     "Given the original JavaScript error message return the string to actually
      use."))
 
+(defprotocol IGetError
+  (-get-error [repl-env name build-options]
+    "Given a symbol representing a var holding an error return the
+     canonical error representation:
+
+     {:value <string>
+      :stacktrace <string>}
+
+    :value should be the host environment JavaScript error message string.
+    :stacktrace should be the host JavaScript environment stacktrace string."))
+
 (defprotocol IParseStacktrace
   (-parse-stacktrace [repl-env stacktrace error build-options]
     "Given the original JavaScript stacktrace string, the entire original error
@@ -957,12 +968,14 @@ str-or-pattern."
   ([e]
    (let [{:keys [repl-env] :as env} &env]
      (when (and e repl-env)
-       (let [ret (edn/read-string
-                   (evaluate-form repl-env env "<cljs repl>"
-                     `(when ~e
-                        (pr-str
-                          {:value (.-message ~e)
-                           :stacktrace (.-stack ~e)}))))]
+       (let [ret (if (satisfies? IGetError repl-env)
+                   (-get-error repl-env e *repl-opts*)
+                   (edn/read-string
+                     (evaluate-form repl-env env "<cljs repl>"
+                       `(when ~e
+                          (pr-str
+                            {:value (.-message ~e)
+                             :stacktrace (.-stack ~e)})))))]
          (when ret
            (let [ret (update-in ret [:value]
                        (fn [msg]
