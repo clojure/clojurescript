@@ -660,8 +660,7 @@
                  :undeclared-var warn-on-undeclared
                  :undeclared-ns warn-on-undeclared
                  :undeclared-ns-form warn-on-undeclared)
-               ana/*cljs-static-fns* static-fns
-               *repl-opts* opts]
+               ana/*cljs-static-fns* static-fns]
        ;; TODO: the follow should become dead code when the REPL is
        ;; sufficiently enhanced to understand :cache-analysis - David
        (let [env {:context :expr :locals {}}
@@ -696,46 +695,47 @@
                        (print value))))))]
          (comp/with-core-cljs opts
            (fn []
-             (try
-               (when analyze-path
-                 (analyze-source analyze-path opts))
-               (evaluate-form repl-env env "<cljs repl>"
-                 (with-meta
-                   '(ns cljs.user
-                      (:require [cljs.repl :refer-macros [source doc find-doc apropos dir pst]]))
-                   {:line 1 :column 1})
-                 identity opts)
-               (catch Throwable e
-                 (caught e repl-env opts)))
-             (when-let [src (:watch opts)]
-               (future
-                 (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                   (print "Watch compilation log available at:" (str log-file))
-                   (try
-                     (binding [*out* (FileWriter. log-file)]
-                       (cljsc/watch src (dissoc opts :watch)))
-                     (catch Throwable e
-                       (caught e repl-env opts))))))
-             (binding [*in* (if (true? (:source-map-inline opts))
-                              *in*
-                              (reader))]
+             (binding [*repl-opts* opts]
                (try
-                 (init)
+                 (when analyze-path
+                   (analyze-source analyze-path opts))
+                 (evaluate-form repl-env env "<cljs repl>"
+                   (with-meta
+                     '(ns cljs.user
+                        (:require [cljs.repl :refer-macros [source doc find-doc apropos dir pst]]))
+                     {:line 1 :column 1})
+                   identity opts)
                  (catch Throwable e
                    (caught e repl-env opts)))
-               (prompt)
-               (flush)
-               (loop []
-                 (when-not
-                   (try
-                     (identical? (read-eval-print) request-exit)
-                     (catch Throwable e
-                       (caught e repl-env opts)
-                       nil))
-                   (when (need-prompt)
-                     (prompt)
-                     (flush))
-                   (recur)))))))
+               (when-let [src (:watch opts)]
+                 (future
+                   (let [log-file (io/file (util/output-directory opts) "watch.log")]
+                     (print "Watch compilation log available at:" (str log-file))
+                     (try
+                       (binding [*out* (FileWriter. log-file)]
+                         (cljsc/watch src (dissoc opts :watch)))
+                       (catch Throwable e
+                         (caught e repl-env opts))))))
+               (binding [*in* (if (true? (:source-map-inline opts))
+                                *in*
+                                (reader))]
+                 (try
+                   (init)
+                   (catch Throwable e
+                     (caught e repl-env opts)))
+                 (prompt)
+                 (flush)
+                 (loop []
+                   (when-not
+                     (try
+                       (identical? (read-eval-print) request-exit)
+                       (catch Throwable e
+                         (caught e repl-env opts)
+                         nil))
+                     (when (need-prompt)
+                       (prompt)
+                       (flush))
+                     (recur))))))))
          (-tear-down repl-env)))))
 
 (defn repl
