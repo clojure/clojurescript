@@ -1,4 +1,5 @@
 (ns clojure.reflect
+  ^{:doc "DEPRECATED. Do not use, superceded by REPL enhancements."}
   (:refer-clojure :exclude [meta])
   (:require [clojure.browser.net :as net]
             [clojure.browser.event :as event]))
