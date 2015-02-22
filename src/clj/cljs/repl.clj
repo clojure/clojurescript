@@ -15,6 +15,7 @@
             [clojure.tools.reader.reader-types :as readers]
             [clojure.stacktrace :as trace]
             [clojure.repl :as cljrepl]
+            [clojure.edn :as edn]
             [cljs.util :as util]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
@@ -107,6 +108,11 @@
   Object
   IReplEnvOptions
   (-repl-options [_] nil))
+
+(defprotocol IParseErrorMessage
+  (-parse-error-message [repl-env message error build-options]
+    "Given the original JavaScript error message return the string to actually
+     use."))
 
 (defprotocol IParseStacktrace
   (-parse-stacktrace [repl-env stacktrace error build-options]
@@ -316,21 +322,22 @@
 
 (defn- display-error
   ([repl-env ret form opts]
-    (display-error repl-env ret form (constantly nil) opts))
+   (display-error repl-env ret form (constantly nil) opts))
   ([repl-env ret form f opts]
-    (f)
-    ((:print opts) (:value ret))
-    (when-let [st (:stacktrace ret)]
-      (if (and (true? (:source-map opts))
-               (satisfies? IParseStacktrace repl-env))
-        (let [cst (-parse-stacktrace repl-env st ret opts)]
-          (if (vector? cst)
-            (if (satisfies? IPrintStacktrace repl-env)
-              (-print-stacktrace repl-env cst ret opts)
-              (print-mapped-stacktrace cst opts))
-            ((:print opts) st)))
-        ((:print opts) st))
-      ((:flush opts)))))
+   (f)
+   (when-let [value (:value ret)]
+     ((:print opts) value))
+   (when-let [st (:stacktrace ret)]
+     (if (and (true? (:source-map opts))
+           (satisfies? IParseStacktrace repl-env))
+       (let [cst (-parse-stacktrace repl-env st ret opts)]
+         (if (vector? cst)
+           (if (satisfies? IPrintStacktrace repl-env)
+             (-print-stacktrace repl-env cst ret opts)
+             (print-mapped-stacktrace cst opts))
+           ((:print opts) st)))
+       ((:print opts) st))
+     ((:flush opts)))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
@@ -351,7 +358,10 @@
                        (atom {:source-map (sorted-map)
                               :gen-col 0
                               :gen-line 0})]
-               (let [js (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts)))
+               (let [js (comp/emit-str
+                          (ana/no-warn
+                            (ana/analyze (assoc env :repl-env repl-env)
+                              (wrap form) opts)))
                      t (System/currentTimeMillis)]
                  (str js
                    "\n//# sourceURL=repl-" t ".js"
@@ -368,7 +378,10 @@
                              ;; handle strings / primitives without metadata
                              (with-out-str (pr form)))]})
                        "UTF-8")))))
-             (comp/emit-str (ana/no-warn (ana/analyze env (wrap form) opts))))]
+             (comp/emit-str
+               (ana/no-warn
+                 (ana/analyze (assoc env :repl-env repl-env)
+                   (wrap form) opts))))]
        (when (= (:op ast) :ns)
          (load-dependencies repl-env
            (into (vals (:requires ast))
@@ -677,7 +690,7 @@
                (evaluate-form repl-env env "<cljs repl>"
                  (with-meta
                    '(ns cljs.user
-                      (:require [cljs.repl :refer-macros [source doc find-doc apropos dir]]))
+                      (:require [cljs.repl :refer-macros [source doc find-doc apropos dir pst]]))
                    {:line 1 :column 1})
                  identity opts)
                (catch Throwable e
@@ -938,3 +951,20 @@ str-or-pattern."
   [ns]
   `(doseq [sym# (quote ~(sort (keys (ana-api/ns-publics ns))))]
      (println sym#)))
+
+(defmacro pst [e]
+  (let [{:keys [repl-env] :as env} &env]
+    (when repl-env
+      (let [ret (edn/read-string
+                  (evaluate-form repl-env env "<cljs repl>"
+                   `(when ~e
+                      (pr-str
+                        {:value (.-message ~e)
+                         :stacktrace (.-stack ~e)}))))]
+        (when ret
+          (let [ret (update-in ret [:value]
+                      (fn [msg]
+                        (if (satisfies? IParseErrorMessage repl-env)
+                          (-parse-error-message repl-env msg ret *repl-opts*)
+                          msg)))]
+            (display-error repl-env ret nil *repl-opts*)))))))

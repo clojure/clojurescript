@@ -172,6 +172,8 @@
   repl/IReplEnvOptions
   (-repl-options [this]
     {:target :nodejs})
+  repl/IParseErrorMessage
+  (-parse-error-message [_ _ _ _])
   repl/IJavaScriptEnv
   (-setup [this opts]
     (setup this opts))
