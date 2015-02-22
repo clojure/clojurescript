@@ -329,7 +329,7 @@
      ((:print opts) value))
    (when-let [st (:stacktrace ret)]
      (if (and (true? (:source-map opts))
-           (satisfies? IParseStacktrace repl-env))
+              (satisfies? IParseStacktrace repl-env))
        (let [cst (-parse-stacktrace repl-env st ret opts)]
          (if (vector? cst)
            (if (satisfies? IPrintStacktrace repl-env)
@@ -923,7 +923,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 (defmacro source
   "Prints the source code for the given symbol, if it can find it.
   This requires that the symbol resolve to a Var defined in a
-  namespace for which the .clj is in the classpath.
+  namespace for which the .cljs is in the classpath.
 
   Example: (source filter)"
   [n]
@@ -952,19 +952,21 @@ str-or-pattern."
   `(doseq [sym# (quote ~(sort (keys (ana-api/ns-publics ns))))]
      (println sym#)))
 
-(defmacro pst [e]
-  (let [{:keys [repl-env] :as env} &env]
-    (when repl-env
-      (let [ret (edn/read-string
-                  (evaluate-form repl-env env "<cljs repl>"
-                   `(when ~e
-                      (pr-str
-                        {:value (.-message ~e)
-                         :stacktrace (.-stack ~e)}))))]
-        (when ret
-          (let [ret (update-in ret [:value]
-                      (fn [msg]
-                        (if (satisfies? IParseErrorMessage repl-env)
-                          (-parse-error-message repl-env msg ret *repl-opts*)
-                          msg)))]
-            (display-error repl-env ret nil *repl-opts*)))))))
+(defmacro pst
+  ([] `(pst *e))
+  ([e]
+   (let [{:keys [repl-env] :as env} &env]
+     (when (and e repl-env)
+       (let [ret (edn/read-string
+                   (evaluate-form repl-env env "<cljs repl>"
+                     `(when ~e
+                        (pr-str
+                          {:value (.-message ~e)
+                           :stacktrace (.-stack ~e)}))))]
+         (when ret
+           (let [ret (update-in ret [:value]
+                       (fn [msg]
+                         (if (satisfies? IParseErrorMessage repl-env)
+                           (-parse-error-message repl-env msg ret *repl-opts*)
+                           msg)))]
+             (display-error repl-env ret nil *repl-opts*))))))))
