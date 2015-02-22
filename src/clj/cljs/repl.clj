@@ -115,9 +115,10 @@
      use."))
 
 (defprotocol IGetError
-  (-get-error [repl-env name build-options]
-    "Given a symbol representing a var holding an error return the
-     canonical error representation:
+  (-get-error [repl-env name env build-options]
+    "Given a symbol representing a var holding an error, an analysis
+     environment, and the REPL/compiler options return the canonical error
+     representation:
 
      {:value <string>
       :stacktrace <string>}
@@ -969,7 +970,7 @@ str-or-pattern."
    (let [{:keys [repl-env] :as env} &env]
      (when (and e repl-env)
        (let [ret (if (satisfies? IGetError repl-env)
-                   (-get-error repl-env e *repl-opts*)
+                   (-get-error repl-env e env *repl-opts*)
                    (edn/read-string
                      (evaluate-form repl-env env "<cljs repl>"
                        `(when ~e
