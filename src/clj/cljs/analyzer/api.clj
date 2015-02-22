@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer.api
-  (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns])
+  (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns
+                            ns-publics])
   (:require [cljs.env :as env]
             [cljs.analyzer :as ana]))
 
@@ -40,6 +41,15 @@
   [ns]
   {:pre [(symbol? ns)]}
   (get-in @env/*compiler* [::ana/namespaces ns :defs]))
+
+(defn ns-publics
+  "Given a namespace return all the public var analysis maps. Analagous to
+  clojure.core/ns-publics but returns var analysis maps not vars."
+  [ns]
+  {:pre [(symbol? ns)]}
+  (->> (get-in @env/*compiler* [::ana/namespaces ns :defs])
+       (remove (fn [[k v]] (:private v)))
+       (into {})))
 
 (defn ns-resolve
   "Given a namespace and a symbol return the corresponding var analysis map.
