@@ -675,7 +675,7 @@
                (evaluate-form repl-env env "<cljs repl>"
                  (with-meta
                    '(ns cljs.user
-                      (:require [cljs.repl :refer-macros [doc]]))
+                      (:require [cljs.repl :refer-macros [source doc]]))
                    {:line 1 :column 1})
                  identity opts)
                (catch Throwable e
@@ -788,3 +788,41 @@
   "Prints documentation for a var or special form given its name"
   [sym]
   `(cljs.repl/print-doc (meta (var ~sym))))
+
+(defn source-fn
+  "Returns a string of the source code for the given symbol, if it can
+  find it.  This requires that the symbol resolve to a Var defined in
+  a namespace for which the .clj is in the classpath.  Returns nil if
+  it can't find the source.  For most REPL usage, 'source' is more
+  convenient.
+
+  Example: (source-fn 'filter)"
+  [env x]
+  (when-let [v (ana/resolve-var env x)]
+    (when-let [filepath (:file v)]
+      (let [f (io/file filepath)]
+        (when (.exists f)
+          (with-open [pbr (PushbackReader. (io/reader f))]
+            (let [rdr (readers/source-logging-push-back-reader pbr)]
+              (dotimes [_ (dec (:line v))] (readers/read-line rdr))
+              (-> (reader/read rdr) meta :source))))))))
+
+(comment
+  (def cenv (env/default-compiler-env))
+  (def aenv (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
+
+  (binding [ana/*cljs-ns* 'cljs.user]
+    (env/with-compiler-env cenv
+      (comp/with-core-cljs {}
+        (fn []
+          (source-fn aenv 'cljs.core/first)))))
+  )
+
+(defmacro source
+  "Prints the source code for the given symbol, if it can find it.
+  This requires that the symbol resolve to a Var defined in a
+  namespace for which the .clj is in the classpath.
+
+  Example: (source filter)"
+  [n]
+  `(println ~(or (source-fn &env n) (str "Source not found"))))
