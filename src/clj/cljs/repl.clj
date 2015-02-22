@@ -679,7 +679,6 @@
                  (init)
                  (catch Throwable e
                    (caught e repl-env opts)))
-               ;; try to let things flush before printing prompt
                (prompt)
                (flush)
                (loop []
