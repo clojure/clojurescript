@@ -26,7 +26,8 @@
   (:import [java.io File PushbackReader FileWriter]
            [java.net URL]
            [javax.xml.bind DatatypeConverter]
-           [clojure.lang IExceptionInfo]))
+           [clojure.lang IExceptionInfo]
+           [java.util.regex Pattern]))
 
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *repl-opts* nil)
@@ -676,7 +677,7 @@
                (evaluate-form repl-env env "<cljs repl>"
                  (with-meta
                    '(ns cljs.user
-                      (:require [cljs.repl :refer-macros [source doc]]))
+                      (:require [cljs.repl :refer-macros [source doc find-doc apropos dir]]))
                    {:line 1 :column 1})
                  identity opts)
                (catch Throwable e
@@ -853,6 +854,30 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
                      [:ns :name :doc :forms :arglists])
                    [:name] clojure.core/name))))))
 
+(defmacro find-doc
+  "Prints documentation for any var whose documentation or name
+ contains a match for re-string-or-pattern"
+  [re-string-or-pattern]
+  (let [re (re-pattern re-string-or-pattern)
+        ms (concat
+             (mapcat
+               (fn [ns]
+                 (map
+                   (fn [m]
+                     (update-in (select-keys m [:ns :name :doc :forms :arglists])
+                       [:name] clojure.core/name))
+                   (sort-by :name (vals (ana-api/ns-interns ns)))))
+               (ana-api/all-ns))
+             (map #(select-keys (ana-api/find-ns %) [:name :doc]) (ana-api/all-ns))
+             (map special-doc (keys special-doc-map)))
+        ms (for [m ms
+                 :when (and (:doc m)
+                            (or (re-find (re-matcher re (:doc m)))
+                                (re-find (re-matcher re (str (:name m))))))]
+             m)]
+    `(doseq [m# (quote ~ms)]
+       (cljs.repl/print-doc m#))))
+
 (defn source-fn
   "Returns a string of the source code for the given symbol, if it can
   find it.  This requires that the symbol resolve to a Var defined in
@@ -890,3 +915,26 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
   Example: (source filter)"
   [n]
   `(println ~(or (source-fn &env n) (str "Source not found"))))
+
+(defmacro apropos
+  "Given a regular expression or stringable thing, return a seq of all
+public definitions in all currently-loaded namespaces that match the
+str-or-pattern."
+  [str-or-pattern]
+  (let [matches? (if (instance? Pattern str-or-pattern)
+                   #(re-find str-or-pattern (str %))
+                   #(.contains (str %) (str str-or-pattern)))]
+    `(quote
+       ~(sort
+          (mapcat
+            (fn [ns]
+              (let [ns-name (str ns)]
+                (map #(symbol ns-name (str %))
+                  (filter matches? (keys (ana-api/ns-publics ns))))))
+            (ana-api/all-ns))))))
+
+(defmacro dir
+  "Prints a sorted directory of public vars in a namespace"
+  [ns]
+  `(doseq [sym# (quote ~(sort (keys (ana-api/ns-publics ns))))]
+     (println sym#)))
