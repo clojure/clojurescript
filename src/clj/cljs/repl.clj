@@ -516,6 +516,23 @@
             identity opts)
           (when is-self-require?
             (set! ana/*cljs-ns* restore-ns)))))
+     'import
+     (fn self
+       ([repl-env env form]
+        (self repl-env env form nil))
+       ([repl-env env [_ & specs :as form] opts]
+        (evaluate-form repl-env env "<cljs repl>"
+          (with-meta
+            `(~'ns ~ana/*cljs-ns*
+               (:import
+                 ~@(map
+                     (fn [quoted-spec-or-kw]
+                       (if (keyword? quoted-spec-or-kw)
+                         quoted-spec-or-kw
+                         (second quoted-spec-or-kw)))
+                     specs)))
+            {:merge true :line 1 :column 1})
+          identity opts)))
      'require-macros
      (fn self
        ([repl-env env form]
