@@ -907,6 +907,8 @@
   ([] (with-core-cljs nil))
   ([opts] (with-core-cljs opts (fn [])))
   ([opts body]
+    {:pre [(or (nil? opts) (map? opts))
+           (fn? body)]}
     (when-not (get-in @env/*compiler* [::ana/namespaces 'cljs.core :defs])
       (ana/analyze-file "cljs/core.cljs" opts))
     (body)))
