@@ -1304,6 +1304,7 @@
   (when (= 1 (count (string/split (clojure.core/name name) #"\.")))
     (warning :single-segment-namespace env {:name name}))
   (let [docstring (if (string? (first args)) (first args))
+        mdocstr   (-> name meta :doc)
         args      (if docstring (next args) args)
         metadata  (if (map? (first args)) (first args))
         form-meta (meta form)
@@ -1357,7 +1358,7 @@
         (check-use-macros use-macros env)))
     (let [ns-info
           {:name name
-           :doc docstring
+           :doc (or docstring mdocstr)
            :excludes excludes
            :use-macros use-macros
            :require-macros require-macros

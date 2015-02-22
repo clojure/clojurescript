@@ -18,6 +18,7 @@
             [cljs.util :as util]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
+            [cljs.analyzer.api :as ana-api]
             [cljs.env :as env]
             [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
@@ -827,10 +828,30 @@
          :doc "The symbol must resolve to a var, and the Var object
 itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 
+(defn- special-doc [name-symbol]
+  (assoc (or (special-doc-map name-symbol) (meta (resolve name-symbol)))
+    :name name-symbol
+    :special-form true))
+
 (defmacro doc
   "Prints documentation for a var or special form given its name"
-  [sym]
-  `(cljs.repl/print-doc (meta (var ~sym))))
+  [name]
+  (if-let [special-name ('{& fn catch try finally try} name)]
+    `(cljs.repl/print-doc (quote ~(special-doc special-name)))
+    (cond
+      (special-doc-map name)
+      `(cljs.repl/print-doc (quote ~(special-doc name)))
+
+      (ana-api/find-ns name)
+      `(cljs.repl/print-doc
+         (quote ~(select-keys (ana-api/find-ns name) [:name :doc])))
+
+      (ana-api/resolve &env name)
+      `(cljs.repl/print-doc
+         (quote ~(update-in
+                   (select-keys (ana-api/resolve &env name)
+                     [:ns :name :doc :forms :arglists])
+                   [:name] clojure.core/name))))))
 
 (defn source-fn
   "Returns a string of the source code for the given symbol, if it can
