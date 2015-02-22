@@ -23,8 +23,8 @@
     (catch Exception e)))
 
 (defn all-ns
-  "Return all the namespace analysis maps. Analagous to clojure.core/all-ns but
-  returns analysis maps not Namespace instances."
+  "Return all namespaces. Analagous to clojure.core/all-ns but
+  returns symbols identifying namespaces not Namespace instances."
   []
   (keys (get @env/*compiler* ::ana/namespaces)))
 
