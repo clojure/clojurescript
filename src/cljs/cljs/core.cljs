@@ -5346,8 +5346,8 @@ reduces them without incurring seq initialization"
     (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
-  (get [coll k]
-    (-lookup coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
   (forEach [coll f]
     (doseq [[k v] coll]
       (f v k)))
@@ -6219,8 +6219,8 @@ reduces them without incurring seq initialization"
     (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
-  (get [coll k]
-    (-lookup coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
   (forEach [coll f]
     (doseq [[k v] coll]
       (f v k)))
@@ -6993,8 +6993,8 @@ reduces them without incurring seq initialization"
     (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
-  (get [coll k]
-    (-lookup coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
   (forEach [coll f]
     (doseq [[k v] coll]
       (f v k)))
