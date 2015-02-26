@@ -82,7 +82,8 @@
 (defn output-directory
   ([opts] (output-directory opts "out"))
   ([opts default]
-    (or (:output-dir opts) default)))
+   {:pre [(or (nil? opts) (map? opts))]}
+   (or (:output-dir opts) default)))
 
 (defn file? [f]
   (instance? File f))
