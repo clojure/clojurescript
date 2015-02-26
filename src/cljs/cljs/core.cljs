@@ -7032,7 +7032,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   vectors, and JavaScript objects into ClojureScript maps.  With
   option ':keywordize-keys true' will convert object fields from
   strings to keywords."
-  ([x] (js->clj x {:keywordize-keys false}))
+  ([x] (js->clj x :keywordize-keys false))
   ([x & opts]
     (cond
       (satisfies? x IEncodeClojure)
