@@ -638,18 +638,20 @@
   (let [ups-deps (cljsc/get-upstream-deps)
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
-        (assoc (merge (-repl-options repl-env) opts)
-          :init init
-          :need-prompt prompt
-          :flush flush
-          :read read
-          :print print
-          :caught caught
-          :reader reader
-          :print-no-newline print-no-newline
-          :source-map-inline source-map-inline
-          :ups-libs (:libs ups-deps)
-          :ups-foreign-libs (:foreign-libs ups-deps))]
+        (merge
+          {:cache-analysis true}
+          (assoc (merge (-repl-options repl-env) opts)
+            :init init
+            :need-prompt prompt
+            :flush flush
+            :read read
+            :print print
+            :caught caught
+            :reader reader
+            :print-no-newline print-no-newline
+            :source-map-inline source-map-inline
+            :ups-libs (:libs ups-deps)
+            :ups-foreign-libs (:foreign-libs ups-deps)))]
     (env/with-compiler-env
      (or (::env/compiler repl-env) (env/default-compiler-env opts))
      (binding [ana/*cljs-ns* 'cljs.user
