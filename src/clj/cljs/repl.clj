@@ -812,8 +812,10 @@
      - :source-map-inline, whether inline source maps should be enabled. Most
        useful in browser context. Implies using a fresh reader for each form.
        default: true"
-  [repl-env & {:as opts}]
-  (repl* repl-env opts))
+  [repl-env & opts]
+  (assert (even? (count opts))
+    "Arguments after repl-env must be interleaved key value pairs")
+  (repl* repl-env (apply hash-map opts)))
 
 ;; =============================================================================
 ;; ClojureScript REPL interaction support
