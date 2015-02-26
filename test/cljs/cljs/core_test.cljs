@@ -1417,6 +1417,7 @@
         (is (.-done (.next iter)))))
     (is (.has {:foo "bar"} :foo))
     (is (= (.get {:foo "bar"} :foo) "bar"))
+    (is (= (.get {:foo "bar"} :bar :default) :default))
     (let [iter (.keys {:foo "bar" :baz "woz"})]
       (testing "map key iteration"
         (is (#{:foo :baz} (.-value (.next iter))))

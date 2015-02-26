@@ -81,7 +81,7 @@
   ([repl-env] (setup repl-env nil))
   ([repl-env opts]
     (let [opts (merge {:output-dir ".cljs_node_repl"} opts)
-          output-dir (io/file (:output-dir opts))
+          output-dir (io/file (util/output-directory (:output-dir opts)))
           _    (.mkdirs output-dir)
           of   (io/file output-dir "node_repl.js")
           _   (spit of

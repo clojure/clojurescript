@@ -466,22 +466,22 @@
 
 ;; http://smhasher.googlecode.com/svn/trunk/MurmurHash3.cpp
 (def m3-seed 0)
-(def m3-C1 0xcc9e2d51)
-(def m3-C2 0x1b873593)
+(def m3-C1 (int 0xcc9e2d51))
+(def m3-C2 (int 0x1b873593))
 
 (defn ^number m3-mix-K1 [k1]
-  (-> k1 (imul m3-C1) (int-rotate-left 15) (imul m3-C2)))
+  (-> (int k1) (imul m3-C1) (int-rotate-left 15) (imul m3-C2)))
 
 (defn ^number m3-mix-H1 [h1 k1]
-  (-> h1 (bit-xor k1) (int-rotate-left 13) (imul 5) (+ 0xe6546b64)))
+  (int (-> (int h1) (bit-xor (int k1)) (int-rotate-left 13) (imul 5) (+ (int 0xe6546b64)))))
 
 (defn ^number m3-fmix [h1 len]
-  (as-> h1 h1
+  (as-> (int h1) h1
     (bit-xor h1 len)
     (bit-xor h1 (unsigned-bit-shift-right h1 16))
-    (imul h1 0x85ebca6b)
+    (imul h1 (int 0x85ebca6b))
     (bit-xor h1 (unsigned-bit-shift-right h1 13))
-    (imul h1 0xc2b2ae35)
+    (imul h1 (int 0xc2b2ae35))
     (bit-xor h1 (unsigned-bit-shift-right h1 16))))
 
 (defn ^number m3-hash-int [in]
@@ -5346,8 +5346,8 @@ reduces them without incurring seq initialization"
     (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
-  (get [coll k]
-    (-lookup coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
   (forEach [coll f]
     (doseq [[k v] coll]
       (f v k)))
@@ -6219,8 +6219,8 @@ reduces them without incurring seq initialization"
     (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
-  (get [coll k]
-    (-lookup coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
   (forEach [coll f]
     (doseq [[k v] coll]
       (f v k)))
@@ -6993,8 +6993,8 @@ reduces them without incurring seq initialization"
     (es6-iterator (vals coll)))
   (has [coll k]
     (contains? coll k))
-  (get [coll k]
-    (-lookup coll k))
+  (get [coll k not-found]
+    (-lookup coll k not-found))
   (forEach [coll f]
     (doseq [[k v] coll]
       (f v k)))
