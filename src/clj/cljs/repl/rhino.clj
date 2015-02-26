@@ -7,9 +7,11 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl.rhino
+  (:refer-clojure :exclude [load-file])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
             [cljs.compiler :as comp]
+            [cljs.closure :as closure]
             [cljs.analyzer :as ana]
             [cljs.repl :as repl]
             [cljs.util :as util])
@@ -18,10 +20,13 @@
                                    RhinoException Undefined]))
 
 (def ^String bootjs
-  (str "var global = this;"
-       "goog.require = function(rule){"
-       "Packages.clojure.lang.RT[\"var\"](\"cljs.repl.rhino\",\"goog-require\")"
-       ".invoke(___repl_env, __repl_opts, rule);}"))
+  (str "var global = this;\n"
+       "CLOSURE_IMPORT_SCRIPT = function(src) {\n"
+       "    var ns = \"cljs.repl.rhino\","
+       "        name = \"load-file\","
+       "        loadFile = Packages.clojure.lang.RT[\"var\"](ns,name);\n"
+       "    if(src) loadFile.invoke(___repl_env, __repl_opts, src);\n"
+       "};\n"))
 
 ;; =============================================================================
 ;; Protocols
@@ -36,7 +41,6 @@
   
   Reader
   (-eval [this {:keys [cx scope]} filename line]
-    (.setOptimizationLevel ^Context cx -1)
     (.evaluateReader cx scope this filename line nil)))
 
 ;; =============================================================================
@@ -75,38 +79,13 @@
        :value (.toString ex)
        :stacktrace (stacktrace ex)})))
 
-(defn goog-require [repl-env opts rule]
-  (let [path        (string/replace (comp/munge rule) \. File/separatorChar)
-        output-dir  (util/output-directory opts)
-        cljsc-path  (str output-dir File/separator (str path ".js"))
-        cljs-path   (str path ".cljs")
-        gpath       (-eval (str "goog.dependencies_.nameToPath['" rule "']")
-                      repl-env "<cljs repl>" 1)
-        js-path     (str "goog/" gpath)
-        js-out-path (io/file output-dir "goog"
-                      (string/replace gpath \/ File/separatorChar))]
-    (let [compiled (io/file cljsc-path)]
-      (if (.exists compiled)
-        ;; TODO: only take this path if analysis cache is available
-        ;; - David
-        (do
-          (with-open [reader (io/reader compiled)]
-            (-eval reader repl-env cljsc-path 1)))
-        (if-let [res (io/resource cljs-path)]
-          (binding [ana/*cljs-ns* 'cljs.user]
-            (repl/load-stream repl-env cljs-path res))
-          (if-let [res (io/resource js-path)]
-            (with-open [reader (io/reader res)]
-              (-eval reader repl-env js-path 1))
-            (if (.exists js-out-path)
-              (with-open [reader (io/reader js-out-path)]
-                (-eval reader repl-env js-path 1))
-              (throw
-               (Exception.
-                 (str "Cannot find "
-                   cljs-path " or "
-                   js-path " or "
-                   (.getName js-out-path) " in classpath"))))))))))
+(defn load-file
+  "Load a JavaScript. This is needed to load JavaScript files before the Rhino
+   environment is bootstrapped. After bootstrapping load-javascript will be
+   used."
+  [repl-env opts src]
+  (let [goog-path (io/file (util/output-directory opts) "goog" src)]
+    (rhino-eval repl-env (.getPath goog-path) 1 (slurp goog-path))))
 
 (defn load-javascript [repl-env ns url]
   (try
@@ -116,18 +95,56 @@
     (catch Throwable ex (println (.getMessage ex)))))
 
 (defn rhino-setup [repl-env opts]
-  (let [env   (ana/empty-env)
-        scope (:scope repl-env)]
+  (let [opts    (merge {:output-dir ".cljs_rhino_repl"} opts)
+        scope   (:scope repl-env)
+        env     (ana/empty-env)
+        core    (io/resource "cljs/core.cljs")
+        base-js (slurp (io/resource "goog/base.js"))
+        core-js (closure/compile core
+                  (assoc opts
+                    :output-file
+                    (closure/src-file->target-file core)))
+        deps    (closure/add-dependencies opts core-js)
+        output-dir (util/output-directory opts)
+        repl-deps (io/file output-dir "rhino_repl_deps.js")]
+    ;; emit core and deps
+    (apply closure/output-unoptimized
+      (assoc opts :output-to (.getPath repl-deps)) deps)
+
+    ;; setup back references & output stream
+    (ScriptableObject/putProperty scope
+      "___repl_env" (Context/javaToJS repl-env scope))
     (ScriptableObject/putProperty scope "__repl_opts"
       (Context/javaToJS opts scope))
-    (repl/load-file repl-env "cljs/core.cljs" opts)
     (ScriptableObject/putProperty scope
       "out" (Context/javaToJS *out* scope))
-    (binding [ana/*cljs-ns* 'cljs.core]
-      (repl/evaluate-form repl-env env "<cljs repl>"
-        '(do
-           (set! (.-isProvided_ js/goog) (fn [_] false))
-           (set! *print-fn* (fn [x] (.write js/out x))))))))
+
+    ;; define file loading, load goog.base, load repl deps
+    (rhino-eval repl-env "bootjs" 1 bootjs)
+    (rhino-eval repl-env "goog/base.js" 1 base-js)
+    (rhino-eval repl-env "rhino_repl_deps.js" 1 (slurp repl-deps))
+
+    ;; === Bootstrap ===
+    ;; load cljs.core, setup printing
+    (repl/evaluate-form repl-env env "<cljs repl>"
+      '(do
+         (.require js/goog "cljs.core")
+         (set! *print-fn* (fn [x] (.write js/out x)))))
+
+    ;; allow namespace reloading
+    (repl/evaluate-form repl-env env "<cljs repl>"
+      '(set! js/goog.isProvided_ (fn [x] false)))
+
+    ;; monkey-patch goog.require
+    (repl/evaluate-form repl-env env "<cljs repl>"
+      '(do
+         (set! *loaded-libs* #{"cljs.core"})
+         (set! (.-require js/goog)
+           (fn [name reload]
+             (when (or (not (contains? *loaded-libs* name)) reload)
+               (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
+               (js/CLOSURE_IMPORT_SCRIPT
+                 (aget (.. js/goog -dependencies_ -nameToPath) name)))))))))
 
 (defrecord RhinoEnv []
   repl/IReplEnvOptions
@@ -146,23 +163,13 @@
   "Returns a fresh JS environment, suitable for passing to repl.
   Hang on to return for use across repl calls."
   []
-  (let [cx (Context/enter)
-        scope (.initStandardObjects cx)
-        base (io/resource "goog/base.js")
-        deps (io/resource "goog/deps.js")
-        new-repl-env (merge (RhinoEnv.) {:cx cx :scope scope})]
-    (assert base "Can't find goog/base.js in classpath")
-    (assert deps "Can't find goog/deps.js in classpath")
-    (ScriptableObject/putProperty scope
-      "___repl_env" (Context/javaToJS new-repl-env scope))
-    (with-open [r (io/reader base)]
-      (-eval r new-repl-env "goog/base.js" 1))
-    (-eval bootjs new-repl-env "bootjs" 1)
-    ;; Load deps.js line-by-line to avoid 64K method limit
-    (with-open [reader (io/reader deps)]
-      (doseq [^String line (line-seq reader)]
-        (-eval line new-repl-env "goog/deps.js" 1)))
-    new-repl-env))
+  (let [cx (Context/enter)]
+    ;; just avoid the 64K method limit
+    ;; Rhino is slow even with optimizations enabled
+    (.setOptimizationLevel cx -1)
+    (merge (RhinoEnv.)
+      {:cx cx
+       :scope (.initStandardObjects cx)})))
 
 (comment
 
@@ -179,7 +186,7 @@
   (time (reduce + [1 2 3 4 5]))
   (even? :a)
   (throw (js/Error. "There was an error"))
-  (load-file "clojure/string.cljs")
+  (clojure.core/load-file "clojure/string.cljs")
   (clojure.string/triml "   hello")
   (clojure.string/reverse "   hello")
 
