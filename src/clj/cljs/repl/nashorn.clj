@@ -146,32 +146,30 @@
   repl/IReplEnvOptions
   (-repl-options [this] {})
   repl/IJavaScriptEnv
-  (-setup [this opts]
-    (let [{:keys [output-dir bootstrap output-to] :as opts}
-          (merge {:output-dir ".cljs_nashorn_repl"} opts)]
-      (init-engine engine output-dir debug)
-      (let [env (ana/empty-env)]
-        (if output-to
-          (load-js-file engine output-to)
-          (bootstrap-repl engine output-dir opts))
-        (repl/evaluate-form this env repl-filename
-          '(do
-             (.require js/goog "cljs.core")
-             (set! *print-newline* false)
-             (set! *print-fn* js/print)))
-        ;; monkey-patch goog.isProvided_ to suppress useless errors
-        (repl/evaluate-form this env repl-filename
-          '(set! js/goog.isProvided_ (fn [ns] false)))
-        ;; monkey-patch goog.require to be more sensible
-        (repl/evaluate-form this env repl-filename
-          '(do
-             (set! *loaded-libs* #{"cljs.core"})
-             (set! (.-require js/goog)
-               (fn [name reload]
-                 (when (or (not (contains? *loaded-libs* name)) reload)
-                   (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
-                   (js/CLOSURE_IMPORT_SCRIPT
-                     (aget (.. js/goog -dependencies_ -nameToPath) name))))))))))
+  (-setup [this {:keys [output-dir bootstrap output-to] :as opts}]
+    (init-engine engine output-dir debug)
+    (let [env (ana/empty-env)]
+      (if output-to
+        (load-js-file engine output-to)
+        (bootstrap-repl engine output-dir opts))
+      (repl/evaluate-form this env repl-filename
+        '(do
+           (.require js/goog "cljs.core")
+           (set! *print-newline* false)
+           (set! *print-fn* js/print)))
+      ;; monkey-patch goog.isProvided_ to suppress useless errors
+      (repl/evaluate-form this env repl-filename
+        '(set! js/goog.isProvided_ (fn [ns] false)))
+      ;; monkey-patch goog.require to be more sensible
+      (repl/evaluate-form this env repl-filename
+        '(do
+           (set! *loaded-libs* #{"cljs.core"})
+           (set! (.-require js/goog)
+             (fn [name reload]
+               (when (or (not (contains? *loaded-libs* name)) reload)
+                 (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
+                 (js/CLOSURE_IMPORT_SCRIPT
+                   (aget (.. js/goog -dependencies_ -nameToPath) name)))))))))
   (-evaluate [{engine :engine :as this} filename line js]
     (when debug (println "Evaluating: " js))
     (try
@@ -207,8 +205,7 @@
    :output-to   load this file initially into Nashorn, relative to output-dir.
                 Use a minimal bootstrapped cljs.core environment if not specified."
   [& {:keys [debug] :as opts}]
-  (let [engine (create-engine)
-        compiler-env (env/default-compiler-env)]
+  (let [engine (create-engine)]
     (merge (NashornEnv. engine debug)
-      {:cljs.env/compiler compiler-env}  ; required by cider middleware ?
+      {:default-output-dir ".cljs_nashorn_repl"}
       opts)))

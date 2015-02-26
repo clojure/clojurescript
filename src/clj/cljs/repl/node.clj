@@ -80,8 +80,7 @@
 (defn setup
   ([repl-env] (setup repl-env nil))
   ([repl-env opts]
-    (let [opts (merge {:output-dir ".cljs_node_repl"} opts)
-          output-dir (io/file (util/output-directory opts))
+    (let [output-dir (io/file (util/output-directory opts))
           _    (.mkdirs output-dir)
           of   (io/file output-dir "node_repl.js")
           _   (spit of
@@ -192,7 +191,8 @@
           {:host "localhost"
            :port (+ 49000 (rand-int 10000))}
           options)]
-    (NodeEnv. host port (atom nil) (atom nil))))
+    (merge (NodeEnv. host port (atom nil) (atom nil))
+      {:default-output-dir ".cljs_node_repl"})))
 
 (defn repl-env
   [& {:as options}]

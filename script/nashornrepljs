@@ -12,4 +12,4 @@ done
 java -server -cp $CLJSC_CP clojure.main -e \
 "(require '[cljs.repl :as repl])
 (require '[cljs.repl.nashorn :as nashorn])
-(repl/repl* (nashorn/repl-env $1) {:output-dir \".cljs_nashorn_repl\" :cache-analysis true :source-map true})"
+(repl/repl (nashorn/repl-env $1))"
