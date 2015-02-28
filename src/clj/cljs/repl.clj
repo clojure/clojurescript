@@ -147,11 +147,14 @@
 (defn- env->opts
   "Returns a hash-map containing all of the entries in [repl-env], translating
 :working-dir to :output-dir."
-  [repl-env]
-  ; some bits in cljs.closure use the options value as an ifn :-/
-  (-> (into {} repl-env)
-      (assoc :optimizations (get repl-env :optimizations :none))
-      (assoc :output-dir (get repl-env :working-dir ".repl"))))
+  ([repl-env] (env->opts repl-env nil))
+  ([repl-env opts]
+    ;; some bits in cljs.closure use the options value as an ifn :-/
+   (-> (into {} repl-env)
+     (assoc :optimizations
+            (or (:optimizations opts) (get repl-env :optimizations :none)))
+     (assoc :output-dir
+            (or (:output-dir opts) (get repl-env :working-dir ".repl"))))))
 
 (defn load-namespace
   "Load a namespace and all of its dependencies into the evaluation environment.
@@ -639,7 +642,7 @@
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (merge
-          {:cache-analysis true}
+          {:cache-analysis true :source-map true}
           (assoc (merge (-repl-options repl-env) opts)
             :init init
             :need-prompt prompt
@@ -650,6 +653,8 @@
             :reader reader
             :print-no-newline print-no-newline
             :source-map-inline source-map-inline
+            :output-dir (or (:output-dir opts)
+                            (:default-output-dir repl-env))
             :ups-libs (:libs ups-deps)
             :ups-foreign-libs (:foreign-libs ups-deps)))]
     (env/with-compiler-env
@@ -807,8 +812,10 @@
      - :source-map-inline, whether inline source maps should be enabled. Most
        useful in browser context. Implies using a fresh reader for each form.
        default: true"
-  [repl-env & {:as opts}]
-  (repl* repl-env opts))
+  [repl-env & opts]
+  (assert (even? (count opts))
+    "Arguments after repl-env must be interleaved key value pairs")
+  (repl* repl-env (apply hash-map opts)))
 
 ;; =============================================================================
 ;; ClojureScript REPL interaction support

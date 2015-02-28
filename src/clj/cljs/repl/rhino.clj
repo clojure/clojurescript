@@ -95,8 +95,7 @@
     (catch Throwable ex (println (.getMessage ex)))))
 
 (defn rhino-setup [repl-env opts]
-  (let [opts    (merge {:output-dir ".cljs_rhino_repl"} opts)
-        scope   (:scope repl-env)
+  (let [scope   (:scope repl-env)
         env     (ana/empty-env)
         core    (io/resource "cljs/core.cljs")
         base-js (slurp (io/resource "goog/base.js"))
@@ -168,7 +167,8 @@
     ;; Rhino is slow even with optimizations enabled
     (.setOptimizationLevel cx -1)
     (merge (RhinoEnv.)
-      {:cx cx
+      {:default-output-dir ".cljs_rhino_repl"
+       :cx cx
        :scope (.initStandardObjects cx)})))
 
 (comment
