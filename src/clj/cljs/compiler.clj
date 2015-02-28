@@ -413,20 +413,21 @@
   (let [docs (when doc [doc])
         docs (if jsdoc (concat docs jsdoc) docs)
         docs (remove nil? docs)]
-    (letfn [(print-comment-lines [e] (doseq [next-line (string/split-lines e)]
-                                       (emitln "* " (string/trim next-line))))]
+    (letfn [(print-comment-lines [e]
+              (doseq [next-line (string/split-lines e)]
+                (emitln " * " (string/trim next-line))))]
       (when (seq docs)
         (emitln "/**")
         (doseq [e docs]
           (when e
             (print-comment-lines e)))
-        (emitln "*/")))))
+        (emitln " */")))))
 
 (defmethod emit* :def
-  [{:keys [name var init env doc export test]}]
+  [{:keys [name var init env doc jsdoc export test]}]
   (let [mname (munge name)]
     (when init
-      (emit-comment doc (:jsdoc init))
+      (emit-comment doc (concat jsdoc (:jsdoc init)))
       (emits var)
       (emits " = " init)
       ;; NOTE: JavaScriptCore does not like this under advanced compilation

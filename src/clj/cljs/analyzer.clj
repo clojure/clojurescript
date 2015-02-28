@@ -761,16 +761,21 @@
                           (:methods init-expr))}) )
           (when (and fn-var? tag)
             {:ret-tag tag})))
-      (merge {:env env :op :def :form form
-              :name var-name
-              :var (assoc
-                     (analyze
-                       (-> env (dissoc :locals)
-                         (assoc :context :expr)
-                         (assoc :def-var true))
-                       sym)
-                     :op :var)
-              :doc doc :init init-expr}
+      (merge
+        {:env env
+         :op :def
+         :form form
+         :name var-name
+         :var (assoc
+                (analyze
+                  (-> env (dissoc :locals)
+                    (assoc :context :expr)
+                    (assoc :def-var true))
+                  sym)
+                :op :var)
+         :doc doc
+         :jsdoc (:jsdoc sym-meta)
+         :init init-expr}
         (when-let [test (:test sym-meta)]
           {:test (analyze (assoc env :context :expr) test)})
         (when tag
