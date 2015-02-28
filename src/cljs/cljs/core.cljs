@@ -17,6 +17,9 @@
 
 (def *unchecked-if* false)
 
+(def ^{:jsdoc ["@define"]}
+  node-target false)
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to print output.
   Whatever function *print-fn* is bound to will be passed any
