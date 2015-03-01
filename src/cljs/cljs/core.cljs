@@ -17,8 +17,8 @@
 
 (def *unchecked-if* false)
 
-(def ^{:jsdoc ["@define"]}
-  node-target false)
+(def ^{:jsdoc ["@define {string}"]}
+  target "default")
 
 (defonce
   ^{:doc "Each runtime environment provides a different way to print output.
