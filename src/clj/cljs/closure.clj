@@ -1320,7 +1320,7 @@ should contain the source for the given namespace name."
           :ups-externs externs)
         (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
       (:target opts)
-      (assoc-in [:closure-defines "cljs.core.target"]
+      (assoc-in [:closure-defines (str (comp/munge 'cljs.core/*target*))]
         (name (:target opts)))
       (nil? (:optimizations opts))
       (assoc :optimizations :none))))
