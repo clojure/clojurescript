@@ -1321,7 +1321,9 @@ should contain the source for the given namespace name."
         (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
       (:target opts)
       (assoc-in [:closure-defines "cljs.core.target"]
-        (name (:target opts))))))
+        (name (:target opts)))
+      (nil? (:optimizations opts))
+      (assoc :optimizations :none))))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
