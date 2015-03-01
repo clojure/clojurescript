@@ -1310,6 +1310,19 @@ should contain the source for the given namespace name."
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
 
+(defn add-implicit-options [opts]
+  (let [{:keys [libs foreign-libs externs]} (get-upstream-deps)]
+    (cond->
+      (-> opts
+        (assoc
+          :ups-libs libs
+          :ups-foreign-libs foreign-libs
+          :ups-externs externs)
+        (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
+      (:target opts)
+      (assoc-in [:closure-defines "cljs.core.target"]
+        (name (:target opts))))))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
@@ -1320,15 +1333,7 @@ should contain the source for the given namespace name."
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)
-             ups-deps (get-upstream-deps)
-             all-opts (cond->
-                        (-> opts
-                          (assoc
-                            :ups-libs (:libs ups-deps)
-                            :ups-foreign-libs (:foreign-libs ups-deps)
-                            :ups-externs (:externs ups-deps))
-                          (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
-                        (:target opts) (assoc-in [:closure-defines "cljs.core.target"] (name (:target opts))))
+             all-opts (add-implicit-options opts)
              emit-constants (or (and (= (:optimizations opts) :advanced)
                                      (not (false? (:optimize-constants opts))))
                                 (:optimize-constants opts))]

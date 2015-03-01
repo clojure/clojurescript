@@ -638,25 +638,23 @@
                   source-map-inline true}
              :as opts}]
   (print "To quit, type:" :cljs/quit)
-  (let [ups-deps (cljsc/get-upstream-deps)
-        {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
+  (let [{:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (merge
           {:cache-analysis true :source-map true}
-          (assoc (merge (-repl-options repl-env) opts)
-            :init init
-            :need-prompt prompt
-            :flush flush
-            :read read
-            :print print
-            :caught caught
-            :reader reader
-            :print-no-newline print-no-newline
-            :source-map-inline source-map-inline
-            :output-dir (or (:output-dir opts)
-                            (:default-output-dir repl-env))
-            :ups-libs (:libs ups-deps)
-            :ups-foreign-libs (:foreign-libs ups-deps)))]
+          (cljsc/add-implicit-options
+            (assoc (merge (-repl-options repl-env) opts)
+              :init init
+              :need-prompt prompt
+              :flush flush
+              :read read
+              :print print
+              :caught caught
+              :reader reader
+              :print-no-newline print-no-newline
+              :source-map-inline source-map-inline
+              :output-dir (or (:output-dir opts)
+                              (:default-output-dir repl-env)))))]
     (env/with-compiler-env
      (or (::env/compiler repl-env) (env/default-compiler-env opts))
      (binding [ana/*cljs-ns* 'cljs.user
