@@ -970,12 +970,12 @@ should contain the source for the given namespace name."
          (ns-list (deps/-provides input))
          "], ["
          (ns-list (deps/-requires input))
-         "]);")))
+         "]);\n")))
 
 (defn deps-file
   "Return a deps file string for a sequence of inputs."
   [opts sources]
-  (apply str (interpose "\n" (map #(add-dep-string opts %) sources))))
+  (apply str (map #(add-dep-string opts %) sources)))
 
 (comment
   (path-relative-to (io/file "out/goog/base.js") {:url (deps/to-url "out/cljs/core.js")})
