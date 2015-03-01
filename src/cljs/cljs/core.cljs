@@ -9181,8 +9181,6 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 ;;; ExceptionInfo
 
-(deftype ExceptionInfo [message data cause])
-
 (defn- pr-writer-ex-info [obj writer opts]
   (-write writer "#ExceptionInfo{:message ")
   (pr-writer (.-message obj) writer opts)
@@ -9194,25 +9192,41 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (pr-writer (.-cause obj) writer opts))
   (-write writer "}"))
 
+(defn ^{:jsdoc ["@constructor"]}
+  ExceptionInfo [message data cause]
+  (let [e (js/Error.)]
+    (this-as this
+      (set! (.-message this) message)
+      (set! (.-data this) data)
+      (set! (.-cause this) cause)
+      (do
+        (set! (.-name this) (.-name e))
+        ;; non-standard
+        (set! (.-description this) (.-description e))
+        (set! (.-number this) (.-number e))
+        (set! (.-fileName this) (.-fileName e))
+        (set! (.-lineNumber this) (.-lineNumber e))
+        (set! (.-columnNumber this) (.-columnNumber e))
+        (set! (.-stack this) (.-stack e)))
+      this)))
+
+(set! (.. ExceptionInfo -prototype -__proto__) js/Error.prototype)
+
+(extend-type ExceptionInfo
+  IPrintWithWriter
+  (-pr-writer [obj writer opts]
+    (pr-writer-ex-info obj writer opts)))
+
+(set! (.. ExceptionInfo -prototype -toString)
+  (fn []
+    (this-as this (pr-str* this))))
+
 (defn ex-info
   "Alpha - subject to change.
   Create an instance of ExceptionInfo, an Error type that carries a
   map of additional data."
   ([msg data] (ex-info msg data nil))
   ([msg data cause]
-    ;; this way each new ExceptionInfo instance will inherit
-    ;; stack property from newly created Error
-    (set! (.-prototype ExceptionInfo) (js/Error msg))
-    (set! (.. ExceptionInfo -prototype -name) "ExceptionInfo")
-    (set! (.. ExceptionInfo -prototype -constructor) ExceptionInfo)
-
-    ;; since we've changed the prototype, we need to
-    ;; re-establish protocol implementations here
-    (set! (.. ExceptionInfo -prototype -toString) pr-str*)
-    (extend-type ExceptionInfo
-      IPrintWithWriter
-      (-pr-writer [obj writer opts]
-        (pr-writer-ex-info obj writer opts)))
     (ExceptionInfo. msg data cause)))
 
 (defn ex-data
