@@ -654,7 +654,9 @@
               :print-no-newline print-no-newline
               :source-map-inline source-map-inline
               :output-dir (or (:output-dir opts)
-                              (:default-output-dir repl-env)))))]
+                              (:default-output-dir repl-env))
+              :target (or (:target opts)
+                          (:default-target repl-env)))))]
     (env/with-compiler-env
      (or (::env/compiler repl-env) (env/default-compiler-env opts))
      (binding [ana/*cljs-ns* 'cljs.user

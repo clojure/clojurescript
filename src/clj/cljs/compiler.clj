@@ -423,13 +423,31 @@
             (print-comment-lines e)))
         (emitln " */")))))
 
+(defn valid-define-value? [x]
+  (or (string? x)
+      (true? x)
+      (false? x)
+      (number? x)))
+
+(defn get-define [mname jsdoc]
+  (let [opts (get @env/*compiler* :options)]
+    (and (some #(.startsWith ^String % "@define") jsdoc)
+         opts
+         (= (:optimizations opts) :none)
+         (let [define (get-in opts [:closure-defines (str mname)])]
+           (when (valid-define-value? define)
+             (pr-str define))))))
+
 (defmethod emit* :def
   [{:keys [name var init env doc jsdoc export test]}]
   (let [mname (munge name)]
     (when init
       (emit-comment doc (concat jsdoc (:jsdoc init)))
       (emits var)
-      (emits " = " init)
+      (emits " = "
+        (if-let [define (get-define mname jsdoc)]
+          define
+          init))
       ;; NOTE: JavaScriptCore does not like this under advanced compilation
       ;; this change was primarily for REPL interactions - David
       ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
