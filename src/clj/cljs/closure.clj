@@ -1311,7 +1311,14 @@ should contain the source for the given namespace name."
        (deps/-foreign? js)))
 
 (defn add-implicit-options [opts]
-  (let [{:keys [libs foreign-libs externs]} (get-upstream-deps)]
+  (let [opts (cond-> opts
+               (:closure-defines opts)
+               (assoc :closure-defines
+                 (into {}
+                   (map (fn [[k v]]
+                          [(if (symbol? k) (str (comp/munge k)) k) v])
+                     (:closure-defines opts)))))
+        {:keys [libs foreign-libs externs]} (get-upstream-deps)]
     (cond->
       (-> opts
         (assoc
