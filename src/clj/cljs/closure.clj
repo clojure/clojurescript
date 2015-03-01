@@ -1321,12 +1321,14 @@ should contain the source for the given namespace name."
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)
              ups-deps (get-upstream-deps)
-             all-opts (-> opts
-                        (assoc
-                          :ups-libs (:libs ups-deps)
-                          :ups-foreign-libs (:foreign-libs ups-deps)
-                          :ups-externs (:externs ups-deps))
-                        (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
+             all-opts (cond->
+                        (-> opts
+                          (assoc
+                            :ups-libs (:libs ups-deps)
+                            :ups-foreign-libs (:foreign-libs ups-deps)
+                            :ups-externs (:externs ups-deps))
+                          (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
+                        (:target opts) (assoc-in [:closure-defines "cljs.core.target"] (name (:target opts))))
              emit-constants (or (and (= (:optimizations opts) :advanced)
                                      (not (false? (:optimize-constants opts))))
                                 (:optimize-constants opts))]
