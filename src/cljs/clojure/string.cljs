@@ -33,7 +33,7 @@
   [s match replacement]
   (cond (string? match)
         (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
-        (.hasOwnProperty match "source")
+        (instance? js/RegExp match)
         (.replace s (js/RegExp. (.-source match) "g") replacement)
         :else (throw (str "Invalid match arg: " match))))
 
