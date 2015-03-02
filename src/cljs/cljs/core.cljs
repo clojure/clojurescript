@@ -17,7 +17,7 @@
 
 (def *unchecked-if* false)
 
-(def ^{:dyanmic true
+(def ^{:dynamic true
        :jsdoc ["@define {string}"]}
   *target* "default")
 
