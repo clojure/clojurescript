@@ -6,7 +6,7 @@ CLOJURE_RELEASE="1.6.0"
 CLOSURE_RELEASE="20150126"
 DJSON_RELEASE="0.2.3"
 GCLOSURE_LIB_RELEASE="0.0-20140718-946a7d39"
-RHINO_RELEASE="1_7R3"
+RHINO_RELEASE="1_7R5"
 TREADER_RELEASE="0.8.10"
 
 # check dependencies
@@ -79,7 +79,7 @@ if [ "$1" = "--closure-library-head" ] ; then
 fi
 
 echo "Fetching Rhino..."
-curl --retry 3 -O -s https://ftp.mozilla.org/pub/mozilla.org/js/rhino$RHINO_RELEASE.zip || { echo "Download failed."; exit 1; }
+curl --retry 3 -LOk -s https://github.com/mozilla/rhino/releases/download/Rhino${RHINO_RELEASE}_RELEASE/rhino$RHINO_RELEASE.zip || { echo "Download failed."; exit 1; }
 unzip -qu rhino$RHINO_RELEASE.zip
 echo "Copying rhino$RHINO_RELEASE/js.jar to lib/js.jar..."
 cp rhino$RHINO_RELEASE/js.jar lib/js.jar
