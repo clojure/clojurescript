@@ -81,7 +81,6 @@
                         (ScriptableObject/getProperty "core"))]
         (ScriptableObject/putProperty top-level "_STAR_e"
           (Context/javaToJS ex scope))
-        (util/debug-prn top-level)
         {:status :exception
          :value (.toString ex)
          :stacktrace (stacktrace ex)}))))
