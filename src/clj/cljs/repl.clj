@@ -249,9 +249,10 @@
       :line <integer>
       :column <integer>}*]
 
-   :file must be a URL path (without protocol) relative to :output-dir. The
-   returned mapped stacktrace will also contain :url entries to the original
-   sources if it can be determined from the classpath."
+   :file must be a URL path (without protocol) relative to :output-dir or a
+   identifier delimited by angle brackets. The returned mapped stacktrace will
+   also contain :url entries to the original sources if it can be determined
+   from the classpath."
   ([stacktrace] (mapped-stacktrace stacktrace nil))
   ([stacktrace opts]
     (let [read-source-map' (memoize read-source-map)
