@@ -69,12 +69,15 @@
 ;; =============================================================================
 
 (defn rhino-eval
-  [repl-env filename line js]
+  [{:keys [scope] :as repl-env} filename line js]
   (try
     (let [linenum (or line Integer/MIN_VALUE)]
       {:status :success
        :value (eval-result (-eval js repl-env filename linenum))})
     (catch Throwable ex
+      ;; manually set *e
+      ;; (ScriptableObject/putProperty scope "cljs.core._STAR_e"
+      ;;   (Context/javaToJS ex scope))
       {:status :exception
        :value (.toString ex)
        :stacktrace (stacktrace ex)})))
@@ -145,10 +148,27 @@
                (js/CLOSURE_IMPORT_SCRIPT
                  (aget (.. js/goog -dependencies_ -nameToPath) name)))))))))
 
+;; Catching errors and rethrowing in Rhino swallows the original trace
+;; https://groups.google.com/d/msg/mozilla.dev.tech.js-engine.rhino/inMyVKhPq6M/cY39hX20_z8J
+(defn wrap-fn [form]
+  (cond
+    (and (seq? form) (= 'ns (first form))) identity
+    ('#{*1 *2 *3 *e} form) (fn [x] `(cljs.core.pr-str ~x))
+    :else
+    (fn [x]
+      `(cljs.core.pr-str
+         (let [ret# ~x]
+           (set! *3 *2)
+           (set! *2 *1)
+           (set! *1 ret#)
+           ret#)))))
+
 (defrecord RhinoEnv []
   repl/IReplEnvOptions
   (-repl-options [this]
-    {:require-foreign true})
+    {:require-foreign true
+     :output-dir ".cljs_rhino_repl"
+     :wrap wrap-fn})
   repl/IJavaScriptEnv
   (-setup [this opts]
     (rhino-setup this opts))
@@ -167,8 +187,7 @@
     ;; Rhino is slow even with optimizations enabled
     (.setOptimizationLevel cx -1)
     (merge (RhinoEnv.)
-      {:default-output-dir ".cljs_rhino_repl"
-       :cx cx
+      {:cx cx
        :scope (.initStandardObjects cx)})))
 
 (comment

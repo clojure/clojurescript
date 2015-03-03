@@ -467,13 +467,13 @@
    form, evaluate the form and return the result. The result is always the value
    represented as a string."
   ([repl-env env form]
-    (eval-cljs repl-env env form nil))
+    (eval-cljs repl-env env form *repl-opts*))
   ([repl-env env form opts]
    (evaluate-form repl-env
      (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
      "<cljs repl>"
      form
-     (wrap-fn form)
+     ((or (:wrap opts) wrap-fn) form)
      opts)))
 
 ;; Special REPL fns, these provide compatiblity with Clojure functions
@@ -620,7 +620,7 @@
       (.printStackTrace e))))
 
 (defn repl*
-  [repl-env {:keys [init need-prompt prompt flush read eval print caught reader print-no-newline source-map-inline]
+  [repl-env {:keys [init need-prompt prompt flush read eval print caught reader print-no-newline source-map-inline wrap]
              :or {init #()
                   need-prompt #(if (readers/indexing-reader? *in*)
                                  (== (readers/get-column-number *in*) 1)
@@ -643,20 +643,18 @@
         (merge
           {:cache-analysis true :source-map true}
           (cljsc/add-implicit-options
-            (assoc (merge (-repl-options repl-env) opts)
-              :init init
-              :need-prompt prompt
-              :flush flush
-              :read read
-              :print print
-              :caught caught
-              :reader reader
-              :print-no-newline print-no-newline
-              :source-map-inline source-map-inline
-              :output-dir (or (:output-dir opts)
-                              (:default-output-dir repl-env))
-              :target (or (:target opts)
-                          (:default-target repl-env)))))]
+            (merge-with (fn [a b] (if (nil? b) a b))
+              (-repl-options repl-env)
+              opts
+              {:init init
+               :need-prompt prompt
+               :flush flush
+               :read read
+               :print print
+               :caught caught
+               :reader reader
+               :print-no-newline print-no-newline
+               :source-map-inline source-map-inline})))]
     (env/with-compiler-env
      (or (::env/compiler repl-env) (env/default-compiler-env opts))
      (binding [ana/*cljs-ns* 'cljs.user

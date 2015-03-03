@@ -169,6 +169,10 @@
                    (aget (.. js/goog -dependencies_ -nameToPath) name))))))))))
 
 (defrecord NodeEnv [host port socket proc]
+  repl/IReplEnvOptions
+  (-repl-options [this]
+    {:output-dir ".cljs_node_repl"
+     :target :nodejs})
   repl/IParseErrorMessage
   (-parse-error-message [_ _ _ _])
   repl/IJavaScriptEnv
@@ -188,9 +192,7 @@
           {:host "localhost"
            :port (+ 49000 (rand-int 10000))}
           options)]
-    (merge (NodeEnv. host port (atom nil) (atom nil))
-      {:default-output-dir ".cljs_node_repl"
-       :default-target :nodejs})))
+    (NodeEnv. host port (atom nil) (atom nil))))
 
 (defn repl-env
   [& {:as options}]

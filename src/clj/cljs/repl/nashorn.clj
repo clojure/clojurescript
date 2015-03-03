@@ -144,7 +144,8 @@
 
 (defrecord NashornEnv [engine debug]
   repl/IReplEnvOptions
-  (-repl-options [this] {})
+  (-repl-options [this]
+    {:output-dir ".cljs_nashorn_repl"})
   repl/IJavaScriptEnv
   (-setup [this {:keys [output-dir bootstrap output-to] :as opts}]
     (init-engine engine output-dir debug)
@@ -206,6 +207,6 @@
                 Use a minimal bootstrapped cljs.core environment if not specified."
   [& {:keys [debug] :as opts}]
   (let [engine (create-engine)]
-    (merge (NashornEnv. engine debug)
-      {:default-output-dir ".cljs_nashorn_repl"}
+    (merge
+      (NashornEnv. engine debug)
       opts)))
