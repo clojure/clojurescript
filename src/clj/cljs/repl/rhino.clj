@@ -21,7 +21,7 @@
 
 (def ^String bootjs
   (str "var global = this;\n"
-       "CLOSURE_IMPORT_SCRIPT = function(src) {\n"
+       "var CLOSURE_IMPORT_SCRIPT = function(src) {\n"
        "    var ns = \"cljs.repl.rhino\","
        "        name = \"load-file\","
        "        loadFile = Packages.clojure.lang.RT[\"var\"](ns,name);\n"
@@ -85,7 +85,7 @@
    used."
   [repl-env opts src]
   (let [goog-path (io/file (util/output-directory opts) "goog" src)]
-    (rhino-eval repl-env (.getPath goog-path) 1 (slurp goog-path))))
+    (rhino-eval repl-env (.getPath goog-path) 1 (io/reader goog-path))))
 
 (defn load-javascript [repl-env ns url]
   (try
@@ -98,7 +98,7 @@
   (let [scope   (:scope repl-env)
         env     (ana/empty-env)
         core    (io/resource "cljs/core.cljs")
-        base-js (slurp (io/resource "goog/base.js"))
+        base-js (io/resource "goog/base.js")
         core-js (closure/compile core
                   (assoc opts
                     :output-file
@@ -120,8 +120,8 @@
 
     ;; define file loading, load goog.base, load repl deps
     (rhino-eval repl-env "bootjs" 1 bootjs)
-    (rhino-eval repl-env "goog/base.js" 1 base-js)
-    (rhino-eval repl-env "rhino_repl_deps.js" 1 (slurp repl-deps))
+    (rhino-eval repl-env "goog/base.js" 1 (io/reader base-js))
+    (rhino-eval repl-env "rhino_repl_deps.js" 1 (io/reader repl-deps))
 
     ;; === Bootstrap ===
     ;; load cljs.core, setup printing
