@@ -1104,7 +1104,7 @@
       false)))
 
 (defn analyze-deps
-  ([lib deps env] (analyze-deps lib deps env))
+  ([lib deps env] (analyze-deps lib deps env nil))
   ([lib deps env opts]
      (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
        (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
