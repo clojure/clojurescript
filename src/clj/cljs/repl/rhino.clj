@@ -76,11 +76,15 @@
        :value (eval-result (-eval js repl-env filename linenum))})
     (catch Throwable ex
       ;; manually set *e
-      ;; (ScriptableObject/putProperty scope "cljs.core._STAR_e"
-      ;;   (Context/javaToJS ex scope))
-      {:status :exception
-       :value (.toString ex)
-       :stacktrace (stacktrace ex)})))
+      (let [top-level (-> scope
+                        (ScriptableObject/getProperty "cljs")
+                        (ScriptableObject/getProperty "core"))]
+        (ScriptableObject/putProperty top-level "_STAR_e"
+          (Context/javaToJS ex scope))
+        (util/debug-prn top-level)
+        {:status :exception
+         :value (.toString ex)
+         :stacktrace (stacktrace ex)}))))
 
 (defn load-file
   "Load a JavaScript. This is needed to load JavaScript files before the Rhino
