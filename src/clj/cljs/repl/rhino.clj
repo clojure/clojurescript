@@ -172,6 +172,23 @@
     {:require-foreign true
      :output-dir ".cljs_rhino_repl"
      :wrap wrap-fn})
+  repl/IParseStacktrace
+  (-parse-stacktrace [this frames-str ret {output-dir :output-dir}]
+    (vec
+      (map
+        (fn [frame-str]
+          (let [[file-side line-fn-side] (string/split frame-str #":")
+                file (string/replace file-side #"\s+at\s+" "")
+                [line function] (string/split line-fn-side #"\s+")]
+            {:file (string/replace file (str output-dir File/separator) "")
+             :function (when function
+                         (-> function
+                           (string/replace "(" "")
+                           (string/replace ")" "")))
+             :line (when line
+                     (Integer/parseInt line))
+             :column 0}))
+        (string/split frames-str #"\n"))))
   repl/IJavaScriptEnv
   (-setup [this opts]
     (rhino-setup this opts))
@@ -194,6 +211,15 @@
        :scope (.initStandardObjects cx)})))
 
 (comment
+
+  (repl/-parse-stacktrace (repl-env)
+    "\tat .cljs_rhino_repl/goog/../cljs/core.js:4215 (seq)
+\tat .cljs_rhino_repl/goog/../cljs/core.js:4245 (first)
+\tat .cljs_rhino_repl/goog/../cljs/core.js:5295 (ffirst)
+\tat <cljs repl>:1
+\tat <cljs repl>:1"
+    nil
+    {:output-dir ".cljs_rhino_repl"})
 
   (require '[cljs.repl :as repl])
   (require '[cljs.repl.rhino :as rhino])
