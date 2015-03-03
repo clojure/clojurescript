@@ -244,15 +244,16 @@ JavaScript library containing provide/require 'declarations'."
   (library-dependencies {:foreign-libs [{:file "cljs/nodejs_externs.js"
                                           :provides ["my.example"]}]}))
 
-(defn goog-resource
-  "Helper to disambiguate Google Closure Library resources from Google
-   Closure Library Third Party resoures."
-  [path]
-  (first
-    (filter
-      (fn [res]
-        (re-find #"(\/google-closure-library-0.0*|\/google-closure-library\/)" (.getPath ^URL res)))
-      (enumeration-seq (.getResources (.getContextClassLoader (Thread/currentThread)) path)))))
+;; NO LONGER NEEDED, deps.js and base.js now removed from build
+;(defn goog-resource
+;  "Helper to disambiguate Google Closure Library resources from Google
+;   Closure Library Third Party resoures."
+;  [path]
+;  (first
+;    (filter
+;      (fn [res]
+;        (re-find #"(\/google-closure-library-0.0*|\/google-closure-library\/)" (.getPath ^URL res)))
+;      (enumeration-seq (.getResources (.getContextClassLoader (Thread/currentThread)) path)))))
 
 (defn goog-dependencies*
   "Create an index of Google dependencies by namespace and file name."
@@ -260,7 +261,7 @@ JavaScript library containing provide/require 'declarations'."
   (letfn [(parse-list [s] (when (> (count s) 0)
                             (-> (.substring ^String s 1 (dec (count s)))
                                 (string/split #"'\s*,\s*'"))))]
-    (with-open [reader (io/reader (goog-resource "goog/deps.js"))]
+    (with-open [reader (io/reader (io/resource "goog/deps.js"))]
       (->> (line-seq reader)
            (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
            (remove nil?)
