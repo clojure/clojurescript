@@ -137,7 +137,9 @@
        :line <integer>
        :column <integer>}*]
 
-     :file must be a URL path (without protocol) relative to :output-dir."))
+     :file must be a URL path (without protocol) relative to :output-dir. If
+     no source file can be supplied (such as REPL defs), :file may be a custom
+     identifier string surrounded by angle brackets, i.e. \"<cljs repl>\"."))
 
 (defprotocol IPrintStacktrace
   (-print-stacktrace [repl-env stacktrace error build-options]
