@@ -292,8 +292,8 @@
     (doseq [{:keys [function file line column]}
             (mapped-stacktrace stacktrace opts)]
       ((:print opts) "\t"
-        (str (or function "NO_FUNCTION")
-             " (" file ":" line ":" column ")")))))
+        (str (and function (str function " "))
+             "(" file ":" line ":" column ")")))))
 
 (comment
   (cljsc/build "samples/hello/src"
