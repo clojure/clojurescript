@@ -1560,7 +1560,7 @@ should contain the source for the given namespace name."
       (comp/compile-file src dest
         {:source-map true
          :cache-analysis true
-         :output-dir (sr "src" File/separator "aot_cljs")}))))
+         :output-dir (str "src" File/separator "aot_cljs")}))))
 
 (comment
 
