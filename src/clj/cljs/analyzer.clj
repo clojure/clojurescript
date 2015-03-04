@@ -217,7 +217,12 @@
                  table
                  (assoc table val (gen-constant-id val))))))
          env (update-in [::namespaces (-> env :ns :name) ::constants]
-               (fnil conj #{}) val))))))
+               (fn [{:keys [seen order] :or {seen #{} order []} :as constants}]
+                 (cond-> constants
+                   (not (contains? seen val))
+                   (assoc
+                     :seen (conj seen val)
+                     :order (conj order val))))))))))
 
 (def default-namespaces '{cljs.core {:name cljs.core}
                           cljs.user {:name cljs.user}})
@@ -2005,7 +2010,7 @@ argument, which the reader will use in any emitted errors."
                  (swap! env/*compiler*
                    (fn [cenv]
                      (let [cached-ns (edn/read-string (slurp cache))]
-                       (doseq [x (::constants cached-ns)]
+                       (doseq [x (get-in cached-ns [::constants :order])]
                          (register-constant! x))
                        (-> cenv
                          (assoc-in [::analyzed-cljs path] true)
