@@ -2988,8 +2988,7 @@ reduces them without incurring seq initialization"
 
 (set! *unchecked-if* true)
 (defn apply
-  "Applies fn f to the argument list formed by prepending intervening arguments to args.
-  First cut.  Not lazy.  Needs to use emitted toApply."
+  "Applies fn f to the argument list formed by prepending intervening arguments to args."
   ([f args]
      (let [fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
