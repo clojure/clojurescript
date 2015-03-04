@@ -489,6 +489,8 @@
      (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
      "<cljs repl>"
      form
+     ;; the pluggability of :wrap is needed for older JS runtimes like Rhino
+     ;; where catching the error will swallow the original trace
      ((or (:wrap opts) wrap-fn) form)
      opts)))
 
@@ -599,7 +601,7 @@
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
-     (fn self
+     (fn selfe
        ([repl-env env form]
         (self env repl-env form nil))
        ([repl-env env [_ ns :as form] opts]
