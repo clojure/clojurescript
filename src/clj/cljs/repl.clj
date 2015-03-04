@@ -601,7 +601,7 @@
      'load-file load-file-fn
      'clojure.core/load-file load-file-fn
      'load-namespace
-     (fn selfe
+     (fn self
        ([repl-env env form]
         (self env repl-env form nil))
        ([repl-env env [_ ns :as form] opts]
