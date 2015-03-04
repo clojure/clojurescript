@@ -260,28 +260,39 @@
       (vec
         (for [{:keys [function file line column] :as frame} stacktrace]
           ;; need to convert file, a relative URL style path, to host-specific file
-          (let [rfile (io/file (URL. (.toURL (io/file (util/output-directory opts))) file))
+          (let [no-source-file? (if-not file
+                                  true
+                                  (.startsWith file "<"))
+                rfile (when-not no-source-file?
+                        (io/file (URL. (.toURL (io/file (util/output-directory opts))) file)))
                 [sm {:keys [ns source-file] :as ns-info}]
-                ((juxt read-source-map' ns-info') rfile)
+                (when-not no-source-file?
+                  ((juxt read-source-map' ns-info') rfile))
                 [line' column'] (if ns-info
                                   (mapped-line-and-column sm line column)
                                   [line column])
                 name' (if (and ns-info function)
                         (symbol (name ns) (cljrepl/demunge function))
                         function)
-                file' (string/replace
-                        (.getCanonicalFile
-                          (if ns-info
-                            source-file
-                            (io/file rfile)))
-                        (str (System/getProperty "user.dir") File/separator) "")
+                file' (if no-source-file?
+                        file
+                        (string/replace
+                         (.getCanonicalFile
+                           (if ns-info
+                             source-file
+                             (io/file rfile)))
+                         (str (System/getProperty "user.dir") File/separator) ""))
                 url   (or (and ns-info (io/resource (util/ns->relpath ns)))
-                          (io/resource file))]
+                          (and file (io/resource file)))]
             (merge
               {:function name'
-               :file     (io/file file')
-               :line     line'
-               :column   column'}
+               :file (if no-source-file?
+                       (str "NO_SOURCE_FILE"
+                         (when file
+                           (str " " file)))
+                       (io/file file'))
+               :line line'
+               :column column'}
               (when url
                 {:url url}))))))))
 
@@ -293,8 +304,8 @@
     (doseq [{:keys [function file line column]}
             (mapped-stacktrace stacktrace opts)]
       ((:print opts) "\t"
-        (str (and function (str function " "))
-             "(" file ":" line ":" column ")")))))
+        (str (when function (str function " "))
+             "(" file (when line (str ":" line)) (when column (str ":" column)) ")")))))
 
 (comment
   (cljsc/build "samples/hello/src"
