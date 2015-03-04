@@ -1553,16 +1553,23 @@ should contain the source for the given namespace name."
           (str goog-ns))))))
 
 (defn aot-cache-core []
-  (let [src (io/file "src" "cljs" "cljs" "core.cljs")
-        dest (io/file "src" "aot_cljs" "cljs" "core.js")]
+  (let [base-path (io/file "src" "cljs" "cljs")
+        src (io/file base-path "core.cljs")
+        dest (io/file base-path "core.aot.js")
+        cache (io/file base-path "core.cljs.cache.aot.edn")]
     (util/mkdirs dest)
     (env/with-compiler-env (env/default-compiler-env)
       (comp/compile-file src dest
         {:source-map true
-         :cache-analysis true
-         :output-dir (str "src" File/separator "aot_cljs")}))))
+         :output-dir (str "src" File/separator "cljs")})
+      (ana/write-analysis-cache 'cljs.core cache))))
 
 (comment
+  (time
+    (do (aot-cache-core) nil))
+
+  (time
+    (do (ana/analyze-file "cljs/core.cljs") nil))
 
   (println (build '[(ns hello.core)
                     (defn ^{:export greet} greet [n] (str "Hola " n))

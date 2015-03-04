@@ -1893,7 +1893,7 @@ argument, which the reader will use in any emitted errors."
    (if-let [core-cache
             (and (util/url? src)
                  (.endsWith (.getPath ^URL src) (str "cljs" File/separator "core.cljs"))
-                 (io/resource "aot_cljs/cljs/core.cljs.cache.edn"))]
+                 (io/resource "cljs/core.cljs.cache.aot.edn"))]
      core-cache
      (let [ns-info (parse-ns src)]
        (io/file (str (util/to-target-file output-dir ns-info "cljs") ".cache.edn"))))))
@@ -1911,9 +1911,17 @@ argument, which the reader will use in any emitted errors."
   ([src output-dir]
     (let [cache (cache-file src output-dir)]
       (requires-analysis? src cache output-dir)))
-  ([src ^File cache output-dir]
-    (if (not (.exists cache))
+  ([src cache output-dir]
+    (cond
+      (and (util/url? cache)
+           (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.edn"))
+      false
+
+      (and (util/file? cache)
+           (not (.exists ^File cache)))
       true
+
+      :else
       (let [out-src (util/to-target-file output-dir (parse-ns src))]
         (if (not (.exists out-src))
           true
@@ -1951,11 +1959,12 @@ argument, which the reader will use in any emitted errors."
          (let [path (if (instance? File res)
                       (.getPath ^File res)
                       (.getPath ^URL res))
-               cache (when (and (:cache-analysis opts) output-dir)
+               cache (when (or (= f "cljs/core.cljs")
+                               (and (:cache-analysis opts) output-dir))
                        (cache-file res output-dir))]
            (when-not (get-in @env/*compiler* [::analyzed-cljs path])
-             (if (or (not (:cache-analysis opts))
-                     (not output-dir)
+             (if (or (not= f "cljs/core.cljs")
+                     (not cache)
                      (requires-analysis? res output-dir))
                (binding [*cljs-ns* 'cljs.user
                          *cljs-file* path
@@ -1972,7 +1981,7 @@ argument, which the reader will use in any emitted errors."
                                   (recur (:name ast) (next forms))
                                   (recur ns (next forms))))
                               ns))]
-                   (when cache
+                   (when (and cache (true? (:cache-analysis opts)))
                      (write-analysis-cache ns cache))
                    (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
                ;; we want want to keep dependency analysis information

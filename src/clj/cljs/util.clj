@@ -33,7 +33,7 @@
        "-SNAPSHOT"))
     "0.0-0000"))
 
-(defn ^String compiled-by-version [^File f]
+(defn ^String compiled-by-version [f]
   (with-open [reader (io/reader f)]
     (let [match (->> reader line-seq first
                      (re-matches #".*ClojureScript (\d+\.\d+-\d+).*$"))]
