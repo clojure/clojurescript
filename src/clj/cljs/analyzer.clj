@@ -204,12 +204,20 @@
                    (Exception. (str "constant type " (type value) " not supported"))))]
     (symbol (str prefix (swap! constant-counter inc)))))
 
-(defn- register-constant! [val]
-  (swap! env/*compiler* update-in [::constant-table]
-    (fn [table]
-      (if (get table val)
-        table
-        (assoc table val (gen-constant-id val))))))
+(defn- register-constant!
+  ([val] (register-constant! nil val))
+  ([env val]
+   (swap! env/*compiler*
+     (fn [cenv]
+       (cond->
+         (-> cenv
+           (update-in [::constant-table]
+             (fn [table]
+               (if (get table val)
+                 table
+                 (assoc table val (gen-constant-id val))))))
+         env (update-in [::namespaces (-> env :ns :name) ::constants]
+               (fnil conj #{}) val))))))
 
 (def default-namespaces '{cljs.core {:name cljs.core}
                           cljs.user {:name cljs.user}})
@@ -469,7 +477,7 @@
 ;; TODO: move this logic out - David
 (defn analyze-keyword
   [env sym]
-  (register-constant! sym)
+  (register-constant! env sym)
   {:op :constant :env env :form sym :tag 'cljs.core/Keyword})
 
 (defn get-tag [e]
@@ -1994,7 +2002,11 @@ argument, which the reader will use in any emitted errors."
                           :load-macros true}))]
                  (when (or *verbose* (:verbose opts))
                    (util/debug-prn "Reading analysis cache for " res))
-                 (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)
-                 (swap! env/*compiler* assoc-in [::namespaces ns]
-                   (edn/read-string (slurp cache))))))))))))
-
+                 (swap! env/*compiler*
+                   (fn [cenv]
+                     (let [cached-ns (edn/read-string (slurp cache))]
+                       (doseq [x (::constants cached-ns)]
+                         (register-constant! x))
+                       (-> cenv
+                         (assoc-in [::analyzed-cljs path] true)
+                         (assoc-in [::namespaces ns] cached-ns))))))))))))))
