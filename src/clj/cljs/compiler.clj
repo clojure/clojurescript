@@ -1072,6 +1072,9 @@
                         (fn [{:keys [recompile visited]}]
                           {:recompile (into recompile (ana/ns-dependents ns))
                            :visited   (conj visited ns)})))
+                    (when (true? (:cache-analysis opts))
+                      (ana/write-analysis-cache ns
+                        (ana/cache-file src (util/output-directory opts))))
                     ret))
                 (do
                   (when-not (contains? (::ana/namespaces @env/*compiler*) ns)

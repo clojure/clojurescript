@@ -1886,6 +1886,8 @@ argument, which the reader will use in any emitted errors."
         ret))))
 
 (defn cache-file
+  "Given a ClojureScript source file returns the _output_ path to the analysis
+   cache file."
   ([src] (cache-file src "out"))
   ([src output-dir]
    (if-let [core-cache
