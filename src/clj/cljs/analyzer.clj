@@ -1893,7 +1893,7 @@ argument, which the reader will use in any emitted errors."
    (if-let [core-cache
             (and (util/url? src)
                  (.endsWith (.getPath ^URL src) (str "cljs" File/separator "core.cljs"))
-                 (io/resource "cljs/aot/core.cljs.cache.edn"))]
+                 (io/resource "aot_cljs/cljs/core.cljs.cache.edn"))]
      core-cache
      (let [ns-info (parse-ns src)]
        (io/file (str (util/to-target-file output-dir ns-info "cljs") ".cache.edn"))))))
