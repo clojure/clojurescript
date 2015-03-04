@@ -1450,7 +1450,8 @@ should contain the source for the given namespace name."
 (defn watch
   "Given a source directory, produce runnable JavaScript. Watch the source
    directory for changes rebuliding when necessary. Takes the same arguments as
-   cljs.closure/build."
+   cljs.closure/build in addition to :watch-fn, a function of no arguments to
+   run after a successful build."
   ([source opts]
     (watch source opts
       (if-not (nil? env/*compiler*)
@@ -1461,11 +1462,16 @@ should contain the source for the given namespace name."
           fs (.getFileSystem path)
           service (.newWatchService fs)]
       (letfn [(buildf []
-                (let [start (System/nanoTime)]
-                  (build source opts compiler-env)
-                  (println "... done. Elapsed"
-                    (/ (unchecked-subtract (System/nanoTime) start) 1e9) "seconds")
-                  (flush)))
+                (try
+                  (let [start (System/nanoTime)]
+                    (build source opts compiler-env)
+                    (println "... done. Elapsed"
+                      (/ (unchecked-subtract (System/nanoTime) start) 1e9) "seconds")
+                    (flush))
+                  (when-let [f (:watch-fn opts)]
+                    (f))
+                  (catch Throwable e
+                    (.printStackTrace e))))
               (watch-all [^Path root]
                 (Files/walkFileTree root
                   (reify
@@ -1501,10 +1507,7 @@ should contain the source for the given namespace name."
                       (seq (.pollEvents key)))
                 (println "Change detected, recompiling...")
                 (flush)
-                (try
-                  (buildf)
-                  (catch Exception e
-                    (.printStackTrace e))))
+                (buildf))
               (recur key))))))))
 
 (comment
@@ -1514,7 +1517,10 @@ should contain the source for the given namespace name."
      :output-dir "samples/hello/out"
      :cache-analysis true
      :source-map true
-     :verbose true})
+     :verbose true
+     :watch-fn
+     (fn []
+       (println "Success!"))})
   )
 
 ;; =============================================================================
