@@ -1491,7 +1491,7 @@ should contain the source for the given namespace name."
                       FileVisitResult/CONTINUE)
                     (visitFileFailed [_ file exc]
                       FileVisitResult/CONTINUE))))]
-        (println "Building...")
+        (println "Building ...")
         (flush)
         (buildf)
         (println "Watching path:" source)
@@ -1505,7 +1505,7 @@ should contain the source for the given namespace name."
                                        (. fstr (endsWith "js")))
                                    (not (. fstr (startsWith ".#"))))))
                       (seq (.pollEvents key)))
-                (println "Change detected, recompiling...")
+                (println "Change detected, recompiling ...")
                 (flush)
                 (buildf))
               (recur key))))))))
