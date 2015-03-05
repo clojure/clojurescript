@@ -19,6 +19,14 @@ REVISION=`git --no-replace-objects describe --match v0.0`
 REVISION=${REVISION:5} # drop the first 5 characters
 REVISION=${REVISION:0:${#REVISION}-9} # drop the last 9 characters
 
+COMP_FILE=`mktemp /tmp/compiler.clj.XXXXXXXXXXX`
+sed -e 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major 0, :minor 0, :qualifier '"$REVISION"'})/' src/clj/cljs/util.clj > $COMP_FILE
+mv $COMP_FILE src/clj/cljs/util.clj
+
+CLJS_FILE=`mktemp /tmp/core.cljs.XXXXXXXXXXX`
+sed -e 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""0.0-$REVISION"\"')/' src/cljs/cljs/core.cljs > $CLJS_FILE
+mv $CLJS_FILE src/cljs/cljs/core.cljs
+
 rm -f src/cljs/cljs/core.aot.js
 rm -f src/cljs/cljs/core.aot.js.map
 rm -f src/cljs/cljs/core.cljs.cache.aot.edn
