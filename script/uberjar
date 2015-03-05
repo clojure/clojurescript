@@ -1,4 +1,37 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# This script must be run within the ClojureScript top-level project
+# directory.
+
+set -ex
+
+# The command `git describe --match v0.0` will return a string like
+#
+# v0.0-856-g329708b
+#
+# where 856 is the number of commits since the v0.0 tag. It will always
+# find the v0.0 tag and will always return the total number of commits (even
+# if the tag is v0.0.1).
+REVISION=`git --no-replace-objects describe --match v0.0`
+
+# Extract the version number from the string. Do this in two steps so
+# it is a little easier to understand.
+REVISION=${REVISION:5} # drop the first 5 characters
+REVISION=${REVISION:0:${#REVISION}-9} # drop the last 9 characters
+
+rm -f src/cljs/cljs/core.aot.js
+rm -f src/cljs/cljs/core.aot.js.map
+rm -f src/cljs/cljs/core.cljs.cache.aot.edn
+
+./script/aot_core
+
+AOT_FILE=`mktemp /tmp/core.aot.js.XXXXXXXXXXX`
+sed -e "s/0.0-0000/0.0-$REVISION/" src/cljs/cljs/core.aot.js > $AOT_FILE
+mv $AOT_FILE src/cljs/cljs/core.aot.js
+
+AOT_CACHE_FILE=`mktemp /tmp/core.cljs.cache.aot.edn.XXXXXXXXXXX`
+sed -e "s/0.0-0000/0.0-$REVISION/" src/cljs/cljs/core.cljs.cache.aot.edn > $AOT_CACHE_FILE
+mv $AOT_CACHE_FILE src/cljs/cljs/core.cljs.cache.aot.edn
 
 lein uberjar clojure.main
 mv target/clojurescript-0.0-SNAPSHOT-standalone.jar target/cljs.jar
