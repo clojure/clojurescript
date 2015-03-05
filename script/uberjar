@@ -1,0 +1,4 @@
+#!/bin/bash
+
+lein uberjar clojure.main
+mv target/clojurescript-0.0-SNAPSHOT-standalone.jar target/cljs.jar
