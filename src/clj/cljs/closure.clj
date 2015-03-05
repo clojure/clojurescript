@@ -483,10 +483,10 @@ should contain the source for the given namespace name."
     (if-let [cljs-res (io/resource relpath)]
       {:relative-path relpath :uri cljs-res}
       (let [relpath (:file (get-in @compiler-env [:js-dependency-index ns-str]))]
-        (if-let [js-res (io/resource relpath)]
+        (if-let [js-res (and relpath (io/resource relpath))]
           {:relative-path relpath :uri js-res}
-         (throw
-           (IllegalArgumentException. (str "Namespace " ns " does not exist"))))))))
+          (throw
+            (IllegalArgumentException. (str "Namespace " ns " does not exist"))))))))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
