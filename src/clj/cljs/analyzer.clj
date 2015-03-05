@@ -1899,17 +1899,18 @@ argument, which the reader will use in any emitted errors."
         ret))))
 
 (defn cache-file
-  "Given a ClojureScript source file returns the _output_ path to the analysis
-   cache file."
+  "Given a ClojureScript source file returns the read/write path to the analysis
+   cache file. Defaults to the read path which is usually also the write path."
   ([src] (cache-file src "out"))
-  ([src output-dir]
+  ([src output-dir] (cache-file src (parse-ns src) output-dir))
+  ([src ns-info output-dir] (cache-file src (parse-ns src) output-dir :read))
+  ([src ns-info output-dir mode]
    (if-let [core-cache
-            (and (util/url? src)
-                 (.endsWith (.getPath ^URL src) (str "cljs" File/separator "core.cljs"))
+            (and (= mode :read)
+                 (= (:ns ns-info) 'cljs.core)
                  (io/resource "cljs/core.cljs.cache.aot.edn"))]
      core-cache
-     (let [ns-info (parse-ns src)]
-       (io/file (str (util/to-target-file output-dir ns-info "cljs") ".cache.edn"))))))
+     (io/file (str (util/to-target-file output-dir ns-info "cljs") ".cache.edn")))))
 
 (defn last-modified [src]
   (cond
@@ -1969,14 +1970,15 @@ argument, which the reader will use in any emitted errors."
                  :else (io/resource f))]
        (assert res (str "Can't find " f " in classpath"))
        (env/ensure
-         (let [path (if (instance? File res)
+         (let [ns-info (parse-ns res)
+               path (if (instance? File res)
                       (.getPath ^File res)
                       (.getPath ^URL res))
-               cache (when (or (= f "cljs/core.cljs")
+               cache (when (or (= (:ns ns-info) 'cljs.core)
                                (and (:cache-analysis opts) output-dir))
-                       (cache-file res output-dir))]
+                       (cache-file res ns-info output-dir))]
            (when-not (get-in @env/*compiler* [::analyzed-cljs path])
-             (if (or (not= f "cljs/core.cljs")
+             (if (or (not= (:ns ns-info) 'cljs.core)
                      (not cache)
                      (requires-analysis? res output-dir))
                (binding [*cljs-ns* 'cljs.user

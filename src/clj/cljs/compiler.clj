@@ -1087,7 +1087,7 @@
                            :visited   (conj visited ns)})))
                     (when (true? (:cache-analysis opts))
                       (ana/write-analysis-cache ns
-                        (ana/cache-file src (util/output-directory opts))))
+                        (ana/cache-file src ns-info (util/output-directory opts) :write)))
                     ret))
                 (do
                   (when-not (contains? (::ana/namespaces @env/*compiler*) ns)
