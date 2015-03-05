@@ -15,7 +15,7 @@
             [cljs.repl :as repl]
             [cljs.compiler :as comp]
             [cljs.closure :as closure])
-  (:import [javax.script ScriptEngine ScriptEngineManager ScriptException]
+  (:import [javax.script ScriptEngine ScriptEngineManager ScriptException ScriptEngineFactory]
            [jdk.nashorn.api.scripting NashornException]))
 
 ;; Nashorn Clojurescript repl binding.
@@ -63,14 +63,21 @@
 
 ;; Implementation
 
-(defn create-engine []
-  (if-let [engine (.getEngineByName (ScriptEngineManager.) "nashorn")]
-    (let [context (.getContext engine)]
-      (.setWriter context *out*)
-      (.setErrorWriter context *err*)
-      engine)
-    (throw (IllegalArgumentException.
-            "Cannot find the Nashorn script engine, use a JDK version 8 or higher."))))
+(defn create-engine
+  ([] (create-engine nil))
+  ([{:keys [code-cache] :or {code-cache true}}]
+   (let [args (when code-cache ["-pcc"])
+         factories (.getEngineFactories (ScriptEngineManager.))
+         factory (get (zipmap (map #(.getEngineName %) factories) factories) "Oracle Nashorn")]
+     (if-let [engine (if-not (empty? args)
+                       (.getScriptEngine ^ScriptEngineFactory factory (into-array args))
+                       (.getScriptEngine ^ScriptEngineFactory factory))]
+       (let [context (.getContext engine)]
+         (.setWriter context *out*)
+         (.setErrorWriter context *err*)
+         engine)
+       (throw (IllegalArgumentException.
+                "Cannot find the Nashorn script engine, use a JDK version 8 or higher."))))))
 
 (defn eval-str [^ScriptEngine engine ^String s]
   (.eval engine s))
@@ -197,6 +204,12 @@
     (when-let [frames (read-string frames-str)]
       (vec (map #(update-in %1 [:file] (fn [s] (strip-file-name s output-dir))) frames)))))
 
+(defn repl-env* [{:keys [debug] :as opts}]
+  (let [engine (create-engine opts)]
+    (merge
+      (NashornEnv. engine debug)
+      opts)))
+
 (defn repl-env 
   "Create a Nashorn repl-env for use with the repl/repl* method in Clojurescript and as the
    :repl-env argument to piggieback/cljs-repl. Besides the usual repl options (e.g. :source-map),
@@ -205,8 +218,5 @@
    :output-dir  the directory of the compiled files, e.g. \"resources/public/my-app\" (mandatory).
    :output-to   load this file initially into Nashorn, relative to output-dir.
                 Use a minimal bootstrapped cljs.core environment if not specified."
-  [& {:keys [debug] :as opts}]
-  (let [engine (create-engine)]
-    (merge
-      (NashornEnv. engine debug)
-      opts)))
+  [& {:as opts}]
+  (repl-env* opts))
