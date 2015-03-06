@@ -211,12 +211,7 @@
       opts)))
 
 (defn repl-env 
-  "Create a Nashorn repl-env for use with the repl/repl* method in Clojurescript and as the
-   :repl-env argument to piggieback/cljs-repl. Besides the usual repl options (e.g. :source-map),
-   opts has the following extra parameters:
-   
-   :output-dir  the directory of the compiled files, e.g. \"resources/public/my-app\" (mandatory).
-   :output-to   load this file initially into Nashorn, relative to output-dir.
-                Use a minimal bootstrapped cljs.core environment if not specified."
+  "Create a Nashorn repl-env for use with the repl/repl* method in Clojurescript."
   [& {:as opts}]
+  (assert (even? (count opts)) "Arguments must be interleaved key value pairs")
   (repl-env* opts))

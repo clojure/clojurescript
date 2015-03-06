@@ -253,6 +253,46 @@
                (cljsc/js-dependencies opts cljs))]
     (disj (set (concat cljs goog)) nil)))
 
+;; NOTE: REPL evaluation environment designers do not replicate the behavior
+;; of the browser REPL. The design is outdated, refer to the Node.js, Rhino or
+;; Nashorn REPLs.
+
+(defn repl-env* [opts]
+  (let [ups-deps (cljsc/get-upstream-deps)
+        opts (assoc opts
+               :ups-libs (:libs ups-deps)
+               :ups-foreign-libs (:foreign-libs ups-deps))
+        compiler-env (cljs.env/default-compiler-env opts)
+        opts (merge (BrowserEnv.)
+               {:port           9000
+                :optimizations  :simple
+                :working-dir    (or (:output-dir opts)
+                                  (->> [".repl" (util/clojurescript-version)]
+                                    (remove empty?) (string/join "-")))
+                :serve-static   true
+                :static-dir     (cond-> ["." "out/"]
+                                  (:output-dir opts) (conj (:output-dir opts)))
+                :preloaded-libs []
+                :src            "src/"
+                ::env/compiler  compiler-env
+                :source-map     false}
+               opts)]
+    (cljs.env/with-compiler-env compiler-env
+      (reset! preloaded-libs
+        (set (concat
+               (always-preload opts)
+               (map str (:preloaded-libs opts)))))
+      (reset! loaded-libs @preloaded-libs)
+      (println "Compiling client js ...")
+      (swap! browser-state
+        (fn [old]
+          (assoc old :client-js
+                     (create-client-js-file
+                       opts
+                       (io/file (:working-dir opts) "client.js")))))
+      (println "Waiting for browser to connect ...")
+      opts)))
+
 (defn repl-env
   "Create a browser-connected REPL environment.
 
@@ -275,40 +315,8 @@
                   support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
-  (let [ups-deps (cljsc/get-upstream-deps (java.lang.ClassLoader/getSystemClassLoader))
-        opts (assoc opts
-               :ups-libs (:libs ups-deps)
-               :ups-foreign-libs (:foreign-libs ups-deps))
-        compiler-env (cljs.env/default-compiler-env opts)
-        opts (merge (BrowserEnv.)
-               {:port           9000
-                :optimizations  :simple
-                :working-dir    (or (:output-dir opts)
-                                    (->> [".repl" (util/clojurescript-version)]
-                                      (remove empty?) (string/join "-")))
-                :serve-static   true
-                :static-dir     (cond-> ["." "out/"]
-                                  (:output-dir opts) (conj (:output-dir opts)))
-                :preloaded-libs []
-                :src            "src/"
-                ::env/compiler  compiler-env
-                :source-map     false}
-               opts)]
-    (cljs.env/with-compiler-env compiler-env
-      (reset! preloaded-libs
-        (set (concat
-               (always-preload opts)
-               (map str (:preloaded-libs opts)))))
-      (reset! loaded-libs @preloaded-libs)
-      (println "Compiling client js ...")
-      (swap! browser-state
-        (fn [old]
-          (assoc old :client-js
-            (create-client-js-file
-              opts
-              (io/file (:working-dir opts) "client.js")))))
-      (println "Waiting for browser to connect ...")
-      opts)))
+  (assert (even? (count opts)) "Arguments must be interleaved key value pairs")
+  (repl-env* opts))
 
 (comment
 

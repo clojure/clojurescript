@@ -198,10 +198,8 @@
     (load-javascript this ns url))
   (-tear-down [_] (Context/exit)))
 
-(defn repl-env
-  "Returns a fresh JS environment, suitable for passing to repl.
-  Hang on to return for use across repl calls."
-  []
+(defn repl-env*
+  [opts]
   (let [cx (Context/enter)]
     ;; just avoid the 64K method limit
     ;; Rhino is slow even with optimizations enabled
@@ -209,6 +207,12 @@
     (merge (RhinoEnv.)
       {:cx cx
        :scope (.initStandardObjects cx)})))
+
+(defn repl-env
+  "Returns a fresh JS environment, suitable for passing to repl.
+  Hang on to return for use across repl calls."
+  [& {:as opts}]
+  (repl-env* opts))
 
 (comment
 
