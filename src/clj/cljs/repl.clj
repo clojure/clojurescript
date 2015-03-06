@@ -901,7 +901,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
       `(cljs.repl/print-doc
          (quote ~(update-in
                    (select-keys (ana-api/resolve &env name)
-                     [:ns :name :doc :forms :arglists])
+                     [:ns :name :doc :forms :arglists :macro :url])
                    [:name] clojure.core/name))))))
 
 (defmacro find-doc

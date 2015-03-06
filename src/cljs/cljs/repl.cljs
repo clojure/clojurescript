@@ -15,7 +15,9 @@
   (cond
     (:forms m) (doseq [f (:forms m)]
                  (println "  " f))
-    (:arglists m) (prn (second (:arglists m))))
+    (:arglists m) (if (:macro m)
+                    (prn (:arglists m))
+                    (prn (second (:arglists m)))))
   (if (:special-form m)
     (do
       (println "Special Form")
