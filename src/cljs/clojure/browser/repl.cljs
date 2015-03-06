@@ -113,24 +113,20 @@
       (fn [iframe]
         (set! (.-display (.-style iframe))
           "none")))
-    ;; Monkey-patch goog.require if running under optimizations :none - David
+    ;; Monkey-patch goog.provide if running under optimizations :none - David
     (when-not js/COMPILED
-      (set! *loaded-libs*
-        (let [gntp (.. js/goog -dependencies_ -nameToPath)]
-          (into #{}
-            (filter
-              (fn [name]
-                (aget (.. js/goog -dependencies_ -visited) (aget gntp name)))
-              (js-keys gntp)))))
-      (set! (.-isProvided_ js/goog) (fn [_] false))
-      (set! (.-require js/goog)
-        (fn [name reload]
-          (when (or (not (contains? *loaded-libs* name)) reload)
-            (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
-            (.appendChild js/document.body
-              (let [script (.createElement js/document "script")]
-                (set! (.-type script) "text/javascript")
-                (set! (.-src script)
-                  (str "goog/"
-                    (aget (.. js/goog -dependencies_ -nameToPath) name)))
-                script))))))))
+      (set! (.-provide__ js/goog) js/goog.provide)
+      (set! (.-isProvided___ js/goog) js/goog.isProvided_)
+      (set! (.-provide js/goog)
+        (fn [name]
+          (set! (.-isProvided_ js/goog) (fn [name] false))
+          (.provide__ js/goog name)
+          (set! (.-isProvided_ js/goog) js/goog.isProvided___)))
+      (set! (.-writeScriptTag_ js/goog)
+        (fn [src opt_sourceText]
+          (let [doc js/goog.global.document]
+            (if (nil? opt_sourceText)
+              (.write doc
+                (str "<script type=\"text/javascript\" src=\"" src "\"></script>"))
+              (.write doc
+                (str "<script type=\"text/javascript\">" opt_sourceText "</script>")))))))))
