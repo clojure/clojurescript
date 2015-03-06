@@ -20,7 +20,7 @@
             [clojure.edn :as edn])
   (:import [java.io File Reader PushbackReader]
            [java.net URL]
-           [clojure.lang Namespace]
+           [clojure.lang Namespace Var]
            [cljs.tagged_literals JSValue]))
 
 (set! *warn-on-reflection* true)
@@ -265,8 +265,18 @@
 (defn intern-macros
   ([ns] (intern-macros ns false))
   ([ns reload]
-    (when (true? reload)
-      (swap! env/*compiler* update-in [::namespaces ns] dissoc :macros))))
+    (when (or (nil? (get-in @env/*compiler* [::namespaces ns :macros]))
+              reload)
+      (swap! env/*compiler* assoc-in [::namespaces ns :macros]
+        (->> (ns-interns ns)
+             (filter (fn [[_ ^Var v]] (.isMacro v)))
+             (map (fn [[k v]]
+                    [k (as-> (meta v) vm
+                         (let [ns (.getName ^Namespace (:ns vm))]
+                           (assoc vm
+                             :ns ns
+                             :name (symbol (str ns) (str k)))))]))
+             (into {}))))))
 
 (defn load-core []
   (when (not @-cljs-macros-loaded)
