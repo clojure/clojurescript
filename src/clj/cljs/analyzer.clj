@@ -20,6 +20,7 @@
             [clojure.edn :as edn])
   (:import [java.io File Reader PushbackReader]
            [java.net URL]
+           [clojure.lang Namespace]
            [cljs.tagged_literals JSValue]))
 
 (set! *warn-on-reflection* true)
@@ -374,10 +375,15 @@
              (nil? (io/resource (util/ns->relpath ns-sym))))
     (warning :undeclared-ns env {:ns-sym ns-sym :path (util/ns->relpath ns-sym)})))
 
+(declare get-expander)
+
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
   [env sym]
-  (and (get-in @env/*compiler* [::namespaces 'cljs.core :defs sym]) 
+  (and (or (get-in @env/*compiler* [::namespaces 'cljs.core :defs sym])
+           (when-let [mac (get-expander sym env)]
+             (let [^Namespace ns (-> mac meta :ns)]
+               (= (.getName ns) 'cljs.core))))
        (not (contains? (-> env :ns :excludes) sym))))
 
 (defn resolve-var
