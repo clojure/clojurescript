@@ -89,8 +89,10 @@
   (str "Use of undeclared Var " (:prefix info) "/" (:suffix info)))
 
 (defmethod error-message :undeclared-ns
-  [warning-type info]
-  (str "No such namespace: " (:ns-sym info)))
+  [warning-type {:keys [ns-sym path] :as info}]
+  (str "No such namespace: " ns-sym
+    (when path
+      (str ", could not locate " path))))
 
 (defmethod error-message :dynamic
   [warning-type info]
@@ -369,7 +371,7 @@
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
              (nil? (io/resource (util/ns->relpath ns-sym))))
-    (warning :undeclared-ns env {:ns-sym ns-sym})))
+    (warning :undeclared-ns env {:ns-sym ns-sym :path (util/ns->relpath ns-sym)})))
 
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
@@ -1132,7 +1134,7 @@
                (analyze-file src opts)
                (throw
                  (error env
-                   (error-message :undeclared-ns {:ns-sym dep}))))))))))
+                   (error-message :undeclared-ns {:ns-sym dep :path relpath}))))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
