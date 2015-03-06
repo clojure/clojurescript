@@ -41,14 +41,18 @@
   clojure.core/ns-interns but returns var analysis maps not vars."
   [ns]
   {:pre [(symbol? ns)]}
-  (get-in @env/*compiler* [::ana/namespaces ns :defs]))
+  (merge
+    (get-in @env/*compiler* [::ana/namespaces ns :macros])
+    (get-in @env/*compiler* [::ana/namespaces ns :defs])))
 
 (defn ns-publics
   "Given a namespace return all the public var analysis maps. Analagous to
   clojure.core/ns-publics but returns var analysis maps not vars."
   [ns]
   {:pre [(symbol? ns)]}
-  (->> (get-in @env/*compiler* [::ana/namespaces ns :defs])
+  (->> (merge
+         (get-in @env/*compiler* [::ana/namespaces ns :macros])
+         (get-in @env/*compiler* [::ana/namespaces ns :defs]))
        (remove (fn [[k v]] (:private v)))
        (into {})))
 
