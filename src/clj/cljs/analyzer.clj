@@ -205,7 +205,7 @@
                  :else
                  (throw
                    (Exception. (str "constant type " (type value) " not supported"))))]
-    (symbol (str prefix (swap! constant-counter inc)))))
+    (symbol (str prefix (string/replace (munge value) "." "$")))))
 
 (defn- register-constant!
   ([val] (register-constant! nil val))
