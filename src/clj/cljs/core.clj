@@ -290,7 +290,9 @@
 (defmacro js-in [key obj]
   (core/list 'js* "~{} in ~{}" key obj))
 
-(defmacro js-debugger []
+(defmacro js-debugger
+  "Emit JavaScript \"debugger;\" statement."
+  []
   (core/list 'js* "debugger;"))
 
 (defmacro true? [x]
@@ -308,12 +310,17 @@
   (bool-expr (core/list 'js* "typeof ~{} === 'string'" x)))
 
 ;; TODO: x must be a symbol, not an arbitrary expression
-(defmacro exists? [x]
+(defmacro exists?
+  "Return true if argument exists, analogous to usage of typeof operator
+   in JavaScript."
+  [x]
   (bool-expr
     (core/list 'js* "typeof ~{} !== 'undefined'"
       (vary-meta x assoc :cljs.analyzer/no-resolve true))))
 
-(defmacro undefined? [x]
+(defmacro undefined?
+  "Return true if argument is identical to the JavaScript undefined value."
+  [x]
   (bool-expr (core/list 'js* "(void 0 === ~{})" x)))
 
 (defmacro identical? [a b]
@@ -610,7 +617,45 @@
       'js/Number "number"
       'js/Function "function"})
 
-(defmacro reify [& impls]
+(defmacro reify
+  "reify is a macro with the following structure:
+
+ (reify options* specs*)
+
+  Currently there are no options.
+
+  Each spec consists of the protocol name followed by zero
+  or more method bodies:
+
+  protocol
+  (methodName [args+] body)*
+
+  Methods should be supplied for all methods of the desired
+  protocol(s). You can also define overrides for Object methods. Note that
+  the first parameter must be supplied to correspond to the target object
+  ('this' in JavaScript parlance). Note also that recur calls
+  to the method head should *not* pass the target object, it will be supplied
+  automatically and can not be substituted.
+
+  recur works to method heads The method bodies of reify are lexical
+  closures, and can refer to the surrounding local scope:
+
+  (str (let [f \"foo\"]
+       (reify Object
+         (toString [this] f))))
+  == \"foo\"
+
+  (seq (let [f \"foo\"]
+       (reify ISeqable
+         (-seq [this] (-seq f)))))
+  == (\\f \\o \\o))
+
+  reify always implements IMeta and IWithMeta and transfers meta
+  data of the form to the created object.
+
+  (meta ^{:k :v} (reify Object (toString [this] \"foo\")))
+  == {:k :v}"
+  [& impls]
   (let [t        (with-meta (gensym "t") {:anonymous true})
         meta-sym (gensym "meta")
         this-sym (gensym "_")
@@ -628,13 +673,18 @@
            ~@impls))
        (new ~t ~@locals ~(ana/elide-reader-meta (meta &form))))))
 
-(defmacro specify! [expr & impls]
+(defmacro specify!
+  "Identical to reify but mutates its first argument."
+  [expr & impls]
   (let [x (with-meta (gensym "x") {:extend :instance})]
     `(let [~x ~expr]
        (extend-type ~x ~@impls)
        ~x)))
 
-(defmacro specify [expr & impls]
+(defmacro specify
+  "Identical to specify but does not mutate its first argument. The first
+  argument must be an ICloneable instance."
+  [expr & impls]
   `(cljs.core/specify! (cljs.core/clone ~expr)
      ~@impls))
 
@@ -813,7 +863,18 @@
           (validate-impl-sigs env proto method))
         (recur (conj protos proto) impls)))))
 
-(defmacro extend-type [type-sym & impls]
+(defmacro extend-type
+  "Extend a type to a series of protocols. Useful when you are
+   supplying the definitions explicitly inline. Propagates the
+   type as a type hint on the first argument of all fns.
+
+  (extend-type MyType
+    ICounted
+    (-count [c] ...)
+    Foo
+    (bar [x y] ...)
+    (baz ([x] ...) ([x y & zs] ...))"
+  [type-sym & impls]
   (let [env &env
         _ (validate-impls env impls)
         resolve (partial resolve-var env)
@@ -886,7 +947,56 @@
        [~@fields]
        (new ~rname ~@field-values))))
 
-(defmacro deftype [t fields & impls]
+(defmacro deftype
+  "(deftype name [fields*]  options* specs*)
+
+  Currently there are no options.
+
+  Each spec consists of a protocol or interface name followed by zero
+  or more method bodies:
+
+  protocol-or-Object
+  (methodName [args*] body)*
+
+  The type will have the (by default, immutable) fields named by
+  fields, which can have type hints. Protocols and methods
+  are optional. The only methods that can be supplied are those
+  declared in the protocols/interfaces.  Note that method bodies are
+  not closures, the local environment includes only the named fields,
+  and those fields can be accessed directly. Fields can be qualified
+  with the metadata :mutable true at which point (set! afield aval) will be
+  supported in method bodies. Note well that mutable fields are extremely
+  difficult to use correctly, and are present only to facilitate the building
+  of higherlevel constructs, such as ClojureScript's reference types, in
+  ClojureScript itself. They are for experts only - if the semantics and
+  implications of :mutable are not immediately apparent to you, you should not
+  be using them.
+
+  Method definitions take the form:
+
+  (methodname [args*] body)
+
+  The argument and return types can be hinted on the arg and
+  methodname symbols. If not supplied, they will be inferred, so type
+  hints should be reserved for disambiguation.
+
+  Methods should be supplied for all methods of the desired
+  protocol(s). You can also define overrides for methods of Object. Note that
+  a parameter must be supplied to correspond to the target object
+  ('this' in JavaScript parlance). Note also that recur calls to the method
+  head should *not* pass the target object, it will be supplied
+  automatically and can not be substituted.
+
+  In the method bodies, the (unqualified) name can be used to name the
+  class (for calls to new, instance? etc).
+
+  One constructor will be defined, taking the designated fields.  Note
+  that the field names __meta and __extmap are currently reserved and
+  should not be used when defining your own types.
+
+  Given (deftype TypeName ...), a factory function called ->TypeName
+  will be defined, taking positional parameters for the fields"
+  [t fields & impls]
   (let [env &env
         r (:name (cljs.analyzer/resolve-var (dissoc env :locals) t))
         [fpps pmasks] (prepare-protocol-masks env impls)
@@ -992,7 +1102,60 @@
     `(defn ~fn-name [~ms]
        (new ~rname ~@getters nil (dissoc ~ms ~@ks) nil))))
 
-(defmacro defrecord [rsym fields & impls]
+(defmacro defrecord
+  "(defrecord name [fields*]  options* specs*)
+
+  Currently there are no options.
+
+  Each spec consists of a protocol or interface name followed by zero
+  or more method bodies:
+
+  protocol-or-Object
+  (methodName [args*] body)*
+
+  The record will have the (immutable) fields named by
+  fields, which can have type hints. Protocols and methods
+  are optional. The only methods that can be supplied are those
+  declared in the protocols.  Note that method bodies are
+  not closures, the local environment includes only the named fields,
+  and those fields can be accessed directly.
+
+  Method definitions take the form:
+
+  (methodname [args*] body)
+
+  The argument and return types can be hinted on the arg and
+  methodname symbols. If not supplied, they will be inferred, so type
+  hints should be reserved for disambiguation.
+
+  Methods should be supplied for all methods of the desired
+  protocol(s). You can also define overrides for
+  methods of Object. Note that a parameter must be supplied to
+  correspond to the target object ('this' in JavaScript parlance). Note also
+  that recur calls to the method head should *not* pass the target object, it
+  will be supplied automatically and can not be substituted.
+
+  In the method bodies, the (unqualified) name can be used to name the
+  class (for calls to new, instance? etc).
+
+  The type will have implementations of several ClojureScript
+  protocol generated automatically: IMeta/IWithMeta (metadata support) and
+  IMap, etc.
+
+  In addition, defrecord will define type-and-value-based =,
+  and will define ClojureScript IHash and IEquiv.
+
+  Two constructors will be defined, one taking the designated fields
+  followed by a metadata map (nil for none) and an extension field
+  map (nil for none), and one taking only the fields (using nil for
+  meta and extension fields). Note that the field names __meta
+  and __extmap are currently reserved and should not be used when
+  defining your own records.
+
+  Given (defrecord TypeName ...), two factory functions will be
+  defined: ->TypeName, taking positional parameters for the fields,
+  and map->TypeName, taking a map of keywords to field values."
+  [rsym fields & impls]
   (let [rsym (vary-meta rsym assoc :internal-ctor true)
         r    (vary-meta
                (:name (cljs.analyzer/resolve-var (dissoc &env :locals) rsym))
@@ -1006,7 +1169,47 @@
        ~(build-map-factory rsym r fields)
        ~r)))
 
-(defmacro defprotocol [psym & doc+methods]
+(defmacro defprotocol
+  "A protocol is a named set of named methods and their signatures:
+
+  (defprotocol AProtocolName
+    ;optional doc string
+    \"A doc string for AProtocol abstraction\"
+
+  ;method signatures
+    (bar [this a b] \"bar docs\")
+    (baz [this a] [this a b] [this a b c] \"baz docs\"))
+
+  No implementations are provided. Docs can be specified for the
+  protocol overall and for each method. The above yields a set of
+  polymorphic functions and a protocol object. All are
+  namespace-qualified by the ns enclosing the definition The resulting
+  functions dispatch on the type of their first argument, which is
+  required and corresponds to the implicit target object ('this' in
+  JavaScript parlance). defprotocol is dynamic, has no special compile-time
+  effect, and defines no new types.
+
+  (defprotocol P
+    (foo [this])
+    (bar-me [this] [this y]))
+
+  (deftype Foo [a b c]
+    P
+    (foo [this] a)
+    (bar-me [this] b)
+    (bar-me [this y] (+ c y)))
+
+  (bar-me (Foo. 1 2 3) 42)
+  => 45
+
+  (foo
+    (let [x 42]
+      (reify P
+        (foo [this] 17)
+        (bar-me [this] x)
+        (bar-me [this y] x))))
+  => 17"
+  [psym & doc+methods]
   (let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
         psym (vary-meta psym assoc :protocol-symbol true)
         ns-name (-> &env :ns :name)
@@ -1091,7 +1294,12 @@
                false)))
          (cljs.core/native-satisfies? ~psym ~xsym)))))
 
-(defmacro lazy-seq [& body]
+(defmacro lazy-seq
+  "Takes a body of expressions that returns an ISeq or nil, and yields
+  a ISeqable object that will invoke the body only the first time seq
+  is called, and will cache the result and return it on all subsequent
+  seq calls."
+  [& body]
   `(new cljs.core/LazySeq nil (fn [] ~@body) nil nil))
 
 (defmacro delay [& body]
@@ -1189,7 +1397,30 @@
               cljs.analyzer/*cljs-file*)))))
     (assoc m test expr)))
 
-(defmacro case [e & clauses]
+(defmacro case
+  "Takes an expression, and a set of clauses.
+
+  Each clause can take the form of either:
+
+  test-constant result-expr
+
+  (test-constant1 ... test-constantN)  result-expr
+
+  The test-constants are not evaluated. They must be compile-time
+  literals, and need not be quoted.  If the expression is equal to a
+  test-constant, the corresponding result-expr is returned. A single
+  default expression can follow the clauses, and its value will be
+  returned if no clause matches. If no default expression is provided
+  and no clause matches, an Error is thrown.
+
+  Unlike cond and condp, case does a constant-time dispatch, the
+  clauses are not considered sequentially.  All manner of constant
+  expressions are acceptable in case, including numbers, strings,
+  symbols, keywords, and (ClojureScript) composites thereof. Note that since
+  lists are used to group multiple constants that map to the same
+  expression, a vector can be used to match a list if needed. The
+  test-constants need not be all of the same type."
+  [e & clauses]
   (core/let [default (if (odd? (count clauses))
                        (last clauses)
                        `(throw
