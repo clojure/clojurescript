@@ -494,7 +494,7 @@
         (get-in namespaces [full-ns :macros (symbol (name sym))]))
 
       (get-in namespaces [ns :use-macros sym])
-      (let [full-ns (get-in namespaces [ns :uses-macros sym])]
+      (let [full-ns (get-in namespaces [ns :use-macros sym])]
         (get-in namespaces [full-ns :macros sym]))
 
       :else
