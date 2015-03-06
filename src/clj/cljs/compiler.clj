@@ -1076,7 +1076,8 @@
               (if (requires-compilation? src-file dest-file opts)
                 (do
                   (util/mkdirs dest-file)
-                  (when (contains? (::ana/namespaces @env/*compiler*) ns)
+                  (when (and (contains? (::ana/namespaces @env/*compiler*) ns)
+                             (not= ns 'cljs.core))
                     (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                   (let [ret (compile-file* src-file dest-file opts)]
                     (when *dependents*
@@ -1084,9 +1085,6 @@
                         (fn [{:keys [recompile visited]}]
                           {:recompile (into recompile (ana/ns-dependents ns))
                            :visited   (conj visited ns)})))
-                    (when (true? (:cache-analysis opts))
-                      (ana/write-analysis-cache ns
-                        (ana/cache-file src ns-info (util/output-directory opts) :write)))
                     ret))
                 (do
                   (when-not (contains? (::ana/namespaces @env/*compiler*) ns)
