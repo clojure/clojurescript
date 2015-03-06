@@ -849,6 +849,7 @@
                                          (get-in env [:js-globals name]))}}
                      (when-let [tag (-> name meta :tag)]
                        {:ret-tag tag})))
+         env (update-in env [:fn-scope] (fnil conj []) name-var)
          locals (if (and locals name) (assoc locals name name-var) locals)
          type (-> form meta ::type)
          protocol-impl (-> form meta ::protocol-impl)
@@ -884,7 +885,8 @@
          (warning :variadic-max-arity env {:name name-var}))
        (when (not= (distinct param-counts) param-counts)
          (warning :overload-arity env {:name name-var})))
-     {:env env :op :fn :form form :name name-var :methods methods :variadic variadic
+     {:env env
+      :op :fn :form form :name name-var :methods methods :variadic variadic
       :tag 'function
       :recur-frames *recur-frames* :loop-lets *loop-lets*
       :jsdoc [(when variadic "@param {...*} var_args")]
