@@ -189,6 +189,17 @@
                      (Integer/parseInt line))
              :column 0}))
         (string/split frames-str #"\n"))))
+  repl/IGetError
+  (-get-error [this e env opts]
+    (let [{:keys [scope]} this
+          ex (-> scope
+               (ScriptableObject/getProperty "cljs")
+               (ScriptableObject/getProperty "core")
+               (ScriptableObject/getProperty "_STAR_e")
+               .unwrap)]
+      {:status :exception
+       :value (.toString ex)
+       :stacktrace (stacktrace ex)}))
   repl/IJavaScriptEnv
   (-setup [this opts]
     (rhino-setup this opts))
