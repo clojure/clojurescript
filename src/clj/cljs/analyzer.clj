@@ -384,6 +384,10 @@
   (let [sym (symbol name)]
     (get (:requires (:ns env)) sym sym)))
 
+(defn resolve-macro-ns-alias [env name]
+  (let [sym (symbol name)]
+    (get (:require-macros (:ns env)) sym sym)))
+
 (defn confirm-ns [env ns-sym]
   (when (and (nil? (get '#{cljs.core goog Math goog.string} ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym))
@@ -478,6 +482,27 @@
           ev (resolve-existing-var env name)]
       (when (and ev (not (-> ev :dynamic)))
         (warning :dynamic env {:ev ev :name (:name ev)})))))
+
+(defn resolve-macro-var [env sym]
+  (let [ns (-> env :ns :name)
+        namespaces (get @env/*compiler* ::namespaces)]
+    (cond
+      (namespace sym)
+      (let [ns (namespace sym)
+            ns (if (= "clojure.core" ns) "cljs.core" ns)
+            full-ns (resolve-macro-ns-alias env ns)]
+        (get-in namespaces [full-ns :macros (symbol (name sym))]))
+
+      (get-in namespaces [ns :use-macros sym])
+      (let [full-ns (get-in namespaces [ns :uses-macros sym])]
+        (get-in namespaces [full-ns :macros sym]))
+
+      :else
+      (let [ns (cond
+                 (get-in namespaces [ns :macros sym]) ns
+                 (core-name? env sym) 'cljs.core)]
+        (when ns
+          (get-in namespaces [ns :macros sym]))))))
 
 (defn ns-dependents
   ([ns]
