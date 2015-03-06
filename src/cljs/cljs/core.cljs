@@ -95,10 +95,14 @@
   [x]
   (coercive-= x nil))
 
-(defn ^boolean array? [x]
+(defn ^boolean array?
+  "Returns true if x is a JavaScript array."
+  [x]
   (cljs.core/array? x))
 
-(defn ^boolean number? [n]
+(defn ^boolean number?
+  "Returns true if x is a JavaScript number."
+  [n]
   (cljs.core/number? n))
 
 (defn ^boolean not
@@ -109,12 +113,16 @@
   "Returns true if x is not nil, false otherwise."
   [x] (not (nil? x)))
 
-(defn ^boolean object? [x]
+(defn ^boolean object?
+  "Returns true if x's constructor is Object"
+  [x]
   (if-not (nil? x)
     (identical? (.-constructor x) js/Object)
     false))
 
-(defn ^boolean string? [x]
+(defn ^boolean string?
+  "Returns true if x is a JavaScript string."
+  [x]
   (goog/isString x))
 
 (set! *unchecked-if* true)
@@ -138,7 +146,9 @@
   argv as arguments"}
   *main-cli-fn* nil)
 
-(defn type [x]
+(defn type
+  "Return x's constructor."
+  [x]
   (when-not (nil? x)
     (.-constructor x)))
 
@@ -169,6 +179,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn ^array make-array
+  "Construct a JavaScript array of specified size. Accepts ignored type
+  argument for compatibility with Clojure."
   ([size]
      (js/Array. size))
   ([type size]
@@ -219,6 +231,8 @@
 (declare reduce)
 
 (defn ^array into-array
+  "Returns an array with components set to the values in aseq. Optional type
+  argument accepted for compatibility with Clojure."
   ([aseq]
      (into-array nil aseq))
   ([type aseq]
@@ -544,7 +558,10 @@
       h
       (add-to-string-hash-cache k))))
 
-(defn hash [o]
+(defn hash
+  "Returns the hash code of its argument. Note this is the hash code
+   consistent with =."
+  [o]
   (cond
     (implements? IHash o)
     (-hash ^not-native o)
@@ -574,10 +591,15 @@
       (bit-shift-left seed 6)
       (bit-shift-right seed 2))))
 
-(defn ^boolean instance? [t o]
+(defn ^boolean instance?
+  "Evaluates x and tests if it is an instance of the type
+  c. Returns true or false"
+  [t o]
   (cljs.core/instance? t o))
 
-(defn ^boolean symbol? [x]
+(defn ^boolean symbol?
+  "Return true if x is a Symbol"
+  [x]
   (instance? Symbol x))
 
 (defn- hash-symbol [sym]
@@ -698,13 +720,19 @@
 
 (declare array-seq prim-seq IndexedSeq)
 
-(defn iterable? [x]
+(defn iterable?
+  "Return true if x implements IIterable protocol."
+  [x]
   (satisfies? IIterable x))
 
-(defn clone [value]
+(defn clone
+  "Clone the supplied value which must implement ICloneable."
+  [value]
   (-clone value))
 
-(defn cloneable? [value]
+(defn cloneable?
+  "Return true if x implements ICloneable protocol."
+  [value]
   (satisfies? ICloneable value))
 
 (defn ^seq seq
@@ -791,7 +819,9 @@
         #js {:value x :done false})
       #js {:value nil :done true})))
 
-(defn es6-iterator [coll]
+(defn es6-iterator
+  "EXPERIMENTAL: Return a ES2015 compatible iterator for coll."
+  [coll]
   (ES6Iterator. (seq coll)))
 
 (declare es6-iterator-seq)
@@ -806,7 +836,9 @@
       (set! _rest (es6-iterator-seq iter)))
     _rest))
 
-(defn es6-iterator-seq [iter]
+(defn es6-iterator-seq
+  "EXPERIMENTAL: Given an ES2015 compatible iterator return a seq."
+  [iter]
   (let [v (.next iter)]
     (if (.-done v)
       ()
@@ -922,6 +954,10 @@
 ;; generic to all refs
 ;; (but currently hard-coded to atom!)
 (defn deref
+  "Also reader macro: @var/@atom/@delay. Returns the
+   most-recently-committed value of ref. When applied to a var
+   or atom, returns its current state. When applied to a delay, forces
+   it if not already forced. See also - realized?."
   [o]
   (-deref o))
 
@@ -1079,6 +1115,7 @@ reduces them without incurring seq initialization"
 (es6-iterable IndexedSeq)
 
 (defn prim-seq
+  "Create seq from a primitive JavaScript Array-like."
   ([prim]
      (prim-seq prim 0))
   ([prim i]
@@ -1086,6 +1123,7 @@ reduces them without incurring seq initialization"
        (IndexedSeq. prim i))))
 
 (defn array-seq
+  "Create a seq from a JavaScript array."
   ([array]
      (prim-seq array 0))
   ([array i]
@@ -1398,7 +1436,9 @@ reduces them without incurring seq initialization"
           (recur ret (first ks) (next ks))
           ret)))))
 
-(defn ^boolean fn? [f]
+(defn ^boolean fn?
+  "Return true if f is a JavaScript function or satisfies the Fn protocol."
+  [f]
   (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
 
 (deftype MetaFn [afn meta]
@@ -1549,21 +1589,28 @@ reduces them without incurring seq initialization"
 (declare ChunkedCons ChunkedSeq)
 
 (defn ^boolean chunked-seq?
+  "Return true if x is satisfies IChunkedSeq."
   [x] (implements? IChunkedSeq x))
 
 ;;;;;;;;;;;;;;;;;;;; js primitives ;;;;;;;;;;;;
 (defn js-obj
+  "Create JavaSript object from an even number arguments representing
+  interleaved keys and values."
   ([]
      (cljs.core/js-obj))
   ([& keyvals]
      (apply gobject/create keyvals)))
 
-(defn js-keys [obj]
+(defn js-keys
+  "Return the JavaScript keys for an object."
+  [obj]
   (let [keys (array)]
     (goog.object/forEach obj (fn [val key obj] (.push keys key)))
     keys))
 
-(defn js-delete [obj key]
+(defn js-delete
+  "Delete a property from a JavaScript object."
+  [obj key]
   (cljs.core/js-delete obj key))
 
 (defn- array-copy
@@ -1594,7 +1641,9 @@ reduces them without incurring seq initialization"
   "Returns true if x is the value true, false otherwise."
   [x] (cljs.core/true? x))
 
-(defn ^boolean undefined? [x]
+(defn ^boolean undefined?
+  "Returns true if x identical to the JavaScript undefined value."
+  [x]
   (cljs.core/undefined? x))
 
 (defn ^boolean seq?
@@ -1609,10 +1658,14 @@ reduces them without incurring seq initialization"
   [s]
   (satisfies? ISeqable s))
 
-(defn ^boolean boolean [x]
+(defn ^boolean boolean
+  "Coerce to boolean"
+  [x]
   (if x true false))
 
-(defn ^boolean ifn? [f]
+(defn ^boolean ifn?
+  "Returns true if f returns true for fn? or satisfies IFn."
+  [f]
   (or (fn? f) (satisfies? IFn f)))
 
 (defn ^boolean integer?
@@ -1815,9 +1868,14 @@ reduces them without incurring seq initialization"
       (-kv-reduce coll f init)
       init)))
 
-(defn identity [x] x)
+(defn identity
+  "Returns its argument."
+  [x] x)
 
 (defn completing
+  "Takes a reducing function f of 2 args and returns a fn suitable for
+  transduce by adding an arity-1 signature that calls cf (default -
+  identity) on the result argument."
   ([f] (completing f identity))
   ([f cf]
     (fn
@@ -1974,10 +2032,14 @@ reduces them without incurring seq initialization"
   ([x y] (cljs.core/unchecked-add-int x y))
   ([x y & more] (reduce unchecked-add-int (cljs.core/unchecked-add-int x y) more)))
 
-(defn unchecked-dec [x]
+(defn unchecked-dec
+  "Returns a number one less than x, an int."
+  [x]
   (cljs.core/unchecked-dec x))
 
-(defn unchecked-dec-int [x]
+(defn unchecked-dec-int
+  "Returns a number one less than x, an int."
+  [x]
   (cljs.core/unchecked-dec-int x))
 
 (defn ^number unchecked-divide-int
@@ -2176,7 +2238,9 @@ reduces them without incurring seq initialization"
   "Returns true if num is greater than zero, else false"
   [n] (cljs.core/pos? n))
 
-(defn ^boolean zero? [n]
+(defn ^boolean zero?
+  "Returns true if num is zero, else false"
+  [n]
   (cljs.core/zero? n))
 
 (defn ^boolean neg?
@@ -2392,10 +2456,15 @@ reduces them without incurring seq initialization"
 
 (es6-iterable EmptyList)
 
-(defn ^boolean reversible? [coll]
+(defn ^boolean reversible?
+  "Returns true if coll satisfies? IReversible."
+  [coll]
   (satisfies? IReversible coll))
 
-(defn ^seq rseq [coll]
+(defn ^seq rseq
+  "Returns, in constant time, a seq of the items in rev (which
+  can be a vector or sorted-map), in reverse order. If rev is empty returns nil"
+  [coll]
   (-rseq coll))
 
 (defn reverse
@@ -2405,7 +2474,9 @@ reduces them without incurring seq initialization"
     (rseq coll)
     (reduce conj () coll)))
 
-(defn list [& xs]
+(defn list
+  "Creates a new list containing the items."
+  [& xs]
   (let [arr (if (and (instance? IndexedSeq xs) (zero? (.-i xs)))
               (.-arr xs)
               (let [arr (array)]
@@ -2477,7 +2548,9 @@ reduces them without incurring seq initialization"
     (Cons. nil x coll nil)
     (Cons. nil x (seq coll) nil)))
 
-(defn ^boolean list? [x]
+(defn ^boolean list?
+  "Returns true if x implements IList"
+  [x]
   (satisfies? IList x))
 
 (defn hash-keyword [k]
@@ -2523,10 +2596,14 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [o writer _] (-write writer (str ":" fqn))))
 
-(defn ^boolean keyword? [x]
+(defn ^boolean keyword?
+  "Return true if x is a Keyword"
+  [x]
   (instance? Keyword x))
 
-(defn ^boolean keyword-identical? [x y]
+(defn ^boolean keyword-identical?
+  "Efficient test to determine that two keywords are identical."
+  [x y]
   (if (identical? x y)
     true
     (if (and (keyword? x)
@@ -2783,6 +2860,8 @@ reduces them without incurring seq initialization"
       ret))
 
 (defn int-array
+  "Creates an array of ints. Does not coerce array, provided for compatibility
+  with Clojure."
   ([size-or-seq]
      (if (number? size-or-seq)
        (int-array size-or-seq nil)
@@ -2803,6 +2882,8 @@ reduces them without incurring seq initialization"
            a)))))
 
 (defn long-array
+  "Creates an array of longs. Does not coerce array, provided for compatibility
+  with Clojure."
   ([size-or-seq]
      (if (number? size-or-seq)
        (long-array size-or-seq nil)
@@ -2823,6 +2904,8 @@ reduces them without incurring seq initialization"
            a)))))
 
 (defn double-array
+  "Creates an array of doubles. Does not coerce array, provided for compatibility
+  with Clojure."
   ([size-or-seq]
      (if (number? size-or-seq)
        (double-array size-or-seq nil)
@@ -2843,6 +2926,8 @@ reduces them without incurring seq initialization"
            a)))))
 
 (defn object-array
+  "Creates an array of objects. Does not coerce array, provided for compatibility
+  with Clojure."
   ([size-or-seq]
      (if (number? size-or-seq)
        (object-array size-or-seq nil)
@@ -4478,7 +4563,10 @@ reduces them without incurring seq initialization"
 
 (es6-iterable PersistentVector)
 
-(defn vec [coll]
+(defn vec
+  "Creates a new vector containing the contents of coll. JavaScript arrays
+  will be aliased and should not be modified."
+  [coll]
   (if (array? coll)
     (.fromArray PersistentVector coll true)
     (-persistent!
@@ -4486,7 +4574,9 @@ reduces them without incurring seq initialization"
         (-as-transient (.-EMPTY PersistentVector))
         coll))))
 
-(defn vector [& args]
+(defn vector
+  "Creates a new vector containing the args."
+  [& args]
   (if (and (instance? IndexedSeq args) (zero? (.-i args)))
     (.fromArray PersistentVector (.-arr args) true)
     (vec args)))
@@ -7604,6 +7694,8 @@ reduces them without incurring seq initialization"
           (-persistent! out))))))
 
 (defn hash-set
+  "Returns a new hash set with supplied keys.  Any equal keys are
+  handled as if by repeated uses of conj."
   ([] #{})
   ([& keys] (set keys)))
 
@@ -7661,7 +7753,9 @@ reduces them without incurring seq initialization"
       (step coll #{}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn butlast [s]
+(defn butlast
+  "Return a seq of all but the last item in coll, in linear time"
+  [s]
   (loop [ret [] s s]
     (if (next s)
       (recur (conj ret (first s)) (next s))
@@ -8062,8 +8156,10 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;; Regular Expressions ;;;;;;;;;;
 
-(defn regexp? [o]
-  (instance? js/RegExp o))
+(defn regexp?
+  "Returns true if x is a JavaScript RegExp instance."
+  [x]
+  (instance? js/RegExp x))
 
 (defn re-matches
   "Returns the result of (re-find re s) if re fully matches s."
