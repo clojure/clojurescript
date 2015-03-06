@@ -262,12 +262,19 @@
 (defn get-col [x env]
   (or (-> x meta :column) (:column env)))
 
+(defn intern-macros
+  ([ns] (intern-macros ns false))
+  ([ns reload]
+    (when (true? reload)
+      (swap! env/*compiler* update-in [::namespaces ns] dissoc :macros))))
+
 (defn load-core []
   (when (not @-cljs-macros-loaded)
     (reset! -cljs-macros-loaded true)
     (if *cljs-macros-is-classpath*
       (load *cljs-macros-path*)
-      (load-file *cljs-macros-path*))))
+      (load-file *cljs-macros-path*))
+    (intern-macros 'cljs.core)))
 
 (defmacro with-core-macros
   [path & body]
@@ -1381,13 +1388,17 @@
     (when *load-macros*
       (load-core)
       (doseq [nsym (vals use-macros)]
-        (if-let [k (:use-macros @reload)]
-          (clojure.core/require nsym k)
-          (clojure.core/require nsym)))
+        (let [k (:use-macros @reload)]
+          (if k
+            (clojure.core/require nsym k)
+            (clojure.core/require nsym))
+          (intern-macros nsym k)))
       (doseq [nsym (vals require-macros)]
-        (if-let [k (:require-macros @reload)]
-          (clojure.core/require nsym k)
-          (clojure.core/require nsym)))
+        (let [k (:require-macros @reload)]
+          (if k
+            (clojure.core/require nsym k)
+            (clojure.core/require nsym))
+          (intern-macros nsym k)))
       (when (seq use-macros)
         (check-use-macros use-macros env)))
     (let [ns-info
