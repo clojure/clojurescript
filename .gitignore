@@ -23,3 +23,7 @@ closure-release-*
 builds
 .cljs*
 node_modules
+nashorn_code_cache
+src/cljs/cljs/core.aot.js
+src/cljs/cljs/core.aot.js.map
+src/cljs/cljs/core.cljs.cache.aot.edn
