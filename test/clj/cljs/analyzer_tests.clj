@@ -33,7 +33,7 @@
 ;; =============================================================================
 ;; NS parsing
 
-(def ns-env (assoc-in (a/empty-env) [:ns [:name]] 'cljs.user))
+(def ns-env (assoc-in (a/empty-env) [:ns :name] 'cljs.user))
 
 (deftest spec-validation
   (is (.startsWith
@@ -324,20 +324,3 @@
     ;; actual: (not (= #{file-reloading dev client} #{file-reloading dev client core}))
     (is (= (set (a/ns-dependents 'utils))
            #{'file-reloading 'dev 'client 'core}))))
-
-;; =============================================================================
-;; Namespace metadata
-
-(deftest test-fn-scope
-  (is (= (get-in
-           (a/analyze ns-env
-             '(fn foo []
-                (fn bar [])))
-           [:children 0 :children 0 :env :fn-scope])
-         '[{:name foo, :info {:shadow nil}} {:name bar, :info {:shadow nil}}]))
-  (is (= (get-in
-           (a/analyze ns-env
-             '(defn foo []
-                (fn bar [])))
-           [:init :children 0 :children 0 :env :fn-scope])
-        '[{:name foo, :info {:shadow nil}} {:name bar, :info {:shadow nil}}])))

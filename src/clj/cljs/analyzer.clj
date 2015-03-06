@@ -290,6 +290,7 @@
     {:ns (get-namespace *cljs-ns*)
      :context :statement
      :locals {}
+     :fn-scope []
      :js-globals (into {}
                    (map #(vector % {:name %})
                      '(alert window document console escape unescape
@@ -844,12 +845,17 @@
          locals (:locals env)
          name-var (if name
                     (merge
-                     {:name name
-                      :info {:shadow (or (locals name)
-                                         (get-in env [:js-globals name]))}}
+                      {:name name
+                       :info {:fn-self-name true
+                              :fn-scope (:fn-scope env)
+                              :ns (-> env :ns :name)
+                              :shadow (or (locals name)
+                                          (get-in env [:js-globals name]))}}
                      (when-let [tag (-> name meta :tag)]
                        {:ret-tag tag})))
-         env (update-in env [:fn-scope] (fnil conj []) name-var)
+         env (if name
+               (update-in env [:fn-scope] conj name-var)
+               env)
          locals (if (and locals name) (assoc locals name name-var) locals)
          type (-> form meta ::type)
          protocol-impl (-> form meta ::protocol-impl)

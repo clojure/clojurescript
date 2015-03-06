@@ -55,29 +55,45 @@
        (some #{(str name)} (ns-first-segments)) (inc d)
        :else d))))
 
+(declare munge)
+
+(defn fn-self-name [{:keys [name info] :as name-var}]
+  (let [{:keys [ns fn-scope]} info
+        scoped-name (apply str
+                      (interpose "_$_"
+                        (concat (map (comp str :name) fn-scope) [name])))]
+    (symbol
+      (munge
+        (str (string/replace (str ns) "." "$")
+          "_SLASH_" scoped-name)))))
+
 (defn munge
   ([s] (munge s js-reserved))
   ([s reserved]
-    (if (map? s)
-      ; Unshadowing
-      (let [{:keys [name field] :as info} s
-            depth (shadow-depth s)
-            renamed (*lexical-renames* (System/identityHashCode s))
-            munged-name (munge (cond field (str "self__." name)
-                                     renamed renamed
-                                     :else name)
-                               reserved)]
-        (if (or field (zero? depth))
-          munged-name
-          (symbol (str munged-name "__$" depth))))
-      ; String munging
-      (let [ss (string/replace (str s) #"\/(.)" ".$1") ; Division is special
-            ss (apply str (map #(if (reserved %) (str % "$") %)
-                               (string/split ss #"(?<=\.)|(?=\.)")))
-            ms (clojure.lang.Compiler/munge ss)]
-        (if (symbol? s)
-          (symbol ms)
-          ms)))))
+   (if (map? s)
+     (let [{:keys [name field info] :as name-var} s]
+       (if (:fn-self-name info)
+         (fn-self-name s)
+         ;; Unshadowing
+         (let [depth (shadow-depth s)
+               renamed (*lexical-renames* (System/identityHashCode s))
+               munged-name (munge
+                             (cond field (str "self__." name)
+                                   renamed renamed
+                                   :else name)
+                             reserved)]
+           (if (or field (zero? depth))
+             munged-name
+             (symbol (str munged-name "__$" depth))))))
+     ;; String munging
+     (let [ss (string/replace (str s) #"\/(.)" ".$1") ; Division is special
+           ss (apply str
+                (map #(if (reserved %) (str % "$") %)
+                  (string/split ss #"(?<=\.)|(?=\.)")))
+           ms (clojure.lang.Compiler/munge ss)]
+       (if (symbol? s)
+         (symbol ms)
+         ms)))))
 
 (defn- comma-sep [xs]
   (interpose "," xs))
@@ -772,16 +788,24 @@
 
              ;; direct dispatch to variadic case
              (and variadic? (> arity mfa))
-             [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$variadic"))))
+             [(update-in f [:info]
+                (fn [info]
+                  (-> info
+                    (assoc :name (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$variadic")))
+                    ;; bypass local fn-self-name munging, we're emitting direct
+                    (update-in [:info] dissoc :fn-self-name))))
               {:max-fixed-arity mfa}]
 
              ;; direct dispatch to specific arity case
              :else
              (let [arities (map count mps)]
                (if (some #{arity} arities)
-                 [(update-in f [:info :name]
-                             (fn [name] (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$" arity)))) nil]
+                 [(update-in f [:info]
+                    (fn [info]
+                      (-> info
+                        (assoc :name (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$" arity)))
+                        ;; bypass local fn-self-name munging, we're emitting direct
+                        (update-in [:info] dissoc :fn-self-name)))) nil]
                  [f nil]))))
           [f nil])]
     (emit-wrap env
@@ -808,6 +832,7 @@
        
        :else
        (if (and ana/*cljs-static-fns* (= (:op f) :var))
+         ;; higher order case, static information missing
          (let [fprop (str ".cljs$core$IFn$_invoke$arity$" (count args))]
            (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : " f ".call(" (comma-sep (cons "null" args)) "))"))
          (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
@@ -1072,7 +1097,10 @@
         (if (.exists src-file)
           (try
             (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)
-                  opts (if (= ns 'cljs.core) (assoc opts :static-fns true) opts)]
+                  opts (if (and (= ns 'cljs.core)
+                                (not (false? (:static-fns opts))))
+                         (assoc opts :static-fns true)
+                         opts)]
               (if (requires-compilation? src-file dest-file opts)
                 (do
                   (util/mkdirs dest-file)
