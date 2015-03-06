@@ -283,8 +283,8 @@
     (reset! -cljs-macros-loaded true)
     (if *cljs-macros-is-classpath*
       (load *cljs-macros-path*)
-      (load-file *cljs-macros-path*))
-    (intern-macros 'cljs.core)))
+      (load-file *cljs-macros-path*)))
+  (intern-macros 'cljs.core))
 
 (defmacro with-core-macros
   [path & body]
@@ -1459,7 +1459,7 @@
                       (select-keys ns-info merge-keys))))
                 ns-info))
             ns-info)]
-      (swap! env/*compiler* assoc-in [::namespaces name] ns-info)
+      (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
       (merge {:env env :op :ns :form form}
         (cond-> ns-info
           (@reload :use)

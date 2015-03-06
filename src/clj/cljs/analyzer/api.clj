@@ -20,7 +20,8 @@
   (try
     (ana/resolve-var env sym
       (ana/confirm-var-exists-throw))
-    (catch Exception e)))
+    (catch Exception e
+      (ana/resolve-macro-var env sym))))
 
 (defn all-ns
   "Return all namespaces. Analagous to clojure.core/all-ns but
