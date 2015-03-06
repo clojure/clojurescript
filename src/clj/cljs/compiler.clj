@@ -1015,8 +1015,7 @@
                                :source-map-timestamp (:source-map-timestamp opts)
                                :source-map-pretty-print (:source-map-pretty-print opts)}))))
                       (let [path (.getPath (.toURL ^File dest))]
-                        (swap! env/*compiler* assoc-in [::compiled-cljs path] ret)
-                        (swap! env/*compiler* assoc-in [::ana/analyzed-cljs path] true))
+                        (swap! env/*compiler* assoc-in [::compiled-cljs path] ret))
                       (let [{:keys [output-dir cache-analysis]} opts]
                         (when (and (true? cache-analysis) output-dir)
                           (ana/write-analysis-cache ns-name

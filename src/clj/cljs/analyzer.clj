@@ -1979,7 +1979,7 @@ argument, which the reader will use in any emitted errors."
                cache (when (or (= (:ns ns-info) 'cljs.core)
                                (and (:cache-analysis opts) output-dir))
                        (cache-file res ns-info output-dir))]
-           (when-not (get-in @env/*compiler* [::analyzed-cljs path])
+           (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info)])
              (if (or (not= (:ns ns-info) 'cljs.core)
                      (not cache)
                      (requires-analysis? res output-dir))
@@ -1999,8 +1999,7 @@ argument, which the reader will use in any emitted errors."
                                   (recur ns (next forms))))
                               ns))]
                    (when (and cache (true? (:cache-analysis opts)))
-                     (write-analysis-cache ns cache))
-                   (swap! env/*compiler* assoc-in [::analyzed-cljs path] true)))
+                     (write-analysis-cache ns cache))))
                ;; we want want to keep dependency analysis information
                ;; don't revert the environment - David
                (let [{:keys [ns]}
@@ -2017,5 +2016,4 @@ argument, which the reader will use in any emitted errors."
                        (doseq [x (get-in cached-ns [::constants :order])]
                          (register-constant! x))
                        (-> cenv
-                         (assoc-in [::analyzed-cljs path] true)
                          (assoc-in [::namespaces ns] cached-ns))))))))))))))
