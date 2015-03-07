@@ -8,5 +8,13 @@ mvn -f pom.template.xml dependency:build-classpath -Dmdep.outputFile=$CP_FILE
 
 CLJS_CP=`cat $CP_FILE`
 
-java -server -cp "$CLJS_CP:src/clj:src/cljs" clojure.main script/aot.clj
+# For Hudson server
+if [ "$HUDSON" = "true" ]; then
+    $JAVA_HOME/bin/java -server -cp "$CLJS_CP:src/clj:src/cljs" clojure.main script/aot.clj
+else
+    java -server -cp "$CLJS_CP:src/clj:src/cljs" clojure.main script/aot.clj
+fi
+
+
+
 
