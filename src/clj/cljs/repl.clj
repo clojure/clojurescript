@@ -467,16 +467,16 @@
     ('#{*1 *2 *3 *e} form) (fn [x] `(cljs.core.pr-str ~x))
     :else
     (fn [x]
-      `(cljs.core.pr-str
-         (try
+      `(try
+         (cljs.core.pr-str
            (let [ret# ~x]
              (set! *3 *2)
              (set! *2 *1)
              (set! *1 ret#)
-             ret#)
-           (catch :default e#
-             (set! *e e#)
-             (throw e#)))))))
+             ret#))
+         (catch :default e#
+           (set! *e e#)
+           (throw e#))))))
 
 (defn- eval-cljs
   "Given a REPL evaluation environment, an analysis environment, and a
