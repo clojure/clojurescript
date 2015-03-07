@@ -40,7 +40,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>data.json</artifactId>
-      <version>0.2.3</version>
+      <version>0.2.6</version>
     </dependency>
     <dependency>
       <groupId>org.mozilla</groupId>
@@ -50,7 +50,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.reader</artifactId>
-      <version>0.8.10</version>
+      <version>0.8.16</version>
     </dependency>
   </dependencies>
 
