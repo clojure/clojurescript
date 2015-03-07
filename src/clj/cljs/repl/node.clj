@@ -173,8 +173,9 @@
   (-repl-options [this]
     {:output-dir ".cljs_node_repl"
      :target :nodejs})
-  repl/IParseErrorMessage
-  (-parse-error-message [_ _ _ _])
+  repl/IParseError
+  (-parse-error [_ err _]
+    (assoc err :value nil))
   repl/IJavaScriptEnv
   (-setup [this opts]
     (setup this opts))

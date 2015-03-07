@@ -109,9 +109,9 @@
   IReplEnvOptions
   (-repl-options [_] nil))
 
-(defprotocol IParseErrorMessage
-  (-parse-error-message [repl-env message error build-options]
-    "Given the original JavaScript error message return the string to actually
+(defprotocol IParseError
+  (-parse-error [repl-env error build-options]
+    "Given the original JavaScript error return the error to actually
      use."))
 
 (defprotocol IGetError
@@ -271,8 +271,7 @@
                 [line' column'] (if ns-info
                                   (mapped-line-and-column sm line column)
                                   [line column])
-                name' (if (and ns-info function)
-                        (symbol (name ns) (cljrepl/demunge function))
+                name' (when (and ns-info function)
                         function)
                 file' (if no-source-file?
                         file
@@ -994,7 +993,7 @@ str-or-pattern."
   ([e]
    (let [{:keys [repl-env] :as env} &env]
      (when (and e repl-env)
-       (let [ret (if (satisfies? IGetError repl-env)
+       (when-let [ret (if (satisfies? IGetError repl-env)
                    (-get-error repl-env e env *repl-opts*)
                    (edn/read-string
                      (evaluate-form repl-env env "<cljs repl>"
@@ -1002,12 +1001,8 @@ str-or-pattern."
                           (pr-str
                             {:value (.-message ~e)
                              :stacktrace (.-stack ~e)})))))]
-         (when ret
-           (let [ret (update-in ret [:value]
-                       (fn [msg]
-                         ;; give REPL environments a chance to fix or
-                         ;; or elide redundant information
-                         (if (satisfies? IParseErrorMessage repl-env)
-                           (-parse-error-message repl-env msg ret *repl-opts*)
-                           msg)))]
-             (display-error repl-env ret nil *repl-opts*))))))))
+         (display-error repl-env
+           (if (satisfies? IParseError repl-env)
+             (-parse-error repl-env ret *repl-opts*)
+             ret)
+           nil *repl-opts*))))))

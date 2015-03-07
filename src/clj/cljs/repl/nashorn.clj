@@ -15,7 +15,8 @@
             [cljs.repl :as repl]
             [cljs.compiler :as comp]
             [cljs.closure :as closure])
-  (:import [javax.script ScriptEngine ScriptEngineManager ScriptException ScriptEngineFactory]
+  (:import [java.io File]
+           [javax.script ScriptEngine ScriptEngineManager ScriptException ScriptEngineFactory]
            [jdk.nashorn.api.scripting NashornException]))
 
 ;; Nashorn Clojurescript repl binding.
@@ -141,12 +142,6 @@
       (string/replace-first file-name with-slash "")
       file-name)))
 
-(defn- convert-stacktrace-element [^StackTraceElement el]
-  {:function (.getMethodName el)
-   :file (.getFileName el)
-   :line (.getLineNumber el)
-   :column 0})
-
 (def repl-filename "<cljs repl>")
 
 (defrecord NashornEnv [engine debug]
@@ -183,26 +178,43 @@
     (try
       {:status :success
        :value (if-let [r (eval-str engine js)] (.toString r) "")}
-
-      ;; Stringify the stacktrace to edn for easy parsing in -parse-stacktrace
       (catch ScriptException e
         (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
           {:status :exception
            :value (.getMessage root-cause)
-           :stacktrace (pr-str (map convert-stacktrace-element
-                                    (NashornException/getScriptFrames root-cause)))}))
+           :stacktrace (NashornException/getScriptStackString root-cause)}))
       (catch Throwable e
         (let [^Throwable root-cause (clojure.stacktrace/root-cause e)]
           {:status :exception
            :value (.getMessage root-cause)
-           :stacktrace (pr-str (map convert-stacktrace-element (.getStackTrace root-cause)))}))))
+           :stacktrace
+           (apply str
+             (interpose "\n"
+               (map str
+                 (.getStackTrace root-cause))))}))))
   (-load [{engine :engine :as this} ns url]
     (load-ns engine ns))
   (-tear-down [this])
   repl/IParseStacktrace
   (-parse-stacktrace [this frames-str ret {output-dir :output-dir}]
-    (when-let [frames (read-string frames-str)]
-      (vec (map #(update-in %1 [:file] (fn [s] (strip-file-name s output-dir))) frames)))))
+    (vec
+      (map
+        (fn [frame-str]
+          (let [frame-str (string/replace frame-str #"\s+at\s+" "")
+                [function file-and-line] (string/split frame-str #"\s+")
+                [file-part line-part] (string/split file-and-line #":")]
+            {:file (string/replace (.substring file-part 1)
+                     (str output-dir File/separator) "")
+             :function function
+             :line (Integer/parseInt
+                     (.substring line-part 0 (dec (.length line-part))))
+             :column 0}))
+        (string/split frames-str #"\n"))))
+  repl/IParseError
+  (-parse-error [_ err _]
+    (update-in err [:stacktrace]
+      (fn [st]
+        (string/join "\n" (drop 1 (string/split st #"\n")))))))
 
 (defn repl-env* [{:keys [debug] :as opts}]
   (let [engine (create-engine opts)]
