@@ -13,7 +13,7 @@
                  [org.clojure/tools.reader "0.8.16"]
                  [org.clojure/google-closure-library "0.0-20140718-946a7d39"]
                  [com.google.javascript/closure-compiler "v20150126"]
-
+                 [org.mozilla/rhino "1.7R5"]]
   :profiles {:1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :uberjar {:aot :all}}
