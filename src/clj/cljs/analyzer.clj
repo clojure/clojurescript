@@ -317,14 +317,18 @@
 
 (defn source-info
   ([env]
-     (when-let [line (:line env)]
-       {:file *cljs-file*
-        :line (get-line name env)
-        :column (get-col name env)}))
-  ([name env]
-     {:file *cljs-file*
+   (when-let [line (:line env)]
+     {:file (if (= (-> env :ns :name) 'cljs.core)
+              "cljs/core.cljs"
+              *cljs-file*)
       :line (get-line name env)
       :column (get-col name env)}))
+  ([name env]
+   {:file (if (= (-> env :ns :name) 'cljs.core)
+            "cljs/core.cljs"
+            *cljs-file*)
+    :line (get-line name env)
+    :column (get-col name env)}))
 
 (defn message [env s]
   (str s (when (:line env)
@@ -793,7 +797,13 @@
           ;; elide test metadata, as it includes non-valid EDN - David
           (cond-> sym-meta
             :test (-> (dissoc :test) (assoc :test true)))
-          {:meta (dissoc sym-meta :test)}
+          {:meta (-> sym-meta
+                   (dissoc :test)
+                   (update-in [:file]
+                     (fn [f]
+                       (if (= (-> env :ns :name) 'cljs.core)
+                         "cljs/core.cljs"
+                         f))))}
           (when doc {:doc doc})
           (when dynamic {:dynamic true})
           (source-info var-name env)
