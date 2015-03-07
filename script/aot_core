@@ -1,14 +1,12 @@
 #!/bin/bash
 
-if [ "$CLOJURESCRIPT_HOME" = "" ]; then
-  CLOJURESCRIPT_HOME="`dirname $0`/.."
-fi
+set -ex
 
-CLJSC_CP=''
-for next in lib/*: src/clj: src/cljs: test/cljs; do
-  CLJSC_CP=$CLJSC_CP$CLOJURESCRIPT_HOME'/'$next
-done
+CP_FILE=`mktemp /tmp/cljs_cp.txt.XXXXXXXXXXX`
 
-java -server -cp $CLJSC_CP clojure.main -e \
-"(require '[cljs.closure :as cljsc])
-(cljsc/aot-cache-core)"
+mvn -f pom.template.xml dependency:build-classpath -Dmdep.outputFile=$CP_FILE
+
+CLJS_CP=`cat $CP_FILE`
+
+java -server -cp "$CLJS_CP:src/clj:src/cljs" clojure.main script/aot.clj
+
