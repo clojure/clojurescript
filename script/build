@@ -40,7 +40,6 @@ rm -f src/cljs/cljs/core.aot.js
 rm -f src/cljs/cljs/core.aot.js.map
 rm -f src/cljs/cljs/core.cljs.cache.aot.edn
 
-./script/bootstrap
 ./script/aot_core
 
 AOT_FILE=`mktemp /tmp/core.aot.js.XXXXXXXXXXX`
