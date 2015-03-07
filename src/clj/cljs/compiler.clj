@@ -64,8 +64,7 @@
                         (concat (map (comp str :name) fn-scope) [name])))]
     (symbol
       (munge
-        (str (string/replace (str ns) "." "$")
-          "_SLASH_" scoped-name)))))
+        (str (string/replace (str ns) "." "$") "$" scoped-name)))))
 
 (defn munge
   ([s] (munge s js-reserved))
