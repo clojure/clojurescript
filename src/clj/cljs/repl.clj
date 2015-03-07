@@ -936,10 +936,13 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 
   Example: (source-fn 'filter)"
   [env x]
-  (when-let [v (ana/resolve-var env x)]
+  (when-let [v (ana-api/resolve env x)]
     (when-let [filepath (:file v)]
-      (let [f (io/file filepath)]
-        (when (.exists f)
+      (let [f (io/file filepath)
+            f (if (.exists f)
+                f
+                (io/resource filepath))]
+        (when f
           (with-open [pbr (PushbackReader. (io/reader f))]
             (let [rdr (readers/source-logging-push-back-reader pbr)]
               (dotimes [_ (dec (:line v))] (readers/read-line rdr))
