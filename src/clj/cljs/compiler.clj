@@ -873,7 +873,10 @@
               (emitln "goog.require('" (munge lib) "');")))
 
           (-> libs meta :reload)
-          (emitln "goog.require('" (munge lib) "', true);")
+          (emitln "goog.require('" (munge lib) "', 'reload');")
+
+          (-> libs meta :reload-all)
+          (emitln "goog.require('" (munge lib) "', 'reload-all');")
 
           :else
           (emitln "goog.require('" (munge lib) "');")))
