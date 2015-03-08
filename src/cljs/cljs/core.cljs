@@ -957,7 +957,11 @@
   IEquiv
   (-equiv [o other]
     (and (instance? js/Date other)
-         (identical? (.toString o) (.toString other)))))
+         (== (.valueOf o) (.valueOf other))))
+
+  IComparable
+  (-compare [this other]
+    (garray/defaultCompare (.valueOf this) (.valueOf other))))
 
 (extend-type number
   IEquiv
