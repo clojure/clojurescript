@@ -1310,7 +1310,11 @@ should contain the source for the given namespace name."
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
 
-(defn add-implicit-options [opts]
+(defn add-implicit-options
+  [{:keys [optimizations output-dir]
+    :or {optimizations :none
+         output-dir "out"}
+    :as opts}]
   (let [opts (cond-> opts
                (:closure-defines opts)
                (assoc :closure-defines
@@ -1322,15 +1326,21 @@ should contain the source for the given namespace name."
     (cond->
       (-> opts
         (assoc
+          :optimizations optimizations
+          :output-dir output-dir
           :ups-libs libs
           :ups-foreign-libs foreign-libs
           :ups-externs externs)
         (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
+
       (:target opts)
       (assoc-in [:closure-defines (str (comp/munge 'cljs.core/*target*))]
         (name (:target opts)))
-      (nil? (:optimizations opts))
-      (assoc :optimizations :none))))
+
+      (= optimizations :none)
+      (assoc
+        :cache-analysis (:cache-analysis opts true)
+        :source-map (:source-map opts true)))))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
@@ -1458,7 +1468,10 @@ should contain the source for the given namespace name."
         env/*compiler*
         (env/default-compiler-env opts))))
   ([source opts compiler-env]
-    (let [path (Paths/get (.toURI (io/file source)))
+    (let [opts (cond-> opts
+                 (= (:verbose opts :not-found) :not-found)
+                 (assoc :verbose true))
+          path (Paths/get (.toURI (io/file source)))
           fs (.getFileSystem path)
           service (.newWatchService fs)]
       (letfn [(buildf []
