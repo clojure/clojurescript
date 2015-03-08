@@ -705,7 +705,7 @@
                                      (apply merge
                                        ((juxt :requires :require-macros)
                                          (ana/get-namespace ana/*cljs-ns*)))]
-                             (repl-read request-prompt request-exit))]
+                             (read request-prompt request-exit))]
                  (or ({request-exit request-exit
                        :cljs/quit request-exit
                        request-prompt request-prompt} input)
