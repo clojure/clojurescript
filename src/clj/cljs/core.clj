@@ -1882,7 +1882,8 @@
   printing calls."
   [& body]
   `(let [sb# (goog.string.StringBuffer.)]
-     (binding [cljs.core/*print-fn* (fn [x#] (.append sb# x#))]
+     (binding [cljs.core/*print-newline* true
+               cljs.core/*print-fn* (fn [x#] (.append sb# x#))]
        ~@body)
      (cljs.core/str sb#)))
 
