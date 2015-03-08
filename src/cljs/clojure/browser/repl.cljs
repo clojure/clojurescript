@@ -15,7 +15,8 @@
 
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.repl
-  (:require [clojure.browser.net   :as net]
+  (:require [goog.dom :as gdom]
+            [clojure.browser.net   :as net]
             [clojure.browser.event :as event]
             ;; repl-connection callback will receive goog.require('cljs.repl')
             ;; and monkey-patched require expects to be able to derive it
@@ -115,18 +116,29 @@
           "none")))
     ;; Monkey-patch goog.provide if running under optimizations :none - David
     (when-not js/COMPILED
-      (set! (.-provide__ js/goog) js/goog.provide)
-      (set! (.-isProvided___ js/goog) js/goog.isProvided_)
-      (set! (.-provide js/goog)
-        (fn [name]
-          (set! (.-isProvided_ js/goog) (fn [name] false))
-          (.provide__ js/goog name)
-          (set! (.-isProvided_ js/goog) js/goog.isProvided___)))
+      (set! (.-require__ js/goog) js/goog.require)
+      ;; suppress useless Google Closure error about duplicate provides
+      (set! (.-isProvided_ js/goog) (fn [name] false))
       (set! (.-writeScriptTag_ js/goog)
         (fn [src opt_sourceText]
-          (let [doc js/goog.global.document]
-            (if (nil? opt_sourceText)
-              (.write doc
-                (str "<script type=\"text/javascript\" src=\"" src "\"></script>"))
-              (.write doc
-                (str "<script type=\"text/javascript\">" opt_sourceText "</script>")))))))))
+          (.appendChild js/document.body
+            (as-> (.createElement js/document "script") script
+              (doto script (aset "type" "text/javascript"))
+              (if (nil? opt_sourceText)
+                (doto script (aset "src" src))
+                (doto script (gdom/setTextContext opt_sourceText)))))))
+      (set! (.-require js/goog)
+        (fn [src reload]
+          (when (= reload "reload-all")
+            (set! (.-cljsReloadAll_ js/goog) true))
+          (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
+            (when reload?
+              (let [path (aget js/goog.dependencies_.nameToPath src)]
+                (js-delete js/goog.dependencies_.visited path)
+                (js-delete js/goog.dependencies_.written
+                  (str js/goog.basePath path))))
+            (let [ret (.require__ js/goog src)]
+              (when (= reload "reload-all")
+                (set! (.-cljsReloadAll_ js/goog) false))
+              ret)))))
+    repl-connection))
