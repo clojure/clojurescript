@@ -718,6 +718,7 @@
            (fn []
              (binding [*repl-opts* opts]
                (try
+                 (init)
                  (when analyze-path
                    (analyze-source analyze-path opts))
                  (evaluate-form repl-env env "<cljs repl>"
@@ -745,10 +746,6 @@
                (binding [*in* (if (true? (:source-map-inline opts))
                                 *in*
                                 (reader))]
-                 (try
-                   (init)
-                   (catch Throwable e
-                     (caught e repl-env opts)))
                  (print "To quit, type:" :cljs/quit)
                  (prompt)
                  (flush)
