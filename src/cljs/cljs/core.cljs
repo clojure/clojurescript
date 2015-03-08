@@ -9331,7 +9331,11 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
   IHash
   (-hash [this]
-    (goog.string/hashCode (pr-str this))))
+    (goog.string/hashCode (pr-str this)))
+
+  IComparable
+  (-compare [_ other]
+    (garray/defaultCompare uuid (.-uuid other))))
 
 ;;; ExceptionInfo
 
