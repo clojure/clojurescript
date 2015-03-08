@@ -1580,6 +1580,7 @@ should contain the source for the given namespace name."
     (env/with-compiler-env (env/default-compiler-env)
       (comp/compile-file src dest
         {:source-map true
+         :source-map-url "core.js.map"
          :output-dir (str "src" File/separator "cljs")})
       (ana/write-analysis-cache 'cljs.core cache))))
 

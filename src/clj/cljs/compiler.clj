@@ -15,7 +15,8 @@
             [cljs.env :as env]
             [cljs.tagged-literals :as tags]
             [cljs.analyzer :as ana]
-            [cljs.source-map :as sm])
+            [cljs.source-map :as sm]
+            [clojure.data.json :as json])
   (:import java.lang.StringBuilder
            java.io.File))
 
@@ -989,7 +990,11 @@
               (spit dest (slurp cached))
               (when (true? (:source-map opts))
                 (spit (io/file (str dest ".map"))
-                  (slurp (io/resource "cljs/core.aot.js.map"))))
+                  (json/write-str
+                    (assoc
+                      (json/read-str (slurp (io/resource "cljs/core.aot.js.map")))
+                      "file"
+                      (str (io/file (util/output-directory opts) "cljs" "core.js"))))))
               (ana/parse-ns src dest nil))
             (with-open [out ^java.io.Writer (io/make-writer dest {})]
               (binding [*out* out
@@ -1028,7 +1033,8 @@
                                   {:source-map (:source-map sm-data)}))]
                       (when (and sm-data (= (:optimizations opts) :none))
                         (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                          (emits "\n//# sourceMappingURL=" (.getName sm-file)
+                          (emits "\n//# sourceMappingURL="
+                            (or (:source-map-url opts) (.getName sm-file))
                             (if (true? (:source-map-timestamp opts))
                               (str "?rel=" (System/currentTimeMillis))
                               ""))
