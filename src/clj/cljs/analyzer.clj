@@ -2057,7 +2057,7 @@ argument, which the reader will use in any emitted errors."
                          *cljs-file* path
                          reader/*alias-map* (or reader/*alias-map* {})]
                  (when (or *verbose* (:verbose opts))
-                   (util/debug-prn "Analyzing " res))
+                   (util/debug-prn "Analyzing" (str res)))
                  (let [env (assoc (empty-env) :build-options opts)
                        ns (loop [ns nil forms (seq (forms-seq res))]
                             (if forms
@@ -2079,7 +2079,7 @@ argument, which the reader will use in any emitted errors."
                           :analyze-deps true
                           :load-macros true}))]
                  (when (or *verbose* (:verbose opts))
-                   (util/debug-prn "Reading analysis cache for " res))
+                   (util/debug-prn "Reading analysis cache for" (str res)))
                  (swap! env/*compiler*
                    (fn [cenv]
                      (let [cached-ns (edn/read-string (slurp cache))]

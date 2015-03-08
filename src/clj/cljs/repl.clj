@@ -654,7 +654,6 @@
                   print-no-newline print
                   source-map-inline true}
              :as opts}]
-  (print "To quit, type:" :cljs/quit)
   (let [{:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (merge
@@ -733,11 +732,16 @@
                  (future
                    (let [log-file (io/file (util/output-directory opts) "watch.log")]
                      (print "Watch compilation log available at:" (str log-file))
+                     (flush)
                      (try
-                       (binding [*out* (FileWriter. log-file)]
-                         (cljsc/watch src (dissoc opts :watch)))
+                       (let [log-out (FileWriter. log-file)]
+                         (binding [*err* log-out
+                                   *out* log-out]
+                           (cljsc/watch src (dissoc opts :watch))))
                        (catch Throwable e
                          (caught e repl-env opts))))))
+               ;; let any setup async messages flush
+               (Thread/sleep 50)
                (binding [*in* (if (true? (:source-map-inline opts))
                                 *in*
                                 (reader))]
@@ -745,6 +749,7 @@
                    (init)
                    (catch Throwable e
                      (caught e repl-env opts)))
+                 (print "To quit, type:" :cljs/quit)
                  (prompt)
                  (flush)
                  (loop []

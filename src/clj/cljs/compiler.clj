@@ -978,7 +978,7 @@
      (with-core-cljs opts
        (fn []
          (when (or ana/*verbose* (:verbose opts))
-           (util/debug-prn "Compiling " src))
+           (util/debug-prn "Compiling" (str src)))
          (if-let [cached (and (= (:optimizations opts) :none)
                               (= (:ns (ana/parse-ns src)) 'cljs.core)
                               (io/resource "cljs/core.aot.js"))]
@@ -986,7 +986,7 @@
             ;; with-core-cljs
             (do
               (when (or ana/*verbose* (:verbose opts))
-                (util/debug-prn "Using cached cljs.core " src))
+                (util/debug-prn "Using cached cljs.core" (str src)))
               (spit dest (slurp cached))
               (when (true? (:source-map opts))
                 (spit (io/file (str dest ".map"))

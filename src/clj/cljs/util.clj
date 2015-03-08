@@ -128,7 +128,8 @@
 
 (defn debug-prn
   [& args]
-  (.println System/err (apply str args)))
+  (binding [*out* *err*]
+    (apply println args)))
 
 (defmacro measure
   "Like cljs.core/time but toggleable and takes a message string."
@@ -138,6 +139,6 @@
     `(if ~enable
        (let [start# (. System (nanoTime))
              ret# ~expr]
-         (debug-prn (str ~msg ", elapsed time: " (/ (double (- (. System (nanoTime)) start#)) 1000000.0) " msecs"))
+         (debug-prn ~msg ", elapsed time:" (/ (double (- (. System (nanoTime)) start#)) 1000000.0) "msecs")
          ret#)
        ~expr)))
