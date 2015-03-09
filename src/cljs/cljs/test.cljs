@@ -281,10 +281,10 @@
   in *testing-vars* as a list, then the source file and line of
   current assertion."
   [m]
-  (let [{:keys [file line]} m]
+  (let [{:keys [file line column]} m]
     (str
       (reverse (map #(:name (meta %)) (:testing-vars (get-current-env))))
-      " (" file ":" line ")")))
+      " (" file ":" line (when column (str ":" column)) ")")))
 
 (defn testing-contexts-str
   "Returns a string representation of the current test context. Joins
