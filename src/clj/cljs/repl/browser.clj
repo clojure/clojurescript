@@ -266,6 +266,7 @@
   (->> st
     string/split-lines
     (drop 1) ;; drop the error message
+    (take-while #(not (.startsWith % "\tat eval")))
     (map #(chrome-st-el->frame % opts))
     (remove nil?)
     vec))
@@ -282,6 +283,20 @@
 \tat cljs.core.LazySeq.cljs$core$ISeqable$_seq$arity$1 (http://localhost:9000/out/cljs/core.js:11073:10)
 \tat Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4239:13)
 \tat Object.cljs$core$pr_sequential_writer [as pr_sequential_writer] (http://localhost:9000/out/cljs/core.js:28706:14)"
+    {:ua-product :chrome}
+    nil)
+
+  (parse-stacktrace nil
+    "at Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4259:8)
+\tat Object.cljs$core$first [as first] (http://localhost:9000/out/cljs/core.js:4289:19)
+\tat cljs$core$ffirst (http://localhost:9000/out/cljs/core.js:5357:18)
+\tat eval (eval at <anonymous> (http://localhost:9000/out/clojure/browser/repl.js:23:272), <anonymous>:1:106)
+\tat eval (eval at <anonymous> (http://localhost:9000/out/clojure/browser/repl.js:23:272), <anonymous>:9:3)
+\tat eval (eval at <anonymous> (http://localhost:9000/out/clojure/browser/repl.js:23:272), <anonymous>:14:4)
+\tat http://localhost:9000/out/clojure/browser/repl.js:23:267
+\tat clojure$browser$repl$evaluate_javascript (http://localhost:9000/out/clojure/browser/repl.js:26:4)
+\tat Object.callback (http://localhost:9000/out/clojure/browser/repl.js:121:169)
+\tat goog.messaging.AbstractChannel.deliver (http://localhost:9000/out/goog/messaging/abstractchannel.js:142:13)"
     {:ua-product :chrome}
     nil)
   )
