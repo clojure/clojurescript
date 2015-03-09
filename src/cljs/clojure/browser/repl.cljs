@@ -48,7 +48,7 @@
                (gbrowser/isChrome) :chrome
                (gbrowser/isFirefox) :firefox
                (gbrowser/isIE) :ie)
-             :value (pr-str e)
+             :value (str e)
              :stacktrace
              (if (.hasOwnProperty e "stack")
                (.-stack e)
