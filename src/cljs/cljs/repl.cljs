@@ -30,4 +30,4 @@
     (do
       (when (:macro m)
         (println "Macro")) 
-      (print " " (:doc m)))))
+      (println " " (:doc m)))))

@@ -895,7 +895,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 (defmacro doc
   "Prints documentation for a var or special form given its name"
   [name]
-  `(println
+  `(print
      (binding [cljs.core/*print-newline* true]
        (with-out-str
          ~(if-let [special-name ('{& fn catch try finally try} name)]
