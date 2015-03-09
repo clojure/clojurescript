@@ -353,21 +353,27 @@
 (defn- display-error
   ([repl-env ret form opts]
    (display-error repl-env ret form (constantly nil) opts))
-  ([repl-env ret form f opts]
+  ([repl-env ret form f {:keys [print flush]}]
    (f)
    (when-let [value (:value ret)]
-     ((:print opts) value))
+     (print value))
    (when-let [st (:stacktrace ret)]
      (if (and (true? (:source-map opts))
               (satisfies? IParseStacktrace repl-env))
-       (let [cst (-parse-stacktrace repl-env st ret opts)]
+       (let [cst (try
+                   (-parse-stacktrace repl-env st ret opts)
+                   (catch Throwable e
+                     (when (:repl-verbose opts)
+                       (print "Failed to canonicalize stacktrace")
+                       (print (with-out-str (.printStacktrace e *out*)))
+                       (flush))))]
          (if (vector? cst)
            (if (satisfies? IPrintStacktrace repl-env)
              (-print-stacktrace repl-env cst ret opts)
              (print-mapped-stacktrace cst opts))
-           ((:print opts) st)))
-       ((:print opts) st))
-     ((:flush opts)))))
+           (print st)))
+       (print st))
+     (flush))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
