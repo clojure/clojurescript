@@ -199,6 +199,9 @@
 
 (defmulti parse-stacktrace (fn [repl-env st err opts] (:ua-product err)))
 
+(defmethod parse-stacktrace :default
+  [repl-env st err opts] st)
+
 (defn parse-file-line-column [flc]
   (let [xs (string/split flc #":")
         [pre [line column]]
@@ -350,6 +353,100 @@ fireListener@http://localhost:9000/out/goog/events/events.js:741:25
 handleBrowserEvent_@http://localhost:9000/out/goog/events/events.js:862:34
 http://localhost:9000/out/goog/events/events.js:276:42"
     {:ua-product :safari}
+    nil)
+  )
+
+;; -----------------------------------------------------------------------------
+;; Firefox Stacktrace
+
+(defn firefox-clean-function [f]
+  (as-> f f
+    (cond
+      (string/blank? f) nil
+      (not= (.indexOf f "</") -1)
+      (let [idx (.indexOf f "</")]
+        (.substring f (+ idx 2)))
+      :else f)
+    (-> f
+      (string/replace #"<" "")
+      (string/replace #"\/" ""))))
+
+(defn firefox-st-el->frame
+  [st-el opts]
+  (let [[function flc] (if (re-find #"@" st-el)
+                         (string/split st-el #"@")
+                         [nil st-el])
+        [file line column] (parse-file-line-column flc)]
+    (if (and file function line column)
+      {:file (parse-file file opts)
+       :function (firefox-clean-function function)
+       :line line
+       :column column}
+      (when-not (string/blank? function)
+        {:file nil
+         :function (firefox-clean-function function)
+         :line nil
+         :column nil}))))
+
+(comment
+  (firefox-st-el->frame
+    "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4258:8" {})
+
+  (firefox-st-el->frame
+    "cljs.core.map</cljs$core$map__2/</<@http://localhost:9000/out/cljs/core.js:16971:87" {})
+
+  (firefox-st-el->frame
+    "cljs.core.map</cljs$core$map__2/</<@http://localhost:9000/out/cljs/core.js:16971:87" {})
+
+  (firefox-st-el->frame
+    "cljs.core.pr_str</cljs$core$pr_str@http://localhost:9000/out/cljs/core.js:29138:8" {})
+
+  (firefox-st-el->frame
+    "cljs.core.pr_str</cljs$core$pr_str__delegate@http://localhost:9000/out/cljs/core.js:29129:8" {})
+  )
+
+(defmethod parse-stacktrace :firefox
+  [repl-env st err opts]
+  (->> st
+    string/split-lines
+    (take-while #(= (.indexOf % "> eval") -1))
+    (remove string/blank?)
+    (map #(firefox-st-el->frame % opts))
+    (remove nil?)
+    vec))
+
+(comment
+  (parse-stacktrace nil
+    "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4258:8
+cljs$core$first@http://localhost:9000/out/cljs/core.js:4288:9
+cljs$core$ffirst@http://localhost:9000/out/cljs/core.js:5356:24
+cljs.core.map</cljs$core$map__2/</<@http://localhost:9000/out/cljs/core.js:16971:87
+cljs.core.map</cljs$core$map__2/<@http://localhost:9000/out/cljs/core.js:16970:1
+cljs.core.LazySeq.prototype.sval/self__.s<@http://localhost:9000/out/cljs/core.js:10981:119
+cljs.core.LazySeq.prototype.sval@http://localhost:9000/out/cljs/core.js:10981:13
+cljs.core.LazySeq.prototype.cljs$core$ISeqable$_seq$arity$1@http://localhost:9000/out/cljs/core.js:11073:1
+cljs$core$seq@http://localhost:9000/out/cljs/core.js:4239:8
+cljs$core$pr_sequential_writer@http://localhost:9000/out/cljs/core.js:28706:4
+cljs.core.LazySeq.prototype.cljs$core$IPrintWithWriter$_pr_writer$arity$3@http://localhost:9000/out/cljs/core.js:29385:8
+cljs$core$pr_writer_impl@http://localhost:9000/out/cljs/core.js:28911:8
+cljs$core$pr_writer@http://localhost:9000/out/cljs/core.js:29010:8
+cljs$core$pr_seq_writer@http://localhost:9000/out/cljs/core.js:29014:1
+cljs$core$pr_sb_with_opts@http://localhost:9000/out/cljs/core.js:29077:1
+cljs$core$pr_str_with_opts@http://localhost:9000/out/cljs/core.js:29091:23
+cljs.core.pr_str</cljs$core$pr_str__delegate@http://localhost:9000/out/cljs/core.js:29129:8
+cljs.core.pr_str</cljs$core$pr_str@http://localhost:9000/out/cljs/core.js:29138:8
+@http://localhost:9000/out/clojure/browser/repl.js line 23 > eval:1:25
+@http://localhost:9000/out/clojure/browser/repl.js line 23 > eval:1:2
+clojure$browser$repl$evaluate_javascript/result<@http://localhost:9000/out/clojure/browser/repl.js:23:267
+clojure$browser$repl$evaluate_javascript@http://localhost:9000/out/clojure/browser/repl.js:23:15
+clojure$browser$repl$connect/</<@http://localhost:9000/out/clojure/browser/repl.js:121:128
+goog.messaging.AbstractChannel.prototype.deliver@http://localhost:9000/out/goog/messaging/abstractchannel.js:142:5
+goog.net.xpc.CrossPageChannel.prototype.xpcDeliver@http://localhost:9000/out/goog/net/xpc/crosspagechannel.js:733:7
+goog.net.xpc.NativeMessagingTransport.messageReceived_@http://localhost:9000/out/goog/net/xpc/nativemessagingtransport.js:321:1
+goog.events.fireListener@http://localhost:9000/out/goog/events/events.js:741:10
+goog.events.handleBrowserEvent_@http://localhost:9000/out/goog/events/events.js:862:1
+goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
+    {:ua-product :firefox}
     nil)
   )
 
