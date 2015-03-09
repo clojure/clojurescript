@@ -16,6 +16,7 @@
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.repl
   (:require [goog.dom :as gdom]
+            [goog.labs.userAgent.browser :as gbrowser]
             [clojure.browser.net   :as net]
             [clojure.browser.event :as event]
             ;; repl-connection callback will receive goog.require('cljs.repl')
@@ -33,12 +34,25 @@
 (defn evaluate-javascript
   "Process a single block of JavaScript received from the server"
   [conn block]
-  (let [result (try {:status :success :value (str (js* "eval(~{block})"))}
-                    (catch :default e
-                      {:status :exception :value (pr-str e)
-                       :stacktrace (if (.hasOwnProperty e "stack")
-                                     (.-stack e)
-                                     "No stacktrace available.")}))]
+  (let [result
+        (try
+          {:status :success
+           :value (str (js* "eval(~{block})"))}
+          (catch :default e
+            {:status :exception
+             ;; TODO: latest GCL interface for this is different
+             ;; see goog.userAgent.product
+             :ua-product
+             (cond
+               (gbrowser/isSafari) :safari
+               (gbrowser/isChrome) :chrome
+               (gbrowser/isFirefox) :firefox
+               (gbrowser/isIE) :ie)
+             :value (pr-str e)
+             :stacktrace
+             (if (.hasOwnProperty e "stack")
+               (.-stack e)
+               "No stacktrace available.")}))]
     (pr-str result)))
 
 (defn send-result [connection url data]
