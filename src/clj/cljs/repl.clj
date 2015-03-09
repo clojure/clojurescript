@@ -353,7 +353,7 @@
 (defn- display-error
   ([repl-env ret form opts]
    (display-error repl-env ret form (constantly nil) opts))
-  ([repl-env ret form f {:keys [print flush]}]
+  ([repl-env ret form f {:keys [print flush] :as opts}]
    (f)
    (when-let [value (:value ret)]
      (print value))
