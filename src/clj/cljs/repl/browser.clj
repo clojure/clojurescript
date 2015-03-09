@@ -193,10 +193,7 @@
       (swap! loaded-libs (partial apply conj) missing))))
 
 (defn setup [repl-env opts]
-  (when (:src repl-env)
-    (repl/analyze-source (:src repl-env)))
-  (comp/with-core-cljs nil
-    (fn [] (server/start repl-env))))
+  (server/start repl-env))
 
 ;; =============================================================================
 ;; Stracktrace parsing
