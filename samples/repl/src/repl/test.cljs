@@ -11,7 +11,8 @@
             ;[clojure.reflect :as reflect]
             ))
 
-(repl/connect "http://localhost:9000/repl")
+(defonce conn
+  (repl/connect "http://localhost:9000/repl"))
 
 (comment
 
