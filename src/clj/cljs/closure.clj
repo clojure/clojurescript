@@ -1438,7 +1438,7 @@ should contain the source for the given namespace name."
                        (apply output-unoptimized all-opts js-sources))]
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
              (when (and (= (:target opts) :nodejs)
-                        (#{:none :whitespace} (:optimizations opts)))
+                        (not= (:optimizations opts) :whitespace))
                (let [outfile (io/file (util/output-directory opts)
                                "goog" "bootstrap" "nodejs.js")]
                  (util/mkdirs outfile)
