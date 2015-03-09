@@ -126,8 +126,7 @@
   (send ordering (fn [_] {:expecting nil :fns {}}))
   (send-for-eval conn
     (cljsc/-compile
-      '[(ns cljs.user)
-        (set! *print-fn* clojure.browser.repl/repl-print)] {})
+      '[(set! *print-fn* clojure.browser.repl/repl-print)] {})
     identity))
 
 (defn add-in-order [{:keys [expecting fns]} order f]
