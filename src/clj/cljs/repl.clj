@@ -895,22 +895,25 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 (defmacro doc
   "Prints documentation for a var or special form given its name"
   [name]
-  (if-let [special-name ('{& fn catch try finally try} name)]
-    `(cljs.repl/print-doc (quote ~(special-doc special-name)))
-    (cond
-      (special-doc-map name)
-      `(cljs.repl/print-doc (quote ~(special-doc name)))
+  `(println
+     (binding [cljs.core/*print-newline* true]
+       (with-out-str
+         ~(if-let [special-name ('{& fn catch try finally try} name)]
+            `(cljs.repl/print-doc (quote ~(special-doc special-name)))
+            (cond
+              (special-doc-map name)
+              `(cljs.repl/print-doc (quote ~(special-doc name)))
 
-      (ana-api/find-ns name)
-      `(cljs.repl/print-doc
-         (quote ~(select-keys (ana-api/find-ns name) [:name :doc])))
+              (ana-api/find-ns name)
+              `(cljs.repl/print-doc
+                 (quote ~(select-keys (ana-api/find-ns name) [:name :doc])))
 
-      (ana-api/resolve &env name)
-      `(cljs.repl/print-doc
-         (quote ~(update-in
-                   (select-keys (ana-api/resolve &env name)
-                     [:ns :name :doc :forms :arglists :macro :url])
-                   [:name] clojure.core/name))))))
+              (ana-api/resolve &env name)
+              `(cljs.repl/print-doc
+                 (quote ~(update-in
+                           (select-keys (ana-api/resolve &env name)
+                             [:ns :name :doc :forms :arglists :macro :url])
+                           [:name] clojure.core/name)))))))))
 
 (defmacro find-doc
   "Prints documentation for any var whose documentation or name
