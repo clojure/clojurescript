@@ -28,7 +28,8 @@
            [java.net URL]
            [javax.xml.bind DatatypeConverter]
            [clojure.lang IExceptionInfo]
-           [java.util.regex Pattern]))
+           [java.util.regex Pattern]
+           [com.google.common.base Throwables]))
 
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *repl-opts* nil)
@@ -365,7 +366,7 @@
                    (catch Throwable e
                      (when (:repl-verbose opts)
                        (print "Failed to canonicalize stacktrace")
-                       (print (with-out-str (.printStacktrace e *out*)))
+                       (print (Throwables/getStackTraceAsString e))
                        (flush))))]
          (if (vector? cst)
            (if (satisfies? IPrintStacktrace repl-env)
