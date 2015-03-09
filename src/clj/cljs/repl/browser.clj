@@ -198,10 +198,83 @@
   (comp/with-core-cljs nil
     (fn [] (server/start repl-env))))
 
+;; =============================================================================
+;; Stracktrace parsing
+
+(defmulti parse-stacktrace (fn [repl-env st err opts] (:ua-product err)))
+
+;; -----------------------------------------------------------------------------
+;; Safari Stacktrace
+
+(defn safari-st-el->frame
+  "Parses a stack line into a frame representation, returning nil
+  if parse failed."
+  [st-el opts]
+  (let [[function flc] (if (re-find #"@" st-el)
+                         (string/split st-el #"@")
+                         [nil st-el])
+        xs (string/split flc #":")
+        [pre post]
+        (reduce
+          (fn [[pre post] [x i]]
+            (if (<= i 2)
+              [pre (conj post x)]
+              [(conj pre x) post]))
+          [[] []] (map vector xs (range (count xs) 0 -1)))
+        file (string/join ":" pre)
+        [line column] (map #(Long/parseLong %) post)]
+    (if (and file function line column)
+      {:file (if (re-find #"http://localhost:9000/" file)
+               (-> file
+                 (string/replace #"http://localhost:9000/" "")
+                 (string/replace (Pattern/compile (str "^" (util/output-directory opts) "/")) ""))
+               (if-let [asset-root (:asset-root opts)]
+                 (string/replace file asset-root "")
+                 (throw
+                   (ex-info (str "Could not relativize URL " file)
+                     {:type :parse-stacktrace
+                      :reason :relativize-url}))))
+       :function function
+       :line line
+       :column column}
+      (when-not (string/blank? function)
+        {:file nil
+         :function (string/trim function)
+         :line nil
+         :column nil}))))
+
+(comment
+  (safari-st-el->frame
+    "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4259:17" {})
+  )
+
+(defmethod parse-stacktrace :safari
+  [repl-env st err opts]
+  (->> st
+    string/split-lines
+    (take-while #(not (.startsWith % "eval code")))
+    (remove string/blank?)
+    (map #(safari-st-el->frame % opts))
+    (remove nil?)
+    vec))
+
+(comment
+  (parse-stacktrace nil
+    "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4259:17\ncljs$core$first@http://localhost:9000/out/cljs/core.js:4289:22\ncljs$core$ffirst@http://localhost:9000/out/cljs/core.js:5357:39\nhttp://localhost:9000/out/cljs/core.js:16972:92\nhttp://localhost:9000/out/cljs/core.js:16973:3\nhttp://localhost:9000/out/cljs/core.js:10982:133\nsval@http://localhost:9000/out/cljs/core.js:10983:3\ncljs$core$ISeqable$_seq$arity$1@http://localhost:9000/out/cljs/core.js:11074:14\ncljs$core$seq@http://localhost:9000/out/cljs/core.js:4240:44\ncljs$core$pr_sequential_writer@http://localhost:9000/out/cljs/core.js:28707:17\ncljs$core$IPrintWithWriter$_pr_writer$arity$3@http://localhost:9000/out/cljs/core.js:29386:38\ncljs$core$pr_writer_impl@http://localhost:9000/out/cljs/core.js:28912:57\ncljs$core$pr_writer@http://localhost:9000/out/cljs/core.js:29011:32\ncljs$core$pr_seq_writer@http://localhost:9000/out/cljs/core.js:29015:20\ncljs$core$pr_sb_with_opts@http://localhost:9000/out/cljs/core.js:29078:24\ncljs$core$pr_str_with_opts@http://localhost:9000/out/cljs/core.js:29092:48\ncljs$core$pr_str__delegate@http://localhost:9000/out/cljs/core.js:29130:34\ncljs$core$pr_str@http://localhost:9000/out/cljs/core.js:29139:39\n\neval code\neval@[native code]\nhttp://localhost:9000/out/clojure/browser/repl.js:23:271\nclojure$browser$repl$evaluate_javascript@http://localhost:9000/out/clojure/browser/repl.js:26:4\nhttp://localhost:9000/out/clojure/browser/repl.js:121:173\ndeliver@http://localhost:9000/out/goog/messaging/abstractchannel.js:142:21\nxpcDeliver@http://localhost:9000/out/goog/net/xpc/crosspagechannel.js:733:19\nmessageReceived_@http://localhost:9000/out/goog/net/xpc/nativemessagingtransport.js:321:23\nfireListener@http://localhost:9000/out/goog/events/events.js:741:25\nhandleBrowserEvent_@http://localhost:9000/out/goog/events/events.js:862:34\nhttp://localhost:9000/out/goog/events/events.js:276:42"
+    {:ua-product :safari}
+    nil)
+  )
+
+;; =============================================================================
+;; BrowserEnv
+
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
   (-setup [this opts]
     (setup this opts))
+  repl/IParseStacktrace
+  (-parse-stacktrace [this st err opts]
+    (parse-stacktrace this st err opts))
   (-evaluate [_ _ _ js] (browser-eval js))
   (-load [this provides url]
     (load-javascript this provides url))
