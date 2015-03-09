@@ -1014,7 +1014,7 @@ str-or-pattern."
                      (evaluate-form repl-env env "<cljs repl>"
                        `(when ~e
                           (pr-str
-                            {:value (.-message ~e)
+                            {:value (str ~e)
                              :stacktrace (.-stack ~e)})))))]
          (display-error repl-env
            (if (satisfies? IParseError repl-env)
