@@ -266,7 +266,7 @@
   (->> st
     string/split-lines
     (drop 1) ;; drop the error message
-    (take-while #(not (.startsWith % "\tat eval")))
+    (take-while #(not (.startsWith % "    at eval")))
     (map #(chrome-st-el->frame % opts))
     (remove nil?)
     vec))
