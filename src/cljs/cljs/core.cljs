@@ -38,13 +38,63 @@
   "Set *print-fn* to f."
   [f] (set! *print-fn* f))
 
-(def ^:dynamic *flush-on-newline* true)
-(def ^:dynamic *print-newline* true)
-(def ^:dynamic *print-readably* true)
-(def ^:dynamic *print-meta* false)
-(def ^:dynamic *print-dup* false)
-(def ^:dynamic *print-length* nil)
-(def ^:dynamic *print-level* nil)
+(def
+  ^{:dynamic true
+    :doc "When set to true, output will be flushed whenever a newline is printed.
+
+  Defaults to true."}
+  *flush-on-newline* true)
+
+(def
+  ^{:dynamic true
+    :doc "When set to logical false will drop newlines from printing calls.
+  This is to work around the implicit newlines emitted by standard JavaScript
+  console objects."}
+  *print-newline* true)
+
+(def
+  ^{:dynamic true
+    :doc "When set to logical false, strings and characters will be printed with
+  non-alphanumeric characters converted to the appropriate escape sequences.
+
+  Defaults to true"}
+  *print-readably* true)
+
+(def
+  ^{:dynamic true
+    :doc "If set to logical true, when printing an object, its metadata will also
+  be printed in a form that can be read back by the reader.
+
+  Defaults to false."}
+  *print-meta* false)
+
+(def
+  ^{:dynamic true
+    :doc "When set to logical true, objects will be printed in a way that preserves
+  their type when read in later.
+
+  Defaults to false."}
+  *print-dup* false)
+
+(def
+  ^{:dynamic true
+    :doc "When set to logical true, objects will be printed in a way that preserves
+  their type when read in later.
+
+  Defaults to false."}
+  *print-length* nil)
+
+(def
+  ^{:dynamic true
+    :doc "*print-level* controls how many levels deep the printer will
+  print nested objects. If it is bound to logical false, there is no
+  limit. Otherwise, it must be bound to an integer indicating the maximum
+  level to print. Each argument to print is at level 0; if an argument is a
+  collection, its items are at level 1; and so on. If an object is a
+  collection and is at a level greater than or equal to the value bound to
+  *print-level*, the printer prints '#' to represent it. The root binding
+  is nil indicating no limit."}
+  *print-level* nil)
 
 (defonce ^:dynamic *loaded-libs* nil)
 
