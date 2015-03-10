@@ -17,8 +17,12 @@
 
 (def *unchecked-if* false)
 
-(def ^{:dynamic true
-       :jsdoc ["@define {string}"]}
+(def
+  ^{:dynamic true
+    :doc "Var bound to the name value of the compiler build :target
+  option. If compiler build :target is :nodejs, *target* will be bound to
+  \"nodejs\"."
+    :jsdoc ["@define {string}"]}
   *target* "default")
 
 (defonce
