@@ -1052,7 +1052,7 @@
                       (let [{:keys [output-dir cache-analysis]} opts]
                         (when (and (true? cache-analysis) output-dir)
                           (ana/write-analysis-cache ns-name
-                            (ana/cache-file src output-dir :write)))
+                            (ana/cache-file src (ana/parse-ns src) output-dir :write)))
                         ret))))))))))))
 
 (defn requires-compilation?

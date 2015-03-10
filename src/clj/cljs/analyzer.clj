@@ -1977,6 +1977,7 @@ argument, which the reader will use in any emitted errors."
   ([src output-dir] (cache-file src (parse-ns src) output-dir))
   ([src ns-info output-dir] (cache-file src (parse-ns src) output-dir :read))
   ([src ns-info output-dir mode]
+   {:pre [(map? ns-info)]}
    (if-let [core-cache
             (and (= mode :read)
                  (= (:ns ns-info) 'cljs.core)
