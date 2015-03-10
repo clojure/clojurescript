@@ -10,6 +10,7 @@
   (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [clojure.edn :as edn]
             [cljs.compiler :as comp]
             [cljs.util :as util]
             [cljs.env :as env]
@@ -265,23 +266,40 @@
   [repl-env st err opts]
   (->> st
     string/split-lines
-    (drop 1) ;; drop the error message
+    (drop-while #(.startsWith % "Error"))
+    (take-while #(not (.startsWith % "    at eval")))
     (map #(chrome-st-el->frame % opts))
     (remove nil?)
     vec))
 
 (comment
   (parse-stacktrace nil
-    "\tat Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4258:8)
-\tat Object.cljs$core$first [as first] (http://localhost:9000/out/cljs/core.js:4288:19)
-\tat cljs$core$ffirst (http://localhost:9000/out/cljs/core.js:5356:34)
-\tat http://localhost:9000/out/cljs/core.js:16971:89
-\tat cljs.core.map.cljs$core$map__2 (http://localhost:9000/out/cljs/core.js:16972:3)
-\tat http://localhost:9000/out/cljs/core.js:10981:129
-\tat cljs.core.LazySeq.sval (http://localhost:9000/out/cljs/core.js:10982:3)
-\tat cljs.core.LazySeq.cljs$core$ISeqable$_seq$arity$1 (http://localhost:9000/out/cljs/core.js:11073:10)
-\tat Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4239:13)
-\tat Object.cljs$core$pr_sequential_writer [as pr_sequential_writer] (http://localhost:9000/out/cljs/core.js:28706:14)"
+    "Error: 1 is not ISeqable
+    at Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4258:8)
+    at Object.cljs$core$first [as first] (http://localhost:9000/out/cljs/core.js:4288:19)
+    at cljs$core$ffirst (http://localhost:9000/out/cljs/core.js:5356:34)
+    at http://localhost:9000/out/cljs/core.js:16971:89
+    at cljs.core.map.cljs$core$map__2 (http://localhost:9000/out/cljs/core.js:16972:3)
+    at http://localhost:9000/out/cljs/core.js:10981:129
+    at cljs.core.LazySeq.sval (http://localhost:9000/out/cljs/core.js:10982:3)
+    at cljs.core.LazySeq.cljs$core$ISeqable$_seq$arity$1 (http://localhost:9000/out/cljs/core.js:11073:10)
+    at Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4239:13)
+    at Object.cljs$core$pr_sequential_writer [as pr_sequential_writer] (http://localhost:9000/out/cljs/core.js:28706:14)"
+    {:ua-product :chrome}
+    nil)
+
+  (parse-stacktrace nil
+    "Error: 1 is not ISeqable
+    at Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4259:8)
+    at Object.cljs$core$first [as first] (http://localhost:9000/out/cljs/core.js:4289:19)
+    at cljs$core$ffirst (http://localhost:9000/out/cljs/core.js:5357:18)
+    at eval (eval at <anonymous> (http://localhost:9000/out/clojure/browser/repl.js:23:272), <anonymous>:1:106)
+    at eval (eval at <anonymous> (http://localhost:9000/out/clojure/browser/repl.js:23:272), <anonymous>:9:3)
+    at eval (eval at <anonymous> (http://localhost:9000/out/clojure/browser/repl.js:23:272), <anonymous>:14:4)
+    at http://localhost:9000/out/clojure/browser/repl.js:23:267
+    at clojure$browser$repl$evaluate_javascript (http://localhost:9000/out/clojure/browser/repl.js:26:4)
+    at Object.callback (http://localhost:9000/out/clojure/browser/repl.js:121:169)
+    at goog.messaging.AbstractChannel.deliver (http://localhost:9000/out/goog/messaging/abstractchannel.js:142:13)"
     {:ua-product :chrome}
     nil)
   )
@@ -315,6 +333,7 @@
   [repl-env st err opts]
   (->> st
     string/split-lines
+    (drop-while #(.startsWith % "Error"))
     (take-while #(not (.startsWith % "eval code")))
     (remove string/blank?)
     (map #(safari-st-el->frame % opts))
@@ -409,6 +428,7 @@ http://localhost:9000/out/goog/events/events.js:276:42"
   [repl-env st err opts]
   (->> st
     string/split-lines
+    (drop-while #(.startsWith % "Error"))
     (take-while #(= (.indexOf % "> eval") -1))
     (remove string/blank?)
     (map #(firefox-st-el->frame % opts))
@@ -460,6 +480,15 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   repl/IParseStacktrace
   (-parse-stacktrace [this st err opts]
     (parse-stacktrace this st err opts))
+  repl/IGetError
+  (-get-error [this e env opts]
+    (edn/read-string
+      (repl/evaluate-form this env "<cljs repl>"
+        `(when ~e
+           (pr-str
+             {:ua-product (clojure.browser.repl/get-ua-product)
+              :value (str ~e)
+              :stacktrace (.-stack ~e)})))))
   (-evaluate [_ _ _ js] (browser-eval js))
   (-load [this provides url]
     (load-javascript this provides url))

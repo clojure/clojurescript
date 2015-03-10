@@ -15,7 +15,8 @@
   (cond
     (:forms m) (doseq [f (:forms m)]
                  (println "  " f))
-    (:arglists m) (if (:macro m)
+    (:arglists m) (if (or (:macro m)
+                          (:repl-special-function m))
                     (prn (:arglists m))
                     (prn (second (:arglists m)))))
   (if (:special-form m)
@@ -29,5 +30,7 @@
                    (:name m)))))
     (do
       (when (:macro m)
-        (println "Macro")) 
+        (println "Macro"))
+      (when (:repl-special-function m)
+        (println "REPL Special Function"))
       (println " " (:doc m)))))

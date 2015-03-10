@@ -31,6 +31,15 @@
   (if-let [conn @xpc-connection]
     (net/transmit conn :print (pr-str data))))
 
+;; TODO: latest GCL interface for this is different
+;; see goog.userAgent.product
+(defn get-ua-product []
+  (cond
+    (gbrowser/isSafari) :safari
+    (gbrowser/isChrome) :chrome
+    (gbrowser/isFirefox) :firefox
+    (gbrowser/isIE) :ie))
+
 (defn evaluate-javascript
   "Process a single block of JavaScript received from the server"
   [conn block]
@@ -40,15 +49,8 @@
            :value (str (js* "eval(~{block})"))}
           (catch :default e
             {:status :exception
-             ;; TODO: latest GCL interface for this is different
-             ;; see goog.userAgent.product
-             :ua-product
-             (cond
-               (gbrowser/isSafari) :safari
-               (gbrowser/isChrome) :chrome
-               (gbrowser/isFirefox) :firefox
-               (gbrowser/isIE) :ie)
-             :value (pr-str e)
+             :ua-product (get-ua-product)
+             :value (str e)
              :stacktrace
              (if (.hasOwnProperty e "stack")
                (.-stack e)
@@ -62,15 +64,15 @@
   "Send data to be printed in the REPL. If there is an error, try again
   up to 10 times."
   ([url data]
-     (send-print url data 0))
+   (send-print url data 0))
   ([url data n]
-     (let [conn (net/xhr-connection)]
-       (event/listen conn :error
-                     (fn [_]
-                       (if (< n 10)
-                         (send-print url data (inc n))
-                         (.log js/console (str "Could not send " data " after " n " attempts.")))))
-       (net/transmit conn url "POST" data nil 0))))
+   (let [conn (net/xhr-connection)]
+     (event/listen conn :error
+       (fn [_]
+         (if (< n 10)
+           (send-print url data (inc n))
+           (.log js/console (str "Could not send " data " after " n " attempts.")))))
+     (net/transmit conn url "POST" data nil 0))))
 
 (def order (atom 0))
 
@@ -83,26 +85,26 @@
   (if-let [repl-connection (net/xpc-connection)]
     (let [connection (net/xhr-connection)]
       (event/listen connection
-                    :success
-                    (fn [e]
-                      (net/transmit
-                       repl-connection
-                       :evaluate-javascript
-                       (.getResponseText (.-currentTarget e)
-                                         ()))))
+        :success
+        (fn [e]
+          (net/transmit
+            repl-connection
+            :evaluate-javascript
+            (.getResponseText (.-currentTarget e)
+              ()))))
 
       (net/register-service repl-connection
-                            :send-result
-                            (fn [data]
-                              (send-result connection url (wrap-message :result data))))
+        :send-result
+        (fn [data]
+          (send-result connection url (wrap-message :result data))))
 
       (net/register-service repl-connection
-                            :print
-                            (fn [data]
-                              (send-print url (wrap-message :print data))))
-      
+        :print
+        (fn [data]
+          (send-print url (wrap-message :print data))))
+
       (net/connect repl-connection
-                   (constantly nil))
+        (constantly nil))
 
       (js/setTimeout #(send-result connection url (wrap-message :ready "ready")) 50))
     (js/alert "No 'xpc' param provided to child iframe.")))

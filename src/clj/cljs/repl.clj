@@ -892,6 +892,75 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     :name name-symbol
     :special-form true))
 
+(def repl-special-doc-map
+  '{in-ns {:arglists ([name])
+           :doc "Sets *cljs-ns* to the namespace named by the symbol, creating it if needed."}
+    require {:arglists ([& args])
+             :doc "  Loads libs, skipping any that are already loaded. Each argument is
+  either a libspec that identifies a lib or a flag that modifies how all the identified
+  libs are loaded. Use :require in the ns macro in preference to calling this
+  directly.
+
+  Libs
+
+  A 'lib' is a named set of resources in classpath whose contents define a
+  library of ClojureScript code. Lib names are symbols and each lib is associated
+  with a ClojureScript namespace. A lib's name also locates its root directory
+  within classpath using Java's package name to classpath-relative path mapping.
+  All resources in a lib should be contained in the directory structure under its
+  root directory. All definitions a lib makes should be in its associated namespace.
+
+  'require loads a lib by loading its root resource. The root resource path
+  is derived from the lib name in the following manner:
+  Consider a lib named by the symbol 'x.y.z; it has the root directory
+  <classpath>/x/y/, and its root resource is <classpath>/x/y/z.clj. The root
+  resource should contain code to create the lib's namespace (usually by using
+  the ns macro) and load any additional lib resources.
+
+  Libspecs
+
+  A libspec is a lib name or a vector containing a lib name followed by
+  options expressed as sequential keywords and arguments.
+
+  Recognized options:
+  :as takes a symbol as its argument and makes that symbol an alias to the
+    lib's namespace in the current namespace.
+  :refer takes a list of symbols to refer from the namespace..
+  :refer-macros takes a list of macro symbols to refer from the namespace.
+  :include-macros takes a list of macro symbols to refer from the namespace.
+
+  Flags
+
+  A flag is a keyword.
+  Recognized flags: :reload, :reload-all, :verbose
+  :reload forces loading of all the identified libs even if they are
+    already loaded
+  :reload-all implies :reload and also forces loading of all libs that the
+    identified libs directly or indirectly load via require or use
+  :verbose triggers printing information about each load, alias, and refer
+
+  Example:
+
+  The following would load the library clojure.string :as string.
+
+  (require '[clojure/string :as string])"}
+    require-macros {:arglists ([& args])
+                    :doc "Similar to the require REPL special function but
+    only for macros."}
+    import {:arglists ([& import-symbols-or-lists])
+            :doc "import-list => (closure-namespace constructor-name-symbols*)
+
+  For each name in constructor-name-symbols, adds a mapping from name to the
+  constructor named by closure-namespace to the current namespace. Use :import in the ns
+  macro in preference to calling this directly."}
+    load-file {:arglist ([name])
+               :doc "Sequentially read and evaluate the set of forms contained in the file."}})
+
+(defn- repl-special-doc [name-symbol]
+  (assoc (repl-special-doc-map name-symbol)
+    :name name-symbol
+    :repl-special-function true))
+
 (defmacro doc
   "Prints documentation for a var or special form given its name"
   [name]
@@ -903,6 +972,9 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
             (cond
               (special-doc-map name)
               `(cljs.repl/print-doc (quote ~(special-doc name)))
+
+              (repl-special-doc-map name)
+              `(cljs.repl/print-doc (quote ~(repl-special-doc name)))
 
               (ana-api/find-ns name)
               `(cljs.repl/print-doc
@@ -1014,7 +1086,7 @@ str-or-pattern."
                      (evaluate-form repl-env env "<cljs repl>"
                        `(when ~e
                           (pr-str
-                            {:value (.-message ~e)
+                            {:value (str ~e)
                              :stacktrace (.-stack ~e)})))))]
          (display-error repl-env
            (if (satisfies? IParseError repl-env)
