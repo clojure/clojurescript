@@ -43,3 +43,7 @@ mv $AOT_CACHE_FILE src/cljs/cljs/core.cljs.cache.aot.edn
 
 lein uberjar clojure.main
 mv target/clojurescript-0.0-SNAPSHOT-standalone.jar target/cljs.jar
+
+rm -f src/cljs/cljs/core.aot.js
+rm -f src/cljs/cljs/core.aot.js.map
+rm -f src/cljs/cljs/core.cljs.cache.aot.edn

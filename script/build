@@ -62,3 +62,7 @@ else
     echo "Skipping remote deployment and Git tag because we are not on Hudson."
     mvn clean install
 fi
+
+rm -f src/cljs/cljs/core.aot.js
+rm -f src/cljs/cljs/core.aot.js.map
+rm -f src/cljs/cljs/core.cljs.cache.aot.edn
