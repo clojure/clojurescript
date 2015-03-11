@@ -197,15 +197,14 @@
   `(binding [*cljs-warning-handlers* ~handlers]
      ~@body))
 
-(def ^:private constant-counter (atom 0))
-
 (defn gen-constant-id [value]
   (let [prefix (cond
                  (keyword? value) "constant$keyword$"
                  :else
                  (throw
-                   (Exception. (str "constant type " (type value) " not supported"))))]
-    (symbol (str prefix (string/replace (munge value) "." "$")))))
+                   (Exception. (str "constant type " (type value) " not supported"))))
+        name (-> value (str) (subs 1) (string/replace "-" "_DASH_") (munge) (string/replace "." "$"))]
+    (symbol (str prefix name))))
 
 (defn- register-constant!
   ([val] (register-constant! nil val))

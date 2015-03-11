@@ -324,3 +324,8 @@
     ;; actual: (not (= #{file-reloading dev client} #{file-reloading dev client core}))
     (is (= (set (a/ns-dependents 'utils))
            #{'file-reloading 'dev 'client 'core}))))
+
+(deftest test-cljs-1105
+  ;; munge turns - into _, must preserve the dash first
+  (is (not= (a/gen-constant-id :test-kw)
+            (a/gen-constant-id :test_kw))))
