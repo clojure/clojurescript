@@ -1032,8 +1032,10 @@ should contain the source for the given namespace name."
     (let [fdeps-str (when-not (empty? foreign-deps)
                       (foreign-deps-str opts foreign-deps))
           sm-name (when (:source-map opts)
-                    (str output-to ".map"))]
-      (spit (io/file output-to)
+                    (str output-to ".map"))
+          out-file (io/file output-to)]
+      (util/mkdirs out-file)
+      (spit out-file
         (as-> source source
           (if (= name :cljs-base)
             (add-header opts source)
