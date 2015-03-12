@@ -57,7 +57,8 @@
            [javax.xml.bind DatatypeConverter]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult]
-           [com.sun.nio.file SensitivityWatchEventModifier]))
+           [com.sun.nio.file SensitivityWatchEventModifier]
+           [com.google.common.base Throwables]))
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
@@ -1486,7 +1487,8 @@ should contain the source for the given namespace name."
                   (when-let [f (:watch-fn opts)]
                     (f))
                   (catch Throwable e
-                    (.printStackTrace e))))
+                    (binding [*out* *err*]
+                      (println (Throwables/getStackTraceAsString e))))))
               (watch-all [^Path root]
                 (Files/walkFileTree root
                   (reify
