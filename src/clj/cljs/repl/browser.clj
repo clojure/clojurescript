@@ -122,7 +122,8 @@
   (send ordering (fn [_] {:expecting nil :fns {}}))
   (send-for-eval conn
     (cljsc/-compile
-      '[(set! *print-fn* clojure.browser.repl/repl-print)] {})
+      '[(set! *print-fn* clojure.browser.repl/repl-print)
+        (set! *print-newline* true)] {})
     identity))
 
 (defn add-in-order [{:keys [expecting fns]} order f]
@@ -496,6 +497,10 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   repl/IJavaScriptEnv
   (-setup [this opts]
     (setup this opts))
+  repl/IReplEnvOptions
+  (-repl-options [this]
+    {:repl-requires
+     '[[clojure.browser.repl]]})
   repl/IParseStacktrace
   (-parse-stacktrace [this st err opts]
     (parse-stacktrace this st err opts))

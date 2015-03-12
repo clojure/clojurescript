@@ -644,7 +644,8 @@
       (.printStackTrace e))))
 
 (defn repl*
-  [repl-env {:keys [init need-prompt prompt flush read eval print caught reader print-no-newline source-map-inline wrap]
+  [repl-env {:keys [init need-prompt prompt flush read eval print caught reader
+                    print-no-newline source-map-inline wrap repl-requires]
              :or {init #()
                   need-prompt #(if (readers/indexing-reader? *in*)
                                  (== (readers/get-column-number *in*) 1)
@@ -659,15 +660,18 @@
                            (PushbackReader. (io/reader *in*))
                            1 "NO_SOURCE_FILE")
                   print-no-newline print
-                  source-map-inline true}
+                  source-map-inline true
+                  repl-requires '[[cljs.repl :refer-macros [source doc find-doc apropos dir pst]]]}
              :as opts}]
-  (let [{:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
+  (let [repl-opts (-repl-options repl-env)
+        repl-requires (into repl-requires (:repl-requires repl-opts))
+        {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (merge
           {:cache-analysis true :source-map true}
           (cljsc/add-implicit-options
             (merge-with (fn [a b] (if (nil? b) a b))
-              (-repl-options repl-env)
+              repl-opts
               opts
               {:init init
                :need-prompt prompt
@@ -730,8 +734,8 @@
                    (analyze-source analyze-path opts))
                  (evaluate-form repl-env env "<cljs repl>"
                    (with-meta
-                     '(ns cljs.user
-                        (:require [cljs.repl :refer-macros [source doc find-doc apropos dir pst]]))
+                     `(~'ns ~'cljs.user
+                        (:require ~@repl-requires))
                      {:line 1 :column 1})
                    identity opts)
                  (catch Throwable e
