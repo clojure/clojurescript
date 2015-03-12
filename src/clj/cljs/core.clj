@@ -47,14 +47,30 @@
 (defmacro import-macros [ns [& vars]]
   (core/let [ns (find-ns ns)
              vars (map #(ns-resolve ns %) vars)
-             syms (map (core/fn [^clojure.lang.Var v] (core/-> v .sym (with-meta {:macro true}))) vars)
-             defs (map (core/fn [sym var]
-                                `(do (def ~sym (deref ~var))
-                                     ;for AOT compilation
-                                     (alter-meta! (var ~sym) assoc :macro true)))
-                       syms vars)]
-            `(do ~@defs
-                 :imported)))
+             syms (map
+                    (core/fn [^clojure.lang.Var v]
+                      (core/-> v .sym
+                        (with-meta
+                          (merge
+                            {:macro true}
+                            (update-in (select-keys (meta v) [:arglists :doc :file :line])
+                              [:arglists] (core/fn [arglists] `(quote ~arglists)))))))
+                    vars)
+             defs (map
+                    (core/fn [sym var]
+                      (core/let [{:keys [arglists doc file line]} (meta sym)]
+                        `(do
+                           (def ~sym (deref ~var))
+                           ;for AOT compilation
+                           (alter-meta! (var ~sym) assoc
+                             :macro true
+                             :arglists ~arglists
+                             :doc ~doc
+                             :file ~file
+                             :line ~line))))
+                    syms vars)]
+    `(do ~@defs
+         :imported)))
 
 (import-macros clojure.core
  [-> ->> .. assert comment cond
