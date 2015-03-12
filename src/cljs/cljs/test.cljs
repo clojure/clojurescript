@@ -372,19 +372,18 @@
       default)))
 
 (defn file-and-line [exception depth]
-  (let [stack (.-stack exception)]
-      (if (and stack (string? stack))
-        ;; TODO: flesh out
-        (let [stacktrace
-              (vec (map string/trim
-                     (string/split stack #"\n")))
-              stack-element (nth stacktrace depth)
-              fname (js-filename stack-element)
-              [line column] (js-line-and-column stack-element)
-              [fname line column] (mapped-line-and-column fname line column)]
-          {:file fname :line line :column column})
-        {:file (.-fileName exception)
-         :line (.-lineNumber exception)}))  )
+  ;; TODO: flesh out
+  (if-let [stack-element (and (string? (.-stack exception))
+                              (some-> (.-stack exception)
+                                      string/split-lines
+                                      (get depth)
+                                      string/trim))]
+    (let [fname (js-filename stack-element)
+          [line column] (js-line-and-column stack-element)
+          [fname line column] (mapped-line-and-column fname line column)]
+      {:file fname :line line :column column})
+    {:file (.-fileName exception)
+     :line (.-lineNumber exception)}))
 
 (defn do-report [m]
   (let [m (case (:type m)
