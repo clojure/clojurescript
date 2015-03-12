@@ -23,10 +23,6 @@
   (atom {:return-value-fn nil
          :client-js nil}))
 
-(def loaded-libs (atom #{}))
-
-(def preloaded-libs (atom #{}))
-
 (defn- set-return-value-fn
   "Save the return value function which will be called when the next
   return value is received."
@@ -123,7 +119,6 @@
 (def ordering (agent {:expecting nil :fns {}}))
 
 (defmethod handle-post :ready [_ conn _]
-  (reset! loaded-libs @preloaded-libs)
   (send ordering (fn [_] {:expecting nil :fns {}}))
   (send-for-eval conn
     (cljsc/-compile
@@ -187,13 +182,7 @@
   if any of the namespaces have not already been loaded from the
   ClojureScript REPL."
   [repl-env provides url]
-  (let [missing (remove #(contains? @loaded-libs %) provides)]
-    (when (seq missing)
-      (browser-eval (slurp url))
-      (swap! loaded-libs (partial apply conj) missing))))
-
-(defn setup [repl-env opts]
-  (server/start repl-env))
+  (browser-eval (slurp url)))
 
 ;; =============================================================================
 ;; Stracktrace parsing
@@ -473,6 +462,36 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
 ;; =============================================================================
 ;; BrowserEnv
 
+(defn compile-client-js [opts]
+  (cljsc/build
+    '[(ns clojure.browser.repl.client
+        (:require [goog.events :as event]
+                  [clojure.browser.repl :as repl]))
+      (defn start [url]
+        (event/listen js/window
+          "load"
+          (fn []
+            (repl/start-evaluator url))))]
+    {:optimizations (:optimizations opts)
+     :output-dir (:working-dir opts)}))
+
+(defn create-client-js-file [opts file-path]
+  (let [file (io/file file-path)]
+    (when (not (.exists file))
+      (spit file (compile-client-js opts)))
+    file))
+
+(defn setup [{:keys [working-dir] :as repl-env} opts]
+  (println "Compiling client js ...")
+  (swap! browser-state
+    (fn [old]
+      (assoc old :client-js
+        (create-client-js-file
+          repl-env (io/file working-dir "client.js")))))
+  (println "Waiting for browser to connect ...")
+  opts
+  (server/start repl-env))
+
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
   (-setup [this opts]
@@ -497,88 +516,18 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
     (reset! server/state {})
     (reset! browser-state {})))
 
-(defn compile-client-js [opts]
-  (cljsc/build
-    '[(ns clojure.browser.repl.client
-        (:require [goog.events :as event]
-                  [clojure.browser.repl :as repl]))
-      (defn start [url]
-        (event/listen js/window
-          "load"
-          (fn []
-            (repl/start-evaluator url))))]
-    {:optimizations (:optimizations opts)
-     :output-dir (:working-dir opts)}))
-
-(defn create-client-js-file [opts file-path]
-  (let [file (io/file file-path)]
-    (when (not (.exists file))
-      (spit file (compile-client-js opts)))
-    file))
-
-(defn- provides-and-requires
-  "Return a flat list of all provided and required namespaces from a
-  sequence of IJavaScripts."
-  [deps]
-  (flatten (mapcat (juxt :provides :requires) deps)))
-
-;; TODO: the following is questionable as it triggers compilation
-;; this code should other means to determine the dependencies for a
-;; namespace - David
-
-(defn- always-preload
-  "Return a list of all namespaces which are always loaded into the browser
-  when using a browser-connected REPL.
-
-  Uses the working-dir (see repl-env) to output intermediate compilation."
-  [& [{:keys [working-dir]}]]
-  (let [opts (if working-dir {:output-dir working-dir}
-                 {})
-        cljs (provides-and-requires
-              (cljsc/cljs-dependencies opts ["clojure.browser.repl"]))
-        goog (provides-and-requires
-               (cljsc/js-dependencies opts cljs))]
-    (disj (set (concat cljs goog)) nil)))
-
-;; NOTE: REPL evaluation environment designers do not replicate the behavior
-;; of the browser REPL. The design is outdated, refer to the Node.js, Rhino or
-;; Nashorn REPLs.
-
-(defn repl-env* [opts]
-  (let [ups-deps (cljsc/get-upstream-deps)
-        opts (assoc opts
-               :ups-libs (:libs ups-deps)
-               :ups-foreign-libs (:foreign-libs ups-deps))
-        compiler-env (cljs.env/default-compiler-env opts)
-        opts (merge (BrowserEnv.)
-               {:port           9000
-                :optimizations  :simple
-                :working-dir    (or (:output-dir opts)
-                                  (->> [".repl" (util/clojurescript-version)]
-                                    (remove empty?) (string/join "-")))
-                :serve-static   true
-                :static-dir     (cond-> ["." "out/"]
-                                  (:output-dir opts) (conj (:output-dir opts)))
-                :preloaded-libs []
-                :src            "src/"
-                ::env/compiler  compiler-env
-                :source-map     false}
-               opts)]
-    (cljs.env/with-compiler-env compiler-env
-      (reset! preloaded-libs
-        (set (concat
-               (always-preload opts)
-               (map str (:preloaded-libs opts)))))
-      (reset! loaded-libs @preloaded-libs)
-      (println "Compiling client js ...")
-      (swap! browser-state
-        (fn [old]
-          (assoc old :client-js
-                     (create-client-js-file
-                       opts
-                       (io/file (:working-dir opts) "client.js")))))
-      (println "Waiting for browser to connect ...")
-      opts)))
+(defn repl-env*
+  [{:keys [output-dir] :as opts}]
+  (merge (BrowserEnv.)
+    {:port 9000
+     :working-dir (->> [".repl" (util/clojurescript-version)]
+                       (remove empty?) (string/join "-"))
+     :serve-static true
+     :static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
+     :preloaded-libs []
+     :optimizations :simple
+     :src "src/"}
+    opts))
 
 (defn repl-env
   "Create a browser-connected REPL environment.
@@ -593,9 +542,6 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
                   Defaults to true.
   static-dir:     List of directories to search for static content. Defaults to
                   [\".\" \"out/\"].
-  preloaded-libs: List of namespaces that should not be sent from the REPL server
-                  to the browser. This may be required if the browser is already
-                  loading code and reloading it would cause a problem.
   optimizations:  The level of optimization to use when compiling the client
                   end of the REPL. Defaults to :simple.
   src:            The source directory containing user-defined cljs files. Used to
