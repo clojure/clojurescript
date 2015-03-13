@@ -1844,6 +1844,8 @@
   ([env form] (analyze env form nil))
   ([env form name] (analyze env form name nil))
   ([env form name opts]
+   {:pre [(or (nil? name) (symbol? name))
+          (or (nil? opts) (map? opts))]}
     (env/ensure
       (wrapping-errors env
         (reduce (fn [ast pass] (pass env ast))
@@ -2033,9 +2035,10 @@ argument, which the reader will use in any emitted errors."
    \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
    meaningful value."
   ([f] (analyze-file f nil))
-  ([f {:keys [output-dir] :as opts}]
+  ([f opts]
    (binding [*file-defs* (atom #{})]
-     (let [res (cond
+     (let [output-dir (util/output-directory opts)
+           res (cond
                  (instance? File f) f
                  (instance? URL f) f
                  (re-find #"^file://" f) (URL. f)
@@ -2047,11 +2050,10 @@ argument, which the reader will use in any emitted errors."
                       (.getPath ^File res)
                       (.getPath ^URL res))
                cache (when (or (= (:ns ns-info) 'cljs.core)
-                               (and (:cache-analysis opts) output-dir))
+                               (:cache-analysis opts))
                        (cache-file res ns-info output-dir))]
            (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info)])
-             (if (or (not= (:ns ns-info) 'cljs.core)
-                     (not cache)
+             (if (or (not cache)
                      (requires-analysis? res output-dir))
                (binding [*cljs-ns* 'cljs.user
                          *cljs-file* path
@@ -2063,7 +2065,7 @@ argument, which the reader will use in any emitted errors."
                             (if forms
                               (let [form (first forms)
                                     env (assoc env :ns (get-namespace *cljs-ns*))
-                                    ast (analyze env form opts)]
+                                    ast (analyze env form nil opts)]
                                 (if (= (:op ast) :ns)
                                   (recur (:name ast) (next forms))
                                   (recur ns (next forms))))
