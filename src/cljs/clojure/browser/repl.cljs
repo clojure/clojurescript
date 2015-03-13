@@ -111,6 +111,55 @@
 
 (def load-queue nil)
 
+(defn bootstrap
+  "Reusable browser REPL bootstrapping. Patches the essential functions
+  in goog.base to support re-loading of namespaces after page load."
+  []
+  ;; Monkey-patch goog.provide if running under optimizations :none - David
+  (when-not js/COMPILED
+    (set! (.-require__ js/goog) js/goog.require)
+    ;; suppress useless Google Closure error about duplicate provides
+    (set! (.-isProvided_ js/goog) (fn [name] false))
+    (set! (.-writeScriptTag__ js/goog)
+      (fn [src opt_sourceText]
+        (let [loaded (atom false)
+              onload (fn []
+                       (when (and load-queue (false? @loaded))
+                         (swap! loaded not)
+                         (if (zero? (alength load-queue))
+                           (set! load-queue nil)
+                           (.apply js/goog.writeScriptTag__ nil (.shift load-queue)))))]
+          (.appendChild js/document.body
+           (as-> (.createElement js/document "script") script
+             (doto script
+               (aset "type" "text/javascript")
+               (aset "onload" onload)
+               (aset "onreadystatechange" onload))
+             (if (nil? opt_sourceText)
+               (doto script (aset "src" src))
+               (doto script (gdom/setTextContext opt_sourceText))))))))
+    (set! (.-writeScriptTag_ js/goog)
+      (fn [src opt_sourceText]
+        (if load-queue
+          (.push load-queue #js [src opt_sourceText])
+          (do
+            (set! load-queue #js [])
+            (js/goog.writeScriptTag__ src opt_sourceText)))))
+    (set! (.-require js/goog)
+      (fn [src reload]
+        (when (= reload "reload-all")
+          (set! (.-cljsReloadAll_ js/goog) true))
+        (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
+          (when reload?
+            (let [path (aget js/goog.dependencies_.nameToPath src)]
+              (js-delete js/goog.dependencies_.visited path)
+              (js-delete js/goog.dependencies_.written
+                (str js/goog.basePath path))))
+          (let [ret (.require__ js/goog src)]
+            (when (= reload "reload-all")
+              (set! (.-cljsReloadAll_ js/goog) false))
+            ret))))))
+
 (defn connect
   "Connects to a REPL server from an HTML document. After the
   connection is made, the REPL will evaluate forms in the context of
@@ -132,45 +181,5 @@
       (fn [iframe]
         (set! (.-display (.-style iframe))
           "none")))
-    ;; Monkey-patch goog.provide if running under optimizations :none - David
-    (when-not js/COMPILED
-      (set! (.-require__ js/goog) js/goog.require)
-      ;; suppress useless Google Closure error about duplicate provides
-      (set! (.-isProvided_ js/goog) (fn [name] false))
-      (set! (.-writeScriptTag__ js/goog)
-        (fn [src opt_sourceText]
-          (.appendChild js/document.body
-            (as-> (.createElement js/document "script") script
-              (doto script
-                (aset "type" "text/javascript")
-                (aset "onload"
-                  (fn []
-                    (when load-queue
-                      (if (zero? (alength load-queue))
-                        (set! load-queue nil)
-                        (.apply js/goog.writeScriptTag__ nil (.shift load-queue)))))))
-              (if (nil? opt_sourceText)
-                (doto script (aset "src" src))
-                (doto script (gdom/setTextContext opt_sourceText)))))))
-      (set! (.-writeScriptTag_ js/goog)
-        (fn [src opt_sourceText]
-          (if load-queue
-            (.push load-queue #js [src opt_sourceText])
-            (do
-              (set! load-queue #js [])
-              (js/goog.writeScriptTag__ src opt_sourceText)))))
-      (set! (.-require js/goog)
-        (fn [src reload]
-          (when (= reload "reload-all")
-            (set! (.-cljsReloadAll_ js/goog) true))
-          (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
-            (when reload?
-              (let [path (aget js/goog.dependencies_.nameToPath src)]
-                (js-delete js/goog.dependencies_.visited path)
-                (js-delete js/goog.dependencies_.written
-                  (str js/goog.basePath path))))
-            (let [ret (.require__ js/goog src)]
-              (when (= reload "reload-all")
-                (set! (.-cljsReloadAll_ js/goog) false))
-              ret)))))
+    (bootstrap)
     repl-connection))
