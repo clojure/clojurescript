@@ -199,10 +199,21 @@
   load. The :use-only-custom-externs flag may be used to indicate that
   the default externs should be excluded."
   [{:keys [externs use-only-custom-externs target ups-externs]}]
-  (let [filter-cp-js (fn [paths]
-                       (for [p paths u (deps/find-js-classpath p)] u))
+  (let [validate (fn validate [p us]
+                   (if (empty? us)
+                     (throw (IllegalArgumentException.
+                              (str "Extern " p " does not exist")))
+                     us))
+        filter-cp-js (fn [paths]
+                       (for [p paths
+                             u (validate p
+                                 (deps/find-js-classpath p))]
+                         u))
         filter-js (fn [paths]
-                    (for [p paths u (deps/find-js-resources p)] u))
+                    (for [p paths
+                          u (validate p
+                              (deps/find-js-resources p))]
+                      u))
         add-target (fn [ext]
                      (cons (io/resource "cljs/externs.js")
                        (if (= :nodejs target)
