@@ -4949,6 +4949,16 @@ reduces them without incurring seq initialization"
   (-reduce [coll f start]
     (ci-reduce coll f start))
 
+  IKVReduce
+  (-kv-reduce [coll f init]
+    (loop [i start j 0 init init]
+      (if (< i end)
+        (let [init (f init j (-nth v i))]
+          (if (reduced? init)
+            @init
+            (recur (inc i) (inc j) init)))
+        init)))
+
   IFn
   (-invoke [coll k]
     (-nth coll k))

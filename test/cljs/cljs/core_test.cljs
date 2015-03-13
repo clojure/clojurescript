@@ -459,7 +459,10 @@
         ;; no layered subvecs
         (is (identical? v1 (.-v (subvec s 1 4))))
         (let [m {:x 1}]
-          (is (= m (meta (with-meta s m))))))
+          (is (= m (meta (with-meta s m)))))
+        ;; CLJS-997
+        (is (= (reduce-kv + 123 (vec (range 10 50)))
+               (reduce-kv + 123 (subvec (vec (range 100)) 10 50)))))
       ;; CLJS-513
       (let [sentinel (js-obj)
             s (subvec [0 1 2 3] 1 2)]
