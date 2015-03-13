@@ -386,7 +386,7 @@
     (evaluate-form repl-env env filename form wrap *repl-opts*))
   ([repl-env env filename form wrap opts]
    (binding [ana/*cljs-file* filename]
-     (let [ast (ana/analyze env form opts)
+     (let [ast (ana/analyze env form nil opts)
            js (comp/emit-str ast)
            wrap-js
            ;; TODO: check opts as well - David
@@ -398,7 +398,7 @@
                (let [js (comp/emit-str
                           (ana/no-warn
                             (ana/analyze (assoc env :repl-env repl-env)
-                              (wrap form) opts)))
+                              (wrap form) nil opts)))
                      t (System/currentTimeMillis)]
                  (str js
                    "\n//# sourceURL=repl-" t ".js"
@@ -418,7 +418,7 @@
              (comp/emit-str
                (ana/no-warn
                  (ana/analyze (assoc env :repl-env repl-env)
-                   (wrap form) opts))))]
+                   (wrap form) nil opts))))]
        (when (= (:op ast) :ns)
          (load-dependencies repl-env
            (into (vals (:requires ast))
