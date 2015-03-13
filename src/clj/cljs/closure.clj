@@ -1407,23 +1407,21 @@ should contain the source for the given namespace name."
            (let [compiled (util/measure compiler-stats
                             "Compile basic sources"
                             (doall (-compile source all-opts)))
-                 ;; the constants_table.js file is not used directly here, is picked up by
-                 ;; add-dependencies below
-                 _ (when emit-constants
-                     (comp/emit-constants-table-to-file
-                       (::ana/constant-table @env/*compiler*)
-                       (str (util/output-directory all-opts) "/constants_table.js")))
                  js-sources (util/measure compiler-stats
                               "Add dependencies"
                               (doall
                                 (concat
-                                 (apply add-dependencies all-opts
-                                   (concat
-                                     (if (coll? compiled) compiled [compiled])
-                                     (when (= :nodejs (:target all-opts))
-                                       [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
-                                 (when (= :nodejs (:target all-opts))
-                                   [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
+                                  (apply add-dependencies all-opts
+                                    (concat
+                                      (if (coll? compiled) compiled [compiled])
+                                      (when (= :nodejs (:target all-opts))
+                                        [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
+                                  (when (= :nodejs (:target all-opts))
+                                    [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
+                 _ (when emit-constants
+                     (comp/emit-constants-table-to-file
+                       (::ana/constant-table @env/*compiler*)
+                       (str (util/output-directory all-opts) "/constants_table.js")))
                  optim (:optimizations all-opts)
                  ret (if (and optim (not= optim :none))
                        (do
