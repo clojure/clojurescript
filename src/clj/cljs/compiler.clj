@@ -251,7 +251,7 @@
 (defmethod emit* :no-op [m])
 
 (defmethod emit* :var
-  [{:keys [info env] :as arg}]
+  [{:keys [info env form] :as arg}]
   (let [var-name (:name info)
         info (if (= (namespace var-name) "js")
                (name var-name)
@@ -264,7 +264,10 @@
       ; (prevents duplicate fn-param-names)
       (emits (munge arg))
       (when-not (= :statement (:context env))
-        (emit-wrap env (emits (munge info)))))))
+        (emit-wrap env
+          (emits
+            (cond-> info
+              (not= form 'js/-Infinity) munge)))))))
 
 (defmethod emit* :var-special
   [{:keys [env var sym meta] :as arg}]

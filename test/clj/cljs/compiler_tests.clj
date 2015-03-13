@@ -47,11 +47,8 @@
              [:children 0 :children 0 :name]))
          'cljs$user$console)))
 
-(comment
-  (c/munge
-    (get-in
-      (a/analyze ns-env
-        '(defn foo []
-           (fn bar [])))
-      [:init :children 0 :children 0 :name]))
-  )
+(deftest test-js-negative-infinity
+  (= (with-out-str
+       (c/emit
+         (a/analyze (assoc ns-env :context :expr) 'js/-Infinity)))
+     "-Infinity"))
