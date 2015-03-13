@@ -881,7 +881,7 @@ should contain the source for the given namespace name."
 (defn optimize
   "Use the Closure Compiler to optimize one or more JavaScript files."
   [opts & sources]
-  (when (or *verbose* (:verbose opts))
+  (when (or ana/*verbose* (:verbose opts))
     (util/debug-prn "Applying optimizations" (:optimizations opts)))
   (let [closure-compiler (make-closure-compiler)
         ^List externs (load-externs opts)
