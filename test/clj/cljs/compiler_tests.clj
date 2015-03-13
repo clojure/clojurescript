@@ -31,21 +31,21 @@
                '(defn foo []
                   (fn bar [])))
              [:init :name]))
-         'cljs$user_SLASH_foo))
+         'cljs$user$foo))
   (is (= (c/munge
            (get-in
              (a/analyze ns-env
                '(defn foo []
                   (fn bar [])))
              [:init :children 0 :children 0 :name]))
-          'cljs$user_SLASH_foo_$_bar))
+          'cljs$user$foo_$_bar))
   (is (= (c/munge
            (get-in
              (a/analyze ns-env
                '(fn []
                   (fn console [])))
              [:children 0 :children 0 :name]))
-         'cljs$user_SLASH_console)))
+         'cljs$user$console)))
 
 (comment
   (c/munge
