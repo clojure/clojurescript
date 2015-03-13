@@ -109,6 +109,8 @@
       (js/setTimeout #(send-result connection url (wrap-message :ready "ready")) 50))
     (js/alert "No 'xpc' param provided to child iframe.")))
 
+(def load-queue nil)
+
 (defn connect
   "Connects to a REPL server from an HTML document. After the
   connection is made, the REPL will evaluate forms in the context of
@@ -135,14 +137,28 @@
       (set! (.-require__ js/goog) js/goog.require)
       ;; suppress useless Google Closure error about duplicate provides
       (set! (.-isProvided_ js/goog) (fn [name] false))
-      (set! (.-writeScriptTag_ js/goog)
+      (set! (.-writeScriptTag__ js/goog)
         (fn [src opt_sourceText]
           (.appendChild js/document.body
             (as-> (.createElement js/document "script") script
-              (doto script (aset "type" "text/javascript"))
+              (doto script
+                (aset "type" "text/javascript")
+                (aset "onload"
+                  (fn []
+                    (when load-queue
+                      (if (zero? (alength load-queue))
+                        (set! load-queue nil)
+                        (.apply js/goog.writeScriptTag__ nil (.shift load-queue)))))))
               (if (nil? opt_sourceText)
                 (doto script (aset "src" src))
                 (doto script (gdom/setTextContext opt_sourceText)))))))
+      (set! (.-writeScriptTag_ js/goog)
+        (fn [src opt_sourceText]
+          (if load-queue
+            (.push load-queue #js [src opt_sourceText])
+            (do
+              (set! load-queue #js [])
+              (js/goog.writeScriptTag__ src opt_sourceText)))))
       (set! (.-require js/goog)
         (fn [src reload]
           (when (= reload "reload-all")
