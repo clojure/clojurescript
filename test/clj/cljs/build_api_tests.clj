@@ -42,7 +42,8 @@
 
 ;; basic
 
-(binding [ana/*cljs-ns* 'cljs.user]
+(binding [ana/*cljs-ns* 'cljs.user
+          ana/*analyze-deps* false]
   (env/with-compiler-env test-cenv
     (ana/no-warn
       (ana/analyze test-env
@@ -51,20 +52,23 @@
 
 ;; linear
 
-(binding [ana/*cljs-ns* 'cljs.user]
+(binding [ana/*cljs-ns* 'cljs.user
+          ana/*analyze-deps* false]
   (env/with-compiler-env test-cenv
     (ana/no-warn
       (ana/analyze test-env
         '(ns foo.core)))))
 
-(binding [ana/*cljs-ns* 'cljs.user]
+(binding [ana/*cljs-ns* 'cljs.user
+          ana/*analyze-deps* false]
   (env/with-compiler-env test-cenv
     (ana/no-warn
       (ana/analyze test-env
         '(ns bar.core
            (:require [foo.core :as foo]))))))
 
-(binding [ana/*cljs-ns* 'cljs.user]
+(binding [ana/*cljs-ns* 'cljs.user
+          ana/*analyze-deps* false]
   (env/with-compiler-env test-cenv
     (ana/no-warn
       (ana/analyze test-env
@@ -73,20 +77,23 @@
 
 ;; graph
 
-(binding [ana/*cljs-ns* 'cljs.user]
+(binding [ana/*cljs-ns* 'cljs.user
+          ana/*analyze-deps* false]
   (env/with-compiler-env test-cenv
     (ana/no-warn
       (ana/analyze test-env
         '(ns graph.foo.core)))))
 
-(binding [ana/*cljs-ns* 'cljs.user]
+(binding [ana/*cljs-ns* 'cljs.user
+          ana/*analyze-deps* false]
   (env/with-compiler-env test-cenv
     (ana/no-warn
       (ana/analyze test-env
         '(ns graph.bar.core
            (:require [graph.foo.core :as foo]))))))
 
-(binding [ana/*cljs-ns* 'cljs.user]
+(binding [ana/*cljs-ns* 'cljs.user
+          ana/*analyze-deps* false]
   (env/with-compiler-env test-cenv
     (ana/no-warn
       (ana/analyze test-env

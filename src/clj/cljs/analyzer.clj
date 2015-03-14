@@ -246,8 +246,7 @@
 
 (defmacro no-warn [& body]
   (let [no-warnings (zipmap (keys *cljs-warnings*) (repeat false))]
-    `(binding [*cljs-warnings* ~no-warnings
-               *analyze-deps* false]
+    `(binding [*cljs-warnings* ~no-warnings]
        ~@body)))
 
 (defmacro all-warn [& body]
@@ -2049,8 +2048,7 @@ argument, which the reader will use in any emitted errors."
                path (if (instance? File res)
                       (.getPath ^File res)
                       (.getPath ^URL res))
-               cache (when (or (= (:ns ns-info) 'cljs.core)
-                               (:cache-analysis opts))
+               cache (when (:cache-analysis opts)
                        (cache-file res ns-info output-dir))]
            (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info)])
              (if (or (not cache)
