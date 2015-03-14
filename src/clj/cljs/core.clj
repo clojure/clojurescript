@@ -1434,6 +1434,11 @@
               cljs.analyzer/*cljs-file*)))))
     (assoc m test expr)))
 
+(defn- const? [env x]
+  (core/let [m (core/and (core/list? x)
+                         (ana/resolve-var env (last x)))]
+    (core/when m (core/get m :const))))
+
 (defmacro case
   "Takes an expression, and a set of clauses.
 
@@ -1481,10 +1486,9 @@
                            (assoc-test m test expr env)))
                      {} (partition 2 clauses))
              esym    (gensym)
-             const? #(:const (and (list? %) (ana/resolve-var env (last %))))
              tests   (keys pairs)]
     (cond
-      (every? (some-fn core/number? core/string? core/char? const?) tests)
+      (every? (some-fn core/number? core/string? core/char? #(const? env %)) tests)
       (core/let [no-default (if (odd? (count clauses)) (butlast clauses) clauses)
                  tests      (mapv #(if (seq? %) (vec %) [%]) (take-nth 2 no-default))
                  thens      (vec (take-nth 2 (drop 1 no-default)))]
