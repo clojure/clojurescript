@@ -1234,14 +1234,20 @@
   => 17"
   [psym & doc+methods]
   (let [p (:name (cljs.analyzer/resolve-var (dissoc &env :locals) psym))
-        psym (vary-meta psym assoc :protocol-symbol true)
+        [doc methods] (if (core/string? (first doc+methods))
+                        [(first doc+methods) (next doc+methods)]
+                        [nil doc+methods])
+        psym (vary-meta psym assoc
+               :doc doc
+               :protocol-symbol true)
         ns-name (-> &env :ns :name)
         fqn (fn [n] (symbol (core/str ns-name "." n)))
         prefix (protocol-prefix p)
-        methods (if (core/string? (first doc+methods)) (next doc+methods) doc+methods)
         _ (core/doseq [[mname & arities] methods]
             (when (some #{0} (map count (filter vector? arities)))
-              (throw (Exception. (core/str "Invalid protocol, " psym " defines method " mname " with arity 0")))))
+              (throw (Exception.
+                       (core/str "Invalid protocol, " psym
+                                 " defines method " mname " with arity 0")))))
         expand-sig (fn [fname slot sig]
                      `(~sig
                        (if (and ~(first sig) (. ~(first sig) ~(symbol (core/str "-" slot)))) ;; Property access needed here.
@@ -1257,18 +1263,26 @@
                  (into {}
                    (map
                      (fn [[fname & sigs]]
-                       (let [sigs (take-while vector? sigs)]
-                         [fname (vec sigs)]))
+                       (let [doc (as-> (last sigs) doc
+                                   (when (core/string? doc) doc))
+                             sigs (take-while vector? sigs)]
+                         [(vary-meta fname assoc :doc doc)
+                          (vec sigs)]))
                      methods)))
         method (fn [[fname & sigs]]
-                 (let [sigs (take-while vector? sigs)
+                 (let [doc (as-> (last sigs) doc
+                             (when (core/string? doc) doc))
+                       sigs (take-while vector? sigs)
                        slot (symbol (core/str prefix (name fname)))
-                       fname (vary-meta fname assoc :protocol p)]
-                   `(defn ~fname ~@(map (fn [sig]
-                                          (expand-sig fname
-                                                      (symbol (core/str slot "$arity$" (count sig)))
-                                                      sig))
-                                        sigs))))]
+                       fname (vary-meta fname assoc
+                               :protocol p
+                               :doc doc)]
+                   `(defn ~fname
+                      ~@(map (fn [sig]
+                               (expand-sig fname
+                                 (symbol (core/str slot "$arity$" (count sig)))
+                                 sig))
+                          sigs))))]
     `(do
        (set! ~'*unchecked-if* true)
        (def ~psym (js-obj))

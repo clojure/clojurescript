@@ -986,10 +986,20 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 
               (ana-api/resolve &env name)
               `(cljs.repl/print-doc
-                 (quote ~(update-in
-                           (select-keys (ana-api/resolve &env name)
-                             [:ns :name :doc :forms :arglists :macro :url])
-                           [:name] clojure.core/name)))))))))
+                 (quote ~(let [var (ana-api/resolve &env name)
+                               m (select-keys var
+                                   [:ns :name :doc :forms :arglists :macro :url])]
+                           (cond-> (update-in m [:name] clojure.core/name)
+                             (:protocol-symbol var)
+                             (assoc :protocol true
+                                    :methods
+                                    (->> (get-in var [:protocol-info :methods])
+                                      (map (fn [[fname sigs]]
+                                             [fname {:doc (:doc
+                                                            (ana-api/resolve &env
+                                                              (symbol (str (:ns var)) (str fname))))
+                                                     :arglists (seq sigs)}]))
+                                      (into {})))))))))))))
 
 (defmacro find-doc
   "Prints documentation for any var whose documentation or name
