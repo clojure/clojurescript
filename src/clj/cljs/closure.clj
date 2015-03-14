@@ -905,7 +905,8 @@ should contain the source for the given namespace name."
               sources name
               (assoc opts
                 :preamble-line-count
-                (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)))))
+                (+ (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
+                   (if (:output-wrapper opts) 1 0))))))
         source)
       (report-failure result))))
 
@@ -1072,7 +1073,8 @@ should contain the source for the given namespace name."
               {:source-map sm-name
                :preamble-line-count
                (if (= name :cljs-base)
-                 (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
+                 (+ (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
+                    (if (:output-wrapper opts) 1 0))
                  0)
                :foreign-deps-line-count
                (if fdeps-str
