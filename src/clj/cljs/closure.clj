@@ -1206,9 +1206,7 @@ should contain the source for the given namespace name."
 
 (defn get-upstream-deps* 
   "returns a merged map containing all upstream dependencies defined
-  by libraries on the classpath. Should be run in the main thread. If
-  not, pass (java.lang.ClassLoader/getSystemClassLoader) to use the
-  system classloader."
+  by libraries on the classpath."
   ([]
    (get-upstream-deps* (. (Thread/currentThread) (getContextClassLoader))))
   ([classloader]
