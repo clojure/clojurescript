@@ -126,6 +126,9 @@
       (when (= depth 0)
         (distinct (apply concat (vals @state)))))))
 
+(defn valid-js-id-start? [s]
+  (re-find #"(?U)^[\p{Alpha}_$]" s))
+
 (defn debug-prn
   [& args]
   (binding [*out* *err*]

@@ -1436,7 +1436,11 @@
       (warning :single-segment-namespace env {:name name}))
     (when (some js-reserved segments)
       (warning :munged-namespace env {:name name}))
-    (find-def-clash env name segments))
+    (find-def-clash env name segments)
+    (when (some (complement util/valid-js-id-start?) segments)
+      (throw (AssertionError.
+               (str "Namespace " name " has a segment starting with an invaild "
+                    "JavaScript identifier")))))
   (let [docstring (if (string? (first args)) (first args))
         mdocstr   (-> name meta :doc)
         args      (if docstring (next args) args)
