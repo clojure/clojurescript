@@ -69,7 +69,8 @@
    :protocol-duped-method true
    :protocol-multiple-impls true
    :single-segment-namespace true
-   :munged-namespace true})
+   :munged-namespace true
+   :ns-var-clash true})
 
 (def js-reserved
   #{"abstract" "boolean" "break" "byte" "case"
@@ -208,6 +209,10 @@
                  (munge))]
     (str "Namespace " name " contains a reserved JavaScript keyword,"
          " the corresponding Google Closure namespace will be munged to " munged)))
+
+(defmethod error-message :ns-var-clash
+  [warning-type {:keys [ns var] :as info}]
+  (str "Namespace " ns " clashes with var " var))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -770,7 +775,12 @@
         protocol (-> sym meta :protocol)
         dynamic (-> sym meta :dynamic)
         ns-name (-> env :ns :name)
-        locals (:locals env)]
+        locals (:locals env)
+        clash-ns (symbol (str ns-name "." sym))]
+    (when (get-in @env/*compiler* [::namespaces clash-ns])
+      (warning :ns-var-clash env
+        {:ns (symbol (str ns-name "." sym))
+         :var (symbol (str ns-name) (str sym))}))
     (when (namespace sym)
       (throw (error env "Can't def ns-qualified name")))
     (when-let [doc (:doc args)]
@@ -1406,6 +1416,17 @@
         (update-in indexed [:require-macros] (fnil into []) require-specs))
       args)))
 
+(defn find-def-clash [env ns segments]
+  (let [to-check (map (fn [xs]
+                        [(symbol (string/join "." (butlast xs)))
+                         (symbol (last xs))])
+                   (drop 2 (reductions conj [] segments)))]
+    (doseq [[clash-ns name] to-check]
+      (when (get-in @env/*compiler* [::namespaces clash-ns :defs name])
+        (warning :ns-var-clash env
+          {:ns ns
+           :var (symbol (str clash-ns) (str name))})))))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
   (when-not (symbol? name) 
@@ -1414,7 +1435,8 @@
     (when (= 1 (count segments))
       (warning :single-segment-namespace env {:name name}))
     (when (some js-reserved segments)
-      (warning :munged-namespace env {:name name})))
+      (warning :munged-namespace env {:name name}))
+    (find-def-clash env name segments))
   (let [docstring (if (string? (first args)) (first args))
         mdocstr   (-> name meta :doc)
         args      (if docstring (next args) args)
