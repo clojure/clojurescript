@@ -684,10 +684,13 @@
         tests    (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
         thens    (mapv #(analyze env %) thens)
         default  (analyze env default)]
-    (assert (every? (fn [t] (and (= :constant (:op t))
-                              ((some-fn number? string? char?) (:form t))))
+    (assert (every? (fn [t]
+                      (or
+                        (-> t :info :const)
+                        (and (= :constant (:op t))
+                             ((some-fn number? string? char?) (:form t)))))
               (apply concat tests))
-      "case* tests must be numbers or strings")
+      "case* tests must be numbers, strings, or constants")
     {:env env :op :case* :form form
      :v v :tests tests :thens thens :default default
      :children (vec (concat [v] tests thens (if default [default])))}))
@@ -783,6 +786,8 @@
          :var (symbol (str ns-name) (str sym))}))
     (when (namespace sym)
       (throw (error env "Can't def ns-qualified name")))
+    (when (:const (resolve-var (dissoc env :locals) sym))
+      (throw (error env "Can't redefine a constant")))
     (when-let [doc (:doc args)]
       (when-not (string? doc)
         (throw (error env "Too many arguments to def"))))
@@ -1178,6 +1183,8 @@
 
                        (symbol? target)
                        (do
+                         (when (:const (resolve-var (dissoc env :locals) target))
+                           (throw (error env "Can't set! a constant")))
                          (let [local (-> env :locals target)]
                            (when-not (or (nil? local)
                                          (and (:field local)

@@ -329,3 +329,18 @@
   ;; munge turns - into _, must preserve the dash first
   (is (not= (a/gen-constant-id :test-kw)
             (a/gen-constant-id :test_kw))))
+;; Constants
+
+(deftest test-constants
+ (is (.startsWith
+        (try
+          (a/analyze test-env '(do (def ^:const foo 123)  (def foo 246)))
+          (catch Exception e
+            (.getMessage e)))
+        "Can't redefine a constant"))
+  (is (.startsWith
+        (try
+          (a/analyze test-env '(do (def ^:const foo 123)  (set! foo 246)))
+          (catch Exception e
+            (.getMessage e)))
+        "Can't set! a constant")))
