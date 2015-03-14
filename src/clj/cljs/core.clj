@@ -963,6 +963,11 @@
        [~@fields]
        (new ~rname ~@field-values))))
 
+(defn- validate-fields
+  [case name fields]
+  (when-not (vector? fields)
+    (throw (AssertionError. (core/str case " " name ", no fields vector given.")))))
+
 (defmacro deftype
   "(deftype name [fields*]  options* specs*)
 
@@ -1013,6 +1018,7 @@
   Given (deftype TypeName ...), a factory function called ->TypeName
   will be defined, taking positional parameters for the fields"
   [t fields & impls]
+  (validate-fields "deftype" t fields)
   (let [env &env
         r (:name (cljs.analyzer/resolve-var (dissoc env :locals) t))
         [fpps pmasks] (prepare-protocol-masks env impls)
@@ -1172,6 +1178,7 @@
   defined: ->TypeName, taking positional parameters for the fields,
   and map->TypeName, taking a map of keywords to field values."
   [rsym fields & impls]
+  (validate-fields "defrecord" rsym fields)
   (let [rsym (vary-meta rsym assoc :internal-ctor true)
         r    (vary-meta
                (:name (cljs.analyzer/resolve-var (dissoc &env :locals) rsym))
