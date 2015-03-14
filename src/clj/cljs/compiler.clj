@@ -22,20 +22,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def js-reserved
-  #{"abstract" "boolean" "break" "byte" "case"
-    "catch" "char" "class" "const" "continue"
-    "debugger" "default" "delete" "do" "double"
-    "else" "enum" "export" "extends" "final"
-    "finally" "float" "for" "function" "goto" "if"
-    "implements" "import" "in" "instanceof" "int"
-    "interface" "let" "long" "native" "new"
-    "package" "private" "protected" "public"
-    "return" "short" "static" "super" "switch"
-    "synchronized" "this" "throw" "throws"
-    "transient" "try" "typeof" "var" "void"
-    "volatile" "while" "with" "yield" "methods"
-    "null"})
+(def js-reserved ana/js-reserved)
 
 (def ^:dynamic *dependents* nil)
 (def ^:dynamic *source-map-data* nil)

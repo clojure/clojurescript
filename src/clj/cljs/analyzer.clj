@@ -68,7 +68,23 @@
    :protocol-invalid-method true
    :protocol-duped-method true
    :protocol-multiple-impls true
-   :single-segment-namespace true})
+   :single-segment-namespace true
+   :munged-namespace true})
+
+(def js-reserved
+  #{"abstract" "boolean" "break" "byte" "case"
+    "catch" "char" "class" "const" "continue"
+    "debugger" "default" "delete" "do" "double"
+    "else" "enum" "export" "extends" "final"
+    "finally" "float" "for" "function" "goto" "if"
+    "implements" "import" "in" "instanceof" "int"
+    "interface" "let" "long" "native" "new"
+    "package" "private" "protected" "public"
+    "return" "short" "static" "super" "switch"
+    "synchronized" "this" "throw" "throws"
+    "transient" "try" "typeof" "var" "void"
+    "volatile" "while" "with" "yield" "methods"
+    "null"})
 
 (declare message namespaces)
 
@@ -183,6 +199,15 @@
 (defmethod error-message :single-segment-namespace
   [warning-type info]
   (str (:name info) " is a single segment namespace"))
+
+(defmethod error-message :munged-namespace
+  [warning-type {:keys [name] :as info}]
+  (let [munged (->> (string/split (clojure.core/name name) #"\.")
+                 (map #(if (js-reserved %) (str % "$") %))
+                 (string/join ".")
+                 (munge))]
+    (str "Namespace " name " contains a reserved JavaScript keyword,"
+         " the corresponding Google Closure namespace will be munged to " munged)))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -1385,8 +1410,11 @@
   [_ env [_ name & args :as form] _ opts]
   (when-not (symbol? name) 
     (throw (error env "Namespaces must be named by a symbol.")))
-  (when (= 1 (count (string/split (clojure.core/name name) #"\.")))
-    (warning :single-segment-namespace env {:name name}))
+  (let [segments (string/split (clojure.core/name name) #"\.")]
+    (when (= 1 (count segments))
+      (warning :single-segment-namespace env {:name name}))
+    (when (some js-reserved segments)
+      (warning :munged-namespace env {:name name})))
   (let [docstring (if (string? (first args)) (first args))
         mdocstr   (-> name meta :doc)
         args      (if docstring (next args) args)
