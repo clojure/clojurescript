@@ -206,13 +206,11 @@
                      us))
         filter-cp-js (fn [paths]
                        (for [p paths
-                             u (validate p
-                                 (deps/find-js-classpath p))]
+                             u (deps/find-js-classpath p)]
                          u))
         filter-js (fn [paths]
                     (for [p paths
-                          u (validate p
-                              (deps/find-js-resources p))]
+                          u (deps/find-js-resources p)]
                       u))
         add-target (fn [ext]
                      (cons (io/resource "cljs/externs.js")
