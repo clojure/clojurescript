@@ -1125,7 +1125,13 @@
                           {:recompile (into recompile (ana/ns-dependents ns))
                            :visited   (conj visited ns)})))
                     ret))
-                ns-info))
+                (do
+                  ;; always populate compilation environment with analysis information
+                  ;; while it would seem this isn't necessary avoiding to do so damages
+                  ;; composition of smaller compilation units like expressions (i.e. REPLs)
+                  (when-not (contains? (::ana/namespaces @env/*compiler*) ns)
+                    (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
+                  ns-info)))
             (catch Exception e
               (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
           (throw (java.io.FileNotFoundException. (str "The file " src " does not exist."))))))))
