@@ -381,7 +381,7 @@
 (defprotocol INext
   "Protocol for accessing the next items of a collection."
   (^clj-or-nil -next [coll]
-    "Returns a new collection of coll without the first item. In contract to
+    "Returns a new collection of coll without the first item. In contrast to
      rest, it should return nil if there are no more items, e.g.
      (next []) => nil
      (next nil) => nil"))
