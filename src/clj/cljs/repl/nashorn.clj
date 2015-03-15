@@ -225,5 +225,4 @@
 (defn repl-env 
   "Create a Nashorn repl-env for use with the repl/repl* method in Clojurescript."
   [& {:as opts}]
-  (assert (even? (count opts)) "Arguments must be interleaved key value pairs")
   (repl-env* opts))

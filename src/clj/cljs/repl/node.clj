@@ -198,6 +198,5 @@
 (defn repl-env
   "Construct a Node.js evalution environment. Can supply :host and :port."
   [& {:as options}]
-  (assert (even? (count options)) "Arguments must be interleaved key value pairs")
   (repl-env* options))
 

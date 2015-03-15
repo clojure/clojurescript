@@ -553,7 +553,6 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
                   support reflection. Defaults to \"src/\".
   "
   [& {:as opts}]
-  (assert (even? (count opts)) "Arguments must be interleaved key value pairs")
   (repl-env* opts))
 
 (comment
