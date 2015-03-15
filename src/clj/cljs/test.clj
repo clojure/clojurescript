@@ -294,9 +294,10 @@
   Optional argument is a regular expression; only namespaces with
   names matching the regular expression (with re-matches) will be
   tested."
-  ([] `(cljs.test/run-all-tests nil))
-  ([re]
-   `(cljs.test/run-tests (cljs.test/empty-env)
+  ([] `(cljs.test/run-all-tests nil (cljs.test/empty-env)))
+  ([re] `(cljs.test/run-all-tests ~re (cljs.test/empty-env)))
+  ([re env]
+   `(cljs.test/run-tests ~env
       ~@(map
           (fn [ns] `(quote ~ns))
           (cond->> (ana-api/all-ns)
