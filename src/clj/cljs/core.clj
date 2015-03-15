@@ -875,8 +875,14 @@
             impls   (drop-while seq? (next impls))]
         (when (contains? protos proto)
           (ana/warning :protocol-multiple-impls env {:protocol proto}))
-        (core/doseq [method methods]
-          (validate-impl-sigs env proto method))
+        (loop [seen #{} methods methods]
+          (when (seq methods)
+            (let [[fname :as method] (first methods)]
+              (when (contains? seen fname)
+                (ana/warning :extend-type-invalid-method-shape env
+                  {:protocol proto :method fname}))
+              (validate-impl-sigs env proto method)
+              (recur (conj seen fname) (next methods)))))
         (recur (conj protos proto) impls)))))
 
 (defmacro extend-type

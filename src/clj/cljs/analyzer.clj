@@ -70,7 +70,8 @@
    :protocol-multiple-impls true
    :single-segment-namespace true
    :munged-namespace true
-   :ns-var-clash true})
+   :ns-var-clash true
+   :extend-type-invalid-method-shape true})
 
 (def js-reserved
   #{"abstract" "boolean" "break" "byte" "case"
@@ -213,6 +214,11 @@
 (defmethod error-message :ns-var-clash
   [warning-type {:keys [ns var] :as info}]
   (str "Namespace " ns " clashes with var " var))
+
+(defmethod error-message :extend-type-invalid-method-shape
+  [warning-type {:keys [protocol method] :as info}]
+  (str "Bad extend-type method shape for protocol " protocol " method " method
+       ", method arities must be grouped together"))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
