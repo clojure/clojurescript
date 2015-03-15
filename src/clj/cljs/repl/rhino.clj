@@ -169,8 +169,7 @@
 (defrecord RhinoEnv []
   repl/IReplEnvOptions
   (-repl-options [this]
-    {:require-foreign true
-     :output-dir ".cljs_rhino_repl"
+    {:output-dir ".cljs_rhino_repl"
      :wrap wrap-fn})
   repl/IParseStacktrace
   (-parse-stacktrace [this frames-str ret {output-dir :output-dir}]

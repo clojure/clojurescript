@@ -153,7 +153,9 @@
 (defn ^boolean array?
   "Returns true if x is a JavaScript array."
   [x]
-  (cljs.core/array? x))
+  (if (identical? *target* "nodejs")
+    (.isArray js/Array x)
+    (instance? js/Array x)))
 
 (defn ^boolean number?
   "Returns true if x is a JavaScript number."
@@ -221,7 +223,7 @@
     s
     (str ty)))
 
-;; INTERNAL - do not use
+;; INTERNAL - do not use, only for Node.js
 (defn load-file [file]
   (when-not js/COMPILED
     (cljs.core/load-file* file)))

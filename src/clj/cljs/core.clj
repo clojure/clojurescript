@@ -317,11 +317,6 @@
 (defmacro false? [x]
   (bool-expr (core/list 'js* "~{} === false" x)))
 
-(defmacro array? [x]
-  (if (= :nodejs (-> @env/*compiler* :options :target))
-    (bool-expr `(.isArray js/Array ~x))
-    (bool-expr (core/list 'js* "~{} instanceof Array" x))))
-
 (defmacro string? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'string'" x)))
 
@@ -1974,9 +1969,6 @@
   [vol f & args]
   `(-vreset! ~vol (~f (-deref ~vol) ~@args)))
 
+;; INTERNAL - do not use, only for Node.js
 (defmacro load-file* [f]
-  (core/let [{:keys [target output-dir]} (:options @env/*compiler*)]
-    (core/condp = target
-      ;; under Node.js, always relative to JVM working directory
-      :nodejs `(. js/goog (~'nodeGlobalRequire (str ~output-dir ~File/separator ~f)))
-      `(. js/goog (~'importScript_ ~f)))))
+  `(. js/goog (~'nodeGlobalRequire ~f)))
