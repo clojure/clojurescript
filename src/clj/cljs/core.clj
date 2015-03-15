@@ -791,8 +791,11 @@
 
 (defn add-obj-methods [type type-sym sigs]
   (map (fn [[f & meths :as form]]
-         `(set! ~(extend-prefix type-sym f)
-            ~(with-meta `(fn ~@(map #(adapt-obj-params type %) meths)) (meta form))))
+         (let [[f meths] (if (vector? (first meths))
+                           [f [(rest form)]]
+                           [f meths])]
+           `(set! ~(extend-prefix type-sym f)
+             ~(with-meta `(fn ~@(map #(adapt-obj-params type %) meths)) (meta form)))))
     sigs))
 
 (defn ifn-invoke-methods [type type-sym [f & meths :as form]]
