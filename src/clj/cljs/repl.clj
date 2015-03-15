@@ -692,7 +692,8 @@
                  :undeclared-var warn-on-undeclared
                  :undeclared-ns warn-on-undeclared
                  :undeclared-ns-form warn-on-undeclared)
-               ana/*cljs-static-fns* static-fns]
+               ana/*cljs-static-fns* static-fns
+               *repl-opts* opts]
        ;; TODO: the follow should become dead code when the REPL is
        ;; sufficiently enhanced to understand :cache-analysis - David
        (let [env {:context :expr :locals {}}
