@@ -1,3 +1,8 @@
+## 0.0-3119
+
+### Fixes
+* CLJS-1130: :foreign-libs regression under Closure optimized builds
+
 ## 0.0-3117
 
 ### Fixes
