@@ -1113,9 +1113,9 @@
                     ret))
                 (do
                   ;; populate compilation environment with analysis information
-                  ;; while it would seem this isn't necessary avoiding to do so damages
-                  ;; composition of smaller compilation units like expressions (i.e. REPLs)
-                  (when (not (contains? (::ana/namespaces @env/*compiler*) ns))
+                  ;; when constants are optimized
+                  (when (and (true? (:optimize-constants opts))
+                             (not (contains? (::ana/namespaces @env/*compiler*) ns)))
                     (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
                   ns-info)))
             (catch Exception e
