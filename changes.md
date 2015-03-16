@@ -1,3 +1,38 @@
+## 0.0-3115
+
+### Enhancements
+* CLJS-806: support ^:const
+* CLJS-1115: Reusable repl-bootstrap! fn
+
+### Changes
+* CLJS-667: validate extend-type and extend-protocol shape
+* CLJS-1112: :repl-requires option for REPL evaluation environment
+* CLJS-1111: browser REPL should have no side effects until -setup
+
+### Fixes
+* CLJS-1085: Allow to pass test environment to cljs.test/run-all-tests
+* CLJS-867: extend-type with Object methods requires multi-arity style definition
+* CLJS-1118: cljs.repl/doc support for protocols
+* CLJS-889: re-pattern works on strings containing \u2028 or \u2029
+* CLJS-109: Compiler errors/warnings should be displayed when cljs namespace 'package' names start with an unacceptable javascript symbol
+* CLJS-891: Defs in "parent" namespaces clash with "child" namespaces with the same name?
+* CLJS-813: Warn about reserved JS keyword usage in namespace names
+* CLJS-876: merged sourcemap doesn't account for output-wrapper
+* CLJS-1062: Incorrect deftype/defrecord definition leads to complex error messages
+* CLJS-1120: analyze-deps does not appear to work when analyzing analysis caches
+* CLJS-1119: constant table emission logic is incorrect
+* CLJS-977: implement IKVReduce in Subvec
+* CLJS-1117: Dependencies in JARs don't use cached analysis
+* CLJS-689: js/-Infinity munges to _Infinity
+* CLJS-1114: browser REPL script loading race condition
+* CLJS-1110: cljs.closure/watch needs to print errors to *err*
+* CLJS-1101 cljs.test might throw when trying to detect file-and-line
+* CLJS-1090: macros imported from clojure.core missing docs
+* CLJS-1108: :modules :output-to needs to create directories
+* CLJS-1095: UUID to implement IComparable
+* CLJS-1096: Update js/Date -equiv and -compare semantics based on Date.valueOf() value
+* CLJS-1102 clojure.test should print column number of exception when available
+
 ## 0.0-3058
 
 ### Enhancements
