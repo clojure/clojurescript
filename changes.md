@@ -1,3 +1,8 @@
+## 0.0-3117
+
+### Fixes
+* CLJS-1126: File are not recompiled when build affecting options changes
+
 ## 0.0-3115
 
 ### Enhancements
