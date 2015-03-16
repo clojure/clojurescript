@@ -523,7 +523,7 @@ should contain the source for the given namespace name."
           (recur (into (rest required-files) new-req)
                  (into visited new-req)
                  (conj js-deps js)))
-        (remove nil? js-deps)))))
+        (disj js-deps nil)))))
 
 (comment
   ;; only get cljs deps
@@ -539,11 +539,13 @@ should contain the source for the given namespace name."
   a new sequence of IJavaScript objects which includes the input list
   plus all dependencies in dependency order."
   [opts & inputs]
-  (let [requires      (mapcat deps/-requires inputs)
-        required-cljs (remove (set inputs) (cljs-dependencies opts requires))
-        required-js   (js-dependencies opts (set (concat (mapcat deps/-requires required-cljs) requires)))
-        provided      (mapcat deps/-provides (concat inputs required-cljs required-js))
-        unprovided    (clojure.set/difference (set requires) (set provided) #{"constants-table"})]
+  (let [inputs        (set inputs)
+        requires      (set (mapcat deps/-requires inputs))
+        required-cljs (clojure.set/difference (cljs-dependencies opts requires) inputs)
+        required-js   (js-dependencies opts
+                        (into (set (mapcat deps/-requires required-cljs)) requires))
+        provided      (set (mapcat deps/-provides (clojure.set/union inputs required-cljs required-js)))
+        unprovided    (clojure.set/difference requires provided #{"constants-table"})]
     (when (seq unprovided)
       (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
     (cons
