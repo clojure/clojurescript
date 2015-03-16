@@ -1370,8 +1370,7 @@ should contain the source for the given namespace name."
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)
-             all-opts (assoc (add-implicit-options opts)
-                        :compilation-mode :non-interactive)
+             all-opts (add-implicit-options opts)
              emit-constants (or (and (= (:optimizations opts) :advanced)
                                      (not (false? (:optimize-constants opts))))
                                 (:optimize-constants opts))]
