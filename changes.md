@@ -1,3 +1,9 @@
+## 0.0-3123
+
+### Fixes
+* CLJS-1131: cljs.closure/add-dependencies needs to be more aggressively set oriented
+* CLJS-1132: compile-file analysis pass optimization broken under Closure optimization and :cache-analysis true
+
 ## 0.0-3119
 
 ### Fixes
