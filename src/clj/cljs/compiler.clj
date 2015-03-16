@@ -848,14 +848,18 @@
         (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
       (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
         (cond
-          (and (= :nodejs (get-in @env/*compiler* [:options :target]))
-               (ana/foreign-dep? lib))
-          ;; under node.js we load foreign libs globally
-          (let [{:keys [js-dependency-index options]} @env/*compiler*
-                ijs-url (get-in js-dependency-index [(name lib) :url])]
-            (emitln "cljs.core.load_file(\""
-              (str (io/file (util/output-directory options) (util/get-name ijs-url)))
-              "\");"))
+          (ana/foreign-dep? lib)
+          (let [{:keys [target optimizations]} (get @env/*compiler* :options)]
+            ;; we only load foreign libraries under optimizations :none
+            (when (= :none optimizations)
+              (if (= :nodejs target)
+                ;; under node.js we load foreign libs globally
+                (let [{:keys [js-dependency-index options]} @env/*compiler*
+                      ijs-url (get-in js-dependency-index [(name lib) :url])]
+                  (emitln "cljs.core.load_file(\""
+                    (str (io/file (util/output-directory options) (util/get-name ijs-url)))
+                    "\");"))
+                (emitln "goog.require('" (munge lib) "');"))))
 
           (-> libs meta :reload)
           (emitln "goog.require('" (munge lib) "', 'reload');")
