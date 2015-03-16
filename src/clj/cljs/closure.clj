@@ -1353,7 +1353,12 @@ should contain the source for the given namespace name."
       (= optimizations :none)
       (assoc
         :cache-analysis (:cache-analysis opts true)
-        :source-map (:source-map opts true)))))
+        :source-map (:source-map opts true))
+
+      (= optimizations :advanced)
+      (cond->
+        (not (false? (:static-fns opts))) (assoc :static-fns true)
+        (not (false? (:optimize-constants opts))) (assoc :optimize-constants true)))))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
