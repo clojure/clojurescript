@@ -122,6 +122,10 @@
     (set! (.-isProvided_ js/goog) (fn [name] false))
     (set! (.-writeScriptTag__ js/goog)
       (fn [src opt_sourceText]
+        ;; the page is already loaded, we can no longer leverage document.write
+        ;; instead construct script tag elements and append them to the body
+        ;; of the page, to avoid parallel script loading enforce sequential
+        ;; load with a simple load queue
         (let [loaded (atom false)
               onload (fn []
                        (when (and load-queue (false? @loaded))
@@ -130,14 +134,15 @@
                            (set! load-queue nil)
                            (.apply js/goog.writeScriptTag__ nil (.shift load-queue)))))]
           (.appendChild js/document.body
-           (as-> (.createElement js/document "script") script
-             (doto script
-               (aset "type" "text/javascript")
-               (aset "onload" onload)
-               (aset "onreadystatechange" onload))
-             (if (nil? opt_sourceText)
-               (doto script (aset "src" src))
-               (doto script (gdom/setTextContext opt_sourceText))))))))
+            (as-> (.createElement js/document "script") script
+              (doto script
+                (aset "type" "text/javascript")
+                (aset "onload" onload)
+                (aset "onreadystatechange" onload)) ;; IE
+              (if (nil? opt_sourceText)
+                (doto script (aset "src" src))
+                (doto script (gdom/setTextContext opt_sourceText))))))))
+    ;; queue or load
     (set! (.-writeScriptTag_ js/goog)
       (fn [src opt_sourceText]
         (if load-queue
@@ -145,6 +150,8 @@
           (do
             (set! load-queue #js [])
             (js/goog.writeScriptTag__ src opt_sourceText)))))
+    ;; we must reuse Closure library dev time dependency management, under namespace
+    ;; reload scenarios we simply delete entries from the correct private locations
     (set! (.-require js/goog)
       (fn [src reload]
         (when (= reload "reload-all")
