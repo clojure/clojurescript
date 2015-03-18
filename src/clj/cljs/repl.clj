@@ -701,13 +701,15 @@
              is-special-fn? (set (keys special-fns))
              request-prompt (Object.)
              request-exit (Object.)
-             opts (try
-                    (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
-                      (merge opts merge-opts)
-                      opts)
-                    (catch Throwable e
-                      (caught e repl-env opts)
-                      opts))
+             opts (comp/with-core-cljs opts
+                    (fn []
+                      (try
+                        (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
+                          (merge opts merge-opts)
+                          opts)
+                        (catch Throwable e
+                          (caught e repl-env opts)
+                          opts))))
              read-eval-print
              (fn []
                (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
