@@ -674,7 +674,8 @@
               repl-opts
               opts
               {:init init
-               :need-prompt prompt
+               :prompt prompt
+               :need-prompt need-prompt
                :flush flush
                :read read
                :print print
