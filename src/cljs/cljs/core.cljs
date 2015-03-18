@@ -9242,7 +9242,9 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-prefer-method [mf dispatch-val dispatch-val-y])
   (-get-method [mf dispatch-val])
   (-methods [mf])
-  (-prefers [mf]))
+  (-prefers [mf])
+  (-default-dispatch-val [mf])
+  (-dispatch-fn [mf]))
 
 (defn- throw-no-method-error [name dispatch-val]
   (throw (js/Error. (str "No method in multimethod '" name "' for dispatch value: " dispatch-val))))
@@ -9424,6 +9426,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
   (-methods [mf] @method-table)
   (-prefers [mf] @prefer-table)
+  (-default-dispatch-val [mf] default-dispatch-val)
+  (-dispatch-fn [mf] dispatch-fn)
   
   INamed
   (-name [this] (-name name))
@@ -9460,6 +9464,14 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn prefers
   "Given a multimethod, returns a map of preferred value -> set of other values"
   [multifn] (-prefers multifn))
+
+(defn default-dispatch-val
+  "Given a multimethod, return it's default-dispatch-val."
+  [multifn] (-default-dispatch-val multifn))
+
+(defn dispatch-fn
+  "Given a multimethod, return it's dispatch-fn."
+  [multifn] (-dispatch-fn multifn))
 
 ;; UUID
 

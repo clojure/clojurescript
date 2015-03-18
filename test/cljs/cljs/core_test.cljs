@@ -2714,6 +2714,13 @@
     (is (= 12345 (:baz m)))
     (is (= "String Metadata" (:whatever m)))))
 
+(defmulti cljs-1144 identity :default ::default)
+
+(deftest test-cljs-1144
+  (is (not= map (dispatch-fn cljs-1144)))
+  (is (= identity (dispatch-fn cljs-1144)))
+  (is (= ::default (default-dispatch-val cljs-1144))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
