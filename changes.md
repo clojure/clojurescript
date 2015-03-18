@@ -1,3 +1,8 @@
+## 0.0-3126
+
+### Fixes
+* Need to wrap REPL -setup calls in cljs.compiler/with-core-cljs
+
 ## 0.0-3123
 
 ### Fixes
