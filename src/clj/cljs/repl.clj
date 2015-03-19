@@ -34,6 +34,10 @@
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *repl-opts* nil)
 
+(defmacro err-out [& body]
+  `(binding [*out* *err*]
+     ~@body))
+
 ;; =============================================================================
 ;; Copied over from clojure.main
 
@@ -355,26 +359,27 @@
   ([repl-env ret form opts]
    (display-error repl-env ret form (constantly nil) opts))
   ([repl-env ret form f {:keys [print flush] :as opts}]
-   (f)
-   (when-let [value (:value ret)]
-     (print value))
-   (when-let [st (:stacktrace ret)]
-     (if (and (true? (:source-map opts))
-              (satisfies? IParseStacktrace repl-env))
-       (let [cst (try
-                   (-parse-stacktrace repl-env st ret opts)
-                   (catch Throwable e
-                     (when (:repl-verbose opts)
-                       (print "Failed to canonicalize stacktrace")
-                       (print (Throwables/getStackTraceAsString e))
-                       (flush))))]
-         (if (vector? cst)
-           (if (satisfies? IPrintStacktrace repl-env)
-             (-print-stacktrace repl-env cst ret opts)
-             (print-mapped-stacktrace cst opts))
-           (print st)))
-       (print st))
-     (flush))))
+   (err-out
+     (f)
+     (when-let [value (:value ret)]
+       (print value))
+     (when-let [st (:stacktrace ret)]
+       (if (and (true? (:source-map opts))
+             (satisfies? IParseStacktrace repl-env))
+         (let [cst (try
+                     (-parse-stacktrace repl-env st ret opts)
+                     (catch Throwable e
+                       (when (:repl-verbose opts)
+                         (print "Failed to canonicalize stacktrace")
+                         (print (Throwables/getStackTraceAsString e))
+                         (flush))))]
+           (if (vector? cst)
+             (if (satisfies? IPrintStacktrace repl-env)
+               (-print-stacktrace repl-env cst ret opts)
+               (print-mapped-stacktrace cst opts))
+             (print st)))
+         (print st))
+       (flush)))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
@@ -425,7 +430,7 @@
              (distinct (vals (:uses ast))))
            opts))
        (when *cljs-verbose*
-         ((:print opts) js))
+         (err-out ((:print opts) js)))
        (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
          (case (:status ret)
            :error (throw
@@ -649,7 +654,7 @@
 (defn repl*
   [repl-env {:keys [init need-prompt quit-prompt prompt flush read eval print caught reader
                     print-no-newline source-map-inline wrap repl-requires
-                    compiler-env]
+                    compiler-env bind-err]
              :or {need-prompt #(if (readers/indexing-reader? *in*)
                                 (== (readers/get-column-number *in*) 1)
                                 (identity true))
@@ -665,7 +670,8 @@
                            1 "NO_SOURCE_FILE")
                   print-no-newline print
                   source-map-inline true
-                  repl-requires '[[cljs.repl :refer-macros [source doc find-doc apropos dir pst]]]}
+                  repl-requires '[[cljs.repl :refer-macros [source doc find-doc apropos dir pst]]]
+                  bind-err true}
              :as opts}]
   (let [repl-opts (-repl-options repl-env)
         repl-requires (into repl-requires (:repl-requires repl-opts))
@@ -687,7 +693,8 @@
                :print-no-newline print-no-newline
                :source-map-inline source-map-inline})))]
     (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
-     (binding [ana/*cljs-ns* 'cljs.user
+     (binding [*err* (if bind-err *out* *err*)
+               ana/*cljs-ns* 'cljs.user
                *cljs-verbose* repl-verbose
                ana/*cljs-warnings*
                (assoc ana/*cljs-warnings*
@@ -750,7 +757,7 @@
                (when-let [src (:watch opts)]
                  (future
                    (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                     (print "Watch compilation log available at:" (str log-file))
+                     (err-out (print "Watch compilation log available at:" (str log-file)))
                      (flush)
                      (try
                        (let [log-out (FileWriter. log-file)]
