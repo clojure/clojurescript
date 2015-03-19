@@ -645,7 +645,8 @@
 
 (defn repl*
   [repl-env {:keys [init need-prompt prompt flush read eval print caught reader
-                    print-no-newline source-map-inline wrap repl-requires]
+                    print-no-newline source-map-inline wrap repl-requires
+                    compiler-env]
              :or {init #()
                   need-prompt #(if (readers/indexing-reader? *in*)
                                  (== (readers/get-column-number *in*) 1)
@@ -683,8 +684,7 @@
                :reader reader
                :print-no-newline print-no-newline
                :source-map-inline source-map-inline})))]
-    (env/with-compiler-env
-     (or (::env/compiler repl-env) (env/default-compiler-env opts))
+    (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
      (binding [ana/*cljs-ns* 'cljs.user
                *cljs-verbose* repl-verbose
                ana/*cljs-warnings*
