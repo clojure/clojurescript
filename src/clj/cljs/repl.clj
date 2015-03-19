@@ -647,10 +647,9 @@
   [repl-env {:keys [init need-prompt prompt flush read eval print caught reader
                     print-no-newline source-map-inline wrap repl-requires
                     compiler-env]
-             :or {init #()
-                  need-prompt #(if (readers/indexing-reader? *in*)
-                                 (== (readers/get-column-number *in*) 1)
-                                 (identity true))
+             :or {need-prompt #(if (readers/indexing-reader? *in*)
+                                (== (readers/get-column-number *in*) 1)
+                                (identity true))
                   prompt repl-prompt
                   flush flush
                   read repl-read
@@ -674,8 +673,7 @@
             (merge-with (fn [a b] (if (nil? b) a b))
               repl-opts
               opts
-              {:init init
-               :prompt prompt
+              {:prompt prompt
                :need-prompt need-prompt
                :flush flush
                :read read
@@ -711,6 +709,13 @@
                         (catch Throwable e
                           (caught e repl-env opts)
                           opts))))
+             init (or init
+                      #(evaluate-form repl-env env "<cljs repl>"
+                         (with-meta
+                           `(~'ns ~'cljs.user
+                              (:require ~@repl-requires))
+                           {:line 1 :column 1})
+                         identity opts))
              read-eval-print
              (fn []
                (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
@@ -733,15 +738,9 @@
            (fn []
              (binding [*repl-opts* opts]
                (try
-                 (init)
                  (when analyze-path
                    (analyze-source analyze-path opts))
-                 (evaluate-form repl-env env "<cljs repl>"
-                   (with-meta
-                     `(~'ns ~'cljs.user
-                        (:require ~@repl-requires))
-                     {:line 1 :column 1})
-                   identity opts)
+                 (init)
                  (catch Throwable e
                    (caught e repl-env opts)))
                (when-let [src (:watch opts)]
