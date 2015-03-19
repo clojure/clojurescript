@@ -623,6 +623,9 @@
       (doseq [file (comp/cljs-files-in src-dir)]
         (ana/analyze-file (str "file://" (.getAbsolutePath file)) opts)))))
 
+(defn repl-quit-prompt []
+  (println "To quit, type:" :cljs/quit))
+
 (defn repl-prompt []
   (print (str "ClojureScript:" ana/*cljs-ns* "> ")))
 
@@ -644,12 +647,13 @@
       (.printStackTrace e))))
 
 (defn repl*
-  [repl-env {:keys [init need-prompt prompt flush read eval print caught reader
+  [repl-env {:keys [init need-prompt quit-prompt prompt flush read eval print caught reader
                     print-no-newline source-map-inline wrap repl-requires
                     compiler-env]
              :or {need-prompt #(if (readers/indexing-reader? *in*)
                                 (== (readers/get-column-number *in*) 1)
                                 (identity true))
+                  quit-prompt repl-quit-prompt
                   prompt repl-prompt
                   flush flush
                   read repl-read
@@ -760,7 +764,7 @@
                (binding [*in* (if (true? (:source-map-inline opts))
                                 *in*
                                 (reader))]
-                 (print "To quit, type:" :cljs/quit)
+                 (quit-prompt)
                  (prompt)
                  (flush)
                  (loop []
