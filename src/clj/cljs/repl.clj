@@ -224,24 +224,25 @@
     (when (.exists f')
       (ana/parse-ns f'))))
 
-(defn mapped-line-and-column
+(defn- mapped-line-column-call
   "Given a cljs.source-map source map data structure map a generated line
-   and column back to the original line and column."
+   and column back to the original line, column, and function called."
   [source-map line column]
-  (let [default [line column]]
+  (let [default [line column nil]]
     ;; source maps are 0 indexed for lines
     (if-let [columns (get source-map (dec line))]
       (vec
-        (map inc
+        (map #(%1 %2)
+          [inc inc identity]
           (map
             ;; source maps are 0 indexed for columns
             ;; multiple segments may exist at column
             ;; the last segment seems most accurate
             (last
-              (if-let [mapping (get columns (dec column))]
-                mapping
+              (or
+                (get columns (last (filter #(<= % (dec column)) (sort (keys columns)))))
                 (second (first columns))))
-            [:line :col])))
+            [:line :col :name])))
       default)))
 
 (defn mapped-stacktrace
@@ -263,42 +264,51 @@
     (let [read-source-map' (memoize read-source-map)
           ns-info' (memoize ns-info)]
       (vec
-        (for [{:keys [function file line column] :as frame} stacktrace]
-          ;; need to convert file, a relative URL style path, to host-specific file
-          (let [no-source-file? (if-not file
-                                  true
-                                  (.startsWith file "<"))
-                rfile (when-not no-source-file?
-                        (io/file (URL. (.toURL (io/file (util/output-directory opts))) file)))
-                [sm {:keys [ns source-file] :as ns-info}]
-                (when-not no-source-file?
-                  ((juxt read-source-map' ns-info') rfile))
-                [line' column'] (if ns-info
-                                  (mapped-line-and-column sm line column)
-                                  [line column])
-                name' (when (and ns-info function)
-                        function)
-                file' (if no-source-file?
-                        file
-                        (string/replace
-                         (.getCanonicalFile
-                           (if ns-info
-                             source-file
-                             (io/file rfile)))
-                         (str (System/getProperty "user.dir") File/separator) ""))
-                url   (or (and ns-info (io/resource (util/ns->relpath ns)))
-                          (and file (io/resource file)))]
-            (merge
-              {:function name'
-               :file (if no-source-file?
-                       (str "NO_SOURCE_FILE"
-                         (when file
-                           (str " " file)))
-                       (io/file file'))
-               :line line'
-               :column column'}
-              (when url
-                {:url url}))))))))
+        (let [with-calls
+              (for [{:keys [function file line column] :as frame} stacktrace]
+                ;; need to convert file, a relative URL style path, to host-specific file
+                (let [no-source-file? (if-not file
+                                        true
+                                        (.startsWith file "<"))
+                      rfile (when-not no-source-file?
+                              (io/file (URL. (.toURL (io/file (util/output-directory opts))) file)))
+                      [sm {:keys [ns source-file] :as ns-info}]
+                      (when-not no-source-file?
+                        ((juxt read-source-map' ns-info') rfile))
+                      [line' column' call] (if ns-info
+                                             (mapped-line-column-call sm line column)
+                                             [line column])
+                      name' (when (and ns-info function)
+                              function)
+                      file' (if no-source-file?
+                              file
+                              (string/replace
+                                (.getCanonicalFile
+                                  (if ns-info
+                                    source-file
+                                    (io/file rfile)))
+                                (str (System/getProperty "user.dir") File/separator) ""))
+                      url (or (and ns-info (io/resource (util/ns->relpath ns)))
+                            (and file (io/resource file)))]
+                  (merge
+                    {:function name'
+                     :call     call
+                     :file     (if no-source-file?
+                                 (str "NO_SOURCE_FILE"
+                                   (when file
+                                     (str " " file)))
+                                 (io/file file'))
+                     :line     line'
+                     :column   column'}
+                    (when url
+                      {:url url}))))]
+          ;; take each non-nil :call and merge it into :function one-level up
+          (map merge
+            (map #(dissoc % :call) with-calls)
+            (concat (rest (map #(if (:call %)
+                                 (hash-map :function (:call %))
+                                 {})
+                            with-calls)) [{}])))))))
 
 (defn print-mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace
