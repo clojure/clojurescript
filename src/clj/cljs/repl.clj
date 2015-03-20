@@ -691,7 +691,8 @@
                :caught caught
                :reader reader
                :print-no-newline print-no-newline
-               :source-map-inline source-map-inline})))]
+               :source-map-inline source-map-inline})))
+        done? (atom false)]
     (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
      (binding [*err* (if bind-err *out* *err*)
                ana/*cljs-ns* 'cljs.user
@@ -755,17 +756,21 @@
                  (catch Throwable e
                    (caught e repl-env opts)))
                (when-let [src (:watch opts)]
-                 (future
-                   (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                     (err-out (print "Watch compilation log available at:" (str log-file)))
-                     (flush)
-                     (try
-                       (let [log-out (FileWriter. log-file)]
-                         (binding [*err* log-out
-                                   *out* log-out]
-                           (cljsc/watch src (dissoc opts :watch))))
-                       (catch Throwable e
-                         (caught e repl-env opts))))))
+                 (.start
+                   (Thread.
+                     ((ns-resolve 'clojure.core 'binding-conveyor-fn)
+                       (fn []
+                         (let [log-file (io/file (util/output-directory opts) "watch.log")]
+                           (err-out (print "Watch compilation log available at:" (str log-file)))
+                           (flush)
+                           (try
+                             (let [log-out (FileWriter. log-file)]
+                               (binding [*err* log-out
+                                         *out* log-out]
+                                 (cljsc/watch src (dissoc opts :watch)
+                                   env/*compiler* done?)))
+                             (catch Throwable e
+                               (caught e repl-env opts)))))))))
                ;; let any setup async messages flush
                (Thread/sleep 50)
                (binding [*in* (if (true? (:source-map-inline opts))
@@ -785,7 +790,8 @@
                        (prompt)
                        (flush))
                      (recur))))))))
-         (-tear-down repl-env)))))
+       (reset! done? true)
+       (-tear-down repl-env)))))
 
 (defn repl
   "Generic, reusable, read-eval-print loop. By default, reads from *in* using

@@ -47,6 +47,7 @@
            [java.net URL]
            [java.util.logging Level]
            [java.util List Random]
+           [java.util.concurrent TimeUnit]
            [com.google.javascript.jscomp CompilerOptions CompilationLevel
               CompilerOptions$LanguageMode SourceMap$Format
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
@@ -1486,6 +1487,8 @@ should contain the source for the given namespace name."
         env/*compiler*
         (env/default-compiler-env opts))))
   ([source opts compiler-env]
+    (watch source opts compiler-env nil))
+  ([source opts compiler-env quit]
     (let [opts (cond-> opts
                  (= (:verbose opts :not-found) :not-found)
                  (assoc :verbose true))
@@ -1529,14 +1532,17 @@ should contain the source for the given namespace name."
         (println "Watching path:" source)
         (watch-all path)
         (loop [key nil]
-          (when (or (nil? key) (. ^WatchKey key reset))
-            (let [key (. service take)]
-              (when (some (fn [^WatchEvent e]
-                            (let [fstr (.. e context toString)]
-                              (and (or (. fstr (endsWith "cljs"))
-                                       (. fstr (endsWith "js")))
-                                   (not (. fstr (startsWith ".#"))))))
-                      (seq (.pollEvents key)))
+          (when (and (or (nil? quit) (not @quit))
+                     (or (nil? key) (. ^WatchKey key reset)))
+            (let [key (. service (poll 300 TimeUnit/MILLISECONDS))]
+              (when (and key
+                         (some
+                           (fn [^WatchEvent e]
+                             (let [fstr (.. e context toString)]
+                               (and (or (. fstr (endsWith "cljs"))
+                                        (. fstr (endsWith "js")))
+                                    (not (. fstr (startsWith ".#"))))))
+                           (seq (.pollEvents key))))
                 (println "Change detected, recompiling ...")
                 (flush)
                 (buildf))
