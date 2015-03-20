@@ -5,11 +5,7 @@
            java.io.InputStreamReader
            java.net.ServerSocket))
 
-(defonce state
-  (atom
-    {:socket nil
-     :connection nil
-     :promised-conn nil}))
+(def ^:dynamic state nil)
 
 (defn connection
   "Promise to return a connection when one is available. If a
@@ -160,16 +156,22 @@
 
 (defn- server-loop
   [opts server-socket]
-  (let [conn (.accept server-socket)]
+  (when-let [conn (try (.accept server-socket) (catch Throwable _))]
     (.setKeepAlive conn true)
-    (future (handle-connection opts conn))
+    (.start
+      (Thread.
+        ((ns-resolve 'clojure.core 'binding-conveyor-fn)
+          (fn [] (handle-connection opts conn)))))
     (recur opts server-socket)))
 
 (defn start
   "Start the server on the specified port."
   [opts]
   (let [ss (ServerSocket. (:port opts))]
-    (future (server-loop opts ss))
+    (.start
+      (Thread.
+        ((ns-resolve 'clojure.core 'binding-conveyor-fn)
+          (fn [] (server-loop opts ss)))))
     (swap! state (fn [old] (assoc old :socket ss :port (:port opts))))))
 
 (defn stop []

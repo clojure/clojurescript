@@ -17,11 +17,12 @@
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
             [cljs.repl.server :as server])
-  (:import [java.util.regex Pattern]))
+  (:import [java.util.regex Pattern]
+           [java.util.concurrent Executors]))
 
-(defonce browser-state
-  (atom {:return-value-fn nil
-         :client-js nil}))
+(def ^:dynamic browser-state nil)
+(def ^:dynamic ordering nil)
+(def ^:dynamic es nil)
 
 (defn- set-return-value-fn
   "Save the return value function which will be called when the next
@@ -116,10 +117,8 @@
 
 (server/dispatch-on :post (constantly true) handle-post)
 
-(def ordering (agent {:expecting nil :fns {}}))
-
 (defmethod handle-post :ready [_ conn _]
-  (send ordering (fn [_] {:expecting nil :fns {}}))
+  (send-via es ordering (fn [_] {:expecting nil :fns {}}))
   (send-for-eval conn
     (cljsc/-compile
       '[(set! *print-fn* clojure.browser.repl/repl-print)
@@ -142,8 +141,8 @@
   "Elements to be printed in the REPL will arrive out of order. Ensure
   that they are printed in the correct order."
   [order f]
-  (send-off ordering add-in-order order f)
-  (send-off ordering run-in-order))
+  (send-via es ordering add-in-order order f)
+  (send-via es ordering run-in-order))
 
 (defmethod handle-post :print [{:keys [content order]} conn _ ]
   (constrain-order order
@@ -483,15 +482,19 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
     file))
 
 (defn setup [{:keys [working-dir] :as repl-env} opts]
-  (println "Compiling client js ...")
-  (swap! browser-state
-    (fn [old]
-      (assoc old :client-js
-        (create-client-js-file
-          repl-env (io/file working-dir "client.js")))))
-  (println "Waiting for browser to connect ...")
-  opts
-  (server/start repl-env))
+  (binding [browser-state (:browser-state repl-env)
+            ordering (:ordering repl-env)
+            es (:es repl-env)
+            server/state (:server-state repl-env)]
+    (repl/err-out ((:print opts) "Compiling client js ..."))
+    (swap! browser-state
+      (fn [old]
+        (assoc old :client-js
+          (create-client-js-file
+            repl-env (io/file working-dir "client.js")))))
+    (repl/err-out ((:print opts) "Waiting for browser to connect ..."))
+    opts
+    (server/start repl-env)))
 
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
@@ -513,13 +516,18 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
              {:ua-product (clojure.browser.repl/get-ua-product)
               :value (str ~e)
               :stacktrace (.-stack ~e)})))))
-  (-evaluate [_ _ _ js] (browser-eval js))
+  (-evaluate [this _ _ js]
+    (binding [browser-state (:browser-state this)
+              ordering (:ordering this)
+              es (:es this)
+              server/state (:server-state this)]
+      (browser-eval js)))
   (-load [this provides url]
     (load-javascript this provides url))
-  (-tear-down [_]
-    (server/stop)
-    (reset! server/state {})
-    (reset! browser-state {})))
+  (-tear-down [this]
+    (binding [server/state (:server-state this)]
+      (server/stop))
+    (.shutdown (:es this))))
 
 (defn repl-env*
   [{:keys [output-dir] :as opts}]
@@ -531,7 +539,16 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
      :static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
      :preloaded-libs []
      :optimizations :simple
-     :src "src/"}
+     :src "src/"
+     :browser-state (atom {:return-value-fn nil
+                          :client-js nil})
+     :ordering (agent {:expecting nil :fns {}})
+     :es (Executors/newFixedThreadPool 16)
+     :server-state
+     (atom
+       {:socket nil
+        :connection nil
+        :promised-conn nil})}
     opts))
 
 (defn repl-env
