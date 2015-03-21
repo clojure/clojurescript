@@ -302,8 +302,12 @@
                      :column   column'}
                     (when url
                       {:url url}))))]
-          ;; take each non-nil :call and merge it into :function one-level up
-          (map merge
+          ;; take each non-nil :call and optionally merge it into :function one-level up
+          ;; to avoid replacing with local symbols, we only replace munged name if we can munge call symbol back to it
+          (map #(merge-with (fn [munged-fn-name unmunged-call-name]
+                              (if (= munged-fn-name (string/replace (cljs.compiler/munge unmunged-call-name) "." "$"))
+                                unmunged-call-name
+                                munged-fn-name)) %1 %2)
             (map #(dissoc % :call) with-calls)
             (concat (rest (map #(if (:call %)
                                  (hash-map :function (:call %))
