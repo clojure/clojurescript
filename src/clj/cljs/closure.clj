@@ -357,7 +357,8 @@
       (let [out-file (io/file (util/output-directory opts) output-file)]
         (compiled-file (comp/compile-file file out-file opts)))
       (binding [ana/*cljs-file* (.getPath ^File file)]
-        (compile-form-seq (ana/forms-seq file)))))
+        (with-open [rdr (io/reader file)]
+          (compile-form-seq (ana/forms-seq* rdr))))))
 
 (defn compile-dir
   "Recursively compile all cljs files under the given source

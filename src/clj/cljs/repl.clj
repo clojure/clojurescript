@@ -464,9 +464,10 @@
 
 (defn load-stream [repl-env filename res]
   (let [env (ana/empty-env)]
-    (doseq [form (ana/forms-seq res filename)]
-      (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
-        (evaluate-form repl-env env filename form)))))
+    (with-open [rdr (io/reader res)]
+      (doseq [form (ana/forms-seq* rdr filename)]
+        (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
+          (evaluate-form repl-env env filename form))))))
 
 ;; TODO: this should probably compile dependencies - David
 

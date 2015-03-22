@@ -2043,29 +2043,30 @@
                       (or (when (contains? opts :load-macros)
                             (:load-macros opts))
                           false)]
-              (loop [[forms rdr] (forms-seq src (source-path src) true)]
-                (if (seq forms)
-                  (let [env (empty-env)
-                        ast (no-warn (analyze env (first forms) nil opts))]
-                    (if (= (:op ast) :ns)
-                      (let [ns-name (:name ast)
-                            deps    (merge (:uses ast) (:requires ast))]
-                        (.close ^Reader rdr)
-                        (merge
-                          {:ns (or ns-name 'cljs.user)
-                           :provides [ns-name]
-                           :requires (if (= ns-name 'cljs.core)
-                                       (set (vals deps))
-                                       (cond-> (conj (set (vals deps)) 'cljs.core)
-                                         (get-in @env/*compiler* [:opts :emit-constants])
-                                         (conj 'constants-table)))
-                           :file dest
-                           :source-file src
-                           :ast ast}
-                          (when (and dest (.exists ^File dest))
-                            {:lines (with-open [reader (io/reader dest)]
-                                      (-> reader line-seq count))})))
-                      (recur (rest forms)))))))]
+              (with-open [rdr (io/reader src)]
+                (loop [forms (forms-seq* rdr (source-path src))]
+                  (if (seq forms)
+                    (let [env (empty-env)
+                          ast (no-warn (analyze env (first forms) nil opts))]
+                      (if (= (:op ast) :ns)
+                        (let [ns-name (:name ast)
+                              deps (merge (:uses ast) (:requires ast))]
+                          (.close ^Reader rdr)
+                          (merge
+                            {:ns (or ns-name 'cljs.user)
+                             :provides [ns-name]
+                             :requires (if (= ns-name 'cljs.core)
+                                         (set (vals deps))
+                                         (cond-> (conj (set (vals deps)) 'cljs.core)
+                                           (get-in @env/*compiler* [:opts :emit-constants])
+                                           (conj 'constants-table)))
+                             :file dest
+                             :source-file src
+                             :ast ast}
+                            (when (and dest (.exists ^File dest))
+                              {:lines (with-open [reader (io/reader dest)]
+                                        (-> reader line-seq count))})))
+                        (recur (rest forms))))))))]
         ;; TODO this _was_ a reset! of the old namespaces atom; should we capture and
         ;; then restore the entirety of env/*compiler* here instead?
         (when-not (false? (:restore opts))
@@ -2161,15 +2162,16 @@
                  (when (or *verbose* (:verbose opts))
                    (util/debug-prn "Analyzing" (str res)))
                  (let [env (assoc (empty-env) :build-options opts)
-                       ns (loop [ns nil forms (seq (forms-seq res))]
-                            (if forms
-                              (let [form (first forms)
-                                    env (assoc env :ns (get-namespace *cljs-ns*))
-                                    ast (analyze env form nil opts)]
-                                (if (= (:op ast) :ns)
-                                  (recur (:name ast) (next forms))
-                                  (recur ns (next forms))))
-                              ns))]
+                       ns (with-open [rdr (io/reader res)]
+                            (loop [ns nil forms (seq (forms-seq* rdr))]
+                              (if forms
+                                (let [form (first forms)
+                                      env (assoc env :ns (get-namespace *cljs-ns*))
+                                      ast (analyze env form nil opts)]
+                                  (if (= (:op ast) :ns)
+                                    (recur (:name ast) (next forms))
+                                    (recur ns (next forms))))
+                                ns)))]
                    (when (and cache (true? (:cache-analysis opts)))
                      (write-analysis-cache ns cache))))
                ;; we want want to keep dependency analysis information

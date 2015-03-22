@@ -1001,49 +1001,50 @@
                                                :gen-col 0
                                                :gen-line 0}))]
                 (emitln (compiled-by-string opts))
-                (loop [forms (ana/forms-seq src)
-                       ns-name nil
-                       deps nil]
-                  (if (seq forms)
-                    (let [env (ana/empty-env)
-                          ast (ana/analyze env (first forms) nil opts)]
-                      (emit ast)
-                      (if (= (:op ast) :ns)
-                        (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
-                        (recur (rest forms) ns-name deps)))
-                    (let [sm-data (when *source-map-data* @*source-map-data*)
-                          ret (merge
-                                {:ns (or ns-name 'cljs.user)
-                                 :provides [ns-name]
-                                 :requires (if (= ns-name 'cljs.core)
-                                             (set (vals deps))
-                                             (cond-> (conj (set (vals deps)) 'cljs.core)
-                                               (get-in @env/*compiler* [:opts :emit-constants])
-                                               (conj 'constants-table)))
-                                 :file dest
-                                 :source-file src}
-                                (when sm-data
-                                  {:source-map (:source-map sm-data)}))]
-                      (when (and sm-data (= (:optimizations opts) :none))
-                        (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                          (emits "\n//# sourceMappingURL="
-                            (or (:source-map-url opts) (.getName sm-file))
-                            (if (true? (:source-map-timestamp opts))
-                              (str "?rel=" (System/currentTimeMillis))
-                              ""))
-                          (spit sm-file
-                            (sm/encode {(url-path src) (:source-map sm-data)}
-                              {:lines (+ (:gen-line sm-data) 2)
-                               :file (url-path dest)
-                               :source-map-timestamp (:source-map-timestamp opts)
-                               :source-map-pretty-print (:source-map-pretty-print opts)}))))
-                      (let [path (.getPath (.toURL ^File dest))]
-                        (swap! env/*compiler* assoc-in [::compiled-cljs path] ret))
-                      (let [{:keys [output-dir cache-analysis]} opts]
-                        (when (and (true? cache-analysis) output-dir)
-                          (ana/write-analysis-cache ns-name
-                            (ana/cache-file src (ana/parse-ns src) output-dir :write)))
-                        ret))))))))))))
+                (with-open [rdr (io/reader src)]
+                  (loop [forms (ana/forms-seq* rdr)
+                         ns-name nil
+                         deps nil]
+                    (if (seq forms)
+                      (let [env (ana/empty-env)
+                            ast (ana/analyze env (first forms) nil opts)]
+                        (emit ast)
+                        (if (= (:op ast) :ns)
+                          (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
+                          (recur (rest forms) ns-name deps)))
+                      (let [sm-data (when *source-map-data* @*source-map-data*)
+                            ret (merge
+                                  {:ns (or ns-name 'cljs.user)
+                                   :provides [ns-name]
+                                   :requires (if (= ns-name 'cljs.core)
+                                               (set (vals deps))
+                                               (cond-> (conj (set (vals deps)) 'cljs.core)
+                                                 (get-in @env/*compiler* [:opts :emit-constants])
+                                                 (conj 'constants-table)))
+                                   :file dest
+                                   :source-file src}
+                                  (when sm-data
+                                    {:source-map (:source-map sm-data)}))]
+                        (when (and sm-data (= (:optimizations opts) :none))
+                          (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
+                            (emits "\n//# sourceMappingURL="
+                              (or (:source-map-url opts) (.getName sm-file))
+                              (if (true? (:source-map-timestamp opts))
+                                (str "?rel=" (System/currentTimeMillis))
+                                ""))
+                            (spit sm-file
+                              (sm/encode {(url-path src) (:source-map sm-data)}
+                                {:lines (+ (:gen-line sm-data) 2)
+                                 :file (url-path dest)
+                                 :source-map-timestamp (:source-map-timestamp opts)
+                                 :source-map-pretty-print (:source-map-pretty-print opts)}))))
+                        (let [path (.getPath (.toURL ^File dest))]
+                          (swap! env/*compiler* assoc-in [::compiled-cljs path] ret))
+                        (let [{:keys [output-dir cache-analysis]} opts]
+                          (when (and (true? cache-analysis) output-dir)
+                            (ana/write-analysis-cache ns-name
+                              (ana/cache-file src (ana/parse-ns src) output-dir :write)))
+                          ret)))))))))))))
 
 (defn requires-compilation?
   "Return true if the src file requires compilation."
