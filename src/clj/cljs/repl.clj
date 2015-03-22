@@ -474,7 +474,10 @@
   ([repl-env f] (load-file repl-env f nil))
   ([repl-env f opts]
     (if (:output-dir opts)
-      (let [src (if (util/url? f) f (io/resource f))
+      (let [src (cond
+                  (util/url? f) f
+                  (.exists (io/file f)) (io/file f)
+                  :else (io/resource f))
             compiled (cljsc/compile src
                        (assoc opts
                          :output-file
