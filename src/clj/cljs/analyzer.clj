@@ -429,6 +429,8 @@
 (defn confirm-ns [env ns-sym]
   (when (and (nil? (get '#{cljs.core goog Math goog.string} ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym))
+             ;; something else may have loaded the namespace, i.e. load-file
+             (nil? (get-in @env/*compiler* [::namespaces ns-sym]))
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
              (nil? (io/resource (util/ns->relpath ns-sym))))

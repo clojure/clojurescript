@@ -471,7 +471,7 @@
 ;; TODO: this should probably compile dependencies - David
 
 (defn load-file
-  ([repl-env f] (load-file repl-env f nil))
+  ([repl-env f] (load-file repl-env f *repl-opts*))
   ([repl-env f opts]
     (if (:output-dir opts)
       (let [src (cond
@@ -482,6 +482,10 @@
                        (assoc opts
                          :output-file
                          (cljsc/src-file->target-file src)))]
+        ;; make sure it's been analyzed, this is because if it's already compiled
+        ;; cljs.compiler/compile-file won't do anything, good for builds,
+        ;; but a bit annoying here
+        (ana/analyze-file src opts)
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1 (cljsc/src-file->goog-require src)))
       (binding [ana/*cljs-ns* 'cljs.user]
