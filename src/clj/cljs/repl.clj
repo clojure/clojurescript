@@ -302,8 +302,12 @@
                      :column   column'}
                     (when url
                       {:url url}))))]
-          ;; take each non-nil :call and merge it into :function one-level up
-          (map merge
+          ;; take each non-nil :call and optionally merge it into :function one-level up
+          ;; to avoid replacing with local symbols, we only replace munged name if we can munge call symbol back to it
+          (map #(merge-with (fn [munged-fn-name unmunged-call-name]
+                              (if (= munged-fn-name (string/replace (cljs.compiler/munge unmunged-call-name) "." "$"))
+                                unmunged-call-name
+                                munged-fn-name)) %1 %2)
             (map #(dissoc % :call) with-calls)
             (concat (rest (map #(if (:call %)
                                  (hash-map :function (:call %))
@@ -467,14 +471,21 @@
 ;; TODO: this should probably compile dependencies - David
 
 (defn load-file
-  ([repl-env f] (load-file repl-env f nil))
+  ([repl-env f] (load-file repl-env f *repl-opts*))
   ([repl-env f opts]
     (if (:output-dir opts)
-      (let [src (if (util/url? f) f (io/resource f))
+      (let [src (cond
+                  (util/url? f) f
+                  (.exists (io/file f)) (io/file f)
+                  :else (io/resource f))
             compiled (cljsc/compile src
                        (assoc opts
                          :output-file
                          (cljsc/src-file->target-file src)))]
+        ;; make sure it's been analyzed, this is because if it's already compiled
+        ;; cljs.compiler/compile-file won't do anything, good for builds,
+        ;; but a bit annoying here
+        (ana/analyze-file src opts)
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1 (cljsc/src-file->goog-require src)))
       (binding [ana/*cljs-ns* 'cljs.user]
@@ -514,6 +525,32 @@
      ;; where catching the error will swallow the original trace
      ((or (:wrap opts) wrap-fn) form)
      opts)))
+
+(defn canonicalize-specs [specs]
+  (letfn [(canonicalize [quoted-spec-or-kw]
+            (if (keyword? quoted-spec-or-kw)
+              quoted-spec-or-kw
+              (as-> (second quoted-spec-or-kw) spec
+                (if (vector? spec) spec [spec]))))]
+    (map canonicalize specs)))
+
+(defn decorate-specs [specs]
+  (if-let [k (some #{:reload :reload-all} specs)]
+    (->> specs (remove #{k}) (map #(vary-meta % assoc :reload k)))
+    specs))
+
+(comment
+  (canonicalize-specs
+    '['foo.bar '[bar.core :as bar]])
+
+  (canonicalize-specs
+    '['foo.bar '[bar.core :as bar] :reload])
+
+  (map meta
+    (decorate-specs
+      (canonicalize-specs
+        '['foo.bar '[bar.core :as bar] :reload])))
+  )
 
 ;; Special REPL fns, these provide compatiblity with Clojure functions
 ;; that are not possible to reproduce given ClojureScript's compilation model
@@ -574,17 +611,22 @@
           (evaluate-form repl-env env "<cljs repl>"
             (with-meta
               `(~'ns ~target-ns
-                 (:require
-                   ~@(map
-                       (fn [quoted-spec-or-kw]
-                         (if (keyword? quoted-spec-or-kw)
-                           quoted-spec-or-kw
-                           (second quoted-spec-or-kw)))
-                       specs)))
+                 (:require ~@(-> specs canonicalize-specs decorate-specs)))
               {:merge true :line 1 :column 1})
             identity opts)
           (when is-self-require?
             (set! ana/*cljs-ns* restore-ns)))))
+     'require-macros
+     (fn self
+       ([repl-env env form]
+        (self repl-env env form nil))
+       ([repl-env env [_ & specs :as form] opts]
+        (evaluate-form repl-env env "<cljs repl>"
+          (with-meta
+            `(~'ns ~ana/*cljs-ns*
+               (:require-macros ~@(-> specs canonicalize-specs decorate-specs)))
+            {:merge true :line 1 :column 1})
+          identity opts)))
      'import
      (fn self
        ([repl-env env form]
@@ -594,23 +636,6 @@
           (with-meta
             `(~'ns ~ana/*cljs-ns*
                (:import
-                 ~@(map
-                     (fn [quoted-spec-or-kw]
-                       (if (keyword? quoted-spec-or-kw)
-                         quoted-spec-or-kw
-                         (second quoted-spec-or-kw)))
-                     specs)))
-            {:merge true :line 1 :column 1})
-          identity opts)))
-     'require-macros
-     (fn self
-       ([repl-env env form]
-        (self repl-env env form nil))
-       ([repl-env env [_ & specs :as form] opts]
-        (evaluate-form repl-env env "<cljs repl>"
-          (with-meta
-            `(~'ns ~ana/*cljs-ns*
-               (:require-macros
                  ~@(map
                      (fn [quoted-spec-or-kw]
                        (if (keyword? quoted-spec-or-kw)
