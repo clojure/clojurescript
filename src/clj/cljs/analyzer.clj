@@ -1473,6 +1473,7 @@
                       :import         (partial parse-import-spec env deps)}
         valid-forms (atom #{:use :use-macros :require :require-macros :import})
         reload (atom {:use nil :require nil :use-macros nil :require-macros nil})
+        reloads (atom {})
         {uses :use requires :require use-macros :use-macros require-macros :require-macros imports :import :as params}
         (reduce
           (fn [m [k & libs]]
@@ -1481,11 +1482,16 @@
             (when-not (@valid-forms k)
               (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
             (swap! valid-forms disj k)
+            ;; check for spec type reloads
             (when-not (= :import k)
               (when (some #{:reload} libs)
                 (swap! reload assoc k :reload))
               (when (some #{:reload-all} libs)
                 (swap! reload assoc k :reload-all)))
+            ;; check for individual ns reloads from REPL interactions
+            (when-let [xs (seq (filter #(-> % meta :reload) libs))]
+              (swap! reloads assoc k
+                (zipmap (map first xs) (map #(-> % meta :reload) xs))))
             (apply merge-with merge m
               (map (spec-parsers k)
                 (remove #{:reload :reload-all} libs))))
@@ -1498,13 +1504,15 @@
     (when *load-macros*
       (load-core)
       (doseq [nsym (vals use-macros)]
-        (let [k (:use-macros @reload)]
+        (let [k (or (:use-macros @reload)
+                    (get-in @reloads [:use-macros nsym]))]
           (if k
             (clojure.core/require nsym k)
             (clojure.core/require nsym))
           (intern-macros nsym k)))
       (doseq [nsym (vals require-macros)]
-        (let [k (:require-macros @reload)]
+        (let [k (or (:require-macros @reload)
+                    (get-in @reloads [:require-macros nsym]))]
           (if k
             (clojure.core/require nsym k)
             (clojure.core/require nsym))
@@ -1535,7 +1543,8 @@
                 ns-info))
             ns-info)]
       (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
-      (merge {:env env :op :ns :form form}
+      (merge {:env env :op :ns :form form
+              :reloads @reloads}
         (cond-> ns-info
           (@reload :use)
           (update-in [:uses]

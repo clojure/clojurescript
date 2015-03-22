@@ -839,46 +839,47 @@
   (emit-wrap env (emits target " = " val)))
 
 (defn load-libs
-  ([libs] (load-libs libs nil))
-  ([libs seen]
-    (let [loaded-libs      (munge 'cljs.core.*loaded-libs*)
-          loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))]
-      (when (-> libs meta :reload-all)
-        (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
-        (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
-      (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
-        (cond
-          (ana/foreign-dep? lib)
-          (let [{:keys [target optimizations]} (get @env/*compiler* :options)]
-            ;; we only load foreign libraries under optimizations :none
-            (when (= :none optimizations)
-              (if (= :nodejs target)
-                ;; under node.js we load foreign libs globally
-                (let [{:keys [js-dependency-index options]} @env/*compiler*
-                      ijs-url (get-in js-dependency-index [(name lib) :url])]
-                  (emitln "cljs.core.load_file(\""
-                    (str (io/file (util/output-directory options) (util/get-name ijs-url)))
-                    "\");"))
-                (emitln "goog.require('" (munge lib) "');"))))
+  [libs seen reloads]
+  (let [loaded-libs (munge 'cljs.core.*loaded-libs*)
+        loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))]
+    (when (-> libs meta :reload-all)
+      (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
+      (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
+    (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
+      (cond
+        (ana/foreign-dep? lib)
+        (let [{:keys [target optimizations]} (get @env/*compiler* :options)]
+          ;; we only load foreign libraries under optimizations :none
+          (when (= :none optimizations)
+            (if (= :nodejs target)
+              ;; under node.js we load foreign libs globally
+              (let [{:keys [js-dependency-index options]} @env/*compiler*
+                    ijs-url (get-in js-dependency-index [(name lib) :url])]
+                (emitln "cljs.core.load_file(\""
+                  (str (io/file (util/output-directory options) (util/get-name ijs-url)))
+                  "\");"))
+              (emitln "goog.require('" (munge lib) "');"))))
 
-          (-> libs meta :reload)
-          (emitln "goog.require('" (munge lib) "', 'reload');")
+        (or (-> libs meta :reload)
+            (= (get reloads lib) :reload))
+        (emitln "goog.require('" (munge lib) "', 'reload');")
 
-          (-> libs meta :reload-all)
-          (emitln "goog.require('" (munge lib) "', 'reload-all');")
+        (or (-> libs meta :reload-all)
+            (= (get reloads lib) :reload-all))
+        (emitln "goog.require('" (munge lib) "', 'reload-all');")
 
-          :else
-          (emitln "goog.require('" (munge lib) "');")))
-      (when (-> libs meta :reload-all)
-        (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");")))))
+        :else
+        (emitln "goog.require('" (munge lib) "');")))
+    (when (-> libs meta :reload-all)
+      (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
 (defmethod emit* :ns
-  [{:keys [name requires uses require-macros env]}]
+  [{:keys [name requires uses require-macros reloads env]}]
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');"))
-  (load-libs requires)
-  (load-libs uses requires))
+  (load-libs requires nil (:require reloads))
+  (load-libs uses requires (:use reloads)))
 
 (defmethod emit* :deftype*
   [{:keys [t fields pmasks body]}]

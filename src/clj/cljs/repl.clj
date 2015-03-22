@@ -519,6 +519,32 @@
      ((or (:wrap opts) wrap-fn) form)
      opts)))
 
+(defn canonicalize-specs [specs]
+  (letfn [(canonicalize [quoted-spec-or-kw]
+            (if (keyword? quoted-spec-or-kw)
+              quoted-spec-or-kw
+              (as-> (second quoted-spec-or-kw) spec
+                (if (vector? spec) spec [spec]))))]
+    (map canonicalize specs)))
+
+(defn decorate-specs [specs]
+  (if-let [k (some #{:reload :reload-all} specs)]
+    (->> specs (remove #{k}) (map #(vary-meta % assoc :reload k)))
+    specs))
+
+(comment
+  (canonicalize-specs
+    '['foo.bar '[bar.core :as bar]])
+
+  (canonicalize-specs
+    '['foo.bar '[bar.core :as bar] :reload])
+
+  (map meta
+    (decorate-specs
+      (canonicalize-specs
+        '['foo.bar '[bar.core :as bar] :reload])))
+  )
+
 ;; Special REPL fns, these provide compatiblity with Clojure functions
 ;; that are not possible to reproduce given ClojureScript's compilation model
 ;; All functions should have the following signature
@@ -578,17 +604,22 @@
           (evaluate-form repl-env env "<cljs repl>"
             (with-meta
               `(~'ns ~target-ns
-                 (:require
-                   ~@(map
-                       (fn [quoted-spec-or-kw]
-                         (if (keyword? quoted-spec-or-kw)
-                           quoted-spec-or-kw
-                           (second quoted-spec-or-kw)))
-                       specs)))
+                 (:require ~@(-> specs canonicalize-specs decorate-specs)))
               {:merge true :line 1 :column 1})
             identity opts)
           (when is-self-require?
             (set! ana/*cljs-ns* restore-ns)))))
+     'require-macros
+     (fn self
+       ([repl-env env form]
+        (self repl-env env form nil))
+       ([repl-env env [_ & specs :as form] opts]
+        (evaluate-form repl-env env "<cljs repl>"
+          (with-meta
+            `(~'ns ~ana/*cljs-ns*
+               (:require-macros ~@(-> specs canonicalize-specs decorate-specs)))
+            {:merge true :line 1 :column 1})
+          identity opts)))
      'import
      (fn self
        ([repl-env env form]
@@ -598,23 +629,6 @@
           (with-meta
             `(~'ns ~ana/*cljs-ns*
                (:import
-                 ~@(map
-                     (fn [quoted-spec-or-kw]
-                       (if (keyword? quoted-spec-or-kw)
-                         quoted-spec-or-kw
-                         (second quoted-spec-or-kw)))
-                     specs)))
-            {:merge true :line 1 :column 1})
-          identity opts)))
-     'require-macros
-     (fn self
-       ([repl-env env form]
-        (self repl-env env form nil))
-       ([repl-env env [_ & specs :as form] opts]
-        (evaluate-form repl-env env "<cljs repl>"
-          (with-meta
-            `(~'ns ~ana/*cljs-ns*
-               (:require-macros
                  ~@(map
                      (fn [quoted-spec-or-kw]
                        (if (keyword? quoted-spec-or-kw)
