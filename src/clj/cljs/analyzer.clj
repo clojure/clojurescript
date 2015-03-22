@@ -1947,10 +1947,34 @@
    (instance? File x) (.getAbsolutePath ^File x)
    :default (str x)))
 
+(defn forms-seq*
+  "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
+  accepts a filename argument which will be used in any emitted errors."
+  ([^Reader rdr] (forms-seq* rdr nil))
+  ([^Reader rdr filename]
+   (let [pbr (readers/indexing-push-back-reader
+               (PushbackReader. rdr) 1 filename)
+         data-readers tags/*cljs-data-readers*
+         forms-seq_
+         (fn forms-seq_ []
+           (lazy-seq
+             (let [eof-sentinel (Object.)
+                   form (binding [*ns* (create-ns *cljs-ns*)
+                                  reader/*data-readers* data-readers
+                                  reader/*alias-map*
+                                  (apply merge
+                                    ((juxt :requires :require-macros)
+                                      (get-namespace *cljs-ns*)))]
+                          (reader/read pbr nil eof-sentinel))]
+               (if (identical? form eof-sentinel)
+                 (.close rdr)
+                 (cons form (forms-seq_))))))]
+     (forms-seq_))))
+
 (defn forms-seq
-  "Seq of Clojure/ClojureScript forms from [f], which can be anything for which
-`clojure.java.io/reader` can produce a `java.io.Reader`. Optionally accepts a [filename]
-argument, which the reader will use in any emitted errors."
+  "DEPRECATED: Seq of Clojure/ClojureScript forms from [f], which can be anything
+  for which `clojure.java.io/reader` can produce a `java.io.Reader`. Optionally
+  accepts a [filename] argument, which the reader will use in any emitted errors."
   ([f] (forms-seq f (source-path f)))
   ([f filename] (forms-seq f filename false))
   ([f filename return-reader?]
