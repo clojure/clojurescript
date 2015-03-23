@@ -24,7 +24,7 @@
             [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
             [cljs.source-map :as sm])
-  (:import [java.io File PushbackReader FileWriter]
+  (:import [java.io File PushbackReader FileWriter PrintWriter]
            [java.net URL]
            [javax.xml.bind DatatypeConverter]
            [clojure.lang IExceptionInfo]
@@ -729,7 +729,10 @@
                :source-map-inline source-map-inline})))
         done? (atom false)]
     (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
-     (binding [*err* (if bind-err *out* *err*)
+     (binding [*err* (if bind-err
+                       (cond-> *out*
+                         (not (instance? PrintWriter *out*)) (PrintWriter.))
+                       *err*)
                ana/*cljs-ns* ana/*cljs-ns*
                *cljs-verbose* repl-verbose
                ana/*cljs-warnings*
