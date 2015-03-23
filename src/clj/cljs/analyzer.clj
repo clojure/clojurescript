@@ -1963,6 +1963,7 @@
   accepts a filename argument which will be used in any emitted errors."
   ([^Reader rdr] (forms-seq* rdr nil))
   ([^Reader rdr filename]
+   {:pre [(instance? Reader rdr)]}
    (let [pbr (readers/indexing-push-back-reader
                (PushbackReader. rdr) 1 filename)
          data-readers tags/*cljs-data-readers*
