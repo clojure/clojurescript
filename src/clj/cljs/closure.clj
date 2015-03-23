@@ -561,7 +561,7 @@ should contain the source for the given namespace name."
                   (javascript-file foreign url provides requires)
                   js-map)))
             required-js)
-          [(when (-> @env/*compiler* :opts :emit-constants)
+          [(when (-> @env/*compiler* :options :emit-constants)
              (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
                (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
           required-cljs
@@ -1386,7 +1386,7 @@ should contain the source for the given namespace name."
          (check-node-target opts)
          (swap! compiler-env
            #(-> %
-             (assoc-in [:opts :emit-constants] emit-constants)
+             (assoc-in [:options :emit-constants] emit-constants)
              (assoc :target (:target opts))
              (assoc :js-dependency-index (deps/js-dependency-index all-opts))))
          (binding [comp/*dependents* (when-not (false? (:recompile-dependents opts))

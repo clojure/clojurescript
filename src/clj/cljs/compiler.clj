@@ -197,7 +197,7 @@
     (emits ")")))
 
 (defmethod emit-constant clojure.lang.Keyword [x]
-  (if (-> @env/*compiler* :opts :emit-constants)
+  (if (-> @env/*compiler* :options :emit-constants)
     (let [value (-> @env/*compiler* ::ana/constant-table x)]
       (emits "cljs.core." value))
     (emits-keyword x)
@@ -1019,7 +1019,7 @@
                                    :requires (if (= ns-name 'cljs.core)
                                                (set (vals deps))
                                                (cond-> (conj (set (vals deps)) 'cljs.core)
-                                                 (get-in @env/*compiler* [:opts :emit-constants])
+                                                 (get-in @env/*compiler* [:options :emit-constants])
                                                  (conj 'constants-table)))
                                    :file dest
                                    :source-file src}

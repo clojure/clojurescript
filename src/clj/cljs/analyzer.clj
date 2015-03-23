@@ -2060,7 +2060,7 @@
                               :requires (if (= ns-name 'cljs.core)
                                           (set (vals deps))
                                           (cond-> (conj (set (vals deps)) 'cljs.core)
-                                            (get-in compiler-env [:opts :emit-constants])
+                                            (get-in compiler-env [:options :emit-constants])
                                             (conj 'constants-table)))
                               :file dest
                               :source-file src
