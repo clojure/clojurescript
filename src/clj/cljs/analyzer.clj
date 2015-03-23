@@ -2029,9 +2029,10 @@
       (let [src (if (symbol? src)
                   (io/resource (util/ns->relpath src))
                   src)
-            namespaces' (::namespaces @env/*compiler*)
-            ret
-            (binding [*cljs-ns* 'cljs.user
+            compiler-env @env/*compiler*
+            [ijs compiler-env']
+            (binding [env/*compiler* (atom compiler-env)
+                      *cljs-ns* 'cljs.user
                       *macro-infer*
                       (or (when (contains? opts :macro-infer)
                             (:macro-infer opts))
@@ -2053,26 +2054,27 @@
                         (let [ns-name (:name ast)
                               deps (merge (:uses ast) (:requires ast))]
                           (.close ^Reader rdr)
-                          (merge
-                            {:ns (or ns-name 'cljs.user)
-                             :provides [ns-name]
-                             :requires (if (= ns-name 'cljs.core)
-                                         (set (vals deps))
-                                         (cond-> (conj (set (vals deps)) 'cljs.core)
-                                           (get-in @env/*compiler* [:opts :emit-constants])
-                                           (conj 'constants-table)))
-                             :file dest
-                             :source-file src
-                             :ast ast}
-                            (when (and dest (.exists ^File dest))
-                              {:lines (with-open [reader (io/reader dest)]
-                                        (-> reader line-seq count))})))
-                        (recur (rest forms))))))))]
-        ;; TODO this _was_ a reset! of the old namespaces atom; should we capture and
-        ;; then restore the entirety of env/*compiler* here instead?
-        (when-not (false? (:restore opts))
-          (swap! env/*compiler* assoc ::namespaces namespaces'))
-        ret))))
+                          [(merge
+                             {:ns (or ns-name 'cljs.user)
+                              :provides [ns-name]
+                              :requires (if (= ns-name 'cljs.core)
+                                          (set (vals deps))
+                                          (cond-> (conj (set (vals deps)) 'cljs.core)
+                                            (get-in compiler-env [:opts :emit-constants])
+                                            (conj 'constants-table)))
+                              :file dest
+                              :source-file src
+                              :ast ast}
+                             (when (and dest (.exists ^File dest))
+                               {:lines (with-open [reader (io/reader dest)]
+                                         (-> reader line-seq count))}))
+                           @env/*compiler*])
+                        (recur (rest forms))))
+                    (throw (AssertionError. (str "No ns form found in " src)))))))]
+        (when (false? (:restore opts))
+          (swap! env/*compiler* update-in [::namespaces] merge
+            (get compiler-env' ::namespaces)))
+        ijs))))
 
 (defn cache-file
   "Given a ClojureScript source file returns the read/write path to the analysis
