@@ -489,7 +489,7 @@
         (ana/analyze-file src opts)
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1 (cljsc/src-file->goog-require src)))
-      (binding [ana/*cljs-ns* 'cljs.user]
+      (binding [ana/*cljs-ns* ana/*cljs-ns*]
         (let [res (if (= File/separatorChar (first f)) f (io/resource f))]
           (assert res (str "Can't find " f " in classpath"))
           (load-stream repl-env f res))))))
@@ -684,8 +684,7 @@
             #(prn "Error evaluating:" form :as js)
             (constantly nil))
           opts)))
-    (binding [*out* *err*]
-      (.printStackTrace e))))
+    (.printStackTrace e *err*)))
 
 (defn repl*
   [repl-env {:keys [init need-prompt quit-prompt prompt flush read eval print caught reader
@@ -731,7 +730,7 @@
         done? (atom false)]
     (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
      (binding [*err* (if bind-err *out* *err*)
-               ana/*cljs-ns* 'cljs.user
+               ana/*cljs-ns* ana/*cljs-ns*
                *cljs-verbose* repl-verbose
                ana/*cljs-warnings*
                (assoc ana/*cljs-warnings*
