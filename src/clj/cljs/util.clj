@@ -121,6 +121,10 @@
     (throw
       (IllegalArgumentException. (str "Cannot get last modified for " src)))))
 
+(defn file-or-resource [s]
+  (or (and (.exists (io/file s)) (io/file s))
+      (io/resource s)))
+
 (defn topo-sort
   ([x get-deps]
     (topo-sort x 0 (atom (sorted-map)) (memoize get-deps)))

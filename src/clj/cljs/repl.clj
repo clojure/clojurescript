@@ -200,20 +200,6 @@
    (doseq [ns (distinct requires)]
      (load-namespace repl-env ns opts))))
 
-(defn read-source-map
-  "Return the source map for the JavaScript source file."
-  [f]
-  (let [smf (io/file (str f ".map"))]
-    (when (.exists smf)
-      (as-> @env/*compiler* compiler-env
-        (let [t (util/last-modified smf)]
-          (if (> t (get-in compiler-env [::source-maps f :last-modified] 0))
-            (swap! env/*compiler* assoc-in [::source-maps f]
-              {:last-modified t
-               :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
-            compiler-env))
-        (get-in compiler-env [::source-maps f :source-map])))))
-
 (defn ^File js-src->cljs-src
   "Map a JavaScript output file back to the original ClojureScript source
    file."
@@ -222,6 +208,22 @@
         dir (.getParentFile f)
         name (.getName f)]
     (io/file dir (string/replace name ".js" ".cljs"))))
+
+(defn read-source-map
+  "Return the source map for the JavaScript source file."
+  [f]
+  (when-let [smf (util/file-or-resource (str f ".map"))]
+    (let [ns (if (= f "cljs/core.aot.js")
+               'cljs.core
+               (:ns (ana/parse-ns (js-src->cljs-src f))))]
+      (as-> @env/*compiler* compiler-env
+        (let [t (util/last-modified smf)]
+          (if (> t (get-in compiler-env [::source-maps ns :last-modified] 0))
+            (swap! env/*compiler* assoc-in [::source-maps ns]
+              {:last-modified t
+               :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
+            compiler-env))
+        (get-in compiler-env [::source-maps ns :source-map])))))
 
 (defn ns-info
   "Given a path to a js source file return the ns info for the corresponding
@@ -734,6 +736,8 @@
                :source-map-inline source-map-inline})))
         done? (atom false)]
     (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
+     (when (:source-map opts)
+       (.start (Thread. (bound-fn [] (read-source-map "cljs/core.aot.js")))))
      (binding [*err* (if bind-err
                        (cond-> *out*
                          (not (instance? PrintWriter *out*)) (PrintWriter.))
