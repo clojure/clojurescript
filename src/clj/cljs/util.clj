@@ -113,6 +113,14 @@
     (filename x)
     (last (string/split (path x) #"\/"))))
 
+(defn last-modified [src]
+  (cond
+    (file? src) (.lastModified ^File src)
+    (url? src) (.getLastModified (.openConnection ^URL src))
+    :else
+    (throw
+      (IllegalArgumentException. (str "Cannot get last modified for " src)))))
+
 (defn topo-sort
   ([x get-deps]
     (topo-sort x 0 (atom (sorted-map)) (memoize get-deps)))

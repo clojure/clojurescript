@@ -205,7 +205,14 @@
   [f]
   (let [smf (io/file (str f ".map"))]
     (when (.exists smf)
-      (sm/decode (json/read-str (slurp smf) :key-fn keyword)))))
+      (as-> @env/*compiler* compiler-env
+        (let [t (util/last-modified smf)]
+          (if (> t (get-in compiler-env [::source-maps f :last-modified] 0))
+            (swap! env/*compiler* assoc-in [::source-maps f]
+              {:last-modified t
+               :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
+            compiler-env))
+        (get-in compiler-env [::source-maps f :source-map])))))
 
 (defn ^File js-src->cljs-src
   "Map a JavaScript output file back to the original ClojureScript source
@@ -261,58 +268,56 @@
    from the classpath."
   ([stacktrace] (mapped-stacktrace stacktrace nil))
   ([stacktrace opts]
-    (let [read-source-map' (memoize read-source-map)
-          ns-info' (memoize ns-info)]
-      (vec
-        (let [with-calls
-              (for [{:keys [function file line column] :as frame} stacktrace]
-                ;; need to convert file, a relative URL style path, to host-specific file
-                (let [no-source-file? (if-not file
-                                        true
-                                        (.startsWith file "<"))
-                      rfile (when-not no-source-file?
-                              (io/file (URL. (.toURL (io/file (util/output-directory opts))) file)))
-                      [sm {:keys [ns source-file] :as ns-info}]
-                      (when-not no-source-file?
-                        ((juxt read-source-map' ns-info') rfile))
-                      [line' column' call] (if ns-info
-                                             (mapped-line-column-call sm line column)
-                                             [line column])
-                      name' (when (and ns-info function)
-                              function)
-                      file' (if no-source-file?
-                              file
-                              (string/replace
-                                (.getCanonicalFile
-                                  (if ns-info
-                                    source-file
-                                    (io/file rfile)))
-                                (str (System/getProperty "user.dir") File/separator) ""))
-                      url (or (and ns-info (io/resource (util/ns->relpath ns)))
-                            (and file (io/resource file)))]
-                  (merge
-                    {:function name'
-                     :call     call
-                     :file     (if no-source-file?
-                                 (str "NO_SOURCE_FILE"
-                                   (when file
-                                     (str " " file)))
-                                 (io/file file'))
-                     :line     line'
-                     :column   column'}
-                    (when url
-                      {:url url}))))]
-          ;; take each non-nil :call and optionally merge it into :function one-level up
-          ;; to avoid replacing with local symbols, we only replace munged name if we can munge call symbol back to it
-          (map #(merge-with (fn [munged-fn-name unmunged-call-name]
-                              (if (= munged-fn-name (string/replace (cljs.compiler/munge unmunged-call-name) "." "$"))
-                                unmunged-call-name
-                                munged-fn-name)) %1 %2)
-            (map #(dissoc % :call) with-calls)
-            (concat (rest (map #(if (:call %)
-                                 (hash-map :function (:call %))
-                                 {})
-                            with-calls)) [{}])))))))
+   (vec
+     (let [with-calls
+           (for [{:keys [function file line column] :as frame} stacktrace]
+             ;; need to convert file, a relative URL style path, to host-specific file
+             (let [no-source-file? (if-not file
+                                     true
+                                     (.startsWith file "<"))
+                   rfile (when-not no-source-file?
+                           (io/file (URL. (.toURL (io/file (util/output-directory opts))) file)))
+                   [sm {:keys [ns source-file] :as ns-info}]
+                   (when-not no-source-file?
+                     ((juxt read-source-map ns-info) rfile))
+                   [line' column' call] (if ns-info
+                                          (mapped-line-column-call sm line column)
+                                          [line column])
+                   name' (when (and ns-info function)
+                           function)
+                   file' (if no-source-file?
+                           file
+                           (string/replace
+                             (.getCanonicalFile
+                               (if ns-info
+                                 source-file
+                                 (io/file rfile)))
+                             (str (System/getProperty "user.dir") File/separator) ""))
+                   url (or (and ns-info (io/resource (util/ns->relpath ns)))
+                         (and file (io/resource file)))]
+               (merge
+                 {:function name'
+                  :call call
+                  :file (if no-source-file?
+                          (str "NO_SOURCE_FILE"
+                            (when file
+                              (str " " file)))
+                          (io/file file'))
+                  :line line'
+                  :column column'}
+                 (when url
+                   {:url url}))))]
+       ;; take each non-nil :call and optionally merge it into :function one-level up
+       ;; to avoid replacing with local symbols, we only replace munged name if we can munge call symbol back to it
+       (map #(merge-with (fn [munged-fn-name unmunged-call-name]
+                           (if (= munged-fn-name (string/replace (cljs.compiler/munge unmunged-call-name) "." "$"))
+                             unmunged-call-name
+                             munged-fn-name)) %1 %2)
+         (map #(dissoc % :call) with-calls)
+         (concat (rest (map #(if (:call %)
+                              (hash-map :function (:call %))
+                              {})
+                         with-calls)) [{}]))))))
 
 (defn print-mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace

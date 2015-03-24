@@ -2091,14 +2091,6 @@
      core-cache
      (io/file (str (util/to-target-file output-dir ns-info "cljs") ".cache.edn")))))
 
-(defn last-modified [src]
-  (cond
-    (instance? File src) (.lastModified ^File src)
-    (instance? URL src) (.getLastModified (.openConnection ^URL src))
-    :else
-    (throw
-      (IllegalArgumentException. (str "Cannot get last modified for " src)))))
-
 (defn requires-analysis?
   ([src] (requires-analysis? src "out"))
   ([src output-dir]
@@ -2118,7 +2110,7 @@
       (let [out-src (util/to-target-file output-dir (parse-ns src))]
         (if (not (.exists out-src))
           true
-          (if (> (last-modified src) (last-modified cache))
+          (if (> (util/last-modified src) (util/last-modified cache))
             true
             (let [version' (util/compiled-by-version cache)
                   version (util/clojurescript-version)]
