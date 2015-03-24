@@ -218,7 +218,10 @@
                (:ns (ana/parse-ns (js-src->cljs-src f))))]
       (as-> @env/*compiler* compiler-env
         (let [t (util/last-modified smf)]
-          (if (> t (get-in compiler-env [::source-maps ns :last-modified] 0))
+          (if (or (and (= ns 'cljs.core)
+                       (nil? (get-in compiler-env [::source-maps ns])))
+                  (and (not= ns 'cljs.core)
+                       (> t (get-in compiler-env [::source-maps ns :last-modified] 0))))
             (swap! env/*compiler* assoc-in [::source-maps ns]
               {:last-modified t
                :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
