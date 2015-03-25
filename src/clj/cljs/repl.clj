@@ -331,9 +331,10 @@
   ([stacktrace opts]
     (doseq [{:keys [function file line column]}
             (mapped-stacktrace stacktrace opts)]
-      ((:print opts) "\t"
-        (str (when function (str function " "))
-             "(" file (when line (str ":" line)) (when column (str ":" column)) ")")))))
+      (err-out
+        (println "\t"
+          (str (when function (str function " "))
+            "(" file (when line (str ":" line)) (when column (str ":" column)) ")"))))))
 
 (comment
   (cljsc/build "samples/hello/src"
@@ -382,11 +383,11 @@
 (defn- display-error
   ([repl-env ret form opts]
    (display-error repl-env ret form (constantly nil) opts))
-  ([repl-env ret form f {:keys [print flush] :as opts}]
+  ([repl-env ret form f opts]
    (err-out
      (f)
      (when-let [value (:value ret)]
-       (print value))
+       (println value))
      (when-let [st (:stacktrace ret)]
        (if (and (true? (:source-map opts))
              (satisfies? IParseStacktrace repl-env))
@@ -394,16 +395,14 @@
                      (-parse-stacktrace repl-env st ret opts)
                      (catch Throwable e
                        (when (:repl-verbose opts)
-                         (print "Failed to canonicalize stacktrace")
-                         (print (Throwables/getStackTraceAsString e))
-                         (flush))))]
+                         (println "Failed to canonicalize stacktrace")
+                         (println (Throwables/getStackTraceAsString e)))))]
            (if (vector? cst)
              (if (satisfies? IPrintStacktrace repl-env)
                (-print-stacktrace repl-env cst ret opts)
                (print-mapped-stacktrace cst opts))
-             (print st)))
-         (print st))
-       (flush)))))
+             (println st)))
+         (println st))))))
 
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
@@ -454,7 +453,7 @@
              (distinct (vals (:uses ast))))
            opts))
        (when *cljs-verbose*
-         (err-out ((:print opts) js)))
+         (err-out (println js)))
        (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
          (case (:status ret)
            :error (throw
@@ -809,8 +808,7 @@
                      ((ns-resolve 'clojure.core 'binding-conveyor-fn)
                        (fn []
                          (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                           (err-out (print "Watch compilation log available at:" (str log-file)))
-                           (flush)
+                           (err-out (println "Watch compilation log available at:" (str log-file)))
                            (try
                              (let [log-out (FileWriter. log-file)]
                                (binding [*err* log-out

@@ -486,13 +486,13 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
             ordering (:ordering repl-env)
             es (:es repl-env)
             server/state (:server-state repl-env)]
-    (repl/err-out ((:print opts) "Compiling client js ..."))
+    (repl/err-out (println "Compiling client js ..."))
     (swap! browser-state
       (fn [old]
         (assoc old :client-js
           (create-client-js-file
             repl-env (io/file working-dir "client.js")))))
-    (repl/err-out ((:print opts) "Waiting for browser to connect ..."))
+    (repl/err-out (println "Waiting for browser to connect ..."))
     opts
     (server/start repl-env)))
 
