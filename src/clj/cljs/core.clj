@@ -1993,5 +1993,5 @@
              env &env]
     (core/loop [form' (ana/macroexpand-1 env form)]
       (core/if-not (core/identical? form form')
-        (recur (ana/macroexpand-1 env form))
+        (recur (ana/macroexpand-1 env form'))
         form'))))
