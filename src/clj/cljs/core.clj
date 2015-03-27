@@ -1973,11 +1973,24 @@
 (defmacro load-file* [f]
   `(. js/goog (~'nodeGlobalRequire ~f)))
 
-(defmacro macroexpand-1 [[quote form]]
-  `(quote ~(ana/macroexpand-1 &env form)))
+(defmacro macroexpand-1
+  "If form represents a macro form, returns its expansion,
+  else returns form."
+  [quoted]
+  (core/assert (core/= (core/first quoted) 'quote)
+    "Argument to macroexpand-1 must be quoted")
+  (core/let [form (second quoted)]
+    `(quote ~(ana/macroexpand-1 &env form))))
 
-(defmacro macroexpand [[quote form]]
-  (core/let [env &env]
+(defmacro macroexpand
+  "Repeatedly calls macroexpand-1 on form until it no longer
+  represents a macro form, then returns it.  Note neither
+  macroexpand-1 nor macroexpand expand macros in subforms."
+  [quoted]
+  (core/assert (core/= (core/first quoted) 'quote)
+    "Argument to macroexpand must be quoted")
+  (core/let [form (second quoted)
+             env &env]
     (core/loop [form' (ana/macroexpand-1 env form)]
       (core/if-not (core/identical? form form')
         (recur (ana/macroexpand-1 env form))
