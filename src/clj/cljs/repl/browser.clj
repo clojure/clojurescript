@@ -572,6 +572,9 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   [& {:as opts}]
   (repl-env* opts))
 
+(defn -main []
+  (repl/repl (repl-env)))
+
 (comment
 
   (require '[cljs.repl :as repl])

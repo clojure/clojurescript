@@ -226,3 +226,6 @@
   "Create a Nashorn repl-env for use with the repl/repl* method in Clojurescript."
   [& {:as opts}]
   (repl-env* opts))
+
+(defn -main []
+  (repl/repl (repl-env)))

@@ -224,6 +224,9 @@
   [& {:as opts}]
   (repl-env* opts))
 
+(defn -main []
+  (repl/repl (repl-env)))
+
 (comment
 
   (repl/-parse-stacktrace (repl-env)

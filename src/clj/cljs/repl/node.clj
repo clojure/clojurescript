@@ -200,3 +200,5 @@
   [& {:as options}]
   (repl-env* options))
 
+(defn -main []
+  (repl/repl (repl-env)))
