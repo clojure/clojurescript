@@ -303,5 +303,9 @@ JavaScript library containing provide/require 'declarations'."
     (let [{:keys [provides] :as lib-info} (library-graph-node lib-resource)]
       (if (some #{(name lib)} provides)
         lib-info
-        (println (format "WARNING: JavaScript file found on classpath for library `%s`, but does not contain a corresponding `goog.provide` declaration: %s"
-                   lib lib-resource))))))
+        (binding [*out* *err*]
+          (println
+            (format
+              (str "WARNING: JavaScript file found on classpath for library `%s`, "
+                   "but does not contain a corresponding `goog.provide` declaration: %s")
+              lib lib-resource)))))))
