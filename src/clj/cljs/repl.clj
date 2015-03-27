@@ -594,20 +594,22 @@
           ([repl-env env form]
             (self repl-env env form nil))
           ([repl-env env [_ file :as form] opts]
-            (load-file repl-env file opts)))]
-    {'in-ns
-     (fn self
-       ([repl-env env form]
-        (self repl-env env form nil))
-       ([repl-env env [_ [quote ns-name] :as form] _]
-         ;; guard against craziness like '5 which wreaks havoc
-        (when-not (and (= quote 'quote) (symbol? ns-name))
-          (throw (IllegalArgumentException. "Argument to in-ns must be a symbol.")))
-        (when-not (ana/get-namespace ns-name)
-          (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
-          (-evaluate repl-env "<cljs repl>" 1
-            (str "goog.provide('" (comp/munge ns-name) "');")))
-        (set! ana/*cljs-ns* ns-name)))
+            (load-file repl-env file opts)))
+        in-ns-fn
+        (fn self
+          ([repl-env env form]
+           (self repl-env env form nil))
+          ([repl-env env [_ [quote ns-name] :as form] _]
+            ;; guard against craziness like '5 which wreaks havoc
+           (when-not (and (= quote 'quote) (symbol? ns-name))
+             (throw (IllegalArgumentException. "Argument to in-ns must be a symbol.")))
+           (when-not (ana/get-namespace ns-name)
+             (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
+             (-evaluate repl-env "<cljs repl>" 1
+               (str "goog.provide('" (comp/munge ns-name) "');")))
+           (set! ana/*cljs-ns* ns-name)))]
+    {'in-ns in-ns-fn
+     'clojure.core/in-ns in-ns-fn
      'require
      (fn self
        ([repl-env env form]
