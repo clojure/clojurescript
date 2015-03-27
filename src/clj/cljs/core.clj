@@ -1991,7 +1991,7 @@
     "Argument to macroexpand must be quoted")
   (core/let [form (second quoted)
              env &env]
-    (core/loop [form' (ana/macroexpand-1 env form)]
+    (core/loop [form form form' (ana/macroexpand-1 env form)]
       (core/if-not (core/identical? form form')
-        (recur (ana/macroexpand-1 env form'))
-        form'))))
+        (recur form' (ana/macroexpand-1 env form'))
+        `(quote ~form')))))
