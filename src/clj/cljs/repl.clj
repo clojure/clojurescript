@@ -679,7 +679,7 @@
   (println "To quit, type:" :cljs/quit))
 
 (defn repl-prompt []
-  (print (str "ClojureScript:" ana/*cljs-ns* "> ")))
+  (print (str ana/*cljs-ns* "=> ")))
 
 (defn repl-caught [e repl-env opts]
   (if (and (instance? IExceptionInfo e)
