@@ -34,7 +34,7 @@
 
                             cond-> cond->> as-> some-> some->>
 
-                            if-some when-some test ns-interns var vswap!])
+                            if-some when-some test ns-interns var vswap! macroexpand-1 macroexpand])
   (:require clojure.walk
             clojure.set
             cljs.compiler
@@ -1972,3 +1972,13 @@
 ;; INTERNAL - do not use, only for Node.js
 (defmacro load-file* [f]
   `(. js/goog (~'nodeGlobalRequire ~f)))
+
+(defmacro macroexpand-1 [[quote form]]
+  `(quote ~(ana/macroexpand-1 &env form)))
+
+(defmacro macroexpand [[quote form]]
+  (core/let [env &env]
+    (core/loop [form' (ana/macroexpand-1 env form)]
+      (core/if-not (core/identical? form form')
+        (recur (ana/macroexpand-1 env form))
+        form'))))
