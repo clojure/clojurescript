@@ -71,8 +71,9 @@
     (let [relative-path (string/split (munge-path (str (:ns ns-info))) #"\.")
           parents (cond-> (butlast relative-path)
                     target-dir (conj target-dir))]
-      (io/file (io/file (to-path parents))
-        (str (last relative-path) (str "." ext))))))
+      (cond->> (io/file (str (last relative-path) (str "." ext)))
+        (seq parents)
+        (io/file (to-path parents))))))
 
 (defn mkdirs
   "Create all parent directories for the passed file."
