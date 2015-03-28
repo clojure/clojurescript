@@ -17,8 +17,9 @@
             [clojure.data.json :as json])
   (:import java.net.Socket
            java.lang.StringBuilder
-           [java.io File BufferedReader BufferedWriter]
-           [java.lang ProcessBuilder ProcessBuilder$Redirect]))
+           [java.io File BufferedReader BufferedWriter InputStream
+            Writer InputStreamReader IOException]
+           [java.lang ProcessBuilder Process]))
 
 (defn socket [host port]
   (let [socket (Socket. host port)
@@ -77,6 +78,20 @@
 (defn platform-path [v]
   (str "path.join.apply(null, " (seq->js-array v) ")"))
 
+(defn- pipe [^Process proc in ^Writer out]
+  ;; we really do want system-default encoding here
+  (with-open [^java.io.Reader in (-> in InputStreamReader. BufferedReader.)]
+    (loop [buf (char-array 1024)]
+      (when (.isAlive proc)
+        (try
+          (let [len (.read in buf)]
+            (when-not (neg? len)
+              (.write out buf 0 len)))
+          (catch IOException e
+            (when (and (.isAlive proc) (not (.contains (.getMessage e) "Stream closed")))
+              (.printStackTrace e *err*))))
+        (recur buf)))))
+
 (defn setup
   ([repl-env] (setup repl-env nil))
   ([repl-env opts]
@@ -87,12 +102,11 @@
                 (string/replace (slurp (io/resource "cljs/repl/node_repl.js"))
                   "var PORT = 5001;"
                   (str "var PORT = " (:port repl-env) ";")))
-          bldr (ProcessBuilder. (into-array [(get opts :node-command "node")]))
-          _    (-> bldr
+          proc (-> (ProcessBuilder. (into-array [(get opts :node-command "node")]))
                  (.redirectInput of)
-                 (.redirectOutput ProcessBuilder$Redirect/INHERIT)
-                 (.redirectError ProcessBuilder$Redirect/INHERIT))
-          proc (.start bldr)
+                 .start)
+          _ (do (future (pipe proc (.getInputStream proc) *out*))
+                (future (pipe proc (.getErrorStream proc) *err*)))
           env  (ana/empty-env)
           core (io/resource "cljs/core.cljs")
           ;; represent paths as vectors so we can emit JS arrays, this is to
