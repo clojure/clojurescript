@@ -34,7 +34,7 @@
 
                             cond-> cond->> as-> some-> some->>
 
-                            if-some when-some test ns-interns var vswap! macroexpand-1 macroexpand])
+                            if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand])
   (:require clojure.walk
             clojure.set
             cljs.compiler
@@ -1855,7 +1855,7 @@
     (let [options   (apply core/hash-map options)
           default   (core/get options :default :default)]
       (check-valid-options options :default :hierarchy)
-      `(def ~(with-meta mm-name m)
+      `(defonce ~(with-meta mm-name m)
          (let [method-table# (atom {})
                prefer-table# (atom {})
                method-cache# (atom {})
@@ -1961,6 +1961,15 @@
           (fn [[sym _]]
             `[(symbol ~(name sym)) (var ~(symbol (name ns) (name sym)))])
           (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs]))]))
+
+(defmacro ns-unmap
+  "Removes the mappings for the symbol from the namespace."
+  [[quote0 ns] [quote1 sym]]
+  (core/assert (core/and (= quote0 'quote) (core/symbol? ns)
+                         (= quote1 'quote) (core/symbol? sym))
+    "Arguments to ns-unmap must be quoted symbols")
+  (swap! env/*compiler* update-in [::ana/namespaces ns :defs] dissoc sym)
+  `(js-delete ~(cljs.compiler/munge ns) ~(cljs.compiler/munge (core/str sym))))
 
 (defmacro vswap!
   "Non-atomically swaps the value of the volatile as if:
