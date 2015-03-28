@@ -105,8 +105,8 @@
           proc (-> (ProcessBuilder. (into-array [(get opts :node-command "node")]))
                  (.redirectInput of)
                  .start)
-          _ (do (future (pipe proc (.getInputStream proc) *out*))
-                (future (pipe proc (.getErrorStream proc) *err*)))
+          _ (do (.start (Thread. (bound-fn [] (pipe proc (.getInputStream proc) *out*))))
+                (.start (Thread. (bound-fn [] (pipe proc (.getErrorStream proc) *err*)))))
           env  (ana/empty-env)
           core (io/resource "cljs/core.cljs")
           ;; represent paths as vectors so we can emit JS arrays, this is to
