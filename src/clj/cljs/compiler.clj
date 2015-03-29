@@ -759,7 +759,7 @@
         opt-not? (and (= (:name info) 'cljs.core/not)
                       (= (ana/infer-tag env (first (:args expr))) 'boolean))
         ns (:ns info)
-        js? (= ns 'js)
+        js? (or (= ns 'js) (= ns 'Math))
         goog? (when ns
                 (or (= ns 'goog)
                     (when-let [ns-str (str ns)]
