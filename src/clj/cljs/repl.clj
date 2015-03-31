@@ -167,23 +167,23 @@
   "Load a namespace and all of its dependencies into the evaluation environment.
   The environment is responsible for ensuring that each namespace is loaded once and
   only once."
-  ([repl-env sym] (load-namespace repl-env sym nil))
-  ([repl-env sym opts]
-   (let [sym      (if (and (seq? sym)
-                        (= (first sym) 'quote))
-                    (second sym)
-                    sym)
+  ([repl-env ns] (load-namespace repl-env ns nil))
+  ([repl-env ns opts]
+   (let [ns (if (and (seq? ns)
+                     (= (first ns) 'quote))
+               (second ns)
+               ns)
          ;; TODO: add pre-condition to source-on-disk, the
          ;; source must supply at least :url - David
-         sources  (cljsc/add-dependencies
-                    (merge (env->opts repl-env) opts)
-                    {:requires [(name sym)] :type :seed
-                     :url (:uri (cljsc/source-for-namespace
-                                  sym env/*compiler*))})
-         deps     (->> sources
-                    (remove (comp #{["goog"]} :provides))
-                    (remove (comp #{:seed} :type))
-                    (map #(select-keys % [:provides :url])))]
+         sources (cljsc/add-dependencies
+                   (merge (env->opts repl-env) opts)
+                   {:requires [(name ns)] :type :seed
+                    :url (:uri (cljsc/source-for-namespace
+                                 ns env/*compiler*))})
+         deps (->> sources
+                (remove (comp #{["goog"]} :provides))
+                (remove (comp #{:seed} :type))
+                (map #(select-keys % [:provides :url])))]
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
@@ -478,8 +478,6 @@
         (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
           (evaluate-form repl-env env filename form))))))
 
-;; TODO: this should probably compile dependencies - David
-
 (defn load-file
   ([repl-env f] (load-file repl-env f *repl-opts*))
   ([repl-env f opts]
@@ -492,6 +490,8 @@
                        (assoc opts
                          :output-file
                          (cljsc/src-file->target-file src)))]
+        ;; need to load dependencies first
+        (load-dependencies repl-env (:requires compiled) opts)
         ;; make sure it's been analyzed, this is because if it's already compiled
         ;; cljs.compiler/compile-file won't do anything, good for builds,
         ;; but a bit annoying here
