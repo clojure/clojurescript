@@ -490,6 +490,12 @@
                        (assoc opts
                          :output-file
                          (cljsc/src-file->target-file src)))]
+        ;; copy over the original source file if source maps enabled
+        (when-let [ns (and (:source-map opts) (first (:provides compiled)))]
+          (spit
+            (io/file (io/file (util/output-directory opts))
+              (util/ns->relpath ns))
+            (slurp src)))
         ;; need to load dependencies first
         (load-dependencies repl-env (:requires compiled) opts)
         ;; make sure it's been analyzed, this is because if it's already compiled
