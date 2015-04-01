@@ -1582,7 +1582,7 @@ should contain the source for the given namespace name."
 
 (defn ^String src-file->goog-require
   ([src] (src-file->goog-require src {:wrap true}))
-  ([src {:keys [wrap all-provides :as options]}]
+  ([src {:keys [wrap all-provides] :as options}]
     (let [goog-ns
           (case (util/ext src)
             "cljs" (comp/munge (:ns (ana/parse-ns src)))
@@ -1592,7 +1592,9 @@ should contain the source for the given namespace name."
               (IllegalArgumentException.
                 (str "Can't create goog.require expression for " src))))]
       (if (and (not all-provides) wrap)
-        (str "goog.require(\"" goog-ns "\");")
+        (if (:reload options)
+          (str "goog.require(\"" goog-ns "\", true);")
+          (str "goog.require(\"" goog-ns "\");"))
         (if (vector? goog-ns)
           goog-ns
           (str goog-ns))))))

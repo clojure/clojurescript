@@ -497,7 +497,8 @@
         ;; but a bit annoying here
         (ana/analyze-file src opts)
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
-        (-evaluate repl-env f 1 (cljsc/src-file->goog-require src)))
+        (-evaluate repl-env f 1
+          (cljsc/src-file->goog-require src {:wrap true :reload true})))
       (binding [ana/*cljs-ns* ana/*cljs-ns*]
         (let [res (if (= File/separatorChar (first f)) f (io/resource f))]
           (assert res (str "Can't find " f " in classpath"))
