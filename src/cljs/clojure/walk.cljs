@@ -43,7 +43,11 @@ the sorting function."}
   {:added "1.1"}
   [inner outer form]
   (cond
+   (list? form) (outer (apply list (map inner form)))
+   (satisfies? IMapEntry form) (outer (vec (map inner form)))
    (seq? form) (outer (doall (map inner form)))
+   (satisfies? IRecord form)
+     (outer (reduce (fn [r x] (conj r (inner x))) form form))
    (coll? form) (outer (into (empty form) (map inner form)))
    :else (outer form)))
 
