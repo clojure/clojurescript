@@ -5484,7 +5484,7 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentArrayMap
 
-(defn- array-map-index-of-nil? [arr m k]
+(defn- array-index-of-nil? [arr]
   (let [len (alength arr)]
     (loop [i 0]
       (cond
@@ -5492,7 +5492,7 @@ reduces them without incurring seq initialization"
         (nil? (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(defn- array-map-index-of-keyword? [arr m k]
+(defn- array-index-of-keyword? [arr k]
   (let [len  (alength arr)
         kstr (.-fqn k)]
     (loop [i 0]
@@ -5503,7 +5503,7 @@ reduces them without incurring seq initialization"
                (identical? kstr (.-fqn k')))) i
         :else (recur (+ i 2))))))
 
-(defn- array-map-index-of-symbol? [arr m k]
+(defn- array-index-of-symbol? [arr k]
   (let [len  (alength arr)
         kstr (.-str k)]
     (loop [i 0]
@@ -5514,7 +5514,7 @@ reduces them without incurring seq initialization"
                (identical? kstr (.-str k')))) i
         :else (recur (+ i 2))))))
 
-(defn- array-map-index-of-identical? [arr m k]
+(defn- array-index-of-identical? [arr k]
   (let [len (alength arr)]
     (loop [i 0]
       (cond
@@ -5522,7 +5522,7 @@ reduces them without incurring seq initialization"
         (identical? k (aget arr i)) i
         :else (recur (+ i 2))))))
 
-(defn- array-map-index-of-equiv? [arr m k]
+(defn- array-index-of-equiv? [arr k]
   (let [len (alength arr)]
     (loop [i 0]
       (cond
@@ -5530,24 +5530,25 @@ reduces them without incurring seq initialization"
         (= k (aget arr i)) i
         :else (recur (+ i 2))))))
 
+(defn array-index-of [arr k]
+  (cond
+    (keyword? k) (array-index-of-keyword? arr k)
+
+    (or ^boolean (goog/isString k) (number? k))
+    (array-index-of-identical? arr k)
+
+    (symbol? k) (array-index-of-symbol? arr k)
+
+    (nil? k)
+    (array-index-of-nil? arr)
+
+    :else (array-index-of-equiv? arr k)))
+
 (defn- array-map-index-of [m k]
-  (let [arr (.-arr m)]
-    (cond
-      (keyword? k) (array-map-index-of-keyword? arr m k)
+  (array-index-of (.-arr m) k))
 
-      (or ^boolean (goog/isString k) (number? k))
-      (array-map-index-of-identical? arr m k)
-
-      (symbol? k) (array-map-index-of-symbol? arr m k)
-
-      (nil? k)
-      (array-map-index-of-nil? arr m k)
-
-      :else (array-map-index-of-equiv? arr m k))))
-
-(defn- array-map-extend-kv [m k v]
-  (let [arr (.-arr m)
-        l (alength arr)
+(defn- array-extend-kv [arr k v]
+  (let [l (alength arr)
         narr (make-array (+ l 2))]
     (loop [i 0]
       (when (< i l)
@@ -5556,6 +5557,9 @@ reduces them without incurring seq initialization"
     (aset narr l k)
     (aset narr (inc l) v)
     narr))
+
+(defn- array-map-extend-kv [m k v]
+  (array-extend-kv (.-arr m) k v))
 
 (declare TransientArrayMap)
 
@@ -5793,17 +5797,22 @@ reduces them without incurring seq initialization"
 
 (set! (.-fromArray PersistentArrayMap)
   (fn [arr ^boolean no-clone ^boolean no-check]
-    (let [arr (if no-clone arr (aclone arr))]
+    (as-> (if no-clone arr (aclone arr)) arr
       (if no-check
-        (let [cnt (/ (alength arr) 2)]
-          (PersistentArrayMap. nil cnt arr nil))
-        (let [len (alength arr)]
-          (loop [i 0
-                 ret (transient (.-EMPTY PersistentArrayMap))]
-            (if (< i len)
-              (recur (+ i 2)
-                (-assoc! ret (aget arr i) (aget arr (inc i))))
-              (-persistent! ret))))))))
+        arr
+        (let [ret (array)]
+          (loop [i 0]
+            (when (< i (alength arr))
+              (let [k (aget arr i)
+                    v (aget arr (inc i))
+                    idx (array-index-of ret k)]
+                (when (== idx -1)
+                  (.push ret k)
+                  (.push ret v)))
+              (recur (+ i 2))))
+          ret))
+      (let [cnt (/ (alength arr) 2)]
+        (PersistentArrayMap. nil cnt arr nil)))))
 
 (es6-iterable PersistentArrayMap)
 
@@ -7439,7 +7448,10 @@ reduces them without incurring seq initialization"
   "keyval => key val
   Returns a new array map with supplied mappings."
   [& keyvals]
-  (.fromArray cljs.core/PersistentArrayMap (apply array keyvals) true false))
+  (let [arr (if (instance? IndexedSeq keyvals)
+              (.-arr keyvals)
+              (into-array keyvals))]
+    (.fromArray cljs.core/PersistentArrayMap arr true false)))
 
 (defn obj-map
   "keyval => key val

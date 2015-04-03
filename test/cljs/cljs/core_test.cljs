@@ -2736,6 +2736,12 @@
     (is (= (with-out-str (print-foo-1187 :foo))
            "foo!"))))
 
+(deftest test-cljs-1189 []
+  (testing "array-map should always return array maps"
+    (let [am (apply array-map (range 100))]
+      (is (== (count am) 50))
+      (is (instance? PersistentArrayMap am)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
