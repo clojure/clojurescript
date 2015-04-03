@@ -631,7 +631,7 @@ should contain the source for the given namespace name."
      (fn [modules module-name]
        (if-not (= module-name :cljs-base)
          (update-in modules [module-name :depends-on]
-           (fnil conj #{}) :cljs-base)
+           (fnil identity #{:cljs-base}))
          modules))
      (update-in modules [:cljs-base :output-to]
        (fnil io/file
@@ -701,6 +701,8 @@ should contain the source for the given namespace name."
           (fn [[sources ret] [name {:keys [entries output-to depends-on] :as module-desc}]]
             (assert (or (= name :cljs-base) (not (empty? entries)))
               (str "Module " name " does not define any :entries"))
+            (when (and (:verbose opts) (not= name :cljs-base))
+              (util/debug-prn "Building module" name))
             (let [js-module (JSModule. (clojure.core/name name))
                   [sources' module-sources]
                   ;; compute inputs for a closure module
@@ -723,6 +725,8 @@ should contain the source for the given namespace name."
                   foreign-deps (atom [])]
               ;; add inputs to module
               (doseq [ijs module-sources]
+                (when (:verbose opts)
+                  (util/debug-prn "  adding entry" (:provides ijs)))
                 (if-not (deps/-foreign? ijs)
                   (.add js-module
                     ^SourceFile (js-source-file (javascript-name ijs) ijs))
@@ -731,7 +735,10 @@ should contain the source for the given namespace name."
               ;; since modules are already in dependency order
               (doseq [dep depends-on]
                 (if-let [parent-module (get-in (into {} ret) [dep :closure-module])]
-                  (.addDependency js-module ^JSModule parent-module)
+                  (do
+                    (when (:verbose opts)
+                      (util/debug-prn "  module" name "depends on" dep))
+                    (.addDependency js-module ^JSModule parent-module))
                   (throw (IllegalArgumentException.
                            (str "Parent module " dep " does not exist")))))
               [sources'
@@ -742,8 +749,12 @@ should contain the source for the given namespace name."
           [sources []] (sort-modules (add-cljs-base-module (:modules opts) opts)))
         cljs-base-closure-module (get-in (into {} modules) [:cljs-base :closure-module])
         foreign-deps (atom [])]
+    (when (:verbose opts)
+      (util/debug-prn "Building module" :cljs-base))
     ;; add anything left to :cljs-base module
     (doseq [source sources']
+      (when (:verbose opts)
+        (util/debug-prn "  adding entry" (:provides source)))
       (if-not (deps/-foreign? source)
         (.add ^JSModule cljs-base-closure-module
           (js-source-file (javascript-name source) source))
