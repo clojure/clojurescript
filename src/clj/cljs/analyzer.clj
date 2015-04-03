@@ -655,10 +655,11 @@
 
 (defmethod parse 'var
   [op env [_ sym :as form] _ _]
-  (let [var (resolve-var env sym (confirm-var-exists-throw))]
+  (let [var (resolve-var env sym (confirm-var-exists-throw))
+        expr-env (assoc env :context :expr)]
     {:env env :op :var-special :form form
-     :var (analyze env sym)
-     :sym (analyze env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
+     :var (analyze expr-env sym)
+     :sym (analyze expr-env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
      :meta (let [ks [:ns :doc :file :line :column]
                  m (merge
                      (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
@@ -669,7 +670,7 @@
                            uks (keys user-meta)]
                        (zipmap uks
                          (map #(list 'quote (get user-meta %)) uks))))]
-             (analyze env m))}))
+             (analyze expr-env m))}))
 
 (defmethod parse 'if
   [op env [_ test then else :as form] name _]

@@ -2721,6 +2721,21 @@
   (is (= identity (dispatch-fn cljs-1144)))
   (is (= ::default (default-dispatch-val cljs-1144))))
 
+(defn foo-1187 [] (print "foo!"))
+
+(defn bar-1187 [] (print "bar!"))
+
+(defn print-foo-1187 [fb]
+  (apply
+    (case fb
+      :foo #'foo-1187
+      :bar #'bar-1187) []))
+
+(deftest test-cljs-1187 []
+  (testing "Internal var nodes analyzed in expression context"
+    (is (= (with-out-str (print-foo-1187 :foo))
+           "foo!"))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
