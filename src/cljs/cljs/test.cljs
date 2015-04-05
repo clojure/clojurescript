@@ -443,16 +443,14 @@
        (update-current-env! [:testing-vars] conj v)
        (update-current-env! [:report-counters :test] inc)
        (do-report {:type :begin-test-var :var v})
-       (let [{:keys [async-disabled]} (get-current-env)]
-         (cond-> (try
-                   (t)
-                   (catch :default e
-                     (do-report
-                      {:type :error
-                       :message "Uncaught exception, not in assertion."
-                       :expected nil
-                       :actual e})))
-           async-disabled (-> async? not (assert async-disabled)))))
+       (try
+         (t)
+         (catch :default e
+           (do-report
+             {:type :error
+              :message "Uncaught exception, not in assertion."
+              :expected nil
+              :actual e}))))
      (fn []
        (do-report {:type :end-test-var :var v})
        (update-current-env! [:testing-vars] rest))]))
@@ -493,28 +491,22 @@
           block
           (reverse (keep :after map-fixtures))))
 
-(defn- fixtures-type
-  [coll]
-  (cond (empty? coll)
-        :none
-        (every? map? coll)
-        :map
-        (every? fn? coll)
-        :fn))
-
-(defn- execution-strategy
-  [once-fixtures each-fixtures]
-  (let [types (map fixtures-type [once-fixtures each-fixtures])
-        _ (assert (not-any? nil? types)
-                  "Fixtures may not be of mixed types")
-        types (->> types
-                   (remove #{:none})
-                   (distinct))
-        _ (assert (> 2 (count types)) "fixtures specified in :once and :each must be of the same type")]
-    (case (first types)
-      :map :async
-      :fn :sync
-      nil :async)))
+(defn- execution-strategy [once each]
+  (letfn [(fixtures-type [coll]
+            (cond
+              (empty? coll) :none
+              (every? map? coll) :map
+              (every? fn? coll) :fn))
+          (fixtures-types []
+            (->> (map fixtures-type [once each])
+              (remove #{:none})
+              (distinct)))]
+    (let [[type :as types] (fixtures-types)]
+      (assert (not-any? nil? types)
+        "Fixtures may not be of mixed types")
+      (assert (> 2 (count types))
+        "fixtures specified in :once and :each must be of the same type")
+      ({:map :async :fn :sync} type :sync))))
 
 (defn test-vars-block
   "Like test-vars, but returns a block for further composition and
@@ -536,9 +528,6 @@
                  (wrap-map-fixtures once-fixtures))
             :sync
             (do
-              (update-current-env! [:async-disabled]
-                                   (constantly
-                                    "Async tests require fixtures to be specified as maps"))
               (let [each-fixture-fn (join-fixtures each-fixtures)]
                 [(fn []
                    ((join-fixtures once-fixtures)
@@ -547,9 +536,7 @@
                         (when (:test (meta v))
                           (each-fixture-fn
                            (fn []
-                             (test-var v)))))))
-                   (update-current-env! [:async-disabled]
-                                        (constantly nil)))])))))))
+                             (test-var v))))))))])))))))
    (group-by (comp :ns meta) vars)))
 
 (defn test-vars
