@@ -864,22 +864,19 @@
              :impls #{}})
           (when fn-var?
             (let [params (map #(vec (map :name (:params %))) (:methods init-expr))]
-              {:fn-var true
-               ;; protocol implementation context
-               :protocol-impl (:protocol-impl init-expr)
-               ;; inline protocol implementation context
-               :protocol-inline (:protocol-inline init-expr)
-               :variadic (:variadic init-expr)
-               :max-fixed-arity (:max-fixed-arity init-expr)
-               :method-params params
-               :arglists (:arglists sym-meta)
-               :arglists-meta (doall (map meta (:arglists sym-meta)))
-               :methods (map (fn [method]
-                               (let [tag (infer-tag env (assoc method :op :method))]
-                                 (cond-> (select-keys method
-                                           [:max-fixed-arity :variadic])
-                                   tag (assoc :tag tag))))
-                          (:methods init-expr))}) )
+              (merge
+                {:fn-var true
+                 ;; protocol implementation context
+                 :protocol-impl (:protocol-impl init-expr)
+                 ;; inline protocol implementation context
+                 :protocol-inline (:protocol-inline init-expr)}
+                (if-let [top-fn-meta (:top-fn sym-meta)]
+                  top-fn-meta
+                  {:variadic (:variadic init-expr)
+                   :max-fixed-arity (:max-fixed-arity init-expr)
+                   :method-params params
+                   :arglists (:arglists sym-meta)
+                   :arglists-meta (doall (map meta (:arglists sym-meta)))}))) )
           (when (and fn-var? tag)
             {:ret-tag tag})))
       (merge
@@ -978,8 +975,7 @@
                              :fn-var true
                              :variadic variadic
                              :max-fixed-arity max-fixed-arity
-                             :method-params (map :params methods)
-                             :methods methods)
+                             :method-params (map :params methods))
                   locals)
          methods (if name
                    ;; a second pass with knowledge of our function-ness/arity
@@ -1027,8 +1023,7 @@
                               :shadow (locals n)
                               :variadic (:variadic fexpr)
                               :max-fixed-arity (:max-fixed-arity fexpr)
-                              :method-params (map :params (:methods fexpr))
-                              :methods (:methods fexpr)}
+                              :method-params (map :params (:methods fexpr))}
                              ret-tag (assoc :ret-tag ret-tag))]
                     [(assoc-in env [:locals n] be)
                      (conj bes be)]))
@@ -1043,8 +1038,7 @@
                               :init fexpr
                               :variadic (:variadic fexpr)
                               :max-fixed-arity (:max-fixed-arity fexpr)
-                              :method-params (map :params (:methods fexpr))
-                              :methods (:methods fexpr))]
+                              :method-params (map :params (:methods fexpr)))]
                     [(assoc-in env [:locals name] be')
                      (conj bes be')]))
           [meth-env []] bes)
@@ -1102,8 +1096,7 @@
                             {:fn-var true
                              :variadic (:variadic init-expr)
                              :max-fixed-arity (:max-fixed-arity init-expr)
-                             :method-params (map :params (:methods init-expr))
-                             :methods (:methods init-expr)})
+                             :method-params (map :params (:methods init-expr))})
                           be)]
                  (recur (conj bes be)
                         (assoc-in env [:locals name] be)

@@ -52,3 +52,16 @@
        (comp/emit
          (ana/analyze (assoc aenv :context :expr) 'js/-Infinity)))
      "-Infinity"))
+
+(comment
+  (env/with-compiler-env cenv
+    (comp/emit
+      (ana/analyze aenv
+        '(defn foo ([a]) ([a b])))))
+
+  (env/with-compiler-env cenv
+    (comp/munge
+      (comp/lazy-load?
+        (ana/analyze aenv
+          '(defn foo ([a]) ([a b]))))))
+  )

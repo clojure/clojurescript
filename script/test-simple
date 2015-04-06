@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # stop blowing compiled stuff
-#rm -rf builds/out-simp
+rm -rf builds/out-simp
 mkdir -p builds/out-simp
 
 possible=4

@@ -701,7 +701,7 @@ should contain the source for the given namespace name."
           (fn [[sources ret] [name {:keys [entries output-to depends-on] :as module-desc}]]
             (assert (or (= name :cljs-base) (not (empty? entries)))
               (str "Module " name " does not define any :entries"))
-            (when (and (:verbose opts) (not= name :cljs-base))
+            (when (:verbose opts)
               (util/debug-prn "Building module" name))
             (let [js-module (JSModule. (clojure.core/name name))
                   [sources' module-sources]
@@ -750,7 +750,7 @@ should contain the source for the given namespace name."
         cljs-base-closure-module (get-in (into {} modules) [:cljs-base :closure-module])
         foreign-deps (atom [])]
     (when (:verbose opts)
-      (util/debug-prn "Building module" :cljs-base))
+      (util/debug-prn "Adding remaining namespaces to" :cljs-base))
     ;; add anything left to :cljs-base module
     (doseq [source sources']
       (when (:verbose opts)

@@ -38,6 +38,7 @@
   (:require clojure.walk
             clojure.set
             cljs.compiler
+            [cljs.util :as util]
             [cljs.env :as env])
   (:import [java.io File]))
 
@@ -74,7 +75,7 @@
 
 (import-macros clojure.core
  [-> ->> .. assert comment cond
-  declare defn defn-
+  declare defn-
   doto
   extend-protocol fn for
   if-let if-not letfn
@@ -82,6 +83,54 @@
   when when-first when-let when-not while
   cond-> cond->> as-> some-> some->>
   if-some when-some])
+
+(defn- ^{:dynamic true} assert-valid-fdecl
+  "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
+  [fdecl]
+  (when (empty? fdecl) (throw (IllegalArgumentException.
+                                "Parameter declaration missing")))
+  (core/let [argdecls (map
+                   #(if (seq? %)
+                     (first %)
+                     (throw (IllegalArgumentException.
+                              (if (seq? (first fdecl))
+                                (core/str "Invalid signature \""
+                                  %
+                                  "\" should be a list")
+                                (core/str "Parameter declaration \""
+                                  %
+                                  "\" should be a vector")))))
+                   fdecl)
+        bad-args (seq (remove #(vector? %) argdecls))]
+    (when bad-args
+      (throw (IllegalArgumentException.
+               (core/str "Parameter declaration \"" (first bad-args)
+                         "\" should be a vector"))))))
+
+(def
+  ^{:private true}
+  sigs
+  (fn [fdecl]
+    (assert-valid-fdecl fdecl)
+    (core/let [asig
+          (fn [fdecl]
+            (core/let [arglist (first fdecl)
+                  ;elide implicit macro args
+                  arglist (if (clojure.lang.Util/equals '&form (first arglist))
+                            (clojure.lang.RT/subvec arglist 2 (clojure.lang.RT/count arglist))
+                            arglist)
+                  body (next fdecl)]
+              (if (map? (first body))
+                (if (next body)
+                  (with-meta arglist (conj (if (meta arglist) (meta arglist) {}) (first body)))
+                  arglist)
+                arglist)))]
+      (if (seq? (first fdecl))
+        (core/loop [ret [] fdecls fdecl]
+          (if fdecls
+            (recur (conj ret (asig (first fdecls))) (next fdecls))
+            (seq ret)))
+        (core/list (asig fdecl))))))
 
 (defmacro defonce [x init]
   `(when-not (exists? ~x)
@@ -95,7 +144,7 @@
         (when more
           (list* `assert-args fnname more)))))
 
-(defn destructure [bindings]
+(core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
          pb (fn pb [bvec b v]
               (core/let [pvec
@@ -227,10 +276,10 @@
                (apply core/str))]
     (list* 'js* (core/str "[" strs "].join('')") xs)))
 
-(defn bool-expr [e]
+(defn- bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
 
-(defn simple-test-expr? [env ast]
+(defn- simple-test-expr? [env ast]
   (core/and
     (#{:var :invoke :constant :dot :js} (:op ast))
     ('#{boolean seq} (cljs.analyzer/infer-tag env ast))))
@@ -607,7 +656,7 @@
 
 ;;; end of reducers macros
 
-(defn protocol-prefix [psym]
+(defn- protocol-prefix [psym]
   (core/str (-> (core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
 
 (def #^:private base-type
@@ -708,10 +757,10 @@
   `(let [~name (js-this)]
      ~@body))
 
-(defn to-property [sym]
+(defn- to-property [sym]
   (symbol (core/str "-" sym)))
 
-(defn warn-and-update-protocol [p type env]
+(defn- warn-and-update-protocol [p type env]
   (when-not (= 'Object p)
     (if-let [var (cljs.analyzer/resolve-existing-var (dissoc env :locals) p)]
       (do
@@ -729,21 +778,21 @@
       (when (:undeclared cljs.analyzer/*cljs-warnings*)
         (cljs.analyzer/warning :undeclared-protocol-symbol env {:protocol p})))))
 
-(defn resolve-var [env sym]
+(defn- resolve-var [env sym]
   (let [ret (-> (dissoc env :locals)
               (cljs.analyzer/resolve-var sym)
               :name)]
     (assert ret (core/str "Can't resolve: " sym))
     ret))
 
-(defn ->impl-map [impls]
+(defn- ->impl-map [impls]
   (loop [ret {} s impls]
     (if (seq s)
       (recur (assoc ret (first s) (take-while seq? (next s)))
         (drop-while seq? (next s)))
       ret)))
 
-(defn base-assign-impls [env resolve tsym type [p sigs]]
+(defn- base-assign-impls [env resolve tsym type [p sigs]]
   (warn-and-update-protocol p tsym env)
   (let [psym       (resolve p)
         pfn-prefix (subs (core/str psym) 0
@@ -762,11 +811,11 @@
 (core/defmethod extend-prefix :default
   [tsym sym] `(.. ~tsym -prototype ~(to-property sym)))
 
-(defn adapt-obj-params [type [[this & args :as sig] & body]]
+(defn- adapt-obj-params [type [[this & args :as sig] & body]]
   (core/list (vec args)
     (list* 'this-as (vary-meta this assoc :tag type) body)))
 
-(defn adapt-ifn-params [type [[this & args :as sig] & body]]
+(defn- adapt-ifn-params [type [[this & args :as sig] & body]]
   (let [self-sym (with-meta 'self__ {:tag type})]
     `(~(vec (cons self-sym args))
        (this-as ~self-sym
@@ -774,17 +823,17 @@
            ~@body)))))
 
 ;; for IFn invoke implementations, we need to drop first arg
-(defn adapt-ifn-invoke-params [type [[this & args :as sig] & body]]
+(defn- adapt-ifn-invoke-params [type [[this & args :as sig] & body]]
   `(~(vec args)
      (this-as ~(vary-meta this assoc :tag type)
        ~@body)))
 
-(defn adapt-proto-params [type [[this & args :as sig] & body]]
+(defn- adapt-proto-params [type [[this & args :as sig] & body]]
   `(~(vec (cons (vary-meta this assoc :tag type) args))
      (this-as ~this
        ~@body)))
 
-(defn add-obj-methods [type type-sym sigs]
+(defn- add-obj-methods [type type-sym sigs]
   (map (fn [[f & meths :as form]]
          (let [[f meths] (if (vector? (first meths))
                            [f [(rest form)]]
@@ -793,7 +842,7 @@
              ~(with-meta `(fn ~@(map #(adapt-obj-params type %) meths)) (meta form)))))
     sigs))
 
-(defn ifn-invoke-methods [type type-sym [f & meths :as form]]
+(defn- ifn-invoke-methods [type type-sym [f & meths :as form]]
   (map
     (fn [meth]
       (let [arity (count (first meth))]
@@ -801,7 +850,7 @@
            ~(with-meta `(fn ~meth) (meta form)))))
     (map #(adapt-ifn-invoke-params type %) meths)))
 
-(defn add-ifn-methods [type type-sym [f & meths :as form]]
+(defn- add-ifn-methods [type type-sym [f & meths :as form]]
   (let [meths    (map #(adapt-ifn-params type %) meths)
         this-sym (with-meta 'self__ {:tag type})
         argsym   (gensym "args")]
@@ -816,7 +865,7 @@
              (meta form)))]
       (ifn-invoke-methods type type-sym form))))
 
-(defn add-proto-methods* [pprefix type type-sym [f & meths :as form]]
+(defn- add-proto-methods* [pprefix type type-sym [f & meths :as form]]
   (let [pf (core/str pprefix f)]
     (if (vector? (first meths))
       ;; single method case
@@ -828,7 +877,7 @@
                 ~(with-meta `(fn ~(adapt-proto-params type meth)) (meta form))))
         meths))))
 
-(defn proto-assign-impls [env resolve type-sym type [p sigs]]
+(defn- proto-assign-impls [env resolve type-sym type [p sigs]]
   (warn-and-update-protocol p type env)
   (let [psym      (resolve p)
         pprefix   (protocol-prefix psym)
@@ -845,7 +894,7 @@
               (add-proto-methods* pprefix type type-sym sig)))
           sigs)))))
 
-(defn validate-impl-sigs [env p method]
+(defn- validate-impl-sigs [env p method]
   (when-not (= p 'Object)
     (let [var (ana/resolve-var (dissoc env :locals) p)
           minfo (-> var :protocol-info :methods)
@@ -865,7 +914,7 @@
               (ana/warning :protocol-invalid-method env {:protocol p :fname fname :invalid-arity c}))
             (recur (next sigs) (conj seen c))))))))
 
-(defn validate-impls [env impls]
+(defn- validate-impls [env impls]
   (loop [protos #{} impls impls]
     (when (seq impls)
       (let [proto   (first impls)
@@ -930,12 +979,12 @@
                 parts
                 (range fast-path-protocol-partitions-count))]))))
 
-(defn annotate-specs [annots v [f sigs]]
+(defn- annotate-specs [annots v [f sigs]]
   (conj v
     (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
       merge annots)))
 
-(defn dt->et
+(core/defn dt->et
   ([type specs fields]
     (dt->et type specs fields false))
   ([type specs fields inline]
@@ -952,7 +1001,7 @@
             (recur ret specs))
           ret)))))
 
-(defn collect-protocols [impls env]
+(defn- collect-protocols [impls env]
   (->> impls
       (filter core/symbol?)
       (map #(:name (cljs.analyzer/resolve-var (dissoc env :locals) %)))
@@ -1738,7 +1787,7 @@
         `(.fromArray cljs.core/PersistentHashSet (array ~@xs) true)
         assoc :tag 'cljs.core/PersistentHashSet))))
 
-(defn js-obj* [kvs]
+(defn- js-obj* [kvs]
   (let [kvs-str (->> (repeat "~{}:~{}")
                      (take (count kvs))
                      (interpose ",")
@@ -1810,7 +1859,7 @@
            ~@body
            (recur (inc ~i)))))))
 
-(defn ^:private check-valid-options
+(defn- check-valid-options
   "Throws an exception if the given option map contains keys not listed
   as valid, else returns nil."
   [options & valid-keys]
@@ -1897,7 +1946,7 @@
 
 (def cs (into [] (map (comp gensym core/str core/char) (range 97 118))))
 
-(defn gen-apply-to-helper
+(defn- gen-apply-to-helper
   ([] (gen-apply-to-helper 1))
   ([n]
      (let [prop (symbol (core/str "-cljs$core$IFn$_invoke$arity$" n))
@@ -2004,3 +2053,192 @@
       (core/if-not (core/identical? form form')
         (recur form' (ana/macroexpand-1 env form'))
         `(quote ~form')))))
+
+(defn- multi-arity-fn? [fdecl]
+  (core/< 1 (count fdecl)))
+
+(defn- variadic-fn? [fdecl]
+  (core/and (= 1 (count fdecl))
+            (some '#{&} (ffirst fdecl))))
+
+(defn- variadic-fn*
+  ([sym method]
+    (variadic-fn* sym method true))
+  ([sym [arglist & body :as method] solo]
+   (let [sig (remove '#{&} arglist)
+         restarg (gensym "seq")]
+     (letfn [(get-delegate []
+               'cljs$core$IFn$_invoke$arity$variadic)
+             (get-delegate-prop []
+               (symbol (core/str "-" (get-delegate))))
+             (param-bind [param]
+               `[~param (^::ana/no-resolve first ~restarg)
+                 ~restarg (^::ana/no-resolve next ~restarg)])
+             (apply-to []
+               (if (core/< 1 (count sig))
+                 (let [params (repeatedly (core/dec (count sig)) gensym)]
+                   `(fn
+                     ([~restarg]
+                      (let [~@(mapcat param-bind params)]
+                        (. ~sym (~(get-delegate) ~@params ~restarg))))))
+                 `(fn
+                    ([~restarg]
+                     (. ~sym (~(get-delegate) (seq ~restarg)))))))]
+       `(do
+          (set! (. ~sym ~(get-delegate-prop))
+            (fn (~(vec sig) ~@body)))
+          ~@(when solo
+              `[(set! (. ~sym ~'-cljs$lang$maxFixedArity)
+                  ~(core/dec (count sig)))])
+          (set! (. ~sym ~'-cljs$lang$applyTo)
+            ~(apply-to)))))))
+
+(defn- variadic-fn [name meta [[arglist & body :as method] :as fdecl]]
+  (letfn [(dest-args [c]
+            (map (fn [n] `(aget (js-arguments) ~n))
+              (range c)))]
+    (core/let [rname (symbol (core/str ana/*cljs-ns*) (core/str name))
+               sig   (remove '#{&} arglist)
+               c-1   (core/dec (count sig))
+               meta  (assoc meta
+                       :top-fn
+                       {:variadic true
+                        :max-fixed-arity c-1
+                        :method-params [sig]
+                        :arglists [arglist]
+                        :arglists-meta (doall (map meta [arglist]))})]
+      `(do
+         (def ~(with-meta name meta)
+           (fn []
+             (let [argseq# (when (< ~c-1 (alength (js-arguments)))
+                             (new ^::ana/no-resolve cljs.core/IndexedSeq
+                              (.call js/Array.prototype.slice
+                                (js-arguments) ~c-1) 0))]
+               (. ~rname
+                 (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#)))))
+         ~(variadic-fn* rname method)))))
+
+(comment
+  (require '[clojure.pprint :as pp])
+  (pp/pprint (variadic-fn 'foo {} '(([& xs]))))
+  (pp/pprint (variadic-fn 'foo {} '(([a & xs] xs))))
+  (pp/pprint (variadic-fn 'foo {} '(([a b & xs] xs))))
+  (pp/pprint (variadic-fn 'foo {} '(([a [b & cs] & xs] xs))))
+  )
+
+(defn- multi-arity-fn [name meta fdecl]
+  (letfn [(dest-args [c]
+            (map (fn [n] `(aget (js-arguments) ~n))
+              (range c)))
+          (fixed-arity [rname sig]
+            (let [c (count sig)]
+              [c `(. ~rname
+                    (~(symbol
+                        (core/str "cljs$core$IFn$_invoke$arity$" c))
+                      ~@(dest-args c)))]))
+          (fn-method [[sig & body :as method]]
+            (if (some '#{&} sig)
+              (variadic-fn* name method false)
+              `(set!
+                 (. ~name
+                   ~(symbol (core/str "-cljs$core$IFn$_invoke$arity$"
+                              (count sig))))
+                 (fn ~method))))]
+    (core/let [rname    (symbol (core/str ana/*cljs-ns*) (core/str name))
+               arglists (map first fdecl)
+               variadic (boolean (some #(some '#{&} %) arglists))
+               sigs     (remove #(some '#{&} %) arglists)
+               maxfa    (apply core/max (map count sigs))
+               meta     (assoc meta
+                          :top-fn
+                          {:variadic variadic
+                           :max-fixed-arity maxfa
+                           :method-params sigs
+                           :arglists arglists
+                           :arglists-meta (doall (map meta arglists))})]
+     `(do
+        (def ~(with-meta name meta)
+          (fn []
+            (case (alength (js-arguments))
+              ~@(mapcat #(fixed-arity rname %) sigs)
+              ~(if variadic
+                 `(let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
+                                  (.call js/Array.prototype.slice
+                                    (js-arguments) ~maxfa) 0)]
+                    (. ~rname
+                      (~'cljs$core$IFn$_invoke$arity$variadic
+                        ~@(dest-args maxfa)
+                        argseq#)))
+                 `(throw (js/Error.
+                           (str "Invalid arity: "
+                             (alength (js-arguments)))))))))
+        ~@(map fn-method fdecl)
+        ;; optimization properties
+        (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)))))
+
+(comment
+  (require '[clojure.pprint :as pp])
+  (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a b]))))
+  (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a & xs]))))
+  (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a [b & cs] & xs]))))
+  )
+
+(def
+  ^{:doc "Same as (def name (fn [params* ] exprs*)) or (def
+    name (fn ([params* ] exprs*)+)) with any doc-string or attrs added
+    to the var metadata. prepost-map defines a map with optional keys
+    :pre and :post that contain collections of pre or post conditions."
+    :arglists '([name doc-string? attr-map? [params*] prepost-map? body]
+                 [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])}
+  defn (fn defn [&form &env name & fdecl]
+         ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
+         (if (core/instance? clojure.lang.Symbol name)
+           nil
+           (throw (IllegalArgumentException. "First argument to defn must be a symbol")))
+         (core/let [m (if (core/string? (first fdecl))
+                        {:doc (first fdecl)}
+                        {})
+                    fdecl (if (core/string? (first fdecl))
+                            (next fdecl)
+                            fdecl)
+                    m (if (map? (first fdecl))
+                        (conj m (first fdecl))
+                        m)
+                    fdecl (if (map? (first fdecl))
+                            (next fdecl)
+                            fdecl)
+                    fdecl (if (vector? (first fdecl))
+                            (core/list fdecl)
+                            fdecl)
+                    m (if (map? (last fdecl))
+                        (conj m (last fdecl))
+                        m)
+                    fdecl (if (map? (last fdecl))
+                            (butlast fdecl)
+                            fdecl)
+                    m (conj {:arglists (core/list 'quote (sigs fdecl))} m)
+                    m (core/let [inline (:inline m)
+                                 ifn (first inline)
+                                 iname (second inline)]
+                        ;; same as: (if (and (= 'fn ifn) (not (symbol? iname))) ...)
+                        (if (if (clojure.lang.Util/equiv 'fn ifn)
+                              (if (core/instance? clojure.lang.Symbol iname) false true))
+                          ;; inserts the same fn name to the inline fn if it does not have one
+                          (assoc m :inline (cons ifn (cons (clojure.lang.Symbol/intern (.concat (.getName ^clojure.lang.Symbol name) "__inliner"))
+                                                       (next inline))))
+                          m))
+                    m (conj (if (meta name) (meta name) {}) m)]
+           (cond
+             (multi-arity-fn? fdecl)
+             (multi-arity-fn name m fdecl)
+
+             (variadic-fn? fdecl)
+             (variadic-fn name m fdecl)
+
+             :else
+             (core/list 'def (with-meta name m)
+              ;;todo - restore propagation of fn name
+              ;;must figure out how to convey primitive hints to self calls first
+              (cons `fn fdecl))))))
+
+(. (var defn) (setMacro))
