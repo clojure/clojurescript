@@ -1229,12 +1229,13 @@
 (defn analyze-deps
   ([lib deps env] (analyze-deps lib deps env nil))
   ([lib deps env opts]
+   (let [compiler @env/*compiler*]
      (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
        (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
          (str "Circular dependency detected " (-> *cljs-dep-set* meta :dep-path)))
        (doseq [dep deps]
-         (when-not (or (contains? (::namespaces @env/*compiler*) dep)
-                       (contains? (:js-dependency-index @env/*compiler*) (name dep))
+         (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
+                       (contains? (:js-dependency-index compiler) (name dep))
                        (deps/find-classpath-lib dep))
            (let [relpath (util/ns->relpath dep)
                  src (locate-src relpath)]
@@ -1242,7 +1243,7 @@
                (analyze-file src opts)
                (throw
                  (error env
-                   (error-message :undeclared-ns {:ns-sym dep :path relpath}))))))))))
+                   (error-message :undeclared-ns {:ns-sym dep :path relpath})))))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
@@ -2115,7 +2116,8 @@
   (util/mkdirs cache-file)
   (spit cache-file
     (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
-      (pr-str (get-in @env/*compiler* [::namespaces ns])))))
+      (pr-str
+        (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros)))))
 
 (defn analyze-file
   "Given a java.io.File, java.net.URL or a string identifying a resource on the
