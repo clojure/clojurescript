@@ -2145,7 +2145,7 @@
                       (.getPath ^URL res))
                cache (when (:cache-analysis opts)
                        (cache-file res ns-info output-dir))]
-           (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info)])
+           (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info) :defs])
              (if (or (not cache)
                      (requires-analysis? res output-dir))
                (binding [*cljs-ns* 'cljs.user

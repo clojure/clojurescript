@@ -1103,7 +1103,7 @@
               (if (requires-compilation? src-file dest-file opts)
                 (do
                   (util/mkdirs dest-file)
-                  (when (and (contains? (::ana/namespaces @env/*compiler*) ns)
+                  (when (and (get-in @env/*compiler* [::ana/namespaces ns :defs])
                              (not= ns 'cljs.core))
                     (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                   (let [ret (compile-file* src-file dest-file opts)]
@@ -1117,7 +1117,7 @@
                   ;; populate compilation environment with analysis information
                   ;; when constants are optimized
                   (when (and (true? (:optimize-constants opts))
-                             (not (contains? (::ana/namespaces @env/*compiler*) ns)))
+                             (nil? (get-in @env/*compiler* [::ana/namespaces ns :defs])))
                     (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
                   ns-info)))
             (catch Exception e
