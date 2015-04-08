@@ -25,7 +25,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.6.0</version>
+      <version>1.7.0-alpha6</version>
     </dependency>
     <dependency>
       <groupId>com.google.javascript</groupId>
@@ -50,7 +50,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.reader</artifactId>
-      <version>0.8.16</version>
+      <version>0.8.17</version>
     </dependency>
   </dependencies>
 
