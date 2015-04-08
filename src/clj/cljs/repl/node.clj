@@ -82,7 +82,7 @@
   ;; we really do want system-default encoding here
   (with-open [^java.io.Reader in (-> in InputStreamReader. BufferedReader.)]
     (loop [buf (char-array 1024)]
-      (when (.isAlive proc)
+      (when (try (.exitValue proc) false (catch IllegalThreadStateException _ true))
         (try
           (let [len (.read in buf)]
             (when-not (neg? len)
