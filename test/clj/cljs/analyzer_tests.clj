@@ -267,9 +267,9 @@
 
 (deftest test-cljs-975
   (let [spec '((:require [bar :refer [baz] :refer-macros [quux]] :reload))]
-    (is (= (a/desugar-ns-specs spec)
-           '((:require-macros (bar :refer [quux]) :reload)
-             (:require (bar :refer [baz]) :reload))))))
+    (is (= (set (a/desugar-ns-specs spec))
+           (set '((:require-macros (bar :refer [quux]) :reload)
+                  (:require (bar :refer [baz]) :reload)))))))
 
 ;; =============================================================================
 ;; Namespace metadata
