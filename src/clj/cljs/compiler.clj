@@ -940,11 +940,11 @@
   String. Always returns a String."
   [^String file-str]
   (cond
-    (.endsWith file-str ".cljc")
-    (clojure.string/replace file-str #"\.cljc$" ".js")
-
     (.endsWith file-str ".cljs")
     (clojure.string/replace file-str #"\.cljs$" ".js")
+
+    (.endsWith file-str ".cljc")
+    (clojure.string/replace file-str #"\.cljc$" ".js")
 
     :else
     (throw (IllegalArgumentException.
@@ -1136,12 +1136,12 @@
           (throw (java.io.FileNotFoundException. (str "The file " src " does not exist."))))))))
 
 (defn cljs-files-in
-  "Return a sequence of all .cljc and .cljs files in the given directory."
+  "Return a sequence of all .cljs and .cljc files in the given directory."
   [dir]
   (filter
     #(let [name (.getName ^File %)]
-      (and (or (.endsWith name ".cljc")
-               (.endsWith name ".cljs"))
+      (and (or (.endsWith name ".cljs")
+               (.endsWith name ".cljc"))
            (not= \. (first name))
            (not (contains? cljs-reserved-file-names name))))
     (file-seq dir)))

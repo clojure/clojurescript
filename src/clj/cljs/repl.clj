@@ -202,17 +202,17 @@
 
 (defn ^File js-src->cljs-src
   "Map a JavaScript output file back to the original ClojureScript source
-   file (.cljc or .cljs)."
+   file (.cljs or .cljc)."
   [f]
   (let [f (io/file f)
         dir (.getParentFile f)
         base-name (string/replace (.getName f) ".js" "")
-        cljcf (io/file dir (str base-name ".cljc"))]
-    (if (.exists cljcf)
-      cljcf
-      (let [cljsf (io/file dir (str base-name ".cljs"))]
-        (if (.exists cljsf)
-          cljsf)))))
+        cljsf (io/file dir (str base-name ".cljs"))]
+    (if (.exists cljsf)
+      cljsf
+      (let [cljcf (io/file dir (str base-name ".cljc"))]
+        (if (.exists cljcf)
+          cljcf)))))
 
 (defn read-source-map
   "Return the source map for the JavaScript source file."

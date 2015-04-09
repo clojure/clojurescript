@@ -479,30 +479,30 @@
     (-compile uri (merge opts {:output-file js-file}))))
 
 (defn cljs-source-for-namespace
-  "Given a namespace return the corresponding source with either a .cljc or
-  .cljs extension."
+  "Given a namespace return the corresponding source with either a .cljs or
+  .cljc extension."
   [ns]
   (let [path (-> (munge ns) (string/replace \. \/))
-        relpath (str path ".cljc")]
+        relpath (str path ".cljs")]
     (if-let [res (io/resource relpath)]
       {:relative-path relpath :uri res}
-      (let [relpath (str path ".cljs")]
+      (let [relpath (str path ".cljc")]
         (if-let [res (io/resource relpath)]
           {:relative-path relpath :uri res})))))
 
 (defn source-for-namespace
   "Given a namespace and compilation environment return the relative path and
   uri of the corresponding source regardless of the source language extension:
-  .cljc, .cljs, .js"
+  .cljs, .cljc, .js"
   [ns compiler-env]
   (let [ns-str  (str (comp/munge ns {}))
         path    (string/replace ns-str \. \/)
-        relpath (str path ".cljc")]
-    (if-let [cljc-res (io/resource relpath)]
-      {:relative-path relpath :uri cljc-res}
-      (let [relpath (str path ".cljs")]
-        (if-let [cljs-res (io/resource relpath)]
-          {:relative-path relpath :uri cljs-res}
+        relpath (str path ".cljs")]
+    (if-let [cljs-res (io/resource relpath)]
+      {:relative-path relpath :uri cljs-res}
+      (let [relpath (str path ".cljc")]
+        (if-let [cljc-res (io/resource relpath)]
+          {:relative-path relpath :uri cljc-res}
           (let [relpath (:file (get-in @compiler-env [:js-dependency-index ns-str]))]
             (if-let [js-res (and relpath (io/resource relpath))]
               {:relative-path relpath :uri js-res}
@@ -1606,7 +1606,7 @@
   ([src {:keys [wrap all-provides] :as options}]
     (let [goog-ns
           (case (util/ext src)
-            ("cljc" "cljs") (comp/munge (:ns (ana/parse-ns src)))
+            ("cljs" "cljc") (comp/munge (:ns (ana/parse-ns src)))
             "js" (cond-> (:provides (parse-js-ns src))
                    (not all-provides) first)
             (throw

@@ -110,8 +110,8 @@
 (defmethod error-message :undeclared-ns
   [warning-type {:keys [ns-sym] :as info}]
   (str "No such namespace: " ns-sym
-       ", could not locate " (util/ns->relpath ns-sym :cljc)
-       " or " (util/ns->relpath ns-sym :cljs)))
+       ", could not locate " (util/ns->relpath ns-sym :cljs)
+       " or " (util/ns->relpath ns-sym :cljc)))
 
 (defmethod error-message :dynamic
   [warning-type info]
@@ -1212,18 +1212,18 @@
 (declare analyze-file)
 
 (defn locate-src
-  "Given a namespace return the corresponding ClojureScript (.cljc or .cljs)
+  "Given a namespace return the corresponding ClojureScript (.cljs or .cljc)
   resource on the classpath or file from the root of the build."
   [ns]
   (or (util/ns->source ns)
       (let [rootp (when-let [root (:root @env/*compiler*)]
                     (.getPath ^File root))
-            cljcf (io/file rootp (util/ns->relpath ns :cljc))
-            cljsf (io/file rootp (util/ns->relpath ns :cljs))]
-        (if (and (.exists cljcf) (.isFile cljcf))
-          cljcf
-          (if (and (.exists cljsf) (.isFile cljsf))
-            cljsf)))))
+            cljsf (io/file rootp (util/ns->relpath ns :cljs))
+            cljcf (io/file rootp (util/ns->relpath ns :cljc))]
+        (if (and (.exists cljsf) (.isFile cljsf))
+          cljsf
+          (if (and (.exists cljcf) (.isFile cljcf))
+            cljcf)))))
 
 (defn foreign-dep? [dep]
   {:pre [(symbol? dep)]}

@@ -58,8 +58,8 @@
 (defn ns->source
   "Given a namespace as a symbol return the corresponding resource if it exists."
   [ns]
-  (or (io/resource (ns->relpath ns :cljc))
-      (io/resource (ns->relpath ns :cljs))))
+  (or (io/resource (ns->relpath ns :cljs))
+      (io/resource (ns->relpath ns :cljc))))
 
 (defn path-seq
   [file-str]
