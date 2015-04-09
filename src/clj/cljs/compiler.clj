@@ -1013,7 +1013,7 @@
                                                :gen-line 0}))]
                 (emitln (compiled-by-string opts))
                 (with-open [rdr (io/reader src)]
-                  (loop [forms (ana/forms-seq* rdr)
+                  (loop [forms (ana/forms-seq* rdr (util/path src))
                          ns-name nil
                          deps nil]
                     (if (seq forms)

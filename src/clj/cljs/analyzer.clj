@@ -1964,7 +1964,9 @@
   ([^Reader rdr] (forms-seq* rdr nil))
   ([^Reader rdr filename]
    {:pre [(instance? Reader rdr)]}
-   (let [pbr (readers/indexing-push-back-reader
+   (let [opts (when (and filename (= (util/ext filename) "cljc"))
+                {:read-cond :allow :features #{:cljs}})
+         pbr (readers/indexing-push-back-reader
                (PushbackReader. rdr) 1 filename)
          data-readers tags/*cljs-data-readers*
          forms-seq_
@@ -1977,7 +1979,7 @@
                                   (apply merge
                                     ((juxt :requires :require-macros)
                                       (get-namespace *cljs-ns*)))]
-                          (reader/read pbr nil eof-sentinel))]
+                          (reader/read pbr nil eof-sentinel opts nil))]
                (if (identical? form eof-sentinel)
                  (.close rdr)
                  (cons form (forms-seq_))))))]
@@ -2161,7 +2163,7 @@
                    (util/debug-prn "Analyzing" (str res)))
                  (let [env (assoc (empty-env) :build-options opts)
                        ns (with-open [rdr (io/reader res)]
-                            (loop [ns nil forms (seq (forms-seq* rdr))]
+                            (loop [ns nil forms (seq (forms-seq* rdr (util/path res)))]
                               (if forms
                                 (let [form (first forms)
                                       env (assoc env :ns (get-namespace *cljs-ns*))
