@@ -50,7 +50,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.reader</artifactId>
-      <version>0.8.17</version>
+      <version>0.9.0</version>
     </dependency>
   </dependencies>
 
