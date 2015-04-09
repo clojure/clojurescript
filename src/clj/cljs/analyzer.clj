@@ -108,10 +108,10 @@
   (str "Use of undeclared Var " (:prefix info) "/" (:suffix info)))
 
 (defmethod error-message :undeclared-ns
-  [warning-type {:keys [ns-sym path] :as info}]
+  [warning-type {:keys [ns-sym] :as info}]
   (str "No such namespace: " ns-sym
-    (when path
-      (str ", could not locate " path))))
+       ", could not locate " (util/ns->relpath ns-sym :cljc)
+       " or " (util/ns->relpath ns-sym :cljs)))
 
 (defmethod error-message :dynamic
   [warning-type info]
@@ -433,8 +433,8 @@
              (nil? (get-in @env/*compiler* [::namespaces ns-sym]))
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
-             (nil? (io/resource (util/ns->relpath ns-sym))))
-    (warning :undeclared-ns env {:ns-sym ns-sym :path (util/ns->relpath ns-sym)})))
+             (nil? (util/ns->source ns-sym)))
+    (warning :undeclared-ns env {:ns-sym ns-sym})))
 
 (declare get-expander)
 
@@ -1211,13 +1211,19 @@
 
 (declare analyze-file)
 
-(defn locate-src [relpath]
-  (or (io/resource relpath)
-      (let [root (:root @env/*compiler*)
-            root-path (when root (.getPath ^File root))
-            f (io/file root-path relpath)]
-        (when (and (.exists f) (.isFile f))
-          f))))
+(defn locate-src
+  "Given a namespace return the corresponding ClojureScript (.cljc or .cljs)
+  resource on the classpath or file from the root of the build."
+  [ns]
+  (or (util/ns->source ns)
+      (let [rootp (when-let [root (:root @env/*compiler*)]
+                    (.getPath ^File root))
+            cljcf (io/file rootp (util/ns->relpath ns :cljc))
+            cljsf (io/file rootp (util/ns->relpath ns :cljs))]
+        (if (and (.exists cljcf) (.isFile cljcf))
+          cljcf
+          (if (and (.exists cljsf) (.isFile cljsf))
+            cljsf)))))
 
 (defn foreign-dep? [dep]
   {:pre [(symbol? dep)]}
@@ -1237,13 +1243,11 @@
          (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                        (contains? (:js-dependency-index compiler) (name dep))
                        (deps/find-classpath-lib dep))
-           (let [relpath (util/ns->relpath dep)
-                 src (locate-src relpath)]
-             (if src
-               (analyze-file src opts)
-               (throw
-                 (error env
-                   (error-message :undeclared-ns {:ns-sym dep :path relpath})))))))))))
+           (if-let [src (locate-src dep)]
+             (analyze-file src opts)
+             (throw
+               (error env
+                 (error-message :undeclared-ns {:ns-sym dep}))))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
@@ -1373,8 +1377,8 @@
     (let [ns (if (sequential? form) (first form) form)
          {:keys [use-macros require-macros]}
          (or (get-in @env/*compiler* [::namespaces ns])
-           (when-let [res (io/resource (util/ns->relpath ns))]
-             (:ast (parse-ns res))))]
+             (when-let [res (util/ns->source ns)]
+               (:ast (parse-ns res))))]
       (or (some #{ns} (vals use-macros))
           (some #{ns} (vals require-macros))))))
 
@@ -2023,7 +2027,7 @@
   ([src dest opts]
     (env/ensure
       (let [src (if (symbol? src)
-                  (io/resource (util/ns->relpath src))
+                  (util/ns->source src)
                   src)
             compiler-env @env/*compiler*
             [ijs compiler-env']
@@ -2085,7 +2089,9 @@
                  (= (:ns ns-info) 'cljs.core)
                  (io/resource "cljs/core.cljs.cache.aot.edn"))]
      core-cache
-     (io/file (str (util/to-target-file output-dir ns-info "cljs") ".cache.edn")))))
+     (let [target-file (util/to-target-file output-dir ns-info
+                         (util/ext (:source-file ns-info)))]
+       (io/file (str target-file ".cache.edn"))))))
 
 (defn requires-analysis?
   ([src] (requires-analysis? src "out"))

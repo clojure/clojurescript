@@ -933,11 +933,22 @@
                (emits (interleave (concat segs (repeat nil))
                                   (concat args [nil]))))))
 
+;; TODO: unify renaming helpers - this one was hard to find - David
+
 (defn rename-to-js
   "Change the file extension from .cljs to .js. Takes a File or a
   String. Always returns a String."
-  [file-str]
-  (clojure.string/replace file-str #"\.cljs$" ".js"))
+  [^String file-str]
+  (cond
+    (.endsWith file-str ".cljc")
+    (clojure.string/replace file-str #"\.cljc$" ".js")
+
+    (.endsWith file-str ".cljs")
+    (clojure.string/replace file-str #"\.cljs$" ".js")
+
+    :else
+    (throw (IllegalArgumentException.
+             (str "Invalid source file extension " file-str)))))
 
 (defn with-core-cljs
   "Ensure that core.cljs has been loaded."
@@ -1125,13 +1136,15 @@
           (throw (java.io.FileNotFoundException. (str "The file " src " does not exist."))))))))
 
 (defn cljs-files-in
-  "Return a sequence of all .cljs files in the given directory."
+  "Return a sequence of all .cljc and .cljs files in the given directory."
   [dir]
-  (filter #(let [name (.getName ^File %)]
-             (and (.endsWith name ".cljs")
-                  (not= \. (first name))
-                  (not (contains? cljs-reserved-file-names name))))
-          (file-seq dir)))
+  (filter
+    #(let [name (.getName ^File %)]
+      (and (or (.endsWith name ".cljc")
+               (.endsWith name ".cljs"))
+           (not= \. (first name))
+           (not (contains? cljs-reserved-file-names name))))
+    (file-seq dir)))
 
 (defn compile-root
   "Looks recursively in src-dir for .cljs files and compiles them to

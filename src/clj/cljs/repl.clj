@@ -202,12 +202,17 @@
 
 (defn ^File js-src->cljs-src
   "Map a JavaScript output file back to the original ClojureScript source
-   file."
+   file (.cljc or .cljs)."
   [f]
   (let [f (io/file f)
         dir (.getParentFile f)
-        name (.getName f)]
-    (io/file dir (string/replace name ".js" ".cljs"))))
+        base-name (string/replace (.getName f) ".js" "")
+        cljcf (io/file dir (str base-name ".cljc"))]
+    (if (.exists cljcf)
+      cljcf
+      (let [cljsf (io/file dir (str base-name ".cljs"))]
+        (if (.exists cljsf)
+          cljsf)))))
 
 (defn read-source-map
   "Return the source map for the JavaScript source file."
@@ -298,8 +303,8 @@
                                  source-file
                                  (io/file rfile)))
                              (str (System/getProperty "user.dir") File/separator) ""))
-                   url (or (and ns-info (io/resource (util/ns->relpath ns)))
-                         (and file (io/resource file)))]
+                   url (or (and ns-info (util/ns->source ns))
+                           (and file (io/resource file)))]
                (merge
                  {:function name'
                   :call call
@@ -494,7 +499,7 @@
         (when-let [ns (and (:source-map opts) (first (:provides compiled)))]
           (spit
             (io/file (io/file (util/output-directory opts))
-              (util/ns->relpath ns))
+              (util/ns->relpath ns (util/ext (:source-url compiled))))
             (slurp src)))
         ;; need to load dependencies first
         (load-dependencies repl-env (:requires compiled) opts)

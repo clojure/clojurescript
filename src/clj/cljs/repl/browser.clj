@@ -90,6 +90,7 @@
             ".html" "text/html"
             ".jpg" "image/jpeg"
             ".js" "text/javascript"
+            ".cljc" "text/x-clojure"
             ".cljs" "text/x-clojure"
             ".map" "application/json"
             ".png" "image/png"
@@ -107,6 +108,7 @@
     (or
       (= path "/")
       (.endsWith path ".js")
+      (.endsWith path ".cljc")
       (.endsWith path ".cljs")
       (.endsWith path ".map")
       (.endsWith path ".html")

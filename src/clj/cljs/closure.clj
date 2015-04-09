@@ -479,26 +479,35 @@
     (-compile uri (merge opts {:output-file js-file}))))
 
 (defn cljs-source-for-namespace
-  "Returns a map containing :relative-path, :uri referring to the resource that
-should contain the source for the given namespace name."
+  "Given a namespace return the corresponding source with either a .cljc or
+  .cljs extension."
   [ns]
-  (as-> (munge ns) %
-    (string/replace % \. \/)
-    (str % ".cljs")
-    {:relative-path % :uri (io/resource %)}))
+  (let [path (-> (munge ns) (string/replace \. \/))
+        relpath (str path ".cljc")]
+    (if-let [res (io/resource relpath)]
+      {:relative-path relpath :uri res}
+      (let [relpath (str path ".cljs")]
+        (if-let [res (io/resource relpath)]
+          {:relative-path relpath :uri res})))))
 
 (defn source-for-namespace
+  "Given a namespace and compilation environment return the relative path and
+  uri of the corresponding source regardless of the source language extension:
+  .cljc, .cljs, .js"
   [ns compiler-env]
   (let [ns-str  (str (comp/munge ns {}))
         path    (string/replace ns-str \. \/)
-        relpath (str path ".cljs")]
-    (if-let [cljs-res (io/resource relpath)]
-      {:relative-path relpath :uri cljs-res}
-      (let [relpath (:file (get-in @compiler-env [:js-dependency-index ns-str]))]
-        (if-let [js-res (and relpath (io/resource relpath))]
-          {:relative-path relpath :uri js-res}
-          (throw
-            (IllegalArgumentException. (str "Namespace " ns " does not exist"))))))))
+        relpath (str path ".cljc")]
+    (if-let [cljc-res (io/resource relpath)]
+      {:relative-path relpath :uri cljc-res}
+      (let [relpath (str path ".cljs")]
+        (if-let [cljs-res (io/resource relpath)]
+          {:relative-path relpath :uri cljs-res}
+          (let [relpath (:file (get-in @compiler-env [:js-dependency-index ns-str]))]
+            (if-let [js-res (and relpath (io/resource relpath))]
+              {:relative-path relpath :uri js-res}
+              (throw
+                (IllegalArgumentException. (str "Namespace " ns " does not exist"))))))))))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
@@ -814,7 +823,7 @@ should contain the source for the given namespace name."
               (if (and provides source-url)
                 (assoc relpaths
                   (.getPath ^URL source-url)
-                  (util/ns->relpath (first provides)))
+                  (util/ns->relpath (first provides) (util/ext source-url)))
                 relpaths))
             (if-let [url (:url source)]
               (let [path (.getPath ^URL url)]
@@ -1156,9 +1165,9 @@ should contain the source for the given namespace name."
     (write-javascript opts js)
     ;; always copy original ClojureScript sources to the output directory
     ;; when source maps enabled
-    (let [out-file (if-let [ns (and (:source-map opts) (first (:provides js)))]
+    (let [out-file (when-let [ns (and (:source-map opts) (first (:provides js)))]
                      (io/file (io/file (util/output-directory opts))
-                       (util/ns->relpath ns)))
+                       (util/ns->relpath ns (util/ext (:source-url js)))))
           source-url (:source-url js)]
       (when (and out-file source-url
                  (or (not (.exists ^File out-file))
@@ -1551,7 +1560,8 @@ should contain the source for the given namespace name."
                          (some
                            (fn [^WatchEvent e]
                              (let [fstr (.. e context toString)]
-                               (and (or (. fstr (endsWith "cljs"))
+                               (and (or (. fstr (endsWith "cljc"))
+                                        (. fstr (endsWith "cljs"))
                                         (. fstr (endsWith "js")))
                                     (not (. fstr (startsWith ".#"))))))
                            (seq (.pollEvents key))))
@@ -1596,9 +1606,9 @@ should contain the source for the given namespace name."
   ([src {:keys [wrap all-provides] :as options}]
     (let [goog-ns
           (case (util/ext src)
-            "cljs" (comp/munge (:ns (ana/parse-ns src)))
-            "js"   (cond-> (:provides (parse-js-ns src))
-                     (not all-provides) first)
+            ("cljc" "cljs") (comp/munge (:ns (ana/parse-ns src)))
+            "js" (cond-> (:provides (parse-js-ns src))
+                   (not all-provides) first)
             (throw
               (IllegalArgumentException.
                 (str "Can't create goog.require expression for " src))))]

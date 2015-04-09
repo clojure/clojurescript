@@ -25,13 +25,6 @@
 ;;
 ;; Nashorn's load() function docs:
 ;; http://docs.oracle.com/javase/8/docs/technotes/guides/scripting/nashorn/shell.html
-;;
-;; Some functions are copied from: https://github.com/bodil/cljs-nashorn and the node.js repl code
-
-;;
-;; ** Usage from Leiningen:
-;;
-;; Create a file init_repl_test.clj containing (adjust :output-dir to your cljsbuild settings):
 
 (comment
   (ns init-repl-test
@@ -39,25 +32,6 @@
               [cljs.repl.nashorn]))
 
   (cljs.repl/repl (cljs.repl.nashorn/repl-env)
-    :output-dir "resources/public/compiled"
-    :cache-analysis true)
-  )
-
-;;
-;; Invoke it with:
-;; lein trampoline run -m clojure.main src-clj/init_repl_test.clj
-
-;;
-;; ** Usage from nrepl / piggieback, execute the following at the nrepl prompt:
-;;    (adjust :output-dir to your cljsbuild settings)
-
-(comment
-  (ns init-repl-piggieback
-    (:require [cljs.repl.nashorn]
-              [cemerick.piggieback]))
-
-  (cemerick.piggieback/cljs-repl
-    :repl-env (cljs.repl.nashorn/repl-env)
     :output-dir "resources/public/compiled"
     :cache-analysis true)
   )

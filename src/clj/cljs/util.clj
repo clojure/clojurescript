@@ -48,8 +48,18 @@
 (defn munge-path [ss]
   (clojure.lang.Compiler/munge (str ss)))
 
-(defn ns->relpath [s]
-  (str (string/replace (munge-path s) \. \/) ".cljs"))
+(defn ns->relpath
+  "Given a namespace as a symbol return the relative path. May optionally
+  provide the file extension, defaults to :cljs."
+  ([ns] (ns->relpath ns :cljs))
+  ([ns ext]
+   (str (string/replace (munge-path ns) \. \/) "." (name ext))))
+
+(defn ns->source
+  "Given a namespace as a symbol return the corresponding resource if it exists."
+  [ns]
+  (or (io/resource (ns->relpath ns :cljc))
+      (io/resource (ns->relpath ns :cljs))))
 
 (defn path-seq
   [file-str]
