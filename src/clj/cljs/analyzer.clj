@@ -1964,22 +1964,24 @@
   ([^Reader rdr] (forms-seq* rdr nil))
   ([^Reader rdr filename]
    {:pre [(instance? Reader rdr)]}
-   (let [opts (when (and filename (= (util/ext filename) "cljc"))
-                {:read-cond :allow :features #{:cljs}})
+   (let [eof-sentinel (Object.)
+         opts (merge
+                {:eof eof-sentinel}
+                (if (and filename (= (util/ext filename) "cljc"))
+                  {:read-cond :allow :features #{:cljs}}))
          pbr (readers/indexing-push-back-reader
                (PushbackReader. rdr) 1 filename)
          data-readers tags/*cljs-data-readers*
          forms-seq_
          (fn forms-seq_ []
            (lazy-seq
-             (let [eof-sentinel (Object.)
-                   form (binding [*ns* (create-ns *cljs-ns*)
+             (let [form (binding [*ns* (create-ns *cljs-ns*)
                                   reader/*data-readers* data-readers
                                   reader/*alias-map*
                                   (apply merge
                                     ((juxt :requires :require-macros)
                                       (get-namespace *cljs-ns*)))]
-                          (reader/read pbr nil eof-sentinel opts nil))]
+                          (reader/read opts pbr))]
                (if (identical? form eof-sentinel)
                  (.close rdr)
                  (cons form (forms-seq_))))))]
