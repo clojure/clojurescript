@@ -16,7 +16,8 @@
             [cljs.tagged-literals :as tags]
             [cljs.analyzer :as ana]
             [cljs.source-map :as sm]
-            [clojure.data.json :as json])
+            [clojure.data.json :as json]
+            [cljs.js-deps :as deps])
   (:import java.lang.StringBuilder
            java.io.File))
 
@@ -25,6 +26,7 @@
 (def js-reserved ana/js-reserved)
 
 (def ^:dynamic *dependents* nil)
+(def ^:dynamic *inputs* nil)
 (def ^:dynamic *source-map-data* nil)
 (def ^:dynamic *lexical-renames* {})
 
@@ -1101,7 +1103,8 @@
   ([src dest opts]
     {:post [map?]}
     (binding [ana/*file-defs* (atom #{})]
-      (let [src-file  (io/file src)
+      (let [nses      (get @env/*compiler* ::ana/namespaces)
+            src-file  (io/file src)
             dest-file (io/file dest)
             opts      (merge {:optimizations :none} opts)]
         (if (.exists src-file)
@@ -1114,21 +1117,23 @@
               (if (requires-compilation? src-file dest-file opts)
                 (do
                   (util/mkdirs dest-file)
-                  (when (and (get-in @env/*compiler* [::ana/namespaces ns :defs])
+                  (when (and (get-in nses [ns :defs])
                              (not= ns 'cljs.core))
                     (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                   (let [ret (compile-file* src-file dest-file opts)]
                     (when *dependents*
                       (swap! *dependents*
                         (fn [{:keys [recompile visited]}]
-                          {:recompile (into recompile (ana/ns-dependents ns))
-                           :visited   (conj visited ns)})))
+                          {:recompile (into recompile
+                                        (ana/ns-dependents ns
+                                          (merge *inputs* nses)))
+                           :visited (conj visited ns)})))
                     ret))
                 (do
                   ;; populate compilation environment with analysis information
                   ;; when constants are optimized
                   (when (and (true? (:optimize-constants opts))
-                             (nil? (get-in @env/*compiler* [::ana/namespaces ns :defs])))
+                             (nil? (get-in nses [ns :defs])))
                     (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
                   ns-info)))
             (catch Exception e
@@ -1158,15 +1163,21 @@
      (compile-root src-dir target-dir nil))
   ([src-dir target-dir opts]
      (swap! env/*compiler* assoc :root src-dir)
-     (let [src-dir-file (io/file src-dir)]
-       (loop [cljs-files (cljs-files-in src-dir-file)
-              output-files []]
-         (if (seq cljs-files)
-           (let [cljs-file (first cljs-files)
-                 output-file (util/to-target-file target-dir (ana/parse-ns cljs-file))
-                 ns-info (compile-file cljs-file output-file opts)]
-             (recur (rest cljs-files) (conj output-files (assoc ns-info :file-name (.getPath output-file)))))
-           output-files)))))
+     (let [src-dir-file (io/file src-dir)
+           inputs (deps/dependency-order
+                    (map #(ana/parse-ns %)
+                      (cljs-files-in src-dir-file)))]
+       (binding [*inputs* (zipmap (map :ns inputs) inputs)]
+         (loop [inputs (seq inputs) compiled []]
+           (if inputs
+             (let [{:keys [source-file] :as ns-info} (first inputs)
+                   output-file (util/to-target-file target-dir ns-info)
+                   ijs (compile-file source-file output-file opts)]
+               (recur
+                 (next inputs)
+                 (conj compiled
+                   (assoc ijs :file-name (.getPath output-file)))))
+             compiled))))))
 
 ;; TODO: needs fixing, table will include other things than keywords - David
 

@@ -332,6 +332,11 @@
     (is (= (set (a/ns-dependents 'utils))
            #{'file-reloading 'dev 'client 'core}))))
 
+(deftest test-ns-dependents-custom-ns-map
+  (let [ns-map '{bar {:requires #{cljs.core}}
+                 foo {:requires #{cljs.core bar}}}]
+    (is (= (set (a/ns-dependents 'bar ns-map)) #{'foo}))))
+
 (deftest test-cljs-1105
   ;; munge turns - into _, must preserve the dash first
   (is (not= (a/gen-constant-id :test-kw)

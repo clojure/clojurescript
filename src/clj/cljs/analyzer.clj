@@ -545,15 +545,29 @@
           (get-in namespaces [ns :macros sym]))))))
 
 (defn ns-dependents
-  ([ns]
-    (util/topo-sort ns
-      (fn [ns]
-        (set
-          (map first
-            (filter
-              (fn [[_ ns-info]]
-                (contains? (:requires ns-info) ns))
-              (get @env/*compiler* ::namespaces))))))))
+  "Given a namespace as a symbol and a map from namespace symbol to
+   namespace information return the topologically sorted list of all
+   dependent namespaces. The map values of the optional second argument must
+   be maps with a :requires set of symbols, a :requires map of symbol -> alias
+   (analyzer format) or a :requires vector of munged namespace strings
+   (closure format)."
+  ([ns] (ns-dependents ns (get @env/*compiler* ::namespaces)))
+  ([ns ns-map]
+   (letfn [(parent? [parent [child {:keys [requires] :as ns-info}]]
+             (when-not (= parent child)
+               (cond
+                 (or (map? requires)
+                     (set? requires)) (contains? requires parent)
+                 (vector? requires) (some #{(munge (name parent))} requires))))]
+     (util/topo-sort ns
+       (fn [ns']
+         (set (map first (filter #(parent? ns' %) ns-map))))))))
+
+(comment
+  (ns-dependents 'bar
+    '{bar {:requires #{cljs.core}}
+      foo {:requires #{cljs.core bar}}})
+  )
 
 (declare analyze analyze-symbol analyze-seq)
 
