@@ -1025,7 +1025,9 @@
     (nil? output-to) js
 
     (string? output-to)
-    (spit output-to js)
+    (do
+      (util/mkdirs output-to)
+      (spit output-to js))
 
     :else (println js)))
 
