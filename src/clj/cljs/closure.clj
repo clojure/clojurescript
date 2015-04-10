@@ -1025,9 +1025,9 @@
     (nil? output-to) js
 
     (string? output-to)
-    (do
-      (util/mkdirs output-to)
-      (spit output-to js))
+    (let [f (io/file output-to)]
+      (util/mkdirs f)
+      (spit f js))
 
     :else (println js)))
 
