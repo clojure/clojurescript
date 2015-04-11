@@ -1,4 +1,4 @@
-## Next
+## 0.0-3196
 
 ### Enhancements
 * Conditional reading
@@ -9,6 +9,8 @@
 * CLJS-1154: Unmunged function names for stacktrace
 
 ### Changes
+* Clojure 1.7.0-beta1 dependency
+* tools.reader 0.9.1 dependency
 * CLJS-1188: multi-arity fns hinder cross-module code motion
 * cljs.test needs to default to sync
 * CLJS-1184: log module building activity under verbose
