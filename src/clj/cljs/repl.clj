@@ -503,10 +503,13 @@
             (slurp src)))
         ;; need to load dependencies first
         (load-dependencies repl-env (:requires compiled) opts)
+        ;; remove the ns to get :reload semantics
+        (ana-api/remove-ns (:ns (ana/parse-ns src)))
         ;; make sure it's been analyzed, this is because if it's already compiled
         ;; cljs.compiler/compile-file won't do anything, good for builds,
         ;; but a bit annoying here
-        (ana/analyze-file src opts)
+        (binding [ana/*reload-macros* true]
+          (ana/analyze-file src opts))
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1
           (cljsc/src-file->goog-require src {:wrap true :reload true})))

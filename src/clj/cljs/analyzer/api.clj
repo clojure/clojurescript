@@ -8,7 +8,7 @@
 
 (ns cljs.analyzer.api
   (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns
-                            ns-publics])
+                            ns-publics remove-ns])
   (:require [cljs.env :as env]
             [cljs.analyzer :as ana]))
 
@@ -62,6 +62,12 @@
   [ns sym]
   {:pre [(symbol? ns) (symbol? sym)]}
   (get-in @env/*compiler* [::ana/namespaces ns :defs sym]))
+
+(defn remove-ns
+  "Removes the namespace named by the symbol."
+  [ns]
+  {:pre [(symbol? ns)]}
+  (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
 
 (defmacro in-cljs-user
   "Binds cljs.analyzer/*cljs-ns* to 'cljs.user and uses the given compilation

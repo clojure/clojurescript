@@ -35,6 +35,7 @@
 (def ^:dynamic *analyze-deps* true)
 (def ^:dynamic *load-tests* true)
 (def ^:dynamic *load-macros* true)
+(def ^:dynamic *reload-macros* false)
 (def ^:dynamic *macro-infer* true)
 
 (def ^:dynamic *file-defs* nil)
@@ -1520,14 +1521,16 @@
       (load-core)
       (doseq [nsym (vals use-macros)]
         (let [k (or (:use-macros @reload)
-                    (get-in @reloads [:use-macros nsym]))]
+                    (get-in @reloads [:use-macros nsym])
+                    (and (= nsym name) *reload-macros* :reload))]
           (if k
             (clojure.core/require nsym k)
             (clojure.core/require nsym))
           (intern-macros nsym k)))
       (doseq [nsym (vals require-macros)]
         (let [k (or (:require-macros @reload)
-                    (get-in @reloads [:require-macros nsym]))]
+                    (get-in @reloads [:require-macros nsym])
+                    (and (= nsym name) *reload-macros* :reload))]
           (if k
             (clojure.core/require nsym k)
             (clojure.core/require nsym))
