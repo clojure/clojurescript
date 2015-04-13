@@ -2686,7 +2686,7 @@
 (defn foo-set [x]
   (first x))
 
-(deftest test-cljs-982-var-deref []
+(deftest test-cljs-982-var-deref
   (let [f (foo-var #'foo-set)]
     (is (= (f [1 2 3]) 1))
     (set! foo-set (fn [x] :oops))
@@ -2731,16 +2731,20 @@
       :foo #'foo-1187
       :bar #'bar-1187) []))
 
-(deftest test-cljs-1187 []
+(deftest test-cljs-1187
   (testing "Internal var nodes analyzed in expression context"
     (is (= (with-out-str (print-foo-1187 :foo))
            "foo!"))))
 
-(deftest test-cljs-1189 []
+(deftest test-cljs-1189
   (testing "array-map should always return array maps"
     (let [am (apply array-map (range 100))]
       (is (== (count am) 50))
       (is (instance? PersistentArrayMap am)))))
+
+(deftest test-cljs-1199
+  (testing "array-map should skip dropped elements of IndexedSeq"
+    (is (= {:a 1} (apply array-map (drop 1 [0 :a 1]))))))
 
 (comment
   ;; ObjMap

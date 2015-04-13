@@ -7448,7 +7448,7 @@ reduces them without incurring seq initialization"
   "keyval => key val
   Returns a new array map with supplied mappings."
   [& keyvals]
-  (let [arr (if (instance? IndexedSeq keyvals)
+  (let [arr (if (and (instance? IndexedSeq keyvals) (zero? (.-i keyvals)))
               (.-arr keyvals)
               (into-array keyvals))]
     (.fromArray cljs.core/PersistentArrayMap arr true false)))
