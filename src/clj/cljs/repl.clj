@@ -220,25 +220,26 @@
   (when-let [smf (util/file-or-resource (str f ".map"))]
     (let [ns (if (= f "cljs/core.aot.js")
                'cljs.core
-               (:ns (ana/parse-ns (js-src->cljs-src f))))]
-      (as-> @env/*compiler* compiler-env
-        (let [t (util/last-modified smf)]
-          (if (or (and (= ns 'cljs.core)
-                       (nil? (get-in compiler-env [::source-maps ns])))
-                  (and (not= ns 'cljs.core)
-                       (> t (get-in compiler-env [::source-maps ns :last-modified] 0))))
-            (swap! env/*compiler* assoc-in [::source-maps ns]
-              {:last-modified t
-               :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
-            compiler-env))
-        (get-in compiler-env [::source-maps ns :source-map])))))
+               (some-> (js-src->cljs-src f) ana/parse-ns :ns))]
+      (when ns
+        (as-> @env/*compiler* compiler-env
+         (let [t (util/last-modified smf)]
+           (if (or (and (= ns 'cljs.core)
+                        (nil? (get-in compiler-env [::source-maps ns])))
+                 (and (not= ns 'cljs.core)
+                      (> t (get-in compiler-env [::source-maps ns :last-modified] 0))))
+             (swap! env/*compiler* assoc-in [::source-maps ns]
+               {:last-modified t
+                :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
+             compiler-env))
+         (get-in compiler-env [::source-maps ns :source-map]))))))
 
 (defn ns-info
   "Given a path to a js source file return the ns info for the corresponding
    ClojureScript file if it exists."
   [f]
   (let [f' (js-src->cljs-src f)]
-    (when (.exists f')
+    (when (and f' (.exists f'))
       (ana/parse-ns f'))))
 
 (defn- mapped-line-column-call
@@ -334,12 +335,12 @@
    print the ClojureScript stacktrace. See mapped-stacktrace."
   ([stacktrace] (print-mapped-stacktrace stacktrace *repl-opts*))
   ([stacktrace opts]
-    (doseq [{:keys [function file line column]}
-            (mapped-stacktrace stacktrace opts)]
-      (err-out
-        (println "\t"
-          (str (when function (str function " "))
-            "(" file (when line (str ":" line)) (when column (str ":" column)) ")"))))))
+   (doseq [{:keys [function file line column]}
+           (mapped-stacktrace stacktrace opts)]
+     (err-out
+       (println "\t"
+         (str (when function (str function " "))
+           "(" file (when line (str ":" line)) (when column (str ":" column)) ")"))))))
 
 (comment
   (cljsc/build "samples/hello/src"
