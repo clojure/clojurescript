@@ -93,7 +93,7 @@
                     *in*)]
      (or ({:line-start request-prompt :stream-end request-exit}
           (skip-whitespace *in*))
-        (let [input (reader/read)]
+        (let [input (reader/read {:read-cond :allow :features #{:cljs}} *in*)]
           (skip-if-eol *in*)
           input)))))
 
