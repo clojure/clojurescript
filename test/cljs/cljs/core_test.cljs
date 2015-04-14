@@ -1679,10 +1679,15 @@
     (is (=  1 (compare [1 2] [1 1])))
     (is (=  1 (compare [1 1 1] [1 2])))
     (is (=  1 (compare [1 1 2] [1 1 1])))
+    (is (=  0 (compare [] [])))
+    (is (=  0 (compare (vec #js []) [])))
+    (is (=  0 (compare (with-meta [] {}) [])))
+    (is (=  0 (compare (pop [1]) [])))
 
     (is (= -1 (compare (subvec [1 2 3] 1) (subvec [1 2 4] 1))))
     (is (=  0 (compare (subvec [1 2 3] 1) (subvec [1 2 3] 1))))
-    (is (=  1 (compare (subvec [1 2 4] 1) (subvec [1 2 3] 1)))))
+    (is (=  1 (compare (subvec [1 2 4] 1) (subvec [1 2 3] 1))))
+    (is (=  0 (compare (subvec [1] 0 0) (subvec [2] 0 0))))
 
     (is (=  0 (compare (js/Date. 2015 2 8 19 13 00 999)
                        (js/Date. 2015 2 8 19 13 00 999))))
@@ -1690,7 +1695,7 @@
                        (js/Date. 2015 2 8 19 13 00 999))))
     (is (=  1 (compare (js/Date. 2015 2 8 19 14 00 999)
                        (js/Date. 2015 2 8 19 13 00 999))))
-  )
+  ))
 
 (deftest test-dot
   (let [s "abc"]
