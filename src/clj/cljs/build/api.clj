@@ -21,6 +21,9 @@
             [clojure.java.io :as io])
   (:import java.io.File))
 
+;; =============================================================================
+;; Useful Utilities
+
 (defn ^File target-file-for-cljs-ns
   "Given an output directory and a clojurescript namespace return the
   compilation target file for that namespace.
@@ -89,6 +92,30 @@
   ([src] (closure/src-file->goog-require src))
   ([src options]
     (closure/src-file->goog-require src options)))
+
+;; =============================================================================
+;; Main API
+
+(defn inputs
+  "Given a list of directories and files, return a compilable object that may
+  be passed to build or watch."
+  [& xs]
+  (reify
+    closure/Compilable
+    (-compile [_ opts]
+      (letfn [(compile-input [x]
+                (let [compiled (closure/-compile x opts)]
+                  (if (sequential? compiled)
+                    compiled
+                    [compiled])))]
+        (mapcat compile-input xs)))))
+
+(defn build
+  "Given a source which can be compiled, produce runnable JavaScript."
+  ([source opts]
+   (closure/build source opts))
+  ([source opts compiler-env]
+   (closure/build source opts compiler-env)))
 
 (comment
 
