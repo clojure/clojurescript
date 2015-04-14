@@ -101,6 +101,9 @@
   be passed to build or watch."
   [& xs]
   (reify
+    closure/Inputs
+    (-paths [_]
+      (map io/file xs))
     closure/Compilable
     (-compile [_ opts]
       (letfn [(compile-input [x]
@@ -116,6 +119,15 @@
    (closure/build source opts))
   ([source opts compiler-env]
    (closure/build source opts compiler-env)))
+
+(defn watch
+  "Given a source which can be compiled, watch it for changes to produce."
+  ([source opts]
+   (closure/watch source opts))
+  ([source opts compiler-env]
+   (closure/watch source opts compiler-env))
+  ([source opts compiler-env stop]
+   (closure/watch source opts compiler-env stop)))
 
 (comment
 

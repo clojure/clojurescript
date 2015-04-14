@@ -313,6 +313,15 @@
 ;; Compile
 ;; =======
 
+(defprotocol Inputs
+  (-paths [this] "Returns the file paths to the source inputs"))
+
+(extend-protocol Inputs
+  String
+  (-paths [this] [(io/file this)])
+  File
+  (-paths [this] [this]))
+
 (defprotocol Compilable
   (-compile [this opts] "Returns one or more IJavaScripts."))
 
@@ -1512,12 +1521,13 @@
   ([source opts compiler-env]
     (watch source opts compiler-env nil))
   ([source opts compiler-env quit]
-    (let [opts (cond-> opts
-                 (= (:verbose opts :not-found) :not-found)
-                 (assoc :verbose true))
-          path (Paths/get (.toURI (io/file source)))
-          fs (.getFileSystem path)
-          service (.newWatchService fs)]
+    (let [opts  (cond-> opts
+                  (= (:verbose opts :not-found) :not-found)
+                  (assoc :verbose true))
+          paths (map #(Paths/get (.toURI %)) (-paths source))
+          path  (first paths)
+          fs    (.getFileSystem path)
+          srvc  (.newWatchService fs)]
       (letfn [(buildf []
                 (try
                   (let [start (System/nanoTime)]
@@ -1537,7 +1547,7 @@
                     (preVisitDirectory [_ dir _]
                       (let [^Path dir dir]
                         (. dir
-                          (register service
+                          (register srvc
                             (into-array [StandardWatchEventKinds/ENTRY_CREATE
                                          StandardWatchEventKinds/ENTRY_DELETE
                                          StandardWatchEventKinds/ENTRY_MODIFY])
@@ -1552,12 +1562,13 @@
         (println "Building ...")
         (flush)
         (buildf)
-        (println "Watching path:" source)
-        (watch-all path)
+        (println "Watching paths:" (apply str (interpose ", " paths)))
+        (doseq [path paths]
+          (watch-all path))
         (loop [key nil]
           (when (and (or (nil? quit) (not @quit))
                      (or (nil? key) (. ^WatchKey key reset)))
-            (let [key (. service (poll 300 TimeUnit/MILLISECONDS))]
+            (let [key (. srvc (poll 300 TimeUnit/MILLISECONDS))]
               (when (and key
                          (some
                            (fn [^WatchEvent e]
