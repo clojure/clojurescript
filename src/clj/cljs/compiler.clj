@@ -1114,11 +1114,13 @@
                                 (not (false? (:static-fns opts))))
                          (assoc opts :static-fns true)
                          opts)]
-              (if (requires-compilation? src-file dest-file opts)
+              (if (or (requires-compilation? src-file dest-file opts)
+                      (:force opts))
                 (do
                   (util/mkdirs dest-file)
                   (when (and (get-in nses [ns :defs])
-                             (not= ns 'cljs.core))
+                             (not= 'cljs.core ns)
+                             (not= :interactive (:mode opts)))
                     (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                   (let [ret (compile-file* src-file dest-file opts)]
                     (when *dependents*

@@ -492,10 +492,12 @@
                   (util/url? f) f
                   (.exists (io/file f)) (io/file f)
                   :else (io/resource f))
-            compiled (cljsc/compile src
-                       (assoc opts
-                         :output-file
-                         (cljsc/src-file->target-file src)))]
+            compiled (binding [ana/*reload-macros* true]
+                       (cljsc/compile src
+                         (assoc opts
+                           :output-file (cljsc/src-file->target-file src)
+                           :force true
+                           :mode :interactive)))]
         ;; copy over the original source file if source maps enabled
         (when-let [ns (and (:source-map opts) (first (:provides compiled)))]
           (spit
@@ -504,13 +506,6 @@
             (slurp src)))
         ;; need to load dependencies first
         (load-dependencies repl-env (:requires compiled) opts)
-        ;; remove the ns to get :reload semantics
-        (ana-api/remove-ns (:ns (ana/parse-ns src)))
-        ;; make sure it's been analyzed, this is because if it's already compiled
-        ;; cljs.compiler/compile-file won't do anything, good for builds,
-        ;; but a bit annoying here
-        (binding [ana/*reload-macros* true]
-          (ana/analyze-file src opts))
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1
           (cljsc/src-file->goog-require src {:wrap true :reload true})))
