@@ -13,6 +13,7 @@
             [cljs.analyzer :as ana]))
 
 ;; =============================================================================
+;; Useful Utilities
 
 (defn empty-env
   "Creates an empty analysis environment."
