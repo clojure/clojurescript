@@ -2054,6 +2054,7 @@
             [ijs compiler-env']
             (binding [env/*compiler* (atom compiler-env)
                       *cljs-ns* 'cljs.user
+                      *cljs-file* src
                       *macro-infer*
                       (or (when (contains? opts :macro-infer)
                             (:macro-infer opts))
