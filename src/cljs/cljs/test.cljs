@@ -433,27 +433,33 @@
 ;; =============================================================================
 ;; Low-level functions
 
+(defn- test-var-block*
+  [v t]
+  {:pre [(instance? Var v)]}
+  [(fn []
+     (update-current-env! [:testing-vars] conj v)
+     (update-current-env! [:report-counters :test] inc)
+     (do-report {:type :begin-test-var :var v})
+     (try
+       (t)
+       (catch :default e
+         (case e
+           ::async-disabled (throw "Async tests require fixtures to be specified as maps.  Testing aborted.")
+           (do-report
+            {:type :error
+             :message "Uncaught exception, not in assertion."
+             :expected nil
+             :actual e})))))
+   (fn []
+     (do-report {:type :end-test-var :var v})
+     (update-current-env! [:testing-vars] rest))])
+
 (defn test-var-block
   "Like test-var, but returns a block for further composition and
   later execution."
   [v]
-  {:pre [(instance? Var v)]}
   (if-let [t (:test (meta v))]
-    [(fn []
-       (update-current-env! [:testing-vars] conj v)
-       (update-current-env! [:report-counters :test] inc)
-       (do-report {:type :begin-test-var :var v})
-       (try
-         (t)
-         (catch :default e
-           (do-report
-             {:type :error
-              :message "Uncaught exception, not in assertion."
-              :expected nil
-              :actual e}))))
-     (fn []
-       (do-report {:type :end-test-var :var v})
-       (update-current-env! [:testing-vars] rest))]))
+    (test-var-block* v t)))
 
 (defn test-var
   "If v has a function in its :test metadata, calls that function,
@@ -506,7 +512,14 @@
         "Fixtures may not be of mixed types")
       (assert (> 2 (count types))
         "fixtures specified in :once and :each must be of the same type")
-      ({:map :async :fn :sync} type :sync))))
+      ({:map :async :fn :sync} type :async))))
+
+(defn- disable-async [f]
+  (fn []
+    (let [obj (f)]
+      (when (async? obj)
+        (throw ::async-disabled))
+      obj)))
 
 (defn test-vars-block
   "Like test-vars, but returns a block for further composition and
@@ -527,16 +540,18 @@
                                test-var-block))
                  (wrap-map-fixtures once-fixtures))
             :sync
-            (do
-              (let [each-fixture-fn (join-fixtures each-fixtures)]
-                [(fn []
-                   ((join-fixtures once-fixtures)
-                    (fn []
-                      (doseq [v vars]
-                        (when (:test (meta v))
-                          (each-fixture-fn
-                           (fn []
-                             (test-var v))))))))])))))))
+            (let [each-fixture-fn (join-fixtures each-fixtures)]
+              [(fn []
+                 ((join-fixtures once-fixtures)
+                  (fn []
+                    (doseq [v vars]
+                      (when-let [t (:test (meta v))]
+                        ;; (alter-meta! v update :test disable-async)
+                        (each-fixture-fn
+                         (fn []
+                           ;; (test-var v)
+                           (run-block
+                            (test-var-block* v (disable-async t))))))))))]))))))
    (group-by (comp :ns meta) vars)))
 
 (defn test-vars
