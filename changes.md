@@ -1,3 +1,18 @@
+## 0.0-3211
+
+### Changes
+* CLJS-1205: Conditional reading in REPLs
+* CLJS-1204: cljs.build.api/watch can now take compilation inputs
+* CLJS-1203: standard way to pass multiple directories to build
+
+### Fixes
+* CLJS-1216: incorrect max fixed arity for fns both multi-arity and variadic 
+* cljs.analyzer/parse-ns did not bind *cljs-file*
+* CLJS-1201: compare broken for IIndexed collections
+* CLJS-1202: cljs.repl/load-file is not additive
+* CLJS-1199: array-map should skip dropped elements of IndexedSeq
+* CLJS-1197: load-file does not reload associated macro namespace
+
 ## 0.0-3196
 
 ### Enhancements
