@@ -2751,6 +2751,26 @@
   (testing "array-map should skip dropped elements of IndexedSeq"
     (is (= {:a 1} (apply array-map (drop 1 [0 :a 1]))))))
 
+(defn foo-1216
+  ([a] (foo-1216 a 10))
+  ([a b & [c]] [a b c]))
+
+(defn destructure-1216
+  ([kvs] kvs)
+  ([k v & args] [k v args]))
+
+(deftest test-cljs-1216
+  (testing "varargs regression"
+    (is (= (foo-1216 1) [1 10 nil]))
+    (is (= (foo-1216 1 2) [1 2 nil]))
+    (is (= (foo-1216 1 2 3) [1 2 3]))
+    (is (= [1 2 [3 4]]
+           (destructure-1216 1 2 3 4)))
+    (is (= [1 2 [3 4]]
+           (apply destructure-1216 [1 2 3 4])))
+    (is (= (destructure-1216 1 2 3 4)[1 2 [3 4]]
+           (apply destructure-1216 [1 2 3 4])))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

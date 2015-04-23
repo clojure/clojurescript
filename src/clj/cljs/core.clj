@@ -2146,9 +2146,13 @@
                  (fn ~method))))]
     (core/let [rname    (symbol (core/str ana/*cljs-ns*) (core/str name))
                arglists (map first fdecl)
-               variadic (boolean (some #(some '#{&} %) arglists))
-               sigs     (remove #(some '#{&} %) arglists)
-               maxfa    (apply core/max (map count sigs))
+               varsig?  #(some '#{&} %)
+               variadic (boolean (some varsig? arglists))
+               sigs     (remove varsig? arglists)
+               maxfa    (apply core/max
+                          (concat
+                            (map count sigs)
+                            [(core/- (count (first (filter varsig? arglists))) 2)]))
                meta     (assoc meta
                           :top-fn
                           {:variadic variadic
@@ -2181,6 +2185,8 @@
   (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a b]))))
   (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a & xs]))))
   (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a [b & cs] & xs]))))
+  ;; CLJS-1216
+  (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a b & xs]))))
   )
 
 (def
