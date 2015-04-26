@@ -2771,6 +2771,14 @@
     (is (= (destructure-1216 1 2 3 4)[1 2 [3 4]]
            (apply destructure-1216 [1 2 3 4])))))
 
+(deftype TypeBasis [a b])
+
+(defrecord RecordBasis [c d e])
+
+(deftest test-get-basis
+  (is (= (.getBasis TypeBasis) '[a b]))
+  (is (= (.getBasis RecordBasis) '[c d e])))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

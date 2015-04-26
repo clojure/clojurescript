@@ -1083,6 +1083,7 @@
        (deftype* ~t ~fields ~pmasks
          ~(if (seq impls)
             `(extend-type ~t ~@(dt->et t impls fields))))
+       (set! (.-getBasis ~t) (fn [] '[~@fields]))
        (set! (.-cljs$lang$type ~t) true)
        (set! (.-cljs$lang$ctorStr ~t) ~(core/str r))
        (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (-write writer# ~(core/str r))))
@@ -1238,6 +1239,7 @@
                assoc :internal-ctor true)]
     `(let []
        ~(emit-defrecord &env rsym r fields impls)
+       (set! (.-getBasis ~r) (fn [] '[~@fields]))
        (set! (.-cljs$lang$type ~r) true)
        (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (core/list ~(core/str r))))
        (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (-write writer# ~(core/str r))))
