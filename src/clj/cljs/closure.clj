@@ -1450,7 +1450,7 @@
                                 (concat
                                   (apply add-dependencies all-opts
                                     (concat
-                                      (if (coll? compiled) compiled [compiled])
+                                      (if (sequential? compiled) compiled [compiled])
                                       (when (= :nodejs (:target all-opts))
                                         [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
                                   (when (= :nodejs (:target all-opts))
