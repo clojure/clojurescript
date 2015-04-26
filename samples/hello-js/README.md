@@ -1,3 +1,5 @@
+*NOTE: this sample is now out of date. Please refer to the Quick Start*
+
 Simple ClojureScript Project Example Using an External JavaScript Library
 
 One-time Setup

@@ -1,3 +1,5 @@
+*NOTE: this sample is now out of date. Please refer to the Quick Start*
+
 Simple ClojureScript Project Example.
 
 One-time Setup

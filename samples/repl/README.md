@@ -1,3 +1,6 @@
+*NOTE: this sample is now out of date. Please refer to the Quick
+Start*
+
 # ClojureScript REPL Examples
 
 The ClojureScript REPL has been updated to work with multiple
