@@ -856,9 +856,10 @@
       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
         (merge 
           {:name var-name}
-          ;; elide test metadata, as it includes non-valid EDN - David
+          ;; remove actual test metadata, as it includes non-valid EDN and
+          ;; cannot be present in analysis cached to disk - David
           (cond-> sym-meta
-            :test (-> (dissoc :test) (assoc :test true)))
+            (:test sym-meta) (assoc :test true))
           {:meta (-> sym-meta
                    (dissoc :test)
                    (update-in [:file]
