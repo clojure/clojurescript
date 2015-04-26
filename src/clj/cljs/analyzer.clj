@@ -1707,12 +1707,16 @@
            (when-not (every?
                        (fn [t]
                          (or (nil? t)
-                             (and (symbol? t) ('#{any number} t))
+                             (and (symbol? t) ('#{any number long double} t))
                              ;; TODO: type inference is not strong enough to detect that
                              ;; when functions like first won't return nil, so variadic
                              ;; numeric functions like cljs.core/< would produce a spurious
                              ;; warning without this - David
-                             (and (set? t) (or (contains? t 'number) (contains? t 'any)))))
+                             (and (set? t)
+                                  (or (contains? t 'number)
+                                      (contains? t 'long)
+                                      (contains? t 'double)
+                                      (contains? t 'any)))))
                        types)
              (warning :invalid-arithmetic env
                {:js-op (-> form meta :js-op)
