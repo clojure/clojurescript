@@ -2783,6 +2783,12 @@
   (is (= (set {:a 0 :b 0 :c 0 :d 0 :e 0 :f 0 :g 0 :h 0 :i 0})
          #{[:a 0] [:b 0] [:c 0] [:d 0] [:e 0] [:f 0] [:g 0] [:h 0] [:i 0]})))
 
+(deftest test-var-aarglists
+  (is (= (-> #'first meta :arglists) '([coll])))
+  (is (= (-> #'hash-map meta :arglists) '([& keyvals])))
+  (is (= (-> #'map meta :arglists)
+        '([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

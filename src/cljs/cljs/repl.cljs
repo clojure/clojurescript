@@ -17,10 +17,14 @@
   (cond
     (:forms m) (doseq [f (:forms m)]
                  (println "  " f))
-    (:arglists m) (if (or (:macro m)
-                          (:repl-special-function m))
-                    (prn (:arglists m))
-                    (prn (second (:arglists m)))))
+    (:arglists m) (let [arglists (:arglists m)]
+                    (if (or (:macro m)
+                         (:repl-special-function m))
+                     (prn arglists)
+                     (prn
+                       (if (= 'quote (first arglists))
+                         (second arglists)
+                         arglists)))))
   (if (:special-form m)
     (do
       (println "Special Form")

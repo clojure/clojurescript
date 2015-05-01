@@ -695,14 +695,20 @@
      :sym (analyze expr-env `(quote ~(symbol (name (:ns var)) (name (:name var)))))
      :meta (let [ks [:ns :doc :file :line :column]
                  m (merge
-                     (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
-                       :name `(quote ~(symbol (name (:name var))))
-                       :test `(when ~sym (.-cljs$lang$test ~sym))
-                       :arglists (map with-meta (:arglists var) (:arglists-meta var)))
                      (let [user-meta (:meta var)
                            uks (keys user-meta)]
                        (zipmap uks
-                         (map #(list 'quote (get user-meta %)) uks))))]
+                         (map #(list 'quote (get user-meta %)) uks)))
+                     (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
+                       :name `(quote ~(symbol (name (:name var))))
+                       :test `(when ~sym (.-cljs$lang$test ~sym))
+                       :arglists (let [arglists (:arglists var)
+                                       arglists' (if (= 'quote (first arglists))
+                                                   (second arglists)
+                                                   arglists)]
+                                   (list 'quote
+                                     (doall (map with-meta arglists'
+                                              (:arglists-meta var)))))))]
              (analyze expr-env m))}))
 
 (defmethod parse 'if

@@ -2107,7 +2107,7 @@
                        {:variadic true
                         :max-fixed-arity c-1
                         :method-params [sig]
-                        :arglists [arglist]
+                        :arglists (core/list arglist)
                         :arglists-meta (doall (map meta [arglist]))})]
       `(do
          (def ~(with-meta name meta)
