@@ -2779,6 +2779,10 @@
   (is (= (.getBasis TypeBasis) '[a b]))
   (is (= (.getBasis RecordBasis) '[c d e])))
 
+(deftest test-1212
+  (is (= (set {:a 0 :b 0 :c 0 :d 0 :e 0 :f 0 :g 0 :h 0 :i 0})
+         #{[:a 0] [:b 0] [:c 0] [:d 0] [:e 0] [:f 0] [:g 0] [:h 0] [:i 0]})))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

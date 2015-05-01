@@ -7898,7 +7898,7 @@ reduces them without incurring seq initialization"
 (defn set
   "Returns a set of the distinct elements of coll."
   [coll]
-  (let [^not-native in (seq coll)]
+  (let [in (seq coll)]
     (cond
       (nil? in) #{}
 
@@ -7906,11 +7906,11 @@ reduces them without incurring seq initialization"
       (set-from-indexed-seq in)
 
       :else
-      (loop [in in
-              ^not-native out (-as-transient #{})]
+      (loop [^not-native in in
+             ^not-native out (-as-transient #{})]
         (if-not (nil? in)
-          (recur (-next in) (-conj! out (-first in)))
-          (-persistent! out))))))
+          (recur (next in) (-conj! out (-first in)))
+          (persistent! out))))))
 
 (defn hash-set
   "Returns a new hash set with supplied keys.  Any equal keys are
