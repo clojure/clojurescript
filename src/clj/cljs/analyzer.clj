@@ -298,6 +298,8 @@
   (or (-> x meta :column) (:column env)))
 
 (defn intern-macros
+  "Given a Clojure namespace intern all macros into the ambient ClojureScript
+   analysis environment."
   ([ns] (intern-macros ns false))
   ([ns reload]
     (when (or (nil? (get-in @env/*compiler* [::namespaces ns :macros]))
@@ -338,7 +340,9 @@
                *cljs-macros-is-classpath* false]
        ~@body)))
 
-(defn empty-env []
+(defn empty-env
+  "Construct an empty analysis environment. Required to analyze forms."
+  []
   (env/ensure
     {:ns (get-namespace *cljs-ns*)
      :context :statement
@@ -427,7 +431,10 @@
   (let [sym (symbol name)]
     (get (:require-macros (:ns env)) sym sym)))
 
-(defn confirm-ns [env ns-sym]
+(defn confirm-ns
+  "Given env, an analysis environment, and ns-sym, a symbol identifying a
+   namespace, confirm that the namespace exists. Warn if not found."
+  [env ns-sym]
   (when (and (nil? (get '#{cljs.core goog Math goog.string} ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym))
              ;; something else may have loaded the namespace, i.e. load-file
@@ -512,19 +519,27 @@
                {:name (symbol (str full-ns) (str sym))
                 :ns full-ns})))))))
 
-(defn resolve-existing-var [env sym]
+(defn resolve-existing-var
+  "Given env, an analysis environment, and sym, a symbol, resolve an existing var.
+   Emits a warning if no such var exists."
+  [env sym]
   (if-not (-> sym meta ::no-resolve)
     (resolve-var env sym confirm-var-exists)
     (resolve-var env sym)))
 
-(defn confirm-bindings [env names]
+(defn confirm-bindings
+  "Given env, an analysis environment env, and names, a list of symbols, confirm
+   that all correspond to declared dynamic vars."
+  [env names]
   (doseq [name names]
     (let [env (assoc env :ns (get-namespace *cljs-ns*))
           ev (resolve-existing-var env name)]
       (when (and ev (not (-> ev :dynamic)))
         (warning :dynamic env {:ev ev :name (:name ev)})))))
 
-(defn resolve-macro-var [env sym]
+(defn resolve-macro-var
+  "Given env, an analysis environment, and sym, a symbol, resolve a macro."
+  [env sym]
   (let [ns (-> env :ns :name)
         namespaces (get @env/*compiler* ::namespaces)]
     (cond
@@ -619,7 +634,10 @@
           ('#{cljs.core/PersistentHashMap
               cljs.core/List} t)))))
 
-(defn infer-tag [env e]
+(defn infer-tag
+  "Given env, an analysis environment, and e, an AST node, return the inferred
+   type of the node"
+  [env e]
   (if-let [tag (get-tag e)]
     tag
     (case (:op e)
@@ -1249,6 +1267,9 @@
       false)))
 
 (defn analyze-deps
+  "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
+   and opts, compiler options - analyze all of the dependencies. Required to
+   correctly analyze usage of other namespaces."
   ([lib deps env] (analyze-deps lib deps env nil))
   ([lib deps env opts]
    (let [compiler @env/*compiler*]
@@ -1793,7 +1814,10 @@
               (resolve-var env sym)))
           (assoc ret :op :var :info (resolve-var env sym)))))))
 
-(defn get-expander [sym env]
+(defn get-expander
+  "Given a sym, a symbol identifying a macro, and env, an analysis environment
+   return the corresponding Clojure macroexpander."
+  [sym env]
   (let [mvar
         (when-not (or (-> env :locals sym)        ;locals hide macros
                       (and (or (-> env :ns :excludes sym)
@@ -1814,7 +1838,10 @@
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
       (with-meta @mvar (meta mvar)))))
 
-(defn macroexpand-1 [env form]
+(defn macroexpand-1
+  "Given a env, an analysis environment, and form, a ClojureScript form,
+   macroexpand the form once."
+  [env form]
   (env/ensure
     (wrapping-errors env
       (let [op (first form)]
@@ -2121,6 +2148,9 @@
        (io/file (str target-file ".cache.edn"))))))
 
 (defn requires-analysis?
+  "Given a src, a resource, and output-dir, a compilation output directory
+   return true or false depending on whether src needs to be (re-)analyzed.
+   Can optionally pass cache, the analysis cache file."
   ([src] (requires-analysis? src "out"))
   ([src output-dir]
     (let [cache (cache-file src output-dir)]
