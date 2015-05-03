@@ -2793,6 +2793,17 @@
   (is (= (-> #'map meta :arglists)
         '([f] [f coll] [f c1 c2] [f c1 c2 c3] [f c1 c2 c3 & colls]))))
 
+(deftest tagged-literals
+  (let [tl (tagged-literal 'x "y")]
+    (is (tagged-literal? tl))
+    (is (not (tagged-literal? {:tag 'x :form "y"})))
+    (is (= (:tag tl) 'x))
+    (is (= (:form tl) "y"))
+    (is (= tl (tagged-literal 'x "y")))
+    (is (not= tl (tagged-literal 'z "y")))
+    (is (not= tl (tagged-literal 'x "z")))
+    (is (= (hash tl) (hash (tagged-literal 'x "y"))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

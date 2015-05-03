@@ -8956,6 +8956,7 @@ reduces them without incurring seq initialization"
   [proc coll]
   (reduce #(proc %2) nil coll))
 
+
 (defprotocol IEncodeJS
   (-clj->js [x] "Recursively transforms clj values to JavaScript")
   (-key->js [x] "Transforms map keys to valid JavaScript keys. Arbitrary keys are
@@ -9610,3 +9611,40 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (if f
       (do (f) :ok)
       :no-test)))
+
+
+(deftype TaggedLiteral [tag form]
+
+  IEquiv
+  (-equiv [this other]
+    (and (instance? TaggedLiteral other)
+         (= tag (.-tag other))
+         (= form (.-form other))))
+
+  IHash
+  (-hash [this]
+    (+ (* 31 (hash tag))
+       (hash form)))
+
+  ILookup
+  (-lookup [this v]
+    (-lookup this v nil))
+  (-lookup [this v not-found]
+    (case v
+      :tag tag
+      :form form
+      not-found))
+
+  )
+
+(defn tagged-literal?
+  "Return true if the value is the data representation of a tagged literal"
+  [value]
+  (instance? cljs.core.TaggedLiteral value))
+
+(defn tagged-literal
+  "Construct a data representation of a tagged literal from a
+  tag symbol and a form."
+  [tag form]
+  {:pre (symbol? tag)}
+  (cljs.core.TaggedLiteral. tag form))
