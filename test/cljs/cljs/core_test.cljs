@@ -2783,7 +2783,7 @@
   (is (= (set {:a 0 :b 0 :c 0 :d 0 :e 0 :f 0 :g 0 :h 0 :i 0})
          #{[:a 0] [:b 0] [:c 0] [:d 0] [:e 0] [:f 0] [:g 0] [:h 0] [:i 0]})))
 
-(deftest test-var-aarglists
+(deftest test-var-arglists
   (is (= (-> #'first meta :arglists) '([coll])))
   (is (= (-> #'hash-map meta :arglists) '([& keyvals])))
   (is (= (-> #'map meta :arglists)
