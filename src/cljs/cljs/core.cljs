@@ -9646,5 +9646,5 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   "Construct a data representation of a tagged literal from a
   tag symbol and a form."
   [tag form]
-  {:pre (symbol? tag)}
+  {:pre [(symbol? tag)]}
   (cljs.core.TaggedLiteral. tag form))
