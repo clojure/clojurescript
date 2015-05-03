@@ -908,6 +908,11 @@
   (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
     (apply (val) a b c d e f g h i j k l m n o p q r s t rest)))
 
+(defn var?
+  "Returns true if v is of type cljs.core.Var"
+  [v]
+  (instance? cljs.core.Var v))
+
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 
 (declare array-seq prim-seq IndexedSeq)

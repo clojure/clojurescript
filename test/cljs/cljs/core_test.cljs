@@ -2736,6 +2736,10 @@
       :foo #'foo-1187
       :bar #'bar-1187) []))
 
+(deftest test-var?
+  (is (var? #'inc))
+  (is (not (var? 1))))
+
 (deftest test-cljs-1187
   (testing "Internal var nodes analyzed in expression context"
     (is (= (with-out-str (print-foo-1187 :foo))
