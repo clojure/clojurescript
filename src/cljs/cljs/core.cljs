@@ -8944,11 +8944,13 @@ reduces them without incurring seq initialization"
 (es6-iterable Eduction)
 
 (defn eduction
-  "Returns a reducible/iterable/seqable application of
-  the transducer to the items in coll. Note that these applications	
-  will be performed every time iterator/seq/reduce is called."
-  [xform coll]
-  (Eduction. xform coll))
+  "Returns a reducible/iterable application of the transducers
+  to the items in coll. Transducers are applied in order as if
+  combined with comp. Note that these applications will be
+  performed every time reduce/iterator is called."
+  {:arglists '([xform* coll])}
+  [& xforms]
+  (Eduction. (apply comp (butlast xforms)) (last xforms)))
 
 (defn run!
   "Runs the supplied procedure (via reduce), for purposes of side
