@@ -1783,6 +1783,11 @@ reduces them without incurring seq initialization"
     false
     (satisfies? IMap x)))
 
+(defn ^boolean record?
+  "Return true if x satisfies IRecord"
+  [x]
+  (satisfies? IRecord x))
+
 (defn ^boolean vector?
   "Return true if x satisfies IVector"
   [x] (satisfies? IVector x))

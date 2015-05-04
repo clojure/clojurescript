@@ -1735,6 +1735,8 @@
         letters (C. "a" "b" "c")
         more-letters (assoc letters :d "d" :e "e" :f "f")]
     (testing "Testing records"
+      (is (record? fred))
+      (is (not (record? {})))
       (is (= (:firstname fred) "Fred"))
       (is (= fred fred-too))
       (is (false? (= fred nil)))
