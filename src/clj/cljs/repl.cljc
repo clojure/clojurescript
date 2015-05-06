@@ -730,7 +730,8 @@
                            1 "NO_SOURCE_FILE")
                   print-no-newline print
                   source-map-inline true
-                  repl-requires '[[cljs.repl :refer-macros [source doc find-doc apropos dir pst]]]
+                  repl-requires '[[cljs.repl :refer-macros [source doc find-doc apropos dir pst]]
+                                  [cljs.pprint :refer [pprint] :refer-macros [pp]]]
                   bind-err true}
              :as opts}]
   (let [repl-opts (-repl-options repl-env)

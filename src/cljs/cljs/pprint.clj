@@ -142,3 +142,8 @@ format-in can be either a control string or a previously compiled format."
   `(cljs.core/binding [cljs.pprint/*print-pprint-dispatch* ~function]
      ~@body))
 
+(defmacro pp
+  "A convenience macro that pretty prints the last thing output. This is
+exactly equivalent to (pprint *1)."
+  {:added "1.2"}
+  [] `(cljs.pprint/pprint *1))
