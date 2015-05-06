@@ -58,10 +58,16 @@
     (comp/emit
       (ana/analyze aenv
         '(defn foo ([a]) ([a b])))))
+  )
 
-  (env/with-compiler-env cenv
-    (comp/munge
-      (comp/lazy-load?
+;; CLJS-1225
+
+(comment
+  (binding [ana/*cljs-static-fns* true]
+    (env/with-compiler-env cenv
+      (comp/emit
         (ana/analyze aenv
-          '(defn foo ([a]) ([a b]))))))
+          '(defn incme []
+             (let [incme (fn [a queue & args])]
+               (println (incme 1 [1] 1 1))))))))
   )
