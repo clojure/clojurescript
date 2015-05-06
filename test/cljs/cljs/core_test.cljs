@@ -2786,7 +2786,7 @@
   (is (= (.getBasis TypeBasis) '[a b]))
   (is (= (.getBasis RecordBasis) '[c d e])))
 
-(deftest test-1212
+(deftest test-cljs-1212
   (is (= (set {:a 0 :b 0 :c 0 :d 0 :e 0 :f 0 :g 0 :h 0 :i 0})
          #{[:a 0] [:b 0] [:c 0] [:d 0] [:e 0] [:f 0] [:g 0] [:h 0] [:i 0]})))
 
@@ -2806,6 +2806,13 @@
     (is (not= tl (tagged-literal 'z "y")))
     (is (not= tl (tagged-literal 'x "z")))
     (is (= (hash tl) (hash (tagged-literal 'x "y"))))))
+
+(defn- incme []
+  (let [incme (fn [a queue & args] (inc a))]
+    (incme 1 [1] :color "#fff")))
+
+(deftest test-cljs-1225
+  (is (= (incme) 2)))
 
 (comment
   ;; ObjMap

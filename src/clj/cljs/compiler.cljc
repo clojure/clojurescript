@@ -785,7 +785,9 @@
                   (-> info
                     (assoc :name (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$variadic")))
                     ;; bypass local fn-self-name munging, we're emitting direct
-                    (update-in [:info] dissoc :fn-self-name))))
+                    ;; shadowing already applied
+                    (update-in [:info]
+                      #(-> % (dissoc :shadow) (dissoc :fn-self-name))))))
               {:max-fixed-arity mfa}]
 
              ;; direct dispatch to specific arity case
@@ -797,7 +799,9 @@
                       (-> info
                         (assoc :name (symbol (str (munge info) ".cljs$core$IFn$_invoke$arity$" arity)))
                         ;; bypass local fn-self-name munging, we're emitting direct
-                        (update-in [:info] dissoc :fn-self-name)))) nil]
+                        ;; shadowing already applied
+                        (update-in [:info]
+                          #(-> % (dissoc :shadow) (dissoc :fn-self-name)))))) nil]
                  [f nil]))))
           [f nil])]
     (emit-wrap env
