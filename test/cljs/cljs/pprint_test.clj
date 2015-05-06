@@ -5,8 +5,8 @@
   `(deftest ~name
      ~@(for [[x y] (partition 2 test-pairs)]
          `(cond
-            (= js/RegExp (type ~y)) (is (.exec ~y ~x))
-            (= js/String (type ~y)) (is (= ~x ~y))
+            (cljs.core/regexp? ~y) (is (.exec ~y ~x))
+            (cljs.core/string? ~y) (is (= ~x ~y))
             :else (is (= ~x ~y))))))
 
 (defmacro code-block
