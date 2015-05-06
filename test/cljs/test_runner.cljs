@@ -13,7 +13,8 @@
             [cljs.reducers-test]
             [cljs.keyword-test]
             [cljs.import-test]
-            [cljs.ns-test.foo]))
+            [cljs.ns-test.foo]
+            [cljs.pprint]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -32,4 +33,5 @@
   'cljs.ns-test
   'cljs.ns-test.foo
   'foo.ns-shadow-test
-  'cljs.import-test)
+  'cljs.import-test
+  'cljs.pprint)
