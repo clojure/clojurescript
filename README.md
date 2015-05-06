@@ -39,7 +39,8 @@ Latest stable release: 0.0-3211
 Please point all of your questions and feedback to the
 [Clojure mailing list](http://groups.google.com/group/clojure). There
 is also a community run
-[ClojureScript user mailing list](http://groups.google.com/group/clojurescript). The
+[ClojureScript user mailing list](http://groups.google.com/group/clojurescript) and
+the [IRC channel](irc://irc.freenode.net/#clojurescript) is quite active. The
 Jira bug/feature tracking application is located at
 <http://dev.clojure.org/jira/browse/CLJS>. Before submitting issues
 please read the
