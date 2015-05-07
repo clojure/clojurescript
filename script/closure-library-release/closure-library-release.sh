@@ -117,7 +117,7 @@ mkdir -p "$src_dir" "$third_party_src_dir"
 cp -r \
     "$closure_library_dir/AUTHORS" \
     "$closure_library_dir/LICENSE" \
-    "$closure_library_dir/README" \
+    "$closure_library_dir/README.md" \
     "$closure_library_dir/closure/goog" \
     "$closure_library_dir/closure/css" \
     "$src_dir"
@@ -125,7 +125,7 @@ cp -r \
 cp -r \
     "$closure_library_dir/AUTHORS" \
     "$closure_library_dir/LICENSE" \
-    "$closure_library_dir/README" \
+    "$closure_library_dir/README.md" \
     "$closure_library_dir/third_party/closure/goog" \
     "$third_party_src_dir"
 
