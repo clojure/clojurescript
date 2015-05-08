@@ -29,26 +29,26 @@ TAG=r$REVISION
 sed -e s/CLOJURESCRIPT_VERSION/0.0-$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
 
 COMP_FILE=`mktemp /tmp/compiler.clj.XXXXXXXXXXX`
-sed -e 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major 0, :minor 0, :qualifier '"$REVISION"'})/' src/clj/cljs/util.cljc > $COMP_FILE
-mv $COMP_FILE src/clj/cljs/util.cljc
+sed -e 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major 0, :minor 0, :qualifier '"$REVISION"'})/' src/main/clojure/cljs/util.cljc > $COMP_FILE
+mv $COMP_FILE src/main/clojure/cljs/util.cljc
 
 CLJS_FILE=`mktemp /tmp/core.cljs.XXXXXXXXXXX`
-sed -e 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""0.0-$REVISION"\"')/' src/cljs/cljs/core.cljs > $CLJS_FILE
-mv $CLJS_FILE src/cljs/cljs/core.cljs
+sed -e 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""0.0-$REVISION"\"')/' src/main/cljs/cljs/core.cljs > $CLJS_FILE
+mv $CLJS_FILE src/main/cljs/cljs/core.cljs
 
-rm -f src/cljs/cljs/core.aot.js
-rm -f src/cljs/cljs/core.aot.js.map
-rm -f src/cljs/cljs/core.cljs.cache.aot.edn
+rm -f src/main/cljs/cljs/core.aot.js
+rm -f src/main/cljs/cljs/core.aot.js.map
+rm -f src/main/cljs/cljs/core.cljs.cache.aot.edn
 
 ./script/aot_core
 
 AOT_FILE=`mktemp /tmp/core.aot.js.XXXXXXXXXXX`
-sed -e 's/0.0-0000/0.0-$REVISION/' src/cljs/cljs/core.aot.js > $AOT_FILE
-mv $AOT_FILE src/cljs/cljs/core.aot.js
+sed -e 's/0.0-0000/0.0-$REVISION/' src/main/cljs/cljs/core.aot.js > $AOT_FILE
+mv $AOT_FILE src/main/cljs/cljs/core.aot.js
 
 AOT_CACHE_FILE=`mktemp /tmp/core.cljs.cache.aot.edn.XXXXXXXXXXX`
-sed -e 's/0.0-0000/0.0-$REVISION/' src/cljs/cljs/core.cljs.cache.aot.edn > $AOT_CACHE_FILE
-mv $AOT_CACHE_FILE src/cljs/cljs/core.cljs.cache.aot.edn
+sed -e 's/0.0-0000/0.0-$REVISION/' src/main/cljs/cljs/core.cljs.cache.aot.edn > $AOT_CACHE_FILE
+mv $AOT_CACHE_FILE src/main/cljs/cljs/core.cljs.cache.aot.edn
 
 # For Hudson server
 if [ "$HUDSON" = "true" ]; then
@@ -63,6 +63,6 @@ else
     mvn clean install
 fi
 
-rm -f src/cljs/cljs/core.aot.js
-rm -f src/cljs/cljs/core.aot.js.map
-rm -f src/cljs/cljs/core.cljs.cache.aot.edn
+rm -f src/main/cljs/cljs/core.aot.js
+rm -f src/main/cljs/cljs/core.aot.js.map
+rm -f src/main/cljs/cljs/core.cljs.cache.aot.edn

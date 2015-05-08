@@ -1634,7 +1634,7 @@
           (str goog-ns))))))
 
 (defn aot-cache-core []
-  (let [base-path (io/file "src" "cljs" "cljs")
+  (let [base-path (io/file "src" "main" "cljs" "cljs")
         src (io/file base-path "core.cljs")
         dest (io/file base-path "core.aot.js")
         cache (io/file base-path "core.cljs.cache.aot.edn")]
@@ -1643,7 +1643,7 @@
       (comp/compile-file src dest
         {:source-map true
          :source-map-url "core.js.map"
-         :output-dir (str "src" File/separator "cljs")})
+         :output-dir (str "src" File/separator "main" File/separator "cljs")})
       (ana/write-analysis-cache 'cljs.core cache))))
 
 (comment

@@ -5,8 +5,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :jvm-opts ^:replace ["-Xmx512m" "-server"]
-  :source-paths ["src/clj"]
-  :resource-paths ["src/cljs"]
+  :source-paths ["src/main/clojure"]
+  :resource-paths ["src/main/cljs"]
   :test-paths ["test/clj"]
   :dependencies [[org.clojure/clojure "1.7.0-beta2"]
                  [org.clojure/data.json "0.2.6"]

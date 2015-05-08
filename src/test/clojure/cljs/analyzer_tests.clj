@@ -112,7 +112,7 @@
 (a/no-warn
   (e/with-compiler-env test-cenv
     (binding [a/*analyze-deps* false]
-      (a/analyze-file (io/file "src/cljs/cljs/core.cljs")))))
+      (a/analyze-file (io/file "src/main/cljs/cljs/core.cljs")))))
 
 (deftest basic-inference
   (is (= (e/with-compiler-env test-cenv

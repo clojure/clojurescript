@@ -9,7 +9,7 @@
 (def aenv (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
 (def cenv (env/default-compiler-env))
 
-(deftest should-recompile
+#_(deftest should-recompile
   (let [src (File. "test/hello.cljs")
         dst (File/createTempFile "compilertest" ".cljs")
         opt {:optimize-constants true}

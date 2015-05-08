@@ -10,9 +10,9 @@ CLJS_CP=`cat $CP_FILE`
 
 # For Hudson server
 if [ "$HUDSON" = "true" ]; then
-    $JAVA_HOME/bin/java -server -cp "$CLJS_CP:src/clj:src/cljs" clojure.main script/aot.clj
+    $JAVA_HOME/bin/java -server -cp "$CLJS_CP:src/main/clojure:src/main/cljs" clojure.main script/aot.clj
 else
-    java -server -cp "$CLJS_CP:src/clj:src/cljs" clojure.main script/aot.clj
+    java -server -cp "$CLJS_CP:src/main/clojure:src/main/cljs" clojure.main script/aot.clj
 fi
 
 

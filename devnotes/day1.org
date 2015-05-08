@@ -189,11 +189,11 @@
 **** ...
 *** strategy for apply
 * What's where
-** src/clj/cljs/compiler.clj
+** src/main/clojure/cljs/compiler.clj
 *** the compiler
-** src/clj/cljs/core.clj
+** src/main/clojure/cljs/core.clj
 *** core macros
-** src/cljs/core.cljs
+** src/main/cljs/core.cljs
 *** core library
 * Todo
 ** separate org file
