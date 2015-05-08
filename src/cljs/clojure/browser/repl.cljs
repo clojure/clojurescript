@@ -16,7 +16,7 @@
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.repl
   (:require [goog.dom :as gdom]
-            [goog.labs.userAgent.browser :as gbrowser]
+            [goog.userAgent.product :as product]
             [clojure.browser.net   :as net]
             [clojure.browser.event :as event]
             ;; repl-connection callback will receive goog.require('cljs.repl')
@@ -35,10 +35,10 @@
 ;; see goog.userAgent.product
 (defn get-ua-product []
   (cond
-    (gbrowser/isSafari) :safari
-    (gbrowser/isChrome) :chrome
-    (gbrowser/isFirefox) :firefox
-    (gbrowser/isIE) :ie))
+    product/SAFARI :safari
+    product/CHROME :chrome
+    product/FIREFOX :firefox
+    product/IE :ie))
 
 (defn evaluate-javascript
   "Process a single block of JavaScript received from the server"

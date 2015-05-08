@@ -263,13 +263,13 @@ JavaScript library containing provide/require 'declarations'."
                                 (string/split #"'\s*,\s*'"))))]
     (with-open [reader (io/reader (io/resource "goog/deps.js"))]
       (->> (line-seq reader)
-           (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\]\);.*" %))
+           (map #(re-matches #"^goog\.addDependency\(['\"](.*)['\"],\s*\[(.*)\],\s*\[(.*)\],.*\);.*" %))
            (remove nil?)
            (map #(drop 1 %))
            (remove #(.startsWith ^String (first %) "../../third_party"))
-           (map #(hash-map :file (str "goog/"(first %))
-                           :provides (parse-list (second %))
-                           :requires (parse-list (last %))
+           (map #(hash-map :file (str "goog/" (nth % 0))
+                           :provides (parse-list (nth % 1))
+                           :requires (parse-list (nth % 2))
                            :group :goog))
            (doall)))))
 
