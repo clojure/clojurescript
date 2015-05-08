@@ -173,3 +173,11 @@
          (debug-prn (str ~msg ", elapsed time:") (/ (double (- (. System (nanoTime)) start#)) 1000000.0) "msecs")
          ret#)
        ~expr)))
+
+(defmacro compile-if
+  ([exp then] `(compile-if ~exp ~then nil))
+  ([exp then else]
+   (if (try (eval exp)
+            (catch Throwable _ false))
+     `(do ~then)
+     `(do ~else))))
