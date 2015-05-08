@@ -561,7 +561,7 @@ nil if the end of stream has been reached")
 (defn ^:private read-uuid
   [uuid]
   (if (string? uuid)
-    (UUID. uuid)
+    (cljs.core/uuid uuid)
     (reader-error nil "UUID literal expects a string as its representation.")))
 
 (def ^:dynamic *tag-table*

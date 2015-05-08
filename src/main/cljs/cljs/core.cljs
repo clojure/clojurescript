@@ -9502,7 +9502,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 ;; UUID
 
-(deftype UUID [uuid]
+(deftype UUID [uuid ^:mutable __hash]
   Object
   (toString [_] uuid)
   (equiv [this other]
@@ -9518,11 +9518,16 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
   IHash
   (-hash [this]
-    (goog.string/hashCode (pr-str this)))
+    (when (nil? __hash)
+      (set! __hash (goog.string/hashCode uuid)))
+    __hash)
 
   IComparable
   (-compare [_ other]
     (garray/defaultCompare uuid (.-uuid other))))
+
+(defn uuid [s]
+  (UUID. s nil))
 
 ;;; ExceptionInfo
 

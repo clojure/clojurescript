@@ -1563,7 +1563,7 @@
             inst (str "2010-" (pad month) "-" (pad day) "T" (pad hour) ":14:15.666-00:00")]
         (is (= (pr-str (js/Date. inst)) (str "#inst \"" inst "\"")))))
     (let [uuid-str "550e8400-e29b-41d4-a716-446655440000"
-          uuid (UUID. uuid-str)]
+          uuid (cljs.core/uuid uuid-str)]
       (is (= (pr-str uuid) (str "#uuid \"" uuid-str "\""))))
     ;; pr-str PersistentQueueSeq - CLJS-800
     (is (= (pr-str (rest (conj cljs.core.PersistentQueue.EMPTY 1 2 3))) "(2 3)"))
@@ -1623,24 +1623,31 @@
 
 (deftest test-uuid
   (testing "Testing UUID"
-    (is (= (UUID. "550e8400-e29b-41d4-a716-446655440000")
-              (UUID. "550e8400-e29b-41d4-a716-446655440000")))
-    (is (not (identical? (UUID. "550e8400-e29b-41d4-a716-446655440000")
-                   (UUID. "550e8400-e29b-41d4-a716-446655440000"))))
-    (is (= 42 (get {(UUID. "550e8400-e29b-41d4-a716-446655440000") 42}
-                    (UUID. "550e8400-e29b-41d4-a716-446655440000")
+    (is (= (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")
+              (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")))
+    (is (not (identical? (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")
+                   (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000"))))
+    (is (= 42 (get {(cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000") 42}
+                    (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")
                     :not-at-all-found)))
     (is (= :not-at-all-found
-              (get {(UUID. "550e8400-e29b-41d4-a716-446655440000") 42}
-                (UUID. "666e8400-e29b-41d4-a716-446655440000")
+              (get {(cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000") 42}
+                (cljs.core/uuid "666e8400-e29b-41d4-a716-446655440000")
                 :not-at-all-found)))
-    (is (= -1 (compare (UUID. "550e8400-e29b-41d4-a716-446655440000")
-                       (UUID. "666e8400-e29b-41d4-a716-446655440000"))))
-    (is (=  1 (compare (UUID. "550e8400-e29b-41d4-a716-446655440000")
-                       (UUID. "550e8400-a29b-41d4-a716-446655440000"))))
-    (is (=  0 (compare (UUID. "550e8400-e29b-41d4-a716-446655440000")
-                       (UUID. "550e8400-e29b-41d4-a716-446655440000"))))
-    ))
+    (is (= -1 (compare (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")
+                       (cljs.core/uuid "666e8400-e29b-41d4-a716-446655440000"))))
+    (is (=  1 (compare (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")
+                       (cljs.core/uuid "550e8400-a29b-41d4-a716-446655440000"))))
+    (is (=  0 (compare (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")
+                       (cljs.core/uuid "550e8400-e29b-41d4-a716-446655440000")))))
+  (testing "UUID hashing"
+    (let [id   "550e8400-e29b-41d4-a716-446655440000"
+          uuid (cljs.core/uuid id)
+          expected (goog.string/hashCode id)]
+      (is (= expected (hash uuid)))
+      ;; checking hash cache
+      (is (= expected (.-__hash uuid)))
+      (is (= expected (hash uuid))))))
 
 (deftest test-comparable
   (testing "Testing IComparable"
