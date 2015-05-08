@@ -1,3 +1,35 @@
+## 0.0-3255
+
+### Changes
+* Update Closure Library dependency
+* CLJS-1252: Update Closure Compiler Dependency to v20150505
+* .clj -> .cljc for important analysis / compilation bits
+* add public cljs.compiler.api namespace
+* CLJS-1224: cljs.repl: Memoize stack frame mapping
+* depend on tools.reader 0.9.2
+
+### Enhancements
+* add cljs.pprint/pp macro
+* CLJS-710: port clojure.pprint
+* CLJS-1178: Compiler does not know Math ns is not not-native
+* add getBasis methods to deftype and defrecord ctors a la Clojure JVM
+* support ^long and ^double type hints
+
+### Fixes
+* fix cljs-1198 async testing regression
+* CLJS-1254: Update REPL browser agent detection CLJS-1253: Create/Use new Closure Library Release
+* CLJS-1225: Variadic function with same name as parent function gives runtime error in advanced compile mode.
+* CLJS-1246: Add cljs.core/record? predicate.
+* CLJS-1239: Make eduction variadic.
+* CLJS-1244: tagged-literal precondition check missing wrapping vector
+* CLJS-1243: Add TaggedLiteral type & related fns
+* CLJS-1240: Add cljs.core/var?
+* CLJS-1214: :arglists meta has needless quoting CLJS-1232: bad arglists for doc, regression
+* CLJS-1212: Error in set ctor for > 8-entry map literal
+* CLJS-1218: Syntax quoting an alias created with :require-macros throws ClassCastException
+* CLJS-1213: cljs.analyzer incorrectly marks all defs as tests when eliding test metadata
+* CLJS-742: Compilation with :output-file option set fails
+
 ## 0.0-3211
 
 ### Changes
