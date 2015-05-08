@@ -1095,7 +1095,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
                  (map
                    (fn [m]
                      (update-in (select-keys m [:ns :name :doc :forms :arglists :macro :url])
-                       [:name] clojure.core/name))
+                       [:name] #(if-not (nil? %) (clojure.core/name %) %)))
                    (sort-by :name (vals (ana-api/ns-interns ns)))))
                (ana-api/all-ns))
              (map #(select-keys (ana-api/find-ns %) [:name :doc]) (ana-api/all-ns))
