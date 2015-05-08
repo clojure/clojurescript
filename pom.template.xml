@@ -101,19 +101,19 @@
         <url>https://github.com/clojure/clojurescript</url>
     </scm>
 
+    <!--
     <parent>
         <groupId>org.clojure</groupId>
         <artifactId>pom.contrib</artifactId>
         <version>0.1.2</version>
     </parent>
+    -->
 
-    <!--
     <parent>
         <groupId>org.sonatype.oss</groupId>
         <artifactId>oss-parent</artifactId>
         <version>7</version>
     </parent>
-    -->
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
