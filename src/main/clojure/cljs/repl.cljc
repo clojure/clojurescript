@@ -177,7 +177,8 @@
          ;; source must supply at least :url - David
          sources (cljsc/add-dependencies
                    (merge (env->opts repl-env) opts)
-                   {:requires [(name ns)] :type :seed
+                   {:requires [(name ns)]
+                    :type :seed
                     :url (:uri (cljsc/source-for-namespace
                                  ns env/*compiler*))})
          deps (->> sources
@@ -187,7 +188,9 @@
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
-       (doseq [source (map #(cljsc/source-on-disk opts %) sources)]
+       (doseq [source (->> sources
+                        (remove (comp #{:seed} :type))
+                        (map #(cljsc/source-on-disk opts %)))]
          (-evaluate repl-env "<cljs repl>" 1
            (cljsc/add-dep-string opts source)))
        ;; REPLs that stream must manually load each dep - David

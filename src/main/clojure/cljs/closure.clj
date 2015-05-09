@@ -512,11 +512,16 @@
       (let [relpath (str path ".cljc")]
         (if-let [cljc-res (io/resource relpath)]
           {:relative-path relpath :uri cljc-res}
-          (let [relpath (:file (get-in @compiler-env [:js-dependency-index ns-str]))]
-            (if-let [js-res (and relpath (io/resource relpath))]
+          (let [relpath (:file (get-in @compiler-env [:js-dependency-index (str ns)]))]
+            (if-let [js-res (and relpath
+                                 ;; try to parse URL, otherwise just return local
+                                 ;; resource
+                                 (or (try (URL. relpath) (catch Throwable t))
+                                     (io/resource relpath)))]
               {:relative-path relpath :uri js-res}
               (throw
-                (IllegalArgumentException. (str "Namespace " ns " does not exist"))))))))))
+                (IllegalArgumentException.
+                  (str "Namespace " ns " does not exist"))))))))))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
@@ -997,7 +1002,7 @@
   to the specified base file."
   [^File base input]
   (let [base-path  (util/path-seq (.getCanonicalPath base))
-        input-path (util/path-seq (.getCanonicalPath (io/file ^URL (deps/-url input))))
+        input-path (util/path-seq (.getCanonicalPath (io/file (deps/-url input))))
         count-base (count base-path)
         common     (count (take-while true? (map #(= %1 %2) base-path input-path)))
         prefix     (repeat (- count-base common 1) "..")]
