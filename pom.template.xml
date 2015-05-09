@@ -214,6 +214,8 @@
                                 <include>**/*.cljc</include>
                                 <include>**/*.cljs</include>
                                 <include>**/*.js</include>
+                                <include>**/*.map</include>
+                                <include>**/*.edn</include>
                             </includes>
                         </configuration>
                     </execution>
