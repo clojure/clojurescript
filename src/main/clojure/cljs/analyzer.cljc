@@ -109,10 +109,11 @@
   (str "Use of undeclared Var " (:prefix info) "/" (:suffix info)))
 
 (defmethod error-message :undeclared-ns
-  [warning-type {:keys [ns-sym] :as info}]
+  [warning-type {:keys [ns-sym js-provide] :as info}]
   (str "No such namespace: " ns-sym
        ", could not locate " (util/ns->relpath ns-sym :cljs)
-       " or " (util/ns->relpath ns-sym :cljc)))
+       ", " (util/ns->relpath ns-sym :cljc)
+       ", or Closure namespace \"" js-provide "\""))
 
 (defmethod error-message :dynamic
   [warning-type info]
@@ -1290,7 +1291,7 @@
              (analyze-file src opts)
              (throw
                (error env
-                 (error-message :undeclared-ns {:ns-sym dep}))))))))))
+                 (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
