@@ -213,6 +213,7 @@
                                 <include>**/*.clj</include>
                                 <include>**/*.cljc</include>
                                 <include>**/*.cljs</include>
+                                <include>**/*.js</include>
                             </includes>
                         </configuration>
                     </execution>
