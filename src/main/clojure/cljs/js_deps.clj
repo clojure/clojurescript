@@ -212,9 +212,9 @@ JavaScript library containing provide/require 'declarations'."
    (with-open [reader (io/reader url)]
      (-> reader line-seq parse-js-ns
        (merge
-         {:url url :closure-lib true}
+         {:url url}
          (when lib-path
-           {:lib-path lib-path}))))))
+           {:closure-lib true :lib-path lib-path}))))))
 
 (defn load-library*
   "Given a path to a JavaScript library, which is a directory
