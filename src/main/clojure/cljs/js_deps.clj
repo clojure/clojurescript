@@ -111,6 +111,8 @@ case."
 (defprotocol IJavaScript
   (-foreign? [this] "Whether the Javascript represents a foreign
   library (a js file that not have any goog.provide statement")
+  (-closure-lib? [this] "Whether the Javascript represents a Closure style
+  library")
   (-url [this] "The URL where this JavaScript is located. Returns nil
   when JavaScript exists in memory only.")
   (-provides [this] "A list of namespaces that this JavaScript provides.")
@@ -205,10 +207,14 @@ case."
 (defn- library-graph-node
   "Returns a map of :provides, :requires, and :url given a URL to a goog-style
 JavaScript library containing provide/require 'declarations'."
-  [url]
-  (with-open [reader (io/reader url)]
-    (-> reader line-seq parse-js-ns
-      (assoc :url url))))
+  ([url] (library-graph-node url nil))
+  ([url lib-path]
+   (with-open [reader (io/reader url)]
+     (-> reader line-seq parse-js-ns
+       (merge
+         {:url url :closure-lib true}
+         (when lib-path
+           {:lib-path lib-path}))))))
 
 (defn load-library*
   "Given a path to a JavaScript library, which is a directory
@@ -216,7 +222,7 @@ JavaScript library containing provide/require 'declarations'."
   containing :provides, :requires, :file and :url."
   [path]
   (->> (find-js-resources path)
-    (map library-graph-node)
+    (map #(library-graph-node % path))
     (filter #(seq (:provides %)))))
 
 (def load-library (memoize load-library*))

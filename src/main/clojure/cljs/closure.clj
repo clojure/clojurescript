@@ -255,6 +255,7 @@
   
   String
   (-foreign? [this] false)
+  (-closure-lib? [this] false)
   (-url [this] nil)
   (-provides [this] (:provides (deps/parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (deps/parse-js-ns (string/split-lines this))))
@@ -262,6 +263,7 @@
   
   clojure.lang.IPersistentMap
   (-foreign? [this] (:foreign this))
+  (-closure-lib? [this] (:closure-lib this))
   (-url [this] (or (:url this)
                    (deps/to-url (:file this))))
   (-provides [this] (map name (:provides this)))
@@ -273,6 +275,7 @@
 (defrecord JavaScriptFile [foreign ^URL url ^URL source-url provides requires lines source-map]
   deps/IJavaScript
   (-foreign? [this] foreign)
+  (-closure-lib? [this] (:closure-lib this))
   (-url [this] url)
   (-provides [this] provides)
   (-requires [this] requires)
@@ -291,16 +294,19 @@
     (JavaScriptFile. foreign url source-url (map name provides) (map name requires) lines source-map)))
 
 (defn map->javascript-file [m]
-  (javascript-file
-    (:foreign m)
-    (when-let [f (:file m)]
-      (deps/to-url f))
-    (when-let [sf (:source-file m)]
-      (deps/to-url sf))
-    (:provides m)
-    (:requires m)
-    (:lines m)
-    (:source-map m)))
+  (merge
+    (javascript-file
+      (:foreign m)
+      (when-let [f (:file m)]
+        (deps/to-url f))
+      (when-let [sf (:source-file m)]
+        (deps/to-url sf))
+      (:provides m)
+      (:requires m)
+      (:lines m)
+      (:source-map m))
+    (when (:closure-lib m)
+      {:closure-lib true})))
 
 (defn read-js
   "Read a JavaScript file returning a map of file information."
@@ -1121,29 +1127,37 @@
                  (- (count (.split #"\r?\n" fdeps-str -1)) 1)
                  0)})))))))
 
+(defn lib-rel-path [{:keys [lib-path url] :as ijs}]
+  (string/replace
+    (util/path url)
+    (str (io/file (System/getProperty "user.dir") lib-path) File/separator)
+    ""))
+
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
   or is a foreign lib, return the path relative to the output
   directory."
-  [js]
-  (let [url (deps/-url js)]
-    (cond
-      url
-      (if (deps/-foreign? js)
-        (util/get-name url)
-        (path-from-jarfile url))
+  ([js] (rel-output-path js nil))
+  ([js opts]
+   (let [url (deps/-url js)]
+     (cond
+       url
+       (cond
+         (deps/-closure-lib? js) (lib-rel-path js)
+         (deps/-foreign? js) (util/get-name url)
+         :else (path-from-jarfile url))
 
-      (string? js)
-      (let [digest (MessageDigest/getInstance "SHA-1")]
-        (.reset digest)
-        (.update digest (.getBytes ^String js "utf8"))
-        (str
-          (->> (DatatypeConverter/printHexBinary (.digest digest))
-            (take 7)
-            (apply str))
-          ".js"))
+       (string? js)
+       (let [digest (MessageDigest/getInstance "SHA-1")]
+         (.reset digest)
+         (.update digest (.getBytes ^String js "utf8"))
+         (str
+           (->> (DatatypeConverter/printHexBinary (.digest digest))
+             (take 7)
+             (apply str))
+           ".js"))
 
-      :else (str (random-string 5) ".js"))))
+       :else (str (random-string 5) ".js")))))
 
 (defn write-javascript
   "Write or copy a JavaScript file to output directory. Only write if the file
@@ -1151,7 +1165,7 @@
   location."
   [opts js]
   (let [out-dir  (io/file (util/output-directory opts))
-        out-name (rel-output-path js)
+        out-name (rel-output-path js opts)
         out-file (io/file out-dir out-name)
         ijs      {:url      (deps/to-url out-file)
                   :requires (deps/-requires js)
@@ -1171,6 +1185,7 @@
   (let [url ^URL (deps/-url js)]
     (or (not url)
         (= (.getProtocol url) "jar")
+        (deps/-closure-lib? js)
         (deps/-foreign? js))))
 
 (defn source-on-disk

@@ -106,10 +106,11 @@
   (.getName f))
 
 (defn ^String path [x]
-  {:pre [(or (file? x) (url? x))]}
+  {:pre [(or (file? x) (url? x) (string? x))]}
   (cond
     (file? x) (.getAbsolutePath ^File x)
-    (url? x) (.getPath ^URL x)))
+    (url? x) (.getPath ^URL x)
+    (string? x) x))
 
 (defn ^String ext
   "Given a file, url or string return the file extension."
