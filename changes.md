@@ -1,3 +1,13 @@
+## 0.0-3264
+
+## Fixes
+* Add missing JS files back to the build
+* CLJS-1168: REPL fails to find .js files in :libs
+* CLJS-1196: Assert failed on 3190+ while :require-ing .js file in :libs directory
+* CLJS-1235: non-upstream :foreign-libs not copied to :output-dir
+* CLJS-1258: stack trace mapping does not appear to work with :asset-path
+* CLJS-1257: find-doc regression
+
 ## 0.0-3255
 
 ### Changes
