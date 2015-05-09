@@ -213,23 +213,26 @@
        (cond-> column
          (.endsWith column ")") (string/replace ")" "")))]))
 
-(defn parse-file [file opts]
-  (if (re-find #"http://localhost:9000/" file)
-    (-> file
-      (string/replace #"http://localhost:9000/" "")
-      (string/replace (Pattern/compile (str "^" (util/output-directory opts) "/")) ""))
-    (if-let [asset-root (:asset-root opts)]
-      (string/replace file asset-root "")
-      (throw
-        (ex-info (str "Could not relativize URL " file)
-          {:type :parse-stacktrace
-           :reason :relativize-url})))))
+(defn parse-file [{:keys [host port] :as repl-env} file {:keys [asset-path] :as opts}]
+  (let [base-url-pattern (Pattern/compile (str "http://" host ":" port "/"))]
+    (if (re-find base-url-pattern file)
+      (-> file
+        (string/replace base-url-pattern "")
+        (string/replace
+          (Pattern/compile
+            (str "^" (or asset-path (util/output-directory opts)) "/")) ""))
+      (if-let [asset-root (:asset-root opts)]
+        (string/replace file asset-root "")
+        (throw
+          (ex-info (str "Could not relativize URL " file)
+            {:type :parse-stacktrace
+             :reason :relativize-url}))))))
 
 ;; -----------------------------------------------------------------------------
 ;; Chrome Stacktrace
 
 (defn chrome-st-el->frame
-  [st-el opts]
+  [repl-env st-el opts]
   (let [xs (-> st-el
              (string/replace #"\s+at\s+" "")
              (string/split #"\s+"))
@@ -238,7 +241,7 @@
                          [(first xs) (last xs)])
         [file line column] (parse-file-line-column flc)]
     (if (and file function line column)
-      {:file (parse-file file opts)
+      {:file (parse-file repl-env file opts)
        :function (string/replace function #"Object\." "")
        :line line
        :column column}
@@ -249,7 +252,7 @@
          :column nil}))))
 
 (comment
-  (chrome-st-el->frame
+  (chrome-st-el->frame {:host "localhost" :port 9000}
     "\tat cljs$core$ffirst (http://localhost:9000/out/cljs/core.js:5356:34)" {})
   )
 
@@ -259,12 +262,12 @@
     string/split-lines
     (drop-while #(.startsWith % "Error"))
     (take-while #(not (.startsWith % "    at eval")))
-    (map #(chrome-st-el->frame % opts))
+    (map #(chrome-st-el->frame repl-env % opts))
     (remove nil?)
     vec))
 
 (comment
-  (parse-stacktrace nil
+  (parse-stacktrace {:host "localhost" :port 9000}
     "Error: 1 is not ISeqable
     at Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4258:8)
     at Object.cljs$core$first [as first] (http://localhost:9000/out/cljs/core.js:4288:19)
@@ -279,7 +282,7 @@
     {:ua-product :chrome}
     nil)
 
-  (parse-stacktrace nil
+  (parse-stacktrace {:host "localhost" :port 9000}
     "Error: 1 is not ISeqable
     at Object.cljs$core$seq [as seq] (http://localhost:9000/out/cljs/core.js:4259:8)
     at Object.cljs$core$first [as first] (http://localhost:9000/out/cljs/core.js:4289:19)
@@ -299,13 +302,13 @@
 ;; Safari Stacktrace
 
 (defn safari-st-el->frame
-  [st-el opts]
+  [repl-env st-el opts]
   (let [[function flc] (if (re-find #"@" st-el)
                          (string/split st-el #"@")
                          [nil st-el])
         [file line column] (parse-file-line-column flc)]
     (if (and file function line column)
-      {:file (parse-file file opts)
+      {:file (parse-file repl-env file opts)
        :function function
        :line line
        :column column}
@@ -316,8 +319,11 @@
          :column nil}))))
 
 (comment
-  (safari-st-el->frame
+  (safari-st-el->frame {:host "localhost" :port 9000}
     "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4259:17" {})
+
+  (safari-st-el->frame {:host "localhost" :port 9000}
+    "cljs$core$seq@http://localhost:9000/js/cljs/core.js:4259:17" {:asset-path "js"})
   )
 
 (defmethod parse-stacktrace :safari
@@ -327,7 +333,7 @@
     (drop-while #(.startsWith % "Error"))
     (take-while #(not (.startsWith % "eval code")))
     (remove string/blank?)
-    (map #(safari-st-el->frame % opts))
+    (map #(safari-st-el->frame repl-env % opts))
     (remove nil?)
     vec))
 
@@ -382,13 +388,13 @@ http://localhost:9000/out/goog/events/events.js:276:42"
       (string/replace #"\/" ""))))
 
 (defn firefox-st-el->frame
-  [st-el opts]
+  [repl-env st-el opts]
   (let [[function flc] (if (re-find #"@" st-el)
                          (string/split st-el #"@")
                          [nil st-el])
         [file line column] (parse-file-line-column flc)]
     (if (and file function line column)
-      {:file (parse-file file opts)
+      {:file (parse-file repl-env file opts)
        :function (firefox-clean-function function)
        :line line
        :column column}
@@ -399,19 +405,19 @@ http://localhost:9000/out/goog/events/events.js:276:42"
          :column nil}))))
 
 (comment
-  (firefox-st-el->frame
+  (firefox-st-el->frame {:host "localhost" :port 9000}
     "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4258:8" {})
 
-  (firefox-st-el->frame
+  (firefox-st-el->frame {:host "localhost" :port 9000}
     "cljs.core.map</cljs$core$map__2/</<@http://localhost:9000/out/cljs/core.js:16971:87" {})
 
-  (firefox-st-el->frame
+  (firefox-st-el->frame {:host "localhost" :port 9000}
     "cljs.core.map</cljs$core$map__2/</<@http://localhost:9000/out/cljs/core.js:16971:87" {})
 
-  (firefox-st-el->frame
+  (firefox-st-el->frame {:host "localhost" :port 9000}
     "cljs.core.pr_str</cljs$core$pr_str@http://localhost:9000/out/cljs/core.js:29138:8" {})
 
-  (firefox-st-el->frame
+  (firefox-st-el->frame {:host "localhost" :port 9000}
     "cljs.core.pr_str</cljs$core$pr_str__delegate@http://localhost:9000/out/cljs/core.js:29129:8" {})
   )
 
@@ -422,7 +428,7 @@ http://localhost:9000/out/goog/events/events.js:276:42"
     (drop-while #(.startsWith % "Error"))
     (take-while #(= (.indexOf % "> eval") -1))
     (remove string/blank?)
-    (map #(firefox-st-el->frame % opts))
+    (map #(firefox-st-el->frame repl-env % opts))
     (remove nil?)
     vec))
 
@@ -502,6 +508,18 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   repl/IJavaScriptEnv
   (-setup [this opts]
     (setup this opts))
+  (-evaluate [this _ _ js]
+    (binding [browser-state (:browser-state this)
+              ordering (:ordering this)
+              es (:es this)
+              server/state (:server-state this)]
+      (browser-eval js)))
+  (-load [this provides url]
+    (load-javascript this provides url))
+  (-tear-down [this]
+    (binding [server/state (:server-state this)]
+      (server/stop))
+    (.shutdown (:es this)))
   repl/IReplEnvOptions
   (-repl-options [this]
     {:repl-requires
@@ -517,24 +535,13 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
            (pr-str
              {:ua-product (clojure.browser.repl/get-ua-product)
               :value (str ~e)
-              :stacktrace (.-stack ~e)})))))
-  (-evaluate [this _ _ js]
-    (binding [browser-state (:browser-state this)
-              ordering (:ordering this)
-              es (:es this)
-              server/state (:server-state this)]
-      (browser-eval js)))
-  (-load [this provides url]
-    (load-javascript this provides url))
-  (-tear-down [this]
-    (binding [server/state (:server-state this)]
-      (server/stop))
-    (.shutdown (:es this))))
+              :stacktrace (.-stack ~e)}))))))
 
 (defn repl-env*
   [{:keys [output-dir] :as opts}]
   (merge (BrowserEnv.)
-    {:port 9000
+    {:host "localhost"
+     :port 9000
      :working-dir (->> [".repl" (util/clojurescript-version)]
                        (remove empty?) (string/join "-"))
      :serve-static true
