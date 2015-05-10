@@ -2814,6 +2814,14 @@
 (deftest test-cljs-1225
   (is (= (incme) 2)))
 
+(defn my-conj
+  [acc x]
+  (conj acc x))
+
+(deftest test-cljs-1209
+  (is (= (reduce my-conj [] (eduction (map identity) [1 2 3]))
+         [1 2 3])))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

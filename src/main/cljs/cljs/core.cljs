@@ -8940,8 +8940,8 @@ reduces them without incurring seq initialization"
   (-seq [_] (seq (sequence xform coll)))
 
   IReduce
-  (-reduce [_ f] (transduce xform f coll))
-  (-reduce [_ f init] (transduce xform f init coll))
+  (-reduce [_ f] (transduce xform (completing f) coll))
+  (-reduce [_ f init] (transduce xform (completing f) init coll))
 
   IPrintWithWriter
   (-pr-writer [coll writer opts]
