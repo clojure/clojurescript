@@ -8934,17 +8934,18 @@ reduces them without incurring seq initialization"
      (filter (fn [_] (< (rand) prob)) coll)))
 
 (deftype Eduction [xform coll]
-   ISequential
-   
-   ISeqable
-   (-seq [_] (seq (sequence xform coll)))
+  ISequential
 
-   IReduce
-   (-reduce [_ f init] (transduce xform f init coll))
+  ISeqable
+  (-seq [_] (seq (sequence xform coll)))
 
-   IPrintWithWriter
-   (-pr-writer [coll writer opts]
-     (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
+  IReduce
+  (-reduce [_ f] (transduce xform f coll))
+  (-reduce [_ f init] (transduce xform f init coll))
+
+  IPrintWithWriter
+  (-pr-writer [coll writer opts]
+    (pr-sequential-writer writer pr-writer "(" " " ")" opts coll)))
 
 (es6-iterable Eduction)
 
