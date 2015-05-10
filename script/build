@@ -6,6 +6,7 @@
 set -ex
 
 cd `dirname $0`/..
+rm -rf target
 
 POM_TEMPLATE="pom.template.xml"
 POM_FILE="pom.xml"
