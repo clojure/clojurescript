@@ -518,18 +518,21 @@
       (let [relpath (str path ".cljc")]
         (if-let [cljc-res (io/resource relpath)]
           {:relative-path relpath :uri cljc-res}
-          (let [ijs (get-in @compiler-env [:js-dependency-index (str ns)])
-                relpath (or (:file ijs) (:url ijs))]
-            (if-let [js-res (and relpath
+          (let [relpath (str path ".js")]
+            (if-let [js-res (io/resource relpath)]
+              {:relative-path relpath :uri js-res}
+              (let [ijs (get-in @compiler-env [:js-dependency-index (str ns)])
+                   relpath (or (:file ijs) (:url ijs))]
+               (if-let [js-res (and relpath
                                  ;; try to parse URL, otherwise just return local
                                  ;; resource
                                  (or (and (util/url? relpath) relpath)
-                                     (try (URL. relpath) (catch Throwable t))
-                                     (io/resource relpath)))]
-              {:relative-path relpath :uri js-res}
-              (throw
-                (IllegalArgumentException.
-                  (str "Namespace " ns " does not exist"))))))))))
+                                   (try (URL. relpath) (catch Throwable t))
+                                   (io/resource relpath)))]
+                 {:relative-path relpath :uri js-res}
+                 (throw
+                   (IllegalArgumentException.
+                     (str "Namespace " ns " does not exist"))))))))))))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
