@@ -1,3 +1,10 @@
+## 0.0-3269
+
+## Fixes
+* REPL support for Closure libraries that follow classpath conventions
+* don't break closure libs that follow classpath conventions
+* build missing .map source map & .edn caches files
+
 ## 0.0-3264
 
 ## Fixes
