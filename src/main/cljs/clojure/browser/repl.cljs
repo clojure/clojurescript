@@ -31,8 +31,6 @@
   (if-let [conn @xpc-connection]
     (net/transmit conn :print (pr-str data))))
 
-;; TODO: latest GCL interface for this is different
-;; see goog.userAgent.product
 (defn get-ua-product []
   (cond
     product/SAFARI :safari
