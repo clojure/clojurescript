@@ -1130,7 +1130,8 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
           (with-open [pbr (PushbackReader. (io/reader f))]
             (let [rdr (readers/source-logging-push-back-reader pbr)]
               (dotimes [_ (dec (:line v))] (readers/read-line rdr))
-              (-> (reader/read rdr) meta :source))))))))
+              (-> (reader/read {:read-cond :allow :features #{:cljs}} rdr)
+                meta :source))))))))
 
 (comment
   (def cenv (env/default-compiler-env))
