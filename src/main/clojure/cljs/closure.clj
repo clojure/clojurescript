@@ -1133,10 +1133,13 @@
                  0)})))))))
 
 (defn lib-rel-path [{:keys [lib-path url] :as ijs}]
-  (string/replace
-    (util/path url)
-    (str (io/file (System/getProperty "user.dir") lib-path) File/separator)
-    ""))
+  (let [path (util/path url)]
+    (if (.endsWith path ".js")
+      (util/get-name url)
+      (string/replace
+        path
+        (str (io/file (System/getProperty "user.dir") lib-path) File/separator)
+        ""))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
