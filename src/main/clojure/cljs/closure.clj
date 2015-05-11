@@ -1133,9 +1133,9 @@
                  0)})))))))
 
 (defn lib-rel-path [{:keys [lib-path url] :as ijs}]
-  (let [path (util/path url)]
-    (if (.endsWith path ".js")
-      (util/get-name url)
+  (if (.endsWith lib-path ".js")
+    (util/get-name url)
+    (let [path (util/path url)]
       (string/replace
         path
         (str (io/file (System/getProperty "user.dir") lib-path) File/separator)
