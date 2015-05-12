@@ -276,6 +276,7 @@
                [(fn []
                    (cljs.test/set-env! ~env)
                    (do-report (deref ~summary))
+                   (report (assoc (deref ~summary) :type :end-run-tests))
                    (cljs.test/clear-env!))]))))
 
 (defmacro run-tests

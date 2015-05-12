@@ -343,6 +343,7 @@
 (defmethod report [::default :begin-test-var] [m]
   #_(println ":begin-test-var" (testing-vars-str m)))
 (defmethod report [::default :end-test-var] [m])
+(defmethod report [::default :end-run-tests] [m])
 
 (defn js-line-and-column [stack-element]
   (let [parts (.split stack-element ":")
