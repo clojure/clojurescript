@@ -96,6 +96,13 @@
 ;; =============================================================================
 ;; Main API
 
+(defn add-implicit-options
+  "Given a valid map of build options add any standard implicit options. For
+  example :optimizations :none implies :cache-analysis true and :source-map
+  true."
+  [opts]
+  (closure/add-implicit-options opts))
+
 (defn inputs
   "Given a list of directories and files, return a compilable object that may
   be passed to build or watch."
