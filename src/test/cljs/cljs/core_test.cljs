@@ -2829,6 +2829,9 @@
   (is (= (reduce my-conj [] (eduction (map identity) [1 2 3]))
          [1 2 3])))
 
+(deftest test-get-string-float
+  (is (= (get "hi" 1.7) \i)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

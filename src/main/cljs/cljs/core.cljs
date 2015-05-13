@@ -1574,11 +1574,11 @@ reduces them without incurring seq initialization"
 
         (array? o)
         (when (< k (.-length o))
-          (aget o k))
+          (aget o (int k)))
         
         (string? o)
         (when (< k (.-length o))
-          (aget o k))
+          (aget o (int k)))
 
         (native-satisfies? ILookup o)
         (-lookup o k)
