@@ -20,6 +20,13 @@
   []
   (ana/empty-env))
 
+(defmacro no-warn
+  "Disable analyzer warnings for any analysis executed in body."
+  [& body]
+  (let [no-warnings (zipmap (keys ana/*cljs-warnings*) (repeat false))]
+    `(binding [ana/*cljs-warnings* ~no-warnings]
+       ~@body)))
+
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
   (one of :statement, :expr, :return), :ns (a symbol naming the

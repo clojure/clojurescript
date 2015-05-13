@@ -11,6 +11,7 @@
 
   For example: a build script may need to how to invalidate compiled
   files so that they will be recompiled."
+  (:refer-clojure :exclude [compile])
   (:require [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
@@ -96,6 +97,39 @@
 ;; =============================================================================
 ;; Main API
 
+(defn goog-dep-string
+  "Given compiler options and a IJavaScript instance return the corresponding
+  goog.addDependency string"
+  [opts ijs]
+  (closure/add-dep-string opts ijs))
+
+(defn source-on-disk
+  "Ensure that the given IJavaScript exists on disk in the output directory.
+  Return updated IJavaScript with the new location if necessary."
+  [opts ijs]
+  (closure/source-on-disk opts ijs))
+
+(defn ns->source
+  "Given a namespace as a symbol return the corresponding resource if it exists."
+  [ns]
+  (util/ns->source ns))
+
+(defn ns->location
+  "Given a namespace and compilation environment return the relative path and
+  uri of the corresponding source regardless of the source language extension:
+  .cljs, .cljc, .js. Returns a map containing :relative-path a string, and
+  :uri a URL."
+  ([ns] (ns->location ns env/*compiler*))
+  ([ns compiler-env]
+   (closure/source-for-namespace ns compiler-env)))
+
+(defn add-dependencies
+  "Given one or more IJavaScript objects in dependency order, produce
+  a new sequence of IJavaScript objects which includes the input list
+  plus all dependencies in dependency order."
+  [opts & ijss]
+  (closure/add-dependencies opts ijss))
+
 (defn add-implicit-options
   "Given a valid map of build options add any standard implicit options. For
   example :optimizations :none implies :cache-analysis true and :source-map
@@ -119,6 +153,21 @@
                     compiled
                     [compiled])))]
         (mapcat compile-input xs)))))
+
+(defn compile
+  "Given a Compilable, compile it and return an IJavaScript."
+  [opts compilable]
+  (closure/compile compilable opts))
+
+(defn output-unoptimized
+  "Ensure that all JavaScript source files are on disk (not in jars),
+   write the goog deps file including only the libraries that are being
+   used and write the deps file for the current project.
+
+   The deps file for the current project will include third-party
+   libraries."
+  [opts & sources]
+  (apply closure/output-unoptimized opts sources))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
