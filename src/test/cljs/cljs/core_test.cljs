@@ -2829,7 +2829,8 @@
   (is (= (reduce my-conj [] (eduction (map identity) [1 2 3]))
          [1 2 3])))
 
-(deftest test-get-string-float
+(deftest test-get-with-float
+  (is (= (get #js [\h \i] 1.7) \i))
   (is (= (get "hi" 1.7) \i)))
 
 (comment
