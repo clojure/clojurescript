@@ -24,6 +24,19 @@
 (def ^:dynamic ordering nil)
 (def ^:dynamic es nil)
 
+(def ext->mime-type
+  {".html" "text/html"
+   ".css" "text/css"
+
+   ".jpg" "image/jpeg"
+   ".png" "image/png"
+   ".gif" "image/gif"
+
+   ".js" "text/javascript"
+   ".cljs" "text/x-clojure"
+   ".cljc" "text/x-clojure"
+   ".map" "application/json"})
+
 (defn- set-return-value-fn
   "Save the return value function which will be called when the next
   return value is received."
@@ -84,16 +97,8 @@
             local-path)]
       (if local-path
         (server/send-and-close conn 200 (slurp local-path)
-          (condp #(.endsWith %2 %1) path
-            ".html" "text/html"
-            ".css" "text/css"
-            ".html" "text/html"
-            ".jpg" "image/jpeg"
-            ".js" "text/javascript"
-            ".cljs" "text/x-clojure"
-            ".cljc" "text/x-clojure"
-            ".map" "application/json"
-            ".png" "image/png"
+          (if (some #(.endsWith path %) (keys ext->mime-type))
+            (get ext->mime-type path)
             "text/plain"))
         (server/send-404 conn path)))
     (server/send-404 conn path)))
@@ -105,14 +110,7 @@
 
 (server/dispatch-on :get
   (fn [{:keys [path]} _ _]
-    (or
-      (= path "/")
-      (.endsWith path ".js")
-      (.endsWith path ".cljc")
-      (.endsWith path ".cljs")
-      (.endsWith path ".map")
-      (.endsWith path ".html")
-      (.endsWith path ".css")))
+    (or (= path "/") (some #(.endsWith path %) (keys ext->mime-type))))
   send-static)
 
 (defmulti handle-post (fn [m _ _ ] (:type m)))
