@@ -477,7 +477,8 @@
         docs (remove nil? docs)]
     (letfn [(print-comment-lines [e]
               (doseq [next-line (string/split-lines e)]
-                (emitln " * " (string/trim next-line))))]
+                (emitln " * " (-> (string/trim next-line)
+                                  (string/replace "*/" "* /")))))]
       (when (seq docs)
         (emitln "/**")
         (doseq [e docs]

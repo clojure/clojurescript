@@ -69,6 +69,16 @@
            (env/with-compiler-env cenv
              (ana/resolve-var {:ns {:name 'cljs.core}} '..))))))
 
+(deftest test-cljs-428
+  (letfn [(check-docs [docs]
+            (is (= 1 (count (re-seq #"\*/" docs)))))]
+    (check-docs (with-out-str 
+                  (comp/emit-comment "/* multiline comments */" nil)))
+    (check-docs (with-out-str
+                  (comp/emit
+                    (ana/analyze aenv
+                      '(defn foo "foo is */ like this /*/" [] (+ 1 1))))))))
+
 (comment
   (env/with-compiler-env cenv
     (comp/emit
