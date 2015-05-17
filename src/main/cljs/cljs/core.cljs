@@ -8883,7 +8883,7 @@ reduces them without incurring seq initialization"
     x))
 
 (defn ^boolean realized?
-  "Returns true if a value has been produced for a promise, delay, future or lazy sequence."
+  "Returns true if a value has been produced for a delay or lazy sequence."
   [d]
   (-realized? d))
 
