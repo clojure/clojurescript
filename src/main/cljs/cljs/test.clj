@@ -334,7 +334,10 @@
   "Calls test-vars on every var with :test metadata interned in the
   namespace, with fixtures."
   [[quote ns :as form]]
-  `(cljs.test/run-block (test-all-vars-block ~form)))
+  `(cljs.test/run-block
+     (concat (test-all-vars-block ~form)
+             [(fn []
+                (report {:type :end-test-all-vars :ns ~form}))])))
 
 (defmacro test-ns-block
   "Like test-ns, but returns a block for further composition and

@@ -357,6 +357,8 @@
   #_(println ":begin-test-var" (testing-vars-str m)))
 (defmethod report [::default :end-test-var] [m])
 (defmethod report [::default :end-run-tests] [m])
+(defmethod report [::default :end-test-all-vars] [m])
+(defmethod report [::default :end-test-vars] [m])
 
 ;; =============================================================================
 ;; File, Line, and Column Helpers
@@ -576,7 +578,9 @@
   appropriate fixtures assuming they are present in the current
   testing environment."
   [vars]
-  (run-block (test-vars-block vars)))
+  (run-block (concat (test-vars-block vars)
+                     [(fn []
+                        (report {:type :end-test-vars :vars vars}))])))
 
 ;; =============================================================================
 ;; Running Tests, high level functions
