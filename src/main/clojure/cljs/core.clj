@@ -1394,11 +1394,12 @@
   [& body]
   `(new cljs.core/LazySeq nil (fn [] ~@body) nil nil))
 
-(defmacro delay [& body]
+(defmacro delay
   "Takes a body of expressions and yields a Delay object that will
   invoke the body only the first time it is forced (with force or deref/@), and
   will cache the result and return it on all subsequent force
   calls."
+  [& body]
   `(new cljs.core/Delay (fn [] ~@body) nil))
 
 (defmacro with-redefs
