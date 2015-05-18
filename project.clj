@@ -7,7 +7,7 @@
   :jvm-opts ^:replace ["-Xmx512m" "-server"]
   :source-paths ["src/main/clojure"]
   :resource-paths ["src/main/cljs"]
-  :test-paths ["test/clj"]
+  :test-paths ["src/test/clojure"]
   :dependencies [[org.clojure/clojure "1.7.0-beta2"]
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.reader "0.9.2"]
