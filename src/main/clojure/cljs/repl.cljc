@@ -1017,7 +1017,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     lib's namespace in the current namespace.
   :refer takes a list of symbols to refer from the namespace..
   :refer-macros takes a list of macro symbols to refer from the namespace.
-  :include-macros takes a list of macro symbols to refer from the namespace.
+  :include-macros true causes macros from the namespace to be required.
 
   Flags
 
