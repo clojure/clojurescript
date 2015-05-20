@@ -86,7 +86,8 @@
         (try
           (let [len (.read in buf)]
             (when-not (neg? len)
-              (.write out buf 0 len)))
+              (.write out buf 0 len)
+              (.flush out)))
           (catch IOException e
             (when (and (.isAlive proc) (not (.contains (.getMessage e) "Stream closed")))
               (.printStackTrace e *err*))))
