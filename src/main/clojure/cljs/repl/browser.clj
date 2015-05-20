@@ -37,6 +37,16 @@
    ".cljc" "text/x-clojure"
    ".map" "application/json"})
 
+(def mime-type->encoding
+  {"text/html" "UTF-8"
+   "text/css" "UTF-8"
+   "image/jpeg" "ISO-8859-1"
+   "image/png" "ISO-8859-1"
+   "image/gif" "ISO-8859-1"
+   "text/javascript" "UTF-8"
+   "text/x-clojure" "UTF-8"
+   "application/json" "UTF-8"})
+
 (defn- set-return-value-fn
   "Save the return value function which will be called when the next
   return value is received."
@@ -96,10 +106,16 @@
               :else nil)
             local-path)]
       (if local-path
-        (server/send-and-close conn 200 (slurp local-path)
-          (if (some #(.endsWith path %) (keys ext->mime-type))
-            (get ext->mime-type path)
-            "text/plain"))
+        (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
+          (let [mime-type (ext->mime-type ext "text/plain")
+                encoding (mime-type->encoding mime-type "UTF-8")]
+            (server/send-and-close
+              conn
+              200
+              (slurp local-path :encoding encoding)
+              mime-type
+              encoding))
+          (server/send-and-close conn 200 (slurp local-path) "text/plain"))
         (server/send-404 conn path)))
     (server/send-404 conn path)))
 

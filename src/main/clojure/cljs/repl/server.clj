@@ -108,20 +108,22 @@
   ([conn status form]
     (send-and-close conn status form "text/html"))
   ([conn status form content-type]
-    (let [utf-8-form (.getBytes form "UTF-8")
-          content-length (count utf-8-form)
+    (send-and-close conn status form content-type "UTF-8"))
+  ([conn status form content-type encoding]
+    (let [byte-form (.getBytes form encoding)
+          content-length (count byte-form)
           headers (map #(.getBytes (str % "\r\n"))
                     [(status-line status)
                      "Server: ClojureScript REPL"
                      (str "Content-Type: "
                        content-type
-                       "; charset=utf-8")
+                       "; charset=" encoding)
                      (str "Content-Length: " content-length)
                      ""])]
       (with-open [os (.getOutputStream conn)]
         (doseq [header headers]
           (.write os header 0 (count header)))
-        (.write os utf-8-form 0 content-length)
+        (.write os byte-form 0 content-length)
         (.flush os)
         (.close conn)))))
 
