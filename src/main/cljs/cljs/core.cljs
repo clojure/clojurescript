@@ -8602,10 +8602,12 @@ reduces them without incurring seq initialization"
   [objs opts]
   (string-print (pr-str-with-opts objs opts)))
 
-(defn newline [opts]
-  (string-print "\n")
-  (when (get opts :flush-on-newline)
-    (flush)))
+(defn newline
+  ([] (newline nil))
+  ([opts]
+   (string-print "\n")
+   (when (get opts :flush-on-newline)
+     (flush))))
 
 (defn pr-str
   "pr to a string, returning it. Fundamental entrypoint to IPrintWithWriter."
