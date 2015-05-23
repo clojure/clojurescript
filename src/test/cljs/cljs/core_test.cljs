@@ -2833,6 +2833,22 @@
   (is (= (get #js [\h \i] 1.7) \i))
   (is (= (get "hi" 1.7) \i)))
 
+(defn foo-1284
+  ([] nil)
+  ([x0 & xs] [x0 xs]))
+
+(deftest test-cljs-1284
+  (let [xs (IndexedSeq. #js [] 0)
+        ys (IndexedSeq. #js [1] 3)]
+    (is (nil? (first xs)))
+    (is (nil? (seq xs)))
+    (is (= (rest xs) ()))
+    (is (= (pr-str xs) "()"))
+    (is (= (foo-1284 0) [0 ()]))
+    (is (= (pr-str (foo-1284 0)) "[0 ()]"))
+    (is (zero? (count ys)))
+    (is (= (transduce (map inc) conj [] ys) []))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

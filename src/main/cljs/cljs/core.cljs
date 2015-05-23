@@ -1256,7 +1256,9 @@ reduces them without incurring seq initialization"
   (-clone [_] (IndexedSeq. arr i))
 
   ISeqable
-  (-seq [this] this)
+  (-seq [this]
+    (when (< i (alength arr))
+      this))
 
   ASeq
   ISeq
@@ -1271,7 +1273,8 @@ reduces them without incurring seq initialization"
                nil))
 
   ICounted
-  (-count [_] (- (alength arr) i))
+  (-count [_]
+    (max 0 (- (alength arr) i)))
 
   IIndexed
   (-nth [coll n]
