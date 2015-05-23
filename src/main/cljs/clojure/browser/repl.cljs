@@ -16,6 +16,7 @@
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.repl
   (:require [goog.dom :as gdom]
+            [goog.object :as gobj]
             [goog.userAgent.product :as product]
             [clojure.browser.net   :as net]
             [clojure.browser.event :as event]
@@ -134,11 +135,11 @@
           (.appendChild js/document.body
             (as-> (.createElement js/document "script") script
               (doto script
-                (aset "type" "text/javascript")
-                (aset "onload" onload)
-                (aset "onreadystatechange" onload)) ;; IE
+                (gobj/set "type" "text/javascript")
+                (gobj/set "onload" onload)
+                (gobj/set "onreadystatechange" onload)) ;; IE
               (if (nil? opt_sourceText)
-                (doto script (aset "src" src))
+                (doto script (gobj/set "src" src))
                 (doto script (gdom/setTextContext opt_sourceText))))))))
     ;; queue or load
     (set! (.-writeScriptTag_ js/goog)
@@ -157,8 +158,9 @@
         (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
           (when reload?
             (let [path (aget js/goog.dependencies_.nameToPath src)]
-              (js-delete js/goog.dependencies_.visited path)
-              (js-delete js/goog.dependencies_.written
+              (gobj/remove js/goog.dependencies_.visited path)
+              (gobj/remove js/goog.dependencies_.written path)
+              (gobj/remove js/goog.dependencies_.written
                 (str js/goog.basePath path))))
           (let [ret (.require__ js/goog src)]
             (when (= reload "reload-all")
