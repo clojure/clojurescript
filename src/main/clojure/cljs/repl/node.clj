@@ -78,18 +78,21 @@
 (defn platform-path [v]
   (str "path.join.apply(null, " (seq->js-array v) ")"))
 
+(defn- alive? [proc]
+  (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
+
 (defn- pipe [^Process proc in ^Writer out]
   ;; we really do want system-default encoding here
   (with-open [^java.io.Reader in (-> in InputStreamReader. BufferedReader.)]
     (loop [buf (char-array 1024)]
-      (when (try (.exitValue proc) false (catch IllegalThreadStateException _ true))
+      (when (alive? proc)
         (try
           (let [len (.read in buf)]
             (when-not (neg? len)
               (.write out buf 0 len)
               (.flush out)))
           (catch IOException e
-            (when (and (.isAlive proc) (not (.contains (.getMessage e) "Stream closed")))
+            (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
               (.printStackTrace e *err*))))
         (recur buf)))))
 
