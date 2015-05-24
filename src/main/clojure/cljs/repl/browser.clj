@@ -227,8 +227,8 @@
        (cond-> column
          (.endsWith column ")") (string/replace ")" "")))]))
 
-(defn parse-file [{:keys [host port] :as repl-env} file {:keys [asset-path] :as opts}]
-  (let [base-url-pattern (Pattern/compile (str "http://" host ":" port "/"))]
+(defn parse-file [{:keys [host host-port port] :as repl-env} file {:keys [asset-path] :as opts}]
+  (let [base-url-pattern (Pattern/compile (str "http://" host ":" (or host-port port) "/"))]
     (if (re-find base-url-pattern file)
       (-> file
         (string/replace base-url-pattern "")
