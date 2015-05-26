@@ -1399,7 +1399,10 @@
                    (map (fn [[k v]]
                           [(if (symbol? k) (str (comp/munge k)) k) v])
                      (:closure-defines opts)))))
-        {:keys [libs foreign-libs externs]} (get-upstream-deps)]
+        {:keys [libs foreign-libs externs]} (get-upstream-deps)
+        emit-constants (or (and (= optimizations :advanced)
+                                (not (false? (:optimize-constants opts))))
+                           (:optimize-constants opts))]
     (cond->
       (-> opts
         (assoc
@@ -1407,7 +1410,8 @@
           :output-dir output-dir
           :ups-libs libs
           :ups-foreign-libs foreign-libs
-          :ups-externs externs)
+          :ups-externs externs
+          :emit-constants emit-constants)
         (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
 
       (:target opts)
@@ -1434,10 +1438,7 @@
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)
-             all-opts (add-implicit-options opts)
-             emit-constants (or (and (= (:optimizations opts) :advanced)
-                                     (not (false? (:optimize-constants opts))))
-                                (:optimize-constants opts))]
+             all-opts (add-implicit-options opts)]
          (check-output-to opts)
          (check-output-dir opts)
          (check-source-map opts)
@@ -1446,7 +1447,7 @@
          (check-node-target opts)
          (swap! compiler-env
            #(-> %
-             (assoc-in [:options :emit-constants] emit-constants)
+             (update-in [:options] merge all-opts)
              (assoc :target (:target opts))
              (assoc :js-dependency-index (deps/js-dependency-index all-opts))))
          (binding [comp/*dependents* (when-not (false? (:recompile-dependents opts))
@@ -1484,7 +1485,7 @@
                                         [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
                                   (when (= :nodejs (:target all-opts))
                                     [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
-                 _ (when emit-constants
+                 _ (when (:emit-constants all-opts)
                      (comp/emit-constants-table-to-file
                        (::ana/constant-table @env/*compiler*)
                        (str (util/output-directory all-opts) "/constants_table.js")))
