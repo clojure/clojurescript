@@ -90,11 +90,12 @@
      :headers headers}))
 
 (defn read-request [rdr]
-  (let [line (.readLine rdr)]
+  (if-let [line (.readLine rdr)]
     (cond
       (.startsWith line "POST") (read-post line rdr)
       (.startsWith line "GET") (read-get line rdr)
-      :else {:method :unknown :content line})))
+      :else {:method :unknown :content line})
+    {:method :unknown :content nil}))
 
 (defn- status-line [status]
   (case status
