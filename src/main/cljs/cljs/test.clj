@@ -281,7 +281,10 @@
 
 (defmacro run-tests
   "Runs all tests in the given namespaces; prints results.
-  Defaults to current namespace if none given."
+  Defaults to current namespace if none given. Does not return a meaningful
+  value due to the possiblity of asynchronous execution. To detect test
+  completion add a :end-run-tests method case to the cljs.test/report
+  multimethod."
   ([] `(run-tests (cljs.test/empty-env) '~ana/*cljs-ns*))
   ([env-or-ns]
    (if (ns? env-or-ns)
