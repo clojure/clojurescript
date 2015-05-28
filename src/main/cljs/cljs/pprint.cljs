@@ -14,7 +14,8 @@
                                defdirectives formatter-out]])
   (:require
     [cljs.core :refer [IWriter IDeref]]
-    [clojure.string :as string])
+    [clojure.string :as string]
+    [goog.string :as gstring])
   (:import [goog.string StringBuffer]))
 
 (def ^:dynamic *out* nil)
@@ -1956,19 +1957,12 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
           ;;TODO need to enforce integers only?
           (-write writer (string/upper-case (char c))))))))
 
-;;TODO: This is an oversimplied version. Needs to be fully implemented
-(defn- is-letter? [s]
-  (boolean
-    (#{"A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" "N" "O" "P" "Q" "R" "S" "T" "U" "V" "W" "X" "Y" "Z"
-       "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"}
-      s)))
-
 (defn- capitalize-string
   "Capitalizes the words in a string. If first? is false, don't capitalize the
                                       first character of the string even if it's a letter."
   [s first?]
   (let [f (first s)
-        s (if (and first? f (is-letter? f))
+        s (if (and first? f (gstring/isUnicodeChar f))
             (str (string/upper-case f) (subs s 1))
             s)]
     (apply str
@@ -1985,11 +1979,6 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
                         (subs s (inc offset))]
                        [s nil]))))
                s)))))
-
-;;TODO: This is an oversimplied version. Needs to be fully implemented
-(defn- is-whitespace? [s]
-  (boolean
-    (#{\space \newline} s)))
 
 (defn- capitalize-word-writer
   "Returns a proxy that wraps writer, capitalizing all words"
@@ -2009,13 +1998,13 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
             (-write writer
                     (capitalize-string (.toLowerCase s) @last-was-whitespace?))
             (when (pos? (.-length s))
-              (reset! last-was-whitespace? (is-whitespace? (nth s (dec (count s)))))))
+              (reset! last-was-whitespace? (gstring/isEmptyOrWhitespace (nth s (dec (count s)))))))
 
           js/Number
           (let [c (char x)]
             (let [mod-c (if @last-was-whitespace? (string/upper-case c) c)]
               (-write writer mod-c)
-              (reset! last-was-whitespace? (is-whitespace? c)))))))))
+              (reset! last-was-whitespace? (gstring/isEmptyOrWhitespace c)))))))))
 
 (defn- init-cap-writer
   "Returns a proxy that wraps writer, capitalizing the first word"
@@ -2046,7 +2035,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
 
           js/Number
           (let [c (char x)]
-            (if (and (not @capped) (is-letter? c))
+            (if (and (not @capped) (gstring/isUnicodeChar c))
               (do
                 (reset! capped true)
                 (-write writer (string/upper-case c)))
