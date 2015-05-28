@@ -2812,7 +2812,8 @@
     (is (= tl (tagged-literal 'x "y")))
     (is (not= tl (tagged-literal 'z "y")))
     (is (not= tl (tagged-literal 'x "z")))
-    (is (= (hash tl) (hash (tagged-literal 'x "y"))))))
+    (is (= (hash tl) (hash (tagged-literal 'x "y"))))
+    (is (= "#foo [1]" (str (tagged-literal 'foo [1]))))))
 
 (defn- incme []
   (let [incme (fn [a queue & args] (inc a))]

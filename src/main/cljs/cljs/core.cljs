@@ -9645,6 +9645,9 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 
 (deftype TaggedLiteral [tag form]
+  Object
+  (toString [coll]
+    (pr-str* coll))
 
   IEquiv
   (-equiv [this other]
@@ -9666,7 +9669,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
       :form form
       not-found))
 
-  )
+  IPrintWithWriter
+  (-pr-writer [o writer opts]
+    (-write writer (str "#" tag " "))
+    (pr-writer form writer opts)))
 
 (defn tagged-literal?
   "Return true if the value is the data representation of a tagged literal"
