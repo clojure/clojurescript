@@ -767,11 +767,19 @@
                ana/*cljs-ns* ana/*cljs-ns*
                *cljs-verbose* repl-verbose
                ana/*cljs-warnings*
-               (assoc ana/*cljs-warnings*
-                 :unprovided warn-on-undeclared
-                 :undeclared-var warn-on-undeclared
-                 :undeclared-ns warn-on-undeclared
-                 :undeclared-ns-form warn-on-undeclared)
+               (let [warnings (opts :warnings true)]
+                 (merge
+                   ana/*cljs-warnings*
+                   (if (or (true? warnings)
+                         (false? warnings))
+                     (zipmap (keys ana/*cljs-warnings*) (repeat warnings))
+                     warnings)
+                   (zipmap
+                     [:unprovided :undeclared-var
+                      :undeclared-ns :undeclared-ns-form]
+                     (repeat (if (false? warnings)
+                               false
+                               warn-on-undeclared)))))
                ana/*cljs-static-fns* static-fns
                *repl-opts* opts]
        (let [env {:context :expr :locals {}}
