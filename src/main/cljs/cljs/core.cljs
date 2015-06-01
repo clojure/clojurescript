@@ -1103,7 +1103,9 @@
 
   IComparable
   (-compare [this other]
-    (garray/defaultCompare (.valueOf this) (.valueOf other))))
+    (if (instance? js/Date other)
+      (garray/defaultCompare (.valueOf this) (.valueOf other))
+      (throw (js/Error. (str "Cannot compare " this " to " other))))))
 
 (extend-type number
   IEquiv
@@ -1935,13 +1937,18 @@ reduces them without incurring seq initialization"
 
    (nil? y) 1
 
-   (identical? (type x) (type y))
-   (if (implements? IComparable x)
-     (-compare ^not-native x y)
-     (garray/defaultCompare x y))
+   (number? x) (if (number? y)
+                 (garray/defaultCompare x y)
+                 (throw (js/Error. (str "Cannot compare " x " to " y))))
+
+   (satisfies? IComparable x)
+   (-compare x y)
 
    :else
-   (throw (js/Error. "compare on non-nil objects of different types"))))
+   (if (and (or (string? x) (array? x) (true? x) (false? x))
+            (identical? (type x) (type y)))
+     (garray/defaultCompare x y)
+     (throw (js/Error. (str "Cannot compare " x " to " y))))))
 
 (defn ^:private compare-indexed
   "Compare indexed collection."
@@ -8783,16 +8790,28 @@ reduces them without incurring seq initialization"
 ;; IComparable
 (extend-protocol IComparable
   Symbol
-  (-compare [x y] (compare-symbols x y))
+  (-compare [x y]
+    (if (symbol? y)
+      (compare-symbols x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y)))))
 
   Keyword
-  (-compare [x y] (compare-keywords x y))
+  (-compare [x y]
+    (if (keyword? y)
+      (compare-keywords x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y)))))
 
   Subvec
-  (-compare [x y] (compare-indexed x y))
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y)))))
   
   PersistentVector
-  (-compare [x y] (compare-indexed x y)))
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
 
