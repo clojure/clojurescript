@@ -485,17 +485,21 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
 ;; BrowserEnv
 
 (defn compile-client-js [opts]
-  (cljsc/build
-    '[(ns clojure.browser.repl.client
-        (:require [goog.events :as event]
-                  [clojure.browser.repl :as repl]))
-      (defn start [url]
-        (event/listen js/window
-          "load"
-          (fn []
-            (repl/start-evaluator url))))]
-    {:optimizations (:optimizations opts)
-     :output-dir (:working-dir opts)}))
+  (let [copts {:optimizations (:optimizations opts)
+               :output-dir (:working-dir opts)}]
+    ;; we're inside the REPL process where cljs.env/*compiler* is already
+    ;; established, need to construct a new one to avoid mutating the one
+    ;; the REPL uses
+    (cljsc/build
+      '[(ns clojure.browser.repl.client
+          (:require [goog.events :as event]
+                    [clojure.browser.repl :as repl]))
+        (defn start [url]
+          (event/listen js/window
+            "load"
+            (fn []
+              (repl/start-evaluator url))))]
+      copts (env/default-compiler-env copts))))
 
 (defn create-client-js-file [opts file-path]
   (let [file (io/file file-path)]
