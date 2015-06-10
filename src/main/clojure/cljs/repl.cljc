@@ -947,6 +947,50 @@
                (.-instanceField instance)]
        :doc "The instance member form works for methods and fields.
   They all expand into calls to the dot operator at macroexpansion time."}
+    ns {:forms [(name docstring? attr-map? references*)]
+        :doc "You must currently use the ns form only with the following caveats
+
+    * You must use the :only form of :use
+    * :require supports :as and :refer
+      - both options can be skipped
+      - in this case a symbol can be used as a libspec directly
+        - that is, (:require lib.foo) and (:require [lib.foo]) are both
+          supported and mean the same thing
+      - prefix lists are not supported
+    * The only option for :refer-clojure is :exclude
+    * :import is available for importing Google Closure classes
+      - ClojureScript types and records should be brought in with :use
+        or :require :refer, not :import ed
+    * Macros are written in Clojure, and are referenced via the new
+      :require-macros / :use-macros options to ns
+      - :require-macros and :use-macros support the same forms that
+        :require and :use do
+
+  Implicit macro loading: If a namespace is required or used, and that
+  namespace itself requires or uses macros from its own namespace, then
+  the macros will be implicitly required or used using the same
+  specifications. This oftentimes leads to simplified library usage,
+  such that the consuming namespace need not be concerned about
+  explicitly distinguishing between whether certain vars are functions
+  or macros.
+
+  Inline macro specification: As a convenience, :require can be given
+  either :include-macros true or :refer-macros [syms...]. Both desugar
+  into forms which explicitly load the matching Clojure file containing
+  macros. (This works independently of whether the namespace being
+  required internally requires or uses its own macros.) For example:
+
+  (ns testme.core
+  (:require [foo.core :as foo :refer [foo-fn] :include-macros true]
+            [woz.core :as woz :refer [woz-fn] :refer-macros [app jx]]))
+
+  is sugar for
+
+  (ns testme.core
+  (:require [foo.core :as foo :refer [foo-fn]]
+            [woz.core :as woz :refer [woz-fn]])
+  (:require-macros [foo.core :as foo]
+                   [woz.core :as woz :refer [app jx]]))"}
     def {:forms [(def symbol doc-string? init?)]
          :doc "Creates and interns a global var with the name
   of symbol in the current namespace (*ns*) or locates such a var if
