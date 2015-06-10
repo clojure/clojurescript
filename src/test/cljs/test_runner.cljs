@@ -6,6 +6,7 @@
             [cljs.ns-test]
             [clojure.string-test]
             [clojure.data-test]
+            [clojure.walk-test]
             [cljs.macro-test]
             [cljs.letfn-test]
             [foo.ns-shadow-test]
@@ -24,6 +25,7 @@
   'cljs.reader-test
   'clojure.string-test
   'clojure.data-test
+  'clojure.walk-test  
   'cljs.letfn-test
   'cljs.reducers-test
   'cljs.binding-test
