@@ -72,7 +72,8 @@
    :single-segment-namespace true
    :munged-namespace true
    :ns-var-clash true
-   :extend-type-invalid-method-shape true})
+   :extend-type-invalid-method-shape true
+   :unsupported-js-module-type true})
 
 (def js-reserved
   #{"abstract" "boolean" "break" "byte" "case"
@@ -221,6 +222,11 @@
   [warning-type {:keys [protocol method] :as info}]
   (str "Bad extend-type method shape for protocol " protocol " method " method
        ", method arities must be grouped together"))
+
+(defmethod error-message :unsupported-js-module-type
+  [warning-type {:keys [module-type file] :as info}]
+  (str "Unsupported JavaScript module type " module-type " for foreign library "
+       file "."))
 
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -1377,6 +1383,9 @@
     (do
       (basic-validate-ns-spec env macros? spec)
       (let [[lib & opts] spec
+            lib (if-let [js-module-name (get-in @env/*compiler* [:js-module-index (name lib)])]
+                  (symbol js-module-name)
+                  lib)
             {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
             [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
         (when-not (or (symbol? alias) (nil? alias))

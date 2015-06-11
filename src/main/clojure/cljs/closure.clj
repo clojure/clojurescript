@@ -53,7 +53,9 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule JSModuleGraph SourceMap]
+              JSModule JSModuleGraph SourceMap ProcessCommonJSModules
+              ES6ModuleLoader AbstractCompiler]
+           [com.google.javascript.rhino Node]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
@@ -68,6 +70,25 @@
 
 (defn random-string [length]
   (apply str (take length (repeatedly random-char))))
+
+(defmacro ^:private compile-if
+  "Evaluate `exp` and if it returns logical true and doesn't error, expand to
+  `then`. Else expand to `else`."
+  [exp then & else]
+  (if (try (eval exp)
+           (catch Throwable _ false))
+    `(do ~then)
+    `(do ~@else)))
+
+(compile-if
+ (and (.getConstructor ProcessCommonJSModules
+        (into-array java.lang.Class
+                    [com.google.javascript.jscomp.Compiler ES6ModuleLoader]))
+      (.getConstructor ES6ModuleLoader
+        (into-array java.lang.Class
+                    [AbstractCompiler java.lang.String])))
+ (def can-convert-js-module? true)
+ (def can-convert-js-module? false))
 
 ;; Closure API
 ;; ===========
@@ -1168,6 +1189,34 @@
 
        :else (str (random-string 5) ".js")))))
 
+(defmulti convert-js-module
+  "Takes a JavaScript module and rewrites it into a Google Closure-compatible
+  form. Returns the source of the new module as a single string."
+  :module-type)
+
+(compile-if can-convert-js-module?
+  (defmethod convert-js-module :commonjs [js]
+    (let [js-file (:file js)
+          path (.getParent (io/file js-file))
+          module-root (cond->> path
+                        (.startsWith path File/separator) (str ".")
+                        (not (.startsWith path (str "." File/separator))) (str "." File/separator)
+                        (not (.endsWith path File/separator)) (#(str % File/separator)))
+          ^List externs '()
+          ^SourceFile source-file (js-source-file js-file (slurp js-file))
+          ^CompilerOptions options (CompilerOptions.)
+          closure-compiler (doto (make-closure-compiler)
+                             (.init externs [source-file] options))
+          es6-loader (ES6ModuleLoader. closure-compiler module-root)
+          cjs (ProcessCommonJSModules. closure-compiler es6-loader)
+          ^Node root (.parse closure-compiler source-file)]
+      (.process cjs nil root)
+      (.toSource closure-compiler root))))
+
+(defmethod convert-js-module :default [js]
+  (ana/warning :unsupported-js-module-type @env/*compiler* js)
+  (deps/-source js))
+
 (defn write-javascript
   "Write or copy a JavaScript file to output directory. Only write if the file
   does not already exist. Return IJavaScript for the file on disk at the new
@@ -1177,12 +1226,15 @@
         out-name (rel-output-path js opts)
         out-file (io/file out-dir out-name)
         ijs      {:url      (deps/to-url out-file)
+                  :out-file (.toString out-file)
                   :requires (deps/-requires js)
                   :provides (deps/-provides js)
                   :group    (:group js)}]
     (when-not (.exists out-file)
       (util/mkdirs out-file)
-      (spit out-file (deps/-source js)))
+      (if (:module-type js)
+        (spit out-file (convert-js-module js))
+        (spit out-file (deps/-source js))))
     (if (map? js)
       (merge js ijs)
       ijs)))
@@ -1428,6 +1480,27 @@
         (not (false? (:static-fns opts))) (assoc :static-fns true)
         (not (false? (:optimize-constants opts))) (assoc :optimize-constants true)))))
 
+(defn process-js-modules
+  "Given the current compiler options, converts JavaScript modules to Google
+  Closure modules and writes them to disk. Adds mapping from original module
+  namespace to new module namespace to compiler env. Returns modified compiler
+  options where new modules are passed with :libs option."
+  [opts]
+  (let [js-modules (filter :module-type (:foreign-libs opts))]
+    (reduce (fn [opts {:keys [file module-type] :as lib}]
+              (if (= module-type :commonjs)
+                (let [module-name (ProcessCommonJSModules/toModuleName file)
+                      ijs (write-javascript opts (deps/load-foreign-library lib))]
+                  (doseq [provide (:provides ijs)]
+                    (swap! env/*compiler*
+                      #(update-in % [:js-module-index] assoc provide module-name)))
+                  (-> opts
+                      (update-in [:libs] (comp vec conj) (:out-file ijs))
+                      (update-in [:foreign-libs]
+                        (comp vec (fn [libs] (remove #(= (:file %) file) libs))))))
+                opts))
+            opts js-modules)))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
@@ -1438,7 +1511,9 @@
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)
-             all-opts (add-implicit-options opts)]
+             all-opts (cond-> opts
+                       true add-implicit-options
+                       can-convert-js-module? process-js-modules)]
          (check-output-to opts)
          (check-output-dir opts)
          (check-source-map opts)

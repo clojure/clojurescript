@@ -243,7 +243,8 @@
   [{:keys [info env form] :as arg}]
   (let [var-name (:name info)
         info (if (= (namespace var-name) "js")
-               (name var-name)
+               (let [js-module-name (get-in @env/*compiler* [:js-module-index (name var-name)])]
+                 (or js-module-name (name var-name)))
                info)]
     ; We need a way to write bindings out to source maps and javascript
     ; without getting wrapped in an emit-wrap calls, otherwise we get
