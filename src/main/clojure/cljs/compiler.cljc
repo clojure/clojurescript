@@ -447,15 +447,28 @@
              (pr-str define))))))
 
 (defmethod emit* :def
-  [{:keys [name var init env doc jsdoc export test]}]
+  [{:keys [name var init env doc jsdoc export test var-ast]}]
   (let [mname (munge name)]
     (when init
       (emit-comment doc (concat jsdoc (:jsdoc init)))
+      (when (:def-emits-vars env)
+        (when (= :return (:context env))
+          (emitln "return ("))
+        (emitln "(function (){"))
       (emits var)
       (emits " = "
         (if-let [define (get-define mname jsdoc)]
           define
           init))
+      (when (:def-emits-vars env)
+        (emitln "; return (")
+        (emits (merge
+                 {:op  :var-special
+                  :env (assoc env :context :expr)}
+                 var-ast))
+        (emitln ");})()")
+        (when (= :return (:context env))
+          (emitln ")")))
       ;; NOTE: JavaScriptCore does not like this under advanced compilation
       ;; this change was primarily for REPL interactions - David
       ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
