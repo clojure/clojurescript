@@ -1311,10 +1311,13 @@
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
-    (when (= (get-in @env/*compiler* [::namespaces lib :defs sym] ::not-found) ::not-found)
-      (throw
-        (error env
-          (error-message :undeclared-ns-form {:type "var" :lib lib :sym sym}))))))
+    (let [js-lib (get-in @env/*compiler* [:js-dependency-index (name lib)])]
+      (when (and (= (get-in @env/*compiler* [::namespaces lib :defs sym] ::not-found) ::not-found)
+                 (not (= (get js-lib :group) :goog))
+                 (not (get js-lib :closure-lib)))
+        (throw
+          (error env
+            (error-message :undeclared-ns-form {:type "var" :lib lib :sym sym})))))))
 
 (defn check-use-macros [use-macros env]
   (doseq [[sym lib] use-macros]
