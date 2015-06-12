@@ -9807,23 +9807,20 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
                 (- (. r -lastIndex) (. x -length)))
               (if (= x "$") "/" (goog.object/get DEMUNGE_MAP x)))
             (. r -lastIndex)))
-        ret))))
+        (str ret
+          (.substring munged-name last-match-end (.-length munged-name)))))))
 
 (defn demunge [name]
   ((if (symbol? name) symbol str)
     (demunge-str (str name))))
 
-(deftype Namespace [obj name]
+(deftype Namespace [obj name mappings]
   Object
   (find [_ sym]
-    (goog.object/get obj (str sym)))
+    (Var. (goog.object/get obj (str sym))
+      (symbol (str name) (str sym)) nil))
   (getMappings [_]
-    (letfn [(step [ret k]
-              (let [sym (symbol (demunge k))]
-                (assoc ret sym
-                           (Var. (goog.object/get obj k)
-                             (symbol (str name) (str sym)) nil))))]
-      (reduce step {} (js-keys obj))))
+    @mappings)
   IEquiv
   (-equiv [_ other]
     (if (instance? Namespace other)
@@ -9837,11 +9834,11 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-namespace [_]
     (throw (js/Error. "Cannot call -namespace on Namespace"))))
 
-(defn find-ns [ns]
+(defn find-ns-obj [ns]
   (letfn [(find-ns* [ctxt xs]
             (cond
               (nil? ctxt) nil
-              (nil? xs) (Namespace. ctxt ns)
+              (nil? xs) ctxt
               :else (recur (goog.object/get ctxt (first xs)) (next xs))))]
     (if-not js/COMPILED
       (let [segs (-> ns str (.split "."))]
@@ -9849,10 +9846,30 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
           (condp identical? *target*
             "nodejs" (find-ns* js/global segs)
             "default" (find-ns* js/window segs)
-            (throw (js/Error. (str "find-ns not supported for target " *target*))))))
+            (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
       (throw
         (js/Error.
-          "find-ns not supported when Closure optimization applied")))))
+          "find-ns-obj not supported when Closure optimization applied")))))
+
+(defn ns-interns* [sym]
+  (let [ns-obj (find-ns-obj sym)]
+    (letfn [(step [ret k]
+              (let [var-sym (symbol (demunge k))]
+                (assoc ret
+                  var-sym (Var. (goog.object/get ns-obj k)
+                            (symbol (str sym) (str var-sym)) nil))))]
+      (reduce step {} (js-keys ns-obj)))))
+
+(defn create-ns
+  ([sym]
+   (create-ns sym (find-ns-obj sym)))
+  ([sym ns-obj]
+   (create-ns sym (find-ns-obj sym) (ns-interns* sym)))
+  ([sym ns-obj mappings]
+   (Namespace. ns-obj sym (atom mappings))))
+
+(defn find-ns [ns]
+  (create-ns ns (find-ns-obj ns)))
 
 (defn ns-name [ns-obj]
   (.-name ns-obj))
