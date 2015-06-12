@@ -451,7 +451,7 @@
   (let [mname (munge name)]
     (when init
       (emit-comment doc (concat jsdoc (:jsdoc init)))
-      (when (:def-emits-vars env)
+      (when (:def-emits-var env)
         (when (= :return (:context env))
           (emitln "return ("))
         (emitln "(function (){"))
@@ -460,7 +460,7 @@
         (if-let [define (get-define mname jsdoc)]
           define
           init))
-      (when (:def-emits-vars env)
+      (when (:def-emits-var env)
         (emitln "; return (")
         (emits (merge
                  {:op  :var-special

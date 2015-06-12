@@ -943,7 +943,7 @@
          :doc doc
          :jsdoc (:jsdoc sym-meta)
          :init init-expr}
-        (when (:def-emits-vars env)
+        (when (:def-emits-var env)
           {:var-ast (var-ast env sym)})
         (when-let [test (:test sym-meta)]
           {:test (analyze (assoc env :context :expr) test)})

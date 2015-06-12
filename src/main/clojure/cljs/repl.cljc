@@ -428,7 +428,7 @@
    (binding [ana/*cljs-file* filename]
      (let [ast (ana/analyze env form nil opts)
            js (comp/emit-str ast)
-           def-emits-vars (:def-emits-vars opts)
+           def-emits-var (:def-emits-var opts)
            wrap-js
            ;; TODO: check opts as well - David
            (if (:source-map repl-env)
@@ -438,7 +438,7 @@
                               :gen-line 0})]
                (let [js (comp/emit-str
                           (ana/no-warn
-                            (ana/analyze (assoc env :repl-env repl-env :def-emits-vars def-emits-vars)
+                            (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
                               (wrap form) nil opts)))
                      t (System/currentTimeMillis)]
                  (str js
@@ -458,7 +458,7 @@
                        "UTF-8")))))
              (comp/emit-str
                (ana/no-warn
-                 (ana/analyze (assoc env :repl-env repl-env :def-emits-vars def-emits-vars)
+                 (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
                    (wrap form) nil opts))))]
        (when (= (:op ast) :ns)
          (load-dependencies repl-env
@@ -743,7 +743,7 @@
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
          :or   {warn-on-undeclared true}}
         (merge
-          {:cache-analysis true :source-map true :def-emits-vars true}
+          {:cache-analysis true :source-map true :def-emits-var true}
           (cljsc/add-implicit-options
             (merge-with (fn [a b] (if (nil? b) a b))
               repl-opts
