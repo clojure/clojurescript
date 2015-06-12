@@ -9864,7 +9864,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   ([sym]
    (create-ns sym (find-ns-obj sym)))
   ([sym ns-obj]
-   (create-ns sym (find-ns-obj sym) (ns-interns* sym)))
+   (create-ns sym (find-ns-obj sym)
+     (merge (ns-interns* 'cljs.core) (ns-interns* sym))))
   ([sym ns-obj mappings]
    (Namespace. ns-obj sym (atom mappings))))
 
