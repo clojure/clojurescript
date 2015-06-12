@@ -26,6 +26,11 @@
     :jsdoc ["@define {string}"]}
   *target* "default")
 
+(def
+  ^{:dynamic true
+    :doc "Var bound to the current namespace. Only used for bootstrapping."}
+  *ns* nil)
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to print output.
   Whatever function *print-fn* is bound to will be passed any
@@ -232,6 +237,62 @@
          (identical? (goog/typeOf js/Symbol) "function"))
   (def ITER_SYMBOL (.-iterator js/Symbol))
   (def ITER_SYMBOL "@@iterator"))
+
+(def ^{:jsdoc ["@enum {string"]}
+  CHAR_MAP
+  #js {"-"    "_"
+       ":"    "_COLON_"
+       "+"    "_PLUS_"
+       ">"    "_GT_"
+       "<"    "_LT_"
+       "="    "_EQ_"
+       "~"    "_TILDE_"
+       "!"    "_BANG_"
+       "@"    "_CIRCA_"
+       "#"    "_SHARP_"
+       "'"    "_SINGLEQUOTE_"
+       "\\\"" "_DOUBLEQUOTE_"
+       "%"    "_PERCENT_"
+       "^"    "_CARET_"
+       "&"    "_AMPERSAND_"
+       "*"    "_STAR_"
+       "|"    "_BAR_"
+       "{"    "_LBRACE_"
+       "}"    "_RBRACE_"
+       "["    "_LBRACK_"
+       "]"    "_RBRACK_"
+       "/"    "_SLASH_"
+       "\\\\" "_BSLASH_"
+       "?"    "_QMARK_"})
+
+(def ^{:jsdoc ["@enum {string}"]}
+  DEMUNGE_MAP
+  #js {"_"             "-"
+       "_COLON_"       ":"
+       "_PLUS_"        "+"
+       "_GT_"          ">"
+       "_LT_"          "<"
+       "_EQ_"          "="
+       "_TILDE_"       "~"
+       "_BANG_"        "!"
+       "_CIRCA_"       "@"
+       "_SHARP_"       "#"
+       "_SINGLEQUOTE_" "'"
+       "_DOUBLEQUOTE_" "\\\""
+       "_PERCENT_"     "%"
+       "_CARET_"       "^"
+       "_AMPERSAND_"   "&"
+       "_STAR_"        "*"
+       "_BAR_"         "|"
+       "_LBRACE_"      "{"
+       "_RBRACE_"      "}"
+       "_LBRACK_"      "["
+       "_RBRACK_"      "]"
+       "_SLASH_"       "/"
+       "_BSLASH_"      "\\\\"
+       "_QMARK_"       "?"})
+
+(def DEMUNGE_PATTERN nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
@@ -9704,3 +9765,105 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   [tag form]
   {:pre [(symbol? tag)]}
   (cljs.core.TaggedLiteral. tag form))
+
+(defn demunge-pattern []
+  (when-not DEMUNGE_PATTERN
+    (set! DEMUNGE_PATTERN
+      (let [ks (sort (fn [a b] (- (. b -length) (. a -length)))
+                 (js-keys DEMUNGE_MAP))]
+        (loop [ks ks ret ""]
+          (if (seq ks)
+            (recur
+              (next ks)
+              (str
+                (cond-> ret
+                  (not (identical? ret "")) (str "|"))
+                (first ks)))
+            (str ret "|\\$"))))))
+  DEMUNGE_PATTERN)
+
+(defn munge-str [name]
+  (loop [i 0 ret ""]
+    (if (< i (. name -length))
+      (recur (inc i)
+        (let [c (.charAt name i)]
+          (if-let [sub (goog.object/get CHAR_MAP c)]
+            (str ret sub)
+            (str ret c))))
+      ret)))
+
+(defn munge [name]
+  ((if (symbol? name) symbol str)
+    (munge-str (str name))))
+
+(defn demunge-str [munged-name]
+  (let [r (js/RegExp. (demunge-pattern) "g")]
+    (loop [ret "" last-match-end 0]
+      (if-let [match (.exec r munged-name)]
+        (let [[x] match]
+          (recur
+            (str ret
+              (.substring munged-name last-match-end
+                (- (. r -lastIndex) (. x -length)))
+              (if (= x "$") "/" (goog.object/get DEMUNGE_MAP x)))
+            (. r -lastIndex)))
+        ret))))
+
+(defn demunge [name]
+  ((if (symbol? name) symbol str)
+    (demunge-str (str name))))
+
+(deftype Namespace [obj name]
+  Object
+  (find [_ sym]
+    (goog.object/get obj (str sym)))
+  (getMappings [_]
+    (letfn [(step [ret k]
+              (let [sym (symbol (demunge k))]
+                (assoc ret sym
+                           (Var. (goog.object/get obj k)
+                             (symbol (str name) (str sym)) nil))))]
+      (reduce step {} (js-keys obj))))
+  IEquiv
+  (-equiv [_ other]
+    (if (instance? Namespace other)
+      (= name (.-name other))
+      false))
+  IHash
+  (-hash [_]
+    (hash name))
+  INamed
+  (-name [_] name)
+  (-namespace [_]
+    (throw (js/Error. "Cannot call -namespace on Namespace"))))
+
+(defn find-ns [ns]
+  (letfn [(find-ns* [ctxt xs]
+            (cond
+              (nil? ctxt) nil
+              (nil? xs) (Namespace. ctxt ns)
+              :else (recur (goog.object/get ctxt (first xs)) (next xs))))]
+    (if-not js/COMPILED
+      (let [segs (-> ns str (.split "."))]
+        (when (goog.object/get (. goog/dependencies_ -nameToPath) (str ns))
+          (condp identical? *target*
+            "nodejs" (find-ns* js/global segs)
+            "default" (find-ns* js/window segs)
+            (throw (js/Error. (str "find-ns not supported for target " *target*))))))
+      (throw
+        (js/Error.
+          "find-ns not supported when Closure optimization applied")))))
+
+(defn ns-name [ns-obj]
+  (.-name ns-obj))
+
+(defn ns-map [ns-obj]
+  (.getMappings ns-obj))
+
+(defn ns-resolve
+  ([ns sym] (ns-resolve ns nil sym))
+  ([ns env sym]
+   (when-not (contains? env sym)
+     (when-let [ns-obj (find-ns ns)]
+       (Var. #(.find ns-obj (str sym))
+         (symbol (str ns) (str sym)) nil)))))
