@@ -13,8 +13,11 @@
   (testing "Testing string replace"
     (is (= "faabar" (s/replace "foobar" \o \a)))
     (is (= "barbarbar" (s/replace "foobarfoo" "foo" "bar")))
+    (is (= "foobarfoo" (s/replace "foobarfoo" #"ooo" s/upper-case)))
     (is (= "FOObarFOO" (s/replace "foobarfoo" #"foo" s/upper-case)))
-    (is (= "barbar)foo" (s/replace "foo(bar)foo" "foo(" "bar"))))
+    (is (= "barbar)foo" (s/replace "foo(bar)foo" "foo(" "bar")))
+    (is (= "FOO-ObarFOO-O"
+           (s/replace "foobarfoo" #"f(o)o" (fn [[m g1]] (s/upper-case (str m "-" g1)))))))
 
   (testing "Testing string join"
     (is (= "" (s/join nil)))

@@ -24,6 +24,18 @@
   (-> (.replace s re-surrogate-pair "$2$1")
       (.. (split "") (reverse) (join ""))))
 
+(defn- replace-all
+  [s re replacement]
+  (.replace s (js/RegExp. (.-source re) "g") replacement))
+
+(defn- replace-with
+  [f]
+  (fn [& args]
+    (let [matches (drop-last 2 args)]
+      (if (= (count matches) 1)
+        (f (first matches))
+        (f (vec matches))))))
+
 (defn replace
   "Replaces all instance of match with replacement in s.
    match/replacement can be:
@@ -36,7 +48,9 @@
     (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
 
     (instance? js/RegExp match)
-    (.replace s (js/RegExp. (.-source match) "g") replacement)
+    (if (string? replacement)
+      (replace-all s match replacement)
+      (replace-all s match (replace-with replacement)))
 
     :else (throw (str "Invalid match arg: " match))))
 
