@@ -9821,6 +9821,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
       (symbol (str name) (str sym)) nil))
   (getMappings [_]
     @mappings)
+  (toString [_]
+    (str name))
   IEquiv
   (-equiv [_ other]
     (if (instance? Namespace other)
