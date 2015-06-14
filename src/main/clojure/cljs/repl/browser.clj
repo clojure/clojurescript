@@ -227,14 +227,20 @@
        (cond-> column
          (.endsWith column ")") (string/replace ")" "")))]))
 
-(defn parse-file [{:keys [host host-port port] :as repl-env} file {:keys [asset-path] :as opts}]
+(defn parse-file
+  "Given a browser file url convert it into a relative path that can be used
+   to locate the original source."
+  [{:keys [host host-port port] :as repl-env} file {:keys [asset-path] :as opts}]
   (let [base-url-pattern (Pattern/compile (str "http://" host ":" (or host-port port) "/"))]
     (if (re-find base-url-pattern file)
       (-> file
         (string/replace base-url-pattern "")
         (string/replace
           (Pattern/compile
-            (str "^" (or asset-path (util/output-directory opts)) "/")) ""))
+            ;; if :asset-path specified drop leading slash
+            (str "^" (or (and asset-path (string/replace asset-path #"^/" ""))
+                         (util/output-directory opts)) "/"))
+          ""))
       (if-let [asset-root (:asset-root opts)]
         (string/replace file asset-root "")
         (throw
@@ -295,6 +301,21 @@
     at Object.cljs$core$pr_sequential_writer [as pr_sequential_writer] (http://localhost:9000/out/cljs/core.js:28706:14)"
     {:ua-product :chrome}
     nil)
+
+  (parse-stacktrace {:host "localhost" :port 9000}
+    "Error: 1 is not ISeqable
+    at Object.cljs$core$seq [as seq] (http://localhost:9000/js/cljs/core.js:4258:8)
+    at Object.cljs$core$first [as first] (http://localhost:9000/js/cljs/core.js:4288:19)
+    at cljs$core$ffirst (http://localhost:9000/js/cljs/core.js:5356:34)
+    at http://localhost:9000/js/cljs/core.js:16971:89
+    at cljs.core.map.cljs$core$map__2 (http://localhost:9000/js/cljs/core.js:16972:3)
+    at http://localhost:9000/js/cljs/core.js:10981:129
+    at cljs.core.LazySeq.sval (http://localhost:9000/js/cljs/core.js:10982:3)
+    at cljs.core.LazySeq.cljs$core$ISeqable$_seq$arity$1 (http://localhost:9000/js/cljs/core.js:11073:10)
+    at Object.cljs$core$seq [as seq] (http://localhost:9000/js/cljs/core.js:4239:13)
+    at Object.cljs$core$pr_sequential_writer [as pr_sequential_writer] (http://localhost:9000/js/cljs/core.js:28706:14)"
+    {:ua-product :chrome}
+    {:asset-path "/js"})
 
   (parse-stacktrace {:host "localhost" :port 9000}
     "Error: 1 is not ISeqable
@@ -447,7 +468,7 @@ http://localhost:9000/out/goog/events/events.js:276:42"
     vec))
 
 (comment
-  (parse-stacktrace nil
+  (parse-stacktrace {:host "localhost" :port 9000}
     "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4258:8
 cljs$core$first@http://localhost:9000/out/cljs/core.js:4288:9
 cljs$core$ffirst@http://localhost:9000/out/cljs/core.js:5356:24
