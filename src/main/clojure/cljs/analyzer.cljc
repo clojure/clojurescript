@@ -7,21 +7,31 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer
-  (:refer-clojure :exclude [macroexpand-1])
-  (:require [cljs.util :as util]
-            [clojure.java.io :as io]
-            [clojure.string :as string]
-            [clojure.set :as set]
-            [cljs.env :as env]
-            [cljs.js-deps :as deps]
-            [cljs.tagged-literals :as tags]
-            [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers]
-            [clojure.edn :as edn])
-  (:import [java.io File Reader PushbackReader]
-           [java.net URL]
-           [clojure.lang Namespace Var]
-           [cljs.tagged_literals JSValue]))
+  #?(:clj  (:refer-clojure :exclude [macroexpand-1])
+     :cljs (:refer-clojure :exclude [macroexpand-1 ns-interns]))
+  #?(:cljs (:require-macros [cljs.analyzer.macros
+                             :refer [no-warn wrapping-errors
+                                     disallowing-recur allowing-redef]]))
+  #?(:clj (:require [cljs.util :as util]
+                    [clojure.java.io :as io]
+                    [clojure.string :as string]
+                    [clojure.set :as set]
+                    [cljs.env :as env]
+                    [cljs.js-deps :as deps]
+                    [cljs.tagged-literals :as tags]
+                    [clojure.tools.reader :as reader]
+                    [clojure.tools.reader.reader-types :as readers]
+                    [clojure.edn :as edn])
+     :cljs (:require [clojure.string :as string]
+                     [clojure.set :as set]
+                     [cljs.env :as env]
+                     [cljs.tools.reader :as reader]
+                     [cljs.tools.reader.reader-types :as readers]
+                     [cljs.reader :as edn]))
+  #?(:clj (:import [java.io File Reader PushbackReader]
+                   [java.net URL]
+                   [clojure.lang Namespace Var]
+                   [cljs.tagged_literals JSValue])))
 
 (set! *warn-on-reflection* true)
 
@@ -237,9 +247,10 @@
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])
 
-(defmacro with-warning-handlers [handlers & body]
-  `(binding [*cljs-warning-handlers* ~handlers]
-     ~@body))
+#?(:clj
+   (defmacro with-warning-handlers [handlers & body]
+     `(binding [*cljs-warning-handlers* ~handlers]
+        ~@body)))
 
 (defn gen-constant-id [value]
   (let [prefix (cond
@@ -288,15 +299,17 @@
 (defn get-namespace [key]
   (get-in @env/*compiler* [::namespaces key]))
 
-(defmacro no-warn [& body]
-  (let [no-warnings (zipmap (keys *cljs-warnings*) (repeat false))]
-    `(binding [*cljs-warnings* ~no-warnings]
-       ~@body)))
+#?(:clj
+   (defmacro no-warn [& body]
+     (let [no-warnings (zipmap (keys *cljs-warnings*) (repeat false))]
+       `(binding [*cljs-warnings* ~no-warnings]
+          ~@body))))
 
-(defmacro all-warn [& body]
-  (let [all-warnings (zipmap (keys *cljs-warnings*) (repeat true))]
-    `(binding [*cljs-warnings* ~all-warnings]
-       ~@body)))
+#?(:clj
+   (defmacro all-warn [& body]
+     (let [all-warnings (zipmap (keys *cljs-warnings*) (repeat true))]
+       `(binding [*cljs-warnings* ~all-warnings]
+          ~@body))))
 
 (defn get-line [x env]
   (or (-> x meta :line) (:line env)))
@@ -330,22 +343,24 @@
       (load-file *cljs-macros-path*)))
   (intern-macros 'cljs.core))
 
-(defmacro with-core-macros
-  [path & body]
-  `(do
-     (when (not= *cljs-macros-path* ~path)
-       (reset! -cljs-macros-loaded false))
-     (binding [*cljs-macros-path* ~path]
-       ~@body)))
+#?(:clj
+   (defmacro with-core-macros
+     [path & body]
+     `(do
+        (when (not= *cljs-macros-path* ~path)
+          (reset! -cljs-macros-loaded false))
+        (binding [*cljs-macros-path* ~path]
+          ~@body))))
 
-(defmacro with-core-macros-file
-  [path & body]
-  `(do
-     (when (not= *cljs-macros-path* ~path)
-       (reset! -cljs-macros-loaded false))
-     (binding [*cljs-macros-path* ~path
-               *cljs-macros-is-classpath* false]
-       ~@body)))
+#?(:clj
+   (defmacro with-core-macros-file
+     [path & body]
+     `(do
+        (when (not= *cljs-macros-path* ~path)
+          (reset! -cljs-macros-loaded false))
+        (binding [*cljs-macros-path* ~path
+                  *cljs-macros-is-classpath* false]
+          ~@body))))
 
 (defn empty-env
   "Construct an empty analysis environment. Required to analyze forms."
@@ -394,13 +409,14 @@
 (defn analysis-error? [ex]
   (= :cljs/analysis-error (:tag (ex-data ex))))
 
-(defmacro wrapping-errors [env & body]
-  `(try
-     ~@body
-     (catch Throwable err#
-       (if (analysis-error? err#)
-         (throw err#)
-         (throw (error ~env (.getMessage err#) err#))))))
+#?(:clj
+   (defmacro wrapping-errors [env & body]
+     `(try
+        ~@body
+        (catch Throwable err#
+          (if (analysis-error? err#)
+            (throw err#)
+            (throw (error ~env (.getMessage err#) err#)))))))
 
 (defn implicit-import? [env prefix suffix]
   (contains? '#{goog goog.object goog.string goog.array Math} prefix))
@@ -601,11 +617,13 @@
 (def ^:dynamic *loop-lets* ())
 (def ^:dynamic *allow-redef* false)
 
-(defmacro disallowing-recur [& body]
-  `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body))
+#?(:clj
+   (defmacro disallowing-recur [& body]
+     `(binding [*recur-frames* (cons nil *recur-frames*)] ~@body)))
 
-(defmacro allowing-redef [& body]
-  `(binding [*allow-redef* true] ~@body))
+#?(:clj
+   (defmacro allowing-redef [& body]
+     `(binding [*allow-redef* true] ~@body)))
 
 ;; TODO: move this logic out - David
 (defn analyze-keyword
@@ -1302,12 +1320,15 @@
        (doseq [dep deps]
          (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                        (contains? (:js-dependency-index compiler) (name dep))
-                       (deps/find-classpath-lib dep))
-           (if-let [src (locate-src dep)]
-             (analyze-file src opts)
-             (throw
-               (error env
-                 (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))
+                       #?(:clj (deps/find-classpath-lib dep)))
+           #?(:clj (if-let [src (locate-src dep)]
+                     (analyze-file src opts)
+                     (throw
+                       (error env
+                         (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))
+              :cljs (throw
+                      (error env
+                        (error-message :undeclared-ns {:ns-sym dep :js-provide (name dep)}))))))))))
 
 (defn check-uses [uses env]
   (doseq [[sym lib] uses]
@@ -1564,7 +1585,7 @@
                 (remove #{:reload :reload-all} libs))))
           {} (remove (fn [[r]] (= r :refer-clojure)) args))]
     (when (and *analyze-deps* (seq @deps))
-      (analyze-deps name @deps env opts))
+      #?(:clj (analyze-deps name @deps env opts)))
     (when (and *analyze-deps* (seq uses))
       (check-uses uses env))
     (set! *cljs-ns* name)
@@ -2029,249 +2050,256 @@
                     tag (assoc :tag tag))))))
           (or *passes* [infer-type]))))))
 
-(defn- source-path
-  "Returns a path suitable for providing to tools.reader as a 'filename'."
-  [x]
-  (cond
-   (instance? File x) (.getAbsolutePath ^File x)
-   :default (str x)))
+#?(:clj
+   (defn- source-path
+     "Returns a path suitable for providing to tools.reader as a 'filename'."
+     [x]
+     (cond
+       (instance? File x) (.getAbsolutePath ^File x)
+       :default (str x))))
 
-(defn forms-seq*
-  "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
-  accepts a filename argument which will be used in any emitted errors."
-  ([^Reader rdr] (forms-seq* rdr nil))
-  ([^Reader rdr filename]
-   {:pre [(instance? Reader rdr)]}
-   (let [eof-sentinel (Object.)
-         opts (merge
-                {:eof eof-sentinel}
-                (if (and filename (= (util/ext filename) "cljc"))
-                  {:read-cond :allow :features #{:cljs}}))
-         pbr (readers/indexing-push-back-reader
-               (PushbackReader. rdr) 1 filename)
-         data-readers tags/*cljs-data-readers*
-         forms-seq_
-         (fn forms-seq_ []
-           (lazy-seq
-             (let [form (binding [*ns* (create-ns *cljs-ns*)
-                                  reader/*data-readers* data-readers
-                                  reader/*alias-map*
-                                  (apply merge
-                                    ((juxt :requires :require-macros)
-                                      (get-namespace *cljs-ns*)))]
-                          (reader/read opts pbr))]
-               (if (identical? form eof-sentinel)
-                 (.close rdr)
-                 (cons form (forms-seq_))))))]
-     (forms-seq_))))
+#?(:clj
+   (defn forms-seq*
+     "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
+     accepts a filename argument which will be used in any emitted errors."
+     ([^Reader rdr] (forms-seq* rdr nil))
+     ([^Reader rdr filename]
+      {:pre [(instance? Reader rdr)]}
+      (let [eof-sentinel (Object.)
+            opts (merge
+                   {:eof eof-sentinel}
+                   (if (and filename (= (util/ext filename) "cljc"))
+                     {:read-cond :allow :features #{:cljs}}))
+            pbr (readers/indexing-push-back-reader
+                  (PushbackReader. rdr) 1 filename)
+            data-readers tags/*cljs-data-readers*
+            forms-seq_
+            (fn forms-seq_ []
+              (lazy-seq
+                (let [form (binding [*ns* (create-ns *cljs-ns*)
+                                     reader/*data-readers* data-readers
+                                     reader/*alias-map*
+                                     (apply merge
+                                       ((juxt :requires :require-macros)
+                                         (get-namespace *cljs-ns*)))]
+                             (reader/read opts pbr))]
+                  (if (identical? form eof-sentinel)
+                    (.close rdr)
+                    (cons form (forms-seq_))))))]
+        (forms-seq_)))))
 
-(defn forms-seq
-  "DEPRECATED: Seq of Clojure/ClojureScript forms from [f], which can be anything
-  for which `clojure.java.io/reader` can produce a `java.io.Reader`. Optionally
-  accepts a [filename] argument, which the reader will use in any emitted errors."
-  ([f] (forms-seq f (source-path f)))
-  ([f filename] (forms-seq f filename false))
-  ([f filename return-reader?]
-    (let [rdr (io/reader f)
-          pbr (readers/indexing-push-back-reader
-                (PushbackReader. rdr) 1 filename)
-          data-readers tags/*cljs-data-readers*
-          forms-seq*
-          (fn forms-seq* []
-            (lazy-seq
-              (let [eof-sentinel (Object.)
-                    form (binding [*ns* (create-ns *cljs-ns*)
-                                   reader/*data-readers* data-readers
-                                   reader/*alias-map*
-                                   (apply merge
-                                     ((juxt :requires :require-macros)
-                                       (get-namespace *cljs-ns*)))]
-                           (reader/read pbr nil eof-sentinel))]
-                (if (identical? form eof-sentinel)
-                  (.close rdr)
-                  (cons form (forms-seq*))))))]
-      (if (true? return-reader?)
-        [(forms-seq*) rdr]
-        (forms-seq*)))))
+#?(:clj
+   (defn forms-seq
+     "DEPRECATED: Seq of Clojure/ClojureScript forms from [f], which can be anything
+     for which `clojure.java.io/reader` can produce a `java.io.Reader`. Optionally
+     accepts a [filename] argument, which the reader will use in any emitted errors."
+     ([f] (forms-seq f (source-path f)))
+     ([f filename] (forms-seq f filename false))
+     ([f filename return-reader?]
+      (let [rdr (io/reader f)
+            pbr (readers/indexing-push-back-reader
+                  (PushbackReader. rdr) 1 filename)
+            data-readers tags/*cljs-data-readers*
+            forms-seq*
+            (fn forms-seq* []
+              (lazy-seq
+                (let [eof-sentinel (Object.)
+                      form (binding [*ns* (create-ns *cljs-ns*)
+                                     reader/*data-readers* data-readers
+                                     reader/*alias-map*
+                                     (apply merge
+                                       ((juxt :requires :require-macros)
+                                         (get-namespace *cljs-ns*)))]
+                             (reader/read pbr nil eof-sentinel))]
+                  (if (identical? form eof-sentinel)
+                    (.close rdr)
+                    (cons form (forms-seq*))))))]
+        (if (true? return-reader?)
+          [(forms-seq*) rdr]
+          (forms-seq*))))))
 
-(defn parse-ns
-  "Helper for parsing only the essential namespace information from a
-   ClojureScript source file and returning a cljs.closure/IJavaScript compatible
-   map _not_ a namespace AST node.
+#?(:clj
+   (defn parse-ns
+     "Helper for parsing only the essential namespace information from a
+      ClojureScript source file and returning a cljs.closure/IJavaScript compatible
+      map _not_ a namespace AST node.
 
-   By default does not load macros or perform any analysis of dependencies. If
-   opts parameter provided :analyze-deps and :load-macros keys their values will
-   be used for *analyze-deps* and *load-macros* bindings respectively. This
-   function does _not_ side-effect the ambient compilation environment unless
-   requested via opts where :restore is false."
-  ([src] (parse-ns src nil nil))
-  ([src opts] (parse-ns src nil opts))
-  ([src dest opts]
-    (env/ensure
-      (let [src (if (symbol? src)
-                  (util/ns->source src)
-                  src)
-            compiler-env @env/*compiler*
-            [ijs compiler-env']
-            (binding [env/*compiler* (atom compiler-env)
-                      *cljs-ns* 'cljs.user
-                      *cljs-file* src
-                      *macro-infer*
-                      (or (when (contains? opts :macro-infer)
-                            (:macro-infer opts))
-                           false)
-                      *analyze-deps*
-                      (or (when (contains? opts :analyze-deps)
-                            (:analyze-deps opts))
+      By default does not load macros or perform any analysis of dependencies. If
+      opts parameter provided :analyze-deps and :load-macros keys their values will
+      be used for *analyze-deps* and *load-macros* bindings respectively. This
+      function does _not_ side-effect the ambient compilation environment unless
+      requested via opts where :restore is false."
+     ([src] (parse-ns src nil nil))
+     ([src opts] (parse-ns src nil opts))
+     ([src dest opts]
+      (env/ensure
+        (let [src (if (symbol? src)
+                    (util/ns->source src)
+                    src)
+              compiler-env @env/*compiler*
+              [ijs compiler-env']
+              (binding [env/*compiler* (atom compiler-env)
+                        *cljs-ns* 'cljs.user
+                        *cljs-file* src
+                        *macro-infer*
+                        (or (when (contains? opts :macro-infer)
+                              (:macro-infer opts))
                           false)
-                      *load-macros*
-                      (or (when (contains? opts :load-macros)
-                            (:load-macros opts))
+                        *analyze-deps*
+                        (or (when (contains? opts :analyze-deps)
+                              (:analyze-deps opts))
+                          false)
+                        *load-macros*
+                        (or (when (contains? opts :load-macros)
+                              (:load-macros opts))
                           false)]
-              (with-open [rdr (io/reader src)]
-                (loop [forms (forms-seq* rdr (source-path src))]
-                  (if (seq forms)
-                    (let [env (empty-env)
-                          ast (no-warn (analyze env (first forms) nil opts))]
-                      (if (= (:op ast) :ns)
-                        (let [ns-name (:name ast)
-                              deps (merge (:uses ast) (:requires ast))]
-                          (.close ^Reader rdr)
-                          [(merge
-                             {:ns (or ns-name 'cljs.user)
-                              :provides [ns-name]
-                              :requires (if (= ns-name 'cljs.core)
-                                          (set (vals deps))
-                                          (cond-> (conj (set (vals deps)) 'cljs.core)
-                                            (get-in compiler-env [:options :emit-constants])
-                                            (conj 'constants-table)))
-                              :file dest
-                              :source-file src
-                              :ast ast}
-                             (when (and dest (.exists ^File dest))
-                               {:lines (with-open [reader (io/reader dest)]
-                                         (-> reader line-seq count))}))
-                           @env/*compiler*])
-                        (recur (rest forms))))
-                    (throw (AssertionError. (str "No ns form found in " src)))))))]
-        (when (false? (:restore opts))
-          (swap! env/*compiler* update-in [::namespaces] merge
-            (get compiler-env' ::namespaces)))
-        ijs))))
+                (with-open [rdr (io/reader src)]
+                  (loop [forms (forms-seq* rdr (source-path src))]
+                    (if (seq forms)
+                      (let [env (empty-env)
+                            ast (no-warn (analyze env (first forms) nil opts))]
+                        (if (= (:op ast) :ns)
+                          (let [ns-name (:name ast)
+                                deps (merge (:uses ast) (:requires ast))]
+                            (.close ^Reader rdr)
+                            [(merge
+                               {:ns (or ns-name 'cljs.user)
+                                :provides [ns-name]
+                                :requires (if (= ns-name 'cljs.core)
+                                            (set (vals deps))
+                                            (cond-> (conj (set (vals deps)) 'cljs.core)
+                                              (get-in compiler-env [:options :emit-constants])
+                                              (conj 'constants-table)))
+                                :file dest
+                                :source-file src
+                                :ast ast}
+                               (when (and dest (.exists ^File dest))
+                                 {:lines (with-open [reader (io/reader dest)]
+                                           (-> reader line-seq count))}))
+                             @env/*compiler*])
+                          (recur (rest forms))))
+                      (throw (AssertionError. (str "No ns form found in " src)))))))]
+          (when (false? (:restore opts))
+            (swap! env/*compiler* update-in [::namespaces] merge
+              (get compiler-env' ::namespaces)))
+          ijs)))))
 
-(defn cache-file
-  "Given a ClojureScript source file returns the read/write path to the analysis
-   cache file. Defaults to the read path which is usually also the write path."
-  ([src] (cache-file src "out"))
-  ([src output-dir] (cache-file src (parse-ns src) output-dir))
-  ([src ns-info output-dir] (cache-file src (parse-ns src) output-dir :read))
-  ([src ns-info output-dir mode]
-   {:pre [(map? ns-info)]}
-   (if-let [core-cache
-            (and (= mode :read)
-                 (= (:ns ns-info) 'cljs.core)
-                 (io/resource "cljs/core.cljs.cache.aot.edn"))]
-     core-cache
-     (let [target-file (util/to-target-file output-dir ns-info
-                         (util/ext (:source-file ns-info)))]
-       (io/file (str target-file ".cache.edn"))))))
+#?(:clj
+   (defn cache-file
+     "Given a ClojureScript source file returns the read/write path to the analysis
+      cache file. Defaults to the read path which is usually also the write path."
+     ([src] (cache-file src "out"))
+     ([src output-dir] (cache-file src (parse-ns src) output-dir))
+     ([src ns-info output-dir] (cache-file src (parse-ns src) output-dir :read))
+     ([src ns-info output-dir mode]
+      {:pre [(map? ns-info)]}
+      (if-let [core-cache
+               (and (= mode :read)
+                    (= (:ns ns-info) 'cljs.core)
+                    (io/resource "cljs/core.cljs.cache.aot.edn"))]
+        core-cache
+        (let [target-file (util/to-target-file output-dir ns-info
+                            (util/ext (:source-file ns-info)))]
+          (io/file (str target-file ".cache.edn")))))))
 
-(defn requires-analysis?
-  "Given a src, a resource, and output-dir, a compilation output directory
-   return true or false depending on whether src needs to be (re-)analyzed.
-   Can optionally pass cache, the analysis cache file."
-  ([src] (requires-analysis? src "out"))
-  ([src output-dir]
-    (let [cache (cache-file src output-dir)]
-      (requires-analysis? src cache output-dir)))
-  ([src cache output-dir]
-    (cond
-      (and (util/url? cache)
-           (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.edn"))
-      false
+#?(:clj
+   (defn requires-analysis?
+     "Given a src, a resource, and output-dir, a compilation output directory
+      return true or false depending on whether src needs to be (re-)analyzed.
+      Can optionally pass cache, the analysis cache file."
+     ([src] (requires-analysis? src "out"))
+     ([src output-dir]
+      (let [cache (cache-file src output-dir)]
+        (requires-analysis? src cache output-dir)))
+     ([src cache output-dir]
+      (cond
+        (and (util/url? cache)
+             (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.edn"))
+        false
 
-      (and (util/file? cache)
-           (not (.exists ^File cache)))
-      true
+        (and (util/file? cache)
+             (not (.exists ^File cache)))
+        true
 
-      :else
-      (let [out-src (util/to-target-file output-dir (parse-ns src))]
-        (if (not (.exists out-src))
-          true
-          (if (> (util/last-modified src) (util/last-modified cache))
+        :else
+        (let [out-src (util/to-target-file output-dir (parse-ns src))]
+          (if (not (.exists out-src))
             true
-            (let [version' (util/compiled-by-version cache)
-                  version (util/clojurescript-version)]
-              (and version (not= version version')))))))))
+            (if (> (util/last-modified src) (util/last-modified cache))
+              true
+              (let [version' (util/compiled-by-version cache)
+                    version (util/clojurescript-version)]
+                (and version (not= version version'))))))))))
 
-(defn write-analysis-cache [ns cache-file]
-  (util/mkdirs cache-file)
-  (spit cache-file
-    (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
-      (pr-str
-        (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros)))))
+#?(:clj
+   (defn write-analysis-cache [ns cache-file]
+     (util/mkdirs cache-file)
+     (spit cache-file
+       (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
+         (pr-str
+           (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros))))))
 
-(defn analyze-file
-  "Given a java.io.File, java.net.URL or a string identifying a resource on the
-   classpath attempt to analyze it.
+#?(:clj
+   (defn analyze-file
+     "Given a java.io.File, java.net.URL or a string identifying a resource on the
+      classpath attempt to analyze it.
 
-   This function side-effects the ambient compilation environment
-   `cljs.env/*compiler*` to aggregate analysis information. opts argument is
-   compiler options, if :cache-analysis true will cache analysis to
-   \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
-   meaningful value."
-  ([f] (analyze-file f nil))
-  ([f opts]
-   (binding [*file-defs* (atom #{})]
-     (let [output-dir (util/output-directory opts)
-           res (cond
-                 (instance? File f) f
-                 (instance? URL f) f
-                 (re-find #"^file://" f) (URL. f)
-                 :else (io/resource f))]
-       (assert res (str "Can't find " f " in classpath"))
-       (env/ensure
-         (let [ns-info (parse-ns res)
-               path (if (instance? File res)
-                      (.getPath ^File res)
-                      (.getPath ^URL res))
-               cache (when (:cache-analysis opts)
-                       (cache-file res ns-info output-dir))]
-           (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info) :defs])
-             (if (or (not cache)
-                     (requires-analysis? res output-dir))
-               (binding [*cljs-ns* 'cljs.user
-                         *cljs-file* path
-                         reader/*alias-map* (or reader/*alias-map* {})]
-                 (when (or *verbose* (:verbose opts))
-                   (util/debug-prn "Analyzing" (str res)))
-                 (let [env (assoc (empty-env) :build-options opts)
-                       ns (with-open [rdr (io/reader res)]
-                            (loop [ns nil forms (seq (forms-seq* rdr (util/path res)))]
-                              (if forms
-                                (let [form (first forms)
-                                      env (assoc env :ns (get-namespace *cljs-ns*))
-                                      ast (analyze env form nil opts)]
-                                  (if (= (:op ast) :ns)
-                                    (recur (:name ast) (next forms))
-                                    (recur ns (next forms))))
-                                ns)))]
-                   (when (and cache (true? (:cache-analysis opts)))
-                     (write-analysis-cache ns cache))))
-               ;; we want want to keep dependency analysis information
-               ;; don't revert the environment - David
-               (let [{:keys [ns]}
-                     (parse-ns res
-                       (merge opts
-                         {:restore false
-                          :analyze-deps true
-                          :load-macros true}))]
-                 (when (or *verbose* (:verbose opts))
-                   (util/debug-prn "Reading analysis cache for" (str res)))
-                 (swap! env/*compiler*
-                   (fn [cenv]
-                     (let [cached-ns (edn/read-string (slurp cache))]
-                       (doseq [x (get-in cached-ns [::constants :order])]
-                         (register-constant! x))
-                       (-> cenv
-                         (assoc-in [::namespaces ns] cached-ns))))))))))))))
+      This function side-effects the ambient compilation environment
+      `cljs.env/*compiler*` to aggregate analysis information. opts argument is
+      compiler options, if :cache-analysis true will cache analysis to
+      \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
+      meaningful value."
+     ([f] (analyze-file f nil))
+     ([f opts]
+      (binding [*file-defs* (atom #{})]
+        (let [output-dir (util/output-directory opts)
+              res (cond
+                    (instance? File f) f
+                    (instance? URL f) f
+                    (re-find #"^file://" f) (URL. f)
+                    :else (io/resource f))]
+          (assert res (str "Can't find " f " in classpath"))
+          (env/ensure
+            (let [ns-info (parse-ns res)
+                  path (if (instance? File res)
+                         (.getPath ^File res)
+                         (.getPath ^URL res))
+                  cache (when (:cache-analysis opts)
+                          (cache-file res ns-info output-dir))]
+              (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info) :defs])
+                (if (or (not cache) (requires-analysis? res output-dir))
+                  (binding [*cljs-ns* 'cljs.user
+                            *cljs-file* path
+                            reader/*alias-map* (or reader/*alias-map* {})]
+                    (when (or *verbose* (:verbose opts))
+                      (util/debug-prn "Analyzing" (str res)))
+                    (let [env (assoc (empty-env) :build-options opts)
+                          ns (with-open [rdr (io/reader res)]
+                               (loop [ns nil forms (seq (forms-seq* rdr (util/path res)))]
+                                 (if forms
+                                   (let [form (first forms)
+                                         env (assoc env :ns (get-namespace *cljs-ns*))
+                                         ast (analyze env form nil opts)]
+                                     (if (= (:op ast) :ns)
+                                       (recur (:name ast) (next forms))
+                                       (recur ns (next forms))))
+                                   ns)))]
+                      (when (and cache (true? (:cache-analysis opts)))
+                        (write-analysis-cache ns cache))))
+                  ;; we want want to keep dependency analysis information
+                  ;; don't revert the environment - David
+                  (let [{:keys [ns]}
+                        (parse-ns res
+                          (merge opts
+                            {:restore false
+                             :analyze-deps true
+                             :load-macros true}))]
+                    (when (or *verbose* (:verbose opts))
+                      (util/debug-prn "Reading analysis cache for" (str res)))
+                    (swap! env/*compiler*
+                      (fn [cenv]
+                        (let [cached-ns (edn/read-string (slurp cache))]
+                          (doseq [x (get-in cached-ns [::constants :order])]
+                            (register-constant! x))
+                          (-> cenv
+                            (assoc-in [::namespaces ns] cached-ns)))))))))))))))
