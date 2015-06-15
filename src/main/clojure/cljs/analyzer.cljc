@@ -32,7 +32,7 @@
                      [cljs.reader :as edn]))
   #?(:clj (:import [java.io File Reader PushbackReader]
                    [java.net URL]
-                   [clojure.lang Namespace Var]
+                   [clojure.lang Namespace Var LazySeq]
                    [cljs.tagged_literals JSValue])))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -2078,7 +2078,7 @@
       (wrapping-errors env
         (reduce (fn [ast pass] (pass env ast))
           (binding [reader/*alias-map* (or reader/*alias-map* {})]
-            (let [form (if (instance? clojure.lang.LazySeq form)
+            (let [form (if (instance? LazySeq form)
                          (or (seq form) ())
                          form)]
               #?(:clj (load-core))
