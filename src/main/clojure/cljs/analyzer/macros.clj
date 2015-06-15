@@ -34,11 +34,11 @@
      (catch :default err#
        (if (cljs.analyzer/analysis-error? err#)
          (throw err#)
-         (throw (error ~env (.-message err#) err#))))))
+         (throw (cljs.analyzer/error ~env (.-message err#) err#))))))
 
 (defmacro disallowing-recur [& body]
   `(binding [cljs.analyzer/*recur-frames*
-             (cons nil *cljs.analyzer/*recur-frames*)]
+             (cons nil cljs.analyzer/*recur-frames*)]
      ~@body))
 
 (defmacro allowing-redef [& body]
