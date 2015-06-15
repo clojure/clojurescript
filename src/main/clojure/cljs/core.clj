@@ -30,7 +30,7 @@
                             unsigned-bit-shift-right
 
                             bit-and bit-and-not bit-clear bit-flip bit-not bit-or bit-set
-                            bit-test bit-shift-left bit-shift-right bit-xor
+                            bit-test bit-shift-left bit-shift-right bit-xor defmacro
 
                             cond-> cond->> as-> some-> some->>
 
@@ -45,7 +45,7 @@
 (alias 'core 'clojure.core)
 (alias 'ana 'cljs.analyzer)
 
-(defmacro import-macros [ns [& vars]]
+(core/defmacro import-macros [ns [& vars]]
   (core/let [ns (find-ns ns)
              vars (map #(ns-resolve ns %) vars)
              syms (map
@@ -132,11 +132,11 @@
             (seq ret)))
         (core/list (asig fdecl))))))
 
-(defmacro defonce [x init]
+(core/defmacro defonce [x init]
   `(when-not (exists? ~x)
      (def ~x ~init)))
 
-(defmacro ^{:private true} assert-args [fnname & pairs]
+(core/defmacro ^{:private true} assert-args [fnname & pairs]
   `(do (when-not ~(first pairs)
          (throw (IllegalArgumentException.
                   ~(core/str fnname " requires " (second pairs)))))
@@ -209,7 +209,7 @@
             (throw (new Exception (core/str "Unsupported binding key: " (ffirst kwbs))))
             (reduce process-entry [] bents)))))
 
-(defmacro let
+(core/defmacro let
   "binding => binding-form init-expr
 
   Evaluates the exprs in a lexical context in which the symbols in
@@ -221,7 +221,7 @@
      (even? (count bindings)) "an even number of forms in binding vector")
   `(let* ~(destructure bindings) ~@body))
 
-(defmacro loop
+(core/defmacro loop
   "Evaluates the exprs in a lexical context in which the symbols in
   the binding-forms are bound to their respective init-exprs or parts
   therein. Acts as a recur target."
@@ -270,7 +270,7 @@
       (core/quot c 32)
       (core/inc (core/quot c 32)))))
 
-(defmacro str [& xs]
+(core/defmacro str [& xs]
   (let [strs (->> (repeat (count xs) "cljs.core.str(~{})")
                (interpose ",")
                (apply core/str))]
@@ -284,7 +284,7 @@
     (#{:var :invoke :constant :dot :js} (:op ast))
     ('#{boolean seq} (cljs.analyzer/infer-tag env ast))))
 
-(defmacro and
+(core/defmacro and
   "Evaluates exprs one at a time, from left to right. If a form
   returns logical false (nil or false), and returns that value and
   doesn't evaluate any of the other expressions, otherwise it returns
@@ -302,7 +302,7 @@
         `(let [and# ~x]
            (if and# (and ~@next) and#))))))
 
-(defmacro or
+(core/defmacro or
   "Evaluates exprs one at a time, from left to right. If a form
   returns a logical true value, or returns that value and doesn't
   evaluate any of the other expressions, otherwise it returns the
@@ -320,57 +320,57 @@
         `(let [or# ~x]
            (if or# or# (or ~@next)))))))
 
-(defmacro nil? [x]
+(core/defmacro nil? [x]
   `(coercive-= ~x nil))
 
 ;; internal - do not use.
-(defmacro coercive-not [x]
+(core/defmacro coercive-not [x]
   (bool-expr (core/list 'js* "(!~{})" x)))
 
 ;; internal - do not use.
-(defmacro coercive-not= [x y]
+(core/defmacro coercive-not= [x y]
   (bool-expr (core/list 'js* "(~{} != ~{})" x y)))
 
 ;; internal - do not use.
-(defmacro coercive-= [x y]
+(core/defmacro coercive-= [x y]
   (bool-expr (core/list 'js* "(~{} == ~{})" x y)))
 
 ;; internal - do not use.
-(defmacro coercive-boolean [x]
+(core/defmacro coercive-boolean [x]
   (with-meta (core/list 'js* "~{}" x)
     {:tag 'boolean}))
 
 ;; internal - do not use.
-(defmacro truth_ [x]
+(core/defmacro truth_ [x]
   (assert (clojure.core/symbol? x) "x is substituted twice")
   (core/list 'js* "(~{} != null && ~{} !== false)" x x))
 
 ;; internal - do not use
-(defmacro js-arguments []
+(core/defmacro js-arguments []
   (core/list 'js* "arguments"))
 
-(defmacro js-delete [obj key]
+(core/defmacro js-delete [obj key]
   (core/list 'js* "delete ~{}[~{}]" obj key))
 
-(defmacro js-in [key obj]
+(core/defmacro js-in [key obj]
   (core/list 'js* "~{} in ~{}" key obj))
 
-(defmacro js-debugger
+(core/defmacro js-debugger
   "Emit JavaScript \"debugger;\" statement."
   []
   (core/list 'js* "debugger;"))
 
-(defmacro true? [x]
+(core/defmacro true? [x]
   (bool-expr (core/list 'js* "~{} === true" x)))
 
-(defmacro false? [x]
+(core/defmacro false? [x]
   (bool-expr (core/list 'js* "~{} === false" x)))
 
-(defmacro string? [x]
+(core/defmacro string? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'string'" x)))
 
 ;; TODO: x must be a symbol, not an arbitrary expression
-(defmacro exists?
+(core/defmacro exists?
   "Return true if argument exists, analogous to usage of typeof operator
    in JavaScript."
   [x]
@@ -378,15 +378,15 @@
     (core/list 'js* "typeof ~{} !== 'undefined'"
       (vary-meta x assoc :cljs.analyzer/no-resolve true))))
 
-(defmacro undefined?
+(core/defmacro undefined?
   "Return true if argument is identical to the JavaScript undefined value."
   [x]
   (bool-expr (core/list 'js* "(void 0 === ~{})" x)))
 
-(defmacro identical? [a b]
+(core/defmacro identical? [a b]
   (bool-expr (core/list 'js* "(~{} === ~{})" a b)))
 
-(defmacro instance? [t o]
+(core/defmacro instance? [t o]
   ;; Google Closure warns about some references to RegExp, so
   ;; (instance? RegExp ...) needs to be inlined, but the expansion
   ;; should preserve the order of argument evaluation.
@@ -395,23 +395,23 @@
                `(let [t# ~t o# ~o]
                   (~'js* "(~{} instanceof ~{})" o# t#)))))
 
-(defmacro number? [x]
+(core/defmacro number? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'number'" x)))
 
-(defmacro symbol? [x]
+(core/defmacro symbol? [x]
   (bool-expr `(instance? Symbol ~x)))
 
-(defmacro keyword? [x]
+(core/defmacro keyword? [x]
   (bool-expr `(instance? Keyword ~x)))
 
-(defmacro aget
+(core/defmacro aget
   ([a i]
      (core/list 'js* "(~{}[~{}])" a i))
   ([a i & idxs]
      (let [astr (apply core/str (repeat (count idxs) "[~{}]"))]
       `(~'js* ~(core/str "(~{}[~{}]" astr ")") ~a ~i ~@idxs))))
 
-(defmacro aset
+(core/defmacro aset
   ([a i v]
     (core/list 'js* "(~{}[~{}] = ~{})" a i v))
   ([a idx idx2 & idxv]
@@ -419,202 +419,202 @@
           astr (apply core/str (repeat n "[~{}]"))]
       `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~a ~idx ~idx2 ~@idxv))))
 
-(defmacro ^::ana/numeric +
+(core/defmacro ^::ana/numeric +
   ([] 0)
   ([x] x)
   ([x y] (core/list 'js* "(~{} + ~{})" x y))
   ([x y & more] `(+ (+ ~x ~y) ~@more)))
 
-(defmacro byte [x] x)
-(defmacro short [x] x)
-(defmacro float [x] x)
-(defmacro double [x] x)
+(core/defmacro byte [x] x)
+(core/defmacro short [x] x)
+(core/defmacro float [x] x)
+(core/defmacro double [x] x)
 
-(defmacro unchecked-byte [x] x)
-(defmacro unchecked-char [x] x)
-(defmacro unchecked-short [x] x)
-(defmacro unchecked-float [x] x)
-(defmacro unchecked-double [x] x)
+(core/defmacro unchecked-byte [x] x)
+(core/defmacro unchecked-char [x] x)
+(core/defmacro unchecked-short [x] x)
+(core/defmacro unchecked-float [x] x)
+(core/defmacro unchecked-double [x] x)
 
-(defmacro ^::ana/numeric unchecked-add
+(core/defmacro ^::ana/numeric unchecked-add
   ([& xs] `(+ ~@xs)))
 
-(defmacro ^::ana/numeric unchecked-add-int
+(core/defmacro ^::ana/numeric unchecked-add-int
   ([& xs] `(+ ~@xs)))
 
-(defmacro ^::ana/numeric unchecked-dec
+(core/defmacro ^::ana/numeric unchecked-dec
   ([x] `(dec ~x)))
 
-(defmacro ^::ana/numeric unchecked-dec-int
+(core/defmacro ^::ana/numeric unchecked-dec-int
   ([x] `(dec ~x)))
 
-(defmacro ^::ana/numeric unchecked-divide-int
+(core/defmacro ^::ana/numeric unchecked-divide-int
   ([& xs] `(/ ~@xs)))
 
-(defmacro ^::ana/numeric unchecked-inc
+(core/defmacro ^::ana/numeric unchecked-inc
   ([x] `(inc ~x)))
 
-(defmacro ^::ana/numeric unchecked-inc-int
+(core/defmacro ^::ana/numeric unchecked-inc-int
   ([x] `(inc ~x)))
 
-(defmacro ^::ana/numeric unchecked-multiply
+(core/defmacro ^::ana/numeric unchecked-multiply
   ([& xs] `(* ~@xs)))
 
-(defmacro ^::ana/numeric unchecked-multiply-int
+(core/defmacro ^::ana/numeric unchecked-multiply-int
   ([& xs] `(* ~@xs)))
 
-(defmacro ^::ana/numeric unchecked-negate
+(core/defmacro ^::ana/numeric unchecked-negate
   ([x] `(- ~x)))
 
-(defmacro ^::ana/numeric unchecked-negate-int
+(core/defmacro ^::ana/numeric unchecked-negate-int
   ([x] `(- ~x)))
 
-(defmacro ^::ana/numeric unchecked-remainder-int
+(core/defmacro ^::ana/numeric unchecked-remainder-int
   ([x n] `(mod ~x ~n)))
 
-(defmacro ^::ana/numeric unchecked-subtract
+(core/defmacro ^::ana/numeric unchecked-subtract
   ([& xs] `(- ~@xs)))
 
-(defmacro ^::ana/numeric unchecked-subtract-int
+(core/defmacro ^::ana/numeric unchecked-subtract-int
   ([& xs] `(- ~@xs)))
 
-(defmacro ^::ana/numeric -
+(core/defmacro ^::ana/numeric -
   ([x] (core/list 'js* "(- ~{})" x))
   ([x y] (core/list 'js* "(~{} - ~{})" x y))
   ([x y & more] `(- (- ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric *
+(core/defmacro ^::ana/numeric *
   ([] 1)
   ([x] x)
   ([x y] (core/list 'js* "(~{} * ~{})" x y))
   ([x y & more] `(* (* ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric /
+(core/defmacro ^::ana/numeric /
   ([x] `(/ 1 ~x))
   ([x y] (core/list 'js* "(~{} / ~{})" x y))
   ([x y & more] `(/ (/ ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric divide
+(core/defmacro ^::ana/numeric divide
   ([x] `(/ 1 ~x))
   ([x y] (core/list 'js* "(~{} / ~{})" x y))
   ([x y & more] `(/ (/ ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric <
+(core/defmacro ^::ana/numeric <
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} < ~{})" x y)))
   ([x y & more] `(and (< ~x ~y) (< ~y ~@more))))
 
-(defmacro ^::ana/numeric <=
+(core/defmacro ^::ana/numeric <=
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} <= ~{})" x y)))
   ([x y & more] `(and (<= ~x ~y) (<= ~y ~@more))))
 
-(defmacro ^::ana/numeric >
+(core/defmacro ^::ana/numeric >
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} > ~{})" x y)))
   ([x y & more] `(and (> ~x ~y) (> ~y ~@more))))
 
-(defmacro ^::ana/numeric >=
+(core/defmacro ^::ana/numeric >=
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} >= ~{})" x y)))
   ([x y & more] `(and (>= ~x ~y) (>= ~y ~@more))))
 
-(defmacro ^::ana/numeric ==
+(core/defmacro ^::ana/numeric ==
   ([x] true)
   ([x y] (bool-expr (core/list 'js* "(~{} === ~{})" x y)))
   ([x y & more] `(and (== ~x ~y) (== ~y ~@more))))
 
-(defmacro ^::ana/numeric dec [x]
+(core/defmacro ^::ana/numeric dec [x]
   `(- ~x 1))
 
-(defmacro ^::ana/numeric inc [x]
+(core/defmacro ^::ana/numeric inc [x]
   `(+ ~x 1))
 
-(defmacro ^::ana/numeric zero? [x]
+(core/defmacro ^::ana/numeric zero? [x]
   `(== ~x 0))
 
-(defmacro ^::ana/numeric pos? [x]
+(core/defmacro ^::ana/numeric pos? [x]
   `(> ~x 0))
 
-(defmacro ^::ana/numeric neg? [x]
+(core/defmacro ^::ana/numeric neg? [x]
   `(< ~x 0))
 
-(defmacro ^::ana/numeric max
+(core/defmacro ^::ana/numeric max
   ([x] x)
   ([x y] `(let [x# ~x, y# ~y]
             (~'js* "((~{} > ~{}) ? ~{} : ~{})" x# y# x# y#)))
   ([x y & more] `(max (max ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric min
+(core/defmacro ^::ana/numeric min
   ([x] x)
   ([x y] `(let [x# ~x, y# ~y]
             (~'js* "((~{} < ~{}) ? ~{} : ~{})" x# y# x# y#)))
   ([x y & more] `(min (min ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric js-mod [num div]
+(core/defmacro ^::ana/numeric js-mod [num div]
   (core/list 'js* "(~{} % ~{})" num div))
 
-(defmacro ^::ana/numeric bit-not [x]
+(core/defmacro ^::ana/numeric bit-not [x]
   (core/list 'js* "(~ ~{})" x))
 
-(defmacro ^::ana/numeric bit-and
+(core/defmacro ^::ana/numeric bit-and
   ([x y] (core/list 'js* "(~{} & ~{})" x y))
   ([x y & more] `(bit-and (bit-and ~x ~y) ~@more)))
 
 ;; internal do not use
-(defmacro ^::ana/numeric unsafe-bit-and
+(core/defmacro ^::ana/numeric unsafe-bit-and
   ([x y] (bool-expr (core/list 'js* "(~{} & ~{})" x y)))
   ([x y & more] `(unsafe-bit-and (unsafe-bit-and ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric bit-or
+(core/defmacro ^::ana/numeric bit-or
   ([x y] (core/list 'js* "(~{} | ~{})" x y))
   ([x y & more] `(bit-or (bit-or ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric int [x]
+(core/defmacro ^::ana/numeric int [x]
   `(bit-or ~x 0))
 
-(defmacro ^::ana/numeric bit-xor
+(core/defmacro ^::ana/numeric bit-xor
   ([x y] (core/list 'js* "(~{} ^ ~{})" x y))
   ([x y & more] `(bit-xor (bit-xor ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric bit-and-not
+(core/defmacro ^::ana/numeric bit-and-not
   ([x y] (core/list 'js* "(~{} & ~~{})" x y))
   ([x y & more] `(bit-and-not (bit-and-not ~x ~y) ~@more)))
 
-(defmacro ^::ana/numeric bit-clear [x n]
+(core/defmacro ^::ana/numeric bit-clear [x n]
   (core/list 'js* "(~{} & ~(1 << ~{}))" x n))
 
-(defmacro ^::ana/numeric bit-flip [x n]
+(core/defmacro ^::ana/numeric bit-flip [x n]
   (core/list 'js* "(~{} ^ (1 << ~{}))" x n))
 
-(defmacro bit-test [x n]
+(core/defmacro bit-test [x n]
   (bool-expr (core/list 'js* "((~{} & (1 << ~{})) != 0)" x n)))
 
-(defmacro ^::ana/numeric bit-shift-left [x n]
+(core/defmacro ^::ana/numeric bit-shift-left [x n]
   (core/list 'js* "(~{} << ~{})" x n))
 
-(defmacro ^::ana/numeric bit-shift-right [x n]
+(core/defmacro ^::ana/numeric bit-shift-right [x n]
   (core/list 'js* "(~{} >> ~{})" x n))
 
-(defmacro ^::ana/numeric bit-shift-right-zero-fill [x n]
+(core/defmacro ^::ana/numeric bit-shift-right-zero-fill [x n]
   (core/list 'js* "(~{} >>> ~{})" x n))
 
-(defmacro ^::ana/numeric unsigned-bit-shift-right [x n]
+(core/defmacro ^::ana/numeric unsigned-bit-shift-right [x n]
   (core/list 'js* "(~{} >>> ~{})" x n))
 
-(defmacro ^::ana/numeric bit-set [x n]
+(core/defmacro ^::ana/numeric bit-set [x n]
   (core/list 'js* "(~{} | (1 << ~{}))" x n))
 
 ;; internal
-(defmacro mask [hash shift]
+(core/defmacro mask [hash shift]
   (core/list 'js* "((~{} >>> ~{}) & 0x01f)" hash shift))
 
 ;; internal
-(defmacro bitpos [hash shift]
+(core/defmacro bitpos [hash shift]
   (core/list 'js* "(1 << ~{})" `(mask ~hash ~shift)))
 
 ;; internal
-(defmacro caching-hash [coll hash-fn hash-key]
+(core/defmacro caching-hash [coll hash-fn hash-key]
   (assert (clojure.core/symbol? hash-key) "hash-key is substituted twice")
   `(let [h# ~hash-key]
      (if-not (nil? h#)
@@ -632,7 +632,7 @@
        (~cargs (fn [x#] (~name ~@cargs x#)))
        (~args ~@body))))
 
-(defmacro ^:private defcurried
+(core/defmacro ^:private defcurried
   "Builds another arity of the fn that returns a fn awaiting the last
   param"
   [name doc meta args & body]
@@ -649,7 +649,7 @@
        fkv)
      ~fkv))
 
-(defmacro ^:private rfn
+(core/defmacro ^:private rfn
   "Builds 3-arity reducing fn given names of wrapped fn and key, and k/v impl."
   [[f1 k] fkv]
   (do-rfn f1 k fkv))
@@ -677,7 +677,7 @@
       'js/Number "number"
       'js/Function "function"})
 
-(defmacro reify
+(core/defmacro reify
   "reify is a macro with the following structure:
 
  (reify options* specs*)
@@ -733,7 +733,7 @@
            ~@impls))
        (new ~t ~@locals ~(ana/elide-reader-meta (meta &form))))))
 
-(defmacro specify!
+(core/defmacro specify!
   "Identical to reify but mutates its first argument."
   [expr & impls]
   (let [x (with-meta (gensym "x") {:extend :instance})]
@@ -741,17 +741,17 @@
        (extend-type ~x ~@impls)
        ~x)))
 
-(defmacro specify
+(core/defmacro specify
   "Identical to specify but does not mutate its first argument. The first
   argument must be an ICloneable instance."
   [expr & impls]
   `(cljs.core/specify! (cljs.core/clone ~expr)
      ~@impls))
 
-(defmacro ^:private js-this []
+(core/defmacro ^:private js-this []
   (core/list 'js* "this"))
 
-(defmacro this-as
+(core/defmacro this-as
   "Defines a scope where JavaScript's implicit \"this\" is bound to the name provided."
   [name & body]
   `(let [~name (js-this)]
@@ -932,7 +932,7 @@
               (recur (conj seen fname) (next methods)))))
         (recur (conj protos proto) impls)))))
 
-(defmacro extend-type
+(core/defmacro extend-type
   "Extend a type to a series of protocols. Useful when you are
    supplying the definitions explicitly inline. Propagates the
    type as a type hint on the first argument of all fns.
@@ -1021,7 +1021,7 @@
   (when-not (vector? fields)
     (throw (AssertionError. (core/str case " " name ", no fields vector given.")))))
 
-(defmacro deftype
+(core/defmacro deftype
   "(deftype name [fields*]  options* specs*)
 
   Currently there are no options.
@@ -1178,7 +1178,7 @@
     `(defn ~fn-name [~ms]
        (new ~rname ~@getters nil (dissoc ~ms ~@ks) nil))))
 
-(defmacro defrecord
+(core/defmacro defrecord
   "(defrecord name [fields*]  options* specs*)
 
   Currently there are no options.
@@ -1247,7 +1247,7 @@
        ~(build-map-factory rsym r fields)
        ~r)))
 
-(defmacro defprotocol
+(core/defmacro defprotocol
   "A protocol is a named set of named methods and their signatures:
 
   (defprotocol AProtocolName
@@ -1344,7 +1344,7 @@
        ~@(map method methods)
        (set! ~'*unchecked-if* false))))
 
-(defmacro implements?
+(core/defmacro implements?
   "EXPERIMENTAL"
   [psym x]
   (let [p          (:name
@@ -1364,7 +1364,7 @@
              false))
          false))))
 
-(defmacro satisfies?
+(core/defmacro satisfies?
   "Returns true if x satisfies the protocol"
   [psym x]
   (let [p          (:name
@@ -1386,7 +1386,7 @@
                false)))
          (cljs.core/native-satisfies? ~psym ~xsym)))))
 
-(defmacro lazy-seq
+(core/defmacro lazy-seq
   "Takes a body of expressions that returns an ISeq or nil, and yields
   a ISeqable object that will invoke the body only the first time seq
   is called, and will cache the result and return it on all subsequent
@@ -1394,7 +1394,7 @@
   [& body]
   `(new cljs.core/LazySeq nil (fn [] ~@body) nil nil))
 
-(defmacro delay
+(core/defmacro delay
   "Takes a body of expressions and yields a Delay object that will
   invoke the body only the first time it is forced (with force or deref/@), and
   will cache the result and return it on all subsequent force
@@ -1402,7 +1402,7 @@
   [& body]
   `(new cljs.core/Delay (fn [] ~@body) nil))
 
-(defmacro with-redefs
+(core/defmacro with-redefs
   "binding => var-symbol temp-value-expr
 
   Temporarily redefines vars while executing the body.  The
@@ -1424,7 +1424,7 @@
         (finally
           ~@(map bind-value resets))))))
 
-(defmacro binding
+(core/defmacro binding
   "binding => var-symbol init-expr
 
   Creates new bindings for the (already-existing) vars, with the
@@ -1437,7 +1437,7 @@
     (cljs.analyzer/confirm-bindings &env names)
     `(with-redefs ~bindings ~@body)))
 
-(defmacro condp
+(core/defmacro condp
   "Takes a binary predicate, an expression, and a set of clauses.
   Each clause can take the form of either:
 
@@ -1495,7 +1495,7 @@
                          (ana/resolve-var env (last x)))]
     (core/when m (core/get m :const))))
 
-(defmacro case
+(core/defmacro case
   "Takes an expression, and a set of clauses.
 
   Each clause can take the form of either:
@@ -1566,7 +1566,7 @@
            ~@(mapcat (fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
            :else ~default)))))
 
-(defmacro assert
+(core/defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to
   logical true."
   ([x]
@@ -1580,7 +1580,7 @@
           (throw (js/Error.
                   (cljs.core/str "Assert failed: " ~message "\n" (cljs.core/pr-str '~x))))))))
 
-(defmacro for
+(core/defmacro for
   "List comprehension. Takes a vector of one or more
    binding-form/collection-expr pairs, each followed by zero or more
    modifiers, and yields a lazy sequence of evaluations of expr.
@@ -1667,7 +1667,7 @@
     `(let [iter# ~(emit-bind (to-groups seq-exprs))]
        (iter# ~(second seq-exprs)))))
 
-(defmacro doseq
+(core/defmacro doseq
   "Repeatedly executes body (presumably for side-effects) with
   bindings and filtering as provided by \"for\".  Does not retain
   the head of the sequence. Returns nil."
@@ -1723,7 +1723,7 @@
                                               ~@(when needrec [recform]))))))])))))]
     (nth (step nil (seq seq-exprs)) 1)))
 
-(defmacro array [& rest]
+(core/defmacro array [& rest]
   (let [xs-str (->> (repeat "~{}")
                     (take (count rest))
                     (interpose ",")
@@ -1732,7 +1732,7 @@
       (list* 'js* (core/str "[" xs-str "]") rest)
       assoc :tag 'array)))
 
-(defmacro make-array
+(core/defmacro make-array
   [size]
   (vary-meta
     (if (core/number? size)
@@ -1740,12 +1740,12 @@
       `(js/Array. ~size))
     assoc :tag 'array))
 
-(defmacro list
+(core/defmacro list
   ([] '(.-EMPTY cljs.core/List))
   ([x & xs]
     `(-conj (list ~@xs) ~x)))
 
-(defmacro vector
+(core/defmacro vector
   ([] '(.-EMPTY cljs.core/PersistentVector))
   ([& xs]
     (let [cnt (count xs)]
@@ -1756,7 +1756,7 @@
           `(.fromArray cljs.core/PersistentVector (array ~@xs) true)
           assoc :tag 'cljs.core/PersistentVector)))))
 
-(defmacro array-map
+(core/defmacro array-map
   ([] '(.-EMPTY cljs.core/PersistentArrayMap))
   ([& kvs]
      (let [keys (map first (partition 2 kvs))]
@@ -1766,7 +1766,7 @@
          `(cljs.core/PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil)
          `(.fromArray cljs.core/PersistentArrayMap (array ~@kvs) true false)))))
 
-(defmacro hash-map
+(core/defmacro hash-map
   ([] `(.-EMPTY cljs.core/PersistentHashMap))
   ([& kvs]
     (let [pairs (partition 2 kvs)
@@ -1776,7 +1776,7 @@
         `(.fromArrays cljs.core/PersistentHashMap (array ~@ks) (array ~@vs))
         assoc :tag 'cljs.core/PersistentHashMap))))
 
-(defmacro hash-set
+(core/defmacro hash-set
   ([] `(.-EMPTY cljs.core/PersistentHashSet))
   ([& xs]
     (if (core/and (core/<= (count xs) 8)
@@ -1799,7 +1799,7 @@
       (list* 'js* (core/str "{" kvs-str "}") (apply concat kvs))
       assoc :tag 'object)))
 
-(defmacro js-obj [& rest]
+(core/defmacro js-obj [& rest]
   (let [sym-or-str? (fn [x] (core/or (core/symbol? x) (core/string? x)))
         filter-on-keys (fn [f coll]
                          (->> coll
@@ -1817,12 +1817,12 @@
        ~@(map (fn [[k v]] `(aset ~obj ~v ~(core/get kvs k))) expr->local)
        ~obj)))
 
-(defmacro alength [a]
+(core/defmacro alength [a]
   (vary-meta
     (core/list 'js* "~{}.length" a)
     assoc :tag 'number))
 
-(defmacro amap
+(core/defmacro amap
   "Maps an expression across an array a, using an index named idx, and
   return value named ret, initialized to a clone of a, then setting
   each element of ret to the evaluation of expr, returning the new
@@ -1837,7 +1837,7 @@
            (recur (inc ~idx)))
          ~ret))))
 
-(defmacro areduce
+(core/defmacro areduce
   "Reduces an expression across an array a, using an index named idx,
   and return value named ret, initialized to init, setting ret to the
   evaluation of expr at each step, returning ret."
@@ -1848,7 +1848,7 @@
          (recur (inc ~idx) ~expr)
          ~ret))))
 
-(defmacro dotimes
+(core/defmacro dotimes
   "bindings => name n
 
   Repeatedly executes body (presumably for side-effects) with name
@@ -1872,7 +1872,7 @@
 	    (first valid-keys)
 	    (map #(core/str ", " %) (rest valid-keys))))))
 
-(defmacro defmulti
+(core/defmacro defmulti
   "Creates a new multimethod with the associated dispatch function.
   The docstring and attribute-map are optional.
 
@@ -1916,12 +1916,12 @@
            (cljs.core/MultiFn. (cljs.core/symbol ~mm-ns ~(name mm-name)) ~dispatch-fn ~default hierarchy#
                                method-table# prefer-table# method-cache# cached-hierarchy#))))))
 
-(defmacro defmethod
+(core/defmacro defmethod
   "Creates and installs a new method of multimethod associated with dispatch-value. "
   [multifn dispatch-val & fn-tail]
   `(-add-method ~(with-meta multifn {:tag 'cljs.core/MultiFn}) ~dispatch-val (fn ~@fn-tail)))
 
-(defmacro time
+(core/defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."
   [expr]
   `(let [start# (.getTime (js/Date.))
@@ -1929,7 +1929,7 @@
      (prn (core/str "Elapsed time: " (- (.getTime (js/Date.)) start#) " msecs"))
      ret#))
 
-(defmacro simple-benchmark
+(core/defmacro simple-benchmark
   "Runs expr iterations times in the context of a let expression with
   the given bindings, then prints out the bindings and the expr
   followed by number of iterations and total time. The optional
@@ -1964,7 +1964,7 @@
               ~(gen-apply-to-helper (core/inc n))))
          `(throw (js/Error. "Only up to 20 arguments supported on functions"))))))
 
-(defmacro gen-apply-to []
+(core/defmacro gen-apply-to []
   `(do
      (set! ~'*unchecked-if* true)
      (defn ~'apply-to [~'f ~'argc ~'args]
@@ -1974,7 +1974,7 @@
            ~(gen-apply-to-helper))))
      (set! ~'*unchecked-if* false)))
 
-(defmacro with-out-str
+(core/defmacro with-out-str
   "Evaluates exprs in a context in which *print-fn* is bound to .append
   on a fresh StringBuffer.  Returns the string created by any nested
   printing calls."
@@ -1985,7 +1985,7 @@
        ~@body)
      (cljs.core/str sb#)))
 
-(defmacro lazy-cat
+(core/defmacro lazy-cat
   "Expands to code which yields a lazy sequence of the concatenation
   of the supplied colls.  Each coll expr is not evaluated until it is
   needed. 
@@ -1994,16 +1994,16 @@
   [& colls]
   `(concat ~@(map #(core/list `lazy-seq %) colls)))
 
-(defmacro js-str [s]
+(core/defmacro js-str [s]
   (core/list 'js* "''+~{}" s))
 
-(defmacro es6-iterable [ty]
+(core/defmacro es6-iterable [ty]
   `(aset (.-prototype ~ty) cljs.core/ITER_SYMBOL
      (fn []
        (this-as this#
          (cljs.core/es6-iterator this#)))))
 
-(defmacro ns-interns
+(core/defmacro ns-interns
   "Returns a map of the intern mappings for the namespace."
   [[quote ns]]
   (core/assert (core/and (= quote 'quote) (core/symbol? ns))
@@ -2014,7 +2014,7 @@
             `[(symbol ~(name sym)) (var ~(symbol (name ns) (name sym)))])
           (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs]))]))
 
-(defmacro ns-unmap
+(core/defmacro ns-unmap
   "Removes the mappings for the symbol from the namespace."
   [[quote0 ns] [quote1 sym]]
   (core/assert (core/and (= quote0 'quote) (core/symbol? ns)
@@ -2023,7 +2023,7 @@
   (swap! env/*compiler* update-in [::ana/namespaces ns :defs] dissoc sym)
   `(js-delete ~(cljs.compiler/munge ns) ~(cljs.compiler/munge (core/str sym))))
 
-(defmacro vswap!
+(core/defmacro vswap!
   "Non-atomically swaps the value of the volatile as if:
    (apply f current-value-of-vol args). Returns the value that
    was swapped in."
@@ -2031,10 +2031,10 @@
   `(-vreset! ~vol (~f (-deref ~vol) ~@args)))
 
 ;; INTERNAL - do not use, only for Node.js
-(defmacro load-file* [f]
+(core/defmacro load-file* [f]
   `(. js/goog (~'nodeGlobalRequire ~f)))
 
-(defmacro macroexpand-1
+(core/defmacro macroexpand-1
   "If form represents a macro form, returns its expansion,
   else returns form."
   [quoted]
@@ -2043,7 +2043,7 @@
   (core/let [form (second quoted)]
     `(quote ~(ana/macroexpand-1 &env form))))
 
-(defmacro macroexpand
+(core/defmacro macroexpand
   "Repeatedly calls macroexpand-1 on form until it no longer
   represents a macro form, then returns it.  Note neither
   macroexpand-1 nor macroexpand expand macros in subforms."
@@ -2251,3 +2251,45 @@
               (cons `fn fdecl))))))
 
 (. (var defn) (setMacro))
+
+(def
+  ^{:doc "Like defn, but the resulting function name is declared as a
+  macro and will be used as a macro by the compiler when it is
+  called."
+    :arglists '([name doc-string? attr-map? [params*] body]
+                [name doc-string? attr-map? ([params*] body)+ attr-map?])
+    :macro true}
+  defmacro (fn [&form &env
+                name & args]
+             (core/let [prefix (core/loop [p (core/list (vary-meta name assoc :macro true)) args args]
+                                 (core/let [f (first args)]
+                                   (if (core/string? f)
+                                     (recur (cons f p) (next args))
+                                     (if (map? f)
+                                       (recur (cons f p) (next args))
+                                       p))))
+                        fdecl (core/loop [fd args]
+                                (if (core/string? (first fd))
+                                  (recur (next fd))
+                                  (if (map? (first fd))
+                                    (recur (next fd))
+                                    fd)))
+                        fdecl (if (vector? (first fdecl))
+                                (core/list fdecl)
+                                fdecl)
+                        add-implicit-args (fn [fd]
+                                            (core/let [args (first fd)]
+                                              (cons (vec (cons '&form (cons '&env args))) (next fd))))
+                        add-args (fn [acc ds]
+                                   (if (core/nil? ds)
+                                     acc
+                                     (core/let [d (first ds)]
+                                       (if (map? d)
+                                         (conj acc d)
+                                         (recur (conj acc (add-implicit-args d)) (next ds))))))
+                        fdecl (seq (add-args [] fdecl))
+                        decl (core/loop [p prefix d fdecl]
+                               (if p
+                                 (recur (next p) (cons (first p) d))
+                                 d))]
+               (cons `defn decl))))

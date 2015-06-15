@@ -885,6 +885,8 @@
                   nsc)))
    :default (garray/defaultCompare (.-name a) (.-name b))))
 
+(declare get)
+
 (deftype Symbol [ns name str ^:mutable _hash _meta]
   Object
   (toString [_] str)
