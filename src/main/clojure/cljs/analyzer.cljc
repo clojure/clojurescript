@@ -539,7 +539,8 @@
                     {:name (symbol (str full-ns) (str (name sym)))
                      :ns full-ns}))
 
-           (.contains s ".")
+           #?(:clj  (.contains s ".")
+              :cljs (goog.string/contains s "."))
            (let [idx (.indexOf s ".")
                  prefix (symbol (subs s 0 idx))
                  suffix (subs s (inc idx))
@@ -1181,7 +1182,9 @@
                 bindings (seq (partition 2 bindings))]
            (if-let [[name init] (first bindings)]
              (do
-               (when (or (namespace name) (.contains (str name) "."))
+               (when (or (namespace name)
+                         #?(:clj  (.contains (str name) ".")
+                            :cljs (goog.string/contains (str name) ".")))
                  (throw (error encl-env (str "Invalid local name: " name))))
                (let [init-expr (binding [*loop-lets* (cons {:params bes} *loop-lets*)]
                                  (analyze env init))

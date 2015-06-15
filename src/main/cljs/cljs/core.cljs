@@ -9837,11 +9837,12 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (find [_ sym]
     (Var. (get @mappings sym)
       (symbol (str name) (str sym)) nil))
-  (getMappings [_]
-    @mappings)
   (findInternedVar [_ sym]
     (Var. (goog.object/get obj (str sym))
       (symbol (str name) (str sym)) nil))
+  (getMappings [_]
+    @mappings)
+  (getName [_] name)
   (toString [_]
     (str name))
   IEquiv
