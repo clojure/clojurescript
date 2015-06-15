@@ -53,7 +53,7 @@ state that is accessed/maintained by many different components."}
             env# (cond
                    (map? env#) (atom env#)
                    (and (instance? clojure.lang.Atom env#)
-                     (map? @env#)) env#
+                        (map? @env#)) env#
                    :default (throw (IllegalArgumentException.
                                      (str "Compiler environment must be a map or atom containing a map, not "
                                        (class env#)))))]

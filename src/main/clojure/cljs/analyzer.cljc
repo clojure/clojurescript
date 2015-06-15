@@ -9,14 +9,16 @@
 (ns cljs.analyzer
   #?(:clj  (:refer-clojure :exclude [macroexpand-1])
      :cljs (:refer-clojure :exclude [macroexpand-1 ns-interns]))
-  #?(:cljs (:require-macros [cljs.analyzer.macros
-                             :refer [no-warn wrapping-errors
-                                     disallowing-recur allowing-redef]]))
+  #?(:cljs (:require-macros
+             [cljs.analyzer.macros
+              :refer [no-warn wrapping-errors
+                      disallowing-recur allowing-redef]]
+             [cljs.env.macros :refer [ensure]]))
   #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]]
                     [clojure.java.io :as io]
                     [clojure.string :as string]
                     [clojure.set :as set]
-                    [cljs.env :as env]
+                    [cljs.env :as env :refer [ensure]]
                     [cljs.js-deps :as deps]
                     [cljs.tagged-literals :as tags]
                     [clojure.tools.reader :as reader]
@@ -400,7 +402,7 @@
 (defn empty-env
   "Construct an empty analysis environment. Required to analyze forms."
   []
-  (env/ensure
+  (ensure
     {:ns (get-namespace *cljs-ns*)
      :context :statement
      :locals {}
@@ -1942,7 +1944,7 @@
   "Given a env, an analysis environment, and form, a ClojureScript form,
    macroexpand the form once."
   [env form]
-  (env/ensure
+  (ensure
     (wrapping-errors env
       (let [op (first form)]
         (if (specials op)
@@ -2072,7 +2074,7 @@
   ([env form name opts]
    {:pre [(or (nil? name) (symbol? name))
           (or (nil? opts) (map? opts))]}
-    (env/ensure
+    (ensure
       (wrapping-errors env
         (reduce (fn [ast pass] (pass env ast))
           (binding [reader/*alias-map* (or reader/*alias-map* {})]
@@ -2182,7 +2184,7 @@
      ([src] (parse-ns src nil nil))
      ([src opts] (parse-ns src nil opts))
      ([src dest opts]
-      (env/ensure
+      (ensure
         (let [src (if (symbol? src)
                     (util/ns->source src)
                     src)
@@ -2309,7 +2311,7 @@
                     (re-find #"^file://" f) (URL. f)
                     :else (io/resource f))]
           (assert res (str "Can't find " f " in classpath"))
-          (env/ensure
+          (ensure
             (let [ns-info (parse-ns res)
                   path (if (instance? File res)
                          (.getPath ^File res)
