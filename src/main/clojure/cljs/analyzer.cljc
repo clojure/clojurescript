@@ -12,7 +12,7 @@
   #?(:cljs (:require-macros [cljs.analyzer.macros
                              :refer [no-warn wrapping-errors
                                      disallowing-recur allowing-redef]]))
-  #?(:clj (:require [cljs.util :as util :refer [ns->relpath]]
+  #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]]
                     [clojure.java.io :as io]
                     [clojure.string :as string]
                     [clojure.set :as set]
@@ -111,6 +111,20 @@
      ([ns] (ns->relpath ns :cljs))
      ([ns ext]
       (str (string/replace (munge-path ns) \. \/) "." (name ext)))))
+
+#?(:cljs
+   (defn topo-sort
+     ([x get-deps]
+      (topo-sort x 0 (atom (sorted-map)) (memoize get-deps)))
+     ([x depth state memo-get-deps]
+      (let [deps (memo-get-deps x)]
+        (swap! state update-in [depth] (fnil into #{}) deps)
+        (doseq [dep deps]
+          (topo-sort dep (inc depth) state memo-get-deps))
+        (doseq [[<depth _] (subseq @state < depth)]
+          (swap! state update-in [<depth] set/difference deps))
+        (when (= depth 0)
+          (distinct (apply concat (vals @state))))))))
 
 (declare message namespaces)
 
@@ -303,11 +317,18 @@
 ;; `default-namespaces` when accessed outside the scope of a
 ;; compilation/analysis call
 (def namespaces
-  (reify clojure.lang.IDeref
-    (deref [_]
-      (if-not (nil? env/*compiler*)
-        (::namespaces @env/*compiler*)
-        default-namespaces))))
+  #?(:clj
+     (reify clojure.lang.IDeref
+       (deref [_]
+         (if-not (nil? env/*compiler*)
+           (::namespaces @env/*compiler*)
+           default-namespaces)))
+     :cljs
+     (reify IDeref
+       (-deref [_]
+         (if-not (nil? env/*compiler*)
+           (::namespaces @env/*compiler*)
+           default-namespaces)))))
 
 (defn get-namespace [key]
   (get-in @env/*compiler* [::namespaces key]))
@@ -338,7 +359,7 @@
     (when (or (nil? (get-in @env/*compiler* [::namespaces ns :macros]))
               reload)
       (swap! env/*compiler* assoc-in [::namespaces ns :macros]
-        (->> (ns-interns ns)
+        (->> #?(:clj (ns-interns ns) :cljs (ns-interns* ns))
              (filter (fn [[_ ^Var v]] (.isMacro v)))
              (map (fn [[k v]]
                     [k (as-> (meta v) vm
@@ -348,13 +369,14 @@
                              :name (symbol (str ns) (str k)))))]))
              (into {}))))))
 
-(defn load-core []
-  (when (not @-cljs-macros-loaded)
-    (reset! -cljs-macros-loaded true)
-    (if *cljs-macros-is-classpath*
-      (load *cljs-macros-path*)
-      (load-file *cljs-macros-path*)))
-  (intern-macros 'cljs.core))
+#?(:clj
+   (defn load-core []
+     (when (not @-cljs-macros-loaded)
+       (reset! -cljs-macros-loaded true)
+       (if *cljs-macros-is-classpath*
+         (load *cljs-macros-path*)
+         (load-file *cljs-macros-path*)))
+     (intern-macros 'cljs.core)))
 
 #?(:clj
    (defmacro with-core-macros
@@ -611,7 +633,7 @@
                  (or (map? requires)
                      (set? requires)) (contains? requires parent)
                  (vector? requires) (some #{(munge (name parent))} requires))))]
-     (util/topo-sort ns
+     (topo-sort ns
        (fn [ns']
          (set (map first (filter #(parent? ns' %) ns-map))))))))
 
@@ -1478,8 +1500,9 @@
     (let [ns (if (sequential? form) (first form) form)
          {:keys [use-macros require-macros]}
          (or (get-in @env/*compiler* [::namespaces ns])
-             (when-let [res (util/ns->source ns)]
-               (:ast (parse-ns res))))]
+             #?(:clj
+                (when-let [res (util/ns->source ns)]
+                  (:ast (parse-ns res)))))]
       (or (some #{ns} (vals use-macros))
           (some #{ns} (vals require-macros))))))
 
@@ -1552,14 +1575,10 @@
     (when (some js-reserved segments)
       (warning :munged-namespace env {:name name}))
     (find-def-clash env name segments)
-    (when (some (complement util/valid-js-id-start?) segments)
-      (throw
-        #?(:clj
+    #?(:clj
+       (when (some (complement util/valid-js-id-start?) segments)
+         (throw
            (AssertionError.
-             (str "Namespace " name " has a segment starting with an invaild "
-                  "JavaScript identifier"))
-           :cljs
-           (js/Error.
              (str "Namespace " name " has a segment starting with an invaild "
                   "JavaScript identifier"))))))
   (let [docstring (if (string? (first args)) (first args))
@@ -1609,26 +1628,27 @@
     (when (and *analyze-deps* (seq uses))
       (check-uses uses env))
     (set! *cljs-ns* name)
-    (when *load-macros*
-      (load-core)
-      (doseq [nsym (vals use-macros)]
-        (let [k (or (:use-macros @reload)
-                    (get-in @reloads [:use-macros nsym])
-                    (and (= nsym name) *reload-macros* :reload))]
-          (if k
-            (clojure.core/require nsym k)
-            (clojure.core/require nsym))
-          (intern-macros nsym k)))
-      (doseq [nsym (vals require-macros)]
-        (let [k (or (:require-macros @reload)
-                    (get-in @reloads [:require-macros nsym])
-                    (and (= nsym name) *reload-macros* :reload))]
-          (if k
-            (clojure.core/require nsym k)
-            (clojure.core/require nsym))
-          (intern-macros nsym k)))
-      (when (seq use-macros)
-        (check-use-macros use-macros env)))
+    #?(:clj
+       (when *load-macros*
+         (load-core)
+         (doseq [nsym (vals use-macros)]
+           (let [k (or (:use-macros @reload)
+                       (get-in @reloads [:use-macros nsym])
+                       (and (= nsym name) *reload-macros* :reload))]
+             (if k
+               (clojure.core/require nsym k)
+               (clojure.core/require nsym))
+             (intern-macros nsym k)))
+         (doseq [nsym (vals require-macros)]
+           (let [k (or (:require-macros @reload)
+                       (get-in @reloads [:require-macros nsym])
+                       (and (= nsym name) *reload-macros* :reload))]
+             (if k
+               (clojure.core/require nsym k)
+               (clojure.core/require nsym))
+             (intern-macros nsym k)))
+         (when (seq use-macros)
+           (check-use-macros use-macros env))))
     (let [ns-info
           {:name name
            :doc (or docstring mdocstr)
@@ -2059,7 +2079,7 @@
             (let [form (if (instance? clojure.lang.LazySeq form)
                          (or (seq form) ())
                          form)]
-              (load-core)
+              #?(:clj (load-core))
               (cond
                 (symbol? form) (analyze-symbol env form)
                 (and (seq? form) (seq form)) (analyze-seq env form name opts)
@@ -2067,7 +2087,7 @@
                 (vector? form) (analyze-vector env form)
                 (set? form) (analyze-set env form)
                 (keyword? form) (analyze-keyword env form)
-                (instance? JSValue form) (analyze-js-value env form)
+                #?@(:clj [(instance? JSValue form) (analyze-js-value env form)])
                 (= form ()) (analyze-list env form)
                 :else
                 (let [tag (cond
