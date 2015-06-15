@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.env.macros
-  (:refer-clojure :exclude [binding])
+  (:refer-clojure :exclude [binding ensure])
   (:require [cljs.core :refer [binding]]))
 
 (defmacro with-compiler-env
