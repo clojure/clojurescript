@@ -786,6 +786,8 @@
   [op env [_ test then else :as form] name _]
   (when (< (count form) 3)
     (throw (error env "Too few arguments to if")))
+  (when (> (count form) 4)
+   (throw (error env "Too many arguments to if")))
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
         then-expr (allowing-redef (analyze env then))
         else-expr (allowing-redef (analyze env else))]
