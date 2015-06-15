@@ -2292,4 +2292,6 @@
                                (if p
                                  (recur (next p) (cons (first p) d))
                                  d))]
-               (cons `defn decl))))
+              (core/list 'do
+                (cons `defn decl)
+                (core/list 'set! `(. ~name ~'-cljs$lang$macro) true)))))

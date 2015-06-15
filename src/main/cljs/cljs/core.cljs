@@ -933,6 +933,9 @@
        (Symbol. ns name sym-str nil nil))))
 
 (deftype Var [val sym _meta]
+  Object
+  (isMacro [_]
+    (. (val) -cljs$lang$macro))
   IDeref
   (-deref [_] (val))
   IMeta
@@ -9832,10 +9835,13 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (deftype Namespace [obj name mappings]
   Object
   (find [_ sym]
-    (Var. (goog.object/get obj (str sym))
+    (Var. (get @mappings sym)
       (symbol (str name) (str sym)) nil))
   (getMappings [_]
     @mappings)
+  (findInternedVar [_ sym]
+    (Var. (goog.object/get obj (str sym))
+      (symbol (str name) (str sym)) nil))
   (toString [_]
     (str name))
   IEquiv

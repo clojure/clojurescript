@@ -1930,7 +1930,8 @@
             (when-let [ns (cond
                            (= "clojure.core" nstr) (find-ns 'cljs.core)
                            (= "clojure.repl" nstr) (find-ns 'cljs.repl)
-                           (.contains nstr ".") (find-ns (symbol nstr))
+                           #?@(:clj  [(.contains nstr ".") (find-ns (symbol nstr))]
+                               :cljs [(goog.string/contains nstr ".") (find-ns (symbol nstr))])
                            :else
                            (some-> env :ns :require-macros (get (symbol nstr)) find-ns))]
               (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
