@@ -898,9 +898,9 @@
 
   IFn
   (-invoke [sym coll]
-    (-lookup coll sym nil))
+    (get coll sym))
   (-invoke [sym coll not-found]
-    (-lookup coll sym not-found))
+    (get coll sym not-found))
 
   IMeta
   (-meta [_] _meta)
