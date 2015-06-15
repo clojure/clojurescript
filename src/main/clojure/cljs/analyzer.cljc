@@ -7,8 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer
-  #?(:clj  (:refer-clojure :exclude [macroexpand-1])
-     :cljs (:refer-clojure :exclude [macroexpand-1 ns-interns]))
+  #?(:clj  (:refer-clojure :exclude [macroexpand-1 ensure])
+     :cljs (:refer-clojure :exclude [macroexpand-1 ns-interns ensure]))
   #?(:cljs (:require-macros
              [cljs.analyzer.macros
               :refer [no-warn wrapping-errors
