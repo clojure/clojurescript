@@ -18,8 +18,6 @@
     [goog.string :as gstring])
   (:import [goog.string StringBuffer]))
 
-(def ^:dynamic *out* nil)
-
 ;;======================================================================
 ;; override print fns to use *out*
 ;;======================================================================

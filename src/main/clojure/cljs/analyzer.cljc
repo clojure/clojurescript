@@ -12,7 +12,7 @@
   #?(:cljs (:require-macros [cljs.analyzer.macros
                              :refer [no-warn wrapping-errors
                                      disallowing-recur allowing-redef]]))
-  #?(:clj (:require [cljs.util :as util]
+  #?(:clj (:require [cljs.util :as util :refer [ns->relpath]]
                     [clojure.java.io :as io]
                     [clojure.string :as string]
                     [clojure.set :as set]
@@ -33,11 +33,11 @@
                    [clojure.lang Namespace Var]
                    [cljs.tagged_literals JSValue])))
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
-(def ^:dynamic *unchecked-if* (atom false))
+#?(:clj (def ^:dynamic *unchecked-if* (atom false)))
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
 (def ^:dynamic *cljs-macros-is-classpath* true)
@@ -100,6 +100,18 @@
     "volatile" "while" "with" "yield" "methods"
     "null"})
 
+#?(:cljs
+   (defn munge-path [ss]
+     (munge (str ss))))
+
+#?(:cljs
+   (defn ns->relpath
+     "Given a namespace as a symbol return the relative path. May optionally
+     provide the file extension, defaults to :cljs."
+     ([ns] (ns->relpath ns :cljs))
+     ([ns ext]
+      (str (string/replace (munge-path ns) \. \/) "." (name ext)))))
+
 (declare message namespaces)
 
 (defn ast? [x]
@@ -122,8 +134,8 @@
 (defmethod error-message :undeclared-ns
   [warning-type {:keys [ns-sym js-provide] :as info}]
   (str "No such namespace: " ns-sym
-       ", could not locate " (util/ns->relpath ns-sym :cljs)
-       ", " (util/ns->relpath ns-sym :cljc)
+       ", could not locate " (ns->relpath ns-sym :cljs)
+       ", " (ns->relpath ns-sym :cljc)
        ", or Closure namespace \"" js-provide "\""))
 
 (defmethod error-message :dynamic
@@ -257,7 +269,8 @@
                  (keyword? value) "constant$keyword$"
                  :else
                  (throw
-                   (Exception. (str "constant type " (type value) " not supported"))))
+                   #?(:clj (Exception. (str "constant type " (type value) " not supported"))
+                      :cljs (js/Error. (str "constant type " (type value) " not supported")))))
         name (-> value (str) (subs 1) (string/replace "-" "_DASH_") (munge) (string/replace "." "$"))]
     (symbol (str prefix name))))
 
@@ -464,7 +477,7 @@
              (nil? (get-in @env/*compiler* [::namespaces ns-sym]))
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
-             (nil? (util/ns->source ns-sym)))
+             #?(:clj (nil? (util/ns->source ns-sym))))
     (warning :undeclared-ns env {:ns-sym ns-sym})))
 
 (declare get-expander)
@@ -1286,19 +1299,20 @@
 
 (declare analyze-file)
 
-(defn locate-src
-  "Given a namespace return the corresponding ClojureScript (.cljs or .cljc)
-  resource on the classpath or file from the root of the build."
-  [ns]
-  (or (util/ns->source ns)
-      (let [rootp (when-let [root (:root @env/*compiler*)]
-                    (.getPath ^File root))
-            cljsf (io/file rootp (util/ns->relpath ns :cljs))
-            cljcf (io/file rootp (util/ns->relpath ns :cljc))]
-        (if (and (.exists cljsf) (.isFile cljsf))
-          cljsf
-          (if (and (.exists cljcf) (.isFile cljcf))
-            cljcf)))))
+#?(:clj
+   (defn locate-src
+     "Given a namespace return the corresponding ClojureScript (.cljs or .cljc)
+     resource on the classpath or file from the root of the build."
+     [ns]
+     (or (util/ns->source ns)
+       (let [rootp (when-let [root (:root @env/*compiler*)]
+                     (.getPath ^File root))
+             cljsf (io/file rootp (ns->relpath ns :cljs))
+             cljcf (io/file rootp (ns->relpath ns :cljc))]
+         (if (and (.exists cljsf) (.isFile cljsf))
+           cljsf
+           (if (and (.exists cljcf) (.isFile cljcf))
+             cljcf))))))
 
 (defn foreign-dep? [dep]
   {:pre [(symbol? dep)]}
@@ -1539,9 +1553,15 @@
       (warning :munged-namespace env {:name name}))
     (find-def-clash env name segments)
     (when (some (complement util/valid-js-id-start?) segments)
-      (throw (AssertionError.
-               (str "Namespace " name " has a segment starting with an invaild "
-                    "JavaScript identifier")))))
+      (throw
+        #?(:clj
+           (AssertionError.
+             (str "Namespace " name " has a segment starting with an invaild "
+                  "JavaScript identifier"))
+           :cljs
+           (js/Error.
+             (str "Namespace " name " has a segment starting with an invaild "
+                  "JavaScript identifier"))))))
   (let [docstring (if (string? (first args)) (first args))
         mdocstr   (-> name meta :doc)
         args      (if docstring (next args) args)
@@ -1707,7 +1727,8 @@
 ;; (. o -p <args>)
 (defmethod build-dot-form [::expr ::property ::list]
   [[target prop args]]
-  (throw (Error. (str "Cannot provide arguments " args " on property access " prop))))
+  #?(:clj  (throw (Error. (str "Cannot provide arguments " args " on property access " prop)))
+     :cljs (throw (js/Error. (str "Cannot provide arguments " args " on property access " prop)))))
 
 (defn- build-method-call
   "Builds the intermediate method call map used to reason about the parsed form during
@@ -1735,7 +1756,16 @@
 
 (defmethod build-dot-form :default
   [dot-form]
-  (throw (Error. (str "Unknown dot form of " (list* '. dot-form) " with classification " (classify-dot-form dot-form)))))
+  #?(:clj  (throw
+             (Error.
+               (str "Unknown dot form of "
+                 (list* '. dot-form) " with classification "
+                 (classify-dot-form dot-form))))
+     :cljs (throw
+             (js/Error.
+               (str "Unknown dot form of "
+                 (list* '. dot-form) " with classification "
+                 (classify-dot-form dot-form))))))
 
 (defmethod parse '.
   [_ env [_ target & [field & member+] :as form] _ _]

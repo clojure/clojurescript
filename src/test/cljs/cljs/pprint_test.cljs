@@ -12,7 +12,7 @@
     [cljs.pprint-test :refer [simple-tests code-block]])
   (:require
     [cljs.test :as t :refer-macros [deftest is]]
-    [cljs.pprint :refer [pprint cl-format *out* get-pretty-writer prn print-table
+    [cljs.pprint :refer [pprint cl-format get-pretty-writer prn print-table
                          *print-pprint-dispatch* simple-dispatch
                          *print-right-margin* *print-miser-width*
                          write code-dispatch]

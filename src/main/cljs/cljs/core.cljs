@@ -31,6 +31,14 @@
     :doc "Var bound to the current namespace. Only used for bootstrapping."}
   *ns* nil)
 
+(def
+  ^{:dynamic true}
+  *out* nil)
+
+(def
+  ^{:dynamic true}
+  *err* nil)
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to print output.
   Whatever function *print-fn* is bound to will be passed any
@@ -186,6 +194,11 @@
   "Returns true if x is a JavaScript string."
   [x]
   (goog/isString x))
+
+(defn ^boolean char?
+  "Returns true if x is a JavaScript char."
+  [x]
+  (gstring/isUnicodeChar x))
 
 (set! *unchecked-if* true)
 (defn ^boolean native-satisfies?
