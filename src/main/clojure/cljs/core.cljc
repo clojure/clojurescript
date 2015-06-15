@@ -87,25 +87,41 @@
 (defn- ^{:dynamic true} assert-valid-fdecl
   "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
   [fdecl]
-  (when (empty? fdecl) (throw (IllegalArgumentException.
-                                "Parameter declaration missing")))
-  (core/let [argdecls (map
-                   #(if (seq? %)
-                     (first %)
-                     (throw (IllegalArgumentException.
+  (when (empty? fdecl)
+    (throw
+      #?(:clj  (IllegalArgumentException. "Parameter declaration missing")
+         :cljs (js/Error. "Parameter declaration missing"))))
+  (core/let [argdecls
+             (map
+               #(if (seq? %)
+                 (first %)
+                 (throw
+                   #?(:clj (IllegalArgumentException.
+                             (if (seq? (first fdecl))
+                               (core/str "Invalid signature \""
+                                 %
+                                 "\" should be a list")
+                               (core/str "Parameter declaration \""
+                                 %
+                                 "\" should be a vector")))
+                      :cljs (js/Error.
                               (if (seq? (first fdecl))
                                 (core/str "Invalid signature \""
                                   %
                                   "\" should be a list")
                                 (core/str "Parameter declaration \""
                                   %
-                                  "\" should be a vector")))))
-                   fdecl)
-        bad-args (seq (remove #(vector? %) argdecls))]
+                                  "\" should be a vector"))))))
+               fdecl)
+             bad-args (seq (remove #(vector? %) argdecls))]
     (when bad-args
-      (throw (IllegalArgumentException.
-               (core/str "Parameter declaration \"" (first bad-args)
-                         "\" should be a vector"))))))
+      (throw
+        #?(:clj (IllegalArgumentException.
+                  (core/str "Parameter declaration \"" (first bad-args)
+                    "\" should be a vector"))
+           :cljs (js/Error.
+                   (core/str "Parameter declaration \"" (first bad-args)
+                     "\" should be a vector")))))))
 
 (def
   ^{:private true}
@@ -116,8 +132,10 @@
           (fn [fdecl]
             (core/let [arglist (first fdecl)
                   ;elide implicit macro args
-                  arglist (if (clojure.lang.Util/equals '&form (first arglist))
-                            (clojure.lang.RT/subvec arglist 2 (clojure.lang.RT/count arglist))
+                  arglist (if #?(:clj (clojure.lang.Util/equals '&form (first arglist))
+                                 :cljs (= '&form (first arglist)))
+                            #?(:clj (clojure.lang.RT/subvec arglist 2 (clojure.lang.RT/count arglist))
+                               :cljs (subvec arglist 2 (count arglist)))
                             arglist)
                   body (next fdecl)]
               (if (map? (first body))
@@ -137,12 +155,18 @@
      (def ~x ~init)))
 
 (core/defmacro ^{:private true} assert-args [fnname & pairs]
-  `(do (when-not ~(first pairs)
-         (throw (IllegalArgumentException.
-                  ~(core/str fnname " requires " (second pairs)))))
-     ~(core/let [more (nnext pairs)]
-        (when more
-          (list* `assert-args fnname more)))))
+  #?(:clj `(do (when-not ~(first pairs)
+                 (throw (IllegalArgumentException.
+                          ~(core/str fnname " requires " (second pairs)))))
+               ~(core/let [more (nnext pairs)]
+                  (when more
+                    (list* `assert-args fnname more))))
+     :cljs `(do (when-not ~(first pairs)
+                  (throw (js/Error.
+                           ~(core/str fnname " requires " (second pairs)))))
+                ~(core/let [more (nnext pairs)]
+                   (when more
+                     (list* `assert-args fnname more))))))
 
 (core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
@@ -163,7 +187,9 @@
                                                       true)
                                  (= firstb :as) (pb ret (second bs) gvec)
                                  :else (if seen-rest?
-                                         (throw (new Exception "Unsupported binding form, only :as can follow & parameter"))
+                                         (throw
+                                           #?(:clj (new Exception "Unsupported binding form, only :as can follow & parameter")
+                                              :cljs (new js/Error "Unsupported binding form, only :as can follow & parameter")))
                                          (recur (pb ret firstb (core/list `nth gvec n nil))
                                                 (core/inc n)
                                                 (next bs)
@@ -201,12 +227,16 @@
                       (core/keyword? b) (-> bvec (conj (symbol (name b))) (conj v))
                       (vector? b) (pvec bvec b v)
                       (map? b) (pmap bvec b v)
-                      :else (throw (new Exception (core/str "Unsupported binding form: " b))))))
+                      :else (throw
+                              #?(:clj (new Exception (core/str "Unsupported binding form: " b))
+                                 :cljs (new js/Error (core/str "Unsupported binding form: " b)))))))
          process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
         (if (every? core/symbol? (map first bents))
           bindings
           (if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
-            (throw (new Exception (core/str "Unsupported binding key: " (ffirst kwbs))))
+            (throw
+              #?(:clj (new Exception (core/str "Unsupported binding key: " (ffirst kwbs)))
+                 :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
             (reduce process-entry [] bents)))))
 
 (core/defmacro let
@@ -1019,7 +1049,9 @@
 (defn- validate-fields
   [case name fields]
   (when-not (vector? fields)
-    (throw (AssertionError. (core/str case " " name ", no fields vector given.")))))
+    (throw
+      #?(:clj (AssertionError. (core/str case " " name ", no fields vector given."))
+         :cljs (js/Error. (core/str case " " name ", no fields vector given."))))))
 
 (core/defmacro deftype
   "(deftype name [fields*]  options* specs*)
@@ -1300,9 +1332,13 @@
         prefix (protocol-prefix p)
         _ (core/doseq [[mname & arities] methods]
             (when (some #{0} (map count (filter vector? arities)))
-              (throw (Exception.
-                       (core/str "Invalid protocol, " psym
-                                 " defines method " mname " with arity 0")))))
+              (throw
+                #?(:clj (Exception.
+                          (core/str "Invalid protocol, " psym
+                            " defines method " mname " with arity 0"))
+                   :cljs (js/Error.
+                           (core/str "Invalid protocol, " psym
+                             " defines method " mname " with arity 0"))))))
         expand-sig (fn [fname slot sig]
                      `(~sig
                        (if (and ~(first sig) (. ~(first sig) ~(symbol (core/str "-" slot)))) ;; Property access needed here.
@@ -1482,12 +1518,18 @@
 (defn- assoc-test [m test expr env]
   (if (contains? m test)
     (throw
-      (clojure.core/IllegalArgumentException.
-        (core/str "Duplicate case test constant '"
-          test "'"
-          (when (:line env)
-            (core/str " on line " (:line env) " "
-              cljs.analyzer/*cljs-file*)))))
+      #?(:clj (clojure.core/IllegalArgumentException.
+                (core/str "Duplicate case test constant '"
+                  test "'"
+                  (when (:line env)
+                    (core/str " on line " (:line env) " "
+                      cljs.analyzer/*cljs-file*))))
+         :cljs (js/Error.
+                 (core/str "Duplicate case test constant '"
+                   test "'"
+                   (when (:line env)
+                     (core/str " on line " (:line env) " "
+                       cljs.analyzer/*cljs-file*))))))
     (assoc m test expr)))
 
 (defn- const? [env x]
@@ -1868,9 +1910,9 @@
   [options & valid-keys]
   (when (seq (apply disj (apply core/hash-set (keys options)) valid-keys))
     (throw
-     (apply core/str "Only these options are valid: "
-	    (first valid-keys)
-	    (map #(core/str ", " %) (rest valid-keys))))))
+      (apply core/str "Only these options are valid: "
+        (first valid-keys)
+        (map #(core/str ", " %) (rest valid-keys))))))
 
 (core/defmacro defmulti
   "Creates a new multimethod with the associated dispatch function.
@@ -1903,7 +1945,9 @@
                       m)
         mm-ns (-> &env :ns :name core/str)] 
     (when (= (count options) 1)
-      (throw (Exception. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")))
+      (throw
+        #?(:clj (Exception. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")
+           :cljs (js/Error. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)"))))
     (let [options   (apply core/hash-map options)
           default   (core/get options :default :default)]
       (check-valid-options options :default :hierarchy)
@@ -2203,7 +2247,9 @@
          ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
          (if (core/instance? clojure.lang.Symbol name)
            nil
-           (throw (IllegalArgumentException. "First argument to defn must be a symbol")))
+           (throw
+             #?(:clj (IllegalArgumentException. "First argument to defn must be a symbol")
+                :cljs (js/Error. "First argument to defn must be a symbol"))))
          (core/let [m (if (core/string? (first fdecl))
                         {:doc (first fdecl)}
                         {})
@@ -2230,8 +2276,10 @@
                                  ifn (first inline)
                                  iname (second inline)]
                         ;; same as: (if (and (= 'fn ifn) (not (symbol? iname))) ...)
-                        (if (if (clojure.lang.Util/equiv 'fn ifn)
-                              (if (core/instance? clojure.lang.Symbol iname) false true))
+                        (if (if #?(:clj (clojure.lang.Util/equiv 'fn ifn)
+                                   :cljs (= 'fn ifn))
+                              (if #?(:clj (core/instance? clojure.lang.Symbol iname)
+                                     :cljs (core/instance? Symbol iname)) false true))
                           ;; inserts the same fn name to the inline fn if it does not have one
                           (assoc m :inline (cons ifn (cons (clojure.lang.Symbol/intern (.concat (.getName ^clojure.lang.Symbol name) "__inliner"))
                                                        (next inline))))
