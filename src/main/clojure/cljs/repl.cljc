@@ -827,7 +827,9 @@
              (binding [*repl-opts* opts]
                (try
                  (when analyze-path
-                   (analyze-source analyze-path opts))
+                   (if (vector? analyze-path)
+                     (run! #(analyze-source % opts) analyze-path)
+                     (analyze-source analyze-path opts)))
                  (init)
                  (catch Throwable e
                    (caught e repl-env opts)))
