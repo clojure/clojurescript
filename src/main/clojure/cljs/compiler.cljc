@@ -8,6 +8,7 @@
 
 (ns cljs.compiler
   (:refer-clojure :exclude [munge macroexpand-1])
+  #?(:cljs (:require-macros [cljs.compiler.macros :refer [emit-wrap]]))
   #?(:clj (:require [cljs.util :as util]
                     [clojure.java.io :as io]
                     [clojure.string :as string]
@@ -28,7 +29,7 @@
                    java.io.File)
      :cljs (:import [goog.string StringBuffer])))
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
 (def js-reserved ana/js-reserved)
 
@@ -192,7 +193,7 @@
 #?(:clj
    (defmethod emit-constant Double [x] (emits x))
    :cljs
-   (defmethod emit-constant Number [x] (emits x)))
+   (defmethod emit-constant js/Number [x] (emits x)))
 
 #?(:clj
    (defmethod emit-constant BigDecimal [x] (emits (.doubleValue ^BigDecimal x))))
@@ -200,10 +201,10 @@
 #?(:clj
    (defmethod emit-constant clojure.lang.BigInt [x] (emits (.doubleValue ^clojure.lang.BigInt x))))
 
-(defmethod emit-constant String [x]
+(defmethod emit-constant js/String [x]
   (emits (wrap-in-double-quotes (escape-string x))))
 
-(defmethod emit-constant Boolean [x] (emits (if x "true" "false")))
+(defmethod emit-constant js/Boolean [x] (emits (if x "true" "false")))
 
 #?(:clj
    (defmethod emit-constant Character [x]
@@ -263,11 +264,12 @@
 (defmethod emit-constant #?(:clj java.util.UUID :cljs UUID) [^java.util.UUID uuid]
   (emits "new cljs.core.UUID(\"" (.toString uuid) "\")"))
 
-(defmacro emit-wrap [env & body]
-  `(let [env# ~env]
-     (when (= :return (:context env#)) (emits "return "))
-     ~@body
-     (when-not (= :expr (:context env#)) (emitln ";"))))
+#?(:clj
+   (defmacro emit-wrap [env & body]
+     `(let [env# ~env]
+        (when (= :return (:context env#)) (emits "return "))
+        ~@body
+        (when-not (= :expr (:context env#)) (emitln ";")))))
 
 (defmethod emit* :no-op [m])
 
