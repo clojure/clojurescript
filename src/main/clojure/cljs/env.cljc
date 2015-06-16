@@ -70,6 +70,4 @@ state that is accessed/maintained by many different components."}
           ~@body
           (finally
             (if (nil? val#)
-              (pop-thread-bindings))))))
-   :cljs
-   (def ensure identity))
+              (pop-thread-bindings)))))))
