@@ -215,7 +215,10 @@
   (if (= "" (str x))
     (emits "(new RegExp(\"\"))")
     (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
-      (emits \/ (.replaceAll (re-matcher #"/" pattern) "\\\\/") \/ flags))))
+      (emits \/
+        #?(:clj (.replaceAll (re-matcher #"/" pattern) "\\\\/")
+           :cljs (string/replace pattern #"/" "\\\\/"))
+        \/ flags))))
 
 (defn emits-keyword [kw]
   (let [ns   (namespace kw)
