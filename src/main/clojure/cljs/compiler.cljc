@@ -7,13 +7,14 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge macroexpand-1])
-  #?(:cljs (:require-macros [cljs.compiler.macros :refer [emit-wrap]]))
+  (:refer-clojure :exclude [munge macroexpand-1 ensure])
+  #?(:cljs (:require-macros [cljs.compiler.macros :refer [emit-wrap]]
+                            [cljs.env.macros :refer [ensure]]))
   #?(:clj (:require [cljs.util :as util]
                     [clojure.java.io :as io]
                     [clojure.string :as string]
                     [clojure.tools.reader :as reader]
-                    [cljs.env :as env]
+                    [cljs.env :as env :refer [ensure]]
                     [cljs.tagged-literals :as tags]
                     [cljs.analyzer :as ana]
                     [cljs.source-map :as sm]
@@ -130,7 +131,7 @@
 (defmulti emit* :op)
 
 (defn emit [ast]
-  (env/ensure
+  (ensure
     (when *source-map-data*
       (let [{:keys [env]} ast]
         (when (:line env)
@@ -1047,7 +1048,7 @@
    (defn compile-file*
      ([src dest] (compile-file* src dest nil))
      ([src dest opts]
-      (env/ensure
+      (ensure
         (with-core-cljs opts
           (fn []
             (when (or ana/*verbose* (:verbose opts))
@@ -1131,7 +1132,7 @@
      "Return true if the src file requires compilation."
      ([src dest] (requires-compilation? src dest nil))
      ([^File src ^File dest opts]
-      (env/ensure
+      (ensure
         (or (not (.exists dest))
             (> (.lastModified src) (.lastModified dest))
             (let [version' (util/compiled-by-version dest)
