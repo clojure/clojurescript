@@ -34,7 +34,8 @@
 
                             cond-> cond->> as-> some-> some->>
 
-                            if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand])
+                            if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
+                            #?(:cljs alias)])
   (:require clojure.walk
             clojure.set
             cljs.compiler
