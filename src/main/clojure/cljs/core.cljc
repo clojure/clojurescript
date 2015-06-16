@@ -39,8 +39,7 @@
             clojure.set
             cljs.compiler
             [cljs.util :as util]
-            [cljs.env :as env])
-  (:import [java.io File]))
+            [cljs.env :as env]))
 
 (alias 'core 'clojure.core)
 (alias 'ana 'cljs.analyzer)
