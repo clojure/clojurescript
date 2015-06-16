@@ -85,7 +85,8 @@
              munged-name
              (symbol (str munged-name "__$" depth))))))
      ;; String munging
-     (let [ss (string/replace (str s) #"\/(.)" ".$1") ; Division is special
+     (let [ss (string/replace (str s)
+                #?(:clj #"\/(.)" :cljs (js/RegExp. "\\/(.)")) ".$1") ; Division is special
            ss (apply str
                 (map #(if (reserved %) (str % "$") %)
                   (string/split ss #"(?<=\.)|(?=\.)")))
