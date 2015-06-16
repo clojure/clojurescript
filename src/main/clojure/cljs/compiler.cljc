@@ -72,7 +72,9 @@
          (fn-self-name s)
          ;; Unshadowing
          (let [depth (shadow-depth s)
-               renamed (*lexical-renames* (System/identityHashCode s))
+               renamed (*lexical-renames*
+                         #?(:clj (System/identityHashCode s)
+                            :cljs (hash s)))
                munged-name (munge
                              (cond field (str "self__." name)
                                    renamed renamed
@@ -739,11 +741,13 @@
   [{:keys [bindings expr env]} is-loop]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
-    (binding [*lexical-renames* (into *lexical-renames*
-                                      (when (= :statement context)
-                                        (map #(vector (System/identityHashCode %)
-                                                      (gensym (str (:name %) "-")))
-                                             bindings)))]
+    (binding [*lexical-renames*
+              (into *lexical-renames*
+                (when (= :statement context)
+                  (map #(vector #?(:clj (System/identityHashCode %)
+                                   :cljs (hash %))
+                         (gensym (str (:name %) "-")))
+                    bindings)))]
       (doseq [{:keys [init] :as binding} bindings]
         (emits "var ")
         (emit binding) ; Binding will be treated as a var
