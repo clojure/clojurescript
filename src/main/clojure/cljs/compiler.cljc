@@ -201,10 +201,10 @@
 #?(:clj
    (defmethod emit-constant clojure.lang.BigInt [x] (emits (.doubleValue ^clojure.lang.BigInt x))))
 
-(defmethod emit-constant js/String [x]
+(defmethod emit-constant #?(:clj String :cljs js/String) [x]
   (emits (wrap-in-double-quotes (escape-string x))))
 
-(defmethod emit-constant js/Boolean [x] (emits (if x "true" "false")))
+(defmethod emit-constant #?(:clj Boolean :cljs js/Boolean) [x] (emits (if x "true" "false")))
 
 #?(:clj
    (defmethod emit-constant Character [x]
