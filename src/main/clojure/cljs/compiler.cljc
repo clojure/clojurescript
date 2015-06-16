@@ -18,13 +18,15 @@
                     [cljs.source-map :as sm]
                     [clojure.data.json :as json]
                     [cljs.js-deps :as deps])
-     :cljs (:require [clojure.string :as string]
+     :cljs (:require [goog.string :as gstring]
+                     [clojure.string :as string]
                      [cljs.tools.reader :as reader]
                      [cljs.env :as env]
                      [cljs.analyzer :as ana]
                      [cljs.source-map :as sm]))
   #?(:clj (:import java.lang.StringBuilder
-                   java.io.File)))
+                   java.io.File)
+     :cljs (:import [goog.string StringBuffer])))
 
 (set! *warn-on-reflection* true)
 
@@ -94,7 +96,8 @@
   (interpose "," xs))
 
 (defn- escape-char [^Character c]
-  (let [cp (.hashCode c)]
+  (let [cp #?(:clj (.hashCode c)
+              :cljs (gstring/hashCode c))]
     (case cp
       ; Handle printable escapes before ASCII
       34 "\\\""
@@ -110,7 +113,8 @@
         (format "\\u%04X" cp))))) ; Any other character is Unicode
 
 (defn- escape-string [^CharSequence s]
-  (let [sb (StringBuilder. (count s))]
+  (let [sb #?(:clj (StringBuilder. (count s))
+              :cljs (StringBuffer.))]
     (doseq [c s]
       (.append sb (escape-char c)))
     (.toString sb)))
@@ -466,7 +470,9 @@
 
 (defn get-define [mname jsdoc]
   (let [opts (get @env/*compiler* :options)]
-    (and (some #(.startsWith ^String % "@define") jsdoc)
+    (and (some #?(:clj #(.startsWith ^String % "@define")
+                  :cljs #(gstring/startsWith % "@define"))
+           jsdoc)
          opts
          (= (:optimizations opts) :none)
          (let [define (get-in opts [:closure-defines (str mname)])]
@@ -893,18 +899,19 @@
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
     (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
       (cond
-        (ana/foreign-dep? lib)
-        (let [{:keys [target optimizations]} (get @env/*compiler* :options)]
-          ;; we only load foreign libraries under optimizations :none
-          (when (= :none optimizations)
-            (if (= :nodejs target)
-              ;; under node.js we load foreign libs globally
-              (let [{:keys [js-dependency-index options]} @env/*compiler*
-                    ijs-url (get-in js-dependency-index [(name lib) :url])]
-                (emitln "cljs.core.load_file(\""
-                  (str (io/file (util/output-directory options) (util/get-name ijs-url)))
-                  "\");"))
-              (emitln "goog.require('" (munge lib) "');"))))
+        #?@(:clj
+            [(ana/foreign-dep? lib)
+             (let [{:keys [target optimizations]} (get @env/*compiler* :options)]
+               ;; we only load foreign libraries under optimizations :none
+               (when (= :none optimizations)
+                 (if (= :nodejs target)
+                   ;; under node.js we load foreign libs globally
+                   (let [{:keys [js-dependency-index options]} @env/*compiler*
+                         ijs-url (get-in js-dependency-index [(name lib) :url])]
+                     (emitln "cljs.core.load_file(\""
+                       (str (io/file (util/output-directory options) (util/get-name ijs-url)))
+                       "\");"))
+                   (emitln "goog.require('" (munge lib) "');"))))])
 
         (or (-> libs meta :reload)
             (= (get reloads lib) :reload))
@@ -1016,13 +1023,14 @@
 (defn- build-affecting-options [opts]
   (select-keys opts [:static-fns :optimize-constants :elide-asserts :target]))
 
-(defn compiled-by-string
-  ([] (compiled-by-string nil))
-  ([opts]
-    (str "// Compiled by ClojureScript "
-      (util/clojurescript-version)
-      (when opts
-        (str " " (pr-str (build-affecting-options opts)))))))
+#?(:clj
+   (defn compiled-by-string
+     ([] (compiled-by-string nil))
+     ([opts]
+      (str "// Compiled by ClojureScript "
+        (util/clojurescript-version)
+        (when opts
+          (str " " (pr-str (build-affecting-options opts))))))))
 
 #?(:clj
    (defn compile-file*
