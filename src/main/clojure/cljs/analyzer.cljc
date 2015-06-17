@@ -38,6 +38,7 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
+(def ^:dynamic *cljs-macros-ns* false)
 (def ^:dynamic *cljs-file* nil)
 #?(:clj (def ^:dynamic *unchecked-if* (atom false)))
 (def ^:dynamic *cljs-static-fns* false)
