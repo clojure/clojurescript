@@ -38,10 +38,9 @@
                             #?(:cljs alias)])
   #?(:cljs (:require-macros [cljs.core.macros :refer [import-macros alias]]))
   (:require clojure.walk
-    clojure.set
-    cljs.compiler
-    [cljs.util :as util]
-    [cljs.env :as env]))
+            clojure.set
+            cljs.compiler
+            [cljs.env :as env]))
 
 (alias 'core 'clojure.core)
 (alias 'ana 'cljs.analyzer)
