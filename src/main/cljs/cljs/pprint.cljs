@@ -2879,7 +2879,7 @@ type-map {"core$future_call" "Future",
       (write-out
         (if (and (satisfies? IPending o) (not (-realized? o)))
           :not-delivered
-          :else @o)))))
+          @o)))))
 
 (def ^{:private true} pprint-pqueue (formatter-out "~<<-(~;~@{~w~^ ~_~}~;)-<~:>"))
 
