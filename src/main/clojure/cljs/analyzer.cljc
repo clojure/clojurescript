@@ -1573,11 +1573,15 @@
           {:ns ns
            :var (symbol (str clash-ns) (str name))})))))
 
+(defn macro-ns-name [name]
+  (symbol (str name "$macros")))
+
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
   (when-not (symbol? name) 
     (throw (error env "Namespaces must be named by a symbol.")))
-  (let [segments (string/split (clojure.core/name name) #"\.")]
+  (let [name     (cond-> name *cljs-macros-ns* macro-ns-name)
+        segments (string/split (clojure.core/name name) #"\.")]
     (when (= 1 (count segments))
       (warning :single-segment-namespace env {:name name}))
     (when (some js-reserved segments)
