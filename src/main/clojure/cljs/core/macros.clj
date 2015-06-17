@@ -28,7 +28,7 @@
           (with-open [pbr (PushbackReader. (io/reader f))]
             (let [rdr (readers/source-logging-push-back-reader pbr)]
               (dotimes [_ (dec (:line m))] (readers/read-line rdr))
-              (reader/read {:read-cond :allow :features #{:cljs}} rdr))))))))
+              (reader/read {:read-cond :allow :features #{:clj}} rdr))))))))
 
 (defmacro import-macros [ns [& vars]]
   `(do
@@ -36,4 +36,5 @@
          (doall (map source-fn vars)))))
 
 (defmacro alias [[_ ns] [_ alias]]
-  )
+  (swap! @env/*compiler*
+    [::namespaces (.getName *ns*) :requires] assoc alias ns))
