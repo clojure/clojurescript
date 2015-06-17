@@ -21,6 +21,7 @@
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
             [cljs.env :as env]
+            [cljs.js-deps :as deps]
             [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
             [cljs.source-map :as sm])
@@ -830,6 +831,11 @@
                         (catch Throwable e
                           (caught e repl-env opts)
                           opts))))
+             opts (if (or (:libs opts) (:foreign-libs opts))
+                    (let [opts (cljsc/process-js-modules opts)]
+                      (swap! env/*compiler* assoc :js-dependency-index (deps/js-dependency-index opts))
+                      opts)
+                    opts)
              init (or init
                       #(evaluate-form repl-env env "<cljs repl>"
                          (with-meta
