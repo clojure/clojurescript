@@ -54,7 +54,7 @@
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
               JSModule JSModuleGraph SourceMap ProcessCommonJSModules
-              ES6ModuleLoader AbstractCompiler]
+              ES6ModuleLoader AbstractCompiler TransformAMDToCJSModule]
            [com.google.javascript.rhino Node]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]
@@ -87,8 +87,16 @@
       (.getConstructor ES6ModuleLoader
         (into-array java.lang.Class
                     [AbstractCompiler java.lang.String])))
- (def can-convert-js-module? true)
- (def can-convert-js-module? false))
+ (def can-convert-commonjs? true)
+ (def can-convert-commonjs? false))
+
+(compile-if
+ (and can-convert-commonjs?
+      (.getConstructor TransformAMDToCJSModule
+        (into-array java.lang.Class
+                    [AbstractCompiler])))
+ (def can-convert-amd? true)
+ (def can-convert-amd? false))
 
 ;; Closure API
 ;; ===========
@@ -1192,9 +1200,13 @@
 (defmulti convert-js-module
   "Takes a JavaScript module and rewrites it into a Google Closure-compatible
   form. Returns the source of the new module as a single string."
-  :module-type)
+  (fn [{module-type :module-type :as js}]
+    (if (and (= module-type :amd) can-convert-amd?)
+      ;; AMD modules are converted via CommonJS modules
+      :commonjs
+      module-type)))
 
-(compile-if can-convert-js-module?
+(compile-if can-convert-commonjs?
   (defmethod convert-js-module :commonjs [js]
     (let [js-file (:file js)
           path (.getParent (io/file js-file))
@@ -1210,6 +1222,8 @@
           es6-loader (ES6ModuleLoader. closure-compiler module-root)
           cjs (ProcessCommonJSModules. closure-compiler es6-loader)
           ^Node root (.parse closure-compiler source-file)]
+      (compile-if can-convert-amd?
+        (.process (TransformAMDToCJSModule. closure-compiler) nil root))
       (.process cjs nil root)
       (.toSource closure-compiler root))))
 
@@ -1488,7 +1502,8 @@
   [opts]
   (let [js-modules (filter :module-type (:foreign-libs opts))]
     (reduce (fn [opts {:keys [file module-type] :as lib}]
-              (if (= module-type :commonjs)
+              (if (or (and (= module-type :commonjs) can-convert-commonjs?)
+                      (and (= module-type :amd) can-convert-amd?))
                 (let [module-name (ProcessCommonJSModules/toModuleName file)
                       ijs (write-javascript opts (deps/load-foreign-library lib))]
                   (doseq [provide (:provides ijs)]
@@ -1511,9 +1526,9 @@
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)
-             all-opts (cond-> opts
-                       true add-implicit-options
-                       can-convert-js-module? process-js-modules)]
+             all-opts (-> opts
+                          add-implicit-options
+                          process-js-modules)]
          (check-output-to opts)
          (check-output-dir opts)
          (check-source-map opts)
