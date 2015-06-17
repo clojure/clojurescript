@@ -7,11 +7,13 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core.macros
-  (:refer-clojure :exclude [binding])
-  (:require [cljs.repl :refer [source]]))
+  (:refer-clojure :exclude [binding alias])
+  (:require [cljs.env :as env]
+            [cljs.analyzer :as ana]
+            [cljs.repl :refer [source]]))
 
 (defmacro import-macros [ns [& vars]]
   )
 
-(defmacro alias [ns alias]
+(defmacro alias [[_ ns] [_ alias]]
   )
