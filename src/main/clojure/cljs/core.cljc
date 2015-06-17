@@ -36,53 +36,55 @@
 
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
                             #?(:cljs alias)])
+  #?(:cljs (:require-macros [cljs.core.macros :refer [import-macros alias]]))
   (:require clojure.walk
-            clojure.set
-            cljs.compiler
-            [cljs.util :as util]
-            [cljs.env :as env]))
+    clojure.set
+    cljs.compiler
+    [cljs.util :as util]
+    [cljs.env :as env]))
 
 (alias 'core 'clojure.core)
 (alias 'ana 'cljs.analyzer)
 
-(core/defmacro import-macros [ns [& vars]]
-  (core/let [ns (find-ns ns)
-             vars (map #(ns-resolve ns %) vars)
-             syms (map
-                    (core/fn [^clojure.lang.Var v]
-                      (core/-> v .sym
-                        (with-meta
-                          (merge
-                            {:macro true}
-                            (update-in (select-keys (meta v) [:arglists :doc :file :line])
-                              [:arglists] (core/fn [arglists] `(quote ~arglists)))))))
-                    vars)
-             defs (map
-                    (core/fn [sym var]
-                      (core/let [{:keys [arglists doc file line]} (meta sym)]
-                        `(do
-                           (def ~sym (deref ~var))
-                           ;for AOT compilation
-                           (alter-meta! (var ~sym) assoc
-                             :macro true
-                             :arglists ~arglists
-                             :doc ~doc
-                             :file ~file
-                             :line ~line))))
-                    syms vars)]
-    `(do ~@defs
-         :imported)))
+#?(:clj
+   (core/defmacro import-macros [ns [& vars]]
+     (core/let [ns (find-ns ns)
+                vars (map #(ns-resolve ns %) vars)
+                syms (map
+                       (core/fn [^clojure.lang.Var v]
+                         (core/-> v .sym
+                           (with-meta
+                             (merge
+                               {:macro true}
+                               (update-in (select-keys (meta v) [:arglists :doc :file :line])
+                                 [:arglists] (core/fn [arglists] `(quote ~arglists)))))))
+                       vars)
+                defs (map
+                       (core/fn [sym var]
+                         (core/let [{:keys [arglists doc file line]} (meta sym)]
+                           `(do
+                              (def ~sym (deref ~var))
+                              ;for AOT compilation
+                              (alter-meta! (var ~sym) assoc
+                                :macro true
+                                :arglists ~arglists
+                                :doc ~doc
+                                :file ~file
+                                :line ~line))))
+                       syms vars)]
+       `(do ~@defs
+            :imported))))
 
 (import-macros clojure.core
- [-> ->> .. assert comment cond
-  declare defn-
-  doto
-  extend-protocol fn for
-  if-let if-not letfn
-  memfn
-  when when-first when-let when-not while
-  cond-> cond->> as-> some-> some->>
-  if-some when-some])
+  [-> ->> .. assert comment cond
+   declare defn-
+   doto
+   extend-protocol fn for
+   if-let if-not letfn
+   memfn
+   when when-first when-let when-not while
+   cond-> cond->> as-> some-> some->>
+   if-some when-some])
 
 (defn- ^{:dynamic true} assert-valid-fdecl
   "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
