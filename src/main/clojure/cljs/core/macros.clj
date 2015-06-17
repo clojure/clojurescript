@@ -7,13 +7,33 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core.macros
-  (:refer-clojure :exclude [binding alias])
-  (:require [cljs.env :as env]
+  (:refer-clojure :exclude [alias])
+  (:require [clojure.java.io :as io]
+            [clojure.tools.reader :as reader]
+            [clojure.tools.reader.reader-types :as readers]
+            [cljs.env :as env]
             [cljs.analyzer :as ana]
-            [cljs.repl :refer [source]]))
+            [cljs.repl :refer [source]])
+  (:import [java.io PushbackReader]))
+
+(defn source-fn
+  [x]
+  (when-let [m (-> x resolve meta)]
+    (when-let [filepath (:file m)]
+      (let [f (io/file filepath)
+            f (if (.exists f)
+                f
+                (io/resource filepath))]
+        (when f
+          (with-open [pbr (PushbackReader. (io/reader f))]
+            (let [rdr (readers/source-logging-push-back-reader pbr)]
+              (dotimes [_ (dec (:line m))] (readers/read-line rdr))
+              (reader/read {:read-cond :allow :features #{:cljs}} rdr))))))))
 
 (defmacro import-macros [ns [& vars]]
-  )
+  `(do
+     ~@(binding [*ns* (find-ns ns)]
+         (doall (map source-fn vars)))))
 
 (defmacro alias [[_ ns] [_ alias]]
   )
