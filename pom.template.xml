@@ -25,7 +25,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
-            <version>1.7.0-RC1</version>
+            <version>1.7.0-RC2</version>
         </dependency>
         <dependency>
             <groupId>com.google.javascript</groupId>
