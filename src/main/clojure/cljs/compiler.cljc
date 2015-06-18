@@ -1056,7 +1056,7 @@
             (let [ext (util/ext src)
                   {:keys [ns] :as ns-info} (ana/parse-ns src)]
               (if-let [cached (and (= (:optimizations opts) :none)
-                                   (not= ext "clj")
+                                   (not= ext "cljc")
                                    (= ns 'cljs.core)
                                    (io/resource "cljs/core.aot.js"))]
                ;; no need to bother with analysis cache reading, handled by
