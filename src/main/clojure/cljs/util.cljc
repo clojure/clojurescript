@@ -74,14 +74,21 @@
   ([parts sep]
     (apply str (interpose sep parts))))
 
+(declare ext)
+
 (defn ^File to-target-file
   ([target-dir ns-info]
     (to-target-file target-dir ns-info "js"))
-  ([target-dir ns-info ext]
-    (let [relative-path (string/split (munge-path (str (:ns ns-info))) #"\.")
-          parents (cond-> (butlast relative-path)
+  ([target-dir {:keys [ns source-file] :as ns-info} ext]
+    (let [src-ext (cljs.util/ext source-file)
+          ns      (if (or (= src-ext "clj")
+                          (and (= ns 'cljs.core) (= src-ext "cljc")))
+                    (symbol (str ns "$macros"))
+                    ns)
+          relpath (string/split (munge-path (str ns)) #"\.")
+          parents (cond-> (butlast relpath)
                     target-dir (conj target-dir))]
-      (cond->> (io/file (str (last relative-path) (str "." ext)))
+      (cond->> (io/file (str (last relpath) (str "." ext)))
         (seq parents)
         (io/file (to-path parents))))))
 
