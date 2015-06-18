@@ -31,9 +31,11 @@
               (reader/read {:read-cond :allow :features #{:clj}} rdr))))))))
 
 (defmacro import-macros [ns [& vars]]
-  `(do
-     ~@(binding [*ns* (find-ns ns)]
-         (doall (map source-fn vars)))))
+  (letfn [(->cljs-macro [[_ & rest]]
+            `(cljs.core/defmacro ~@rest))]
+    `(do
+      ~@(binding [*ns* (find-ns ns)]
+          (doall (map (comp ->cljs-macro source-fn) vars))))))
 
 (defmacro alias [[_ ns] [_ alias]]
   (swap! env/*compiler* assoc-in

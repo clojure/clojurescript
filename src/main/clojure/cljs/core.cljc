@@ -42,7 +42,9 @@
             cljs.compiler
             [cljs.env :as env]))
 
-(alias 'core 'clojure.core)
+#?(:clj (alias 'core 'clojure.core)
+   :cljs (alias 'core 'cljs.core))
+
 (alias 'ana 'cljs.analyzer)
 
 #?(:clj
