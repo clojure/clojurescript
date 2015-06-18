@@ -1073,66 +1073,67 @@
                          "file"
                          (str (io/file (util/output-directory opts) "cljs" "core.js"))))))
                  (ana/parse-ns src dest nil))
-               (with-open [out ^java.io.Writer (io/make-writer dest {})]
-                 (binding [*out* out
-                           ana/*cljs-ns* 'cljs.user
-                           ana/*cljs-macros-ns* (or (= ext "clj")
-                                                    (and (= ns 'cljs.core) (= ext "cljc"))
-                                                    (:macros-ns opts)
-                                                    ana/*cljs-macros-ns*)
-                           ana/*cljs-file* (.getPath ^File src)
-                           reader/*alias-map* (or reader/*alias-map* {})
-                           ana/*cljs-static-fns* (or ana/*cljs-static-fns* (:static-fns opts))
-                           *source-map-data* (when (:source-map opts)
-                                               (atom
-                                                 {:source-map (sorted-map)
-                                                  :gen-col 0
-                                                  :gen-line 0}))]
-                   (emitln (compiled-by-string opts))
-                   (with-open [rdr (io/reader src)]
-                     (loop [forms   (ana/forms-seq* rdr (util/path src))
-                            ns-name nil
-                            deps    nil]
-                       (if (seq forms)
-                         (let [env (ana/empty-env)
-                               ast (ana/analyze env (first forms) nil opts)]
-                           (emit ast)
-                           (if (= (:op ast) :ns)
-                             (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
-                             (recur (rest forms) ns-name deps)))
-                         (let [sm-data (when *source-map-data* @*source-map-data*)
-                               ret (merge
-                                     {:ns (or ns-name 'cljs.user)
-                                      :provides [ns-name]
-                                      :requires (if (= ns-name 'cljs.core)
-                                                  (set (vals deps))
-                                                  (cond-> (conj (set (vals deps)) 'cljs.core)
-                                                    (get-in @env/*compiler* [:options :emit-constants])
-                                                    (conj 'constants-table)))
-                                      :file dest
-                                      :source-file src}
-                                     (when sm-data
-                                       {:source-map (:source-map sm-data)}))]
-                           (when (and sm-data (= (:optimizations opts) :none))
-                             (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
-                               (emits "\n//# sourceMappingURL="
-                                 (or (:source-map-url opts) (.getName sm-file))
-                                 (if (true? (:source-map-timestamp opts))
-                                   (str "?rel=" (System/currentTimeMillis))
-                                   ""))
-                               (spit sm-file
-                                 (sm/encode {(url-path src) (:source-map sm-data)}
-                                   {:lines (+ (:gen-line sm-data) 2)
-                                    :file (url-path dest)
-                                    :source-map-timestamp (:source-map-timestamp opts)
-                                    :source-map-pretty-print (:source-map-pretty-print opts)}))))
-                           (let [path (.getPath (.toURL ^File dest))]
-                             (swap! env/*compiler* assoc-in [::compiled-cljs path] ret))
-                           (let [{:keys [output-dir cache-analysis]} opts]
-                             (when (and (true? cache-analysis) output-dir)
-                               (ana/write-analysis-cache ns-name
-                                 (ana/cache-file src (ana/parse-ns src) output-dir :write)))
-                             ret)))))))))))))))
+               (let [opts (if (or (= ext "clj")
+                                  (and (= ns 'cljs.core) (= ext "cljc"))
+                                  (:macros-ns opts))
+                            (assoc opts :macros-ns true)
+                            opts)]
+                 (with-open [out ^java.io.Writer (io/make-writer dest {})]
+                  (binding [*out* out
+                            ana/*cljs-ns* 'cljs.user
+                            ana/*cljs-file* (.getPath ^File src)
+                            reader/*alias-map* (or reader/*alias-map* {})
+                            ana/*cljs-static-fns* (or ana/*cljs-static-fns* (:static-fns opts))
+                            *source-map-data* (when (:source-map opts)
+                                                (atom
+                                                  {:source-map (sorted-map)
+                                                   :gen-col 0
+                                                   :gen-line 0}))]
+                    (emitln (compiled-by-string opts))
+                    (with-open [rdr (io/reader src)]
+                      (loop [forms (ana/forms-seq* rdr (util/path src))
+                             ns-name nil
+                             deps nil]
+                        (if (seq forms)
+                          (let [env (ana/empty-env)
+                                ast (ana/analyze env (first forms) nil opts)]
+                            (emit ast)
+                            (if (= (:op ast) :ns)
+                              (recur (rest forms) (:name ast) (merge (:uses ast) (:requires ast)))
+                              (recur (rest forms) ns-name deps)))
+                          (let [sm-data (when *source-map-data* @*source-map-data*)
+                                ret (merge
+                                      {:ns (or ns-name 'cljs.user)
+                                       :provides [ns-name]
+                                       :requires (if (= ns-name 'cljs.core)
+                                                   (set (vals deps))
+                                                   (cond-> (conj (set (vals deps)) 'cljs.core)
+                                                     (get-in @env/*compiler* [:options :emit-constants])
+                                                     (conj 'constants-table)))
+                                       :file dest
+                                       :source-file src}
+                                      (when sm-data
+                                        {:source-map (:source-map sm-data)}))]
+                            (when (and sm-data (= (:optimizations opts) :none))
+                              (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
+                                (emits "\n//# sourceMappingURL="
+                                  (or (:source-map-url opts) (.getName sm-file))
+                                  (if (true? (:source-map-timestamp opts))
+                                    (str "?rel=" (System/currentTimeMillis))
+                                    ""))
+                                (spit sm-file
+                                  (sm/encode {(url-path src) (:source-map sm-data)}
+                                    {:lines (+ (:gen-line sm-data) 2)
+                                     :file (url-path dest)
+                                     :source-map-timestamp (:source-map-timestamp opts)
+                                     :source-map-pretty-print (:source-map-pretty-print opts)}))))
+                            (let [path (.getPath (.toURL ^File dest))]
+                              (swap! env/*compiler* assoc-in [::compiled-cljs path] ret))
+                            (let [{:keys [output-dir cache-analysis]} opts]
+                              (when (and (true? cache-analysis) output-dir)
+                                (ana/write-analysis-cache ns-name
+                                  (ana/cache-file src (ana/parse-ns src) output-dir :write)))
+                              ret))))))))))))))))
 
 #?(:clj
    (defn requires-compilation?

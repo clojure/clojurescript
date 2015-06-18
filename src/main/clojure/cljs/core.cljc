@@ -36,16 +36,15 @@
 
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
                             #?(:cljs alias)])
-  #?(:cljs (:require-macros [cljs.core.macros :refer [import-macros alias]]))
   (:require clojure.walk
             clojure.set
             cljs.compiler
-            [cljs.env :as env]))
+            [cljs.env :as env]
+            #?(:cljs [clojure.core :as core])
+            #?(:cljs [cljs.analyzer :as ana])))
 
-#?(:clj (alias 'core 'clojure.core)
-   :cljs (alias 'core 'cljs.core))
-
-(alias 'ana 'cljs.analyzer)
+#?(:clj (alias 'core 'clojure.core))
+#?(:clj (alias 'ana 'cljs.analyzer))
 
 #?(:clj
    (core/defmacro import-macros [ns [& vars]]
@@ -76,16 +75,33 @@
        `(do ~@defs
             :imported))))
 
-(import-macros clojure.core
-  [-> ->> .. assert comment cond
-   declare defn-
-   doto
-   extend-protocol fn for
-   if-let if-not letfn
-   memfn
-   when when-first when-let when-not while
-   cond-> cond->> as-> some-> some->>
-   if-some when-some])
+#?(:clj
+   (import-macros clojure.core
+     [-> ->> .. assert comment cond
+      declare defn-
+      doto
+      extend-protocol fn for
+      if-let if-not letfn
+      memfn
+      when when-first when-let when-not while
+      cond-> cond->> as-> some-> some->>
+      if-some when-some]))
+
+#?(:cljs
+   (core/defmacro ->
+     "Threads the expr through the forms. Inserts x as the
+     second item in the first form, making a list of it if it is not a
+     list already. If there are more forms, inserts the first form as the
+     second item in second form, etc."
+     [x & forms]
+     (core/loop [x x, forms forms]
+       (if forms
+         (core/let [form (first forms)
+                    threaded (if (seq? form)
+                               (with-meta `(~(first form) ~x ~@(next form)) (meta form))
+                               (list form x))]
+           (recur threaded (next forms)))
+         x))))
 
 (defn- ^{:dynamic true} assert-valid-fdecl
   "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
