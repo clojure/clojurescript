@@ -36,6 +36,6 @@
          (doall (map source-fn vars)))))
 
 (defmacro alias [[_ ns] [_ alias]]
-  (swap! env/*compiler* assoc-in [::namespaces (.getName *ns*) :requires]
-    alias ns)
+  (swap! env/*compiler* assoc-in
+    [::namespaces (.getName *ns*) :requires alias] ns)
   nil)
