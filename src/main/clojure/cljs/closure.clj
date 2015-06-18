@@ -54,7 +54,8 @@
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
               JSModule JSModuleGraph SourceMap ProcessCommonJSModules
-              ES6ModuleLoader AbstractCompiler TransformAMDToCJSModule]
+              ES6ModuleLoader AbstractCompiler TransformAMDToCJSModule
+              ProcessEs6Modules]
            [com.google.javascript.rhino Node]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]
@@ -97,6 +98,17 @@
                     [AbstractCompiler])))
  (def can-convert-amd? true)
  (def can-convert-amd? false))
+
+(compile-if
+ (and (.getConstructor ProcessEs6Modules
+        (into-array java.lang.Class
+                    [com.google.javascript.jscomp.Compiler ES6ModuleLoader Boolean/TYPE]))
+      (.getConstructor ES6ModuleLoader
+        (into-array java.lang.Class
+                    [AbstractCompiler java.lang.String])))
+ (def can-convert-es6? true)
+ (def can-convert-es6? false))
+
 
 ;; Closure API
 ;; ===========
@@ -1197,6 +1209,22 @@
 
        :else (str (random-string 5) ".js")))))
 
+(defn get-js-module-root [js-file]
+  (let [path (.getParent (io/file js-file))]
+    (cond->> path
+      (.startsWith path File/separator) (str ".")
+      (not (.startsWith path (str "." File/separator))) (str "." File/separator)
+      (not (.endsWith path File/separator)) (#(str % File/separator)))))
+
+(defn init-js-module-processing [js-file options]
+  (let [^List externs '()
+        ^SourceFile source-file (js-source-file js-file (slurp js-file))
+        closure-compiler (doto (make-closure-compiler)
+                           (.init externs [source-file] options))
+        ^Node root (.parse closure-compiler source-file)]
+    {:closure-compiler closure-compiler
+     :root root}))
+
 (defmulti convert-js-module
   "Takes a JavaScript module and rewrites it into a Google Closure-compatible
   form. Returns the source of the new module as a single string."
@@ -1210,21 +1238,27 @@
   (defmethod convert-js-module :commonjs [js]
     (let [js-file (:file js)
           path (.getParent (io/file js-file))
-          module-root (cond->> path
-                        (.startsWith path File/separator) (str ".")
-                        (not (.startsWith path (str "." File/separator))) (str "." File/separator)
-                        (not (.endsWith path File/separator)) (#(str % File/separator)))
-          ^List externs '()
-          ^SourceFile source-file (js-source-file js-file (slurp js-file))
+          module-root (get-js-module-root js-file)
           ^CompilerOptions options (CompilerOptions.)
-          closure-compiler (doto (make-closure-compiler)
-                             (.init externs [source-file] options))
+          {:keys [closure-compiler root]} (init-js-module-processing js-file options)
           es6-loader (ES6ModuleLoader. closure-compiler module-root)
-          cjs (ProcessCommonJSModules. closure-compiler es6-loader)
-          ^Node root (.parse closure-compiler source-file)]
+          cjs (ProcessCommonJSModules. closure-compiler es6-loader)]
       (compile-if can-convert-amd?
         (.process (TransformAMDToCJSModule. closure-compiler) nil root))
       (.process cjs nil root)
+      (.toSource closure-compiler root))))
+
+(compile-if can-convert-es6?
+  (defmethod convert-js-module :es6 [js]
+    (let [js-file (:file js)
+          module-root (get-js-module-root js-file)
+          ^CompilerOptions options (doto (CompilerOptions.)
+                                     (.setLanguageIn CompilerOptions$LanguageMode/ECMASCRIPT6)
+                                     (.setLanguageOut CompilerOptions$LanguageMode/ECMASCRIPT5))
+          {:keys [closure-compiler root]} (init-js-module-processing js-file options)
+          es6-loader (ES6ModuleLoader. closure-compiler module-root)
+          cjs (ProcessEs6Modules. closure-compiler es6-loader true)]
+      (.processFile cjs root)
       (.toSource closure-compiler root))))
 
 (defmethod convert-js-module :default [js]
@@ -1503,7 +1537,8 @@
   (let [js-modules (filter :module-type (:foreign-libs opts))]
     (reduce (fn [opts {:keys [file module-type] :as lib}]
               (if (or (and (= module-type :commonjs) can-convert-commonjs?)
-                      (and (= module-type :amd) can-convert-amd?))
+                      (and (= module-type :amd) can-convert-amd?)
+                      (and (= module-type :es6) can-convert-es6?))
                 (let [module-name (ProcessCommonJSModules/toModuleName file)
                       ijs (write-javascript opts (deps/load-foreign-library lib))]
                   (doseq [provide (:provides ijs)]
