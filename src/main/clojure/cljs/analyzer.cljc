@@ -466,7 +466,8 @@
   ([env prefix suffix missing-fn]
     (let [sufstr (str suffix)
           suffix (symbol
-                   (if (re-find #"\." sufstr)
+                   ;; leave cljs.core$macros/.. alone
+                   (if (and (not= ".." sufstr) (re-find #"\." sufstr))
                      (first (string/split sufstr #"\."))
                      suffix))]
       (when (and (not (implicit-import? env prefix suffix))
