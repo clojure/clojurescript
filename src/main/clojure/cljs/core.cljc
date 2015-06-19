@@ -35,7 +35,11 @@
                             cond-> cond->> as-> some-> some->>
 
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
-                            #?(:cljs alias)])
+                            #?@(:cljs [alias assert-args coercive-not coercive-not= coercive-= coercive-boolean
+                                       truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
+                                       unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
+                                       defcurried rfn specify! js-this this-as implements? array js-obj
+                                       simple-benchmark gen-apply-to js-str es6-iterable load-file*])])
   #?(:cljs (:require-macros [cljs.core :as core]))
   (:require clojure.walk
             clojure.set
@@ -194,7 +198,7 @@
               (core/let [pvec
                      (core/fn [bvec b val]
                        (core/let [gvec (gensym "vec__")]
-                         (core/loop [ret (-> bvec (conj gvec) (conj val))
+                         (core/loop [ret (core/-> bvec (conj gvec) (conj val))
                                      n 0
                                      bs b
                                      seen-rest? false]
@@ -219,7 +223,7 @@
                      (core/fn [bvec b v]
                        (core/let [gmap (gensym "map__")
                                   defaults (:or b)]
-                         (core/loop [ret (-> bvec (conj gmap) (conj v)
+                         (core/loop [ret (core/-> bvec (conj gmap) (conj v)
                                              (conj gmap) (conj `(if (seq? ~gmap) (apply core/hash-map ~gmap) ~gmap))
                                              ((core/fn [ret]
                                                 (if (:as b)
@@ -243,8 +247,8 @@
                                       (next bes)))
                              ret))))]
                     (core/cond
-                      (core/symbol? b) (-> bvec (conj (if (namespace b) (symbol (name b)) b)) (conj v))
-                      (core/keyword? b) (-> bvec (conj (symbol (name b))) (conj v))
+                      (core/symbol? b) (core/-> bvec (conj (if (namespace b) (symbol (name b)) b)) (conj v))
+                      (core/keyword? b) (core/-> bvec (conj (symbol (name b))) (conj v))
                       (vector? b) (pvec bvec b v)
                       (map? b) (pmap bvec b v)
                       :else (throw
@@ -253,7 +257,7 @@
          process-entry (core/fn [bvec b] (pb bvec (first b) (second b)))]
         (if (every? core/symbol? (map first bents))
           bindings
-          (if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
+          (core/if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
             (throw
               #?(:clj (new Exception (core/str "Unsupported binding key: " (ffirst kwbs)))
                  :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
@@ -321,7 +325,7 @@
       (core/inc (core/quot c 32)))))
 
 (core/defmacro str [& xs]
-  (core/let [strs (->> (repeat (count xs) "cljs.core.str(~{})")
+  (core/let [strs (core/->> (repeat (count xs) "cljs.core.str(~{})")
                     (interpose ",")
                     (apply core/str))]
     (list* 'js* (core/str "[" strs "].join('')") xs)))
@@ -345,7 +349,7 @@
    (core/let [forms (concat [x] next)]
      (if (every? #(simple-test-expr? &env %)
            (map #(cljs.analyzer/analyze &env %) forms))
-       (core/let [and-str (->> (repeat (count forms) "(~{})")
+       (core/let [and-str (core/->> (repeat (count forms) "(~{})")
                             (interpose " && ")
                             (apply core/str))]
          (bool-expr `(~'js* ~and-str ~@forms)))
@@ -363,7 +367,7 @@
    (core/let [forms (concat [x] next)]
      (if (every? #(simple-test-expr? &env %)
            (map #(cljs.analyzer/analyze &env %) forms))
-       (core/let [or-str (->> (repeat (count forms) "(~{})")
+       (core/let [or-str (core/->> (repeat (count forms) "(~{})")
                            (interpose " || ")
                            (apply core/str))]
          (bool-expr `(~'js* ~or-str ~@forms)))
@@ -707,7 +711,7 @@
 ;;; end of reducers macros
 
 (core/defn- protocol-prefix [psym]
-  (core/str (-> (core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
+  (core/str (core/-> (core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
 
 (def #^:private base-type
      {nil "null"
@@ -770,7 +774,7 @@
              meta-sym (gensym "meta")
              this-sym (gensym "_")
              locals   (keys (:locals &env))
-             ns       (-> &env :ns :name)
+             ns       (core/-> &env :ns :name)
              munge    cljs.compiler/munge]
     `(do
        (when-not (exists? ~(symbol (core/str ns) (core/str t)))
@@ -812,13 +816,13 @@
 
 (core/defn- warn-and-update-protocol [p type env]
   (core/when-not (= 'Object p)
-    (if-let [var (cljs.analyzer/resolve-existing-var (dissoc env :locals) p)]
+    (core/if-let [var (cljs.analyzer/resolve-existing-var (dissoc env :locals) p)]
       (do
         (core/when-not (:protocol-symbol var)
           (cljs.analyzer/warning :invalid-protocol-symbol env {:protocol p}))
         (core/when (core/and (:protocol-deprecated cljs.analyzer/*cljs-warnings*)
-                (-> var :deprecated)
-                (not (-> p meta :deprecation-nowarn)))
+                (core/-> var :deprecated)
+                (not (core/-> p meta :deprecation-nowarn)))
           (cljs.analyzer/warning :protocol-deprecated env {:protocol p}))
         (core/when (:protocol-symbol var)
           (swap! env/*compiler* update-in [:cljs.analyzer/namespaces]
@@ -829,7 +833,7 @@
         (cljs.analyzer/warning :undeclared-protocol-symbol env {:protocol p})))))
 
 (core/defn- resolve-var [env sym]
-  (core/let [ret (-> (dissoc env :locals)
+  (core/let [ret (core/-> (dissoc env :locals)
                    (cljs.analyzer/resolve-var sym)
                    :name)]
     (assert ret (core/str "Can't resolve: " sym))
@@ -853,7 +857,7 @@
                 ~type ~(with-meta `(fn ~@meths) (meta form))))
         sigs))))
 
-(core/defmulti extend-prefix (core/fn [tsym sym] (-> tsym meta :extend)))
+(core/defmulti extend-prefix (core/fn [tsym sym] (core/-> tsym meta :extend)))
 
 (core/defmethod extend-prefix :instance
   [tsym sym] `(.. ~tsym ~(to-property sym)))
@@ -931,7 +935,7 @@
   (warn-and-update-protocol p type env)
   (core/let [psym      (resolve p)
              pprefix   (protocol-prefix psym)
-             skip-flag (set (-> type-sym meta :skip-protocol-flag))]
+             skip-flag (set (core/-> type-sym meta :skip-protocol-flag))]
     (if (= p 'Object)
       (add-obj-methods type type-sym sigs)
       (concat
@@ -947,7 +951,7 @@
 (core/defn- validate-impl-sigs [env p method]
   (core/when-not (= p 'Object)
     (core/let [var (ana/resolve-var (dissoc env :locals) p)
-               minfo (-> var :protocol-info :methods)
+               minfo (core/-> var :protocol-info :methods)
                [fname sigs] (if (core/vector? (second method))
                               [(first method) [(second method)]]
                               [(first method) (map first (rest method))])
@@ -998,7 +1002,7 @@
              _ (validate-impls env impls)
              resolve (partial resolve-var env)
              impl-map (->impl-map impls)
-             [type assign-impls] (if-let [type (base-type type-sym)]
+             [type assign-impls] (core/if-let [type (base-type type-sym)]
                                    [type base-assign-impls]
                                    [(resolve type-sym) proto-assign-impls])]
     (core/when (core/and (:extending-base-js-type cljs.analyzer/*cljs-warnings*)
@@ -1044,7 +1048,7 @@
      (core/loop [ret [] specs specs]
        (if (seq specs)
          (core/let [p     (first specs)
-                    ret   (-> (conj ret p)
+                    ret   (core/-> (conj ret p)
                             (into (reduce (partial annotate-specs annots) []
                                     (group-by first (take-while seq? (next specs))))))
                     specs (drop-while seq? (next specs))]
@@ -1052,7 +1056,7 @@
          ret)))))
 
 (core/defn- collect-protocols [impls env]
-  (->> impls
+  (core/->> impls
       (filter core/symbol?)
       (map #(:name (cljs.analyzer/resolve-var (dissoc env :locals) %)))
       (into #{})))
@@ -1061,7 +1065,7 @@
   [rsym rname fields]
   (let [fn-name (with-meta (symbol (core/str '-> rsym))
                   (assoc (meta rsym) :factory :positional))
-        field-values (if (-> rsym meta :internal-ctor) (conj fields nil nil nil) fields)]
+        field-values (if (core/-> rsym meta :internal-ctor) (conj fields nil nil nil) fields)]
     `(defn ~fn-name
        [~@fields]
        (new ~rname ~@field-values))))
@@ -1347,7 +1351,7 @@
              psym (vary-meta psym assoc
                     :doc doc
                     :protocol-symbol true)
-             ns-name (-> &env :ns :name)
+             ns-name (core/-> &env :ns :name)
              fqn (core/fn [n] (symbol (core/str ns-name "." n)))
              prefix (protocol-prefix p)
              _ (core/doseq [[mname & arities] methods]
@@ -1605,7 +1609,7 @@
                      {} (partition 2 clauses))
              esym    (gensym)
              tests   (keys pairs)]
-    (cond
+    (core/cond
       (every? (some-fn core/number? core/string? core/char? #(const? env %)) tests)
       (core/let [no-default (if (odd? (count clauses)) (butlast clauses) clauses)
                  tests      (mapv #(if (seq? %) (vec %) [%]) (take-nth 2 no-default))
@@ -1613,7 +1617,7 @@
         `(let [~esym ~e] (case* ~esym ~tests ~thens ~default)))
 
       (every? core/keyword? tests)
-      (core/let [tests (->> tests
+      (core/let [tests (core/->> tests
                          (map #(.substring (core/str %) 1))
                          vec
                          (mapv #(if (seq? %) (vec %) [%])))
@@ -1786,7 +1790,7 @@
     (nth (step nil (seq seq-exprs)) 1)))
 
 (core/defmacro array [& rest]
-  (core/let [xs-str (->> (repeat "~{}")
+  (core/let [xs-str (core/->> (repeat "~{}")
                       (take (count rest))
                       (interpose ",")
                       (apply core/str))]
@@ -1853,7 +1857,7 @@
         assoc :tag 'cljs.core/PersistentHashSet))))
 
 (core/defn- js-obj* [kvs]
-  (core/let [kvs-str (->> (repeat "~{}:~{}")
+  (core/let [kvs-str (core/->> (repeat "~{}:~{}")
                        (take (count kvs))
                        (interpose ",")
                        (apply core/str))]
@@ -1864,7 +1868,7 @@
 (core/defmacro js-obj [& rest]
   (core/let [sym-or-str? (core/fn [x] (core/or (core/symbol? x) (core/string? x)))
              filter-on-keys (core/fn [f coll]
-                              (->> coll
+                              (core/->> coll
                                 (filter (core/fn [[k _]] (f k)))
                                 (into {})))
              kvs (into {} (map vec (partition 2 rest)))
@@ -1963,7 +1967,7 @@
              m           (if (meta mm-name)
                            (conj (meta mm-name) m)
                            m)
-             mm-ns (-> &env :ns :name core/str)]
+             mm-ns (core/-> &env :ns :name core/str)]
     (core/when (= (count options) 1)
       (throw
         #?(:clj (Exception. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")
@@ -2185,7 +2189,7 @@
                  (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#)))))
          ~(variadic-fn* rname method)))))
 
-(comment
+(core/comment
   (require '[clojure.pprint :as pp])
   (pp/pprint (variadic-fn 'foo {} '(([& xs]))))
   (pp/pprint (variadic-fn 'foo {} '(([a & xs] xs))))
@@ -2292,20 +2296,24 @@
                             (butlast fdecl)
                             fdecl)
                     m (conj {:arglists (core/list 'quote (sigs fdecl))} m)
-                    m (core/let [inline (:inline m)
-                                 ifn (first inline)
-                                 iname (second inline)]
-                        ;; same as: (if (and (= 'fn ifn) (not (symbol? iname))) ...)
-                        (if (if #?(:clj (clojure.lang.Util/equiv 'fn ifn)
-                                   :cljs (= 'fn ifn))
-                              (if #?(:clj (core/instance? clojure.lang.Symbol iname)
-                                     :cljs (core/instance? Symbol iname)) false true))
-                          ;; inserts the same fn name to the inline fn if it does not have one
-                          (assoc m :inline (cons ifn (cons (clojure.lang.Symbol/intern (.concat (.getName ^clojure.lang.Symbol name) "__inliner"))
-                                                       (next inline))))
-                          m))
+                    ;; no support for :inline
+                    ;m (core/let [inline (:inline m)
+                    ;             ifn (first inline)
+                    ;             iname (second inline)]
+                    ;    ;; same as: (if (and (= 'fn ifn) (not (symbol? iname))) ...)
+                    ;    (if (if #?(:clj (clojure.lang.Util/equiv 'fn ifn)
+                    ;               :cljs (= 'fn ifn))
+                    ;          (if #?(:clj (core/instance? clojure.lang.Symbol iname)
+                    ;                 :cljs (core/instance? Symbol iname)) false true))
+                    ;      ;; inserts the same fn name to the inline fn if it does not have one
+                    ;      (assoc m
+                    ;        :inline (cons ifn
+                    ;                  (cons (clojure.lang.Symbol/intern
+                    ;                          (.concat (.getName ^clojure.lang.Symbol name) "__inliner"))
+                    ;                    (next inline))))
+                    ;      m))
                     m (conj (if (meta name) (meta name) {}) m)]
-           (cond
+           (core/cond
              (multi-arity-fn? fdecl)
              (multi-arity-fn name m fdecl)
 
