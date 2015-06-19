@@ -109,6 +109,421 @@
            (recur threaded (next forms)))
          x))))
 
+#?(:cljs
+   (core/defmacro ->>
+     "Threads the expr through the forms. Inserts x as the
+     last item in the first form, making a list of it if it is not a
+     list already. If there are more forms, inserts the first form as the
+     last item in second form, etc."
+     [x & forms]
+     (core/loop [x x, forms forms]
+       (if forms
+         (core/let [form (first forms)
+                    threaded (if (seq? form)
+                               (with-meta `(~(first form) ~@(next form) ~x) (meta form))
+                               (core/list form x))]
+           (recur threaded (next forms)))
+         x))))
+
+;#?(:cljs
+;   (core/defmacro ..
+;     "form => fieldName-symbol or (instanceMethodName-symbol args*)
+;
+;     Expands into a member access (.) of the first member on the first
+;     argument, followed by the next member on the result, etc. For
+;     instance:
+;
+;     (.. System (getProperties) (get \"os.name\"))
+;
+;     expands to:
+;
+;     (. (. System (getProperties)) (get \"os.name\"))
+;
+;     but is easier to write, read, and understand."
+;     ([x form] `(. ~x ~form))
+;     ([x form & more] `(.. (. ~x ~form) ~@more))))
+
+#?(:cljs
+   (core/defmacro comment
+     "Ignores body, yields nil"
+     [& body]))
+
+#?(:cljs
+   (core/defmacro cond
+     "Takes a set of test/expr pairs. It evaluates each test one at a
+     time.  If a test returns logical true, cond evaluates and returns
+     the value of the corresponding expr and doesn't evaluate any of the
+     other tests or exprs. (cond) returns nil."
+     {:added "1.0"}
+     [& clauses]
+     (core/when clauses
+       (core/list 'if (first clauses)
+         (if (next clauses)
+           (second clauses)
+           (throw (js/Error. "cond requires an even number of forms")))
+         (cons 'cljs.core/cond (next (next clauses)))))))
+
+#?(:cljs
+   (core/defmacro declare
+     "defs the supplied var names with no bindings, useful for making forward declarations."
+     [& names] `(do ~@(map #(core/list 'def (vary-meta % assoc :declared true)) names))))
+
+#?(:cljs
+   (core/defmacro doto
+     "Evaluates x then calls all of the methods and functions with the
+     value of x supplied at the front of the given arguments.  The forms
+     are evaluated in order.  Returns x.
+
+     (doto (new java.util.HashMap) (.put \"a\" 1) (.put \"b\" 2))"
+     [x & forms]
+     (core/let [gx (gensym)]
+       `(let [~gx ~x]
+          ~@(map (core/fn [f]
+                   (if (seq? f)
+                     `(~(first f) ~gx ~@(next f))
+                     `(~f ~gx)))
+              forms)
+          ~gx))))
+
+#?(:cljs
+   (core/defn- parse-impls [specs]
+     (core/loop [ret {} s specs]
+       (if (seq s)
+         (recur (assoc ret (first s) (take-while seq? (next s)))
+           (drop-while seq? (next s)))
+         ret))))
+
+#?(:cljs
+   (core/defn- emit-extend-protocol [p specs]
+     (core/let [impls (parse-impls specs)]
+       `(do
+          ~@(map (core/fn [[t fs]]
+                   `(extend-type ~t ~p ~@fs))
+              impls)))))
+
+#?(:cljs
+   (core/defmacro extend-protocol
+     "Useful when you want to provide several implementations of the same
+     protocol all at once. Takes a single protocol and the implementation
+     of that protocol for one or more types. Expands into calls to
+     extend-type:
+
+     (extend-protocol Protocol
+       AType
+         (foo [x] ...)
+         (bar [x y] ...)
+       BType
+         (foo [x] ...)
+         (bar [x y] ...)
+       AClass
+         (foo [x] ...)
+         (bar [x y] ...)
+       nil
+         (foo [x] ...)
+         (bar [x y] ...))
+
+     expands into:
+
+     (do
+      (clojure.core/extend-type AType Protocol
+        (foo [x] ...)
+        (bar [x y] ...))
+      (clojure.core/extend-type BType Protocol
+        (foo [x] ...)
+        (bar [x y] ...))
+      (clojure.core/extend-type AClass Protocol
+        (foo [x] ...)
+        (bar [x y] ...))
+      (clojure.core/extend-type nil Protocol
+        (foo [x] ...)
+        (bar [x y] ...)))"
+     [p & specs]
+     (emit-extend-protocol p specs)))
+
+#?(:cljs
+   (core/defn ^{:private true}
+   maybe-destructured
+     [params body]
+     (if (every? core/symbol? params)
+       (cons params body)
+       (core/loop [params params
+                   new-params (with-meta [] (meta params))
+                   lets []]
+         (if params
+           (if (core/symbol? (first params))
+             (recur (next params) (conj new-params (first params)) lets)
+             (core/let [gparam (gensym "p__")]
+               (recur (next params) (conj new-params gparam)
+                 (-> lets (conj (first params)) (conj gparam)))))
+           `(~new-params
+              (let ~lets
+                ~@body)))))))
+
+#?(:cljs
+   (core/defmacro fn
+     "params => positional-params* , or positional-params* & next-param
+     positional-param => binding-form
+     next-param => binding-form
+     name => symbol
+
+     Defines a function"
+     {:forms '[(fn name? [params*] exprs*) (fn name? ([params*] exprs*) +)]}
+     [& sigs]
+     (core/let [name (if (core/symbol? (first sigs)) (first sigs) nil)
+                sigs (if name (next sigs) sigs)
+                sigs (if (vector? (first sigs))
+                       (core/list sigs)
+                       (if (seq? (first sigs))
+                         sigs
+                         ;; Assume single arity syntax
+                         (throw (js/Error.
+                                  (if (seq sigs)
+                                    (core/str "Parameter declaration "
+                                      (core/first sigs)
+                                      " should be a vector")
+                                    (core/str "Parameter declaration missing"))))))
+                psig (fn* [sig]
+                       ;; Ensure correct type before destructuring sig
+                       (core/when (not (seq? sig))
+                         (throw (js/Error.
+                                  (core/str "Invalid signature " sig
+                                    " should be a list"))))
+                       (core/let [[params & body] sig
+                                  _ (core/when (not (vector? params))
+                                      (throw (js/Error..
+                                               (if (seq? (first sigs))
+                                                 (core/str "Parameter declaration " params
+                                                   " should be a vector")
+                                                 (core/str "Invalid signature " sig
+                                                   " should be a list")))))
+                                  conds (core/when (core/and (next body) (map? (first body)))
+                                          (first body))
+                                  body (if conds (next body) body)
+                                  conds (core/or conds (meta params))
+                                  pre (:pre conds)
+                                  post (:post conds)
+                                  body (if post
+                                         `((let [~'% ~(if (core/< 1 (count body))
+                                                        `(do ~@body)
+                                                        (first body))]
+                                             ~@(map (fn* [c] `(assert ~c)) post)
+                                             ~'%))
+                                         body)
+                                  body (if pre
+                                         (concat (map (fn* [c] `(assert ~c)) pre)
+                                           body)
+                                         body)]
+                         (maybe-destructured params body)))
+                new-sigs (map psig sigs)]
+       (with-meta
+         (if name
+           (list* 'fn* name new-sigs)
+           (cons 'fn* new-sigs))
+         (meta &form)))))
+
+#?(:cljs
+   (core/defmacro if-let
+     "bindings => binding-form test
+
+     If test is true, evaluates then with binding-form bound to the value of
+     test, if not, yields else"
+     ([bindings then]
+      `(if-let ~bindings ~then nil))
+     ([bindings then else & oldform]
+      (core/assert-args
+        (vector? bindings) "a vector for its binding"
+        (nil? oldform) "1 or 2 forms after binding vector"
+        (= 2 (count bindings)) "exactly 2 forms in binding vector")
+      (core/let [form (bindings 0) tst (bindings 1)]
+        `(let [temp# ~tst]
+           (if temp#
+             (let [~form temp#]
+               ~then)
+             ~else))))))
+
+#?(:cljs
+   (core/defmacro if-not
+     "Evaluates test. If logical false, evaluates and returns then expr,
+     otherwise else expr, if supplied, else nil."
+     ([test then] `(if-not ~test ~then nil))
+     ([test then else]
+      `(if (not ~test) ~then ~else))))
+
+#?(:cljs
+   (core/defmacro letfn
+     "fnspec ==> (fname [params*] exprs) or (fname ([params*] exprs)+)
+
+     Takes a vector of function specs and a body, and generates a set of
+     bindings of functions to their names. All of the names are available
+     in all of the definitions of the functions, as well as the body."
+     {:forms '[(letfn [fnspecs*] exprs*)],
+      :special-form true, :url nil}
+     [fnspecs & body]
+     `(letfn* ~(vec (interleave (map first fnspecs)
+                      (map #(cons `fn %) fnspecs)))
+        ~@body)))
+
+#?(:cljs
+   (core/defmacro memfn
+     "Expands into code that creates a fn that expects to be passed an
+     object and any args and calls the named instance method on the
+     object passing the args. Use when you want to treat a Java method as
+     a first-class fn. name may be type-hinted with the method receiver's
+     type in order to avoid reflective calls."
+     [name & args]
+     (core/let [t (with-meta (gensym "target")
+               (meta name))]
+       `(fn [~t ~@args]
+          (. ~t (~name ~@args))))))
+
+#?(:cljs
+   (core/defmacro when
+     "Evaluates test. If logical true, evaluates body in an implicit do."
+     [test & body]
+     (core/list 'if test (cons 'do body))))
+
+#?(:cljs
+   (core/defmacro when-first
+     "bindings => x xs
+
+     Roughly the same as (when (seq xs) (let [x (first xs)] body)) but xs is evaluated only once"
+     [bindings & body]
+     (core/assert-args
+       (vector? bindings) "a vector for its binding"
+       (= 2 (count bindings)) "exactly 2 forms in binding vector")
+     (core/let [[x xs] bindings]
+       `(when-let [xs# (seq ~xs)]
+          (let [~x (first xs#)]
+            ~@body)))))
+
+#?(:cljs
+   (core/defmacro when-let
+     "bindings => binding-form test
+
+     When test is true, evaluates body with binding-form bound to the value of test"
+     [bindings & body]
+     (core/assert-args
+       (vector? bindings) "a vector for its binding"
+       (= 2 (count bindings)) "exactly 2 forms in binding vector")
+     (core/let [form (bindings 0) tst (bindings 1)]
+       `(let [temp# ~tst]
+          (when temp#
+            (let [~form temp#]
+              ~@body))))))
+
+#?(:cljs
+   (core/defmacro when-not
+     "Evaluates test. If logical false, evaluates body in an implicit do."
+     [test & body]
+     (core/list 'if test nil (cons 'do body))))
+
+#?(:cljs
+   (core/defmacro while
+     "Repeatedly executes body while test expression is true. Presumes
+     some side-effect will cause test to become false/nil. Returns nil"
+     [test & body]
+     `(loop []
+        (when ~test
+          ~@body
+          (recur)))))
+
+#?(:cljs
+   (core/defmacro cond->
+     "Takes an expression and a set of test/form pairs. Threads expr (via ->)
+     through each form for which the corresponding test
+     expression is true. Note that, unlike cond branching, cond-> threading does
+     not short circuit after the first true test expression."
+     [expr & clauses]
+     (core/assert (even? (count clauses)))
+     (core/let [g (gensym)
+                pstep (core/fn [[test step]] `(if ~test (-> ~g ~step) ~g))]
+       `(let [~g ~expr
+              ~@(interleave (repeat g) (map pstep (partition 2 clauses)))]
+          ~g))))
+
+#?(:cljs
+   (core/defmacro cond->>
+     "Takes an expression and a set of test/form pairs. Threads expr (via ->>)
+     through each form for which the corresponding test expression
+     is true.  Note that, unlike cond branching, cond->> threading does not short circuit
+     after the first true test expression."
+     [expr & clauses]
+     (core/assert (even? (count clauses)))
+     (core/let [g (gensym)
+                pstep (core/fn [[test step]] `(if ~test (->> ~g ~step) ~g))]
+       `(let [~g ~expr
+              ~@(interleave (repeat g) (map pstep (partition 2 clauses)))]
+          ~g))))
+
+#?(:cljs
+   (core/defmacro as->
+     "Binds name to expr, evaluates the first form in the lexical context
+     of that binding, then binds name to that result, repeating for each
+     successive form, returning the result of the last form."
+     [expr name & forms]
+     `(let [~name ~expr
+            ~@(interleave (repeat name) forms)]
+        ~name)))
+
+#?(:cljs
+   (core/defmacro some->
+     "When expr is not nil, threads it into the first form (via ->),
+     and when that result is not nil, through the next etc"
+     [expr & forms]
+     (core/let [g (gensym)
+                pstep (core/fn [step] `(if (nil? ~g) nil (-> ~g ~step)))]
+       `(let [~g ~expr
+              ~@(interleave (repeat g) (map pstep forms))]
+          ~g))))
+
+#?(:cljs
+   (core/defmacro some->>
+     "When expr is not nil, threads it into the first form (via ->>),
+     and when that result is not nil, through the next etc"
+     [expr & forms]
+     (core/let [g (gensym)
+                pstep (core/fn [step] `(if (nil? ~g) nil (->> ~g ~step)))]
+       `(let [~g ~expr
+              ~@(interleave (repeat g) (map pstep forms))]
+          ~g))))
+
+#?(:cljs
+   (core/defmacro if-some
+     "bindings => binding-form test
+
+      If test is not nil, evaluates then with binding-form bound to the
+      value of test, if not, yields else"
+     ([bindings then]
+      `(if-some ~bindings ~then nil))
+     ([bindings then else & oldform]
+      (core/assert-args
+        (vector? bindings) "a vector for its binding"
+        (nil? oldform) "1 or 2 forms after binding vector"
+        (= 2 (count bindings)) "exactly 2 forms in binding vector")
+      (core/let [form (bindings 0) tst (bindings 1)]
+        `(let [temp# ~tst]
+           (if (nil? temp#)
+             ~else
+             (let [~form temp#]
+               ~then)))))))
+
+#?(:cljs
+   (core/defmacro when-some
+     "bindings => binding-form test
+
+      When test is not nil, evaluates body with binding-form bound to the
+      value of test"
+     [bindings & body]
+     (core/assert-args
+       (vector? bindings) "a vector for its binding"
+       (= 2 (count bindings)) "exactly 2 forms in binding vector")
+     (core/let [form (bindings 0) tst (bindings 1)]
+       `(let [temp# ~tst]
+          (if (nil? temp#)
+            nil
+            (let [~form temp#]
+              ~@body))))))
+
 (core/defn- ^{:dynamic true} assert-valid-fdecl
   "A good fdecl looks like (([a] ...) ([a b] ...)) near the end of defn."
   [fdecl]
@@ -195,58 +610,58 @@
 
 (core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
-         pb (core/fn pb [bvec b v]
-              (core/let [pvec
-                     (core/fn [bvec b val]
-                       (core/let [gvec (gensym "vec__")]
-                         (core/loop [ret (core/-> bvec (conj gvec) (conj val))
-                                     n 0
-                                     bs b
-                                     seen-rest? false]
-                           (if (seq bs)
-                             (core/let [firstb (first bs)]
-                               (core/cond
-                                 (= firstb '&) (recur (pb ret (second bs) (core/list `nthnext gvec n))
-                                                      n
-                                                      (nnext bs)
-                                                      true)
-                                 (= firstb :as) (pb ret (second bs) gvec)
-                                 :else (if seen-rest?
-                                         (throw
-                                           #?(:clj (new Exception "Unsupported binding form, only :as can follow & parameter")
-                                              :cljs (new js/Error "Unsupported binding form, only :as can follow & parameter")))
-                                         (recur (pb ret firstb (core/list `nth gvec n nil))
-                                                (core/inc n)
-                                                (next bs)
-                                                seen-rest?))))
-                             ret))))
-                     pmap
-                     (core/fn [bvec b v]
-                       (core/let [gmap (gensym "map__")
-                                  defaults (:or b)]
-                         (core/loop [ret (core/-> bvec (conj gmap) (conj v)
-                                             (conj gmap) (conj `(if (seq? ~gmap) (apply core/hash-map ~gmap) ~gmap))
-                                             ((core/fn [ret]
-                                                (if (:as b)
-                                                  (conj ret (:as b) gmap)
-                                                  ret))))
-                                     bes (reduce
-                                          (core/fn [bes entry]
-                                            (reduce #(assoc %1 %2 ((val entry) %2))
-                                                    (dissoc bes (key entry))
-                                                    ((key entry) bes)))
-                                          (dissoc b :as :or)
-                                          {:keys #(if (core/keyword? %) % (keyword (core/str %))),
-                                           :strs core/str, :syms #(core/list `quote %)})]
-                           (if (seq bes)
-                             (core/let [bb (key (first bes))
-                                        bk (val (first bes))
-                                        has-default (contains? defaults bb)]
-                               (recur (pb ret bb (if has-default
-                                                   (core/list `get gmap bk (defaults bb))
-                                                   (core/list `get gmap bk)))
-                                      (next bes)))
-                             ret))))]
+             pb (core/fn pb [bvec b v]
+                  (core/let [pvec
+                             (core/fn [bvec b val]
+                               (core/let [gvec (gensym "vec__")]
+                                 (core/loop [ret (core/-> bvec (conj gvec) (conj val))
+                                             n 0
+                                             bs b
+                                             seen-rest? false]
+                                   (if (seq bs)
+                                     (core/let [firstb (first bs)]
+                                       (core/cond
+                                         (= firstb '&) (recur (pb ret (second bs) (core/list `nthnext gvec n))
+                                                         n
+                                                         (nnext bs)
+                                                         true)
+                                         (= firstb :as) (pb ret (second bs) gvec)
+                                         :else (if seen-rest?
+                                                 (throw
+                                                   #?(:clj (new Exception "Unsupported binding form, only :as can follow & parameter")
+                                                      :cljs (new js/Error "Unsupported binding form, only :as can follow & parameter")))
+                                                 (recur (pb ret firstb (core/list `nth gvec n nil))
+                                                   (core/inc n)
+                                                   (next bs)
+                                                   seen-rest?))))
+                                     ret))))
+                             pmap
+                             (core/fn [bvec b v]
+                               (core/let [gmap (gensym "map__")
+                                          defaults (:or b)]
+                                 (core/loop [ret (core/-> bvec (conj gmap) (conj v)
+                                                   (conj gmap) (conj `(if (seq? ~gmap) (apply core/hash-map ~gmap) ~gmap))
+                                                   ((core/fn [ret]
+                                                      (if (:as b)
+                                                        (conj ret (:as b) gmap)
+                                                        ret))))
+                                             bes (reduce
+                                                   (core/fn [bes entry]
+                                                     (reduce #(assoc %1 %2 ((val entry) %2))
+                                                       (dissoc bes (key entry))
+                                                       ((key entry) bes)))
+                                                   (dissoc b :as :or)
+                                                   {:keys #(if (core/keyword? %) % (keyword (core/str %))),
+                                                    :strs core/str, :syms #(core/list `quote %)})]
+                                   (if (seq bes)
+                                     (core/let [bb (key (first bes))
+                                                bk (val (first bes))
+                                                has-default (contains? defaults bb)]
+                                       (recur (pb ret bb (if has-default
+                                                           (core/list `get gmap bk (defaults bb))
+                                                           (core/list `get gmap bk)))
+                                         (next bes)))
+                                     ret))))]
                     (core/cond
                       (core/symbol? b) (core/-> bvec (conj (if (namespace b) (symbol (name b)) b)) (conj v))
                       (core/keyword? b) (core/-> bvec (conj (symbol (name b))) (conj v))
@@ -255,14 +670,14 @@
                       :else (throw
                               #?(:clj (new Exception (core/str "Unsupported binding form: " b))
                                  :cljs (new js/Error (core/str "Unsupported binding form: " b)))))))
-         process-entry (core/fn [bvec b] (pb bvec (first b) (second b)))]
-        (if (every? core/symbol? (map first bents))
-          bindings
-          (core/if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
-            (throw
-              #?(:clj (new Exception (core/str "Unsupported binding key: " (ffirst kwbs)))
-                 :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
-            (reduce process-entry [] bents)))))
+             process-entry (core/fn [bvec b] (pb bvec (first b) (second b)))]
+    (if (every? core/symbol? (map first bents))
+      bindings
+      (core/if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
+        (throw
+          #?(:clj (new Exception (core/str "Unsupported binding key: " (ffirst kwbs)))
+             :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
+        (reduce process-entry [] bents)))))
 
 (core/defmacro let
   "binding => binding-form init-expr
