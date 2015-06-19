@@ -36,11 +36,11 @@
 
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
                             #?(:cljs alias)])
+  #?(:cljs (:require-macros [cljs.core :as core]))
   (:require clojure.walk
             clojure.set
             cljs.compiler
             [cljs.env :as env]
-            #?(:cljs [clojure.core :as core])
             #?(:cljs [cljs.analyzer :as ana])))
 
 #?(:clj (alias 'core 'clojure.core))
