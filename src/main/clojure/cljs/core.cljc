@@ -670,7 +670,7 @@
 
 ;; internal
 (core/defmacro caching-hash [coll hash-fn hash-key]
-  (assert (clojure.core/symbol? hash-key) "hash-key is substituted twice")
+  (core/assert (clojure.core/symbol? hash-key) "hash-key is substituted twice")
   `(let [h# ~hash-key]
      (if-not (nil? h#)
        h#
@@ -2166,9 +2166,9 @@
             ~(apply-to)))))))
 
 (core/defn- variadic-fn [name meta [[arglist & body :as method] :as fdecl]]
-  (letfn [(dest-args [c]
-            (map (core/fn [n] `(aget (js-arguments) ~n))
-              (range c)))]
+  (core/letfn [(dest-args [c]
+                 (map (core/fn [n] `(aget (js-arguments) ~n))
+                   (range c)))]
     (core/let [rname (symbol (core/str ana/*cljs-ns*) (core/str name))
                sig   (remove '#{&} arglist)
                c-1   (core/dec (count sig))
@@ -2184,8 +2184,8 @@
            (fn []
              (let [argseq# (when (< ~c-1 (alength (js-arguments)))
                              (new ^::ana/no-resolve cljs.core/IndexedSeq
-                              (.call js/Array.prototype.slice
-                                (js-arguments) ~c-1) 0))]
+                               (.call js/Array.prototype.slice
+                                 (js-arguments) ~c-1) 0))]
                (. ~rname
                  (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#)))))
          ~(variadic-fn* rname method)))))
@@ -2203,7 +2203,7 @@
                  (map (core/fn [n] `(aget (js-arguments) ~n))
                    (range c)))
                (fixed-arity [rname sig]
-                 (let [c (count sig)]
+                 (core/let [c (count sig)]
                    [c `(. ~rname
                          (~(symbol
                              (core/str "cljs$core$IFn$_invoke$arity$" c))
