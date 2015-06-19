@@ -10,7 +10,7 @@
 * *command-line-args*
 * *compile-files*
 * *compile-path*
-* TODO *e
+* DONE *e
 * *err*
 * *file*
 * *flush-on-newline*
