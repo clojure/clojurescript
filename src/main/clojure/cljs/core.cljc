@@ -39,7 +39,8 @@
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
                                        defcurried rfn specify! js-this this-as implements? array js-obj
-                                       simple-benchmark gen-apply-to js-str es6-iterable load-file*])])
+                                       simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
+                                       specify])])
   #?(:cljs (:require-macros [cljs.core :as core]))
   (:require clojure.walk
             clojure.set
@@ -396,7 +397,7 @@
 
 ;; internal - do not use.
 (core/defmacro truth_ [x]
-  (assert (clojure.core/symbol? x) "x is substituted twice")
+  (core/assert (core/symbol? x) "x is substituted twice")
   (core/list 'js* "(~{} != null && ~{} !== false)" x x))
 
 ;; internal - do not use
@@ -836,7 +837,7 @@
   (core/let [ret (core/-> (dissoc env :locals)
                    (cljs.analyzer/resolve-var sym)
                    :name)]
-    (assert ret (core/str "Can't resolve: " sym))
+    (core/assert ret (core/str "Can't resolve: " sym))
     ret))
 
 (core/defn- ->impl-map [impls]
@@ -1022,7 +1023,7 @@
       (core/let [fpps  (into #{}
                          (filter (partial contains? fast-path-protocols)
                            (map resolve (keys impl-map))))
-                 parts (as-> (group-by first fpp-pbs) parts
+                 parts (core/as-> (group-by first fpp-pbs) parts
                          (into {}
                            (map (juxt key (comp (partial map peek) val))
                              parts))
@@ -1063,8 +1064,8 @@
 
 (core/defn- build-positional-factory
   [rsym rname fields]
-  (let [fn-name (with-meta (symbol (core/str '-> rsym))
-                  (assoc (meta rsym) :factory :positional))
+  (core/let [fn-name (with-meta (symbol (core/str '-> rsym))
+                       (assoc (meta rsym) :factory :positional))
         field-values (if (core/-> rsym meta :internal-ctor) (conj fields nil nil nil) fields)]
     `(defn ~fn-name
        [~@fields]
@@ -1378,14 +1379,14 @@
                       (into {}
                         (map
                           (core/fn [[fname & sigs]]
-                            (core/let [doc (as-> (last sigs) doc
+                            (core/let [doc (core/as-> (last sigs) doc
                                              (core/when (core/string? doc) doc))
                                        sigs (take-while vector? sigs)]
                               [(vary-meta fname assoc :doc doc)
                                (vec sigs)]))
                           methods)))
              method (core/fn [[fname & sigs]]
-                      (core/let [doc (as-> (last sigs) doc
+                      (core/let [doc (core/as-> (last sigs) doc
                                        (core/when (core/string? doc) doc))
                                  sigs (take-while vector? sigs)
                                  slot (symbol (core/str prefix (name fname)))
@@ -1522,9 +1523,9 @@
   (core/let [gpred (gensym "pred__")
              gexpr (gensym "expr__")
              emit (core/fn emit [pred expr args]
-                    (let [[[a b c :as clause] more]
-                          (split-at (if (= :>> (second args)) 3 2) args)
-                          n (count clause)]
+                    (core/let [[[a b c :as clause] more]
+                               (split-at (if (= :>> (second args)) 3 2) args)
+                               n (count clause)]
                       (core/cond
                         (= 0 n) `(throw (js/Error. (core/str "No matching clause: " ~expr)))
                         (= 1 n) a
@@ -1597,9 +1598,9 @@
                            (seq? test)
                            (reduce
                              (core/fn [m test]
-                               (let [test (if (core/symbol? test)
-                                            (core/list 'quote test)
-                                            test)]
+                               (core/let [test (if (core/symbol? test)
+                                                 (core/list 'quote test)
+                                                 test)]
                                  (assoc-test m test expr env)))
                              m test)
                            (core/symbol? test)
@@ -1743,7 +1744,7 @@
     (even? (count seq-exprs)) "an even number of forms in binding vector")
   (core/let [err (core/fn [& msg] (throw (ex-info (apply core/str msg) {})))
              step (core/fn step [recform exprs]
-                    (if-not exprs
+                    (core/if-not exprs
                       [true `(do ~@body)]
                       (core/let [k (first exprs)
                                  v (second exprs)
@@ -1764,13 +1765,13 @@
                                                   ~@(core/when needrec [recform]))
                                                 ~recform)]
                           (core/keyword? k) (err "Invalid 'doseq' keyword" k)
-                          :else (let [chunksym (with-meta (gensym "chunk__")
-                                                 {:tag 'not-native})
-                                      countsym (gensym "count__")
-                                      isym     (gensym "i__")
-                                      recform-chunk  `(recur ~seqsym ~chunksym ~countsym (unchecked-inc ~isym))
-                                      steppair-chunk (step recform-chunk (nnext exprs))
-                                      subform-chunk  (steppair-chunk 1)]
+                          :else (core/let [chunksym (with-meta (gensym "chunk__")
+                                                      {:tag 'not-native})
+                                           countsym (gensym "count__")
+                                           isym     (gensym "i__")
+                                           recform-chunk  `(recur ~seqsym ~chunksym ~countsym (unchecked-inc ~isym))
+                                           steppair-chunk (step recform-chunk (nnext exprs))
+                                           subform-chunk  (steppair-chunk 1)]
                                   [true `(loop [~seqsym   (seq ~v)
                                                 ~chunksym nil
                                                 ~countsym 0
@@ -2138,23 +2139,23 @@
   ([sym [arglist & body :as method] solo]
    (core/let [sig (remove '#{&} arglist)
               restarg (gensym "seq")]
-     (letfn [(get-delegate []
-               'cljs$core$IFn$_invoke$arity$variadic)
-             (get-delegate-prop []
-               (symbol (core/str "-" (get-delegate))))
-             (param-bind [param]
-               `[~param (^::ana/no-resolve first ~restarg)
-                 ~restarg (^::ana/no-resolve next ~restarg)])
-             (apply-to []
-               (if (core/< 1 (count sig))
-                 (let [params (repeatedly (core/dec (count sig)) gensym)]
-                   `(fn
-                      ([~restarg]
-                       (let [~@(mapcat param-bind params)]
-                         (. ~sym (~(get-delegate) ~@params ~restarg))))))
-                 `(fn
-                    ([~restarg]
-                     (. ~sym (~(get-delegate) (seq ~restarg)))))))]
+     (core/letfn [(get-delegate []
+                    'cljs$core$IFn$_invoke$arity$variadic)
+                  (get-delegate-prop []
+                    (symbol (core/str "-" (get-delegate))))
+                  (param-bind [param]
+                    `[~param (^::ana/no-resolve first ~restarg)
+                      ~restarg (^::ana/no-resolve next ~restarg)])
+                  (apply-to []
+                    (if (core/< 1 (count sig))
+                      (core/let [params (repeatedly (core/dec (count sig)) gensym)]
+                        `(fn
+                           ([~restarg]
+                            (let [~@(mapcat param-bind params)]
+                              (. ~sym (~(get-delegate) ~@params ~restarg))))))
+                      `(fn
+                         ([~restarg]
+                          (. ~sym (~(get-delegate) (seq ~restarg)))))))]
        `(do
           (set! (. ~sym ~(get-delegate-prop))
             (fn (~(vec sig) ~@body)))
@@ -2198,23 +2199,23 @@
   )
 
 (core/defn- multi-arity-fn [name meta fdecl]
-  (letfn [(dest-args [c]
-            (map (core/fn [n] `(aget (js-arguments) ~n))
-              (range c)))
-          (fixed-arity [rname sig]
-            (let [c (count sig)]
-              [c `(. ~rname
-                    (~(symbol
-                        (core/str "cljs$core$IFn$_invoke$arity$" c))
-                      ~@(dest-args c)))]))
-          (fn-method [[sig & body :as method]]
-            (if (some '#{&} sig)
-              (variadic-fn* name method false)
-              `(set!
-                 (. ~name
-                   ~(symbol (core/str "-cljs$core$IFn$_invoke$arity$"
-                              (count sig))))
-                 (fn ~method))))]
+  (core/letfn [(dest-args [c]
+                 (map (core/fn [n] `(aget (js-arguments) ~n))
+                   (range c)))
+               (fixed-arity [rname sig]
+                 (let [c (count sig)]
+                   [c `(. ~rname
+                         (~(symbol
+                             (core/str "cljs$core$IFn$_invoke$arity$" c))
+                           ~@(dest-args c)))]))
+               (fn-method [[sig & body :as method]]
+                 (if (some '#{&} sig)
+                   (variadic-fn* name method false)
+                   `(set!
+                      (. ~name
+                        ~(symbol (core/str "-cljs$core$IFn$_invoke$arity$"
+                                   (count sig))))
+                      (fn ~method))))]
     (core/let [rname    (symbol (core/str ana/*cljs-ns*) (core/str name))
                arglists (map first fdecl)
                varsig?  #(some '#{&} %)
@@ -2231,27 +2232,27 @@
                            :method-params sigs
                            :arglists arglists
                            :arglists-meta (doall (map meta arglists))})]
-     `(do
-        (def ~(with-meta name meta)
-          (fn []
-            (case (alength (js-arguments))
-              ~@(mapcat #(fixed-arity rname %) sigs)
-              ~(if variadic
-                 `(let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
-                                  (.call js/Array.prototype.slice
-                                    (js-arguments) ~maxfa) 0)]
-                    (. ~rname
-                      (~'cljs$core$IFn$_invoke$arity$variadic
-                        ~@(dest-args maxfa)
-                        argseq#)))
-                 `(throw (js/Error.
-                           (str "Invalid arity: "
-                             (alength (js-arguments)))))))))
-        ~@(map fn-method fdecl)
-        ;; optimization properties
-        (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)))))
+      `(do
+         (def ~(with-meta name meta)
+           (fn []
+             (case (alength (js-arguments))
+               ~@(mapcat #(fixed-arity rname %) sigs)
+               ~(if variadic
+                  `(let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
+                                   (.call js/Array.prototype.slice
+                                     (js-arguments) ~maxfa) 0)]
+                     (. ~rname
+                       (~'cljs$core$IFn$_invoke$arity$variadic
+                         ~@(dest-args maxfa)
+                         argseq#)))
+                  `(throw (js/Error.
+                            (str "Invalid arity: "
+                              (alength (js-arguments)))))))))
+         ~@(map fn-method fdecl)
+         ;; optimization properties
+         (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)))))
 
-(comment
+(core/comment
   (require '[clojure.pprint :as pp])
   (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a b]))))
   (pp/pprint (multi-arity-fn 'foo {} '(([a]) ([a & xs]))))

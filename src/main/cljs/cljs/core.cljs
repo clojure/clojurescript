@@ -39,6 +39,10 @@
   ^{:dynamic true}
   *err* nil)
 
+(def
+  ^{:dynamic true}
+  *assert* true)
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to print output.
   Whatever function *print-fn* is bound to will be passed any
