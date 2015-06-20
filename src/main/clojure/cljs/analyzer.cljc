@@ -1940,16 +1940,22 @@
                                     (get-in @env/*compiler* [::namespaces (-> env :ns :name) :use-macros sym])))))
           (if-let [nstr (namespace sym)]
             (when-let [ns (cond
-                           (= "clojure.core" nstr) (find-ns 'cljs.core)
-                           (= "clojure.repl" nstr) (find-ns 'cljs.repl)
-                           #?@(:clj  [(.contains nstr ".") (find-ns (symbol nstr))]
-                               :cljs [(goog.string/contains nstr ".") (find-ns (symbol nstr))])
-                           :else
-                           (some-> env :ns :require-macros (get (symbol nstr)) find-ns))]
+                            (= "clojure.core" nstr)
+                            #?(:clj (find-ns 'cljs.core)
+                               :cljs (find-macros-ns 'cljs.core))
+                            (= "clojure.repl" nstr)
+                            #?(:clj (find-ns 'cljs.repl)
+                               :cljs (find-macros-ns 'cljs.repl))
+                            #?@(:clj  [(.contains nstr ".") (find-ns (symbol nstr))]
+                                :cljs [(goog.string/contains nstr ".") (find-macros-ns (symbol nstr))])
+                            :else
+                            (some-> env :ns :require-macros (get (symbol nstr)) find-ns))]
               (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
             (if-let [nsym (-> env :ns :use-macros sym)]
-              (.findInternedVar ^clojure.lang.Namespace (find-ns nsym) sym)
-              (.findInternedVar ^clojure.lang.Namespace (find-ns 'cljs.core) sym))))]
+              (.findInternedVar ^clojure.lang.Namespace
+                #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
+              (.findInternedVar ^clojure.lang.Namespace
+                #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns 'cljs.core)) sym))))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
       (with-meta @mvar (meta mvar)))))
 

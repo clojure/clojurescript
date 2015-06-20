@@ -9896,6 +9896,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn find-ns [ns]
   (create-ns ns (find-ns-obj ns)))
 
+(defn find-macros-ns [ns]
+  (let [ns (symbol (str ns "$macros"))]
+    (create-ns ns (find-ns-obj ns))))
+
 (defn ns-name [ns-obj]
   (.-name ns-obj))
 
