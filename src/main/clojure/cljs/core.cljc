@@ -290,7 +290,7 @@
                                     " should be a list"))))
                        (core/let [[params & body] sig
                                   _ (core/when (not (vector? params))
-                                      (throw (js/Error..
+                                      (throw (js/Error.
                                                (if (seq? (first sigs))
                                                  (core/str "Parameter declaration " params
                                                    " should be a vector")
