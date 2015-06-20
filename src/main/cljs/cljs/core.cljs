@@ -9856,11 +9856,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
       false))
   IHash
   (-hash [_]
-    (hash name))
-  INamed
-  (-name [_] name)
-  (-namespace [_]
-    (throw (js/Error. "Cannot call -namespace on Namespace"))))
+    (hash name)))
 
 (defn find-ns-obj [ns]
   (letfn [(find-ns* [ctxt xs]
