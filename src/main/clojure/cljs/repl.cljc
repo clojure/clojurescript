@@ -807,6 +807,7 @@
              read-eval-print
              (fn []
                (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
+                                     reader/resolve-symbol ana/resolve-symbol
                                      reader/*data-readers* tags/*cljs-data-readers*
                                      reader/*alias-map*
                                      (apply merge

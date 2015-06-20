@@ -2121,6 +2121,9 @@
        (instance? File x) (.getAbsolutePath ^File x)
        :default (str x))))
 
+(defn resolve-symbol [s]
+  (:name (resolve-existing-var {:ns {:name *cljs-ns*}} s)))
+
 #?(:clj
    (defn forms-seq*
      "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
@@ -2144,7 +2147,8 @@
                                      reader/*alias-map*
                                      (apply merge
                                        ((juxt :requires :require-macros)
-                                         (get-namespace *cljs-ns*)))]
+                                         (get-namespace *cljs-ns*)))
+                                     reader/resolve-symbol resolve-symbol]
                              (reader/read opts pbr))]
                   (if (identical? form eof-sentinel)
                     (.close rdr)
