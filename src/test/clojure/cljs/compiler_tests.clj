@@ -48,10 +48,26 @@
          'cljs$user$console)))
 
 (deftest test-js-negative-infinity
-  (= (with-out-str
-       (comp/emit
-         (ana/analyze (assoc aenv :context :expr) 'js/-Infinity)))
-     "-Infinity"))
+  (is (= (with-out-str
+           (comp/emit
+             (ana/analyze (assoc aenv :context :expr) 'js/-Infinity)))
+          "-Infinity")))
+
+(deftest test-munge-dotdot
+  (is (= 'cljs.core._DOT__DOT_ (comp/munge 'cljs.core/..)))
+  (is (= "cljs.core._DOT__DOT_" (comp/munge "cljs.core/..")))
+  (is (= 'cljs.core._DOT__DOT_
+         (ana/no-warn
+           (env/with-compiler-env cenv
+             (comp/munge
+               (:info (ana/analyze {:ns {:name 'cljs.core}} 'cljs.core/..))))))))
+
+(deftest test-resolve-dotdot
+  (is (= '{:name cljs.core/..
+           :ns   cljs.core}
+         (ana/no-warn
+           (env/with-compiler-env cenv
+             (ana/resolve-var {:ns {:name 'cljs.core}} '..))))))
 
 (comment
   (env/with-compiler-env cenv

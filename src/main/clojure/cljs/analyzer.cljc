@@ -540,8 +540,10 @@
                     {:name (symbol (str full-ns) (str (name sym)))
                      :ns full-ns}))
 
-           #?(:clj  (.contains s ".")
-              :cljs (goog.string/contains s "."))
+           #?(:clj  (and (.contains s ".")
+                         (not (.contains s "..")))
+              :cljs (and (goog.string/contains s ".")
+                         (not (goog.string/contains s ".."))))
            (let [idx (.indexOf s ".")
                  prefix (symbol (subs s 0 idx))
                  suffix (subs s (inc idx))

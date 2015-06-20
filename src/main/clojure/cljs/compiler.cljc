@@ -57,7 +57,8 @@
 (declare munge)
 
 (defn fn-self-name [{:keys [name info] :as name-var}]
-  (let [{:keys [ns fn-scope]} info
+  (let [name (string/replace (str name) ".." "_DOT__DOT_")
+        {:keys [ns fn-scope]} info
         scoped-name (apply str
                       (interpose "_$_"
                         (concat (map (comp str :name) fn-scope) [name])))]
@@ -86,7 +87,8 @@
              munged-name
              (symbol (str munged-name "__$" depth))))))
      ;; String munging
-     (let [ss (string/replace (str s)
+     (let [ss (string/replace (str s) ".." "_DOT__DOT_")
+           ss (string/replace ss
                 #?(:clj #"\/(.)" :cljs (js/RegExp. "\\/(.)")) ".$1") ; Division is special
            ss (apply str
                 (map #(if (reserved %) (str % "$") %)
