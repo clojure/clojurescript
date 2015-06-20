@@ -14,7 +14,7 @@
               :refer [no-warn wrapping-errors
                       disallowing-recur allowing-redef]]
              [cljs.env.macros :refer [ensure]]))
-  #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]]
+  #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]] 
                     [clojure.java.io :as io]
                     [clojure.string :as string]
                     [clojure.set :as set]
@@ -2122,7 +2122,7 @@
        :default (str x))))
 
 (defn resolve-symbol [s]
-  (:name (resolve-existing-var {:ns {:name *cljs-ns*}} s)))
+  (:name (resolve-var {:ns {:name *cljs-ns*}} s)))
 
 #?(:clj
    (defn forms-seq*
