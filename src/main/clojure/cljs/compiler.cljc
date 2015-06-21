@@ -1142,23 +1142,25 @@
      "Return true if the src file requires compilation."
      ([src dest] (requires-compilation? src dest nil))
      ([^File src ^File dest opts]
-      (ensure
-        (or (not (.exists dest))
-            (> (.lastModified src) (.lastModified dest))
-            (let [version' (util/compiled-by-version dest)
-                  version (util/clojurescript-version)]
-              (and version (not= version version')))
-            (and opts (not= (build-affecting-options opts)
-                            (build-affecting-options (util/build-options dest))))
-            (and opts (:source-map opts)
-                 (if (= (:optimizations opts) :none)
-                   (not (.exists (io/file (str (.getPath dest) ".map"))))
-                   (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))
-          (let [{ns :ns} (ana/parse-ns src)
-                {:keys [recompile visited]}
-                (and *dependents* @*dependents*)]
-            (and (contains? recompile ns)
-                 (not (contains? visited ns)))))))))
+      (let [{:keys [ns]} (ana/parse-ns src)]
+        (ensure
+          (or (not (.exists dest))
+              (> (.lastModified src) (.lastModified dest))
+              (let [version' (util/compiled-by-version dest)
+                    version (util/clojurescript-version)]
+                (and version (not= version version')))
+              (and opts
+                   (not (and (io/resource "cljs/core.aot.js") (= 'cljs.core ns)))
+                   (not= (build-affecting-options opts)
+                         (build-affecting-options (util/build-options dest))))
+              (and opts (:source-map opts)
+                (if (= (:optimizations opts) :none)
+                  (not (.exists (io/file (str (.getPath dest) ".map"))))
+                  (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))
+              (let [{:keys [recompile visited]}
+                    (and *dependents* @*dependents*)]
+                (and (contains? recompile ns)
+                     (not (contains? visited ns))))))))))
 
 #?(:clj
    (defn compile-file
