@@ -9839,10 +9839,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (deftype Namespace [obj name mappings]
   Object
   (find [_ sym]
-    (Var. (get @mappings sym)
+    (Var. #(get @mappings sym)
       (symbol (str name) (str sym)) nil))
   (findInternedVar [_ sym]
-    (Var. (goog.object/get obj (munge (str sym)))
+    (Var. #(goog.object/get obj (munge (str sym)))
       (symbol (str name) (str sym)) nil))
   (getMappings [_]
     @mappings)
@@ -9880,7 +9880,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (letfn [(step [ret k]
               (let [var-sym (symbol (demunge k))]
                 (assoc ret
-                  var-sym (Var. (goog.object/get ns-obj k)
+                  var-sym (Var. #(goog.object/get ns-obj k)
                             (symbol (str sym) (str var-sym)) nil))))]
       (reduce step {} (js-keys ns-obj)))))
 
