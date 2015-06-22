@@ -9839,7 +9839,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (deftype Namespace [obj name mappings]
   Object
   (find [_ sym]
-    (when (has? @mappings sym)
+    (when (contains? @mappings sym)
       (Var. #(get @mappings sym)
         (symbol (str name) (str sym)) nil)))
   (findInternedVar [_ sym]
