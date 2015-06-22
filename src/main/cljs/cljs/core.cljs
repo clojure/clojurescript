@@ -9844,7 +9844,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
         (symbol (str name) (str sym)) nil)))
   (findInternedVar [_ sym]
     (let [k (munge (str sym))]
-      (when (gobject/contains obj k)
+      (when (gobject/containsKey obj k)
         (Var. #(gobject/get obj k)
           (symbol (str name) (str sym)) nil))))
   (getMappings [_]
