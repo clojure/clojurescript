@@ -6,7 +6,7 @@
 * add cljs.core/random-uuid
 * flush immediately when forwarding Node process out & err
 * CLJS-1256 cache UUID hash value
-* CLJS-1226: Added the :end-run-test event to cljs.test and a dummy event handler for it
+* CLJS-1226: Added the :end-run-tests event to cljs.test and a dummy event handler for it
 
 ## Fixes
 * CLJS-1200: compare behaves differently from Clojure
