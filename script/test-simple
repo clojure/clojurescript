@@ -8,7 +8,7 @@ possible=4
 ran=0
 
 #bin/cljsc test >out/core-test.js
-bin/cljsc test "{:optimizations :simple :static-fns true :output-dir \"builds/out-simp\" :cache-analysis true :output-wrapper true :compiler-stats true}" > builds/out-simp/core-simple-test.js
+bin/cljsc src/test/cljsix  "{:optimizations :simple :static-fns true :output-dir \"builds/out-simp\" :cache-analysis true :output-wrapper true :compiler-stats true}" > builds/out-simp/core-simple-test.js
 
 if [ "$V8_HOME" = "" ]; then
   echo "V8_HOME not set, skipping V8 tests"
