@@ -321,12 +321,11 @@
              `(cljs.test/update-current-env! [:each-fixtures] assoc '~ns
                                              ~(symbol (name ns) "cljs-test-each-fixtures"))))]
        (cljs.test/test-vars-block
-        [~@(map
-            (fn [[k _]]
-              `(var ~(symbol (name ns) (name k))))
-            (filter
-             (fn [[_ v]] (:test v))
-             (ana-api/ns-interns ns)))])
+        [~@(->> (ana-api/ns-interns ns)
+                (filter (fn [[_ v]] (:test v)))
+                (sort-by (fn [[_ v]] (:line v)))
+                (map (fn [[k _]]
+                       `(var ~(symbol (name ns) (name k))))))])
        [(fn []
           (when (nil? env#)
             (cljs.test/clear-env!)))]))))
