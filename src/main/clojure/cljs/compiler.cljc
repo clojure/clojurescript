@@ -90,9 +90,9 @@
      (let [ss (string/replace (str s) ".." "_DOT__DOT_")
            ss (string/replace ss
                 #?(:clj #"\/(.)" :cljs (js/RegExp. "\\/(.)")) ".$1") ; Division is special
-           ss (apply str
+           ss (string/join "."
                 (map #(if (reserved %) (str % "$") %)
-                  (string/split ss #"(?<=\.)|(?=\.)")))
+                  (string/split ss #"\.")))
            ms #?(:clj (clojure.lang.Compiler/munge ss)
                  :cljs (cljs.core/munge ss))]
        (if (symbol? s)
