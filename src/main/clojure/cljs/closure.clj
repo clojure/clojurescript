@@ -1539,7 +1539,8 @@
               (if (or (and (= module-type :commonjs) can-convert-commonjs?)
                       (and (= module-type :amd) can-convert-amd?)
                       (and (= module-type :es6) can-convert-es6?))
-                (let [module-name (ProcessCommonJSModules/toModuleName file)
+                (let [module-name (-> (ProcessCommonJSModules/toModuleName file)
+                                      (string/replace "_" "-"))
                       ijs (write-javascript opts (deps/load-foreign-library lib))]
                   (doseq [provide (:provides ijs)]
                     (swap! env/*compiler*
