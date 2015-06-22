@@ -796,7 +796,8 @@
         else-expr (allowing-redef (analyze env else))]
     {:env env :op :if :form form
      :test test-expr :then then-expr :else else-expr
-     :unchecked @*unchecked-if*
+     :unchecked #?(:clj  @*unchecked-if*
+                   :cljs *unchecked-if*)
      :children [test-expr then-expr else-expr]}))
 
 (defmethod parse 'case*
@@ -1300,7 +1301,8 @@
                        ;; TODO: proper resolve
                        (= target '*unchecked-if*)
                        (do
-                         (reset! *unchecked-if* val)
+                         #?(:clj  (reset! *unchecked-if* val)
+                            :cljs (set! *unchecked-if* val))
                          ::set-unchecked-if)
 
                        (symbol? target)
