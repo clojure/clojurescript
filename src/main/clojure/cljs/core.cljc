@@ -2742,7 +2742,8 @@
               ;;must figure out how to convey primitive hints to self calls first
               (cons `fn fdecl))))))
 
-#?(:clj (. (var defn) (setMacro)))
+#?(:clj  (. (var defn) (setMacro))
+   :cljs (set! (. defn -cljs$lang$macro) true))
 
 (def
   ^{:doc "Like defn, but the resulting function name is declared as a
