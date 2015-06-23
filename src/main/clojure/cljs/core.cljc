@@ -2685,7 +2685,7 @@
                  [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])}
   defn (core/fn defn [&form &env name & fdecl]
          ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
-         (if (core/instance? clojure.lang.Symbol name)
+         (if (core/instance? #?(:clj clojure.lang.Symbol :cljs Symbol) name)
            nil
            (throw
              #?(:clj (IllegalArgumentException. "First argument to defn must be a symbol")
