@@ -513,7 +513,7 @@
   (and (or (get-in @env/*compiler* [::namespaces 'cljs.core :defs sym])
            (when-let [mac (get-expander sym env)]
              (let [^Namespace ns (-> mac meta :ns)]
-               (= (.getName ns) 'cljs.core))))
+               (= (.getName ns) #?(:clj 'cljs.core :cljs 'cljs.core$macros)))))
        (not (contains? (-> env :ns :excludes) sym))))
 
 (defn resolve-var
