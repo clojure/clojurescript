@@ -9838,15 +9838,15 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (deftype Namespace [obj name mappings]
   Object
-  (find [_ sym]
+  (find [this sym]
     (when (contains? @mappings sym)
       (Var. #(get @mappings sym)
-        (symbol (str name) (str sym)) nil)))
-  (findInternedVar [_ sym]
+        (symbol (str name) (str sym)) {:ns this})))
+  (findInternedVar [this sym]
     (let [k (munge (str sym))]
       (when (gobject/containsKey obj k)
         (Var. #(gobject/get obj k)
-          (symbol (str name) (str sym)) nil))))
+          (symbol (str name) (str sym)) {:ns this}))))
   (getMappings [_]
     @mappings)
   (getName [_] name)
@@ -9879,12 +9879,13 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
           "find-ns-obj not supported when Closure optimization applied")))))
 
 (defn ns-interns* [sym]
-  (let [ns-obj (find-ns-obj sym)]
+  (let [ns-obj (find-ns-obj sym)
+        ns (Namespace. ns-obj sym (atom nil))]
     (letfn [(step [ret k]
               (let [var-sym (symbol (demunge k))]
                 (assoc ret
                   var-sym (Var. #(gobject/get ns-obj k)
-                            (symbol (str sym) (str var-sym)) nil))))]
+                            (symbol (str sym) (str var-sym)) {:ns ns}))))]
       (reduce step {} (js-keys ns-obj)))))
 
 (defn create-ns
@@ -9917,4 +9918,4 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
    (when-not (contains? env sym)
      (when-let [ns-obj (find-ns ns)]
        (Var. #(.find ns-obj (str sym))
-         (symbol (str ns) (str sym)) nil)))))
+         (symbol (str ns) (str sym)) {:ns ns-obj})))))
