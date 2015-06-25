@@ -9872,6 +9872,16 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
         (js/Error.
           "find-ns-obj not supported when Closure optimization applied")))))
 
+(defn ns-interns* [sym]
+  (let [ns-obj (find-ns-obj sym)
+        ns     (Namespace. ns-obj sym)]
+    (letfn [(step [ret k]
+              (let [var-sym (symbol (demunge k))]
+                (assoc ret
+                  var-sym (Var. #(gobject/get ns-obj k)
+                            (symbol (str sym) (str var-sym)) {:ns ns}))))]
+      (reduce step {} (js-keys ns-obj)))))
+
 (defn create-ns
   ([sym]
    (create-ns sym (find-ns-obj sym)))
