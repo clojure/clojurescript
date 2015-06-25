@@ -9886,7 +9886,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   ([sym]
    (create-ns sym (find-ns-obj sym)))
   ([sym ns-obj]
-   (Namespace. sym ns-obj)))
+   (Namespace. ns-obj sym)))
 
 (defn find-ns [ns]
   (create-ns ns (find-ns-obj ns)))
