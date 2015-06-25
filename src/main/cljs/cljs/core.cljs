@@ -9836,19 +9836,13 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   ((if (symbol? name) symbol str)
     (demunge-str (str name))))
 
-(deftype Namespace [obj name mappings]
+(deftype Namespace [obj name]
   Object
-  (find [this sym]
-    (when (contains? @mappings sym)
-      (Var. #(get @mappings sym)
-        (symbol (str name) (str sym)) {:ns this})))
   (findInternedVar [this sym]
     (let [k (munge (str sym))]
       (when (gobject/containsKey obj k)
         (Var. #(gobject/get obj k)
           (symbol (str name) (str sym)) {:ns this}))))
-  (getMappings [_]
-    @mappings)
   (getName [_] name)
   (toString [_]
     (str name))
@@ -9878,24 +9872,11 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
         (js/Error.
           "find-ns-obj not supported when Closure optimization applied")))))
 
-(defn ns-interns* [sym]
-  (let [ns-obj (find-ns-obj sym)
-        ns (Namespace. ns-obj sym (atom nil))]
-    (letfn [(step [ret k]
-              (let [var-sym (symbol (demunge k))]
-                (assoc ret
-                  var-sym (Var. #(gobject/get ns-obj k)
-                            (symbol (str sym) (str var-sym)) {:ns ns}))))]
-      (reduce step {} (js-keys ns-obj)))))
-
 (defn create-ns
   ([sym]
    (create-ns sym (find-ns-obj sym)))
   ([sym ns-obj]
-   (create-ns sym (find-ns-obj sym)
-     (merge (ns-interns* 'cljs.core) (ns-interns* sym))))
-  ([sym ns-obj mappings]
-   (Namespace. ns-obj sym (atom mappings))))
+   (Namespace. sym ns-obj)))
 
 (defn find-ns [ns]
   (create-ns ns (find-ns-obj ns)))
@@ -9908,14 +9889,3 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (defn ns-name [ns-obj]
   (.-name ns-obj))
-
-(defn ns-map [ns-obj]
-  (.getMappings ns-obj))
-
-(defn ns-resolve
-  ([ns sym] (ns-resolve ns nil sym))
-  ([ns env sym]
-   (when-not (contains? env sym)
-     (when-let [ns-obj (find-ns ns)]
-       (Var. #(.find ns-obj (str sym))
-         (symbol (str ns) (str sym)) {:ns ns-obj})))))
