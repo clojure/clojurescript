@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.compiler
-  (:refer-clojure :exclude [munge macroexpand-1 ensure])
+  #?(:clj (:refer-clojure :exclude [munge macroexpand-1 ensure])
+     :cljs (:refer-clojure :exclude [munge macroexpand-1 ensure js-reserved]))
   #?(:cljs (:require-macros [cljs.compiler.macros :refer [emit-wrap]]
                             [cljs.env.macros :refer [ensure]]))
   #?(:clj (:require [cljs.util :as util]

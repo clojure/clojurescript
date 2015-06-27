@@ -8,7 +8,7 @@
 
 (ns cljs.analyzer
   #?(:clj  (:refer-clojure :exclude [macroexpand-1 ensure])
-     :cljs (:refer-clojure :exclude [macroexpand-1 ns-interns ensure]))
+     :cljs (:refer-clojure :exclude [macroexpand-1 ns-interns ensure js-reserved]))
   #?(:cljs (:require-macros
              [cljs.analyzer.macros
               :refer [no-warn wrapping-errors

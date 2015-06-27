@@ -9779,16 +9779,40 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn tagged-literal?
   "Return true if the value is the data representation of a tagged literal"
   [value]
-  (instance? cljs.core.TaggedLiteral value))
+  (instance? TaggedLiteral value))
 
 (defn tagged-literal
   "Construct a data representation of a tagged literal from a
   tag symbol and a form."
   [tag form]
   {:pre [(symbol? tag)]}
-  (cljs.core.TaggedLiteral. tag form))
+  (TaggedLiteral. tag form))
 
-(defn demunge-pattern []
+(def ^:private js-reserved-arr
+  #js ["abstract" "boolean" "break" "byte" "case"
+       "catch" "char" "class" "const" "continue"
+       "debugger" "default" "delete" "do" "double"
+       "else" "enum" "export" "extends" "final"
+       "finally" "float" "for" "function" "goto" "if"
+       "implements" "import" "in" "instanceof" "int"
+       "interface" "let" "long" "native" "new"
+       "package" "private" "protected" "public"
+       "return" "short" "static" "super" "switch"
+       "synchronized" "this" "throw" "throws"
+       "transient" "try" "typeof" "var" "void"
+       "volatile" "while" "with" "yield" "methods"
+       "null"])
+
+(def js-reserved nil)
+
+(defn- js-reserved? [x]
+  (when (nil? js-reserved)
+    (set! js-reserved
+      (reduce #(do (gobject/set %1 %2 true) %1)
+        #js {} js-reserved-arr)))
+  (gobject/containsKey js-reserved x))
+
+(defn- demunge-pattern []
   (when-not DEMUNGE_PATTERN
     (set! DEMUNGE_PATTERN
       (let [ks (sort (fn [a b] (- (. b -length) (. a -length)))
@@ -9804,7 +9828,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
             (str ret "|\\$"))))))
   DEMUNGE_PATTERN)
 
-(defn munge-str [name]
+(defn- munge-str [name]
   (loop [i 0 ret ""]
     (if (< i (. name -length))
       (recur (inc i)
@@ -9816,10 +9840,15 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (defn munge [name]
   ((if (symbol? name) symbol str)
-    (munge-str (str name))))
+    (let [name' (munge-str (str name))]
+      (if (js-reserved? name')
+        (str name' "$")
+        name'))))
 
-(defn demunge-str [munged-name]
-  (let [r (js/RegExp. (demunge-pattern) "g")]
+(defn- demunge-str [munged-name]
+  (let [r (js/RegExp. (demunge-pattern) "g")
+        munged-name (if (gstring/endsWith munged-name "$")
+                      (.substring munged-name 0 (dec (. munged-name -length))))]
     (loop [ret "" last-match-end 0]
       (if-let [match (.exec r munged-name)]
         (let [[x] match]
