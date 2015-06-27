@@ -2745,46 +2745,45 @@
 #?(:clj  (. (var defn) (setMacro))
    :cljs (set! (. defn -cljs$lang$macro) true))
 
-(def
-  ^{:doc "Like defn, but the resulting function name is declared as a
+(core/defn defmacro
+  "Like defn, but the resulting function name is declared as a
   macro and will be used as a macro by the compiler when it is
   called."
-    :arglists '([name doc-string? attr-map? [params*] body]
-                [name doc-string? attr-map? ([params*] body)+ attr-map?])
-    :macro true}
-  defmacro (core/fn [&form &env
-                name & args]
-             (core/let [prefix (core/loop [p (core/list (vary-meta name assoc :macro true)) args args]
-                                 (core/let [f (first args)]
-                                   (if (core/string? f)
-                                     (recur (cons f p) (next args))
-                                     (if (map? f)
-                                       (recur (cons f p) (next args))
-                                       p))))
-                        fdecl (core/loop [fd args]
-                                (if (core/string? (first fd))
-                                  (recur (next fd))
-                                  (if (map? (first fd))
-                                    (recur (next fd))
-                                    fd)))
-                        fdecl (if (vector? (first fdecl))
-                                (core/list fdecl)
-                                fdecl)
-                        add-implicit-args (core/fn [fd]
-                                            (core/let [args (first fd)]
-                                              (cons (vec (cons '&form (cons '&env args))) (next fd))))
-                        add-args (core/fn [acc ds]
-                                   (if (core/nil? ds)
-                                     acc
-                                     (core/let [d (first ds)]
-                                       (if (map? d)
-                                         (conj acc d)
-                                         (recur (conj acc (add-implicit-args d)) (next ds))))))
-                        fdecl (seq (add-args [] fdecl))
-                        decl (core/loop [p prefix d fdecl]
-                               (if p
-                                 (recur (next p) (cons (first p) d))
-                                 d))]
-              (core/list 'do
-                (cons `defn decl)
-                (core/list 'set! `(. ~name ~'-cljs$lang$macro) true)))))
+  {:arglists '([name doc-string? attr-map? [params*] body]
+               [name doc-string? attr-map? ([params*] body)+ attr-map?])
+   :macro true}
+  [&form &env name & args]
+  (core/let [prefix (core/loop [p (core/list (vary-meta name assoc :macro true)) args args]
+                      (core/let [f (first args)]
+                        (if (core/string? f)
+                          (recur (cons f p) (next args))
+                          (if (map? f)
+                            (recur (cons f p) (next args))
+                            p))))
+             fdecl (core/loop [fd args]
+                     (if (core/string? (first fd))
+                       (recur (next fd))
+                       (if (map? (first fd))
+                         (recur (next fd))
+                         fd)))
+             fdecl (if (vector? (first fdecl))
+                     (core/list fdecl)
+                     fdecl)
+             add-implicit-args (core/fn [fd]
+                                 (core/let [args (first fd)]
+                                   (cons (vec (cons '&form (cons '&env args))) (next fd))))
+             add-args (core/fn [acc ds]
+                        (if (core/nil? ds)
+                          acc
+                          (core/let [d (first ds)]
+                            (if (map? d)
+                              (conj acc d)
+                              (recur (conj acc (add-implicit-args d)) (next ds))))))
+             fdecl (seq (add-args [] fdecl))
+             decl (core/loop [p prefix d fdecl]
+                    (if p
+                      (recur (next p) (cons (first p) d))
+                      d))]
+    (core/list 'do
+      (cons `defn decl)
+      (core/list 'set! `(. ~name ~'-cljs$lang$macro) true))))

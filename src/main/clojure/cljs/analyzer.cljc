@@ -1959,7 +1959,7 @@
               (.findInternedVar ^clojure.lang.Namespace
                 #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns 'cljs.core)) sym))))]
     (when (and mvar (.isMacro ^clojure.lang.Var mvar))
-      (with-meta @mvar (meta mvar)))))
+      mvar)))
 
 (defn macroexpand-1
   "Given a env, an analysis environment, and form, a ClojureScript form,
@@ -1970,16 +1970,16 @@
       (let [op (first form)]
         (if (specials op)
           form
-          (if-let [mac (and (symbol? op) (get-expander op env))]
+          (if-let [mac-var (and (symbol? op) (get-expander op env))]
             (binding [*ns* (create-ns *cljs-ns*)]
-              (let [form' (apply mac form env (rest form))]
+              (let [form' (apply @mac-var form env (rest form))]
                 (if (seq? form')
                   (let [sym' (first form')
                         sym  (first form)]
                     (if (= sym' 'js*)
                       (vary-meta form' merge
                                  (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
-                                         (-> mac meta ::numeric) (assoc :numeric true)))
+                                         (-> mac-var meta ::numeric) (assoc :numeric true)))
                       form'))
                   form')))
             (if (symbol? op)
