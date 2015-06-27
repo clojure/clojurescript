@@ -2201,7 +2201,7 @@
                                              (let [~k (-nth ~chunksym ~isym)]
                                                ~subform-chunk
                                                ~@(core/when needrec [recform-chunk]))
-                                             (core/when-let [~seqsym (seq ~seqsym)]
+                                             (when-let [~seqsym (seq ~seqsym)]
                                                (if (chunked-seq? ~seqsym)
                                                  (let [c# (chunk-first ~seqsym)]
                                                    (recur (chunk-rest ~seqsym) c#
