@@ -927,14 +927,18 @@
 
 (defn symbol
   ([name]
-     (if (symbol? name)
-       name
-       (symbol nil name)))
+   (if (symbol? name)
+     name
+     (let [idx (.indexOf name "/")]
+       (if (== idx -1)
+         (symbol nil name)
+         (symbol (.substring name 0 idx)
+                 (.substring name (inc idx) (. name -length)))))))
   ([ns name]
-     (let [sym-str (if-not (nil? ns)
-                     (str ns "/" name)
-                     name)]
-       (Symbol. ns name sym-str nil nil))))
+   (let [sym-str (if-not (nil? ns)
+                   (str ns "/" name)
+                   name)]
+     (Symbol. ns name sym-str nil nil))))
 
 (deftype Var [val sym _meta]
   Object

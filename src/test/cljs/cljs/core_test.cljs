@@ -2850,6 +2850,13 @@
     (is (zero? (count ys)))
     (is (= (transduce (map inc) conj [] ys) []))))
 
+(deftest test-symbol-from-string
+  (let [x (symbol "js/Array")]
+    (is (= x 'js/Array))
+    (is (= (hash x) (hash 'js/Array)))
+    (is (= (namespace x) "js"))
+    (is (= (name x) "Array"))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
