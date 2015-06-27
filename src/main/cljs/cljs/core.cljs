@@ -9845,9 +9845,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn munge [name]
   ((if (symbol? name) symbol str)
     (let [name' (munge-str (str name))]
-      (if (js-reserved? name')
-        (str name' "$")
-        name'))))
+      (cond
+        (= name' "..") "_DOT__DOT_"
+        (js-reserved? name') (str name' "$")
+        :else name'))))
 
 (defn- demunge-str [munged-name]
   (let [r (js/RegExp. (demunge-pattern) "g")
@@ -9867,7 +9868,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (defn demunge [name]
   ((if (symbol? name) symbol str)
-    (demunge-str (str name))))
+    (let [name' (str name)]
+      (if (= name' "_DOT__DOT_")
+        ".."
+        (demunge-str (str name))))))
 
 (deftype Namespace [obj name]
   Object
