@@ -254,7 +254,7 @@
              (recur (next params) (conj new-params (first params)) lets)
              (core/let [gparam (gensym "p__")]
                (recur (next params) (conj new-params gparam)
-                 (-> lets (conj (first params)) (conj gparam)))))
+                 (core/-> lets (conj (first params)) (conj gparam)))))
            `(~new-params
               (let ~lets
                 ~@body)))))))
