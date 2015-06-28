@@ -9926,13 +9926,15 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
    (Namespace. ns-obj sym)))
 
 (defn find-ns [ns]
-  (create-ns ns (find-ns-obj ns)))
+  (when-let [ns-obj (find-ns-obj ns)]
+    (create-ns ns ns-obj)))
 
 (defn find-macros-ns [ns]
   (let [ns (cond-> ns
              (not (gstring/contains (str ns) "$macros"))
              (-> (str "$macros") symbol))]
-    (create-ns ns (find-ns-obj ns))))
+    (when-let [ns-obj (find-ns-obj ns)]
+      (create-ns ns ns-obj))))
 
 (defn ns-name [ns-obj]
   (.-name ns-obj))
