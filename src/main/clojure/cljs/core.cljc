@@ -2447,7 +2447,7 @@
      (if (core/<= n 20)
        `(let [~(cs (core/dec n)) (-first ~'args)
               ~'args (-rest ~'args)]
-          (if (core/== ~'argc ~n)
+          (if (== ~'argc ~n)
             (if (. ~'f ~prop)
               (. ~'f (~f ~@(take n cs)))
               (~'f ~@(take n cs)))
