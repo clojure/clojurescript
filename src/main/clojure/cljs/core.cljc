@@ -389,6 +389,12 @@
      (core/list 'if test (cons 'do body))))
 
 #?(:cljs
+   (defmacro when-not
+     "Evaluates test. If logical false, evaluates body in an implicit do."
+     [test & body]
+     (core/list 'if test nil (cons 'do body))))
+
+#?(:cljs
    (core/defmacro when-first
      "bindings => x xs
 
@@ -646,7 +652,7 @@
                                (core/let [gmap (gensym "map__")
                                           defaults (:or b)]
                                  (core/loop [ret (core/-> bvec (conj gmap) (conj v)
-                                                   (conj gmap) (conj `(if (seq? ~gmap) (apply core/hash-map ~gmap) ~gmap))
+                                                   (conj gmap) (conj `(if (seq? ~gmap) (apply hash-map ~gmap) ~gmap))
                                                    ((core/fn [ret]
                                                       (if (:as b)
                                                         (conj ret (:as b) gmap)
@@ -2059,12 +2065,12 @@
   logical true."
   ([x]
      (core/when *assert*
-       `(core/when-not ~x
+       `(when-not ~x
           (throw (js/Error.
                   (cljs.core/str "Assert failed: " (cljs.core/pr-str '~x)))))))
   ([x message]
      (core/when *assert*
-       `(core/when-not ~x
+       `(when-not ~x
           (throw (js/Error.
                   (cljs.core/str "Assert failed: " ~message "\n" (cljs.core/pr-str '~x))))))))
 
@@ -2394,8 +2400,8 @@
       (throw
         #?(:clj (Exception. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)")
            :cljs (js/Error. "The syntax for defmulti has changed. Example: (defmulti name dispatch-fn :default dispatch-value)"))))
-    (core/let [options   (apply core/hash-map options)
-               default   (core/get options :default :default)]
+    (core/let [options (apply core/hash-map options)
+               default (core/get options :default :default)]
       (check-valid-options options :default :hierarchy)
       `(defonce ~(with-meta mm-name m)
          (let [method-table# (atom {})
