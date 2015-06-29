@@ -389,12 +389,6 @@
      (core/list 'if test (cons 'do body))))
 
 #?(:cljs
-   (defmacro when-not
-     "Evaluates test. If logical false, evaluates body in an implicit do."
-     [test & body]
-     (core/list 'if test nil (cons 'do body))))
-
-#?(:cljs
    (core/defmacro when-first
      "bindings => x xs
 
