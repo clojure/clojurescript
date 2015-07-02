@@ -347,7 +347,9 @@
       (:lines m)
       (:source-map m))
     (when (:closure-lib m)
-      {:closure-lib true})))
+      {:closure-lib true})
+    (when (:macros-ns m)
+      {:macros-ns true})))
 
 (defn read-js
   "Read a JavaScript file returning a map of file information."
@@ -1772,10 +1774,13 @@
 
 (defn ^String src-file->goog-require
   ([src] (src-file->goog-require src {:wrap true}))
-  ([src {:keys [wrap all-provides] :as options}]
+  ([src {:keys [wrap all-provides macros-ns] :as options}]
     (let [goog-ns
           (case (util/ext src)
-            ("cljs" "cljc") (comp/munge (:ns (ana/parse-ns src)))
+            ("cljs" "cljc") (let [ns-str (str (comp/munge (:ns (ana/parse-ns src))))]
+                              (cond-> ns-str
+                                (and macros-ns (not (.endsWith ns-str "$macros")))
+                                (str "$macros")))
             "js" (cond-> (:provides (parse-js-ns src))
                    (not all-provides) first)
             (throw

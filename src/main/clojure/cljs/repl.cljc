@@ -515,7 +515,8 @@
         (load-dependencies repl-env (:requires compiled) opts)
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1
-          (cljsc/src-file->goog-require src {:wrap true :reload true})))
+          (cljsc/src-file->goog-require src
+            {:wrap true :reload true :macros-ns (:macros-ns compiled)})))
       (binding [ana/*cljs-ns* ana/*cljs-ns*]
         (let [res (if (= File/separatorChar (first f)) f (io/resource f))]
           (assert res (str "Can't find " f " in classpath"))

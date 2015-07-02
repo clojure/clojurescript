@@ -1107,6 +1107,7 @@
                           (let [sm-data (when *source-map-data* @*source-map-data*)
                                 ret (merge
                                       {:ns (or ns-name 'cljs.user)
+                                       :macros-ns (:macros-ns opts)
                                        :provides [ns-name]
                                        :requires (if (= ns-name 'cljs.core)
                                                    (set (vals deps))
