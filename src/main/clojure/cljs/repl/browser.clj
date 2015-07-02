@@ -33,8 +33,11 @@
    ".gif" "image/gif"
 
    ".js" "text/javascript"
+   ".json" "application/json"
+   ".clj" "text/x-clojure"
    ".cljs" "text/x-clojure"
    ".cljc" "text/x-clojure"
+   ".edn" "text/x-clojure"
    ".map" "application/json"})
 
 (def mime-type->encoding
