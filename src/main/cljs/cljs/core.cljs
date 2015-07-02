@@ -9668,7 +9668,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (defn ^{:jsdoc ["@constructor"]}
   ExceptionInfo [message data cause]
-  (let [e (js/Error.)]
+  (let [e (js/Error. message)]
     (this-as this
       (set! (.-message this) message)
       (set! (.-data this) data)
