@@ -334,6 +334,21 @@ nil if the end of stream has been reached")
                 (.-length token)))
       (special-symbols token (symbol token)))))
 
+(defn read-literal
+  [rdr ch]
+  (let [token (read-token rdr ch)
+        chars (subs token 1)]
+    (cond (identical? (.-length chars) 1) chars
+          (identical? chars "tab")       "\t"
+          (identical? chars "return")    "\r"
+          (identical? chars "newline")   "\n"
+          (identical? chars "space")     " "
+          (identical? chars "backspace") "\b"
+          (identical? chars "formfeed")  "\f"
+          (identical? (.charAt chars 0) "u") (make-unicode-char (subs chars 1))
+          (identical? (.charAt chars 0) "o") (not-implemented rdr token)
+          :else (reader-error rdr "Unknown character literal: " token))))
+
 (defn read-keyword
   [reader initch]
   (let [token (read-token reader (read-char reader))
@@ -407,7 +422,7 @@ nil if the end of stream has been reached")
    (identical? c \]) read-unmatched-delimiter
    (identical? c \{) read-map
    (identical? c \}) read-unmatched-delimiter
-   (identical? c \\) read-char
+   (identical? c \\) read-literal
    (identical? c \#) read-dispatch
    :else nil))
 

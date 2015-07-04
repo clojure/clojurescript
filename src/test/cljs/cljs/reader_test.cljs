@@ -94,6 +94,10 @@
     (reader/register-default-tag-parser! (fn [tag val] val))
     (is (= [1 2] (reader/read-string "#a.b/c [1 2]"))))
 
+  (testing "Character Literals"
+    (is (= [\tab \return \newline \space \backspace \formfeed \u1234]
+          (reader/read-string "[\\tab \\return \\newline \\space \\backspace \\formfeed \\u1234]"))))
+
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Unicode Tests
 
