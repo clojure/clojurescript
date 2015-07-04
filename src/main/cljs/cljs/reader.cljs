@@ -213,6 +213,21 @@ nil if the end of stream has been reached")
         :else
         (reader-error reader "Unexpected unicode escape \\" ch )))))
 
+(defn read-literal
+  [rdr ch]
+  (let [token (read-token rdr ch)
+        chars (subs token 1)]
+    (cond (identical? (alength chars) 1) chars
+          (identical? chars "tab")       "\t"
+          (identical? chars "return")    "\r"
+          (identical? chars "newline")   "\n"
+          (identical? chars "space")     " "
+          (identical? chars "backspace") "\b"
+          (identical? chars "formfeed")  "\f"
+          (= (.charAt chars 0) "u") (make-unicode-char (subs chars 1))
+          (= (.charAt chars 0) "o") (not-implemented rdr token)
+          :else (reader-error rdr "Unknown character literal: " token))))
+
 (defn read-past
   "Read until first character that doesn't match pred, returning
    char."
@@ -407,7 +422,7 @@ nil if the end of stream has been reached")
    (identical? c \]) read-unmatched-delimiter
    (identical? c \{) read-map
    (identical? c \}) read-unmatched-delimiter
-   (identical? c \\) read-char
+   (identical? c \\) read-literal
    (identical? c \#) read-dispatch
    :else nil))
 
