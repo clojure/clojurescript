@@ -1791,15 +1791,19 @@
                                   " defines method " mname " with arity 0"))))))
              expand-sig (core/fn [fname slot sig]
                           `(~sig
-                             (if (and ~(first sig) (. ~(first sig) ~(symbol (core/str "-" slot)))) ;; Property access needed here.
+                             (if (and (not (nil? ~(first sig)))
+                                      (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
                                (. ~(first sig) ~slot ~@sig)
-                               (let [x# (if (nil? ~(first sig)) nil ~(first sig))]
-                                 ((or
-                                    (aget ~(fqn fname) (goog/typeOf x#))
-                                    (aget ~(fqn fname) "_")
-                                    (throw (missing-protocol
-                                             ~(core/str psym "." fname) ~(first sig))))
-                                   ~@sig)))))
+                               (let [x# (if (nil? ~(first sig)) nil ~(first sig))
+                                     m# (aget ~(fqn fname) (goog/typeOf x#))]
+                                 (if-not (nil? m#)
+                                   (m# ~@sig)
+                                   (let [m# (aget ~(fqn fname) "_")]
+                                     (if-not (nil? m#)
+                                       (m# ~@sig)
+                                       (throw
+                                         (missing-protocol
+                                           ~(core/str psym "." fname) ~(first sig))))))))))
              psym   (vary-meta psym assoc-in [:protocol-info :methods]
                       (into {}
                         (map
