@@ -9898,16 +9898,12 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
               (nil? ctxt) nil
               (nil? xs) ctxt
               :else (recur (gobject/get ctxt (first xs)) (next xs))))]
-    (if-not js/COMPILED
-      (let [segs (-> ns str (.split "."))]
-        (when (gobject/get (. goog/dependencies_ -nameToPath) (str ns))
-          (condp identical? *target*
-            "nodejs" (find-ns* js/global segs)
-            "default" (find-ns* js/window segs)
-            (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
-      (throw
-        (js/Error.
-          "find-ns-obj not supported when Closure optimization applied")))))
+    (let [segs (-> ns str (.split "."))]
+      (when (gobject/get (. goog/dependencies_ -nameToPath) (str ns))
+        (condp identical? *target*
+          "nodejs" (find-ns* js/global segs)
+          "default" (find-ns* js/window segs)
+          (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))))
 
 (defn ns-interns* [sym]
   (let [ns-obj (find-ns-obj sym)
