@@ -1845,13 +1845,19 @@
              [part bit] (fast-path-protocols p)
              msym       (symbol
                           (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
-    `(let [~xsym ~x]
-       (if ~xsym
-         (let [bit# ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))]
-           (if (or bit#
-                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+    (if-not (core/symbol? x)
+      `(let [~xsym ~x]
+         (if ~xsym
+           (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
+                   ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
              true
-             false))
+             false)
+           false))
+      `(if-not (nil? ~x)
+         (if (or ~(if bit `(unsafe-bit-and (. ~x ~msym) ~bit) false)
+                 ~(bool-expr `(. ~x ~(symbol (core/str "-" prefix)))))
+           true
+           false)
          false))))
 
 (core/defmacro satisfies?
