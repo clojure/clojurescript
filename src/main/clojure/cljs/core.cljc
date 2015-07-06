@@ -2594,6 +2594,13 @@
           (set! (. ~sym ~'-cljs$lang$applyTo)
             ~(apply-to)))))))
 
+(core/defmacro copy-arguments [dest]
+  `(let [len# (alength (js-arguments))]
+     (loop [i# 0]
+       (when (< i# len#)
+         (.push ~dest (aget (js-arguments) i#))
+         (recur (inc i#))))))
+
 (core/defn- variadic-fn [name meta [[arglist & body :as method] :as fdecl]]
   (core/letfn [(dest-args [c]
                  (map (core/fn [n] `(aget (js-arguments) ~n))
@@ -2611,12 +2618,13 @@
       `(do
          (def ~(with-meta name meta)
            (fn []
-             (let [argseq# (when (< ~c-1 (alength (js-arguments)))
-                             (new ^::ana/no-resolve cljs.core/IndexedSeq
-                               (.call js/Array.prototype.slice
-                                 (js-arguments) ~c-1) 0))]
-               (. ~rname
-                 (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#)))))
+             (let [args# (array)]
+               (copy-arguments args#)
+               (let [argseq# (when (< ~c-1 (alength args#))
+                               (new ^::ana/no-resolve cljs.core/IndexedSeq
+                                 (.slice args# ~c-1) 0))]
+                 (. ~rname
+                   (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#))))))
          ~(variadic-fn* rname method)))))
 
 (core/comment
@@ -2660,23 +2668,25 @@
                            :max-fixed-arity maxfa
                            :method-params sigs
                            :arglists arglists
-                           :arglists-meta (doall (map meta arglists))})]
+                           :arglists-meta (doall (map meta arglists))})
+               args-sym (gensym "args")]
       `(do
          (def ~(with-meta name meta)
            (fn []
-             (case (alength (js-arguments))
-               ~@(mapcat #(fixed-arity rname %) sigs)
-               ~(if variadic
-                  `(let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
-                                   (.call js/Array.prototype.slice
-                                     (js-arguments) ~maxfa) 0)]
-                     (. ~rname
-                       (~'cljs$core$IFn$_invoke$arity$variadic
-                         ~@(dest-args maxfa)
-                         argseq#)))
-                  `(throw (js/Error.
-                            (str "Invalid arity: "
-                              (alength (js-arguments)))))))))
+             (let [~args-sym (array)]
+               (copy-arguments ~args-sym)
+               (case (alength ~args-sym)
+                ~@(mapcat #(fixed-arity rname %) sigs)
+                ~(if variadic
+                   `(let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
+                                    (.slice ~args-sym ~maxfa) 0)]
+                      (. ~rname
+                        (~'cljs$core$IFn$_invoke$arity$variadic
+                          ~@(dest-args maxfa)
+                          argseq#)))
+                   `(throw (js/Error.
+                             (str "Invalid arity: "
+                               (alength ~args-sym)))))))))
          ~@(map fn-method fdecl)
          ;; optimization properties
          (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)))))
