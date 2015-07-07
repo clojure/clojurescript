@@ -2570,7 +2570,7 @@ reduces them without incurring seq initialization"
   ([] "")
   ([x] (if (nil? x)
          ""
-         (gstring/buildString x)))
+         (.join #js [x] "")))
   ([x & ys]
     (loop [sb (StringBuffer. (str x)) more ys]
       (if more
