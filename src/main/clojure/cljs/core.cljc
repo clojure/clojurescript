@@ -2313,11 +2313,13 @@
                            (filter (complement sym-or-str?) (keys kvs))
                            (repeatedly gensym))
              obj (gensym "obj")]
-    `(let [~@(apply concat (clojure.set/map-invert expr->local))
-           ~obj ~(js-obj* (filter-on-keys core/string? kvs))]
-       ~@(map (core/fn [[k v]] `(aset ~obj ~k ~v)) sym-pairs)
-       ~@(map (core/fn [[k v]] `(aset ~obj ~v ~(core/get kvs k))) expr->local)
-       ~obj)))
+    (if (empty? rest)
+      (js-obj* '())
+      `(let [~@(apply concat (clojure.set/map-invert expr->local))
+            ~obj ~(js-obj* (filter-on-keys core/string? kvs))]
+        ~@(map (core/fn [[k v]] `(aset ~obj ~k ~v)) sym-pairs)
+        ~@(map (core/fn [[k v]] `(aset ~obj ~v ~(core/get kvs k))) expr->local)
+        ~obj))))
 
 (core/defmacro alength [a]
   (vary-meta
