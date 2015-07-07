@@ -1901,7 +1901,11 @@
        (warning :fn-deprecated env {:fexpr fexpr}))
      (when (-> fexpr :info :type)
        (warning :invoke-ctor env {:fexpr fexpr}))
-     (if (or (not *cljs-static-fns*) (not (symbol? f)) fn-var? (contains? (meta f) ::analyzed))
+     (if (or (not *cljs-static-fns*)
+             (not (symbol? f))
+             fn-var?
+             (contains? (meta f) ::analyzed)
+             (every? symbol? args))
        (let [argexprs (vec (map #(analyze enve %) args))]
          {:env env :op :invoke :form form :f fexpr :args argexprs
           :children (into [fexpr] argexprs)})

@@ -87,3 +87,16 @@
              (let [incme (fn [a queue & args])]
                (println (incme 1 [1] 1 1))))))))
   )
+
+(comment
+  ;; combining boolean hint w/ static fns
+
+  (binding [ana/*cljs-static-fns* true]
+    (env/with-compiler-env cenv
+      (comp/emit
+        (ana/analyze aenv
+          '(defn foo [x]
+             (if ^boolean (goog.array/isEmpty x)
+               true
+               false))))))
+  )
