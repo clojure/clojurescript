@@ -9894,22 +9894,35 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-hash [_]
     (hash name)))
 
+(def NS_CACHE nil)
+
+(defn- find-ns-obj* [ctxt xs]
+  (cond
+    (nil? ctxt) nil
+    (nil? xs) ctxt
+    :else (recur (gobject/get ctxt (first xs)) (next xs))))
+
 (defn find-ns-obj [ns]
-  (letfn [(find-ns* [ctxt xs]
-            (cond
-              (nil? ctxt) nil
-              (nil? xs) ctxt
-              :else (recur (gobject/get ctxt (first xs)) (next xs))))]
-    (if-not js/COMPILED
-      (let [segs (-> ns str (.split "."))]
-        (when (gobject/get (. goog/dependencies_ -nameToPath) (str ns))
-          (condp identical? *target*
-            "nodejs" (find-ns* js/global segs)
-            "default" (find-ns* js/window segs)
-            (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
-      (throw
-        (js/Error.
-          "find-ns-obj not supported when Closure optimization applied")))))
+  (if-not js/COMPILED
+    (do
+      (when (nil? NS_CACHE)
+        (set! NS_CACHE (atom {})))
+      (let [the-ns (get @NS_CACHE ns)]
+        (if-not (nil? the-ns)
+          the-ns
+          (let [segs (-> ns str (.split "."))]
+            (when-not (nil? (gobject/get (. goog/dependencies_ -nameToPath) (str ns)))
+              (case *target*
+                "nodejs"  (let [ns-obj (find-ns-obj* js/global segs)]
+                            (swap! NS_CACHE assoc ns ns-obj)
+                            ns-obj)
+                "default" (let [ns-obj (find-ns-obj* js/window segs)]
+                            (swap! NS_CACHE assoc ns ns-obj)
+                            ns-obj)
+                (throw (js/Error. (str "find-ns-obj not supported for target " *target*)))))))))
+    (throw
+      (js/Error.
+        "find-ns-obj not supported when Closure optimization applied"))))
 
 (defn ns-interns* [sym]
   (let [ns-obj (find-ns-obj sym)
