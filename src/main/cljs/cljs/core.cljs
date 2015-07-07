@@ -9833,14 +9833,16 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   DEMUNGE_PATTERN)
 
 (defn- munge-str [name]
-  (loop [i 0 ret ""]
-    (if (< i (. name -length))
-      (recur (inc i)
-        (let [c (.charAt name i)]
-          (if-let [sub (gobject/get CHAR_MAP c)]
-            (str ret sub)
-            (str ret c))))
-      ret)))
+  (let [sb (StringBuffer.)]
+    (loop [i 0]
+      (if (< i (. name -length))
+        (let [c (.charAt name i)
+              sub (gobject/get CHAR_MAP c)]
+          (if-not (nil? sub)
+            (.append sb sub)
+            (.append sb c))
+          (recur (inc i)))))
+    (.toString sb)))
 
 (defn munge [name]
   ((if (symbol? name) symbol str)
