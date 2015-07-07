@@ -130,7 +130,9 @@
 
 (declare message namespaces)
 
-(defn ast? [x]
+(defn ast?
+  #?(:cljs {:tag boolean})
+  [x]
   (and (map? x) (contains? x :op)))
 
 (defmulti error-message (fn [warning-type & _] warning-type))
@@ -443,7 +445,9 @@
             (assoc (source-info env) :tag :cljs/analysis-error)
             cause)))
 
-(defn analysis-error? [ex]
+(defn analysis-error?
+  #?(:cljs {:tag boolean})
+  [ex]
   (= :cljs/analysis-error (:tag (ex-data ex))))
 
 #?(:clj
@@ -455,7 +459,9 @@
             (throw err#)
             (throw (error ~env (.getMessage err#) err#)))))))
 
-(defn implicit-import? [env prefix suffix]
+(defn implicit-import?
+  #?(:cljs {:tag boolean})
+  [env prefix suffix]
   (contains? '#{goog goog.object goog.string goog.array Math} prefix))
 
 (defn confirm-var-exists
@@ -509,6 +515,7 @@
 
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
+  #?(:cljs {:tag boolean})
   [env sym]
   (and (or (get-in @env/*compiler* [::namespaces 'cljs.core :defs sym])
            (when-let [mac (get-expander sym env)]
@@ -688,7 +695,9 @@
              m))
       methods)))
 
-(defn type? [env t]
+(defn type?
+  #?(:cljs {:tag boolean})
+  [env t]
   ;; don't use resolve-existing-var to avoid warnings
   (when (and t (symbol? t))
     (let [var (resolve-var env t)]
@@ -1348,7 +1357,9 @@
            (if (and (.exists cljcf) (.isFile cljcf))
              cljcf))))))
 
-(defn foreign-dep? [dep]
+(defn foreign-dep?
+  #?(:cljs {:tag boolean})
+  [dep]
   {:pre [(symbol? dep)]}
   (let [js-index (:js-dependency-index @env/*compiler*)]
     (if-let [[_ {:keys [foreign]}] (find js-index (name dep))]
@@ -1507,6 +1518,7 @@
 (defn macro-autoload-ns?
   "Given a spec form check whether the spec namespace requires a macro file
    of the same name. If so return true."
+  #?(:cljs {:tag boolean})
   [form]
   (when *macro-infer*
     (let [ns (if (sequential? form) (first form) form)
@@ -2000,26 +2012,29 @@
 
 (declare analyze-list)
 
+(defn analyze-seq* [op env form name opts]
+  (if-not (nil? (get specials op))
+    (parse op env form name opts)
+    (parse-invoke env form)))
+
 (defn analyze-seq
   ([env form name] (analyze-seq env form name nil))
   ([env form name opts]
-     (if (:quoted? env)
-       (analyze-list env form)
-       (let [env (assoc env
-                   :line (or (-> form meta :line)
-                           (:line env))
-                   :column (or (-> form meta :column)
-                             (:column env)))]
-         (let [op (first form)]
-           (when (nil? op)
-             (throw (error env "Can't call nil")))
-           (let [mform (macroexpand-1 env form)]
-             (if (identical? form mform)
-               (wrapping-errors env
-                 (if (specials op)
-                   (parse op env form name opts)
-                   (parse-invoke env form)))
-               (analyze env mform name opts))))))))
+   (if ^boolean (:quoted? env)
+     (analyze-list env form)
+     (let [line (-> form meta :line)
+           line (when (nil? line) (:line env))
+           col  (-> form meta :column)
+           col  (when (nil? col) (:column env))
+           env  (assoc env :line line :column col)]
+       (let [op (first form)]
+         (when (nil? op)
+           (throw (error env "Can't call nil")))
+         (let [mform (macroexpand-1 env form)]
+           (if (identical? form mform)
+             (wrapping-errors env
+               (analyze-seq* op env form name opts))
+             (analyze env mform name opts))))))))
 
 (defn analyze-map
   [env form]
@@ -2087,6 +2102,36 @@
 
 (def ^:dynamic *passes* nil)
 
+(defn analyze-form [env form name opts]
+  #?(:clj (load-core))
+  (cond
+    (symbol? form) (analyze-symbol env form)
+    (and (seq? form) (seq form)) (analyze-seq env form name opts)
+    (map? form) (analyze-map env form)
+    (vector? form) (analyze-vector env form)
+    (set? form) (analyze-set env form)
+    (keyword? form) (analyze-keyword env form)
+    #?@(:clj [(instance? JSValue form) (analyze-js-value env form)])
+    (= () form) (analyze-list env form)
+    :else
+    (let [tag (cond
+                (nil? form) 'clj-nil
+                (number? form) 'number
+                (string? form) 'string
+                (true? form) 'boolean
+                (false? form) 'boolean)]
+      (cond-> {:op :constant :env env :form form}
+        tag (assoc :tag tag)))))
+
+(defn analyze* [env form name opts]
+  (let [passes *passes*
+        passes (when (nil? passes) [infer-type])
+        form   (if (instance? LazySeq form)
+                 (if (seq form) form ())
+                 form)
+        ast    (analyze-form env form name opts)]
+    (reduce (fn [ast pass] (pass env ast)) ast passes)))
+
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
   (one of :statement, :expr, :return), :ns (a symbol naming the
@@ -2101,31 +2146,8 @@
           (or (nil? opts) (map? opts))]}
     (ensure
       (wrapping-errors env
-        (reduce (fn [ast pass] (pass env ast))
-          (binding [reader/*alias-map* (or reader/*alias-map* {})]
-            (let [form (if (instance? LazySeq form)
-                         (or (seq form) ())
-                         form)]
-              #?(:clj (load-core))
-              (cond
-                (symbol? form) (analyze-symbol env form)
-                (and (seq? form) (seq form)) (analyze-seq env form name opts)
-                (map? form) (analyze-map env form)
-                (vector? form) (analyze-vector env form)
-                (set? form) (analyze-set env form)
-                (keyword? form) (analyze-keyword env form)
-                #?@(:clj [(instance? JSValue form) (analyze-js-value env form)])
-                (= form ()) (analyze-list env form)
-                :else
-                (let [tag (cond
-                            (nil? form)    'clj-nil
-                            (number? form) 'number
-                            (string? form) 'string
-                            (true? form)   'boolean
-                            (false? form)  'boolean)]
-                  (cond-> {:op :constant :env env :form form}
-                    tag (assoc :tag tag))))))
-          (or *passes* [infer-type]))))))
+        (binding [reader/*alias-map* (or reader/*alias-map* {})]
+          (analyze* env form name opts))))))
 
 #?(:clj
    (defn- source-path
