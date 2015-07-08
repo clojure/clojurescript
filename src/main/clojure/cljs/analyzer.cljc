@@ -1946,35 +1946,56 @@
               (resolve-var env sym)))
           (assoc ret :op :var :info (resolve-var env sym)))))))
 
+(defn excluded?
+  #?(:cljs {:tag boolean})
+  [env sym]
+  (if-not (nil? (get-in env [:ns :excludes sym]))
+    true
+    (not (nil? (get-in @env/*compiler* [::namespaces (get-in env [:ns :name]) :excludes sym])))))
+
+(defn used?
+  #?(:cljs {:tag boolean})
+  [env sym]
+  (if-not (nil? (get-in env [:ns :use-macros sym]))
+    true
+    (not (nil? (get-in @env/*compiler* [::namespaces (get-in env [:ns :name]) :use-macros sym])))))
+
+(defn get-expander-ns [env ^String nstr]
+  (cond
+    (identical? "clojure.core" nstr)
+    #?(:clj  (find-ns 'cljs.core)
+       :cljs (find-macros-ns 'cljs.core))
+    (identical? "clojure.repl" nstr)
+    #?(:clj  (find-ns 'cljs.repl)
+       :cljs (find-macros-ns 'cljs.repl))
+    #?@(:clj  [(.contains nstr ".") (find-ns (symbol nstr))]
+        :cljs [(goog.string/contains nstr ".") (find-macros-ns (symbol nstr))])
+    :else
+    (some-> env :ns :require-macros (get (symbol nstr)) find-ns)))
+
+(defn get-expander* [sym env]
+  (when-not (or (not (nil? (get-in env [:locals sym]))) ; locals hide macros
+                (and (excluded? env sym) (not (used? env sym))))
+    (let [nstr (namespace sym)]
+      (if-not (nil? nstr)
+        (let [ns (get-expander-ns env nstr)]
+          (when-not (nil? ns)
+            (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym)))))
+        (let [nsym (get-in env [:ns :use-macros sym])]
+          (if-not (nil? nsym)
+            (.findInternedVar ^clojure.lang.Namespace
+            #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
+            (.findInternedVar ^clojure.lang.Namespace
+            #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns 'cljs.core)) sym)))))))
+
 (defn get-expander
   "Given a sym, a symbol identifying a macro, and env, an analysis environment
    return the corresponding Clojure macroexpander."
   [sym env]
-  (let [mvar
-        (when-not (or (-> env :locals sym)        ;locals hide macros
-                      (and (or (-> env :ns :excludes sym)
-                               (get-in @env/*compiler* [::namespaces (-> env :ns :name) :excludes sym]))
-                           (not (or (-> env :ns :use-macros sym)
-                                    (get-in @env/*compiler* [::namespaces (-> env :ns :name) :use-macros sym])))))
-          (if-let [nstr (namespace sym)]
-            (when-let [ns (cond
-                            (= "clojure.core" nstr)
-                            #?(:clj (find-ns 'cljs.core)
-                               :cljs (find-macros-ns 'cljs.core))
-                            (= "clojure.repl" nstr)
-                            #?(:clj (find-ns 'cljs.repl)
-                               :cljs (find-macros-ns 'cljs.repl))
-                            #?@(:clj  [(.contains nstr ".") (find-ns (symbol nstr))]
-                                :cljs [(goog.string/contains nstr ".") (find-macros-ns (symbol nstr))])
-                            :else
-                            (some-> env :ns :require-macros (get (symbol nstr)) find-ns))]
-              (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym))))
-            (if-let [nsym (-> env :ns :use-macros sym)]
-              (.findInternedVar ^clojure.lang.Namespace
-                #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
-              (.findInternedVar ^clojure.lang.Namespace
-                #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns 'cljs.core)) sym))))]
-    (when (and mvar (.isMacro ^clojure.lang.Var mvar))
+  (let [mvar (get-expander* sym env)]
+    (when (and (not (nil? mvar))
+            #?(:clj  (.isMacro ^clojure.lang.Var mvar)
+               :cljs ^boolean (.isMacro mvar)))
       mvar)))
 
 (defn macroexpand-1
