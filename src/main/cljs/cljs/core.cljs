@@ -5606,9 +5606,8 @@ reduces them without incurring seq initialization"
     (loop [i 0]
       (cond
         (<= len i) -1
-        (let [k' (aget arr i)]
-          (and (keyword? k')
-               (identical? kstr (.-fqn k')))) i
+        (and (keyword? (aget arr i))
+             (identical? kstr (.-fqn (aget arr i)))) i
         :else (recur (+ i 2))))))
 
 (defn- array-index-of-symbol? [arr k]
@@ -5617,9 +5616,8 @@ reduces them without incurring seq initialization"
     (loop [i 0]
       (cond
         (<= len i) -1
-        (let [k' (aget arr i)]
-          (and (symbol? k')
-               (identical? kstr (.-str k')))) i
+        (and (symbol? (aget arr i))
+             (identical? kstr (.-str (aget arr i)))) i
         :else (recur (+ i 2))))))
 
 (defn- array-index-of-identical? [arr k]
