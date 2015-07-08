@@ -27,6 +27,7 @@
      :cljs (:require [clojure.string :as string]
                      [clojure.set :as set]
                      [cljs.env :as env]
+                     [cljs.tagged-literals :as tags]
                      [cljs.tools.reader :as reader]
                      [cljs.tools.reader.reader-types :as readers]
                      [cljs.reader :as edn]))
@@ -2087,7 +2088,7 @@
 
 (defn analyze-js-value
   [env ^JSValue form]
-  (let [val (.val form)
+  (let [val (.-val form)
         expr-env (assoc env :context :expr)
         items (if (map? val)
                 (zipmap (keys val)
@@ -2132,7 +2133,8 @@
     (vector? form) (analyze-vector env form)
     (set? form) (analyze-set env form)
     (keyword? form) (analyze-keyword env form)
-    #?@(:clj [(instance? JSValue form) (analyze-js-value env form)])
+    #?@(:clj  [(instance? JSValue form) (analyze-js-value env form)]
+        :cljs [(instance? cljs.tagged-literals/JSValue form) (analyze-js-value env form)])
     (= () form) (analyze-list env form)
     :else
     (let [tag (cond
