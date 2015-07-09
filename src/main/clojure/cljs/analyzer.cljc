@@ -2135,27 +2135,64 @@
 
 (def ^:dynamic *passes* nil)
 
-(defn analyze-form [env form name opts]
-  #?(:clj (load-core))
-  (cond
-    (symbol? form) (analyze-symbol env form)
-    (and (seq? form) (seq form)) (analyze-seq env form name opts)
-    (map? form) (analyze-map env form)
-    (vector? form) (analyze-vector env form)
-    (set? form) (analyze-set env form)
-    (keyword? form) (analyze-keyword env form)
-    #?@(:clj  [(instance? JSValue form) (analyze-js-value env form)]
-        :cljs [(instance? cljs.tagged-literals/JSValue form) (analyze-js-value env form)])
-    (= () form) (analyze-list env form)
-    :else
-    (let [tag (cond
-                (nil? form) 'clj-nil
-                (number? form) 'number
-                (string? form) 'string
-                (true? form) 'boolean
-                (false? form) 'boolean)]
-      (cond-> {:op :constant :env env :form form}
-        tag (assoc :tag tag)))))
+#?(:clj
+   (defn analyze-form [env form name opts]
+     (load-core)
+     (cond
+       (symbol? form) (analyze-symbol env form)
+       (and (seq? form) (seq form)) (analyze-seq env form name opts)
+       (map? form) (analyze-map env form)
+       (vector? form) (analyze-vector env form)
+       (set? form) (analyze-set env form)
+       (keyword? form) (analyze-keyword env form)
+       (instance? JSValue form) (analyze-js-value env form)
+       (= () form) (analyze-list env form)
+       :else
+       (let [tag (cond
+                   (nil? form) 'clj-nil
+                   (number? form) 'number
+                   (string? form) 'string
+                   (true? form) 'boolean
+                   (false? form) 'boolean)]
+         (cond-> {:op :constant :env env :form form}
+           tag (assoc :tag tag))))))
+
+#?(:cljs
+   (defn ^boolean cljs-seq? [x]
+     (implements? ISeq x)))
+
+#?(:cljs
+   (defn ^boolean cljs-map? [x]
+     (implements? IMap x)))
+
+#?(:cljs
+   (defn ^boolean cljs-vector? [x]
+     (implements? IVector x)))
+
+#?(:cljs
+   (defn ^boolean cljs-set? [x]
+     (implements? ISet x)))
+
+#?(:cljs
+   (defn analyze-form [env form name opts]
+     (cond
+       (symbol? form) (analyze-symbol env form)
+       (and (cljs-seq? form) (seq form)) (analyze-seq env form name opts)
+       (cljs-map? form) (analyze-map env form)
+       (cljs-vector? form) (analyze-vector env form)
+       (cljs-set? form) (analyze-set env form)
+       (keyword? form) (analyze-keyword env form)
+       (instance? cljs.tagged-literals/JSValue form) (analyze-js-value env form)
+       (= () form) (analyze-list env form)
+       :else
+       (let [tag (cond
+                   (nil? form) 'clj-nil
+                   (number? form) 'number
+                   (string? form) 'string
+                   (true? form) 'boolean
+                   (false? form) 'boolean)]
+         (cond-> {:op :constant :env env :form form}
+           tag (assoc :tag tag))))))
 
 (defn analyze* [env form name opts]
   (let [passes *passes*
