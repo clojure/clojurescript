@@ -1999,38 +1999,46 @@
                :cljs ^boolean (.isMacro mvar)))
       mvar)))
 
+(defn macroexpand-1*
+  [env form]
+  (let [op (first form)]
+    (if-not (nil? (get specials op))
+      form
+      (let [mac-var (when (symbol? op) (get-expander op env))]
+        (if-not (nil? mac-var)
+          (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
+               :cljs [do])
+            (let [form' (apply @mac-var form env (rest form))]
+              (if (seq? form')
+                (let [sym' (first form')
+                      sym  (first form)]
+                  (if #?(:clj (= sym' 'js*) :cljs (symbol-identical? sym' 'js*))
+                    (vary-meta form' merge
+                      (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
+                        (-> mac-var meta ::numeric) (assoc :numeric true)))
+                    form'))
+                form')))
+          (if (symbol? op)
+            (let [opname (str op)]
+              (cond
+                (identical? (first opname) \.)
+                (let [[target & args] (next form)]
+                  (with-meta (list* '. target (symbol (subs opname 1)) args)
+                    (meta form)))
+
+                (identical? (last opname) \.)
+                (with-meta
+                  (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
+                  (meta form))
+
+                :else form))
+            form))))))
+
 (defn macroexpand-1
   "Given a env, an analysis environment, and form, a ClojureScript form,
    macroexpand the form once."
   [env form]
-  (ensure
-    (wrapping-errors env
-      (let [op (first form)]
-        (if (specials op)
-          form
-          (if-let [mac-var (and (symbol? op) (get-expander op env))]
-            (binding [*ns* (create-ns *cljs-ns*)]
-              (let [form' (apply @mac-var form env (rest form))]
-                (if (seq? form')
-                  (let [sym' (first form')
-                        sym  (first form)]
-                    (if (= sym' 'js*)
-                      (vary-meta form' merge
-                                 (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
-                                         (-> mac-var meta ::numeric) (assoc :numeric true)))
-                      form'))
-                  form')))
-            (if (symbol? op)
-              (let [opname (str op)]
-                (cond
-                 (= (first opname) \.) (let [[target & args] (next form)]
-                                         (with-meta (list* '. target (symbol (subs opname 1)) args)
-                                           (meta form)))
-                 (= (last opname) \.) (with-meta
-                                        (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
-                                        (meta form))
-                 :else form))
-              form)))))))
+  (ensure (wrapping-errors env (macroexpand-1* env form))))
 
 (declare analyze-list)
 
