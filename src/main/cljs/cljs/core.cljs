@@ -9843,12 +9843,14 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (.toString sb)))
 
 (defn munge [name]
-  ((if (symbol? name) symbol str)
-    (let [name' (munge-str (str name))]
-      (cond
-        (= name' "..") "_DOT__DOT_"
-        (js-reserved? name') (str name' "$")
-        :else name'))))
+  (let [name' (munge-str (str name))
+        name' (cond
+                (identical? name' "..") "_DOT__DOT_"
+                (js-reserved? name') (str name' "$")
+                :else name')]
+    (if (symbol? name)
+      (symbol name')
+      (str name'))))
 
 (defn- demunge-str [munged-name]
   (let [r (js/RegExp. (demunge-pattern) "g")
@@ -9861,7 +9863,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
             (str ret
               (.substring munged-name last-match-end
                 (- (. r -lastIndex) (. x -length)))
-              (if (= x "$") "/" (gobject/get DEMUNGE_MAP x)))
+              (if (identical? x "$") "/" (gobject/get DEMUNGE_MAP x)))
             (. r -lastIndex)))
         (str ret
           (.substring munged-name last-match-end (.-length munged-name)))))))
@@ -9869,7 +9871,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn demunge [name]
   ((if (symbol? name) symbol str)
     (let [name' (str name)]
-      (if (= name' "_DOT__DOT_")
+      (if (identical? name' "_DOT__DOT_")
         ".."
         (demunge-str (str name))))))
 
