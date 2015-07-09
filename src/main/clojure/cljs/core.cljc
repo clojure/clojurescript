@@ -1871,16 +1871,24 @@
              [part bit] (fast-path-protocols p)
              msym       (symbol
                           (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
-    `(let [~xsym ~x]
-       (if ~xsym
-         (let [bit# ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit))]
-           (if (or bit#
-                 ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+    (if-not (core/symbol? x)
+      `(let [~xsym ~x]
+         (if-not (nil? ~xsym)
+           (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
+                   ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
              true
              (if (coercive-not (. ~xsym ~msym))
                (cljs.core/native-satisfies? ~psym ~xsym)
-               false)))
-         (cljs.core/native-satisfies? ~psym ~xsym)))))
+               false))
+           (cljs.core/native-satisfies? ~psym ~xsym)))
+      `(if-not (nil? ~x)
+         (if (or ~(if bit `(unsafe-bit-and (. ~x ~msym) ~bit) false)
+                 ~(bool-expr `(. ~x ~(symbol (core/str "-" prefix)))))
+           true
+           (if (coercive-not (. ~x ~msym))
+             (cljs.core/native-satisfies? ~psym ~x)
+             false))
+         (cljs.core/native-satisfies? ~psym ~x)))))
 
 (core/defmacro lazy-seq
   "Takes a body of expressions that returns an ISeq or nil, and yields
