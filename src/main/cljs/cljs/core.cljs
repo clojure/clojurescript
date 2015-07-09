@@ -9883,13 +9883,17 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
         ".."
         (demunge-str (str name))))))
 
+(defn- ns-lookup [ns-obj k]
+  (fn [] (gobject/get ns-obj k)))
+
 (deftype Namespace [obj name]
   Object
   (findInternedVar [this sym]
     (let [k (munge (str sym))]
-      (when (gobject/containsKey obj k)
-        (Var. #(gobject/get obj k)
-          (symbol (str name) (str sym)) {:ns this}))))
+      (when ^boolean (gobject/containsKey obj k)
+        (let [var-sym (symbol (str name) (str sym))
+              var-meta {:ns this}]
+          (Var. (ns-lookup obj k) var-sym var-meta)))))
   (getName [_] name)
   (toString [_]
     (str name))
@@ -9949,14 +9953,17 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
    (Namespace. ns-obj sym)))
 
 (defn find-ns [ns]
-  (when-let [ns-obj (find-ns-obj ns)]
-    (create-ns ns ns-obj)))
+  (let [ns-obj (find-ns-obj ns)]
+    (when-not (nil? ns-obj)
+      (create-ns ns ns-obj))))
 
 (defn find-macros-ns [ns]
-  (let [ns (cond-> ns
-             (not (gstring/contains (str ns) "$macros"))
-             (-> (str "$macros") symbol))]
-    (when-let [ns-obj (find-ns-obj ns)]
+  (let [ns-str (str ns)
+        ns (if (not ^boolean (gstring/contains ns-str "$macros"))
+             (symbol (str ns-str "$macros"))
+             ns)
+        ns-obj (find-ns-obj ns)]
+    (when-not (nil? ns-obj)
       (create-ns ns ns-obj))))
 
 (defn ns-name [ns-obj]
