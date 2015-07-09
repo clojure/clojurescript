@@ -2039,6 +2039,10 @@
     (parse op env form name opts)
     (parse-invoke env form)))
 
+(defn analyze-seq*-wrap [op env form name opts]
+  (wrapping-errors env
+    (analyze-seq* op env form name opts)))
+
 (defn analyze-seq
   ([env form name] (analyze-seq env form name nil))
   ([env form name opts]
@@ -2054,8 +2058,7 @@
            (throw (error env "Can't call nil")))
          (let [mform (macroexpand-1 env form)]
            (if (identical? form mform)
-             (wrapping-errors env
-               (analyze-seq* op env form name opts))
+             (analyze-seq*-wrap op env form name opts)
              (analyze env mform name opts))))))))
 
 (defn analyze-map
