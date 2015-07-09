@@ -2910,9 +2910,17 @@ reduces them without incurring seq initialization"
   [x y]
   (if (identical? x y)
     true
-    (if (and (keyword? x)
-             (keyword? y))
+    (if (and (keyword? x) (keyword? y))
       (identical? (.-fqn x) (.-fqn y))
+      false)))
+
+(defn ^boolean symbol-identical?
+  "Efficient test to determine that two symbol are identical."
+  [x y]
+  (if (identical? x y)
+    true
+    (if (and (symbol? x) (symbol? y))
+      (identical? (.-str x) (.-str y))
       false)))
 
 (defn namespace
