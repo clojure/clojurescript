@@ -1612,11 +1612,11 @@ reduces them without incurring seq initialization"
       (when (< n (.-length coll))
         (aget coll n))
 
+      (implements? ISeq coll)
+      (linear-traversal-nth coll n)
+
       (native-satisfies? IIndexed coll)
       (-nth coll n)
-
-      (satisfies? ISeq coll)
-      (linear-traversal-nth coll n)
 
       :else
       (throw (js/Error. (str "nth not supported on this type "
@@ -1642,11 +1642,11 @@ reduces them without incurring seq initialization"
         (aget coll n)
         not-found)
 
+      (implements? ISeq coll)
+      (linear-traversal-nth coll n not-found)
+
       (native-satisfies? IIndexed coll)
       (-nth coll n)
-
-      (satisfies? ISeq coll)
-      (linear-traversal-nth coll n not-found)
 
       :else
       (throw (js/Error. (str "nth not supported on this type "
