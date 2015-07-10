@@ -126,6 +126,9 @@
 #?(:cljs
    (def CLJS_CORE_SYM 'cljs.core))
 
+#?(:cljs
+   (def CLJS_CORE_MACROS_SYM 'cljs.core$macros))
+
 (def IGNORE_SYM 'ignore)
 
 (def ANY_SYM 'any)
@@ -2036,7 +2039,7 @@
   (cond
     (identical? "clojure.core" nstr)
     #?(:clj  (find-ns 'cljs.core)
-       :cljs (find-macros-ns CLJS_CORE_SYM))
+       :cljs (find-macros-ns CLJS_CORE_MACROS_SYM))
     (identical? "clojure.repl" nstr)
     #?(:clj  (find-ns 'cljs.repl)
        :cljs (find-macros-ns 'cljs.repl))
@@ -2058,7 +2061,7 @@
             (.findInternedVar ^clojure.lang.Namespace
             #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
             (.findInternedVar ^clojure.lang.Namespace
-            #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns CLJS_CORE_SYM)) sym)))))))
+            #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns CLJS_CORE_MACROS_SYM)) sym)))))))
 
 (defn get-expander
   "Given a sym, a symbol identifying a macro, and env, an analysis environment

@@ -9916,22 +9916,12 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
 (defn find-ns-obj [ns]
   (if-not js/COMPILED
-    (do
-      (when (nil? NS_CACHE)
-        (set! NS_CACHE (atom {})))
-      (let [the-ns (get @NS_CACHE ns)]
-        (if-not (nil? the-ns)
-          the-ns
-          (let [segs (-> ns str (.split "."))]
-            (when-not (nil? (gobject/get (. goog/dependencies_ -nameToPath) (str ns)))
-              (case *target*
-                "nodejs"  (let [ns-obj (find-ns-obj* js/global segs)]
-                            (swap! NS_CACHE assoc ns ns-obj)
-                            ns-obj)
-                "default" (let [ns-obj (find-ns-obj* js/window segs)]
-                            (swap! NS_CACHE assoc ns ns-obj)
-                            ns-obj)
-                (throw (js/Error. (str "find-ns-obj not supported for target " *target*)))))))))
+    (let [segs (-> ns str (.split "."))]
+      (when-not (nil? (gobject/get (. goog/dependencies_ -nameToPath) (str ns)))
+        (case *target*
+          "nodejs"  (find-ns-obj* js/global segs)
+          "default" (find-ns-obj* js/window segs)
+          (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
     (throw
       (js/Error.
         "find-ns-obj not supported when Closure optimization applied"))))
@@ -9953,18 +9943,32 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
    (Namespace. ns-obj sym)))
 
 (defn find-ns [ns]
-  (let [ns-obj (find-ns-obj ns)]
-    (when-not (nil? ns-obj)
-      (create-ns ns ns-obj))))
+  (when (nil? NS_CACHE)
+    (set! NS_CACHE (atom {})))
+  (let [the-ns (get @NS_CACHE ns)]
+    (if-not (nil? the-ns)
+      the-ns
+      (let [ns-obj (find-ns-obj ns)]
+        (when-not (nil? ns-obj)
+          (let [new-ns (create-ns ns ns-obj)]
+            (swap! NS_CACHE assoc ns new-ns)
+            new-ns))))))
 
 (defn find-macros-ns [ns]
-  (let [ns-str (str ns)
-        ns (if (not ^boolean (gstring/contains ns-str "$macros"))
-             (symbol (str ns-str "$macros"))
-             ns)
-        ns-obj (find-ns-obj ns)]
-    (when-not (nil? ns-obj)
-      (create-ns ns ns-obj))))
+  (when (nil? NS_CACHE)
+    (set! NS_CACHE (atom {})))
+  (let [the-ns (get @NS_CACHE ns)]
+    (if-not (nil? the-ns)
+      the-ns
+      (let [ns-str (str ns)
+           ns (if (not ^boolean (gstring/contains ns-str "$macros"))
+                (symbol (str ns-str "$macros"))
+                ns)
+           ns-obj (find-ns-obj ns)]
+       (when-not (nil? ns-obj)
+         (let [new-ns (create-ns ns ns-obj)]
+           (swap! NS_CACHE assoc ns new-ns)
+           new-ns))))))
 
 (defn ns-name [ns-obj]
   (.-name ns-obj))
