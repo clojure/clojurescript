@@ -112,8 +112,7 @@
 #?(:cljs
    (def STRING_SYM 'string))
 
-#?(:cljs
-   (def BOOLEAN_SYM 'boolean))
+(def BOOLEAN_SYM 'boolean)
 
 #?(:cljs
    (def JS_STAR_SYM 'js*))
@@ -126,6 +125,10 @@
 
 #?(:cljs
    (def CLJS_CORE_SYM 'cljs.core))
+
+(def IGNORE_SYM 'ignore)
+
+(def ANY_SYM 'any)
 
 #?(:cljs
    (defn ^boolean cljs-seq? [x]
@@ -740,15 +743,66 @@
   #?(:cljs {:tag boolean})
   [env t]
   ;; don't use resolve-existing-var to avoid warnings
-  (when (and t (symbol? t))
-    (let [var (resolve-var env t)]
-      (or (:type var)
-          (-> var :info :type)
-          (:protocol-symbol var)
-          ;; need to hard code some cases because of
-          ;; forward declaration - David
-          ('#{cljs.core/PersistentHashMap
-              cljs.core/List} t)))))
+  (when (and (not (nil? t)) (symbol? t))
+    (let [var (resolve-var env t)
+          type (:type var)]
+      (if-not (nil? type)
+        type
+        (let [type (-> var :info :type)]
+          (if-not (nil? type)
+            type
+            (let [proto (:protocol-symbol var)]
+              (if-not (nil? proto)
+                proto
+                (get '#{cljs.core/PersistentHashMap cljs.core/List} t)))))))))
+
+(declare infer-tag)
+
+(def NOT_NATIVE '#{clj not-native})
+
+(def BOOLEAN_OR_SEQ '#{boolean seq})
+
+(defn infer-if [env e]
+  (let [{{:keys [op form]} :test} e
+        then-tag (infer-tag env (:then e))]
+    (if (and #?(:clj (= op :constant)
+                :cljs (keyword-identical? op :constant))
+             (not (nil? form))
+             (not (false? form)))
+      then-tag
+      (let [else-tag (infer-tag env (:else e))]
+        (cond
+          (or #?(:clj (= then-tag else-tag)
+                 :cljs (symbol-identical? then-tag else-tag))
+              #?(:clj (= else-tag IGNORE_SYM)
+                 :cljs (symbol-identical? else-tag IGNORE_SYM))) then-tag
+          #?(:clj (= then-tag IGNORE_SYM)
+             :cljs (symbol-identical? then-tag IGNORE_SYM)) else-tag
+          ;; TODO: temporary until we move not-native -> clj - David
+          (and (or (not (nil? (get NOT_NATIVE then-tag))) (type? env then-tag))
+               (or (not (nil? (get NOT_NATIVE else-tag))) (type? env else-tag)))
+          'clj
+          :else
+          (if (and (not (nil? (get BOOLEAN_OR_SEQ then-tag)))
+                   (not (nil? (get BOOLEAN_OR_SEQ else-tag))))
+            'seq
+            (let [then-tag (if #?(:clj (set? then-tag)
+                                  :cljs (cljs-set? then-tag))
+                             then-tag #{then-tag})
+                  else-tag (if #?(:clj (set? else-tag)
+                                  :cljs (cljs-set? else-tag))
+                             else-tag #{else-tag})]
+              (into then-tag else-tag))))))))
+
+(defn infer-invoke [env e]
+  (let [{info :info :as f} (:f e)
+        ret-tag (when-not (nil? (:fn-var info)) (:ret-tag info))]
+    (if-not (nil? ret-tag)
+      ret-tag
+      (let [ret-tag (infer-tag env (assoc (find-matching-method f (:args e)) :op :method))]
+        (if-not (nil? ret-tag)
+          ret-tag
+          ANY_SYM)))))
 
 (defn infer-tag
   "Given env, an analysis environment, and e, an AST node, return the inferred
@@ -757,47 +811,24 @@
   (if-let [tag (get-tag e)]
     tag
     (case (:op e)
-      :recur 'ignore
-      :throw 'ignore
-      :let (infer-tag env (:expr e))
-      :loop (infer-tag env (:expr e))
-      :do  (infer-tag env (:ret e))
-      :method (infer-tag env (:expr e))
-      :def (infer-tag env (:init e))
-      :invoke (let [{info :info :as f} (:f e)]
-                (or (and (:fn-var info) (:ret-tag info))
-                    (infer-tag env
-                      (assoc (find-matching-method f (:args e)) :op :method))
-                    'any))
-      :if (let [{{:keys [op form]} :test} e
-                then-tag (infer-tag env (:then e))]
-            (if (and (= op :constant)
-                     (not (#{nil false} form)))
-              then-tag
-              (let [else-tag (infer-tag env (:else e))]
-                (cond
-                  (or (= then-tag else-tag)
-                    (= else-tag 'ignore)) then-tag
-                  (= then-tag 'ignore) else-tag
-                  ;; TODO: temporary until we move not-native -> clj - David
-                  (and (or ('#{clj not-native} then-tag) (type? env then-tag))
-                    (or ('#{clj not-native} else-tag) (type? env else-tag)))
-                  'clj
-                  :else
-                  (if (every? '#{boolean seq} [then-tag else-tag])
-                    'seq
-                    (let [then-tag (if (set? then-tag) then-tag #{then-tag})
-                           else-tag (if (set? else-tag) else-tag #{else-tag})]
-                      (into then-tag else-tag)))))))
+      :recur    IGNORE_SYM
+      :throw    IGNORE_SYM
+      :let      (infer-tag env (:expr e))
+      :loop     (infer-tag env (:expr e))
+      :do       (infer-tag env (:ret e))
+      :method   (infer-tag env (:expr e))
+      :def      (infer-tag env (:init e))
+      :invoke   (infer-invoke env e)
+      :if       (infer-if env e)
       :constant (case (:form e)
-                  true 'boolean
-                  false 'boolean
-                  'any)
-      :var (if (:init e)
-             (infer-tag env (:init e))
-             (infer-tag env (:info e)))
-      :dot 'any
-      :js 'any
+                  true BOOLEAN_SYM
+                  false BOOLEAN_SYM
+                  ANY_SYM)
+      :var      (if (:init e)
+                  (infer-tag env (:init e))
+                  (infer-tag env (:info e)))
+      :dot      ANY_SYM
+      :js       ANY_SYM
       nil)))
 
 (defmulti parse (fn [op & rest] op))
