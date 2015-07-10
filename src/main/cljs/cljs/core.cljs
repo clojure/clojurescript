@@ -1562,10 +1562,10 @@ reduces them without incurring seq initialization"
       (string? coll)
       (alength coll)
 
-      (native-satisfies? ICounted coll)
-      (-count coll)
+      (implements? ISeqable coll)
+      (accumulating-seq-count coll)
 
-      :else (accumulating-seq-count coll))
+      :else (-count coll))
     0))
 
 (defn- linear-traversal-nth
@@ -1610,7 +1610,7 @@ reduces them without incurring seq initialization"
 
       (string? coll)
       (when (< n (.-length coll))
-        (aget coll n))
+        (.charAt coll n))
 
       (implements? ISeq coll)
       (linear-traversal-nth coll n)
@@ -1639,7 +1639,7 @@ reduces them without incurring seq initialization"
 
       (string? coll)
       (if (< n (.-length coll))
-        (aget coll n)
+        (.charAt coll n)
         not-found)
 
       (implements? ISeq coll)
@@ -2144,7 +2144,7 @@ reduces them without incurring seq initialization"
 
        (string? coll)
        (array-reduce coll f)
-       
+
        (native-satisfies? IReduce coll)
        (-reduce coll f)
 
@@ -2160,7 +2160,7 @@ reduces them without incurring seq initialization"
       
        (string? coll)
        (array-reduce coll f val)
-       
+
        (native-satisfies? IReduce coll)
        (-reduce coll f val)
 
