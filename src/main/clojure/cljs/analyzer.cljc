@@ -104,6 +104,46 @@
     "null"})
 
 #?(:cljs
+   (def CLJ_NIL_SYM 'clj-nil))
+
+#?(:cljs
+   (def NUMBER_SYM 'number))
+
+#?(:cljs
+   (def STRING_SYM 'string))
+
+#?(:cljs
+   (def BOOLEAN_SYM 'boolean))
+
+#?(:cljs
+   (def JS_STAR_SYM 'js*))
+
+#?(:cljs
+   (def DOT_SYM '.))
+
+#?(:cljs
+   (def NEW_SYM 'new))
+
+#?(:cljs
+   (def CLJS_CORE_SYM 'cljs.core))
+
+#?(:cljs
+   (defn ^boolean cljs-seq? [x]
+     (implements? ISeq x)))
+
+#?(:cljs
+   (defn ^boolean cljs-map? [x]
+     (implements? IMap x)))
+
+#?(:cljs
+   (defn ^boolean cljs-vector? [x]
+     (implements? IVector x)))
+
+#?(:cljs
+   (defn ^boolean cljs-set? [x]
+     (implements? ISet x)))
+
+#?(:cljs
    (defn munge-path [ss]
      (munge (str ss))))
 
@@ -1965,7 +2005,7 @@
   (cond
     (identical? "clojure.core" nstr)
     #?(:clj  (find-ns 'cljs.core)
-       :cljs (find-macros-ns 'cljs.core))
+       :cljs (find-macros-ns CLJS_CORE_SYM))
     (identical? "clojure.repl" nstr)
     #?(:clj  (find-ns 'cljs.repl)
        :cljs (find-macros-ns 'cljs.repl))
@@ -1987,7 +2027,7 @@
             (.findInternedVar ^clojure.lang.Namespace
             #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
             (.findInternedVar ^clojure.lang.Namespace
-            #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns 'cljs.core)) sym)))))))
+            #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns CLJS_CORE_SYM)) sym)))))))
 
 (defn get-expander
   "Given a sym, a symbol identifying a macro, and env, an analysis environment
@@ -2009,10 +2049,10 @@
           (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
                :cljs [do])
             (let [form' (apply @mac-var form env (rest form))]
-              (if (seq? form')
+              (if #?(:clj (seq? form') :cljs (cljs-seq? form'))
                 (let [sym' (first form')
                       sym  (first form)]
-                  (if #?(:clj (= sym' 'js*) :cljs (symbol-identical? sym' 'js*))
+                  (if #?(:clj (= sym' 'js*) :cljs (symbol-identical? sym' JS_STAR_SYM))
                     (vary-meta form' merge
                       (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
                         (-> mac-var meta ::numeric) (assoc :numeric true)))
@@ -2023,12 +2063,12 @@
               (cond
                 (identical? (first opname) \.)
                 (let [[target & args] (next form)]
-                  (with-meta (list* '. target (symbol (subs opname 1)) args)
+                  (with-meta (list* #?(:clj '. :cljs DOT_SYM) target (symbol (subs opname 1)) args)
                     (meta form)))
 
                 (identical? (last opname) \.)
                 (with-meta
-                  (list* 'new (symbol (subs opname 0 (dec (count opname)))) (next form))
+                  (list* #?(:clj 'new :cljs NEW_SYM) (symbol (subs opname 0 (dec (count opname)))) (next form))
                   (meta form))
 
                 :else form))
@@ -2158,22 +2198,6 @@
            tag (assoc :tag tag))))))
 
 #?(:cljs
-   (defn ^boolean cljs-seq? [x]
-     (implements? ISeq x)))
-
-#?(:cljs
-   (defn ^boolean cljs-map? [x]
-     (implements? IMap x)))
-
-#?(:cljs
-   (defn ^boolean cljs-vector? [x]
-     (implements? IVector x)))
-
-#?(:cljs
-   (defn ^boolean cljs-set? [x]
-     (implements? ISet x)))
-
-#?(:cljs
    (defn analyze-form [env form name opts]
      (cond
        (symbol? form) (analyze-symbol env form)
@@ -2186,11 +2210,11 @@
        (= () form) (analyze-list env form)
        :else
        (let [tag (cond
-                   (nil? form) 'clj-nil
-                   (number? form) 'number
-                   (string? form) 'string
-                   (true? form) 'boolean
-                   (false? form) 'boolean)]
+                   (nil? form) CLJ_NIL_SYM
+                   (number? form) NUMBER_SYM
+                   (string? form) STRING_SYM
+                   (true? form) BOOLEAN_SYM
+                   (false? form) BOOLEAN_SYM)]
          (cond-> {:op :constant :env env :form form}
            tag (assoc :tag tag))))))
 
