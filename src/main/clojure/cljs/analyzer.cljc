@@ -103,6 +103,29 @@
     "volatile" "while" "with" "yield" "methods"
     "null"})
 
+#?(:clj (def SENTINEL (Object.))
+   :cljs (def SENTINEL (js-obj)))
+
+(defn gets
+  ([m k0 k1]
+    (let [m (get m k0 SENTINEL)]
+      (when-not (identical? m SENTINEL)
+        (get m k1))))
+  ([m k0 k1 k2]
+   (let [m (get m k0 SENTINEL)]
+     (when-not (identical? m SENTINEL)
+       (let [m (get m k1 SENTINEL)]
+         (when-not (identical? m SENTINEL)
+           (get m k2))))))
+  ([m k0 k1 k2 k3]
+   (let [m (get m k0 SENTINEL)]
+     (when-not (identical? m SENTINEL)
+       (let [m (get m k1 SENTINEL)]
+         (when-not (identical? m SENTINEL)
+           (let [m (get m k2 SENTINEL)]
+             (when-not (identical? m SENTINEL)
+               (get m k3)))))))))
+
 #?(:cljs
    (def CLJ_NIL_SYM 'clj-nil))
 
@@ -524,11 +547,11 @@
                      (first (string/split sufstr #"\."))
                      suffix))]
       (when (and (not (implicit-import? env prefix suffix))
-                 (not (and (not (get-in @env/*compiler* [::namespaces prefix]))
+                 (not (and (not (gets @env/*compiler* ::namespaces prefix))
                            (or (get (:requires (:ns env)) prefix)
                            (get (:imports (:ns env)) prefix))))
                  (not (and (= prefix 'cljs.core) (= suffix 'unquote)))
-                 (not (get-in @env/*compiler* [::namespaces prefix :defs suffix])))
+                 (not (gets @env/*compiler* ::namespaces prefix :defs suffix)))
         (missing-fn env prefix suffix)))))
 
 (defn confirm-var-exists-throw []
@@ -552,7 +575,7 @@
   (when (and (nil? (get '#{cljs.core goog Math goog.string} ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym))
              ;; something else may have loaded the namespace, i.e. load-file
-             (nil? (get-in @env/*compiler* [::namespaces ns-sym]))
+             (nil? (gets @env/*compiler* ::namespaces ns-sym))
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
              #?(:clj (nil? (util/ns->source ns-sym))))
@@ -564,7 +587,7 @@
   "Is sym visible from core in the current compilation namespace?"
   #?(:cljs {:tag boolean})
   [env sym]
-  (and (or (get-in @env/*compiler* [::namespaces 'cljs.core :defs sym])
+  (and (or (gets @env/*compiler* ::namespaces 'cljs.core :defs sym)
            (when-let [mac (get-expander sym env)]
              (let [^Namespace ns (-> mac meta :ns)]
                (= (.getName ns) #?(:clj 'cljs.core :cljs 'cljs.core$macros)))))
@@ -590,7 +613,7 @@
                (when (not= (-> env :ns :name) full-ns)
                  (confirm-ns env full-ns))
                (confirm env full-ns (symbol (name sym))))
-             (merge (get-in @env/*compiler* [::namespaces full-ns :defs (symbol (name sym))])
+             (merge (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
                     {:name (symbol (str full-ns) (str (name sym)))
                      :ns full-ns}))
 
@@ -605,35 +628,35 @@
              (if lb
                {:name (symbol (str (:name lb)) suffix)}
                (let [cur-ns (-> env :ns :name)]
-                 (if-let [full-ns (get-in @env/*compiler* [::namespaces cur-ns :imports prefix])]
+                 (if-let [full-ns (gets @env/*compiler* ::namespaces cur-ns :imports prefix)]
                    {:name (symbol (str full-ns) suffix)}
-                   (if-let [info (get-in @env/*compiler* [::namespaces cur-ns :defs prefix])]
+                   (if-let [info (gets @env/*compiler* ::namespaces cur-ns :defs prefix)]
                      (merge info
                        {:name (symbol (str cur-ns) (str sym))
                         :ns cur-ns})
-                     (merge (get-in @env/*compiler* [::namespaces prefix :defs (symbol suffix)])
+                     (merge (gets @env/*compiler* ::namespaces prefix :defs (symbol suffix))
                        {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
                         :ns prefix}))))))
 
-           (get-in @env/*compiler* [::namespaces (-> env :ns :name) :uses sym])
-           (let [full-ns (get-in @env/*compiler* [::namespaces (-> env :ns :name) :uses sym])]
+           (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)
+           (let [full-ns (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)]
              (merge
-              (get-in @env/*compiler* [::namespaces full-ns :defs sym])
+              (gets @env/*compiler* ::namespaces full-ns :defs sym)
               {:name (symbol (str full-ns) (str sym))
                :ns (-> env :ns :name)}))
 
-           (get-in @env/*compiler* [::namespaces (-> env :ns :name) :imports sym])
-           (recur env (get-in @env/*compiler* [::namespaces (-> env :ns :name) :imports sym]) confirm)
+           (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym)
+           (recur env (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym) confirm)
 
            :else
            (let [cur-ns (-> env :ns :name)
                  full-ns (cond
-                           (get-in @env/*compiler* [::namespaces cur-ns :defs sym]) cur-ns
+                           (gets @env/*compiler* ::namespaces cur-ns :defs sym) cur-ns
                            (core-name? env sym) 'cljs.core
                            :else cur-ns)]
              (when confirm
                (confirm env full-ns sym))
-             (merge (get-in @env/*compiler* [::namespaces full-ns :defs sym])
+             (merge (gets @env/*compiler* ::namespaces full-ns :defs sym)
                {:name (symbol (str full-ns) (str sym))
                 :ns full-ns})))))))
 
@@ -2044,16 +2067,16 @@
 (defn excluded?
   #?(:cljs {:tag boolean})
   [env sym]
-  (if-not (nil? (get-in env [:ns :excludes sym]))
+  (if-not (nil? (gets env :ns :excludes sym))
     true
-    (not (nil? (get-in @env/*compiler* [::namespaces (get-in env [:ns :name]) :excludes sym])))))
+    (not (nil? (gets @env/*compiler* ::namespaces (gets env :ns :name) :excludes sym)))))
 
 (defn used?
   #?(:cljs {:tag boolean})
   [env sym]
-  (if-not (nil? (get-in env [:ns :use-macros sym]))
+  (if-not (nil? (gets env :ns :use-macros sym))
     true
-    (not (nil? (get-in @env/*compiler* [::namespaces (get-in env [:ns :name]) :use-macros sym])))))
+    (not (nil? (gets @env/*compiler* ::namespaces (gets env :ns :name) :use-macros sym)))))
 
 (defn get-expander-ns [env ^String nstr]
   (cond
@@ -2069,14 +2092,14 @@
     (some-> env :ns :require-macros (get (symbol nstr)) find-ns)))
 
 (defn get-expander* [sym env]
-  (when-not (or (not (nil? (get-in env [:locals sym]))) ; locals hide macros
+  (when-not (or (not (nil? (gets env :locals sym))) ; locals hide macros
                 (and (excluded? env sym) (not (used? env sym))))
     (let [nstr (namespace sym)]
       (if-not (nil? nstr)
         (let [ns (get-expander-ns env nstr)]
           (when-not (nil? ns)
             (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym)))))
-        (let [nsym (get-in env [:ns :use-macros sym])]
+        (let [nsym (gets env :ns :use-macros sym)]
           (if-not (nil? nsym)
             (.findInternedVar ^clojure.lang.Namespace
             #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
