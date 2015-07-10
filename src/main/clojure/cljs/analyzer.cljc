@@ -750,9 +750,13 @@
   {:op :constant :env env :form sym :tag 'cljs.core/Keyword})
 
 (defn get-tag [e]
-  (or (-> e :tag)
-      (-> e :info :tag)
-      (-> e :form meta :tag)))
+  (let [tag (-> e :tag)]
+    (if-not (nil? tag)
+      tag
+      (let [tag (-> e :info :tag)]
+        (if-not (nil? tag)
+          tag
+          (-> e :form meta :tag))))))
 
 (defn find-matching-method [f params]
   ;; if local fn, need to look in :info
@@ -825,7 +829,9 @@
         ret-tag (when-not (nil? (:fn-var info)) (:ret-tag info))]
     (if-not (nil? ret-tag)
       ret-tag
-      (let [ret-tag (infer-tag env (assoc (find-matching-method f (:args e)) :op :method))]
+      (let [args (:args e)
+            me (assoc (find-matching-method f args) :op :method)
+            ret-tag (infer-tag env me)]
         (if-not (nil? ret-tag)
           ret-tag
           ANY_SYM)))))
@@ -2138,12 +2144,16 @@
           (if (symbol? op)
             (let [opname (str op)]
               (cond
-                (identical? (first opname) \.)
+                (identical? \.
+                  #?(:clj  (first opname)
+                     :cljs (.charAt opname 0)))
                 (let [[target & args] (next form)]
                   (with-meta (list* #?(:clj '. :cljs DOT_SYM) target (symbol (subs opname 1)) args)
                     (meta form)))
 
-                (identical? (last opname) \.)
+                (identical? \.
+                  #?(:clj  (last opname)
+                     :cljs (.charAt opname (dec (. opname -length)))))
                 (with-meta
                   (list* #?(:clj 'new :cljs NEW_SYM) (symbol (subs opname 0 (dec (count opname)))) (next form))
                   (meta form))
@@ -2245,10 +2255,13 @@
       expr)))
 
 (defn infer-type [env ast]
-  (if-let [tag (and (not (:tag ast))
-                    (infer-tag env ast))]
-    (assoc ast :tag tag)
-    ast))
+  (let [tag (:tag ast)]
+    (if (nil? tag)
+      (let [tag (infer-tag env ast)]
+        (if-not (nil? tag)
+          (assoc ast :tag tag)
+          ast))
+      ast)))
 
 (def ^:dynamic *passes* nil)
 
