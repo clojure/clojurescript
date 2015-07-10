@@ -2709,6 +2709,11 @@ reduces them without incurring seq initialization"
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
 
+(defn ^boolean list?
+  "Returns true if x implements IList"
+  [x]
+  (satisfies? IList x))
+
 (es6-iterable List)
 
 (deftype EmptyList [meta]
@@ -2748,7 +2753,11 @@ reduces them without incurring seq initialization"
 
   ISequential
   IEquiv
-  (-equiv [coll other] (equiv-sequential coll other))
+  (-equiv [coll other]
+    (if (or (list? other)
+            (sequential? other))
+      (nil? (seq other))
+      false))
 
   IHash
   (-hash [coll] empty-ordered-hash)
@@ -2858,11 +2867,6 @@ reduces them without incurring seq initialization"
           (implements? ISeq coll))
     (Cons. nil x coll nil)
     (Cons. nil x (seq coll) nil)))
-
-(defn ^boolean list?
-  "Returns true if x implements IList"
-  [x]
-  (satisfies? IList x))
 
 (defn hash-keyword [k]
   (int (+ (hash-symbol k) 0x9e3779b9)))
