@@ -1969,37 +1969,57 @@
        :js-op (-> form meta :js-op)
        :numeric (-> form meta :numeric)})))
 
-(defn parse-invoke
+(defn- analyzed?
+  #?(:cljs {:tag boolean})
+  [f]
+  (contains? (meta f) ::analyzed))
+
+(defn- all-values?
+  #?(:cljs {:tag boolean})
+  [exprs]
+  (every? #{:var :constant} (map :op exprs)))
+
+(defn- valid-arity?
+  #?(:cljs {:tag boolean})
+  [argc method-params]
+  (boolean (some #{argc} (map count method-params))))
+
+(defn parse-invoke*
   [env [f & args :as form]]
-  (disallowing-recur
-   (let [enve    (assoc env :context :expr)
-         fexpr   (analyze enve f)
-         argc    (count args)
-         fn-var? (-> fexpr :info :fn-var)]
-     (when fn-var?
-       (let [{:keys [variadic max-fixed-arity method-params name]} (:info fexpr)]
-         (when (and (not (some #{argc} (map count method-params)))
-                    (or (not variadic)
-                        (and variadic (< argc max-fixed-arity))))
-           (warning :fn-arity env {:name name
-                                   :argc argc}))))
-     (when (and (-> fexpr :info :deprecated)
-                (not (-> form meta :deprecation-nowarn)))
-       (warning :fn-deprecated env {:fexpr fexpr}))
-     (when (-> fexpr :info :type)
-       (warning :invoke-ctor env {:fexpr fexpr}))
-     (let [argexprs (vec (map #(analyze enve %) args))]
-       (if (or (not *cljs-static-fns*)
-               (not (symbol? f))
-               fn-var?
-               (contains? (meta f) ::analyzed)
-               (every? #{:var :constant} (map :op argexprs)))
-         {:env env :op :invoke :form form :f fexpr :args argexprs
-          :children (into [fexpr] argexprs)}
-         (let [arg-syms (take argc (repeatedly gensym))]
-           (analyze env
-             `(let [~@(vec (interleave arg-syms args))]
-                (~(vary-meta f assoc ::analyzed true) ~@arg-syms)))))))))
+  (let [enve (assoc env :context :expr)
+        fexpr (analyze enve f)
+        argc (count args)
+        ^boolean fn-var? (-> fexpr :info :fn-var)]
+    (when fn-var?
+      (let [{:keys [^boolean variadic max-fixed-arity method-params name]} (:info fexpr)]
+        (when (and (not (valid-arity? argc method-params))
+                   (or (not variadic)
+                       (and variadic (< argc max-fixed-arity))))
+          (warning :fn-arity env {:name name :argc argc}))))
+    (let [deprecated? (-> fexpr :info :deprecated)
+          no-warn? (-> form meta :deprecation-nowarn)]
+      (when (and (boolean deprecated?)
+                 (not (boolean no-warn?)))
+        (warning :fn-deprecated env {:fexpr fexpr})))
+    (when-not (nil? (-> fexpr :info :type))
+      (warning :invoke-ctor env {:fexpr fexpr}))
+    (let [ana-expr #(analyze enve %)
+          argexprs (map ana-expr args)]
+      (if (or (not (boolean *cljs-static-fns*))
+              (not (symbol? f))
+              fn-var?
+              (analyzed? f)
+              (all-values? argexprs))
+        {:env env :op :invoke :form form :f fexpr :args (vec argexprs)
+         :children (into [fexpr] argexprs)}
+        (let [arg-syms (take argc (repeatedly gensym))]
+          (analyze env
+            `(let [~@(vec (interleave arg-syms args))]
+               (~(vary-meta f assoc ::analyzed true) ~@arg-syms))))))))
+
+(defn parse-invoke
+  [env form]
+  (disallowing-recur (parse-invoke* env form)))
 
 (defn analyze-symbol
   "Finds the var associated with sym"

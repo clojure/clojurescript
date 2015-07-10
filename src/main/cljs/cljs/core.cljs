@@ -181,7 +181,11 @@
 
 (defn ^boolean not
   "Returns true if x is logical false, false otherwise."
-  [x] (if x false true))
+  [x]
+  (cond
+    (nil? x) true
+    (false? x) true
+    :else false))
 
 (defn ^boolean some?
   "Returns true if x is not nil, false otherwise."
@@ -1959,7 +1963,10 @@ reduces them without incurring seq initialization"
 (defn ^boolean boolean
   "Coerce to boolean"
   [x]
-  (if x true false))
+  (cond
+    (nil? x) false
+    (false? x) false
+    :else true))
 
 (defn ^boolean ifn?
   "Returns true if f returns true for fn? or satisfies IFn."
