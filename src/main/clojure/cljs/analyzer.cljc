@@ -2327,12 +2327,10 @@
   ([env form] (analyze env form nil))
   ([env form name] (analyze env form name nil))
   ([env form name opts]
-   {:pre [(or (nil? name) (symbol? name))
-          (or (nil? opts) (map? opts))]}
-    (ensure
-      (wrapping-errors env
-        (binding [reader/*alias-map* (or reader/*alias-map* {})]
-          (analyze* env form name opts))))))
+   (ensure
+     (wrapping-errors env
+       (binding [reader/*alias-map* (or reader/*alias-map* {})]
+         (analyze* env form name opts))))))
 
 #?(:clj
    (defn- source-path
