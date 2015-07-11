@@ -1158,35 +1158,60 @@
         (when export-as {:export export-as})
         (when init-expr {:children [init-expr]})))))
 
+(defn analyze-fn-method-param [env]
+  (fn [[locals params] name]
+    (let [line   (get-line name env)
+          column (get-col name env)
+          nmeta  (meta name)
+          tag    (:tag nmeta)
+          shadow (when-not (nil? locals)
+                   (locals name))
+          env    (merge (select-keys env [:context])
+                   {:line line :column column})
+          param  {:op :var
+                  :name name
+                  :line line
+                  :column column
+                  :tag tag
+                  :shadow shadow
+                  ;; Give the fn params the same shape
+                  ;; as a :var, so it gets routed
+                  ;; correctly in the compiler
+                  :env env
+                  :info {:name name :shadow shadow}
+                  :binding-form? true}]
+     [(assoc locals name param) (conj params param)])))
+
+(defn analyze-fn-method-body [env form recur-frames]
+  (binding [*recur-frames* recur-frames]
+    (analyze env form)))
+
 (defn- analyze-fn-method [env locals form type]
-  (let [param-names (first form)
-        variadic (boolean (some '#{&} param-names))
-        param-names (vec (remove '#{&} param-names))
-        body (next form)
-        [locals params] (reduce (fn [[locals params] name]
-                                  (let [param {:name name
-                                               :line (get-line name env)
-                                               :column (get-col name env)
-                                               :tag (-> name meta :tag)
-                                               :shadow (when locals (locals name))
-                                               ;; Give the fn params the same shape
-                                               ;; as a :var, so it gets routed
-                                               ;; correctly in the compiler
-                                               :op :var
-                                               :env (merge (select-keys env [:context])
-                                                           {:line (get-line name env)
-                                                            :column (get-col name env)})
-                                               :info {:name name
-                                                      :shadow (when locals (locals name))}
-                                               :binding-form? true}]
-                                    [(assoc locals name param) (conj params param)]))
-                                [locals []] param-names)
-        fixed-arity (count (if variadic (butlast params) params))
-        recur-frame {:params params :flag (atom nil)}
-        expr (binding [*recur-frames* (cons recur-frame *recur-frames*)]
-               (analyze (assoc env :context :return :locals locals) `(do ~@body)))]
-    {:env env :variadic variadic :params params :max-fixed-arity fixed-arity
-     :type type :form form :recurs @(:flag recur-frame) :expr expr}))
+  (let [param-names     (first form)
+        variadic        (boolean (some '#{&} param-names))
+        param-names     (vec (remove '#{&} param-names))
+        body            (next form)
+        step            (analyze-fn-method-param env)
+        step-init       [locals []]
+        [locals params] (reduce step step-init param-names)
+        params'         (if (true? variadic)
+                          (butlast params)
+                          params)
+        fixed-arity     (count params')
+        recur-frame     {:params params :flag (atom nil)}
+        recur-frames    (cons recur-frame *recur-frames*)
+        body-env        (assoc env :context :return :locals locals)
+        body-form       `(do ~@body)
+        expr            (analyze-fn-method-body body-env body-form recur-frames)
+        recurs          @(:flag recur-frame)]
+    {:env env
+     :variadic variadic
+     :params params
+     :max-fixed-arity fixed-arity
+     :type type
+     :form form
+     :expr expr
+     :recurs recurs}))
 
 (declare analyze-wrap-meta)
 
