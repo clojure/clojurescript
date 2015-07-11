@@ -1289,63 +1289,94 @@
      :statements statements :ret ret
      :children (conj (vec statements) ret)}))
 
+(defn analyze-let-binding-init [env init loop-lets]
+  (binding [*loop-lets* loop-lets]
+    (analyze env init)))
+
+(defn get-let-tag [name init-expr]
+  (let [tag (-> name meta :tag)]
+    (if-not (nil? tag)
+      tag
+      (let [tag (-> init-expr :tag)]
+        (if-not (nil? tag)
+          tag
+          (-> init-expr :info :tag))))))
+
+(defn analyze-let-bindings* [encl-env bindings]
+  (loop [bes []
+         env (assoc encl-env :context :expr)
+         bindings (seq (partition 2 bindings))]
+    (let [binding (first bindings)]
+      (if-not (nil? binding)
+        (let [[name init] binding]
+          (when (or (not (nil? (namespace name)))
+                  #?(:clj  (.contains (str name) ".")
+                     :cljs ^boolean (goog.string/contains (str name) ".")))
+            (throw (error encl-env (str "Invalid local name: " name))))
+          (let [init-expr (analyze-let-binding-init env init (cons {:params bes} *loop-lets*))
+                line (get-line name env)
+                col (get-col name env)
+                be {:name name
+                    :line line
+                    :column col
+                    :init init-expr
+                    :tag (get-let-tag name init-expr)
+                    :local true
+                    :shadow (-> env :locals name)
+                    ;; Give let* bindings same shape as var so
+                    ;; they get routed correctly in the compiler
+                    :op :var
+                    :env {:line line :column col}
+                    :info {:name name
+                           :shadow (-> env :locals name)}
+                    :binding-form? true}
+                be (if (= :fn (:op init-expr))
+                     ;; TODO: can we simplify - David
+                     (merge be
+                       {:fn-var true
+                        :variadic (:variadic init-expr)
+                        :max-fixed-arity (:max-fixed-arity init-expr)
+                        :method-params (map :params (:methods init-expr))})
+                     be)]
+            (recur (conj bes be)
+              (assoc-in env [:locals name] be)
+              (next bindings))))
+        [bes env]))))
+
+(defn analyze-let-bindings [encl-env bindings]
+  (disallowing-recur (analyze-let-bindings* encl-env bindings)))
+
+(defn analyze-let-body* [env context exprs]
+  (analyze (assoc env :context (if (= :expr context) :return context)) `(do ~@exprs)))
+
+(defn analyze-let-body [env context exprs recur-frames loop-lets]
+  (binding [*recur-frames* recur-frames
+            *loop-lets* loop-lets]
+    (analyze-let-body* env context exprs)))
+
 (defn analyze-let
   [encl-env [_ bindings & exprs :as form] is-loop]
   (when-not (and (vector? bindings) (even? (count bindings))) 
     (throw (error encl-env "bindings must be vector of even number of elements")))
-  (let [context (:context encl-env)
-        [bes env]
-        (disallowing-recur
-         (loop [bes []
-                env (assoc encl-env :context :expr)
-                bindings (seq (partition 2 bindings))]
-           (if-let [[name init] (first bindings)]
-             (do
-               (when (or (namespace name)
-                         #?(:clj  (.contains (str name) ".")
-                            :cljs (goog.string/contains (str name) ".")))
-                 (throw (error encl-env (str "Invalid local name: " name))))
-               (let [init-expr (binding [*loop-lets* (cons {:params bes} *loop-lets*)]
-                                 (analyze env init))
-                     be {:name name
-                         :line (get-line name env)
-                         :column (get-col name env)
-                         :init init-expr
-                         :tag (or (-> name meta :tag)
-                                  (-> init-expr :tag)
-                                  (-> init-expr :info :tag))
-                         :local true
-                         :shadow (-> env :locals name)
-                         ;; Give let* bindings same shape as var so
-                         ;; they get routed correctly in the compiler
-                         :op :var
-                         :env {:line (get-line name env)
-                               :column (get-col name env)}
-                         :info {:name name
-                                :shadow (-> env :locals name)}
-                         :binding-form? true}
-                     be (if (= (:op init-expr) :fn)
-                          ;; TODO: can we simplify - David
-                          (merge be
-                            {:fn-var true
-                             :variadic (:variadic init-expr)
-                             :max-fixed-arity (:max-fixed-arity init-expr)
-                             :method-params (map :params (:methods init-expr))})
-                          be)]
-                 (recur (conj bes be)
-                        (assoc-in env [:locals name] be)
-                        (next bindings))))
-             [bes env])))
-        recur-frame (when is-loop {:params bes :flag (atom nil)})
-        expr
-        (binding [*recur-frames* (if recur-frame (cons recur-frame *recur-frames*) *recur-frames*)
-                  *loop-lets* (cond
-                                is-loop *loop-lets*
-                                *loop-lets* (cons {:params bes} *loop-lets*))]
-          (analyze (assoc env :context (if (= :expr context) :return context)) `(do ~@exprs)))]
-    {:env encl-env :op (if is-loop :loop :let)
-     :bindings bes :expr expr :form form
-     :children (conj (vec (map :init bes)) expr)}))
+  (let [context      (:context encl-env)
+        [bes env]    (analyze-let-bindings encl-env bindings)
+        recur-frame  (when (true? is-loop)
+                       {:params bes :flag (atom nil)})
+        recur-frames (if recur-frame
+                       (cons recur-frame *recur-frames*)
+                       *recur-frames*)
+        loop-lets    (cond
+                       (true? is-loop) *loop-lets*
+                       (not (nil? *loop-lets*)) (cons {:params bes} *loop-lets*))
+        expr         (analyze-let-body env context exprs recur-frames loop-lets)
+        op           (if (true? is-loop) :loop :let)
+        children     (conj (vec (map :init bes)) expr)]
+    {:op op
+     :env encl-env
+     :bindings bes
+     :expr expr
+     :form form
+     :children children}))
 
 (defmethod parse 'let*
   [op encl-env form _ _]
@@ -2135,10 +2166,16 @@
               (if #?(:clj (seq? form') :cljs (cljs-seq? form'))
                 (let [sym' (first form')
                       sym  (first form)]
-                  (if #?(:clj (= sym' 'js*) :cljs (symbol-identical? sym' JS_STAR_SYM))
-                    (vary-meta form' merge
-                      (cond-> {:js-op (if (namespace sym) sym (symbol "cljs.core" (str sym)))}
-                        (-> mac-var meta ::numeric) (assoc :numeric true)))
+                  (if #?(:clj  (= sym' 'js*)
+                         :cljs (symbol-identical? sym' JS_STAR_SYM))
+                    (let [sym   (if (namespace sym)
+                                  sym
+                                  (symbol "cljs.core" (str sym)))
+                          js-op {:js-op sym}
+                          js-op (if (true? (-> mac-var meta ::numeric))
+                                  (assoc js-op :numeric true)
+                                  js-op)]
+                      (vary-meta form' merge js-op))
                     form'))
                 form')))
           (if (symbol? op)
