@@ -1169,71 +1169,101 @@
 
 (declare analyze-wrap-meta)
 
+(defn fn-name-var [env locals name]
+  (when-not (nil? name)
+    (let [ns       (-> env :ns :name)
+          shadow   (get locals name)
+          shadow   (when (nil? shadow)
+                     (get-in env [:js-globals name]))
+          fn-scope (:fn-scope env)
+          name-var {:name name
+                    :info {:fn-self-name true
+                           :fn-scope fn-scope
+                           :ns ns
+                           :shadow shadow}}
+          tag      (-> name meta :tag)
+          ret-tag  (when-not (nil? tag)
+                     {:ret-tag tag})]
+      (merge name-var ret-tag))))
+
+(defn analyze-fn-methods-pass2* [menv locals type meths]
+  (doall (map #(analyze-fn-method menv locals % type) meths)))
+
+(defn analyze-fn-methods-pass2 [menv locals type meths]
+  (no-warn (analyze-fn-methods-pass2* menv locals type meths)))
+
 (defmethod parse 'fn*
   [op env [_ & args :as form] name _]
-  (analyze-wrap-meta
-   (let [[name meths] (if (symbol? (first args))
-                        [(first args) (next args)]
-                        [name (seq args)])
-         ;;turn (fn [] ...) into (fn ([]...))
-         meths (if (vector? (first meths)) (list meths) meths)
-         locals (:locals env)
-         name-var (if name
-                    (merge
-                      {:name name
-                       :info {:fn-self-name true
-                              :fn-scope (:fn-scope env)
-                              :ns (-> env :ns :name)
-                              :shadow (or (locals name)
-                                          (get-in env [:js-globals name]))}}
-                     (when-let [tag (-> name meta :tag)]
-                       {:ret-tag tag})))
-         env (if name
-               (update-in env [:fn-scope] conj name-var)
-               env)
-         locals (if (and locals name) (assoc locals name name-var) locals)
-         type (-> form meta ::type)
-         protocol-impl (-> form meta ::protocol-impl)
-         protocol-inline (-> form meta ::protocol-inline)
-         menv (if (> (count meths) 1) (assoc env :context :expr) env)
-         menv (merge menv
-                     {:protocol-impl protocol-impl
-                      :protocol-inline protocol-inline})
-         methods (map #(analyze-fn-method menv locals % type) meths)
-         max-fixed-arity (apply max (map :max-fixed-arity methods))
-         variadic (boolean (some :variadic methods))
-         locals (if name
-                  (update-in locals [name] assoc
-                             ;; TODO: can we simplify? - David
-                             :fn-var true
-                             :variadic variadic
-                             :max-fixed-arity max-fixed-arity
-                             :method-params (map :params methods))
-                  locals)
-         methods (if name
-                   ;; a second pass with knowledge of our function-ness/arity
-                   ;; lets us optimize self calls
-                   (no-warn (doall (map #(analyze-fn-method menv locals % type) meths)))
-                   methods)
-         form (vary-meta form dissoc ::protocol-impl ::protocol-inline ::type)]
-     (let [variadic-methods (filter :variadic methods)
-           variadic-params (count (:params (first variadic-methods)))
-           param-counts (map (comp count :params) methods)]
-       (when (< 1 (count variadic-methods))
-         (warning :multiple-variadic-overloads env {:name name-var}))
-       (when (not (or (zero? variadic-params) (= variadic-params (+ 1 max-fixed-arity))))
-         (warning :variadic-max-arity env {:name name-var}))
-       (when (not= (distinct param-counts) param-counts)
-         (warning :overload-arity env {:name name-var})))
-     {:env env
-      :op :fn :form form :name name-var :methods methods :variadic variadic
-      :tag 'function
-      :recur-frames *recur-frames* :loop-lets *loop-lets*
-      :jsdoc [(when variadic "@param {...*} var_args")]
-      :max-fixed-arity max-fixed-arity
-      :protocol-impl protocol-impl
-      :protocol-inline protocol-inline
-      :children (mapv :expr methods)})))
+  (let [[name meths] (if (symbol? (first args))
+                       [(first args) (next args)]
+                       [name (seq args)])
+        ;; turn (fn [] ...) into (fn ([]...))
+        meths        (if (vector? (first meths))
+                       (list meths)
+                       meths)
+        locals       (:locals env)
+        name-var     (fn-name-var env locals name)
+        env          (if-not (nil? name)
+                       (update-in env [:fn-scope] conj name-var)
+                       env)
+        locals       (if (and (not (nil? locals))
+                              (not (nil? name)))
+                       (assoc locals name name-var)
+                       locals)
+        form-meta    (meta form)
+        type         (::type form-meta)
+        proto-impl   (::protocol-impl form-meta)
+        proto-inline (::protocol-inline form-meta)
+        menv         (if (> (count meths) 1)
+                       (assoc env :context :expr)
+                       env)
+        menv         (merge menv
+                       {:protocol-impl proto-impl
+                        :protocol-inline proto-inline})
+        methods      (map #(analyze-fn-method menv locals % type) meths)
+        mfa          (apply max (map :max-fixed-arity methods))
+        variadic     (boolean (some :variadic methods))
+        locals       (if-not (nil? name)
+                       (update-in locals [name] assoc
+                         ;; TODO: can we simplify? - David
+                         :fn-var true
+                         :variadic variadic
+                         :max-fixed-arity mfa
+                         :method-params (map :params methods))
+                       locals)
+        methods      (if-not (nil? name)
+                       ;; a second pass with knowledge of our function-ness/arity
+                       ;; lets us optimize self calls
+                       (analyze-fn-methods-pass2 menv locals type meths)
+                       methods)
+        form         (vary-meta form dissoc ::protocol-impl ::protocol-inline ::type)
+        js-doc       (when (true? variadic)
+                       "@param {...*} var_args")
+        children     (mapv :expr methods)
+        ast          {:op :fn
+                      :env env
+                      :form form
+                      :name name-var
+                      :methods methods
+                      :variadic variadic
+                      :tag 'function
+                      :recur-frames *recur-frames*
+                      :loop-lets *loop-lets*
+                      :jsdoc [js-doc]
+                      :max-fixed-arity mfa
+                      :protocol-impl proto-impl
+                      :protocol-inline proto-inline
+                      :children children}]
+    (let [variadic-methods (filter :variadic methods)
+          variadic-params  (count (:params (first variadic-methods)))
+          param-counts     (map (comp count :params) methods)]
+      (when (< 1 (count variadic-methods))
+        (warning :multiple-variadic-overloads env {:name name-var}))
+      (when (not (or (zero? variadic-params) (== variadic-params (+ 1 mfa))))
+        (warning :variadic-max-arity env {:name name-var}))
+      (when (not= (distinct param-counts) param-counts)
+        (warning :overload-arity env {:name name-var})))
+    (analyze-wrap-meta ast)))
 
 (defmethod parse 'letfn*
   [op env [_ bindings & exprs :as form] name _]
