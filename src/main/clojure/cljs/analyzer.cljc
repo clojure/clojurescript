@@ -840,28 +840,29 @@
   "Given env, an analysis environment, and e, an AST node, return the inferred
    type of the node"
   [env e]
-  (if-let [tag (get-tag e)]
-    tag
-    (case (:op e)
-      :recur    IGNORE_SYM
-      :throw    IGNORE_SYM
-      :let      (infer-tag env (:expr e))
-      :loop     (infer-tag env (:expr e))
-      :do       (infer-tag env (:ret e))
-      :method   (infer-tag env (:expr e))
-      :def      (infer-tag env (:init e))
-      :invoke   (infer-invoke env e)
-      :if       (infer-if env e)
-      :constant (case (:form e)
-                  true BOOLEAN_SYM
-                  false BOOLEAN_SYM
-                  ANY_SYM)
-      :var      (if (:init e)
-                  (infer-tag env (:init e))
-                  (infer-tag env (:info e)))
-      :dot      ANY_SYM
-      :js       ANY_SYM
-      nil)))
+  (let [tag (get-tag e)]
+    (if-not (nil? tag)
+      tag
+      (case (:op e)
+        :recur    IGNORE_SYM
+        :throw    IGNORE_SYM
+        :let      (infer-tag env (:expr e))
+        :loop     (infer-tag env (:expr e))
+        :do       (infer-tag env (:ret e))
+        :method   (infer-tag env (:expr e))
+        :def      (infer-tag env (:init e))
+        :invoke   (infer-invoke env e)
+        :if       (infer-if env e)
+        :constant (case (:form e)
+                    true BOOLEAN_SYM
+                    false BOOLEAN_SYM
+                    ANY_SYM)
+        :var      (if (:init e)
+                    (infer-tag env (:init e))
+                    (infer-tag env (:info e)))
+        :dot      ANY_SYM
+        :js       ANY_SYM
+        nil))))
 
 (defmulti parse (fn [op & rest] op))
 
