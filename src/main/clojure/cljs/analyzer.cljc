@@ -2002,25 +2002,36 @@
                  (list* '. dot-form) " with classification "
                  (classify-dot-form dot-form))))))
 
+(defn analyze-dot [env target field member+ form]
+  (let [v [target field member+]
+        {:keys [dot-action target method field args]} (build-dot-form v)
+        enve       (assoc env :context :expr)
+        targetexpr (analyze enve target)
+        form-meta  (meta form)
+        tag        (:tag form-meta)]
+    (case dot-action
+      ::access (let [children [targetexpr]]
+                 {:op :dot
+                  :env env
+                  :form form
+                  :target targetexpr
+                  :field field
+                  :children children
+                  :tag tag})
+      ::call   (let [argexprs (map #(analyze enve %) args)
+                     children (into [targetexpr] argexprs)]
+                 {:op :dot
+                  :env env
+                  :form form
+                  :target targetexpr
+                  :method method
+                  :args argexprs
+                  :children children
+                  :tag tag}))))
+
 (defmethod parse '.
   [_ env [_ target & [field & member+] :as form] _ _]
-  (disallowing-recur
-   (let [{:keys [dot-action target method field args]} (build-dot-form [target field member+])
-         enve        (assoc env :context :expr)
-         targetexpr  (analyze enve target)]
-     (case dot-action
-           ::access {:env env :op :dot :form form
-                     :target targetexpr
-                     :field field
-                     :children [targetexpr]
-                     :tag (-> form meta :tag)}
-           ::call   (let [argexprs (map #(analyze enve %) args)]
-                      {:env env :op :dot :form form
-                       :target targetexpr
-                       :method method
-                       :args argexprs
-                       :children (into [targetexpr] argexprs)
-                       :tag (-> form meta :tag)})))))
+  (disallowing-recur (analyze-dot env target field member+ form)))
 
 (defmethod parse 'js*
   [op env [_ jsform & args :as form] _ _]
