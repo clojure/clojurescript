@@ -2033,64 +2033,101 @@
   [_ env [_ target & [field & member+] :as form] _ _]
   (disallowing-recur (analyze-dot env target field member+ form)))
 
+(defn get-js-tag [form]
+  (let [form-meta (meta form)
+        tag       (:tag form-meta)]
+    (if-not (nil? tag)
+      tag
+      (when (true? (:numeric form-meta))
+        'number))))
+
+(defn js-star-interp
+  [env ^String s]
+  (let [idx (.indexOf s "~{")]
+    (if (== -1 idx)
+      (list s)
+      (let [end (.indexOf s "}" idx)
+            inner (:name (resolve-existing-var env (symbol (subs s (+ 2 idx) end))))]
+        (lazy-seq
+          (cons (subs s 0 idx)
+            (cons inner
+              (js-star-interp env (subs s (inc end))))))))))
+
+(defn js-star-seg
+  [^String s]
+  (let [idx (.indexOf s "~{")]
+    (if (== -1 idx)
+      (list s)
+      (let [end (.indexOf s "}" idx)]
+        (lazy-seq
+          (cons (subs s 0 idx)
+            (js-star-seg (subs s (inc end)))))))))
+
+(def NUMERIC_SET '#{any number long double})
+
+(defn numeric-type?
+  #?(:cljs {:tag boolean})
+  [t]
+  ;; TODO: type inference is not strong enough to detect that
+  ;; when functions like first won't return nil, so variadic
+  ;; numeric functions like cljs.core/< would produce a spurious
+  ;; warning without this - David
+  (if (nil? t)
+    true
+    (if (and (symbol? t) (not (nil? (get NUMERIC_SET t))))
+      true
+      (when #?(:clj  (set? t)
+               :cljs (cljs-set? t))
+        (or (contains? t 'number)
+            (contains? t 'long)
+            (contains? t 'double)
+            (contains? t 'any))))))
+
+(defn analyze-js-star* [env jsform args form]
+  (let [enve      (assoc env :context :expr)
+        argexprs  (vec (map #(analyze enve %) args))
+        form-meta (meta form)
+        segs      (js-star-seg jsform)
+        tag       (get-js-tag form)
+        js-op     (:js-op form-meta)
+        numeric   (:numeric form-meta)]
+    (when (true? numeric)
+      (let [types (map #(infer-tag env %) argexprs)]
+        (when-not (every? numeric-type? types)
+          (warning :invalid-arithmetic env
+            {:js-op js-op
+             :types (into [] types)}))))
+    {:op :js
+     :env env
+     :segs segs
+     :args argexprs
+     :tag tag
+     :form form
+     :children argexprs
+     :js-op js-op
+     :numeric numeric}))
+
+(defn analyze-js-star [env jsform args form]
+  (disallowing-recur (analyze-js-star* env jsform args form)))
+
 (defmethod parse 'js*
   [op env [_ jsform & args :as form] _ _]
   (when-not (string? jsform)
     (throw (error env "Invalid js* form")))
-  (if args
-    (disallowing-recur
-     (let [seg (fn seg [^String s]
-                 (let [idx (.indexOf s "~{")]
-                   (if (= -1 idx)
-                     (list s)
-                     (let [end (.indexOf s "}" idx)]
-                       (lazy-seq
-                         (cons (subs s 0 idx)
-                           (seg (subs s (inc end)))))))))
-           enve (assoc env :context :expr)
-           argexprs (vec (map #(analyze enve %) args))]
-       (when (-> form meta :numeric)
-         (let [types (map #(infer-tag env %) argexprs)]
-           (when-not (every?
-                       (fn [t]
-                         (or (nil? t)
-                             (and (symbol? t) ('#{any number long double} t))
-                             ;; TODO: type inference is not strong enough to detect that
-                             ;; when functions like first won't return nil, so variadic
-                             ;; numeric functions like cljs.core/< would produce a spurious
-                             ;; warning without this - David
-                             (and (set? t)
-                                  (or (contains? t 'number)
-                                      (contains? t 'long)
-                                      (contains? t 'double)
-                                      (contains? t 'any)))))
-                       types)
-             (warning :invalid-arithmetic env
-               {:js-op (-> form meta :js-op)
-                :types (into [] types)}))))
-       {:env env :op :js :segs (seg jsform) :args argexprs
-        :tag (or (-> form meta :tag)
-                 (and (-> form meta :numeric) 'number)
-                 nil)
-        :form form :children argexprs
-        :js-op (-> form meta :js-op)
-        :numeric (-> form meta :numeric)}))
-    (let [interp (fn interp [^String s]
-                   (let [idx (.indexOf s "~{")]
-                     (if (= -1 idx)
-                       (list s)
-                       (let [end (.indexOf s "}" idx)
-                             inner (:name (resolve-existing-var env (symbol (subs s (+ 2 idx) end))))]
-                         (lazy-seq
-                           (cons (subs s 0 idx)
-                             (cons inner
-                               (interp (subs s (inc end))))))))))]
-      {:env env :op :js :form form :code (apply str (interp jsform))
-       :tag (or (-> form meta :tag)
-                (and (-> form meta :numeric) 'number)
-                nil)
-       :js-op (-> form meta :js-op)
-       :numeric (-> form meta :numeric)})))
+  (if-not (nil? args)
+    (analyze-js-star env jsform args form)
+    (let [code      (apply str (js-star-interp env jsform))
+          tag       (get-js-tag form)
+          form-meta (meta form)
+          js-op     (:js-op form-meta)
+          numeric   (:numeric form-meta)]
+      {:op :js
+       :env env
+       :form form
+       :code code
+       :tag tag
+       :js-op js-op
+       :numeric numeric})))
 
 (defn- analyzed?
   #?(:cljs {:tag boolean})
