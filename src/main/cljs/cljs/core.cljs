@@ -1795,7 +1795,7 @@ reduces them without incurring seq initialization"
   "Returns an object of the same type and value as obj, with
   map m as its metadata."
   [o meta]
-  (if (and (fn? o) (not (satisfies? IWithMeta o)))
+  (if ^boolean (goog/isFunction o)
     (MetaFn. o meta)
     (when-not (nil? o)
       (-with-meta o meta))))
