@@ -3,7 +3,7 @@
 rm -rf builds/out-adv-bench
 mkdir -p builds/out-adv-bench
 
-bin/cljsc benchmark "{:optimizations :advanced :output-wrapper true :compiler-stats true}" > builds/out-adv-bench/core-advanced-benchmark.js
+bin/cljsc benchmark "{:optimizations :advanced :output-wrapper true :compiler-stats true :verbose true :output-dir \"builds/out-adv-bench\"}" > builds/out-adv-bench/core-advanced-benchmark.js
 
 if [ "$V8_HOME" = "" ]; then
   echo "V8_HOME not set, skipping V8 benchmarks"
