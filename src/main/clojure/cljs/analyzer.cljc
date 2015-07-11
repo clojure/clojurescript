@@ -871,7 +871,7 @@
                     true BOOLEAN_SYM
                     false BOOLEAN_SYM
                     ANY_SYM)
-        :var      (if (:init e)
+        :var      (if-not (nil? (:init e))
                     (infer-tag env (:init e))
                     (infer-tag env (:info e)))
         :dot      ANY_SYM
