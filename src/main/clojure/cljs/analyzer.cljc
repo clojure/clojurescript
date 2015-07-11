@@ -612,63 +612,70 @@
    warnings about unresolved vars."
   ([env sym] (resolve-var env sym nil))
   ([env sym confirm]
-     (if (= (namespace sym) "js")
+     (if #?(:clj  (= "js" (namespace sym))
+            :cljs (identical? "js" (namespace sym)))
        {:name sym :ns 'js}
-       (let [s (str sym)
-             lb (-> env :locals sym)]
+       (let [s    (str sym)
+             lcls (:locals env)
+             lb   (get lcls sym)]
          (cond
-           lb lb
+           (not (nil? lb)) lb
 
-           (namespace sym)
-           (let [ns (namespace sym)
-                 ns (if (= "clojure.core" ns) "cljs.core" ns)
+           (not (nil? (namespace sym)))
+           (let [ns      (namespace sym)
+                 ns      (if #?(:clj  (= "clojure.core" ns)
+                                :cljs (identical? "clojure.core" ns))
+                           "cljs.core"
+                           ns)
                  full-ns (resolve-ns-alias env ns)]
-             (when confirm
+             (when-not (nil? confirm)
                (when (not= (-> env :ns :name) full-ns)
                  (confirm-ns env full-ns))
                (confirm env full-ns (symbol (name sym))))
              (merge (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
-                    {:name (symbol (str full-ns) (str (name sym)))
-                     :ns full-ns}))
+               {:name (symbol (str full-ns) (str (name sym)))
+                :ns full-ns}))
 
            #?(:clj  (and (.contains s ".")
                          (not (.contains s "..")))
-              :cljs (and (goog.string/contains s ".")
-                         (not (goog.string/contains s ".."))))
-           (let [idx (.indexOf s ".")
+              :cljs (and ^boolean (goog.string/contains s ".")
+                         (not ^boolean (goog.string/contains s ".."))))
+           (let [idx    (.indexOf s ".")
                  prefix (symbol (subs s 0 idx))
                  suffix (subs s (inc idx))
-                 lb (-> env :locals prefix)]
-             (if lb
+                 lb     (get lcls prefix)]
+             (if-not (nil? lb)
                {:name (symbol (str (:name lb)) suffix)}
-               (let [cur-ns (-> env :ns :name)]
-                 (if-let [full-ns (gets @env/*compiler* ::namespaces cur-ns :imports prefix)]
+               (let [cur-ns  (-> env :ns :name)
+                     full-ns (gets @env/*compiler* ::namespaces cur-ns :imports prefix)]
+                 (if-not (nil? full-ns)
                    {:name (symbol (str full-ns) suffix)}
-                   (if-let [info (gets @env/*compiler* ::namespaces cur-ns :defs prefix)]
-                     (merge info
-                       {:name (symbol (str cur-ns) (str sym))
-                        :ns cur-ns})
-                     (merge (gets @env/*compiler* ::namespaces prefix :defs (symbol suffix))
-                       {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-                        :ns prefix}))))))
+                   (let [info (gets @env/*compiler* ::namespaces cur-ns :defs prefix)]
+                     (if-not (nil? info)
+                       (merge info
+                         {:name (symbol (str cur-ns) (str sym))
+                          :ns cur-ns})
+                       (merge (gets @env/*compiler* ::namespaces prefix :defs (symbol suffix))
+                         {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
+                          :ns prefix})))))))
 
-           (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)
+           (not (nil? (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)))
            (let [full-ns (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)]
              (merge
-              (gets @env/*compiler* ::namespaces full-ns :defs sym)
-              {:name (symbol (str full-ns) (str sym))
-               :ns (-> env :ns :name)}))
+               (gets @env/*compiler* ::namespaces full-ns :defs sym)
+               {:name (symbol (str full-ns) (str sym))
+                :ns (-> env :ns :name)}))
 
-           (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym)
+           (not (nil? (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym)))
            (recur env (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym) confirm)
 
            :else
            (let [cur-ns (-> env :ns :name)
                  full-ns (cond
-                           (gets @env/*compiler* ::namespaces cur-ns :defs sym) cur-ns
+                           (not (nil? (gets @env/*compiler* ::namespaces cur-ns :defs sym))) cur-ns
                            (core-name? env sym) 'cljs.core
                            :else cur-ns)]
-             (when confirm
+             (when-not (nil? confirm)
                (confirm env full-ns sym))
              (merge (gets @env/*compiler* ::namespaces full-ns :defs sym)
                {:name (symbol (str full-ns) (str sym))
