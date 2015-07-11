@@ -2129,22 +2129,28 @@
 (defn analyze-symbol
   "Finds the var associated with sym"
   [env sym]
-  (if (:quoted? env)
+  (if ^boolean (:quoted? env)
     {:op :constant :env env :form sym :tag 'cljs.core/Symbol}
     (let [{:keys [line column]} (meta sym)
-          env (cond-> env
-                line (assoc :line line)
-                column (assoc :column column))
-          ret {:env env :form sym}
-          lb (-> env :locals sym)]
-      (if lb
+          env  (if-not (nil? line)
+                 (assoc env :line line)
+                 env)
+          env  (if-not (nil? column)
+                 (assoc env :column column)
+                 env)
+          ret  {:env env :form sym}
+          lcls (:locals env)
+          lb   (get lcls sym)]
+      (if-not (nil? lb)
         (assoc ret :op :var :info lb)
-        (if-not (:def-var env)
-          (assoc ret :op :var :info
-            (if-not (contains? (meta sym) ::analyzed)
-              (resolve-existing-var env sym)
-              (resolve-var env sym)))
-          (assoc ret :op :var :info (resolve-var env sym)))))))
+        (if-not (true? (:def-var env))
+          (let [sym-meta (meta sym)
+                info     (if-not (contains? sym-meta ::analyzed)
+                           (resolve-existing-var env sym)
+                           (resolve-var env sym))]
+            (assoc ret :op :var :info info))
+          (let [info (resolve-var env sym)]
+            (assoc ret :op :var :info info)))))))
 
 (defn excluded?
   #?(:cljs {:tag boolean})
