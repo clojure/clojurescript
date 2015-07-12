@@ -67,33 +67,43 @@
       (munge
         (str (string/replace (str ns) "." "$") "$" scoped-name)))))
 
+(defn munge-reserved [reserved]
+  (fn [s]
+    (if-not (nil? (get reserved s))
+      (str s "$")
+      s)))
+
 (defn munge
   ([s] (munge s js-reserved))
   ([s reserved]
-   (if (map? s)
-     (let [{:keys [name field info] :as name-var} s]
-       (if (:fn-self-name info)
+   (if #?(:clj  (map? s)
+          :cljs (ana/cljs-map? s))
+     (let [name-var s
+           name     (:name name-var)
+           field    (:field name-var)
+           info     (:info name-var)]
+       (if-not (nil? (:fn-self-name info))
          (fn-self-name s)
          ;; Unshadowing
-         (let [depth (shadow-depth s)
-               renamed (*lexical-renames*
-                         #?(:clj (System/identityHashCode s)
-                            :cljs (hash s)))
-               munged-name (munge
-                             (cond field (str "self__." name)
-                                   renamed renamed
-                                   :else name)
-                             reserved)]
-           (if (or field (zero? depth))
+         (let [depth       (shadow-depth s)
+               code        #?(:clj  (System/identityHashCode s)
+                              :cljs (hash s))
+               renamed     (get *lexical-renames* code)
+               name        (cond
+                             (true? field) (str "self__." name)
+                             (not (nil? renamed)) renamed
+                             :else name)
+               munged-name (munge name reserved)]
+           (if (or (true? field) (zero? depth))
              munged-name
              (symbol (str munged-name "__$" depth))))))
      ;; String munging
      (let [ss (string/replace (str s) ".." "_DOT__DOT_")
            ss (string/replace ss
                 #?(:clj #"\/(.)" :cljs (js/RegExp. "\\/(.)")) ".$1") ; Division is special
-           ss (string/join "."
-                (map #(if (reserved %) (str % "$") %)
-                  (string/split ss #"\.")))
+           rf (munge-reserved reserved)
+           ss (map rf (string/split ss #"\."))
+           ss (string/join "." ss)
            ms #?(:clj (clojure.lang.Compiler/munge ss)
                  :cljs (cljs.core/munge ss))]
        (if (symbol? s)
