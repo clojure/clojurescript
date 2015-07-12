@@ -556,9 +556,10 @@
      (confirm-var-exists env prefix suffix warn)))
   ([env prefix suffix missing-fn]
     (let [sufstr     (str suffix)
-          suffix-str (if (and (not (identical? ".." sufstr)) ;; leave cljs.core$macros/.. alone
-                           #?(:clj  (re-find #"\." sufstr)
-                              :cljs ^boolean (.test #"\." sufstr)))
+          suffix-str (if (and #?(:clj  (not= ".." sufstr)
+                                 :cljs (not (identical? ".." sufstr))) ;; leave cljs.core$macros/.. alone
+                              #?(:clj  (re-find #"\." sufstr)
+                                 :cljs ^boolean (.test #"\." sufstr)))
                        (first (string/split sufstr #"\."))
                        suffix)
           suffix     (symbol suffix-str)]
