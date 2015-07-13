@@ -21,8 +21,8 @@
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
-(defn analyze* [env string cb]
-  (let [rdr (rt/string-push-back-reader f)
+(defn analyze* [env source cb]
+  (let [rdr (rt/string-push-back-reader source)
         eof (js-obj)
         env (ana/empty-env)]
     (env/with-compiler-env env
@@ -34,11 +34,11 @@
             (recur))
           (cb))))))
 
-(defn analyze [env string cb]
+(defn analyze [env source cb]
   (binding [ana/*cljs-ns*    (or (:ns env) 'cljs.user)
             *ns*             (create-ns ana/*cljs-ns*)
             r/*data-readers* tags/*cljs-data-readers*]
-    (analyze* env string cb)))
+    (analyze* env source cb)))
 
 ;; -----------------------------------------------------------------------------
 ;; Emit
