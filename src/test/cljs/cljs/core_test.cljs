@@ -2865,6 +2865,13 @@
   (let [v (vary-meta #'first assoc :foo 'bar)]
     (is (= (-> v meta :foo) 'bar))))
 
+(deftest test-1210
+  (is (= ((fn []
+            (let [{:keys [arguments]} {}
+                  arguments (or arguments [])]
+              arguments)))
+         [])))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

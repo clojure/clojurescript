@@ -89,7 +89,7 @@
    :unsupported-js-module-type true})
 
 (def js-reserved
-  #{"abstract" "boolean" "break" "byte" "case"
+  #{"arguments" "abstract" "boolean" "break" "byte" "case"
     "catch" "char" "class" "const" "continue"
     "debugger" "default" "delete" "do" "double"
     "else" "enum" "export" "extends" "final"
