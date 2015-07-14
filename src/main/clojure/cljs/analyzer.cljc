@@ -1862,7 +1862,7 @@
           (reduce
             (fn [m [k & libs]]
               (when-not (#{:use :use-macros :require :require-macros :import} k)
-                (throw (error env "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported")))
+                (throw (error env "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported")))
               (when-not (@valid-forms k)
                 (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
               (swap! valid-forms disj k)
