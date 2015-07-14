@@ -1024,8 +1024,6 @@
      :catch catch
      :children [try catch finally]}))
 
-(declare get-expander)
-
 (defmethod parse 'def
   [op env form name _]
   (let [pfn (fn
