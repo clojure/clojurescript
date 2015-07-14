@@ -2861,6 +2861,10 @@
   (is (= #'first #'first))
   (is (not= #'first #'last)))
 
+(deftest test-1248
+  (let [v (vary-meta #'first assoc :foo 'bar)]
+    (is (= (-> v meta :foo) 'bar))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
