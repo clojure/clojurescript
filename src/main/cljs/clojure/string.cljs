@@ -31,11 +31,14 @@
    string / string
    pattern / (string or function of match)."
   [s match replacement]
-  (cond (string? match)
-        (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
-        (instance? js/RegExp match)
-        (.replace s (js/RegExp. (.-source match) "g") replacement)
-        :else (throw (str "Invalid match arg: " match))))
+  (cond
+    (string? match)
+    (.replace s (js/RegExp. (gstring/regExpEscape match) "g") replacement)
+
+    (instance? js/RegExp match)
+    (.replace s (js/RegExp. (.-source match) "g") replacement)
+
+    :else (throw (str "Invalid match arg: " match))))
 
 (defn replace-first
   "Replaces the first instance of match with replacement in s.
@@ -51,12 +54,12 @@
   separated by an optional separator."
   ([coll]
    (loop [sb (StringBuffer.) coll (seq coll)]
-     (if coll
+     (if-not (nil? coll)
        (recur (. sb (append (str (first coll)))) (next coll))
        (.toString sb))))
   ([separator coll]
    (loop [sb (StringBuffer.) coll (seq coll)]
-     (if coll
+     (if-not (nil? coll)
        (do
          (. sb (append (str (first coll))))
          (let [coll (next coll)]
@@ -96,13 +99,13 @@
 (defn- pop-last-while-empty
   [v]
   (loop [v v]
-    (if (= "" (peek v))
+    (if (identical? "" (peek v))
       (recur (pop v))
       v)))
 
 (defn- discard-trailing-if-needed
   [limit v]
-  (if (= 0 limit)
+  (if (== 0 limit)
     (pop-last-while-empty v)
     v))
 
@@ -110,7 +113,7 @@
   [s limit]
   (if (or (<= limit 0) (>= limit (+ 2 (count s))))
     (conj (vec (cons "" (map str (seq s)))) "")
-    (condp = limit
+    (condp == limit
       1 (vector s)
       2 (vector "" s)
       (let [c (- limit 2)]
@@ -123,21 +126,22 @@
      (split s re 0))
     ([s re limit]
      (discard-trailing-if-needed limit
-       (if (= (str re) "/(?:)/")
+       (if (identical? "/(?:)/" (str re))
          (split-with-empty-regex s limit)
          (if (< limit 1)
            (vec (.split (str s) re))
            (loop [s s
                   limit limit
                   parts []]
-             (if (= limit 1)
+             (if (== 1 limit)
                (conj parts s)
-               (if-let [m (re-find re s)]
-                 (let [index (.indexOf s m)]
-                   (recur (.substring s (+ index (count m)))
-                          (dec limit)
-                          (conj parts (.substring s 0 index))))
-                 (conj parts s)))))))))
+               (let [m (re-find re s)]
+                 (if-not (nil? m)
+                   (let [index (.indexOf s m)]
+                     (recur (.substring s (+ index (count m)))
+                       (dec limit)
+                       (conj parts (.substring s 0 index))))
+                   (conj parts s))))))))))
 
 (defn split-lines
   "Splits s on \n or \r\n."
@@ -145,19 +149,19 @@
   (split s #"\n|\r\n"))
 
 (defn trim
-    "Removes whitespace from both ends of string."
-    [s]
-    (gstring/trim s))
+  "Removes whitespace from both ends of string."
+  [s]
+  (gstring/trim s))
 
 (defn triml
-    "Removes whitespace from the left side of string."
-    [s]
-    (gstring/trimLeft s))
+  "Removes whitespace from the left side of string."
+  [s]
+  (gstring/trimLeft s))
 
 (defn trimr
-    "Removes whitespace from the right side of string."
-    [s]
-    (gstring/trimRight s))
+  "Removes whitespace from the right side of string."
+  [s]
+  (gstring/trimRight s))
 
 (defn trim-newline
   "Removes all trailing newline \\n or return \\r characters from
@@ -167,7 +171,8 @@
     (if (zero? index)
       ""
       (let [ch (get s (dec index))]
-        (if (or (= ch \newline) (= ch \return))
+        (if (or (identical? \newline ch)
+                (identical? \return ch))
           (recur (dec index))
           (.substring s 0 index))))))
 
@@ -186,10 +191,11 @@
   (let [buffer (StringBuffer.)
         length (.-length s)]
     (loop [index 0]
-      (if (= length index)
+      (if (== length index)
         (. buffer (toString))
-        (let [ch (.charAt s index)]
-          (if-let [replacement (get cmap ch)]
+        (let [ch (.charAt s index)
+              replacement (get cmap ch)]
+          (if-not (nil? replacement)
             (.append buffer (str replacement))
             (.append buffer ch))
           (recur (inc index)))))))
