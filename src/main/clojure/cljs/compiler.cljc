@@ -171,7 +171,7 @@
      (nil? x) nil
      #?(:clj (map? x) :cljs (ana/cljs-map? x)) (emit x)
      #?(:clj (seq? x) :cljs (ana/cljs-seq? x)) (apply emits x)
-     #?(:clj (fn? x) :cljs (goog/isFunction x)) (x)
+     #?(:clj (fn? x) :cljs ^boolean (goog/isFunction x)) (x)
      :else (let [s (print-str x)]
              (when-not (nil? *source-map-data*)
                (swap! *source-map-data*
