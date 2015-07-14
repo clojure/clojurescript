@@ -169,11 +169,11 @@
   (doseq [x xs]
     (cond
      (nil? x) nil
-     (map? x) (emit x)
-     (seq? x) (apply emits x)
-     (fn? x)  (x)
+     #?(:clj (map? x) :cljs (ana/cljs-map? x)) (emit x)
+     #?(:clj (seq? x) :cljs (ana/cljs-seq? x)) (apply emits x)
+     #?(:clj (fn? x) :cljs (goog/isFunction x)) (x)
      :else (let [s (print-str x)]
-             (when *source-map-data*
+             (when-not (nil? *source-map-data*)
                (swap! *source-map-data*
                  update-in [:gen-col] #(+ % (count s))))
              (print s))))
