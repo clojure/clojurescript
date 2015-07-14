@@ -2857,6 +2857,10 @@
     (is (= (namespace x) "js"))
     (is (= (name x) "Array"))))
 
+(deftest test-1276
+  (is (= #'first #'first))
+  (is (not= #'first #'last)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

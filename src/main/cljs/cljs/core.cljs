@@ -952,6 +952,11 @@
   (-deref [_] (val))
   IMeta
   (-meta [_] _meta)
+  IEquiv
+  (-equiv [this other]
+    (if (instance? Var other)
+      (= (.-sym this) (.-sym other))
+      false))
   Fn
   IFn
   (-invoke [_]
