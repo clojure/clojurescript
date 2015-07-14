@@ -87,7 +87,7 @@
          ;; Unshadowing
          (let [depth       (shadow-depth s)
                code        #?(:clj  (System/identityHashCode s)
-                              :cljs (hash s))
+                              :cljs (-hash ^not-native name))
                renamed     (get *lexical-renames* code)
                name        (cond
                              (true? field) (str "self__." name)
@@ -766,9 +766,12 @@
     (binding [*lexical-renames*
               (into *lexical-renames*
                 (when (= :statement context)
-                  (map #(vector #?(:clj (System/identityHashCode %)
-                                   :cljs (hash %))
-                         (gensym (str (:name %) "-")))
+                  (map
+                    (fn [binding]
+                      (let [name (:name binding)]
+                        (vector #?(:clj  (System/identityHashCode binding)
+                                   :cljs (-hash ^not-native name))
+                          (gensym (str name "-")))))
                     bindings)))]
       (doseq [{:keys [init] :as binding} bindings]
         (emits "var ")
