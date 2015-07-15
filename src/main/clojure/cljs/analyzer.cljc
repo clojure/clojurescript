@@ -1916,7 +1916,10 @@
              :require-macros require-macros
              :uses           uses
              :requires       requires
-             :imports        imports}
+             :imports        imports
+             :deps           @deps
+             :reload         @reload
+             :reloads        @reloads}
             ns-info
             (if (:merge form-meta)
               ;; for merging information in via require usage in REPLs
