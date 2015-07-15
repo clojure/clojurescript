@@ -1840,26 +1840,26 @@
              (AssertionError.
                (str "Namespace " name " has a segment starting with an invaild "
                     "JavaScript identifier"))))))
-    (let [docstring (if (string? (first args)) (first args))
-          mdocstr (-> name meta :doc)
-          args (if docstring (next args) args)
-          metadata (if (map? (first args)) (first args))
-          form-meta (meta form)
-          args (desugar-ns-specs (if metadata (next args) args))
-          name (vary-meta name merge metadata)
-          excludes (parse-ns-excludes env args)
-          deps (atom #{})
-          aliases (atom {:fns {} :macros {}})
-          spec-parsers {:require (partial parse-require-spec env false deps aliases)
+    (let [docstring    (if (string? (first args)) (first args))
+          mdocstr      (-> name meta :doc)
+          args         (if docstring (next args) args)
+          metadata     (if (map? (first args)) (first args))
+          form-meta    (meta form)
+          args         (desugar-ns-specs (if metadata (next args) args))
+          name         (vary-meta name merge metadata)
+          excludes     (parse-ns-excludes env args)
+          deps         (atom #{})
+          aliases      (atom {:fns {} :macros {}})
+          spec-parsers {:require        (partial parse-require-spec env false deps aliases)
                         :require-macros (partial parse-require-spec env true deps aliases)
-                        :use (comp (partial parse-require-spec env false deps aliases)
-                               (partial use->require env))
-                        :use-macros (comp (partial parse-require-spec env true deps aliases)
-                                      (partial use->require env))
-                        :import (partial parse-import-spec env deps)}
-          valid-forms (atom #{:use :use-macros :require :require-macros :import})
-          reload (atom {:use nil :require nil :use-macros nil :require-macros nil})
-          reloads (atom {})
+                        :use            (comp (partial parse-require-spec env false deps aliases)
+                                          (partial use->require env))
+                        :use-macros     (comp (partial parse-require-spec env true deps aliases)
+                                          (partial use->require env))
+                        :import         (partial parse-import-spec env deps)}
+          valid-forms  (atom #{:use :use-macros :require :require-macros :import})
+          reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
+          reloads      (atom {})
           {uses :use requires :require use-macros :use-macros require-macros :require-macros imports :import :as params}
           (reduce
             (fn [m [k & libs]]
@@ -1909,14 +1909,14 @@
            (when (seq use-macros)
              (check-use-macros use-macros env))))
       (let [ns-info
-            {:name name
-             :doc (or docstring mdocstr)
-             :excludes excludes
-             :use-macros use-macros
+            {:name           name
+             :doc            (or docstring mdocstr)
+             :excludes       excludes
+             :use-macros     use-macros
              :require-macros require-macros
-             :uses uses
-             :requires requires
-             :imports imports}
+             :uses           uses
+             :requires       requires
+             :imports        imports}
             ns-info
             (if (:merge form-meta)
               ;; for merging information in via require usage in REPLs
@@ -1932,7 +1932,7 @@
                   ns-info))
               ns-info)]
         (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
-        (merge {:env env :op :ns :form form
+        (merge {:op :ns :env env :form form
                 :reloads @reloads}
           (cond-> ns-info
             (@reload :use)
