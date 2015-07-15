@@ -17,8 +17,9 @@
 
 (defonce
   ^{:doc "Each runtime environment provides a different way to load libraries.
-  Whatever function *load-fn* is bound to will be passed a library name and a
-  callback. The callback should be invoked with source of the library (a string)."
+  Whatever function *load-fn* is bound to will be passed a library name
+  (a string) and a callback. The callback should be invoked with the source of
+  the library (a string)."
     :dynamic true}
   *load-fn*
   (fn [name cb]
