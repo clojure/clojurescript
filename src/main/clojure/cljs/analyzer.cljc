@@ -2444,7 +2444,7 @@
          :meta meta-expr :expr expr :children [meta-expr expr]})
       expr)))
 
-(defn infer-type [env ast]
+(defn infer-type [env ast _]
   (let [tag (:tag ast)]
     (if (nil? tag)
       (let [tag (infer-tag env ast)]
@@ -2452,6 +2452,35 @@
           (assoc ast :tag tag)
           ast))
       ast)))
+
+(defn ns-side-effects
+  [env {:keys [op] :as ast} opts]
+  (if (= :ns op)
+    (let [{:keys [deps require-macros use-macros reload reloads]} ast]
+      (when (and *analyze-deps* (seq deps))
+        (analyze-deps name deps env (dissoc opts :macros-ns)))
+      (when *load-macros*
+        (load-core)
+        (doseq [nsym (vals use-macros)]
+          (let [k (or (:use-macros reload)
+                      (get-in reloads [:use-macros nsym])
+                      (and (= nsym name) *reload-macros* :reload))]
+            (if k
+              (clojure.core/require nsym k)
+              (clojure.core/require nsym))
+            (intern-macros nsym k)))
+        (doseq [nsym (vals require-macros)]
+          (let [k (or (:require-macros reload)
+                      (get-in reloads [:require-macros nsym])
+                      (and (= nsym name) *reload-macros* :reload))]
+            (if k
+              (clojure.core/require nsym k)
+              (clojure.core/require nsym))
+            (intern-macros nsym k)))
+        (when (seq use-macros)
+          (check-use-macros use-macros env)))
+      ast)
+    ast))
 
 (def ^:dynamic *passes* nil)
 
@@ -2505,7 +2534,7 @@
                  (if (seq form) form ())
                  form)
         ast    (analyze-form env form name opts)]
-    (reduce (fn [ast pass] (pass env ast)) ast passes)))
+    (reduce (fn [ast pass] (pass env ast opts)) ast passes)))
 
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
