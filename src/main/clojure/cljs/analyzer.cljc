@@ -1882,32 +1882,7 @@
                 (map (spec-parsers k)
                   (remove #{:reload :reload-all} libs))))
             {} (remove (fn [[r]] (= r :refer-clojure)) args))]
-      (when (and *analyze-deps* (seq @deps))
-        #?(:clj (analyze-deps name @deps env (dissoc opts :macros-ns))))
-      (when (and *analyze-deps* (seq uses))
-        (check-uses uses env))
       (set! *cljs-ns* name)
-      #?(:clj
-         (when *load-macros*
-           (load-core)
-           (doseq [nsym (vals use-macros)]
-             (let [k (or (:use-macros @reload)
-                         (get-in @reloads [:use-macros nsym])
-                         (and (= nsym name) *reload-macros* :reload))]
-               (if k
-                 (clojure.core/require nsym k)
-                 (clojure.core/require nsym))
-               (intern-macros nsym k)))
-           (doseq [nsym (vals require-macros)]
-             (let [k (or (:require-macros @reload)
-                         (get-in @reloads [:require-macros nsym])
-                         (and (= nsym name) *reload-macros* :reload))]
-               (if k
-                 (clojure.core/require nsym k)
-                 (clojure.core/require nsym))
-               (intern-macros nsym k)))
-           (when (seq use-macros)
-             (check-use-macros use-macros env))))
       (let [ns-info
             {:name           name
              :doc            (or docstring mdocstr)
@@ -1916,17 +1891,15 @@
              :require-macros require-macros
              :uses           uses
              :requires       requires
-             :imports        imports
-             :deps           @deps
-             :reload         @reload
-             :reloads        @reloads}
+             :imports        imports}
             ns-info
             (if (:merge form-meta)
               ;; for merging information in via require usage in REPLs
               (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
                 (if (pos? (count ns-info'))
                   (let [merge-keys
-                        [:use-macros :require-macros :uses :requires :imports]]
+                        [:name :doc :excludes :use-macros :require-macros
+                         :uses :requires :imports]]
                     (merge
                       ns-info'
                       (merge-with merge
@@ -1935,7 +1908,11 @@
                   ns-info))
               ns-info)]
         (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
-        (merge {:op :ns :env env :form form
+        (merge {:op      :ns
+                :env     env
+                :form    form
+                :deps    @deps
+                :reload  @reload
                 :reloads @reloads}
           (cond-> ns-info
             (@reload :use)
@@ -2456,9 +2433,11 @@
 (defn ns-side-effects
   [env {:keys [op] :as ast} opts]
   (if (= :ns op)
-    (let [{:keys [deps require-macros use-macros reload reloads]} ast]
+    (let [{:keys [deps uses require-macros use-macros reload reloads]} ast]
       (when (and *analyze-deps* (seq deps))
         (analyze-deps name deps env (dissoc opts :macros-ns)))
+      (when (and *analyze-deps* (seq uses))
+        (check-uses uses env))
       (when *load-macros*
         (load-core)
         (doseq [nsym (vals use-macros)]
@@ -2529,7 +2508,9 @@
 
 (defn analyze* [env form name opts]
   (let [passes *passes*
-        passes (when (nil? passes) [infer-type])
+        passes (when (nil? passes)
+                 #?(:clj  [infer-type ns-side-effects]
+                    :cljs [infer-type]))
         form   (if (instance? LazySeq form)
                  (if (seq form) form ())
                  form)
