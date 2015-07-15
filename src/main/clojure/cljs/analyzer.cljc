@@ -341,8 +341,10 @@
 (defn ^:private default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
     (when-let [s (error-message warning-type extra)]
-      (binding [*out* *err*]
-        (println (message env (str "WARNING: " s)))))))
+      #?(:clj  (binding [*out* *err*]
+                 (println (message env (str "WARNING: " s))))
+         :cljs (binding [*print-fn* *print-err-fn*]
+                 (println (message env (str "WARNING: " s))))))))
 
 (def ^:dynamic *cljs-warning-handlers*
   [default-warning-handler])

@@ -33,14 +33,6 @@
 
 (def
   ^{:dynamic true}
-  *out* nil)
-
-(def
-  ^{:dynamic true}
-  *err* nil)
-
-(def
-  ^{:dynamic true}
   *assert* true)
 
 (defonce
@@ -51,9 +43,21 @@
   (fn [_]
     (throw (js/Error. "No *print-fn* fn set for evaluation environment"))))
 
+(defonce
+  ^{:doc "Each runtime environment provides a different way to print error output.
+  Whatever function *print-fn* is bound to will be passed any
+  Strings which should be printed." :dynamic true}
+  *print-err-fn*
+  (fn [_]
+    (throw (js/Error. "No *print-err-fn* fn set for evaluation environment"))))
+
 (defn set-print-fn!
   "Set *print-fn* to f."
   [f] (set! *print-fn* f))
+
+(defn set-print-err-fn!
+  "Set *print-err-fn* to f."
+  [f] (set! *print-err-fn* f))
 
 (def
   ^{:dynamic true
@@ -130,7 +134,11 @@
   (set! *print-newline* false)
   (set! *print-fn*
     (fn [& args]
-      (.apply (.-log js/console) js/console (into-array args)))))
+      (.apply (.-log js/console) js/console (into-array args))))
+  (set! *print-err-fn*
+    (fn [& args]
+      (.apply (.-error js/console) js/console (into-array args))))
+  nil)
 
 (def
   ^{:doc "bound in a repl thread to the most recent value printed"}

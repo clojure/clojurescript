@@ -19,4 +19,8 @@
   (set! *print-newline* false)
   (set! *print-fn*
     (fn [& args]
-      (.apply (.-log js/console) js/console (into-array args)))))
+      (.apply (.-log js/console) js/console (into-array args))))
+  (set! *print-err-fn*
+    (fn [& args]
+      (.apply (.-error js/console) js/console (into-array args))))
+  nil)
