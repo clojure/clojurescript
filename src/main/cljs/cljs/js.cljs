@@ -15,6 +15,14 @@
             [cljs.tools.reader-types :as rt]
             [cljs.tagged-literals :as tags]))
 
+(defonce
+  ^{:doc "Each runtime environment provides a different way to print error output.
+  Whatever function *print-fn* is bound to will be passed any
+  Strings which should be printed." :dynamic true}
+  *load-fn*
+  (fn [_]
+    (throw (js/Error. "No *load-fn* set"))))
+
 (defn empty-env []
   (env/default-compiler-env))
 
