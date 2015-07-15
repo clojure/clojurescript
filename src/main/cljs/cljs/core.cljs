@@ -33,6 +33,10 @@
 
 (def
   ^{:dynamic true}
+  *out* nil)
+
+(def
+  ^{:dynamic true}
   *assert* true)
 
 (defonce
