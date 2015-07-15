@@ -2136,7 +2136,7 @@
                              `(fn ~giter [~gxs]
                                 (lazy-seq
                                   (loop [~gxs ~gxs]
-                                    (core/when-first [~bind ~gxs]
+                                    (when-first [~bind ~gxs]
                                       ~(do-mod mod-pairs)))))
                              #_"inner-most loop"
                              (core/let [gi (gensym "i__")
