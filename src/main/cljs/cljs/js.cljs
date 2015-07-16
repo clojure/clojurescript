@@ -87,20 +87,19 @@
 ;; -----------------------------------------------------------------------------
 ;; Emit
 
-(defn emit* [env ast cb]
+(defn emit* [env bound-vars ast cb]
   (cb (with-out-str (comp/emit ast))))
 
 (defn emit [env ast cb]
-  (env/with-compiler-env env
-    (emit* env ast cb)))
+  (emit* env {} ast cb))
 
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
-(defn eval* [env form cb]
+(defn eval* [env bound-vars form cb]
   (let [ana-env (ana/empty-env)]
     (cb (ana/analyze ana-env form))))
 
 (defn eval [env form cb]
   (env/with-compiler-env env
-    (eval* env form cb)))
+    (eval* env {} form cb)))
