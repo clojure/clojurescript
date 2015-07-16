@@ -33,8 +33,11 @@
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
-(defn require [name cb]
-  (*load-fn* name cb))
+(defn require
+  ([name cb]
+   (*load-fn* name cb))
+  ([name reload cb]
+   (*load-fn* name cb)))
 
 (defn analyze* [env bound-vars source cb]
   (let [rdr  (rt/string-push-back-reader source)
@@ -65,7 +68,7 @@
          (let [dep (first deps)]
            (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                        (contains? (:js-dependency-index compiler) (name dep)))
-             (require name
+             (*load-fn* name
                (fn [source]
                  (if-not (nil? source)
                    (analyze* env bound-vars source
@@ -76,6 +79,23 @@
                        (ana/error-message :undeclared-ns
                          {:ns-sym dep :js-provide (name dep)}))))))))
          (cb))))))
+
+(defn load-macros [k macros reload reloads bound-vars cb]
+  (if (seq macros)
+    (let [nsym (first (vals macros))]
+      (let [k (or (k reload)
+                  (get-in reloads [k nsym])
+                  (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
+        (if k
+          (require nsym k
+            (fn []
+              (load-macros k (next macros) reload reloads bound-vars cb)))
+          (require nsym
+            (fn []
+              (load-macros k (next macros) reload reloads bound-vars cb))))
+        ;(intern-macros nsym k)
+        ))
+    (cb)))
 
 (defn analyze [env source cb]
   (analyze* env
