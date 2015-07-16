@@ -15,6 +15,8 @@
             [cljs.tools.reader.reader-types :as rt]
             [cljs.tagged-literals :as tags]))
 
+(js/goog.require "cljs.core$macros")
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to load libraries.
   Whatever function *load-fn* is bound to will be passed a library name
