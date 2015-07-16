@@ -33,7 +33,10 @@
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
-(defn analyze* [env source cb]
+(defn require [name cb]
+  (*load-fn* name cb))
+
+(defn analyze* [env bound-vars source cb]
   (let [rdr  (rt/string-push-back-reader source)
         eof  (js-obj)
         aenv (ana/empty-env)]
@@ -46,11 +49,40 @@
               (recur))
             (cb)))))))
 
+(defn analyze-deps
+  "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
+   and opts, compiler options - analyze all of the dependencies. Required to
+   correctly analyze usage of other namespaces."
+  ([lib deps env bound-vars cb] (analyze-deps lib deps env bound-vars nil cb))
+  ([lib deps env bound-vars opts cb]
+   (let [compiler @(:*compiler* bound-vars)]
+     (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
+                                    update-in [:dep-path] conj lib)]
+       (assert (every? #(not (contains? (:*cljs-dep-set* bound-vars) %)) deps)
+         (str "Circular dependency detected "
+           (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
+       (if (seq deps)
+         (let [dep (first deps)]
+           (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
+                       (contains? (:js-dependency-index compiler) (name dep)))
+             (require name
+               (fn [source]
+                 (if-not (nil? source)
+                   (analyze* env bound-vars source
+                     (fn []
+                       (analyze-deps lib (next deps) env bound-vars opts cb)))
+                   (throw
+                     (ana/error env
+                       (ana/error-message :undeclared-ns
+                         {:ns-sym dep :js-provide (name dep)}))))))))
+         (cb))))))
+
 (defn analyze [env source cb]
-  (binding [ana/*cljs-ns*    (or (:ns env) 'cljs.user)
-            *ns*             (create-ns ana/*cljs-ns*)
-            r/*data-readers* tags/*cljs-data-readers*]
-    (analyze* env source cb)))
+  (analyze* env
+    {:*cljs-ns*      (or (:ns env) 'cljs.user)
+     :*ns*           (create-ns ana/*cljs-ns*)
+     :*data-readers* tags/*cljs-data-readers*}
+    source cb))
 
 ;; -----------------------------------------------------------------------------
 ;; Emit
