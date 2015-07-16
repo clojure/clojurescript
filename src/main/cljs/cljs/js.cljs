@@ -32,17 +32,17 @@
 ;; Analyze
 
 (defn analyze* [env source cb]
-  (let [rdr (rt/string-push-back-reader source)
-        eof (js-obj)
-        env (ana/empty-env)]
+  (let [rdr  (rt/string-push-back-reader source)
+        eof  (js-obj)
+        aenv (ana/empty-env)]
     (env/with-compiler-env env
       (loop []
         (let [form (r/read {:eof eof} rdr)]
           (if-not (identical? eof form)
-            (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))]
-              (ana/analyze env form))
-            (recur))
-          (cb))))))
+            (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))]
+              (ana/analyze aenv form)
+              (recur))
+            (cb)))))))
 
 (defn analyze [env source cb]
   (binding [ana/*cljs-ns*    (or (:ns env) 'cljs.user)
