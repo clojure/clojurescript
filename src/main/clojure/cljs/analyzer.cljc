@@ -1632,7 +1632,8 @@
 
 (defn check-use-macros [use-macros env]
   (doseq [[sym lib] use-macros]
-    (when (nil? (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym))
+    (when (nil? #?(:clj  (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)
+                   :cljs (.findInternedVar (find-macros-ns lib) sym)))
       (throw
         (error env
           (error-message :undeclared-ns-form {:type "macro" :lib lib :sym sym}))))))
