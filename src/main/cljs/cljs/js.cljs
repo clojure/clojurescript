@@ -27,6 +27,15 @@
   (fn [name cb]
     (throw (js/Error. "No *load-fn* set"))))
 
+(defonce
+  ^{:doc "Each runtime environment provides various ways to eval JavaScript
+  source. Whatever function *eval-fn* is bound to will be passed source to eval
+  (a string). The result of eval will be passed back immediately to the caller."
+    :dynamic true}
+  *eval-fn*
+  (fn [source]
+    (throw (js/Error. "No *eval-fn* set"))))
+
 (defn empty-env []
   (env/default-compiler-env))
 
