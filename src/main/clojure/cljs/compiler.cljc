@@ -1027,7 +1027,9 @@
        (clojure.string/replace file-str #"\.cljs$" ".js")
 
        (.endsWith file-str ".cljc")
-       (clojure.string/replace file-str #"\.cljc$" ".js")
+       (if (= "cljs/core.cljc" file-str)
+         "cljs/core$macros.js"
+         (clojure.string/replace file-str #"\.cljc$" ".js"))
 
        :else
        (throw (IllegalArgumentException.

@@ -539,19 +539,22 @@
         compiled (-compile uri (merge opts {:output-file js-file}))]
     (cond-> compiled
       (= ["cljs.js"] (deps/-provides compiled))
-      (update-in [:requires] conj "cljs.core$macros"))))
+      (update-in [:requires] concat ["cljs.core$macros"]))))
 
 (defn cljs-source-for-namespace
   "Given a namespace return the corresponding source with either a .cljs or
   .cljc extension."
   [ns]
-  (let [path (-> (munge ns) (string/replace \. \/))
-        relpath (str path ".cljs")]
-    (if-let [res (io/resource relpath)]
-      {:relative-path relpath :uri res}
-      (let [relpath (str path ".cljc")]
-        (if-let [res (io/resource relpath)]
-          {:relative-path relpath :uri res})))))
+  (if (= "cljs.core$macros" ns)
+    (let [relpath "cljs/core.cljc"]
+      {:relative-path relpath :uri (io/resource relpath)})
+    (let [path    (-> (munge ns) (string/replace \. \/))
+          relpath (str path ".cljs")]
+      (if-let [res (io/resource relpath)]
+        {:relative-path relpath :uri res}
+        (let [relpath (str path ".cljc")]
+          (if-let [res (io/resource relpath)]
+            {:relative-path relpath :uri res}))))))
 
 (defn source-for-namespace
   "Given a namespace and compilation environment return the relative path and
@@ -606,9 +609,7 @@
            js-deps        #{}]
       (if (seq required-files)
         (let [next-file (first required-files)
-              js        (if (= "cljs.core$macros" next-file)
-                          (compile-core-macros opts)
-                          (get-compiled-cljs opts next-file))
+              js        (get-compiled-cljs opts next-file)
               new-req   (remove #(contains? visited %) (cljs-deps (deps/-requires js)))]
           (recur (into (rest required-files) new-req)
                  (into visited new-req)
