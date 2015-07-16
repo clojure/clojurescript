@@ -539,7 +539,7 @@
         compiled (-compile uri (merge opts {:output-file js-file}))]
     (cond-> compiled
       (= ["cljs.js"] (deps/-provides compiled))
-      (update-in [:requires] conj ["cljs.core$macros"]))))
+      (update-in [:requires] conj "cljs.core$macros"))))
 
 (defn cljs-source-for-namespace
   "Given a namespace return the corresponding source with either a .cljs or
