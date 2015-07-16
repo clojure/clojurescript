@@ -1257,7 +1257,8 @@
           es6-loader (ES6ModuleLoader. closure-compiler module-root)
           cjs (ProcessCommonJSModules. closure-compiler es6-loader)]
       (compile-if can-convert-amd?
-        (.process (TransformAMDToCJSModule. closure-compiler) nil root))
+        (when (= (:module-type js) :amd)
+          (.process (TransformAMDToCJSModule. closure-compiler) nil root)))
       (.process cjs nil root)
       (.toSource closure-compiler root))))
 
