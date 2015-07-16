@@ -12,7 +12,7 @@
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.tools.reader :as r]
-            [cljs.tools.reader-types :as rt]
+            [cljs.tools.reader.reader-types :as rt]
             [cljs.tagged-literals :as tags]))
 
 (defonce
