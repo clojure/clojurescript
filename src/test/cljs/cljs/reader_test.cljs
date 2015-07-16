@@ -140,6 +140,13 @@
                 :failed-to-throw
                 (catch js/Error e :ok))]
         (is (= r :ok)))))
+
+  (testing "Testing non-string input, CLJS-1342"
+    (let [r (try
+              (reader/read-string :foo)
+              :failed-to-throw
+              (catch js/Error e :ok))]
+      (is (= r :ok))))
 )
 
 (deftest test-717
