@@ -535,8 +535,11 @@
   "Return an IJavaScript for this file. Compiled output will be
    written to the working directory."
   [opts {:keys [relative-path uri]}]
-  (let [js-file (comp/rename-to-js relative-path)]
-    (-compile uri (merge opts {:output-file js-file}))))
+  (let [js-file  (comp/rename-to-js relative-path)
+        compiled (-compile uri (merge opts {:output-file js-file}))]
+    (cond-> compiled
+      (= ["cljs.js"] (deps/-provides compiled))
+      (update-in compiled [:requires] conj ["cljs.core$macros"]))))
 
 (defn cljs-source-for-namespace
   "Given a namespace return the corresponding source with either a .cljs or
@@ -579,6 +582,10 @@
                    (IllegalArgumentException.
                      (str "Namespace " ns " does not exist"))))))))))))
 
+(defn compile-core-macros [opts]
+  (-compile (io/resource "cljs/core.cljc")
+    (merge opts {:output-file "core$macros.js"})))
+
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
   IJavaScripts which are the cljs dependencies. The returned list will
@@ -588,19 +595,21 @@
 
   Only load dependencies from the classpath."
   [opts requires]
-  (let [cljs-deps (fn [lib-names]
-                    (->> (remove #(or ((@env/*compiler* :js-dependency-index) %)
-                                    (deps/find-classpath-lib %))
-                           lib-names)
-                      (map cljs-source-for-namespace)
-                      (remove (comp nil? :uri))))]
+  (letfn [(cljs-deps [lib-names]
+            (->> lib-names
+              (remove #(or ((@env/*compiler* :js-dependency-index) %)
+                           (deps/find-classpath-lib %)))
+              (map cljs-source-for-namespace)
+              (remove (comp nil? :uri))))]
     (loop [required-files (cljs-deps requires)
-           visited (set required-files)
-           js-deps #{}]
+           visited        (set required-files)
+           js-deps        #{}]
       (if (seq required-files)
         (let [next-file (first required-files)
-              js (get-compiled-cljs opts next-file)
-              new-req (remove #(contains? visited %) (cljs-deps (deps/-requires js)))]
+              js        (if (= "cljs.core$macros" next-file)
+                          (compile-core-macros opts)
+                          (get-compiled-cljs opts next-file))
+              new-req   (remove #(contains? visited %) (cljs-deps (deps/-requires js)))]
           (recur (into (rest required-files) new-req)
                  (into visited new-req)
                  (conj js-deps js)))
