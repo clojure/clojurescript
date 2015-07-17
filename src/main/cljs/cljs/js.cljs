@@ -33,7 +33,7 @@
   (a string). The result of eval will be passed back immediately to the caller."
     :dynamic true}
   *eval-fn*
-  (fn [source]
+  (fn [js-source]
     (throw (js/Error. "No *eval-fn* set"))))
 
 (defn empty-env []
@@ -171,10 +171,23 @@
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
-(defn eval* [env bound-vars form cb]
+(defn eval* [env bound-vars form opts cb]
   (let [ana-env (ana/empty-env)]
-    (cb (ana/analyze ana-env form))))
+    (binding [ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+              *ns*             (:*ns* bound-vars)
+              r/*data-readers* (:*data-readers* bound-vars)
+              env/*compiler*   env]
+      (*eval-fn*
+        (with-out-str
+          (comp/emit (ana/analyze ana-env form nil opts)))
+        cb))))
 
-(defn eval [env form cb]
-  (env/with-compiler-env env
-    (eval* env {} form cb)))
+(defn eval
+  ([env form cb] (eval env form nil cb))
+  ([env form opts cb]
+   (env/with-compiler-env env
+     (eval* env
+       {:*cljs-ns*      (or (:ns env) 'cljs.user)
+        :*ns*           (create-ns ana/*cljs-ns*)
+        :*data-readers* tags/*cljs-data-readers*}
+       form opts cb))))
