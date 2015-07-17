@@ -48,7 +48,9 @@
   ([name reload cb]
    (*load-fn* name cb)))
 
-(defn analyze* [env bound-vars source cb]
+(declare ns-side-effects)
+
+(defn analyze* [env bound-vars source opts cb]
   (let [rdr  (rt/string-push-back-reader source)
         eof  (js-obj)
         aenv (ana/empty-env)]
@@ -59,9 +61,12 @@
       (loop []
         (let [form (r/read {:eof eof} rdr)]
           (if-not (identical? eof form)
-            (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))]
-              (ana/analyze aenv form)
-              (recur))
+            (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                  ast  (ana/analyze aenv form)]
+              (if (= (:op ast) :ns)
+                (ns-side-effects env ast opts bound-vars
+                  (fn [_] (cb)))
+                (recur)))
             (cb)))))))
 
 (defn analyze-deps
@@ -130,12 +135,15 @@
           (check-uses-and-load-macros))))
     (cb ast)))
 
-(defn analyze [env source cb]
-  (analyze* env
-    {:*cljs-ns*      (or (:ns env) 'cljs.user)
-     :*ns*           (create-ns ana/*cljs-ns*)
-     :*data-readers* tags/*cljs-data-readers*}
-    source cb))
+(defn analyze
+  ([env source cb]
+   (analyze env source nil cb))
+  ([env source opts cb]
+   (analyze* env
+     {:*cljs-ns*      (or (:ns env) 'cljs.user)
+      :*ns*           (create-ns ana/*cljs-ns*)
+      :*data-readers* tags/*cljs-data-readers*}
+     source opts cb)))
 
 ;; -----------------------------------------------------------------------------
 ;; Emit
