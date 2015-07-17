@@ -173,7 +173,8 @@
 
 (defn eval* [env bound-vars form opts cb]
   (let [ana-env (ana/empty-env)]
-    (binding [ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+    (binding [*eval-fn*        (:*eval-fn* bound-vars)
+              ana/*cljs-ns*    (:*cljs-ns* bound-vars)
               *ns*             (:*ns* bound-vars)
               r/*data-readers* (:*data-readers* bound-vars)
               env/*compiler*   env]
@@ -188,5 +189,6 @@
      (eval* env
        {:*cljs-ns*      (or (:ns env) 'cljs.user)
         :*ns*           (create-ns ana/*cljs-ns*)
-        :*data-readers* tags/*cljs-data-readers*}
+        :*data-readers* tags/*cljs-data-readers*
+        :*eval-fn*      (or (:js-eval opts) js/eval)}
        form opts cb))))
