@@ -8519,7 +8519,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;; Regular Expressions ;;;;;;;;;;
 
-(defn regexp?
+(defn ^boolean regexp?
   "Returns true if x is a JavaScript RegExp instance."
   [x]
   (instance? js/RegExp x))
