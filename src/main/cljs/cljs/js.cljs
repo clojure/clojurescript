@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.js
-  (:require-macros [cljs.env :as env])
+  (:require-macros [cljs.env.macros :as env])
   (:require [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
