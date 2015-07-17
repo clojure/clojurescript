@@ -42,11 +42,25 @@
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
+(def *loaded* (atom #{}))
+
 (defn require
   ([name cb]
-   (*load-fn* name cb))
+   (when-not (contains? @*loaded* name)
+     (*load-fn* name
+       (fn [source]
+         (*eval-fn* source)
+         (cb true)))))
   ([name reload cb]
-   (*load-fn* name cb)))
+   (when (= :reload reload)
+     (swap! *loaded* disj name))
+   (when (= :reload-all reload)
+     (reset! *loaded* #{}))
+   (when-not (contains? @*loaded* name)
+     (*load-fn* name
+       (fn [source]
+         (*eval-fn* source)
+         (cb true))))))
 
 (declare ns-side-effects)
 
