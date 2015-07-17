@@ -95,7 +95,7 @@
           (a/analyze ns-env '(ns foo.bar (:unless [])))
           (catch Exception e
             (.getMessage e)))
-        "Only :refer-clojure, :require, :require-macros, :use and :use-macros libspecs supported"))
+        "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported"))
   (is (.startsWith
         (try
           (a/analyze ns-env '(ns foo.bar (:require baz.woz) (:require noz.goz)))
@@ -260,7 +260,7 @@
           (a/analyze test-env '(defn foo 123))
           (catch Exception e
             (.getMessage e)))
-        "Parameter declaration \"123\" should be a vector at line")))
+        "Parameter declaration \"123\" should be a vector")))
 
 ;; =============================================================================
 ;; ns desugaring
