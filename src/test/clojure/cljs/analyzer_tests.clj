@@ -13,7 +13,8 @@
 (def warning-forms
   {:undeclared-var (let [v (gensym)] `(~v 1 2 3))
    :fn-arity '(do (defn x [a b] (+ a b))
-                  (x 1 2 3 4))})
+                  (x 1 2 3 4))
+   :keyword-arity '(do (:argumentless-keyword-invocation))})
 
 (defn warn-count [form]
   (let [counter (atom 0)

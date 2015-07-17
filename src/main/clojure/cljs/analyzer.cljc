@@ -2188,12 +2188,15 @@
   (let [enve (assoc env :context :expr)
         fexpr (analyze enve f)
         argc (count args)
-        ^boolean fn-var? (-> fexpr :info :fn-var)]
-    (when fn-var?
+        ^boolean fn-var? (-> fexpr :info :fn-var)
+        kw? (= 'cljs.core/Keyword (:tag fexpr))]
+    (when (or fn-var? kw?)
       (let [{:keys [^boolean variadic max-fixed-arity method-params name]} (:info fexpr)]
-        (when (and (not (valid-arity? argc method-params))
-                   (or (not variadic)
-                       (and variadic (< argc max-fixed-arity))))
+        (when (or (and kw? (zero? argc))
+                  (and (not kw?)
+                       (not (valid-arity? argc method-params))
+                       (or (not variadic)
+                           (and variadic (< argc max-fixed-arity)))))
           (warning :fn-arity env {:name name :argc argc}))))
     (let [deprecated? (-> fexpr :info :deprecated)
           no-warn? (-> form meta :deprecation-nowarn)]
