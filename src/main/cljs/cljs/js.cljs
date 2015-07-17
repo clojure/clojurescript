@@ -109,6 +109,27 @@
         ))
     (cb)))
 
+(defn ns-side-effects
+  [env {:keys [op] :as ast} opts bound-vars cb]
+  (if (= :ns op)
+    (let [{:keys [deps uses require-macros use-macros reload reloads]} ast]
+      (letfn [(check-uses-and-load-macros []
+                (when (and (:*analyze-deps* bound-vars) (seq uses))
+                  (ana/check-uses uses env))
+                (when (:*load-macros* bound-vars)
+                  (load-macros :use-macros use-macros reload reloads bound-vars
+                    (fn []
+                      (load-macros :require-macros require-macros reloads reloads bound-vars
+                        (fn []
+                          (when (seq use-macros)
+                            (ana/check-use-macros use-macros env))
+                          (cb ast)))))))]
+        (if (and (:*analyze-deps* bound-vars) (seq deps))
+          (analyze-deps name deps env (dissoc opts :macros-ns)
+            check-uses-and-load-macros)
+          (check-uses-and-load-macros))))
+    (cb ast)))
+
 (defn analyze [env source cb]
   (analyze* env
     {:*cljs-ns*      (or (:ns env) 'cljs.user)
