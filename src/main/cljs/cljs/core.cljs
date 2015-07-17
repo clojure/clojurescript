@@ -8623,73 +8623,77 @@ reduces them without incurring seq initialization"
 
 (declare print-map)
 
+(defn ^boolean print-meta? [opts obj]
+  (and (not (nil? (get opts :meta)))
+       (implements? IMeta obj)
+       (not (nil? (meta obj)))))
+
 (defn- pr-writer-impl
   [obj writer opts]
   (cond
     (nil? obj) (-write writer "nil")
     (undefined? obj) (-write writer "#<undefined>")
-    :else (do
-            (when (and (get opts :meta)
-                       (satisfies? IMeta obj)
-                       (meta obj))
-              (-write writer "^")
-              (pr-writer (meta obj) writer opts)
-              (-write writer " "))
-            (cond
-              (nil? obj) (-write writer "nil")
+    :else
+    (do
+      (when (print-meta? opts obj)
+        (-write writer "^")
+        (pr-writer (meta obj) writer opts)
+        (-write writer " "))
+      (cond
+        (nil? obj) (-write writer "nil")
 
-              ;; handle CLJS ctors
-              ^boolean (.-cljs$lang$type obj)
-              (.cljs$lang$ctorPrWriter obj obj writer opts)
-              
-              ; Use the new, more efficient, IPrintWithWriter interface when possible.
-              (implements? IPrintWithWriter obj)
-              (-pr-writer ^not-native obj writer opts)
-              
-              (or (identical? (type obj) js/Boolean) (number? obj))
-              (-write writer (str obj))
+        ;; handle CLJS ctors
+        ^boolean (.-cljs$lang$type obj)
+        (.cljs$lang$ctorPrWriter obj obj writer opts)
 
-              (object? obj)
-              (do
-                (-write writer "#js ")
-                (print-map
-                  (map (fn [k] [(keyword k) (aget obj k)]) (js-keys obj))
-                  pr-writer writer opts))
+        ; Use the new, more efficient, IPrintWithWriter interface when possible.
+        (implements? IPrintWithWriter obj)
+        (-pr-writer ^not-native obj writer opts)
 
-              (array? obj)
-              (pr-sequential-writer writer pr-writer "#js [" " " "]" opts obj)
+        (or (true? obj) (false? obj) (number? obj))
+        (-write writer (str obj))
 
-              ^boolean (goog/isString obj)
-              (if (:readably opts)
-                (-write writer (quote-string obj))
-                (-write writer obj))
+        (object? obj)
+        (do
+          (-write writer "#js ")
+          (print-map
+            (map (fn [k] [(keyword k) (aget obj k)]) (js-keys obj))
+            pr-writer writer opts))
 
-              (fn? obj)
-              (write-all writer "#<" (str obj) ">")
+        (array? obj)
+        (pr-sequential-writer writer pr-writer "#js [" " " "]" opts obj)
 
-              (instance? js/Date obj)
-              (let [normalize (fn [n len]
-                                (loop [ns (str n)]
-                                  (if (< (count ns) len)
-                                    (recur (str "0" ns))
-                                    ns)))]
-                (write-all writer
-                  "#inst \""
-                  (str (.getUTCFullYear obj))             "-"
-                  (normalize (inc (.getUTCMonth obj)) 2)  "-"
-                  (normalize (.getUTCDate obj) 2)         "T"
-                  (normalize (.getUTCHours obj) 2)        ":"
-                  (normalize (.getUTCMinutes obj) 2)      ":"
-                  (normalize (.getUTCSeconds obj) 2)      "."
-                  (normalize (.getUTCMilliseconds obj) 3) "-"
-                  "00:00\""))
+        ^boolean (goog/isString obj)
+        (if (:readably opts)
+          (-write writer (quote-string obj))
+          (-write writer obj))
 
-              (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
+        ^boolean (goog/isFunction obj)
+        (write-all writer "#<" (str obj) ">")
 
-              (satisfies? IPrintWithWriter obj)
-              (-pr-writer obj writer opts)
+        (instance? js/Date obj)
+        (let [normalize (fn [n len]
+                          (loop [ns (str n)]
+                            (if (< (count ns) len)
+                              (recur (str "0" ns))
+                              ns)))]
+          (write-all writer
+            "#inst \""
+            (str (.getUTCFullYear obj))             "-"
+            (normalize (inc (.getUTCMonth obj)) 2)  "-"
+            (normalize (.getUTCDate obj) 2)         "T"
+            (normalize (.getUTCHours obj) 2)        ":"
+            (normalize (.getUTCMinutes obj) 2)      ":"
+            (normalize (.getUTCSeconds obj) 2)      "."
+            (normalize (.getUTCMilliseconds obj) 3) "-"
+            "00:00\""))
 
-              :else (write-all writer "#<" (str obj) ">")))))
+        (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
+
+        (implements? IPrintWithWriter obj)
+        (-pr-writer obj writer opts)
+
+        :else (write-all writer "#<" (str obj) ">")))))
 
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
