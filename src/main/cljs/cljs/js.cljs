@@ -177,10 +177,9 @@
               *ns*             (:*ns* bound-vars)
               r/*data-readers* (:*data-readers* bound-vars)
               env/*compiler*   env]
-      (*eval-fn*
-        (with-out-str
-          (comp/emit (ana/analyze ana-env form nil opts)))
-        cb))))
+      (cb (*eval-fn*
+            (with-out-str
+              (comp/emit (ana/analyze ana-env form nil opts))))))))
 
 (defn eval
   ([env form cb] (eval env form nil cb))
