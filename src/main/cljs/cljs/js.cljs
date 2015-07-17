@@ -52,7 +52,10 @@
   (let [rdr  (rt/string-push-back-reader source)
         eof  (js-obj)
         aenv (ana/empty-env)]
-    (env/with-compiler-env env
+    (binding [ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+              *ns*             (:*ns* bound-vars)
+              r/*data-readers* (:*data-readers* bound-vars)
+              env/*compiler*   env]
       (loop []
         (let [form (r/read {:eof eof} rdr)]
           (if-not (identical? eof form)
@@ -76,7 +79,7 @@
        (if (seq deps)
          (let [dep (first deps)]
            (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
-                       (contains? (:js-dependency-index compiler) (name dep)))
+                         (contains? (:js-dependency-index compiler) (name dep)))
              (*load-fn* name
                (fn [source]
                  (if-not (nil? source)
