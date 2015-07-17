@@ -698,7 +698,13 @@
     (is (= (hash 'foo) (hash (symbol "foo"))))
     (is (= (hash 'foo/bar) (hash (symbol "foo" "bar"))))
     (is (= (lazy-cat [1] [2] [3]) '(1 2 3)))
-    ))
+    ;; Make sure take/drop raise an error when given nil as an argument
+    (is (try (do (take nil [1 2 3]) false)
+             (catch js/Error e true)))
+    (is (try (do (drop nil [1 2 3]) false)
+             (catch js/Error e true)))
+    (is (try (do (take-nth nil [1 2 3]) false)
+             (catch js/Error e true)))))
 
 (deftest test-booleans
   (testing "Testing boolean predicates"

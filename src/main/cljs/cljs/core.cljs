@@ -4216,6 +4216,7 @@ reduces them without incurring seq initialization"
   there are fewer than n.  Returns a stateful transducer when
   no collection is provided."
   ([n]
+   {:pre [(number? n)]}
      (fn [rf]
        (let [na (volatile! n)]
          (fn
@@ -4231,6 +4232,7 @@ reduces them without incurring seq initialization"
                   (ensure-reduced result)
                   result)))))))
   ([n coll]
+   {:pre [(number? n)]}
      (lazy-seq
        (when (pos? n)
          (when-let [s (seq coll)]
@@ -4240,6 +4242,7 @@ reduces them without incurring seq initialization"
   "Returns a lazy sequence of all but the first n items in coll.
   Returns a stateful transducer when no collection is provided."
   ([n]
+   {:pre [(number? n)]}
      (fn [rf]
        (let [na (volatile! n)]
          (fn
@@ -4252,6 +4255,7 @@ reduces them without incurring seq initialization"
                   result
                   (rf result input))))))))
   ([n coll]
+   {:pre [(number? n)]}
      (let [step (fn [n coll]
                   (let [s (seq coll)]
                     (if (and (pos? n) s)
@@ -8370,6 +8374,7 @@ reduces them without incurring seq initialization"
   "Returns a lazy seq of every nth item in coll.  Returns a stateful
   transducer when no collection is provided."
   ([n]
+   {:pre [(number? n)]}
      (fn [rf]
        (let [ia (volatile! -1)]
          (fn
@@ -8381,6 +8386,7 @@ reduces them without incurring seq initialization"
                   (rf result input)
                   result)))))))
   ([n coll]
+   {:pre [(number? n)]}
      (lazy-seq
        (when-let [s (seq coll)]
          (cons (first s) (take-nth n (drop n s)))))))
