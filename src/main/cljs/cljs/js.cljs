@@ -88,7 +88,7 @@
              (*load-fn* name
                (fn [source]
                  (if-not (nil? source)
-                   (analyze* env bound-vars source
+                   (analyze* env bound-vars source opts
                      (fn []
                        (analyze-deps lib (next deps) env bound-vars opts cb)))
                    (throw
