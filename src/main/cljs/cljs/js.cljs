@@ -172,12 +172,13 @@
 ;; Eval
 
 (defn eval* [env bound-vars form opts cb]
-  (let [ana-env (ana/empty-env)]
-    (binding [*eval-fn*        (:*eval-fn* bound-vars)
-              ana/*cljs-ns*    (:*cljs-ns* bound-vars)
-              *ns*             (:*ns* bound-vars)
-              r/*data-readers* (:*data-readers* bound-vars)
-              env/*compiler*   env]
+  (binding [env/*compiler*   env
+            *eval-fn*        (:*eval-fn* bound-vars)
+            ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+            *ns*             (:*ns* bound-vars)
+            r/*data-readers* (:*data-readers* bound-vars)]
+    (let [ana-env (assoc (ana/empty-env)
+                    :ns (ana/get-namespace ana/*cljs-ns*))]
       (cb (*eval-fn*
             (with-out-str
               (comp/emit (ana/analyze ana-env form nil opts))))))))
@@ -185,10 +186,9 @@
 (defn eval
   ([env form cb] (eval env form nil cb))
   ([env form opts cb]
-   (env/with-compiler-env env
-     (eval* env
-       {:*cljs-ns*      (or (:ns env) 'cljs.user)
-        :*ns*           (create-ns ana/*cljs-ns*)
-        :*data-readers* tags/*cljs-data-readers*
-        :*eval-fn*      (or (:js-eval opts) js/eval)}
-       form opts cb))))
+   (eval* env
+     {:*cljs-ns*      'cljs.user
+      :*ns*           (create-ns 'cljs.user)
+      :*data-readers* tags/*cljs-data-readers*
+      :*eval-fn*      (or (:js-eval opts) js/eval)}
+     form opts cb)))
