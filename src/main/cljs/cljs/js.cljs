@@ -42,16 +42,17 @@
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
+(declare compile*)
+
 (def *loaded* (atom #{}))
 
 (defn require
-  ([name cb]
+  ([bound-vars name opts cb]
    (when-not (contains? @*loaded* name)
      (*load-fn* name
        (fn [source]
-         (*eval-fn* source)
-         (cb true)))))
-  ([name reload cb]
+         (compile* bound-vars source opts (fn [ret] (cb true)))))))
+  ([bound-vars name reload opts cb]
    (when (= :reload reload)
      (swap! *loaded* disj name))
    (when (= :reload-all reload)
@@ -59,27 +60,25 @@
    (when-not (contains? @*loaded* name)
      (*load-fn* name
        (fn [source]
-         (*eval-fn* source)
-         (cb true))))))
+         (compile* bound-vars source opts (fn [ret] (cb true))))))))
 
 (declare ns-side-effects)
 
-(defn analyze* [env bound-vars source opts cb]
+(defn analyze* [bound-vars source opts cb]
   (let [rdr  (rt/string-push-back-reader source)
         eof  (js-obj)
         aenv (ana/empty-env)]
-    (binding [ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+    (binding [env/*compiler*   (:*compiler* bound-vars)
+              ana/*cljs-ns*    (:*cljs-ns* bound-vars)
               *ns*             (:*ns* bound-vars)
-              r/*data-readers* (:*data-readers* bound-vars)
-              env/*compiler*   env]
+              r/*data-readers* (:*data-readers* bound-vars)]
       (loop []
         (let [form (r/read {:eof eof} rdr)]
           (if-not (identical? eof form)
             (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
                   ast  (ana/analyze aenv form)]
               (if (= (:op ast) :ns)
-                (ns-side-effects env ast opts bound-vars
-                  (fn [_] (cb)))
+                (ns-side-effects bound-vars aenv ast opts (fn [_] (cb)))
                 (recur)))
             (cb)))))))
 
@@ -87,8 +86,8 @@
   "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
    and opts, compiler options - analyze all of the dependencies. Required to
    correctly analyze usage of other namespaces."
-  ([lib deps env bound-vars cb] (analyze-deps lib deps env bound-vars nil cb))
-  ([lib deps env bound-vars opts cb]
+  ([bound-vars ana-env lib deps cb] (analyze-deps bound-vars lib deps nil cb))
+  ([bound-vars ana-env lib deps opts cb]
    (let [compiler @(:*compiler* bound-vars)]
      (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
                                     update-in [:dep-path] conj lib)]
@@ -102,49 +101,51 @@
              (*load-fn* name
                (fn [source]
                  (if-not (nil? source)
-                   (analyze* env bound-vars source opts
+                   (analyze* bound-vars source opts
                      (fn []
-                       (analyze-deps lib (next deps) env bound-vars opts cb)))
+                       (analyze-deps bound-vars lib (next deps) opts cb)))
                    (throw
-                     (ana/error env
+                     (ana/error ana-env
                        (ana/error-message :undeclared-ns
                          {:ns-sym dep :js-provide (name dep)}))))))))
          (cb))))))
 
-(defn load-macros [k macros reload reloads bound-vars cb]
+(defn load-macros [bound-vars k macros reload reloads opts cb]
   (if (seq macros)
-    (let [nsym (first (vals macros))]
+    (let [env  (:*compiler* bound-vars)
+          nsym (first (vals macros))]
       (let [k (or (k reload)
                   (get-in reloads [k nsym])
                   (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
         (if k
-          (require nsym k
+          (require bound-vars nsym k opts
             (fn []
-              (load-macros k (next macros) reload reloads bound-vars cb)))
-          (require nsym
+              (load-macros bound-vars k (next macros) reload reloads opts cb)))
+          (require bound-vars nsym opts
             (fn []
-              (load-macros k (next macros) reload reloads bound-vars cb))))
+              (load-macros bound-vars k (next macros) reload reloads opts cb))))
         ;(intern-macros nsym k)
         ))
     (cb)))
 
 (defn ns-side-effects
-  [env {:keys [op] :as ast} opts bound-vars cb]
+  [bound-vars ana-env {:keys [op] :as ast} opts cb]
   (if (= :ns op)
-    (let [{:keys [deps uses require-macros use-macros reload reloads]} ast]
+    (let [{:keys [deps uses require-macros use-macros reload reloads]} ast
+          env (:*compiler* bound-vars)]
       (letfn [(check-uses-and-load-macros []
                 (when (and (:*analyze-deps* bound-vars) (seq uses))
                   (ana/check-uses uses env))
                 (when (:*load-macros* bound-vars)
-                  (load-macros :use-macros use-macros reload reloads bound-vars
+                  (load-macros bound-vars :use-macros use-macros reload reloads opts
                     (fn []
-                      (load-macros :require-macros require-macros reloads reloads bound-vars
+                      (load-macros bound-vars :require-macros require-macros reloads reloads opts
                         (fn []
                           (when (seq use-macros)
                             (ana/check-use-macros use-macros env))
                           (cb ast)))))))]
         (if (and (:*analyze-deps* bound-vars) (seq deps))
-          (analyze-deps name deps env (dissoc opts :macros-ns)
+          (analyze-deps bound-vars name deps (dissoc opts :macros-ns)
             check-uses-and-load-macros)
           (check-uses-and-load-macros))))
     (cb ast)))
@@ -153,8 +154,9 @@
   ([env source cb]
    (analyze env source nil cb))
   ([env source opts cb]
-   (analyze* env
-     {:*cljs-ns*      (or (:ns env) 'cljs.user)
+   (analyze*
+     {:*compiler*     env
+      :*cljs-ns*      (or (:ns env) 'cljs.user)
       :*ns*           (create-ns ana/*cljs-ns*)
       :*data-readers* tags/*cljs-data-readers*}
      source opts cb)))
@@ -171,8 +173,8 @@
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
-(defn eval* [env bound-vars form opts cb]
-  (binding [env/*compiler*   env
+(defn eval* [bound-vars form opts cb]
+  (binding [env/*compiler*   (:*compiler* bound-vars)
             *eval-fn*        (:*eval-fn* bound-vars)
             ana/*cljs-ns*    (:*cljs-ns* bound-vars)
             *ns*             (:*ns* bound-vars)
@@ -186,9 +188,32 @@
 (defn eval
   ([env form cb] (eval env form nil cb))
   ([env form opts cb]
-   (eval* env
-     {:*cljs-ns*      'cljs.user
+   (eval*
+     {:*compiler*     env
+      :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
       :*eval-fn*      (or (:js-eval opts) js/eval)}
      form opts cb)))
+
+;; -----------------------------------------------------------------------------
+;; Compile
+
+(defn compile* [bound-vars source opts cb]
+  (binding [env/*compiler    (:*compiler* bound-vars)
+            *eval-fn*        (:*eval-fn* bound-vars)
+            ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+            *ns*             (:*ns* bound-vars)
+            r/*data-readers* (:*data-readers* bound-vars)]
+    ))
+
+(defn compile
+  ([env source cb] (compile env source cb))
+  ([env source opts cb]
+    (compile*
+      {:*compiler*     env
+       :*cljs-ns*      'cljs.user
+       :*ns*           (create-ns 'cljs.user)
+       :*data-readers* tags/*cljs-data-readers*
+       :*eval-fn*      (or (:js-eval opts) js/eval)}`
+      source opts cb)))
