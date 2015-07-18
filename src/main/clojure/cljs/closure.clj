@@ -538,14 +538,16 @@
   (let [js-file  (comp/rename-to-js relative-path)
         compiled (-compile uri (merge opts {:output-file js-file}))]
     (cond-> compiled
-      (= ["cljs.js"] (deps/-provides compiled))
+      ;; TODO: IJavaScript :provides :requires should really
+      ;; always be Vector<MungedString> - David
+      (= ["cljs.js"] (into [] (map str) (deps/-provides compiled)))
       (update-in [:requires] concat ["cljs.core$macros"]))))
 
 (defn cljs-source-for-namespace
   "Given a namespace return the corresponding source with either a .cljs or
   .cljc extension."
   [ns]
-  (if (= "cljs.core$macros" ns)
+  (if (= "cljs.core$macros" (str ns))
     (let [relpath "cljs/core.cljc"]
       {:relative-path relpath :uri (io/resource relpath)})
     (let [path    (-> (munge ns) (string/replace \. \/))

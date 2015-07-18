@@ -1826,7 +1826,10 @@
            :var (symbol (str clash-ns) (str name))})))))
 
 (defn macro-ns-name [name]
-  (symbol (str name "$macros")))
+  (let [name-str (str name)]
+    (if-not (.endsWith name-str "$macros")
+      (symbol (str name-str "$macros"))
+      name)))
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
@@ -2648,21 +2651,27 @@
                     (if (seq forms)
                       (let [env (empty-env)
                             ast (no-warn (analyze env (first forms) nil opts))]
-                        (if (= (:op ast) :ns)
+                        (if (= :ns (:op ast))
                           (let [ns-name (:name ast)
-                                deps (merge (:uses ast) (:requires ast))]
+                                ns-name (if (and (= 'cljs.core ns-name)
+                                                 (= "cljc" (util/ext src)))
+                                          'cljs.core$macros
+                                          ns-name)
+                                deps    (merge (:uses ast) (:requires ast))]
                             (.close ^Reader rdr)
                             [(merge
-                               {:ns (or ns-name 'cljs.user)
-                                :provides [ns-name]
-                                :requires (if (= ns-name 'cljs.core)
-                                            (set (vals deps))
-                                            (cond-> (conj (set (vals deps)) 'cljs.core)
-                                              (get-in compiler-env [:options :emit-constants])
-                                              (conj 'constants-table)))
-                                :file dest
+                               {:ns          (or ns-name 'cljs.user)
+                                :provides    [ns-name]
+                                :requires    (if (= 'cljs.core ns-name)
+                                               (set (vals deps))
+                                               (cond-> (conj (set (vals deps)) 'cljs.core)
+                                                 (get-in compiler-env [:options :emit-constants])
+                                                 (conj 'constants-table)))
+                                :file        dest
                                 :source-file src
-                                :ast ast}
+                                :ast         ast
+                                :macros-ns   (or (:macros-ns opts)
+                                                 (= 'cljs.core$macros ns-name))}
                                (when (and dest (.exists ^File dest))
                                  {:lines (with-open [reader (io/reader dest)]
                                            (-> reader line-seq count))}))
