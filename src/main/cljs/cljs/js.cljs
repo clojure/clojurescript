@@ -13,7 +13,8 @@
             [cljs.compiler :as comp]
             [cljs.tools.reader :as r]
             [cljs.tools.reader.reader-types :as rt]
-            [cljs.tagged-literals :as tags]))
+            [cljs.tagged-literals :as tags])
+  (:import [goog.string StringBuffer]))
 
 (js/goog.require "cljs.core$macros")
 
@@ -42,7 +43,7 @@
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
-(declare compile*)
+(declare eval-str*)
 
 (def *loaded* (atom #{}))
 
@@ -51,7 +52,8 @@
    (when-not (contains? @*loaded* name)
      (*load-fn* name
        (fn [source]
-         (compile* bound-vars source opts (fn [ret] (cb true)))))))
+         (eval-str* bound-vars source opts
+           (fn [ret] (cb true)))))))
   ([bound-vars name reload opts cb]
    (when (= :reload reload)
      (swap! *loaded* disj name))
@@ -60,7 +62,8 @@
    (when-not (contains? @*loaded* name)
      (*load-fn* name
        (fn [source]
-         (compile* bound-vars source opts (fn [ret] (cb true))))))))
+         (eval-str* bound-vars source opts
+           (fn [ret] (cb true))))))))
 
 (declare ns-side-effects)
 
@@ -72,15 +75,16 @@
               ana/*cljs-ns*    (:*cljs-ns* bound-vars)
               *ns*             (:*ns* bound-vars)
               r/*data-readers* (:*data-readers* bound-vars)]
-      (loop []
-        (let [form (r/read {:eof eof} rdr)]
-          (if-not (identical? eof form)
-            (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
-                  ast  (ana/analyze aenv form)]
-              (if (= (:op ast) :ns)
-                (ns-side-effects bound-vars aenv ast opts (fn [_] (cb)))
-                (recur)))
-            (cb)))))))
+      ((fn analyze-loop []
+         (let [form (r/read {:eof eof} rdr)]
+           (if-not (identical? eof form)
+             (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                   ast  (ana/analyze aenv form)]
+               (if (= :ns (:op ast))
+                 (ns-side-effects bound-vars aenv ast opts
+                   (fn [_] (analyze-loop)))
+                 (recur)))
+             (cb))))))))
 
 (defn analyze-deps
   "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
@@ -200,12 +204,25 @@
 ;; Compile
 
 (defn compile* [bound-vars source opts cb]
-  (binding [env/*compiler    (:*compiler* bound-vars)
-            *eval-fn*        (:*eval-fn* bound-vars)
-            ana/*cljs-ns*    (:*cljs-ns* bound-vars)
-            *ns*             (:*ns* bound-vars)
-            r/*data-readers* (:*data-readers* bound-vars)]
-    ))
+  (let [rdr  (rt/string-push-back-reader source)
+        eof  (js-obj)
+        aenv (ana/empty-env)
+        sb   (StringBuffer.)]
+    ((fn compile-loop []
+       (binding [env/*compiler*   (:*compiler* bound-vars)
+                 *eval-fn*        (:*eval-fn* bound-vars)
+                 ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+                 *ns*             (:*ns* bound-vars)
+                 r/*data-readers* (:*data-readers* bound-vars)]
+         (let [form (r/read {:eof eof} rdr)]
+           (if-not (identical? eof form)
+             (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                   ast  (.append sb (comp/emit (ana/analyze aenv form)))]
+               (if (= :ns (:op ast))
+                 (ns-side-effects bound-vars aenv ast opts
+                   (fn [_] (compile-loop)))
+                 (recur)))
+             (cb (.toString cb)))))))))
 
 (defn compile
   ([env source cb] (compile env source cb))
@@ -217,3 +234,38 @@
        :*data-readers* tags/*cljs-data-readers*
        :*eval-fn*      (or (:js-eval opts) js/eval)}`
       source opts cb)))
+
+;; -----------------------------------------------------------------------------
+;; Evaluate String
+
+(defn eval-str* [bound-vars source opts cb]
+  (let [rdr  (rt/string-push-back-reader source)
+        eof  (js-obj)
+        aenv (ana/empty-env)
+        sb   (StringBuffer.)]
+    ((fn compile-loop []
+       (binding [env/*compiler*   (:*compiler* bound-vars)
+                 *eval-fn*        (:*eval-fn* bound-vars)
+                 ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+                 *ns*             (:*ns* bound-vars)
+                 r/*data-readers* (:*data-readers* bound-vars)]
+         (let [form (r/read {:eof eof} rdr)]
+           (if-not (identical? eof form)
+             (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                   ast  (.append sb (comp/emit (ana/analyze aenv form)))]
+               (if (= :ns (:op ast))
+                 (ns-side-effects bound-vars aenv ast opts
+                   (fn [_] (compile-loop)))
+                 (recur)))
+             (cb (.toString cb)))))))))
+
+(defn eval-str
+  ([env source cb] (eval-str env source cb))
+  ([env source opts cb]
+   (eval-str*
+     {:*compiler*     env
+      :*cljs-ns*      'cljs.user
+      :*ns*           (create-ns 'cljs.user)
+      :*data-readers* tags/*cljs-data-readers*
+      :*eval-fn*      (or (:js-eval opts) js/eval)}`
+       source opts cb)))
