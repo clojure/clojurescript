@@ -585,10 +585,6 @@
                    (IllegalArgumentException.
                      (str "Namespace " ns " does not exist"))))))))))))
 
-(defn compile-core-macros [opts]
-  (-compile (io/resource "cljs/core.cljc")
-    (merge opts {:output-file "cljs/core$macros.js"})))
-
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of
   IJavaScripts which are the cljs dependencies. The returned list will
