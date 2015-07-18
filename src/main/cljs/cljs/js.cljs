@@ -232,7 +232,7 @@
        :*cljs-ns*      'cljs.user
        :*ns*           (create-ns 'cljs.user)
        :*data-readers* tags/*cljs-data-readers*
-       :*eval-fn*      (or (:js-eval opts) js/eval)}`
+       :*eval-fn*      (or (:js-eval opts) js/eval)}
       source opts cb)))
 
 ;; -----------------------------------------------------------------------------
@@ -267,5 +267,5 @@
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
-      :*eval-fn*      (or (:js-eval opts) js/eval)}`
-       source opts cb)))
+      :*eval-fn*      (or (:js-eval opts) js/eval)}
+     source opts cb)))
