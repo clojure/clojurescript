@@ -1903,8 +1903,7 @@
               (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
                 (if (pos? (count ns-info'))
                   (let [merge-keys
-                        [:name :doc :excludes :use-macros :require-macros
-                         :uses :requires :imports]]
+                        [:use-macros :require-macros :uses :requires :imports]]
                     (merge
                       ns-info'
                       (merge-with merge
