@@ -1845,7 +1845,7 @@
              [part bit] (fast-path-protocols p)
              msym       (symbol
                           (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
-    (if-not (core/symbol? x)
+    (core/if-not (core/symbol? x)
       `(let [~xsym ~x]
          (if ~xsym
            (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
@@ -1871,7 +1871,7 @@
              [part bit] (fast-path-protocols p)
              msym       (symbol
                           (core/str "-cljs$lang$protocol_mask$partition" part "$"))]
-    (if-not (core/symbol? x)
+    (core/if-not (core/symbol? x)
       `(let [~xsym ~x]
          (if-not (nil? ~xsym)
            (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
