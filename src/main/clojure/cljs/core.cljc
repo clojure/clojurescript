@@ -40,7 +40,7 @@
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
-                                       specify])])
+                                       specify copy-arguments])])
   #?(:cljs (:require-macros [cljs.core :as core]))
   (:require clojure.walk
             clojure.set
