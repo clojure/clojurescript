@@ -191,6 +191,8 @@
        (doseq [source (->> sources
                         (remove (comp #{:seed} :type))
                         (map #(cljsc/source-on-disk opts %)))]
+         (when (:repl-verbose opts)
+           (println "Loading:" (:provides source)))
          (-evaluate repl-env "<cljs repl>" 1
            (cljsc/add-dep-string opts source)))
        ;; REPLs that stream must manually load each dep - David
