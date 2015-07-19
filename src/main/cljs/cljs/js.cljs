@@ -18,6 +18,11 @@
 
 (js/goog.require "cljs.core$macros")
 
+(defn debug-prn
+  [& args]
+  (binding [*print-fn* *print-err-fn*]
+    (apply println args)))
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to load libraries.
   Whatever function *load-fn* is bound to will be passed a library name
@@ -49,21 +54,23 @@
 
 (defn require
   ([bound-vars name opts cb]
-   (when-not (contains? @*loaded* name)
-     (*load-fn* name
-       (fn [source]
-         (eval-str* bound-vars source opts
-           (fn [ret] (cb true)))))))
+   (require bound-vars name nil opts cb))
   ([bound-vars name reload opts cb]
    (when (= :reload reload)
      (swap! *loaded* disj name))
    (when (= :reload-all reload)
      (reset! *loaded* #{}))
    (when-not (contains? @*loaded* name)
-     (*load-fn* name
-       (fn [source]
-         (eval-str* bound-vars source opts
-           (fn [ret] (cb true))))))))
+     (let [env (:*env* bound-vars)]
+       (*load-fn* name
+         (fn [source]
+           (if source
+             (eval-str* bound-vars source opts
+               (fn [ret] (cb true)))
+             (throw
+               (ana/error env
+                 (ana/error-message :undeclared-ns
+                   {:ns-sym dep :js-provide (name dep)}))))))))))
 
 (declare ns-side-effects)
 
@@ -85,6 +92,24 @@
                    (fn [_] (analyze-loop)))
                  (recur)))
              (cb))))))))
+
+(defn load-deps
+  ([bound-vars ana-env lib deps cb] (analyze-deps bound-vars lib deps nil cb))
+  ([bound-vars ana-env lib deps opts cb]
+   (let [compiler @(:*compiler* bound-vars)]
+     (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
+                                    update-in [:dep-path] conj lib)]
+       (assert (every? #(not (contains? (:*cljs-dep-set* bound-vars) %)) deps)
+         (str "Circular dependency detected "
+           (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
+       (if (seq deps)
+         (let [dep (first deps)]
+           (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
+                         (contains? (:js-dependency-index compiler) (name dep)))
+             (require bound-vars name opts
+               (fn [_]
+                 (load-deps bound-vars lib (next deps) opts cb)))))
+         (cb))))))
 
 (defn analyze-deps
   "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
@@ -133,26 +158,35 @@
     (cb)))
 
 (defn ns-side-effects
-  [bound-vars ana-env {:keys [op] :as ast} opts cb]
-  (if (= :ns op)
-    (let [{:keys [deps uses require-macros use-macros reload reloads]} ast
-          env (:*compiler* bound-vars)]
-      (letfn [(check-uses-and-load-macros []
-                (when (and (:*analyze-deps* bound-vars) (seq uses))
-                  (ana/check-uses uses env))
-                (when (:*load-macros* bound-vars)
-                  (load-macros bound-vars :use-macros use-macros reload reloads opts
-                    (fn []
-                      (load-macros bound-vars :require-macros require-macros reloads reloads opts
-                        (fn []
-                          (when (seq use-macros)
-                            (ana/check-use-macros use-macros env))
-                          (cb ast)))))))]
-        (if (and (:*analyze-deps* bound-vars) (seq deps))
-          (analyze-deps bound-vars name deps (dissoc opts :macros-ns)
-            check-uses-and-load-macros)
-          (check-uses-and-load-macros))))
-    (cb ast)))
+  ([bound-vars ana-env ast opts cb]
+    (ns-side-effects false bound-vars ana-env ast opts cb))
+  ([load bound-vars ana-env {:keys [op] :as ast} opts cb]
+   (if (= :ns op)
+     (let [{:keys [deps uses requires require-macros use-macros reload reloads]} ast
+           env (:*compiler* bound-vars)]
+       (letfn [(check-uses-and-load-macros []
+                 (when (and (:*analyze-deps* bound-vars) (seq uses))
+                   (ana/check-uses uses env))
+                 (when (:*load-macros* bound-vars)
+                   (load-macros bound-vars :use-macros use-macros reload reloads opts
+                     (fn []
+                       (load-macros bound-vars :require-macros require-macros reloads reloads opts
+                         (fn []
+                           (when (seq use-macros)
+                             (ana/check-use-macros use-macros env))
+                           (cb ast)))))))]
+         (cond
+           (and load (seq deps))
+           (load-deps bound-vars name deps (dissoc opts :macros-ns)
+             check-uses-and-load-macros)
+
+           (and (not load) (:*analyze-deps* bound-vars) (seq deps))
+           (analyze-deps bound-vars name deps (dissoc opts :macros-ns)
+             check-uses-and-load-macros)
+
+           :else
+           (check-uses-and-load-macros))))
+     (cb ast))))
 
 (defn analyze
   ([env source cb]
