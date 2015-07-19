@@ -78,11 +78,11 @@
   (let [rdr  (rt/string-push-back-reader source)
         eof  (js-obj)
         aenv (ana/empty-env)]
-    (binding [env/*compiler*   (:*compiler* bound-vars)
-              ana/*cljs-ns*    (:*cljs-ns* bound-vars)
-              *ns*             (:*ns* bound-vars)
-              r/*data-readers* (:*data-readers* bound-vars)]
-      ((fn analyze-loop []
+    ((fn analyze-loop []
+       (binding [env/*compiler*   (:*compiler* bound-vars)
+                 ana/*cljs-ns*    (:*cljs-ns* bound-vars)
+                 *ns*             (:*ns* bound-vars)
+                 r/*data-readers* (:*data-readers* bound-vars)]
          (let [form (r/read {:eof eof} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
@@ -256,7 +256,7 @@
                  (ns-side-effects bound-vars aenv ast opts
                    (fn [_] (compile-loop)))
                  (recur)))
-             (cb (.toString cb)))))))))
+             (cb (.toString sb)))))))))
 
 (defn compile
   ([env source cb] (compile env source cb))
