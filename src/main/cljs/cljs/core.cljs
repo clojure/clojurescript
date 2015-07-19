@@ -8624,7 +8624,7 @@ reduces them without incurring seq initialization"
 (declare print-map)
 
 (defn ^boolean print-meta? [opts obj]
-  (and (not (nil? (get opts :meta)))
+  (and (boolean (get opts :meta))
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
 
