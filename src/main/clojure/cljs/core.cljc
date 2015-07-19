@@ -646,7 +646,7 @@
                                (core/let [gmap (gensym "map__")
                                           defaults (:or b)]
                                  (core/loop [ret (core/-> bvec (conj gmap) (conj v)
-                                                   (conj gmap) (conj `(if (seq? ~gmap) (apply hash-map ~gmap) ~gmap))
+                                                   (conj gmap) (conj `(if (implements? ISeq ~gmap) (apply hash-map ~gmap) ~gmap))
                                                    ((core/fn [ret]
                                                       (if (:as b)
                                                         (conj ret (:as b) gmap)
