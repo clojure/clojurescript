@@ -53,6 +53,16 @@
 (def *loaded* (atom #{}))
 
 (defn require
+  ([name cb]
+    (require name nil cb))
+  ([name opts cb]
+    (require
+      {:*compiler*     (env/default-compiler-env)
+       :*cljs-ns*      'cljs.user
+       :*ns*           (create-ns 'cljs.user)
+       :*data-readers* tags/*cljs-data-readers*
+       :*eval-fn*      (or (:js-eval opts) js/eval)}
+      name opts cb))
   ([bound-vars name opts cb]
    (require bound-vars name nil opts cb))
   ([bound-vars name reload opts cb]
