@@ -143,18 +143,16 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
-                         (contains? (:js-dependency-index compiler) (name dep)))
-             (*load-fn* (ns->relpath name)
-               (fn [source]
-                 (if-not (nil? source)
-                   (analyze* bound-vars source opts
-                     (fn []
-                       (analyze-deps bound-vars ana-env lib (next deps) opts cb)))
-                   (throw
-                     (ana/error ana-env
-                       (ana/error-message :undeclared-ns
-                         {:ns-sym dep :js-provide (name dep)}))))))))
+           (*load-fn* (ns->relpath dep)
+             (fn [source]
+               (if-not (nil? source)
+                 (analyze* bound-vars source opts
+                   (fn []
+                     (analyze-deps bound-vars ana-env lib (next deps) opts cb)))
+                 (throw
+                   (ana/error ana-env
+                     (ana/error-message :undeclared-ns
+                       {:ns-sym dep :js-provide (name dep)})))))))
          (cb))))))
 
 (defn load-macros [bound-vars k macros reload reloads opts cb]
