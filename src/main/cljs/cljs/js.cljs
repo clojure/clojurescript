@@ -150,7 +150,7 @@
                  (if-not (nil? source)
                    (analyze* bound-vars source opts
                      (fn []
-                       (analyze-deps bound-vars lib (next deps) opts cb)))
+                       (analyze-deps bound-vars ana-env lib (next deps) opts cb)))
                    (throw
                      (ana/error ana-env
                        (ana/error-message :undeclared-ns
@@ -211,7 +211,7 @@
              check-uses-and-load-macros)
 
            (and (not load) (:*analyze-deps* bound-vars) (seq deps))
-           (analyze-deps bound-vars ana-env deps (dissoc opts :macros-ns)
+           (analyze-deps bound-vars ana-env lib deps (dissoc opts :macros-ns)
              check-uses-and-load-macros)
 
            :else
