@@ -251,7 +251,8 @@
          (let [form (r/read {:eof eof} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
-                   ast  (.append sb (with-out-str (comp/emit (ana/analyze aenv form))))]
+                   ast  (ana/analyze aenv form)]
+               (.append sb (with-out-str (comp/emit ast)))
                (if (= :ns (:op ast))
                  (ns-side-effects bound-vars aenv ast opts
                    (fn [_] (compile-loop)))
@@ -287,12 +288,16 @@
          (let [form (r/read {:eof eof} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
-                   ast  (.append sb (with-out-str (comp/emit (ana/analyze aenv form))))]
+                   ast  (ana/analyze aenv form)]
+               (.append sb (with-out-str (comp/emit ast)))
                (if (= :ns (:op ast))
                  (ns-side-effects bound-vars aenv ast opts
                    (fn [_] (compile-loop)))
                  (recur)))
-             (cb (*eval-fn* (.toString cb))))))))))
+             (let [js-source (.toString sb)]
+               (when (:verbose opts)
+                 (debug-prn js-source))
+               (cb (*eval-fn* js-source))))))))))
 
 (defn eval-str
   ([env source cb]
