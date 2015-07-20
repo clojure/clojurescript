@@ -132,7 +132,8 @@
   "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
    and opts, compiler options - analyze all of the dependencies. Required to
    correctly analyze usage of other namespaces."
-  ([bound-vars ana-env lib deps cb] (analyze-deps bound-vars lib deps nil cb))
+  ([bound-vars ana-env lib deps cb]
+   (analyze-deps bound-vars ana-env lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
    (let [compiler @(:*compiler* bound-vars)]
      (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
@@ -210,7 +211,7 @@
              check-uses-and-load-macros)
 
            (and (not load) (:*analyze-deps* bound-vars) (seq deps))
-           (analyze-deps bound-vars name deps (dissoc opts :macros-ns)
+           (analyze-deps bound-vars ana-env deps (dissoc opts :macros-ns)
              check-uses-and-load-macros)
 
            :else
