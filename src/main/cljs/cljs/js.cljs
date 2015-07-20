@@ -297,6 +297,8 @@
        :*cljs-ns*      'cljs.user
        :*ns*           (create-ns 'cljs.user)
        :*data-readers* tags/*cljs-data-readers*
+       :*analyze-deps* (or (:analyze-deps opts) true)
+       :*load-macros*  (or (:load-macros opts) true)
        :*eval-fn*      (or (:js-eval opts) js/eval)}
       source opts cb)))
 
@@ -337,5 +339,7 @@
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
+      :*analyze-deps* (or (:analyze-deps opts) true)
+      :*load-macros*  (or (:load-macros opts) true)
       :*eval-fn*      (or (:js-eval opts) js/eval)}
      source opts cb)))
