@@ -30,10 +30,11 @@
   (string/replace (ana/munge-path ns-sym) \. \/))
 
 (defonce
-  ^{:doc "Each runtime environment provides a different way to load libraries.
-  Whatever function *load-fn* is bound to will be passed a munged library name
-  (a string) and a callback. The callback should be invoked with the source of
-  the library (a string)."
+  ^{:doc "Each runtime environment provides a different way to load source.
+  Whatever function *load-fn* is bound to will be passed a munged relative
+  library path (a string) and a callback. It is up to the implementor to
+  correctly resolvea .cljs, .cljc, or .js file (the order must be respected).
+  The callback should be invoked with the source of the library (a string)."
     :dynamic true}
   *load-fn*
   (fn [name cb]
