@@ -7,6 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.analyzer.api
+  "This is intended to be a stable api for those who need programmatic access
+  to the analyzer."
   (:refer-clojure :exclude [all-ns ns-interns ns-resolve resolve find-ns
                             ns-publics remove-ns])
   (:require [cljs.env :as env]

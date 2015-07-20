@@ -7,11 +7,8 @@
 ;   You must not remove this notice, or any other, from this software
 
 (ns cljs.compiler.api
-  "This is intended to be a stable api for those who intend to create
-  tools that use compiler data.
-
-  For example: a build script may need to how to invalidate compiled
-  files so that they will be recompiled."
+  "This is intended to be a stable api for those who need programmatic access
+  to the compiler."
   (:require [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
