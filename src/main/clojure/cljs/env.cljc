@@ -41,7 +41,8 @@ state that is accessed/maintained by many different components."}
 (defn default-compiler-env
   ([] (default-compiler-env {}))
   ([options]
-     (atom (merge {:options options}
+     (atom (merge {:cljs.analyzer/namespaces {'cljs.user {:name 'cljs.user}}
+                   :options options}
              #?(:clj {:js-dependency-index (js-dependency-index options)})))))
 
 #?(:clj
