@@ -23,9 +23,14 @@
   (binding [*print-fn* *print-err-fn*]
     (apply println args)))
 
+(defn ns->relpath
+  "Given a namespace as a symbol return the relative path sans extension"
+  [ns-sym]
+  (string/replace (ana/munge-path ns-sym) \. \/))
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to load libraries.
-  Whatever function *load-fn* is bound to will be passed a library name
+  Whatever function *load-fn* is bound to will be passed a munged library name
   (a string) and a callback. The callback should be invoked with the source of
   the library (a string)."
     :dynamic true}
@@ -72,7 +77,7 @@
      (reset! *loaded* #{}))
    (when-not (contains? @*loaded* name)
      (let [env (:*env* bound-vars)]
-       (*load-fn* name
+       (*load-fn* (ns->relpath name)
          (fn [source]
            (if source
              (eval-str* bound-vars source opts
@@ -137,7 +142,7 @@
          (let [dep (first deps)]
            (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                          (contains? (:js-dependency-index compiler) (name dep)))
-             (*load-fn* name
+             (*load-fn* (ns->relpath name)
                (fn [source]
                  (if-not (nil? source)
                    (analyze* bound-vars source opts
