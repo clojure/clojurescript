@@ -15,6 +15,17 @@
 ;; =============================================================================
 ;; Useful Utilities
 
+(defn empty-state
+  "Creates an empty compilation state Atom<Map>."
+  []
+  (env/default-compiler-env))
+
+(defmacro with-state
+  "Run the body with the given compilation state Atom<Map>."
+  [state body]
+  `(env/with-compiler-env ~state
+     ~@body))
+
 (defn empty-env
   "Creates an empty analysis environment."
   []
@@ -26,6 +37,11 @@
   (let [no-warnings (zipmap (keys ana/*cljs-warnings*) (repeat false))]
     `(binding [ana/*cljs-warnings* ~no-warnings]
        ~@body)))
+
+(defn get-options
+  "Return the compiler options from compiler state."
+  []
+  (get @env/*compiler* :options))
 
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
