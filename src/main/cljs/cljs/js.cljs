@@ -291,7 +291,7 @@
                  (ns-side-effects bound-vars aenv ast opts
                    (fn [_] (compile-loop)))
                  (recur)))
-             (cb (.toString cb)))))))))
+             (cb (*eval-fn* (.toString cb))))))))))
 
 (defn eval-str
   ([env source cb] (eval-str env source cb))
