@@ -259,7 +259,8 @@
              (cb (.toString sb)))))))))
 
 (defn compile
-  ([env source cb] (compile env source cb))
+  ([env source cb]
+   (compile env source nil cb))
   ([env source opts cb]
     (compile*
       {:*compiler*     env
@@ -294,7 +295,8 @@
              (cb (*eval-fn* (.toString cb))))))))))
 
 (defn eval-str
-  ([env source cb] (eval-str env source cb))
+  ([env source cb]
+   (eval-str env source nil cb))
   ([env source opts cb]
    (eval-str*
      {:*compiler*     env
