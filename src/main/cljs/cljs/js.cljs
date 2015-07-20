@@ -123,7 +123,7 @@
          (let [dep (first deps)]
            (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                          (contains? (:js-dependency-index compiler) (name dep)))
-             (require bound-vars name opts
+             (require bound-vars lib opts
                (fn [_]
                  (load-deps bound-vars lib (next deps) opts cb)))))
          (cb))))))
