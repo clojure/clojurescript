@@ -8,7 +8,8 @@
 
 (ns cljs.js
   (:require-macros [cljs.env.macros :as env])
-  (:require [cljs.env :as env]
+  (:require [clojure.string :as string]
+            [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.tools.reader :as r]
