@@ -178,20 +178,32 @@
   ([bound-vars ana-env ast opts cb]
     (ns-side-effects false bound-vars ana-env ast opts cb))
   ([load bound-vars ana-env {:keys [op] :as ast} opts cb]
+   (when (:verbose opts)
+     (debug-prn "Namespace side effects for" (:name ast)))
    (if (= :ns op)
      (let [{:keys [deps uses requires require-macros use-macros reload reloads]} ast
            env (:*compiler* bound-vars)]
        (letfn [(check-uses-and-load-macros []
                  (when (and (:*analyze-deps* bound-vars) (seq uses))
+                   (when (:verbose opts)
+                     (debug-prn "Checking uses"))
                    (ana/check-uses uses env))
-                 (when (:*load-macros* bound-vars)
-                   (load-macros bound-vars :use-macros use-macros reload reloads opts
-                     (fn []
-                       (load-macros bound-vars :require-macros require-macros reloads reloads opts
-                         (fn []
-                           (when (seq use-macros)
-                             (ana/check-use-macros use-macros env))
-                           (cb ast)))))))]
+                 (if (:*load-macros* bound-vars)
+                   (do
+                     (when (:verobse opts)
+                       (debug-prn "Loading :use-macros"))
+                     (load-macros bound-vars :use-macros use-macros reload reloads opts
+                       (fn []
+                         (when (:verobse opts)
+                           (debug-prn "Loading :require-macros"))
+                         (load-macros bound-vars :require-macros require-macros reloads reloads opts
+                           (fn []
+                             (when (seq use-macros)
+                               (when (:verobse opts)
+                                 (debug-prn "Checking :use-macros"))
+                               (ana/check-use-macros use-macros env))
+                             (cb ast))))))
+                   (cb ast)))]
          (cond
            (and load (seq deps))
            (load-deps bound-vars name deps (dissoc opts :macros-ns)
