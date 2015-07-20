@@ -100,7 +100,7 @@
                  ana/*cljs-ns*    (:*cljs-ns* bound-vars)
                  *ns*             (:*ns* bound-vars)
                  r/*data-readers* (:*data-readers* bound-vars)]
-         (let [form (r/read {:eof eof} rdr)]
+         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
                    ast  (ana/analyze aenv form)]
@@ -265,7 +265,7 @@
                  ana/*cljs-ns*    (:*cljs-ns* bound-vars)
                  *ns*             (:*ns* bound-vars)
                  r/*data-readers* (:*data-readers* bound-vars)]
-         (let [form (r/read {:eof eof} rdr)]
+         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
                    ast  (ana/analyze aenv form)]
@@ -302,7 +302,7 @@
                  ana/*cljs-ns*    (:*cljs-ns* bound-vars)
                  *ns*             (:*ns* bound-vars)
                  r/*data-readers* (:*data-readers* bound-vars)]
-         (let [form (r/read {:eof eof} rdr)]
+         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
                    ast  (ana/analyze aenv form)]
