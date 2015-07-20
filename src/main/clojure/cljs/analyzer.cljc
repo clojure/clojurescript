@@ -406,12 +406,15 @@
            (::namespaces @env/*compiler*)
            default-namespaces)))))
 
-(defn get-namespace [key]
-  (let [ns (get-in @env/*compiler* [::namespaces key])]
-    (if-not (nil? ns)
-      ns
-      (when (= 'cljs.user key)
-        {:name 'cljs.user}))))
+(defn get-namespace
+  ([key]
+    (get-namespace env/*compiler* key))
+  ([cenv key]
+   (let [ns (get-in @cenv [::namespaces key])]
+     (if-not (nil? ns)
+       ns
+       (when (= 'cljs.user key)
+         {:name 'cljs.user})))))
 
 #?(:clj
    (defmacro no-warn [& body]
