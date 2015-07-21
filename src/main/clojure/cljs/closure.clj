@@ -55,7 +55,7 @@
               CommandLineRunner AnonymousFunctionNamingPolicy
               JSModule JSModuleGraph SourceMap ProcessCommonJSModules
               ES6ModuleLoader AbstractCompiler TransformAMDToCJSModule
-              ProcessEs6Modules]
+              ProcessEs6Modules CompilerInput]
            [com.google.javascript.rhino Node]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]
@@ -72,26 +72,30 @@
 (defn random-string [length]
   (apply str (take length (repeatedly random-char))))
 
-(defmacro ^:private compile-if
-  "Evaluate `exp` and if it returns logical true and doesn't error, expand to
-  `then`. Else expand to `else`."
-  [exp then & else]
-  (if (try (eval exp)
-           (catch Throwable _ false))
-    `(do ~then)
-    `(do ~@else)))
+(util/compile-if
+ (.getConstructor ES6ModuleLoader
+   (into-array java.lang.Class
+               [java.util.List java.lang.Iterable]))
+ (do (def is-new-es6-loader? true)
+     (def default-module-root ES6ModuleLoader/DEFAULT_FILENAME_PREFIX))
+ (def is-new-es6-loader? false))
 
-(compile-if
+(util/compile-if
+ (.getConstructor ES6ModuleLoader
+   (into-array java.lang.Class
+               [AbstractCompiler java.lang.String]))
+ (def is-old-es6-loader? true)
+ (def is-old-es6-loader? false))
+
+(util/compile-if
  (and (.getConstructor ProcessCommonJSModules
         (into-array java.lang.Class
                     [com.google.javascript.jscomp.Compiler ES6ModuleLoader]))
-      (.getConstructor ES6ModuleLoader
-        (into-array java.lang.Class
-                    [AbstractCompiler java.lang.String])))
+      (or is-new-es6-loader? is-old-es6-loader?))
  (def can-convert-commonjs? true)
  (def can-convert-commonjs? false))
 
-(compile-if
+(util/compile-if
  (and can-convert-commonjs?
       (.getConstructor TransformAMDToCJSModule
         (into-array java.lang.Class
@@ -99,16 +103,13 @@
  (def can-convert-amd? true)
  (def can-convert-amd? false))
 
-(compile-if
+(util/compile-if
  (and (.getConstructor ProcessEs6Modules
         (into-array java.lang.Class
                     [com.google.javascript.jscomp.Compiler ES6ModuleLoader Boolean/TYPE]))
-      (.getConstructor ES6ModuleLoader
-        (into-array java.lang.Class
-                    [AbstractCompiler java.lang.String])))
+      (or is-new-es6-loader? is-old-es6-loader?))
  (def can-convert-es6? true)
  (def can-convert-es6? false))
-
 
 ;; Closure API
 ;; ===========
@@ -1227,53 +1228,73 @@
       (not (.startsWith path (str "." File/separator))) (str "." File/separator)
       (not (.endsWith path File/separator)) (#(str % File/separator)))))
 
-(defn init-js-module-processing [js-file options]
-  (let [^List externs '()
-        ^SourceFile source-file (js-source-file js-file (slurp js-file))
-        closure-compiler (doto (make-closure-compiler)
-                           (.init externs [source-file] options))
-        ^Node root (.parse closure-compiler source-file)]
-    {:closure-compiler closure-compiler
-     :root root}))
+(util/compile-if is-new-es6-loader?
+  (defn make-es6-loader [source-files]
+    (let [^List module-roots (list default-module-root)
+          ^List compiler-inputs (map #(CompilerInput. %) source-files)]
+      (ES6ModuleLoader. module-roots compiler-inputs)))
+  (defn make-es6-loader [closure-compiler file]
+    (let [module-root (get-js-module-root file)]
+      (ES6ModuleLoader. closure-compiler module-root))))
+
+(defn ^Node get-root-node [file closure-compiler]
+  (let [^CompilerInput input (->> (slurp file)
+                                  (js-source-file file)
+                                  (CompilerInput.))]
+    (.getAstRoot input closure-compiler)))
+
+(defn get-source-files [module-type opts]
+  (->> (:foreign-libs opts)
+       (filter #(= (:module-type %) module-type))
+       (map #(js-source-file (:file %) (slurp (:file %))))))
 
 (defmulti convert-js-module
   "Takes a JavaScript module and rewrites it into a Google Closure-compatible
   form. Returns the source of the new module as a single string."
-  (fn [{module-type :module-type :as js}]
+  (fn [{module-type :module-type :as js} opts]
     (if (and (= module-type :amd) can-convert-amd?)
       ;; AMD modules are converted via CommonJS modules
       :commonjs
       module-type)))
 
-(compile-if can-convert-commonjs?
-  (defmethod convert-js-module :commonjs [js]
-    (let [js-file (:file js)
-          path (.getParent (io/file js-file))
-          module-root (get-js-module-root js-file)
+(util/compile-if can-convert-commonjs?
+  (defmethod convert-js-module :commonjs [js opts]
+    (let [{:keys [file module-type]} js
+          ^List externs '()
+          ^List source-files (get-source-files module-type opts)
           ^CompilerOptions options (CompilerOptions.)
-          {:keys [closure-compiler root]} (init-js-module-processing js-file options)
-          es6-loader (ES6ModuleLoader. closure-compiler module-root)
-          cjs (ProcessCommonJSModules. closure-compiler es6-loader)]
-      (compile-if can-convert-amd?
+          closure-compiler (doto (make-closure-compiler)
+                             (.init externs source-files options))
+          es6-loader (if is-new-es6-loader?
+                       (make-es6-loader source-files)
+                       (make-es6-loader closure-compiler file))
+          cjs (ProcessCommonJSModules. closure-compiler es6-loader)
+          ^Node root (get-root-node file closure-compiler)]
+      (util/compile-if can-convert-amd?
         (when (= (:module-type js) :amd)
           (.process (TransformAMDToCJSModule. closure-compiler) nil root)))
       (.process cjs nil root)
       (.toSource closure-compiler root))))
 
-(compile-if can-convert-es6?
-  (defmethod convert-js-module :es6 [js]
-    (let [js-file (:file js)
-          module-root (get-js-module-root js-file)
+(util/compile-if can-convert-es6?
+  (defmethod convert-js-module :es6 [js opts]
+    (let [{:keys [file module-type]} js
+          ^List externs '()
+          ^List source-files (get-source-files module-type opts)
           ^CompilerOptions options (doto (CompilerOptions.)
                                      (.setLanguageIn CompilerOptions$LanguageMode/ECMASCRIPT6)
                                      (.setLanguageOut CompilerOptions$LanguageMode/ECMASCRIPT5))
-          {:keys [closure-compiler root]} (init-js-module-processing js-file options)
-          es6-loader (ES6ModuleLoader. closure-compiler module-root)
-          cjs (ProcessEs6Modules. closure-compiler es6-loader true)]
+          closure-compiler (doto (make-closure-compiler)
+                             (.init externs source-files options))
+          es6-loader (if is-new-es6-loader?
+                       (make-es6-loader source-files)
+                       (make-es6-loader closure-compiler file))
+          cjs (ProcessEs6Modules. closure-compiler es6-loader true)
+          ^Node root (get-root-node file closure-compiler)]
       (.processFile cjs root)
       (.toSource closure-compiler root))))
 
-(defmethod convert-js-module :default [js]
+(defmethod convert-js-module :default [js opts]
   (ana/warning :unsupported-js-module-type @env/*compiler* js)
   (deps/-source js))
 
@@ -1293,7 +1314,7 @@
     (when-not (.exists out-file)
       (util/mkdirs out-file)
       (if (:module-type js)
-        (spit out-file (convert-js-module js))
+        (spit out-file (convert-js-module js opts))
         (spit out-file (deps/-source js))))
     (if (map? js)
       (merge js ijs)
@@ -1547,21 +1568,20 @@
   options where new modules are passed with :libs option."
   [opts]
   (let [js-modules (filter :module-type (:foreign-libs opts))]
-    (reduce (fn [opts {:keys [file module-type] :as lib}]
+    (reduce (fn [new-opts {:keys [file module-type] :as lib}]
               (if (or (and (= module-type :commonjs) can-convert-commonjs?)
                       (and (= module-type :amd) can-convert-amd?)
                       (and (= module-type :es6) can-convert-es6?))
-                (let [module-name (-> (ProcessCommonJSModules/toModuleName file)
-                                      (string/replace "_" "-"))
-                      ijs (write-javascript opts (deps/load-foreign-library lib))]
+                (let [ijs (write-javascript opts (deps/load-foreign-library lib))
+                      module-name (-> (deps/load-library (:out-file ijs)) first :provides first)]
                   (doseq [provide (:provides ijs)]
                     (swap! env/*compiler*
                       #(update-in % [:js-module-index] assoc provide module-name)))
-                  (-> opts
+                  (-> new-opts
                       (update-in [:libs] (comp vec conj) (:out-file ijs))
                       (update-in [:foreign-libs]
                         (comp vec (fn [libs] (remove #(= (:file %) file) libs))))))
-                opts))
+                new-opts))
             opts js-modules)))
 
 (defn build
