@@ -152,7 +152,9 @@
                  r/*data-readers* (:*data-readers* bound-vars)]
          (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
-             (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                          (:context opts) (assoc :context (:context opts))
+                          (:def-emits-var opts) (assoc :def-emits-var true))
                    ast  (ana/analyze aenv form)]
                (if (= :ns (:op ast))
                  (ns-side-effects bound-vars aenv ast opts
@@ -247,16 +249,16 @@
                    (ana/check-uses uses env))
                  (if (:*load-macros* bound-vars)
                    (do
-                     (when (:verobse opts)
+                     (when (:verbose opts)
                        (debug-prn "Loading :use-macros"))
                      (load-macros bound-vars :use-macros use-macros reload reloads opts
                        (fn []
-                         (when (:verobse opts)
+                         (when (:verbose opts)
                            (debug-prn "Loading :require-macros"))
                          (load-macros bound-vars :require-macros require-macros reloads reloads opts
                            (fn []
                              (when (seq use-macros)
-                               (when (:verobse opts)
+                               (when (:verbose opts)
                                  (debug-prn "Checking :use-macros"))
                                (ana/check-use-macros use-macros env))
                              (cb ast))))))
@@ -323,18 +325,22 @@
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
+;; TODO: ns form handling, source mapping
+
 (defn eval* [bound-vars form opts cb]
   (binding [env/*compiler*   (:*compiler* bound-vars)
             *eval-fn*        (:*eval-fn* bound-vars)
             ana/*cljs-ns*    (:*cljs-ns* bound-vars)
             *ns*             (:*ns* bound-vars)
             r/*data-readers* (:*data-readers* bound-vars)]
-    (let [ana-env (assoc (ana/empty-env)
-                    :ns (ana/get-namespace ana/*cljs-ns*))]
+    (let [aenv (ana/empty-env)
+          aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                 (:context opts) (assoc :context (:context opts))
+                 (:def-emits-var opts) (assoc :def-emits-var true))]
       (cb (*eval-fn*
             {:lang   :clj
              :source (with-out-str
-                       (comp/emit (ana/analyze ana-env form nil opts)))})))))
+                       (comp/emit (ana/analyze aenv form nil opts)))})))))
 
 (defn eval
   "Evaluate a single ClojureScript form. The parameters:
@@ -382,7 +388,9 @@
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
-             (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                          (:context opts) (assoc :context (:context opts))
+                          (:def-emits-var opts) (assoc :def-emits-var true))
                    ast  (ana/analyze aenv form)]
                (.append sb (with-out-str (comp/emit ast)))
                (if (= :ns (:op ast))
@@ -464,7 +472,9 @@
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
-             (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                          (:context opts) (assoc :context (:context opts))
+                          (:def-emits-var opts) (assoc :def-emits-var true))
                    ast  (ana/analyze aenv form)]
                (if (= :ns (:op ast))
                  (do
