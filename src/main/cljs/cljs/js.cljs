@@ -39,6 +39,7 @@
 
   :lang   - the language, :clj or :js
   :source - the source of the library (a string)
+  :name   - optional, use to uniquely identify the script
 
   If the library could not be resolved, the callback should be invoked with
   nil."
