@@ -49,7 +49,7 @@
   (fn [js-source]
     (throw (js/Error. "No *eval-fn* set"))))
 
-(defn empty-env []
+(defn empty-state []
   (env/default-compiler-env))
 
 ;; -----------------------------------------------------------------------------
@@ -87,9 +87,9 @@
              (throw
                (ana/error env
                  (ana/error-message :undeclared-ns
-                   {:ns-sym dep :js-provide (name dep)}))))))))))
+                   {:ns-sym name :js-provide (cljs.core/name name)}))))))))))
 
-(declare ns-side-effects)
+(declare ns-side-effects analyze-deps)
 
 (defn analyze* [bound-vars source opts cb]
   (let [rdr  (rt/string-push-back-reader source)
@@ -111,7 +111,8 @@
              (cb))))))))
 
 (defn load-deps
-  ([bound-vars ana-env lib deps cb] (analyze-deps bound-vars lib deps nil cb))
+  ([bound-vars ana-env lib deps cb]
+   (analyze-deps bound-vars lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
    (let [compiler @(:*compiler* bound-vars)]
      (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
@@ -209,7 +210,7 @@
              check-uses-and-load-macros)
 
            (and (not load) (:*analyze-deps* bound-vars) (seq deps))
-           (analyze-deps bound-vars ana-env lib deps (dissoc opts :macros-ns)
+           (analyze-deps bound-vars ana-env (:name ast) deps (dissoc opts :macros-ns)
              check-uses-and-load-macros)
 
            :else
@@ -217,12 +218,12 @@
      (cb ast))))
 
 (defn analyze
-  ([env source cb]
-   (analyze env source nil cb))
-  ([env source opts cb]
+  ([state source cb]
+   (analyze state source nil cb))
+  ([state source opts cb]
    (analyze*
-     {:*compiler*     env
-      :*cljs-ns*      (or (:ns env) 'cljs.user)
+     {:*compiler*     state
+      :*cljs-ns*      'cljs.user
       :*ns*           (create-ns ana/*cljs-ns*)
       :*data-readers* tags/*cljs-data-readers*}
      source opts cb)))
@@ -230,11 +231,12 @@
 ;; -----------------------------------------------------------------------------
 ;; Emit
 
-(defn emit* [env bound-vars ast cb]
-  (cb (with-out-str (comp/emit ast))))
+(defn emit* [bound-vars ast cb]
+  (binding [env/*compiler* (:*compiler* bound-vars)]
+    (cb (with-out-str (comp/emit ast)))))
 
-(defn emit [env ast cb]
-  (emit* env {} ast cb))
+(defn emit [state ast cb]
+  (emit* {:*compiler* state} ast cb))
 
 ;; -----------------------------------------------------------------------------
 ;; Eval
@@ -252,10 +254,11 @@
               (comp/emit (ana/analyze ana-env form nil opts))))))))
 
 (defn eval
-  ([env form cb] (eval env form nil cb))
-  ([env form opts cb]
+  ([state form cb]
+   (eval state form nil cb))
+  ([state form opts cb]
    (eval*
-     {:*compiler*     env
+     {:*compiler*     state
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
@@ -288,11 +291,11 @@
              (cb (.toString sb)))))))))
 
 (defn compile
-  ([env source cb]
-   (compile env source nil cb))
-  ([env source opts cb]
+  ([state source cb]
+   (compile state source nil cb))
+  ([state source opts cb]
     (compile*
-      {:*compiler*     env
+      {:*compiler*     state
        :*cljs-ns*      'cljs.user
        :*ns*           (create-ns 'cljs.user)
        :*data-readers* tags/*cljs-data-readers*
@@ -330,11 +333,11 @@
                (cb (*eval-fn* js-source))))))))))
 
 (defn eval-str
-  ([env source cb]
-   (eval-str env source nil cb))
-  ([env source opts cb]
+  ([state source cb]
+   (eval-str state source nil cb))
+  ([state source opts cb]
    (eval-str*
-     {:*compiler*     env
+     {:*compiler*     state
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
