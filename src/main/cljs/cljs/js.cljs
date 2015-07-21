@@ -72,10 +72,14 @@
   (fn [js-source]
     (throw (js/Error. "No *eval-fn* set"))))
 
-(defn js-eval [{:keys [source] :as resource}]
+(defn js-eval
+  "A default JavaScript evaluation function."
+  [{:keys [source] :as resource}]
   (js/eval source))
 
 (defn empty-state
+  "Construct an empty compiler state. Required to invoke analyze, compile,
+   eval and eval-str."
   ([]
    (env/default-compiler-env))
   ([init]
@@ -178,9 +182,6 @@
          (cb))))))
 
 (defn analyze-deps
-  "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
-   and opts, compiler options - analyze all of the dependencies. Required to
-   correctly analyze usage of other namespaces."
   ([bound-vars ana-env lib deps cb]
    (analyze-deps bound-vars ana-env lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
@@ -274,6 +275,27 @@
      (cb ast))))
 
 (defn analyze
+  "Analyze ClojureScript source. The compiler state will be populated with
+   the results of analyzes. The parameters:
+
+   state (atom)
+     the compiler state
+
+   source (string)
+     the ClojureScript source
+
+   name (symbol)
+     optional, the name of the source
+
+   opts (map)
+     compilation options.
+
+   :eval-fn - the eval function to invoke, see *eval-fn*
+   :load-fn - library resolution function, see *load-fn*
+
+   cb (function)
+     callback, will be invoked with the evalution result."
+
   ([state source cb]
    (analyze state source nil cb))
   ([state source name cb]
@@ -283,7 +305,9 @@
      {:*compiler*     state
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns ana/*cljs-ns*)
-      :*data-readers* tags/*cljs-data-readers*}
+      :*data-readers* tags/*cljs-data-readers*
+      :*load-fn*      (or (:load-fn opts) *load-fn*)
+      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
      source name opts cb)))
 
 ;; -----------------------------------------------------------------------------
@@ -313,6 +337,22 @@
                        (comp/emit (ana/analyze ana-env form nil opts)))})))))
 
 (defn eval
+  "Evaluate a single ClojureScript form. The parameters:
+
+   state (atom)
+     the compiler state
+
+   form (s-expr)
+     the ClojureScript source
+
+   opts (map)
+     compilation options.
+
+     :eval-fn - the eval function to invoke, see *eval-fn*
+     :load-fn - library resolution function, see *load-fn*
+
+   cb (function)
+     callback, will be invoked with the evalution result."
   ([state form cb]
    (eval state form nil cb))
   ([state form opts cb]
@@ -366,6 +406,25 @@
                (cb (.toString sb))))))))))
 
 (defn compile
+  "Compile ClojureScript source into JavaScript. The parameters:
+
+   state (atom)
+     the compiler state
+
+   source (string)
+     the ClojureScript source
+
+   name (symbol)
+     optional, the name of the source
+
+   opts (map)
+     compilation options.
+
+     :load-fn    - library resolution function, see *load-fn*
+     :source-map - set to true to generate inline source map information
+
+   cb (function)
+     callback, will be invoked with the compilation result (string)."
   ([state source cb]
    (compile state source nil cb))
   ([state source name cb]
@@ -420,6 +479,26 @@
                                :source js-source}))))))))))
 
 (defn eval-str
+  "Evalute ClojureScript source given as a string. The parameters:
+
+  state (atom)
+    the compiler state
+
+  source (string)
+    the ClojureScript source
+
+  name (symbol)
+    optional, the name of the source
+
+  opts (map)
+    compilation options.
+
+    :eval-fn    - eval function to invoke, see *eval-fn*
+    :load-fn    - library resolution function, see *load-fn*
+    :source-map - set to true to generate inline source map information
+
+  cb (function)
+    callback, will be invoked with result of evalution"
   ([state source cb]
    (eval-str state source nil cb))
   ([state source name cb]
