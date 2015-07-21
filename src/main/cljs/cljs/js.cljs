@@ -352,17 +352,17 @@
                  (let [t   (.valueOf (js/Date.))
                        src (str "repl-" t ".cljs")]
                    (.append sb
-                     "\n//# sourceURL=repl-" t ".js"
-                     "\n//# sourceMappingURL=data:application/json;base64,"
-                     (base64/encodeString
-                       (sm/encode
-                         {src (:source-map @comp/*source-map-data*)}
-                         {:lines (+ (:gen-line @comp/*source-map-data*) 3)
-                          :file (str "repl-" t ".js")
-                          :sources-content [(or (:source (meta form))
-                                                ;; handle strings / primitives without metadata
-                                                (with-out-str (pr form)))]})
-                       true))))
+                     (str "\n//# sourceURL=repl-" t ".js"
+                          "\n//# sourceMappingURL=data:application/json;base64,"
+                          (base64/encodeString
+                            (sm/encode
+                              {src (:source-map @comp/*source-map-data*)}
+                              {:lines (+ (:gen-line @comp/*source-map-data*) 3)
+                               :file (str "repl-" t ".js")
+                               :sources-content [(or (:source (meta form))
+                                                     ;; handle strings / primitives without metadata
+                                                     (with-out-str (pr form)))]})
+                            true)))))
                (cb (.toString sb))))))))))
 
 (defn compile
