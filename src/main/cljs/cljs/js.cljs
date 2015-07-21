@@ -360,7 +360,7 @@
                                :file file :sources-content [source]})]
                    (when (:verbose opts) (debug-prn json))
                    (.append sb
-                     (str "\n//# sourceURL=repl-" t ".js"
+                     (str "\n//# sourceURL=" file
                           "\n//# sourceMappingURL=data:application/json;base64,"
                           (base64/encodeString json true)))))
                (cb (.toString sb))))))))))
