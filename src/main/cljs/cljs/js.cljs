@@ -75,7 +75,8 @@
        :*cljs-ns*      'cljs.user
        :*ns*           (create-ns 'cljs.user)
        :*data-readers* tags/*cljs-data-readers*
-       :*eval-fn*      (or (:js-eval opts) js/eval)}
+       :*load-fn*      (or (:load-fn opts) *load-fn*)
+       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
       name opts cb))
   ([bound-vars name opts cb]
    (require bound-vars name nil opts cb))
@@ -86,7 +87,7 @@
      (reset! *loaded* #{}))
    (when-not (contains? @*loaded* name)
      (let [env (:*env* bound-vars)]
-       (*load-fn* (ns->relpath name)
+       ((:*load-fn* bound-vars) (ns->relpath name)
          (fn [resolved]
            (assert (or (map? resolved) (nil? resolved))
              "*load-fn* may only return a map or nil")
@@ -96,7 +97,7 @@
                  :clj (eval-str* bound-vars source opts
                         (fn [ret] (cb true)))
                  :js  (do
-                        (*eval-fn* source)
+                        ((:*eval-fn* bound-vars) source)
                         (cb true))
                  (throw
                    (js/Error.
@@ -161,7 +162,7 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           (*load-fn* (ns->relpath dep)
+           ((:*load-fn* bound-vars) (ns->relpath dep)
              (fn [resolved]
                (assert (or (map? resolved) (nil? resolved))
                  "*load-fn* may only return a map or nil")
@@ -287,7 +288,8 @@
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
-      :*eval-fn*      (or (:js-eval opts) js/eval)}
+      :*load-fn*      (or (:load-fn opts) *load-fn*)
+      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
      form opts cb)))
 
 ;; -----------------------------------------------------------------------------
@@ -326,7 +328,8 @@
        :*data-readers* tags/*cljs-data-readers*
        :*analyze-deps* (or (:analyze-deps opts) true)
        :*load-macros*  (or (:load-macros opts) true)
-       :*eval-fn*      (or (:js-eval opts) js/eval)}
+       :*load-fn*      (or (:load-fn opts) *load-fn*)
+       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
       source opts cb)))
 
 ;; -----------------------------------------------------------------------------
@@ -372,5 +375,6 @@
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (or (:analyze-deps opts) true)
       :*load-macros*  (or (:load-macros opts) true)
-      :*eval-fn*      (or (:js-eval opts) js/eval)}
+      :*load-fn*      (or (:load-fn opts) *load-fn*)
+      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
      source opts cb)))
