@@ -347,11 +347,15 @@
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
                    ast  (ana/analyze aenv form)]
-               (.append sb (with-out-str (comp/emit ast)))
                (if (= :ns (:op ast))
-                 (ns-side-effects true bound-vars aenv ast opts
-                   (fn [_] (compile-loop)))
-                 (recur)))
+                 (do
+                   (.append sb
+                     (str "goog.provide(\"" (munge (:name ast)) "\");\n"))
+                   (ns-side-effects true bound-vars aenv ast opts
+                     (fn [_] (compile-loop))))
+                 (do
+                   (.append sb (with-out-str (comp/emit ast)))
+                   (recur))))
              (let [js-source (.toString sb)]
                (when (:verbose opts)
                  (debug-prn js-source))
