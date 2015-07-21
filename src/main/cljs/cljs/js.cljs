@@ -350,14 +350,15 @@
              (do
                (when (:source-map opts)
                  (let [t   (.valueOf (js/Date.))
-                       src (str "repl-" t ".cljs")]
+                       src (str "repl-" t ".cljs")
+                       smd @comp/*source-map-data*]
                    (.append sb
                      (str "\n//# sourceURL=repl-" t ".js"
                           "\n//# sourceMappingURL=data:application/json;base64,"
                           (base64/encodeString
                             (sm/encode
-                              {src (:source-map @comp/*source-map-data*)}
-                              {:lines (+ (:gen-line @comp/*source-map-data*) 3)
+                              {src (:source-map smd)}
+                              {:lines (+ (:gen-line smd) 3)
                                :file (str "repl-" t ".js")
                                :sources-content [(or (:source (meta form))
                                                      ;; handle strings / primitives without metadata
