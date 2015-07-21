@@ -356,6 +356,7 @@
                        json (sm/encode {src (:source-map smd)}
                               {:lines (+ (:gen-line smd) 3)
                                :file file :sources-content [source]})]
+                   (when (:verbose opts) (debug-prn json))
                    (.append sb
                      (str "\n//# sourceURL=repl-" t ".js"
                           "\n//# sourceMappingURL=data:application/json;base64,"
