@@ -392,13 +392,18 @@
              (do
                (when (:source-map opts)
                  (let [t    (.valueOf (js/Date.))
-                       src  (str "cljs-" t ".cljs")
-                       file (str "cljs-" t ".js")
+                       smn  (if name
+                              (munge name)
+                              (str "cljs-" t))
                        smd  @comp/*source-map-data*
+                       src  (str smn ".cljs")
+                       file (str smn ".js")
                        json (sm/encode {src (:source-map smd)}
                               {:lines (+ (:gen-line smd) 3)
                                :file file :sources-content [source]})]
                    (when (:verbose opts) (debug-prn json))
+                   (swap! env/*compiler* assoc-in
+                     [:source-maps name] (:source-map smd))
                    (.append sb
                      (str "\n//# sourceURL=" file
                           "\n//# sourceMappingURL=data:application/json;base64,"
