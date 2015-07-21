@@ -34,7 +34,13 @@
   Whatever function *load-fn* is bound to will be passed a munged relative
   library path (a string) and a callback. It is up to the implementor to
   orrectly resolve a .cljs, .cljc, or .js file (the order must be respected).
-  The callback should be invoked with the source of the library (a string)."
+  The callback should be invoked with a map of two keys:
+
+  :lang   - the language, :clj or :js
+  :source - the source of the library (a string)
+
+  If the library could not be resolved, the callback should be invoked with
+  nil."
     :dynamic true}
   *load-fn*
   (fn [name cb]
@@ -80,10 +86,18 @@
    (when-not (contains? @*loaded* name)
      (let [env (:*env* bound-vars)]
        (*load-fn* (ns->relpath name)
-         (fn [source]
-           (if source
-             (eval-str* bound-vars source opts
-               (fn [ret] (cb true)))
+         (fn [resolved]
+           (if resolved
+             (let [{:keys [lang source]} resolved]
+               (condp = lang
+                 :clj (eval-str* bound-vars source opts
+                        (fn [ret] (cb true)))
+                 :js  (do
+                        (*eval-fn* source)
+                        (cb true))
+                 (throw
+                   (js/Error.
+                     (str "Invalid :lang specified " lang ", only :clj or :js allowed")))))
              (throw
                (ana/error env
                  (ana/error-message :undeclared-ns
@@ -145,11 +159,17 @@
        (if (seq deps)
          (let [dep (first deps)]
            (*load-fn* (ns->relpath dep)
-             (fn [source]
-               (if-not (nil? source)
-                 (analyze* bound-vars source opts
-                   (fn []
-                     (analyze-deps bound-vars ana-env lib (next deps) opts cb)))
+             (fn [resolved]
+               (if resolved
+                 (let [{:keys [lang source]} resolved]
+                   (condp = lang
+                     :clj (analyze* bound-vars source opts
+                            (fn []
+                              (analyze-deps bound-vars ana-env lib (next deps) opts cb)))
+                     :js  (analyze-deps bound-vars ana-env lib (next deps) opts cb)
+                     (throw
+                       (js/Error.
+                         (str "Invalid :lang specified " lang ", only :clj or :js allowed")))))
                  (throw
                    (ana/error ana-env
                      (ana/error-message :undeclared-ns
