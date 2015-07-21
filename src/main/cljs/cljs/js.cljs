@@ -15,7 +15,9 @@
             [cljs.compiler :as comp]
             [cljs.tools.reader :as r]
             [cljs.tools.reader.reader-types :as rt]
-            [cljs.tagged-literals :as tags])
+            [cljs.tagged-literals :as tags]
+            [goog.crypt.base64 :as base64]
+            [cljs.source-map :as sm])
   (:import [goog.string StringBuffer]))
 
 (js/goog.require "cljs.core$macros")
@@ -78,6 +80,12 @@
    (env/default-compiler-env))
   ([init]
    (doto (empty-state) (swap! init))))
+
+(defn sm-data []
+  (atom
+    {:source-map (sorted-map)
+     :gen-col    0
+     :gen-line   0}))
 
 ;; -----------------------------------------------------------------------------
 ;; Analyze
@@ -212,10 +220,10 @@
                   (get-in reloads [k nsym])
                   (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
         (if k
-          (require bound-vars nsym k opts
+          (require bound-vars nsym k (assoc opts :macros-ns true)
             (fn []
               (load-macros bound-vars k (next macros) reload reloads opts cb)))
-          (require bound-vars nsym opts
+          (require bound-vars nsym (assoc opts :macros-ns true)
             (fn []
               (load-macros bound-vars k (next macros) reload reloads opts cb))))
         ;(intern-macros nsym k)
@@ -324,11 +332,12 @@
         aenv (ana/empty-env)
         sb   (StringBuffer.)]
     ((fn compile-loop []
-       (binding [env/*compiler*   (:*compiler* bound-vars)
-                 *eval-fn*        (:*eval-fn* bound-vars)
-                 ana/*cljs-ns*    (:*cljs-ns* bound-vars)
-                 *ns*             (:*ns* bound-vars)
-                 r/*data-readers* (:*data-readers* bound-vars)]
+       (binding [env/*compiler*         (:*compiler* bound-vars)
+                 *eval-fn*              (:*eval-fn* bound-vars)
+                 ana/*cljs-ns*          (:*cljs-ns* bound-vars)
+                 *ns*                   (:*ns* bound-vars)
+                 r/*data-readers*       (:*data-readers* bound-vars)
+                 comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
@@ -338,7 +347,23 @@
                  (ns-side-effects bound-vars aenv ast opts
                    (fn [_] (compile-loop)))
                  (recur)))
-             (cb (.toString sb)))))))))
+             (do
+               (when (:source-map opts)
+                 (let [t   (.valueOf (js/Date.))
+                       src (str "repl-" t ".cljs")]
+                   (.append sb
+                     "\n//# sourceURL=repl-" t ".js"
+                     "\n//# sourceMappingURL=data:application/json;base64,"
+                     (base64/encodeString
+                       (sm/encode
+                         {src (:source-map @comp/*source-map-data*)}
+                         {:lines (+ (:gen-line @comp/*source-map-data*) 3)
+                          :file (str "repl-" t ".js")
+                          :sources-content [(or (:source (meta form))
+                                                ;; handle strings / primitives without metadata
+                                                (with-out-str (pr form)))]})
+                       true))))
+               (cb (.toString sb))))))))))
 
 (defn compile
   ([state source cb]
@@ -352,7 +377,8 @@
        :*analyze-deps* (or (:analyze-deps opts) true)
        :*load-macros*  (or (:load-macros opts) true)
        :*load-fn*      (or (:load-fn opts) *load-fn*)
-       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
+       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)
+       :*sm-data*      (when (:source-map opts) (sm-data))}
       source opts cb)))
 
 ;; -----------------------------------------------------------------------------
@@ -364,11 +390,12 @@
         aenv (ana/empty-env)
         sb   (StringBuffer.)]
     ((fn compile-loop []
-       (binding [env/*compiler*   (:*compiler* bound-vars)
-                 *eval-fn*        (:*eval-fn* bound-vars)
-                 ana/*cljs-ns*    (:*cljs-ns* bound-vars)
-                 *ns*             (:*ns* bound-vars)
-                 r/*data-readers* (:*data-readers* bound-vars)]
+       (binding [env/*compiler*         (:*compiler* bound-vars)
+                 *eval-fn*              (:*eval-fn* bound-vars)
+                 ana/*cljs-ns*          (:*cljs-ns* bound-vars)
+                 *ns*                   (:*ns* bound-vars)
+                 r/*data-readers*       (:*data-readers* bound-vars)
+                 comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
              (let [aenv (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
@@ -404,5 +431,6 @@
       :*analyze-deps* (or (:analyze-deps opts) true)
       :*load-macros*  (or (:load-macros opts) true)
       :*load-fn*      (or (:load-fn opts) *load-fn*)
-      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
+      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)
+      :*sm-data*      (when (:source-map opts) (sm-data))}
      source name opts cb)))

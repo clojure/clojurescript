@@ -168,6 +168,89 @@
            result)))))
 
 ;; -----------------------------------------------------------------------------
+;; Encoding
+
+(defn lines->segs
+  "Take a nested sorted map encoding line and column information
+   for a file and return a vector of vectors of encoded segments.
+   Each vector represents a line, and the internal vectors are segments
+   representing the contents of the line."
+  [lines]
+  (let [relseg (atom [0 0 0 0 0])]
+    (reduce
+      (fn [segs cols]
+        (swap! relseg
+          (fn [[_ source line col name]]
+            [0 source line col name]))
+        (conj segs
+          (reduce
+            (fn [cols [gcol sidx line col name :as seg]]
+              (let [offset (map - seg @relseg)]
+                (swap! relseg
+                  (fn [[_ _ _ _ lname]]
+                    [gcol sidx line col (or name lname)]))
+                (conj cols (base64-vlq/encode offset))))
+            [] cols)))
+      [] lines)))
+
+(defn encode
+  "Take an internal source map representation represented as nested
+   sorted maps of file, line, column and return a source map v3 JSON
+   string."
+  [m opts]
+  (let [lines          (atom [[]])
+        names->idx     (atom {})
+        name-idx       (atom 0)
+        preamble-lines (take (or (:preamble-line-count opts) 0) (repeat []))
+        info->segv     (fn [info source-idx line col]
+                         (let [segv [(:gcol info) source-idx line col]]
+                           (if-let [name (:name info)]
+                             (let [idx (if-let [idx (get @names->idx name)]
+                                         idx
+                                         (let [cidx @name-idx]
+                                           (swap! names->idx assoc name cidx)
+                                           (swap! name-idx inc)
+                                           cidx))]
+                               (conj segv idx))
+                             segv)))
+        encode-cols    (fn [infos source-idx line col]
+                         (doseq [info infos]
+                           (let [segv  (info->segv info source-idx line col)
+                                 gline (:gline info)
+                                 lc    (count @lines)]
+                             (if (> gline (dec lc))
+                               (swap! lines
+                                 (fn [lines]
+                                   (conj (into lines (repeat (dec (- gline (dec lc))) [])) [segv])))
+                               (swap! lines
+                                 (fn [lines]
+                                   (update-in lines [gline] conj segv)))))))]
+    (doseq [[source-idx [_ lines]] (map-indexed (fn [i v] [i v]) m)]
+      (doseq [[line cols] lines]
+        (doseq [[col infos] cols]
+          (encode-cols infos source-idx line col))))
+    (let [source-map-file-contents
+          (cond-> {"version"   3
+                   "file"      (:file opts)
+                   "sources"   (let [paths (keys m)
+                                     f     (comp
+                                             (if (true? (:source-map-timestamp opts))
+                                               #(str % "?rel=" (.valueOf (js/Date.)))
+                                               identity)
+                                             #(last (string/split % #"/")))]
+                                 (->> paths (map f) (into [])))
+                   "lineCount" (:lines opts)
+                   "mappings"  (->> (lines->segs (concat preamble-lines @lines))
+                                 (map #(string/join "," %))
+                                 (string/join ";"))
+                   "names"     (into []
+                                 (map (set/map-invert @names->idx)
+                                   (range (count @names->idx))))}
+            (:sources-content opts)
+            (assoc "sourcesContent" (:sources-content opts)))]
+      (.stringify js/JSON source-map-file-contents))))
+
+;; -----------------------------------------------------------------------------
 ;; Merging
 
 (defn merge-source-maps
