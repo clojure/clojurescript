@@ -130,8 +130,10 @@
 
 (defn load-deps
   ([bound-vars ana-env lib deps cb]
-   (analyze-deps bound-vars lib deps nil cb))
+   (analyze-deps bound-vars ana-env lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
+   (when (:verbose opts)
+     (debug-prn "Loading dependencies"))
    (let [compiler @(:*compiler* bound-vars)]
      (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
                                     update-in [:dep-path] conj lib)]
@@ -144,7 +146,7 @@
              (debug-prn "Loading" dep))
            (require bound-vars dep opts
              (fn [_]
-               (load-deps bound-vars lib (next deps) opts cb))))
+               (load-deps bound-vars ana-env lib (next deps) opts cb))))
          (cb))))))
 
 (defn analyze-deps
@@ -232,7 +234,7 @@
                    (cb ast)))]
          (cond
            (and load (seq deps))
-           (load-deps bound-vars name deps (dissoc opts :macros-ns)
+           (load-deps bound-vars ana-env (:name ast) deps (dissoc opts :macros-ns)
              check-uses-and-load-macros)
 
            (and (not load) (:*analyze-deps* bound-vars) (seq deps))
