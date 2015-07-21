@@ -137,8 +137,8 @@
 
 (declare ns-side-effects analyze-deps)
 
-(defn analyze* [bound-vars source opts cb]
-  (let [rdr  (rt/string-push-back-reader source)
+(defn analyze* [bound-vars source name opts cb]
+  (let [rdr  (rt/indexing-push-back-reader source 1 name)
         eof  (js-obj)
         aenv (ana/empty-env)]
     ((fn analyze-loop []
@@ -197,9 +197,9 @@
                (assert (or (map? resource) (nil? resource))
                  "*load-fn* may only return a map or nil")
                (if resource
-                 (let [{:keys [lang source]} resource]
+                 (let [{:keys [name lang source]} resource]
                    (condp = lang
-                     :clj (analyze* bound-vars source opts
+                     :clj (analyze* bound-vars source name opts
                             (fn []
                               (analyze-deps bound-vars ana-env lib (next deps) opts cb)))
                      :js  (analyze-deps bound-vars ana-env lib (next deps) opts cb)
@@ -276,13 +276,15 @@
 (defn analyze
   ([state source cb]
    (analyze state source nil cb))
-  ([state source opts cb]
+  ([state source name cb]
+   (analyze state source name nil cb))
+  ([state source name opts cb]
    (analyze*
      {:*compiler*     state
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns ana/*cljs-ns*)
       :*data-readers* tags/*cljs-data-readers*}
-     source opts cb)))
+     source name opts cb)))
 
 ;; -----------------------------------------------------------------------------
 ;; Emit
@@ -326,8 +328,8 @@
 ;; -----------------------------------------------------------------------------
 ;; Compile
 
-(defn compile* [bound-vars source opts cb]
-  (let [rdr  (rt/string-push-back-reader source)
+(defn compile* [bound-vars source name opts cb]
+  (let [rdr  (rt/indexing-push-back-reader source 1 name)
         eof  (js-obj)
         aenv (ana/empty-env)
         sb   (StringBuffer.)]
@@ -366,7 +368,9 @@
 (defn compile
   ([state source cb]
    (compile state source nil cb))
-  ([state source opts cb]
+  ([state source name cb]
+   (compile state source name nil cb))
+  ([state source name opts cb]
     (compile*
       {:*compiler*     state
        :*cljs-ns*      'cljs.user
@@ -377,13 +381,13 @@
        :*load-fn*      (or (:load-fn opts) *load-fn*)
        :*eval-fn*      (or (:eval-fn opts) *eval-fn*)
        :*sm-data*      (when (:source-map opts) (sm-data))}
-      source opts cb)))
+      source name opts cb)))
 
 ;; -----------------------------------------------------------------------------
 ;; Evaluate String
 
 (defn eval-str* [bound-vars source name opts cb]
-  (let [rdr  (rt/string-push-back-reader source)
+  (let [rdr  (rt/indexing-push-back-reader source 1 name)
         eof  (js-obj)
         aenv (ana/empty-env)
         sb   (StringBuffer.)]
