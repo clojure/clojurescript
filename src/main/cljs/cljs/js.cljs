@@ -349,19 +349,17 @@
                  (recur)))
              (do
                (when (:source-map opts)
-                 (let [t   (.valueOf (js/Date.))
-                       src (str "repl-" t ".cljs")
-                       smd @comp/*source-map-data*]
+                 (let [t    (.valueOf (js/Date.))
+                       src  (str "cljs-" t ".cljs")
+                       file (str "cljs-" t ".js")
+                       smd  @comp/*source-map-data*
+                       json (sm/encode {src (:source-map smd)}
+                              {:lines (+ (:gen-line smd) 3)
+                               :file file :sources-content [source]})]
                    (.append sb
                      (str "\n//# sourceURL=repl-" t ".js"
                           "\n//# sourceMappingURL=data:application/json;base64,"
-                          (base64/encodeString
-                            (sm/encode
-                              {src (:source-map smd)}
-                              {:lines (+ (:gen-line smd) 3)
-                               :file (str "repl-" t ".js")
-                               :sources-content [source]})
-                            true)))))
+                          (base64/encodeString json true)))))
                (cb (.toString sb))))))))))
 
 (defn compile
