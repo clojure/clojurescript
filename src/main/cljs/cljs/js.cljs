@@ -349,7 +349,7 @@
                    ast  (ana/analyze aenv form)]
                (.append sb (with-out-str (comp/emit ast)))
                (if (= :ns (:op ast))
-                 (ns-side-effects bound-vars aenv ast opts
+                 (ns-side-effects true bound-vars aenv ast opts
                    (fn [_] (compile-loop)))
                  (recur)))
              (let [js-source (.toString sb)]
