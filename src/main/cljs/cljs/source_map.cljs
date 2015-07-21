@@ -232,24 +232,24 @@
         (doseq [[col infos] cols]
           (encode-cols infos source-idx line col))))
     (let [source-map-file-contents
-          (cond-> {"version"   3
-                   "file"      (:file opts)
-                   "sources"   (let [paths (keys m)
-                                     f     (comp
-                                             (if (true? (:source-map-timestamp opts))
-                                               #(str % "?rel=" (.valueOf (js/Date.)))
-                                               identity)
-                                             #(last (string/split % #"/")))]
-                                 (->> paths (map f) (into [])))
-                   "lineCount" (:lines opts)
-                   "mappings"  (->> (lines->segs (concat preamble-lines @lines))
-                                 (map #(string/join "," %))
-                                 (string/join ";"))
-                   "names"     (into []
-                                 (map (set/map-invert @names->idx)
-                                   (range (count @names->idx))))}
+          (cond-> #js {"version"   3
+                       "file"      (:file opts)
+                       "sources"   (let [paths (keys m)
+                                         f     (comp
+                                                 (if (true? (:source-map-timestamp opts))
+                                                   #(str % "?rel=" (.valueOf (js/Date.)))
+                                                   identity)
+                                                 #(last (string/split % #"/")))]
+                                     (->> paths (map f) (into-array)))
+                       "lineCount" (:lines opts)
+                       "mappings"  (->> (lines->segs (concat preamble-lines @lines))
+                                     (map #(string/join "," %))
+                                     (string/join ";"))
+                       "names"     (into-array
+                                     (map (set/map-invert @names->idx)
+                                       (range (count @names->idx))))}
             (:sources-content opts)
-            (assoc "sourcesContent" (:sources-content opts)))]
+            (gobj/set "sourcesContent" (:sources-content opts)))]
       (.stringify js/JSON source-map-file-contents))))
 
 ;; -----------------------------------------------------------------------------
