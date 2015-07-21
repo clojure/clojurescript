@@ -140,11 +140,11 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
-                         (contains? (:js-dependency-index compiler) (name dep)))
-             (require bound-vars lib opts
-               (fn [_]
-                 (load-deps bound-vars lib (next deps) opts cb)))))
+           (when (:verbose opts)
+             (debug-prn "Loading" dep))
+           (require bound-vars dep opts
+             (fn [_]
+               (load-deps bound-vars lib (next deps) opts cb))))
          (cb))))))
 
 (defn analyze-deps
