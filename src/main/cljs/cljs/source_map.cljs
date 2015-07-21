@@ -249,7 +249,7 @@
                                      (map (set/map-invert @names->idx)
                                        (range (count @names->idx))))}
             (:sources-content opts)
-            (doto (gobj/set "sourcesContent" (:sources-content opts))))]
+            (doto (gobj/set "sourcesContent" (into-array (:sources-content opts)))))]
       (.stringify js/JSON source-map-file-contents))))
 
 ;; -----------------------------------------------------------------------------
