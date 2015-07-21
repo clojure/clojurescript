@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.source-map
-  (:require [clojure.string :as string]
+  (:require [goog.object :as gobj]
+            [clojure.string :as string]
             [clojure.set :as set]
             [cljs.source-map.base64-vlq :as base64-vlq]))
 
@@ -55,11 +56,11 @@
   [seg source-map]
   (let [[gcol source line col name] seg]
    {:gcol   gcol
-    :source (aget (.split (aget source-map "sources" source) "?") 0)
+    :source (aget (.split (gobj/get source-map "sources" source) "?") 0)
     :line   line
     :col    col
     :name   (when-let [name (-> seg meta :name)]
-              (aget source-map "names" name))}))
+              (gobj/get source-map "names" name))}))
 
 (defn seg-combine
   "Combine a source map segment vector and a relative
@@ -100,38 +101,39 @@
   mapping original ClojureScript source locations to the generated
   JavaScript."
   ([source-map]
-     (decode-reverse (aget source-map "mappings") source-map))
+   (decode-reverse
+     (gobj/get source-map "mappings") source-map))
   ([mappings source-map]
-     (let [sources (aget source-map "sources")
-           relseg-init [0 0 0 0 0]
-           lines (seq (string/split mappings #";"))]
-       (loop [gline 0
-              lines lines
-              relseg relseg-init
-              result (sorted-map-by (source-compare sources))]
-         (if lines
-           (let [line (first lines)
+   (let [sources     (gobj/get source-map "sources")
+         relseg-init [0 0 0 0 0]
+         lines       (seq (string/split mappings #";"))]
+     (loop [gline  0
+            lines  lines
+            relseg relseg-init
+            result (sorted-map-by (source-compare sources))]
+       (if lines
+         (let [line (first lines)
+               [result relseg]
+               (if (string/blank? line)
                  [result relseg]
-                 (if (string/blank? line)
-                   [result relseg]
-                   (let [segs (seq (string/split line #","))]
-                     (loop [segs segs relseg relseg result result]
-                       (if segs
-                         (let [seg (first segs)
-                               nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
-                           (recur (next segs) nrelseg
-                             (update-reverse-result result (seg->map nrelseg source-map) gline)))
-                         [result relseg]))))]
-             (recur (inc gline) (next lines) (assoc relseg 0 0) result))
-           result)))))
+                 (let [segs (seq (string/split line #","))]
+                   (loop [segs segs relseg relseg result result]
+                     (if segs
+                       (let [seg (first segs)
+                             nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
+                         (recur (next segs) nrelseg
+                           (update-reverse-result result (seg->map nrelseg source-map) gline)))
+                       [result relseg]))))]
+           (recur (inc gline) (next lines) (assoc relseg 0 0) result))
+         result)))))
 
 (defn update-result
   "Helper for decode. Take a source map and update it based on a
   segment map."
   [result segmap gline]
   (let [{:keys [gcol source line col name]} segmap
-        d {:line line
-           :col col
+        d {:line   line
+           :col    col
            :source source}
         d (if name (assoc d :name name) d)]
     (update-in result [gline]
@@ -145,11 +147,11 @@
   generated JavaScript source locations to the original
   ClojureScript."
   ([source-map]
-     (decode (aget source-map "mappings") source-map))
+     (decode (gobj/get source-map "mappings") source-map))
   ([mappings source-map]
-     (let [sources (aget source-map "sources")
+     (let [sources     (gobj/get source-map "sources")
            relseg-init [0 0 0 0 0]
-           lines (seq (string/split mappings #";"))]
+           lines       (seq (string/split mappings #";"))]
        (loop [gline 0 lines lines relseg relseg-init result {}]
          (if lines
            (let [line (first lines)
@@ -159,7 +161,7 @@
                    (let [segs (seq (string/split line #","))]
                      (loop [segs segs relseg relseg result result]
                        (if segs
-                         (let [seg (first segs)
+                         (let [seg     (first segs)
                                nrelseg (seg-combine (base64-vlq/decode seg) relseg)]
                            (recur (next segs) nrelseg
                              (update-result result (seg->map nrelseg source-map) gline)))
