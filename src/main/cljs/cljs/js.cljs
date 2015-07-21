@@ -73,8 +73,11 @@
 (defn js-eval [{:keys [source] :as resource}]
   (js/eval source))
 
-(defn empty-state []
-  (env/default-compiler-env))
+(defn empty-state
+  ([]
+   (env/default-compiler-env))
+  ([init]
+   (doto (empty-state) (swap! init))))
 
 ;; -----------------------------------------------------------------------------
 ;; Analyze
