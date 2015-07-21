@@ -31,17 +31,23 @@
   (string/replace (ana/munge-path ns-sym) \. \/))
 
 (defonce
-  ^{:doc "Each runtime environment provides a different way to load source.
-  Whatever function *load-fn* is bound to will be passed a munged relative
-  library path (a string) and a callback. It is up to the implementor to
-  orrectly resolve a .cljs, .cljc, or .js file (the order must be respected).
-  The callback should be invoked with a map of two keys:
+  ^{:doc "Each runtime environment provides a different way to load a library.
+  Whatever function *load-fn* is bound to will be passed two arguments - a
+  map and a callback function: The map should have the following keys:
+
+  :name   - the name of the library (a symbol)
+  :path   - munged relative library path (a string)
+
+  It is up to the implementor to correctly resolve the corresponding .cljs,
+  .cljc, or .js resource (the order must be respected). Upon resolution the
+  callback should be invoked with a map containing the following keys:
 
   :lang   - the language, :clj or :js
   :source - the source of the library (a string)
-  :name   - optional, use to uniquely identify the script
+  :name   - optional, used to uniquely identify the script
+  :path   - optional, relative URL style path representing location
 
-  If the library could not be resolved, the callback should be invoked with
+  If the resource could not be resolved, the callback should be invoked with
   nil."
     :dynamic true}
   *load-fn*
@@ -50,12 +56,22 @@
 
 (defonce
   ^{:doc "Each runtime environment provides various ways to eval JavaScript
-  source. Whatever function *eval-fn* is bound to will be passed source to eval
-  (a string). The result of eval will be passed back immediately to the caller."
+  source. Whatever function *eval-fn* is bound to will be passed a map
+  containing the following keys:
+
+  :lang   - the language, :clj or :js
+  :source - the source of the library (a string)
+  :name   - optional, used to unique identify the script
+  :path   - optional, relative URL style path representing location
+
+  The result of evaluation should be the return value."
     :dynamic true}
   *eval-fn*
   (fn [js-source]
     (throw (js/Error. "No *eval-fn* set"))))
+
+(defn js-eval [{:keys [source] :as resource}]
+  (js/eval source))
 
 (defn empty-state []
   (env/default-compiler-env))
@@ -88,17 +104,17 @@
      (reset! *loaded* #{}))
    (when-not (contains? @*loaded* name)
      (let [env (:*env* bound-vars)]
-       ((:*load-fn* bound-vars) (ns->relpath name)
-         (fn [resolved]
-           (assert (or (map? resolved) (nil? resolved))
+       ((:*load-fn* bound-vars) {:name name :path (ns->relpath name)}
+         (fn [resource]
+           (assert (or (map? resource) (nil? resource))
              "*load-fn* may only return a map or nil")
-           (if resolved
-             (let [{:keys [lang source]} resolved]
+           (if resource
+             (let [{:keys [lang source]} resource]
                (condp = lang
                  :clj (eval-str* bound-vars source opts
                         (fn [ret] (cb true)))
                  :js  (do
-                        ((:*eval-fn* bound-vars) source)
+                        ((:*eval-fn* bound-vars) resource)
                         (cb true))
                  (throw
                    (js/Error.
@@ -165,12 +181,12 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           ((:*load-fn* bound-vars) (ns->relpath dep)
-             (fn [resolved]
-               (assert (or (map? resolved) (nil? resolved))
+           ((:*load-fn* bound-vars) {:name dep :path (ns->relpath dep)}
+             (fn [resource]
+               (assert (or (map? resource) (nil? resource))
                  "*load-fn* may only return a map or nil")
-               (if resolved
-                 (let [{:keys [lang source]} resolved]
+               (if resource
+                 (let [{:keys [lang source]} resource]
                    (condp = lang
                      :clj (analyze* bound-vars source opts
                             (fn []
@@ -279,8 +295,9 @@
     (let [ana-env (assoc (ana/empty-env)
                     :ns (ana/get-namespace ana/*cljs-ns*))]
       (cb (*eval-fn*
-            (with-out-str
-              (comp/emit (ana/analyze ana-env form nil opts))))))))
+            {:lang   :clj
+             :source (with-out-str
+                       (comp/emit (ana/analyze ana-env form nil opts)))})))))
 
 (defn eval
   ([state form cb]
@@ -338,7 +355,7 @@
 ;; -----------------------------------------------------------------------------
 ;; Evaluate String
 
-(defn eval-str* [bound-vars source opts cb]
+(defn eval-str* [bound-vars source name opts cb]
   (let [rdr  (rt/string-push-back-reader source)
         eof  (js-obj)
         aenv (ana/empty-env)
@@ -365,12 +382,17 @@
              (let [js-source (.toString sb)]
                (when (:verbose opts)
                  (debug-prn js-source))
-               (cb (*eval-fn* js-source))))))))))
+               (cb (*eval-fn* {:lang   :clj
+                               :name   name
+                               :path   (ns->relpath name)
+                               :source js-source}))))))))))
 
 (defn eval-str
   ([state source cb]
    (eval-str state source nil cb))
-  ([state source opts cb]
+  ([state source name cb]
+   (eval-str state source name nil cb))
+  ([state source opts name cb]
    (eval-str*
      {:*compiler*     state
       :*cljs-ns*      'cljs.user
@@ -380,4 +402,4 @@
       :*load-macros*  (or (:load-macros opts) true)
       :*load-fn*      (or (:load-fn opts) *load-fn*)
       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
-     source opts cb)))
+     source name opts cb)))
