@@ -109,9 +109,9 @@
            (assert (or (map? resource) (nil? resource))
              "*load-fn* may only return a map or nil")
            (if resource
-             (let [{:keys [lang source]} resource]
+             (let [{:keys [name lang source]} resource]
                (condp = lang
-                 :clj (eval-str* bound-vars source opts
+                 :clj (eval-str* bound-vars source name opts
                         (fn [ret] (cb true)))
                  :js  (do
                         ((:*eval-fn* bound-vars) resource)
