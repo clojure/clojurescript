@@ -87,6 +87,8 @@
      (let [env (:*env* bound-vars)]
        (*load-fn* (ns->relpath name)
          (fn [resolved]
+           (assert (or (map? resolved) (nil? resolved))
+             "*load-fn* may only return a map or nil")
            (if resolved
              (let [{:keys [lang source]} resolved]
                (condp = lang
@@ -160,6 +162,8 @@
          (let [dep (first deps)]
            (*load-fn* (ns->relpath dep)
              (fn [resolved]
+               (assert (or (map? resolved) (nil? resolved))
+                 "*load-fn* may only return a map or nil")
                (if resolved
                  (let [{:keys [lang source]} resolved]
                    (condp = lang
