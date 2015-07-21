@@ -360,9 +360,7 @@
                               {src (:source-map smd)}
                               {:lines (+ (:gen-line smd) 3)
                                :file (str "repl-" t ".js")
-                               :sources-content [(or (:source (meta form))
-                                                     ;; handle strings / primitives without metadata
-                                                     (with-out-str (pr form)))]})
+                               :sources-content [source]})
                             true)))))
                (cb (.toString sb))))))))))
 
