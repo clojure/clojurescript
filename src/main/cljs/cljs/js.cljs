@@ -240,13 +240,9 @@
       (let [k (or (k reload)
                   (get-in reloads [k nsym])
                   (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
-        (if k
-          (require bound-vars nsym k (assoc opts :macros-ns true)
-            (fn []
-              (load-macros bound-vars k (next macros) reload reloads opts cb)))
-          (require bound-vars nsym (assoc opts :macros-ns true)
-            (fn []
-              (load-macros bound-vars k (next macros) reload reloads opts cb))))
+        (require bound-vars nsym k (assoc opts :macros-ns true)
+          (fn []
+            (load-macros bound-vars k (next macros) reload reloads opts cb)))
         ;(intern-macros nsym k)
         ))
     (cb)))
@@ -416,8 +412,9 @@
                    (fn [_] (compile-loop)))
                  (recur)))
              (do
-               (append-source-map env/*compiler*
-                 name source sb @comp/*source-map-data* opts)
+               (when (:source-map opts)
+                 (append-source-map env/*compiler*
+                   name source sb @comp/*source-map-data* opts))
                (cb (.toString sb))))))))))
 
 (defn compile
@@ -495,8 +492,9 @@
                               :source js-source}]
                (when (:verbose opts)
                  (debug-prn js-source))
-               (append-source-map env/*compiler*
-                 name source sb @comp/*source-map-data* opts)
+               (when (:source-map opts)
+                 (append-source-map env/*compiler*
+                   name source sb @comp/*source-map-data* opts))
                (cb {:ns ns :value (*eval-fn* evalm)}))))))
       (:*cljs-ns* bound-vars))))
 
