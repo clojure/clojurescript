@@ -486,13 +486,14 @@
                  (do
                    (.append sb (with-out-str (comp/emit ast)))
                    (recur ns'))))
-             (let [js-source (.toString sb)]
+             (let [js-source (.toString sb)
+                   evalm     {:lang   :clj
+                              :name   name
+                              :path   (ns->relpath name)
+                              :source js-source}]
                (when (:verbose opts)
                  (debug-prn js-source))
-               (cb (*eval-fn* {:lang   :clj
-                               :name   name
-                               :path   (ns->relpath name)
-                               :source js-source})))))))
+               (cb {:ns ns :value (*eval-fn* evalm)}))))))
       (:*cljs-ns* bound-vars))))
 
 (defn eval-str
