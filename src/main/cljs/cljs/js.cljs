@@ -463,35 +463,37 @@
         eof  (js-obj)
         aenv (ana/empty-env)
         sb   (StringBuffer.)]
-    ((fn compile-loop []
+    ((fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
-                 ana/*cljs-ns*          (:*cljs-ns* bound-vars)
-                 *ns*                   (:*ns* bound-vars)
+                 ana/*cljs-ns*          ns
+                 *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
            (if-not (identical? eof form)
-             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ns))
                           (:context opts) (assoc :context (:context opts))
                           (:def-emits-var opts) (assoc :def-emits-var true))
-                   ast  (ana/analyze aenv form)]
+                   ast  (ana/analyze aenv form)
+                   ns'  ana/*cljs-ns*]
                (if (= :ns (:op ast))
                  (do
                    (.append sb
                      (str "goog.provide(\"" (munge (:name ast)) "\");\n"))
                    (ns-side-effects true bound-vars aenv ast opts
-                     (fn [_] (compile-loop))))
+                     (fn [_] (compile-loop ns'))))
                  (do
                    (.append sb (with-out-str (comp/emit ast)))
-                   (recur))))
+                   (recur ns'))))
              (let [js-source (.toString sb)]
                (when (:verbose opts)
                  (debug-prn js-source))
                (cb (*eval-fn* {:lang   :clj
                                :name   name
                                :path   (ns->relpath name)
-                               :source js-source}))))))))))
+                               :source js-source})))))))
+      (:*cljs-ns* bound-vars))))
 
 (defn eval-str
   "Evalute ClojureScript source given as a string. The parameters:
