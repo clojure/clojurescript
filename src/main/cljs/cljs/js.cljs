@@ -91,6 +91,24 @@
      :gen-col    0
      :gen-line   0}))
 
+(defn append-source-map [state name source sb sm-data opts]
+   (let [t    (.valueOf (js/Date.))
+         smn  (if name
+                (munge name)
+                (str "cljs-" t))
+         src  (str smn ".cljs")
+         file (str smn ".js")
+         json (sm/encode {src (:source-map sm-data)}
+                {:lines (+ (:gen-line sm-data) 3)
+                 :file file :sources-content [source]})]
+     (when (:verbose opts) (debug-prn json))
+     (swap! state assoc-in
+       [:source-maps name] (:source-map sm-data))
+     (.append sb
+       (str "\n//# sourceURL=" file
+            "\n//# sourceMappingURL=data:application/json;base64,"
+            (base64/encodeString json true)))))
+
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
@@ -398,24 +416,8 @@
                    (fn [_] (compile-loop)))
                  (recur)))
              (do
-               (when (:source-map opts)
-                 (let [t    (.valueOf (js/Date.))
-                       smn  (if name
-                              (munge name)
-                              (str "cljs-" t))
-                       smd  @comp/*source-map-data*
-                       src  (str smn ".cljs")
-                       file (str smn ".js")
-                       json (sm/encode {src (:source-map smd)}
-                              {:lines (+ (:gen-line smd) 3)
-                               :file file :sources-content [source]})]
-                   (when (:verbose opts) (debug-prn json))
-                   (swap! env/*compiler* assoc-in
-                     [:source-maps name] (:source-map smd))
-                   (.append sb
-                     (str "\n//# sourceURL=" file
-                          "\n//# sourceMappingURL=data:application/json;base64,"
-                          (base64/encodeString json true)))))
+               (append-source-map env/*compiler*
+                 name source sb @comp/*source-map-data* opts)
                (cb (.toString sb))))))))))
 
 (defn compile
@@ -493,6 +495,8 @@
                               :source js-source}]
                (when (:verbose opts)
                  (debug-prn js-source))
+               (append-source-map env/*compiler*
+                 name source sb @comp/*source-map-data* opts)
                (cb {:ns ns :value (*eval-fn* evalm)}))))))
       (:*cljs-ns* bound-vars))))
 
