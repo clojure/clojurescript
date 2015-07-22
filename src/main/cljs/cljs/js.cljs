@@ -44,7 +44,7 @@
 (defonce
   ^{:doc "Each runtime environment provides a different way to load a library.
   Whatever function *load-fn* is bound to will be passed two arguments - a
-  map and a callback function: The map should have the following keys:
+  map and a callback function: The map will have the following keys:
 
   :name   - the name of the library (a symbol)
   :path   - munged relative library path (a string)
@@ -55,8 +55,6 @@
 
   :lang   - the language, :clj or :js
   :source - the source of the library (a string)
-  :name   - optional, used to uniquely identify the script
-  :path   - optional, relative URL style path representing location
 
   If the resource could not be resolved, the callback should be invoked with
   nil."
@@ -71,9 +69,8 @@
   containing the following keys:
 
   :lang   - the language, :clj or :js
-  :source - the source of the library (a string)
-  :name   - optional, used to unique identify the script
-  :path   - optional, relative URL style path representing location
+  :source - the source of the library (string)
+  :name   - used to unique identify the script (symbol)
 
   The result of evaluation should be the return value."
     :dynamic true}
@@ -149,7 +146,7 @@
            (assert (or (map? resource) (nil? resource))
              "*load-fn* may only return a map or nil")
            (if resource
-             (let [{:keys [name lang source]} resource]
+             (let [{:keys [lang source]} resource]
                (condp = lang
                  :clj (eval-str* bound-vars source name opts
                         (fn [ret] (cb true)))
