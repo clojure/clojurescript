@@ -122,8 +122,6 @@
   ([name opts cb]
     (require
       {:*compiler*     (env/default-compiler-env)
-       :*cljs-ns*      'cljs.user
-       :*ns*           (create-ns 'cljs.user)
        :*data-readers* tags/*cljs-data-readers*
        :*load-fn*      (or (:load-fn opts) *load-fn*)
        :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
@@ -158,27 +156,6 @@
                    {:ns-sym name :js-provide (cljs.core/name name)}))))))))))
 
 (declare ns-side-effects analyze-deps)
-
-(defn analyze* [bound-vars source name opts cb]
-  (let [rdr  (rt/indexing-push-back-reader source 1 name)
-        eof  (js-obj)
-        aenv (ana/empty-env)]
-    ((fn analyze-loop []
-       (binding [env/*compiler*   (:*compiler* bound-vars)
-                 ana/*cljs-ns*    (:*cljs-ns* bound-vars)
-                 *ns*             (:*ns* bound-vars)
-                 r/*data-readers* (:*data-readers* bound-vars)]
-         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
-           (if-not (identical? eof form)
-             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
-                          (:context opts) (assoc :context (:context opts))
-                          (:def-emits-var opts) (assoc :def-emits-var true))
-                   ast  (ana/analyze aenv form)]
-               (if (= :ns (:op ast))
-                 (ns-side-effects bound-vars aenv ast opts
-                   (fn [_] (analyze-loop)))
-                 (recur)))
-             (cb))))))))
 
 (defn load-deps
   ([bound-vars ana-env lib deps cb]
@@ -290,6 +267,32 @@
            (check-uses-and-load-macros))))
      (cb ast))))
 
+(defn analyze* [bound-vars source name opts cb]
+  (let [rdr        (rt/indexing-push-back-reader source 1 name)
+        eof        (js-obj)
+        aenv       (ana/empty-env)
+        bound-vars (cond-> (merge bound-vars
+                             {:*cljs-ns* 'cljs.user
+                              :*ns* (create-ns ana/*cljs-ns*)})
+                     (:source-map opts) (assoc :*sm-data* (sm-data)))]
+    ((fn analyze-loop []
+       (binding [env/*compiler*         (:*compiler* bound-vars)
+                 ana/*cljs-ns*          (:*cljs-ns* bound-vars)
+                 *ns*                   (:*ns* bound-vars)
+                 r/*data-readers*       (:*data-readers* bound-vars)
+                 comp/*source-map-data* (:*sm-data* bound-vars)]
+         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
+           (if-not (identical? eof form)
+             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                          (:context opts) (assoc :context (:context opts))
+                          (:def-emits-var opts) (assoc :def-emits-var true))
+                   ast  (ana/analyze aenv form)]
+               (if (= :ns (:op ast))
+                 (ns-side-effects bound-vars aenv ast opts
+                   (fn [_] (analyze-loop)))
+                 (recur)))
+             (cb))))))))
+
 (defn analyze
   "Analyze ClojureScript source. The compiler state will be populated with
    the results of analyzes. The parameters:
@@ -319,8 +322,6 @@
   ([state source name opts cb]
    (analyze*
      {:*compiler*     state
-      :*cljs-ns*      'cljs.user
-      :*ns*           (create-ns ana/*cljs-ns*)
       :*data-readers* tags/*cljs-data-readers*
       :*load-fn*      (or (:load-fn opts) *load-fn*)
       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
@@ -389,10 +390,14 @@
 ;; Compile
 
 (defn compile* [bound-vars source name opts cb]
-  (let [rdr  (rt/indexing-push-back-reader source 1 name)
-        eof  (js-obj)
-        aenv (ana/empty-env)
-        sb   (StringBuffer.)]
+  (let [rdr        (rt/indexing-push-back-reader source 1 name)
+        eof        (js-obj)
+        aenv       (ana/empty-env)
+        sb         (StringBuffer.)
+        bound-vars (cond-> (merge bound-vars
+                             {:*cljs-ns* 'cljs.user
+                              :*ns* (create-ns ana/*cljs-ns*)})
+                     (:source-map opts) (assoc :*sm-data* (sm-data)))]
     ((fn compile-loop []
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
@@ -444,8 +449,6 @@
   ([state source name opts cb]
     (compile*
       {:*compiler*     state
-       :*cljs-ns*      'cljs.user
-       :*ns*           (create-ns 'cljs.user)
        :*data-readers* tags/*cljs-data-readers*
        :*analyze-deps* (or (:analyze-deps opts) true)
        :*load-macros*  (or (:load-macros opts) true)
@@ -458,10 +461,14 @@
 ;; Evaluate String
 
 (defn eval-str* [bound-vars source name opts cb]
-  (let [rdr  (rt/indexing-push-back-reader source 1 name)
-        eof  (js-obj)
-        aenv (ana/empty-env)
-        sb   (StringBuffer.)]
+  (let [rdr        (rt/indexing-push-back-reader source 1 name)
+        eof        (js-obj)
+        aenv       (ana/empty-env)
+        sb         (StringBuffer.)
+        bound-vars (cond-> (merge bound-vars
+                             {:*cljs-ns* 'cljs.user
+                              :*ns* (create-ns ana/*cljs-ns*)})
+                     (:source-map opts) (assoc :*sm-data* (sm-data)))]
     ((fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
@@ -526,12 +533,9 @@
   ([state source opts name cb]
    (eval-str*
      {:*compiler*     state
-      :*cljs-ns*      'cljs.user
-      :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (or (:analyze-deps opts) true)
       :*load-macros*  (or (:load-macros opts) true)
       :*load-fn*      (or (:load-fn opts) *load-fn*)
-      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)
-      :*sm-data*      (when (:source-map opts) (sm-data))}
+      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
      source name opts cb)))
