@@ -32,6 +32,15 @@
   [ns-sym]
   (string/replace (ana/munge-path ns-sym) \. \/))
 
+(defn atom? [x]
+  (instance? Atom x))
+
+(defn valid-name? [x]
+  (or (nil? x) (symbol? x) (string? x)))
+
+(defn valid-opts? [x]
+  (or (nil? x) (map? x)))
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to load a library.
   Whatever function *load-fn* is bound to will be passed two arguments - a
@@ -320,6 +329,8 @@
   ([state source name cb]
    (analyze state source name nil cb))
   ([state source name opts cb]
+   {:pre [(atom? state) (string? source)
+          (valid-name? name) (valid-opts? opts) (fn? cb)]}
    (analyze*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
@@ -447,15 +458,17 @@
   ([state source name cb]
    (compile state source name nil cb))
   ([state source name opts cb]
-    (compile*
-      {:*compiler*     state
-       :*data-readers* tags/*cljs-data-readers*
-       :*analyze-deps* (or (:analyze-deps opts) true)
-       :*load-macros*  (or (:load-macros opts) true)
-       :*load-fn*      (or (:load-fn opts) *load-fn*)
-       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)
-       :*sm-data*      (when (:source-map opts) (sm-data))}
-      source name opts cb)))
+   {:pre [(atom? state) (string? source)
+          (valid-name? name) (valid-opts? opts) (fn? cb)]}
+   (compile*
+     {:*compiler*     state
+      :*data-readers* tags/*cljs-data-readers*
+      :*analyze-deps* (or (:analyze-deps opts) true)
+      :*load-macros*  (or (:load-macros opts) true)
+      :*load-fn*      (or (:load-fn opts) *load-fn*)
+      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)
+      :*sm-data*      (when (:source-map opts) (sm-data))}
+     source name opts cb)))
 
 ;; -----------------------------------------------------------------------------
 ;; Evaluate String
@@ -530,7 +543,9 @@
    (eval-str state source nil cb))
   ([state source name cb]
    (eval-str state source name nil cb))
-  ([state source opts name cb]
+  ([state source name opts cb]
+   {:pre [(atom? state) (string? source)
+          (valid-name? name) (valid-opts? opts) (fn? cb)]}
    (eval-str*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
