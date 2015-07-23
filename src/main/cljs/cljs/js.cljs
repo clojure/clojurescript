@@ -160,13 +160,11 @@
             (if resource
               (let [{:keys [lang source]} resource]
                 (condp = lang
-                  :clj (try
-                         (eval-str* bound-vars source name opts
-                           (fn [ret] (cb {:value true})))
-                         (catch :default cause
-                           (cb (wrap-error
-                                 (ana/error env
-                                   (str "Could not require " name) cause)))))
+                  :clj (eval-str* bound-vars source name opts
+                         (fn [res]
+                           (if (:error res)
+                             (cb res)
+                             (cb {:value true}))))
                   :js  (let [res (try
                                    ((:*eval-fn* bound-vars) resource)
                                    (catch :default cause
