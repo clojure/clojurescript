@@ -132,8 +132,8 @@
     (require
       {:*compiler*     (env/default-compiler-env)
        :*data-readers* tags/*cljs-data-readers*
-       :*load-fn*      (or (:load-fn opts) *load-fn*)
-       :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
+       :*load-fn*      (or (:load opts) *load-fn*)
+       :*eval-fn*      (or (:eval opts) *eval-fn*)}
       name opts cb))
   ([bound-vars name opts cb]
    (require bound-vars name nil opts cb))
@@ -385,8 +385,8 @@
    opts (map)
      compilation options.
 
-   :eval-fn - the eval function to invoke, see *eval-fn*
-   :load-fn - library resolution function, see *load-fn*
+   :eval - the eval function to invoke, see *eval-fn*
+   :load - library resolution function, see *load-fn*
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
@@ -403,8 +403,8 @@
    (analyze*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
-      :*load-fn*      (or (:load-fn opts) *load-fn*)
-      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
+      :*load-fn*      (or (:load opts) *load-fn*)
+      :*eval-fn*      (or (:eval opts) *eval-fn*)}
      source name opts cb)))
 
 ;; -----------------------------------------------------------------------------
@@ -449,8 +449,8 @@
    opts (map)
      compilation options.
 
-     :eval-fn - the eval function to invoke, see *eval-fn*
-     :load-fn - library resolution function, see *load-fn*
+     :eval - the eval function to invoke, see *eval-fn*
+     :load - library resolution function, see *load-fn*
 
    cb (function)
      callback, will be invoked with the evalution result."
@@ -462,8 +462,8 @@
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
-      :*load-fn*      (or (:load-fn opts) *load-fn*)
-      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
+      :*load-fn*      (or (:load opts) *load-fn*)
+      :*eval-fn*      (or (:eval opts) *eval-fn*)}
      form opts cb)))
 
 ;; -----------------------------------------------------------------------------
@@ -533,7 +533,7 @@
    opts (map)
      compilation options.
 
-     :load-fn    - library resolution function, see *load-fn*
+     :load       - library resolution function, see *load-fn*
      :source-map - set to true to generate inline source map information
 
    cb (function)
@@ -553,8 +553,8 @@
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (or (:analyze-deps opts) true)
       :*load-macros*  (or (:load-macros opts) true)
-      :*load-fn*      (or (:load-fn opts) *load-fn*)
-      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)
+      :*load-fn*      (or (:load opts) *load-fn*)
+      :*eval-fn*      (or (:eval opts) *eval-fn*)
       :*sm-data*      (when (:source-map opts) (sm-data))}
      source name opts cb)))
 
@@ -640,8 +640,8 @@
   opts (map)
     compilation options.
 
-    :eval-fn    - eval function to invoke, see *eval-fn*
-    :load-fn    - library resolution function, see *load-fn*
+    :eval       - eval function to invoke, see *eval-fn*
+    :load       - library resolution function, see *load-fn*
     :source-map - set to true to generate inline source map information
 
   cb (function)
@@ -660,6 +660,6 @@
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (or (:analyze-deps opts) true)
       :*load-macros*  (or (:load-macros opts) true)
-      :*load-fn*      (or (:load-fn opts) *load-fn*)
-      :*eval-fn*      (or (:eval-fn opts) *eval-fn*)}
+      :*load-fn*      (or (:load opts) *load-fn*)
+      :*eval-fn*      (or (:eval opts) *eval-fn*)}
      source name opts cb)))
