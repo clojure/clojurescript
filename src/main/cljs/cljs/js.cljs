@@ -483,22 +483,38 @@
                  *ns*                   (:*ns* bound-vars)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
-         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
-           (if-not (identical? eof form)
-             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
-                          (:context opts) (assoc :context (:context opts))
-                          (:def-emits-var opts) (assoc :def-emits-var true))
-                   ast  (ana/analyze aenv form)]
-               (.append sb (with-out-str (comp/emit ast)))
-               (if (= :ns (:op ast))
-                 (ns-side-effects bound-vars aenv ast opts
-                   (fn [_] (compile-loop)))
-                 (recur)))
-             (do
-               (when (:source-map opts)
-                 (append-source-map env/*compiler*
-                   name source sb @comp/*source-map-data* opts))
-               (cb (.toString sb))))))))))
+         (let [res (try
+                     {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
+                     (catch :default cause
+                       (wrap-error
+                         (ana/error aenv
+                           (str "Could not compile " name) cause))))]
+           (if (:error res)
+             (cb res)
+             (let [form (:value res)]
+               (if-not (identical? eof form)
+                 (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                              (:context opts) (assoc :context (:context opts))
+                              (:def-emits-var opts) (assoc :def-emits-var true))
+                       ast  (try
+                              (ana/analyze aenv form)
+                              (catch :default cause
+                                (wrap-error
+                                  (ana/error aenv
+                                    (str "Could not compile " name) cause))))]
+                   (.append sb (with-out-str (comp/emit ast)))
+                   (if (= :ns (:op ast))
+                     (ns-side-effects bound-vars aenv ast opts
+                       (fn [res]
+                         (if (:error res)
+                           (cb res)
+                           (compile-loop))))
+                     (recur)))
+                 (do
+                   (when (:source-map opts)
+                     (append-source-map env/*compiler*
+                       name source sb @comp/*source-map-data* opts))
+                   (cb {:value (.toString sb)})))))))))))
 
 (defn compile
   "Compile ClojureScript source into JavaScript. The parameters:
@@ -556,33 +572,52 @@
                  *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
-         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
-           (if-not (identical? eof form)
-             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ns))
-                          (:context opts) (assoc :context (:context opts))
-                          (:def-emits-var opts) (assoc :def-emits-var true))
-                   ast  (ana/analyze aenv form)
-                   ns'  ana/*cljs-ns*]
-               (if (= :ns (:op ast))
-                 (do
-                   (.append sb
-                     (str "goog.provide(\"" (munge (:name ast)) "\");\n"))
-                   (ns-side-effects true bound-vars aenv ast opts
-                     (fn [_] (compile-loop ns'))))
-                 (do
-                   (.append sb (with-out-str (comp/emit ast)))
-                   (recur ns'))))
-             (let [js-source (.toString sb)
-                   evalm     {:lang   :clj
-                              :name   name
-                              :path   (ns->relpath name)
+         (let [res (try
+                     {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
+                     (catch :default cause
+                       (wrap-error
+                         (ana/error aenv
+                           (str "Could not eval " name) cause))))]
+           (if (:error res)
+             (cb res)
+             (let [form (:value res)]
+               (if-not (identical? eof form)
+                 (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ns))
+                              (:context opts) (assoc :context (:context opts))
+                              (:def-emits-var opts) (assoc :def-emits-var true))
+                       res  (try
+                              {:value (ana/analyze aenv form)}
+                              (catch :deafult cause
+                                (wrap-error
+                                  (ana/error aenv
+                                    (str "Could not eval " name) cause))))]
+                   (if (:error res)
+                     (cb res)
+                     (let [ast (:value res)
+                           ns' ana/*cljs-ns*]
+                      (if (= :ns (:op ast))
+                        (do
+                          (.append sb
+                            (str "goog.provide(\"" (munge (:name ast)) "\");\n"))
+                          (ns-side-effects true bound-vars aenv ast opts
+                            (fn [res]
+                              (if (:error res)
+                                (cb res)
+                                (compile-loop ns')))))
+                        (do
+                          (.append sb (with-out-str (comp/emit ast)))
+                          (recur ns'))))))
+                 (let [js-source (.toString sb)
+                       evalm {:lang :clj
+                              :name name
+                              :path (ns->relpath name)
                               :source js-source}]
-               (when (:verbose opts)
-                 (debug-prn js-source))
-               (when (:source-map opts)
-                 (append-source-map env/*compiler*
-                   name source sb @comp/*source-map-data* opts))
-               (cb {:ns ns :value (*eval-fn* evalm)}))))))
+                   (when (:verbose opts)
+                     (debug-prn js-source))
+                   (when (:source-map opts)
+                     (append-source-map env/*compiler*
+                       name source sb @comp/*source-map-data* opts))
+                   (cb {:ns ns :value (*eval-fn* evalm)}))))))))
       (:*cljs-ns* bound-vars))))
 
 (defn eval-str
