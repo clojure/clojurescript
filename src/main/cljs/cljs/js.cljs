@@ -271,27 +271,46 @@
    (if (= :ns op)
      (let [{:keys [deps uses requires require-macros use-macros reload reloads]} ast
            env (:*compiler* bound-vars)]
-       (letfn [(check-uses-and-load-macros []
-                 (when (and (:*analyze-deps* bound-vars) (seq uses))
-                   (when (:verbose opts)
-                     (debug-prn "Checking uses"))
-                   (ana/check-uses uses env))
-                 (if (:*load-macros* bound-vars)
-                   (do
-                     (when (:verbose opts)
-                       (debug-prn "Loading :use-macros"))
-                     (load-macros bound-vars :use-macros use-macros reload reloads opts
-                       (fn []
-                         (when (:verbose opts)
-                           (debug-prn "Loading :require-macros"))
-                         (load-macros bound-vars :require-macros require-macros reloads reloads opts
-                           (fn []
-                             (when (seq use-macros)
-                               (when (:verbose opts)
-                                 (debug-prn "Checking :use-macros"))
-                               (ana/check-use-macros use-macros env))
-                             (cb ast))))))
-                   (cb ast)))]
+       (letfn [(check-uses-and-load-macros [res]
+                 (if (:error res)
+                   (cb res)
+                   (let [res (try
+                               (when (and (:*analyze-deps* bound-vars) (seq uses))
+                                 (when (:verbose opts) (debug-prn "Checking uses"))
+                                 (ana/check-uses uses env)
+                                 {:value nil})
+                               (catch :default cause
+                                 (wrap-error
+                                   (ana/error ana-env
+                                     (str "Could not parse ns form " (:name ast)) cause))))]
+                     (if (:error res)
+                       (cb res)
+                       (if (:*load-macros* bound-vars)
+                        (do
+                          (when (:verbose opts) (debug-prn "Loading :use-macros"))
+                          (load-macros bound-vars :use-macros use-macros reload reloads opts
+                            (fn [res]
+                              (if (:error res)
+                                (cb res)
+                                (do
+                                  (when (:verbose opts) (debug-prn "Loading :require-macros"))
+                                  (load-macros bound-vars :require-macros require-macros reloads reloads opts
+                                    (fn [res]
+                                      (if (:error res)
+                                        (cb res)
+                                        (let [res (try
+                                                    (when (seq use-macros)
+                                                      (when (:verbose opts) (debug-prn "Checking :use-macros"))
+                                                      (ana/check-use-macros use-macros env))
+                                                    {:value nil}
+                                                    (catch :default cause
+                                                      (wrap-error
+                                                        (ana/error ana-env
+                                                          (str "Could not parse ns form " (:name ast)) cause))))]
+                                          (if (:error res)
+                                            (cb res)
+                                            (cb {:value ast})))))))))))
+                        (cb {:value ast}))))))]
          (cond
            (and load (seq deps))
            (load-deps bound-vars ana-env (:name ast) deps (dissoc opts :macros-ns)
@@ -302,8 +321,8 @@
              check-uses-and-load-macros)
 
            :else
-           (check-uses-and-load-macros))))
-     (cb ast))))
+           (check-uses-and-load-macros {:value nil}))))
+     (cb {:value ast}))))
 
 (defn analyze* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
@@ -327,7 +346,8 @@
                    ast  (ana/analyze aenv form)]
                (if (= :ns (:op ast))
                  (ns-side-effects bound-vars aenv ast opts
-                   (fn [_] (analyze-loop)))
+                   (fn [res]
+                     (analyze-loop)))
                  (recur)))
              (cb))))))))
 
