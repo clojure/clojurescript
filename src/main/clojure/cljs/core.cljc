@@ -2827,3 +2827,5 @@
     (core/list 'do
       (cons `defn decl)
       (core/list 'set! `(. ~name ~'-cljs$lang$macro) true))))
+
+#?(:cljs (set! (. defmacro -cljs$lang$macro) true))
