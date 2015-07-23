@@ -246,10 +246,10 @@
                         (ana/error ana-env
                           (ana/error-message :undeclared-ns
                             {:ns-sym dep :js-provide (name dep)})))))))
-             (catch :default e
+             (catch :default cause
                (cb (wrap-error
                      (ana/error ana-env
-                       (str "Could not analyze dep " dep)))))))
+                       (str "Could not analyze dep " dep) cause))))))
          (cb {:value nil}))))))
 
 (defn load-macros [bound-vars k macros reload reloads opts cb]
@@ -358,7 +358,7 @@
                               (:context opts) (assoc :context (:context opts))
                               (:def-emits-var opts) (assoc :def-emits-var true))
                        res  (try
-                              {:value (ana/analyze aenv form)}
+                              {:value (ana/analyze aenv form nil opts)}
                               (catch :default cause
                                 (wrap-error
                                   (ana/error aenv
@@ -517,7 +517,7 @@
                               (:context opts) (assoc :context (:context opts))
                               (:def-emits-var opts) (assoc :def-emits-var true))
                        ast  (try
-                              (ana/analyze aenv form)
+                              (ana/analyze aenv form nil opts)
                               (catch :default cause
                                 (wrap-error
                                   (ana/error aenv
@@ -609,8 +609,8 @@
                               (:context opts) (assoc :context (:context opts))
                               (:def-emits-var opts) (assoc :def-emits-var true))
                        res  (try
-                              {:value (ana/analyze aenv form)}
-                              (catch :deafult cause
+                              {:value (ana/analyze aenv form nil opts)}
+                              (catch :default cause
                                 (wrap-error
                                   (ana/error aenv
                                     (str "Could not eval " name) cause))))]
