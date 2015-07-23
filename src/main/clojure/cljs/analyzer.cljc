@@ -1638,6 +1638,8 @@
           (error env
             (error-message :undeclared-ns-form {:type "var" :lib lib :sym sym})))))))
 
+;; TODO: better error handling here, we should be first checking if the ns
+;; was found
 (defn check-use-macros [use-macros env]
   (doseq [[sym lib] use-macros]
     (when (nil? #?(:clj  (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)
