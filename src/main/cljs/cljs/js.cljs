@@ -83,6 +83,9 @@
   [{:keys [source] :as resource}]
   (js/eval source))
 
+(defn wrap-error [ex]
+  {:error ex})
+
 (defn empty-state
   "Construct an empty compiler state. Required to invoke analyze, compile,
    eval and eval-str."
@@ -141,25 +144,41 @@
      (reset! *loaded* #{}))
    (when-not (contains? @*loaded* name)
      (let [env (:*env* bound-vars)]
-       ((:*load-fn* bound-vars) {:name name :path (ns->relpath name)}
-         (fn [resource]
-           (assert (or (map? resource) (nil? resource))
-             "*load-fn* may only return a map or nil")
-           (if resource
-             (let [{:keys [lang source]} resource]
-               (condp = lang
-                 :clj (eval-str* bound-vars source name opts
-                        (fn [ret] (cb true)))
-                 :js  (do
-                        ((:*eval-fn* bound-vars) resource)
-                        (cb true))
-                 (throw
-                   (js/Error.
-                     (str "Invalid :lang specified " lang ", only :clj or :js allowed")))))
-             (throw
-               (ana/error env
-                 (ana/error-message :undeclared-ns
-                   {:ns-sym name :js-provide (cljs.core/name name)}))))))))))
+       (try
+         ((:*load-fn* bound-vars) {:name name :path (ns->relpath name)}
+          (fn [resource]
+            (assert (or (map? resource) (nil? resource))
+              "*load-fn* may only return a map or nil")
+            (if resource
+              (let [{:keys [lang source]} resource]
+                (condp = lang
+                  :clj (try
+                         (eval-str* bound-vars source name opts
+                           (fn [ret] (cb {:value true})))
+                         (catch :default cause
+                           (cb (wrap-error
+                                 (ana/error env
+                                   (str "Could not require " name) cause)))))
+                  :js  (let [res (try
+                                   ((:*eval-fn* bound-vars) resource)
+                                   (catch :default cause
+                                     (wrap-error
+                                       (ana/error env
+                                         (str "Could not require " name) cause))))]
+                         (if (:error res)
+                           (cb res)
+                           (cb {:value true})))
+                  (cb (wrap-error
+                        (ana/error env
+                          (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))
+              (cb (wrap-error
+                    (ana/error env
+                      (ana/error-message :undeclared-ns
+                        {:ns-sym name :js-provide (cljs.core/name name)})))))))
+         (catch :default cause
+           (cb (wrap-error
+                 (ana/error env
+                   (str "Could not require " name) cause)))))))))
 
 (declare ns-side-effects analyze-deps)
 

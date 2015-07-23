@@ -518,11 +518,12 @@
     (handler warning-type env extra)))
 
 (defn error
-  ([env s] (error env s nil))
-  ([env s cause]
-   (ex-info (message env s)
-            (assoc (source-info env) :tag :cljs/analysis-error)
-            cause)))
+  ([env msg]
+   (error env msg nil))
+  ([env msg cause]
+   (ex-info (message env msg)
+     (assoc (source-info env) :tag :cljs/analysis-error)
+     cause)))
 
 (defn analysis-error?
   #?(:cljs {:tag boolean})
