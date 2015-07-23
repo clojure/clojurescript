@@ -410,22 +410,39 @@
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
-;; TODO: ns form handling, source mapping
-
 (defn eval* [bound-vars form opts cb]
-  (binding [env/*compiler*   (:*compiler* bound-vars)
-            *eval-fn*        (:*eval-fn* bound-vars)
-            ana/*cljs-ns*    (:*cljs-ns* bound-vars)
-            *ns*             (:*ns* bound-vars)
-            r/*data-readers* (:*data-readers* bound-vars)]
-    (let [aenv (ana/empty-env)
-          aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
-                 (:context opts) (assoc :context (:context opts))
-                 (:def-emits-var opts) (assoc :def-emits-var true))]
-      (cb (*eval-fn*
-            {:lang   :clj
-             :source (with-out-str
-                       (comp/emit (ana/analyze aenv form nil opts)))})))))
+  (let [bound-vars (cond-> (merge bound-vars
+                             {:*cljs-ns* 'cljs.user
+                              :*ns* (create-ns ana/*cljs-ns*)})
+                     (:source-map opts) (assoc :*sm-data* (sm-data)))]
+    (binding [env/*compiler*         (:*compiler* bound-vars)
+              *eval-fn*              (:*eval-fn* bound-vars)
+              ana/*cljs-ns*          (:*cljs-ns* bound-vars)
+              *ns*                   (:*ns* bound-vars)
+              r/*data-readers*       (:*data-readers* bound-vars)
+              comp/*source-map-data* (:*sm-data* bound-vars)]
+      (let [aenv (ana/empty-env)
+            aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                   (:context opts) (assoc :context (:context opts))
+                   (:def-emits-var opts) (assoc :def-emits-var true))
+            res  (try
+                   {:value (ana/analyze aenv form nil opts)}
+                   (catch :default cause
+                     (wrap-error
+                       (ana/error aenv
+                         (str "Could not eval " form) cause))))]
+        (if (:error res)
+          (cb res)
+          (let [ast (:value res)]
+            (if (= :ns (:op ast))
+              (ns-side-effects true bound-vars aenv ast opts
+                (fn [res]
+                  (if (:error res)
+                    (cb res)
+                    (let [src (str "goog.provide(\"" (munge (:name ast)) "\")")]
+                      (cb (*eval-fn* {:lang :clj :source src}))))))
+              (let [src (with-out-str (comp/emit ast))]
+                (cb (*eval-fn* {:lang :clj :source src}))))))))))
 
 (defn eval
   "Evaluate a single ClojureScript form. The parameters:
@@ -443,7 +460,10 @@
      :load - library resolution function, see *load-fn*
 
    cb (function)
-     callback, will be invoked with the evalution result."
+     callback, will be invoked with a map. If successful the map will contain
+     a :value key with the result of evalution. If unsuccessful the map wil
+     contain a :error key with an ex-info instance describing the cause of
+     failure."
   ([state form cb]
    (eval state form nil cb))
   ([state form opts cb]
@@ -452,6 +472,8 @@
       :*cljs-ns*      'cljs.user
       :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
+      :*analyze-deps* (or (:analyze-deps opts) true)
+      :*load-macros*  (or (:load-macros opts) true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
      form opts cb)))
