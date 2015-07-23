@@ -24,7 +24,8 @@
                     [clojure.tools.reader :as reader]
                     [clojure.tools.reader.reader-types :as readers]
                     [clojure.edn :as edn])
-     :cljs (:require [clojure.string :as string]
+     :cljs (:require [goog.string :as gstring]
+                     [clojure.string :as string]
                      [clojure.set :as set]
                      [cljs.env :as env]
                      [cljs.tagged-literals :as tags]
@@ -1832,7 +1833,8 @@
 
 (defn macro-ns-name [name]
   (let [name-str (str name)]
-    (if-not (.endsWith name-str "$macros")
+    (if-not #?(:clj  (.endsWith name-str "$macros")
+               :cljs (gstring/endsWith name-str "$macros"))
       (symbol (str name-str "$macros"))
       name)))
 
