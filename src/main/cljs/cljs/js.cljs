@@ -145,6 +145,8 @@
      (swap! *loaded* disj name))
    (when (= :reload-all reload)
      (reset! *loaded* #{}))
+   (when (:verbose opts)
+     (debug-prn (str "Loading " name (when (:macros-ns opts) " macros") " namespace")))
    (when-not (contains? @*loaded* name)
      (let [env (:*env* bound-vars)]
        (try
@@ -193,7 +195,7 @@
    (analyze-deps bound-vars ana-env lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
    (when (:verbose opts)
-     (debug-prn "Loading dependencies"))
+     (debug-prn "Loading dependencies for" lib))
    (let [compiler @(:*compiler* bound-vars)]
      (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
                                     update-in [:dep-path] conj lib)]
@@ -202,8 +204,6 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           (when (:verbose opts)
-             (debug-prn "Loading" dep))
            (require bound-vars dep opts
              (fn [res]
                (if-not (:error res)
@@ -254,18 +254,15 @@
 
 (defn load-macros [bound-vars k macros reload reloads opts cb]
   (if (seq macros)
-    (let [env  (:*compiler* bound-vars)
-          nsym (first (vals macros))]
-      (let [k (or (k reload)
-                  (get-in reloads [k nsym])
-                  (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
-        (require bound-vars nsym k (assoc opts :macros-ns true)
-          (fn [res]
-            (if-not (:error res)
-              (load-macros bound-vars k (next macros) reload reloads opts cb)
-              (cb res))))
-        ;(intern-macros nsym k)
-        ))
+    (let [nsym (first (vals macros))
+          k    (or (k reload)
+                   (get-in reloads [k nsym])
+                   (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
+      (require bound-vars nsym k (assoc opts :macros-ns true)
+        (fn [res]
+          (if-not (:error res)
+            (load-macros bound-vars k (next macros) reload reloads opts cb)
+            (cb res)))))
     (cb {:value nil})))
 
 (defn ns-side-effects
@@ -293,20 +290,20 @@
                        (cb res)
                        (if (:*load-macros* bound-vars)
                         (do
-                          (when (:verbose opts) (debug-prn "Loading :use-macros"))
+                          (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
                           (load-macros bound-vars :use-macros use-macros reload reloads opts
                             (fn [res]
                               (if (:error res)
                                 (cb res)
                                 (do
-                                  (when (:verbose opts) (debug-prn "Loading :require-macros"))
+                                  (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
                                   (load-macros bound-vars :require-macros require-macros reloads reloads opts
                                     (fn [res]
                                       (if (:error res)
                                         (cb res)
                                         (let [res (try
                                                     (when (seq use-macros)
-                                                      (when (:verbose opts) (debug-prn "Checking :use-macros"))
+                                                      (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
                                                       (ana/check-use-macros use-macros env))
                                                     {:value nil}
                                                     (catch :default cause
@@ -588,6 +585,7 @@
                              {:*cljs-ns* 'cljs.user
                               :*ns* (create-ns ana/*cljs-ns*)})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
+    (when (:verbose opts) (debug-prn "Evaluating" name))
     ((fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
