@@ -338,18 +338,36 @@
                  *ns*                   (:*ns* bound-vars)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
-         (let [form (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)]
-           (if-not (identical? eof form)
-             (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
-                          (:context opts) (assoc :context (:context opts))
-                          (:def-emits-var opts) (assoc :def-emits-var true))
-                   ast  (ana/analyze aenv form)]
-               (if (= :ns (:op ast))
-                 (ns-side-effects bound-vars aenv ast opts
-                   (fn [res]
-                     (analyze-loop)))
-                 (recur)))
-             (cb))))))))
+         (let [res (try
+                     {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
+                     (catch :default cause
+                       (wrap-error
+                         (ana/error aenv
+                           (str "Could not analyze " name) cause))))]
+           (if (:error res)
+             (cb res)
+             (let [form (:value res)]
+               (if-not (identical? eof form)
+                 (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
+                              (:context opts) (assoc :context (:context opts))
+                              (:def-emits-var opts) (assoc :def-emits-var true))
+                       res  (try
+                              {:value (ana/analyze aenv form)}
+                              (catch :default cause
+                                (wrap-error
+                                  (ana/error aenv
+                                    (str "Could not analyze " name) cause))))]
+                   (if (:error res)
+                     (cb res)
+                     (let [ast (:value res)]
+                       (if (= :ns (:op ast))
+                         (ns-side-effects bound-vars aenv ast opts
+                           (fn [res]
+                             (if (:error res)
+                               (cb res)
+                               (analyze-loop))))
+                         (recur)))))
+                 (cb {:value nil}))))))))))
 
 (defn analyze
   "Analyze ClojureScript source. The compiler state will be populated with
