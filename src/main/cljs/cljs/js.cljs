@@ -408,16 +408,6 @@
      source name opts cb)))
 
 ;; -----------------------------------------------------------------------------
-;; Emit
-
-(defn emit* [bound-vars ast cb]
-  (binding [env/*compiler* (:*compiler* bound-vars)]
-    (cb (with-out-str (comp/emit ast)))))
-
-(defn emit [state ast cb]
-  (emit* {:*compiler* state} ast cb))
-
-;; -----------------------------------------------------------------------------
 ;; Eval
 
 ;; TODO: ns form handling, source mapping
