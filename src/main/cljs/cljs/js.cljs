@@ -389,8 +389,10 @@
    :load-fn - library resolution function, see *load-fn*
 
    cb (function)
-     callback, will be invoked with the evalution result."
-
+     callback, will be invoked with a map. If successful the map will contain
+     a key :value, the actual value is not meaningful. If unsuccessful the
+     map will contain a key :error with an ex-info instance describing the cause
+     of failure."
   ([state source cb]
    (analyze state source nil cb))
   ([state source name cb]
@@ -535,7 +537,10 @@
      :source-map - set to true to generate inline source map information
 
    cb (function)
-     callback, will be invoked with the compilation result (string)."
+     callback, will be invoked with a map. If successful the map will contain
+     a key :value with the compilation result (string). If unsuccessful the map
+     will contain a key :error with an ex-info instance describing the cause
+     of failure."
   ([state source cb]
    (compile state source nil cb))
   ([state source name cb]
@@ -640,7 +645,9 @@
     :source-map - set to true to generate inline source map information
 
   cb (function)
-    callback, will be invoked with result of evalution"
+    callback, will be invoked with a map. If succesful the map will contain
+    a :value key with the result of evaluation. If unsuccessful will contain
+    a :error key with an ex-info instance describing the cause of failure."
   ([state source cb]
    (eval-str state source nil cb))
   ([state source name cb]
