@@ -71,7 +71,6 @@
   source. Whatever function *eval-fn* is bound to will be passed a map
   containing the following keys:
 
-  :lang   - the language, :clj or :js
   :source - the source of the library (string)
   :name   - used to unique identify the script (symbol)
 
@@ -441,9 +440,9 @@
                   (if (:error res)
                     (cb res)
                     (let [src (str "goog.provide(\"" (munge (:name ast)) "\")")]
-                      (cb (*eval-fn* {:lang :clj :source src}))))))
+                      (cb (*eval-fn* {:source src}))))))
               (let [src (with-out-str (comp/emit ast))]
-                (cb (*eval-fn* {:lang :clj :source src}))))))))))
+                (cb (*eval-fn* {:source src}))))))))))
 
 (defn eval
   "Evaluate a single ClojureScript form. The parameters:
