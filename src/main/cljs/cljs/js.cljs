@@ -47,11 +47,14 @@
   map and a callback function: The map will have the following keys:
 
   :name   - the name of the library (a symbol)
+  :macros - modifier signaling a macros namespace load
   :path   - munged relative library path (a string)
 
   It is up to the implementor to correctly resolve the corresponding .cljs,
-  .cljc, or .js resource (the order must be respected). Upon resolution the
-  callback should be invoked with a map containing the following keys:
+  .cljc, or .js resource (the order must be respected). If :macros is true
+  resolution should only consider .clj or .cljc resources (the order must be
+  respected). Upon resolution the callback should be invoked with a map
+  containing the following keys:
 
   :lang   - the language, :clj or :js
   :source - the source of the library (a string)
@@ -145,7 +148,10 @@
    (when-not (contains? @*loaded* name)
      (let [env (:*env* bound-vars)]
        (try
-         ((:*load-fn* bound-vars) {:name name :path (ns->relpath name)}
+         ((:*load-fn* bound-vars)
+           {:name   name
+            :macros (:macros-ns opts)
+            :path   (ns->relpath name)}
           (fn [resource]
             (assert (or (map? resource) (nil? resource))
               "*load-fn* may only return a map or nil")
