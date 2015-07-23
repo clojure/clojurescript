@@ -199,9 +199,13 @@
            (when (:verbose opts)
              (debug-prn "Loading" dep))
            (require bound-vars dep opts
-             (fn [_]
-               (load-deps bound-vars ana-env lib (next deps) opts cb))))
-         (cb))))))
+             (fn [res]
+               (if-not (:error res)
+                 (load-deps bound-vars ana-env lib (next deps) opts cb)
+                 (cb res)))))
+         (cb {:value nil}))))))
+
+(declare analyze*)
 
 (defn analyze-deps
   ([bound-vars ana-env lib deps cb]
@@ -215,25 +219,32 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           ((:*load-fn* bound-vars) {:name dep :path (ns->relpath dep)}
-             (fn [resource]
-               (assert (or (map? resource) (nil? resource))
-                 "*load-fn* may only return a map or nil")
-               (if resource
-                 (let [{:keys [name lang source]} resource]
-                   (condp = lang
-                     :clj (analyze* bound-vars source name opts
-                            (fn []
-                              (analyze-deps bound-vars ana-env lib (next deps) opts cb)))
-                     :js  (analyze-deps bound-vars ana-env lib (next deps) opts cb)
-                     (throw
-                       (js/Error.
-                         (str "Invalid :lang specified " lang ", only :clj or :js allowed")))))
-                 (throw
-                   (ana/error ana-env
-                     (ana/error-message :undeclared-ns
-                       {:ns-sym dep :js-provide (name dep)})))))))
-         (cb))))))
+           (try
+             ((:*load-fn* bound-vars) {:name dep :path (ns->relpath dep)}
+              (fn [resource]
+                (assert (or (map? resource) (nil? resource))
+                  "*load-fn* may only return a map or nil")
+                (if resource
+                  (let [{:keys [name lang source]} resource]
+                    (condp = lang
+                      :clj (analyze* bound-vars source name opts
+                             (fn [res]
+                               (if-not (:error res)
+                                 (analyze-deps bound-vars ana-env lib (next deps) opts cb)
+                                 (cb res))))
+                      :js (analyze-deps bound-vars ana-env lib (next deps) opts cb)
+                      (wrap-error
+                        (ana/error ana-env
+                          (str "Invalid :lang specified " lang ", only :clj or :js allowed")))))
+                  (cb (wrap-error
+                        (ana/error ana-env
+                          (ana/error-message :undeclared-ns
+                            {:ns-sym dep :js-provide (name dep)})))))))
+             (catch :default e
+               (cb (wrap-error
+                     (ana/error ana-env
+                       (str "Could not analyze dep " dep)))))))
+         (cb {:value nil}))))))
 
 (defn load-macros [bound-vars k macros reload reloads opts cb]
   (if (seq macros)
@@ -243,11 +254,13 @@
                   (get-in reloads [k nsym])
                   (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
         (require bound-vars nsym k (assoc opts :macros-ns true)
-          (fn []
-            (load-macros bound-vars k (next macros) reload reloads opts cb)))
+          (fn [res]
+            (if-not (:error res)
+              (load-macros bound-vars k (next macros) reload reloads opts cb)
+              (cb res))))
         ;(intern-macros nsym k)
         ))
-    (cb)))
+    (cb {:value nil})))
 
 (defn ns-side-effects
   ([bound-vars ana-env ast opts cb]
