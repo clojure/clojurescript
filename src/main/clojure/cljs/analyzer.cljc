@@ -1638,15 +1638,14 @@
           (error env
             (error-message :undeclared-ns-form {:type "var" :lib lib :sym sym})))))))
 
-;; TODO: better error handling here, we should be first checking if the ns
-;; was found
 (defn check-use-macros [use-macros env]
   (doseq [[sym lib] use-macros]
-    (when (nil? #?(:clj  (.findInternedVar ^clojure.lang.Namespace (find-ns lib) sym)
-                   :cljs (.findInternedVar (find-macros-ns lib) sym)))
-      (throw
-        (error env
-          (error-message :undeclared-ns-form {:type "macro" :lib lib :sym sym}))))))
+    (let [the-ns #?(:clj  (find-ns lib)
+                    :cljs (find-macros-ns lib))]
+      (when (or (nil? the-ns) (nil? (.findInternedVar ^clojure.lang.Namespace the-ns sym)))
+        (throw
+          (error env
+            (error-message :undeclared-ns-form {:type "macro" :lib lib :sym sym})))))))
 
 (defn parse-ns-error-msg [spec msg]
   (str msg "; offending spec: " (pr-str spec)))
