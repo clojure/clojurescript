@@ -1723,7 +1723,7 @@
        ~(emit-defrecord &env rsym r fields impls)
        (set! (.-getBasis ~r) (fn [] '[~@fields]))
        (set! (.-cljs$lang$type ~r) true)
-       (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (core/list ~(core/str r))))
+       (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (cljs.core/list ~(core/str r))))
        (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (-write writer# ~(core/str r))))
        ~(build-positional-factory rsym r fields)
        ~(build-map-factory rsym r fields)
