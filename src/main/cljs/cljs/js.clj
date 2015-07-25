@@ -7,9 +7,14 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.js
-  (:require [cljs.env.macros :as env]))
+  (:require [cljs.env :as env]
+            [cljs.env.macros :as menv]
+            [cljs.analyzer :as ana]))
 
 (defmacro with-state
   [state & body]
-  `(env/with-compiler-env ~state
+  `(menv/with-compiler-env ~state
      ~@body))
+
+(defmacro dump-core []
+  `(quote ~(get-in @env/*compiler* [::ana/namespaces 'cljs.core])))

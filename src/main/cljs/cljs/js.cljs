@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.js
-  (:require-macros [cljs.js]
+  (:require-macros [cljs.js :refer [dump-core]]
                    [cljs.env.macros :as env])
   (:require [clojure.string :as string]
             [cljs.env :as env]
@@ -58,6 +58,8 @@
 
   :lang   - the language, :clj or :js
   :source - the source of the library (a string)
+  :cache  - optional, if a :clj namespace has been precompiled to :js, can give
+            an analysis cache for faster loads.
 
   If the resource could not be resolved, the callback should be invoked with
   nil."
@@ -73,6 +75,8 @@
 
   :source - the source of the library (string)
   :name   - used to unique identify the script (symbol)
+  :cache  - if the source was originally ClojureScript, will be given the
+            analysis cache.
 
   The result of evaluation should be the return value."
     :dynamic true}
@@ -92,15 +96,13 @@
   "Construct an empty compiler state. Required to invoke analyze, compile,
    eval and eval-str."
   ([]
-   (env/default-compiler-env))
+   (doto (env/default-compiler-env)
+     (swap! assoc-in [::ana/namespaces 'cljs.core] (dump-core))))
   ([init]
    (doto (empty-state) (swap! init))))
 
-(defn load-ns [pure-state ns cache]
-  (assoc-in pure-state [::ana/namespaces ns] cache))
-
-(defn load-ns! [state ns cache]
-  (assoc-in state [::ana/namespaces ns] cache))
+(defn load-analysis-cache! [state ns cache]
+  (swap! state assoc-in [::ana/namespaces ns] cache))
 
 (defn sm-data []
   (atom
@@ -163,7 +165,7 @@
             (assert (or (map? resource) (nil? resource))
               "*load-fn* may only return a map or nil")
             (if resource
-              (let [{:keys [lang source]} resource]
+              (let [{:keys [lang source cache]} resource]
                 (condp = lang
                   :clj (eval-str* bound-vars source name opts
                          (fn [res]
@@ -172,6 +174,9 @@
                              (cb {:value true}))))
                   :js  (let [res (try
                                    ((:*eval-fn* bound-vars) resource)
+                                   (when cache
+                                     (load-analysis-cache!
+                                       (:*compiler* bound-vars) name cache))
                                    (catch :default cause
                                      (wrap-error
                                        (ana/error env
@@ -639,7 +644,9 @@
                          evalm     {:lang   :clj
                                     :name   name
                                     :path   (ns->relpath name)
-                                    :source js-source}]
+                                    :source js-source
+                                    :cache  (get-in env/*compiler*
+                                              [::ana/namespaces name])}]
                     (when (:verbose opts)
                       (debug-prn js-source))
                     (cb {:ns ns :value (*eval-fn* evalm)})))))))))
