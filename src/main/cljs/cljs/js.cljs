@@ -97,10 +97,10 @@
    (doto (empty-state) (swap! init))))
 
 (defn load-ns [pure-state ns cache]
-  (assoc-in pure-state [:ana/namespaces ns] cache))
+  (assoc-in pure-state [::ana/namespaces ns] cache))
 
 (defn load-ns! [state ns cache]
-  (assoc-in state [:ana/namespaces ns] cache))
+  (assoc-in state [::ana/namespaces ns] cache))
 
 (defn sm-data []
   (atom
