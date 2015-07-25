@@ -34,6 +34,10 @@
   #?(:clj  (Pattern/compile s)
      :cljs (RegExp. s)))
 
+(defn output-directory [opts]
+  #?(:clj  (util/output-directory opts)
+     :cljs (or (:output-dir opts) "out")))
+
 (defmethod parse-stacktrace :default
   [repl-env st err opts] st)
 
@@ -68,7 +72,7 @@
           (string->regex
             ;; if :asset-path specified drop leading slash
             (str "^" (or (and asset-path (string/replace asset-path #"^/" ""))
-                         (util/output-directory opts)) "/"))
+                         (output-directory opts)) "/"))
           ""))
       (if-let [asset-root (:asset-root opts)]
         (string/replace file asset-root "")
