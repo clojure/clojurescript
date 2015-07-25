@@ -30,6 +30,10 @@
   #?(:clj  (.endsWith s0 s1)
      :cljs (gstring/endsWith s0 s1)))
 
+(defn string->regex [s]
+  #?(:clj  (Pattern/compile s)
+     :cljs (RegExp. s)))
+
 (defmethod parse-stacktrace :default
   [repl-env st err opts] st)
 
@@ -56,12 +60,12 @@
   "Given a browser file url convert it into a relative path that can be used
    to locate the original source."
   [{:keys [host host-port port] :as repl-env} file {:keys [asset-path] :as opts}]
-  (let [base-url-pattern (Pattern/compile (str "http://" host ":" (or host-port port) "/"))]
+  (let [base-url-pattern (string->regex (str "http://" host ":" (or host-port port) "/"))]
     (if (re-find base-url-pattern file)
       (-> file
         (string/replace base-url-pattern "")
         (string/replace
-          (Pattern/compile
+          (string->regex
             ;; if :asset-path specified drop leading slash
             (str "^" (or (and asset-path (string/replace asset-path #"^/" ""))
                          (util/output-directory opts)) "/"))
