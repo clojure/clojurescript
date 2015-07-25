@@ -32,7 +32,7 @@
 
 (defn string->regex [s]
   #?(:clj  (Pattern/compile s)
-     :cljs (RegExp. s)))
+     :cljs (js/RegExp. s)))
 
 (defn output-directory [opts]
   #?(:clj  (util/output-directory opts)
@@ -206,7 +206,7 @@
     vec))
 
 (comment
-  (parse-stacktrace nil
+  (parse-stacktrace {:host "localhost" :port 9000}
     "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4259:17
 cljs$core$first@http://localhost:9000/out/cljs/core.js:4289:22
 cljs$core$ffirst@http://localhost:9000/out/cljs/core.js:5357:39
@@ -253,7 +253,7 @@ http://localhost:9000/out/goog/events/events.js:276:42"
       :else f)
     (-> f
       (string/replace #"<" "")
-      (string/replace #"\/" ""))))
+      (string/replace #?(:clj #"\/" :cljs (js/RegExp. "\\/")) ""))))
 
 (defn firefox-st-el->frame
   [repl-env st-el opts]

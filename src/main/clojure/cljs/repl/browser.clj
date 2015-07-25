@@ -376,7 +376,7 @@
     vec))
 
 (comment
-  (parse-stacktrace nil
+  (parse-stacktrace {:host "localhost" :port 9000}
     "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4259:17
 cljs$core$first@http://localhost:9000/out/cljs/core.js:4289:22
 cljs$core$ffirst@http://localhost:9000/out/cljs/core.js:5357:39
