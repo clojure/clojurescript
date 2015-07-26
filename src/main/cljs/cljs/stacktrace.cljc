@@ -10,7 +10,8 @@
   (:require #?(:clj  [cljs.util :as util]
                :cljs [goog.string :as gstring])
                [clojure.string :as string])
-  #?(:clj (:import [java.util.regex Pattern])))
+  #?(:clj (:import [java.util.regex Pattern]
+                   [java.io File])))
 
 (defmulti parse-stacktrace (fn [repl-env st err opts] (:ua-product err)))
 
@@ -333,4 +334,66 @@ goog.events.handleBrowserEvent_@http://localhost:9000/out/goog/events/events.js:
 goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
     {:ua-product :firefox}
     nil)
+  )
+
+;; -----------------------------------------------------------------------------
+;; Rhino Stacktrace
+
+(defmethod parse-stacktrace :rhino
+  [repl-env st err {:keys [output-dir] :as opts}]
+  (letfn [(process-frame [frame-str]
+            (when-not (or (string/blank? frame-str)
+                          (== -1 (.indexOf frame-str "\tat")))
+              (let [[file-side line-fn-side] (string/split frame-str #":")
+                   file                      (string/replace file-side #"\s+at\s+" "")
+                   [line function]           (string/split line-fn-side #"\s+")]
+               {:file     (string/replace file
+                            (str output-dir
+                              #?(:clj File/separator :cljs "/"))
+                            "")
+                :function (when function
+                            (-> function
+                              (string/replace "(" "")
+                              (string/replace ")" "")))
+                :line     (when (and line (not (string/blank? line)))
+                            (parse-int line))
+                :column   0})))]
+    (->> (string/split st #"\n")
+      (map process-frame)
+      (remove nil?)
+      vec)))
+
+(comment
+  (parse-stacktrace {}
+    "\tat .cljs_rhino_repl/goog/../cljs/core.js:4215 (seq)
+     \tat .cljs_rhino_repl/goog/../cljs/core.js:4245 (first)
+     \tat .cljs_rhino_repl/goog/../cljs/core.js:5295 (ffirst)
+     \tat <cljs repl>:1
+     \tat <cljs repl>:1"
+    {:ua-product :rhino}
+    {:output-dir ".cljs_rhino_repl"})
+
+  (parse-stacktrace {}
+    "org.mozilla.javascript.JavaScriptException: Error: 1 is not ISeqable (.cljs_rhino_repl/goog/../cljs/core.js#3998)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:3998 (cljs$core$seq)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:4017 (cljs$core$first)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:5160 (cljs$core$ffirst)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:16005
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:16004
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:10243
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:10334
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:3979 (cljs$core$seq)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28083 (cljs$core$pr_sequential_writer)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28811
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28267 (cljs$core$pr_writer_impl)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28349 (cljs$core$pr_writer)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28353 (cljs$core$pr_seq_writer)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28416 (cljs$core$pr_sb_with_opts)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28430 (cljs$core$pr_str_with_opts)
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28524
+   \tat .cljs_rhino_repl/goog/../cljs/core.js:28520 (cljs$core$pr_str)
+   at <cljs repl>:1
+   "
+    {:ua-product :rhino}
+    {:output-dir ".cljs_rhino_repl"})
   )
