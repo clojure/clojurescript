@@ -9,7 +9,8 @@
 (ns cljs.js
   (:require [cljs.env :as env]
             [cljs.env.macros :as menv]
-            [cljs.analyzer :as ana]))
+            [cljs.analyzer :as ana]
+            [clojure.java.io :as io]))
 
 (defmacro with-state
   [state & body]
@@ -18,3 +19,6 @@
 
 (defmacro dump-core []
   `(quote ~(get-in @env/*compiler* [::ana/namespaces 'cljs.core])))
+
+(defmacro dump-core-source-map-json []
+  (slurp (io/resource "cljs/core.aot.js.map")))
