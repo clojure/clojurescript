@@ -228,16 +228,16 @@
                (some-> (js-src->cljs-src f) ana/parse-ns :ns))]
       (when ns
         (as-> @env/*compiler* compiler-env
-         (let [t (util/last-modified smf)]
-           (if (or (and (= ns 'cljs.core)
-                        (nil? (get-in compiler-env [::source-maps ns])))
-                 (and (not= ns 'cljs.core)
-                      (> t (get-in compiler-env [::source-maps ns :last-modified] 0))))
-             (swap! env/*compiler* assoc-in [::source-maps ns]
-               {:last-modified t
-                :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
-             compiler-env))
-         (get-in compiler-env [::source-maps ns :source-map]))))))
+          (let [t (util/last-modified smf)]
+            (if (or (and (= ns 'cljs.core)
+                         (nil? (get-in compiler-env [::source-maps ns])))
+                    (and (not= ns 'cljs.core)
+                         (> t (get-in compiler-env [::source-maps ns :last-modified] 0))))
+              (swap! env/*compiler* assoc-in [::source-maps ns]
+                {:last-modified t
+                 :source-map (sm/decode (json/read-str (slurp smf) :key-fn keyword))})
+              compiler-env))
+          (get-in compiler-env [::source-maps ns :source-map]))))))
 
 (defn ns-info
   "Given a path to a js source file return the ns info for the corresponding
@@ -351,25 +351,30 @@
            "(" file (when line (str ":" line)) (when column (str ":" column)) ")"))))))
 
 (comment
+  (def st (env/default-compiler-env))
+
   (cljsc/build "samples/hello/src"
     {:optimizations :none
      :output-dir "samples/hello/out"
      :output-to "samples/hello/out/hello.js"
-     :source-map true})
+     :source-map true}
+    st)
 
-  (mapped-stacktrace
-    [{:file "hello/core.js"
-      :function "first"
-      :line 2
-      :column 1}]
-    {:output-dir "samples/hello/out"})
+  (env/with-compiler-env st
+    (mapped-stacktrace
+      [{:file "hello/core.js"
+        :function "first"
+        :line 6
+        :column 0}]
+      {:output-dir "samples/hello/out"}))
 
-  (print-mapped-stacktrace
-    [{:file "hello/core.js"
-      :function "first"
-      :line 2
-      :column 1}]
-    {:output-dir "samples/hello/out"})
+  (env/with-compiler-env st
+    (print-mapped-stacktrace
+      [{:file "hello/core.js"
+        :function "first"
+        :line 6
+        :column 0}]
+      {:output-dir "samples/hello/out"}))
 
   ;; URL example
 
@@ -377,21 +382,24 @@
     {:optimizations :none
      :output-dir "out"
      :output-to "out/hello.js"
-     :source-map true})
+     :source-map true}
+    st)
 
-  (mapped-stacktrace
-    [{:file "cljs/core.js"
-      :function "first"
-      :line 2
-      :column 1}]
-    {:output-dir "out"})
+  (env/with-compiler-env st
+    (mapped-stacktrace
+      [{:file "cljs/core.js"
+        :function "first"
+        :line 2
+        :column 1}]
+      {:output-dir "out"}))
 
-  (print-mapped-stacktrace
-    [{:file "cljs/core.js"
-      :function "first"
-      :line 2
-      :column 1}]
-    {:output-dir "out"})
+  (env/with-compiler-env st
+    (print-mapped-stacktrace
+      [{:file "cljs/core.js"
+        :function "first"
+        :line 2
+        :column 1}]
+      {:output-dir "out"}))
   )
 
 (defn- display-error
