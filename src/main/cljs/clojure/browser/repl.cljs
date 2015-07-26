@@ -120,7 +120,7 @@
     ;; suppress useless Google Closure error about duplicate provides
     (set! (.-isProvided_ js/goog) (fn [name] false))
     ;; provide cljs.user
-    (goog/provide "cljs.user")
+    (goog/constructNamespace_ "cljs.user")
     (set! (.-writeScriptTag__ js/goog)
       (fn [src opt_sourceText]
         ;; the page is already loaded, we can no longer leverage document.write
