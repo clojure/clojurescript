@@ -2875,6 +2875,10 @@
               arguments)))
          [])))
 
+(deftest test-munge-demunge
+  (is (= 'cljs.core/first?
+         (demunge (munge 'cljs.core/first?)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

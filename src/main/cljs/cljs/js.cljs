@@ -32,6 +32,12 @@
   [ns-sym]
   (string/replace (ana/munge-path ns-sym) \. \/))
 
+(defn file->ns
+  [file]
+  (let [lib-name (subs (string/replace file "/" ".")
+                   0 (- (count file) 5))]
+    (symbol (demunge lib-name))))
+
 (defn atom? [x]
   (instance? Atom x))
 

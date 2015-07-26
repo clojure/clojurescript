@@ -9898,7 +9898,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn- demunge-str [munged-name]
   (let [r (js/RegExp. (demunge-pattern) "g")
         munged-name (if (gstring/endsWith munged-name "$")
-                      (.substring munged-name 0 (dec (. munged-name -length))))]
+                      (.substring munged-name 0 (dec (. munged-name -length)))
+                      munged-name)]
     (loop [ret "" last-match-end 0]
       (if-let [match (.exec r munged-name)]
         (let [[x] match]
