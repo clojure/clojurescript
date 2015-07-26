@@ -309,6 +309,24 @@
           (assoc new-lines line new-cols)))
       new-lines)))
 
+;; -----------------------------------------------------------------------------
+;; Reverse Source Map Inversion
+
+(defn invert-reverse-map
+  "Given a ClojureScript to JavaScript source map, invert it. Useful when
+   mapping JavaScript stack traces when environment support is unavailable."
+  [reverse-map]
+  (let [inverted (atom (sorted-map))]
+    (doseq [[line columns] reverse-map]
+      (doseq [[column column-info] columns]
+        (doseq [{:keys [gline gcol name]} column-info]
+          (swap! inverted update-in [gline]
+            (fnil (fn [columns]
+                    (update-in columns [column] (fnil conj [])
+                      {:line line :col column :name name}))
+              (sorted-map))))))
+    @inverted))
+
 (comment
   ;; INSTRUCTIONS:
   
