@@ -122,7 +122,7 @@
                  :file file :sources-content [source]})]
      (when (:verbose opts) (debug-prn json))
      (swap! state assoc-in
-       [:source-maps name] (:source-map sm-data))
+       [:source-maps name] (sm/invert-reverse-map (:source-map sm-data)))
      (.append sb
        (str "\n//# sourceURL=" file
             "\n//# sourceMappingURL=data:application/json;base64,"
