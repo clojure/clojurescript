@@ -7,9 +7,10 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.stacktrace
-  (:require #?(:clj  [cljs.util :as util]
-               :cljs [goog.string :as gstring])
-               [clojure.string :as string])
+  (:require #?@(:clj  [[cljs.util :as util]
+                       [clojure.java.io :as io]]
+                :cljs [[goog.string :as gstring]])
+            [clojure.string :as string])
   #?(:clj (:import [java.util.regex Pattern]
                    [java.io File])))
 
@@ -446,4 +447,130 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
     \tat <program> (<eval>:1)\n"
     {:ua-product :nashorn}
     {:output-dir ".cljs_nashorn_repl"})
+  )
+
+;; -----------------------------------------------------------------------------
+;; Stacktrace Mapping
+
+(defn mapped-line-column-call
+  "Given a cljs.source-map source map data structure map a generated line
+   and column back to the original line, column, and function called."
+  [source-map line column]
+  ;; source maps are 0 indexed for columns
+  ;; multiple segments may exist at column
+  ;; the last segment seems most accurate
+  (letfn [(get-best-column [columns column]
+            (last (or (get columns
+                        (last (filter #(<= % (dec column))
+                                (sort (keys columns)))))
+                      (second (first columns)))))
+          (adjust [mapped]
+            (vec (map #(%1 %2) [inc inc identity] mapped)))]
+    (let [default [line column nil]]
+      ;; source maps are 0 indexed for lines
+      (if-let [columns (get source-map (dec line))]
+        (adjust (map (get-best-column columns column) [:line :col :name]))
+        default))))
+
+(defn mapped-frame
+  "Given opts and a canonicalized JavaScript stacktrace frame, return the
+  ClojureScript frame."
+  [{:keys [function file line column]} sm opts]
+  (let [no-source-file?      (if-not file true (starts-with? file "<"))
+        [line' column' call] (mapped-line-column-call sm line column)
+        file'                (if (ends-with? file ".js")
+                               (str (subs file 0 (- (count file) 3)) ".cljs")
+                               file)]
+    {:function function
+     :call     call
+     :file     (if no-source-file?
+                 (str "NO_SOURCE_FILE" (when file (str " " file)))
+                 file')
+     :line     line'
+     :column   column'}))
+
+(defn mapped-stacktrace
+  "Given a vector representing the canonicalized JavaScript stacktrace
+   return the ClojureScript stacktrace. The canonical stacktrace must be
+   in the form:
+
+    [{:file <string>
+      :function <string>
+      :line <integer>
+      :column <integer>}*]
+
+   :file must be a URL path (without protocol) relative to :output-dir or a
+   identifier delimited by angle brackets. The returned mapped stacktrace will
+   also contain :url entries to the original sources if it can be determined
+   from the classpath."
+  ([stacktrace sm] (mapped-stacktrace stacktrace sm nil))
+  ([stacktrace sm opts]
+   (letfn [(call->function [x]
+             (if (:call x)
+               (hash-map :function (:call x))
+               {}))
+           (call-merge [function call]
+             (merge-with
+               (fn [munged-fn-name unmunged-call-name]
+                 (if (= munged-fn-name
+                        (string/replace (munge unmunged-call-name) "." "$"))
+                   unmunged-call-name
+                   munged-fn-name))
+               function call))]
+     (let [mapped-frames (map (memoize #(mapped-frame % sm opts)) stacktrace)]
+       ;; take each non-nil :call and optionally merge it into :function one-level
+       ;; up to avoid replacing with local symbols, we only replace munged name if
+       ;; we can munge call symbol back to it
+       (vec (map call-merge
+              (map #(dissoc % :call) mapped-frames)
+              (concat (rest (map call->function mapped-frames)) [{}])))))))
+
+(defn mapped-stacktrace-str
+  "Given a vector representing the canonicalized JavaScript stacktrace
+   print the ClojureScript stacktrace. See mapped-stacktrace."
+  ([stacktrace sm]
+   (mapped-stacktrace-str stacktrace sm nil))
+  ([stacktrace sm opts]
+   (with-out-str
+     (doseq [{:keys [function file line column]}
+             (mapped-stacktrace stacktrace sm opts)]
+       (println "\t"
+         (str (when function (str function " "))
+              "(" file (when line (str ":" line))
+                       (when column (str ":" column)) ")"))))))
+
+(comment
+  (require '[cljs.closure :as cljsc]
+           '[clojure.data.json :as json]
+           '[cljs.source-map :as sm]
+           '[clojure.pprint :as pp])
+
+  (cljsc/build "samples/hello/src"
+    {:optimizations :none
+     :output-dir "samples/hello/out"
+     :output-to "samples/hello/out/hello.js"
+     :source-map true})
+
+  (def sm
+    (sm/decode
+      (json/read-str
+        (slurp "samples/hello/out/hello/core.js.map")
+        :key-fn keyword)))
+
+  (pp/pprint sm)
+
+  ;; maps to :line 5 :column 24
+  (mapped-stacktrace
+    [{:file "hello/core.js"
+      :function "first"
+      :line 6
+      :column 0}]
+    sm {:output-dir "samples/hello/out"})
+
+  (mapped-stacktrace-str
+    [{:file "hello/core.js"
+      :function "first"
+      :line 6
+      :column 0}]
+    sm {:output-dir "samples/hello/out"})
   )
