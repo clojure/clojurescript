@@ -1,4 +1,5 @@
 (ns cljs.build-api-tests
+  (:refer-clojure :exclude [compile])
   (:use cljs.build.api)
   (:use clojure.test)
   (:require [cljs.env :as env]
