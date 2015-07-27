@@ -80,7 +80,9 @@
   ([target-dir ns-info]
     (to-target-file target-dir ns-info "js"))
   ([target-dir {:keys [ns source-file] :as ns-info} ext]
-    (let [src-ext (cljs.util/ext source-file)
+    (let [src-ext (if source-file
+                    (cljs.util/ext source-file)
+                    "cljs")
           ns      (if (or (= src-ext "clj")
                           (and (= ns 'cljs.core) (= src-ext "cljc")))
                     (symbol (str ns "$macros"))
