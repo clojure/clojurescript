@@ -111,4 +111,6 @@
         '(bar.core baz.core)))
   (is (= (env/with-compiler-env test-cenv
            (cljs-ns-dependents 'graph.foo.core))
+        '(graph.bar.core graph.baz.core)))
+  (is (= (cljs-ns-dependents test-cenv 'graph.foo.core)
         '(graph.bar.core graph.baz.core))))

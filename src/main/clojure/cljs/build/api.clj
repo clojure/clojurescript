@@ -56,23 +56,23 @@
   ClojureScript namespaces that require and use the macros from
   'example.macros :
   (cljs-dependents-for-macro-namespaces 'example.macros) ->
-  ('example.core 'example.util)
-
-  This must be called when cljs.env/*compiler* is bound to the
-  compile env that you are inspecting. See cljs.env/with-compile-env."
-  [namespaces]
-  (map :name
-       (let [namespaces-set (set namespaces)]
-         (filter (fn [x] (not-empty
-                         (intersection namespaces-set (-> x :require-macros vals set))))
-                 (vals (:cljs.analyzer/namespaces @env/*compiler*))))))
+  ('example.core 'example.util)"
+  ([namespaces] (cljs-dependents-for-macro-namespaces env/*compiler* namespaces))
+  ([state namespaces]
+   (map :name
+        (let [namespaces-set (set namespaces)]
+          (filter (fn [x] (not-empty
+                            (intersection namespaces-set (-> x :require-macros vals set))))
+                  (vals (:cljs.analyzer/namespaces @state)))))))
 
 (defn cljs-ns-dependents
   "Given a namespace symbol return a seq of all dependent
   namespaces sorted in dependency order. Will include
   transient dependents."
-  [ns]
-  (ana/ns-dependents ns))
+  ([ns] (cljs-ns-dependents env/*compiler* ns))
+  ([state ns]
+   (env/with-compiler-env state
+     (ana/ns-dependents ns))))
 
 (defn parse-js-ns
   "Given a Google Closure style JavaScript file or resource return the namespace
@@ -84,15 +84,22 @@
 (defn ^File src-file->target-file
   "Given a ClojureScript source file return the target file. May optionally
   provide build options with :output-dir specified."
-  ([src] (closure/src-file->target-file src))
-  ([src opts] (closure/src-file->target-file src opts)))
+  ([src] (src-file->target-file src nil))
+  ([src opts] (src-file->target-file env/*compiler* src opts))
+  ([state src opts]
+   (env/with-compiler-env state
+     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+       (closure/src-file->target-file src opts)))))
 
 (defn ^String src-file->goog-require
   "Given a ClojureScript or Google Closure style JavaScript source file return
   the goog.require statement for it."
-  ([src] (closure/src-file->goog-require src))
-  ([src options]
-    (closure/src-file->goog-require src options)))
+  ([src] (src-file->goog-require src nil))
+  ([src options] (src-file->goog-require env/*compiler* src options))
+  ([state src options]
+   (env/with-compiler-env state
+     (binding [ana/*cljs-warning-handlers* (:warning-handlers options ana/*cljs-warning-handlers*)]
+       (closure/src-file->goog-require src options)))))
 
 ;; =============================================================================
 ;; Main API
@@ -156,8 +163,10 @@
 
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."
-  [opts compilable]
-  (closure/compile compilable opts))
+  ([opts compilable] (compile env/*compiler* opts compilable))
+  ([state opts compilable]
+   (env/with-compiler-env state
+     (closure/compile compilable opts))))
 
 (defn output-unoptimized
   "Ensure that all JavaScript source files are on disk (not in jars),
@@ -172,18 +181,22 @@
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
-   (closure/build source opts))
+   (build source opts nil))
   ([source opts compiler-env]
-   (closure/build source opts compiler-env)))
+   (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+     (closure/build source opts compiler-env))))
 
 (defn watch
   "Given a source which can be compiled, watch it for changes to produce."
   ([source opts]
-   (closure/watch source opts))
+   (watch source opts (if-not (nil? env/*compiler*)
+                        env/*compiler*
+                        (env/default-compiler-env opts))))
   ([source opts compiler-env]
-   (closure/watch source opts compiler-env))
+   (watch source opts compiler-env nil))
   ([source opts compiler-env stop]
-   (closure/watch source opts compiler-env stop)))
+   (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+     (closure/watch source opts compiler-env stop))))
 
 (comment
 

@@ -42,8 +42,9 @@
 
 (defn get-options
   "Return the compiler options from compiler state."
-  []
-  (get @env/*compiler* :options))
+  ([] (get-options env/*compiler*))
+  ([state]
+   (get @state :options)))
 
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
@@ -52,9 +53,13 @@
   containing at least :form, :op and :env keys). If expr has any (immediately)
   nested exprs, must have :children [exprs...] entry. This will
   facilitate code walking without knowing the details of the op set."
-  ([env form] (ana/analyze env form nil))
-  ([env form name] (ana/analyze env form name nil))
-  ([env form name opts] (ana/analyze env form name opts)))
+  ([env form] (analyze env form nil))
+  ([env form name] (analyze env form name nil))
+  ([env form name opts] (analyze env/*compiler* env form name opts))
+  ([state env form name opts]
+   (env/with-compiler-env state
+     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+       (ana/analyze env form name opts)))))
 
 (defn forms-seq
   "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
@@ -72,9 +77,13 @@
    be used for *analyze-deps* and *load-macros* bindings respectively. This
    function does _not_ side-effect the ambient compilation environment unless
    requested via opts where :restore is false."
-  ([src] (ana/parse-ns src nil nil))
-  ([src opts] (ana/parse-ns src nil opts))
-  ([src dest opts] (ana/parse-ns src dest opts)))
+  ([src] (parse-ns src nil nil))
+  ([src opts] (parse-ns src nil opts))
+  ([src dest opts] (parse-ns env/*compiler* src dest opts))
+  ([state src dest opts]
+   (env/with-compiler-env state
+     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+       (ana/parse-ns src dest opts)))))
 
 (defn analyze-file
   "Given a java.io.File, java.net.URL or a string identifying a resource on the
@@ -85,8 +94,12 @@
    compiler options, if :cache-analysis true will cache analysis to
    \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
    meaningful value."
-  ([f] (ana/analyze-file f nil))
-  ([f opts] (ana/analyze-file f opts)))
+  ([f] (analyze-file f nil))
+  ([f opts] (analyze-file env/*compiler* f opts))
+  ([state f opts]
+   (env/with-compiler-env state
+     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+       (ana/analyze-file f opts)))))
 
 ;; =============================================================================
 ;; Main API
@@ -105,48 +118,54 @@
 (defn all-ns
   "Return all namespaces. Analagous to clojure.core/all-ns but
   returns symbols identifying namespaces not Namespace instances."
-  []
-  (keys (get @env/*compiler* ::ana/namespaces)))
+  ([] (all-ns env/*compiler*))
+  ([state]
+   (keys (get @state ::ana/namespaces))))
 
 (defn find-ns
   "Given a namespace return the corresponding namespace analysis map. Analagous
   to clojure.core/find-ns."
-  [sym]
-  {:pre [(symbol? sym)]}
-  (get-in @env/*compiler* [::ana/namespaces sym]))
+  ([sym] (find-ns env/*compiler* sym))
+  ([state sym]
+   {:pre [(symbol? sym)]}
+   (get-in @state [::ana/namespaces sym])))
 
 (defn ns-interns
   "Given a namespace return all the var analysis maps. Analagous to
   clojure.core/ns-interns but returns var analysis maps not vars."
-  [ns]
-  {:pre [(symbol? ns)]}
-  (merge
-    (get-in @env/*compiler* [::ana/namespaces ns :macros])
-    (get-in @env/*compiler* [::ana/namespaces ns :defs])))
+  ([ns] (ns-interns env/*compiler*))
+  ([state ns]
+   {:pre [(symbol? ns)]}
+   (merge
+     (get-in @state [::ana/namespaces ns :macros])
+     (get-in @state [::ana/namespaces ns :defs]))))
 
 (defn ns-publics
   "Given a namespace return all the public var analysis maps. Analagous to
   clojure.core/ns-publics but returns var analysis maps not vars."
-  [ns]
-  {:pre [(symbol? ns)]}
-  (->> (merge
-         (get-in @env/*compiler* [::ana/namespaces ns :macros])
-         (get-in @env/*compiler* [::ana/namespaces ns :defs]))
-       (remove (fn [[k v]] (:private v)))
-       (into {})))
+  ([ns] (ns-publics env/*compiler*))
+  ([state ns]
+   {:pre [(symbol? ns)]}
+   (->> (merge
+          (get-in @state [::ana/namespaces ns :macros])
+          (get-in @state [::ana/namespaces ns :defs]))
+        (remove (fn [[k v]] (:private v)))
+        (into {}))))
 
 (defn ns-resolve
   "Given a namespace and a symbol return the corresponding var analysis map.
   Analagous to clojure.core/ns-resolve but returns var analysis map not Var."
-  [ns sym]
-  {:pre [(symbol? ns) (symbol? sym)]}
-  (get-in @env/*compiler* [::ana/namespaces ns :defs sym]))
+  ([ns sym] (ns-resolve env/*compiler* ns sym))
+  ([state ns sym]
+   {:pre [(symbol? ns) (symbol? sym)]}
+   (get-in @state [::ana/namespaces ns :defs sym])))
 
 (defn remove-ns
   "Removes the namespace named by the symbol."
-  [ns]
-  {:pre [(symbol? ns)]}
-  (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
+  ([ns] (remove-ns env/*compiler* ns))
+  ([state ns]
+   {:pre [(symbol? ns)]}
+   (swap! state update-in [::ana/namespaces] dissoc ns)))
 
 (defmacro in-cljs-user
   "Binds cljs.analyzer/*cljs-ns* to 'cljs.user and uses the given compilation
