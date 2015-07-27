@@ -411,7 +411,9 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
                     [function file-and-line] (string/split frame-str #"\s+")
                     [file-part line-part]    (string/split file-and-line #":")]
                 {:file     (string/replace (.substring file-part 1)
-                             (str output-dir File/separator) "")
+                             (str output-dir
+                               #?(:clj File/separator :cljs "/"))
+                             "")
                  :function function
                  :line     (when (and line-part (not (string/blank? line-part)))
                              (parse-int
