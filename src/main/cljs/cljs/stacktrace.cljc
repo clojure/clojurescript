@@ -14,7 +14,21 @@
   #?(:clj (:import [java.util.regex Pattern]
                    [java.io File])))
 
-(defmulti parse-stacktrace (fn [repl-env st err opts] (:ua-product err)))
+(defmulti parse-stacktrace
+  "Parse a JavaScript stacktrace string into a canonical data form. The
+  arguments:
+
+  repl-env - the repl environment, an optional map with :host and :port keys
+             if the stacktrace includes url, not file references
+  st       - the original stacktrace string to parse
+  err      - an error map. :ua-product key defines the type of stacktrace parser
+             to use, for example :chrome
+  opts     - additional options. :output-dir maybe given in this argument if
+             :host and :port do not apply, for example, a file path
+
+  The canonical stacktrace representation can easily be mapped to a
+  ClojureScript one see mapped-stacktrace and mapped-stacktrace-str"
+  (fn [repl-env st err opts] (:ua-product err)))
 
 (defn parse-int [s]
   #?(:clj  (Long/parseLong s)
