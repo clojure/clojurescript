@@ -549,11 +549,12 @@
   (fn [env prefix suffix]
     (warning :undeclared-var env {:prefix prefix :suffix suffix})))
 
-(defn loaded-ns?
+(defn loaded-js-ns?
+  "Check if a JavaScript namespace has been loaded. JavaScript vars are
+  not currently checked."
   #?(:cljs {:tag boolean})
   [env prefix]
-  (if-not (nil? (gets @env/*compiler* ::namespaces prefix))
-    true
+  (when-not (gets @env/*compiler* ::namespaces prefix)
     (let [ns (:ns env)]
       (if-not (nil? (get (:requires ns) prefix))
         true
@@ -566,19 +567,19 @@
    (let [warn (confirm-var-exist-warning env prefix suffix)]
      (confirm-var-exists env prefix suffix warn)))
   ([env prefix suffix missing-fn]
-    (let [sufstr     (str suffix)
-          suffix-str (if (and #?(:clj  (not= ".." sufstr)
-                                 :cljs (not (identical? ".." sufstr))) ;; leave cljs.core$macros/.. alone
-                              #?(:clj  (re-find #"\." sufstr)
-                                 :cljs ^boolean (.test #"\." sufstr)))
-                       (first (string/split sufstr #"\."))
-                       suffix)
-          suffix     (symbol suffix-str)]
-      (when (and (not (implicit-import? env prefix suffix))
-                 (not (loaded-ns? env prefix))
-                 (not (and (= 'cljs.core prefix) (= 'unquote suffix)))
-                 (nil? (gets @env/*compiler* ::namespaces prefix :defs suffix)))
-        (missing-fn env prefix suffix)))))
+   (let [sufstr     (str suffix)
+         suffix-str (if (and #?(:clj  (not= ".." sufstr)
+                                :cljs (not (identical? ".." sufstr))) ;; leave cljs.core$macros/.. alone
+                          #?(:clj  (re-find #"\." sufstr)
+                             :cljs ^boolean (.test #"\." sufstr)))
+                      (first (string/split sufstr #"\."))
+                      suffix)
+         suffix     (symbol suffix-str)]
+     (when (and (not (implicit-import? env prefix suffix))
+                (not (loaded-js-ns? env prefix))
+                (not (and (= 'cljs.core prefix) (= 'unquote suffix)))
+                (nil? (gets @env/*compiler* ::namespaces prefix :defs suffix)))
+       (missing-fn env prefix suffix)))))
 
 (defn confirm-var-exists-throw []
   (fn [env prefix suffix]
