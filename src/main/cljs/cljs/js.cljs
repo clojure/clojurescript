@@ -120,23 +120,31 @@
      :gen-col    0
      :gen-line   0}))
 
-(defn append-source-map [state name source sb sm-data opts]
+(defn prefix [s pre]
+  (str pre s))
+
+(defn append-source-map
+  [state name source sb sm-data {:keys [output-dir asset-path] :as opts}]
    (let [t    (.valueOf (js/Date.))
          smn  (if name
-                (munge name)
+                (string/replace (munge (str name)) "." "/")
                 (str "cljs-" t))
-         src  (str smn ".cljs")
-         file (str smn ".js")
+         ts   (.valueOf (js/Date.))
+         out  (or output-dir asset-path)
+         src  (cond-> (str smn ".cljs?rel=" ts)
+                out (prefix (str out "/")))
+         file (cond-> (str smn ".js?rel=" ts)
+                out (prefix (str out "/")))
          json (sm/encode {src (:source-map sm-data)}
                 {:lines (+ (:gen-line sm-data) 3)
-                 :file file :sources-content [source]})]
+                 :file  file :sources-content [source]})]
      (when (:verbose opts) (debug-prn json))
      (swap! state assoc-in
        [:source-maps name] (sm/invert-reverse-map (:source-map sm-data)))
      (.append sb
        (str "\n//# sourceURL=" file
             "\n//# sourceMappingURL=data:application/json;base64,"
-            (base64/encodeString json true)))))
+            (base64/encodeString json)))))
 
 ;; -----------------------------------------------------------------------------
 ;; Analyze
