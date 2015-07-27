@@ -66,10 +66,16 @@
   "Given a browser file url convert it into a relative path that can be used
    to locate the original source."
   [{:keys [host host-port port] :as repl-env} file {:keys [asset-path] :as opts}]
-  (let [base-url-pattern (string->regex (str "http://" host ":" (or host-port port) "/"))]
-    (if (re-find base-url-pattern file)
+  (let [urlpat (if host
+                 (string->regex
+                   (str "http://" host ":" (or host-port port) "/"))
+                 "")
+        match  (if host
+                 (re-find urlpat file)
+                 (contains? opts :output-dir))]
+    (if match
       (-> file
-        (string/replace base-url-pattern "")
+        (string/replace urlpat "")
         (string/replace
           (string->regex
             ;; if :asset-path specified drop leading slash
@@ -166,6 +172,22 @@
     at goog.messaging.AbstractChannel.deliver (http://localhost:9000/out/goog/messaging/abstractchannel.js:142:13)"
     {:ua-product :chrome}
     nil)
+
+  ;; Node.js example
+  (parse-stacktrace {}
+    "Error: 1 is not ISeqable
+    at Object.cljs$core$seq [as seq] (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:3999:8)
+    at Object.cljs$core$first [as first] (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:4018:19)
+    at cljs$core$ffirst (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:5161:34)
+    at /home/my/cool/project/.cljs_bootstrap/cljs/core.js:16006:88
+    at cljs.core.map.cljs$core$IFn$_invoke$arity$2 (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:16007:3)
+    at cljs.core.LazySeq.sval (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:10244:109)
+    at cljs.core.LazySeq.cljs$core$ISeqable$_seq$arity$1 (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:10335:10)
+    at Object.cljs$core$seq [as seq] (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:3980:13)
+    at Object.cljs$core$pr_sequential_writer [as pr_sequential_writer] (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:28084:14)
+    at cljs.core.LazySeq.cljs$core$IPrintWithWriter$_pr_writer$arity$3 (/home/my/cool/project/.cljs_bootstrap/cljs/core.js:28812:18)"
+    {:ua-product :chrome}
+    {:output-dir "/home/my/cool/project/.cljs_bootstrap"})
   )
 
 ;; -----------------------------------------------------------------------------
