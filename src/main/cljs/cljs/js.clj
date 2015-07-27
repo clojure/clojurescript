@@ -19,6 +19,3 @@
 
 (defmacro dump-core []
   `(quote ~(get-in @env/*compiler* [::ana/namespaces 'cljs.core])))
-
-(defmacro dump-core-source-map-json []
-  (slurp (io/resource "cljs/core.aot.js.map")))

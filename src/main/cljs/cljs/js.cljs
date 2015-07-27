@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.js
-  (:require-macros [cljs.js :refer [dump-core dump-core-source-map-json]]
+  (:require-macros [cljs.js :refer [dump-core]]
                    [cljs.env.macros :as env])
   (:require [clojure.string :as string]
             [cljs.env :as env]
@@ -106,8 +106,7 @@
      (swap!
        (fn [state]
          (-> state
-           (assoc-in [::ana/namespaces 'cljs.core] (dump-core))
-           (assoc :core-source-map-json (dump-core-source-map-json)))))))
+           (assoc-in [::ana/namespaces 'cljs.core] (dump-core)))))))
   ([init]
    (doto (empty-state) (swap! init))))
 
