@@ -229,7 +229,10 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           (require bound-vars dep (dissoc opts :context)
+           (require bound-vars dep
+             (-> opts
+               (dissoc :context)
+               (dissoc :ns))
              (fn [res]
                (if-not (:error res)
                  (load-deps bound-vars ana-env lib (next deps) opts cb)
@@ -286,7 +289,8 @@
       (require bound-vars nsym k
         (-> opts
           (assoc :macros-ns true)
-          (dissoc :context))
+          (dissoc :context)
+          (dissoc :ns))
         (fn [res]
           (if-not (:error res)
             (load-macros bound-vars k (next macros) reload reloads opts cb)
@@ -359,14 +363,13 @@
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
         eof        (js-obj)
         aenv       (ana/empty-env)
-        bound-vars (cond-> (merge bound-vars
-                             {:*cljs-ns* 'cljs.user
-                              :*ns* (create-ns ana/*cljs-ns*)})
+        the-ns     (or (:ns opts) 'cljs.user)
+        bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
     ((fn analyze-loop []
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  ana/*cljs-ns*          (:*cljs-ns* bound-vars)
-                 *ns*                   (:*ns* bound-vars)
+                 *ns*                   (create-ns (:*cljs-ns* bound-vars))
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
@@ -442,14 +445,13 @@
 ;; Eval
 
 (defn eval* [bound-vars form opts cb]
-  (let [bound-vars (cond-> (merge bound-vars
-                             {:*cljs-ns* 'cljs.user
-                              :*ns* (create-ns ana/*cljs-ns*)})
+  (let [the-ns     (or (:ns opts) 'cljs.user)
+        bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
     (binding [env/*compiler*         (:*compiler* bound-vars)
               *eval-fn*              (:*eval-fn* bound-vars)
               ana/*cljs-ns*          (:*cljs-ns* bound-vars)
-              *ns*                   (:*ns* bound-vars)
+              *ns*                   (create-ns (:*cljs-ns* bound-vars))
               r/*data-readers*       (:*data-readers* bound-vars)
               comp/*source-map-data* (:*sm-data* bound-vars)]
       (let [aenv (ana/empty-env)
@@ -500,8 +502,6 @@
   ([state form opts cb]
    (eval*
      {:*compiler*     state
-      :*cljs-ns*      'cljs.user
-      :*ns*           (create-ns 'cljs.user)
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (or (:analyze-deps opts) true)
       :*load-macros*  (or (:load-macros opts) true)
@@ -517,15 +517,14 @@
         eof        (js-obj)
         aenv       (ana/empty-env)
         sb         (StringBuffer.)
-        bound-vars (cond-> (merge bound-vars
-                             {:*cljs-ns* 'cljs.user
-                              :*ns* (create-ns ana/*cljs-ns*)})
+        the-ns     (or (:ns opts) 'cljs.user)
+        bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
     ((fn compile-loop []
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          (:*cljs-ns* bound-vars)
-                 *ns*                   (:*ns* bound-vars)
+                 *ns*                   (create-ns (:*cljs-ns* bound-vars))
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
@@ -609,9 +608,8 @@
         eof        (js-obj)
         aenv       (ana/empty-env)
         sb         (StringBuffer.)
-        bound-vars (cond-> (merge bound-vars
-                             {:*cljs-ns* 'cljs.user
-                              :*ns* (create-ns ana/*cljs-ns*)})
+        the-ns     (or (:ns opts) 'cljs.user)
+        bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
     (when (:verbose opts) (debug-prn "Evaluating" name))
     ((fn compile-loop [ns]
