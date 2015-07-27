@@ -659,7 +659,11 @@
                                               [::ana/namespaces name])}]
                     (when (:verbose opts)
                       (debug-prn js-source))
-                    (cb {:ns ns :value (*eval-fn* evalm)})))))))))
+                    (let [res (try
+                                {:ns ns :value (*eval-fn* evalm)}
+                                (catch :default cause
+                                  (wrap-error (ana/error aenv "ERROR" cause))))]
+                      (cb res))))))))))
       (:*cljs-ns* bound-vars))))
 
 (defn eval-str
