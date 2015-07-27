@@ -62,10 +62,12 @@
   respected). Upon resolution the callback should be invoked with a map
   containing the following keys:
 
-  :lang   - the language, :clj or :js
-  :source - the source of the library (a string)
-  :cache  - optional, if a :clj namespace has been precompiled to :js, can give
-            an analysis cache for faster loads.
+  :lang       - the language, :clj or :js
+  :source     - the source of the library (a string)
+  :cache      - optional, if a :clj namespace has been precompiled to :js, can
+                give an analysis cache for faster loads.
+  :source-map - optional, if a :clj namespace has been precompiled to :js, can
+                give a V3 source map JSON
 
   If the resource could not be resolved, the callback should be invoked with
   nil."
@@ -112,6 +114,10 @@
 
 (defn load-analysis-cache! [state ns cache]
   (swap! state assoc-in [::ana/namespaces ns] cache))
+
+(defn load-source-map! [state ns sm-json]
+  (let [sm (sm/decode (.parse js/JSON sm-json))]
+    (swap! state assoc-in [:source-maps ns] sm)))
 
 (defn sm-data []
   (atom
@@ -182,7 +188,7 @@
             (assert (or (map? resource) (nil? resource))
               "*load-fn* may only return a map or nil")
             (if resource
-              (let [{:keys [lang source cache]} resource]
+              (let [{:keys [lang source cache source-map]} resource]
                 (condp = lang
                   :clj (eval-str* bound-vars source name opts
                          (fn [res]
@@ -194,6 +200,9 @@
                                    (when cache
                                      (load-analysis-cache!
                                        (:*compiler* bound-vars) name cache))
+                                   (when source-map
+                                     (load-source-map!
+                                       (:*compiler* bound-vars) name source-map))
                                    (catch :default cause
                                      (wrap-error
                                        (ana/error env
