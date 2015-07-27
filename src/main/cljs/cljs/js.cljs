@@ -672,15 +672,21 @@
                                     :name   name
                                     :path   (ns->relpath name)
                                     :source js-source
-                                    :cache  (get-in env/*compiler*
-                                              [::ana/namespaces name])}]
-                    (when (:verbose opts)
-                      (debug-prn js-source))
-                    (let [res (try
-                                {:ns ns :value (*eval-fn* evalm)}
-                                (catch :default cause
-                                  (wrap-error (ana/error aenv "ERROR" cause))))]
-                      (cb res))))))))))
+                                    :cache  (get-in env/*compiler* [::ana/namespaces name])}
+                         complete  (fn [res]
+                                     (if (:error res)
+                                       (cb res)
+                                       (do
+                                         (when (:verbose opts)
+                                           (debug-prn js-source))
+                                         (let [res (try
+                                                     {:ns ns :value (*eval-fn* evalm)}
+                                                     (catch :default cause
+                                                       (wrap-error (ana/error aenv "ERROR" cause))))]
+                                           (cb res)))))]
+                     (if-let [f (:cache-source opts)]
+                       (f evalm complete)
+                       (complete {:value nil}))))))))))
       (:*cljs-ns* bound-vars))))
 
 (defn eval-str
@@ -698,9 +704,15 @@
   opts (map)
     compilation options.
 
-    :eval       - eval function to invoke, see *eval-fn*
-    :load       - library resolution function, see *load-fn*
-    :source-map - set to true to generate inline source map information
+    :eval         - eval function to invoke, see *eval-fn*
+    :load         - library resolution function, see *load-fn*
+    :source-map   - set to true to generate inline source map information
+    :cache-source - optional, a function to run side-effects with the
+                    compilation result prior to actual evalution. This function
+                    takes two arguments, the first is the eval map, the source
+                    will be under :source. The second argument is a callback of
+                    one argument. If an error occurs an :error key should be
+                    supplied.
 
   cb (function)
     callback, will be invoked with a map. If succesful the map will contain
