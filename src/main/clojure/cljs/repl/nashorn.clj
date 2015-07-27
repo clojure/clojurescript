@@ -121,7 +121,8 @@
             '(do
                (.require js/goog "cljs.core")
                (set! *print-newline* false)
-               (set! *print-fn* js/print)))
+               (set! *print-fn* js/print)
+               (set! *print-err-fn* js/print)))
           ;; monkey-patch goog.isProvided_ to suppress useless errors
           (repl/evaluate-form this env repl-filename
             '(set! js/goog.isProvided_ (fn [ns] false)))

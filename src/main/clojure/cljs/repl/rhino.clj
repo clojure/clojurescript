@@ -124,6 +124,8 @@
       (Context/javaToJS opts scope))
     (ScriptableObject/putProperty scope
       "out" (Context/javaToJS *out* scope))
+    (ScriptableObject/putProperty scope
+      "err" (Context/javaToJS *err* scope))
 
     ;; define file loading, load goog.base, load repl deps
     (rhino-eval repl-env "bootjs" 1 bootjs)
@@ -135,7 +137,8 @@
     (repl/evaluate-form repl-env env "<cljs repl>"
       '(do
          (.require js/goog "cljs.core")
-         (set! *print-fn* (fn [x] (.write js/out x)))))
+         (set! *print-fn* (fn [x] (.write js/out x)))
+         (set! *print-err-fn* (fn [x] (.write js/err x)))))
 
     ;; allow namespace reloading
     (repl/evaluate-form repl-env env "<cljs repl>"
