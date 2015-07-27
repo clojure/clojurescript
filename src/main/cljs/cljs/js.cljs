@@ -229,7 +229,7 @@
            (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
        (if (seq deps)
          (let [dep (first deps)]
-           (require bound-vars dep opts
+           (require bound-vars dep (dissoc opts :context)
              (fn [res]
                (if-not (:error res)
                  (load-deps bound-vars ana-env lib (next deps) opts cb)
@@ -283,7 +283,10 @@
           k    (or (k reload)
                    (get-in reloads [k nsym])
                    (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
-      (require bound-vars nsym k (assoc opts :macros-ns true)
+      (require bound-vars nsym k
+        (-> opts
+          (assoc :macros-ns true)
+          (dissoc :context))
         (fn [res]
           (if-not (:error res)
             (load-macros bound-vars k (next macros) reload reloads opts cb)
