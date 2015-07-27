@@ -230,23 +230,22 @@
   ([bound-vars ana-env lib deps opts cb]
    (when (:verbose opts)
      (debug-prn "Loading dependencies for" lib))
-   (let [compiler @(:*compiler* bound-vars)]
-     (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
-                                    update-in [:dep-path] conj lib)]
-       (assert (every? #(not (contains? (:*cljs-dep-set* bound-vars) %)) deps)
-         (str "Circular dependency detected "
-           (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
-       (if (seq deps)
-         (let [dep (first deps)]
-           (require bound-vars dep
-             (-> opts
-               (dissoc :context)
-               (dissoc :ns))
-             (fn [res]
-               (if-not (:error res)
-                 (load-deps bound-vars ana-env lib (next deps) opts cb)
-                 (cb res)))))
-         (cb {:value nil}))))))
+   (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
+                                  update-in [:dep-path] conj lib)]
+     (assert (every? #(not (contains? (:*cljs-dep-set* bound-vars) %)) deps)
+       (str "Circular dependency detected "
+         (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
+     (if (seq deps)
+       (let [dep (first deps)]
+         (require bound-vars dep
+           (-> opts
+             (dissoc :context)
+             (dissoc :ns))
+           (fn [res]
+             (if-not (:error res)
+               (load-deps bound-vars ana-env lib (next deps) opts cb)
+               (cb res)))))
+       (cb {:value nil})))))
 
 (declare analyze*)
 
@@ -330,30 +329,30 @@
                      (if (:error res)
                        (cb res)
                        (if (:*load-macros* bound-vars)
-                        (do
-                          (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
-                          (load-macros bound-vars :use-macros use-macros reload reloads opts
-                            (fn [res]
-                              (if (:error res)
-                                (cb res)
-                                (do
-                                  (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
-                                  (load-macros bound-vars :require-macros require-macros reloads reloads opts
-                                    (fn [res]
-                                      (if (:error res)
-                                        (cb res)
-                                        (let [res (try
-                                                    (when (seq use-macros)
-                                                      (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
-                                                      (ana/check-use-macros use-macros env))
-                                                    {:value nil}
-                                                    (catch :default cause
-                                                      (wrap-error
-                                                        (ana/error ana-env
-                                                          (str "Could not parse ns form " (:name ast)) cause))))]
-                                          (if (:error res)
-                                            (cb res)
-                                            (cb {:value ast})))))))))))
+                         (do
+                           (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
+                           (load-macros bound-vars :use-macros use-macros reload reloads opts
+                             (fn [res]
+                               (if (:error res)
+                                 (cb res)
+                                 (do
+                                   (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
+                                   (load-macros bound-vars :require-macros require-macros reloads reloads opts
+                                     (fn [res]
+                                       (if (:error res)
+                                         (cb res)
+                                         (let [res (try
+                                                     (when (seq use-macros)
+                                                       (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
+                                                       (ana/check-use-macros use-macros env))
+                                                     {:value nil}
+                                                     (catch :default cause
+                                                       (wrap-error
+                                                         (ana/error ana-env
+                                                           (str "Could not parse ns form " (:name ast)) cause))))]
+                                           (if (:error res)
+                                             (cb res)
+                                             (cb {:value ast})))))))))))
                         (cb {:value ast}))))))]
          (cond
            (and load (seq deps))
