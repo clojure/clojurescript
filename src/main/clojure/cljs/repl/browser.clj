@@ -142,6 +142,7 @@
   (send-for-eval conn
     (cljsc/-compile
       '[(set! *print-fn* clojure.browser.repl/repl-print)
+        (set! *print-err-fn* clojure.browser.repl/repl-print)
         (set! *print-newline* true)] {})
     identity))
 
