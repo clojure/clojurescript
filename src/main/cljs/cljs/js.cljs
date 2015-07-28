@@ -734,8 +734,7 @@
      source name opts cb)))
 
 (comment
-  (ns cljs.js.test
-    (:require [cljs.js :as cljs]))
+  (require '[cljs.js :as cljs])
 
   (def vm (js/require "vm"))
   (def fs (js/require "fs"))
@@ -751,7 +750,7 @@
   (defn node-load [{:keys [name macros]} cb]
     (if (contains? libs name)
       (let [path (str "src/test/" (cljs/ns->relpath name)
-                   "." (cljs.core/name (get libs name)))]
+                      "." (cljs.core/name (get libs name)))]
         (.readFile fs path "utf-8"
           (fn [err src]
             (cb (if-not err
@@ -846,6 +845,21 @@
     'foo.bar
     {:verbose true
      :source-map true
+     :eval node-eval
+     :load node-load}
+    (fn [{:keys [error] :as res}]
+      (if error
+        (do
+          (println error)
+          (println (.. error -cause -stack)))
+        (println res))))
+
+  ;; inline source maps work under Node.js
+  (cljs/eval-str st
+    "(ns foo.bar)\n(ffirst [1 2 3])"
+    'foo.bar
+    {:verbose true
+     :source-map false
      :eval node-eval
      :load node-load}
     (fn [{:keys [error] :as res}]
