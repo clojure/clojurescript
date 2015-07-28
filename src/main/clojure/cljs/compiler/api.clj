@@ -82,4 +82,4 @@
   ([state src-dir target-dir opts]
    (env/with-compiler-env state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
-       (with-bindings (api-opts opts) (comp/compile-root src-dir target-dir opts))))))
+       (comp/compile-root src-dir target-dir opts)))))
