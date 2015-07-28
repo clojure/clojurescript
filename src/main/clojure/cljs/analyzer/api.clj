@@ -69,7 +69,10 @@
   ([env form name] (analyze env form name nil))
   ([env form name opts] (analyze env/*compiler* env form name opts))
   ([state env form name opts]
-   (env/with-compiler-env state
+   (if state
+     (env/with-compiler-env state
+       (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+         (ana/analyze env form name opts)))
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
        (ana/analyze env form name opts)))))
 
