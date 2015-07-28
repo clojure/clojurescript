@@ -10,7 +10,7 @@
   :test-paths ["src/test/clojure" "src/test/cljs"]
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/data.json "0.2.6"]
-                 [org.clojure/tools.reader "0.9.2"]
+                 [org.clojure/tools.reader "0.10.0-alpha3"]
                  [org.clojure/google-closure-library "0.0-20150505-021ed5b3"]
                  [com.google.javascript/closure-compiler "v20150609"]
                  [org.mozilla/rhino "1.7R5"]]

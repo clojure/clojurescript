@@ -732,3 +732,126 @@
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
      source name opts cb)))
+
+(comment
+  (ns cljs.js.test
+    (:require [cljs.js :as cljs]))
+
+  (def vm (js/require "vm"))
+  (def fs (js/require "fs"))
+  (def st (cljs/empty-state))
+
+  (defn node-eval [{:keys [name source]}]
+    (.runInThisContext vm source (str (munge name) ".js")))
+
+  (def libs
+    {'bootstrap-test.core :cljs
+     'bootstrap-test.macros :clj})
+
+  (defn node-load [{:keys [name macros]} cb]
+    (if (contains? libs name)
+      (let [path (str "src/test/" (cljs/ns->relpath name)
+                   "." (cljs.core/name (get libs name)))]
+        (.readFile fs path "utf-8"
+          (fn [err src]
+            (cb (if-not err
+                  {:lang :clj :source src}
+                  (.error js/console err))))))
+      (cb nil)))
+
+  (cljs/eval st '(defn foo [a b] (+ a b))
+    {:eval cljs/js-eval}
+    (fn [res]
+      (println res)))
+
+  (cljs/compile st "(defprotocol IFoo (foo [this]))"
+    (fn [js-source]
+      (println "Source:")
+      (println js-source)))
+
+  (cljs/eval-str st
+    "(defn foo [a b] (+ a b))
+     (defn bar [c d] (+ c d))"
+    nil
+    {:eval cljs/js-eval}
+    (fn [res]
+      (println res)))
+
+  (cljs/eval-str st "1"
+    nil
+    {:eval cljs/js-eval
+     :context :expr}
+    (fn [res]
+      (println res)))
+
+  (cljs/eval-str st "(def x 1)"
+    nil
+    {:eval cljs/js-eval
+     :context :expr
+     :def-emits-var true}
+    (fn [res]
+      (println res)))
+
+  (cljs/eval st '(ns foo.bar)
+    {:eval cljs/js-eval}
+    (fn [res]
+      (println res)))
+
+  (cljs/compile st "(defn foo\n[a b]\n(+ a b))" 'cljs.foo
+    {:verbose true :source-map true}
+    (fn [js-source]
+      (println "Source:")
+      (println js-source)))
+
+  (cljs/eval-str st
+    "(ns foo.bar (:require [bootstrap-test.core]))\n(bootstrap-test.core/foo 3 4)"
+    'foo.bar
+    {:verbose true
+     :source-map true
+     :eval node-eval
+     :load node-load}
+    (fn [ret]
+      (println ret)))
+
+  (cljs/eval-str st
+    "(ns foo.bar (:require-macros [bootstrap-test.macros :refer [foo]]))\n(foo 4 4)"
+    'foo.bar
+    {:verbose true
+     :source-map true
+     :eval node-eval
+     :load node-load}
+    (fn [{:keys [error] :as res}]
+      (if error
+        (do
+          (println error)
+          (println (.. error -cause -stack)))
+        (println res))))
+
+  (cljs/eval-str st
+    "(ns foo.bar)\n(first [1 2 3])"
+    'foo.bar
+    {:verbose true
+     :source-map true
+     :eval node-eval
+     :load node-load}
+    (fn [{:keys [error] :as res}]
+      (if error
+        (do
+          (println error)
+          (println (.. error -cause -stack)))
+        (println res))))
+
+  (cljs/eval-str st
+    "(ns foo.bar)\n(map inc [1 2 3])"
+    'foo.bar
+    {:verbose true
+     :source-map true
+     :eval node-eval
+     :load node-load}
+    (fn [{:keys [error] :as res}]
+      (if error
+        (do
+          (println error)
+          (println (.. error -cause -stack)))
+        (println res))))
+  )
