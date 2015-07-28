@@ -162,16 +162,19 @@
   ([name cb]
     (require name nil cb))
   ([name opts cb]
-    (require
-      {:*compiler*     (env/default-compiler-env)
-       :*data-readers* tags/*cljs-data-readers*
-       :*load-fn*      (or (:load opts) *load-fn*)
-       :*eval-fn*      (or (:eval opts) *eval-fn*)}
-      name opts cb))
+    (require nil name opts cb))
   ([bound-vars name opts cb]
    (require bound-vars name nil opts cb))
   ([bound-vars name reload opts cb]
-   (let [name (cond-> name (:macro-ns opts) ana/macro-ns-name)]
+   (let [bound-vars (merge
+                      {:*compiler*     (env/default-compiler-env)
+                       :*data-readers* tags/*cljs-data-readers*
+                       :*load-macros*  (or (:load-macros opts) true)
+                       :*analyze-deps* (or (:analyze-deps opts) true)
+                       :*load-fn*      (or (:load opts) *load-fn*)
+                       :*eval-fn*      (or (:eval opts) *eval-fn*)}
+                      bound-vars)
+         name (cond-> name (:macro-ns opts) ana/macro-ns-name)]
      (when (= :reload reload)
        (swap! *loaded* disj name))
      (when (= :reload-all reload)
@@ -745,6 +748,8 @@
   (def vm (js/require "vm"))
   (def fs (js/require "fs"))
   (def st (cljs/empty-state))
+
+  (set! *target* "nodejs")
 
   (defn node-eval [{:keys [name source]}]
     (.runInThisContext vm source (str (munge name) ".js")))
