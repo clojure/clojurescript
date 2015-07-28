@@ -490,35 +490,46 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
 ;; -----------------------------------------------------------------------------
 ;; Stacktrace Mapping
 
+(defn remove-ext [file]
+  (-> file
+    (string/replace #"\.js$" "")
+    (string/replace #"\.cljs$" "")
+    (string/replace #"\.cljc$" "")
+    (string/replace #"\.clj$" "")))
+
 (defn mapped-line-column-call
   "Given a cljs.source-map source map data structure map a generated line
    and column back to the original line, column, and function called."
-  [source-map line column]
-  ;; source maps are 0 indexed for columns
-  ;; multiple segments may exist at column
-  ;; the last segment seems most accurate
-  (letfn [(get-best-column [columns column]
-            (last (or (get columns
-                        (last (filter #(<= % (dec column))
-                                (sort (keys columns)))))
-                      (second (first columns)))))
-          (adjust [mapped]
-            (vec (map #(%1 %2) [inc inc identity] mapped)))]
-    (let [default [line column nil]]
-      ;; source maps are 0 indexed for lines
-      (if-let [columns (get source-map (dec line))]
-        (adjust (map (get-best-column columns column) [:line :col :name]))
-        default))))
+  [sms file line column]
+  (let [source-map (get sms (symbol (string/replace (remove-ext file) "/" ".")))]
+    ;; source maps are 0 indexed for columns
+    ;; multiple segments may exist at column
+    ;; the last segment seems most accurate
+    (letfn [(get-best-column [columns column]
+             (last (or (get columns
+                         (last (filter #(<= % (dec column))
+                                 (sort (keys columns)))))
+                     (second (first columns)))))
+           (adjust [mapped]
+             (vec (map #(%1 %2) [inc inc identity] mapped)))]
+     (let [default [line column nil]]
+       ;; source maps are 0 indexed for lines
+       (if-let [columns (get source-map (dec line))]
+         (adjust (map (get-best-column columns column) [:line :col :name]))
+         default)))))
 
 (defn mapped-frame
   "Given opts and a canonicalized JavaScript stacktrace frame, return the
   ClojureScript frame."
-  [{:keys [function file line column]} sm opts]
+  [{:keys [function file line column]} sms opts]
   (let [no-source-file?      (if-not file true (starts-with? file "<"))
-        [line' column' call] (mapped-line-column-call sm line column)
-        file'                (if (ends-with? file ".js")
-                               (str (subs file 0 (- (count file) 3)) ".cljs")
-                               file)]
+        [line' column' call] (if no-source-file?
+                               [line column nil]
+                               (mapped-line-column-call sms file line column))
+        file'                (when-not no-source-file?
+                               (if (ends-with? file ".js")
+                                 (str (subs file 0 (- (count file) 3)) ".cljs")
+                                 file))]
     {:function function
      :call     call
      :file     (if no-source-file?
@@ -541,8 +552,9 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
    identifier delimited by angle brackets. The returned mapped stacktrace will
    also contain :url entries to the original sources if it can be determined
    from the classpath."
-  ([stacktrace sm] (mapped-stacktrace stacktrace sm nil))
-  ([stacktrace sm opts]
+  ([stacktrace sms]
+   (mapped-stacktrace stacktrace sms nil))
+  ([stacktrace sms opts]
    (letfn [(call->function [x]
              (if (:call x)
                (hash-map :function (:call x))
@@ -555,7 +567,7 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
                    unmunged-call-name
                    munged-fn-name))
                function call))]
-     (let [mapped-frames (map (memoize #(mapped-frame % sm opts)) stacktrace)]
+     (let [mapped-frames (map (memoize #(mapped-frame % sms opts)) stacktrace)]
        ;; take each non-nil :call and optionally merge it into :function one-level
        ;; up to avoid replacing with local symbols, we only replace munged name if
        ;; we can munge call symbol back to it
@@ -564,14 +576,15 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
               (concat (rest (map call->function mapped-frames)) [{}])))))))
 
 (defn mapped-stacktrace-str
-  "Given a vector representing the canonicalized JavaScript stacktrace
-   print the ClojureScript stacktrace. See mapped-stacktrace."
-  ([stacktrace sm]
-   (mapped-stacktrace-str stacktrace sm nil))
-  ([stacktrace sm opts]
+  "Given a vector representing the canonicalized JavaScript stacktrace and a map
+  of library names to decoded source maps, print the ClojureScript stacktrace .
+  See mapped-stacktrace."
+  ([stacktrace sms]
+   (mapped-stacktrace-str stacktrace sms nil))
+  ([stacktrace sms opts]
    (with-out-str
      (doseq [{:keys [function file line column]}
-             (mapped-stacktrace stacktrace sm opts)]
+             (mapped-stacktrace stacktrace sms opts)]
        (println "\t"
          (str (when function (str function " "))
               "(" file (when line (str ":" line))
@@ -589,13 +602,14 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
      :output-to "samples/hello/out/hello.js"
      :source-map true})
 
-  (def sm
-    (sm/decode
-      (json/read-str
-        (slurp "samples/hello/out/hello/core.js.map")
-        :key-fn keyword)))
+  (def sms
+    {'hello.core
+     (sm/decode
+       (json/read-str
+         (slurp "samples/hello/out/hello/core.js.map")
+         :key-fn keyword))})
 
-  (pp/pprint sm)
+  (pp/pprint sms)
 
   ;; maps to :line 5 :column 24
   (mapped-stacktrace
@@ -603,12 +617,12 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
       :function "first"
       :line 6
       :column 0}]
-    sm {:output-dir "samples/hello/out"})
+    sms {:output-dir "samples/hello/out"})
 
   (mapped-stacktrace-str
     [{:file "hello/core.js"
       :function "first"
       :line 6
       :column 0}]
-    sm {:output-dir "samples/hello/out"})
+    sms {:output-dir "samples/hello/out"})
   )
