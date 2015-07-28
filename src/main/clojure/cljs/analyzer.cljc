@@ -2185,19 +2185,19 @@
 
 (defn parse-invoke*
   [env [f & args :as form]]
-  (let [enve (assoc env :context :expr)
-        fexpr (analyze enve f)
-        argc (count args)
-        ^boolean fn-var? (-> fexpr :info :fn-var)
-        kw? (= 'cljs.core/Keyword (:tag fexpr))]
-    (when (or fn-var? kw?)
+  (let [enve    (assoc env :context :expr)
+        fexpr   (analyze enve f)
+        argc    (count args)
+        fn-var? (-> fexpr :info :fn-var)
+        kw?     (= 'cljs.core/Keyword (:tag fexpr))]
+    (when ^boolean fn-var?
       (let [{:keys [^boolean variadic max-fixed-arity method-params name]} (:info fexpr)]
-        (when (or (and kw? (zero? argc))
-                  (and (not kw?)
-                       (not (valid-arity? argc method-params))
-                       (or (not variadic)
-                           (and variadic (< argc max-fixed-arity)))))
+        (when (and (not (valid-arity? argc method-params))
+                   (or (not variadic)
+                       (and variadic (< argc max-fixed-arity))))
           (warning :fn-arity env {:name name :argc argc}))))
+    (when (and kw? (not (or (== 1 argc) (== 2 argc))))
+      (warning :fn-arity env {:name (first form) :argc argc}))
     (let [deprecated? (-> fexpr :info :deprecated)
           no-warn? (-> form meta :deprecation-nowarn)]
       (when (and (boolean deprecated?)
