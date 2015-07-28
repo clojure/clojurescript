@@ -339,7 +339,7 @@
   (str "Unsupported JavaScript module type " module-type " for foreign library "
        file "."))
 
-(defn ^:private default-warning-handler [warning-type env extra]
+(defn default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
     (when-let [s (error-message warning-type extra)]
       #?(:clj  (binding [*out* *err*]

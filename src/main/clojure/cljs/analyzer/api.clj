@@ -40,6 +40,18 @@
     `(binding [ana/*cljs-warnings* ~no-warnings]
        ~@body)))
 
+(defn warning-enabled?
+  "Test if the given warning-type is enabled."
+  [warning-type]
+  (ana/*cljs-warnings* warning-type))
+
+(defn default-warning-handler
+  "The default warning handler.
+
+   Outputs the warning messages to *err*."
+  [warning-type env extra]
+  (ana/default-warning-handler warning-type env extra))
+
 (defn get-options
   "Return the compiler options from compiler state."
   ([] (get-options env/*compiler*))

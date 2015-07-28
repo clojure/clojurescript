@@ -2,6 +2,12 @@
   (:require [cljs.analyzer.api :as ana-api])
   (:use clojure.test))
 
+(deftest cljs-warning-test
+  (is (ana-api/warning-enabled? :undeclared-var)
+      "Undeclared-var warning is enabled by default")
+  (is (not (ana-api/no-warn (ana-api/warning-enabled? :undeclared-var)))
+      "Disabled when all warnings are disabled"))
+
 (def warning-form
   '(do (defn x [a b] (+ a b))
        (x 1 2 3 4)))
