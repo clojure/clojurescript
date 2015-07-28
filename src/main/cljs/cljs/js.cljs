@@ -171,56 +171,62 @@
   ([bound-vars name opts cb]
    (require bound-vars name nil opts cb))
   ([bound-vars name reload opts cb]
-   (when (= :reload reload)
-     (swap! *loaded* disj name))
-   (when (= :reload-all reload)
-     (reset! *loaded* #{}))
-   (when (:verbose opts)
-     (debug-prn (str "Loading " name (when (:macros-ns opts) " macros") " namespace")))
-   (when-not (contains? @*loaded* name)
-     (let [env (:*env* bound-vars)]
-       (try
-         ((:*load-fn* bound-vars)
-           {:name   name
-            :macros (:macros-ns opts)
-            :path   (ns->relpath name)}
-          (fn [resource]
-            (assert (or (map? resource) (nil? resource))
-              "*load-fn* may only return a map or nil")
-            (if resource
-              (let [{:keys [lang source cache source-map]} resource]
-                (condp = lang
-                  :clj (eval-str* bound-vars source name opts
-                         (fn [res]
-                           (if (:error res)
-                             (cb res)
-                             (cb {:value true}))))
-                  :js  (let [res (try
-                                   ((:*eval-fn* bound-vars) resource)
-                                   (when cache
-                                     (load-analysis-cache!
-                                       (:*compiler* bound-vars) name cache))
-                                   (when source-map
-                                     (load-source-map!
-                                       (:*compiler* bound-vars) name source-map))
-                                   (catch :default cause
-                                     (wrap-error
-                                       (ana/error env
-                                         (str "Could not require " name) cause))))]
-                         (if (:error res)
-                           (cb res)
-                           (cb {:value true})))
-                  (cb (wrap-error
-                        (ana/error env
-                          (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))
-              (cb (wrap-error
-                    (ana/error env
-                      (ana/error-message :undeclared-ns
-                        {:ns-sym name :js-provide (cljs.core/name name)})))))))
-         (catch :default cause
-           (cb (wrap-error
-                 (ana/error env
-                   (str "Could not require " name) cause)))))))))
+   (let [name (cond-> name (:macro-ns opts) ana/macro-ns-name)]
+     (when (= :reload reload)
+       (swap! *loaded* disj name))
+     (when (= :reload-all reload)
+       (reset! *loaded* #{}))
+     (when (:verbose opts)
+       (debug-prn (str "Loading " name (when (:macros-ns opts) " macros") " namespace")))
+     (if-not (contains? @*loaded* name)
+       (let [env (:*env* bound-vars)]
+         (try
+           ((:*load-fn* bound-vars)
+             {:name name
+              :macros (:macros-ns opts)
+              :path (ns->relpath name)}
+             (fn [resource]
+               (assert (or (map? resource) (nil? resource))
+                 "*load-fn* may only return a map or nil")
+               (if resource
+                 (let [{:keys [lang source cache source-map]} resource]
+                   (condp = lang
+                     :clj (eval-str* bound-vars source name opts
+                            (fn [res]
+                              (if (:error res)
+                                (cb res)
+                                (do
+                                  (swap! *loaded* conj name)
+                                  (cb {:value true})))))
+                     :js  (let [res (try
+                                      ((:*eval-fn* bound-vars) resource)
+                                      (when cache
+                                        (load-analysis-cache!
+                                          (:*compiler* bound-vars) name cache))
+                                      (when source-map
+                                        (load-source-map!
+                                          (:*compiler* bound-vars) name source-map))
+                                      (catch :default cause
+                                        (wrap-error
+                                          (ana/error env
+                                            (str "Could not require " name) cause))))]
+                            (if (:error res)
+                              (cb res)
+                              (do
+                                (swap! *loaded* conj name)
+                                (cb {:value true}))))
+                     (cb (wrap-error
+                           (ana/error env
+                             (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))
+                 (cb (wrap-error
+                       (ana/error env
+                         (ana/error-message :undeclared-ns
+                           {:ns-sym name :js-provide (cljs.core/name name)})))))))
+           (catch :default cause
+             (cb (wrap-error
+                   (ana/error env
+                     (str "Could not require " name) cause))))))
+       (cb {:value true})))))
 
 (declare ns-side-effects analyze-deps)
 
@@ -822,9 +828,9 @@
     (fn [{:keys [error] :as res}]
       (if error
         (do
-          (println error)
+          (println "Error:" error)
           (println (.. error -cause -stack)))
-        (println res))))
+        (println "Result:" res))))
 
   (cljs/eval-str st
     "(ns foo.bar)\n(first [1 2 3])"
@@ -854,12 +860,11 @@
           (println (.. error -cause -stack)))
         (println res))))
 
-  ;; inline source maps work under Node.js
   (cljs/eval-str st
     "(ns foo.bar)\n(ffirst [1 2 3])"
     'foo.bar
     {:verbose true
-     :source-map false
+     :source-map true
      :eval node-eval
      :load node-load}
     (fn [{:keys [error] :as res}]
