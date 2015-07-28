@@ -28,21 +28,21 @@
      (when-let [i (:incremental *clojurescript-version*)]
        (str "." i))
      (when-let [q (:qualifier *clojurescript-version*)]
-       (str "-" q))
+       (str "." q))
      (when (:interim *clojurescript-version*)
        "-SNAPSHOT"))
-    "0.0-0000"))
+    "0.0.0000"))
 
 (defn ^String compiled-by-version [f]
   (with-open [reader (io/reader f)]
     (let [match (->> reader line-seq first
-                     (re-matches #".*ClojureScript (\d+\.\d+-\d+).*$"))]
-      (or (and match (second match)) "0.0-0000"))))
+                     (re-matches #".*ClojureScript (\d+\.\d+\.\d+).*$"))]
+      (or (and match (second match)) "0.0.0000"))))
 
 (defn build-options [^File f]
   (with-open [reader (io/reader f)]
     (let [match (->> reader line-seq first
-                  (re-matches #".*ClojureScript \d+\.\d+-\d+ (.*)$"))]
+                  (re-matches #".*ClojureScript \d+\.\d+\.\d+ (.*)$"))]
           (and match (edn/read-string (second match))))))
 
 (defn munge-path [ss]

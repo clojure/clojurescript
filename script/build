@@ -20,7 +20,7 @@ POM_FILE="pom.xml"
 # if the tag is v0.0.1).
 MAJOR="1"
 MINOR="7"
-REVISION=`git --no-replace-objects describe --match v$MAJOR\.$MINOR`
+REVISION=`git --no-replace-objects describe --match v$MAJOR.$MINOR`
 
 # Extract the version number from the string. Do this in two steps so
 # it is a little easier to understand.
@@ -29,14 +29,14 @@ REVISION=${REVISION:0:${#REVISION}-9} # drop the last 9 characters
 
 TAG=r$REVISION
 
-sed -e s/CLOJURESCRIPT_VERSION/$MAJOR.$MINOR-$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
+sed -e s/CLOJURESCRIPT_VERSION/$MAJOR.$MINOR.$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
 
 COMP_FILE=`mktemp /tmp/compiler.clj.XXXXXXXXXXX`
 sed -e 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major '"$MAJOR"', :minor '"$MINOR"', :qualifier '"$REVISION"'})/' src/main/clojure/cljs/util.cljc > $COMP_FILE
 mv $COMP_FILE src/main/clojure/cljs/util.cljc
 
 CLJS_FILE=`mktemp /tmp/core.cljs.XXXXXXXXXXX`
-sed -e 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""$MAJOR.$MINOR-$REVISION"\"')/' src/main/cljs/cljs/core.cljs > $CLJS_FILE
+sed -e 's/^.def \*clojurescript-version\*.*$/(def *clojurescript-version* '\""$MAJOR.$MINOR.$REVISION"\"')/' src/main/cljs/cljs/core.cljs > $CLJS_FILE
 mv $CLJS_FILE src/main/cljs/cljs/core.cljs
 
 rm -f src/main/cljs/cljs/core.aot.js
@@ -46,11 +46,11 @@ rm -f src/main/cljs/cljs/core.cljs.cache.aot.edn
 ./script/aot_core
 
 AOT_FILE=`mktemp /tmp/core.aot.js.XXXXXXXXXXX`
-sed -e 's/0.0-0000/$MAJOR.$MINOR-$REVISION/' src/main/cljs/cljs/core.aot.js > $AOT_FILE
+sed -e 's/0.0.0000/$MAJOR.$MINOR.$REVISION/' src/main/cljs/cljs/core.aot.js > $AOT_FILE
 mv $AOT_FILE src/main/cljs/cljs/core.aot.js
 
 AOT_CACHE_FILE=`mktemp /tmp/core.cljs.cache.aot.edn.XXXXXXXXXXX`
-sed -e 's/0.0-0000/$MAJOR.$MINOR-$REVISION/' src/main/cljs/cljs/core.cljs.cache.aot.edn > $AOT_CACHE_FILE
+sed -e 's/0.0.0000/$MAJOR.$MINOR.$REVISION/' src/main/cljs/cljs/core.cljs.cache.aot.edn > $AOT_CACHE_FILE
 mv $AOT_CACHE_FILE src/main/cljs/cljs/core.cljs.cache.aot.edn
 
 # For Hudson server
