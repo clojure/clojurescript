@@ -67,12 +67,14 @@
   facilitate code walking without knowing the details of the op set."
   ([env form] (analyze env form nil))
   ([env form name] (analyze env form name nil))
-  ([env form name opts] (analyze env/*compiler* env form name opts))
+  ([env form name opts]
+   (analyze
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env opts))
+     env form name opts))
   ([state env form name opts]
-   (if state
-     (env/with-compiler-env state
-       (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
-         (ana/analyze env form name opts)))
+   (env/with-compiler-env state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
        (ana/analyze env form name opts)))))
 
@@ -94,7 +96,12 @@
    requested via opts where :restore is false."
   ([src] (parse-ns src nil nil))
   ([src opts] (parse-ns src nil opts))
-  ([src dest opts] (parse-ns env/*compiler* src dest opts))
+  ([src dest opts]
+   (parse-ns
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env opts))
+     src dest opts))
   ([state src dest opts]
    (env/with-compiler-env state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -110,7 +117,12 @@
    \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
    meaningful value."
   ([f] (analyze-file f nil))
-  ([f opts] (analyze-file env/*compiler* f opts))
+  ([f opts]
+   (analyze-file
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env opts))
+     f opts))
   ([state f opts]
    (env/with-compiler-env state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]

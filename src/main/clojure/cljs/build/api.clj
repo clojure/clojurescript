@@ -57,19 +57,29 @@
   'example.macros :
   (cljs-dependents-for-macro-namespaces 'example.macros) ->
   ('example.core 'example.util)"
-  ([namespaces] (cljs-dependents-for-macro-namespaces env/*compiler* namespaces))
+  ([namespaces]
+   (cljs-dependents-for-macro-namespaces
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env))
+     namespaces))
   ([state namespaces]
    (map :name
-        (let [namespaces-set (set namespaces)]
-          (filter (fn [x] (not-empty
-                            (intersection namespaces-set (-> x :require-macros vals set))))
-                  (vals (:cljs.analyzer/namespaces @state)))))))
+     (let [namespaces-set (set namespaces)]
+       (filter (fn [x] (not-empty
+                         (intersection namespaces-set (-> x :require-macros vals set))))
+         (vals (:cljs.analyzer/namespaces @state)))))))
 
 (defn cljs-ns-dependents
   "Given a namespace symbol return a seq of all dependent
   namespaces sorted in dependency order. Will include
   transient dependents."
-  ([ns] (cljs-ns-dependents env/*compiler* ns))
+  ([ns]
+   (cljs-ns-dependents
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env))
+     ns))
   ([state ns]
    (env/with-compiler-env state
      (ana/ns-dependents ns))))
@@ -85,7 +95,12 @@
   "Given a ClojureScript source file return the target file. May optionally
   provide build options with :output-dir specified."
   ([src] (src-file->target-file src nil))
-  ([src opts] (src-file->target-file env/*compiler* src opts))
+  ([src opts]
+   (src-file->target-file
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env opts))
+     src opts))
   ([state src opts]
    (env/with-compiler-env state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
@@ -95,7 +110,12 @@
   "Given a ClojureScript or Google Closure style JavaScript source file return
   the goog.require statement for it."
   ([src] (src-file->goog-require src nil))
-  ([src options] (src-file->goog-require env/*compiler* src options))
+  ([src options]
+   (src-file->goog-require
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env))
+     src options))
   ([state src options]
    (env/with-compiler-env state
      (binding [ana/*cljs-warning-handlers* (:warning-handlers options ana/*cljs-warning-handlers*)]
@@ -126,7 +146,11 @@
   uri of the corresponding source regardless of the source language extension:
   .cljs, .cljc, .js. Returns a map containing :relative-path a string, and
   :uri a URL."
-  ([ns] (ns->location ns env/*compiler*))
+  ([ns]
+   (ns->location ns
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env))))
   ([ns compiler-env]
    (closure/source-for-namespace ns compiler-env)))
 
@@ -163,7 +187,12 @@
 
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."
-  ([opts compilable] (compile env/*compiler* opts compilable))
+  ([opts compilable]
+   (compile
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env opts))
+     opts compilable))
   ([state opts compilable]
    (env/with-compiler-env state
      (closure/compile compilable opts))))
@@ -181,7 +210,10 @@
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
-   (build source opts nil))
+   (build source opts
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env opts))))
   ([source opts compiler-env]
    (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/build source opts compiler-env))))
@@ -189,9 +221,10 @@
 (defn watch
   "Given a source which can be compiled, watch it for changes to produce."
   ([source opts]
-   (watch source opts (if-not (nil? env/*compiler*)
-                        env/*compiler*
-                        (env/default-compiler-env opts))))
+   (watch source opts
+     (if-not (nil? env/*compiler*)
+       env/*compiler*
+       (env/default-compiler-env opts))))
   ([source opts compiler-env]
    (watch source opts compiler-env nil))
   ([source opts compiler-env stop]
