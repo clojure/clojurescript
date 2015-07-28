@@ -860,6 +860,9 @@
           (println (.. error -cause -stack)))
         (println res))))
 
+  ;; *NOT* source mapped under Node.js
+  ;; source-map-support does not yet work, users will need to map
+  ;; themselves
   (cljs/eval-str st
     "(ns foo.bar)\n(ffirst [1 2 3])"
     'foo.bar
