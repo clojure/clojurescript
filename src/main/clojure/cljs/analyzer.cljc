@@ -87,7 +87,8 @@
    :munged-namespace true
    :ns-var-clash true
    :extend-type-invalid-method-shape true
-   :unsupported-js-module-type true})
+   :unsupported-js-module-type true
+   :unsupported-preprocess-value true})
 
 (def js-reserved
   #{"arguments" "abstract" "boolean" "break" "byte" "case"
@@ -337,6 +338,11 @@
 (defmethod error-message :unsupported-js-module-type
   [warning-type {:keys [module-type file] :as info}]
   (str "Unsupported JavaScript module type " module-type " for foreign library "
+       file "."))
+
+(defmethod error-message :unsupported-preprocess-value
+  [warning-type {:keys [preprocess file]}]
+  (str "Unsupported preprocess value " preprocess " for foreign library "
        file "."))
 
 (defn default-warning-handler [warning-type env extra]

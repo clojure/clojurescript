@@ -1247,21 +1247,24 @@
     (let [module-root (get-js-module-root file)]
       (ES6ModuleLoader. closure-compiler module-root))))
 
-(defn ^Node get-root-node [file closure-compiler]
-  (let [^CompilerInput input (->> (slurp file)
-                                  (js-source-file file)
+(defn ^Node get-root-node [ijs closure-compiler]
+  (let [^CompilerInput input (->> (deps/-source ijs)
+                                  (js-source-file (:file ijs))
                                   (CompilerInput.))]
     (.getAstRoot input closure-compiler)))
 
 (defn get-source-files [module-type opts]
   (->> (:foreign-libs opts)
        (filter #(= (:module-type %) module-type))
-       (map #(js-source-file (:file %) (slurp (:file %))))))
+       (map (fn [lib]
+              (let [lib (deps/load-foreign-library lib)]
+                (js-source-file (:file lib) (deps/-source lib)))))))
 
 (defmulti convert-js-module
-  "Takes a JavaScript module and rewrites it into a Google Closure-compatible
-  form. Returns the source of the new module as a single string."
-  (fn [{module-type :module-type :as js} opts]
+  "Takes a JavaScript module as an IJavaScript and rewrites it into a Google
+  Closure-compatible form. Returns an IJavaScript with the converted module
+  code set as source."
+  (fn [{module-type :module-type :as ijs} opts]
     (if (and (= module-type :amd) can-convert-amd?)
       ;; AMD modules are converted via CommonJS modules
       :commonjs
@@ -1275,8 +1278,8 @@
       (set-options (CompilerOptions.))))
 
 (util/compile-if can-convert-commonjs?
-  (defmethod convert-js-module :commonjs [js opts]
-    (let [{:keys [file module-type]} js
+  (defmethod convert-js-module :commonjs [ijs opts]
+    (let [{:keys [file module-type]} ijs
           ^List externs '()
           ^List source-files (get-source-files module-type opts)
           ^CompilerOptions options (make-convert-js-module-options opts)
@@ -1286,17 +1289,17 @@
                        (make-es6-loader source-files)
                        (make-es6-loader closure-compiler file))
           cjs (ProcessCommonJSModules. closure-compiler es6-loader)
-          ^Node root (get-root-node file closure-compiler)]
+          ^Node root (get-root-node ijs closure-compiler)]
       (util/compile-if can-convert-amd?
-        (when (= (:module-type js) :amd)
+        (when (= module-type :amd)
           (.process (TransformAMDToCJSModule. closure-compiler) nil root)))
       (.process cjs nil root)
       (report-failure (.getResult closure-compiler))
-      (.toSource closure-compiler root))))
+      (assoc ijs :source (.toSource closure-compiler root)))))
 
 (util/compile-if can-convert-es6?
-  (defmethod convert-js-module :es6 [js opts]
-    (let [{:keys [file module-type]} js
+  (defmethod convert-js-module :es6 [ijs opts]
+    (let [{:keys [file module-type]} ijs
           ^List externs '()
           ^List source-files (get-source-files module-type opts)
           ^CompilerOptions options (doto (make-convert-js-module-options opts)
@@ -1308,14 +1311,24 @@
                        (make-es6-loader source-files)
                        (make-es6-loader closure-compiler file))
           cjs (ProcessEs6Modules. closure-compiler es6-loader true)
-          ^Node root (get-root-node file closure-compiler)]
+          ^Node root (get-root-node ijs closure-compiler)]
       (.processFile cjs root)
       (report-failure (.getResult closure-compiler))
-      (.toSource closure-compiler root))))
+      (assoc ijs :source (.toSource closure-compiler root)))))
 
-(defmethod convert-js-module :default [js opts]
-  (ana/warning :unsupported-js-module-type @env/*compiler* js)
-  (deps/-source js))
+(defmethod convert-js-module :default [ijs opts]
+  (ana/warning :unsupported-js-module-type @env/*compiler* ijs)
+  ijs)
+
+(defmulti js-transforms
+  "Takes an IJavaScript with the source code set as source, transforms the
+  source code and returns an IJavascript with the new code set as source."
+  (fn [ijs opts]
+    (:preprocess ijs)))
+
+(defmethod js-transforms :default [ijs opts]
+  (ana/warning :unsupported-preprocess-value @env/*compiler* ijs)
+  ijs)
 
 (defn write-javascript
   "Write or copy a JavaScript file to output directory. Only write if the file
@@ -1332,9 +1345,11 @@
                   :group    (:group js)}]
     (when-not (.exists out-file)
       (util/mkdirs out-file)
-      (if (:module-type js)
-        (spit out-file (convert-js-module js opts))
-        (spit out-file (deps/-source js))))
+      (spit out-file
+            (cond-> (assoc js :source (deps/-source js))
+              (:preprocess js) (js-transforms opts)
+              (:module-type js) (convert-js-module opts)
+              true deps/-source)))
     (if (map? js)
       (merge js ijs)
       ijs)))
