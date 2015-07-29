@@ -983,7 +983,7 @@
   "Use the Closure Compiler to optimize one or more JavaScript files."
   [opts & sources]
   (when (or ana/*verbose* (:verbose opts))
-    (util/debug-prn "Applying optimizations" (:optimizations opts)))
+    (util/debug-prn "Applying optimizations" (:optimizations opts) "to" (count sources) "sources"))
   (let [closure-compiler (make-closure-compiler)
         ^List externs (load-externs opts)
         compiler-options (make-options opts)
