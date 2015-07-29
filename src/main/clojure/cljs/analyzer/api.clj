@@ -145,14 +145,16 @@
 (defn all-ns
   "Return all namespaces. Analagous to clojure.core/all-ns but
   returns symbols identifying namespaces not Namespace instances."
-  ([] (all-ns env/*compiler*))
+  ([]
+   (all-ns env/*compiler*))
   ([state]
    (keys (get @state ::ana/namespaces))))
 
 (defn find-ns
   "Given a namespace return the corresponding namespace analysis map. Analagous
   to clojure.core/find-ns."
-  ([sym] (find-ns env/*compiler* sym))
+  ([sym]
+   (find-ns env/*compiler* sym))
   ([state sym]
    {:pre [(symbol? sym)]}
    (get-in @state [::ana/namespaces sym])))
@@ -160,7 +162,8 @@
 (defn ns-interns
   "Given a namespace return all the var analysis maps. Analagous to
   clojure.core/ns-interns but returns var analysis maps not vars."
-  ([ns] (ns-interns env/*compiler*))
+  ([ns]
+   (ns-interns env/*compiler* ns))
   ([state ns]
    {:pre [(symbol? ns)]}
    (merge
@@ -170,7 +173,8 @@
 (defn ns-publics
   "Given a namespace return all the public var analysis maps. Analagous to
   clojure.core/ns-publics but returns var analysis maps not vars."
-  ([ns] (ns-publics env/*compiler*))
+  ([ns]
+   (ns-publics env/*compiler* ns))
   ([state ns]
    {:pre [(symbol? ns)]}
    (->> (merge
@@ -182,14 +186,16 @@
 (defn ns-resolve
   "Given a namespace and a symbol return the corresponding var analysis map.
   Analagous to clojure.core/ns-resolve but returns var analysis map not Var."
-  ([ns sym] (ns-resolve env/*compiler* ns sym))
+  ([ns sym]
+   (ns-resolve env/*compiler* ns sym))
   ([state ns sym]
    {:pre [(symbol? ns) (symbol? sym)]}
    (get-in @state [::ana/namespaces ns :defs sym])))
 
 (defn remove-ns
   "Removes the namespace named by the symbol."
-  ([ns] (remove-ns env/*compiler* ns))
+  ([ns]
+   (remove-ns env/*compiler* ns))
   ([state ns]
    {:pre [(symbol? ns)]}
    (swap! state update-in [::ana/namespaces] dissoc ns)))
