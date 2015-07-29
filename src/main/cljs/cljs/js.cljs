@@ -760,7 +760,7 @@
 
   (defn node-load [{:keys [name macros]} cb]
     (if (contains? libs name)
-      (let [path (str "src/test/" (cljs/ns->relpath name)
+      (let [path (str "src/test/cljs/" (cljs/ns->relpath name)
                       "." (cljs.core/name (get libs name)))]
         (.readFile fs path "utf-8"
           (fn [err src]
