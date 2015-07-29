@@ -1666,7 +1666,7 @@
                                              (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
                              (->>
                                (util/measure compiler-stats
-                                 "Optimize sources"
+                                 (str "Optimizing " (count js-sources) " sources")
                                  (apply optimize all-opts
                                    (remove foreign-source? js-sources)))
                                (add-wrapper all-opts)
