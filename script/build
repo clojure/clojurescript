@@ -27,7 +27,7 @@ REVISION=`git --no-replace-objects describe --match v$MAJOR.$MINOR`
 REVISION=${REVISION:5} # drop the first 5 characters
 REVISION=${REVISION:0:${#REVISION}-9} # drop the last 9 characters
 
-TAG=r$REVISION
+TAG=v$MAJOR.$MINOR.$REVISION
 
 sed -e s/CLOJURESCRIPT_VERSION/$MAJOR.$MINOR.$REVISION/ < "$POM_TEMPLATE" > "$POM_FILE"
 
