@@ -2265,16 +2265,13 @@
 
 (defn get-expander-ns [env ^String nstr]
   (cond
-    (identical? "clojure.core" nstr)
-    #?(:clj  (find-ns 'cljs.core)
-       :cljs (find-macros-ns CLJS_CORE_MACROS_SYM))
-    (identical? "clojure.repl" nstr)
-    #?(:clj  (find-ns 'cljs.repl)
-       :cljs (find-macros-ns 'cljs.repl))
-    #?@(:clj  [(.contains nstr ".") (find-ns (symbol nstr))]
-        :cljs [(goog.string/contains nstr ".") (find-macros-ns (symbol nstr))])
-    :else
-    (some-> env :ns :require-macros (get (symbol nstr)) find-ns)))
+    #?@(:clj  [(= "clojure.core" nstr)          (find-ns 'cljs.core)]
+        :cljs [(identical? "clojure.core" nstr) (find-macros-ns CLJS_CORE_MACROS_SYM)])
+    #?@(:clj  [(= "clojure.repl" nstr)          (find-ns 'cljs.repl)]
+        :cljs [(identical? "clojure.repl" nstr) (find-macros-ns 'cljs.repl)])
+    #?@(:clj  [(.contains nstr ".")             (find-ns (symbol nstr))]
+        :cljs [(goog.string/contains nstr ".")  (find-macros-ns (symbol nstr))])
+    :else (some-> env :ns :require-macros (get (symbol nstr)) find-ns)))
 
 (defn get-expander* [sym env]
   (when-not (or (not (nil? (gets env :locals sym))) ; locals hide macros
