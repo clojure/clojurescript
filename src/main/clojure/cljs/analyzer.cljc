@@ -2691,8 +2691,11 @@
                           (recur (rest forms))))
                       (throw (AssertionError. (str "No ns form found in " src)))))))]
           (when (false? (:restore opts))
-            (swap! env/*compiler* update-in [::namespaces] merge
-              (get compiler-env' ::namespaces)))
+            (swap! env/*compiler*
+              (fn [old-state]
+                (-> old-state
+                  (update-in [::namespaces] merge (get compiler-env' ::namespaces))
+                  (update-in [::constant-table] merge (get compiler-env' ::constant-table))))))
           ijs)))))
 
 #?(:clj
