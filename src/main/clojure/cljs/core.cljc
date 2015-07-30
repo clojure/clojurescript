@@ -1634,6 +1634,9 @@
                         `(~'-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
                                                 ~'__extmap)))
 
+                        'IIterable
+                        `(~'-iterator [~gs] (RecordIter. 0 ~gs ~(count base-fields) [~@(map keyword base-fields)]  (-iterator ~'__extmap) ))
+
                         'IPrintWithWriter
                         `(~'-pr-writer [this# writer# opts#]
                            (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# pr-writer "" " " "" opts# keyval#))]

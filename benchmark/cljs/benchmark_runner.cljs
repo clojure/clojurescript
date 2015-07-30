@@ -322,6 +322,26 @@
 (simple-benchmark [r r] (last r) 1)
 (println)
 
+(println ";; iterators")
+(def ipmap (apply hash-map (range 2000)))
+
+(println ";; Sequence iterator")
+(simple-benchmark [s (seq ipmap)]
+                  (let [iter (seq-iter s)]
+                    (loop [v nil]
+                      (if (.hasNext iter)
+                        (recur (.next iter))
+                        v)))
+                  1000)
+(println ";; Direct iterator")
+(simple-benchmark []
+                  (let [iter (-iterator ipmap)]
+                    (loop [v nil]
+                      (if (.hasNext iter)
+                        (recur (.next iter))
+                        v)))
+                  1000)
+
 (println ";;; comprehensions")
 (simple-benchmark [xs (range 512)] (last (for [x xs y xs] (+ x y))) 1)
 (simple-benchmark [xs (vec (range 512))] (last (for [x xs y xs] (+ x y))) 4)

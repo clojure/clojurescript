@@ -5330,6 +5330,21 @@ reduces them without incurring seq initialization"
 
 ;;; PersistentQueue ;;;
 
+(deftype PersistentQueueIter [^:mutable fseq riter]
+  Object
+  (hasNext [_]
+    (or (and (some? fseq) (seq fseq)) (and (some? riter) (.hasNext riter))))
+  (next [_]
+    (cond
+      (some? fseq)
+      (let [ret (first fseq)]
+        (set! fseq (next fseq))
+        ret)
+      (and (some? riter) ^boolean (.hasNext riter))
+      (.next riter)
+      :else (throw (js/Error. "No such element"))))
+  (remove [_] (js/Error. "Unsupported operation")))
+
 (deftype PersistentQueueSeq [meta front rear ^:mutable __hash]
   Object
   (toString [coll]
@@ -5379,6 +5394,10 @@ reduces them without incurring seq initialization"
 
   ICloneable
   (-clone [coll] (PersistentQueue. meta count front rear __hash))
+
+  IIterable
+  (-iterator [coll]
+    (PersistentQueueIter. front (-iterator rear)))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentQueue. meta count front rear __hash))
@@ -5606,6 +5625,19 @@ reduces them without incurring seq initialization"
 (set! (.-HASHMAP_THRESHOLD ObjMap) 8)
 
 (set! (.-fromObject ObjMap) (fn [ks obj] (ObjMap. nil ks obj 0 nil)))
+
+;; Record Iterator
+(deftype RecordIter [^:mutable i record base-count fields ext-map-iter]
+  Object
+  (hasNext [_]
+    (or (< i base-count) (.hasNext ext-map-iter)))
+  (next [_]
+    (if (< i base-count)
+      (let [k (nth fields i)]
+        (set! i (inc i))
+        [k (-lookup record k)])
+      (.next ext-map-iter)))
+  (remove [_] (js/Error. "Unsupported operation")))
 
 ;; EXPERIMENTAL: subject to change
 (deftype ES6EntriesIterator [^:mutable s]
@@ -6109,6 +6141,44 @@ reduces them without incurring seq initialization"
 
 (declare ArrayNode)
 
+ (deftype NodeIterator [arr ^:mutable i ^:mutable next-entry ^:mutable next-iter]
+  Object
+  (advance [this]
+    (let [len (alength arr)]
+      (loop []
+        (if (< i len)
+          (let [key (aget arr i)
+                node-or-val (aget arr (inc i))
+                ^boolean found
+                (cond (some? key)
+                      (set! next-entry [key node-or-val])
+                      (some? node-or-val)
+                      (let [new-iter (-iterator node-or-val)]
+                        (if ^boolean (.hasNext new-iter)
+                          (set! next-iter new-iter)
+                          false))
+                      :else false)]
+            (set! i (+ i 2))
+            (if found true (recur)))
+          false))))
+  (hasNext [this]
+    (or (some? next-entry) (some? next-iter) (.advance this)))
+  (next [this]
+    (cond
+      (some? next-entry)
+      (let [ret next-entry]
+        (set! next-entry nil)
+        ret)
+      (some? next-iter)
+      (let [ret (.next next-iter)]
+        (when-not ^boolean (.hasNext next-iter)
+          (set! next-iter nil))
+        ret)
+      ^boolean (.advance this)
+      (.next this)
+      :else (throw (js/Error. "No such element"))))
+  (remove [_] (js/Error. "Unsupported operation")))
+
 (deftype BitmapIndexedNode [edit ^:mutable bitmap ^:mutable arr]
   Object
   (inode-assoc [inode shift hash key val added-leaf?]
@@ -6303,7 +6373,11 @@ reduces them without incurring seq initialization"
                 :else inode)))))
 
   (kv-reduce [inode f init]
-    (inode-kv-reduce arr f init)))
+    (inode-kv-reduce arr f init))
+
+  IIterable
+  (-iterator [coll]
+    (NodeIterator. arr 0 nil nil)))
 
 (set! (.-EMPTY BitmapIndexedNode) (BitmapIndexedNode. nil 0 (make-array 0)))
 
@@ -6319,6 +6393,26 @@ reduces them without incurring seq initialization"
               (recur (inc i) (+ j 2) (bit-or bitmap (bit-shift-left 1 i))))
           (recur (inc i) j bitmap))
         (BitmapIndexedNode. edit bitmap new-arr)))))
+
+(deftype ArrayNodeIterator [arr ^:mutable i ^:mutable next-iter]
+  Object
+  (hasNext [this]
+    (let [len (alength arr)]
+      (loop []
+        (if-not (and  (some? next-iter) ^boolean (.hasNext next-iter))
+          (if (< i len)
+            (let [node (aget arr i)]
+              (set! i (inc i))
+              (when (some? node)
+                (set! next-iter (-iterator node)))
+              (recur))
+            false)
+          true))))
+  (next [this]
+    (if ^boolean (.hasNext this)
+      (.next next-iter)
+      (throw (js/Error. "No such element"))))
+  (remove [_] (js/Error. "Unsupported operation")))
 
 (deftype ArrayNode [edit ^:mutable cnt ^:mutable arr]
   Object
@@ -6415,7 +6509,11 @@ reduces them without incurring seq initialization"
                   @init
                   (recur (inc i) init)))
               (recur (inc i) init)))
-          init)))))
+          init))))
+
+ IIterable
+ (-iterator [coll]
+    (ArrayNodeIterator. arr 0 nil)))
 
 (defn- hash-collision-node-find-index [arr cnt key]
   (let [lim (* 2 cnt)]
@@ -6522,7 +6620,11 @@ reduces them without incurring seq initialization"
                 editable))))))
 
   (kv-reduce [inode f init]
-    (inode-kv-reduce arr f init)))
+    (inode-kv-reduce arr f init))
+
+  IIterable
+  (-iterator [coll]
+    (NodeIterator. arr 0 nil nil)))
 
 (defn- create-node
   ([shift key1 val1 key2hash key2 val2]
@@ -6660,6 +6762,18 @@ reduces them without incurring seq initialization"
 
 (declare TransientHashMap)
 
+(deftype HashMapIter [nil-val root-iter ^:mutable seen]
+  Object
+  (hasNext [_]
+    (and ^boolean seen ^boolean (.hasNext root-iter)))
+  (next [_]
+    (if-not ^boolean seen
+      (do
+        (set! seen true)
+        nil-val)
+      (.next root-iter)))
+  (remove [_] (js/Error. "Unsupported operation")))
+
 (deftype PersistentHashMap [meta cnt root ^boolean has-nil? nil-val ^:mutable __hash]
   Object
   (toString [coll]
@@ -6684,6 +6798,13 @@ reduces them without incurring seq initialization"
 
   ICloneable
   (-clone [_] (PersistentHashMap. meta cnt root has-nil? nil-val __hash))
+
+  IIterable
+  (-iterator [coll]
+    (let [root-iter (if ^boolean root (-iterator root) nil-iter)]
+      (if has-nil?
+        (HashMapIter. nil-val root-iter false)
+        root-iter)))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentHashMap. meta cnt root has-nil? nil-val __hash))
@@ -7812,6 +7933,16 @@ reduces them without incurring seq initialization"
 
 (declare TransientHashSet)
 
+(deftype HashSetIter [iter]
+  Object
+  (hasNext [_]
+    (.hasNext iter))
+  (next [_]
+    (if ^boolean (.hasNext iter)
+      (aget (.-tail (.next iter)) 0)
+      (throw (js/Error. "No such element"))))
+  (remove [_] (js/Error. "Unsupported operation")))
+
 (deftype PersistentHashSet [meta hash-map ^:mutable __hash]
   Object
   (toString [coll]
@@ -7834,6 +7965,10 @@ reduces them without incurring seq initialization"
 
   ICloneable
   (-clone [_] (PersistentHashSet. meta hash-map __hash))
+
+  IIterable
+  (-iterator [coll]
+    (HashSetIter. (-iterator hash-map)))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentHashSet. meta hash-map __hash))
