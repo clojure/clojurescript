@@ -383,10 +383,11 @@
         the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
-    ((fn analyze-loop []
+    ((fn analyze-loop [last-ast]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  ana/*cljs-ns*          (:*cljs-ns* bound-vars)
                  *ns*                   (create-ns (:*cljs-ns* bound-vars))
+                 ana/*passes*           (:*passes* bound-vars)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
@@ -416,9 +417,9 @@
                            (fn [res]
                              (if (:error res)
                                (cb res)
-                               (analyze-loop))))
-                         (recur)))))
-                 (cb {:value nil}))))))))))
+                               (analyze-loop ast))))
+                         (recur ast)))))
+                 (cb {:value last-ast}))))))) nil)))
 
 (defn analyze
   "Analyze ClojureScript source. The compiler state will be populated with
@@ -454,6 +455,9 @@
    (analyze*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
+      :*passes*       (or (:passes opts) ana/*passes*)
+      :*analyze-deps* (or (:analyze-deps opts) true)
+      :*load-macros*  (or (:load-macros opts) true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
      source name opts cb)))
@@ -743,7 +747,8 @@
      source name opts cb)))
 
 (comment
-  (require '[cljs.js :as cljs])
+  (require '[cljs.js :as cljs]
+           '[cljs.analyzer :as ana])
 
   (def vm (js/require "vm"))
   (def fs (js/require "fs"))
@@ -768,6 +773,15 @@
                   {:lang :clj :source src}
                   (.error js/console err))))))
       (cb nil)))
+
+  (defn elide-env [env ast opts]
+    (dissoc ast :env))
+
+  (cljs/analyze st "(+ 1 1)" nil
+    {:passes [ana/infer-type elide-env]
+     :eval cljs/js-eval}
+    (fn [{:keys [value]}]
+      (println value)))
 
   (cljs/eval st '(defn foo [a b] (+ a b))
     {:eval cljs/js-eval}
