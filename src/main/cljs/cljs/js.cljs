@@ -779,12 +779,12 @@
 
   (cljs/analyze st "(+ 1 1)" nil
     {:passes [ana/infer-type elide-env]
-     :eval cljs/js-eval}
+     :eval node-eval}
     (fn [{:keys [value]}]
       (println value)))
 
   (cljs/eval st '(defn foo [a b] (+ a b))
-    {:eval cljs/js-eval}
+    {:eval node-eval}
     (fn [res]
       (println res)))
 
@@ -797,27 +797,35 @@
     "(defn foo [a b] (+ a b))
      (defn bar [c d] (+ c d))"
     nil
-    {:eval cljs/js-eval}
+    {:eval node-eval}
     (fn [res]
       (println res)))
 
   (cljs/eval-str st "1"
     nil
-    {:eval cljs/js-eval
+    {:eval node-eval
      :context :expr}
     (fn [res]
       (println res)))
 
   (cljs/eval-str st "(def x 1)"
     nil
-    {:eval cljs/js-eval
+    {:eval node-eval
      :context :expr
      :def-emits-var true}
     (fn [res]
       (println res)))
 
   (cljs/eval st '(ns foo.bar)
-    {:eval cljs/js-eval}
+    {:eval node-eval}
+    (fn [res]
+      (println res)))
+
+  (cljs/eval st '(def x 1)
+    {:eval node-eval
+     :context :expr
+     :def-emits-var true
+     :ns 'foo.bar}
     (fn [res]
       (println res)))
 
