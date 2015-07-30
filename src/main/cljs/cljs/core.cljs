@@ -8839,11 +8839,15 @@ reduces them without incurring seq initialization"
         (-pr-writer obj writer opts)
 
         :else
-        (let [name (.. obj -constructor -name)
-              name (if (or (nil? name) (gstring/isEmpty name))
-                     "Object"
-                     name)]
-          (write-all writer "#object[" name " " (str obj) "]"))))))
+        (if (.. obj -constructor -cljs$lang$ctorStr)
+          (write-all writer
+            "#object[" (.replace (.. obj -constructor -cljs$lang$ctorStr)
+                         (js/RegExp. "/" "g") ".") "]")
+          (let [name (.. obj -constructor -name)
+               name (if (or (nil? name) (gstring/isEmpty name))
+                      "Object"
+                      name)]
+           (write-all writer "#object[" name " " (str obj) "]")))))))
 
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
@@ -9050,15 +9054,15 @@ reduces them without incurring seq initialization"
 
   Atom
   (-pr-writer [a writer opts]
-    (-write writer "#<Atom: ")
-    (pr-writer (.-state a) writer opts)
-    (-write writer ">"))
+    (-write writer "#object [cljs.core.Atom ")
+    (pr-writer {:val (.-state a)} writer opts)
+    (-write writer "]"))
 
   Volatile
   (-pr-writer [a writer opts]
-    (-write writer "#<Volatile: ")
-    (pr-writer (.-state a) writer opts)
-    (-write writer ">"))
+    (-write writer "#object [cljs.core.Volatile ")
+    (pr-writer {:val (.-state a)} writer opts)
+    (-write writer "]"))
 
   Var
   (-pr-writer [a writer opts]
