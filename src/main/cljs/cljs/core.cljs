@@ -8810,7 +8810,11 @@ reduces them without incurring seq initialization"
           (-write writer obj))
 
         ^boolean (goog/isFunction obj)
-        (write-all writer "#<" (str obj) ">")
+        (let [name (.-name obj)
+              name (if (or (nil? name) (gstring/isEmpty name))
+                     "Function"
+                     name)]
+          (write-all writer "#object[" name " \"" (str obj) "\"]"))
 
         (instance? js/Date obj)
         (let [normalize (fn [n len]
@@ -8834,7 +8838,12 @@ reduces them without incurring seq initialization"
         (implements? IPrintWithWriter obj)
         (-pr-writer obj writer opts)
 
-        :else (write-all writer "#<" (str obj) ">")))))
+        :else
+        (let [name (.. obj -constructor -name)
+              name (if (or (nil? name) (gstring/isEmpty name))
+                     "Object"
+                     name)]
+          (write-all writer "#object[" name " " (str obj) "]"))))))
 
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
@@ -9838,7 +9847,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 ;;; ExceptionInfo
 
 (defn- pr-writer-ex-info [obj writer opts]
-  (-write writer "#ExceptionInfo{:message ")
+  (-write writer "#error {:message ")
   (pr-writer (.-message obj) writer opts)
   (when (.-data obj)
     (-write writer ", :data ")
