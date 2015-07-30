@@ -692,7 +692,7 @@
   the binding-forms are bound to their respective init-exprs or parts
   therein."
   [bindings & body]
-  (assert-args
+  (assert-args let
      (vector? bindings) "a vector for its binding"
      (even? (count bindings)) "an even number of forms in binding vector")
   `(let* ~(destructure bindings) ~@body))
@@ -702,7 +702,7 @@
   the binding-forms are bound to their respective init-exprs or parts
   therein. Acts as a recur target."
   [bindings & body]
-  (assert-args
+  (assert-args loop
     (vector? bindings) "a vector for its binding"
     (even? (count bindings)) "an even number of forms in binding vector")
   (core/let [db (destructure bindings)]
