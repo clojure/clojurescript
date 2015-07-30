@@ -2524,9 +2524,10 @@
 
 (defn analyze* [env form name opts]
   (let [passes *passes*
-        passes (when (nil? passes)
+        passes (if (nil? passes)
                  #?(:clj  [infer-type ns-side-effects]
-                    :cljs [infer-type]))
+                    :cljs [infer-type])
+                 passes)
         form   (if (instance? LazySeq form)
                  (if (seq form) form ())
                  form)
