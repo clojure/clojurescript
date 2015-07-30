@@ -1,4 +1,5 @@
-(ns bootstrap-test.macros)
+(ns bootstrap-test.macros
+  (:require [bootstrap-test.helper :refer [bar]]))
 
 (defmacro foo [a b]
-  `(* ~a ~b))
+  (bar a b))

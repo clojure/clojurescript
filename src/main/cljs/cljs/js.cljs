@@ -761,7 +761,8 @@
 
   (def libs
     {'bootstrap-test.core :cljs
-     'bootstrap-test.macros :clj})
+     'bootstrap-test.macros :clj
+     'bootstrap-test.helper :clj})
 
   (defn node-load [{:keys [name macros]} cb]
     (if (contains? libs name)
