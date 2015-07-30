@@ -2036,7 +2036,7 @@
                        (last clauses)
                        `(throw
                           (js/Error.
-                            (core/str "No matching clause: " ~e))))
+                            (cljs.core/str "No matching clause: " ~e))))
              env     &env
              pairs   (reduce
                        (core/fn [m [test expr]]
@@ -2443,7 +2443,7 @@
   [expr]
   `(let [start# (.getTime (js/Date.))
          ret# ~expr]
-     (prn (core/str "Elapsed time: " (- (.getTime (js/Date.)) start#) " msecs"))
+     (prn (cljs.core/str "Elapsed time: " (- (.getTime (js/Date.)) start#) " msecs"))
      ret#))
 
 (core/defmacro simple-benchmark
