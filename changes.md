@@ -1,3 +1,51 @@
+## 1.7.28
+
+## Enhancement
+* New namespace cljs.js provides analysis, compilation, and eval
+* CLJS-1360: Refactor JS module processing to work with recent Google Closure compiler changes
+* CLJS-1282: Add a :pprint option to the default reporter in cljs.test
+* CLJS-1308: :analyze-path should be extended to take a vector of paths
+* CLJS-1230: ES 2015 Module Processing
+* CLJS-1231: AMD Module Processing
+* CLJS-1092: CommonJS Module processing
+
+## Changes
+* CLJS-1376: Printing in a tagged literal data form
+* CLJS-836: Replace seq-based iterators with direct iterator for all non-seq collections that use SeqIterator
+* CLJS-1367: Expose default-warning-handler and warning-enabled?
+* CLJS-1267: Added the :end-test-all-vars and :end-test-vars events to have end events for all cljs.test api functions
+* CLJS-1337: Move parse ns side-effects into a separate compiler pass
+* CLJS-1247: Split out error printing from regular printing
+* CLJS-1329: Support for reading #js tagged literals in bootstrap
+* CLJS-1191: rebased patch Update clojure.walk to the current version on clojure
+* CLJS-1321: remove getNamespace & getName method calls from defrecord
+* CLJS-1281: Preserve test order
+* CLJS-934: In the REPL return vars after defs
+
+## Fixes
+* CLJS-1316 let does not detect invalid binding vector when it contains destructuring
+* CLJS-1033: take a drop accept nil as n argument
+* CLJS-1324: Compiler fails to raise warning/error when invoking a keyword without arguments
+* CLJS-1352: cljs.js: Allow conditional readers
+* CLJS-1348: meta is printing for def at REPL
+* CLJS-1342: cljs.reader/read-string should throw Error when not called with string
+* CLJS-1341: Fix CommonJS conversion bug
+* CLJS-1333: Analyze meta on quoted symbols
+* CLJS-1210: Javascript built-in arguments replaces nil arguments locally defined by let
+* CLJS-1248: alter-meta! does not work on vars
+* CLJS-1276: var equality differs from Clojure
+* CLJS-1310: ns libspec error message misses :import
+* CLJS-428: Added step to escape docstrings with */ and associated test
+* CLJS-1331: Regex literal emits invalid JS
+* CLJS-1338: NPE in confirm-var-exists if suffix is ".."
+* CLJS-1319: Cannot locate module namespace when filename contains dash
+* CLJS-1317: Incremental compilation issues for :nodejs target
+* CLJS-1227 Raise error when if form has more than 4 statements
+* CLJS-1306: Browser REPL :asset-path with leading slash breaks source map support
+* CLJS-1290: :refer does not work with Closure JS namespaces
+* CLJS-1307: Doc for ns missing
+* CLJS-1301: local :foreign-libs are not picked up the first time browser REPL is started
+
 ## 0.0-3308
 
 ## Changes
