@@ -383,10 +383,10 @@
         the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
-    ((fn analyze-loop [last-ast]
+    ((fn analyze-loop [last-ast ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
-                 ana/*cljs-ns*          (:*cljs-ns* bound-vars)
-                 *ns*                   (create-ns (:*cljs-ns* bound-vars))
+                 ana/*cljs-ns*          ns
+                 *ns*                   (create-ns ns)
                  ana/*passes*           (:*passes* bound-vars)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
@@ -417,9 +417,9 @@
                            (fn [res]
                              (if (:error res)
                                (cb res)
-                               (analyze-loop ast))))
-                         (recur ast)))))
-                 (cb {:value last-ast}))))))) nil)))
+                               (analyze-loop ast (:name ast)))))
+                         (recur ast ns)))))
+                 (cb {:value last-ast}))))))) nil the-ns)))
 
 (defn analyze-str
   "Analyze ClojureScript source. The compiler state will be populated with
