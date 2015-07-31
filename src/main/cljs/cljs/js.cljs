@@ -97,7 +97,7 @@
   [{:keys [source] :as resource}]
   (js/eval source))
 
-(defn wrap-error [ex]
+(defn- wrap-error [ex]
   {:error ex})
 
 (defn empty-state
@@ -119,16 +119,16 @@
   (let [sm (sm/decode (.parse js/JSON sm-json))]
     (swap! state assoc-in [:source-maps ns] sm)))
 
-(defn sm-data []
+(defn- sm-data []
   (atom
     {:source-map (sorted-map)
      :gen-col    0
      :gen-line   0}))
 
-(defn prefix [s pre]
+(defn- prefix [s pre]
   (str pre s))
 
-(defn append-source-map
+(defn- append-source-map
   [state name source sb sm-data {:keys [output-dir asset-path] :as opts}]
    (let [t    (.valueOf (js/Date.))
          smn  (if name
@@ -233,7 +233,7 @@
 
 (declare ns-side-effects analyze-deps)
 
-(defn load-deps
+(defn- load-deps
   ([bound-vars ana-env lib deps cb]
    (analyze-deps bound-vars ana-env lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
@@ -256,9 +256,9 @@
                (cb res)))))
        (cb {:value nil})))))
 
-(declare analyze*)
+(declare analyze-str*)
 
-(defn analyze-deps
+(defn- analyze-deps
   ([bound-vars ana-env lib deps cb]
    (analyze-deps bound-vars ana-env lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
@@ -278,7 +278,7 @@
                 (if resource
                   (let [{:keys [name lang source]} resource]
                     (condp = lang
-                      :clj (analyze* bound-vars source name opts
+                      :clj (analyze-str* bound-vars source name opts
                              (fn [res]
                                (if-not (:error res)
                                  (analyze-deps bound-vars ana-env lib (next deps) opts cb)
@@ -297,7 +297,7 @@
                        (str "Could not analyze dep " dep) cause))))))
          (cb {:value nil}))))))
 
-(defn load-macros [bound-vars k macros reload reloads opts cb]
+(defn- load-macros [bound-vars k macros reload reloads opts cb]
   (if (seq macros)
     (let [nsym (first (vals macros))
           k    (or (k reload)
@@ -314,7 +314,7 @@
             (cb res)))))
     (cb {:value nil})))
 
-(defn ns-side-effects
+(defn- ns-side-effects
   ([bound-vars ana-env ast opts cb]
     (ns-side-effects false bound-vars ana-env ast opts cb))
   ([load bound-vars ana-env {:keys [op] :as ast} opts cb]
@@ -376,7 +376,7 @@
            (check-uses-and-load-macros {:value nil}))))
      (cb {:value ast}))))
 
-(defn analyze* [bound-vars source name opts cb]
+(defn- analyze-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
         eof        (js-obj)
         aenv       (ana/empty-env)
@@ -421,7 +421,7 @@
                          (recur ast)))))
                  (cb {:value last-ast}))))))) nil)))
 
-(defn analyze
+(defn analyze-str
   "Analyze ClojureScript source. The compiler state will be populated with
    the results of analyzes. The parameters:
 
@@ -446,13 +446,13 @@
      map will contain a key :error with an ex-info instance describing the cause
      of failure."
   ([state source cb]
-   (analyze state source nil cb))
+   (analyze-str state source nil cb))
   ([state source name cb]
-   (analyze state source name nil cb))
+   (analyze-str state source name nil cb))
   ([state source name opts cb]
    {:pre [(atom? state) (string? source)
           (valid-name? name) (valid-opts? opts) (fn? cb)]}
-   (analyze*
+   (analyze-str*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
       :*passes*       (or (:passes opts) ana/*passes*)
@@ -465,7 +465,7 @@
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
-(defn eval* [bound-vars form opts cb]
+(defn- eval* [bound-vars form opts cb]
   (let [the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
@@ -533,7 +533,7 @@
 ;; -----------------------------------------------------------------------------
 ;; Compile
 
-(defn compile* [bound-vars source name opts cb]
+(defn- compile-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
         eof        (js-obj)
         aenv       (ana/empty-env)
@@ -581,7 +581,7 @@
                        name source sb @comp/*source-map-data* opts))
                    (cb {:value (.toString sb)})))))))))))
 
-(defn compile
+(defn compile-str
   "Compile ClojureScript source into JavaScript. The parameters:
 
    state (atom)
@@ -605,13 +605,13 @@
      will contain a key :error with an ex-info instance describing the cause
      of failure."
   ([state source cb]
-   (compile state source nil cb))
+   (compile-str state source nil cb))
   ([state source name cb]
-   (compile state source name nil cb))
+   (compile-str state source name nil cb))
   ([state source name opts cb]
    {:pre [(atom? state) (string? source)
           (valid-name? name) (valid-opts? opts) (fn? cb)]}
-   (compile*
+   (compile-str*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (or (:analyze-deps opts) true)
@@ -624,7 +624,7 @@
 ;; -----------------------------------------------------------------------------
 ;; Evaluate String
 
-(defn eval-str* [bound-vars source name opts cb]
+(defn- eval-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
         eof        (js-obj)
         aenv       (ana/empty-env)
@@ -778,7 +778,7 @@
   (defn elide-env [env ast opts]
     (dissoc ast :env))
 
-  (cljs/analyze st "(+ 1 1)" nil
+  (cljs/analyze-str st "(+ 1 1)" nil
     {:passes [ana/infer-type elide-env]
      :eval node-eval}
     (fn [{:keys [value]}]
@@ -789,7 +789,7 @@
     (fn [res]
       (println res)))
 
-  (cljs/compile st "(defprotocol IFoo (foo [this]))"
+  (cljs/compile-str st "(defprotocol IFoo (foo [this]))"
     (fn [{:keys [value]}]
       (println "Source:")
       (println value)))
@@ -830,7 +830,7 @@
     (fn [res]
       (println res)))
 
-  (cljs/compile st "(defn foo\n[a b]\n(+ a b))" 'cljs.foo
+  (cljs/compile-str st "(defn foo\n[a b]\n(+ a b))" 'cljs.foo
     {:verbose true :source-map true}
     (fn [js-source]
       (println "Source:")
