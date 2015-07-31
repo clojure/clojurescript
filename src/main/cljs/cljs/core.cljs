@@ -8773,7 +8773,6 @@ reduces them without incurring seq initialization"
   [obj writer opts]
   (cond
     (nil? obj) (-write writer "nil")
-    (undefined? obj) (-write writer "#<undefined>")
     :else
     (do
       (when (print-meta? opts obj)
@@ -8781,8 +8780,6 @@ reduces them without incurring seq initialization"
         (pr-writer (meta obj) writer opts)
         (-write writer " "))
       (cond
-        (nil? obj) (-write writer "nil")
-
         ;; handle CLJS ctors
         ^boolean (.-cljs$lang$type obj)
         (.cljs$lang$ctorPrWriter obj obj writer opts)
