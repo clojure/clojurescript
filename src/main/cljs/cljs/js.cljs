@@ -541,11 +541,11 @@
         the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
-    ((fn compile-loop []
+    ((fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
-                 ana/*cljs-ns*          (:*cljs-ns* bound-vars)
-                 *ns*                   (create-ns (:*cljs-ns* bound-vars))
+                 ana/*cljs-ns*          ns
+                 *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
@@ -573,13 +573,13 @@
                        (fn [res]
                          (if (:error res)
                            (cb res)
-                           (compile-loop))))
-                     (recur)))
+                           (compile-loop (:name ast)))))
+                     (recur ns)))
                  (do
                    (when (:source-map opts)
                      (append-source-map env/*compiler*
                        name source sb @comp/*source-map-data* opts))
-                   (cb {:value (.toString sb)})))))))))))
+                   (cb {:value (.toString sb)})))))))) the-ns)))
 
 (defn compile-str
   "Compile ClojureScript source into JavaScript. The parameters:
