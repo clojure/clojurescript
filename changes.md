@@ -1,6 +1,6 @@
 ## 1.7.28
 
-## Enhancement
+## Enhancements
 * New namespace cljs.js provides analysis, compilation, and eval
 * CLJS-1360: Refactor JS module processing to work with recent Google Closure compiler changes
 * CLJS-1282: Add a :pprint option to the default reporter in cljs.test
