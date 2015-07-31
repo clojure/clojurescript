@@ -125,40 +125,6 @@
 (defmethod js-source-file BufferedInputStream [^String name ^BufferedInputStream source]
   (SourceFile/fromInputStream name source))
 
-(defn set-options
-  "TODO: Add any other options that we would like to support."
-  [opts ^CompilerOptions compiler-options]
-  (when (contains? opts :pretty-print)
-    (set! (.prettyPrint compiler-options) (:pretty-print opts)))
-
-  (when (contains? opts :pseudo-names)
-    (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
-
-  (when (contains? opts :anon-fn-naming-policy)
-    (let [policy (:anon-fn-naming-policy opts)]
-      (set! (.anonymousFunctionNaming compiler-options)
-        (case policy
-          :off AnonymousFunctionNamingPolicy/OFF
-          :unmapped AnonymousFunctionNamingPolicy/UNMAPPED
-          :mapped AnonymousFunctionNamingPolicy/MAPPED
-          (throw (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted")))))))
-
-  (when (contains? opts :language-in)
-    (case (:language-in opts)
-      :ecmascript5        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
-      :ecmascript5-strict (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
-      :ecmascript3        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
-
-  (when (contains? opts :language-out)
-    (case (:language-out opts)
-      :ecmascript5        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
-      :ecmascript5-strict (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
-      :ecmascript3        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
-
-  (when (contains? opts :print-input-delimiter)
-    (set! (.printInputDelimiter compiler-options)
-      (:print-input-delimiter opts))))
-
 (def check-level
   {:error CheckLevel/ERROR
    :warning CheckLevel/WARNING
@@ -191,6 +157,51 @@
    :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
    :visiblity DiagnosticGroups/VISIBILITY})
 
+(defn set-options
+  "TODO: Add any other options that we would like to support."
+  [opts ^CompilerOptions compiler-options]
+  (when (contains? opts :pretty-print)
+    (set! (.prettyPrint compiler-options) (:pretty-print opts)))
+
+  (when (contains? opts :pseudo-names)
+    (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
+
+  (when (contains? opts :anon-fn-naming-policy)
+    (let [policy (:anon-fn-naming-policy opts)]
+      (set! (.anonymousFunctionNaming compiler-options)
+        (case policy
+          :off AnonymousFunctionNamingPolicy/OFF
+          :unmapped AnonymousFunctionNamingPolicy/UNMAPPED
+          :mapped AnonymousFunctionNamingPolicy/MAPPED
+          (throw (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted")))))))
+
+  (when (contains? opts :language-in)
+    (case (:language-in opts)
+      :ecmascript5        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
+      :ecmascript5-strict (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
+      :ecmascript3        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
+
+  (when (contains? opts :language-out)
+    (case (:language-out opts)
+      :ecmascript5        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
+      :ecmascript5-strict (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
+      :ecmascript3        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
+
+  (when (contains? opts :print-input-delimiter)
+    (set! (.printInputDelimiter compiler-options)
+      (:print-input-delimiter opts)))
+
+  (when (contains? opts :closure-warnings)
+    (doseq [[type level] (:closure-warnings opts)]
+      (. compiler-options
+        (setWarningLevel (type warning-types) (level check-level)))))
+
+  (when (contains? opts :closure-extra-annotations)
+    (. compiler-options
+      (setExtraAnnotationNames (map name (:closure-extra-annotations opts)))))
+
+  compiler-options)
+
 (defn ^CompilerOptions make-options
   "Create a CompilerOptions object and set options from opts map."
   [opts]
@@ -209,9 +220,6 @@
           (or (true? val)
               (false? val)) (.setDefineToBooleanLiteral compiler-options key val)
           :else (println "value for" key "must be string, int, float, or bool"))))
-    (doseq [[type level] (:closure-warnings opts)]
-      (. compiler-options
-        (setWarningLevel (type warning-types) (level check-level))))
     (if-let [extra-annotations (:closure-extra-annotations opts)]
       (. compiler-options (setExtraAnnotationNames (map name extra-annotations))))
     (when (contains? opts :source-map)
@@ -1259,12 +1267,19 @@
       :commonjs
       module-type)))
 
+(defn make-convert-js-module-options [opts]
+  (-> opts
+      (select-keys [:closure-warnings
+                    :pretty-print
+                    :closure-extra-annotations])
+      (set-options (CompilerOptions.))))
+
 (util/compile-if can-convert-commonjs?
   (defmethod convert-js-module :commonjs [js opts]
     (let [{:keys [file module-type]} js
           ^List externs '()
           ^List source-files (get-source-files module-type opts)
-          ^CompilerOptions options (CompilerOptions.)
+          ^CompilerOptions options (make-convert-js-module-options opts)
           closure-compiler (doto (make-closure-compiler)
                              (.init externs source-files options))
           es6-loader (if is-new-es6-loader?
@@ -1276,6 +1291,7 @@
         (when (= (:module-type js) :amd)
           (.process (TransformAMDToCJSModule. closure-compiler) nil root)))
       (.process cjs nil root)
+      (report-failure (.getResult closure-compiler))
       (.toSource closure-compiler root))))
 
 (util/compile-if can-convert-es6?
@@ -1283,7 +1299,7 @@
     (let [{:keys [file module-type]} js
           ^List externs '()
           ^List source-files (get-source-files module-type opts)
-          ^CompilerOptions options (doto (CompilerOptions.)
+          ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                      (.setLanguageIn CompilerOptions$LanguageMode/ECMASCRIPT6)
                                      (.setLanguageOut CompilerOptions$LanguageMode/ECMASCRIPT5))
           closure-compiler (doto (make-closure-compiler)
@@ -1294,6 +1310,7 @@
           cjs (ProcessEs6Modules. closure-compiler es6-loader true)
           ^Node root (get-root-node file closure-compiler)]
       (.processFile cjs root)
+      (report-failure (.getResult closure-compiler))
       (.toSource closure-compiler root))))
 
 (defmethod convert-js-module :default [js opts]
