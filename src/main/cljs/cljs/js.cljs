@@ -790,9 +790,9 @@
       (println res)))
 
   (cljs/compile st "(defprotocol IFoo (foo [this]))"
-    (fn [js-source]
+    (fn [{:keys [value]}]
       (println "Source:")
-      (println js-source)))
+      (println value)))
 
   (cljs/eval-str st
     "(defn foo [a b] (+ a b))
