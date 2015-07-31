@@ -728,8 +728,9 @@
 
   cb (function)
     callback, will be invoked with a map. If succesful the map will contain
-    a :value key with the result of evaluation. If unsuccessful will contain
-    a :error key with an ex-info instance describing the cause of failure."
+    a :value key with the result of evaluation and :ns the current namespace.
+    If unsuccessful will contain a :error key with an ex-info instance describing
+    the cause of failure."
   ([state source cb]
    (eval-str state source nil cb))
   ([state source name cb]
@@ -847,6 +848,20 @@
       (println ret)))
 
   (cljs/eval-str st
+    "(ns foo.bar (:require-macros [bootstrap-test.macros :refer [foo]]))\n(foo 4 4)"
+    'foo.bar
+    {:verbose true
+     :source-map true
+     :eval node-eval
+     :load node-load}
+    (fn [{:keys [error] :as res}]
+      (if error
+        (do
+          (println "Error:" error)
+          (println (.. error -cause -stack)))
+        (println "Result:" res))))
+
+  (cljs/compile-str st
     "(ns foo.bar (:require-macros [bootstrap-test.macros :refer [foo]]))\n(foo 4 4)"
     'foo.bar
     {:verbose true
