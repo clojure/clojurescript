@@ -22,7 +22,7 @@
 
 (js/goog.require "cljs.core$macros")
 
-(defn debug-prn
+(defn- debug-prn
   [& args]
   (binding [*print-fn* *print-err-fn*]
     (apply println args)))
@@ -38,13 +38,13 @@
                    0 (- (count file) 5))]
     (symbol (demunge lib-name))))
 
-(defn atom? [x]
+(defn- atom? [x]
   (instance? Atom x))
 
-(defn valid-name? [x]
+(defn- valid-name? [x]
   (or (nil? x) (symbol? x) (string? x)))
 
-(defn valid-opts? [x]
+(defn- valid-opts? [x]
   (or (nil? x) (map? x)))
 
 (defonce
