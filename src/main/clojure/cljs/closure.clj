@@ -1420,7 +1420,7 @@
 
 (defn foreign-deps-str [opts sources]
   (letfn [(to-js-str [ijs]
-            (let [url (or (and (= (:optimizations opts) :advanced)
+            (let [url (or (and (#{:advanced :simple} (:optimizations opts))
                                (:url-min ijs))
                           (:url ijs))]
               (slurp url)))]
