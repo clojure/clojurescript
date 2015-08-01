@@ -1186,14 +1186,16 @@
                  (- (count (.split #"\r?\n" fdeps-str -1)) 1)
                  0)})))))))
 
-(defn lib-rel-path [{:keys [lib-path url] :as ijs}]
-  (if (.endsWith lib-path ".js")
-    (util/get-name url)
-    (let [path (util/path url)]
-      (string/replace
-        path
-        (str (io/file (System/getProperty "user.dir") lib-path) File/separator)
-        ""))))
+(defn lib-rel-path [{:keys [lib-path url provides] :as ijs}]
+  (if (nil? lib-path)
+    (str (string/replace (first provides) #"\." File/separator) ".js")
+    (if (.endsWith lib-path ".js")
+      (util/get-name url)
+      (let [path (util/path url)]
+        (string/replace
+          path
+          (str (io/file (System/getProperty "user.dir") lib-path) File/separator)
+          "")))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,

@@ -308,7 +308,7 @@ JavaScript library containing provide/require 'declarations'."
                             io/resource)]
     (let [{:keys [provides] :as lib-info} (library-graph-node lib-resource)]
       (if (some #{(name lib)} provides)
-        lib-info
+        (assoc lib-info :closure-lib true)
         (binding [*out* *err*]
           (println
             (format
