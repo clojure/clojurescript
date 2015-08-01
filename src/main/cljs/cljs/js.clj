@@ -18,4 +18,7 @@
      ~@body))
 
 (defmacro dump-core []
-  `(quote ~(get-in @env/*compiler* [::ana/namespaces 'cljs.core])))
+  (let [state @env/*compiler*]
+    (if-not (false? (get-in state [:options :dump-core]))
+      `(quote ~(get-in state [::ana/namespaces 'cljs.core]))
+      `(hash-map))))
