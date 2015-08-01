@@ -250,16 +250,9 @@
     (emit-constant (hash kw))
     (emits ")")))
 
-(defmethod emit-constant #?(:clj clojure.lang.Keyword :cljs Keyword) [x]
-  (if (-> @env/*compiler* :options :emit-constants)
-    (let [value (-> @env/*compiler* ::ana/constant-table x)]
-      (emits "cljs.core." value))
-    (emits-keyword x)
-    ))
-
-(defmethod emit-constant #?(:clj clojure.lang.Symbol :cljs Symbol) [x]
-  (let [ns     (namespace x)
-        name   (name x)
+(defn emits-symbol [sym]
+  (let [ns     (namespace sym)
+        name   (name sym)
         symstr (if-not (nil? ns)
                  (str ns "/" name)
                  name)]
@@ -270,10 +263,22 @@
     (emits ",")
     (emit-constant symstr)
     (emits ",")
-    (emit-constant (hash x))
+    (emit-constant (hash sym))
     (emits ",")
     (emit-constant nil)
     (emits ")")))
+
+(defmethod emit-constant #?(:clj clojure.lang.Keyword :cljs Keyword) [x]
+  (if (-> @env/*compiler* :options :emit-constants)
+    (let [value (-> @env/*compiler* ::ana/constant-table x)]
+      (emits "cljs.core." value))
+    (emits-keyword x)))
+
+(defmethod emit-constant #?(:clj clojure.lang.Symbol :cljs Symbol) [x]
+  (if (-> @env/*compiler* :options :emit-constants)
+    (let [value (-> @env/*compiler* ::ana/constant-table x)]
+      (emits "cljs.core." value))
+    (emits-symbol x)))
 
 ;; tagged literal support
 
@@ -1293,11 +1298,17 @@
 ;; TODO: needs fixing, table will include other things than keywords - David
 
 (defn emit-constants-table [table]
-  (doseq [[keyword value] table]
-    (let [ns   (namespace keyword)
-          name (name keyword)]
+  (doseq [[sym value] table]
+    (let [ns   (namespace sym)
+          name (name sym)]
       (emits "cljs.core." value " = ")
-      (emits-keyword keyword)
+      (cond
+        (keyword? sym) (emits-keyword sym)
+        (symbol? sym) (emits-symbol sym)
+        :else (throw
+                (ex-info
+                  (str "Cannot emit constant for type " (type sym))
+                  {:error :invalid-constant-type})))
       (emits ";\n"))))
 
 #?(:clj

@@ -357,12 +357,16 @@
 
 (defn gen-constant-id [value]
   (let [prefix (cond
-                 (keyword? value) "constant$keyword$"
+                 (keyword? value) "cst$kw$"
+                 (symbol? value)  "cst$sym$"
                  :else
                  (throw
                    #?(:clj (Exception. (str "constant type " (type value) " not supported"))
                       :cljs (js/Error. (str "constant type " (type value) " not supported")))))
-        name (-> value (str) (subs 1) (string/replace "-" "_DASH_") (munge) (string/replace "." "$"))]
+        name   (if (keyword? value)
+                 (subs (str value) 1)
+                 (str value))
+        name   (-> name (string/replace "-" "_DASH_") (munge) (string/replace "." "$"))]
     (symbol (str prefix name))))
 
 (defn- register-constant!
@@ -2227,7 +2231,9 @@
   "Finds the var associated with sym"
   [env sym]
   (if ^boolean (:quoted? env)
-    (analyze-wrap-meta {:op :constant :env env :form sym :tag 'cljs.core/Symbol})
+    (do
+      (register-constant! env sym)
+      (analyze-wrap-meta {:op :constant :env env :form sym :tag 'cljs.core/Symbol}))
     (let [{:keys [line column]} (meta sym)
           env  (if-not (nil? line)
                  (assoc env :line line)
