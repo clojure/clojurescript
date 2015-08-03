@@ -690,15 +690,13 @@
   string, number or boolean.
 
   Default value can be overridden at compile time using the
-  compiler option `:closure-defines`. When overriding the string
-  you need to pass to `:closure-defines` is the munged version
-  of the original var.
+  compiler option `:closure-defines`.
 
   Example:
     (ns your-app.core)
     (define DEBUG! false)
     ;; can be overridden with
-    :closure-defines {\"your_app.core.DEBUG_BANG_\" true}"
+    :closure-defines {\"your-app.core.DEBUG!\" true}"
   [sym default]
   (assert-args define
    (core/or (core/string? default)
