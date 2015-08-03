@@ -58,23 +58,25 @@
   [repl-env st err opts] st)
 
 (defn parse-file-line-column [flc]
-  (let [xs (string/split flc #":")
-        [pre [line column]]
-        (reduce
-          (fn [[pre post] [x i]]
-            (if (<= i 2)
-              [pre (conj post x)]
-              [(conj pre x) post]))
-          [[] []] (map vector xs (range (count xs) 0 -1)))
-        file (string/join ":" pre)]
-    [(cond-> file
-       (starts-with? file "(") (string/replace "(" ""))
-     (parse-int
-       (cond-> line
-         (ends-with? line ")") (string/replace ")" "")))
-     (parse-int
-       (cond-> column
-         (ends-with? column ")") (string/replace ")" "")))]))
+  (if-not (re-find #":" flc)
+    [flc nil nil]
+    (let [xs (string/split flc #":")
+          [pre [line column]]
+          (reduce
+            (fn [[pre post] [x i]]
+              (if (<= i 2)
+                [pre (conj post x)]
+                [(conj pre x) post]))
+            [[] []] (map vector xs (range (count xs) 0 -1)))
+          file (string/join ":" pre)]
+      [(cond-> file
+         (starts-with? file "(") (string/replace "(" ""))
+       (parse-int
+         (cond-> line
+           (ends-with? line ")") (string/replace ")" "")))
+       (parse-int
+         (cond-> column
+           (ends-with? column ")") (string/replace ")" "")))])))
 
 (defn parse-file
   "Given a browser file url convert it into a relative path that can be used
@@ -215,7 +217,7 @@
         [file line column] (parse-file-line-column flc)]
     (if (and file function line column)
       {:file (parse-file repl-env file opts)
-       :function function
+       :function (string/trim function)
        :line line
        :column column}
       (when-not (string/blank? function)
@@ -244,6 +246,14 @@
     vec))
 
 (comment
+  (parse-stacktrace {}
+    "cljs$core$seq@out/cljs/core.js:3999:17
+    cljs$core$first@out/cljs/core.js:4018:22
+    cljs$core$ffirst@out/cljs/core.js:5161:39
+    global code"
+    {:ua-product :safari}
+    {:output-dir "out"})
+
   (parse-stacktrace {:host "localhost" :port 9000}
     "cljs$core$seq@http://localhost:9000/out/cljs/core.js:4259:17
 cljs$core$first@http://localhost:9000/out/cljs/core.js:4289:22
