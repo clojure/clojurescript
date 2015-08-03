@@ -143,7 +143,10 @@
     (cljsc/-compile
       '[(set! *print-fn* clojure.browser.repl/repl-print)
         (set! *print-err-fn* clojure.browser.repl/repl-print)
-        (set! *print-newline* true)] {})
+        (set! *print-newline* true)
+        (when (pos? (count clojure.browser.repl/print-queue))
+          (clojure.browser.repl/flush-print-queue!
+            @clojure.browser.repl/xpc-connection))] {})
     identity))
 
 (defn add-in-order [{:keys [expecting fns]} order f]

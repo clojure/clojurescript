@@ -17,8 +17,9 @@
   clojure.browser.repl
   (:require [goog.dom :as gdom]
             [goog.object :as gobj]
+            [goog.array :as garray]
             [goog.userAgent.product :as product]
-            [clojure.browser.net   :as net]
+            [clojure.browser.net :as net]
             [clojure.browser.event :as event]
             ;; repl-connection callback will receive goog.require('cljs.repl')
             ;; and monkey-patched require expects to be able to derive it
@@ -27,10 +28,21 @@
             [cljs.repl]))
 
 (def xpc-connection (atom nil))
+(def print-queue (array))
+
+(defn flush-print-queue! [conn]
+  (doseq [str print-queue]
+    (net/transmit conn :print str))
+  (garray/clear print-queue))
 
 (defn repl-print [data]
-  (if-let [conn @xpc-connection]
-    (net/transmit conn :print (pr-str data))))
+  (.push print-queue (pr-str data))
+  (when-let [conn @xpc-connection]
+    (flush-print-queue! conn)))
+
+(set! *print-fn* repl-print)
+(set! *print-err-fn* repl-print)
+(set! *print-newline* true)
 
 (defn get-ua-product []
   (cond
