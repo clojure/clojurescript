@@ -685,6 +685,36 @@
              :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
         (reduce process-entry [] bents)))))
 
+(core/defmacro define
+  "Defines a var using `goog.define`. Passed default value must be
+  string, number or boolean.
+
+  Default value can be overridden at compile time using the
+  compiler option `:closure-defines`. When overriding the string
+  you need to pass to `:closure-defines` is the munged version
+  of the original var.
+
+  Example:
+    (ns your-app.core)
+    (define DEBUG! false)
+    ;; can be overridden with
+    :closure-defines {\"your_app.core.DEBUG_BANG_\" true}"
+  [sym default]
+  (assert-args define
+   (core/or (core/string? default)
+            (core/number? default)
+            (core/true? default)
+            (core/false? default)) "a string, number or boolean as default value")
+  (core/let [defname (cljs.compiler/munge (core/str *ns* "/" sym))
+             type    (core/cond
+                       (core/string? default) "string"
+                       (core/number? default) "number"
+                       (core/or (core/true? default) (core/false? default)) "boolean")]
+    `(do
+       (declare ~(symbol sym))
+       (~'js* ~(core/str "/** @define {" type "} */"))
+       (goog/define ~defname ~default))))
+
 (core/defmacro let
   "binding => binding-form init-expr
 
