@@ -685,7 +685,7 @@
              :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
         (reduce process-entry [] bents)))))
 
-(core/defmacro define
+(core/defmacro goog-define
   "Defines a var using `goog.define`. Passed default value must be
   string, number or boolean.
 
@@ -694,11 +694,11 @@
 
   Example:
     (ns your-app.core)
-    (define DEBUG! false)
+    (goog-define DEBUG! false)
     ;; can be overridden with
     :closure-defines {\"your-app.core.DEBUG!\" true}"
   [sym default]
-  (assert-args define
+  (assert-args goog-define
    (core/or (core/string? default)
             (core/number? default)
             (core/true? default)
