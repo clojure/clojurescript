@@ -172,5 +172,17 @@ if [ "$HUDSON" = "true" ]; then
     echo "Now log in to https://oss.sonatype.org/ to release"
     echo "the staging repository."
 else
-    echo "Skipping deployment because we are not on Hudson."
+    echo "Not on Hudson, local Maven install"
+    (
+        cd "$third_party_project_dir"
+        mvn clean
+        mvn package
+        mvn install:install-file -Dfile=./target/google-closure-library-third-party-$release_version.jar -DpomFile=pom.xml
+    )
+    (
+        cd "$project_dir"
+        mvn clean
+        mvn package
+        mvn install:install-file -Dfile=./target/google-closure-library-$release_version.jar -DpomFile=pom.xml
+    )
 fi
