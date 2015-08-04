@@ -1349,7 +1349,7 @@
     (when-not (.exists out-file)
       (util/mkdirs out-file)
       (spit out-file
-            (cond-> (assoc js :source (deps/-source js))
+            (cond-> (if (map? js) (assoc js :source (deps/-source js)) js)
               (:preprocess js) (js-transforms opts)
               (:module-type js) (convert-js-module opts)
               true deps/-source)))
