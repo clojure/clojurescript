@@ -11,7 +11,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.reader "0.10.0-alpha3"]
-                 [org.clojure/google-closure-library "0.0-20150505-021ed5b3"]
+                 [org.clojure/google-closure-library "0.0-20150805-acd8b553"]
                  [com.google.javascript/closure-compiler "v20150729"]
                  [org.mozilla/rhino "1.7R5"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
