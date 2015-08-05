@@ -7,6 +7,10 @@
 * add :dump-core compiler option for cljs.js config
 * CLJS-1386: Symbols should be added to the constants table
 
+## Changes
+* Bump Closure Compiler dependency
+* Bump Closure Library dependency
+
 ## Fixes
 * CLJS-1392: cljs.repl/source regression
 * CLJS-1391: Error when building for target :nodejs
