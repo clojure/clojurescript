@@ -1,3 +1,19 @@
+## 1.7.48
+
+## Enhancements
+* provide goog-define macro to support proper use of goog.define
+* CLJS-1177: A compiler support for non-Closure transforms (JSX, etc)
+* CLJS-1296: browser REPL should queue prints before connection then flush after connection
+* add :dump-core compiler option for cljs.js config
+* CLJS-1386: Symbols should be added to the constants table
+
+## Fixes
+* CLJS-1392: cljs.repl/source regression
+* CLJS-1391: Error when building for target :nodejs
+* CLJS-1388: Stacktrace element handling for :output-dir w/o file/line/column
+* CLJS-1311: Improve error reporting when converting JavaScript modules
+* CLJS-1387: support local Closure libs that conform to classpath
+
 ## 1.7.28
 
 ## Enhancements

@@ -4,14 +4,14 @@ ClojureScript is a new compiler for [Clojure](http://clojure.org) that targets J
 
 ## Releases and dependency information ##
 
-Latest stable release: 1.7.28
+Latest stable release: 1.7.48
 
 * [All released versions](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.clojure%22%20AND%20a%3A%22clojurescript%22)
 
 [Leiningen](http://github.com/technomancy/leiningen/) dependency information:
 
 ```
-[org.clojure/clojurescript "1.7.28"]
+[org.clojure/clojurescript "1.7.48"]
 ```
 
 [Maven](http://maven.apache.org) dependency information:
@@ -20,7 +20,7 @@ Latest stable release: 1.7.28
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>clojurescript</artifactId>
-  <version>1.7.28</version>
+  <version>1.7.48</version>
 </dependency>
 ```
 
