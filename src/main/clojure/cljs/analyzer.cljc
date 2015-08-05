@@ -2378,9 +2378,13 @@
    (if ^boolean (:quoted? env)
      (analyze-list env form)
      (let [line (-> form meta :line)
-           line (when (nil? line) (:line env))
+           line (if (nil? line)
+                  (:line env)
+                  line)
            col  (-> form meta :column)
-           col  (when (nil? col) (:column env))
+           col  (if (nil? col)
+                  (:column env)
+                  col)
            env  (assoc env :line line :column col)]
        (let [op (first form)]
          (when (nil? op)
