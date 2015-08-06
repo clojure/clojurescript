@@ -13,7 +13,33 @@
 (defn inc! [r]
   (swap! r inc))
 
+(set! *target* "nodejs")
+
+(def vm (js/require "vm"))
+(def fs (js/require "fs"))
 (def st (cljs/empty-state))
+
+(defn node-eval [{:keys [name source]}]
+  (.runInThisContext vm source (str (munge name) ".js")))
+
+(def libs
+  {'bootstrap-test.core :cljs
+   'bootstrap-test.macros :clj
+   'bootstrap-test.helper :clj})
+
+(defn node-load [{:keys [name macros]} cb]
+  (if (contains? libs name)
+    (let [path (str "src/test/cljs/" (cljs/ns->relpath name)
+                 "." (cljs.core/name (get libs name)))]
+      (.readFile fs path "utf-8"
+        (fn [err src]
+          (cb (if-not err
+                {:lang :clj :source src}
+                (.error js/console err))))))
+    (cb nil)))
+
+(defn elide-env [env ast opts]
+  (dissoc ast :env))
 
 (deftest test-compile-str
   (async done
@@ -34,4 +60,30 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (= value "(cljs.core.truth_(cljs.core.first)?1:2)"))
+          (inc! l))))))
+
+(deftest test-eval-str
+  (async done
+    (let [l (latch 3 done)]
+      (cljs/eval-str st "(+ 1 1)" nil
+        {:eval node-eval}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (== value 2))
+          (inc! l)))
+      (cljs/eval-str st "(def x 1)" nil
+        {:eval node-eval
+         :context :expr
+         :def-emits-var true}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (var? value))
+          (inc! l)))
+      (cljs/eval-str st "(fn [])" nil
+        {:eval node-eval
+         :context :expr
+         :def-emits-var true}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (fn? value))
           (inc! l))))))
