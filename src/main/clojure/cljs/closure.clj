@@ -1199,7 +1199,7 @@
 
 (defn lib-rel-path [{:keys [lib-path url provides] :as ijs}]
   (if (nil? lib-path)
-    (str (string/replace (first provides) #"\." File/separator) ".js")
+    (str (string/replace (first provides) "." File/separator) ".js")
     (if (.endsWith lib-path ".js")
       (util/get-name url)
       (let [path (util/path url)]
