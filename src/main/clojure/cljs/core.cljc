@@ -40,10 +40,11 @@
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
-                                       specify copy-arguments])])
+                                       specify copy-arguments goog-define])])
   #?(:cljs (:require-macros [cljs.core :as core]))
   (:require clojure.walk
             clojure.set
+            [clojure.string :as string]
             cljs.compiler
             [cljs.env :as env]
             #?(:cljs [cljs.core :as core])
@@ -1220,7 +1221,11 @@
   (meta ^{:k :v} (reify Object (toString [this] \"foo\")))
   == {:k :v}"
   [& impls]
-  (core/let [t        (with-meta (gensym "t") {:anonymous true})
+  (core/let [t        (with-meta
+                        (gensym
+                          (core/str "t_"
+                            (string/replace (core/str (munge ana/*cljs-ns*)) "." "$")))
+                        {:anonymous true})
              meta-sym (gensym "meta")
              this-sym (gensym "_")
              locals   (keys (:locals &env))
