@@ -99,26 +99,28 @@
 (defn setup
   ([repl-env] (setup repl-env nil))
   ([repl-env opts]
-    (let [output-dir (io/file (util/output-directory opts))
-          _    (.mkdirs output-dir)
-          of   (io/file output-dir "node_repl.js")
-          _   (spit of
-                (string/replace (slurp (io/resource "cljs/repl/node_repl.js"))
-                  "var PORT = 5001;"
-                  (str "var PORT = " (:port repl-env) ";")))
-          proc (-> (ProcessBuilder. (into-array [(get opts :node-command "node")]))
-                 (.redirectInput of)
-                 .start)
-          _ (do (.start (Thread. (bound-fn [] (pipe proc (.getInputStream proc) *out*))))
-                (.start (Thread. (bound-fn [] (pipe proc (.getErrorStream proc) *err*)))))
-          env  (ana/empty-env)
-          core (io/resource "cljs/core.cljs")
+    (let [output-dir   (io/file (util/output-directory opts))
+          _            (.mkdirs output-dir)
+          of           (io/file output-dir "node_repl.js")
+          _            (spit of
+                         (string/replace (slurp (io/resource "cljs/repl/node_repl.js"))
+                           "var PORT = 5001;"
+                           (str "var PORT = " (:port repl-env) ";")))
+          xs           (cond-> [(get opts :node-command "node")]
+                         (:debug-port repl-env) (conj (str "--debug=" (:debug-port repl-env))))
+          proc         (-> (ProcessBuilder. (into-array xs))
+                         (.redirectInput of)
+                         .start)
+          _            (do (.start (Thread. (bound-fn [] (pipe proc (.getInputStream proc) *out*))))
+                           (.start (Thread. (bound-fn [] (pipe proc (.getErrorStream proc) *err*)))))
+          env          (ana/empty-env)
+          core         (io/resource "cljs/core.cljs")
           ;; represent paths as vectors so we can emit JS arrays, this is to
           ;; paper over Windows issues with minimum hassle - David
-          path (.getPath (.getCanonicalFile output-dir))
-          [fc & cs] (rest (util/path-seq path)) ;; remove leading empty string
-          root (.substring path 0 (+ (.indexOf path fc) (count fc)))
-          root-path (vec (cons root cs))
+          path         (.getPath (.getCanonicalFile output-dir))
+          [fc & cs]    (rest (util/path-seq path)) ;; remove leading empty string
+          root         (.substring path 0 (+ (.indexOf path fc) (count fc)))
+          root-path    (vec (cons root cs))
           rewrite-path (conj root-path "goog")]
       (reset! (:proc repl-env) proc)
       (loop [r nil]
@@ -206,12 +208,13 @@
     (close-socket @socket)))
 
 (defn repl-env* [options]
-  (let [{:keys [host port]}
+  (let [{:keys [host port debug-port]}
         (merge
           {:host "localhost"
            :port (+ 49000 (rand-int 10000))}
           options)]
-    (NodeEnv. host port (atom nil) (atom nil))))
+    (assoc (NodeEnv. host port (atom nil) (atom nil))
+      :debug-port debug-port)))
 
 (defn repl-env
   "Construct a Node.js evalution environment. Can supply :host and :port."
