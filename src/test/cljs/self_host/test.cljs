@@ -4,6 +4,8 @@
             [cljs.js :as cljs]
             [cljs.nodejs :as nodejs]))
 
+(set! (.-user js/cljs) #js {})
+
 (nodejs/enable-util-print!)
 
 (defn latch [m f]
@@ -21,7 +23,9 @@
 (def st (cljs/empty-state))
 
 (defn node-eval [{:keys [name source]}]
-  (.runInThisContext vm source (str (munge name) ".js")))
+  (if-not js/COMPILED
+    (.runInThisContext vm source (str (munge name) ".js"))
+    (js/eval source)))
 
 (def libs
   {'bootstrap-test.core :cljs
@@ -31,7 +35,7 @@
 (defn node-load [{:keys [name macros]} cb]
   (if (contains? libs name)
     (let [path (str "src/test/cljs/" (cljs/ns->relpath name)
-                 "." (cljs.core/name (get libs name)))]
+                    "." (cljs.core/name (get libs name)))]
       (.readFile fs path "utf-8"
         (fn [err src]
           (cb (if-not err
@@ -72,7 +76,7 @@
           (is (nil? error))
           (is (== value 2))
           (inc! l)))
-      #_(cljs/eval-str st "(def x 1)" nil
+      (cljs/eval-str st "(def x 1)" nil
         {:eval node-eval
          :context :expr
          :def-emits-var true}
