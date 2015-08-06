@@ -4,7 +4,7 @@
 rm -rf builds/out-self
 mkdir -p builds/out-self
 
-bin/cljsc src/test/cljs/self_host  "{:optimizations :simple :static-fns true :output-dir \"builds/out-self\" :optimize-constants true :verbose true :compiler-stats true :target :nodejs}" > builds/out-self/core-self-test.js
+bin/cljsc src/test/self/self_host  "{:optimizations :simple :static-fns true :output-dir \"builds/out-self\" :optimize-constants true :verbose true :compiler-stats true :target :nodejs}" > builds/out-self/core-self-test.js
 
 echo "Testing with Node"
 node builds/out-self/core-self-test.js
