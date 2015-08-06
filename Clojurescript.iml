@@ -15,7 +15,9 @@
       <excludeFolder url="file://$MODULE_DIR$/.cljs_node_repl" />
       <excludeFolder url="file://$MODULE_DIR$/.cljs_repl" />
       <excludeFolder url="file://$MODULE_DIR$/.cljs_rhino_repl" />
+      <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/.repl" />
+      <excludeFolder url="file://$MODULE_DIR$/builds" />
       <excludeFolder url="file://$MODULE_DIR$/classes" />
       <excludeFolder url="file://$MODULE_DIR$/node_modules" />
       <excludeFolder url="file://$MODULE_DIR$/samples/hello/out" />
