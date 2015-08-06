@@ -1,7 +1,10 @@
 (ns self-host.test
   (:require [cljs.test :as test
              :refer-macros [run-tests deftest testing is async]]
-            [cljs.js :as cljs]))
+            [cljs.js :as cljs]
+            [cljs.nodejs :as nodejs]))
+
+(nodejs/enable-util-print!)
 
 (defn latch [m f]
   (let [r (atom 0)]
@@ -12,8 +15,6 @@
 
 (defn inc! [r]
   (swap! r inc))
-
-(set! *target* "nodejs")
 
 (def vm (js/require "vm"))
 (def fs (js/require "fs"))
@@ -71,7 +72,7 @@
           (is (nil? error))
           (is (== value 2))
           (inc! l)))
-      (cljs/eval-str st "(def x 1)" nil
+      #_(cljs/eval-str st "(def x 1)" nil
         {:eval node-eval
          :context :expr
          :def-emits-var true}
@@ -87,3 +88,8 @@
           (is (nil? error))
           (is (fn? value))
           (inc! l))))))
+
+(defn -main [& args]
+  (run-tests))
+
+(set! *main-cli-fn* -main)
