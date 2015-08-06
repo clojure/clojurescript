@@ -1013,12 +1013,15 @@
         ")"))))
 
 (defmethod emit* :js
-  [{:keys [env code segs args]}]
-  (emit-wrap env
-    (if code
-      (emits code)
-      (emits (interleave (concat segs (repeat nil))
-               (concat args [nil]))))))
+  [{:keys [op env code segs args]}]
+  (if (and code (= op :js) #?(:clj  (.startsWith ^String code "/*")
+                              :cljs (gstring/startsWith code "/*")))
+    (emits code)
+    (emit-wrap env
+      (if code
+        (emits code)
+        (emits (interleave (concat segs (repeat nil))
+                           (concat args [nil])))))))
 
 ;; TODO: unify renaming helpers - this one was hard to find - David
 
