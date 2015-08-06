@@ -69,7 +69,7 @@
 
 (deftest test-eval-str
   (async done
-    (let [l (latch 4 done)]
+    (let [l (latch 6 done)]
       (cljs/eval-str st "(+ 1 1)" nil
         {:eval node-eval}
         (fn [{:keys [error value]}]
@@ -99,9 +99,28 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (== 3))
+          (inc! l)))
+      (cljs/eval-str st "(ns foo.bar)" nil
+        {:eval node-eval
+         :context :expr
+         :def-emits-var true}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (not (nil? js/foo.bar)))
+          (inc! l)))
+      (cljs/eval-str st "(defn foo [a b] (+ a b))" nil
+        {:eval node-eval
+         :context :expr
+         :def-emits-var true}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (== (js/cljs.user.foo 1 2) 3))
           (inc! l))))))
 
 (defn -main [& args]
   (run-tests))
 
 (set! *main-cli-fn* -main)
+
+(comment
+  )
