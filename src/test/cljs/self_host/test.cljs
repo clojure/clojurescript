@@ -46,6 +46,19 @@
 (defn elide-env [env ast opts]
   (dissoc ast :env))
 
+;; NOTE: can't set passes because callbacks happen _inside_ binding
+;; do so will effect other tests
+
+(deftest test-analyze-str
+  (async done
+    (let [l (latch 1 done)]
+      (cljs/analyze-str st "(+ 1 1)" nil
+        {:context :expr}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (= :js (:op value)))
+          (inc! l))))))
+
 (deftest test-compile-str
   (async done
     (let [l (latch 3 done)]
@@ -115,6 +128,37 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (== (js/cljs.user.foo 1 2) 3))
+          (inc! l))))))
+
+(deftest test-eval-str-with-require
+  (async done
+    (let [l (latch 2 done)]
+      (cljs/eval-str st
+        "(ns foo.bar (:require [bootstrap-test.core]))\n(bootstrap-test.core/foo 3 4)"
+        nil
+        {:eval node-eval
+         :load node-load}
+        (fn [{:keys [value error]}]
+          (is (nil? error))
+          (is (== 7 value))
+          (inc! l)))
+      #_(cljs/eval-str st
+        "(ns foo.bar (:require-macros [bootstrap-test.macros :refer [foo]]))\n(foo 4 4)"
+        nil
+        {:eval node-eval
+         :load node-load}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (== 16 value))
+          (inc! l)))
+      (cljs/eval-str st
+        "(ns foo.bar)\n(first [1 2 3])"
+        nil
+        {:eval node-eval
+         :load node-load}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (== 1 value))
           (inc! l))))))
 
 (defn -main [& args]
