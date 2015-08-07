@@ -481,9 +481,13 @@
         docs (if jsdoc (concat docs jsdoc) docs)
         docs (remove nil? docs)]
     (letfn [(print-comment-lines [e]
-              (doseq [next-line (string/split-lines e)]
-                (emitln " * " (-> (string/trim next-line)
-                                  (string/replace "*/" "* /")))))]
+              (let [[x & ys] (string/split-lines e)]
+                (emitln " * " x)
+                (doseq [next-line ys]
+                  (emitln " * "
+                    (-> next-line
+                      (string/replace #"^   " "")
+                      (string/replace "*/" "* /"))))))]
       (when (seq docs)
         (emitln "/**")
         (doseq [e docs]

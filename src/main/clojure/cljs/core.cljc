@@ -871,13 +871,13 @@
   [comment]
   (let [[x & ys] (string/split comment #"\n")]
     (core/list 'js*
-     (core/str
-       "\n/**\n"
-       (core/str " * " x "\n")
-       (core/->> ys
-         (map #(core/str " * " (subs % 3) "\n"))
-         (reduce core/str ""))
-       " */\n"))))
+      (core/str
+        "\n/**\n"
+        (core/str " * " x "\n")
+        (core/->> ys
+          (map #(core/str " * " (string/replace % #"^   " "") "\n"))
+          (reduce core/str ""))
+        " */\n"))))
 
 (core/defmacro true? [x]
   (bool-expr (core/list 'js* "~{} === true" x)))
