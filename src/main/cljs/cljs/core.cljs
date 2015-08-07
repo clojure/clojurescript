@@ -28,11 +28,13 @@
 
 (def
   ^{:dynamic true
-    :doc "Var bound to the current namespace. Only used for bootstrapping."}
+    :doc "Var bound to the current namespace. Only used for bootstrapping."
+    :jsdoc ["@type {*}"]}
   *ns* nil)
 
 (def
-  ^{:dynamic true}
+  ^{:dynamic true
+    :jsdoc ["@type {*}"]}
   *out* nil)
 
 (def
@@ -106,7 +108,8 @@
     :doc "When set to logical true, objects will be printed in a way that preserves
   their type when read in later.
 
-  Defaults to false."}
+  Defaults to false."
+    :jsdoc ["@type {null|number}"]}
   *print-length* nil)
 
 (def
@@ -118,10 +121,14 @@
   collection, its items are at level 1; and so on. If an object is a
   collection and is at a level greater than or equal to the value bound to
   *print-level*, the printer prints '#' to represent it. The root binding
-  is nil indicating no limit."}
+  is nil indicating no limit."
+    :jsdoc ["@type {null|number}"]}
   *print-level* nil)
 
-(defonce ^:dynamic *loaded-libs* nil)
+(defonce
+  ^{:dynamic true
+    :jsdoc ["@type {*}"]}
+  *loaded-libs* nil)
 
 (defn- pr-opts []
   {:flush-on-newline *flush-on-newline*
@@ -9143,7 +9150,9 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; gensym ;;;;;;;;;;;;;;;;
 ;; Internal - do not use!
-(def gensym_counter nil)
+(def
+  ^{:jsdoc ["@type {*}"]}
+  gensym_counter nil)
 
 (defn gensym
   "Returns a new symbol with a unique name. If a prefix string is
@@ -9403,7 +9412,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   "Creates a hierarchy object for use with derive, isa? etc."
   [] {:parents {} :descendants {} :ancestors {}})
 
-(def ^:private -global-hierarchy nil)
+(def
+  ^{:private true
+    :jsdoc ["@type {*}"]}
+  -global-hierarchy nil)
 
 (defn- get-global-hierarchy []
   (when (nil? -global-hierarchy)
@@ -9984,7 +9996,10 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   {:pre [(symbol? tag)]}
   (TaggedLiteral. tag form))
 
-(def ^:private js-reserved-arr
+(def
+  ^{:private true
+    :jsdoc ["@type {*}"]}
+  js-reserved-arr
   #js ["abstract" "boolean" "break" "byte" "case"
        "catch" "char" "class" "const" "continue"
        "debugger" "default" "delete" "do" "double"
@@ -9999,7 +10014,9 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
        "volatile" "while" "with" "yield" "methods"
        "null"])
 
-(def js-reserved nil)
+(def
+  ^{:jsdoc ["@type {*}"]}
+  js-reserved nil)
 
 (defn- js-reserved? [x]
   (when (nil? js-reserved)
@@ -10093,7 +10110,9 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (-hash [_]
     (hash name)))
 
-(def NS_CACHE nil)
+(def
+  ^{:jsdoc ["@type {*}"]}
+  NS_CACHE nil)
 
 (defn- find-ns-obj* [ctxt xs]
   (cond

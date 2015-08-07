@@ -2683,7 +2683,7 @@
                         :arglists-meta (doall (map meta [arglist]))})]
       `(do
          (def ~(with-meta name meta)
-           (fn []
+           (fn [~'var_args]
              (let [args# (array)]
                (copy-arguments args#)
                (let [argseq# (when (< ~c-1 (alength args#))
@@ -2738,7 +2738,7 @@
                args-sym (gensym "args")]
       `(do
          (def ~(with-meta name meta)
-           (fn []
+           (fn [~'var_args]
              (let [~args-sym (array)]
                (copy-arguments ~args-sym)
                (case (alength ~args-sym)
@@ -2821,16 +2821,18 @@
                     m (conj (if (meta name) (meta name) {}) m)]
            (core/cond
              (multi-arity-fn? fdecl)
-             (multi-arity-fn name m fdecl)
+             (multi-arity-fn name
+               (update-in m [:jsdoc] conj "@param {...*} var_args") fdecl)
 
              (variadic-fn? fdecl)
-             (variadic-fn name m fdecl)
+             (variadic-fn name
+               (update-in m [:jsdoc] conj "@param {...*} var_args") fdecl)
 
              :else
              (core/list 'def (with-meta name m)
-              ;;todo - restore propagation of fn name
-              ;;must figure out how to convey primitive hints to self calls first
-              (cons `fn fdecl))))))
+               ;;todo - restore propagation of fn name
+               ;;must figure out how to convey primitive hints to self calls first
+               (cons `fn fdecl))))))
 
 #?(:clj  (. (var defn) (setMacro))
    :cljs (set! (. defn -cljs$lang$macro) true))
