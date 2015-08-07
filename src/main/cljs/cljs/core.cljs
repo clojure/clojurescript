@@ -17,13 +17,12 @@
 
 (def *unchecked-if* false)
 
-(def
+(goog-define
   ^{:dynamic true
     :doc "Var bound to the name value of the compiler build :target option.
   For example, if the compiler build :target is :nodejs, *target* will be bound
   to \"nodejs\". *target* is a Google Closure define and can be set by compiler
-  :closure-defines option."
-    :jsdoc ["@define {string}"]}
+  :closure-defines option."}
   *target* "default")
 
 (def
