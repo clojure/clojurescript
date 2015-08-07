@@ -865,6 +865,20 @@
   []
   (core/list 'js* "debugger;"))
 
+(core/defmacro js-comment
+  "Emit top-level JavaScript multi-line comment. New lines will create a
+  new comment line."
+  [comment]
+  (let [[x & ys] (string/split comment #"\n")]
+    (core/list 'js*
+     (core/str
+       "\n/**\n"
+       (core/str " * " x "\n")
+       (core/->> ys
+         (map #(core/str " * " (subs % 3) "\n"))
+         (reduce core/str ""))
+       " */\n"))))
+
 (core/defmacro true? [x]
   (bool-expr (core/list 'js* "~{} === true" x)))
 
