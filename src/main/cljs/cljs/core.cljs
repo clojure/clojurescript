@@ -271,7 +271,7 @@
   (def ITER_SYMBOL (.-iterator js/Symbol))
   (def ITER_SYMBOL "@@iterator"))
 
-(def ^{:jsdoc ["@enum {string"]}
+(def ^{:jsdoc ["@enum {string}"]}
   CHAR_MAP
   #js {"-"    "_"
        ":"    "_COLON_"
