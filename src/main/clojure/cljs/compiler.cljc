@@ -482,7 +482,7 @@
         docs (remove nil? docs)]
     (letfn [(print-comment-lines [e]
               (let [[x & ys] (string/split-lines e)]
-                (emitln " * " x)
+                (emitln " * " (string/replace x "*/" "* /"))
                 (doseq [next-line ys]
                   (emitln " * "
                     (-> next-line
