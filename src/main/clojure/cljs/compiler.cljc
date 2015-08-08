@@ -475,6 +475,17 @@
     (emits "(function(){throw " throw "})()")
     (emitln "throw " throw ";")))
 
+(defn munge-param [line]
+  (if (re-find #"@param" line)
+    (let [[p t n & xs] (map string/trim
+                         (string/split (string/trim line) #" "))]
+      (if (and (= "@param" p)
+               t #?(:clj  (.startsWith ^String t "{")
+                    :cljs (gstring/startsWith t "{")))
+        (string/join " " (concat [p t (munge n)] xs))
+        line))
+    line))
+
 (defn emit-comment
   "Emit a nicely formatted comment string."
   [doc jsdoc]
@@ -482,7 +493,7 @@
         docs (if jsdoc (concat docs jsdoc) docs)
         docs (remove nil? docs)]
     (letfn [(print-comment-lines [e]
-              (let [[x & ys] (string/split-lines e)]
+              (let [[x & ys] (map munge-param (string/split-lines e))]
                 (emitln " * " (string/replace x "*/" "* /"))
                 (doseq [next-line ys]
                   (emitln " * "
