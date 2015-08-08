@@ -993,11 +993,6 @@
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
-    (doseq [fld fields]
-      (emitln "* @param {*} " fld))
-    (emitln "* @param {*=} __meta ")
-    (emitln "* @param {*=} __extmap")
-    (emitln "* @param {number|null} __hash")
     (emitln "*/")
     (emitln (munge t) " = (function (" (comma-sep fields) "){")
     (doseq [fld fields]
