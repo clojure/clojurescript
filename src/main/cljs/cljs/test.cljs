@@ -366,8 +366,8 @@
 (defn js-line-and-column [stack-element]
   (let [parts (.split stack-element ":")
         cnt   (count parts)]
-    [(js/parseInt (nth parts (- cnt 2)))
-     (js/parseInt (nth parts (dec cnt)))]))
+    [(js/parseInt (nth parts (- cnt 2)) 10)
+     (js/parseInt (nth parts (dec cnt)) 10)]))
 
 (defn js-filename [stack-element]
   (first (.split (last (.split stack-element "/out/")) ":")))

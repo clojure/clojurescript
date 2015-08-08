@@ -1418,7 +1418,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
         e (if (and (pos? (count e)) (= (nth e 0) \+)) (subs e 1) e)]
     (if (empty? m2)
       ["0" 0]
-      [m2 (- (js/parseInt e) delta)])))
+      [m2 (- (js/parseInt e 10) delta)])))
 
 (defn- inc-s
   "Assumption: The input string consists of one or more decimal digits,
@@ -2475,7 +2475,7 @@ not a pretty writer (which keeps track of columns), this function always outputs
      (and (= (.-length p) 1) (contains? #{\v \V} (nth p 0))) :parameter-from-args
      (and (= (.-length p) 1) (= \# (nth p 0))) :remaining-arg-count
      (and (= (.-length p) 2) (= \' (nth p 0))) (nth p 1)
-     true (js/parseInt p))
+     true (js/parseInt p 10))
    offset])
 
 (def ^{:private true}
