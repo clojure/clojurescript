@@ -475,37 +475,63 @@
     (emits "(function(){throw " throw "})()")
     (emitln "throw " throw ";")))
 
-(defn munge-param [line]
-  (if (re-find #"@param" line)
-    (let [[p t n & xs] (map string/trim
-                         (string/split (string/trim line) #" "))]
+(defn resolve-type [env t]
+  (str (:name (ana/resolve-var env (symbol t)))))
+
+(defn resolve-types [env ts]
+  (let [ts (-> ts string/trim (subs 1 (dec (count ts))))
+        xs (string/split ts #"\|")]
+    (str
+      "{"
+      (->> (map #(resolve-type env %) xs)
+        (map munge)
+        (string/join "|"))
+      "}")))
+
+(defn munge-param-return [env line]
+  (cond
+    (re-find #"@param" line)
+    (let [[p ts n & xs] (map string/trim
+                          (string/split (string/trim line) #" "))]
       (if (and (= "@param" p)
-               t #?(:clj  (.startsWith ^String t "{")
-                    :cljs (gstring/startsWith t "{")))
-        (string/join " " (concat [p t (munge n)] xs))
+               ts #?(:clj  (.startsWith ^String ts "{")
+                     :cljs (gstring/startsWith ts "{")))
+        (string/join " " (concat [p (resolve-types env ts) (munge n)] xs))
         line))
-    line))
+
+    (re-find #"@return" line)
+    (let [[p ts & xs] (map string/trim
+                        (string/split (string/trim line) #" "))]
+      (if (and (= "@return" p)
+               ts #?(:clj  (.startsWith ^String ts "{")
+                     :cljs (gstring/startsWith ts "{")))
+        (string/join " " (concat [p (resolve-types env ts)] xs))
+        line))
+
+    :else line))
 
 (defn emit-comment
   "Emit a nicely formatted comment string."
-  [doc jsdoc]
-  (let [docs (when doc [doc])
-        docs (if jsdoc (concat docs jsdoc) docs)
-        docs (remove nil? docs)]
-    (letfn [(print-comment-lines [e]
-              (let [[x & ys] (map munge-param (string/split-lines e))]
-                (emitln " * " (string/replace x "*/" "* /"))
-                (doseq [next-line ys]
-                  (emitln " * "
-                    (-> next-line
-                      (string/replace #"^   " "")
-                      (string/replace "*/" "* /"))))))]
-      (when (seq docs)
-        (emitln "/**")
-        (doseq [e docs]
-          (when e
-            (print-comment-lines e)))
-        (emitln " */")))))
+  ([doc jsdoc]
+    (emit-comment nil doc jsdoc))
+  ([env doc jsdoc]
+   (let [docs (when doc [doc])
+         docs (if jsdoc (concat docs jsdoc) docs)
+         docs (remove nil? docs)]
+     (letfn [(print-comment-lines [e]
+               (let [[x & ys] (map #(munge-param-return env %) (string/split-lines e))]
+                 (emitln " * " (string/replace x "*/" "* /"))
+                 (doseq [next-line ys]
+                   (emitln " * "
+                     (-> next-line
+                       (string/replace #"^   " "")
+                       (string/replace "*/" "* /"))))))]
+       (when (seq docs)
+         (emitln "/**")
+         (doseq [e docs]
+           (when e
+             (print-comment-lines e)))
+         (emitln " */"))))))
 
 (defn valid-define-value? [x]
   (or (string? x)
@@ -527,7 +553,7 @@
 (defmethod emit* :def
   [{:keys [name var init env doc jsdoc export test var-ast]}]
   (let [mname (munge name)]
-    (emit-comment doc (concat jsdoc (:jsdoc init)))
+    (emit-comment env doc (concat jsdoc (:jsdoc init)))
     (when (:def-emits-var env)
       (when (= :return (:context env))
         (emitln "return ("))
