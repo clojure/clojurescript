@@ -2922,6 +2922,10 @@
   (is (= 'cljs.core/first?
          (demunge (munge 'cljs.core/first?)))))
 
+(deftest test-uuid-compile-and-runtime-hash
+  (is (= (hash (.toString #uuid "0d1f9029-40fc-4728-8bdd-9862172d4370"))
+         (hash (.toString (UUID. "0d1f9029-40fc-4728-8bdd-9862172d4370" nil))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

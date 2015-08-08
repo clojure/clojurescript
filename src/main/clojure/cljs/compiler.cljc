@@ -286,7 +286,8 @@
   (emits "new Date(" (.getTime date) ")"))
 
 (defmethod emit-constant #?(:clj java.util.UUID :cljs UUID) [^java.util.UUID uuid]
-  (emits "new cljs.core.UUID(\"" (.toString uuid) "\")"))
+  (let [uuid-str (.toString uuid)]
+    (emits "new cljs.core.UUID(\"" uuid-str "\", " (hash uuid-str) ")")))
 
 #?(:clj
    (defmacro emit-wrap [env & body]
