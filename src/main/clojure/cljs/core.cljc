@@ -40,7 +40,7 @@
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
-                                       specify copy-arguments goog-define js-comment])])
+                                       specify copy-arguments goog-define js-comment js-inline-comment])])
   #?(:cljs (:require-macros [cljs.core :as core]))
   (:require clojure.walk
             clojure.set
@@ -866,8 +866,8 @@
   (core/list 'js* "debugger;"))
 
 (core/defmacro js-comment
-  "Emit top-level JavaScript multi-line comment. New lines will create a
-  new comment line."
+  "Emit a top-level JavaScript multi-line comment. New lines will create a
+  new comment line. Comment block will be preceded and followed by a newline."
   [comment]
   (core/let [[x & ys] (string/split comment #"\n")]
     (core/list 'js*
@@ -878,6 +878,11 @@
           (map #(core/str " * " (string/replace % #"^   " "") "\n"))
           (reduce core/str ""))
         " */\n"))))
+
+(core/defmacro js-inline-comment
+  "Emit an inline JavaScript comment."
+  [comment]
+  (core/list 'js* (core/str "/**" comment "*/")))
 
 (core/defmacro true? [x]
   (bool-expr (core/list 'js* "~{} === true" x)))

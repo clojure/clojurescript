@@ -1025,8 +1025,8 @@
 
 (defmethod emit* :js
   [{:keys [op env code segs args]}]
-  (if (and code #?(:clj  (.startsWith ^String code "/*")
-                   :cljs (gstring/startsWith code "/*")))
+  (if (and code #?(:clj  (.startsWith ^String (string/trim code) "/*")
+                   :cljs (gstring/startsWith (string/trim code) "/*")))
     (emits code)
     (emit-wrap env
       (if code
