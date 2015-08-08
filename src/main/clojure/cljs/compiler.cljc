@@ -527,36 +527,36 @@
 (defmethod emit* :def
   [{:keys [name var init env doc jsdoc export test var-ast]}]
   (let [mname (munge name)]
+    (emit-comment doc (concat jsdoc (:jsdoc init)))
+    (when (:def-emits-var env)
+      (when (= :return (:context env))
+        (emitln "return ("))
+      (emitln "(function (){"))
+    (emits var)
     (when init
-      (emit-comment doc (concat jsdoc (:jsdoc init)))
-      (when (:def-emits-var env)
-        (when (= :return (:context env))
-          (emitln "return ("))
-        (emitln "(function (){"))
-      (emits var)
       (emits " = "
-        (if-let [define (get-define mname jsdoc)]
-          define
-          init))
-      (when (:def-emits-var env)
-        (emitln "; return (")
-        (emits (merge
-                 {:op  :var-special
-                  :env (assoc env :context :expr)}
-                 var-ast))
-        (emitln ");})()")
-        (when (= :return (:context env))
-          (emitln ")")))
-      ;; NOTE: JavaScriptCore does not like this under advanced compilation
-      ;; this change was primarily for REPL interactions - David
-      ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
-      (when-not (= :expr (:context env)) (emitln ";"))
-      (when export
-        (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))
-      (when (and ana/*load-tests* test)
-        (when (= :expr (:context env))
-          (emitln ";"))
-        (emitln var ".cljs$lang$test = " test ";")))))
+       (if-let [define (get-define mname jsdoc)]
+         define
+         init)))
+    (when (:def-emits-var env)
+      (emitln "; return (")
+      (emits (merge
+               {:op :var-special
+                :env (assoc env :context :expr)}
+               var-ast))
+      (emitln ");})()")
+      (when (= :return (:context env))
+        (emitln ")")))
+    ;; NOTE: JavaScriptCore does not like this under advanced compilation
+    ;; this change was primarily for REPL interactions - David
+    ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
+    (when-not (= :expr (:context env)) (emitln ";"))
+    (when export
+      (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))
+    (when (and ana/*load-tests* test)
+      (when (= :expr (:context env))
+        (emitln ";"))
+      (emitln var ".cljs$lang$test = " test ";"))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
