@@ -10014,7 +10014,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
        "null"])
 
 (def
-  ^{:jsdoc ["@type {*}"]}
+  ^{:jsdoc ["@type {null|Object}"]}
   js-reserved nil)
 
 (defn- js-reserved? [x]
