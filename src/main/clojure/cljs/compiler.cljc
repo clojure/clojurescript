@@ -349,7 +349,7 @@
         (emits "new cljs.core.PersistentArrayMap(null, " (count keys) ", ["
           (comma-sep (interleave keys vals))
           "], null)")
-        (emits "new cljs.core.PersistentArrayMap.fromArray(["
+        (emits "cljs.core.PersistentArrayMap.fromArray(["
           (comma-sep (interleave keys vals))
           "], true, false)"))
 
