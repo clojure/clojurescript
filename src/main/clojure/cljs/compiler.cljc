@@ -475,8 +475,38 @@
     (emits "(function(){throw " throw "})()")
     (emitln "throw " throw ";")))
 
-(defn resolve-type [env t]
-  (str (:name (ana/resolve-var env (symbol t)))))
+(def base-types
+  #{"boolean" "Boolean"
+    "string" "String"
+    "number" "Number"
+    "array" "Array"
+    "object" "Object"
+    "RegExp"
+    "Date"})
+
+(defn resolve-type [env ^String t]
+  (cond
+    (get base-types t) t
+
+    #?(:clj  (.startsWith t "!")
+       :cljs (gstring/startsWith t "!")) t
+
+    #?(:clj  (.startsWith t "{")
+       :cljs (gstring/startsWith t "{")) t
+
+    #?(:clj  (.startsWith t "function")
+       :cljs (gstring/startsWith t "function")) t
+
+    :else
+    (let [optional? #?(:clj  (.endsWith t "=")
+                       :cljs (gstring/endsWith t "="))
+          t         (if optional?
+                      (subs t 0 (dec (count t)))
+                      t)
+          ret       (str (:name (ana/resolve-var env (symbol t))))]
+      (if optional?
+        (str ret "=")
+        ret))))
 
 (defn resolve-types [env ts]
   (let [ts (-> ts string/trim (subs 1 (dec (count ts))))
