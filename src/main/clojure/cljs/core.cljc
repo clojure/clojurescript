@@ -40,7 +40,8 @@
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
-                                       specify copy-arguments goog-define js-comment js-inline-comment])])
+                                       specify copy-arguments goog-define js-comment js-inline-comment
+                                       unsafe-cast])])
   #?(:cljs (:require-macros [cljs.core :as core]))
   (:require clojure.walk
             clojure.set
@@ -878,6 +879,12 @@
           (map #(core/str " * " (string/replace % #"^   " "") "\n"))
           (reduce core/str ""))
         " */"))))
+
+(core/defmacro unsafe-cast
+  "EXPERIMENTAL: Subject to change. Unsafely cast a value to a different type."
+  [t x]
+  (core/let [cast-expr (core/str "~{} = /** @type {" t "} */ (~{})")]
+    (core/list 'js* cast-expr x x)))
 
 (core/defmacro js-inline-comment
   "Emit an inline JavaScript comment."
