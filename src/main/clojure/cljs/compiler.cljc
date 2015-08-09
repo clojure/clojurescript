@@ -476,7 +476,8 @@
     (emitln "throw " throw ";")))
 
 (def base-types
-  #{"boolean" "Boolean"
+  #{"null" "*"
+    "boolean" "Boolean"
     "string" "String"
     "number" "Number"
     "array" "Array"
@@ -484,9 +485,14 @@
     "RegExp"
     "Date"})
 
+(def mapped-types
+  {"nil" "null"})
+
 (defn resolve-type [env ^String t]
   (cond
     (get base-types t) t
+
+    (get mapped-types t) (get mapped-types t)
 
     #?(:clj  (.startsWith t "!")
        :cljs (gstring/startsWith t "!")) t
@@ -508,13 +514,19 @@
         (str ret "=")
         ret))))
 
+(defn type-munge [s]
+  (cond
+    (= "null" s) s
+    (= "*" s) s
+    :else (munge s)))
+
 (defn resolve-types [env ts]
   (let [ts (-> ts string/trim (subs 1 (dec (count ts))))
         xs (string/split ts #"\|")]
     (str
       "{"
       (->> (map #(resolve-type env %) xs)
-        (map munge)
+        (map type-munge)
         (string/join "|"))
       "}")))
 
