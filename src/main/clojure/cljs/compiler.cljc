@@ -502,7 +502,18 @@
        :cljs (gstring/startsWith t "{")) t
 
     #?(:clj  (.startsWith t "function")
-       :cljs (gstring/startsWith t "function")) t
+       :cljs (gstring/startsWith t "function"))
+    (let [idx         (.lastIndexOf t ":")
+          [fstr rstr] (if-not (== -1 idx)
+                        [(subs t 0 idx) (subs t (inc idx) (count t))]
+                        [t nil])
+          ret-t       (when rstr (resolve-type env rstr))
+          axstr       (subs fstr 9 (dec (count fstr)))
+          args-ts     (when-not (string/blank? axstr)
+                        (map (comp #(resolve-type env %) string/trim)
+                          (string/split axstr #",")))]
+      (cond-> (str "function(" (string/join "," args-ts) ")")
+        ret-t (str ":" ret-t)))
 
     #?(:clj  (.endsWith t "=")
        :cljs (gstring/endsWith t "="))
