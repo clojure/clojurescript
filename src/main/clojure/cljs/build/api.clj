@@ -42,7 +42,7 @@
   "Backdates a cljs target file so that it the cljs compiler will recompile it."
   ([ns-sym] (mark-cljs-ns-for-recompile! ns-sym nil))
   ([ns-sym output-dir]
-    (let [s (target-file-for-cljs-ns output-dir ns-sym)]
+    (let [s (target-file-for-cljs-ns ns-sym output-dir)]
       (when (.exists s)
         (.setLastModified s 5000)))))
 
