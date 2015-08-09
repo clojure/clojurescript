@@ -476,7 +476,7 @@
     (emitln "throw " throw ";")))
 
 (def base-types
-  #{"null" "*"
+  #{"null" "*" "...*"
     "boolean" "Boolean"
     "string" "String"
     "number" "Number"
@@ -509,26 +509,15 @@
           t         (if optional?
                       (subs t 0 (dec (count t)))
                       t)
-          ret       (str (:name (ana/resolve-var env (symbol t))))]
+          ret       (munge (str (:name (ana/resolve-var env (symbol t)))))]
       (if optional?
         (str ret "=")
         ret))))
 
-(defn type-munge [s]
-  (cond
-    (= "null" s) s
-    (= "*" s) s
-    :else (munge s)))
-
 (defn resolve-types [env ts]
   (let [ts (-> ts string/trim (subs 1 (dec (count ts))))
         xs (string/split ts #"\|")]
-    (str
-      "{"
-      (->> (map #(resolve-type env %) xs)
-        (map type-munge)
-        (string/join "|"))
-      "}")))
+    (str "{" (string/join "|" (map #(resolve-type env %) xs)) "}")))
 
 (defn munge-param-return [env line]
   (cond
