@@ -1042,11 +1042,13 @@
   (load-libs uses requires (:use reloads)))
 
 (defmethod emit* :deftype*
-  [{:keys [t fields pmasks body]}]
+  [{:keys [t fields pmasks body protocols]}]
   (let [fields (map munge fields)]
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
+    (doseq [protocol protocols]
+      (emitln " * @implements {" (munge (str protocol)) "}"))
     (emitln "*/")
     (emitln (munge t) " = (function (" (comma-sep fields) "){")
     (doseq [fld fields]
@@ -1057,11 +1059,13 @@
     (emit body)))
 
 (defmethod emit* :defrecord*
-  [{:keys [t fields pmasks body]}]
+  [{:keys [t fields pmasks body protocols]}]
   (let [fields (concat (map munge fields) '[__meta __extmap __hash])]
     (emitln "")
     (emitln "/**")
     (emitln "* @constructor")
+    (doseq [protocol protocols]
+      (emitln " * @implements {" (munge (str protocol)) "}"))
     (emitln "*/")
     (emitln (munge t) " = (function (" (comma-sep fields) "){")
     (doseq [fld fields]

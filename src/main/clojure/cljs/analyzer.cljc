@@ -1963,7 +1963,8 @@
                                  :shadow (m fld)}))
                        {} (if (= :defrecord* op)
                             (concat fields '[__meta __extmap ^:mutable __hash])
-                            fields))]
+                            fields))
+        protocols (-> tsym meta :protocols)]
     (swap! env/*compiler* update-in [::namespaces (-> env :ns :name) :defs tsym]
            (fn [m]
              (let [m (assoc (or m {})
@@ -1973,9 +1974,11 @@
                        :record (= :defrecord* op))]
                (merge m
                       (dissoc (meta tsym) :protocols)
-                      {:protocols (-> tsym meta :protocols)}
+                      {:protocols protocols}
                       (source-info tsym env)))))
-    {:op op :env env :form form :t t :fields fields :pmasks pmasks :body (analyze (assoc env :locals locals) body)}))
+    {:op op :env env :form form :t t :fields fields :pmasks pmasks
+     :protocols (disj protocols 'cljs.core/Object)
+     :body (analyze (assoc env :locals locals) body)}))
 
 (defmethod parse 'deftype*
   [_ env form _ _]

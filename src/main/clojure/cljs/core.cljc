@@ -1895,7 +1895,7 @@
                                sigs))))]
     `(do
        (set! ~'*unchecked-if* true)
-       (def ~psym (js-obj))
+       (def ~psym (~'js* "function(){}"))
        ~@(map method methods)
        (set! ~'*unchecked-if* false))))
 
