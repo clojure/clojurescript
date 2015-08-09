@@ -1866,7 +1866,10 @@
                                        (throw
                                          (missing-protocol
                                            ~(core/str psym "." fname) ~(first sig))))))))))
-             psym   (vary-meta psym assoc-in [:protocol-info :methods]
+             psym (-> psym
+                    (vary-meta update-in [:jsdoc] conj
+                      "@interface")
+                    (vary-meta assoc-in [:protocol-info :methods]
                       (into {}
                         (map
                           (core/fn [[fname & sigs]]
@@ -1875,7 +1878,7 @@
                                        sigs (take-while vector? sigs)]
                               [(vary-meta fname assoc :doc doc)
                                (vec sigs)]))
-                          methods)))
+                          methods))))
              method (core/fn [[fname & sigs]]
                       (core/let [doc (core/as-> (last sigs) doc
                                        (core/when (core/string? doc) doc))
