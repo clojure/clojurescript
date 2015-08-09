@@ -701,7 +701,6 @@
     :closure-defines {\"your-app.core.DEBUG_BANG_\" true}
     or
     :closure-defines {'your-app.core/DEBUG! true}"
-    
   [sym default]
   (assert-args goog-define
    (core/or (core/string? default)
