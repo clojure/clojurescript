@@ -549,6 +549,11 @@
 
     :else line))
 
+(defn checking-types? []
+  (#{:error :warn}
+    (get-in @env/*compiler*
+      [:options :closure-warnings :check-types])))
+
 (defn emit-comment
   "Emit a nicely formatted comment string."
   ([doc jsdoc]
@@ -558,7 +563,9 @@
          docs (if jsdoc (concat docs jsdoc) docs)
          docs (remove nil? docs)]
      (letfn [(print-comment-lines [e]
-               (let [[x & ys] (map #(munge-param-return env %) (string/split-lines e))]
+               (let [[x & ys]
+                     (map #(if (checking-types?) (munge-param-return env %) %)
+                       (string/split-lines e))]
                  (emitln " * " (string/replace x "*/" "* /"))
                  (doseq [next-line ys]
                    (emitln " * "
