@@ -1666,7 +1666,10 @@
                            (repeat warnings))
                          warnings)))
                    ana/*verbose* (:verbose opts)]
-           (let [compiled (util/measure compiler-stats
+           (let [source (if (and (:main all-opts) (#{:advanced :simple} (:optimizations all-opts)))
+                          (:uri (cljs-source-for-namespace (:main all-opts)))
+                          source)
+                 compiled (util/measure compiler-stats
                             "Compile basic sources"
                             (doall (-compile source all-opts)))
                  js-sources (util/measure compiler-stats
