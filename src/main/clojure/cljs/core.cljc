@@ -2839,11 +2839,15 @@
            (core/cond
              (multi-arity-fn? fdecl)
              (multi-arity-fn name
-               (update-in m [:jsdoc] conj "@param {...*} var_args") fdecl)
+               (if (comp/checking-types?)
+                 (update-in m [:jsdoc] conj "@param {...*} var_args")
+                 m) fdecl)
 
              (variadic-fn? fdecl)
              (variadic-fn name
-               (update-in m [:jsdoc] conj "@param {...*} var_args") fdecl)
+               (if (comp/checking-types?)
+                 (update-in m [:jsdoc] conj "@param {...*} var_args")
+                 m) fdecl)
 
              :else
              (core/list 'def (with-meta name m)
