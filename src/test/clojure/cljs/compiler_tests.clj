@@ -72,8 +72,9 @@
 (deftest test-cljs-428
   (letfn [(check-docs [docs]
             (is (= 1 (count (re-seq #"\*/" docs)))))]
-    (check-docs (with-out-str 
-                  (comp/emit-comment "/* multiline comments */" nil)))
+    (check-docs (with-out-str
+                  (env/ensure
+                    (comp/emit-comment "/* multiline comments */" nil))))
     (check-docs (with-out-str
                   (comp/emit
                     (ana/analyze aenv
