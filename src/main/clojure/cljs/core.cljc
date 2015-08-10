@@ -46,7 +46,7 @@
   (:require clojure.walk
             clojure.set
             [clojure.string :as string]
-            cljs.compiler
+            [cljs.compiler :as comp]
             [cljs.env :as env]
             #?(:cljs [cljs.core :as core])
             #?(:cljs [cljs.analyzer :as ana])))
@@ -707,7 +707,7 @@
             (core/number? default)
             (core/true? default)
             (core/false? default)) "a string, number or boolean as default value")
-  (core/let [defname (cljs.compiler/munge (core/str *ns* "/" sym))
+  (core/let [defname (comp/munge (core/str *ns* "/" sym))
              type    (core/cond
                        (core/string? default) "string"
                        (core/number? default) "number"
@@ -1258,7 +1258,7 @@
              this-sym (gensym "_")
              locals   (keys (:locals &env))
              ns       (core/-> &env :ns :name)
-             munge    cljs.compiler/munge]
+             munge    comp/munge]
     `(do
        (when-not (exists? ~(symbol (core/str ns) (core/str t)))
          (deftype ~t [~@locals ~meta-sym]
@@ -2602,7 +2602,7 @@
                          (= quote1 'quote) (core/symbol? sym))
     "Arguments to ns-unmap must be quoted symbols")
   (swap! env/*compiler* update-in [::ana/namespaces ns :defs] dissoc sym)
-  `(js-delete ~(cljs.compiler/munge ns) ~(cljs.compiler/munge (core/str sym))))
+  `(js-delete ~(comp/munge ns) ~(comp/munge (core/str sym))))
 
 (core/defmacro vswap!
   "Non-atomically swaps the value of the volatile as if:
