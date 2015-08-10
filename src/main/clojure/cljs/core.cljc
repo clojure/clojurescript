@@ -870,7 +870,7 @@
 
 (core/defmacro js-comment
   "Emit a top-level JavaScript multi-line comment. New lines will create a
-  new comment line. Comment block will be preceded by a newline."
+  new comment line. Comment block will be preceded and followed by a newline"
   [comment]
   (core/let [[x & ys] (string/split comment #"\n")]
     (core/list 'js*
@@ -880,7 +880,7 @@
         (core/->> ys
           (map #(core/str " * " (string/replace % #"^   " "") "\n"))
           (reduce core/str ""))
-        " */"))))
+        " */\n"))))
 
 (core/defmacro unsafe-cast
   "EXPERIMENTAL: Subject to change. Unsafely cast a value to a different type."
