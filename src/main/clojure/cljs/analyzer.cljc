@@ -228,6 +228,12 @@
        ", " (ns->relpath ns-sym :cljc)
        ", or Closure namespace \"" js-provide "\""))
 
+(defmethod error-message :undeclared-macros-ns
+  [warning-type {:keys [ns-sym js-provide] :as info}]
+  (str "No such macros namespace: " ns-sym
+       ", could not locate " (ns->relpath ns-sym :clj)
+       " or " (ns->relpath ns-sym :cljc)))
+
 (defmethod error-message :dynamic
   [warning-type info]
   (str (:name info) " not declared ^:dynamic"))

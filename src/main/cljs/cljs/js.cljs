@@ -223,7 +223,9 @@
                              (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))
                  (cb (wrap-error
                        (ana/error env
-                         (ana/error-message :undeclared-ns
+                         (ana/error-message (if (:macros-ns opts)
+                                              :undeclared-macros-ns
+                                              :undeclared-ns)
                            {:ns-sym name :js-provide (cljs.core/name name)})))))))
            (catch :default cause
              (cb (wrap-error
