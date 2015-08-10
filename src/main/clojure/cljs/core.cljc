@@ -1868,7 +1868,7 @@
                                        (throw
                                          (missing-protocol
                                            ~(core/str psym "." fname) ~(first sig))))))))))
-             psym (-> psym
+             psym (core/-> psym
                     (vary-meta update-in [:jsdoc] conj
                       "@interface")
                     (vary-meta assoc-in [:protocol-info :methods]

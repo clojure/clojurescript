@@ -51,12 +51,17 @@
 
 (deftest test-analyze-str
   (async done
-    (let [l (latch 1 done)]
+    (let [l (latch 2 done)]
       (cljs/analyze-str st "(+ 1 1)" nil
         {:context :expr}
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (= :js (:op value)))
+          (inc! l)))
+      (cljs/analyze-str st "(defprotocol IFoo)" nil
+        {:context :expr}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
           (inc! l))))))
 
 (deftest test-compile-str
