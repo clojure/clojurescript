@@ -70,19 +70,19 @@
       (cljs/compile-str st "(+ 1 1)"
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (= value "(1 + 1);\n"))
+          (is (= "(1 + 1);\n" value))
           (inc! l)))
       (cljs/compile-str st "(fn [])" nil
         {:context :expr}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (= value "(function (){\nreturn null;\n})"))
+          (is (= "(function (){\nreturn null;\n})" value))
           (inc! l)))
       (cljs/compile-str st "(if cljs.core.first 1 2)" nil
         {:context :expr}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (= value "(cljs.core.truth_(cljs.core.first)?1:2)"))
+          (is (= "(cljs.core.truth_(cljs.core.first)?1:2)" value))
           (inc! l))))))
 
 (deftest test-eval-str
@@ -92,7 +92,7 @@
         {:eval node-eval}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (== value 2))
+          (is (== 2 value))
           (inc! l)))
       (cljs/eval-str st "(def x 1)" nil
         {:eval node-eval
@@ -116,7 +116,7 @@
          :def-emits-var true}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (== 3))
+          (is (== 3 value))
           (inc! l)))
       #_(cljs/eval-str st "(ns foo.bar)" nil
           {:eval node-eval
@@ -132,7 +132,7 @@
          :def-emits-var true}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (== (js/cljs.user.foo 1 2) 3))
+          (is (== 3 (js/cljs.user.foo 1 2)))
           (inc! l))))))
 
 #_(deftest test-eval-str-with-require
