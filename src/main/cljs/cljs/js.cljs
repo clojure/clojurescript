@@ -391,6 +391,7 @@
                  *ns*                   (create-ns ns)
                  ana/*passes*           (:*passes* bound-vars)
                  r/*data-readers*       (:*data-readers* bound-vars)
+                 r/resolve-symbol       ana/resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
@@ -476,6 +477,7 @@
               ana/*cljs-ns*          (:*cljs-ns* bound-vars)
               *ns*                   (create-ns (:*cljs-ns* bound-vars))
               r/*data-readers*       (:*data-readers* bound-vars)
+              r/resolve-symbol       ana/resolve-symbol
               comp/*source-map-data* (:*sm-data* bound-vars)]
       (let [aenv (ana/empty-env)
             aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
@@ -549,6 +551,7 @@
                  ana/*cljs-ns*          ns
                  *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
+                 r/resolve-symbol       ana/resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
@@ -641,6 +644,7 @@
                  ana/*cljs-ns*          ns
                  *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
+                 r/resolve-symbol       ana/resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
