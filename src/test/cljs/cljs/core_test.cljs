@@ -3111,6 +3111,15 @@
 (deftest test-cljs-1569
   (is (= (meta (with-meta (seq [1 2 3]) {:a 1})) {:a 1})))
 
+(deftest test-cljs-1420
+  (is (= :2-arity
+         (get-in
+           (reify
+             ILookup
+             (-lookup [o k] :2-arity)
+             (-lookup [o k not-found] :3-arity))
+           [:foo]))))
+
 
 (comment
   ;; ObjMap
