@@ -55,6 +55,11 @@
        (some #{(str name)} (ns-first-segments)) (inc d)
        :else d))))
 
+(defn hash-scope [s]
+  #?(:clj (System/identityHashCode s)
+     :cljs (hash-combine (-hash ^not-native (:name s))
+             (shadow-depth s))))
+
 (declare munge)
 
 (defn fn-self-name [{:keys [name info] :as name-var}]
@@ -86,8 +91,7 @@
          (fn-self-name s)
          ;; Unshadowing
          (let [depth       (shadow-depth s)
-               code        #?(:clj  (System/identityHashCode s)
-                              :cljs (-hash ^not-native name))
+               code        (hash-scope s)
                renamed     (get *lexical-renames* code)
                name        (cond
                              (true? field) (str "self__." name)
@@ -862,8 +866,7 @@
                   (map
                     (fn [binding]
                       (let [name (:name binding)]
-                        (vector #?(:clj  (System/identityHashCode binding)
-                                   :cljs (-hash ^not-native name))
+                        (vector (hash-scope binding)
                           (gensym (str name "-")))))
                     bindings)))]
       (doseq [{:keys [init] :as binding} bindings]
