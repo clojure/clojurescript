@@ -8430,11 +8430,10 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [rng]
-    (if (pos? step)
-      (when (< start end)
-        rng)
-      (when (> start end)
-        rng)))
+    (cond
+      (pos? step) (when (< start end) rng)
+      (neg? step) (when (> start end) rng)
+      :else       (when-not (== start end) rng)))
 
   ISeq
   (-first [rng]
