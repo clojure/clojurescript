@@ -14,7 +14,9 @@
         opts-string (apply str (interpose " " (rest args)))
         options (when (> (count opts-string) 1)
                   (try (read-string opts-string)
-                       (catch Exception e (println e))))]
+                    (catch Exception e
+                      (binding [*out* *err*]
+                        (println "Failed to parse command line args:" e)))))]
     {:source source :options (merge {:output-to :print} options)}))
 
 (let [args (transform-cl-args *command-line-args*)]
