@@ -1110,7 +1110,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
   For each name in constructor-name-symbols, adds a mapping from name to the
   constructor named by closure-namespace to the current namespace. Use :import in the ns
   macro in preference to calling this directly."}
-    load-file {:arglist ([name])
+    load-file {:arglists ([name])
                :doc "Sequentially read and evaluate the set of forms contained in the file."}})
 
 (defn- repl-special-doc [name-symbol]
