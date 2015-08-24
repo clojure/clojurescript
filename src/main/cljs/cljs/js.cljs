@@ -690,7 +690,7 @@
                                     :name   name
                                     :path   (ns->relpath name)
                                     :source js-source
-                                    :cache  (get-in env/*compiler* [::ana/namespaces name])}
+                                    :cache  (get-in @env/*compiler* [::ana/namespaces name])}
                          complete  (fn [res]
                                      (if (:error res)
                                        (cb res)
