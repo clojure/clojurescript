@@ -342,6 +342,12 @@
   ;; munge turns - into _, must preserve the dash first
   (is (not= (a/gen-constant-id :test-kw)
             (a/gen-constant-id :test_kw))))
+
+(deftest test-symbols-munge-cljs-1432
+  (is (not= (a/gen-constant-id :$)
+            (a/gen-constant-id :.)))
+  (is (not= (a/gen-constant-id '$)
+            (a/gen-constant-id '.))))
 ;; Constants
 
 (deftest test-constants

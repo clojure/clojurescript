@@ -378,7 +378,9 @@
         name   (if (keyword? value)
                  (subs (str value) 1)
                  (str value))
-        name   (-> name (string/replace "-" "_DASH_") (munge) (string/replace "." "$"))]
+        name   (if (= "." name)
+                 "_DOT_"
+                 (-> name (string/replace "-" "_DASH_") (munge) (string/replace "." "$")))]
     (symbol (str prefix name))))
 
 (defn- register-constant!

@@ -306,7 +306,11 @@
     (is (= :a (keyword "a")))
     (is (= :a (keyword 'a)))
     (is (= :a/b (keyword 'a 'b)))
-    (is (= :a (keyword :a)))))
+    (is (= :a (keyword :a))))
+
+  (testing "Testing name munging CLJS-1432"
+    (is (not= :$ :.))
+    (is (not= '$ '.))))
 
 (deftest test-map-operations
   (testing "Test basic map collection operations"
