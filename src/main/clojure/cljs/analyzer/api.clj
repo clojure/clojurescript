@@ -58,6 +58,13 @@
   ([state]
    (get @state :options)))
 
+(defn get-js-index
+  "Return the currently computed Google Closure js dependency index from the
+  compiler state."
+  ([] (get-options env/*compiler*))
+  ([state]
+   (get @state :js-dependency-index)))
+
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
   (one of :statement, :expr, :return), :ns (a symbol naming the
