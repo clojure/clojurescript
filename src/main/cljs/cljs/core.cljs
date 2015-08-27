@@ -10135,7 +10135,16 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
         segs (.split munged-ns ".")]
     (case *target*
       "nodejs"  (if ^boolean js/COMPILED
-                  (js/eval munged-ns)
+                  ; Under simple optimizations on nodejs, namespaces will be in module
+                  ; rather than global scope and must be accessed by a direct call to eval.
+                  ; The first segment may refer to an undefined variable, so its evaluation
+                  ; may throw ReferenceError.
+                  (find-ns-obj*
+                    (try
+                      (js/eval (first segs))
+                      (catch js/ReferenceError e
+                        nil))
+                    (next segs))
                   (find-ns-obj* js/global segs))
       "default" (find-ns-obj* goog/global segs)
       (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))

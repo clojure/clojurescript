@@ -124,7 +124,7 @@
           (is (nil? error))
           (is (== 3 value))
           (inc! l)))
-      #_(cljs/eval-str st "(ns foo.bar)" nil
+      (cljs/eval-str st "(ns foo.bar)" nil
           {:eval node-eval
            :context :expr
            :def-emits-var true}
