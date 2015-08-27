@@ -66,7 +66,7 @@
 
 (deftest test-compile-str
   (async done
-    (let [l (latch 3 done)]
+    (let [l (latch 4 done)]
       (cljs/compile-str st "(+ 1 1)"
         (fn [{:keys [error value]}]
           (is (nil? error))
@@ -83,6 +83,12 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (= "(cljs.core.truth_(cljs.core.first)?1:2)" value))
+          (inc! l)))
+      (cljs/compile-str st "(.toString \"a\")" nil
+        {:context :expr}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (= "\"a\".toString()" value))
           (inc! l))))))
 
 (deftest test-eval-str

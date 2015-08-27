@@ -2922,6 +2922,14 @@
   (is (= 'cljs.core/first?
          (demunge (munge 'cljs.core/first?)))))
 
+(deftest test-munge
+  (is (= "a_b" (munge "a-b")))
+  (is (= "a_SLASH_b" (munge "a/b")))
+  (is (= "_DOT__DOT_" (munge "..")))
+  (is (= "abstract$" (munge "abstract")))
+  (is (= 'abc (munge 'abc)))
+  (is (= "toString" (munge "toString"))))
+
 (deftest test-uuid-compile-and-runtime-hash
   (is (= (hash (.toString #uuid "0d1f9029-40fc-4728-8bdd-9862172d4370"))
          (hash (.toString (UUID. "0d1f9029-40fc-4728-8bdd-9862172d4370" nil))))))

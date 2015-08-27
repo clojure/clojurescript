@@ -10021,7 +10021,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (set! js-reserved
       (reduce #(do (gobject/set %1 %2 true) %1)
         #js {} js-reserved-arr)))
-  (gobject/containsKey js-reserved x))
+  (.hasOwnProperty js-reserved x))
 
 (defn- demunge-pattern []
   (when-not DEMUNGE_PATTERN
