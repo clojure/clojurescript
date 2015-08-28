@@ -1,10 +1,22 @@
 (ns cljs.repl-tests
   (:require [clojure.java.io :as io]
             [cljs.analyzer :as ana]
+            [cljs.analyzer.api :as ana-api]
             [cljs.env :as env]
             [cljs.repl :as repl]
-            [cljs.repl.rhino :as rhino])
+            [cljs.repl.rhino :as rhino]
+            [cljs.compiler :as comp])
     (:use clojure.test))
+
+(def st (env/default-compiler-env))
+
+(env/with-compiler-env st
+  (ana/analyze-file "cljs/core.cljs")
+  (ana/load-core))
+
+(deftest test-doc
+  (env/with-compiler-env st
+    (is (string? (:doc (ana-api/resolve {} '->))))))
 
 #_(deftest file-info
   (let [repl-env (rhino/repl-env)
