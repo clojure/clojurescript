@@ -558,7 +558,8 @@
             (throw err#)
             (throw (error ~env (.getMessage err#) err#)))))))
 
-(def implicit-nses '#{cljs.core goog goog.object goog.string goog.array Math})
+;; namespaces implicit to the inclusion of cljs.core
+(def implicit-nses '#{goog goog.object goog.string goog.array Math})
 
 (defn implicit-import?
   #?(:cljs {:tag boolean})
@@ -619,7 +620,8 @@
   "Given env, an analysis environment, and ns-sym, a symbol identifying a
    namespace, confirm that the namespace exists. Warn if not found."
   [env ns-sym]
-  (when (and (nil? (get implicit-nses ns-sym))
+  (when (and (not= 'cljs.core ns-sym)
+             (nil? (get implicit-nses ns-sym))
              (nil? (get (-> env :ns :requires) ns-sym))
              ;; something else may have loaded the namespace, i.e. load-file
              (nil? (gets @env/*compiler* ::namespaces ns-sym))
