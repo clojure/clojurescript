@@ -19,4 +19,11 @@
            (w/prewalk #(if (keyword? %) (str %) %) (Rec1. 1)))
         "Mirror Clojure behavior")))
 
-
+(deftest test-preserves-meta
+  (testing "Test preserves meta"
+    (is (= (-> (w/prewalk identity [1 (with-meta [1 2] {:foo 3})])
+             (nth 1) meta)
+           {:foo 3}))
+    (is (= (-> (w/postwalk identity [1 (with-meta [1 2] {:foo 3})])
+             (nth 1) meta)
+          {:foo 3}))))
