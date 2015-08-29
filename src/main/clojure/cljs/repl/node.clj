@@ -180,6 +180,7 @@
       ;; redef goog.require to track loaded libs
       (repl/evaluate-form repl-env env "<cljs repl>"
         '(do
+           (set! *target* "nodejs")
            (set! *loaded-libs* #{"cljs.core"})
            (set! (.-require js/goog)
              (fn [name reload]
