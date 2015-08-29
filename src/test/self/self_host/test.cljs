@@ -93,7 +93,7 @@
 
 (deftest test-eval-str
   (async done
-    (let [l (latch 6 done)]
+    (let [l (latch 7 done)]
       (cljs/eval-str st "(+ 1 1)" nil
         {:eval node-eval}
         (fn [{:keys [error value]}]
@@ -146,7 +146,12 @@
          :def-emits-var true}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (== 2 js/cljs.user.foo))
+          (inc! l)))
+      (cljs/eval-str st "(with-out-str (doseq [x [1 2]] (println x)))" nil
+        {:eval node-eval
+         :context :expr}
+        (fn [{:keys [error value]}]
+          (is (= "1\n2\n" value))
           (inc! l))))))
 
 #_(deftest test-eval-str-with-require

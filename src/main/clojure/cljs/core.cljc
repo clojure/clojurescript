@@ -2560,7 +2560,7 @@
   on a fresh StringBuffer.  Returns the string created by any nested
   printing calls."
   [& body]
-  `(let [sb# (goog.string.StringBuffer.)]
+  `(let [sb# (js/goog.string.StringBuffer.)]
      (binding [cljs.core/*print-newline* true
                cljs.core/*print-fn* (fn [x#] (.append sb# x#))]
        ~@body)
