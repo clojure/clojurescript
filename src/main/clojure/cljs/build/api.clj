@@ -183,7 +183,9 @@
                   (if (sequential? compiled)
                     compiled
                     [compiled])))]
-        (mapcat compile-input xs)))))
+        (mapcat compile-input xs)))
+    (-find-sources [_ opts]
+      (mapcat #(closure/-find-sources % opts) xs))))
 
 (defn compile
   "Given a Compilable, compile it and return an IJavaScript."

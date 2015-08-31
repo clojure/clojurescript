@@ -1637,6 +1637,12 @@
      resource on the classpath or file from the root of the build."
      [ns]
      (or (util/ns->source ns)
+       ;; Find sources available in inputs given to cljs.closure/build - Juho Teperi
+       (some (fn [source]
+               (if (= ns (:ns source))
+                 (:source-file source)))
+             (:sources @env/*compiler*))
+       ;; Find sources in directory given to cljs.compiler/compile-root - Juho Teperi
        (let [rootp (when-let [root (:root @env/*compiler*)]
                      (.getPath ^File root))
              cljsf (io/file rootp (ns->relpath ns :cljs))

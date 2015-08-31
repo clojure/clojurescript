@@ -14,7 +14,7 @@
 
    Use the 'build' function for end-to-end compilation.
 
-   build = compile -> add-dependencies -> optimize -> output
+   build = find-sources -> add-dependencies -> compile -> optimize -> output
 
    Two protocols are defined: IJavaScript and Compilable. The
    Compilable protocol is satisfied by something which can return one
@@ -389,7 +389,8 @@
   (-paths [this] [this]))
 
 (defprotocol Compilable
-  (-compile [this opts] "Returns one or more IJavaScripts."))
+  (-compile [this opts] "Returns one or more IJavaScripts.")
+  (-find-sources [this opts] "Returns one or more IJavascripts, without compiling them."))
 
 (defn compile-form-seq
   "Compile a sequence of forms to a JavaScript source string."
@@ -477,6 +478,10 @@
       (let [file-on-disk (jar-file-to-disk this (util/output-directory opts))]
         (-compile file-on-disk opts))))
 
+(defn find-jar-sources
+  [this opts]
+  [(comp/find-source (jar-file-to-disk this (util/output-directory opts)))])
+
 (extend-protocol Compilable
 
   File
@@ -484,33 +489,48 @@
     (if (.isDirectory this)
       (compile-dir this opts)
       (compile-file this opts)))
+  (-find-sources [this _]
+    (if (.isDirectory this)
+      (comp/find-root-sources this)
+      [(comp/find-source this)]))
 
   URL
   (-compile [this opts]
     (case (.getProtocol this)
       "file" (-compile (io/file this) opts)
       "jar" (compile-from-jar this opts)))
+  (-find-sources [this opts]
+    (case (.getProtocol this)
+      "file" (-find-sources (io/file this) opts)
+      "jar" (find-jar-sources this opts)))
   
   clojure.lang.PersistentList
   (-compile [this opts]
     (compile-form-seq [this]))
+  ; FIXME: -find-sources
   
   String
   (-compile [this opts] (-compile (io/file this) opts))
+  (-find-sources [this opts] (-find-sources (io/file this) opts))
   
   clojure.lang.PersistentVector
   (-compile [this opts] (compile-form-seq this))
+  ; FIXME: -find-sources
   )
 
 (comment
   ;; compile a file in memory
   (-compile "samples/hello/src/hello/core.cljs" {})
+  (-find-sources "samples/hello/src/hello/core.cljs" {})
   ;; compile a file to disk - see file @ 'out/clojure/set.js'
   (-compile (io/resource "clojure/set.cljs") {:output-file "clojure/set.js"})
+  (-find-sources (io/resource "clojure/set.cljs") {:output-file "clojure/set.js"})
   ;; compile a project
   (-compile (io/file "samples/hello/src") {})
+  (-find-sources (io/file "samples/hello/src") {})
   ;; compile a project with a custom output directory
   (-compile (io/file "samples/hello/src") {:output-dir "my-output"})
+  (-find-sources (io/file "samples/hello/src") {:output-dir "my-output"})
   ;; compile a form
   (-compile '(defn plus-one [x] (inc x)) {})
   ;; compile a vector of forms
@@ -639,6 +659,28 @@
   (cljs-dependencies {} ["cljs.core" "clojure.string"])
   )
 
+(defn find-cljs-dependencies
+  "Given set of cljs namespace symbols, find IJavaScript objects for the namespaces."
+  [requires]
+  (letfn [(cljs-deps [namespaces]
+            (->> namespaces
+                 (remove #(or ((@env/*compiler* :js-dependency-index) %)
+                              (deps/find-classpath-lib %)))
+                 (map cljs-source-for-namespace)
+                 (remove (comp nil? :uri))))]
+    (loop [required-files (cljs-deps requires)
+           visited (set required-files)
+           cljs-namespaces #{}]
+      (if (seq required-files)
+        (let [next-file (first required-files)
+              ns-info (ana/parse-ns (:uri next-file))
+              new-req (remove #(contains? visited %) (cljs-deps (cond-> (deps/-requires ns-info)
+                                                                  (= 'cljs.js (:ns ns-info)) (conj "cljs.core$macros"))))]
+          (recur (into (rest required-files) new-req)
+                 (into visited new-req)
+                 (conj cljs-namespaces ns-info)))
+        (disj cljs-namespaces nil)))))
+
 (defn add-dependencies
   "Given one or more IJavaScript objects in dependency order, produce
   a new sequence of IJavaScript objects which includes the input list
@@ -669,6 +711,77 @@
                (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
           required-cljs
           inputs)))))
+
+(comment
+  (alter-var-root #'env/*compiler* (constantly (env/default-compiler-env)))
+  ;; only get cljs deps
+  (find-cljs-dependencies ["goog.string" "cljs.core"])
+  ;; get transitive deps
+  (find-cljs-dependencies ["clojure.string"])
+  ;; don't get cljs.core twice
+  (find-cljs-dependencies ["cljs.core" "clojure.string"])
+  )
+
+(defn add-dependency-sources
+  "Given list of IJavaScript objects, produce a new sequence of IJavaScript objects
+  of all dependencies of inputs."
+  [inputs]
+  (let [inputs        (set inputs)
+        requires      (set (mapcat deps/-requires inputs))]
+    (into inputs (find-cljs-dependencies requires))))
+
+(defn check-unprovided
+  [inputs]
+  (let [requires   (set (mapcat deps/-requires inputs))
+        provided   (set (mapcat deps/-provides inputs))
+        unprovided (clojure.set/difference requires provided #{"constants-table"})]
+    (when (seq unprovided)
+      (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
+    inputs))
+
+(defn compile-sources
+  "Takes dependency ordered list of IJavaScript compatible maps from parse-ns
+  and compiles them."
+  [inputs compiler-stats opts]
+  (util/measure compiler-stats
+    "Compile sources"
+    (binding [comp/*inputs* (zipmap (map :ns inputs) inputs)]
+      (doall
+        (for [ns-info inputs]
+          ; TODO: compile-file calls parse-ns unnecessarily to get ns-info
+          ; TODO: we could mark dependent namespaces for recompile here
+          (-compile (:source-file ns-info)
+                    ; - ns-info -> ns -> cljs file relpath -> js relpath
+                    (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))})))))))
+
+(defn add-goog-base
+  [inputs]
+  (cons (javascript-file nil (io/resource "goog/base.js") ["goog"] nil)
+        inputs))
+
+(defn add-js-sources
+  "Given list of IJavaScript objects, add foreign-deps and constants-table
+  IJavaScript objects to the list."
+  [inputs opts]
+  (let [requires      (set (mapcat deps/-requires inputs))
+        required-js   (js-dependencies opts requires)]
+    (concat
+      (map
+        (fn [{:keys [foreign url file provides requires] :as js-map}]
+          (let [url (or url (io/resource file))]
+            (merge
+              (javascript-file foreign url provides requires)
+              js-map)))
+        required-js)
+      [(when (-> @env/*compiler* :options :emit-constants)
+         (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
+           (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
+      inputs)))
+
+(comment
+  (comp/find-sources-root "samples/hello/src")
+  (find-dependency-sources (find-sources-root "samples/hello/src"))
+  (find-sources "samples/hello/src"))
 
 (defn preamble-from-paths [paths]
   (when-let [missing (seq (remove io/resource paths))]
@@ -1653,7 +1766,9 @@
            #(-> %
              (update-in [:options] merge all-opts)
              (assoc :target (:target opts))
-             (assoc :js-dependency-index (deps/js-dependency-index all-opts))))
+             (assoc :js-dependency-index (deps/js-dependency-index all-opts))
+             ;; Save list of sources for cljs.analyzer/locate-src - Juho Teperi
+             (assoc :sources (-find-sources source all-opts))))
          (binding [comp/*dependents* (when-not (false? (:recompile-dependents opts))
                                        (atom {:recompile #{} :visited #{}}))
                    ana/*cljs-static-fns*
@@ -1683,20 +1798,15 @@
                  compile-opts (if one-file?
                                 (assoc all-opts :output-file (:output-to all-opts))
                                 all-opts)
-                 compiled (util/measure compiler-stats
-                            "Compile basic sources"
-                            (doall (-compile source compile-opts)))
-                 js-sources (util/measure compiler-stats
-                              "Add dependencies"
-                              (doall
-                                (concat
-                                  (apply add-dependencies all-opts
-                                    (concat
-                                      (if (sequential? compiled) compiled [compiled])
-                                      (when (= :nodejs (:target all-opts))
-                                        [(-compile (io/resource "cljs/nodejs.cljs") all-opts)])))
-                                  (when (= :nodejs (:target all-opts))
-                                    [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))))
+                 js-sources (-> (-find-sources source all-opts)
+                                add-dependency-sources
+                                deps/dependency-order
+                                (compile-sources compiler-stats compile-opts)
+                                (add-js-sources all-opts)
+                                (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") all-opts)]))
+                                deps/dependency-order
+                                add-goog-base
+                                (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)])))
                  _ (when (:emit-constants all-opts)
                      (comp/emit-constants-table-to-file
                        (::ana/constant-table @env/*compiler*)
