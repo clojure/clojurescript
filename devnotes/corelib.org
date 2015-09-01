@@ -5,7 +5,7 @@
 * DONE *3
 * *agent*
 * *allow-unresolved-vars*
-* *assert*
+* DONE *assert*
 * *clojure-version*
 * *command-line-args*
 * *compile-files*
@@ -20,10 +20,10 @@
 * *ns*
 * *out*
 * *print-dup*
-* *print-length*
-* *print-level*
-* *print-meta*
-* *print-readably*
+* DONE *print-length*
+* DONE *print-level*
+* DONE *print-meta*
+* DONE *print-readably*
 * *read-eval*
 * *source-path*
 * TODO *unchecked-math*
@@ -171,7 +171,7 @@ does what?
 * DONE defmulti
 * DONE defn
 * DONE defn-
-* defonce
+* DONE defonce
 * DONE defprotocol
 * DONE defrecord
 * defstruct
@@ -337,7 +337,7 @@ does what?
 * DONE min
 * DONE min-key
 * DONE mod
-* munge
+* DONE munge
 * DONE name
 * DONE namespace
 * namespace-munge
@@ -555,7 +555,7 @@ as macro
 * DONE vals
 * var-get
 * var-set
-* var?
+* DONE var?
 * DONE vary-meta
 * DONE vec
 * DONE vector
@@ -573,7 +573,7 @@ as macro
 * TODO with-local-vars
 * DONE with-meta
 * with-open
-* with-out-str
+* DONE with-out-str
 * with-precision
 * with-redefs
 * with-redefs-fn
