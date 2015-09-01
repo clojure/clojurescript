@@ -10125,7 +10125,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
       "nodejs"  (if ^boolean js/COMPILED
                   (js/eval munged-ns)
                   (find-ns-obj* js/global segs))
-      "default" (find-ns-obj* js/window segs)
+      "default" (find-ns-obj* goog/global segs)
       (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
 
 (defn ns-interns* [sym]
