@@ -158,6 +158,49 @@
 
 (def *loaded* (atom #{}))
 
+(defn- run-async!
+  "Like cljs.core/run!, but for an async procedure, and with the
+  ability to break prior to processing the entire collection.
+
+  Chains successive calls to the supplied procedure for items in
+  the collection. The procedure should accept an item from the
+  collection and a callback of one argument. If the break? predicate,
+  when applied to the procedure callback value, yields a truthy
+  result, terminates early calling the supplied cb with the callback
+  value. Otherwise, when complete, calls cb with nil."
+  [proc coll break? cb]
+  (if (seq coll)
+    (proc (first coll)
+      (fn [res]
+        (if (break? res)
+          (cb res)
+          (run-async! proc (rest coll) break? cb))))
+    (cb nil)))
+
+(declare require)
+
+(defn- process-deps
+  [bound-vars names opts cb]
+  (run-async! (fn [name cb]
+                (require bound-vars name nil opts cb))
+    names
+    :error
+    cb))
+
+(defn- process-macros-deps
+  [bound-vars cache opts cb]
+  (process-deps bound-vars
+    (distinct (vals (:require-macros cache)))
+    (assoc opts :macros-ns true)
+    cb))
+
+(defn- process-libs-deps
+  [bound-vars cache opts cb]
+  (process-deps bound-vars
+    (distinct (concat (vals (:requires cache)) (vals (:imports cache))))
+    (dissoc opts :macros-ns)
+    cb))
+
 (defn require
   ([name cb]
     (require name nil cb))
@@ -201,23 +244,31 @@
                                 (do
                                   (swap! *loaded* conj name)
                                   (cb {:value true})))))
-                     :js  (let [res (try
-                                      ((:*eval-fn* bound-vars) resource)
-                                      (when cache
-                                        (load-analysis-cache!
-                                          (:*compiler* bound-vars) name cache))
-                                      (when source-map
-                                        (load-source-map!
-                                          (:*compiler* bound-vars) name source-map))
-                                      (catch :default cause
-                                        (wrap-error
-                                          (ana/error env
-                                            (str "Could not require " name) cause))))]
-                            (if (:error res)
-                              (cb res)
-                              (do
-                                (swap! *loaded* conj name)
-                                (cb {:value true}))))
+                     :js (process-macros-deps bound-vars cache opts
+                           (fn [res]
+                             (if (:error res)
+                               (cb res)
+                               (process-libs-deps bound-vars cache opts
+                                 (fn [res]
+                                   (if (:error res)
+                                     (cb res)
+                                     (let [res (try
+                                                 ((:*eval-fn* bound-vars) resource)
+                                                 (when cache
+                                                   (load-analysis-cache!
+                                                     (:*compiler* bound-vars) name cache))
+                                                 (when source-map
+                                                   (load-source-map!
+                                                     (:*compiler* bound-vars) name source-map))
+                                                 (catch :default cause
+                                                   (wrap-error
+                                                     (ana/error env
+                                                       (str "Could not require " name) cause))))]
+                                       (if (:error res)
+                                         (cb res)
+                                         (do
+                                           (swap! *loaded* conj name)
+                                           (cb {:value true}))))))))))
                      (cb (wrap-error
                            (ana/error env
                              (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))
