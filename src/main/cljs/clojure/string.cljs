@@ -213,3 +213,46 @@
             (.append buffer (str replacement))
             (.append buffer ch))
           (recur (inc index)))))))
+
+(defn index-of
+  "Return index of value (string or char) in s, optionally searching
+  forward from from-index or nil if not found."
+  ([s value]
+   (let [result (.indexOf s value)]
+     (if (neg? result)
+       nil
+       result)))
+  ([s value from-index]
+   (let [result (.indexOf s value from-index)]
+     (if (neg? result)
+       nil
+       result))))
+
+(defn last-index-of
+  "Return last index of value (string or char) in s, optionally
+  searching backward from from-index or nil if not found."
+  ([s value]
+   (let [result (.lastIndexOf s value)]
+     (if (neg? result)
+       nil
+       result)))
+  ([s value from-index]
+   (let [result (.lastIndexOf s value from-index)]
+     (if (neg? result)
+       nil
+       result))))
+
+(defn ^boolean starts-with?
+  "True if s starts with substr."
+  [s substr]
+  (gstring/startsWith s substr))
+
+(defn ^boolean ends-with?
+  "True if s ends with substr."
+  [s substr]
+  (gstring/endsWith s substr))
+
+(defn ^boolean includes?
+  "True if s includes substr."
+  [s substr]
+  (gstring/contains s substr))

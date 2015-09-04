@@ -9,7 +9,7 @@
     (is (= "tab" (s/reverse "bat")))
     (is (= "c\uD834\uDD1Ea" (s/reverse "a\uD834\uDD1Ec"))) ;; U+1D11E MUSICAL SYMBOL G CLEF
     )
-  
+
   (testing "Testing string replace"
     (is (= "faabar" (s/replace "foobar" \o \a)))
     (is (= "barbarbar" (s/replace "foobarfoo" "foo" "bar")))
@@ -87,7 +87,57 @@
     (is (= "foo" (s/trim-newline "foo\r\n")))
     (is (= "foo" (s/trim-newline "foo")))
     (is (= "foo\r " (s/trim-newline "foo\r ")))
-    (is (= "" (s/trim-newline "")))))
+    (is (= "" (s/trim-newline ""))))
+
+  (testing "Testing string trim-newline"
+    (is (= "foo" (s/trim-newline "foo\n")))
+    (is (= "foo" (s/trim-newline "foo\r\n")))
+    (is (= "foo" (s/trim-newline "foo")))
+    (is (= "foo\r " (s/trim-newline "foo\r ")))
+    (is (= "" (s/trim-newline ""))))
+
+  (testing "Testing string index-of"
+    (let [sb "tacos"]
+    (is (= 2  (s/index-of sb "c")))
+    (is (= 2  (s/index-of sb \c)))
+    (is (= 1  (s/index-of sb "ac")))
+    (is (= 3  (s/index-of sb "o" 2)))
+    (is (= 3  (s/index-of sb  \o  2)))
+    (is (= 3  (s/index-of sb "o" -100)))
+    (is (= nil (s/index-of sb "z")))
+    (is (= nil (s/index-of sb \z)))
+    (is (= nil (s/index-of sb "z" 2)))
+    (is (= nil (s/index-of sb \z  2)))
+    (is (= nil (s/index-of sb "z" 100))
+    (is (= nil (s/index-of sb "z" -10))))))
+
+  (testing "Testing string last-index-of"
+    (let [sb "banana"]
+      (is (= 4 (s/last-index-of sb "n")))
+      (is (= 4 (s/last-index-of sb \n)))
+      (is (= 3 (s/last-index-of sb "an")))
+      (is (= 4 (s/last-index-of sb "n" )))
+      (is (= 4 (s/last-index-of sb "n" 5)))
+      (is (= 4 (s/last-index-of sb \n  5)))
+      (is (= 4 (s/last-index-of sb "n" 500)))
+      (is (= nil (s/last-index-of sb "z")))
+      (is (= nil (s/last-index-of sb "z" 1)))
+      (is (= nil (s/last-index-of sb \z  1)))
+      (is (= nil (s/last-index-of sb "z" 100)))
+      (is (= nil (s/last-index-of sb "z" -10)))))
+
+  (testing "Testing string starts-with?"
+    (is (s/starts-with? "clojure west" "clojure"))
+    (is (not (s/starts-with? "conj" "clojure"))))
+
+  (testing "Testing string ends-with?"
+    (is (s/ends-with? "Clojure West" "West"))
+    (is (not (s/ends-with? "Conj" "West"))))
+
+  (testing "Testing string includes?"
+    (let [sb "Clojure Applied Book"]
+      (is (s/includes? sb "Applied"))
+      (is (not (s/includes? sb "Living"))))))
 
 (comment
 
