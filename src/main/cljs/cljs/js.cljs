@@ -570,8 +570,8 @@
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
-     a :value key with the result of evalution. If unsuccessful the map wil
-     contain a :error key with an ex-info instance describing the cause of
+     a key :value with the result of evalution. If unsuccessful the map will
+     contain a key :error with an ex-info instance describing the cause of
      failure."
   ([state form cb]
    (eval state form nil cb))
