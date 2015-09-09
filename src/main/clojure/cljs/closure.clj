@@ -1283,10 +1283,10 @@
 
 (defn make-convert-js-module-options [opts]
   (-> opts
-      (select-keys [:closure-warnings
-                    :pretty-print
-                    :closure-extra-annotations])
-      (set-options (CompilerOptions.))))
+    (select-keys
+      [:closure-warnings :closure-extra-annotations :pretty-print
+       :language-in :language-out])
+    (set-options (CompilerOptions.))))
 
 (util/compile-if can-convert-commonjs?
   (defmethod convert-js-module :commonjs [ijs opts]
