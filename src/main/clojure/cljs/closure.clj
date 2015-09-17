@@ -1129,6 +1129,8 @@
 (defn output-deps-file [opts sources]
   (output-one-file opts (deps-file opts sources)))
 
+(declare foreign-deps-str add-header add-source-map-link)
+
 (defn output-main-file [opts]
   (let [asset-path (or (:asset-path opts)
                        (util/output-directory opts))
@@ -1136,24 +1138,23 @@
     (case (:target opts)
       :nodejs
       (output-one-file opts
-        (str "var path = require(\"path\");\n"
-             "try {\n"
-             "    require(\"source-map-support\").install();\n"
-             "} catch(err) {\n"
-             "}\n"
-             "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
-             "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
-             "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-             "goog.require(\"" (comp/munge (:main opts)) "\");\n"
-             "goog.require(\"cljs.nodejscli\");\n"))
+        (add-header opts
+          (str "var path = require(\"path\");\n"
+               "try {\n"
+               "    require(\"source-map-support\").install();\n"
+               "} catch(err) {\n"
+               "}\n"
+               "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
+               "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
+               "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+               "goog.require(\"" (comp/munge (:main opts)) "\");\n"
+               "goog.require(\"cljs.nodejscli\");\n")))
       (output-one-file opts
         (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
              "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
              "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
              "document.write('<script>if (typeof goog != \"undefined\") { goog.require(\"" (comp/munge (:main opts))
              "\"); } else { console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\"); };</script>');\n")))))
-
-(declare foreign-deps-str add-header add-source-map-link)
 
 (defn output-modules
   "Given compiler options, original IJavaScript sources and a sequence of
