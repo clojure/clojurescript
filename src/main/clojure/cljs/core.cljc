@@ -2505,9 +2505,11 @@
 (core/defmacro time
   "Evaluates expr and prints the time it took. Returns the value of expr."
   [expr]
-  `(let [start# (.getTime (js/Date.))
+  `(let [start# (system-time)
          ret# ~expr]
-     (prn (cljs.core/str "Elapsed time: " (- (.getTime (js/Date.)) start#) " msecs"))
+     (prn (cljs.core/str "Elapsed time: "
+            (.toFixed (- (system-time) start#) 6)
+            " msecs"))
      ret#))
 
 (core/defmacro simple-benchmark

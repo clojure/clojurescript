@@ -333,6 +333,15 @@
 
 (def DEMUNGE_PATTERN nil)
 
+(defn system-time
+  "Returns highest resolution time offered by host in milliseconds."
+  []
+  (cond
+    (exists? js/performance) (.now js/performance)
+    (exists? js/process) (let [t (.hrtime js/process)]
+                           (/ (+ (* (aget t 0) 1e9) (aget t 1)) 1e6))
+    :else (.getTime (js/Date.))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn ^array make-array
