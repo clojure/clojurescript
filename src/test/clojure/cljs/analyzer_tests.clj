@@ -348,6 +348,11 @@
             (a/gen-constant-id :.)))
   (is (not= (a/gen-constant-id '$)
             (a/gen-constant-id '.))))
+
+(deftest test-unicode-munging-cljs-1457
+  (is (= (a/gen-constant-id :C♯) 'cst$kw$C_u266f_)
+      (= (a/gen-constant-id 'C♯) 'cst$sym$C_u266f_)))
+
 ;; Constants
 
 (deftest test-constants
