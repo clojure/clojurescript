@@ -380,7 +380,12 @@
                  (str value))
         name   (if (= "." name)
                  "_DOT_"
-                 (-> name (string/replace "-" "_DASH_") (munge) (string/replace "." "$")))]
+                 (-> name
+                     (string/replace "-" "_DASH_")
+                     (munge)
+                     (string/replace "." "$")
+                     (string/replace #"(?i)[^a-z0-9$_]"
+                                     #(str "_u" (format "%04x" (int (first %))) "_"))))]
     (symbol (str prefix name))))
 
 (defn- register-constant!
