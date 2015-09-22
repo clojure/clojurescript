@@ -617,6 +617,26 @@
              (= ns ana/*cljs-ns*))))
     specs))
 
+(defn- wrap-self
+  "Takes a self-ish fn and returns it wrapped with exception handling.
+  Compiler state is restored if self-ish fn fails."
+  [f]
+  (fn g
+    ([a b c]
+     (g a b c nil))
+    ([a b c d]
+     (let [backup-comp @env/*compiler*]
+       (try
+         (apply f [a b c d])
+         (catch #?(:clj Exception :cljs js/Error) e ;;Exception
+           (reset! env/*compiler* backup-comp)
+           (throw e)))))))
+
+(defn- wrap-special-fns
+  [wfn fns]
+  "Wrap wfn around all (fn) values in fns hashmap."
+  (into {} (for [[k v] fns] [k (wfn v)])))
+
 (def default-special-fns
   (let [load-file-fn
         (fn self
@@ -637,62 +657,63 @@
              (-evaluate repl-env "<cljs repl>" 1
                (str "goog.provide('" (comp/munge ns-name) "');")))
            (set! ana/*cljs-ns* ns-name)))]
-    {'in-ns in-ns-fn
-     'clojure.core/in-ns in-ns-fn
-     'require
-     (fn self
-       ([repl-env env form]
-        (self repl-env env form nil))
-       ([repl-env env [_ & specs :as form] opts]
-        (let [is-self-require? (self-require? specs)
-              [target-ns restore-ns]
-              (if-not is-self-require?
-                [ana/*cljs-ns* nil]
-                ['cljs.user ana/*cljs-ns*])]
-          (evaluate-form repl-env env "<cljs repl>"
-            (with-meta
-              `(~'ns ~target-ns
-                 (:require ~@(-> specs canonicalize-specs decorate-specs)))
-              {:merge true :line 1 :column 1})
-            identity opts)
-          (when is-self-require?
-            (set! ana/*cljs-ns* restore-ns)))))
-     'require-macros
-     (fn self
-       ([repl-env env form]
-        (self repl-env env form nil))
-       ([repl-env env [_ & specs :as form] opts]
-        (evaluate-form repl-env env "<cljs repl>"
-          (with-meta
-            `(~'ns ~ana/*cljs-ns*
-               (:require-macros ~@(-> specs canonicalize-specs decorate-specs)))
-            {:merge true :line 1 :column 1})
-          identity opts)))
-     'import
-     (fn self
-       ([repl-env env form]
-        (self repl-env env form nil))
-       ([repl-env env [_ & specs :as form] opts]
-        (evaluate-form repl-env env "<cljs repl>"
-          (with-meta
-            `(~'ns ~ana/*cljs-ns*
-               (:import
-                 ~@(map
-                     (fn [quoted-spec-or-kw]
-                       (if (keyword? quoted-spec-or-kw)
-                         quoted-spec-or-kw
-                         (second quoted-spec-or-kw)))
-                     specs)))
-            {:merge true :line 1 :column 1})
-          identity opts)))
-     'load-file load-file-fn
-     'clojure.core/load-file load-file-fn
-     'load-namespace
-     (fn self
-       ([repl-env env form]
-        (self env repl-env form nil))
-       ([repl-env env [_ ns :as form] opts]
-        (load-namespace repl-env ns opts)))}))
+    (wrap-special-fns wrap-self
+     {'in-ns in-ns-fn
+      'clojure.core/in-ns in-ns-fn
+      'require
+      (fn self
+        ([repl-env env form]
+         (self repl-env env form nil))
+        ([repl-env env [_ & specs :as form] opts]
+         (let [is-self-require? (self-require? specs)
+               [target-ns restore-ns]
+               (if-not is-self-require?
+                 [ana/*cljs-ns* nil]
+                 ['cljs.user ana/*cljs-ns*])]
+           (evaluate-form repl-env env "<cljs repl>"
+                          (with-meta
+                            `(~'ns ~target-ns
+                               (:require ~@(-> specs canonicalize-specs decorate-specs)))
+                            {:merge true :line 1 :column 1})
+                          identity opts)
+           (when is-self-require?
+             (set! ana/*cljs-ns* restore-ns)))))
+      'require-macros
+      (fn self
+        ([repl-env env form]
+         (self repl-env env form nil))
+        ([repl-env env [_ & specs :as form] opts]
+         (evaluate-form repl-env env "<cljs repl>"
+                        (with-meta
+                          `(~'ns ~ana/*cljs-ns*
+                             (:require-macros ~@(-> specs canonicalize-specs decorate-specs)))
+                          {:merge true :line 1 :column 1})
+                        identity opts)))
+      'import
+      (fn self
+        ([repl-env env form]
+         (self repl-env env form nil))
+        ([repl-env env [_ & specs :as form] opts]
+         (evaluate-form repl-env env "<cljs repl>"
+                        (with-meta
+                          `(~'ns ~ana/*cljs-ns*
+                             (:import
+                              ~@(map
+                                 (fn [quoted-spec-or-kw]
+                                   (if (keyword? quoted-spec-or-kw)
+                                     quoted-spec-or-kw
+                                     (second quoted-spec-or-kw)))
+                                 specs)))
+                          {:merge true :line 1 :column 1})
+                        identity opts)))
+      'load-file load-file-fn
+      'clojure.core/load-file load-file-fn
+      'load-namespace
+      (fn self
+        ([repl-env env form]
+         (self env repl-env form nil))
+        ([repl-env env [_ ns :as form] opts]
+         (load-namespace repl-env ns opts)))})))
 
 (defn analyze-source
   "Given a source directory, analyzes all .cljs files. Used to populate
