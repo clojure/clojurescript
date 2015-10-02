@@ -353,9 +353,10 @@
 (defn- load-macros [bound-vars k macros reload reloads opts cb]
   (if (seq macros)
     (let [nsym (first (vals macros))
-          k    (or (k reload)
+          k    (or (reload k)
                    (get-in reloads [k nsym])
-                   (and (= nsym name) (:*reload-macros* bound-vars) :reload))]
+                   (and (= nsym name) (:*reload-macros* bound-vars) :reload)
+                   nil)]
       (require bound-vars nsym k
         (-> opts
           (assoc :macros-ns true)

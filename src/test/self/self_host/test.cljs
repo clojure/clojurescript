@@ -154,6 +154,26 @@
           (is (= "1\n2\n" value))
           (inc! l))))))
 
+(deftest test-eval-str-with-require-macros
+  (async done
+    (let [l (latch 2 done)]
+      (cljs/eval-str st
+        "(ns cljs.user (:require-macros [cljs.user.macros]))"
+        nil
+        {:eval node-eval
+         :load (fn [_ cb] (cb {:lang :clj :source "(ns cljs.user.macros)"}))}
+        (fn [{:keys [value error]}]
+          (is (nil? error))
+          (inc! l)))
+      (cljs/eval-str st
+        "(ns cljs.user (:require-macros [cljs.user.macros :as cljs-user-macros]))"
+        nil
+        {:eval node-eval
+         :load (fn [_ cb] (cb {:lang :clj :source "(ns cljs.user.macros)"}))}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (inc! l))))))
+
 #_(deftest test-eval-str-with-require
   (async done
     (let [l (latch 3 done)]
