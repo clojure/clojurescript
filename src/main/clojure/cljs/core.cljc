@@ -864,9 +864,11 @@
   (core/list 'js* "~{} in ~{}" key obj))
 
 (core/defmacro js-debugger
-  "Emit JavaScript \"debugger;\" statement."
+  "Emit JavaScript \"debugger;\" statement"
   []
-  (core/list 'js* "debugger;"))
+  (core/list 'do
+             (core/list 'js* "debugger")
+             nil))
 
 (core/defmacro js-comment
   "Emit a top-level JavaScript multi-line comment. New lines will create a
