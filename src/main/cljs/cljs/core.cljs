@@ -3877,7 +3877,8 @@ reduces them without incurring seq initialization"
   "Returns a lazy sequence consisting of the result of applying f to 0
   and the first item of coll, followed by applying f to 1 and the second
   item in coll, etc, until coll is exhausted. Thus function f should
-  accept 2 arguments, index and item."
+  accept 2 arguments, index and item. Returns a stateful transducer when
+  no collection is provided."
   ([f]
     (fn [rf]
       (let [i (volatile! -1)]
@@ -4364,7 +4365,8 @@ reduces them without incurring seq initialization"
           (concat (map first ss) (apply interleave (map rest ss))))))))
 
 (defn interpose
-  "Returns a lazy seq of the elements of coll separated by sep"
+  "Returns a lazy seq of the elements of coll separated by sep.
+  Returns a stateful transducer when no collection is provided."
   ([sep]
     (fn [rf]
       (let [started (volatile! false)]
@@ -8246,7 +8248,8 @@ reduces them without incurring seq initialization"
        (map #(if-let [e (find smap %)] (second e) %) coll))))
 
 (defn distinct
-  "Returns a lazy sequence of the elements of coll with duplicates removed"
+  "Returns a lazy sequence of the elements of coll with duplicates removed.
+  Returns a stateful transducer when no collection is provided."
   ([]
     (fn [rf]
       (let [seen (volatile! #{})]
