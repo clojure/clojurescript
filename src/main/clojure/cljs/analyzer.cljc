@@ -367,6 +367,21 @@
      `(binding [*cljs-warning-handlers* ~handlers]
         ~@body)))
 
+(defn- repeat-char [c n]
+  (loop [ret c n n]
+    (if (pos? n)
+      (recur (str ret c) (dec n))
+      ret)))
+
+(defn- hex-format [s pad]
+  #?(:clj  (str "_u" (format (str "%0" pad "x") (int (first s))) "_")
+     :cljs (let [hex (.toString (.charCodeAt s 0) 16)
+                 len (. hex -length)
+                 hex (if (< len pad)
+                       (str (repeat-char "0" (- pad len)) hex)
+                       hex)]
+             (str "_u" hex "_"))))
+
 (defn gen-constant-id [value]
   (let [prefix (cond
                  (keyword? value) "cst$kw$"
@@ -384,8 +399,7 @@
                      (string/replace "-" "_DASH_")
                      (munge)
                      (string/replace "." "$")
-                     (string/replace #"(?i)[^a-z0-9$_]"
-                                     #(str "_u" (format "%04x" (int (first %))) "_"))))]
+                     (string/replace #"(?i)[^a-z0-9$_]" #(hex-format % 4))))]
     (symbol (str prefix name))))
 
 (defn- register-constant!
