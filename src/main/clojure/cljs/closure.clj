@@ -428,7 +428,7 @@
   returns a JavaScriptFile. In either case the return value satisfies
   IJavaScript."
   [^File file {:keys [output-file output-to] :as opts}]
-    (if output-file
+    (if (or output-file (string? output-to))
       (let [out-file (io/file (util/output-directory opts)
                        (or output-file output-to))]
         (compiled-file (comp/compile-file file out-file opts)))
