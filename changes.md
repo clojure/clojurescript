@@ -17,6 +17,7 @@
 * CLJS-1393: turn *target* into goog-define
 
 ### Fixes
+* UUID hashing
 * CLJS-1465: fix *main-cli-fn* doc
 * CLJS-1456: bad require forms at REPL can corrupt REPL session
 * CLJS-1449: self host :require-macros bug
