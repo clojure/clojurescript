@@ -1,17 +1,64 @@
+## 1.7.145
+
+### Enhancements
+* CLJS-1455: high resoluting timing where available
+* CLJS-1403: Add updated Windows shell scripts
+* CLJS-1017: support :main for :advanced and :simple builds
+* CLJS-1409: allow basic type checking of protocols
+* CLJS-1404: var resolution for @param and @return
+* CLJS-1395: Node.js REPL debug port support
+
+### Changes
+* CLJS-1464: docstrings for transducer arities
+* Latest Google Closure Compiler dependency
+* Node.js REPL sets *target*
+* add cljs.analyzer.api/get-js-index
+* add goog.object to list of implicit namespaces
+* CLJS-1393: turn *target* into goog-define
+
+### Fixes
+* CLJS-1465: fix *main-cli-fn* doc
+* CLJS-1456: bad require forms at REPL can corrupt REPL session
+* CLJS-1449: self host :require-macros bug
+* CLJS-1462: self host regression
+* Add header bits for Node.js under :none
+* CLJS-1457: unicode symbol munging
+* CLJS-1442: self host, docstring typos
+* CLJS-1441: portable clojure.string
+* CLJS-1436: self-host, dep ns not loaded
+* CLJS-1440: self-host, eval support in Web Workers
+* CLJS-1400: self-host, doseq broken
+* CLJS-1435: self-host, bad lexical scope
+* CLJS-1434: clojure.walk no longer preseves meta
+* CLJS-1432: '$ and '. symbol collision under advanced
+* CLJS-1304: c.string/replace differs from Clojure
+* CLJS-1430: bad code gen for self host .toString method calls
+* CLJS-1353: range inconsistent with Clojure
+* CLJS-1431: load-file doc output missing arglists
+* CLJS-1433: cljs.js/*eval-fn* passed nil :cache
+* CLJS-1299: add more support for literals to cljs.reader
+* CLJS-1417: cljs.js require macros failures
+* CLJS-1416: cljs.util/last-modified leaks files
+* CLJS-1481: self host defprotocol regression
+* CLJS-1414: only munge @param & @return if type checking
+* CLJS-1401: unify runtime & compile UUID hashing
+* CLJS-1395: no trailing semicolons after JS comment
+* CLJS-1394: reify gensyms can clash
+
 ## 1.7.48
 
-## Enhancements
+### Enhancements
 * provide goog-define macro to support proper use of goog.define
 * CLJS-1177: A compiler support for non-Closure transforms (JSX, etc)
 * CLJS-1296: browser REPL should queue prints before connection then flush after connection
 * add :dump-core compiler option for cljs.js config
 * CLJS-1386: Symbols should be added to the constants table
 
-## Changes
+### Changes
 * Bump Closure Compiler dependency
 * Bump Closure Library dependency
 
-## Fixes
+### Fixes
 * CLJS-1392: cljs.repl/source regression
 * CLJS-1391: Error when building for target :nodejs
 * CLJS-1388: Stacktrace element handling for :output-dir w/o file/line/column
@@ -20,7 +67,7 @@
 
 ## 1.7.28
 
-## Enhancements
+### Enhancements
 * New namespace cljs.js provides analysis, compilation, and eval
 * CLJS-1360: Refactor JS module processing to work with recent Google Closure compiler changes
 * CLJS-1282: Add a :pprint option to the default reporter in cljs.test
@@ -29,7 +76,7 @@
 * CLJS-1231: AMD Module Processing
 * CLJS-1092: CommonJS Module processing
 
-## Changes
+### Changes
 * CLJS-1376: Printing in a tagged literal data form
 * CLJS-836: Replace seq-based iterators with direct iterator for all non-seq collections that use SeqIterator
 * CLJS-1367: Expose default-warning-handler and warning-enabled?
@@ -42,7 +89,7 @@
 * CLJS-1281: Preserve test order
 * CLJS-934: In the REPL return vars after defs
 
-## Fixes
+### Fixes
 * CLJS-1316 let does not detect invalid binding vector when it contains destructuring
 * CLJS-1033: take a drop accept nil as n argument
 * CLJS-1324: Compiler fails to raise warning/error when invoking a keyword without arguments
@@ -68,7 +115,7 @@
 
 ## 0.0-3308
 
-## Changes
+### Changes
 * Clojure 1.7.0-RC1 dependency
 * CLJS-1292: Add IPrintWithWriter implementation for TaggedLiteral
 * add cljs.core/random-uuid
@@ -76,7 +123,7 @@
 * CLJS-1256 cache UUID hash value
 * CLJS-1226: Added the :end-run-tests event to cljs.test and a dummy event handler for it
 
-## Fixes
+### Fixes
 * CLJS-1200: compare behaves differently from Clojure
 * CLJS-1293: Warning settings not conveyed via REPL
 * CLJS-1291: pprint whitespace/letter checks are incomplete
@@ -100,14 +147,14 @@
 
 ## 0.0-3269
 
-## Fixes
+### Fixes
 * REPL support for Closure libraries that follow classpath conventions
 * don't break closure libs that follow classpath conventions
 * build missing .map source map & .edn caches files
 
 ## 0.0-3264
 
-## Fixes
+### Fixes
 * Add missing JS files back to the build
 * CLJS-1168: REPL fails to find .js files in :libs
 * CLJS-1196: Assert failed on 3190+ while :require-ing .js file in :libs directory
