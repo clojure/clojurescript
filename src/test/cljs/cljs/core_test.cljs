@@ -1690,11 +1690,9 @@
   (testing "UUID hashing"
     (let [id   "550e8400-e29b-41d4-a716-446655440000"
           uuid (cljs.core/uuid id)
-          expected (goog.string/hashCode id)]
+          expected (hash id)]
       (is (= expected (hash uuid)))
-      ;; checking hash cache
-      (is (= expected (.-__hash uuid)))
-      (is (= expected (hash uuid))))))
+      (is (= expected (.-__hash uuid))))))
 
 (deftest test-comparable
   (testing "Testing IComparable"

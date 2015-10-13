@@ -9844,7 +9844,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   IHash
   (-hash [this]
     (when (nil? __hash)
-      (set! __hash (hash-string* uuid)))
+      (set! __hash (hash uuid)))
     __hash)
 
   IComparable
