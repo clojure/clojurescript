@@ -14,7 +14,7 @@
               :refer [no-warn wrapping-errors
                       disallowing-recur allowing-redef]]
              [cljs.env.macros :refer [ensure]]))
-  #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]] 
+  #?(:clj (:require [cljs.util :as util :refer [ns->relpath topo-sort]]
                     [clojure.java.io :as io]
                     [clojure.string :as string]
                     [clojure.set :as set]
@@ -83,6 +83,7 @@
    :protocol-invalid-method true
    :protocol-duped-method true
    :protocol-multiple-impls true
+   :protocol-with-variadic-method true
    :single-segment-namespace true
    :munged-namespace true
    :ns-var-clash true
@@ -293,6 +294,11 @@
 (defmethod error-message :protocol-multiple-impls
   [warning-type info]
   (str "Protocol " (:protocol info) " implemented multiple times"))
+
+(defmethod error-message :protocol-with-variadic-method
+  [warning-type info]
+  (str "Protocol " (:protocol info) " declares method "
+       (:name info) " with variadic signature (&)"))
 
 (defmethod error-message :multiple-variadic-overloads
   [warning-type info]
@@ -1142,7 +1148,7 @@
                    (and (:fn-var v) (not fn-var?)))
           (warning :fn-var env {:ns-name ns-name :sym sym})))
       (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
-        (merge 
+        (merge
           {:name var-name}
           ;; remove actual test metadata, as it includes non-valid EDN and
           ;; cannot be present in analysis cached to disk - David
@@ -1503,7 +1509,7 @@
 
 (defn analyze-let
   [encl-env [_ bindings & exprs :as form] is-loop]
-  (when-not (and (vector? bindings) (even? (count bindings))) 
+  (when-not (and (vector? bindings) (even? (count bindings)))
     (throw (error encl-env "bindings must be vector of even number of elements")))
   (let [context      (:context encl-env)
         [bes env]    (analyze-let-bindings encl-env bindings)
@@ -1538,9 +1544,9 @@
   (let [context (:context env)
         frame (first *recur-frames*)
         exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs)))]
-    (when-not frame 
+    (when-not frame
       (throw (error env "Can't recur here")))
-    (when-not (= (count exprs) (count (:params frame))) 
+    (when-not (= (count exprs) (count (:params frame)))
       (throw (error env "recur argument count mismatch")))
     (reset! (:flag frame) true)
     (assoc {:env env :op :recur :form form}
@@ -1554,7 +1560,7 @@
 
 (defmethod parse 'new
   [_ env [_ ctor & args :as form] _ _]
-  (when-not (symbol? ctor) 
+  (when-not (symbol? ctor)
     (throw (error env "First arg to new must be a symbol")))
   (disallowing-recur
    (let [enve (assoc env :context :expr)
@@ -1616,7 +1622,7 @@
                            (when (:field targetexpr)
                              targetexpr))))
            valexpr (analyze enve val)]
-       (when-not targetexpr 
+       (when-not targetexpr
          (throw (error env "set! target must be a field or a symbol naming a var")))
        (cond
         (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
@@ -1729,7 +1735,7 @@
     (fn [s [k exclude xs]]
       (if (= k :refer-clojure)
         (do
-          (when-not (= exclude :exclude) 
+          (when-not (= exclude :exclude)
             (throw (error env "Only [:refer-clojure :exclude (names)] form supported")))
           (when (seq s)
             (throw (error env "Only one :refer-clojure form is allowed per namespace definition")))
@@ -1883,7 +1889,7 @@
 
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
-  (when-not (symbol? name) 
+  (when-not (symbol? name)
     (throw (error env "Namespaces must be named by a symbol.")))
   (let [name (cond-> name (:macros-ns opts) macro-ns-name)]
     (let [segments (string/split (clojure.core/name name) #"\.")]

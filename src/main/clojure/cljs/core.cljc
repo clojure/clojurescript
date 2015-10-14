@@ -1893,6 +1893,10 @@
                       (core/let [doc (core/as-> (last sigs) doc
                                        (core/when (core/string? doc) doc))
                                  sigs (take-while vector? sigs)
+                                 amp (when (some #{'&} (apply concat sigs))
+                                       (cljs.analyzer/warning
+                                        :protocol-with-variadic-method
+                                        &env {:protocol psym :name fname}))
                                  slot (symbol (core/str prefix (name fname)))
                                  fname (vary-meta fname assoc
                                          :protocol p
@@ -2143,7 +2147,7 @@
                  thens (vec (vals pairs))]
         `(let [~esym (if (keyword? ~e) (.-fqn ~e) nil)]
            (case* ~esym ~tests ~thens ~default)))
-      
+
       ;; equality
       :else
       `(let [~esym ~e]
@@ -2579,7 +2583,7 @@
 (core/defmacro lazy-cat
   "Expands to code which yields a lazy sequence of the concatenation
   of the supplied colls.  Each coll expr is not evaluated until it is
-  needed. 
+  needed.
 
   (lazy-cat xs ys zs) === (concat (lazy-seq xs) (lazy-seq ys) (lazy-seq zs))"
   [& colls]
