@@ -190,7 +190,7 @@
           (recur (dec index))
           (.substring s 0 index))))))
 
-(defn blank?
+(defn ^boolean blank?
   "True is s is nil, empty, or contains only whitespace."
   [s]
   (gstring/isEmptySafe s))
