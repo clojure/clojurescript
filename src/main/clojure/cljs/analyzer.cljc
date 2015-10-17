@@ -1589,8 +1589,9 @@
     (disallowing-recur
      (let [enve (assoc env :context :expr)
            targetexpr (cond
-                       ;; TODO: proper resolve
-                       (= target '*unchecked-if*)
+                       (and
+                         (= target '*unchecked-if*) ;; TODO: proper resolve
+                         (or (true? val) (false? val)))
                        (do
                          #?(:clj  (reset! *unchecked-if* val)
                             :cljs (set! *unchecked-if* val))
