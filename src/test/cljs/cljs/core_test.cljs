@@ -2936,6 +2936,14 @@
   (is (= (hash (.toString #uuid "0d1f9029-40fc-4728-8bdd-9862172d4370"))
          (hash (.toString (UUID. "0d1f9029-40fc-4728-8bdd-9862172d4370" nil))))))
 
+(defprotocol IFooBar
+  (a-method [t]))
+
+(deftest test-cljs-1451
+  (is (= "foobar" (a-method (reify
+                              IFooBar
+                              (cljs.core-test/a-method [_] "foobar"))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

@@ -1403,7 +1403,7 @@
       (ifn-invoke-methods type type-sym form))))
 
 (core/defn- add-proto-methods* [pprefix type type-sym [f & meths :as form]]
-  (core/let [pf (core/str pprefix f)]
+  (core/let [pf (core/str pprefix (name f))]
     (if (vector? (first meths))
       ;; single method case
       (core/let [meth meths]
@@ -1435,9 +1435,10 @@
   (core/when-not (= p 'Object)
     (core/let [var (ana/resolve-var (dissoc env :locals) p)
                minfo (core/-> var :protocol-info :methods)
+               ->name (comp symbol name first)
                [fname sigs] (if (core/vector? (second method))
-                              [(first method) [(second method)]]
-                              [(first method) (map first (rest method))])
+                              [(->name method) [(second method)]]
+                              [(->name method) (map first (rest method))])
                decmeths (core/get minfo fname ::not-found)]
       (core/when (= decmeths ::not-found)
         (ana/warning :protocol-invalid-method env {:protocol p :fname fname :no-such-method true}))
