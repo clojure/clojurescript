@@ -354,12 +354,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
 (defn ^array make-array
-  "Construct a JavaScript array of specified size. Accepts ignored type
-  argument for compatibility with Clojure."
+  "Construct a JavaScript array of the specified dimensions. Accepts ignored
+  type argument for compatibility with Clojure. Note that there is no efficient
+  way to allocate multi-dimensional arrays in JavaScript; as such, this function
+  will run in polynomial time when called with 3 or more arguments."
   ([size]
      (js/Array. size))
   ([type size]
-     (make-array size)))
+     (make-array size))
+  ([type size & more-sizes]
+    (let [dims more-sizes
+          dimarray (make-array size)]
+      (dotimes [i (alength dimarray)]
+        (aset dimarray i (apply make-array nil dims)))
+      dimarray)))
 
 (defn aclone
   "Returns a javascript array, cloned from the passed in array"
