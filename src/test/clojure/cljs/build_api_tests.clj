@@ -2,7 +2,9 @@
   (:refer-clojure :exclude [compile])
   (:use cljs.build.api)
   (:use clojure.test)
-  (:require [cljs.env :as env]
+  (:import java.io.File)
+  (:require [clojure.java.io :as io]
+            [cljs.env :as env]
             [cljs.analyzer :as ana]))
 
 (deftest test-target-file-for-cljs-ns
@@ -114,3 +116,20 @@
         '(graph.bar.core graph.baz.core)))
   (is (= (cljs-ns-dependents test-cenv 'graph.foo.core)
         '(graph.bar.core graph.baz.core))))
+
+(deftest cljs-1469
+  (let [srcs "samples/hello/src"
+        [common-tmp app-tmp] (mapv #(File/createTempFile  % ".js")
+                                   ["common" "app"])
+        opts {:optimizations :simple
+              :modules {:common {:entries #{"hello.foo.bar"}
+                                 :output-to (.getAbsolutePath common-tmp)}
+                        :app {:entries #{"hello.core"}
+                              :output-to (.getAbsolutePath app-tmp)}}}]
+    (.deleteOnExit common-tmp)
+    (.deleteOnExit app-tmp)
+    (is (every? #(zero? (.length %)) [common-tmp app-tmp])
+      "The initial files are empty")
+    (build srcs opts)
+    (is (not (every? #(zero? (.length %)) [common-tmp app-tmp]))
+      "The files are not empty after compilation")))

@@ -965,6 +965,7 @@
   (let [closure-compiler (make-closure-compiler)
         ^List externs (load-externs opts)
         compiler-options (make-options opts)
+        _ (.initOptions closure-compiler compiler-options)
         sources (if (= :whitespace (:optimizations opts))
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
