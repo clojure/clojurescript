@@ -438,7 +438,9 @@ nil if the end of stream has been reached")
 
 (defn read
   "Reads the first object from a PushbackReader. Returns the object read.
-   If EOF, throws if eof-is-error is true. Otherwise returns sentinel."
+   If EOF, throws if eof-is-error is true. Otherwise returns sentinel.
+
+   Only supports edn (similar to clojure.edn/read)"
   [reader eof-is-error sentinel is-recursive]
   (let [ch (read-char reader)]
     (cond
