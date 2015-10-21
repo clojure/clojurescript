@@ -427,10 +427,9 @@
   compiled JavaScript will written to this location and the function
   returns a JavaScriptFile. In either case the return value satisfies
   IJavaScript."
-  [^File file {:keys [output-file output-to] :as opts}]
-    (if (or output-file (string? output-to))
-      (let [out-file (io/file (util/output-directory opts)
-                       (or output-file output-to))]
+  [^File file {:keys [output-file] :as opts}]
+    (if output-file 
+      (let [out-file (io/file (util/output-directory opts) output-file)]
         (compiled-file (comp/compile-file file out-file opts)))
       (let [path (.getPath ^File file)]
         (binding [ana/*cljs-file* path]
@@ -1676,12 +1675,17 @@
                            (repeat warnings))
                          warnings)))
                    ana/*verbose* (:verbose opts)]
-           (let [source (if (and (:main all-opts) (#{:advanced :simple} (:optimizations all-opts)))
+           (let [one-file? (and (:main all-opts)
+                                (#{:advanced :simple} (:optimizations all-opts)))
+                 source (if one-file?
                           (:uri (cljs-source-for-namespace (:main all-opts)))
                           source)
+                 compile-opts (if one-file?
+                                (assoc all-opts :output-file (:output-to all-opts))
+                                all-opts)
                  compiled (util/measure compiler-stats
                             "Compile basic sources"
-                            (doall (-compile source all-opts)))
+                            (doall (-compile source compile-opts)))
                  js-sources (util/measure compiler-stats
                               "Add dependencies"
                               (doall
