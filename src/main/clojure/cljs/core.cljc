@@ -1190,7 +1190,10 @@
 ;;; end of reducers macros
 
 (core/defn- protocol-prefix [psym]
-  (core/str (core/-> (core/str psym) (.replace \. \$) (.replace \/ \$)) "$"))
+  (core/str (core/-> (core/str psym)
+              (.replace #?(:clj \. :cljs (js/RegExp. "\\." "g")) \$)
+              (.replace \/ \$))
+    "$"))
 
 (def #^:private base-type
      {nil "null"
