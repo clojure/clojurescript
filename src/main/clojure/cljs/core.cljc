@@ -1896,7 +1896,7 @@
                       (core/let [doc (core/as-> (last sigs) doc
                                        (core/when (core/string? doc) doc))
                                  sigs (take-while vector? sigs)
-                                 amp (when (some #{'&} (apply concat sigs))
+                                 amp (core/when (some #{'&} (apply concat sigs))
                                        (cljs.analyzer/warning
                                         :protocol-with-variadic-method
                                         &env {:protocol psym :name fname}))
