@@ -3,7 +3,8 @@
   (:require [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.env :as env]
-            [cljs.util :as util])
+            [cljs.util :as util]
+            [cljs.tagged-literals :as tags])
   (:import [java.io File]))
 
 (def aenv (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
@@ -86,6 +87,50 @@
       (ana/analyze aenv
         '(defn foo ([a]) ([a b])))))
   )
+
+(defn capture-warnings* [f]
+  (let [capture (atom [])
+        tracker (fn [warning-type env & [extra]]
+                  (when (warning-type ana/*cljs-warnings*)
+                    (let [err (ana/error-message warning-type extra)
+                          msg (ana/message env (str "WARNING: " err))]
+                      (swap! capture conj [warning-type msg]))))]
+    (ana/with-warning-handlers [tracker]
+      (f))
+    @capture))
+
+(defmacro capture-warnings [& body]
+  `(capture-warnings* (fn [] ~@body)))
+
+(deftest no-warn-on-emit-invoke-protocol-method
+  (let [define-foo #(assoc-in % [::ana/namespaces 'cljs.user :defs 'foo]
+                              {:ns 'cljs.user
+                               :name 'cljs.user/foo
+                               :fn-var true
+                               :method-params '([x])
+                               :protocol 'cljs.user/Foo})
+        aenv-with-foo (define-foo aenv)
+        cenv-with-foo (define-foo @cenv)]
+    (binding [ana/*cljs-static-fns* true]
+      (are [form]
+        (empty?
+         (capture-warnings
+          (env/with-compiler-env (atom cenv-with-foo)
+            (with-out-str
+              (comp/emit
+               (ana/analyze aenv-with-foo form))))))
+
+        '(cljs.user/foo nil)
+        '(cljs.user/foo 0)
+        '(cljs.user/foo (inc 0))
+        '(cljs.user/foo "")
+        '(cljs.user/foo true)
+        '(cljs.user/foo false)
+        '(cljs.user/foo (nil? nil))
+        '(cljs.user/foo (fn [x] x))
+        `(cljs.user/foo ~(tags/->JSValue {}))
+        `(cljs.user/foo ~(tags/->JSValue []))
+        '(cljs.user/foo (make-array 0))))))
 
 ;; CLJS-1225
 
