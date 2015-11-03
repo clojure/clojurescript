@@ -440,6 +440,7 @@
     ((fn analyze-loop [last-ast ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  ana/*cljs-ns*          ns
+                 ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
                  ana/*passes*           (:*passes* bound-vars)
                  r/*data-readers*       (:*data-readers* bound-vars)
@@ -527,6 +528,7 @@
     (binding [env/*compiler*         (:*compiler* bound-vars)
               *eval-fn*              (:*eval-fn* bound-vars)
               ana/*cljs-ns*          (:*cljs-ns* bound-vars)
+              ana/*cljs-static-fns*  (:static-fns opts)
               *ns*                   (create-ns (:*cljs-ns* bound-vars))
               r/*data-readers*       (:*data-readers* bound-vars)
               r/resolve-symbol       ana/resolve-symbol
@@ -601,6 +603,7 @@
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
+                 ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       ana/resolve-symbol
@@ -694,6 +697,7 @@
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
+                 ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       ana/resolve-symbol

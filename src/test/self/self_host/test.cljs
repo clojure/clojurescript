@@ -2,6 +2,7 @@
   (:require [cljs.test :as test
              :refer-macros [run-tests deftest testing is async]]
             [cljs.js :as cljs]
+            [clojure.string :as string]
             [cljs.nodejs :as nodejs]))
 
 (set! (.-user js/cljs) #js {})
@@ -66,7 +67,7 @@
 
 (deftest test-compile-str
   (async done
-    (let [l (latch 4 done)]
+    (let [l (latch 6 done)]
       (cljs/compile-str st "(+ 1 1)"
         (fn [{:keys [error value]}]
           (is (nil? error))
@@ -89,11 +90,24 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (= "\"a\".toString()" value))
+          (inc! l)))
+      (cljs/compile-str st "(do (defn foo [a b] (+ a b)) (foo 1 2))" nil
+        {:context :expr}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (string/index-of value "cljs.user.foo.call(null,1,2)"))
+          (inc! l)))
+      (cljs/compile-str st "(do (defn foo [a b] (+ a b)) (foo 1 2))" nil
+        {:context :expr
+         :static-fns true}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (string/index-of value "cljs.user.foo(1,2)"))
           (inc! l))))))
 
 (deftest test-eval-str
   (async done
-    (let [l (latch 7 done)]
+    (let [l (latch 8 done)]
       (cljs/eval-str st "(+ 1 1)" nil
         {:eval node-eval}
         (fn [{:keys [error value]}]
@@ -139,6 +153,15 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (== 3 (js/cljs.user.foo 1 2)))
+          (inc! l)))
+      (cljs/eval-str st "(do (defn foo [a b] (+ a b)) (foo 1 2))" nil
+        {:eval node-eval
+         :context :expr
+         :def-emits-var true
+         :static-fns true}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (== 3 value))
           (inc! l)))
       (cljs/eval-str st "(def foo (let [x 1] (let [x (inc x)] x)))" nil
         {:eval node-eval
