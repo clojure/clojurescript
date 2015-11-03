@@ -337,9 +337,14 @@
   "Returns highest resolution time offered by host in milliseconds."
   []
   (cond
-    (exists? js/performance) (.now js/performance)
-    (exists? js/process) (let [t (.hrtime js/process)]
-                           (/ (+ (* (aget t 0) 1e9) (aget t 1)) 1e6))
+    (and (exists? js/performance)
+         (not (nil? (. js/performance -now))))
+    (.now js/performance)
+
+    (exists? js/process)
+    (let [t (.hrtime js/process)]
+      (/ (+ (* (aget t 0) 1e9) (aget t 1)) 1e6))
+
     :else (.getTime (js/Date.))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
