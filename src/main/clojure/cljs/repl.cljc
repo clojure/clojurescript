@@ -188,13 +188,14 @@
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
-       (doseq [source (->> sources
-                        (remove (comp #{:seed} :type))
-                        (map #(cljsc/source-on-disk opts %)))]
-         (when (:repl-verbose opts)
-           (println "Loading:" (:provides source)))
-         (-evaluate repl-env "<cljs repl>" 1
-           (cljsc/add-dep-string opts source)))
+       (let [sb (StringBuffer.)]
+         (doseq [source (->> sources
+                            (remove (comp #{:seed} :type))
+                            (map #(cljsc/source-on-disk opts %)))]
+           (when (:repl-verbose opts)
+             (println "Loading:" (:provides source)))
+           (.append sb (cljsc/add-dep-string opts source)))
+         (-evaluate repl-env "<cljs repl>" 1 (.toString sb)))
        ;; REPLs that stream must manually load each dep - David
        (doseq [{:keys [url provides]} deps]
          (-load repl-env provides url))))))
