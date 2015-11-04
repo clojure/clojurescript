@@ -9861,8 +9861,8 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
   (UUID. s nil))
 
 (defn random-uuid []
-  (letfn [(hex [] (.toString (rand-int 15) 16))]
-    (let [rhex (.toString (bit-or 0x8 (bit-and 0x3 (rand-int 14))) 16)]
+  (letfn [(hex [] (.toString (rand-int 16) 16))]
+    (let [rhex (.toString (bit-or 0x8 (bit-and 0x3 (rand-int 16))) 16)]
       (uuid
         (str (hex) (hex) (hex) (hex)
              (hex) (hex) (hex) (hex) "-"
