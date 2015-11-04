@@ -507,7 +507,8 @@
   clojure.lang.PersistentList
   (-compile [this opts]
     (compile-form-seq [this]))
-  ; FIXME: -find-sources
+  (-find-sources [this opts]
+    [(ana/parse-ns [this] opts)])
   
   String
   (-compile [this opts] (-compile (io/file this) opts))
@@ -515,7 +516,8 @@
   
   clojure.lang.PersistentVector
   (-compile [this opts] (compile-form-seq this))
-  ; FIXME: -find-sources
+  (-find-sources [this opts]
+    [(ana/parse-ns this opts)])
   )
 
 (comment
@@ -750,7 +752,8 @@
         (for [ns-info inputs]
           ; TODO: compile-file calls parse-ns unnecessarily to get ns-info
           ; TODO: we could mark dependent namespaces for recompile here
-          (-compile (:source-file ns-info)
+          (-compile (or (:source-file ns-info)
+                        (:source-forms ns-info))
                     ; - ns-info -> ns -> cljs file relpath -> js relpath
                     (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))})))))))
 

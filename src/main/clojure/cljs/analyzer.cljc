@@ -2694,38 +2694,44 @@
                         (or (when (contains? opts :load-macros)
                               (:load-macros opts))
                           false)]
-                (with-open [rdr (io/reader src)]
-                  (loop [forms (forms-seq* rdr (source-path src))]
-                    (if (seq forms)
-                      (let [env (empty-env)
-                            ast (no-warn (analyze env (first forms) nil opts))]
-                        (if (= :ns (:op ast))
-                          (let [ns-name (:name ast)
-                                ns-name (if (and (= 'cljs.core ns-name)
-                                                 (= "cljc" (util/ext src)))
-                                          'cljs.core$macros
-                                          ns-name)
-                                deps    (merge (:uses ast) (:requires ast))]
-                            (.close ^Reader rdr)
-                            [(merge
-                               {:ns          (or ns-name 'cljs.user)
-                                :provides    [ns-name]
-                                :requires    (if (= 'cljs.core ns-name)
-                                               (set (vals deps))
-                                               (cond-> (conj (set (vals deps)) 'cljs.core)
-                                                 (get-in compiler-env [:options :emit-constants])
-                                                 (conj 'constants-table)))
-                                :file        dest
-                                :source-file src
-                                :ast         ast
-                                :macros-ns   (or (:macros-ns opts)
-                                                 (= 'cljs.core$macros ns-name))}
-                               (when (and dest (.exists ^File dest))
-                                 {:lines (with-open [reader (io/reader dest)]
-                                           (-> reader line-seq count))}))
-                             @env/*compiler*])
-                          (recur (rest forms))))
-                      (throw (AssertionError. (str "No ns form found in " src)))))))]
+                (let [rdr (when-not (sequential? src) (io/reader src))]
+                  (try
+                    (loop [forms (if rdr
+                                   (forms-seq* rdr (source-path src))
+                                   src)]
+                      (if (seq forms)
+                        (let [env (empty-env)
+                              ast (no-warn (analyze env (first forms) nil opts))]
+                          (if (= :ns (:op ast))
+                            (let [ns-name (:name ast)
+                                  ns-name (if (and (= 'cljs.core ns-name)
+                                                   (= "cljc" (util/ext src)))
+                                            'cljs.core$macros
+                                            ns-name)
+                                  deps (merge (:uses ast) (:requires ast))]
+                              [(merge
+                                 {:ns           (or ns-name 'cljs.user)
+                                  :provides     [ns-name]
+                                  :requires     (if (= 'cljs.core ns-name)
+                                                  (set (vals deps))
+                                                  (cond-> (conj (set (vals deps)) 'cljs.core)
+                                                          (get-in compiler-env [:options :emit-constants])
+                                                          (conj 'constants-table)))
+                                  :file         dest
+                                  :source-file  (when rdr src)
+                                  :source-forms (when-not rdr src)
+                                  :ast          ast
+                                  :macros-ns    (or (:macros-ns opts)
+                                                    (= 'cljs.core$macros ns-name))}
+                                 (when (and dest (.exists ^File dest))
+                                   {:lines (with-open [reader (io/reader dest)]
+                                             (-> reader line-seq count))}))
+                               @env/*compiler*])
+                            (recur (rest forms))))
+                        (throw (AssertionError. (str "No ns form found in " src)))))
+                    (finally
+                      (when rdr
+                        (.close ^Reader rdr))))))]
           (when (false? (:restore opts))
             (swap! env/*compiler*
               (fn [old-state]
