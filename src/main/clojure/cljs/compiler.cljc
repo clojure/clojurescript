@@ -35,7 +35,7 @@
 
 (def js-reserved ana/js-reserved)
 
-(def ^:dynamic *dependents* nil)
+(def ^:dynamic *recompiled* nil)
 (def ^:dynamic *inputs* nil)
 (def ^:dynamic *source-map-data* nil)
 (def ^:dynamic *lexical-renames* {})
@@ -1268,7 +1268,7 @@
      "Return true if the src file requires compilation."
      ([src dest] (requires-compilation? src dest nil))
      ([^File src ^File dest opts]
-      (let [{:keys [ns]} (ana/parse-ns src)]
+      (let [{:keys [ns requires]} (ana/parse-ns src)]
         (ensure
           (or (not (.exists dest))
               (> (.lastModified src) (.lastModified dest))
@@ -1283,10 +1283,8 @@
                 (if (= (:optimizations opts) :none)
                   (not (.exists (io/file (str (.getPath dest) ".map"))))
                   (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))
-              (let [{:keys [recompile visited]}
-                    (and *dependents* @*dependents*)]
-                (and (contains? recompile ns)
-                     (not (contains? visited ns))))))))))
+              (when-let [recompiled' (and *recompiled* @*recompiled*)]
+                (some requires recompiled'))))))))
 
 #?(:clj
    (defn compile-file
@@ -1331,13 +1329,8 @@
                                (not= :interactive (:mode opts)))
                       (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
                     (let [ret (compile-file* src-file dest-file opts)]
-                      (when *dependents*
-                        (swap! *dependents*
-                          (fn [{:keys [recompile visited]}]
-                            {:recompile (into recompile
-                                          (ana/ns-dependents ns
-                                            (merge *inputs* nses)))
-                             :visited (conj visited ns)})))
+                      (when *recompiled*
+                        (swap! *recompiled* conj ns))
                       ret))
                   (do
                     ;; populate compilation environment with analysis information

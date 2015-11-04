@@ -104,19 +104,6 @@
            (:require [graph.foo.core :as foo]
                      [graph.bar.core :as bar]))))))
 
-(deftest test-cljs-ns-dependencies
-  (is (= (env/with-compiler-env test-cenv
-           (cljs-ns-dependents 'clojure.string))
-        '(cljs.user)))
-  (is (= (env/with-compiler-env test-cenv
-           (cljs-ns-dependents 'foo.core))
-        '(bar.core baz.core)))
-  (is (= (env/with-compiler-env test-cenv
-           (cljs-ns-dependents 'graph.foo.core))
-        '(graph.bar.core graph.baz.core)))
-  (is (= (cljs-ns-dependents test-cenv 'graph.foo.core)
-        '(graph.bar.core graph.baz.core))))
-
 (deftest cljs-1469
   (let [srcs "samples/hello/src"
         [common-tmp app-tmp] (mapv #(File/createTempFile  % ".js")

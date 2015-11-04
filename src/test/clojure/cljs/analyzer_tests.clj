@@ -305,39 +305,6 @@
     (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble {:foo baz}))))
            {:foo 'baz}))))
 
-(def test-deps-env (atom
-                    {:cljs.analyzer/namespaces
-                     {'file-reloading {:requires {'utils 'utils}}
-                      'core           {:requires {'file-reloading 'file-reloading}}
-                      'dev            {:requires {'client 'client
-                                                  'core 'core}}
-                      'client         {:requires {'utils 'utils}}
-                      'utils          {:requires {}}}}))
-
-(deftest test-ns-dependents
-  (binding [env/*compiler* test-deps-env]
-    (is (= (set (a/ns-dependents 'client))
-           #{'dev}))
-    (is (= (set (a/ns-dependents 'core))
-           #{'dev}))
-    (is (= (set (a/ns-dependents 'dev))
-           #{}))
-
-    ;; if 'file-reloading returns 'core
-    (is (= (set (a/ns-dependents 'file-reloading))
-           #{'dev 'core}))
-
-    ;; how can 'utils include 'file-reloading but not 'core
-    ;; FAILS with
-    ;; actual: (not (= #{file-reloading dev client} #{file-reloading dev client core}))
-    (is (= (set (a/ns-dependents 'utils))
-           #{'file-reloading 'dev 'client 'core}))))
-
-(deftest test-ns-dependents-custom-ns-map
-  (let [ns-map '{bar {:requires #{cljs.core}}
-                 foo {:requires #{cljs.core bar}}}]
-    (is (= (set (a/ns-dependents 'bar ns-map)) #{'foo}))))
-
 (deftest test-cljs-1105
   ;; munge turns - into _, must preserve the dash first
   (is (not= (a/gen-constant-id :test-kw)

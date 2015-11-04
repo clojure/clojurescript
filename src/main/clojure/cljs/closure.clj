@@ -1769,8 +1769,8 @@
              (assoc :js-dependency-index (deps/js-dependency-index all-opts))
              ;; Save list of sources for cljs.analyzer/locate-src - Juho Teperi
              (assoc :sources (-find-sources source all-opts))))
-         (binding [comp/*dependents* (when-not (false? (:recompile-dependents opts))
-                                       (atom {:recompile #{} :visited #{}}))
+         (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))
+                                       (atom #{}))
                    ana/*cljs-static-fns*
                    (or (and (= (:optimizations opts) :advanced)
                             (not (false? (:static-fns opts))))

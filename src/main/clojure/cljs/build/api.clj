@@ -70,20 +70,6 @@
                          (intersection namespaces-set (-> x :require-macros vals set))))
          (vals (:cljs.analyzer/namespaces @state)))))))
 
-(defn cljs-ns-dependents
-  "Given a namespace symbol return a seq of all dependent
-  namespaces sorted in dependency order. Will include
-  transient dependents."
-  ([ns]
-   (cljs-ns-dependents
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env))
-     ns))
-  ([state ns]
-   (env/with-compiler-env state
-     (ana/ns-dependents ns))))
-
 (defn parse-js-ns
   "Given a Google Closure style JavaScript file or resource return the namespace
   information for the given file. Only returns the value extracted from the
