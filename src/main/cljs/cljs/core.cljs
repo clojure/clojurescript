@@ -341,7 +341,8 @@
          (not (nil? (. js/performance -now))))
     (.now js/performance)
 
-    (exists? js/process)
+    (and (exists? js/process)
+         (not (nil? (. js/process -hrtime))))
     (let [t (.hrtime js/process)]
       (/ (+ (* (aget t 0) 1e9) (aget t 1)) 1e6))
 
