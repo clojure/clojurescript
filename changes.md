@@ -1,5 +1,9 @@
 ## 1.7.170
 
+This is a breaking change for tooling libraries like lein-cljsbuild,
+lein-figwheel, and boot-cljs. Refer to the corresponding documentation to
+determine which version you should use.
+
 ### Enhancements
 * Refactor build pipeline
 * CLJS-1478: Self-host: Allow static-fns opt
