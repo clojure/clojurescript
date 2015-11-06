@@ -1,3 +1,31 @@
+## 1.7.170
+
+### Enhancements
+* Refactor build pipeline
+* CLJS-1478: Self-host: Allow static-fns opt
+
+### Changes
+* Generate larger range of random UUIDs
+* make browser REPL file reloads less chatty
+* CLJS-1475: indicate that cljs.reader/read is safe
+* CLJS-1470: Bump GCL Dependency
+* bump Google Closure dep
+
+### Fixes
+* in system-time check that js/process.hrtime is actually a thing
+* CLJS-1228: cljs.util/topo-sort is polynomial on larger dependency graphs
+* check that performance.now method actually exists
+* CLJS-1476: Self-host: Protocol prefixing broken for three- (or more) segment namespaces
+* CLJS-1472 Patch for CLJS-1467 causes regression for nodejscli
+* CLJS-1469 :modules regression
+* CLJS-1445: Syntax error for var args in protocol methods
+* Warn if protocol impl methods do not match its protocol
+* CLJS-1451 Protocol impl do not support qualified method names
+* CLJS-1422: cljs.js/eval-str fails for ns form on node.js with simple optimizations
+* CLJS-1423: self-host: Requiring analyzer/compiler breaks unchecked Boolean
+* CLJS-1466: Improperly munged output path for GClosure JavaScript
+* CLJS-1467: Foreign Libraries not included when using :main with :simple or :advanced
+
 ## 1.7.145
 
 ### Enhancements
