@@ -602,37 +602,40 @@
 
 (defmethod emit* :def
   [{:keys [name var init env doc jsdoc export test var-ast]}]
-  (let [mname (munge name)]
-    (emit-comment env doc (concat jsdoc (:jsdoc init)))
-    (when (:def-emits-var env)
-      (when (= :return (:context env))
-        (emitln "return ("))
-      (emitln "(function (){"))
-    (emits var)
-    (when init
-      (emits " = "
-       (if-let [define (get-define mname jsdoc)]
-         define
-         init)))
-    (when (:def-emits-var env)
-      (emitln "; return (")
-      (emits (merge
-               {:op :var-special
-                :env (assoc env :context :expr)}
-               var-ast))
-      (emitln ");})()")
-      (when (= :return (:context env))
-        (emitln ")")))
-    ;; NOTE: JavaScriptCore does not like this under advanced compilation
-    ;; this change was primarily for REPL interactions - David
-    ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
-    (when-not (= :expr (:context env)) (emitln ";"))
-    (when export
-      (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))
-    (when (and ana/*load-tests* test)
-      (when (= :expr (:context env))
-        (emitln ";"))
-      (emitln var ".cljs$lang$test = " test ";"))))
+  ;; We only want to emit if an init is supplied, this is to avoid dead code
+  ;; elimination issues. The REPL is the exception to this rule.
+  (when (or init (:def-emits-var env))
+    (let [mname (munge name)]
+     (emit-comment env doc (concat jsdoc (:jsdoc init)))
+     (when (:def-emits-var env)
+       (when (= :return (:context env))
+         (emitln "return ("))
+       (emitln "(function (){"))
+     (emits var)
+     (when init
+       (emits " = "
+         (if-let [define (get-define mname jsdoc)]
+           define
+           init)))
+     (when (:def-emits-var env)
+       (emitln "; return (")
+       (emits (merge
+                {:op  :var-special
+                 :env (assoc env :context :expr)}
+                var-ast))
+       (emitln ");})()")
+       (when (= :return (:context env))
+         (emitln ")")))
+     ;; NOTE: JavaScriptCore does not like this under advanced compilation
+     ;; this change was primarily for REPL interactions - David
+     ;(emits " = (typeof " mname " != 'undefined') ? " mname " : undefined")
+     (when-not (= :expr (:context env)) (emitln ";"))
+     (when export
+       (emitln "goog.exportSymbol('" (munge export) "', " mname ");"))
+     (when (and ana/*load-tests* test)
+       (when (= :expr (:context env))
+         (emitln ";"))
+       (emitln var ".cljs$lang$test = " test ";")))))
 
 (defn emit-apply-to
   [{:keys [name params env]}]
