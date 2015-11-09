@@ -1198,13 +1198,8 @@
         (next coll))
       (mix-collection-hash hash-code n))))
 
-(def ^{:private true :jsdoc ["@type {*}"]}
-  EMPTY_ORDERED_HASH nil)
-
-(defn- empty-ordered-hash []
-  (when (nil? EMPTY_ORDERED_HASH)
-    (set! EMPTY_ORDERED_HASH (mix-collection-hash 1 0)))
-  EMPTY_ORDERED_HASH)
+(def ^:private empty-ordered-hash
+  (mix-collection-hash 1 0))
 
 (defn ^number hash-unordered-coll
   "Returns the hash code, consistent with =, for an external unordered
@@ -1218,13 +1213,8 @@
       (recur (inc n) (bit-or (+ hash-code (hash (first coll))) 0) (next coll))
       (mix-collection-hash hash-code n))))
 
-(def ^{:private true :jsdoc ["@type {*}"]}
-  EMPTY_UNORDERED_HASH nil)
-
-(defn- empty-unordered-hash []
-  (when (nil? EMPTY_UNORDERED_HASH)
-    (set! EMPTY_UNORDERED_HASH (mix-collection-hash 0 0)))
-  EMPTY_UNORDERED_HASH)
+(def ^:private empty-unordered-hash
+  (mix-collection-hash 0 0))
 
 ;;;;;;;;;;;;;;;;;;; protocols on primitives ;;;;;;;;
 (declare hash-map list equiv-sequential)
@@ -2811,7 +2801,7 @@ reduces them without incurring seq initialization"
       false))
 
   IHash
-  (-hash [coll] (empty-ordered-hash))
+  (-hash [coll] empty-ordered-hash)
 
   ISeqable
   (-seq [coll] nil)
@@ -4926,7 +4916,7 @@ reduces them without incurring seq initialization"
 (set! (.-EMPTY-NODE PersistentVector) (VectorNode. nil (make-array 32)))
 
 (set! (.-EMPTY PersistentVector)
-  (PersistentVector. nil 0 5 (.-EMPTY-NODE PersistentVector) (array) (empty-ordered-hash)))
+  (PersistentVector. nil 0 5 (.-EMPTY-NODE PersistentVector) (array) empty-ordered-hash))
 
 (set! (.-fromArray PersistentVector)
   (fn [xs ^boolean no-clone]
@@ -5476,7 +5466,7 @@ reduces them without incurring seq initialization"
   ICounted
   (-count [coll] count))
 
-(set! (.-EMPTY PersistentQueue) (PersistentQueue. nil 0 nil [] (empty-ordered-hash)))
+(set! (.-EMPTY PersistentQueue) (PersistentQueue. nil 0 nil [] empty-ordered-hash))
 
 (es6-iterable PersistentQueue)
 
@@ -5653,7 +5643,7 @@ reduces them without incurring seq initialization"
   (-as-transient [coll]
     (transient (into (hash-map) coll))))
 
-(set! (.-EMPTY ObjMap) (ObjMap. nil (array) (js-obj) 0 (empty-unordered-hash)))
+(set! (.-EMPTY ObjMap) (ObjMap. nil (array) (js-obj) 0 empty-unordered-hash))
 
 (set! (.-HASHMAP_THRESHOLD ObjMap) 8)
 
@@ -6005,7 +5995,7 @@ reduces them without incurring seq initialization"
   (-as-transient [coll]
     (TransientArrayMap. (js-obj) (alength arr) (aclone arr))))
 
-(set! (.-EMPTY PersistentArrayMap) (PersistentArrayMap. nil 0 (array) (empty-unordered-hash)))
+(set! (.-EMPTY PersistentArrayMap) (PersistentArrayMap. nil 0 (array) empty-unordered-hash))
 
 (set! (.-HASHMAP-THRESHOLD PersistentArrayMap) 8)
 
@@ -6941,7 +6931,7 @@ reduces them without incurring seq initialization"
   (-as-transient [coll]
     (TransientHashMap. (js-obj) root cnt has-nil? nil-val)))
 
-(set! (.-EMPTY PersistentHashMap) (PersistentHashMap. nil 0 nil false nil (empty-unordered-hash)))
+(set! (.-EMPTY PersistentHashMap) (PersistentHashMap. nil 0 nil false nil empty-unordered-hash))
 
 (set! (.-fromArray PersistentHashMap)
   (fn [arr ^boolean no-clone]
@@ -7734,7 +7724,7 @@ reduces them without incurring seq initialization"
 
   (-comparator [coll] comp))
 
-(set! (.-EMPTY PersistentTreeMap) (PersistentTreeMap. compare nil 0 nil (empty-unordered-hash)))
+(set! (.-EMPTY PersistentTreeMap) (PersistentTreeMap. compare nil 0 nil empty-unordered-hash))
 
 (es6-iterable PersistentTreeMap)
 
@@ -8055,7 +8045,7 @@ reduces them without incurring seq initialization"
   (-as-transient [coll] (TransientHashSet. (-as-transient hash-map))))
 
 (set! (.-EMPTY PersistentHashSet)
-  (PersistentHashSet. nil (.-EMPTY PersistentArrayMap) (empty-unordered-hash)))
+  (PersistentHashSet. nil (.-EMPTY PersistentArrayMap) empty-unordered-hash))
 
 (set! (.-fromArray PersistentHashSet)
   (fn [items ^boolean no-clone]
@@ -8201,7 +8191,7 @@ reduces them without incurring seq initialization"
     (-lookup coll k not-found)))
 
 (set! (.-EMPTY PersistentTreeSet)
-  (PersistentTreeSet. nil (.-EMPTY PersistentTreeMap) (empty-unordered-hash)))
+  (PersistentTreeSet. nil (.-EMPTY PersistentTreeMap) empty-unordered-hash))
 
 (es6-iterable PersistentTreeSet)
 
