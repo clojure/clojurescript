@@ -214,10 +214,9 @@
                                             .toURI)]
             (str (.relativize source-map-parent-juri unrelativized-juri))))))
 
-(defn encode
+(defn encode*
   "Take an internal source map representation represented as nested
-   sorted maps of file, line, column and return a source map v3 JSON
-   string."
+   sorted maps of file, line, column and return a v3 representation."
   [m opts]
   (let [lines (atom [[]])
         names->idx (atom {})
@@ -252,35 +251,43 @@
       (doseq [[line cols] lines]
         (doseq [[col infos] cols]
           (encode-cols infos source-idx line col))))
-    (let [source-map-file-contents
-          (cond-> {"version" 3
-                   "file" (:file opts)
-                   "sources" (into []
-                                   (let [paths (keys m)
-                                         f (comp
-                                             (if (true? (:source-map-timestamp opts))
-                                               #(str % "?rel=" (System/currentTimeMillis))
-                                               identity)
-                                             (if (or (:output-dir opts)
-                                                   (:source-map-path opts))
-                                               #(relativize-path % opts)
-                                               #(last (string/split % #"/"))))]
-                                     (map f paths)))
-                   "lineCount" (:lines opts)
-                   "mappings" (->> (lines->segs (concat preamble-lines @lines))
-                                   (map #(string/join "," %))
-                                   (string/join ";"))
-                   "names" (into []
-                                 (map (set/map-invert @names->idx)
-                                      (range (count @names->idx))))}
-                  (:sources-content opts)
-                  (assoc "sourcesContent" (:sources-content opts)))]
-      (if (true? (:source-map-pretty-print opts))
-        (with-out-str
-          (json/pprint
-            source-map-file-contents
-            :escape-slash false))
-        (json/write-str source-map-file-contents)))))
+
+    (cond-> {"version" 3
+             "file" (:file opts)
+             "sources" (into []
+                             (let [paths (keys m)
+                                   f (comp
+                                      (if (true? (:source-map-timestamp opts))
+                                        #(str % "?rel=" (System/currentTimeMillis))
+                                        identity)
+                                      (if (or (:output-dir opts)
+                                              (:source-map-path opts))
+                                        #(relativize-path % opts)
+                                        #(last (string/split % #"/"))))]
+                               (map f paths)))
+             "lineCount" (:lines opts)
+             "mappings" (->> (lines->segs (concat preamble-lines @lines))
+                             (map #(string/join "," %))
+                             (string/join ";"))
+             "names" (into []
+                           (map (set/map-invert @names->idx)
+                                (range (count @names->idx))))}
+
+            (:sources-content opts)
+            (assoc "sourcesContent" (:sources-content opts)))))
+
+(defn encode
+  "Take an internal source map representation represented as nested
+   sorted maps of file, line, column and return a source map v3 JSON
+   string."
+  [m opts]
+  (let [source-map-file-contents (encode* m opts)]
+    (if (true? (:source-map-pretty-print opts))
+      (with-out-str
+        (json/pprint
+         source-map-file-contents
+         :escape-slash false))
+      (json/write-str source-map-file-contents))))
 
 ;; -----------------------------------------------------------------------------
 ;; Merging
