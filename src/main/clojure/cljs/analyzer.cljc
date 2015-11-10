@@ -104,7 +104,7 @@
     "synchronized" "this" "throw" "throws"
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"
-    "null"})
+    "null" "constructor"})
 
 #?(:clj (def SENTINEL (Object.))
    :cljs (def SENTINEL (js-obj)))
