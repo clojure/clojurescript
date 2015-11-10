@@ -213,7 +213,7 @@
 #?(:clj
    (defmethod emit-constant Double [x] (emits x))
    :cljs
-   (defmethod emit-constant js/Number [x] (emits x)))
+   (defmethod emit-constant js/Number [x] (emits "(" x ")")))
 
 #?(:clj
    (defmethod emit-constant BigDecimal [x] (emits (.doubleValue ^BigDecimal x))))

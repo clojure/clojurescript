@@ -71,7 +71,7 @@
       (cljs/compile-str st "(+ 1 1)"
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (= "(1 + 1);\n" value))
+          (is (= "((1) + (1));\n" value))
           (inc! l)))
       (cljs/compile-str st "(fn [])" nil
         {:context :expr}
@@ -83,7 +83,7 @@
         {:context :expr}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (= "(cljs.core.truth_(cljs.core.first)?1:2)" value))
+          (is (= "(cljs.core.truth_(cljs.core.first)?(1):(2))" value))
           (inc! l)))
       (cljs/compile-str st "(.toString \"a\")" nil
         {:context :expr}
@@ -95,14 +95,14 @@
         {:context :expr}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (string/index-of value "cljs.user.foo.call(null,1,2)"))
+          (is (string/index-of value "cljs.user.foo.call(null,(1),(2))"))
           (inc! l)))
       (cljs/compile-str st "(do (defn foo [a b] (+ a b)) (foo 1 2))" nil
         {:context :expr
          :static-fns true}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (string/index-of value "cljs.user.foo(1,2)"))
+          (is (string/index-of value "cljs.user.foo((1),(2))"))
           (inc! l))))))
 
 (deftest test-eval-str
@@ -196,6 +196,14 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (inc! l))))))
+
+(deftest test-CLJS-1330
+  (cljs/eval-str st
+    "(.toString 1)"
+    nil
+    {:eval node-eval}
+    (fn [{:keys [error value]}]
+      (is (= "1" value)))))
 
 #_(deftest test-eval-str-with-require
   (async done
