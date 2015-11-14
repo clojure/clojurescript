@@ -47,7 +47,7 @@
            [java.net URL]
            [java.util.logging Level]
            [java.util List Random]
-           [java.util.concurrent TimeUnit]
+           [java.util.concurrent TimeUnit LinkedBlockingDeque]
            [com.google.javascript.jscomp CompilerOptions CompilationLevel
               CompilerOptions$LanguageMode SourceMap$Format
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
@@ -741,21 +741,70 @@
       (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
     inputs))
 
+(defn compile-task [^LinkedBlockingDeque deque input-set compiled opts]
+  (loop [ns-info (.pollFirst deque)]
+    (when ns-info
+      (let [{:keys [requires]} ns-info
+            input-set' @input-set]
+        (if (every? #(not (contains? input-set' %)) requires)
+          (do
+            (try
+              (swap! compiled conj
+                (-compile (or (:source-file ns-info)
+                              (:source-forms ns-info))
+                  ; - ns-info -> ns -> cljs file relpath -> js relpath
+                  (merge opts
+                    {:output-file (comp/rename-to-js
+                                    (util/ns->relpath (:ns ns-info)))})))
+              (catch Throwable e
+                (util/debug-prn e)))
+            (when-let [ns (:ns ns-info)]
+              (swap! input-set disj ns))
+            (recur (.pollFirst deque)))
+          (do
+            (Thread/sleep 10)
+            (recur ns-info)))))))
+
+(defn parallel-compile-sources [inputs compiler-stats opts]
+  (let [deque     (LinkedBlockingDeque. (count inputs))
+        input-set (atom #{})
+        cnt       (+ 2 (.. Runtime getRuntime availableProcessors))
+        agents    (repeatedly cnt
+                    #(agent nil
+                      :error-handler
+                      (fn [err]
+                        (util/debug-prn err))))
+        compiled  (atom [])]
+    (doseq [ns-info (reverse inputs)]
+      (when-let [ns (:ns ns-info)]
+        (swap! input-set conj ns))
+      (.push deque ns-info))
+    (doseq [agent agents]
+      (send agent
+        (fn [agent]
+          (compile-task deque input-set compiled opts)
+          agent)))
+    (util/measure compiler-stats
+      "Compile sources" (apply await agents))
+    @compiled))
+
 (defn compile-sources
   "Takes dependency ordered list of IJavaScript compatible maps from parse-ns
   and compiles them."
   [inputs compiler-stats opts]
-  (util/measure compiler-stats
-    "Compile sources"
-    (binding [comp/*inputs* (zipmap (map :ns inputs) inputs)]
-      (doall
-        (for [ns-info inputs]
-          ; TODO: compile-file calls parse-ns unnecessarily to get ns-info
-          ; TODO: we could mark dependent namespaces for recompile here
-          (-compile (or (:source-file ns-info)
-                        (:source-forms ns-info))
-                    ; - ns-info -> ns -> cljs file relpath -> js relpath
-                    (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))})))))))
+  (if (:parallel-build opts)
+    (parallel-compile-sources inputs compiler-stats opts)
+    (util/measure compiler-stats
+      "Compile sources"
+      (binding [comp/*inputs* (zipmap (map :ns inputs) inputs)]
+        (doall
+          (for [ns-info inputs]
+            ; TODO: compile-file calls parse-ns unnecessarily to get ns-info
+            ; TODO: we could mark dependent namespaces for recompile here
+            (-compile (or (:source-file ns-info)
+                          (:source-forms ns-info))
+              ; - ns-info -> ns -> cljs file relpath -> js relpath
+              (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))}))))))))
 
 (defn add-goog-base
   [inputs]
