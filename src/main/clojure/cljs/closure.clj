@@ -741,9 +741,9 @@
       (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
     inputs))
 
-(defn compile-task [^LinkedBlockingDeque deque input-set compiled opts]
+(defn compile-task [^LinkedBlockingDeque deque input-set compiled opts failed]
   (loop [ns-info (.pollFirst deque)]
-    (when ns-info
+    (when (and ns-info (not @failed))
       (let [{:keys [requires]} ns-info
             input-set' @input-set]
         (if (every? #(not (contains? input-set' %)) requires)
@@ -757,32 +757,31 @@
                     {:output-file (comp/rename-to-js
                                     (util/ns->relpath (:ns ns-info)))})))
               (catch Throwable e
-                (util/debug-prn e)))
-            (when-let [ns (:ns ns-info)]
-              (swap! input-set disj ns))
-            (recur (.pollFirst deque)))
+                (util/debug-prn e)
+                (reset! failed true)))
+            (when-not @failed
+              (when-let [ns (:ns ns-info)]
+                (swap! input-set disj ns))
+              (recur (.pollFirst deque))))
           (do
             (Thread/sleep 10)
             (recur ns-info)))))))
 
 (defn parallel-compile-sources [inputs compiler-stats opts]
-  (let [deque     (LinkedBlockingDeque. (count inputs))
-        input-set (atom #{})
+  (let [deque     (LinkedBlockingDeque. inputs)
+        input-set (atom (into #{} (comp (remove nil?) (map :ns)) inputs))
         cnt       (+ 2 (.. Runtime getRuntime availableProcessors))
         agents    (repeatedly cnt
                     #(agent nil
                       :error-handler
                       (fn [err]
                         (util/debug-prn err))))
-        compiled  (atom [])]
-    (doseq [ns-info (reverse inputs)]
-      (when-let [ns (:ns ns-info)]
-        (swap! input-set conj ns))
-      (.push deque ns-info))
+        compiled  (atom [])
+        failed    (atom false)]
     (doseq [agent agents]
       (send agent
         (fn [agent]
-          (compile-task deque input-set compiled opts)
+          (compile-task deque input-set compiled opts failed)
           agent)))
     (util/measure compiler-stats
       "Compile sources" (apply await agents))
