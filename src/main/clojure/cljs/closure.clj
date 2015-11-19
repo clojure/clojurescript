@@ -782,6 +782,7 @@
           (compile-task deque input-set compiled opts failed)
           (.countDown latch))))
     (util/measure compiler-stats "Compile sources" (.await latch))
+    (.shutdown es)
     @compiled))
 
 (defn compile-sources
