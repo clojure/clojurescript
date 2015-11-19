@@ -47,7 +47,8 @@
            [java.net URL]
            [java.util.logging Level]
            [java.util List Random]
-           [java.util.concurrent TimeUnit LinkedBlockingDeque]
+           [java.util.concurrent
+            TimeUnit LinkedBlockingDeque Executors CountDownLatch]
            [com.google.javascript.jscomp CompilerOptions CompilationLevel
               CompilerOptions$LanguageMode SourceMap$Format
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
@@ -771,20 +772,16 @@
   (let [deque     (LinkedBlockingDeque. inputs)
         input-set (atom (into #{} (comp (remove nil?) (map :ns)) inputs))
         cnt       (+ 2 (.. Runtime getRuntime availableProcessors))
-        agents    (repeatedly cnt
-                    #(agent nil
-                      :error-handler
-                      (fn [err]
-                        (util/debug-prn err))))
+        latch     (CountDownLatch. cnt)
+        es        (Executors/newFixedThreadPool cnt)
         compiled  (atom [])
         failed    (atom false)]
-    (doseq [agent agents]
-      (send agent
-        (fn [agent]
+    (dotimes [_ cnt]
+      (.execute es
+        (bound-fn []
           (compile-task deque input-set compiled opts failed)
-          agent)))
-    (util/measure compiler-stats
-      "Compile sources" (apply await agents))
+          (.countDown latch))))
+    (util/measure compiler-stats "Compile sources" (.await latch))
     @compiled))
 
 (defn compile-sources
