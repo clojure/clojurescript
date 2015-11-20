@@ -788,20 +788,22 @@
 (defn compile-sources
   "Takes dependency ordered list of IJavaScript compatible maps from parse-ns
   and compiles them."
-  [inputs compiler-stats opts]
-  (if (:parallel-build opts)
-    (parallel-compile-sources inputs compiler-stats opts)
-    (util/measure compiler-stats
-      "Compile sources"
-      (binding [comp/*inputs* (zipmap (map :ns inputs) inputs)]
-        (doall
-          (for [ns-info inputs]
-            ; TODO: compile-file calls parse-ns unnecessarily to get ns-info
-            ; TODO: we could mark dependent namespaces for recompile here
-            (-compile (or (:source-file ns-info)
-                          (:source-forms ns-info))
-              ; - ns-info -> ns -> cljs file relpath -> js relpath
-              (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))}))))))))
+  ([inputs opts]
+   (compile-sources inputs (:compiler-stats opts) opts))
+  ([inputs compiler-stats opts]
+   (if (:parallel-build opts)
+     (parallel-compile-sources inputs compiler-stats opts)
+     (util/measure compiler-stats
+       "Compile sources"
+       (binding [comp/*inputs* (zipmap (map :ns inputs) inputs)]
+         (doall
+           (for [ns-info inputs]
+             ; TODO: compile-file calls parse-ns unnecessarily to get ns-info
+             ; TODO: we could mark dependent namespaces for recompile here
+             (-compile (or (:source-file ns-info)
+                         (:source-forms ns-info))
+               ; - ns-info -> ns -> cljs file relpath -> js relpath
+               (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))})))))))))
 
 (defn add-goog-base
   [inputs]
