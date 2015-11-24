@@ -202,3 +202,6 @@
             (catch Throwable _ false))
      `(do ~then)
      `(do ~else))))
+
+(defn boolean? [x]
+  (or (true? x) (false? x)))

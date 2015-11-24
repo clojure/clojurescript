@@ -1694,10 +1694,10 @@
                     (pr-str output-dir))))
   true)
 
-(defn check-source-map [{:keys [output-to source-map output-dir] :as opts}]
+(defn check-source-map [{:keys [output-to source-map output-dir optimizations] :as opts}]
   "When :source-map is specified in opts, "
   (when (and (contains? opts :source-map)
-             (not (= (:optimizations opts) :none)))
+             (not (= optimizations :none)))
     (assert (and (or (contains? opts :output-to)
                      (contains? opts :modules))
                  (contains? opts :output-dir))
@@ -1718,6 +1718,11 @@
                    "parent %s if optimization setting applied")
         (pr-str output-dir)
         (pr-str (absolute-parent output-to)))))
+  (when (and (contains? opts :source-map)
+             (= optimizations :none))
+    (assert (util/boolean? source-map)
+            (format ":source-map must be true or false when compiling with :optimizations :none but it is: %s"
+                    (pr-str source-map))))
   true)
 
 (defn check-source-map-path [{:keys [source-map-path] :as opts}]

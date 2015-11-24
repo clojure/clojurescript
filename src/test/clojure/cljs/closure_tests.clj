@@ -28,3 +28,9 @@
     (is (= "var preamble1 = require(\"preamble1\");\nvar preamble2 = require(\"preamble2\");\n"
            (make-preamble {:preamble ["cljs/preamble1.js"
                                       "cljs/preamble2.js"]})))))
+
+(deftest test-check-sourcemap
+  (testing "optimizations none"
+    (is (check-source-map {:source-map true :optimizations :none}))
+    (is (check-source-map {:source-map false :optimizations :none}))
+    (is (thrown? AssertionError (check-source-map {:source-map "target/build/app.js.map" :optimizations :none})))))
