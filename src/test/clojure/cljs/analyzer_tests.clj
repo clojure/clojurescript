@@ -277,32 +277,32 @@
 
 (deftest test-namespace-metadata
   (binding [a/*cljs-ns* a/*cljs-ns*]
-    (is (= (do (a/analyze ns-env '(ns weeble {:foo bar}))
+    (is (= (do (a/analyze ns-env '(ns weeble.ns {:foo bar}))
                (meta a/*cljs-ns*))
            {:foo 'bar}))
 
-    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble))
+    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble.ns))
                (meta a/*cljs-ns*))
            {:foo 'bar}))
 
-    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble {:baz quux}))
+    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble.ns {:baz quux}))
                (meta a/*cljs-ns*))
            {:foo 'bar :baz 'quux}))
 
-    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble {:foo baz}))
+    (is (= (do (a/analyze ns-env '(ns ^{:foo bar} weeble.ns {:foo baz}))
                (meta a/*cljs-ns*))
            {:foo 'baz}))
 
-    (is (= (meta (:name (a/analyze ns-env '(ns weeble {:foo bar}))))
+    (is (= (meta (:name (a/analyze ns-env '(ns weeble.ns {:foo bar}))))
            {:foo 'bar}))
 
-    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble))))
+    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble.ns))))
            {:foo 'bar}))
 
-    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble {:baz quux}))))
+    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble.ns {:baz quux}))))
            {:foo 'bar :baz 'quux}))
 
-    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble {:foo baz}))))
+    (is (= (meta (:name (a/analyze ns-env '(ns ^{:foo bar} weeble.ns {:foo baz}))))
            {:foo 'baz}))))
 
 (deftest test-cljs-1105
