@@ -41,6 +41,7 @@
             [cljs.env :as env]
             [cljs.js-deps :as deps]
             [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as string]
             [clojure.data.json :as json])
   (:import [java.io File BufferedInputStream StringWriter]
@@ -725,13 +726,25 @@
   (find-cljs-dependencies ["cljs.core" "clojure.string"])
   )
 
+(defn- module-entries
+  "Return the module entries of `compile-opts` as a set."
+  [compile-opts]
+  (->> compile-opts :modules vals
+       (map :entries)
+       (remove nil?)
+       (apply concat)
+       (set)))
+
 (defn add-dependency-sources
   "Given list of IJavaScript objects, produce a new sequence of IJavaScript objects
   of all dependencies of inputs."
-  [inputs]
-  (let [inputs        (set inputs)
-        requires      (set (mapcat deps/-requires inputs))]
-    (into inputs (find-cljs-dependencies requires))))
+  ([inputs]
+   (add-dependency-sources inputs nil))
+  ([inputs compile-opts]
+   (let [inputs         (set inputs)
+         requires       (set (mapcat deps/-requires inputs))
+         module-entries (module-entries compile-opts)]
+     (into inputs (find-cljs-dependencies (set/union requires module-entries))))))
 
 (defn check-unprovided
   [inputs]
@@ -1850,7 +1863,7 @@
                                 (assoc all-opts :output-file (:output-to all-opts))
                                 all-opts)
                  js-sources (-> (-find-sources source all-opts)
-                                add-dependency-sources
+                                (add-dependency-sources compile-opts)
                                 deps/dependency-order
                                 (compile-sources compiler-stats compile-opts)
                                 (add-js-sources all-opts)

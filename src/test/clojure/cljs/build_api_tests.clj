@@ -120,3 +120,28 @@
     (build srcs opts)
     (is (not (every? #(zero? (.length %)) [common-tmp app-tmp]))
       "The files are not empty after compilation")))
+
+(deftest cljs-1500-test-modules
+  (let [module-main (io/file "out/module-main.js")
+        module-a (io/file "out/module-a.js")
+        module-b (io/file "out/module-b.js")]
+    (.delete module-main)
+    (.delete module-a)
+    (.delete module-b)
+    (build
+     (inputs "src/test/cljs")
+     {:main "module-test.main"
+      :optimizations :advanced
+      :verbose true
+      :modules
+      {:cljs-base
+       {:output-to (str module-main)}
+       :module-a
+       {:output-to (str module-a)
+        :entries #{'module-test.modules.a}}
+       :module-b
+       {:output-to (str module-b)
+        :entries #{'module-test.modules.b}}}})
+    (is (re-find #"Loading modules A and B" (slurp module-main)))
+    (is (re-find #"Module A loaded" (slurp module-a)))
+    (is (re-find #"Module B loaded" (slurp module-b)))))
