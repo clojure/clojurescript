@@ -174,10 +174,14 @@
 (defn valid-js-id-start? [s]
   (re-find #"(?U)^[\p{Alpha}_$]" s))
 
+(def debug-prn-mutex (Object.))
+
 (defn debug-prn
   [& args]
   (binding [*out* *err*]
-    (apply println args)))
+    (locking debug-prn-mutex
+      (apply println args)
+      (flush))))
 
 (defmacro measure
   "Like cljs.core/time but toggleable and takes a message string."
