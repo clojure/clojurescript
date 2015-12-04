@@ -35,6 +35,7 @@
   "
   (:refer-clojure :exclude [compile])
   (:require [cljs.util :as util]
+            [cljs.core :as cljsm]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
             [cljs.source-map :as sm]
