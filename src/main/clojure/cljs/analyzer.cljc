@@ -265,7 +265,7 @@
 
 (defmethod error-message :undeclared-ns-form
   [warning-type info]
-  (str "Referred " (:type info) " " (:lib info) "/" (:sym info) " does not exist"))
+  (str "Invalid :refer, var " (:type info) " " (:lib info) "/" (:sym info) " does not exist"))
 
 (defmethod error-message :protocol-deprecated
   [warning-type info]
@@ -554,8 +554,11 @@
     :column (get-col name env)}))
 
 (defn message [env s]
-  (str s (when (:line env)
-           (str " at line " (:line env) " " *cljs-file*))))
+  (str s
+    (if (:line env)
+      (str " at line " (:line env) " " *cljs-file*)
+      (when *cljs-file*
+        (str " in file " *cljs-file*)))))
 
 (defn warning [warning-type env extra]
   (doseq [handler *cljs-warning-handlers*]
