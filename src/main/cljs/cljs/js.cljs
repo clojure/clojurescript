@@ -217,14 +217,14 @@
                        :*load-fn*      (or (:load opts) *load-fn*)
                        :*eval-fn*      (or (:eval opts) *eval-fn*)}
                       bound-vars)
-         name (cond-> name (:macro-ns opts) ana/macro-ns-name)]
+         aname (cond-> name (:macros-ns opts) ana/macro-ns-name)]
      (when (= :reload reload)
-       (swap! *loaded* disj name))
+       (swap! *loaded* disj aname))
      (when (= :reload-all reload)
        (reset! *loaded* #{}))
      (when (:verbose opts)
        (debug-prn (str "Loading " name (when (:macros-ns opts) " macros") " namespace")))
-     (if-not (contains? @*loaded* name)
+     (if-not (contains? @*loaded* aname)
        (let [env (:*env* bound-vars)]
          (try
            ((:*load-fn* bound-vars)
@@ -242,7 +242,7 @@
                               (if (:error res)
                                 (cb res)
                                 (do
-                                  (swap! *loaded* conj name)
+                                  (swap! *loaded* conj aname)
                                   (cb {:value true})))))
                      :js (process-macros-deps bound-vars cache opts
                            (fn [res]
@@ -256,10 +256,10 @@
                                                  ((:*eval-fn* bound-vars) resource)
                                                  (when cache
                                                    (load-analysis-cache!
-                                                     (:*compiler* bound-vars) name cache))
+                                                     (:*compiler* bound-vars) aname cache))
                                                  (when source-map
                                                    (load-source-map!
-                                                     (:*compiler* bound-vars) name source-map))
+                                                     (:*compiler* bound-vars) aname source-map))
                                                  (catch :default cause
                                                    (wrap-error
                                                      (ana/error env
@@ -691,7 +691,8 @@
         sb         (StringBuffer.)
         the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
-                     (:source-map opts) (assoc :*sm-data* (sm-data)))]
+                     (:source-map opts) (assoc :*sm-data* (sm-data)))
+        aname      (cond-> name (:macros-ns opts) ana/macro-ns-name)]
     (when (:verbose opts) (debug-prn "Evaluating" name))
     ((fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
@@ -740,13 +741,13 @@
                  (do
                    (when (:source-map opts)
                      (append-source-map env/*compiler*
-                       name source sb @comp/*source-map-data* opts))
+                       aname source sb @comp/*source-map-data* opts))
                    (let [js-source (.toString sb)
                          evalm     {:lang   :clj
                                     :name   name
                                     :path   (ns->relpath name)
                                     :source js-source
-                                    :cache  (get-in @env/*compiler* [::ana/namespaces name])}
+                                    :cache  (get-in @env/*compiler* [::ana/namespaces aname])}
                          complete  (fn [res]
                                      (if (:error res)
                                        (cb res)
