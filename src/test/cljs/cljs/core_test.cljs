@@ -1929,6 +1929,45 @@
   (-method1 [this] "some doc")
   (-method2 [this] ""))
 
+(deftest test-type
+  (is (= nil         (type nil)))
+  (is (= js/Number   (type 0)))
+  (is (= js/Number   (type js/NaN)))
+  (is (= js/Number   (type js/Infinity)))
+  (is (= js/String   (type "")))
+  (is (= js/Boolean  (type true)))
+  (is (= js/Boolean  (type false)))
+  (is (= js/Function (type identity)))
+  (is (= js/Function (type (fn [x] x))))
+  (is (= js/Object   (type (js-obj))))
+  (is (= js/Array    (type (array))))
+  (is (= js/Date     (type (js/Date.))))
+  (is (= js/Function (type js/Object))))
+
+(deftest test-instance?
+  (is (not (instance? js/Object  nil)))
+  (is (not (instance? js/Number  0)))
+  (is (not (instance? js/Number  js/NaN)))
+  (is (not (instance? js/Number  js/Infinity)))
+  (is (not (instance? js/String  "")))
+  (is (not (instance? js/Boolean true)))
+  (is (not (instance? js/Boolean false)))
+  (is (instance? js/Number   (js/Number. 0)))
+  (is (instance? js/Object   (js/Number. 0)))
+  (is (instance? js/String   (js/String. "")))
+  (is (instance? js/Object   (js/String. "")))
+  (is (instance? js/Boolean  (js/Boolean.)))
+  (is (instance? js/Object   (js/Boolean.)))
+  (is (instance? js/Function identity))
+  (is (instance? js/Object   identity))
+  (is (instance? js/Function (fn [x] x)))
+  (is (instance? js/Object   (js-obj)))
+  (is (instance? js/Array    (array)))
+  (is (instance? js/Object   (array)))
+  (is (instance? js/Date     (js/Date.)))
+  (is (instance? js/Object   (js/Date.)))
+  (is (instance? js/Function js/Object)))
+
 ;; =============================================================================
 ;; Tickets
 
