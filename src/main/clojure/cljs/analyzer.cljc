@@ -496,13 +496,17 @@
                              :name (symbol (str ns) (str k)))))]))
              (into {}))))))
 
+(def load-mutex (Object.))
+
 #?(:clj
    (defn load-core []
      (when (not @-cljs-macros-loaded)
        (reset! -cljs-macros-loaded true)
        (if *cljs-macros-is-classpath*
-         (load *cljs-macros-path*)
-         (load-file *cljs-macros-path*)))
+         (locking load-mutex
+           (load *cljs-macros-path*))
+         (locking load-mutex
+           (load-file *cljs-macros-path*))))
      (intern-macros 'cljs.core)))
 
 #?(:clj
@@ -2502,16 +2506,20 @@
                        (get-in reloads [:use-macros nsym])
                        (and (= nsym name) *reload-macros* :reload))]
                (if k
-                 (clojure.core/require nsym k)
-                 (clojure.core/require nsym))
+                 (locking load-mutex
+                   (clojure.core/require nsym k))
+                 (locking load-mutex
+                   (clojure.core/require nsym)))
                (intern-macros nsym k)))
            (doseq [nsym (vals require-macros)]
              (let [k (or (:require-macros reload)
                        (get-in reloads [:require-macros nsym])
                        (and (= nsym name) *reload-macros* :reload))]
                (if k
-                 (clojure.core/require nsym k)
-                 (clojure.core/require nsym))
+                 (locking load-mutex
+                   (clojure.core/require nsym k))
+                 (locking load-mutex
+                   (clojure.core/require nsym)))
                (intern-macros nsym k)))
            (when (seq use-macros)
              (check-use-macros use-macros env)))
