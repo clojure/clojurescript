@@ -727,7 +727,7 @@
              (merge
                (gets @env/*compiler* ::namespaces full-ns :defs sym)
                {:name (symbol (str full-ns) (str sym))
-                :ns (-> env :ns :name)}))
+                :ns full-ns}))
 
            (not (nil? (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym)))
            (recur env (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym) confirm)
