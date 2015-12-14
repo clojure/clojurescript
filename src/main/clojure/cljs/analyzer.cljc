@@ -2358,7 +2358,12 @@
                                   sym
                                   (symbol "cljs.core" (str sym)))
                           js-op {:js-op sym}
-                          js-op (if (true? (-> mac-var meta ::numeric))
+                          numeric #?(:clj  (-> mac-var meta ::numeric)
+                                     :cljs (let [mac-var-ns   (symbol (namespace (.-sym mac-var)))
+                                                 mac-var-name (symbol (name (.-sym mac-var)))]
+                                             (get-in @env/*compiler*
+                                               [::namespaces mac-var-ns :defs mac-var-name :meta ::numeric])))
+                          js-op (if (true? numeric)
                                   (assoc js-op :numeric true)
                                   js-op)]
                       (vary-meta form' merge js-op))
