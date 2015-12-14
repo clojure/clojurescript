@@ -496,7 +496,8 @@
                              :name (symbol (str ns) (str k)))))]))
              (into {}))))))
 
-(def load-mutex (Object.))
+#?(:clj
+   (def load-mutex (Object.)))
 
 #?(:clj
    (defn load-core []
