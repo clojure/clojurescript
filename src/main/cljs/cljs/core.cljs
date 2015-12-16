@@ -9132,9 +9132,7 @@ reduces them without incurring seq initialization"
   (set! (.-meta iref) m))
 
 (defn add-watch
-  "Alpha - subject to change.
-
-  Adds a watch function to an atom reference. The watch fn must be a
+  "Adds a watch function to an atom reference. The watch fn must be a
   fn of 4 args: a key, the reference, its old-state, its
   new-state. Whenever the reference's state might have been changed,
   any registered watches will have their functions called. The watch
@@ -9157,9 +9155,7 @@ reduces them without incurring seq initialization"
   iref)
 
 (defn remove-watch
-  "Alpha - subject to change.
-
-  Removes a watch (set by add-watch) from a reference"
+  "Removes a watch (set by add-watch) from a reference"
   [iref key]
   (-remove-watch iref key)
   iref)
@@ -9916,32 +9912,28 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (this-as this (pr-str* this))))
 
 (defn ex-info
-  "Alpha - subject to change.
-  Create an instance of ExceptionInfo, an Error type that carries a
+  "Create an instance of ExceptionInfo, an Error type that carries a
   map of additional data."
   ([msg data] (ex-info msg data nil))
   ([msg data cause]
     (ExceptionInfo. msg data cause)))
 
 (defn ex-data
-  "Alpha - subject to change.
-  Returns exception data (a map) if ex is an ExceptionInfo.
+  "Returns exception data (a map) if ex is an ExceptionInfo.
   Otherwise returns nil."
   [ex]
   (when (instance? ExceptionInfo ex)
     (.-data ex)))
 
 (defn ex-message
-  "Alpha - subject to change.
-  Returns the message attached to the given Error / ExceptionInfo object.
+  "Returns the message attached to the given Error / ExceptionInfo object.
   For non-Errors returns nil."
   [ex]
   (when (instance? js/Error ex)
     (.-message ex)))
 
 (defn ex-cause
-  "Alpha - subject to change.
-  Returns exception cause (an Error / ExceptionInfo) if ex is an
+  "Returns exception cause (an Error / ExceptionInfo) if ex is an
   ExceptionInfo.
   Otherwise returns nil."
   [ex]
