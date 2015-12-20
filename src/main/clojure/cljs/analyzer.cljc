@@ -34,7 +34,7 @@
                      [cljs.reader :as edn]))
   #?(:clj (:import [java.io File Reader PushbackReader]
                    [java.net URL]
-                   [clojure.lang Namespace Var LazySeq]
+                   [clojure.lang Namespace Var LazySeq ArityException]
                    [cljs.tagged_literals JSValue])))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -2349,7 +2349,10 @@
         (if-not (nil? mac-var)
           (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
                :cljs [do])
-            (let [form' (apply @mac-var form env (rest form))]
+            (let [form' (try
+                          (apply @mac-var form env (rest form))
+                          #?(:clj (catch ArityException e
+                                    (throw (ArityException. (- (.actual e) 2) (.name e))))))]
               (if #?(:clj (seq? form') :cljs (cljs-seq? form'))
                 (let [sym' (first form')
                       sym  (first form)]

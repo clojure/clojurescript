@@ -2784,9 +2784,11 @@
                         (~'cljs$core$IFn$_invoke$arity$variadic
                           ~@(dest-args maxfa)
                           argseq#)))
-                   `(throw (js/Error.
-                             (str "Invalid arity: "
-                               (alength ~args-sym)))))))))
+                   (if (:macro meta)
+                     `(throw (js/Error.
+                               (str "Invalid arity: " (- (alength ~args-sym) 2))))
+                     `(throw (js/Error.
+                               (str "Invalid arity: " (alength ~args-sym))))))))))
          ~@(map fn-method fdecl)
          ;; optimization properties
          (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)))))
