@@ -2801,19 +2801,24 @@
         (let [out-src (util/to-target-file output-dir (parse-ns src))]
           (if (not (.exists out-src))
             true
-            (if (> (util/last-modified src) (util/last-modified cache))
+            (if (util/changed? src cache)
               true
               (let [version' (util/compiled-by-version cache)
-                    version (util/clojurescript-version)]
+                    version  (util/clojurescript-version)]
                 (and version (not= version version'))))))))))
 
 #?(:clj
-   (defn write-analysis-cache [ns cache-file]
-     (util/mkdirs cache-file)
-     (spit cache-file
-       (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
-         (pr-str
-           (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros))))))
+   (defn write-analysis-cache
+     ([ns cache-file]
+       (write-analysis-cache ns cache-file nil))
+     ([ns cache-file src]
+      (util/mkdirs cache-file)
+      (spit cache-file
+        (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
+          (pr-str
+            (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros))))
+       (when src
+         (.setLastModified ^File cache-file (util/last-modified src))))))
 
 #?(:clj
    (defn analyze-file
@@ -2861,7 +2866,7 @@
                                        (recur ns (next forms))))
                                    ns)))]
                       (when (and cache (true? (:cache-analysis opts)))
-                        (write-analysis-cache ns cache))))
+                        (write-analysis-cache ns cache res))))
                   ;; we want want to keep dependency analysis information
                   ;; don't revert the environment - David
                   (let [{:keys [ns]}
