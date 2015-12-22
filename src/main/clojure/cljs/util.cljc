@@ -154,6 +154,9 @@
     (throw
       (IllegalArgumentException. (str "Cannot get last modified for " src)))))
 
+(defn changed? [a b]
+  (not (== (last-modified a) (last-modified b))))
+
 (defn file-or-resource [s]
   (or (and (.exists (io/file s)) (io/file s))
       (io/resource s)))

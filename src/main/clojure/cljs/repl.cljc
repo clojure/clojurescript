@@ -190,8 +190,8 @@
        ;; environment will handle actual loading - David
        (let [sb (StringBuffer.)]
          (doseq [source (->> sources
-                            (remove (comp #{:seed} :type))
-                            (map #(cljsc/source-on-disk opts %)))]
+                          (remove (comp #{:seed} :type))
+                          (map #(cljsc/source-on-disk opts %)))]
            (when (:repl-verbose opts)
              (println "Loading:" (:provides source)))
            (.append sb (cljsc/add-dep-string opts source)))

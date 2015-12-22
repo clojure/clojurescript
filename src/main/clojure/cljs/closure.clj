@@ -1522,8 +1522,8 @@
 
 (defn write-javascript
   "Write or copy a JavaScript file to output directory. Only write if the file
-  does not already exist. Return IJavaScript for the file on disk at the new
-  location."
+   does not already exist. Return IJavaScript for the file on disk at the new
+   location."
   [opts js]
   (let [out-dir  (io/file (util/output-directory opts))
         out-name (rel-output-path js opts)
@@ -1532,14 +1532,21 @@
                   :out-file (.toString out-file)
                   :requires (deps/-requires js)
                   :provides (deps/-provides js)
-                  :group    (:group js)}]
-    (when-not (.exists out-file)
+                  :group    (:group js)}
+        url      (:url js)]
+    (when (or (not (.exists out-file))
+              (and url (util/changed? out-file url)))
+      (when (and url (or ana/*verbose* (:verbose opts)))
+        (util/debug-prn "Copying" (str url) "to" (str out-file)))
       (util/mkdirs out-file)
       (spit out-file
-            (cond-> (if (map? js) (assoc js :source (deps/-source js)) js)
-              (:preprocess js) (js-transforms opts)
-              (:module-type js) (convert-js-module opts)
-              true deps/-source)))
+        (cond-> js
+          (map? js) (assoc :source (deps/-source js))
+          (:preprocess js) (js-transforms opts)
+          (:module-type js) (convert-js-module opts)
+          true deps/-source))
+      (when url
+        (.setLastModified ^File out-file (util/last-modified url))))
     (if (map? js)
       (merge js ijs)
       ijs)))
@@ -1556,7 +1563,7 @@
 
 (defn source-on-disk
   "Ensure that the given IJavaScript exists on disk in the output directory.
-  Return updated IJavaScript with the new location if necessary."
+   Return updated IJavaScript with the new location if necessary."
   [opts js]
   (if (write-js? js)
     (write-javascript opts js)
@@ -1568,9 +1575,11 @@
           source-url (:source-url js)]
       (when (and out-file source-url
                  (or (not (.exists ^File out-file))
-                     (> (.lastModified (io/file source-url))
-                        (.lastModified out-file))))
-        (spit out-file (slurp source-url)))
+                     (util/changed? (io/file source-url) out-file)))
+        (when (or ana/*verbose* (:verbose opts))
+          (util/debug-prn "Copying" (str source-url) "to" (str out-file)))
+        (spit out-file (slurp source-url))
+        (.setLastModified ^File out-file (util/last-modified source-url)))
       js)))
 
 (comment
@@ -2060,16 +2069,16 @@
 
 (defn aot-cache-core []
   (let [base-path (io/file "src" "main" "cljs" "cljs")
-        src (io/file base-path "core.cljs")
-        dest (io/file base-path "core.aot.js")
-        cache (io/file base-path "core.cljs.cache.aot.edn")]
+        src       (io/file base-path "core.cljs")
+        dest      (io/file base-path "core.aot.js")
+        cache     (io/file base-path "core.cljs.cache.aot.edn")]
     (util/mkdirs dest)
     (env/with-compiler-env (env/default-compiler-env)
       (comp/compile-file src dest
         {:source-map true
          :source-map-url "core.js.map"
          :output-dir (str "src" File/separator "main" File/separator "cljs")})
-      (ana/write-analysis-cache 'cljs.core cache))))
+      (ana/write-analysis-cache 'cljs.core cache src))))
 
 (comment
   (time
