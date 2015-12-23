@@ -462,6 +462,7 @@
                    (slurp reader))]
     (util/mkdirs out-file)
     (spit out-file content)
+    (.setLastModified ^File out-file (util/last-modified url))
     out-file))
 
 ;; TODO: it would be nice if we could consolidate requires-compilation?
@@ -1533,11 +1534,11 @@
                   :requires (deps/-requires js)
                   :provides (deps/-provides js)
                   :group    (:group js)}
-        url      (:url js)]
+        res      (or (:url js) (:source-file js))]
     (when (or (not (.exists out-file))
-              (and url (util/changed? out-file url)))
-      (when (and url (or ana/*verbose* (:verbose opts)))
-        (util/debug-prn "Copying" (str url) "to" (str out-file)))
+              (and res (util/changed? out-file res)))
+      (when (and res (or ana/*verbose* (:verbose opts)))
+        (util/debug-prn "Copying" (str res) "to" (str out-file)))
       (util/mkdirs out-file)
       (spit out-file
         (cond-> js
@@ -1545,8 +1546,8 @@
           (:preprocess js) (js-transforms opts)
           (:module-type js) (convert-js-module opts)
           true deps/-source))
-      (when url
-        (.setLastModified ^File out-file (util/last-modified url))))
+      (when res
+        (.setLastModified ^File out-file (util/last-modified res))))
     (if (map? js)
       (merge js ijs)
       ijs)))
