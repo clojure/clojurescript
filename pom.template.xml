@@ -57,42 +57,131 @@
     <developers>
         <developer><name>Aaron Bedra</name></developer>
         <developer><name>Alan Dipert</name></developer>
+        <developer><name>Alex Dowad</name></developer>
         <developer><name>Alan Malloy</name></developer>
         <developer><name>Alen Ribic</name></developer>
         <developer><name>Alex Redington</name></developer>
+        <developer><name>Ambrose Bonnaire-Sergeant</name></developer>
+        <developer><name>Andrew Rosa</name></developer>
+        <developer><name>Antonin Hildebrand</name></developer>
+        <developer><name>Ben Moss</name></developer>
+        <developer><name>Benjamin Meyer</name></developer>
+        <developer><name>Bo Jeanes</name></developer>
         <developer><name>Bobby Calderwood</name></developer>
         <developer><name>Brandon Bloom</name></developer>
         <developer><name>Brenton Ashworth</name></developer>
+        <developer><name>Brian Jenkins</name></developer>
+        <developer><name>Brian Kim</name></developer>
+        <developer><name>Brian Taylor</name></developer>
+        <developer><name>Bruce Hauman</name></developer>
+        <developer><name>Chad Taylor</name></developer>
+        <developer><name>Chas Emerick</name></developer>
+        <developer><name>Charles Duffy</name></developer>
+        <developer><name>Chris Granger</name></developer>
+        <developer><name>Chris Pickard</name></developer>
         <developer><name>Chris Houser</name></developer>
+        <developer><name>Chris Truter</name></developer>
         <developer><name>Christopher Redinger</name></developer>
+        <developer><name>Colin Jones</name></developer>
         <developer><name>Creighton Kirkendall</name></developer>
         <developer><name>David Nolen</name></developer>
+        <developer><name>Daniel Compton</name></developer>
+        <developer><name>Daniel Skarda</name></developer>
+        <developer><name>Dave Sann</name></developer>
         <developer><name>Devin Walters</name></developer>
+        <developer><name>Dylan Butman</name></developer>
+        <developer><name>Edward Tsech</name></developer>
+        <developer><name>Eric Normand</name></developer>
         <developer><name>Eric Thorsen</name></developer>
+        <developer><name>Erik Ouchterlony</name></developer>
+        <developer><name>Evan Mezeske</name></developer>
+        <developer><name>Francis Avila</name></developer>
         <developer><name>Frank Failla</name></developer>
+        <developer><name>Francoise De Serre</name></developer>
+        <developer><name>Gary Fredericks</name></developer>
+        <developer><name>Gary Trakhman</name></developer>
+        <developer><name>Herwig Hochleitner</name></developer>
         <developer><name>Hubert Iwaniuk</name></developer>
         <developer><name>Hugo Duncan</name></developer>
+        <developer><name>Immo Heikkinen</name></developer>
+        <developer><name>Ivan Willig</name></developer>
+        <developer><name>J. Pablo Fernandez</name></developer>
+        <developer><name>Jamie Brandon</name></developer>
+        <developer><name>Jeff Dik</name></developer>
         <developer><name>Jess Martin</name></developer>
+        <developer><name>Joel Holdbrooks</name></developer>
+        <developer><name>Joel Martin</name></developer>
         <developer><name>John Li</name></developer>
+        <developer><name>Jonas De Vuyst</name></developer>
         <developer><name>Jonas Enlund</name></developer>
+        <developer><name>Jonathan Boston</name></developer>
+        <developer><name>Jozef Wagner</name></developer>
         <developer><name>Juergen Hoetzel</name></developer>
+        <developer><name>Juho Teperi</name></developer>
+        <developer><name>Julian Eluard</name></developer>
+        <developer><name>Justin Tirrell</name></developer>
+        <developer><name>Kovas Boguta</name></developer>
         <developer><name>Kevin J. Lynagh</name></developer>
         <developer><name>Laszlo Toeroek</name></developer>
+        <developer><name>Leon Grapenthin</name></developer>
         <developer><name>Luke VanderHart</name></developer>
+        <developer><name>Maria Geller</name></developer>
+        <developer><name>Martin Klepsch</name></developer>
+        <developer><name>Matjaz Gregoric</name></developer>
+        <developer><name>Max Gonzih</name></developer>
+        <developer><name>Max Penet</name></developer>
+        <developer><name>Max Veytsman</name></developer>
+        <developer><name>Michael Ballantyne</name></developer>
         <developer><name>Michael Fogus</name></developer>
+        <developer><name>Michael Glaesemann</name></developer>
+        <developer><name>Michael Griffiths</name></developer>
+        <developer><name>Michael O. Church</name></developer>
         <developer><name>Michał Marczyk</name></developer>
+        <developer><name>Michiel Borkent</name></developer>
+        <developer><name>Mike Fikes</name></developer>
         <developer><name>Moritz Ulrich</name></developer>
+        <developer><name>Murphy McMahon</name></developer>
+        <developer><name>Nelson Morris</name></developer>
         <developer><name>Nicola Mometto</name></developer>
+        <developer><name>Nikita Prokopov</name></developer>
+        <developer><name>Osbert Feng</name></developer>
         <developer><name>Paul Michael Bauer</name></developer>
+        <developer><name>Paul deGrandis</name></developer>
+        <developer><name>Peter Schuck</name></developer>
+        <developer><name>Peter Stephens</name></developer>
+        <developer><name>Peter Taoussanis</name></developer>
+        <developer><name>Pieter van Prooijen</name></developer>
+        <developer><name>Raphaël Amiard</name></developer>
+        <developer><name>Raymond Huang</name></developer>
         <developer><name>Rich Hickey</name></developer>
         <developer><name>Roman Gonzalez</name></developer>
+        <developer><name>Roman Scherer</name></developer>
+        <developer><name>Rupa Shankar</name></developer>
         <developer><name>Russ Olsen</name></developer>
+        <developer><name>Sam Umbach</name></developer>
+        <developer><name>Samuel Miller</name></developer>
+        <developer><name>Sean Grove</name></developer>
+        <developer><name>Sebastien Bensusan</name></developer>
+        <developer><name>Sean LeBron</name></developer>
+        <developer><name>Steven Kallstrom</name></developer>
         <developer><name>Stuart Halloway</name></developer>
+        <developer><name>Stuart Mitchell</name></developer>
         <developer><name>Stuart Sierra</name></developer>
         <developer><name>Takahiro Hozumi</name></developer>
+        <developer><name>Thomas Heller</name></developer>
         <developer><name>Thomas Scheiblauer</name></developer>
+        <developer><name>Tim Griesser</name></developer>
+        <developer><name>Timothy Pratley</name></developer>
+        <developer><name>Toby Crawley</name></developer>
         <developer><name>Tom Hickey</name></developer>
+        <developer><name>Tom Jack</name></developer>
+        <developer><name>Tom Marble</name></developer>
+        <developer><name>Travis Thieman</name></developer>
+        <developer><name>Travis Vachon</name></developer>
         <developer><name>Wilkes Joiner</name></developer>
+        <developer><name>Zachary Allaun</name></developer>
+        <developer><name>Zach Oakes</name></developer>
+        <developer><name>Zubair Quraishi</name></developer>
     </developers>
 
     <scm>
