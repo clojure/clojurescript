@@ -456,31 +456,40 @@
 
 (defn jar-file-to-disk
   "Copy a file contained within a jar to disk. Return the created file."
-  [url out-dir]
-  (let [out-file (io/file out-dir (path-from-jarfile url))
-        content  (with-open [reader (io/reader url)]
-                   (slurp reader))]
-    (util/mkdirs out-file)
-    (spit out-file content)
-    (.setLastModified ^File out-file (util/last-modified url))
-    out-file))
+  ([url out-dir]
+    (jar-file-to-disk url out-dir nil))
+  ([url out-dir opts]
+   (let [out-file (io/file out-dir (path-from-jarfile url))
+         content  (with-open [reader (io/reader url)]
+                    (slurp reader))]
+     (when (and url (or ana/*verbose* (:verbose opts)))
+       (util/debug-prn "Copying" (str url) "to" (str out-file)))
+     (util/mkdirs out-file)
+     (spit out-file content)
+     (.setLastModified ^File out-file (util/last-modified url))
+     out-file)))
 
 ;; TODO: it would be nice if we could consolidate requires-compilation?
 ;; logic - David
 (defn compile-from-jar
-  "Compile a file from a jar."
-  [this {:keys [output-file] :as opts}]
-  (or (when output-file
-        (let [out-file (io/file (util/output-directory opts) output-file)]
-          (when (and (.exists out-file)
-                     (= (util/compiled-by-version out-file)
-                        (util/clojurescript-version)))
-            (compile-file
-              (io/file (util/output-directory opts)
-                (last (string/split (.getPath ^URL this) #"\.jar!/")))
-              opts))))
-      (let [file-on-disk (jar-file-to-disk this (util/output-directory opts))]
-        (-compile file-on-disk opts))))
+  "Compile a file from a jar if necessary. Returns IJavaScript."
+  [jar-file {:keys [output-file] :as opts}]
+  (let [out-file (when output-file
+                   (io/file (util/output-directory opts) output-file))]
+    (if (or (nil? out-file)
+            (not (.exists ^File out-file))
+            (not= (util/compiled-by-version out-file)
+                  (util/clojurescript-version))
+            (util/changed? jar-file out-file))
+      ;; actually compile from JAR
+      (let [file-on-disk (jar-file-to-disk jar-file (util/output-directory opts) opts)]
+        (-compile file-on-disk opts))
+      ;; have to call compile-file as it includes more IJavaScript
+      ;; information than ana/parse-ns
+      (compile-file
+        (io/file (util/output-directory opts)
+          (last (string/split (.getPath ^URL jar-file) #"\.jar!/")))
+        opts))))
 
 (defn find-jar-sources
   [this opts]
