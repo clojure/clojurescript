@@ -2322,7 +2322,8 @@
         :cljs [(identical? "clojure.repl" nstr) (find-macros-ns 'cljs.repl)])
     #?@(:clj  [(.contains nstr ".")             (find-ns (symbol nstr))]
         :cljs [(goog.string/contains nstr ".")  (find-macros-ns (symbol nstr))])
-    :else (some-> env :ns :require-macros (get (symbol nstr)) find-ns)))
+    :else (some-> env :ns :require-macros (get (symbol nstr)) #?(:clj  find-ns
+                                                                 :cljs find-macros-ns))))
 
 (defn get-expander* [sym env]
   (when-not (or (not (nil? (gets env :locals sym))) ; locals hide macros
