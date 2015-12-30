@@ -2880,7 +2880,7 @@ reduces them without incurring seq initialization"
     (if (nil? rest) nil (seq rest)))
 
   ICollection
-  (-conj [coll o] (Cons. nil o coll __hash))
+  (-conj [coll o] (Cons. nil o coll nil))
 
   IEmptyableCollection
   (-empty [coll] (with-meta (.-EMPTY List) meta))

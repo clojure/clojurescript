@@ -2983,6 +2983,18 @@
                               IFooBar
                               (cljs.core-test/a-method [_] "foobar"))))))
 
+(deftest test-cljs-1524
+  (let [x0 []
+        x1 (conj x0 1)
+        x2 (conj x1 2)
+        x3 (remove #{1} x2)
+        x4 (remove #{2} x3)
+        x5 (conj x4 3)
+        x6 (conj x5 4)
+        x7 (conj x6 5)]
+    (is (not (== (hash x0) (hash x1) (hash x2) (hash x3) (hash x4)
+                 (hash x5) (hash x6) (hash x7))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
