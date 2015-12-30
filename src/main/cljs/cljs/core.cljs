@@ -194,8 +194,8 @@
 
 (defn ^boolean number?
   "Returns true if x is a JavaScript number."
-  [n]
-  (cljs.core/number? n))
+  [x]
+  (cljs.core/number? x))
 
 (defn ^boolean not
   "Returns true if x is logical false, false otherwise."
