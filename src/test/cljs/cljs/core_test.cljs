@@ -1639,6 +1639,19 @@
     (is (= '(2 3) (next (range 1 4))))
     ))
 
+(deftest test-lazy-seq-realized?
+  (testing "Testing LazySeq IPending"
+    (let [xs (lazy-seq
+               (cons 1
+                 (lazy-seq
+                   (cons 2
+                     (lazy-seq (cons 3 nil))))))]
+      (is (not (realized? xs)))
+      (is (not (realized? (rest xs))))
+      (is (realized? xs))
+      (is (not (realized? (nthrest xs 2))))
+      (is (realized? (rest xs))))))
+
 (deftest test-chunked
   (let [r (range 64)
         v (into [] r)]

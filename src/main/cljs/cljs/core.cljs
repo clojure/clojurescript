@@ -650,9 +650,9 @@
 
 (defprotocol IPending
   "Protocol for types which can have a deferred realization. Currently only
-  implemented by Delay."
-  (^boolean -realized? [d]
-    "Returns true if a value for d has been produced, false otherwise."))
+  implemented by Delay and LazySeq."
+  (^boolean -realized? [x]
+    "Returns true if a value for x has been produced, false otherwise."))
 
 (defprotocol IWatchable
   "Protocol for types that can be watched. Currently only implemented by Atom."
@@ -3013,6 +3013,10 @@ reduces them without incurring seq initialization"
         (set! s (fn))
         (set! fn nil)
         s)))
+
+  IPending
+  (-realized? [x]
+    (not fn))
 
   IWithMeta
   (-with-meta [coll meta] (LazySeq. meta fn s __hash))
@@ -9195,7 +9199,7 @@ reduces them without incurring seq initialization"
     value)
 
   IPending
-  (-realized? [d]
+  (-realized? [x]
     (not f)))
 
 (defn ^boolean delay?
@@ -9211,8 +9215,8 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean realized?
   "Returns true if a value has been produced for a delay or lazy sequence."
-  [d]
-  (-realized? d))
+  [x]
+  (-realized? x))
 
 (defn- preserving-reduced
   [rf]
