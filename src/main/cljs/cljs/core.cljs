@@ -480,7 +480,7 @@
     (-index [coll]))
 
 (defprotocol IIndexed
-  "Protocol for collections to provide idexed-based access to their items."
+  "Protocol for collections to provide indexed-based access to their items."
   (-nth [coll n] [coll n not-found]
     "Returns the value at the index n in the collection coll.
      Returns not-found if index n is out of bounds and not-found is supplied."))
