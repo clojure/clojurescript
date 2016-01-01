@@ -466,7 +466,7 @@
   "Protocol for creating an empty collection."
   (-empty [coll]
     "Returns an empty collection of the same category as coll. Used
-     by cljs.core/count."))
+     by cljs.core/empty."))
 
 (defprotocol ICollection
   "Protocol for adding to a collection."
