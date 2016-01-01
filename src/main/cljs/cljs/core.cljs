@@ -2828,8 +2828,8 @@ reduces them without incurring seq initialization"
 (defn ^seq rseq
   "Returns, in constant time, a seq of the items in rev (which
   can be a vector or sorted-map), in reverse order. If rev is empty returns nil"
-  [coll]
-  (-rseq coll))
+  [rev]
+  (-rseq rev))
 
 (defn reverse
   "Returns a seq of the items in coll in reverse order. Not lazy."
