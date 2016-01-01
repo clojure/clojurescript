@@ -921,14 +921,14 @@
 (core/defmacro identical? [a b]
   (bool-expr (core/list 'js* "(~{} === ~{})" a b)))
 
-(core/defmacro instance? [t o]
+(core/defmacro instance? [c x]
   ;; Google Closure warns about some references to RegExp, so
   ;; (instance? RegExp ...) needs to be inlined, but the expansion
   ;; should preserve the order of argument evaluation.
-  (bool-expr (if (clojure.core/symbol? t)
-               (core/list 'js* "(~{} instanceof ~{})" o t)
-               `(let [t# ~t o# ~o]
-                  (~'js* "(~{} instanceof ~{})" o# t#)))))
+  (bool-expr (if (clojure.core/symbol? c)
+               (core/list 'js* "(~{} instanceof ~{})" x c)
+               `(let [c# ~c x# ~x]
+                  (~'js* "(~{} instanceof ~{})" x# c#)))))
 
 (core/defmacro number? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'number'" x)))

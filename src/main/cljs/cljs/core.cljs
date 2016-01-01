@@ -904,8 +904,8 @@
 (defn ^boolean instance?
   "Evaluates x and tests if it is an instance of the type
   c. Returns true or false"
-  [t o]
-  (cljs.core/instance? t o))
+  [c x]
+  (cljs.core/instance? c x))
 
 (defn ^boolean symbol?
   "Return true if x is a Symbol"
