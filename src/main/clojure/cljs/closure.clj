@@ -1579,7 +1579,9 @@
     (write-javascript opts js)
     ;; always copy original ClojureScript sources to the output directory
     ;; when source maps enabled
-    (let [out-file (when-let [ns (and (:source-map opts) (first (:provides js)))]
+    (let [out-file (when-let [ns (and (:source-map opts)
+                                      (:source-url js)
+                                      (first (:provides js)))]
                      (io/file (io/file (util/output-directory opts))
                        (util/ns->relpath ns (util/ext (:source-url js)))))
           source-url (:source-url js)]
