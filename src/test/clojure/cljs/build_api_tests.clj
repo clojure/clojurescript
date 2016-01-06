@@ -150,7 +150,7 @@
   (let [out-file (io/file "out/main.js")]
     (.delete out-file)
     (try
-      (build (inputs "src/test/cljs")
+      (build (inputs "src/test/cljs_build")
         {:main 'circular-deps.a
          :optimizations :none
          :verbose true

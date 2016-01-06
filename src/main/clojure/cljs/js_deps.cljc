@@ -142,14 +142,19 @@ case."
     {} deps))
 
 (defn dependency-order-visit
-  [state ns-name]
-  (let [file (get state ns-name)]
-    (if (or (:visited file) (nil? file))
-      state
-      (let [state (assoc-in state [ns-name :visited] true)
-            deps (:requires file)
-            state (reduce dependency-order-visit state deps)]
-        (assoc state :order (conj (:order state) file))))))
+  ([state ns-name]
+    (dependency-order-visit state ns-name []))
+  ([state ns-name seen]
+   (assert (not (some #{ns-name} seen))
+     (str "Circular dependency detected, "
+       (apply str (interpose " -> " (conj seen ns-name)))))
+   (let [file (get state ns-name)]
+     (if (or (:visited file) (nil? file))
+       state
+       (let [state (assoc-in state [ns-name :visited] true)
+             deps  (:requires file)
+             state (reduce #(dependency-order-visit %1 %2 (conj seen ns-name)) state deps)]
+         (assoc state :order (conj (:order state) file)))))))
 
 (defn- pack-string [s]
   (if (string? s)
@@ -167,8 +172,8 @@ case."
   [coll]
   (let [state (build-index (map pack-string coll))]
     (map unpack-string
-         (distinct
-          (:order (reduce dependency-order-visit (assoc state :order []) (keys state)))))))
+      (distinct
+        (:order (reduce dependency-order-visit (assoc state :order []) (keys state)))))))
 
 
 ;; Dependencies
