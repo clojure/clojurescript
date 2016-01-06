@@ -149,8 +149,12 @@
 (deftest cljs-1537-circular-deps
   (let [out-file (io/file "out/main.js")]
     (.delete out-file)
-    (build (inputs "src/test/cljs")
-      {:main 'circular-deps.a
-       :optimizations :none
-       :verbose true
-       :output-to "out"})))
+    (try
+      (build (inputs "src/test/cljs")
+        {:main 'circular-deps.a
+         :optimizations :none
+         :verbose true
+         :output-to "out"})
+      (is false)
+      (catch Throwable e
+        (is true)))))
