@@ -1043,7 +1043,7 @@
   (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
     (apply (val) a b c d e f g h i j k l m n o p q r s t rest)))
 
-(defn var?
+(defn ^boolean var?
   "Returns true if v is of type cljs.core.Var"
   [v]
   (instance? cljs.core.Var v))
@@ -1052,7 +1052,7 @@
 
 (declare array-seq prim-seq IndexedSeq)
 
-(defn iterable?
+(defn ^boolean iterable?
   "Return true if x implements IIterable protocol."
   [x]
   (satisfies? IIterable x))
@@ -1062,7 +1062,7 @@
   [value]
   (-clone value))
 
-(defn cloneable?
+(defn ^boolean cloneable?
   "Return true if x implements ICloneable protocol."
   [value]
   (satisfies? ICloneable value))
@@ -4070,7 +4070,7 @@ reduces them without incurring seq initialization"
   [val]
   (Volatile. val))
 
-(defn volatile?
+(defn ^boolean volatile?
   "Returns true if x is a volatile."
   [x] (instance? Volatile x))
 
@@ -9999,7 +9999,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
     (-write writer (str "#" tag " "))
     (pr-writer form writer opts)))
 
-(defn tagged-literal?
+(defn ^boolean tagged-literal?
   "Return true if the value is the data representation of a tagged literal"
   [value]
   (instance? TaggedLiteral value))
