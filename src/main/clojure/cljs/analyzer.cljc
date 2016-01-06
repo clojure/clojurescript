@@ -1654,7 +1654,10 @@
      (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
        (assert (every? #(not (contains? *cljs-dep-set* %)) deps)
          (str "Circular dependency detected, "
-           (apply str (interpose " -> " (-> *cljs-dep-set* meta :dep-path)))))
+           (apply str
+             (interpose " -> "
+               (conj (-> *cljs-dep-set* meta :dep-path)
+                 (some *cljs-dep-set* deps))))))
        (doseq [dep deps]
          (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                        (contains? (:js-dependency-index compiler) (name dep))
