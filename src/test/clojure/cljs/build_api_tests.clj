@@ -145,3 +145,12 @@
     (is (re-find #"Loading modules A and B" (slurp module-main)))
     (is (re-find #"Module A loaded" (slurp module-a)))
     (is (re-find #"Module B loaded" (slurp module-b)))))
+
+(deftest cljs-1537-circular-deps
+  (let [out-file (io/file "out/main.js")]
+    (.delete out-file)
+    (build (inputs "src/test/cljs")
+      {:main 'circular-deps.a
+       :optimizations :none
+       :verbose true
+       :output-to "out"})))
