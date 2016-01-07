@@ -9708,7 +9708,7 @@ reduces them without incurring seq initialization"
   vectors, and JavaScript objects into ClojureScript maps.  With
   option ':keywordize-keys true' will convert object fields from
   strings to keywords."
-  ([x] (js->clj x {:keywordize-keys false}))
+  ([x] (js->clj x :keywordize-keys false))
   ([x & opts]
     (let [{:keys [keywordize-keys]} opts
           keyfn (if keywordize-keys keyword str)
