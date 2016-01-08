@@ -1,3 +1,35 @@
+## 1.7.228
+
+### Enhancements
+* New experimental :parallel-build compiler option
+
+### Changes
+* CLJS-1538: Type hint some cljs.core predicates
+* Docstring typos
+* CLJS-1463: (js-debugger) should generate nil-returning expression
+* CLJS-1516: better error message when calling macros with arity
+* CLJS-1514: Remove Alpha designators on *-watch and ex-*
+* clojure.core/require is not thread safe, use locks
+* CLJS-1505: Add tests to characterize `type` and `instance?` behavior
+* CLJS-1491: Check :source-map is boolean when :optimizations :none
+* split sm/encode into 2 functions so JSON generation is optional
+
+### Fixes
+* CLJS-1539: Parallel compilation fails on circular dependencies
+* CLJS-1425: self-host: cljs.js/eval cb argument inconsistent with docstring
+* CLJS-1425: self-host: cljs.js/eval cb argument inconsistent with docstring
+* CLJS-1524: Bad hashing for Cons
+* CLJS-1487: Fix handling of timestamp comparison for dependencies in JARs
+* CLJS-1498: Fix parallel build logging
+* CLJS-1477: Do not attempt to resolve "native" type symbols
+* CLJS-1236: `constructor` needs to munged if used as namespace segment
+* CLJS-1330: self-host: .toString on int needs parens
+* CLJS-1512: Self-host: arithmetic form meta missing :numeric
+* CLJS-1506: doc for referred fn displays alias ns
+* CLJS-1504: Self-host: Pseudo-namespace for macro namespace analysis
+metadata
+* CLJS-1483: Minor DCE regression with advanced compilation mode
+
 ## 1.7.170
 
 This is a breaking change for tooling libraries like lein-cljsbuild,
