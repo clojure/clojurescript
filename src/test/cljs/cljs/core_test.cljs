@@ -907,6 +907,16 @@
     (is (contains? "f" 0))
     (is (not (contains? "f" 55)))))
 
+(deftest test-run!
+  (testing "Testing run!"
+    (let [a (atom 0)]
+      (run! (fn [n]
+              (swap! a + n))
+        (range 5))
+      (is (= 10 @a)))
+    (is (nil? (run! identity [1])))
+    (is (nil? (run! reduced (range))))))
+
 (deftest test-distinct
   (testing "Testing distinct? & distinct"
     (is (distinct? 1 2 3))

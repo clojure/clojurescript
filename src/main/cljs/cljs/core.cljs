@@ -9293,8 +9293,8 @@ reduces them without incurring seq initialization"
   "Runs the supplied procedure (via reduce), for purposes of side
   effects, on successive items in the collection. Returns nil"
   [proc coll]
-  (reduce #(proc %2) nil coll))
-
+  (reduce #(proc %2) nil coll)
+  nil)
 
 (defprotocol IEncodeJS
   (-clj->js [x] "Recursively transforms clj values to JavaScript")
