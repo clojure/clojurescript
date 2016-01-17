@@ -211,6 +211,9 @@
     (. compiler-options
       (setExtraAnnotationNames (map name (:closure-extra-annotations opts)))))
 
+  (. compiler-options
+     (setOutputCharset (:closure-output-charset opts "UTF-8")))
+
   compiler-options)
 
 (defn ^CompilerOptions make-options
