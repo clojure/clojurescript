@@ -217,6 +217,29 @@
     (fn [{:keys [error value]}]
       (is (= "1" value)))))
 
+(deftest test-CLJS-1551
+  (cljs/eval-str st
+    "(if-let [x true y true] 3)"
+    nil
+    {:eval node-eval}
+    (fn [{:keys [error value]}]
+      (is (nil? value))
+      (is (= "if-let requires exactly 2 forms in binding vector at line 1 " (ex-message (ex-cause error))))))
+  (cljs/eval-str st
+    "(if-let [x true] 1 2 3)"
+    nil
+    {:eval node-eval}
+    (fn [{:keys [error value]}]
+      (is (nil? value))
+      (is (= "if-let requires 1 or 2 forms after binding vector at line 1 " (ex-message (ex-cause error))))))
+  (cljs/eval-str st
+    "(if-let '(x true) 1)"
+    nil
+    {:eval node-eval}
+    (fn [{:keys [error value]}]
+      (is (nil? value))
+      (is (= "if-let requires a vector for its binding at line 1 " (ex-message (ex-cause error)))))))
+
 #_(deftest test-eval-str-with-require
   (async done
     (let [l (latch 3 done)]

@@ -7,8 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core
-  (:refer-clojure :exclude [-> ->> .. amap and areduce alength aclone assert binding bound-fn case comment cond condp
-                            declare definline definterface defmethod defmulti defn defn- defonce
+  (:refer-clojure :exclude [-> ->> .. amap and areduce alength aclone assert assert-args binding bound-fn case comment
+                            cond condp declare definline definterface defmethod defmulti defn defn- defonce
                             defprotocol defrecord defstruct deftype delay destructure doseq dosync dotimes doto
                             extend-protocol extend-type fn for future gen-class gen-interface
                             if-let if-not import io! lazy-cat lazy-seq let letfn locking loop
@@ -35,19 +35,21 @@
                             cond-> cond->> as-> some-> some->>
 
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
-                            #?@(:cljs [alias assert-args coercive-not coercive-not= coercive-= coercive-boolean
+                            #?@(:cljs [alias coercive-not coercive-not= coercive-= coercive-boolean
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
                                        specify copy-arguments goog-define js-comment js-inline-comment
                                        unsafe-cast])])
-  #?(:cljs (:require-macros [cljs.core :as core]))
+  #?(:cljs (:require-macros [cljs.core :as core]
+                            [cljs.support :refer [assert-args]]))
   (:require clojure.walk
             clojure.set
             [clojure.string :as string]
             [cljs.compiler :as comp]
             [cljs.env :as env]
+            #?(:clj [cljs.support :refer [assert-args]])
             #?(:cljs [cljs.core :as core])
             #?(:cljs [cljs.analyzer :as ana])))
 
@@ -338,9 +340,9 @@
      ([bindings then]
       `(if-let ~bindings ~then nil))
      ([bindings then else & oldform]
-      (core/assert-args
+      (assert-args if-let
         (vector? bindings) "a vector for its binding"
-        (nil? oldform) "1 or 2 forms after binding vector"
+        (empty? oldform) "1 or 2 forms after binding vector"
         (= 2 (count bindings)) "exactly 2 forms in binding vector")
       (core/let [form (bindings 0) tst (bindings 1)]
         `(let [temp# ~tst]
@@ -396,7 +398,7 @@
 
      Roughly the same as (when (seq xs) (let [x (first xs)] body)) but xs is evaluated only once"
      [bindings & body]
-     (core/assert-args
+     (assert-args when-first
        (vector? bindings) "a vector for its binding"
        (= 2 (count bindings)) "exactly 2 forms in binding vector")
      (core/let [[x xs] bindings]
@@ -410,7 +412,7 @@
 
      When test is true, evaluates body with binding-form bound to the value of test"
      [bindings & body]
-     (core/assert-args
+     (assert-args when-let
        (vector? bindings) "a vector for its binding"
        (= 2 (count bindings)) "exactly 2 forms in binding vector")
      (core/let [form (bindings 0) tst (bindings 1)]
@@ -504,9 +506,9 @@
      ([bindings then]
       `(if-some ~bindings ~then nil))
      ([bindings then else & oldform]
-      (core/assert-args
+      (assert-args if-some
         (vector? bindings) "a vector for its binding"
-        (nil? oldform) "1 or 2 forms after binding vector"
+        (empty? oldform) "1 or 2 forms after binding vector"
         (= 2 (count bindings)) "exactly 2 forms in binding vector")
       (core/let [form (bindings 0) tst (bindings 1)]
         `(let [temp# ~tst]
@@ -522,7 +524,7 @@
       When test is not nil, evaluates body with binding-form bound to the
       value of test"
      [bindings & body]
-     (core/assert-args
+     (assert-args when-some
        (vector? bindings) "a vector for its binding"
        (= 2 (count bindings)) "exactly 2 forms in binding vector")
      (core/let [form (bindings 0) tst (bindings 1)]
@@ -601,20 +603,6 @@
 (core/defmacro defonce [x init]
   `(when-not (exists? ~x)
      (def ~x ~init)))
-
-(core/defmacro ^{:private true} assert-args [fnname & pairs]
-  #?(:clj `(do (when-not ~(first pairs)
-                 (throw (IllegalArgumentException.
-                          ~(core/str fnname " requires " (second pairs)))))
-               ~(core/let [more (nnext pairs)]
-                  (core/when more
-                    (list* `assert-args fnname more))))
-     :cljs `(do (when-not ~(first pairs)
-                  (throw (js/Error.
-                           ~(core/str fnname " requires " (second pairs)))))
-                ~(core/let [more (nnext pairs)]
-                   (core/when more
-                     (list* `assert-args fnname more))))))
 
 (core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
