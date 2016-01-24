@@ -20,7 +20,7 @@ Latest stable release: 1.7.228
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>clojurescript</artifactId>
-  <version>1.7.170</version>
+  <version>1.7.228</version>
 </dependency>
 ```
 
