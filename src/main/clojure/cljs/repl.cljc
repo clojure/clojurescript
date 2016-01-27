@@ -1154,7 +1154,7 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
      (binding [cljs.core/*print-newline* true]
        (with-out-str
          ~(if-let [special-name ('{& fn catch try finally try} name)]
-            `(cljs.repl/print-doc (quote ~(special-doc special-name)))
+            `(doc ~special-name)
             (cond
               (special-doc-map name)
               `(cljs.repl/print-doc (quote ~(special-doc name)))
