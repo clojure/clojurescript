@@ -13,6 +13,7 @@
             [clojure.data.json :as json]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
+            [cljs.tagged-literals :as tags]
             [clojure.stacktrace :as trace]
             [clojure.repl :as cljrepl]
             [clojure.edn :as edn]
@@ -1225,8 +1226,9 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
           (with-open [pbr (PushbackReader. (io/reader f))]
             (let [rdr (readers/source-logging-push-back-reader pbr)]
               (dotimes [_ (dec (:line v))] (readers/read-line rdr))
-              (-> (reader/read {:read-cond :allow :features #{:cljs}} rdr)
-                meta :source))))))))
+              (binding [reader/*data-readers* tags/*cljs-data-readers*]
+                (-> (reader/read {:read-cond :allow :features #{:cljs}} rdr)
+                  meta :source)))))))))
 
 (comment
   (def cenv (env/default-compiler-env))
