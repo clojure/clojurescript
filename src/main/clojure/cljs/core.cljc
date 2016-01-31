@@ -2328,12 +2328,14 @@
       assoc :tag 'array)))
 
 (core/defmacro make-array
-  [size]
-  (vary-meta
-    (if (core/number? size)
-      `(array ~@(take size (repeat nil)))
-      `(js/Array. ~size))
-    assoc :tag 'array))
+  ([size]
+   (vary-meta
+     (if (core/number? size)
+       `(array ~@(take size (repeat nil)))
+       `(js/Array. ~size))
+     assoc :tag 'array))
+  ([type size]
+    `(make-array ~size)))
 
 (core/defmacro list
   ([] '(.-EMPTY cljs.core/List))

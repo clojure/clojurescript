@@ -1044,6 +1044,25 @@
         (apply aset a [0 0 "bar"])
         (is (= (aget a 0 0) "bar"))))))
 
+(defn- primitive-arrays-equal
+  [a b]
+  (= (js->clj a) (js->clj b)))
+
+(deftest test-make-array
+  (testing "Testing make-array"
+    (is (primitive-arrays-equal #js [] (make-array 0)))
+    (is (primitive-arrays-equal #js [] (apply make-array [0])))
+    (is (primitive-arrays-equal #js [nil] (make-array 1)))
+    (is (primitive-arrays-equal #js [nil] (apply make-array [1])))
+    (is (primitive-arrays-equal #js [nil nil] (make-array 2)))
+    (is (primitive-arrays-equal #js [nil nil] (apply make-array [2])))
+    (is (primitive-arrays-equal #js [] (make-array nil 0)))
+    (is (primitive-arrays-equal #js [] (apply make-array [nil 0])))
+    (is (primitive-arrays-equal #js [nil] (make-array nil 1)))
+    (is (primitive-arrays-equal #js [nil] (apply make-array [nil 1])))
+    (is (primitive-arrays-equal #js [nil nil] (make-array nil 2)))
+    (is (primitive-arrays-equal #js [nil nil] (apply make-array [nil 2])))))
+
 (deftest test-rearrange-sequential
   (testing "Test rearranging sequential collections"
     (is (= [1 2 3 4 5] (sort [5 3 1 4 2])))
