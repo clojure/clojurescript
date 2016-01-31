@@ -2417,6 +2417,14 @@
     (is (array? (aget #js {"foo" #js [1 2 3]} "foo")))
     (is (= (seq (aget #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))))
 
+(deftest test-1556
+  (testing "Testing CLJS-1556, JS object literal code emission, beginning of statement"
+    ;; Really testing that this evaluates properly
+    (is (= 1 (do #js {:a 1}
+                 1)))
+    (is (= 1 (aget #js {:a 1} "a")))
+    (is (= 1 (.-a #js {:a 1})))))
+
 (deftest test-725
   (testing "Testing CLJS-725, drop"
     (is (= (apply vector (drop-while (partial = 1) [1 2 3])) [2 3]))

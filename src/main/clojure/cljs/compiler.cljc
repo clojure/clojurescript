@@ -406,13 +406,13 @@
   (emit-wrap env
     (if (= js-type :object)
       (do
-        (emits "{")
+        (emits "({")
         (when-let [items (seq items)]
           (let [[[k v] & r] items]
             (emits "\"" (name k) "\": " v)
             (doseq [[k v] r]
               (emits ", \"" (name k) "\": " v))))
-        (emits "}"))
+        (emits "})"))
       (emits "[" (comma-sep items) "]"))))
 
 (defmethod emit* :constant
