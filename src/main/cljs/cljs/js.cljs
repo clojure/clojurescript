@@ -621,20 +621,23 @@
                  (let [aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
                               (:context opts) (assoc :context (:context opts))
                               (:def-emits-var opts) (assoc :def-emits-var true))
-                       ast  (try
-                              (ana/analyze aenv form nil opts)
+                       res  (try
+                              {:value (ana/analyze aenv form nil opts)}
                               (catch :default cause
                                 (wrap-error
                                   (ana/error aenv
                                     (str "Could not compile " name) cause))))]
-                   (.append sb (with-out-str (comp/emit ast)))
-                   (if (= :ns (:op ast))
-                     (ns-side-effects bound-vars aenv ast opts
-                       (fn [res]
-                         (if (:error res)
-                           (cb res)
-                           (compile-loop (:name ast)))))
-                     (recur ns)))
+                   (if (:error res)
+                     (cb res)
+                     (let [ast (:value res)]
+                       (.append sb (with-out-str (comp/emit ast)))
+                       (if (= :ns (:op ast))
+                         (ns-side-effects bound-vars aenv ast opts
+                           (fn [res]
+                             (if (:error res)
+                               (cb res)
+                               (compile-loop (:name ast)))))
+                         (recur ns)))))
                  (do
                    (when (:source-map opts)
                      (append-source-map env/*compiler*

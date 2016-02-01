@@ -52,7 +52,7 @@
 
 (deftest test-analyze-str
   (async done
-    (let [l (latch 2 done)]
+    (let [l (latch 3 done)]
       (cljs/analyze-str st "(+ 1 1)" nil
         {:context :expr}
         (fn [{:keys [error value]}]
@@ -63,11 +63,17 @@
         {:context :expr}
         (fn [{:keys [error value]}]
           (is (nil? error))
+          (inc! l)))
+      (cljs/analyze-str st "(fn [] (let [x 7 y] (prn y)))" nil
+        {:context :expr}
+        (fn [{:keys [error value]}]
+          (is (nil? value))
+          (is (= "Could not analyze " (ex-message error)))
           (inc! l))))))
 
 (deftest test-compile-str
   (async done
-    (let [l (latch 6 done)]
+    (let [l (latch 7 done)]
       (cljs/compile-str st "(+ 1 1)"
         (fn [{:keys [error value]}]
           (is (nil? error))
@@ -103,6 +109,12 @@
         (fn [{:keys [error value]}]
           (is (nil? error))
           (is (string/index-of value "cljs.user.foo((1),(2))"))
+          (inc! l)))
+      (cljs/compile-str st "(fn [] (let [x 7 y] (prn y)))" nil
+        {:context :expr}
+        (fn [{:keys [error value]}]
+          (is (nil? value))
+          (is (= "Could not compile " (ex-message error)))
           (inc! l))))))
 
 (deftest test-eval-str
