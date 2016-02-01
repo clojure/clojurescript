@@ -1284,7 +1284,7 @@
        ~x)))
 
 (core/defmacro specify
-  "Identical to specify but does not mutate its first argument. The first
+  "Identical to specify! but does not mutate its first argument. The first
   argument must be an ICloneable instance."
   [expr & impls]
   `(cljs.core/specify! (cljs.core/clone ~expr)
