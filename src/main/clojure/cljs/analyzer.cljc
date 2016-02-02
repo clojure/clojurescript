@@ -220,7 +220,10 @@
 
 (defmethod error-message :undeclared-var
   [warning-type info]
-  (str "Use of undeclared Var " (:prefix info) "/" (:suffix info)))
+  (str (if (:macro-present? info)
+         "Can't take value of macro "
+         "Use of undeclared Var ")
+    (:prefix info) "/" (:suffix info)))
 
 (defmethod error-message :undeclared-ns
   [warning-type {:keys [ns-sym js-provide] :as info}]
@@ -599,9 +602,14 @@
   [env prefix suffix]
   (contains? implicit-nses prefix))
 
+(declare get-expander)
+
 (defn confirm-var-exist-warning [env prefix suffix]
   (fn [env prefix suffix]
-    (warning :undeclared-var env {:prefix prefix :suffix suffix})))
+    (warning :undeclared-var env
+      {:prefix         prefix
+       :suffix         suffix
+       :macro-present? (not (nil? (get-expander (symbol (str prefix) (str suffix)) env)))})))
 
 (defn loaded-js-ns?
   "Check if a JavaScript namespace has been loaded. JavaScript vars are
@@ -662,8 +670,6 @@
              ;; confirm that the library at least exists
              #?(:clj (nil? (util/ns->source ns-sym))))
     (warning :undeclared-ns env {:ns-sym ns-sym})))
-
-(declare get-expander)
 
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
