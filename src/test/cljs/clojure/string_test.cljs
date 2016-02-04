@@ -25,7 +25,9 @@
     (is (= "FOObarFOO" (s/replace "foobarfoo" #"foo" s/upper-case)))
     (is (= "barbar)foo" (s/replace "foo(bar)foo" "foo(" "bar")))
     (is (= "FOO-ObarFOO-O"
-           (s/replace "foobarfoo" #"f(o)o" (fn [[m g1]] (s/upper-case (str m "-" g1)))))))
+           (s/replace "foobarfoo" #"f(o)o" (fn [[m g1]] (s/upper-case (str m "-" g1))))))
+    (is (= "faabarfaa" (s/replace "FOObarfoo" #"(?i)foo" "faa")))
+    (is (= "aaa\nccc" (s/replace "aaa\nbbb" #"(?m)^bbb" "ccc"))))
 
   (testing "Testing string join"
     (is (= "" (s/join nil)))
