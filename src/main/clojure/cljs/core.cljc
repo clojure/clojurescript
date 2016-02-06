@@ -2168,13 +2168,12 @@
   ([x]
      (core/when *assert*
        `(when-not ~x
-          (throw (js/Error.
-                  (cljs.core/str "Assert failed: " (cljs.core/pr-str '~x)))))))
+          (throw (js/Error. ~(core/str "Assert failed: " (core/pr-str x)))))))
   ([x message]
      (core/when *assert*
        `(when-not ~x
           (throw (js/Error.
-                  (cljs.core/str "Assert failed: " ~message "\n" (cljs.core/pr-str '~x))))))))
+                  (cljs.core/str "Assert failed: " ~message "\n" ~(core/pr-str x))))))))
 
 (core/defmacro for
   "List comprehension. Takes a vector of one or more
