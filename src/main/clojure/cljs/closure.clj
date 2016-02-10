@@ -585,17 +585,23 @@
   (js-dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"])
   )
 
+(defn- add-core-macros-if-cljs-js
+  "If a compiled entity is the cljs.js namespace, explicitly
+  add the cljs.core macros namespace dependency to it."
+  [compiled]
+  (cond-> compiled
+    ;; TODO: IJavaScript :provides :requires should really
+    ;; always be Vector<MungedString> - David
+    (= ["cljs.js"] (into [] (map str) (deps/-provides compiled)))
+    (update-in [:requires] concat ["cljs.core$macros"])))
+
 (defn get-compiled-cljs
   "Return an IJavaScript for this file. Compiled output will be
    written to the working directory."
   [opts {:keys [relative-path uri]}]
   (let [js-file  (comp/rename-to-js relative-path)
         compiled (-compile uri (merge opts {:output-file js-file}))]
-    (cond-> compiled
-      ;; TODO: IJavaScript :provides :requires should really
-      ;; always be Vector<MungedString> - David
-      (= ["cljs.js"] (into [] (map str) (deps/-provides compiled)))
-      (update-in [:requires] concat ["cljs.core$macros"]))))
+    (add-core-macros-if-cljs-js compiled)))
 
 (defn cljs-source-for-namespace
   "Given a namespace return the corresponding source with either a .cljs or
@@ -1896,6 +1902,7 @@
                                 (add-dependency-sources compile-opts)
                                 deps/dependency-order
                                 (compile-sources compiler-stats compile-opts)
+                                (#(map add-core-macros-if-cljs-js %))
                                 (add-js-sources all-opts)
                                 (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") all-opts)]))
                                 deps/dependency-order
