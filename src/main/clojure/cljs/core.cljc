@@ -2335,7 +2335,15 @@
        `(js/Array. ~size))
      assoc :tag 'array))
   ([type size]
-    `(make-array ~size)))
+   `(make-array ~size))
+  ([type size & more-sizes]
+   (vary-meta
+     `(let [dims#     (list ~@more-sizes)
+            dimarray# (make-array ~size)]
+        (dotimes [i# (alength dimarray#)]
+          (aset dimarray# i# (apply make-array nil dims#)))
+        dimarray#)
+     assoc :tag 'array)))
 
 (core/defmacro list
   ([] '(.-EMPTY cljs.core/List))
