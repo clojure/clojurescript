@@ -1507,7 +1507,9 @@
       (is (= (sequence xform data) '(36 200 10))))
     (let [xf (map #(+ %1 %2))]
       (is (= (sequence xf [0 0] [1 2]) [1 2])))
-    ))
+    (is (= (-> (sequence (map inc) [1 2 3])
+             (with-meta {:a 1})
+             meta) {:a 1}))))
 
 (deftest test-obj-equiv
   (testing "Object equiv method"

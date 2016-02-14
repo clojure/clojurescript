@@ -3780,6 +3780,9 @@ reduces them without incurring seq initialization"
   (-with-meta [this new-meta]
     (LazyTransformer. stepper first rest new-meta))
 
+  IMeta
+  (-meta [this] meta)
+
   ICollection
   (-conj [this o]
     (cons o (-seq this)))
