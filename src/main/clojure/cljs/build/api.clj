@@ -203,6 +203,9 @@
        env/*compiler*
        (env/default-compiler-env opts))))
   ([source opts compiler-env]
+   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) closure/known-opts)]
+     (println (str "WARNING: Unknown compiler option '" unknown-opt "'."
+                (when suggested-opt (str " Did you mean '" suggested-opt "'?")))))
    (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/build source opts compiler-env))))
 

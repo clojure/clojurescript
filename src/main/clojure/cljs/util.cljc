@@ -208,3 +208,42 @@
 
 (defn boolean? [x]
   (or (true? x) (false? x)))
+
+(defn levenshtein-distance
+  "The the minimum number of single-element edits needed to
+  transform s in to t."
+  [s t]
+  (let [f (fn [f s t]
+            (cond
+              (empty? s) (count t)
+              (empty? t) (count s)
+              :else (let [cost (if (= (first s) (first t))
+                                 0
+                                 1)]
+                      (min (inc (f f (rest s) t))
+                        (inc (f f s (rest t)))
+                        (+ cost (f f (rest s) (rest t)))))))
+        g (memoize f)]
+    (g g s t)))
+
+(defn suggestion
+  "Provides a best suggestion for an unknown, taken from knowns,
+  minimizing the Levenshtein distance, returning nil if threshold
+  cannot be satisfied."
+  [threshold unknown knowns]
+  (let [distance     (partial levenshtein-distance unknown)
+        closest      (apply min-key distance knowns)
+        closest-dist (distance closest)]
+    (when (<= closest-dist threshold)
+      closest)))
+
+(defn unknown-opts
+  "Takes a set of passed opt keys and known opt keys and for each
+  unknown opt key returns a vector of the key and its (potentially
+  nil) suggestion."
+  [passed knowns]
+  {:pre [(set? passed) (set? knowns)]}
+  (for [unknown (set/difference passed knowns)]
+    [unknown (some-> (suggestion 3 (str unknown) (map str knowns))
+               (subs 1)
+               keyword)]))

@@ -10,6 +10,7 @@
   (:refer-clojure :exclude [load-file])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [clojure.set :as set]
             [clojure.data.json :as json]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
@@ -35,6 +36,11 @@
 
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *repl-opts* nil)
+
+(def known-repl-opts
+  "Set of all known REPL options."
+  #{:analyze-path :caught :def-emits-var :flush :need-prompt :print :print-no-newline :prompt :read
+    :reader :repl-verbose :watch :watch-fn})
 
 (defmacro err-out [& body]
   `(binding [*out* *err*]
@@ -773,6 +779,9 @@
                                   [cljs.pprint :refer [pprint] :refer-macros [pp]]]
                   bind-err true}
              :as opts}]
+  (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) (set/union known-repl-opts cljsc/known-opts))]
+    (println (str  "WARNING: Unknown option '" unknown-opt "'."
+               (when suggested-opt (str " Did you mean '" suggested-opt "'?")))))
   (let [repl-opts (-repl-options repl-env)
         repl-requires (into repl-requires (:repl-requires repl-opts))
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts

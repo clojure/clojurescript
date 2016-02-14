@@ -160,6 +160,15 @@
    :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
    :visiblity DiagnosticGroups/VISIBILITY})
 
+(def known-opts
+  "Set of all known compiler options."
+  #{:anon-fn-naming-policy :asset-path :cache-analysis :closure-defines :closure-extra-annotations
+    :closure-warnings :compiler-stats :dump-core :elide-asserts :externs :foreign-libs
+    :hashbang :language-in :language-out :libs :main :modules :source-map-path :optimizations
+    :optimize-constants :output-dir :output-to :output-wrapper :parallel-build :preamble
+    :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
+    :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings})
+
 (defn set-options
   "TODO: Add any other options that we would like to support."
   [opts ^CompilerOptions compiler-options]
