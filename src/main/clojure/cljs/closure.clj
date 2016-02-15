@@ -1893,7 +1893,10 @@
            (let [one-file? (and (:main all-opts)
                                 (#{:advanced :simple} (:optimizations all-opts)))
                  source (if one-file?
-                          (:uri (cljs-source-for-namespace (:main all-opts)))
+                          (let [main (:main all-opts)
+                                uri  (:uri (cljs-source-for-namespace main))]
+                            (assert uri (str "No file for namespace " main " exists"))
+                            uri)
                           source)
                  compile-opts (if one-file?
                                 (assoc all-opts :output-file (:output-to all-opts))
