@@ -10188,7 +10188,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 (defn ^boolean special-symbol? [x]
   (contains?
     '#{if def fn* do let* loop* letfn* throw try catch finally
-       recur new set! ns deftype* defrecord* . js* & quote}
+       recur new set! ns deftype* defrecord* . js* & quote var}
     x))
 
 (defn test
