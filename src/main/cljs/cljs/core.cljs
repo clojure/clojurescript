@@ -353,6 +353,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; arrays ;;;;;;;;;;;;;;;;
 
+(declare apply)
+
 (defn ^array make-array
   "Construct a JavaScript array of the specified dimensions. Accepts ignored
   type argument for compatibility with Clojure. Note that there is no efficient
@@ -389,8 +391,6 @@
           (aset a i (aget (cljs.core/js-arguments) i))
           (recur (inc i)))
         a))))
-
-(declare apply)
 
 (defn aget
   "Returns the value at the index."
