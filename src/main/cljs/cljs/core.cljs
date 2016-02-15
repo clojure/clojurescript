@@ -1371,7 +1371,7 @@ reduces them without incurring seq initialization"
                (recur nval (inc n))))
            val)))))
 
-(declare hash-coll cons RSeq List)
+(declare hash-coll cons drop count nth RSeq List)
 
 (defn ^boolean counted?
   "Returns true if coll implements count in constant time"
@@ -1380,6 +1380,40 @@ reduces them without incurring seq initialization"
 (defn ^boolean indexed?
   "Returns true if coll implements nth in constant time"
   [x] (satisfies? IIndexed x))
+
+(defn- -indexOf
+  ([coll x]
+   (-indexOf coll x 0))
+  ([coll x start]
+   (let [len (count coll)]
+     (if (>= start len)
+       -1
+       (loop [idx (cond
+                    (pos? start) start
+                    (neg? start) (max 0 (+ start len))
+                    :else start)]
+         (if (< idx len)
+           (if (= (nth coll idx) x)
+             idx
+             (recur (inc idx)))
+           -1))))))
+
+(defn- -lastIndexOf
+  ([coll x]
+   (-lastIndexOf coll x (count coll)))
+  ([coll x start]
+   (let [len (count coll)]
+    (if (zero? len)
+      -1
+      (loop [idx (cond
+                   (pos? start) (min (dec len) start)
+                   (neg? start) (+ len start)
+                   :else start)]
+        (if (>= idx 0)
+          (if (= (nth coll idx) x)
+            idx
+            (recur (dec idx)))
+          -1))))))
 
 (deftype IndexedSeqIterator [arr ^:mutable i]
   Object
@@ -1396,6 +1430,14 @@ reduces them without incurring seq initialization"
    (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (IndexedSeq. arr i))
@@ -1486,6 +1528,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (RSeq. ci i meta))
@@ -2708,6 +2758,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x count))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IList
 
@@ -2774,6 +2832,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IList
 
@@ -2869,6 +2935,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IList
 
@@ -3021,6 +3095,14 @@ reduces them without incurring seq initialization"
         (set! s (fn))
         (set! fn nil)
         s)))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IPending
   (-realized? [x]
@@ -3135,6 +3217,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
   
   IWithMeta
   (-with-meta [coll m]
@@ -3670,6 +3760,16 @@ reduces them without incurring seq initialization"
        (MultiStepper. (xform stepfn) iters nexts))))
 
 (deftype LazyTransformer [^:mutable stepper ^:mutable first ^:mutable rest meta]
+  Object
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
   IWithMeta
   (-with-meta [this new-meta]
     (LazyTransformer. stepper first rest new-meta))
@@ -4752,6 +4852,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (PersistentVector. meta cnt shift root tail __hash))
@@ -4974,6 +5082,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IWithMeta
   (-with-meta [coll m]
@@ -5058,6 +5174,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (Subvec. meta v start end __hash))
@@ -5389,6 +5513,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IWithMeta
   (-with-meta [coll meta] (PersistentQueueSeq. meta front rear __hash))
@@ -5429,6 +5561,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   ICloneable
   (-clone [coll] (PersistentQueue. meta count front rear __hash))
@@ -5788,6 +5928,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
   
   IMeta
   (-meta [coll] _meta)
@@ -6688,6 +6836,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IMeta
   (-meta [coll] meta)
@@ -6751,6 +6907,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IMeta
   (-meta [coll] meta)
@@ -7086,6 +7250,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   ISeqable
   (-seq [this] this)
@@ -7269,6 +7441,15 @@ reduces them without incurring seq initialization"
   (kv-reduce [node f init]
     (tree-map-kv-reduce node f init))
 
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
   IMapEntry
   (-key [node] key)
   (-val [node] val)
@@ -7411,6 +7592,15 @@ reduces them without incurring seq initialization"
 
   (kv-reduce [node f init]
     (tree-map-kv-reduce node f init))
+
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IMapEntry
   (-key [node] key)
@@ -7799,6 +7989,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IMeta
   (-meta [coll] _meta)
@@ -7867,6 +8065,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   IMeta
   (-meta [coll] _meta)
@@ -8451,6 +8657,14 @@ reduces them without incurring seq initialization"
     (pr-str* coll))
   (equiv [this other]
     (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
 
   ICloneable
   (-clone [_] (Range. meta start end step __hash))
@@ -9273,6 +9487,16 @@ reduces them without incurring seq initialization"
      (filter (fn [_] (< (rand) prob)) coll)))
 
 (deftype Eduction [xform coll]
+  Object
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
   ISequential
 
   ISeqable

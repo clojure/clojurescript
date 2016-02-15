@@ -1077,6 +1077,45 @@
       (is (not (empty? shuffles))))
     ))
 
+(deftest test-ISequential-indexOf
+  (testing "Testing JS .indexOf in ISequential types"
+    ;; PersistentVector
+    (is (= (.indexOf [] 2) -1))
+    (is (= (.indexOf [] 2 3) -1))
+    (is (= (.indexOf [1 2 3 4 5] 2) 1))
+    (is (= (.indexOf [1 2 3 4 5] 6) -1))
+    (is (= (.indexOf [1 2 3 4 5] -1) -1))
+    (is (= (.indexOf [1 2 "x" 4 5 "a"] "a") 5))
+    (is (= (.indexOf [1 2 3 4 5] 1 2) -1))
+    (is (= (.indexOf [1 2 3 4 5] 2 2) -1))
+    (is (= (.indexOf [1 2 3 1 5] 1 2) 3))
+    (is (= (.indexOf [1 2 3 4 5] 2) 1))
+    (is (= (.indexOf '(1 2 3 4 5) 2) 1))
+    (is (= (.indexOf (list 1 2 3) 3) 2))
+    (is (= (.indexOf (lazy-seq [1 2 3 4 5]) 3)) 2)
+    (is (= (.indexOf (sequence (map inc) '(0 1 2 3 4)) 5) 4))))
+
+(deftest test-ISequential-lastIndexOf
+  (testing "Testing JS .lastIndexOf in ISequential types"
+    ;; PersistentVector
+    (is (= (.lastIndexOf [] 2) -1))
+    (is (= (.lastIndexOf [] 2 3) -1))
+    (is (= (.lastIndexOf [1 2 3 4 5] 2) 1))
+    (is (= (.lastIndexOf [1 2 3 1 5] 1) 3))
+    (is (= (.lastIndexOf [1 2 3 1 5] 1 3) 3))
+    (is (= (.lastIndexOf [1 2 3 1 5] 1 2) 0))
+    (is (= (.lastIndexOf [1 2 3 1] 1 0) 0))
+    (is (= (.lastIndexOf [1 2 3 4 5] 3 100) 2))
+    (is (= (.lastIndexOf [1 1 1 1 1] 1) 4))
+    (is (= (.lastIndexOf [1 1 1 1 1] 1 6) 4))
+    (is (= (.lastIndexOf [1 2 1 1 1] 2) 1))
+    (is (= (.lastIndexOf [1 2 3 4 5] 3 -100) -1))
+    (is (= (.lastIndexOf [1 2 3 4 5] 3 -2) 2))
+    (is (= (.lastIndexOf '(1 2 1 4 5) 1) 2))
+    (is (= (.lastIndexOf (list 1 2 3 1 5) 1) 3))
+    (is (= (.lastIndexOf (lazy-seq [1 2 1 4 5]) 1)) 2)
+    (is (= (.lastIndexOf (sequence (map inc) '(0 1 0 3 4)) 1) 2))))
+
 (deftest test-js-clj-conversions
   (testing "Testing JS / CLJS data conversions"
     (testing "js->clj"
