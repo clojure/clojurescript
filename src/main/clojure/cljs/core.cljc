@@ -2735,7 +2735,7 @@
                (copy-arguments args#)
                (let [argseq# (when (< ~c-1 (alength args#))
                                (new ^::ana/no-resolve cljs.core/IndexedSeq
-                                 (.slice args# ~c-1) 0))]
+                                 (.slice args# ~c-1) 0 nil))]
                  (. ~rname
                    (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#))))))
          ~(variadic-fn* rname method)))))
@@ -2792,7 +2792,7 @@
                 ~@(mapcat #(fixed-arity rname %) sigs)
                 ~(if variadic
                    `(let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
-                                    (.slice ~args-sym ~maxfa) 0)]
+                                    (.slice ~args-sym ~maxfa) 0 nil)]
                       (. ~rname
                         (~'cljs$core$IFn$_invoke$arity$variadic
                           ~@(dest-args maxfa)

@@ -3037,8 +3037,8 @@
   ([x0 & xs] [x0 xs]))
 
 (deftest test-cljs-1284
-  (let [xs (IndexedSeq. #js [] 0)
-        ys (IndexedSeq. #js [1] 3)]
+  (let [xs (IndexedSeq. #js [] 0 nil)
+        ys (IndexedSeq. #js [1] 3 nil)]
     (is (nil? (first xs)))
     (is (nil? (seq xs)))
     (is (= (rest xs) ()))
@@ -3105,6 +3105,10 @@
         x7 (conj x6 5)]
     (is (not (== (hash x0) (hash x1) (hash x2) (hash x3) (hash x4)
                  (hash x5) (hash x6) (hash x7))))))
+
+(deftest test-cljs-1569
+  (is (= (meta (with-meta (seq [1 2 3]) {:a 1})) {:a 1})))
+
 
 (comment
   ;; ObjMap

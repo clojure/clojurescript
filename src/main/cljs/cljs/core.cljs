@@ -1087,11 +1087,11 @@
 
       (array? coll)
       (when-not (zero? (alength coll))
-        (IndexedSeq. coll 0))
+        (IndexedSeq. coll 0 nil))
 
       (string? coll)
       (when-not (zero? (alength coll))
-        (IndexedSeq. coll 0))
+        (IndexedSeq. coll 0 nil))
 
       (native-satisfies? ISeqable coll)
       (-seq coll)
@@ -1424,7 +1424,7 @@ reduces them without incurring seq initialization"
       (set! i (inc i))
       ret)))
 
-(deftype IndexedSeq [arr i]
+(deftype IndexedSeq [arr i meta]
   Object
   (toString [coll]
    (pr-str* coll))
@@ -1440,23 +1440,29 @@ reduces them without incurring seq initialization"
     (-lastIndexOf coll x start))
 
   ICloneable
-  (-clone [_] (IndexedSeq. arr i))
+  (-clone [_] (IndexedSeq. arr i meta))
 
   ISeqable
   (-seq [this]
     (when (< i (alength arr))
       this))
 
+  IMeta
+  (-meta [coll] meta)
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (IndexedSeq. arr i new-meta))
+
   ASeq
   ISeq
   (-first [_] (aget arr i))
   (-rest [_] (if (< (inc i) (alength arr))
-               (IndexedSeq. arr (inc i))
+               (IndexedSeq. arr (inc i) nil)
                (list)))
 
   INext
   (-next [_] (if (< (inc i) (alength arr))
-               (IndexedSeq. arr (inc i))
+               (IndexedSeq. arr (inc i) nil)
                nil))
 
   ICounted
@@ -1511,7 +1517,7 @@ reduces them without incurring seq initialization"
      (prim-seq prim 0))
   ([prim i]
      (when (< i (alength prim))
-       (IndexedSeq. prim i))))
+       (IndexedSeq. prim i nil))))
 
 (defn array-seq
   "Create a seq from a JavaScript array."
@@ -4935,7 +4941,7 @@ reduces them without incurring seq initialization"
   (-seq [coll]
     (cond
       (zero? cnt) nil
-      (<= cnt 32) (IndexedSeq. tail 0)
+      (<= cnt 32) (IndexedSeq. tail 0 nil)
       :else (chunked-seq coll (first-array-for-longvec coll) 0 0)))
 
   ICounted
