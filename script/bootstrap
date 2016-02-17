@@ -3,11 +3,11 @@
 set -e
 
 CLOJURE_RELEASE="1.8.0"
-CLOSURE_RELEASE="20151216"
+CLOSURE_RELEASE="20160125"
 DJSON_RELEASE="0.2.6"
 GCLOSURE_LIB_RELEASE="0.0-20151016-61277aea"
 RHINO_RELEASE="1_7R5"
-TREADER_RELEASE="1.0.0-alpha1"
+TREADER_RELEASE="1.0.0-alpha3"
 
 # check dependencies
 curl -V >/dev/null  || { echo "cURL is missing, or not on your system path."; exit 1; }

@@ -64,6 +64,7 @@
            [javax.xml.bind DatatypeConverter]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult]
+           [java.nio.charset Charset StandardCharsets]
            [com.sun.nio.file SensitivityWatchEventModifier]
            [com.google.common.base Throwables]))
 
@@ -169,6 +170,22 @@
     :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
     :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings})
 
+(def string->charset
+  {"iso-8859-1" StandardCharsets/ISO_8859_1
+   "us-ascii"   StandardCharsets/US_ASCII
+   "utf-16"     StandardCharsets/UTF_16
+   "utf-16be"   StandardCharsets/UTF_16BE
+   "utf-16le"   StandardCharsets/UTF_16LE
+   "utf-8"      StandardCharsets/UTF_8})
+
+(defn to-charset [charset]
+  (cond
+    (instance? Charset charset) charset
+    (string? charset) (get string->charset (string/lower-case charset))
+    :else
+    (throw
+      (ex-info (str "Invalid :closure-output-charset " charset) {}))))
+
 (defn set-options
   "TODO: Add any other options that we would like to support."
   [opts ^CompilerOptions compiler-options]
@@ -221,7 +238,7 @@
       (setExtraAnnotationNames (map name (:closure-extra-annotations opts)))))
 
   (. compiler-options
-     (setOutputCharset (:closure-output-charset opts "UTF-8")))
+    (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))))
 
   compiler-options)
 
