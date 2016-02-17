@@ -181,10 +181,15 @@
 (defn to-charset [charset]
   (cond
     (instance? Charset charset) charset
-    (string? charset) (get string->charset (string/lower-case charset))
+    (and (string? charset)
+         (contains? string->charset (string/lower-case charset)))
+    (get string->charset (string/lower-case charset))
     :else
     (throw
-      (ex-info (str "Invalid :closure-output-charset " charset) {}))))
+      (ex-info
+        (str "Invalid :closure-output-charset " charset " given, only "
+             (string/join ", " (keys string->charset)) " supported ")
+        {}))))
 
 (defn set-options
   "TODO: Add any other options that we would like to support."
