@@ -292,7 +292,7 @@
         (doseq [{:keys [gline gcol name]} column-info]
           (swap! inverted update-in [gline]
             (fnil (fn [columns]
-                    (update-in columns [column] (fnil conj [])
+                    (update-in columns [gcol] (fnil conj [])
                       {:line line :col column :name name}))
               (sorted-map))))))
     @inverted))
