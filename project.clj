@@ -4,7 +4,7 @@
   :url "https://github.com/clojure/clojurescript"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :jvm-opts ^:replace ["-Xmx512m" "-server"]
+  :jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true" "-Xmx512m" "-server"]
   :source-paths ["src/main/clojure" "src/main/cljs"]
   :resource-paths ["src/main/cljs"]
   :test-paths ["src/test/clojure" "src/test/cljs" "src/test/self"]
