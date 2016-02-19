@@ -25,7 +25,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
-            <version>1.7.0</version>
+            <version>1.8.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.javascript</groupId>
@@ -208,6 +208,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <clojure.source.dir>src/main/clojure</clojure.source.dir>
         <cljs.source.dir>src/main/cljs</cljs.source.dir>
+        <directlinking>true</directlinking>
     </properties>
 
     <build>
