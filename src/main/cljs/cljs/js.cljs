@@ -732,7 +732,7 @@
                       (if (= :ns (:op ast))
                         (do
                           (.append sb
-                            (str "goog.provide(\"" (munge (:name ast)) "\");\n"))
+                            (with-out-str (comp/emitln (str "goog.provide(\"" (munge (:name ast)) "\");"))))
                           (ns-side-effects true bound-vars aenv ast opts
                             (fn [res]
                               (if (:error res)
