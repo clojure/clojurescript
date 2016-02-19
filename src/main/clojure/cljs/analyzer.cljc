@@ -34,6 +34,7 @@
                      [cljs.reader :as edn]))
   #?(:clj (:import [java.io File Reader PushbackReader]
                    [java.net URL]
+                   [java.lang Throwable]
                    [clojure.lang Namespace Var LazySeq ArityException]
                    [cljs.tagged_literals JSValue])))
 
@@ -2840,57 +2841,63 @@
       compiler options, if :cache-analysis true will cache analysis to
       \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
       meaningful value."
-     ([f] (analyze-file f nil))
+     ([f]
+      (analyze-file f nil))
      ([f opts]
+      (analyze-file f false opts))
+     ([f skip-cache opts]
       (binding [*file-defs* (atom #{})]
         (let [output-dir (util/output-directory opts)
-              res (cond
-                    (instance? File f) f
-                    (instance? URL f) f
-                    (re-find #"^file://" f) (URL. f)
-                    :else (io/resource f))]
+              res        (cond
+                           (instance? File f) f
+                           (instance? URL f) f
+                           (re-find #"^file://" f) (URL. f)
+                           :else (io/resource f))]
           (assert res (str "Can't find " f " in classpath"))
           (ensure
             (let [ns-info (parse-ns res)
-                  path (if (instance? File res)
-                         (.getPath ^File res)
-                         (.getPath ^URL res))
-                  cache (when (:cache-analysis opts)
-                          (cache-file res ns-info output-dir))]
+                  path    (if (instance? File res)
+                            (.getPath ^File res)
+                            (.getPath ^URL res))
+                  cache   (when (:cache-analysis opts)
+                            (cache-file res ns-info output-dir))]
               (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info) :defs])
-                (if (or (not cache) (requires-analysis? res output-dir))
+                (if (or skip-cache (not cache) (requires-analysis? res output-dir))
                   (binding [*cljs-ns* 'cljs.user
                             *cljs-file* path
                             reader/*alias-map* (or reader/*alias-map* {})]
                     (when (or *verbose* (:verbose opts))
                       (util/debug-prn "Analyzing" (str res)))
                     (let [env (assoc (empty-env) :build-options opts)
-                          ns (with-open [rdr (io/reader res)]
-                               (loop [ns nil forms (seq (forms-seq* rdr (util/path res)))]
-                                 (if forms
-                                   (let [form (first forms)
-                                         env (assoc env :ns (get-namespace *cljs-ns*))
-                                         ast (analyze env form nil opts)]
-                                     (if (= (:op ast) :ns)
-                                       (recur (:name ast) (next forms))
-                                       (recur ns (next forms))))
-                                   ns)))]
+                          ns  (with-open [rdr (io/reader res)]
+                                (loop [ns nil forms (seq (forms-seq* rdr (util/path res)))]
+                                  (if forms
+                                    (let [form (first forms)
+                                          env (assoc env :ns (get-namespace *cljs-ns*))
+                                          ast (analyze env form nil opts)]
+                                      (if (= (:op ast) :ns)
+                                        (recur (:name ast) (next forms))
+                                        (recur ns (next forms))))
+                                    ns)))]
                       (when (and cache (true? (:cache-analysis opts)))
                         (write-analysis-cache ns cache res))))
-                  ;; we want want to keep dependency analysis information
-                  ;; don't revert the environment - David
-                  (let [{:keys [ns]}
-                        (parse-ns res
-                          (merge opts
-                            {:restore false
-                             :analyze-deps true
-                             :load-macros true}))]
-                    (when (or *verbose* (:verbose opts))
-                      (util/debug-prn "Reading analysis cache for" (str res)))
-                    (swap! env/*compiler*
-                      (fn [cenv]
-                        (let [cached-ns (edn/read-string (slurp cache))]
-                          (doseq [x (get-in cached-ns [::constants :order])]
-                            (register-constant! x))
-                          (-> cenv
-                            (assoc-in [::namespaces ns] cached-ns)))))))))))))))
+                  (try
+                    ;; we want want to keep dependency analysis information
+                    ;; don't revert the environment - David
+                    (let [{:keys [ns]} (parse-ns res
+                                         (merge opts
+                                           {:restore false
+                                            :analyze-deps true
+                                            :load-macros true}))
+                          cached-ns    (edn/read-string (slurp cache))]
+                     (when (or *verbose* (:verbose opts))
+                       (util/debug-prn "Reading analysis cache for" (str res)))
+                     (swap! env/*compiler*
+                       (fn [cenv]
+                         (let []
+                           (doseq [x (get-in cached-ns [::constants :order])]
+                             (register-constant! x))
+                           (-> cenv
+                             (assoc-in [::namespaces ns] cached-ns))))))
+                    (catch Throwable e
+                      (analyze-file f true opts))))))))))))
