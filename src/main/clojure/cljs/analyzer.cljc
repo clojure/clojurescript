@@ -42,7 +42,7 @@
 
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
-#?(:clj (def ^:dynamic *unchecked-if* (atom false)))
+#?(:clj (def ^:dynamic *unchecked-if* false))
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
 (def ^:dynamic *cljs-macros-is-classpath* true)
@@ -981,8 +981,7 @@
         else-expr (allowing-redef (analyze env else))]
     {:env env :op :if :form form
      :test test-expr :then then-expr :else else-expr
-     :unchecked #?(:clj  @*unchecked-if*
-                   :cljs *unchecked-if*)
+     :unchecked *unchecked-if*
      :children [test-expr then-expr else-expr]}))
 
 (defmethod parse 'case*
@@ -1589,8 +1588,7 @@
                          (= target '*unchecked-if*) ;; TODO: proper resolve
                          (or (true? val) (false? val)))
                        (do
-                         #?(:clj  (reset! *unchecked-if* val)
-                            :cljs (set! *unchecked-if* val))
+                         (set! *unchecked-if* val)
                          ::set-unchecked-if)
 
                        (symbol? target)
@@ -2846,7 +2844,8 @@
      ([f opts]
       (analyze-file f false opts))
      ([f skip-cache opts]
-      (binding [*file-defs* (atom #{})]
+      (binding [*file-defs*    (atom #{})
+                *unchecked-if* false]
         (let [output-dir (util/output-directory opts)
               res        (cond
                            (instance? File f) f

@@ -1333,7 +1333,8 @@
       (compile-file src dest nil))
      ([src dest opts]
       {:post [map?]}
-      (binding [ana/*file-defs* (atom #{})]
+      (binding [ana/*file-defs*    (atom #{})
+                ana/*unchecked-if* false]
         (let [nses      (get @env/*compiler* ::ana/namespaces)
               src-file  (io/file src)
               dest-file (io/file dest)
