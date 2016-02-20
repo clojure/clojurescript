@@ -1470,6 +1470,34 @@
               (recur (conj seen fname) (next methods)))))
         (recur (conj protos proto) impls)))))
 
+(core/defn- type-hint-first-arg
+  [type-sym argv]
+  (assoc argv 0 (vary-meta (argv 0) assoc :tag type-sym)))
+
+(core/defn- type-hint-single-arity-sig
+  [type-sym sig]
+  (list* (first sig) (type-hint-first-arg type-sym (second sig)) (nnext sig)))
+
+(core/defn- type-hint-multi-arity-sig
+  [type-sym sig]
+  (list* (type-hint-first-arg type-sym (first sig)) (next sig)))
+
+(core/defn- type-hint-multi-arity-sigs
+  [type-sym sigs]
+  (list* (first sigs) (map (partial type-hint-multi-arity-sig type-sym) (rest sigs))))
+
+(core/defn- type-hint-sigs
+  [type-sym sig]
+  (if (vector? (second sig))
+    (type-hint-single-arity-sig type-sym sig)
+    (type-hint-multi-arity-sigs type-sym sig)))
+
+(core/defn- type-hint-impl-map
+  [type-sym impl-map]
+  (reduce-kv (core/fn [m proto sigs]
+               (assoc m proto (map (partial type-hint-sigs type-sym) sigs)))
+    {} impl-map))
+
 (core/defmacro extend-type
   "Extend a type to a series of protocols. Useful when you are
   supplying the definitions explicitly inline. Propagates the
@@ -1500,6 +1528,9 @@
              _ (validate-impls env impls)
              resolve (partial resolve-var env)
              impl-map (->impl-map impls)
+             impl-map (if ('#{boolean number} type-sym)
+                        (type-hint-impl-map type-sym impl-map)
+                        impl-map)
              [type assign-impls] (core/if-let [type (base-type type-sym)]
                                    [type base-assign-impls]
                                    [(resolve type-sym) proto-assign-impls])]
