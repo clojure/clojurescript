@@ -132,8 +132,10 @@
       9 "\\t"
       (if (< 31 cp 127)
         c ; Print simple ASCII characters
-        #?(:clj (format "\\u%04X" cp)
-           :cljs (str "\\u" (.toString cp 16))))))) ; Any other character is Unicode
+        #?(:clj (format "\\u%04X" cp)                       ; Any other character is Unicode
+           :cljs (let [unpadded (.toString cp 16)
+                       pad      (subs "0000" (.-length unpadded))]
+                   (str "\\u" pad unpadded)))))))
 
 (defn- escape-string [^CharSequence s]
   (let [sb #?(:clj (StringBuilder. (count s))

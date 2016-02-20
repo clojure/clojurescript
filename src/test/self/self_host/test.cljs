@@ -240,6 +240,40 @@
       (is (nil? value))
       (is (= "if-let requires a vector for its binding at line 1 " (ex-message (ex-cause error)))))))
 
+(deftest test-CLJS-1573
+  (cljs/compile-str st
+    "\"90°\""
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= "\"90\\u00b0\"" value))))
+  (cljs/compile-str st
+    "\"Ϊ\""
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= "\"\\u03aa\"" value))))
+  (cljs/compile-str st
+    "\"ሴ\""
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= "\"\\u1234\"" value))))
+  (cljs/eval-str st
+    "\"90°\""
+    nil
+    {:eval node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= "90°" value)))))
+
 #_(deftest test-eval-str-with-require
   (async done
     (let [l (latch 3 done)]
