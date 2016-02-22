@@ -97,14 +97,18 @@
   ([request-prompt request-exit]
    (repl-read request-prompt request-exit *repl-opts*))
   ([request-prompt request-exit opts]
-   (binding [*in* (if (true? (:source-map-inline opts))
-                    ((:reader opts))
-                    *in*)]
-     (or ({:line-start request-prompt :stream-end request-exit}
-          (skip-whitespace *in*))
-        (let [input (reader/read {:read-cond :allow :features #{:cljs}} *in*)]
-          (skip-if-eol *in*)
-          input)))))
+   (let [current-in *in*
+         bind-in?   (true? (:source-map-inline opts))]
+     (binding [*in* (if bind-in?
+                      ((:reader opts))
+                      *in*)]
+       (or ({:line-start request-prompt :stream-end request-exit}
+             (skip-whitespace *in*))
+         (let [input (reader/read {:read-cond :allow :features #{:cljs}} *in*)]
+           ;; Transfer 1-char buffer to original *in*
+           (readers/unread current-in (readers/read-char *in*))
+           (skip-if-eol (if bind-in? current-in *in*))
+           input))))))
 
 ;; =============================================================================
 ;; CLJS Specifics
@@ -745,7 +749,7 @@
                   print println
                   caught repl-caught
                   reader #(readers/source-logging-push-back-reader
-                           (PushbackReader. (io/reader *in*))
+                           *in*
                            1 "NO_SOURCE_FILE")
                   print-no-newline print
                   source-map-inline true
