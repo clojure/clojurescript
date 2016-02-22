@@ -302,6 +302,11 @@
   (testing "Testing symbol ctor is idempotent"
     (is (= 'a (symbol 'a))))
 
+  (testing "Testing constructed division symbol"
+    (is (= '/ (symbol "/")))
+    (is (= (namespace '/) (namespace (symbol "/"))))
+    (is (= (hash '/) (hash (symbol "/")))))
+
   (testing "Testing keyword ctor"
     (is (= :a (keyword "a")))
     (is (= :a (keyword 'a)))

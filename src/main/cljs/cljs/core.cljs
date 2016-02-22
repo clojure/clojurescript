@@ -978,7 +978,7 @@
    (if (symbol? name)
      name
      (let [idx (.indexOf name "/")]
-       (if (== idx -1)
+       (if (< idx 1)
          (symbol nil name)
          (symbol (.substring name 0 idx)
                  (.substring name (inc idx) (. name -length)))))))
