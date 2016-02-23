@@ -545,6 +545,27 @@
       (is (nil? error))
       (is (= 2 value)))))
 
+(deftest test-CLJS-1585
+  (cljs/eval-str st
+    "(ns alias-load.core (:require [aliased.core :as alias]))"
+    nil
+    {:ns      'cljs.user
+     :context :expr
+     :eval    cljs.js/js-eval
+     :load    (fn [_ cb]
+                (cb {:lang :clj :source "(ns aliased.core)"}))}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (cljs.js/eval-str st
+        "::alias/bar"
+        nil
+        {:ns      'alias-load.core
+         :context :expr
+         :eval    cljs.js/js-eval}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is (= :aliased.core/bar value)))))))
+
 #_(deftest test-eval-str-with-require
   (async done
     (let [l (latch 3 done)]

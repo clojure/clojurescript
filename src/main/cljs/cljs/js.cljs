@@ -157,6 +157,10 @@
             "\n//# sourceMappingURL=data:application/json;base64,"
             (base64/encodeString json)))))
 
+(defn- current-alias-map
+  []
+  (get-in @env/*compiler* [:cljs.analyzer/namespaces ana/*cljs-ns* :requires]))
+
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
@@ -449,6 +453,7 @@
                  ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
                  ana/*passes*           (:*passes* bound-vars)
+                 r/*alias-map*          (current-alias-map)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
@@ -536,6 +541,7 @@
               ana/*cljs-ns*          (:*cljs-ns* bound-vars)
               ana/*cljs-static-fns*  (:static-fns opts)
               *ns*                   (create-ns (:*cljs-ns* bound-vars))
+              r/*alias-map*          (current-alias-map)
               r/*data-readers*       (:*data-readers* bound-vars)
               r/resolve-symbol       resolve-symbol
               comp/*source-map-data* (:*sm-data* bound-vars)]
@@ -611,6 +617,7 @@
                  ana/*cljs-ns*          ns
                  ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
+                 r/*alias-map*          (current-alias-map)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
@@ -709,6 +716,7 @@
                  ana/*cljs-ns*          ns
                  ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
+                 r/*alias-map*          (current-alias-map)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
