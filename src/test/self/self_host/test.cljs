@@ -50,6 +50,60 @@
 ;; NOTE: can't set passes because callbacks happen _inside_ binding
 ;; do so will effect other tests
 
+(deftest test-require-updates-*loading*
+  (async done
+    (let [l (latch 4 done)]
+      (cljs/require
+        {}
+        'load1.core
+        :reload-all
+        {:load (fn [_ cb] (cb {:lang   :clj
+                               :source "(ns load1.core)"}))
+         :eval (constantly nil)}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is value)
+          (is (= #{'load1.core} @cljs/*loaded*))
+          (inc! l)))
+      (cljs/require
+        {}
+        'load2.core
+        :reload-all
+        {:macros-ns true
+         :load      (fn [_ cb] (cb {:lang   :clj
+                                    :source "(ns load2.core)"}))
+         :eval      (constantly nil)}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is value)
+          (is (= #{'load2.core$macros} @cljs/*loaded*))
+          (inc! l)))
+      (cljs/require
+        {}
+        'load3.core
+        :reload-all
+        {:load (fn [_ cb] (cb {:lang   :js
+                               :source ""}))
+         :eval (constantly nil)}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is value)
+          (is (= #{'load3.core} @cljs/*loaded*))
+          (inc! l)))
+      (cljs/require
+        {}
+        'load4.core
+        :reload-all
+        {:macros-ns true
+         :load      (fn [_ cb] (cb {:lang   :js
+                                    :source ""}))
+         :eval      (constantly nil)}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (is value)
+          (is (= #{'load4.core$macros} @cljs/*loaded*))
+          (inc! l))))))
+
 (deftest test-analyze-str
   (async done
     (let [l (latch 3 done)]

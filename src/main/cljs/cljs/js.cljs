@@ -267,7 +267,7 @@
                                        (if (:error res)
                                          (cb res)
                                          (do
-                                           (swap! *loaded* conj name)
+                                           (swap! *loaded* conj aname)
                                            (cb {:value true}))))))))))
                      (cb (wrap-error
                            (ana/error env
