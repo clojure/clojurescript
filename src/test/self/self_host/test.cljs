@@ -509,6 +509,32 @@
       (is (nil? error))
       (is (= "90°" value)))))
 
+(deftest test-CLJS-1577
+  (cljs/analyze-str st
+    "`.x"
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= '.x (:form value)))))
+  (cljs/compile-str st
+    "`.x"
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (string/starts-with? value "new cljs.core.Symbol(null,\".x\",\".x\","))))
+  (cljs/eval-str st
+    "`.x"
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= '.x value)))))
+
 (deftest test-CLJS-1584
   (cljs/eval-str st
     "(condp = 1 1 2)"

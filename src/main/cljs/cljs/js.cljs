@@ -38,6 +38,12 @@
                    0 (- (count file) 5))]
     (symbol (demunge lib-name))))
 
+(defn- resolve-symbol
+  [sym]
+  (if (string/starts-with? (str sym) ".")
+    sym
+    (ana/resolve-symbol sym)))
+
 (defn- atom? [x]
   (instance? Atom x))
 
@@ -444,7 +450,7 @@
                  *ns*                   (create-ns ns)
                  ana/*passes*           (:*passes* bound-vars)
                  r/*data-readers*       (:*data-readers* bound-vars)
-                 r/resolve-symbol       ana/resolve-symbol
+                 r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
@@ -531,7 +537,7 @@
               ana/*cljs-static-fns*  (:static-fns opts)
               *ns*                   (create-ns (:*cljs-ns* bound-vars))
               r/*data-readers*       (:*data-readers* bound-vars)
-              r/resolve-symbol       ana/resolve-symbol
+              r/resolve-symbol       resolve-symbol
               comp/*source-map-data* (:*sm-data* bound-vars)]
       (let [aenv (ana/empty-env)
             aenv (cond-> (assoc aenv :ns (ana/get-namespace ana/*cljs-ns*))
@@ -606,7 +612,7 @@
                  ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
-                 r/resolve-symbol       ana/resolve-symbol
+                 r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
@@ -704,7 +710,7 @@
                  ana/*cljs-static-fns*  (:static-fns opts)
                  *ns*                   (create-ns ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
-                 r/resolve-symbol       ana/resolve-symbol
+                 r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
