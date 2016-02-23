@@ -455,6 +455,16 @@
       (is (nil? error))
       (is (= "90°" value)))))
 
+(deftest test-CLJS-1584
+  (cljs/eval-str st
+    "(condp = 1 1 2)"
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= 2 value)))))
+
 #_(deftest test-eval-str-with-require
   (async done
     (let [l (latch 3 done)]
