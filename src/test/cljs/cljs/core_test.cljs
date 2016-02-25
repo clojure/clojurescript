@@ -1582,8 +1582,9 @@
         (is (.-done (.next iter)))))
     (let [eiter (.entries {:foo "bar" :baz "woz"})]
       (testing "map entry iteration"
-        (is (= (seq (.-value (.next eiter))) (seq #js [:foo "bar"])))
-        (is (= (seq (.-value (.next eiter))) (seq #js [:baz "woz"])))
+        (let [entries #{(seq #js [:foo "bar"]) (seq #js [:baz "woz"])}]
+          (is (entries (seq (.-value (.next eiter)))))
+          (is (entries (seq (.-value (.next eiter))))))
         (is (.-done (.next eiter)))))
     (let [iter (.values {:foo "bar" :baz "woz"})]
       (testing "map value iteration"
@@ -1643,10 +1644,10 @@
               "{:foo \"bar\"}"))
     (is (= (binding [*print-length* 0] (str {:foo "bar" :baz "woz"}))
           "{...}"))
-    (is (= (binding [*print-length* 1] (str {:foo "bar" :baz "woz"}))
-              "{:foo \"bar\", ...}"))
-    (is (= (binding [*print-length* 10] (str {:foo "bar" :baz "woz"}))
-              "{:foo \"bar\", :baz \"woz\"}")))
+    (is (#{"{:foo \"bar\", ...}" "{:baz \"woz\", ...}"}
+          (binding [*print-length* 1] (str {:foo "bar" :baz "woz"}))))
+    (is (#{"{:foo \"bar\", :baz \"woz\"}" "{:baz \"woz\", :foo \"bar\"}"}
+          (binding [*print-length* 10] (str {:foo "bar" :baz "woz"})))))
   )
 
 (deftest test-print-with-opts
@@ -1656,12 +1657,16 @@
           "[<MORE-MARKER>]"))
     (is (= (pr-str-with-opts [[1 2 3]] {:more-marker "\u2026" :print-length 1})
           "[1 \u2026]"))
-    (is (= (pr-str-with-opts [#{1 2 3}] {:more-marker "\u2026" :print-length 2})
-          "#{1 3 \u2026}"))
+    (is (#{"#{1 2 \u2026}" "#{1 3 \u2026}" 
+           "#{2 1 \u2026}" "#{2 3 \u2026}"
+           "#{3 1 \u2026}" "#{3 2 \u2026}"}
+          (pr-str-with-opts [#{1 2 3}] {:more-marker "\u2026" :print-length 2})))
     (is (= (pr-str-with-opts ['(1 2 3)] {:more-marker "\u2026" :print-length 2})
           "(1 2 \u2026)"))
-    (is (= (pr-str-with-opts [{:1 1 :2 2 :3 3}] {:more-marker "\u2026" :print-length 2})
-          "{:1 1, :2 2, \u2026}")))
+    (is (#{"{:1 1, :2 2, \u2026}" "{:1 1, :3 3, \u2026}"
+           "{:2 2, :1 1, \u2026}" "{:2 2, :3 3, \u2026}"
+           "{:3 3, :1 1, \u2026}" "{:3 3, :2 2, \u2026}"}
+          (pr-str-with-opts [{:1 1 :2 2 :3 3}] {:more-marker "\u2026" :print-length 2}))))
 
   (testing "Testing printing with opts - :alt-impl"
     ; CLJS-1010
@@ -2429,10 +2434,9 @@
 
 (deftest test-739
   (testing "Testing CLJS-739, with-out-str"
-    (set! *print-newline* true)
-    (is (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
-          ":a\n:b\n:c\n:d\n"))
-    (set! *print-newline* false)))
+    (binding [*print-newline* true]
+      (is (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
+          ":a\n:b\n:c\n:d\n")))))
 
 (deftest test-728
   (testing "Testing CLJS-728, lookup with default"
