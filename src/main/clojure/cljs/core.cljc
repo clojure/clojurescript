@@ -2140,7 +2140,7 @@
              esym    (gensym)
              tests   (keys pairs)]
     (core/cond
-      (every? (some-fn core/number? core/string? core/char? #(const? env %)) tests)
+      (every? (some-fn core/number? core/string? #?(:clj core/char? :cljs (core/fnil core/char? :nonchar)) #(const? env %)) tests)
       (core/let [no-default (if (odd? (count clauses)) (butlast clauses) clauses)
                  tests      (mapv #(if (seq? %) (vec %) [%]) (take-nth 2 no-default))
                  thens      (vec (take-nth 2 (drop 1 no-default)))]

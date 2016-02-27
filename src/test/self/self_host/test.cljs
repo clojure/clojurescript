@@ -653,6 +653,16 @@
           (is (nil? error))
           (is (= :aliased.core/bar value)))))))
 
+(deftest test-CLJS-1589
+  (cljs/eval-str st
+    "(case 1 nil nil :x)"
+    nil
+    {:eval    node-eval
+     :context :expr}
+    (fn [{:keys [error value]}]
+      (is (nil? error))
+      (is (= :x value)))))
+
 #_(deftest test-eval-str-with-require
   (async done
     (let [l (latch 3 done)]
