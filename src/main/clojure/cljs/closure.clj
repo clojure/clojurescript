@@ -243,9 +243,7 @@
       (setExtraAnnotationNames (map name (:closure-extra-annotations opts)))))
 
   (. compiler-options
-    (setOutputCharset (:closure-output-charset opts "UTF-8"))
-    #_(setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
-    )
+    (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))))
 
   compiler-options)
 
@@ -320,7 +318,7 @@
                   (map #(js-source-file (.getFile %) (slurp %)) ext))]
     (let [js-sources (-> externs filter-js add-target load-js)
           ups-sources (-> ups-externs filter-cp-js load-js)
-          all-sources (concat js-sources ups-sources)] 
+          all-sources (concat js-sources ups-sources)]
       (if use-only-custom-externs
         all-sources
         (into all-sources (CommandLineRunner/getDefaultExterns))))))
@@ -349,7 +347,7 @@
   (-source-map [this] "Return the CLJS compiler generated JS source mapping"))
 
 (extend-protocol deps/IJavaScript
-  
+
   String
   (-foreign? [this] false)
   (-closure-lib? [this] false)
@@ -357,7 +355,7 @@
   (-provides [this] (:provides (deps/parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (deps/parse-js-ns (string/split-lines this))))
   (-source [this] this)
-  
+
   clojure.lang.IPersistentMap
   (-foreign? [this] (:foreign this))
   (-closure-lib? [this] (:closure-lib this))
@@ -468,7 +466,7 @@
   returns a JavaScriptFile. In either case the return value satisfies
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
-    (if output-file 
+    (if output-file
       (let [out-file (io/file (util/output-directory opts) output-file)]
         (compiled-file (comp/compile-file file out-file opts)))
       (let [path (.getPath ^File file)]
@@ -552,17 +550,17 @@
     (case (.getProtocol this)
       "file" (-find-sources (io/file this) opts)
       "jar" (find-jar-sources this opts)))
-  
+
   clojure.lang.PersistentList
   (-compile [this opts]
     (compile-form-seq [this]))
   (-find-sources [this opts]
     [(ana/parse-ns [this] opts)])
-  
+
   String
   (-compile [this opts] (-compile (io/file this) opts))
   (-find-sources [this opts] (-find-sources (io/file this) opts))
-  
+
   clojure.lang.PersistentVector
   (-compile [this opts] (compile-form-seq this))
   (-find-sources [this opts]
@@ -1270,7 +1268,7 @@
 
   ;; optimize a ClojureScript form
   (optimize {:optimizations :simple} (-compile '(def x 3) {}))
-  
+
   ;; optimize a project
   (println (->> (-compile "samples/hello/src" {})
                 (apply add-dependencies {})
@@ -1673,7 +1671,7 @@
       (output-deps-file opts disk-sources))))
 
 (comment
-  
+
   ;; output unoptimized alone
   (output-unoptimized {} "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
   ;; output unoptimized with all dependencies
@@ -1690,7 +1688,7 @@
   )
 
 
-(defn get-upstream-deps* 
+(defn get-upstream-deps*
   "returns a merged map containing all upstream dependencies defined
   by libraries on the classpath."
   ([]
