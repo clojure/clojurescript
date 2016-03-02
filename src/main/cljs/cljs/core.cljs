@@ -885,7 +885,14 @@
     (-hash ^not-native o)
 
     (number? o)
-    (js-mod (Math/floor o) 2147483647)
+    (if (js/isFinite o)
+      (js-mod (Math/floor o) 2147483647)
+      (case o
+        Infinity
+        2146435072
+        -Infinity
+        -1048576
+        2146959360))
 
     (true? o) 1
 
