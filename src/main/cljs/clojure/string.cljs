@@ -119,7 +119,7 @@
 
 (defn- discard-trailing-if-needed
   [limit v]
-  (if (== 0 limit)
+  (if (and (== 0 limit) (< 1 (count v)))
     (pop-last-while-empty v)
     v))
 

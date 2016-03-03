@@ -3132,6 +3132,12 @@
   (is  (=  (hash-set Infinity -Infinity 0 1 2 3 4 5 6 7 8)
           (set  (keys  (zipmap  [Infinity -Infinity 0 1 2 3 4 5 6 7 8]  (repeat nil)))))))
 
+(deftest test-cljs-1590
+  (is (= [""] (s/split "" #"\n")))
+  (is (= [] (s/split "\n\n\n" #"\n")))
+  (is (= [""] (s/split-lines "")))
+  (is (= [] (s/split-lines "\n\n\n"))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
