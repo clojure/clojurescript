@@ -9093,9 +9093,6 @@ reduces them without incurring seq initialization"
 
         (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
 
-        (implements? IPrintWithWriter obj)
-        (-pr-writer obj writer opts)
-
         :else
         (if (.. obj -constructor -cljs$lang$ctorStr)
           (write-all writer
