@@ -222,8 +222,8 @@
    (let [bound-vars (merge
                       {:*compiler*     (env/default-compiler-env)
                        :*data-readers* tags/*cljs-data-readers*
-                       :*load-macros*  (or (:load-macros opts) true)
-                       :*analyze-deps* (or (:analyze-deps opts) true)
+                       :*load-macros*  (:load-macros opts true)
+                       :*analyze-deps* (:analyze-deps opts true)
                        :*load-fn*      (or (:load opts) *load-fn*)
                        :*eval-fn*      (or (:eval opts) *eval-fn*)}
                       bound-vars)
@@ -523,8 +523,8 @@
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
       :*passes*       (or (:passes opts) ana/*passes*)
-      :*analyze-deps* (or (:analyze-deps opts) true)
-      :*load-macros*  (or (:load-macros opts) true)
+      :*analyze-deps* (:analyze-deps opts true)
+      :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
      source name opts cb)))
@@ -594,8 +594,8 @@
    (eval*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
-      :*analyze-deps* (or (:analyze-deps opts) true)
-      :*load-macros*  (or (:load-macros opts) true)
+      :*analyze-deps* (:analyze-deps opts true)
+      :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
      form opts cb)))
@@ -690,8 +690,8 @@
    (compile-str*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
-      :*analyze-deps* (or (:analyze-deps opts) true)
-      :*load-macros*  (or (:load-macros opts) true)
+      :*analyze-deps* (:analyze-deps opts true)
+      :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)
       :*sm-data*      (when (:source-map opts) (sm-data))}
@@ -821,8 +821,8 @@
    (eval-str*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
-      :*analyze-deps* (or (:analyze-deps opts) true)
-      :*load-macros*  (or (:load-macros opts) true)
+      :*analyze-deps* (:analyze-deps opts true)
+      :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
      source name opts cb)))

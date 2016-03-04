@@ -243,6 +243,93 @@
           (is (= "1\n2\n" value))
           (inc! l))))))
 
+(deftest test-disable-analyze-deps
+  (cljs/analyze-str st
+    "(ns analyze-deps-as.core (:require [analyze-me.core :refer [abc]]))"
+    nil
+    {:context      :expr
+     :eval         cljs.js/js-eval
+     :analyze-deps false
+     :load         (fn [_ cb]
+                     (cb {:lang   :clj
+                          :source "(ns analyze-me.core)"}))}
+    (fn [{:keys [error]}]
+      (is (nil? error))))
+
+  (cljs/eval st
+    '(ns analyze-deps-e.core (:require [analyze-me.core :refer [abc]]))
+    {:context      :expr
+     :eval         cljs.js/js-eval
+     :analyze-deps false
+     :load         (fn [_ cb]
+                     (cb {:lang   :clj
+                          :source "(ns analyze-me.core)"}))}
+    (fn [{:keys [error]}]
+      (is (nil? error))))
+  (cljs/compile-str st
+    "(ns analyze-deps-c.core (:require [analyze-me.core :refer [abc]]))"
+    nil
+    {:context      :expr
+     :eval         cljs.js/js-eval
+     :analyze-deps false
+     :load         (fn [_ cb]
+                     (cb {:lang   :clj
+                          :source "(ns analyze-me.core)"}))}
+    (fn [{:keys [error]}]
+      (is (nil? error))))
+  (cljs/eval-str st
+    "(ns analyze-deps-es.core (:require [analyze-me.core :refer [abc]]))"
+    nil
+    {:context      :expr
+     :eval         cljs.js/js-eval
+     :analyze-deps false
+     :load         (fn [_ cb]
+                     (cb {:lang   :clj
+                          :source "(ns analyze-me.core)"}))}
+    (fn [{:keys [error]}]
+      (is (nil? error)))))
+
+(deftest test-disable-load-macros
+  (cljs/analyze-str st
+    "(ns load-macros-as.core (:require-macros [load-me.core]))"
+    nil
+    {:context     :expr
+     :eval        cljs.js/js-eval
+     :load-macros false
+     :load        (fn [_ _]
+                    (throw (ex-info "unexpected" {})))}
+    (fn [{:keys [error]}]
+      (is (nil? error))))
+  (cljs/eval st
+    '(ns load-macros-e.core (:require-macros [load-me.core]))
+    {:context     :expr
+     :eval        cljs.js/js-eval
+     :load-macros false
+     :load        (fn [_ _]
+                    (throw (ex-info "unexpected" {})))}
+    (fn [{:keys [error]}]
+      (is (nil? error))))
+  (cljs/compile-str st
+    "(ns load-macros-c.core (:require-macros [load-me.core]))"
+    nil
+    {:context     :expr
+     :eval        cljs.js/js-eval
+     :load-macros false
+     :load        (fn [_ _]
+                    (throw (ex-info "unexpected" {})))}
+    (fn [{:keys [error]}]
+      (is (nil? error))))
+  (cljs/eval-str st
+    "(ns load-macros-es.core (:require-macros [load-me.core]))"
+    nil
+    {:context     :expr
+     :eval        cljs.js/js-eval
+     :load-macros false
+     :load        (fn [_ _]
+                    (throw (ex-info "unexpected" {})))}
+    (fn [{:keys [error]}]
+      (is (nil? error)))))
+
 (deftest test-load-and-invoke-macros
   (async done
     (let [l (latch 9 done)]
