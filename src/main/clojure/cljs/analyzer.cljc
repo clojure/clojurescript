@@ -2459,7 +2459,7 @@
 (defn- all-values?
   #?(:cljs {:tag boolean})
   [exprs]
-  (every? #{:var :constant} (map :op exprs)))
+  (every? #(or (nil? %) (symbol? %) (string? %) (number? %) (true? %) (false? %)) exprs))
 
 (defn- valid-arity?
   #?(:cljs {:tag boolean})
@@ -2488,19 +2488,19 @@
         (warning :fn-deprecated env {:fexpr fexpr})))
     (when-not (nil? (-> fexpr :info :type))
       (warning :invoke-ctor env {:fexpr fexpr}))
-    (let [ana-expr #(analyze enve %)
-          argexprs (map ana-expr args)]
-      (if (or (not (boolean *cljs-static-fns*))
-              (not (symbol? f))
-              fn-var?
-              (analyzed? f)
-              (all-values? argexprs))
+    (if (or (not (boolean *cljs-static-fns*))
+            (not (symbol? f))
+            fn-var?
+            (analyzed? f)
+            (all-values? args))
+      (let [ana-expr #(analyze enve %)
+            argexprs (map ana-expr args)]
         {:env env :op :invoke :form form :f fexpr :args (vec argexprs)
-         :children (into [fexpr] argexprs)}
-        (let [arg-syms (take argc (repeatedly gensym))]
-          (analyze env
-            `(let [~@(vec (interleave arg-syms args))]
-               (~(vary-meta f assoc ::analyzed true) ~@arg-syms))))))))
+         :children (into [fexpr] argexprs)})
+      (let [arg-syms (take argc (repeatedly gensym))]
+        (analyze env
+                 `(let [~@(vec (interleave arg-syms args))]
+                    (~(vary-meta f assoc ::analyzed true) ~@arg-syms)))))))
 
 (defn parse-invoke
   [env form]
