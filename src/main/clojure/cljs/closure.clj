@@ -168,7 +168,8 @@
     :hashbang :language-in :language-out :libs :main :modules :source-map-path :optimizations
     :optimize-constants :output-dir :output-to :output-wrapper :parallel-build :preamble
     :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
-    :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings})
+    :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings
+    :emit-constants :ups-externs :ups-foreign-libs :ups-libs})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
