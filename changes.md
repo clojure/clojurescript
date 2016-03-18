@@ -1,3 +1,50 @@
+## 1.8.34
+
+### Changes
+* CLJS-1582: Type-hint extend-type first arg for primitives
+* CLJS-1590: split, split-lines differs from Clojure on empty string
+* CLJS-1594: NaN and both infinities cannot be elements of a set
+* CLJS-1597: Redundant IPrintWithWriter test in pr-writer-impl
+* CLJS-1583: (hash (symbol "/")) does not match (hash '/)
+* bump tools reader
+* CLJS-1492: Warn when using :optimisations instead of :optimizations
+* less cryptic error if :main doesn't correspond to any file
+* CLJS-744: ISequential types should implement JS indexOf, lastIndexOf
+* CLJS-1411: make-array signature differs from clojure
+
+### Fixes
+* CLJS-1589: Self-host: case fail with nil
+* CLJS-1596: Self-host: :load-macros and :analyze-deps don't work in cljs.js
+* CLJS-1420 - get-in behavior differs from Clojure by always deferring to the 3 arity fn
+* CLJS-1585: Self-host: Alias-scoped keywords
+* CLJS-1577: Self-host: syntax-quote resolves on dot forms
+* CLJS-1564: Self-host: cached macro *loaded* update
+* CLJS-1584: Self-host: core/str error with condp
+* CLJS-1521: Self-host: Macro namespaces cannot be aliased
+* CLJS-1573: Self-host: Invalid UTF escaping in cljs-in-cljs
+* CLJS-1570: :parallel-build causes invalid truth check in cljs.reader/read-number
+* CLJS-1568: LazyTransformer doesn't implement IMeta
+* CLJS-1578: Corrupted Analysis Files Break Compilation
+* CLJS-1579: cljs.source-map/invert-reverse-map discards gcol
+* CLJS-1580: Self-host: goog.provide offsets source-maps
+* CLJS-1569: IndexedSeq doesn't implement IWithMeta / IMeta
+* CLJS-1567: make-array macro missing > 2 arg arity
+* CLJS-1571: Make special-symbol? true for 'var
+* CLJS-1555: make-array macro missing 2 arg arity
+* CLJS-970: generate assert message when compiling
+* CLJS-1565: Self-host: whitespace optimization is broken
+* CLJS-1541: Self-host: Cannot require 'cljs.js using cljs.jar
+* CLJS-1550: Enhance docstring for extend-type wrt type-sym
+* CLJS-1551: Self-host: assert-args dormant in macros
+* CLJS-1552: doc for & should match fn
+* CLJS-1488: cljs.repl/source Cannot read source of cljs functions that use #js reader
+* CLJS-1557: Make special-symbol? return true for catch and finally
+* CLJS-1542: Self-host: cljs/compile-str not handling errors properly
+* CLJS-1318: Fix typo in documentation of `specify`
+* CLJS-620: Warnings are generated when using a macro in argument position
+* CLJS-1547: Wrong output encoding when compile with goog.LOCALE
+* CLJS-1546: cljs.core/run! does not always return nil
+
 ## 1.7.228
 
 ### Enhancements
