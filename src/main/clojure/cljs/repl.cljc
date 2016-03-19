@@ -780,8 +780,8 @@
                   bind-err true}
              :as opts}]
   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) (set/union known-repl-opts cljsc/known-opts))]
-    (println (str  "WARNING: Unknown option '" unknown-opt "'."
-               (when suggested-opt (str " Did you mean '" suggested-opt "'?")))))
+    (when suggested-opt
+      (println (str "WARNING: Unknown option '" unknown-opt "'. Did you mean '" suggested-opt "'?"))))
   (let [repl-opts (-repl-options repl-env)
         repl-requires (into repl-requires (:repl-requires repl-opts))
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
