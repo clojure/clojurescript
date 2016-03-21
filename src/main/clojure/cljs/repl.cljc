@@ -39,8 +39,10 @@
 
 (def known-repl-opts
   "Set of all known REPL options."
-  #{:analyze-path :caught :def-emits-var :flush :need-prompt :print :print-no-newline :prompt :read
-    :reader :repl-verbose :watch :watch-fn})
+  #{:analyze-path :bind-err :caught :compiler-env :def-emits-var :eval :flush
+    :init :need-prompt :print :print-no-newline :prompt :quit-prompt :read
+    :reader :repl-requires :repl-verbose :source-map-inline :watch :watch-fn
+    :wrap})
 
 (defmacro err-out [& body]
   `(binding [*out* *err*]
