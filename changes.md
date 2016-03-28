@@ -1,3 +1,10 @@
+## 1.8.40
+
+### Fixes
+* CLJS-1603: Only warn for misspelled comp/REPL opts
+* :warning-handlers missing for known compiler options
+* CLJS-1592: Self-host: Robustness for core tests
+
 ## 1.8.34
 
 ### Changes
