@@ -2707,9 +2707,10 @@
         (let [src (if (symbol? src)
                     (util/ns->source src)
                     src)
-              compiler-env @env/*compiler*
-              [ijs compiler-env']
-              (binding [env/*compiler* (atom compiler-env)
+              ijs
+              (binding [env/*compiler* (if (false? (:restore opts))
+                                         env/*compiler*
+                                         (atom @env/*compiler*))
                         *cljs-ns* 'cljs.user
                         *cljs-file* src
                         *macro-infer*
@@ -2739,35 +2740,28 @@
                                             'cljs.core$macros
                                             ns-name)
                                   deps (merge (:uses ast) (:requires ast))]
-                              [(merge
-                                 {:ns           (or ns-name 'cljs.user)
-                                  :provides     [ns-name]
-                                  :requires     (if (= 'cljs.core ns-name)
-                                                  (set (vals deps))
-                                                  (cond-> (conj (set (vals deps)) 'cljs.core)
-                                                          (get-in compiler-env [:options :emit-constants])
-                                                          (conj 'constants-table)))
-                                  :file         dest
-                                  :source-file  (when rdr src)
-                                  :source-forms (when-not rdr src)
-                                  :ast          ast
-                                  :macros-ns    (or (:macros-ns opts)
-                                                    (= 'cljs.core$macros ns-name))}
-                                 (when (and dest (.exists ^File dest))
-                                   {:lines (with-open [reader (io/reader dest)]
-                                             (-> reader line-seq count))}))
-                               @env/*compiler*])
+                              (merge
+                                {:ns           (or ns-name 'cljs.user)
+                                 :provides     [ns-name]
+                                 :requires     (if (= 'cljs.core ns-name)
+                                                 (set (vals deps))
+                                                 (cond-> (conj (set (vals deps)) 'cljs.core)
+                                                   (get-in @env/*compiler* [:options :emit-constants])
+                                                   (conj 'constants-table)))
+                                 :file         dest
+                                 :source-file  (when rdr src)
+                                 :source-forms (when-not rdr src)
+                                 :ast          ast
+                                 :macros-ns    (or (:macros-ns opts)
+                                                   (= 'cljs.core$macros ns-name))}
+                                (when (and dest (.exists ^File dest))
+                                  {:lines (with-open [reader (io/reader dest)]
+                                            (-> reader line-seq count))})))
                             (recur (rest forms))))
                         (throw (AssertionError. (str "No ns form found in " src)))))
                     (finally
                       (when rdr
                         (.close ^Reader rdr))))))]
-          (when (false? (:restore opts))
-            (swap! env/*compiler*
-              (fn [old-state]
-                (-> old-state
-                  (update-in [::namespaces] merge (get compiler-env' ::namespaces))
-                  (update-in [::constant-table] merge (get compiler-env' ::constant-table))))))
           ijs)))))
 
 #?(:clj
