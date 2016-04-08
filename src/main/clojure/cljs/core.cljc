@@ -2377,9 +2377,13 @@
      assoc :tag 'array)))
 
 (core/defmacro list
-  ([] '(.-EMPTY cljs.core/List))
+  ([]
+   '(.-EMPTY cljs.core/List))
   ([x & xs]
-    `(-conj (list ~@xs) ~x)))
+   (if (= :constant (:op (cljs.analyzer/analyze &env x)))
+     `(-conj (list ~@xs) ~x)
+     `(let [x# ~x]
+        (-conj (list ~@xs) x#)))))
 
 (core/defmacro vector
   ([] '(.-EMPTY cljs.core/PersistentVector))
