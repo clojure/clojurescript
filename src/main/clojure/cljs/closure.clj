@@ -1496,9 +1496,12 @@
                                   (CompilerInput.))]
     (.getAstRoot input closure-compiler)))
 
-(defn get-source-files [module-type opts]
+(defn get-source-files [opts]
   (->> (:foreign-libs opts)
-       (filter #(= (:module-type %) module-type))
+       (filter #(let [module-type (:module-type %)]
+                  (or (= module-type :amd)
+                      (= module-type :commonjs)
+                      (= module-type :es6))))
        (map (fn [lib]
               (let [lib (deps/load-foreign-library lib)]
                 (js-source-file (:file lib) (deps/-source lib)))))))
@@ -1524,7 +1527,7 @@
   (defmethod convert-js-module :commonjs [ijs opts]
     (let [{:keys [file module-type]} ijs
           ^List externs '()
-          ^List source-files (get-source-files module-type opts)
+          ^List source-files (get-source-files opts)
           ^CompilerOptions options (make-convert-js-module-options opts)
           closure-compiler (doto (make-closure-compiler)
                              (.init externs source-files options))
@@ -1542,9 +1545,9 @@
 
 (util/compile-if can-convert-es6?
   (defmethod convert-js-module :es6 [ijs opts]
-    (let [{:keys [file module-type]} ijs
+    (let [{:keys [file]} ijs
           ^List externs '()
-          ^List source-files (get-source-files module-type opts)
+          ^List source-files (get-source-files opts)
           ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                      (.setLanguageIn CompilerOptions$LanguageMode/ECMASCRIPT6)
                                      (.setLanguageOut CompilerOptions$LanguageMode/ECMASCRIPT5))
