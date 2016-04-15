@@ -27,11 +27,11 @@ else
 fi
 
 # commented out because of memory issue in JSC w/ nested fn calls - David
-#if [ "$JSC_HOME" = "" ]; then
-#  echo "JSC_HOME not set, skipping JavaScriptCore tests"
+#if ! hash jsc 2>/dev/null; then
+#  echo "jsc not on path, skipping JavaScriptCore tests"
 #else
 #  echo "Testing with JavaScriptCore"
-#  "${JSC_HOME}/jsc" -f builds/out-simp/core-simple-test.js
+#  jsc -f builds/out-simp/core-simple-test.js
 #  ran=$[ran+1]
 #fi
 

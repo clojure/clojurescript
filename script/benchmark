@@ -19,11 +19,11 @@ else
   "${SPIDERMONKEY_HOME}/js" -f builds/out-adv-bench/core-advanced-benchmark.js
 fi
 
-if [ "$JSC_HOME" = "" ]; then
-  echo "JSC_HOME not set, skipping JavaScriptCore benchmarks"
+if ! hash jsc 2>/dev/null; then
+  echo "jsc not on path, skipping JavaScriptCore benchmarks"
 else
   echo "Benchmarking with JavaScriptCore"
-  "${JSC_HOME}/jsc" -f builds/out-adv-bench/core-advanced-benchmark.js
+  jsc -f builds/out-adv-bench/core-advanced-benchmark.js
 fi
 
 if [ "$NASHORN_HOME" = "" ]; then

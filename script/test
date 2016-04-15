@@ -26,11 +26,11 @@ else
   ran=$((ran+1))
 fi
 
-if [ "$JSC_HOME" = "" ]; then
-  echo "JSC_HOME not set, skipping JavaScriptCore tests"
+if ! hash jsc 2>/dev/null; then
+  echo "jsc not on path, skipping JavaScriptCore tests"
 else
   echo "Testing with JavaScriptCore"
-  "${JSC_HOME}/jsc" -f builds/out-adv/core-advanced-test.js
+  jsc -f builds/out-adv/core-advanced-test.js
   ran=$((ran+1))
 fi
 
