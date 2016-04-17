@@ -2626,7 +2626,7 @@
        :default (str x))))
 
 (defn resolve-symbol [s]
-  (:name (resolve-var {:ns {:name *cljs-ns*}} s)))
+  (:name (resolve-var (assoc @env/*compiler* :ns (get-namespace *cljs-ns*)) s)))
 
 #?(:clj
    (defn forms-seq*

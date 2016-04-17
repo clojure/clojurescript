@@ -47,6 +47,23 @@
 (defn elide-env [env ast opts]
   (dissoc ast :env))
 
+(defn str-evals-to
+  "Checks that a string evaluates to an expected value."
+  ([st l expected s]
+   (str-evals-to st l expected nil))
+  ([st l expected s opts]
+   (cljs/eval-str st
+     s
+     nil
+     (merge
+       {:context :expr
+        :eval    node-eval}
+       opts)
+     (fn [{:keys [error value]}]
+       (is (nil? error))
+       (is (= expected value))
+       (inc! l)))))
+
 ;; NOTE: can't set passes because callbacks happen _inside_ binding
 ;; do so will effect other tests
 
@@ -662,6 +679,34 @@
     (fn [{:keys [error value]}]
       (is (nil? error))
       (is (= :x value)))))
+
+(deftest test-CLJS-1612
+  (async done
+    (let [st (cljs/empty-state)
+          l  (latch 10 done)]
+      (cljs/eval st '(ns foo.core
+                       (:require [bar.core :as bar]))
+        {:load (fn [{:keys [macros]} cb]
+                 (if macros
+                   (cb {:lang :clj :source "(ns bar.core) (defmacro add [a b] `(+ ~a ~b))"})
+                   (cb {:lang :clj :source "(ns bar.core (:refer-macros bar.core)) (defn sub [a b] (- a b))"})))}
+        (fn [_] (inc! l)))
+      (testing "various syntax quote patterns"
+        (str-evals-to st l 'foo.core/foo "`foo" {:ns 'foo.core})
+        (str-evals-to st l 'bar.core/sub "`bar/sub" {:ns 'foo.core})
+        (str-evals-to st l 'bar.core/add "`bar/add" {:ns 'foo.core})
+        (str-evals-to st l 'bar.core/undeclared "`bar/undeclared" {:ns 'foo.core}))
+      (testing "core macros under syntax quote"
+        (str-evals-to st l 13
+          "(do (defmulti bar (fn [x y] [x y])) 13)" {:ns 'foo.core})
+        (str-evals-to st l 17
+          "(do (deftype FnLikeB [a] IFn (-invoke [_] a)) 17)" {:ns 'foo.core})
+        (str-evals-to st l [10 4]
+          "(let [{:keys [a b] :or {b 4}} {:a 10}] [a b])" {:ns 'foo.core})
+        (str-evals-to st l [[nil]]
+          "(js->clj (make-array nil 1 1))" {:ns 'foo.core})
+        (str-evals-to st l [1 1 1 1 1]
+          "(let [an-array (int-array 5 0)] (js->clj (amap an-array idx ret (+ 1 (aget an-array idx)))))" {:ns 'foo.core})))))
 
 #_(deftest test-eval-str-with-require
   (async done

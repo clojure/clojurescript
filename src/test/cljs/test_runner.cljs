@@ -13,6 +13,7 @@
             [cljs.top-level]
             [cljs.reducers-test]
             [cljs.keyword-test]
+            [cljs.syntax-quote-test]
             [cljs.import-test]
             [cljs.ns-test.foo]
             [cljs.pprint]))
@@ -32,6 +33,7 @@
   'cljs.macro-test
   'cljs.top-level
   'cljs.keyword-test
+  'cljs.syntax-quote-test
   'cljs.ns-test
   'cljs.ns-test.foo
   'foo.ns-shadow-test
