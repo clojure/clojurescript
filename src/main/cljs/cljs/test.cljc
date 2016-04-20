@@ -7,10 +7,11 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.test
+  #?(:cljs (:require-macros [clojure.template :as temp]))
   (:require [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
-            [clojure.template :as temp]))
+            #?(:clj [clojure.template :as temp])))
 
 ;; =============================================================================
 ;; Utilities for assertions
@@ -137,7 +138,7 @@
   You don't call this."
   [msg form]
   `(try
-     ~(cljs.test/assert-expr &env msg form)
+     ~(assert-expr &env msg form)
      (catch :default t#
        (cljs.test/do-report 
          {:type :error, :message ~msg,
@@ -162,7 +163,7 @@
   re-find) the regular expression re."
   ([form] `(cljs.test/is ~form nil))
   ([form msg]
-   `(cljs.test/try-expr ~msg ~form)))
+   `(try-expr ~msg ~form)))
 
 (defmacro are
   "Checks multiple assertions with a template expression.
@@ -186,7 +187,7 @@
           (pos? (count args))
           (zero? (mod (count args) (count argv)))))
     `(clojure.template/do-template ~argv (is ~expr) ~@args)
-    (throw (IllegalArgumentException. "The number of args doesn't match are's argv."))))
+    (throw (#?(:clj Exception. :cljs js/Error.) "The number of args doesn't match are's argv."))))
 
 (defmacro testing
   "Adds a new string to the list of testing contexts.  May be nested,
@@ -276,8 +277,8 @@
                     namespaces))
                [(fn []
                    (cljs.test/set-env! ~env)
-                   (do-report (deref ~summary))
-                   (report (assoc (deref ~summary) :type :end-run-tests))
+                   (cljs.test/do-report (deref ~summary))
+                   (cljs.test/report (assoc (deref ~summary) :type :end-run-tests))
                    (cljs.test/clear-env!))]))))
 
 (defmacro run-tests
@@ -384,4 +385,4 @@
        [~@fns])
     :else
     (throw
-      (Exception. "First argument to cljs.test/use-fixtures must be :once or :each"))))
+      (#?(:clj Exception. :cljs js/Error.) "First argument to cljs.test/use-fixtures must be :once or :each"))))

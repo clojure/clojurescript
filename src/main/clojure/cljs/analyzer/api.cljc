@@ -65,75 +65,78 @@
   ([state]
    (get @state :js-dependency-index)))
 
-(defn analyze
-  "Given an environment, a map containing {:locals (mapping of names to bindings), :context
-  (one of :statement, :expr, :return), :ns (a symbol naming the
-  compilation ns)}, and form, returns an expression object (a map
-  containing at least :form, :op and :env keys). If expr has any (immediately)
-  nested exprs, must have :children [exprs...] entry. This will
-  facilitate code walking without knowing the details of the op set."
-  ([env form] (analyze env form nil))
-  ([env form name] (analyze env form name nil))
-  ([env form name opts]
-   (analyze
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env opts))
-     env form name opts))
-  ([state env form name opts]
-   (env/with-compiler-env state
-     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
-       (ana/analyze env form name opts)))))
+#?(:clj
+   (defn analyze
+     "Given an environment, a map containing {:locals (mapping of names to bindings), :context
+     (one of :statement, :expr, :return), :ns (a symbol naming the
+     compilation ns)}, and form, returns an expression object (a map
+     containing at least :form, :op and :env keys). If expr has any (immediately)
+     nested exprs, must have :children [exprs...] entry. This will
+     facilitate code walking without knowing the details of the op set."
+     ([env form] (analyze env form nil))
+     ([env form name] (analyze env form name nil))
+     ([env form name opts]
+      (analyze
+        (if-not (nil? env/*compiler*)
+          env/*compiler*
+          (env/default-compiler-env opts))
+        env form name opts))
+     ([state env form name opts]
+      (env/with-compiler-env state
+        (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+          (ana/analyze env form name opts))))))
 
-(defn forms-seq
-  "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
-  accepts a filename argument which will be used in any emitted errors."
-  ([rdr] (ana/forms-seq* rdr nil))
-  ([rdr filename] (ana/forms-seq* rdr filename)))
+#?(:clj
+   (defn forms-seq
+     "Seq of Clojure/ClojureScript forms from rdr, a java.io.Reader. Optionally
+     accepts a filename argument which will be used in any emitted errors."
+     ([rdr] (ana/forms-seq* rdr nil))
+     ([rdr filename] (ana/forms-seq* rdr filename))))
 
-(defn parse-ns
-  "Helper for parsing only the essential namespace information from a
-   ClojureScript source file and returning a cljs.closure/IJavaScript compatible
-   map _not_ a namespace AST node.
-
-   By default does not load macros or perform any analysis of dependencies. If
-   opts parameter provided :analyze-deps and :load-macros keys their values will
-   be used for *analyze-deps* and *load-macros* bindings respectively. This
-   function does _not_ side-effect the ambient compilation environment unless
-   requested via opts where :restore is false."
-  ([src] (parse-ns src nil nil))
-  ([src opts] (parse-ns src nil opts))
-  ([src dest opts]
-   (parse-ns
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env opts))
-     src dest opts))
-  ([state src dest opts]
-   (env/with-compiler-env state
-     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
-       (ana/parse-ns src dest opts)))))
-
-(defn analyze-file
-  "Given a java.io.File, java.net.URL or a string identifying a resource on the
-   classpath attempt to analyze it.
-
-   This function side-effects the ambient compilation environment
-   `cljs.env/*compiler*` to aggregate analysis information. opts argument is
-   compiler options, if :cache-analysis true will cache analysis to
-   \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
-   meaningful value."
-  ([f] (analyze-file f nil))
-  ([f opts]
-   (analyze-file
-     (if-not (nil? env/*compiler*)
-       env/*compiler*
-       (env/default-compiler-env opts))
-     f opts))
-  ([state f opts]
-   (env/with-compiler-env state
-     (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
-       (ana/analyze-file f opts)))))
+#?(:clj
+   (defn parse-ns
+     "Helper for parsing only the essential namespace information from a
+      ClojureScript source file and returning a cljs.closure/IJavaScript compatible
+      map _not_ a namespace AST node.
+   
+      By default does not load macros or perform any analysis of dependencies. If
+      opts parameter provided :analyze-deps and :load-macros keys their values will
+      be used for *analyze-deps* and *load-macros* bindings respectively. This
+      function does _not_ side-effect the ambient compilation environment unless
+      requested via opts where :restore is false."
+     ([src] (parse-ns src nil nil))
+     ([src opts] (parse-ns src nil opts))
+     ([src dest opts]
+      (parse-ns
+        (if-not (nil? env/*compiler*)
+          env/*compiler*
+          (env/default-compiler-env opts))
+        src dest opts))
+     ([state src dest opts]
+      (env/with-compiler-env state
+        (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+          (ana/parse-ns src dest opts))))))
+#?(:clj
+   (defn analyze-file
+     "Given a java.io.File, java.net.URL or a string identifying a resource on the
+      classpath attempt to analyze it.
+   
+      This function side-effects the ambient compilation environment
+      `cljs.env/*compiler*` to aggregate analysis information. opts argument is
+      compiler options, if :cache-analysis true will cache analysis to
+      \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
+      meaningful value."
+     ([f] (analyze-file f nil))
+     ([f opts]
+      (analyze-file
+        (if-not (nil? env/*compiler*)
+          env/*compiler*
+          (env/default-compiler-env opts))
+        f opts))
+     ([state f opts]
+      (env/with-compiler-env state
+        (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
+          (ana/analyze-file f opts))))))
 
 ;; =============================================================================
 ;; Main API
@@ -146,7 +149,7 @@
   (try
     (ana/resolve-var env sym
       (ana/confirm-var-exists-throw))
-    (catch Exception e
+    (catch #?(:clj Exception :cljs :default) e
       (ana/resolve-macro-var env sym))))
 
 (defn all-ns
