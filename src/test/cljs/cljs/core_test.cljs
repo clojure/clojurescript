@@ -349,21 +349,6 @@
     (is (= {"x" "y"} (meta ^{"x" "y"} [])))
     ))
 
-(deftest test-pr-str
-  (testing "Testing printing"
-    (is (= "\"asdf\" \"asdf\"" (pr-str "asdf" "asdf")))
-    (is (= "[1 true {:a 2, :b #\"x\\\"y\"} #js [3 4]]"
-              (pr-str [1 true {:a 2 :b #"x\"y"} (array 3 4)])))
-    (is (= "\"asdf\"\n" (prn-str "asdf")))
-    (is (= "[1 true {:a 2, :b 42} #js [3 4]]\n"
-              (prn-str [1 true {:a 2 :b 42} (array 3 4)])))
-    (is (= "asdf" (print-str "asdf")))
-    (is (= "asdf\n" (println-str "asdf")))
-    (is (= "" (pr-str)))
-    (is (= "\n" (prn-str)))
-    (is (= "12" (with-out-str (print 1) (print 2))))
-    (is (= "12" (with-out-str (*print-fn* 1) (*print-fn* 2))))))
-
 (deftest test-bit-operations
   (testing "Testing bit operations"
     (is (= [1 0 0 40 43 49 49])
@@ -1685,8 +1670,9 @@
 
 (defrecord PrintMe [a b])
 
-(deftest test-pr-str
+(deftest test-printing
   (testing "Testing pr-str"
+    (is (= (pr-str) ""))
     (is (= (pr-str 1) "1"))
     (is (= (pr-str -1) "-1"))
     (is (= (pr-str -1.5) "-1.5"))
@@ -1724,7 +1710,25 @@
       (is (= (pr-str uuid) (str "#uuid \"" uuid-str "\""))))
     ;; pr-str PersistentQueueSeq - CLJS-800
     (is (= (pr-str (rest (conj cljs.core.PersistentQueue.EMPTY 1 2 3))) "(2 3)"))
-    ))
+    (is (= "\"asdf\" \"asdf\"" (pr-str "asdf" "asdf")))
+    ;; Different hash map order on self-host
+    (is (#{"[1 true {:a 2, :b #\"x\\\"y\"} #js [3 4]]"
+           "[1 true {:b #\"x\\\"y\", :a 2} #js [3 4]]"}
+         (pr-str [1 true {:a 2 :b #"x\"y"} (array 3 4)]))))
+  (testing "Testing print-str"
+    (is (= (print-str "asdf") "asdf")))
+  (testing "Testing println-str"
+    (is (= (println-str "asdf") "asdf\n")))
+  (testing "Testing prn-str"
+    (is (= (prn-str) "\n"))
+    (is (= (prn-str "asdf") "\"asdf\"\n"))
+    ;; Different hash map order on self-host
+    (is (#{"[1 true {:a 2, :b 42} #js [3 4]]\n"
+           "[1 true {:b 42, :a 2} #js [3 4]]\n"}
+         (prn-str [1 true {:a 2 :b 42} (array 3 4)]))))
+  (testing "Testing with-out-str"
+    (is (= "12" (with-out-str (print 1) (print 2))))
+    (is (= "12" (with-out-str (*print-fn* 1) (*print-fn* 2))))))
 
 (deftest test-inext
   (testing "Testing INext"
