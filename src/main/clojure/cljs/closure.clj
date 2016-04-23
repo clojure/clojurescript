@@ -244,8 +244,7 @@
       (setExtraAnnotationNames (map name (:closure-extra-annotations opts)))))
 
   (. compiler-options
-    (setOutputCharset (:closure-output-charset opts "UTF-8"))
-    #_(setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
+    (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
     )
 
   compiler-options)

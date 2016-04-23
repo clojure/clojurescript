@@ -12,7 +12,7 @@
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.reader "1.0.0-beta1"]
                  [org.clojure/google-closure-library "0.0-20151016-61277aea"]
-                 [com.google.javascript/closure-compiler "v20151216"]
+                 [com.google.javascript/closure-compiler "v20160315"]
                  [org.mozilla/rhino "1.7R5"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :uberjar {:aot :all :main clojure.main}}
