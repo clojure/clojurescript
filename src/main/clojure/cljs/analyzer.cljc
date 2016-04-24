@@ -269,7 +269,7 @@
 
 (defmethod error-message :undeclared-ns-form
   [warning-type info]
-  (str "Invalid :refer, var " (:type info) " " (:lib info) "/" (:sym info) " does not exist"))
+  (str "Invalid :refer, " (:type info) " " (:lib info) "/" (:sym info) " does not exist"))
 
 (defmethod error-message :protocol-deprecated
   [warning-type info]

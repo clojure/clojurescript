@@ -79,7 +79,7 @@
   nil."
     :dynamic true}
   *load-fn*
-  (fn [name cb]
+  (fn [m cb]
     (throw (js/Error. "No *load-fn* set"))))
 
 (defonce
@@ -95,7 +95,7 @@
   The result of evaluation should be the return value."
     :dynamic true}
   *eval-fn*
-  (fn [js-source]
+  (fn [m]
     (throw (js/Error. "No *eval-fn* set"))))
 
 (defn js-eval

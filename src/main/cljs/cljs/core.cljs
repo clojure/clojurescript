@@ -50,7 +50,7 @@
 
 (defonce
   ^{:doc "Each runtime environment provides a different way to print error output.
-  Whatever function *print-fn* is bound to will be passed any
+  Whatever function *print-err-fn* is bound to will be passed any
   Strings which should be printed." :dynamic true}
   *print-err-fn*
   (fn [_]
@@ -2595,7 +2595,7 @@ reduces them without incurring seq initialization"
      (reduce bit-or (cljs.core/bit-or x y) more)))
 
 (defn bit-and-not
-  "Bitwise and"
+  "Bitwise and with complement"
   ([x y] (cljs.core/bit-and-not x y))
   ([x y & more]
      (reduce bit-and-not (cljs.core/bit-and-not x y) more)))
@@ -2662,12 +2662,12 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean pos?
   "Returns true if num is greater than zero, else false"
-  [n] (cljs.core/pos? n))
+  [x] (cljs.core/pos? x))
 
 (defn ^boolean zero?
   "Returns true if num is zero, else false"
-  [n]
-  (cljs.core/zero? n))
+  [x]
+  (cljs.core/zero? x))
 
 (defn ^boolean neg?
   "Returns true if num is less than zero, else false"
@@ -3000,7 +3000,7 @@ reduces them without incurring seq initialization"
 (es6-iterable Cons)
 
 (defn cons
-  "Returns a new seq where x is the first element and seq is the rest."
+  "Returns a new seq where x is the first element and coll is the rest."
   [x coll]
   (if (or (nil? coll)
           (implements? ISeq coll))
@@ -3065,7 +3065,7 @@ reduces them without incurring seq initialization"
       false)))
 
 (defn ^boolean symbol-identical?
-  "Efficient test to determine that two symbol are identical."
+  "Efficient test to determine that two symbols are identical."
   [x y]
   (if (identical? x y)
     true
@@ -3118,7 +3118,7 @@ reduces them without incurring seq initialization"
     (-lastIndexOf coll x start))
 
   IPending
-  (-realized? [x]
+  (-realized? [coll]
     (not fn))
 
   IWithMeta
@@ -3496,10 +3496,10 @@ reduces them without incurring seq initialization"
   (-persistent! tcoll))
 
 (defn conj!
-  "Adds x to the transient collection, and return coll. The 'addition'
+  "Adds val to the transient collection, and return tcoll. The 'addition'
   may happen at different 'places' depending on the concrete type."
   ([] (transient []))
-  ([coll] coll)
+  ([tcoll] tcoll)
   ([tcoll val]
     (-conj! tcoll val))
   ([tcoll val & vals]
@@ -3532,7 +3532,7 @@ reduces them without incurring seq initialization"
 
 (defn pop!
   "Removes the last item from a transient vector. If
-  the collection is empty, throws an exception. Returns coll"
+  the collection is empty, throws an exception. Returns tcoll"
   [tcoll]
   (-pop! tcoll))
 
@@ -4122,7 +4122,7 @@ reduces them without incurring seq initialization"
 
 (defn reset!
   "Sets the value of atom to newval without regard for the
-  current value. Returns newval."
+  current value. Returns new-value."
   [a new-value]
   (if (instance? Atom a)
     (let [validate (.-validator a)]
@@ -4472,7 +4472,8 @@ reduces them without incurring seq initialization"
   ([n x] (take n (repeat x))))
 
 (defn replicate
-  "Returns a lazy seq of n xs."
+  "DEPRECATED: Use 'repeat' instead.
+  Returns a lazy seq of n xs."
   [n x] (take n (repeat x)))
 
 (defn repeatedly
@@ -4586,10 +4587,10 @@ reduces them without incurring seq initialization"
 
 (defn tree-seq
   "Returns a lazy sequence of the nodes in a tree, via a depth-first walk.
-   branch? must be a fn of one arg that returns true if passed a node
-   that can have children (but may not).  children must be a fn of one
-   arg that returns a sequence of the children. Will only be called on
-   nodes for which branch? returns true. Root is the root node of the
+  branch? must be a fn of one arg that returns true if passed a node
+  that can have children (but may not).  children must be a fn of one
+  arg that returns a sequence of the children. Will only be called on
+  nodes for which branch? returns true. Root is the root node of the
   tree."
    [branch? children root]
    (let [walk (fn walk [node]
@@ -9559,9 +9560,9 @@ reduces them without incurring seq initialization"
       (pr-str k))))
 
 (defn clj->js
-   "Recursively transforms ClojureScript values to JavaScript.
-sets/vectors/lists become Arrays, Keywords and Symbol become Strings,
-Maps become Objects. Arbitrary keys are encoded to by key->js."
+  "Recursively transforms ClojureScript values to JavaScript.
+  sets/vectors/lists become Arrays, Keywords and Symbol become Strings,
+  Maps become Objects. Arbitrary keys are encoded to by key->js."
    [x]
    (when-not (nil? x)
      (if (satisfies? IEncodeJS x)
