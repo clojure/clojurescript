@@ -1899,6 +1899,9 @@
 (defrecord C [a b c])
 (defrecord A' [x])
 (defrecord B' [x])
+(defrecord FooComparable [x]
+  IComparable
+  (-compare [_ o] (compare x (.-x o))))
 
 (deftest test-records
   (let [fred (Person. "Fred" "Mertz")
@@ -1939,7 +1942,8 @@
       (is (= (set (keys (dissoc more-letters :d))) #{:a :b :c :e :f}))
       (is (= (set (keys (dissoc more-letters :d :e))) #{:a :b :c :f}))
       (is (= (set (keys (dissoc more-letters :d :e :f))) #{:a :b :c}))
-      (is (not= (A'. nil) (B'. nil))))))
+      (is (not= (A'. nil) (B'. nil)))
+      (is (satisfies? IComparable (->FooComparable 1))))))
 
 (deftype FnLike []
   IFn

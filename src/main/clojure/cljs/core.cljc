@@ -755,7 +755,8 @@
           (iterate (core/fn [[p b]]
                      (if (core/== 2147483648 b)
                        [(core/inc p) 1]
-                       [p (core/bit-shift-left b 1)]))
+                       [p #?(:clj  (core/bit-shift-left b 1)
+                             :cljs (core/* 2 b))]))
                    [0 1])))
 
 (def fast-path-protocol-partitions-count
