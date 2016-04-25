@@ -1,3 +1,21 @@
+## 1.8.51
+
+### Changes
+* bump Closure Compiler to v20160315
+* bump tools.reader to 1.0.0-beta1
+* CLJS-1624: Avoid useage of JSC_HOME in test bash scripts
+
+### Enhancements
+* CLJS-1626: cljs.test for bootstrap
+
+### Fixes
+* CLJS-1588: defrecord satisfies? behavior under bootstrap
+* CLJS-1632: docs / arglist consistency
+* CLJS-1612: Resolve ns aliases in syntax-quote
+* CLJS-1621: Foreign libs modules of different types don't compile together
+* CLJS-1617: inlined `list` evaluation order
+* :parallel-build race condition
+
 ## 1.8.40
 
 ### Fixes
