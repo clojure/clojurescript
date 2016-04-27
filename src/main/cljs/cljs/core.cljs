@@ -1012,6 +1012,9 @@
     (if (instance? Var other)
       (= (.-sym this) (.-sym other))
       false))
+  IHash
+  (-hash [_]
+    (hash-symbol sym))
   Fn
   IFn
   (-invoke [_]
