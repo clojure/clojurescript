@@ -600,7 +600,10 @@
             (seq ret)))
         (core/list (asig fdecl))))))
 
-(core/defmacro defonce [x init]
+(core/defmacro defonce
+  "defs name to have the root value of init iff the named var has no root value,
+  else init is unevaluated"
+  [x init]
   `(when-not (exists? ~x)
      (def ~x ~init)))
 

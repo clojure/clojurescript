@@ -981,6 +981,7 @@
   (-pr-writer [o writer _] (-write writer str)))
 
 (defn symbol
+  "Returns a Symbol with the given namespace and name."
   ([name]
    (if (symbol? name)
      name
@@ -9158,6 +9159,7 @@ reduces them without incurring seq initialization"
   (string-print (pr-str-with-opts objs opts)))
 
 (defn newline
+  "Prints a newline using *print-fn*"
   ([] (newline nil))
   ([opts]
    (string-print "\n")
@@ -10199,7 +10201,9 @@ reduces them without incurring seq initialization"
   (fn [x y]
     (cond (pred x y) -1 (pred y x) 1 :else 0)))
 
-(defn ^boolean special-symbol? [x]
+(defn ^boolean special-symbol?
+  "Returns true if x names a special form"
+  [x]
   (contains?
     '#{if def fn* do let* loop* letfn* throw try catch finally
        recur new set! ns deftype* defrecord* . js* & quote var}
