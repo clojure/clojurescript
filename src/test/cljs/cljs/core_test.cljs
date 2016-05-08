@@ -743,6 +743,7 @@
   (let [a (atom [1] :validator coll? :meta {:a 1})]
     (testing "Testing atom validators"
       (is (= coll? (get-validator a)))
+      (is (thrown? js/Error (reset! a 1)))
       (is (= {:a 1} (meta a)))
       (alter-meta! a assoc :b 2)
       (is (= {:a 1 :b 2} (meta a)))))

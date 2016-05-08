@@ -4244,7 +4244,8 @@ reduces them without incurring seq initialization"
   (if (instance? Atom a)
     (let [validate (.-validator a)]
       (when-not (nil? validate)
-        (assert (validate new-value) "Validator rejected reference state"))
+        (when-not (validate new-value)
+          (throw (js/Error. "Validator rejected reference state"))))
       (let [old-value (.-state a)]
         (set! (.-state a) new-value)
         (when-not (nil? (.-watches a))
