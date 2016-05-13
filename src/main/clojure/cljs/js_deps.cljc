@@ -210,14 +210,14 @@ case."
 (def load-foreign-library (memoize load-foreign-library*))
 
 (defn- library-graph-node
-  "Returns a map of :provides, :requires, and :url given a URL to a goog-style
-JavaScript library containing provide/require 'declarations'."
+  "Returns a map of :provides, :requires, :source-url and :url given a URL to a
+  goog-style JavaScript library containing provide/require 'declarations'."
   ([url] (library-graph-node url nil))
   ([url lib-path]
    (with-open [reader (io/reader url)]
      (-> reader line-seq parse-js-ns
        (merge
-         {:url url}
+         {:url url :source-url url}
          (when lib-path
            {:closure-lib true :lib-path lib-path}))))))
 
