@@ -3003,22 +3003,22 @@
       `(do
          (def ~(with-meta name meta)
            (fn [~'var_args]
-             (let [~args-sym (array)]
-               (copy-arguments ~args-sym)
-               (case (alength ~args-sym)
-                ~@(mapcat #(fixed-arity rname %) sigs)
-                ~(if variadic
-                   `(let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
-                                    (.slice ~args-sym ~maxfa) 0 nil)]
-                      (. ~rname
-                        (~'cljs$core$IFn$_invoke$arity$variadic
-                          ~@(dest-args maxfa)
-                          argseq#)))
-                   (if (:macro meta)
-                     `(throw (js/Error.
-                               (str "Invalid arity: " (- (alength ~args-sym) 2))))
-                     `(throw (js/Error.
-                               (str "Invalid arity: " (alength ~args-sym))))))))))
+             (case (alength (js-arguments))
+               ~@(mapcat #(fixed-arity rname %) sigs)
+               ~(if variadic
+                  `(let [args-arr# (array)]
+                     (copy-arguments args-arr#)
+                     (let [argseq# (new ^::ana/no-resolve cljs.core/IndexedSeq
+                                        (.slice args-arr# ~maxfa) 0 nil)]
+                       (. ~rname
+                          (~'cljs$core$IFn$_invoke$arity$variadic
+                           ~@(dest-args maxfa)
+                           argseq#))))
+                  (if (:macro meta)
+                    `(throw (js/Error.
+                             (str "Invalid arity: " (- (alength (js-arguments)) 2))))
+                    `(throw (js/Error.
+                             (str "Invalid arity: " (alength (js-arguments))))))))))
          ~@(map fn-method fdecl)
          ;; optimization properties
          (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)
