@@ -8858,15 +8858,17 @@ reduces them without incurring seq initialization"
   "Returns a lazy seq of the intermediate values of the reduction (as
   per reduce) of coll by f, starting with init."
   ([f coll]
-     (lazy-seq
-      (if-let [s (seq coll)]
-        (reductions f (first s) (rest s))
-        (list (f)))))
+   (lazy-seq
+     (if-let [s (seq coll)]
+       (reductions f (first s) (rest s))
+       (list (f)))))
   ([f init coll]
+   (if (reduced? init)
+     (list @init)
      (cons init
-           (lazy-seq
-            (when-let [s (seq coll)]
-              (reductions f (f init (first s)) (rest s)))))))
+       (lazy-seq
+         (when-let [s (seq coll)]
+           (reductions f (f init (first s)) (rest s))))))))
 
 (defn juxt
   "Takes a set of functions and returns a fn that is the juxtaposition

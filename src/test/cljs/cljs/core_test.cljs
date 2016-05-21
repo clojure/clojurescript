@@ -3150,6 +3150,21 @@
   (is (= [""] (s/split-lines "")))
   (is (= [] (s/split-lines "\n\n\n"))))
 
+(deftest test-reductions-obeys-reduced
+  (is (= [0 :x]
+        (reductions (constantly (reduced :x))
+          (range))))
+  (is (= [:x]
+        (reductions (fn [acc x] x)
+          (reduced :x)
+          (range))))
+  (is (= [2 6 12 12]
+        (reductions (fn [acc x]
+                      (if (= x :stop)
+                        (reduced acc)
+                        (+ acc x)))
+          [2 4 6 :stop 8 10]))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
