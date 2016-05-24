@@ -824,8 +824,7 @@
                     {:output-file (comp/rename-to-js
                                     (util/ns->relpath (:ns ns-info)))})))
               (catch Throwable e
-                (util/debug-prn e)
-                (reset! failed true)))
+                (reset! failed e)))
             (when-not @failed
               (when-let [ns (:ns ns-info)]
                 (swap! input-set disj ns))
@@ -849,6 +848,8 @@
           (.countDown latch))))
     (util/measure compiler-stats "Compile sources" (.await latch))
     (.shutdown es)
+    (when @failed
+      (throw @failed))
     @compiled))
 
 (defn compile-sources
