@@ -447,7 +447,11 @@
     (evaluate-form repl-env env filename form wrap *repl-opts*))
   ([repl-env env filename form wrap opts]
    (binding [ana/*cljs-file* filename]
-     (let [ast (ana/analyze env form nil opts)
+     (let [env (assoc env
+                      :root-source-info
+                      {:source-type :fragment
+                       :source-form form })
+           ast (ana/analyze env form nil opts)
            js (comp/emit-str ast)
            def-emits-var (:def-emits-var opts)
            wrap-js

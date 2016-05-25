@@ -581,18 +581,16 @@
 
 (defn source-info
   ([env]
-   (when-let [line (:line env)]
-     {:file (if (= (-> env :ns :name) 'cljs.core)
-              "cljs/core.cljs"
-              *cljs-file*)
-      :line (get-line name env)
-      :column (get-col name env)}))
+   (when (:line env)
+     (source-info nil env)))
   ([name env]
-   {:file (if (= (-> env :ns :name) 'cljs.core)
-            "cljs/core.cljs"
-            *cljs-file*)
-    :line (get-line name env)
-    :column (get-col name env)}))
+   (cond-> {:file (if (= (-> env :ns :name) 'cljs.core)
+                    "cljs/core.cljs"
+                    *cljs-file*)
+            :line (get-line name env)
+            :column (get-col name env)}
+     (:root-source-info env)
+     (merge (select-keys env [:root-source-info])))))
 
 (defn message [env s]
   (str s
