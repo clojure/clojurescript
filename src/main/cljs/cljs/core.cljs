@@ -871,10 +871,12 @@
   (when (> string-hash-cache-count 255)
     (set! string-hash-cache (js-obj))
     (set! string-hash-cache-count 0))
-  (let [h (aget string-hash-cache k)]
-    (if (number? h)
-      h
-      (add-to-string-hash-cache k))))
+  (if (nil? k)
+    0
+    (let [h (aget string-hash-cache k)]
+      (if (number? h)
+        h
+        (add-to-string-hash-cache k)))))
 
 (defn hash
   "Returns the hash code of its argument. Note this is the hash code

@@ -3165,6 +3165,10 @@
                         (+ acc x)))
           [2 4 6 :stop 8 10]))))
 
+(deftest test-nil-hashing-cljs-1649
+  (is (zero? (hash-string nil)))
+  (is (not (zero? (hash-string "null")))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
