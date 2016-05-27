@@ -118,7 +118,7 @@ gen-builtins
   (generate (one-of [(gen-for-pred integer?) (gen-for-pred string?)]))
   (generate (such-that #(< 10000 %) (gen-for-pred integer?)))
   (let [reqs {:a (gen-for-pred number?)
-              :b (gen-for-pred ratio?)}
+              :b (gen-for-pred keyword?)}
         opts {:c (gen-for-pred string?)}]
     (generate (bind (choose 0 (count opts))
                 #(let [args (concat (seq reqs) (shuffle (seq opts)))]
@@ -127,16 +127,16 @@ gen-builtins
                     (mapcat identity)
                     (apply hash-map))))))
   (generate (cat (list (gen-for-pred string?))
-              (list (gen-for-pred ratio?))))
+              (list (gen-for-pred integer?))))
 
   ;; load your own generator
-  (gen-for-name 'clojure.test.check.generators/int)
+  ;(gen-for-name 'clojure.test.check.generators/int)
 
   ;; failure modes
-  (gen-for-name 'unqualified)
-  (gen-for-name 'clojure.core/+)
-  (gen-for-name 'clojure.core/name-does-not-exist)
-  (gen-for-name 'ns.does.not.exist/f)
+  ;(gen-for-name 'unqualified)
+  ;(gen-for-name 'clojure.core/+)
+  ;(gen-for-name 'clojure.core/name-does-not-exist)
+  ;(gen-for-name 'ns.does.not.exist/f)
 
   )
 
