@@ -52,6 +52,18 @@
             <artifactId>tools.reader</artifactId>
             <version>1.0.0-beta1</version>
         </dependency>
+        <dependency>
+            <groupId>org.clojure</groupId>
+            <artifactId>test.check</artifactId>
+            <version>0.9.0</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.clojure</groupId>
+                    <artifactId>clojure</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 
     <developers>
