@@ -273,10 +273,13 @@ nil if the end of stream has been reached")
 
 (defn read-map
   [rdr _]
-  (let [l (read-delimited-list "}" rdr true)]
-    (when (odd? (count l))
+  (let [l (read-delimited-list "}" rdr true)
+        c (count l)]
+    (when (odd? c)
       (reader-error rdr "Map literal must contain an even number of forms"))
-    (apply hash-map l)))
+    (if (<= c (* 2 (.-HASHMAP-THRESHOLD PersistentArrayMap)))
+      (apply array-map l)
+      (apply hash-map l))))
 
 (defn read-number
   [reader initch]
