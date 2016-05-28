@@ -164,7 +164,7 @@
   (let [pairs (partition 2 key-pred-forms)
         keys (mapv first pairs)
         pred-forms (mapv second pairs)
-        pf (mapv res pred-forms)]
+        pf (mapv #(res &env %) pred-forms)]
     (assert (c/and (even? (count key-pred-forms)) (every? keyword? keys)) "spec/or expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/or-spec-impl ~keys '~pf ~pred-forms nil)))
 
@@ -207,7 +207,7 @@
   (let [pairs (partition 2 key-pred-forms)
         keys (mapv first pairs)
         pred-forms (mapv second pairs)
-        pf (mapv res pred-forms)]
+        pf (mapv #(res &env %) pred-forms)]
     (assert (c/and (even? (count key-pred-forms)) (every? keyword? keys)) "alt expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/alt-impl ~keys ~pred-forms '~pf)))
 
@@ -222,7 +222,7 @@
   (let [pairs (partition 2 key-pred-forms)
         keys (mapv first pairs)
         pred-forms (mapv second pairs)
-        pf (mapv res pred-forms)]
+        pf (mapv #(res &env %) pred-forms)]
     ;;(prn key-pred-forms)
     (assert (c/and (even? (count key-pred-forms)) (every? keyword? keys)) "cat expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/cat-impl ~keys ~pred-forms '~pf)))
