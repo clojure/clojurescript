@@ -353,3 +353,15 @@
   "Returns a spec for a map whose keys satisfy kpred and vals satisfy vpred."
   [kpred vpred]
   `(and (coll-of (tuple ~kpred ~vpred) {}) map?))
+
+(defmacro instrument
+  "Instruments the var at v, a var or symbol, to check specs
+  registered with fdef. Wraps the fn at v to check :args/:ret/:fn
+  specs, if they exist, throwing an ex-info with explain-data if a
+  check fails. Idempotent."
+  [v]
+  (let [v   (if-not (seq? v) (list 'var v) v)
+        sym (second v)]
+    `(when-let [checked# (cljs.spec/instrument* ~v)]
+       (set! ~sym checked#)
+       ~v)))

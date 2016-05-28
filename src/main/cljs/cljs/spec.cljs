@@ -242,10 +242,21 @@
   [spec v]
   )
 
+(defn- ->sym
+  "Returns a symbol from a symbol or var"
+  [x]
+  (if (var? x)
+    (.-sym x)
+    x))
+
 (defn- fn-specs?
   "Fn-specs must include at least :args or :ret specs."
   [m]
   (c/or (:args m) (:ret m)))
+
+(defn- fn-spec-sym
+  [sym role]
+  (symbol (str sym "$" (name role))))
 
 (defn fn-specs
   "Returns :args/:ret/:fn map of specs for var or symbol v."
@@ -303,38 +314,23 @@
   (ex-info (str "Fn at " v " is not spec'ed.")
            {:var v :specs specs}))
 
-;(def ^:private instrumented-vars
-;  "Map for instrumented vars to :raw/:wrapped fns"
-;  (atom {}))
-;
-;(defn- ->var
-;  [s-or-v]
-;  (if (var? s-or-v)
-;    s-or-v
-;    (let [v (c/and (symbol? s-or-v) (resolve s-or-v))]
-;      (if (var? v)
-;        v
-;        (throw (js/Error. (str (pr-str s-or-v) " does not name a var")))))))
+(def ^:private instrumented-vars
+  "Map for instrumented vars to :raw/:wrapped fns"
+  (atom {}))
 
-;(defn instrument
-;  "Instruments the var at v, a var or symbol, to check specs
-;registered with fdef. Wraps the fn at v to check :args/:ret/:fn
-;specs, if they exist, throwing an ex-info with explain-data if a
-;check fails. Idempotent."
-;  [v]
-;  (let [v (->var v)
-;        specs (fn-specs v)]
-;    (if (fn-specs? specs)
-;      (locking instrumented-vars
-;               (let [{:keys [raw wrapped]} (get @instrumented-vars v)
-;                     current @v]
-;                 (when-not (= wrapped current)
-;                   (let [checked (spec-checking-fn v current)]
-;                     (alter-var-root v (constantly checked))
-;                     (swap! instrumented-vars assoc v {:raw current :wrapped checked}))))
-;               v)
-;      (throw (no-fn-specs v specs)))))
-;
+(defn instrument*
+  [v]
+  (let [specs (fn-specs v)]
+    (if (fn-specs? specs)
+      (locking instrumented-vars
+               (let [{:keys [raw wrapped]} (get @instrumented-vars v)
+                     current @v]
+                 (when-not (= wrapped current)
+                   (let [checked (spec-checking-fn v current)]
+                     (swap! instrumented-vars assoc v {:raw current :wrapped checked})
+                     checked))))
+      (throw (no-fn-specs v specs)))))
+
 ;(defn unstrument
 ;  "Undoes instrument on the var at v, a var or symbol. Idempotent."
 ;  [v]
