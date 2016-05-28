@@ -12,7 +12,7 @@
                    [cljs.spec :as s])
   (:require [cljs.core :as c]
             [clojure.walk :as walk]
-            [cljs.spec.gen :as gen]
+            [cljs.spec.impl.gen :as gen]
             [clojure.string :as str]))
 
 (def ^:dynamic *recursion-limit*
@@ -271,7 +271,7 @@
     (c/fn
       [& args]
       (if *instrument-enabled*
-        (with-instrument-disabled
+        (s/with-instrument-disabled
           (let [specs (fn-specs v)]
             (let [cargs (when (:args specs) (conform! v :args (:args specs) args args))
                   ret (binding [*instrument-enabled* true]
