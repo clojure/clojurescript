@@ -2680,6 +2680,10 @@
   [vol f & args]
   `(-vreset! ~vol (~f (-deref ~vol) ~@args)))
 
+(core/defmacro locking
+  [x & forms]
+  `(do ~@forms))
+
 ;; INTERNAL - do not use, only for Node.js
 (core/defmacro load-file* [f]
   `(. js/goog (~'nodeGlobalRequire ~f)))
