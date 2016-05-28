@@ -6,7 +6,7 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns cljs.spec.gen
+(ns cljs.spec.impl.gen
   (:refer-clojure :exclude [delay])
   (:require [cljs.core :as c]))
 
@@ -21,7 +21,7 @@
   generator that delegates to that, but delays
   creation until used."
   [& body]
-  `(cljs.spec.gen/delay-impl (c/delay ~@body)))
+  `(cljs.spec.impl.gen/delay-impl (c/delay ~@body)))
 
 (defmacro ^:skip-wiki lazy-combinator
   "Implementation macro, do not call directly."
