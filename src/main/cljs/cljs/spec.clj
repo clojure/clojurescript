@@ -274,20 +274,26 @@
 
 (def ^:private _speced_vars (atom #{}))
 
+(defn speced-vars*
+  ([]
+    (speced-vars* nil))
+  ([ns-syms]
+   (let [ns-match? (if (seq ns-syms)
+                     (set ns-syms)
+                     (constantly true))]
+     (reduce
+       (fn [ret sym]
+         (if (ns-match? (namespace sym))
+           (conj ret (list 'var sym))
+           ret))
+       #{} @_speced_vars))))
+
 (defmacro speced-vars
   "Returns the set of vars whose namespace is in ns-syms AND
 whose vars have been speced with fdef. If no ns-syms are
 specified, return speced vars from all namespaces."
   [& ns-syms]
-  (let [ns-match? (if (seq ns-syms)
-                    (set ns-syms)
-                    (constantly true))]
-    (reduce
-      (fn [ret sym]
-        (if (ns-match? (namespace sym))
-          (conj ret (list 'var sym))
-          ret))
-      #{} @_speced_vars)))
+  (speced-vars* ns-syms))
 
 (defmacro fdef
   "Takes a symbol naming a function, and one or more of the following:
@@ -391,3 +397,29 @@ specified, return speced vars from all namespaces."
     `(when-let [raw# (cljs.spec/unstrument* ~v)]
        (set! ~sym raw#)
        ~v)))
+
+(defmacro instrument-ns
+  "Call instrument for all speced-vars in namespaces named
+by ns-syms. Idempotent."
+  [& ns-syms]
+  `(do
+     ~@(map #(list 'cljs.spec/instrument %) (speced-vars* ns-syms))))
+
+(defmacro unstrument-ns
+  "Call unstrument for all speced-vars in namespaces named
+by ns-syms. Idempotent."
+  [& ns-syms]
+  `(do
+     ~@(map #(list 'cljs.spec/unstrument %) (speced-vars* ns-syms))))
+
+(defmacro instrument-all
+  "Call instrument for all speced-vars. Idempotent."
+  []
+  `(do
+     ~@(map #(list 'cljs.spec/instrument %) (speced-vars*))))
+
+(defmacro unstrument-all
+  "Call unstrument for all speced-vars. Idempotent"
+  []
+  `(do
+     ~@(map #(list 'cljs.spec/unstrument %) (speced-vars*))))

@@ -341,38 +341,6 @@
              (swap! instrumented-vars dissoc v))
            v))
 
-;(defn instrument-ns
-;  "Call instrument for all speced-vars in namespaces named
-;by ns-syms. Idempotent."
-;  [& ns-syms]
-;  (when (seq ns-syms)
-;    (locking instrumented-vars
-;             (doseq [v (apply speced-vars ns-syms)]
-;               (instrument v)))))
-;
-;(defn unstrument-ns
-;  "Call unstrument for all speced-vars in namespaces named
-;by ns-syms. Idempotent."
-;  [& ns-syms]
-;  (when (seq ns-syms)
-;    (locking instrumented-vars
-;             (doseq [v (apply speced-vars ns-syms)]
-;               (unstrument v)))))
-;
-;(defn instrument-all
-;  "Call instrument for all speced-vars. Idempotent."
-;  []
-;  (locking instrumented-vars
-;           (doseq [v (speced-vars)]
-;             (instrument v))))
-;
-;(defn unstrument-all
-;  "Call unstrument for all speced-vars. Idempotent"
-;  []
-;  (locking instrumented-vars
-;           (doseq [v (speced-vars)]
-;             (unstrument v))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; impl ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn- recur-limit? [rmap id path k]
   (c/and (> (get rmap id) (::recursion-limit rmap))
