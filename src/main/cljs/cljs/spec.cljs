@@ -331,18 +331,16 @@
                      checked))))
       (throw (no-fn-specs v specs)))))
 
-;(defn unstrument
-;  "Undoes instrument on the var at v, a var or symbol. Idempotent."
-;  [v]
-;  (let [v (->var v)]
-;    (locking instrumented-vars
-;             (when-let [{:keys [raw wrapped]} (get @instrumented-vars v)]
-;               (let [current @v]
-;                 (when (= wrapped current)
-;                   (alter-var-root v (constantly raw))))
-;               (swap! instrumented-vars dissoc v))
-;             v)))
-;
+(defn unstrument*
+  [v]
+  (locking instrumented-vars
+           (when-let [{:keys [raw wrapped]} (get @instrumented-vars v)]
+             (let [current @v]
+               (when (= wrapped current)
+                 raw))
+             (swap! instrumented-vars dissoc v))
+           v))
+
 ;(defn speced-vars
 ;  "Returns the set of vars whose namespace is in ns-syms AND
 ;whose vars have been speced with fdef. If no ns-syms are

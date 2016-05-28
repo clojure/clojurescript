@@ -365,3 +365,11 @@
     `(when-let [checked# (cljs.spec/instrument* ~v)]
        (set! ~sym checked#)
        ~v)))
+
+(defmacro unstrument
+  "Undoes instrument on the var at v, a var or symbol. Idempotent."[v]
+  (let [v   (if-not (seq? v) (list 'var v) v)
+        sym (second v)]
+    `(when-let [raw# (cljs.spec/unstrument* ~v)]
+       (set! ~sym raw#)
+       ~v)))
