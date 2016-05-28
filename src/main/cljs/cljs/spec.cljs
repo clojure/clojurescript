@@ -341,26 +341,6 @@
              (swap! instrumented-vars dissoc v))
            v))
 
-;(defn speced-vars
-;  "Returns the set of vars whose namespace is in ns-syms AND
-;whose vars have been speced with fdef. If no ns-syms are
-;specified, return speced vars from all namespaces."
-;  [& ns-syms]
-;  (let [ns-match? (if (seq ns-syms)
-;                    (set (map str ns-syms))
-;                    (constantly true))]
-;    (reduce-kv
-;      (fn [s k _]
-;        (if (c/and (symbol? k)
-;                   (re-find  #"\$(args|ret)$" (name k))
-;                   (ns-match? (namespace k)))
-;          (if-let [v (resolve (symbol (str/replace (str k) #"\$(args|ret)$" "")))]
-;            (conj s v)
-;            s)
-;          s))
-;      #{}
-;      (registry))))
-;
 ;(defn instrument-ns
 ;  "Call instrument for all speced-vars in namespaces named
 ;by ns-syms. Idempotent."

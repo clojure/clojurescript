@@ -272,6 +272,23 @@
   [env sym role]
   (symbol (str (ns-qualify env sym) "$" (name role))))
 
+(def ^:private _speced_vars (atom #{}))
+
+(defmacro speced-vars
+  "Returns the set of vars whose namespace is in ns-syms AND
+whose vars have been speced with fdef. If no ns-syms are
+specified, return speced vars from all namespaces."
+  [& ns-syms]
+  (let [ns-match? (if (seq ns-syms)
+                    (set ns-syms)
+                    (constantly true))]
+    (reduce
+      (fn [ret sym]
+        (if (ns-match? (namespace sym))
+          (conj ret (list 'var sym))
+          ret))
+      #{} @_speced_vars)))
+
 (defmacro fdef
   "Takes a symbol naming a function, and one or more of the following:
 
@@ -305,6 +322,7 @@
                  :sym symbol?)
     :ret symbol?)"
   [fn-sym & {:keys [args ret fn] :as m}]
+  (swap! _speced_vars conj (:name (resolve &env fn-sym)))
   (let [env &env
         qn  (ns-qualify env fn-sym)]
     `(do ~@(reduce
