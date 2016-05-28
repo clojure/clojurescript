@@ -13,7 +13,7 @@ set -ex
 # find the v0.0 tag and will always return the total number of commits (even
 # if the tag is v0.0.1).
 MAJOR="1"
-MINOR="8"
+MINOR="9"
 REVISION=`git --no-replace-objects describe --match v$MAJOR.$MINOR`
 
 # Extract the version number from the string. Do this in two steps so
