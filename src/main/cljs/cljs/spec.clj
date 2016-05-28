@@ -141,7 +141,7 @@
         pred-exprs [`map?]
         pred-exprs (into pred-exprs (parse-req req identity))
         pred-exprs (into pred-exprs (parse-req req-un unk))
-        pred-forms (walk/postwalk res pred-exprs)]
+        pred-forms (walk/postwalk #(res &env %) pred-exprs)]
     ;; `(map-spec-impl ~req-keys '~req ~opt '~pred-forms ~pred-exprs ~gen)
     `(cljs.spec/map-spec-impl {:req '~req :opt '~opt :req-un '~req-un :opt-un '~opt-un
                                :req-keys '~req-keys :req-specs '~req-specs
