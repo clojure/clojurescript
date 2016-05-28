@@ -7,9 +7,10 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl
-  (:require-macros cljs.repl))
+  (:require-macros cljs.repl)
+  (:require [cljs.spec :as spec]))
 
-(defn print-doc [m]
+(defn print-doc [{n :ns nm :name :as m}]
   (println "-------------------------")
   (println (str (when-let [ns (:ns m)] (str ns "/")) (:name m)))
   (when (:protocol m)
@@ -46,4 +47,11 @@
           (println " " name)
           (println " " arglists)
           (when doc
-            (println " " doc)))))))
+            (println " " doc))))
+      (when n
+        (when-let [specs (spec/fn-specs (symbol (str (ns-name n)) (name nm)))]
+          (println "Spec")
+          (run! (fn [[role spec]]
+                  (when (and spec (not (= spec ::spec/unknown)))
+                    (println " " (str (name role) ":") (spec/describe spec))))
+                specs))))))
