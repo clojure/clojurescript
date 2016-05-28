@@ -155,31 +155,32 @@
   "prints an explanation to *out*."
   [ed]
   (if ed
-    (do
-      ;;(prn {:ed ed})
-      (doseq [[path {:keys [pred val reason via in] :as prob}]  (::problems ed)]
-        (when-not (empty? in)
-          (print "In:" in ""))
-        (print "val: ")
-        (pr val)
-        (print " fails")
-        (when-not (empty? via)
-          (print " spec:" (last via)))
-        (when-not (empty? path)
-          (print " at:" path))
-        (print " predicate: ")
-        (pr pred)
-        (when reason (print ", " reason))
-        (doseq [[k v] prob]
-          (when-not (#{:pred :val :reason :via :in} k)
-            (print "\n\t" k " ")
-            (pr v)))
-        (newline))
-      (doseq [[k v] ed]
-        (when-not (#{::problems} k)
-          (print k " ")
-          (pr v)
-          (newline))))
+    (print
+      (with-out-str
+        ;;(prn {:ed ed})
+        (doseq [[path {:keys [pred val reason via in] :as prob}] (::problems ed)]
+          (when-not (empty? in)
+            (print "In:" in ""))
+          (print "val: ")
+          (pr val)
+          (print " fails")
+          (when-not (empty? via)
+            (print " spec:" (last via)))
+          (when-not (empty? path)
+            (print " at:" path))
+          (print " predicate: ")
+          (pr pred)
+          (when reason (print ", " reason))
+          (doseq [[k v] prob]
+            (when-not (#{:pred :val :reason :via :in} k)
+              (print "\n\t" k " ")
+              (pr v)))
+          (newline))
+        (doseq [[k v] ed]
+          (when-not (#{::problems} k)
+            (print k " ")
+            (pr v)
+            (newline)))))
     (println "Success!")))
 
 (defn explain
