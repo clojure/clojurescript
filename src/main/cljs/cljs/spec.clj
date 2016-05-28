@@ -10,7 +10,7 @@
   (:refer-clojure :exclude [+ * and or cat def keys resolve])
   (:require [cljs.analyzer.api :refer [resolve]]
             [clojure.walk :as walk]
-            [cljs.spec.gen :as gen]
+            [cljs.spec.impl.gen :as gen]
             [clojure.string :as str]))
 
 (alias 'c 'clojure.core)

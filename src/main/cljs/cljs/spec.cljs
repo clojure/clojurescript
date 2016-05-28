@@ -1070,8 +1070,8 @@
       (describe* [_] `(fspec ~aform ~rform ~fform)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; non-primitives ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(s/def ::any (s/spec (constantly true) :gen gen/any))
-(s/def ::kvs->map (s/conformer #(zipmap (map ::k %) (map ::v %))))
+(cljs.spec/def ::any (cljs.spec/spec (constantly true) :gen gen/any))
+(cljs.spec/def ::kvs->map (cljs.spec/conformer #(zipmap (map ::k %) (map ::v %))))
 
 (defn exercise
   "generates a number (default 10) of values compatible with spec and maps conform over them,
