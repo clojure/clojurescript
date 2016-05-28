@@ -18,10 +18,8 @@
 (defn- ->sym
   "Returns a symbol from a symbol or var"
   [x]
-  (if (var? x)
-    (let [^clojure.lang.Var v x]
-      (symbol (str (.name (.ns v)))
-              (str (.sym v))))
+  (if (map? x)
+    (:name x)
     x))
 
 (defn- unfn [expr]
