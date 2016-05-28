@@ -7,11 +7,13 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.spec
-  (:refer-clojure :exclude [+ * and or cat def keys])
-  (:require [cljs.core :as c]
+  (:refer-clojure :exclude [+ * and or cat def keys resolve])
+  (:require [cljs.analyzer.api :refer [resolve]]
             [clojure.walk :as walk]
             [cljs.spec.gen :as gen]
             [clojure.string :as str]))
+
+(alias 'c 'clojure.core)
 
 (defn- ->sym
   "Returns a symbol from a symbol or var"
@@ -30,18 +32,18 @@
       (conj (walk/postwalk-replace {s '%} form) '[%] 'fn))
     expr))
 
-(defn- res [form]
+(defn- res [env form]
   (cond
     (keyword? form) form
-    (symbol? form) (c/or (-> form resolve ->sym) form)
-    (sequential? form) (walk/postwalk #(if (symbol? %) (res %) %) (unfn form))
+    (symbol? form) (c/or (->> form (resolve env) ->sym) form)
+    (sequential? form) (walk/postwalk #(if (symbol? %) (res env %) %) (unfn form))
     :else form))
 
 (defmacro def
   "Given a namespace-qualified keyword or symbol k, and a spec, spec-name, predicate or regex-op
   makes an entry in the registry mapping k to the spec"
   [k spec-form]
-  `(cljs.spec/def-impl ~k '~(res spec-form) ~spec-form))
+  `(cljs.spec/def-impl ~k '~(res &env spec-form) ~spec-form))
 
 (defmacro spec
   "Takes a single predicate form, e.g. can be the name of a predicate,
@@ -59,7 +61,7 @@
 
   Returns a spec."
   [form & {:keys [gen]}]
-  `(cljs.spec/spec-impl '~(res form) ~form ~gen nil))
+  `(cljs.spec/spec-impl '~(res &env form) ~form ~gen nil))
 
 (defmacro multi-spec
   "Takes the name of a spec/predicate-returning multimethod and a
@@ -88,7 +90,7 @@
   though those values are not evident in the spec.
 "
   [mm retag]
-  `(cljs.spec/multi-spec-impl '~(res mm) (var ~mm) ~retag))
+  `(cljs.spec/multi-spec-impl '~(res &env mm) (var ~mm) ~retag))
 
 (defmacro keys
   "Creates and returns a map validating spec. :req and :opt are both
@@ -174,19 +176,19 @@
   Returns a spec that returns the conformed value. Successive
   conformed values propagate through rest of predicates."
   [& pred-forms]
-  `(cljs.spec/and-spec-impl '~(mapv res pred-forms) ~(vec pred-forms) nil))
+  `(cljs.spec/and-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
 
 (defmacro *
   "Returns a regex op that matches zero or more values matching
   pred. Produces a vector of matches iff there is at least one match"
   [pred-form]
-  `(cljs.spec/rep-impl '~(res pred-form) ~pred-form))
+  `(cljs.spec/rep-impl '~(res &env pred-form) ~pred-form))
 
 (defmacro +
   "Returns a regex op that matches one or more values matching
   pred. Produces a vector of matches"
   [pred-form]
-  `(cljs.spec/rep+impl '~(res pred-form) ~pred-form))
+  `(cljs.spec/rep+impl '~(res &env pred-form) ~pred-form))
 
 (defmacro ?
   "Returns a regex op that matches zero or one value matching
@@ -248,7 +250,8 @@
   Optionally takes :gen generator-fn, which must be a fn of no args
   that returns a test.check generator."
   [& {:keys [args ret fn gen]}]
-  `(cljs.spec/fspec-impl ~args '~(res args) ~ret '~(res ret) ~fn '~(res fn) ~gen))
+  (let [env &env]
+    `(cljs.spec/fspec-impl ~args '~(res env args) ~ret '~(res env ret) ~fn '~(res env fn) ~gen)))
 
 (defmacro tuple
   "takes one or more preds and returns a spec for a tuple, a vector
@@ -256,20 +259,20 @@
   will be referred to in paths using its ordinal."
   [& preds]
   (assert (not (empty? preds)))
-  `(cljs.spec/tuple-impl '~(mapv res preds) ~(vec preds)))
+  `(cljs.spec/tuple-impl '~(mapv #(res &env %) preds) ~(vec preds)))
 
 (defn- ns-qualify
   "Qualify symbol s by resolving it or using the current *ns*."
-  [s]
-  (if-let [resolved (resolve s)]
+  [env s]
+  (if-let [resolved (resolve env s)]
     (->sym resolved)
     (if (namespace s)
       s
       (symbol (str (.name *ns*)) (str s)))))
 
 (defn- fn-spec-sym
-  [sym role]
-  (symbol (str (ns-qualify sym) "$" (name role))))
+  [env sym role]
+  (symbol (str (ns-qualify env sym) "$" (name role))))
 
 (defmacro fdef
   "Takes a symbol naming a function, and one or more of the following:
@@ -304,11 +307,12 @@
                  :sym symbol?)
     :ret symbol?)"
   [fn-sym & {:keys [args ret fn] :as m}]
-  (let [qn (ns-qualify fn-sym)]
+  (let [env &env
+        qn  (ns-qualify env fn-sym)]
     `(do ~@(reduce
              (c/fn [defns role]
                (if (contains? m role)
-                 (let [s (fn-spec-sym qn (name role))]
+                 (let [s (fn-spec-sym env qn (name role))]
                    (conj defns `(cljs.spec/def '~s ~(get m role))))
                  defns))
              [] [:args :ret :fn])
