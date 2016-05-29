@@ -807,7 +807,8 @@
     (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
      (when (:source-map opts)
        (.start (Thread. (bound-fn [] (read-source-map "cljs/core.aot.js")))))
-     (binding [*err* (if bind-err
+     (binding [ana/*unchecked-if* false
+               *err* (if bind-err
                        (cond-> *out*
                          (not (instance? PrintWriter *out*)) (PrintWriter.))
                        *err*)
