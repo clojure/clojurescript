@@ -13,8 +13,6 @@
             [cljs.spec.impl.gen :as gen]
             [clojure.string :as str]))
 
-(alias 'c 'clojure.core)
-
 (defn- ->sym
   "Returns a symbol from a symbol or var"
   [x]
@@ -23,7 +21,7 @@
     x))
 
 (defn- unfn [expr]
-  (if (c/and (seq? expr)
+  (if (clojure.core/and (seq? expr)
              (symbol? (first expr))
              (= "fn*" (name (first expr))))
     (let [[[s] & form] (rest expr)]
@@ -33,7 +31,7 @@
 (defn- res [env form]
   (cond
     (keyword? form) form
-    (symbol? form) (c/or (->> form (resolve env) ->sym) form)
+    (symbol? form) (clojure.core/or (->> form (resolve env) ->sym) form)
     (sequential? form) (walk/postwalk #(if (symbol? %) (res env %) %) (unfn form))
     :else form))
 
@@ -122,7 +120,7 @@
   (let [unk #(-> % name keyword)
         req-keys (filterv keyword? (flatten req))
         req-un-specs (filterv keyword? (flatten req-un))
-        _ (assert (every? #(c/and (keyword? %) (namespace %)) (concat req-keys req-un-specs opt opt-un))
+        _ (assert (every? #(clojure.core/and (keyword? %) (namespace %)) (concat req-keys req-un-specs opt opt-un))
                   "all keys must be namespace-qualified keywords")
         req-specs (into req-keys req-un-specs)
         req-keys (into req-keys (map unk req-un-specs))
@@ -163,7 +161,7 @@
         keys (mapv first pairs)
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
-    (assert (c/and (even? (count key-pred-forms)) (every? keyword? keys)) "spec/or expects k1 p1 k2 p2..., where ks are keywords")
+    (assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "spec/or expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/or-spec-impl ~keys '~pf ~pred-forms nil)))
 
 (defmacro and
@@ -206,7 +204,7 @@
         keys (mapv first pairs)
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
-    (assert (c/and (even? (count key-pred-forms)) (every? keyword? keys)) "alt expects k1 p1 k2 p2..., where ks are keywords")
+    (assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "alt expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/alt-impl ~keys ~pred-forms '~pf)))
 
 (defmacro cat
@@ -222,7 +220,7 @@
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
     ;;(prn key-pred-forms)
-    (assert (c/and (even? (count key-pred-forms)) (every? keyword? keys)) "cat expects k1 p1 k2 p2..., where ks are keywords")
+    (assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "cat expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/cat-impl ~keys ~pred-forms '~pf)))
 
 (defmacro &
@@ -332,7 +330,7 @@ specified, return speced vars from all namespaces."
   (let [env &env
         qn  (ns-qualify env fn-sym)]
     `(do ~@(reduce
-             (c/fn [defns role]
+             (clojure.core/fn [defns role]
                (if (contains? m role)
                  (let [s (fn-spec-sym env qn (name role))]
                    (conj defns `(cljs.spec/def '~s ~(get m role))))
