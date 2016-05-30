@@ -15,12 +15,12 @@
 (defmacro run-tests
   "Like run-all-tests, but scoped to specific namespaces, or to
 *ns* if no ns-sym are specified."
-  [& ns-syms]
-  (if (seq ns-syms)
-    `(cljs.spec.test/run-var-tests
-       (->> ~(spec/speced-vars* ns-syms)
-         (filter (fn [v] (:args (spec/fn-specs v))))))
-    `(cljs.spec.test/run-tests '~ana/*cljs-ns*)))
+  ([]
+   `(cljs.spec.test/run-tests '~ana/*cljs-ns*))
+  ([& ns-syms]
+   `(cljs.spec.test/run-var-tests
+      (->> ~(spec/speced-vars* ns-syms)
+        (filter (fn [v] (:args (cljs.spec/fn-specs v))))))))
 
 (defmacro run-all-tests
   "Like clojure.test/run-all-tests, but runs test.check tests
