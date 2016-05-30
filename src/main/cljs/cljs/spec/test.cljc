@@ -8,6 +8,7 @@
 
 (ns cljs.spec.test
   (:require
+    [cljs.analyzer :as ana]
     [cljs.spec :as spec]
     [cljs.spec.impl.gen :as gen]))
 
@@ -16,13 +17,14 @@
 *ns* if no ns-sym are specified."
   [& ns-syms]
   (if (seq ns-syms)
-    (run-var-tests (->> (apply spec/speced-vars ns-syms)
-                     (filter (fn [v] (:args (spec/fn-specs v))))))
-    (run-tests (.name ^clojure.lang.Namespace *ns*))))
+    `(cljs.spec.test/run-var-tests
+       (->> ~(spec/speced-vars* ns-syms)
+         (filter (fn [v] (:args (spec/fn-specs v))))))
+    `(cljs.spec.test/run-tests '~ana/*cljs-ns*)))
 
 (defn run-all-tests
   "Like clojure.test/run-all-tests, but runs test.check tests
 for all speced vars. Prints per-test results to *out*, and
 returns a map with :test,:pass,:fail, and :error counts."
   []
-  (run-var-tests (spec/speced-vars)))
+  `(cljs.spec.test/run-var-tests ~(spec/speced-vars*)))
