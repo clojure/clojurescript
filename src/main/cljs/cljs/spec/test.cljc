@@ -1,0 +1,28 @@
+;   Copyright (c) Rich Hickey. All rights reserved.
+;   The use and distribution terms for this software are covered by the
+;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;   which can be found in the file epl-v10.html at the root of this distribution.
+;   By using this software in any fashion, you are agreeing to be bound by
+;   the terms of this license.
+;   You must not remove this notice, or any other, from this software.
+
+(ns cljs.spec.test
+  (:require
+    [cljs.spec :as spec]
+    [cljs.spec.impl.gen :as gen]))
+
+(defn run-tests
+  "Like run-all-tests, but scoped to specific namespaces, or to
+*ns* if no ns-sym are specified."
+  [& ns-syms]
+  (if (seq ns-syms)
+    (run-var-tests (->> (apply spec/speced-vars ns-syms)
+                     (filter (fn [v] (:args (spec/fn-specs v))))))
+    (run-tests (.name ^clojure.lang.Namespace *ns*))))
+
+(defn run-all-tests
+  "Like clojure.test/run-all-tests, but runs test.check tests
+for all speced vars. Prints per-test results to *out*, and
+returns a map with :test,:pass,:fail, and :error counts."
+  []
+  (run-var-tests (spec/speced-vars)))
