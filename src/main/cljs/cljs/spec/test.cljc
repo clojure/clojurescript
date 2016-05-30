@@ -12,7 +12,7 @@
     [cljs.spec :as spec]
     [cljs.spec.impl.gen :as gen]))
 
-(defn run-tests
+(defmacro run-tests
   "Like run-all-tests, but scoped to specific namespaces, or to
 *ns* if no ns-sym are specified."
   [& ns-syms]
@@ -22,7 +22,7 @@
          (filter (fn [v] (:args (spec/fn-specs v))))))
     `(cljs.spec.test/run-tests '~ana/*cljs-ns*)))
 
-(defn run-all-tests
+(defmacro run-all-tests
   "Like clojure.test/run-all-tests, but runs test.check tests
 for all speced vars. Prints per-test results to *out*, and
 returns a map with :test,:pass,:fail, and :error counts."

@@ -9,6 +9,8 @@
 (ns cljs.spec.test
   (:require-macros [cljs.spec.test :as st])
   (:require
+    [clojure.test.check]
+    [clojure.test.check.properties]
     [cljs.spec :as spec]
     [cljs.spec.impl.gen :as gen]))
 
