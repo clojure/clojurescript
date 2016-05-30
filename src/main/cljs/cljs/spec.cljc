@@ -281,7 +281,7 @@
                      (constantly true))]
      (reduce
        (fn [ret sym]
-         (if (ns-match? (namespace sym))
+         (if (ns-match? (symbol (namespace sym)))
            (conj ret (list 'var sym))
            ret))
        #{} @_speced_vars))))
