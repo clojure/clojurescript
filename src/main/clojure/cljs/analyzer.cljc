@@ -1207,6 +1207,8 @@
 
 (defn analyze-fn-method-param [env]
   (fn [[locals params] name]
+    (when (namespace name)
+      (throw (error env (str "Can't use qualified name as parameter: " name))))
     (let [line   (get-line name env)
           column (get-col name env)
           nmeta  (meta name)
