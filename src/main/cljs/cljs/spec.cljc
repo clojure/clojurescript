@@ -277,7 +277,7 @@
     (speced-vars* nil))
   ([ns-syms]
    (let [ns-match? (if (seq ns-syms)
-                     (set ns-syms)
+                     (set (map second ns-syms))
                      (constantly true))]
      (reduce
        (fn [ret sym]

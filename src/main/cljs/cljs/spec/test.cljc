@@ -20,7 +20,7 @@
   ([& ns-syms]
    `(cljs.spec.test/run-var-tests
       (->> ~(spec/speced-vars* ns-syms)
-        (filter (fn [v] (:args (cljs.spec/fn-specs v))))))))
+        (filter (fn [v#] (:args (cljs.spec/fn-specs v#))))))))
 
 (defmacro run-all-tests
   "Like clojure.test/run-all-tests, but runs test.check tests
