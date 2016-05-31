@@ -19,7 +19,8 @@
    `(cljs.spec.test/run-tests '~ana/*cljs-ns*))
   ([& ns-syms]
    `(cljs.spec.test/run-var-tests
-      (->> ~(spec/speced-vars* ns-syms)
+      (->> #?(:clj  ~(spec/speced-vars* ns-syms)
+              :cljs ~(cljs.spec$macros/speced-vars* ns-syms))
         (filter (fn [v#] (:args (cljs.spec/fn-specs v#))))))))
 
 (defmacro run-all-tests
@@ -27,4 +28,5 @@
 for all speced vars. Prints per-test results to *out*, and
 returns a map with :test,:pass,:fail, and :error counts."
   []
-  `(cljs.spec.test/run-var-tests ~(spec/speced-vars*)))
+  `(cljs.spec.test/run-var-tests #?(:clj  ~(spec/speced-vars*)
+                                    :cljs ~(cljs.spec$macros/speced-vars*))))
