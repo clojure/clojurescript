@@ -2361,7 +2361,11 @@
         (if-not (nil? mac-var)
           (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
                :cljs [do])
-            (let [form' (try
+            (let [mchk  #?(:clj (some-> (find-ns 'clojure.spec)
+                                  (ns-resolve 'macroexpand-check)))
+                  _     #?(:clj (when mchk
+                                  (mchk mac-var (next form))))
+                  form' (try
                           (apply @mac-var form env (rest form))
                           #?(:clj (catch ArityException e
                                     (throw (ArityException. (- (.actual e) 2) (.name e))))))]
