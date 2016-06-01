@@ -13,24 +13,34 @@
                    [cljs.spec.impl.gen :as gen :refer [dynaload lazy-combinators lazy-prims]])
   (:require [cljs.core :as c]))
 
+(deftype LazyVar [f ^:mutable cached]
+  IDeref
+  (-deref [this]
+    (if-not (nil? cached)
+      cached
+      (let [x (f)]
+        (when-not (nil? x)
+          (set! cached x))
+        x))))
+
 (def ^:private quick-check-ref
-  (c/delay (dynaload 'clojure.test.check/quick-check)))
+  (dynaload 'clojure.test.check/quick-check))
 
 (defn quick-check
   [& args]
   (apply @quick-check-ref args))
 
 (def ^:private for-all*-ref
-  (c/delay (dynaload 'clojure.test.check.properties/for-all*)))
+  (dynaload 'clojure.test.check.properties/for-all*))
 
 (defn for-all*
   "Dynamically loaded clojure.test.check.properties/for-all*."
   [& args]
   (apply @for-all*-ref args))
 
-(let [g? (c/delay (dynaload 'clojure.test.check.generators/generator?))
-      g (c/delay (dynaload 'clojure.test.check.generators/generate))
-      mkg (c/delay (dynaload 'clojure.test.check.generators/->Generator))]
+(let [g? (dynaload 'clojure.test.check.generators/generator?)
+      g (dynaload 'clojure.test.check.generators/generate)
+      mkg (dynaload 'clojure.test.check.generators/->Generator)]
   (defn- generator?
     [x]
     (@g? x))

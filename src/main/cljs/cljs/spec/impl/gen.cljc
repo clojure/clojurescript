@@ -8,13 +8,26 @@
 
 (ns cljs.spec.impl.gen
   (:refer-clojure :exclude [delay])
-  (:require [cljs.core :as c]))
+  (:require [cljs.core :as c]
+            [clojure.string :as string]))
 
 (defmacro dynaload [[quote s]]
-  `(if (c/exists? ~s)
-     ~(vary-meta s assoc :cljs.analyzer/no-resolve true)
-     (fn [& ~'args]
-       (throw (js/Error. (str "Var " '~s " is not on the classpath"))))))
+  (let [xs     (string/split (namespace s) #"\.")
+        cnt    (count xs)
+        checks (map
+                 (fn [n xs]
+                   `(c/exists? ~(symbol (string/join "." (take n xs)))))
+                 (range 2 cnt)
+                 (repeat xs))]
+    `(cljs.spec.impl.gen/LazyVar.
+       (fn []
+         (if (and ~@checks (c/exists? ~s))
+           ~(vary-meta s assoc :cljs.analyzer/no-resolve true)
+           (throw
+             (js/Error.
+               (str "Var " '~s " does not exist, "
+                    (namespace '~s) " never required")))))
+       nil)))
 
 (defmacro delay
   "given body that returns a generator, returns a
@@ -28,7 +41,7 @@
   [s]
   (let [fqn (symbol "clojure.test.check.generators" (name s))
         doc (str "Lazy loaded version of " fqn)]
-    `(let [g# (c/delay (dynaload '~fqn))]
+    `(let [g# (dynaload '~fqn)]
        (defn ~s
          ~doc
          [& ~'args]
@@ -47,7 +60,7 @@
   [s]
   (let [fqn (symbol "clojure.test.check.generators" (name s))
         doc (str "Fn returning " fqn)]
-    `(let [g# (c/delay (dynaload '~fqn))]
+    `(let [g# (dynaload '~fqn)]
        (defn ~s
          ~doc
          [& ~'args]
