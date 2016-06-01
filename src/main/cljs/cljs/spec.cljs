@@ -806,8 +806,8 @@
 (defn- op-explain [form p path via in input]
   ;;(prn {:form form :p p :path path :input input})
   (let [[x :as input] input
-        via (if-let [name (spec-name p)] (conj via name) via)
         {:keys [::op ps ks forms splice p1 p2] :as p} (reg-resolve p)
+        via (if-let [name (spec-name p)] (conj via name) via)
         insufficient (fn [path form]
                        {path {:reason "Insufficient input"
                               :pred (abbrev form)
@@ -827,13 +827,13 @@
                 (if-let [p1 (deriv p1 x)]
                   (explain-pred-list forms ps path via in (preturn p1))
                   (op-explain (op-describe p1) p1 path via in input)))
-        ::pcat (let [[pred k form] (->> (map vector
-                                             ps
-                                             (c/or (seq ks) (repeat nil))
-                                             (c/or (seq forms) (repeat nil)))
-                                        (remove (fn [[p]]
-                                                  (accept-nil? p)))
-                                        first)
+        ::pcat (let [pkfs (map vector
+                               ps
+                               (c/or (seq ks) (repeat nil))
+                               (c/or (seq forms) (repeat nil)))
+                     [pred k form] (if (= 1 (count pkfs))
+                                     (first pkfs)
+                                     (first (remove (fn [[p]] (accept-nil? p)) pkfs)))
                      path (if k (conj path k) path)
                      form (c/or form (op-describe pred))]
                  (if (c/and (empty? input) (not pred))
@@ -916,11 +916,13 @@
       (if-let [dp (deriv p x)]
         (recur dp xs (inc i))
         (if (accept? p)
-          {path {:reason "Extra input"
-                 :pred (abbrev (op-describe re))
-                 :val data
-                 :via via
-                 :in (conj in i)}}
+          (if (= (::op p) ::pcat)
+            (op-explain (op-describe p) p path via (conj in i) (seq data))
+            {path {:reason "Extra input"
+                   :pred (abbrev (op-describe re))
+                   :val data
+                   :via via
+                   :in (conj in i)}})
           (c/or (op-explain (op-describe p) p path via (conj in i) (seq data))
                 {path {:reason "Extra input"
                        :pred (abbrev (op-describe p))
