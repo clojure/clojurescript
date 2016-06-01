@@ -1,3 +1,16 @@
+## 1.9.14
+
+### Enhancements
+* clojure.spec ported to cljs.spec
+
+### Fixes
+* CLJS-1649: Possible issue with in cljs.reader or cljs.core/PersistentHashMap
+* CLJS-1647: Rethrow exception from parallel-build
+* CLJS-1642: cljs.core/reductions does not respect 'reduced'
+* CLJS-1635: Var type implements IEquiv but not IHash
+* CLJS-1629: Fix warning about duplicate test-pr-str
+* CLJS-1637: Missing docstrings for a few vars
+
 ## 1.8.51
 
 ### Changes
