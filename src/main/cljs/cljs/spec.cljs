@@ -322,7 +322,7 @@
 
 (defn- no-fn-specs
   [v specs]
-  (ex-info (str "Fn at " v " is not spec'ed.")
+  (ex-info (str "Fn at " (pr-str v) " is not spec'ed.")
            {:var v :specs specs}))
 
 (def ^:private instrumented-vars
