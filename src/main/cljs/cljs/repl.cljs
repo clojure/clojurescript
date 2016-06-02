@@ -49,9 +49,10 @@
           (when doc
             (println " " doc))))
       (when n
-        (when-let [specs (spec/fn-specs (symbol (str (ns-name n)) (name nm)))]
-          (println "Spec")
-          (run! (fn [[role spec]]
-                  (when (and spec (not (= spec ::spec/unknown)))
-                    (println " " (str (name role) ":") (spec/describe spec))))
-                specs))))))
+        (let [specs (spec/fn-specs (symbol (str (ns-name n)) (name nm)))]
+          (when (some identity (vals specs))
+            (print "Spec")
+            (run! (fn [[role spec]]
+                   (when (and spec (not (= spec ::spec/unknown)))
+                     (print (str "\n " (name role) ":") (spec/describe spec))))
+              specs)))))))
