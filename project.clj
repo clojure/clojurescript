@@ -12,7 +12,7 @@
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.reader "1.0.0-beta1"]
                  [org.clojure/test.check "0.9.0" :scope "test"]
-                 [org.clojure/transit-clj "0.8.285" :scope "provided"]
+                 [com.cognitect/transit-clj "0.8.285" :scope "provided"]
                  [org.clojure/google-closure-library "0.0-20151016-61277aea"]
                  [com.google.javascript/closure-compiler "v20160315"]
                  [org.mozilla/rhino "1.7R5"]]
