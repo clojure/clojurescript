@@ -64,6 +64,18 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>com.cognitect</groupId>
+            <artifactId>transit-clj</artifactId>
+            <version>0.8.285</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.clojure</groupId>
+                    <artifactId>clojure</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 
     <developers>
