@@ -2818,6 +2818,30 @@
                 (and version (not= version version'))))))))))
 
 #?(:clj
+   (def transit-writer
+     (delay
+       (try
+         (require '[cognitect.transit])
+         (some->
+           (find-ns 'cognitect.transit)
+           (ns-resolve 'writer)
+           deref)
+         (catch Throwable t
+           nil)))))
+
+#?(:clj
+   (def transit-reader
+     (delay
+       (try
+         (require '[cognitect.transit])
+         (some->
+           (find-ns 'cognitect.transit)
+           (ns-resolve 'reader)
+           deref)
+         (catch Throwable t
+           nil)))))
+
+#?(:clj
    (defn write-analysis-cache
      ([ns cache-file]
        (write-analysis-cache ns cache-file nil))
@@ -2827,8 +2851,8 @@
         (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
           (pr-str
             (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros))))
-       (when src
-         (.setLastModified ^File cache-file (util/last-modified src))))))
+      (when src
+        (.setLastModified ^File cache-file (util/last-modified src))))))
 
 #?(:clj
    (defn analyze-file
