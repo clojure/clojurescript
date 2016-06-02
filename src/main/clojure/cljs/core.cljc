@@ -612,54 +612,70 @@
              pb (core/fn pb [bvec b v]
                   (core/let [pvec
                              (core/fn [bvec b val]
-                               (core/let [gvec (gensym "vec__")]
-                                 (core/loop [ret (core/-> bvec (conj gvec) (conj val))
+                               (core/let [gvec (gensym "vec__")
+                                          gseq (gensym "seq__")
+                                          gfirst (gensym "first__")
+                                          has-rest (some #{'&} b)]
+                                 (core/loop [ret (core/let [ret (conj bvec gvec val)]
+                                                   (if has-rest
+                                                     (conj ret gseq (core/list `seq gvec))
+                                                     ret))
                                              n 0
                                              bs b
                                              seen-rest? false]
                                    (if (seq bs)
                                      (core/let [firstb (first bs)]
                                        (core/cond
-                                         (= firstb '&) (recur (pb ret (second bs) (core/list `nthnext gvec n))
-                                                         n
-                                                         (nnext bs)
-                                                         true)
+                                         (= firstb '&) (recur (pb ret (second bs) gseq)
+                                                              n
+                                                              (nnext bs)
+                                                              true)
                                          (= firstb :as) (pb ret (second bs) gvec)
                                          :else (if seen-rest?
-                                                 (throw
-                                                   #?(:clj (new Exception "Unsupported binding form, only :as can follow & parameter")
-                                                      :cljs (new js/Error "Unsupported binding form, only :as can follow & parameter")))
-                                                 (recur (pb ret firstb (core/list `nth gvec n nil))
-                                                   (core/inc n)
-                                                   (next bs)
-                                                   seen-rest?))))
+                                                 (throw #?(:clj (new Exception "Unsupported binding form, only :as can follow & parameter")
+                                                           :cljs (new js/Error "Unsupported binding form, only :as can follow & parameter")))
+                                                 (recur (pb (if has-rest
+                                                              (conj ret
+                                                                    gfirst `(first ~gseq)
+                                                                    gseq `(next ~gseq))
+                                                              ret)
+                                                            firstb
+                                                            (if has-rest
+                                                              gfirst
+                                                              (core/list `nth gvec n nil)))
+                                                        (core/inc n)
+                                                        (next bs)
+                                                        seen-rest?))))
                                      ret))))
                              pmap
                              (core/fn [bvec b v]
                                (core/let [gmap (gensym "map__")
                                           defaults (:or b)]
                                  (core/loop [ret (core/-> bvec (conj gmap) (conj v)
-                                                   (conj gmap) (conj `(if (implements? ISeq ~gmap) (apply cljs.core/hash-map ~gmap) ~gmap))
-                                                   ((core/fn [ret]
-                                                      (if (:as b)
-                                                        (conj ret (:as b) gmap)
-                                                        ret))))
+                                                          (conj gmap) (conj `(if (implements? ISeq ~gmap) (apply cljs.core/hash-map ~gmap) ~gmap))
+                                                     ((core/fn [ret]
+                                                        (if (:as b)
+                                                          (conj ret (:as b) gmap)
+                                                          ret))))
                                              bes (reduce
-                                                   (core/fn [bes entry]
-                                                     (reduce #(assoc %1 %2 ((val entry) %2))
-                                                       (dissoc bes (key entry))
-                                                       ((key entry) bes)))
-                                                   (dissoc b :as :or)
-                                                   {:keys #(if (core/keyword? %) % (keyword (core/str %))),
-                                                    :strs core/str, :syms #(core/list `quote %)})]
+                                                  (core/fn [bes entry]
+                                                    (reduce #(assoc %1 %2 ((val entry) %2))
+                                                            (dissoc bes (key entry))
+                                                            ((key entry) bes)))
+                                                  (dissoc b :as :or)
+                                                  {:keys #(if (core/keyword? %) % (keyword (core/str %))),
+                                                   :strs core/str, :syms #(core/list `quote %)})]
                                    (if (seq bes)
                                      (core/let [bb (key (first bes))
                                                 bk (val (first bes))
-                                                has-default (contains? defaults bb)]
-                                       (recur (pb ret bb (if has-default
-                                                           (core/list 'cljs.core/get gmap bk (defaults bb))
-                                                           (core/list 'cljs.core/get gmap bk)))
-                                         (next bes)))
+                                                bv (if (contains? defaults bb)
+                                                     (core/list 'cljs.core/get gmap bk (defaults bb))
+                                                     (core/list 'cljs.core/get gmap bk))]
+                                       (recur (core/cond
+                                                (core/symbol? bb) (core/-> ret (conj (if (namespace bb) (symbol (name bb)) bb)) (conj bv))
+                                                (core/keyword? bb) (core/-> ret (conj (symbol (name bb)) bv))
+                                                :else (pb ret bb bv))
+                                              (next bes)))
                                      ret))))]
                     (core/cond
                       (core/symbol? b) (core/-> bvec (conj (if (namespace b) (symbol (name b)) b)) (conj v))
@@ -667,8 +683,8 @@
                       (vector? b) (pvec bvec b v)
                       (map? b) (pmap bvec b v)
                       :else (throw
-                              #?(:clj (new Exception (core/str "Unsupported binding form: " b))
-                                 :cljs (new js/Error (core/str "Unsupported binding form: " b)))))))
+                             #?(:clj (new Exception (core/str "Unsupported binding form: " b))
+                                :cljs (new js/Error (core/str "Unsupported binding form: " b)))))))
              process-entry (core/fn [bvec b] (pb bvec (first b) (second b)))]
     (if (every? core/symbol? (map first bents))
       bindings

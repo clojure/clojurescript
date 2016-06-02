@@ -379,3 +379,12 @@
 (simple-benchmark [f array] (f 1 2 3 4 5 6 7 8 9 0) 100000)
 (simple-benchmark [f vector] (f 1 2 3 4 5 6 7 8 9 0) 100000)
 (simple-benchmark [] (= 1 1 1 1 1 1 1 1 1 0) 100000)
+
+(println "\n")
+(println ";; Destructuring a sequence")
+(simple-benchmark [v (into [] (range 1000000))]
+                  (loop [[x & xs] v]
+                    (if-not (nil? xs)
+                      (recur xs)
+                      x))
+                  10)
