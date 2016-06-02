@@ -10,7 +10,8 @@
   (:refer-clojure :exclude [+ * and or cat def keys])
   (:require-macros [cljs.core :as c]
                    [cljs.spec :as s])
-  (:require [cljs.core :as c]
+  (:require [goog.object :as gobj]
+            [cljs.core :as c]
             [clojure.walk :as walk]
             [cljs.spec.impl.gen :as gen]
             [clojure.string :as str]))
@@ -280,19 +281,21 @@
                                   (str "Call to " v " did not conform to spec:\n" (with-out-str (explain-out ed)))
                                   ed)))
                        conformed)))]
-    (c/fn
-      [& args]
-      (if *instrument-enabled*
-        (s/with-instrument-disabled
-          (let [specs (fn-specs v)]
-            (let [cargs (when (:args specs) (conform! v :args (:args specs) args args))
-                  ret (binding [*instrument-enabled* true]
-                        (apply f args))
-                  cret (when (:ret specs) (conform! v :ret (:ret specs) ret args))]
-              (when (c/and (:args specs) (:ret specs) (:fn specs))
-                (conform! v :fn (:fn specs) {:args cargs :ret cret} args))
-              ret)))
-        (apply f args)))))
+    (doto
+      (c/fn
+        [& args]
+        (if *instrument-enabled*
+          (s/with-instrument-disabled
+            (let [specs (fn-specs v)]
+              (let [cargs (when (:args specs) (conform! v :args (:args specs) args args))
+                    ret (binding [*instrument-enabled* true]
+                          (apply f args))
+                    cret (when (:ret specs) (conform! v :ret (:ret specs) ret args))]
+                (when (c/and (:args specs) (:ret specs) (:fn specs))
+                  (conform! v :fn (:fn specs) {:args cargs :ret cret} args))
+                ret)))
+          (apply f args)))
+      (gobj/extend f))))
 
 ;(defn- macroexpand-check
 ;  [v args]
