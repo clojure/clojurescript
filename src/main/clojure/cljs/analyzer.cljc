@@ -55,6 +55,20 @@
 
 (def ^:dynamic *file-defs* nil)
 
+#?(:clj
+   (def transit
+     (delay
+       (try
+         (require '[cognitect.transit])
+         (let [ns (find-ns 'cognitect.transit)]
+           (when ns
+             {:writer @(ns-resolve ns 'writer)
+              :reader @(ns-resolve ns 'reader)
+              :write  @(ns-resolve ns 'write)
+              :read   @(ns-resolve ns 'read)}))
+         (catch Throwable t
+           nil)))))
+
 ;; log compiler activities
 (def ^:dynamic *verbose* false)
 
@@ -2782,7 +2796,8 @@
       (if-let [core-cache
                (and (= mode :read)
                     (= (:ns ns-info) 'cljs.core)
-                    (io/resource "cljs/core.cljs.cache.aot.edn"))]
+                    (or (and @transit (io/resource "cljs/core.cljs.cache.aot.json"))
+                        (io/resource "cljs/core.cljs.cache.aot.edn")))]
         core-cache
         (let [target-file (util/to-target-file output-dir ns-info
                             (util/ext (:source-file ns-info)))]
@@ -2800,7 +2815,8 @@
      ([src cache output-dir]
       (cond
         (and (util/url? cache)
-             (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.edn"))
+             (or (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.edn")
+                 (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.json")))
         false
 
         (and (util/file? cache)
@@ -2816,20 +2832,6 @@
               (let [version' (util/compiled-by-version cache)
                     version  (util/clojurescript-version)]
                 (and version (not= version version'))))))))))
-
-#?(:clj
-   (def transit
-     (delay
-       (try
-         (require '[cognitect.transit])
-         (let [ns (find-ns 'cognitect.transit)]
-           (when ns
-             {:writer @(ns-resolve ns 'writer)
-              :reader @(ns-resolve ns 'reader)
-              :write  @(ns-resolve ns 'write)
-              :read   @(ns-resolve ns 'read)}))
-         (catch Throwable t
-           nil)))))
 
 #?(:clj
    (defn write-analysis-cache
