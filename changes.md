@@ -1,3 +1,19 @@
+## 1.9.36
+
+### Enhancements
+* Write analysis caches as Transit if transit-clj available
+
+### Changes
+* Clojure 1f25347
+* Clojure 47b8d6b
+* Optimize seq (&) destructuring as per commit (0aa3467) of Clojure
+
+### Fixes
+* CLJS-1611: Function arity dispatch returns arity
+* only print specs in REPL if we actually have some
+* CLJS-1663: Calling instrumented multi-arity function causes exception
+* CLJS-1650: `cljs.reader/read-map` now returns array-map/hash-map based on the size of the sequence.
+
 ## 1.9.14
 
 ### Enhancements
