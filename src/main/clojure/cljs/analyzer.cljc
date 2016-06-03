@@ -32,7 +32,7 @@
                      [cljs.tools.reader :as reader]
                      [cljs.tools.reader.reader-types :as readers]
                      [cljs.reader :as edn]))
-  #?(:clj (:import [java.io File Reader PushbackReader]
+  #?(:clj (:import [java.io File Reader PushbackReader FileOutputStream]
                    [java.net URL]
                    [java.lang Throwable]
                    [clojure.lang Namespace Var LazySeq ArityException]
@@ -2818,26 +2818,16 @@
                 (and version (not= version version'))))))))))
 
 #?(:clj
-   (def transit-writer
+   (def transit
      (delay
        (try
          (require '[cognitect.transit])
-         (some->
-           (find-ns 'cognitect.transit)
-           (ns-resolve 'writer)
-           deref)
-         (catch Throwable t
-           nil)))))
-
-#?(:clj
-   (def transit-reader
-     (delay
-       (try
-         (require '[cognitect.transit])
-         (some->
-           (find-ns 'cognitect.transit)
-           (ns-resolve 'reader)
-           deref)
+         (let [ns (find-ns 'cognitect.transit)]
+           (when ns
+             {:writer @(ns-resolve ns 'writer)
+              :reader @(ns-resolve ns 'reader)
+              :write  @(ns-resolve ns 'write)
+              :read   @(ns-resolve ns 'read)}))
          (catch Throwable t
            nil)))))
 
@@ -2845,12 +2835,19 @@
    (defn write-analysis-cache
      ([ns cache-file]
        (write-analysis-cache ns cache-file nil))
-     ([ns cache-file src]
+     ([ns ^File cache-file src]
       (util/mkdirs cache-file)
-      (spit cache-file
-        (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
-          (pr-str
-            (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros))))
+      (let [ext (util/ext cache-file)
+            analysis (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros)]
+        (case ext
+          "edn"  (spit cache-file
+                   (str (when
+                     (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"))
+                       (pr-str analysis)))
+          "json" (when-let [{:keys [writer write]} @transit]
+                   (write
+                     (writer (FileOutputStream. cache-file) :json)
+                     analysis))))
       (when src
         (.setLastModified ^File cache-file (util/last-modified src))))))
 
