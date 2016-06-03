@@ -32,7 +32,7 @@
                      [cljs.tools.reader :as reader]
                      [cljs.tools.reader.reader-types :as readers]
                      [cljs.reader :as edn]))
-  #?(:clj (:import [java.io File Reader PushbackReader FileOutputStream]
+  #?(:clj (:import [java.io File Reader PushbackReader FileOutputStream FileInputStream]
                    [java.net URL]
                    [java.lang Throwable]
                    [clojure.lang Namespace Var LazySeq ArityException]
@@ -2801,7 +2801,9 @@
         core-cache
         (let [target-file (util/to-target-file output-dir ns-info
                             (util/ext (:source-file ns-info)))]
-          (io/file (str target-file ".cache.edn")))))))
+          (if @transit
+            (io/file (str target-file ".cache.json"))
+            (io/file (str target-file ".cache.edn"))))))))
 
 #?(:clj
    (defn requires-analysis?
@@ -2814,9 +2816,15 @@
         (requires-analysis? src cache output-dir)))
      ([src cache output-dir]
       (cond
+        (util/url? cache)
+        (let [path (.getPath ^URL cache)]
+          (if (or (.endsWith path "cljs/core.cljs.cache.aot.edn")
+                  (.endsWith path "cljs/core.cljs.cache.aot.json"))
+            false
+            (throw (Exception. (str "Invalid anlaysis cache, must be file not URL " cache)))))
+
         (and (util/url? cache)
-             (or (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.edn")
-                 (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.json")))
+             (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.json"))
         false
 
         (and (util/file? cache)
@@ -2912,7 +2920,11 @@
                                            {:restore false
                                             :analyze-deps true
                                             :load-macros true}))
-                          cached-ns    (edn/read-string (slurp cache))]
+                          ext          (util/ext cache)
+                          cached-ns    (case ext
+                                         "edn"  (edn/read-string (slurp cache))
+                                         "json" (let [{:keys [reader read]} @transit]
+                                                  (read (reader (FileInputStream. ^File cache) :json))))]
                      (when (or *verbose* (:verbose opts))
                        (util/debug-prn "Reading analysis cache for" (str res)))
                      (swap! env/*compiler*
