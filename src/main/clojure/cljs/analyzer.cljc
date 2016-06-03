@@ -2823,10 +2823,6 @@
             false
             (throw (Exception. (str "Invalid anlaysis cache, must be file not URL " cache)))))
 
-        (and (util/url? cache)
-             (.endsWith (.getPath ^URL cache) "cljs/core.cljs.cache.aot.json"))
-        false
-
         (and (util/file? cache)
              (not (.exists ^File cache)))
         true
