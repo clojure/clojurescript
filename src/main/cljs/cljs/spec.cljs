@@ -49,7 +49,10 @@
   (with-meta spec (assoc (meta spec) ::name name)))
 
 (defn- spec-name [spec]
-  (when (implements? IMeta spec)
+  (cond
+    (keyword? spec) spec
+
+    (implements? IMeta spec)
     (-> (meta spec) ::name)))
 
 (defn- reg-resolve
