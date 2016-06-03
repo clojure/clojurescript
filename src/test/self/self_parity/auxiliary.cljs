@@ -3,7 +3,7 @@
   the libs listed here to be dumped into the compiler output
   directory where they can be loaded on demand when running
   the compiler tests in bootstrap mode."}
-  self-parity.aux
+  self-parity.auxiliary
   (:require
     goog.Delay
     goog.Disposable
