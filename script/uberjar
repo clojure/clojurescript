@@ -33,6 +33,7 @@ mv $CLJS_FILE src/main/cljs/cljs/core.cljs
 rm -f src/main/cljs/cljs/core.aot.js
 rm -f src/main/cljs/cljs/core.aot.js.map
 rm -f src/main/cljs/cljs/core.cljs.cache.aot.edn
+rm -f src/main/cljs/cljs/core.cljs.cache.aot.json
 
 ./script/aot_core
 
@@ -50,3 +51,4 @@ mv target/clojurescript-0.0-SNAPSHOT-standalone.jar target/cljs.jar
 rm -f src/main/cljs/cljs/core.aot.js
 rm -f src/main/cljs/cljs/core.aot.js.map
 rm -f src/main/cljs/cljs/core.cljs.cache.aot.edn
+rm -f src/main/cljs/cljs/core.cljs.cache.aot.json
