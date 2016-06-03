@@ -2831,11 +2831,7 @@
         (let [out-src (util/to-target-file output-dir (parse-ns src))]
           (if (not (.exists out-src))
             true
-            (if (util/changed? src cache)
-              true
-              (let [version' (util/compiled-by-version cache)
-                    version  (util/clojurescript-version)]
-                (and version (not= version version'))))))))))
+            (util/changed? src cache)))))))
 
 #?(:clj
    (defn write-analysis-cache
