@@ -2773,7 +2773,7 @@
          (.push ~dest (aget (js-arguments) i#))
          (recur (inc i#))))))
 
-(core/defn- variadic-fn [name meta [[arglist & body :as method] :as fdecl]]
+(core/defn- variadic-fn [name meta [[arglist & body :as method] :as fdecl] emit-var?]
   (core/letfn [(dest-args [c]
                  (map (core/fn [n] `(aget (js-arguments) ~n))
                    (range c)))]
@@ -2797,7 +2797,8 @@
                                  (.slice args# ~c-1) 0 nil))]
                  (. ~rname
                    (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#))))))
-         ~(variadic-fn* rname method)))))
+         ~(variadic-fn* rname method)
+         ~(core/when emit-var? `(var ~name))))))
 
 (core/comment
   (require '[clojure.pprint :as pp])
@@ -2807,7 +2808,7 @@
   (pp/pprint (variadic-fn 'foo {} '(([a [b & cs] & xs] xs))))
   )
 
-(core/defn- multi-arity-fn [name meta fdecl]
+(core/defn- multi-arity-fn [name meta fdecl emit-var?]
   (core/letfn [(dest-args [c]
                  (map (core/fn [n] `(aget (js-arguments) ~n))
                    (range c)))
@@ -2863,7 +2864,8 @@
                                (str "Invalid arity: " (alength ~args-sym))))))))))
          ~@(map fn-method fdecl)
          ;; optimization properties
-         (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)))))
+         (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)
+         ~(core/when emit-var? `(var ~name))))))
 
 (core/comment
   (require '[clojure.pprint :as pp])
@@ -2932,13 +2934,13 @@
              (multi-arity-fn name
                (if (comp/checking-types?)
                  (update-in m [:jsdoc] conj "@param {...*} var_args")
-                 m) fdecl)
+                 m) fdecl (:def-emits-var &env))
 
              (variadic-fn? fdecl)
              (variadic-fn name
                (if (comp/checking-types?)
                  (update-in m [:jsdoc] conj "@param {...*} var_args")
-                 m) fdecl)
+                 m) fdecl (:def-emits-var &env))
 
              :else
              (core/list 'def (with-meta name m)
