@@ -299,20 +299,18 @@
           (apply f args)))
       (gobj/extend f))))
 
-;(defn- macroexpand-check
-;  [v args]
-;  (let [specs (fn-specs v)]
-;    (when-let [arg-spec (:args specs)]
-;      (when (= ::invalid (conform arg-spec args))
-;        (let [ed (assoc (explain-data* arg-spec [:args]
-;                                       (if-let [name (spec-name arg-spec)] [name] []) [] args)
-;                   ::args args)]
-;          (throw (js/Error.
-;                   (str
-;                     "Call to " (->sym v) " did not conform to spec:\n"
-;                     (with-out-str (explain-out ed))))))))))
-
-
+(defn- macroexpand-check
+  [v args]
+  (let [specs (fn-specs v)]
+    (when-let [arg-spec (:args specs)]
+      (when (= ::invalid (conform arg-spec args))
+        (let [ed (assoc (explain-data* arg-spec [:args]
+                          (if-let [name (spec-name arg-spec)] [name] []) [] args)
+                   ::args args)]
+          (throw (js/Error.
+                   (str
+                     "Call to " (->sym v) " did not conform to spec:\n"
+                     (with-out-str (explain-out ed))))))))))
 
 (defn- no-fn-specs
   [v specs]
