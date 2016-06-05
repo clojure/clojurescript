@@ -642,7 +642,7 @@
     (explain* [_ path via in x] (explain-pred-list forms preds path via in x))
     (gen* [_ overrides path rmap] (if gfn (gfn) (gensub (first preds) overrides path rmap (first forms))))
     (with-gen* [_ gfn] (and-spec-impl forms preds gfn))
-    (describe* [_] `(s/and ~@forms))))
+    (describe* [_] `(and ~@forms))))
 
 ;;;;;;;;;;;;;;;;;;;;;;; regex ;;;;;;;;;;;;;;;;;;;
 ;;See:
