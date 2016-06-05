@@ -264,7 +264,7 @@
     (->sym resolved)
     (if (namespace s)
       s
-      (symbol (str (.name *ns*)) (str s)))))
+      (symbol (str (.-name *ns*)) (str s)))))
 
 (defn- fn-spec-sym
   [env sym role]
