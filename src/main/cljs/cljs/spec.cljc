@@ -234,9 +234,10 @@
 (defmacro conformer
   "takes a predicate function with the semantics of conform i.e. it should return either a
   (possibly converted) value or :clojure.spec/invalid, and returns a
-  spec that uses it as a predicate/conformer"
-  [f]
-  `(cljs.spec/spec-impl '~f ~f nil true))
+  spec that uses it as a predicate/conformer. Optionally takes a
+  second fn that does unform of result of first"
+  ([f] `(cljs.spec/spec-impl '~f ~f nil true))
+  ([f unf] `(cljs.spec/spec-impl '~f ~f nil true ~unf)))
 
 (defmacro fspec
   "takes :args :ret and (optional) :fn kwargs whose values are preds
