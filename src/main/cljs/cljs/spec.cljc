@@ -326,9 +326,9 @@ specified, return speced vars from all namespaces."
                  :sym symbol?)
     :ret symbol?)"
   [fn-sym & {:keys [args ret fn] :as m}]
-  (swap! _speced_vars conj (:name (resolve &env fn-sym)))
   (let [env &env
         qn  (ns-qualify env fn-sym)]
+    (swap! _speced_vars conj qn)
     `(do ~@(reduce
              (clojure.core/fn [defns role]
                (if (contains? m role)
@@ -389,7 +389,8 @@ specified, return speced vars from all namespaces."
        ~v)))
 
 (defmacro unstrument
-  "Undoes instrument on the var at v, a var or symbol. Idempotent."[v]
+  "Undoes instrument on the var at v, a var or symbol. Idempotent."
+  [v]
   (let [v   (if-not (seq? v) (list 'var v) v)
         sym (second v)]
     `(when-let [raw# (cljs.spec/unstrument* ~v)]
