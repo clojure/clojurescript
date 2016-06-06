@@ -385,8 +385,9 @@ specified, return speced vars from all namespaces."
   [v]
   (let [v   (if-not (seq? v) (list 'var v) v)
         sym (second v)]
-    `(when-let [checked# (cljs.spec/instrument* ~v)]
-       (set! ~sym checked#)
+    `(do
+       (when-let [checked# (cljs.spec/instrument* ~v)]
+         (set! ~sym checked#))
        ~v)))
 
 (defmacro unstrument
@@ -394,8 +395,9 @@ specified, return speced vars from all namespaces."
   [v]
   (let [v   (if-not (seq? v) (list 'var v) v)
         sym (second v)]
-    `(when-let [raw# (cljs.spec/unstrument* ~v)]
-       (set! ~sym raw#)
+    `(do
+       (when-let [raw# (cljs.spec/unstrument* ~v)]
+         (set! ~sym raw#))
        ~v)))
 
 (defmacro instrument-ns
