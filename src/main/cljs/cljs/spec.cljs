@@ -340,9 +340,8 @@
            (when-let [{:keys [raw wrapped]} (get @instrumented-vars v)]
              (let [current @v]
                (when (= wrapped current)
-                 raw))
-             (swap! instrumented-vars dissoc v))
-           v))
+                 (swap! instrumented-vars dissoc v)
+                 raw)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; impl ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn- recur-limit? [rmap id path k]
