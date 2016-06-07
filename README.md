@@ -27,7 +27,7 @@ Latest stable release: 1.9.36
 ## Getting Started ##
 
 * [Compare with JavaScript](http://himera.herokuapp.com/synonym.html)
-* [Try it online](http://himera.herokuapp.com/index.html)
+* [Try it online](http://clojurescript.io)
 * Read the [Quick Start](https://github.com/clojure/clojurescript/wiki/Quick-Start) guide.
 * Read the [Documentation](https://github.com/clojure/clojurescript/wiki).
 * Try a [tutorial](https://github.com/clojure/clojurescript/wiki).
