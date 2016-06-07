@@ -2868,7 +2868,8 @@
                        (pr-str analysis)))
           "json" (when-let [{:keys [writer write]} @transit]
                    (write
-                     (writer (FileOutputStream. cache-file) :json)
+                     (writer (FileOutputStream. cache-file) :json
+                       transit-write-opts)
                      analysis))))
       (when src
         (.setLastModified ^File cache-file (util/last-modified src))))))
@@ -2936,7 +2937,8 @@
                           cached-ns    (case ext
                                          "edn"  (edn/read-string (slurp cache))
                                          "json" (let [{:keys [reader read]} @transit]
-                                                  (read (reader (io/input-stream cache) :json))))]
+                                                  (read (reader (io/input-stream cache) :json
+                                                          transit-read-opts))))]
                      (when (or *verbose* (:verbose opts))
                        (util/debug-prn "Reading analysis cache for" (str res)))
                      (swap! env/*compiler*
