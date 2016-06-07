@@ -56,6 +56,24 @@
 (def ^:dynamic *file-defs* nil)
 
 #?(:clj
+   (def transit-read-opts
+     (util/compile-if (import '[com.cognitect.transit ReadHandler])
+       {:handlers
+        {"cljs/js"
+         (reify com.cognitect.transit.ReadHandler
+           (fromRep [_ v] (JSValue. v)))}})))
+
+#?(:clj
+   (def transit-write-opts
+     (util/compile-if (import '[com.cognitect.transit WriteHandler])
+       {:handlers
+        {JSValue
+         (reify com.cognitect.transit.WriteHandler
+           (tag [_ _] "cljs/js")
+           (rep [_ js] (.val ^JSValue js))
+           (stringRep [_ _] nil))}})))
+
+#?(:clj
    (def transit
      (delay
        (try
