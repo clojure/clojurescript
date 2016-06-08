@@ -702,13 +702,17 @@
 
 (deftest test-booleans
   (testing "Testing boolean predicates"
-    (is (= [true false true false false false]
+    (is (= [true false true false false false true true false false]
           [(true? true)
            (true? false)
            (false? false)
            (false? true)
            (true? js/undefined)
-           (false? js/undefined)]))))
+           (false? js/undefined)
+           (boolean? true)
+           (boolean? false)
+           (boolean? nil)
+           (boolean? js/undefined)]))))
 
 (deftest test-fn-with-metadata
   (let [f (fn [x] (* x 2))

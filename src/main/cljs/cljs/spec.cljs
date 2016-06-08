@@ -1115,3 +1115,17 @@
       (gen/fmap
         #(if (vector? init) % (into init %))
         (gen/vector (gen pred))))))
+
+(defn inst-in-range?
+  "Return true if inst at or after start and before end"
+  [start end inst]
+  (c/and (inst? inst)
+         (let [t (inst-ms inst)]
+           (c/and (<= (inst-ms start) t) (< t (inst-ms end))))))
+
+(defn long-in-range?
+  "Return true if start <= val and val < end"
+  [start end val]
+  (c/and (long? val)
+         (.lessThanOrEqual (goog.math.Long.fromNumber start) val)
+         (.lessThan val  (goog.math.Long.fromNumber end))))

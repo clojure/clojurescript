@@ -377,6 +377,25 @@ specified, return speced vars from all namespaces."
   [kpred vpred]
   `(and (coll-of (tuple ~kpred ~vpred) {}) map?))
 
+(defmacro inst-in
+  "Returns a spec that validates insts in the range from start
+  (inclusive) to end (exclusive)."
+  [start end]
+  `(let [st# (inst-ms ~start)
+         et# (inst-ms ~end)
+         mkdate# (fn [d#] (js/Date. d#))]
+     (spec (and inst? #(inst-in-range? ~start ~end %))
+       :gen (fn []
+              (gen/fmap mkdate#
+                (gen/large-integer* {:min st# :max et#}))))))
+
+(defmacro long-in
+  "Returns a spec that validates longs in the range from start
+  (inclusive) to end (exclusive)."
+  [start end]
+  `(spec (and c/long? #(long-in-range? ~start ~end %))
+     :gen #(gen/large-integer* {:min ~start :max (dec ~end)})))
+
 (defmacro instrument
   "Instruments the var at v, a var or symbol, to check specs
   registered with fdef. Wraps the fn at v to check :args/:ret/:fn

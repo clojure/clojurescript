@@ -1263,6 +1263,23 @@
       (garray/defaultCompare (.valueOf this) (.valueOf other))
       (throw (js/Error. (str "Cannot compare " this " to " other))))))
 
+(defprotocol Inst
+  (inst-ms* [inst]))
+
+(extend-protocol Inst
+  js/Date
+  (inst-ms* [inst] (.getTime inst)))
+
+(defn inst-ms
+  "Return the number of milliseconds since January 1, 1970, 00:00:00 GMT"
+  [inst]
+  (inst-ms* inst))
+
+(defn ^boolean inst?
+  "Return true if x satisfies Inst"
+  [x]
+  (satisfies? Inst x))
+
 (extend-type number
   IEquiv
   (-equiv [x o] (identical? x o)))
@@ -2064,6 +2081,10 @@ reduces them without incurring seq initialization"
   "Returns true if x is the value true, false otherwise."
   [x] (cljs.core/true? x))
 
+(defn ^boolean boolean?
+  "Return true if x is a Boolean"
+  [x] (or (cljs.core/true? x) (cljs.core/false? x)))
+
 (defn ^boolean undefined?
   "Returns true if x identical to the JavaScript undefined value."
   [x]
@@ -2101,6 +2122,26 @@ reduces them without incurring seq initialization"
        (not ^boolean (js/isNaN n))
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
+
+(defn ^boolean long?
+  "Return true if x is an instance of goog.math.Long"
+  [x] (instance? goog.math.Long x))
+
+(defn ^boolean pos-long?
+  "Return true if x is a positive Long"
+  [x] (and (instance? goog.math.Long x)
+           (not (.isNegative x))
+           (not (.isZero x))))
+
+(defn ^boolean neg-long?
+  "Return true if x is a negative Long"
+  [x] (and (instance? goog.math.Long x)
+           (.isNegative x)))
+
+(defn ^boolean nat-long?
+  "Return true if x is a non-negative Long"
+  [x] (and (instance? goog.math.Long x)
+           (or (not (.isNegative x)) (.isZero x))))
 
 (defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
@@ -3085,6 +3126,34 @@ reduces them without incurring seq initialization"
   (if (implements? INamed x)
     (-namespace ^not-native x)
     (throw (js/Error. (str "Doesn't support namespace: " x)))))
+
+(defn ^boolean ident?
+  "Return true if x is a symbol or keyword"
+  [x] (or (keyword? x) (symbol? x)))
+
+(defn ^boolean simple-ident?
+  "Return true if x is a symbol or keyword without a namespace"
+  [x] (and (ident? x) (nil? (namespace x))))
+
+(defn ^boolean qualified-ident?
+  "Return true if x is a symbol or keyword with a namespace"
+  [x] (and (ident? x) (namespace x) true))
+
+(defn ^boolean simple-symbol?
+  "Return true if x is a symbol without a namespace"
+  [x] (and (symbol? x) (nil? (namespace x))))
+
+(defn ^boolean qualified-symbol?
+  "Return true if x is a symbol with a namespace"
+  [x] (and (symbol? x) (namespace x) true))
+
+(defn ^boolean simple-keyword?
+  "Return true if x is a keyword without a namespace"
+  [x] (and (keyword? x) (nil? (namespace x))))
+
+(defn ^boolean qualified-keyword?
+  "Return true if x is a keyword with a namespace"
+  [x] (and (keyword? x) (namespace x) true))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
@@ -10090,8 +10159,11 @@ reduces them without incurring seq initialization"
   [multifn] (-dispatch-fn multifn))
 
 ;; UUID
+(defprotocol IUUID "A marker protocol for UUIDs")
 
 (deftype UUID [uuid ^:mutable __hash]
+  IUUID
+
   Object
   (toString [_] uuid)
   (equiv [this other]
@@ -10130,6 +10202,9 @@ reduces them without incurring seq initialization"
              (hex) (hex) (hex) (hex)
              (hex) (hex) (hex) (hex)
              (hex) (hex) (hex) (hex))))))
+
+(defn ^boolean uuid?
+  [x] (implements? IUUID x))
 
 ;;; ExceptionInfo
 
