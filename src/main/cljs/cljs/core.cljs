@@ -10435,9 +10435,15 @@ reduces them without incurring seq initialization"
         ".."
         (demunge-str (str name))))))
 
-(defn- ns-lookup [ns-obj k]
+;; -----------------------------------------------------------------------------
+;; Bootstrap helpers - incompatible with advanced compilation
+
+(defn- ns-lookup
+  "Bootstrap only."
+  [ns-obj k]
   (fn [] (gobject/get ns-obj k)))
 
+;; Bootstrap only
 (deftype Namespace [obj name]
   Object
   (findInternedVar [this sym]
@@ -10459,16 +10465,20 @@ reduces them without incurring seq initialization"
     (hash name)))
 
 (def
-  ^{:jsdoc ["@type {*}"]}
+  ^{:doc "Bootstrap only." :jsdoc ["@type {*}"]}
   NS_CACHE nil)
 
-(defn- find-ns-obj* [ctxt xs]
+(defn- find-ns-obj*
+  "Bootstrap only."
+  [ctxt xs]
   (cond
     (nil? ctxt) nil
     (nil? xs) ctxt
     :else (recur (gobject/get ctxt (first xs)) (next xs))))
 
-(defn find-ns-obj [ns]
+(defn find-ns-obj
+  "Bootstrap only."
+  [ns]
   (let [munged-ns (munge (str ns))
         segs (.split munged-ns ".")]
     (case *target*
@@ -10487,7 +10497,9 @@ reduces them without incurring seq initialization"
       "default" (find-ns-obj* goog/global segs)
       (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
 
-(defn ns-interns* [sym]
+(defn ns-interns*
+  "Bootstrap only."
+  [sym]
   (let [ns-obj (find-ns-obj sym)
         ns     (Namespace. ns-obj sym)]
     (letfn [(step [ret k]
@@ -10498,12 +10510,15 @@ reduces them without incurring seq initialization"
       (reduce step {} (js-keys ns-obj)))))
 
 (defn create-ns
+  "Bootstrap only."
   ([sym]
    (create-ns sym (find-ns-obj sym)))
   ([sym ns-obj]
    (Namespace. ns-obj sym)))
 
-(defn find-ns [ns]
+(defn find-ns
+  "Bootstrap only."
+  [ns]
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
   (let [the-ns (get @NS_CACHE ns)]
@@ -10515,7 +10530,9 @@ reduces them without incurring seq initialization"
             (swap! NS_CACHE assoc ns new-ns)
             new-ns))))))
 
-(defn find-macros-ns [ns]
+(defn find-macros-ns
+  "Bootstrap only."
+  [ns]
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
   (let [the-ns (get @NS_CACHE ns)]
@@ -10531,5 +10548,7 @@ reduces them without incurring seq initialization"
            (swap! NS_CACHE assoc ns new-ns)
            new-ns))))))
 
-(defn ns-name [ns-obj]
+(defn ns-name
+  "Bootstrap only."
+  [ns-obj]
   (.-name ns-obj))
