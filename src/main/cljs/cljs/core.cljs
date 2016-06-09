@@ -7,7 +7,8 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.core
-  (:require [goog.string :as gstring]
+  (:require goog.math.Long
+            [goog.string :as gstring]
             [goog.object :as gobject]
             [goog.array :as garray])
   (:import [goog.string StringBuffer]))
