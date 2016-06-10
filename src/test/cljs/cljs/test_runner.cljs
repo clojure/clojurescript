@@ -14,7 +14,8 @@
             [cljs.keyword-test]
             [cljs.import-test]
             [cljs.ns-test.foo]
-            [cljs.pprint]))
+            [cljs.pprint]
+            [cljs.spec-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -34,4 +35,5 @@
   'cljs.ns-test.foo
   'foo.ns-shadow-test
   'cljs.import-test
-  'cljs.pprint)
+  'cljs.pprint
+  'cljs.spec-test)

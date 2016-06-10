@@ -229,7 +229,7 @@
   conjunction of the predicates, and any conforming they might perform."
   [re & preds]
   (let [pv (vec preds)]
-    `(cljs.spec/amp-impl ~re ~pv '~pv)))
+    `(cljs.spec/amp-impl ~re ~pv '~(mapv #(res &env %) pv))))
 
 (defmacro conformer
   "takes a predicate function with the semantics of conform i.e. it should return either a
