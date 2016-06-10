@@ -1102,6 +1102,9 @@
      :catch catch
      :children [try catch finally]}))
 
+(defn valid-proto [x]
+  (when (symbol? x) x))
+
 (defmethod parse 'def
   [op env form name _]
   (let [pfn (fn
@@ -1112,7 +1115,7 @@
         sym (:sym args)
         sym-meta (meta sym)
         tag (-> sym meta :tag)
-        protocol (-> sym meta :protocol)
+        protocol (-> sym meta :protocol valid-proto)
         dynamic (-> sym meta :dynamic)
         ns-name (-> env :ns :name)
         locals (:locals env)
