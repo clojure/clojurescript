@@ -1052,6 +1052,15 @@
     (reify
       IFn
       (-invoke [this x] (valid? this x))
+      ILookup
+      (-lookup [this k]
+        (-lookup this k nil))
+      (-lookup [_ k not-found]
+        (case k
+          :args argspec
+          :ret retspec
+          :fn fnspec
+          not-found))
       Spec
       (conform* [_ f] (if (fn? f)
                         (if (identical? f (validate-fn f specs *fspec-iterations*)) f ::invalid)
