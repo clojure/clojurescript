@@ -288,7 +288,7 @@
                        (let [ed (assoc (explain-data* spec [role] [] [] data)
                                   ::args args)]
                          (throw (ex-info
-                                  (str "Call to " v " did not conform to spec:\n" (with-out-str (explain-out ed)))
+                                  (str "Call to " (pr-str v) " did not conform to spec:\n" (with-out-str (explain-out ed)))
                                   ed)))
                        conformed)))]
     (doto
