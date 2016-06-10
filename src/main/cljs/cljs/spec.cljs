@@ -291,7 +291,7 @@
                                   (str "Call to " (pr-str v) " did not conform to spec:\n" (with-out-str (explain-out ed)))
                                   ed)))
                        conformed)))]
-    (doto
+    (cond->
       (c/fn
         [& args]
         (if *instrument-enabled*
@@ -305,7 +305,7 @@
                   (conform! v :fn (:fn specs) {:args cargs :ret cret} args))
                 ret)))
           (apply f args)))
-      (gobj/extend f))))
+      (not (instance? MultiFn f)) (doto (gobj/extend f)))))
 
 (defn- macroexpand-check
   [v args]
