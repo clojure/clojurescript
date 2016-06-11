@@ -11,7 +11,6 @@
     goog.Throttle
     goog.Timer
     goog.Uri
-    goog.array.ArrayLike
     goog.color
     goog.color.Hsl
     goog.color.Hsv
@@ -25,7 +24,6 @@
     goog.crypt.Cbc
     goog.crypt.Hash
     goog.crypt.Hmac
-    goog.crypt.JpegEncoder
     goog.crypt.Md5
     goog.crypt.Sha1
     goog.crypt.Sha2
