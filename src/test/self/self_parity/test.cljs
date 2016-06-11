@@ -160,7 +160,8 @@
   technical issues)."
   [name macros]
   ((if macros
-     #{'cljs.pprint
+     #{'cljs.core
+       'cljs.pprint
        'cljs.env.macros
        'cljs.analyzer.macros
        'cljs.compiler.macros}
@@ -228,6 +229,14 @@
      :verbose false}
     cb))
 
+(defn prime-analysis-cache-for-implicit-macro-loading
+  "Supports priming analysis cache in order to work around
+  http://dev.clojure.org/jira/browse/CLJS-1657"
+  [st ns-sym]
+  (swap! st assoc-in [::cljs.analyzer/namespaces ns-sym :require-macros] {ns-sym ns-sym}))
+
+;; Test suite runner
+
 (defn run-tests 
   "Runs the tests."
   []
@@ -235,6 +244,8 @@
   ;; don't yet run in bootstrapped ClojureScript. These are commented
   ;; out below and can be uncommented as fixed.
   (let [st (cljs/empty-state)]
+    (prime-analysis-cache-for-implicit-macro-loading st 'cljs.spec)
+    (prime-analysis-cache-for-implicit-macro-loading st 'cljs.spec.impl.gen)
     (eval-form st 'cljs.user
       '(ns parity.core
          (:require [cljs.test :refer-macros [run-tests]]
@@ -252,7 +263,8 @@
                    #_[cljs.keyword-test]
                    [cljs.import-test]
                    [cljs.ns-test.foo]
-                   #_[cljs.pprint]))
+                   #_[cljs.pprint]
+                   [cljs.spec-test]))
       (fn [{:keys [value error]}]
         (if error
           (prn error)
@@ -272,7 +284,8 @@
                'cljs.ns-test.foo
                'foo.ns-shadow-test
                'cljs.import-test
-               #_'cljs.pprint)
+               #_'cljs.pprint
+               'cljs.spec-test)
             (fn [{:keys [value error]}]
               (when error
                 (prn error)))))))))

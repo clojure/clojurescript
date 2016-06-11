@@ -342,7 +342,7 @@ specified, return speced vars from all namespaces."
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
   [& body]
-  `(binding [*instrument-enabled* nil]
+  `(binding [cljs.spec/*instrument-enabled* nil]
      ~@body))
 
 (defmacro keys*
