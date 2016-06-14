@@ -1538,7 +1538,8 @@
     (.getAstRoot input closure-compiler)))
 
 (defn get-source-files [opts]
-  (->> (:foreign-libs opts)
+  (->> (concat (:foreign-libs opts)
+               (:ups-foreign-libs opts))
        (filter #(let [module-type (:module-type %)]
                   (or (= module-type :amd)
                       (= module-type :commonjs)
@@ -1735,7 +1736,7 @@
   )
 
 
-(defn get-upstream-deps* 
+(defn get-upstream-deps*
   "returns a merged map containing all upstream dependencies defined
   by libraries on the classpath."
   ([]
@@ -1903,13 +1904,9 @@
         (not (false? (:static-fns opts))) (assoc :static-fns true)
         (not (false? (:optimize-constants opts))) (assoc :optimize-constants true)))))
 
-(defn process-js-modules
-  "Given the current compiler options, converts JavaScript modules to Google
-  Closure modules and writes them to disk. Adds mapping from original module
-  namespace to new module namespace to compiler env. Returns modified compiler
-  options where new modules are passed with :libs option."
-  [opts]
-  (let [js-modules (filter :module-type (:foreign-libs opts))]
+(defn- process-js-modules*
+  [opts k]
+  (let [js-modules (filter :module-type (k opts))]
     (reduce (fn [new-opts {:keys [file module-type] :as lib}]
               (if (or (and (= module-type :commonjs) can-convert-commonjs?)
                       (and (= module-type :amd) can-convert-amd?)
@@ -1921,10 +1918,20 @@
                       #(update-in % [:js-module-index] assoc provide module-name)))
                   (-> new-opts
                       (update-in [:libs] (comp vec conj) (:out-file ijs))
-                      (update-in [:foreign-libs]
+                      (update-in [k]
                         (comp vec (fn [libs] (remove #(= (:file %) file) libs))))))
                 new-opts))
             opts js-modules)))
+
+(defn process-js-modules
+  "Given the current compiler options, converts JavaScript modules to Google
+  Closure modules and writes them to disk. Adds mapping from original module
+  namespace to new module namespace to compiler env. Returns modified compiler
+  options where new modules are passed with :libs option."
+  [opts]
+  (-> opts
+      (process-js-modules* :foreign-libs)
+      (process-js-modules* :ups-foreign-libs)))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
