@@ -7,6 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.util
+  (:refer-clojure :exclude [boolean?])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.set :as set]
