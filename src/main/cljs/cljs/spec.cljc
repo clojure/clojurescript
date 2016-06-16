@@ -393,8 +393,8 @@ specified, return speced vars from all namespaces."
 
 (defmacro instrument
   "Instruments the var at v, a var or symbol, to check specs
-  registered with fdef. Wraps the fn at v to check :args/:ret/:fn
-  specs, if they exist, throwing an ex-info with explain-data if a
+  registered with fdef. Wraps the fn at v to check :args
+  spec, if it exist, throwing an ex-info with explain-data if a
   check fails. Idempotent."
   [v]
   (let [v   (if-not (seq? v) (list 'var v) v)

@@ -293,13 +293,9 @@
         (if *instrument-enabled*
           (s/with-instrument-disabled
             (let [specs (fn-spec v)]
-              (let [cargs (when (:args specs) (conform! v :args (:args specs) args args))
-                    ret (binding [*instrument-enabled* true]
-                          (apply f args))
-                    cret (when (:ret specs) (conform! v :ret (:ret specs) ret args))]
-                (when (c/and (:args specs) (:ret specs) (:fn specs))
-                  (conform! v :fn (:fn specs) {:args cargs :ret cret} args))
-                ret)))
+              (when (:args specs) (conform! v :args (:args specs) args args))
+              (binding [*instrument-enabled* true]
+                (apply f args))))
           (apply f args)))
       (not (instance? MultiFn f)) (doto (gobj/extend f)))))
 
