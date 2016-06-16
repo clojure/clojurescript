@@ -68,6 +68,14 @@
             (with-name spec k)))))
     k))
 
+(defn- reg-resolve!
+  "returns the spec/regex at end of alias chain starting with k, throws if not found, k if k not ident"
+  [k]
+  (if (ident? k)
+    (c/or (reg-resolve k)
+          (throw (js/Error. (str "Unable to resolve spec: " k))))
+    k))
+
 (defn spec?
   "returns x if x is a spec object, else logical false"
   [x]
@@ -770,14 +778,14 @@
 
 (defn- noret? [p1 pret]
   (c/or (= pret ::nil)
-        (c/and (#{::rep ::pcat} (::op (reg-resolve p1))) ;;hrm, shouldn't know these
+        (c/and (#{::rep ::pcat} (::op (reg-resolve! p1))) ;;hrm, shouldn't know these
                (empty? pret))
         nil))
 
 (declare preturn)
 
 (defn- accept-nil? [p]
-  (let [{:keys [::op ps p1 p2 forms] :as p} (reg-resolve p)]
+  (let [{:keys [::op ps p1 p2 forms] :as p} (reg-resolve! p)]
     (case op
       ::accept true
       nil nil
@@ -792,7 +800,7 @@
 (declare add-ret)
 
 (defn- preturn [p]
-  (let [{[p0 & pr :as ps] :ps, [k :as ks] :ks, :keys [::op p1 ret forms] :as p} (reg-resolve p)]
+  (let [{[p0 & pr :as ps] :ps, [k :as ks] :ks, :keys [::op p1 ret forms] :as p} (reg-resolve! p)]
     (case op
       ::accept ret
       nil nil
@@ -808,7 +816,7 @@
 
 (defn- op-unform [p x]
   ;;(prn {:p p :x x})
-  (let [{[p0 & pr :as ps] :ps, [k :as ks] :ks, :keys [::op p1 ret forms rep+ maybe] :as p} (reg-resolve p)
+  (let [{[p0 & pr :as ps] :ps, [k :as ks] :ks, :keys [::op p1 ret forms rep+ maybe] :as p} (reg-resolve! p)
         kps (zipmap ks ps)]
     (case op
       ::accept [ret]
@@ -828,7 +836,7 @@
                 (op-unform (kps k) v))))))
 
 (defn- add-ret [p r k]
-  (let [{:keys [::op ps splice] :as p} (reg-resolve p)
+  (let [{:keys [::op ps splice] :as p} (reg-resolve! p)
         prop #(let [ret (preturn p)]
                (if (empty? ret) r ((if splice into conj) r (if k {k ret} ret))))]
     (case op
@@ -842,7 +850,7 @@
 
 (defn- deriv
   [p x]
-  (let [{[p0 & pr :as ps] :ps, [k0 & kr :as ks] :ks, :keys [::op p1 p2 ret splice forms] :as p} (reg-resolve p)]
+  (let [{[p0 & pr :as ps] :ps, [k0 & kr :as ks] :ks, :keys [::op p1 p2 ret splice forms] :as p} (reg-resolve! p)]
     (when p
       (case op
         ::accept nil
@@ -861,7 +869,7 @@
                     (when (accept-nil? p1) (deriv (rep* p2 p2 (add-ret p1 ret nil) splice forms) x)))))))
 
 (defn- op-describe [p]
-  (let [{:keys [::op ps ks forms splice p1 rep+ maybe] :as p} (reg-resolve p)]
+  (let [{:keys [::op ps ks forms splice p1 rep+ maybe] :as p} (reg-resolve! p)]
     ;;(prn {:op op :ks ks :forms forms :p p})
     (when p
       (case op
@@ -879,7 +887,7 @@
 (defn- op-explain [form p path via in input]
   ;;(prn {:form form :p p :path path :input input})
   (let [[x :as input] input
-        {:keys [::op ps ks forms splice p1 p2] :as p} (reg-resolve p)
+        {:keys [::op ps ks forms splice p1 p2] :as p} (reg-resolve! p)
         via (if-let [name (spec-name p)] (conj via name) via)
         insufficient (fn [path form]
                        {path {:reason "Insufficient input"
@@ -932,7 +940,7 @@
 
 (defn- re-gen [p overrides path rmap f]
   ;;(prn {:op op :ks ks :forms forms})
-  (let [{:keys [::op ps ks p1 p2 forms splice ret id] :as p} (reg-resolve p)
+  (let [{:keys [::op ps ks p1 p2 forms splice ret id] :as p} (reg-resolve! p)
         rmap (if id (inck rmap id) rmap)
         ggens (fn [ps ks forms]
                 (let [gen (fn [p k f]
