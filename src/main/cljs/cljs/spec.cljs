@@ -254,8 +254,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; instrument ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def ^:private fn-spec-roles [:args :ret :fn])
-
 (defn- expect
   "Returns nil if v conforms to spec, else throws ex-info with explain-data."
   [spec v]
@@ -268,25 +266,15 @@
     (.-sym x)
     x))
 
-(defn- fn-specs?
-  "Fn-specs must include at least :args or :ret specs."
+(defn- fn-spec?
+  "Fn-spec must include at least :args or :ret specs."
   [m]
   (c/or (:args m) (:ret m)))
 
-(defn- fn-spec-sym
-  [sym role]
-  (symbol (str sym "$" (name role))))
-
-(defn fn-specs
-  "Returns :args/:ret/:fn map of specs for var or symbol v."
+(defn fn-spec
+  "Returns fspec of specs for var or symbol v, or nil."
   [v]
-  (let [s (->sym v)
-        reg (registry)]
-    (reduce
-      (fn [m role]
-        (assoc m role (get reg (fn-spec-sym s role))))
-      {}
-      fn-spec-roles)))
+  (get (registry) (->sym v)))
 
 (defn- spec-checking-fn
   [v f]
@@ -304,7 +292,7 @@
         [& args]
         (if *instrument-enabled*
           (s/with-instrument-disabled
-            (let [specs (fn-specs v)]
+            (let [specs (fn-spec v)]
               (let [cargs (when (:args specs) (conform! v :args (:args specs) args args))
                     ret (binding [*instrument-enabled* true]
                           (apply f args))
@@ -317,7 +305,7 @@
 
 (defn- macroexpand-check
   [v args]
-  (let [specs (fn-specs v)]
+  (let [specs (fn-spec v)]
     (when-let [arg-spec (:args specs)]
       (when (= ::invalid (conform arg-spec args))
         (let [ed (assoc (explain-data* arg-spec [:args]
@@ -328,7 +316,7 @@
                      "Call to " (->sym v) " did not conform to spec:\n"
                      (with-out-str (explain-out ed))))))))))
 
-(defn- no-fn-specs
+(defn- no-fn-spec
   [v specs]
   (ex-info (str "Fn at " (pr-str v) " is not spec'ed.")
            {:var v :specs specs}))
@@ -339,8 +327,8 @@
 
 (defn instrument*
   [v]
-  (let [specs (fn-specs v)]
-    (if (fn-specs? specs)
+  (let [spec (fn-spec v)]
+    (if (fn-spec? spec)
       (locking instrumented-vars
                (let [{:keys [raw wrapped]} (get @instrumented-vars v)
                      current @v]
@@ -348,7 +336,7 @@
                    (let [checked (spec-checking-fn v current)]
                      (swap! instrumented-vars assoc v {:raw current :wrapped checked})
                      checked))))
-      (throw (no-fn-specs v specs)))))
+      (throw (no-fn-spec v spec)))))
 
 (defn unstrument*
   [v]

@@ -49,10 +49,8 @@
           (when doc
             (println " " doc))))
       (when n
-        (let [specs (spec/fn-specs (symbol (str (ns-name n)) (name nm)))]
-          (when (some identity (vals specs))
-            (print "Spec")
-            (run! (fn [[role spec]]
-                   (when (and spec (not (= spec ::spec/unknown)))
-                     (print (str "\n " (name role) ":") (spec/describe spec))))
-              specs)))))))
+        (when-let [fnspec (spec/fn-spec (symbol (str (ns-name n)) (name nm)))]
+          (print "Spec")
+          (doseq [role [:args :ret :fn]]
+            (when-let [spec (get fnspec role)]
+              (print (str "\n " (name role) ":") (spec/describe spec)))))))))

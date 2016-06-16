@@ -273,10 +273,6 @@
       s
       (symbol (str (.-name *ns*)) (str s)))))
 
-(defn- fn-spec-sym
-  [env sym role]
-  (symbol (str (ns-qualify env sym) "$" (name role))))
-
 (def ^:private _speced_vars (atom #{}))
 
 (defn speced-vars*
@@ -313,7 +309,7 @@ specified, return speced vars from all namespaces."
 
   Qualifies fn-sym with resolve, or using *ns* if no resolution found.
   Registers specs in the global registry, where they can be retrieved
-  by calling fn-specs.
+  by calling fn-spec.
 
   Once registered, function specs are included in doc, checked by
   instrument, tested by the runner clojure.spec.test/run-tests, and (if
@@ -332,18 +328,11 @@ specified, return speced vars from all namespaces."
                  :str string?
                  :sym symbol?)
     :ret symbol?)"
-  [fn-sym & {:keys [args ret fn] :as m}]
+  [fn-sym & specs]
   (let [env &env
         qn  (ns-qualify env fn-sym)]
     (swap! _speced_vars conj qn)
-    `(do ~@(reduce
-             (clojure.core/fn [defns role]
-               (if (contains? m role)
-                 (let [s (fn-spec-sym env qn (name role))]
-                   (conj defns `(cljs.spec/def '~s ~(get m role))))
-                 defns))
-             [] [:args :ret :fn])
-         '~qn)))
+    `(cljs.spec/def '~qn (cljs.spec/fspec ~@specs))))
 
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
