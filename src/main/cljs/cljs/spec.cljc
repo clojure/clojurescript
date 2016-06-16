@@ -57,7 +57,8 @@
 
   Returns a spec."
   [form & {:keys [gen]}]
-  `(cljs.spec/spec-impl '~(res &env form) ~form ~gen nil))
+  (when form
+    `(cljs.spec/spec-impl '~(res &env form) ~form ~gen nil)))
 
 (defmacro multi-spec
   "Takes the name of a spec/predicate-returning multimethod and a
@@ -251,7 +252,9 @@
   that returns a test.check generator."
   [& {:keys [args ret fn gen]}]
   (let [env &env]
-    `(cljs.spec/fspec-impl ~args '~(res env args) ~ret '~(res env ret) ~fn '~(res env fn) ~gen)))
+    `(cljs.spec/fspec-impl (spec ~args) '~(res env args)
+                           (spec ~ret) '~(res env ret)
+                           (spec ~fn) '~(res env fn) ~gen)))
 
 (defmacro tuple
   "takes one or more preds and returns a spec for a tuple, a vector

@@ -1060,20 +1060,13 @@
 (defn ^:skip-wiki fspec-impl
   "Do not call this directly, use 'fspec'"
   [argspec aform retspec rform fnspec fform gfn]
-  (assert (c/and argspec retspec))
   (let [specs {:args argspec :ret retspec :fn fnspec}]
     (reify
       IFn
       (-invoke [this x] (valid? this x))
       ILookup
-      (-lookup [this k]
-        (-lookup this k nil))
-      (-lookup [_ k not-found]
-        (case k
-          :args argspec
-          :ret retspec
-          :fn fnspec
-          not-found))
+      (-lookup [this k] (get specs k))
+      (-lookup [_ k not-found] (get specs k not-found))
       Spec
       (conform* [_ f] (if (fn? f)
                         (if (identical? f (validate-fn f specs *fspec-iterations*)) f ::invalid)
