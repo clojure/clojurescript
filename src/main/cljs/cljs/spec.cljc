@@ -153,9 +153,10 @@
 
   (s/or :even even? :small #(< % 42))
 
-  Returns a destructuring spec that
-  returns a vector containing the key of the first matching pred and the
-  corresponding value."
+  Returns a destructuring spec that returns a map entry containing the
+  key of the first matching pred and the corresponding value. Thus the
+  'key' and 'val' functions can be used to refer generically to the
+  components of the tagged return."
   [& key-pred-forms]
   (let [pairs (partition 2 key-pred-forms)
         keys (mapv first pairs)
@@ -197,8 +198,10 @@
 
   (s/alt :even even? :small #(< % 42))
 
-  Returns a regex op that returns a vector containing the key of the
-  first matching pred and the corresponding value."
+  Returns a regex op that returns a map entry containing the key of the
+  first matching pred and the corresponding value. Thus the
+  'key' and 'val' functions can be used to refer generically to the
+  components of the tagged return."
   [& key-pred-forms]
   (let [pairs (partition 2 key-pred-forms)
         keys (mapv first pairs)

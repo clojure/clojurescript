@@ -603,6 +603,11 @@
      (with-gen* [_ gfn] (tuple-impl forms preds gfn))
      (describe* [_] `(tuple ~@forms)))))
 
+(defn- tagged-ret [v]
+  (specify! v
+    IMapEntry
+    (-key [_] (-nth v 0))
+    (-val [_] (-nth v 1))))
 
 (defn ^:skip-wiki or-spec-impl
   "Do not call this directly, use 'or'"
@@ -616,7 +621,7 @@
                       (let [ret (dt pred x (nth forms i))]
                         (if (= ::invalid ret)
                           (recur (inc i))
-                          [(keys i) ret])))
+                          (tagged-ret [(keys i) ret]))))
                     ::invalid)))]
     (reify
       IFn
@@ -747,7 +752,7 @@
         (if (nil? pr)
           (if k1
             (if (accept? p1)
-              (accept [k1 (:ret p1)])
+              (accept (tagged-ret [k1 (:ret p1)]))
               ret)
             p1)
           ret)))))
@@ -799,7 +804,7 @@
       ::pcat (add-ret p0 ret k)
       ::alt (let [[[p0] [k0]] (filter-alt ps ks forms accept-nil?)
                   r (if (nil? p0) ::nil (preturn p0))]
-              (if k0 [k0 r] r)))))
+              (if k0 (tagged-ret [k0 r]) r)))))
 
 (defn- op-unform [p x]
   ;;(prn {:p p :x x})
