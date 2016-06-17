@@ -1124,9 +1124,18 @@
          (let [t (inst-ms inst)]
            (c/and (<= (inst-ms start) t) (< t (inst-ms end))))))
 
-(defn long-in-range?
+(defn int-in-range?
   "Return true if start <= val and val < end"
   [start end val]
-  (c/and (long? val)
-         (.lessThanOrEqual (goog.math.Long.fromNumber start) val)
-         (.lessThan val  (goog.math.Long.fromNumber end))))
+  (cond
+    (integer? val) (and (<= start val) (< val end))
+
+    (instance? goog.math.Long val)
+    (c/and (.lessThanOrEqual start val)
+           (.lessThan val end))
+
+    (instance? goog.math.Integer val)
+    (c/and (.lessThanOrEqual start val)
+           (.lessThan val end))
+
+    :else false))

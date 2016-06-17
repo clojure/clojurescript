@@ -384,11 +384,11 @@ specified, return speced vars from all namespaces."
               (gen/fmap mkdate#
                 (gen/large-integer* {:min st# :max et#}))))))
 
-(defmacro long-in
+(defmacro int-in
   "Returns a spec that validates longs in the range from start
   (inclusive) to end (exclusive)."
   [start end]
-  `(spec (and c/long? #(long-in-range? ~start ~end %))
+  `(spec (and c/int? #(int-in-range? ~start ~end %))
      :gen #(gen/large-integer* {:min ~start :max (dec ~end)})))
 
 (defmacro instrument

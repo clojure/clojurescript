@@ -8,6 +8,7 @@
 
 (ns cljs.core
   (:require goog.math.Long
+            goog.math.Integer
             [goog.string :as gstring]
             [goog.object :as gobject]
             [goog.array :as garray])
@@ -2124,25 +2125,57 @@ reduces them without incurring seq initialization"
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
 
-(defn ^boolean long?
-  "Return true if x is an instance of goog.math.Long"
-  [x] (instance? goog.math.Long x))
+(defn ^boolean int?
+  "Return true if x is an integer"
+  [x]
+  (or (integer? x)
+      (instance? goog.math.Integer x)
+      (instance? goog.math.Long x)))
 
-(defn ^boolean pos-long?
-  "Return true if x is a positive Long"
-  [x] (and (instance? goog.math.Long x)
-           (not (.isNegative x))
-           (not (.isZero x))))
+(defn ^boolean pos-int?
+  "Return true if x is a positive integer"
+  [x]
+  (cond
+    (integer? x) (pos? x)
 
-(defn ^boolean neg-long?
-  "Return true if x is a negative Long"
-  [x] (and (instance? goog.math.Long x)
-           (.isNegative x)))
+    (instance? goog.math.Integer x)
+    (and (not (.isNegative x))
+         (not (.isZero x)))
 
-(defn ^boolean nat-long?
-  "Return true if x is a non-negative Long"
-  [x] (and (instance? goog.math.Long x)
-           (or (not (.isNegative x)) (.isZero x))))
+    (instance? goog.math.Long x)
+    (and (not (.isNegative x))
+         (not (.isZero x)))
+
+    :else false))
+
+(defn ^boolean neg-int?
+  "Return true if x is a negative integer"
+  [x]
+  (cond
+    (integer? x) (neg? x)
+
+    (instance? goog.math.Integer x)
+    (.isNegative x)
+
+    (instance? goog.math.Long x)
+    (.isNegative x)
+
+    :else false))
+
+(defn ^boolean nat-int?
+  "Return true if x is a non-negative integer"
+  [x]
+  (cond
+    (integer? x)
+    (or (not (neg? x)) (zero? x))
+
+    (instance? goog.math.Integer x)
+    (or (not (.isNegative x)) (.isZero x))
+
+    (instance? goog.math.Long x)
+    (or (not (.isNegative x)) (.isZero x))
+
+    :else false))
 
 (defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
