@@ -1,3 +1,27 @@
+## 1.9.76
+
+### Enhancements
+* CLJS-1648: Getting Source Info into ex-info data for Analysis Errors
+* cljs.spec updated to Clojure 1.9.0-alpha7 changes
+
+### Changes
+* bump Google Closure Library dep
+* AOT cljs.spec nses
+
+### Fixes
+* CLJS-1679: Self-host: Incorporate spec tests
+* CLJS-1680: Self-host: Don't require items no longer provided by Closure
+* CLJS-1654: cljs.spec: var name in s/fdef non-conformance
+* CLJS-1655: cljs.spec: conformer docstring indicates :clojure.spec/invalid
+* CLJS-1656: Self-host: cljs.spec: speced-vars* fn not resolving
+* CLJS-1661: cljs.spec: non-spec'ed fn var printing
+* compute read/write opts for transit if possible, handle JSValue
+* CLJS-1660: cljs.spec: Always return var from instrument / unstrument
+* CLJS-1671: Bad cljs.spec interactive instrumentation session 
+* CLJS-1664: The filename aux.cljs is a problem on windows.
+* CLJS-1667: bad describe* for and-spec-impl
+* CLJS-1699: Self-host: s/fdef ns-qualify *ns* name field access
+
 ## 1.9.36
 
 ### Enhancements
