@@ -8,7 +8,8 @@
 
 (ns cljs.spec
   (:refer-clojure :exclude [+ * and or cat def keys resolve])
-  (:require [cljs.analyzer.api :refer [resolve]]
+  (:require [cljs.analyzer :as ana]
+            [cljs.analyzer.api :refer [resolve]]
             [clojure.walk :as walk]
             [cljs.spec.impl.gen :as gen]
             [clojure.string :as str]))
@@ -35,11 +36,22 @@
     (sequential? form) (walk/postwalk #(if (symbol? %) (res env %) %) (unfn form))
     :else form))
 
+(defn- ns-qualify
+  "Qualify symbol s by resolving it or using the current *ns*."
+  [env s]
+  (if (namespace s)
+    (let [v (resolve env s)]
+      (assert v (str "Unable to resolve: " s))
+      (->sym v))
+    (symbol (str ana/*cljs-ns*) (str s))))
+
 (defmacro def
-  "Given a namespace-qualified keyword or symbol k, and a spec, spec-name, predicate or regex-op
-  makes an entry in the registry mapping k to the spec"
+  "Given a namespace-qualified keyword or resolveable symbol k, and a spec,
+   spec-name, predicate or regex-op makes an entry in the registry mapping k to
+   the spec"
   [k spec-form]
-  `(cljs.spec/def-impl ~k '~(res &env spec-form) ~spec-form))
+  (let [k (if (symbol? k) (ns-qualify &env k) k)]
+    `(cljs.spec/def-impl '~k '~(res &env spec-form) ~spec-form)))
 
 (defmacro spec
   "Takes a single predicate form, e.g. can be the name of a predicate,
@@ -248,6 +260,9 @@
   and returns a spec whose conform/explain take a fn and validates it
   using generative testing. The conformed value is always the fn itself.
 
+  See 'fdef' for a single operation that creates an fspec and
+  registers it, as well as a full description of :args, :ret and :fn
+
   Optionally takes :gen generator-fn, which must be a fn of no args
   that returns a test.check generator."
   [& {:keys [args ret fn gen]}]
@@ -263,15 +278,6 @@
   [& preds]
   (assert (not (empty? preds)))
   `(cljs.spec/tuple-impl '~(mapv #(res &env %) preds) ~(vec preds)))
-
-(defn- ns-qualify
-  "Qualify symbol s by resolving it or using the current *ns*."
-  [env s]
-  (if-let [resolved (resolve env s)]
-    (->sym resolved)
-    (if (namespace s)
-      s
-      (symbol (str (.-name *ns*)) (str s)))))
 
 (def ^:private _speced_vars (atom #{}))
 
@@ -308,8 +314,8 @@ specified, return speced vars from all namespaces."
     expected to contain predicates that relate those values
 
   Qualifies fn-sym with resolve, or using *ns* if no resolution found.
-  Registers specs in the global registry, where they can be retrieved
-  by calling fn-spec.
+  Registers an fspec in the global registry, where it can be retrieved
+  by calling get-spec with the var or full-qualified symbol.
 
   Once registered, function specs are included in doc, checked by
   instrument, tested by the runner clojure.spec.test/run-tests, and (if
@@ -329,10 +335,8 @@ specified, return speced vars from all namespaces."
                  :sym symbol?)
     :ret symbol?)"
   [fn-sym & specs]
-  (let [env &env
-        qn  (ns-qualify env fn-sym)]
-    (swap! _speced_vars conj qn)
-    `(cljs.spec/def '~qn (cljs.spec/fspec ~@specs))))
+  (swap! _speced_vars conj (ns-qualify &env fn-sym))
+  `(cljs.spec/def ~fn-sym (cljs.spec/fspec ~@specs)))
 
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."

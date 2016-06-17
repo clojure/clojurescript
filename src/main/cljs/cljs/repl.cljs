@@ -49,7 +49,7 @@
           (when doc
             (println " " doc))))
       (when n
-        (when-let [fnspec (spec/fn-spec (symbol (str (ns-name n)) (name nm)))]
+        (when-let [fnspec (spec/get-spec (symbol (str (ns-name n)) (name nm)))]
           (print "Spec")
           (doseq [role [:args :ret :fn]]
             (when-let [spec (get fnspec role)]

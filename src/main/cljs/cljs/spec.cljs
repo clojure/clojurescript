@@ -238,7 +238,7 @@
 (defn ^:skip-wiki def-impl
   "Do not call this directly, use 'def'"
   [k form spec]
-  (assert (c/and (named? k) (namespace k)) "k must be namespaced keyword/symbol")
+  (assert (c/and (named? k) (namespace k)) "k must be namespaced keyword or resolveable symbol")
   (let [spec (if (c/or (spec? spec) (regex? spec) (get @registry-ref spec))
                spec
                (spec-impl form spec nil nil))]
@@ -246,9 +246,21 @@
     k))
 
 (defn registry
-  "returns the registry map"
+  "returns the registry map, prefer 'get-spec' to lookup a spec by name"
   []
   @registry-ref)
+
+(defn- ->sym
+  "Returns a symbol from a symbol or var"
+  [x]
+  (if (var? x)
+    (.-sym x)
+    x))
+
+(defn get-spec
+  "Returns spec registered for keyword/symbol/var k, or nil."
+  [k]
+  (get (registry) (if (keyword? k) k (->sym k))))
 
 (declare map-spec)
 
@@ -259,22 +271,10 @@
   [spec v]
   )
 
-(defn- ->sym
-  "Returns a symbol from a symbol or var"
-  [x]
-  (if (var? x)
-    (.-sym x)
-    x))
-
 (defn- fn-spec?
   "Fn-spec must include at least :args or :ret specs."
   [m]
   (c/or (:args m) (:ret m)))
-
-(defn fn-spec
-  "Returns fspec of specs for var or symbol v, or nil."
-  [v]
-  (get (registry) (->sym v)))
 
 (defn- spec-checking-fn
   [v f]
@@ -292,7 +292,7 @@
         [& args]
         (if *instrument-enabled*
           (s/with-instrument-disabled
-            (let [specs (fn-spec v)]
+            (let [specs (get-spec v)]
               (when (:args specs) (conform! v :args (:args specs) args args))
               (binding [*instrument-enabled* true]
                 (apply f args))))
@@ -301,7 +301,7 @@
 
 (defn- macroexpand-check
   [v args]
-  (let [specs (fn-spec v)]
+  (let [specs (get-spec v)]
     (when-let [arg-spec (:args specs)]
       (when (= ::invalid (conform arg-spec args))
         (let [ed (assoc (explain-data* arg-spec [:args]
@@ -323,7 +323,7 @@
 
 (defn instrument*
   [v]
-  (let [spec (fn-spec v)]
+  (let [spec (get-spec v)]
     (if (fn-spec? spec)
       (locking instrumented-vars
                (let [{:keys [raw wrapped]} (get @instrumented-vars v)
@@ -1128,7 +1128,7 @@
   "Return true if start <= val and val < end"
   [start end val]
   (cond
-    (integer? val) (and (<= start val) (< val end))
+    (integer? val) (c/and (<= start val) (< val end))
 
     (instance? goog.math.Long val)
     (c/and (.lessThanOrEqual start val)
