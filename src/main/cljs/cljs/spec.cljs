@@ -1075,11 +1075,10 @@
           {path {:pred 'ifn? :val f :via via :in in}}))
       (gen* [_ _ _ _] (if gfn
                         (gfn)
-                        (when-not fnspec
-                          (gen/return
-                            (fn [& args]
-                              (assert (valid? argspec args) (with-out-str (explain argspec args)))
-                              (gen/generate (gen retspec)))))))
+                        (gen/return
+                          (fn [& args]
+                            (assert (valid? argspec args) (with-out-str (explain argspec args)))
+                            (gen/generate (gen retspec))))))
       (with-gen* [_ gfn] (fspec-impl argspec aform retspec rform fnspec fform gfn))
       (describe* [_] `(fspec :args ~aform :ret ~rform :fn ~fform)))))
 

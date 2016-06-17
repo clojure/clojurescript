@@ -263,6 +263,10 @@
   See 'fdef' for a single operation that creates an fspec and
   registers it, as well as a full description of :args, :ret and :fn
 
+  fspecs can generate functions that validate the arguments and
+  fabricate a return value compliant with the :ret spec, ignoring
+  the :fn spec if present.
+
   Optionally takes :gen generator-fn, which must be a fn of no args
   that returns a test.check generator."
   [& {:keys [args ret fn gen]}]
