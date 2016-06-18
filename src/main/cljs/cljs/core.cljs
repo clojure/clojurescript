@@ -3538,13 +3538,17 @@ reduces them without incurring seq initialization"
              (aset a i init-val-or-seq))
            a)))))
 
-(defn- bounded-count [s n]
-  (if (counted? s)
-    (count s)
-    (loop [s s i n sum 0]
-      (if (and (pos? i) (seq s))
-        (recur (next s) (dec i) (inc sum))
-        sum))))
+(defn bounded-count
+  "If coll is counted? returns its count, else will count at most the first n
+   elements of coll using its seq"
+  {:added "1.9"}
+  [n coll]
+  (if (counted? coll)
+    (count coll)
+    (loop [i 0 s (seq coll)]
+      (if (and (not (nil? s)) (< i n))
+        (recur (inc i) (next s))
+        i))))
 
 (defn spread
   [arglist]
@@ -3668,7 +3672,7 @@ reduces them without incurring seq initialization"
   ([f args]
      (let [fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (let [bc (bounded-count args (inc fixed-arity))]
+         (let [bc (bounded-count (inc fixed-arity) args)]
           (if (<= bc fixed-arity)
             (apply-to f bc args)
             (.cljs$lang$applyTo f args)))
@@ -3677,7 +3681,7 @@ reduces them without incurring seq initialization"
      (let [arglist (list* x args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (let [bc (bounded-count arglist (inc fixed-arity))]
+         (let [bc (bounded-count (inc fixed-arity) arglist)]
           (if (<= bc fixed-arity)
             (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
@@ -3686,7 +3690,7 @@ reduces them without incurring seq initialization"
      (let [arglist (list* x y args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (let [bc (bounded-count arglist (inc fixed-arity))]
+         (let [bc (bounded-count (inc fixed-arity) arglist)]
           (if (<= bc fixed-arity)
             (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
@@ -3695,7 +3699,7 @@ reduces them without incurring seq initialization"
      (let [arglist (list* x y z args)
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (let [bc (bounded-count arglist (inc fixed-arity))]
+         (let [bc (bounded-count (inc fixed-arity) arglist)]
           (if (<= bc fixed-arity)
             (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
@@ -3704,7 +3708,7 @@ reduces them without incurring seq initialization"
      (let [arglist (cons a (cons b (cons c (cons d (spread args)))))
            fixed-arity (.-cljs$lang$maxFixedArity f)]
        (if (.-cljs$lang$applyTo f)
-         (let [bc (bounded-count arglist (inc fixed-arity))]
+         (let [bc (bounded-count (inc fixed-arity) arglist)]
           (if (<= bc fixed-arity)
             (apply-to f bc arglist)
             (.cljs$lang$applyTo f arglist)))
