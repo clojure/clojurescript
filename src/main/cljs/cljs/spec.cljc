@@ -188,6 +188,40 @@
   [& pred-forms]
   `(cljs.spec/and-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
 
+(defmacro every
+  "takes a pred and validates collection elements against that pred.
+
+  Note that 'every' does not do exhaustive checking, rather it samples
+  *coll-check-limit* elements. Nor (as a result) does it do any
+  conforming of elements. 'explain' will report at most *coll-error-limit*
+  problems.  Thus 'every' should be suitable for potentially large
+  collections.
+
+  Takes several kwargs options that further constrain the collection:
+
+  :count - specifies coll has exactly this count (default nil)
+  :min-count, :max-count - coll has count (<= min count max) (default nil)
+  :distinct - all the elements are distinct (default nil)
+
+  And additional args that control gen
+
+  :gen-max - the maximum coll size to generate (default 20)
+  :gen-into - the default colection to generate into (will be emptied) (default [])
+
+  Optionally takes :gen generator-fn, which must be a fn of no args that
+  returns a test.check generator
+"
+  [pred & {:keys [count max-count min-count distinct gen-max gen-into gen] :as opts}]
+  `(cljs.spec/every-impl '~pred ~pred ~(dissoc opts :gen) ~gen))
+
+(defmacro every-kv
+  "like 'every' but takes separate key and val preds and works on associative collections.
+
+  Same options as 'every'"
+
+  [kpred vpred & opts]
+  `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (key v#)) :gen-into {} ~@opts))
+
 (defmacro *
   "Returns a regex op that matches zero or more values matching
   pred. Produces a vector of matches iff there is at least one match"

@@ -66,7 +66,7 @@
 ;      g
 ;      (throw (js/Error. (str "Var " s " is not a generator"))))))
 
-(lazy-combinators hash-map list map not-empty set vector fmap elements
+(lazy-combinators hash-map list map not-empty set vector vector-distinct fmap elements
   bind choose one-of such-that tuple sample return
   large-integer*)
 
