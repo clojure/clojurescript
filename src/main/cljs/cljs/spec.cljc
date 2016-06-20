@@ -8,7 +8,8 @@
 
 (ns cljs.spec
   (:refer-clojure :exclude [+ * and or cat def keys resolve])
-  (:require [cljs.analyzer :as ana]
+  (:require [cljs.core :as c]
+            [cljs.analyzer :as ana]
             [cljs.analyzer.api :refer [resolve]]
             [clojure.walk :as walk]
             [cljs.spec.impl.gen :as gen]
