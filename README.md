@@ -31,6 +31,7 @@ Latest stable release: 1.9.76
 * Read the [Quick Start](https://github.com/clojure/clojurescript/wiki/Quick-Start) guide.
 * Read the [Documentation](https://github.com/clojure/clojurescript/wiki).
 * Try a [tutorial](https://github.com/clojure/clojurescript/wiki).
+* See how it [evaluates and translates into Javascript](http://app.klipse.tech/)
 * [Companies using ClojureScript](https://github.com/clojure/clojurescript/wiki/Companies-Using-ClojureScript)
 
 ## Questions, Feedback? ##
