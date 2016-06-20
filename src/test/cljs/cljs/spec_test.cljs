@@ -43,6 +43,14 @@
   (is (= "good" (testmm {:type :good})))
   (is (thrown? js/Error (testmm "foo"))))
 
+(deftest int-in-test
+  (is (s/valid? (s/int-in 1 3) 2))
+  (is (not (s/valid? (s/int-in 1 3) 0))))
+
+(deftest inst-in-test
+  (is (s/valid? (s/inst-in #inst "1999" #inst "2001") #inst "2000"))
+  (is (not (s/valid? (s/inst-in #inst "1999" #inst "2001") #inst "1492"))))
+
 (comment
 
   (s/conform s2 [42 11 13 15 {:a 1 :b 2 :c 3} 1 2 3 42 43 44 11])

@@ -422,7 +422,7 @@ specified, return speced vars from all namespaces."
   `(let [st# (inst-ms ~start)
          et# (inst-ms ~end)
          mkdate# (fn [d#] (js/Date. d#))]
-     (spec (and inst? #(inst-in-range? ~start ~end %))
+     (spec (and inst? #(cljs.spec/inst-in-range? ~start ~end %))
        :gen (fn []
               (gen/fmap mkdate#
                 (gen/large-integer* {:min st# :max et#}))))))
@@ -431,7 +431,7 @@ specified, return speced vars from all namespaces."
   "Returns a spec that validates longs in the range from start
   (inclusive) to end (exclusive)."
   [start end]
-  `(spec (and c/int? #(int-in-range? ~start ~end %))
+  `(spec (and c/int? #(cljs.spec/int-in-range? ~start ~end %))
      :gen #(gen/large-integer* {:min ~start :max (dec ~end)})))
 
 (defmacro instrument
