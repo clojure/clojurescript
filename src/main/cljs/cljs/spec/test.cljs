@@ -77,9 +77,9 @@ passed through to test.check/quick-check:
 Returns a map as quick-check, with :explain-data added if
 :result is false."
   [v & opts]
-  (let [specs (spec/fn-specs v)]
-    (if (:args specs)
-      (apply check-fn @v specs opts)
+  (let [fnspec (spec/get-spec v)]
+    (if (:args fnspec)
+      (apply check-fn @v fnspec opts)
       (throw (js/Error. (str  "No :args spec for " v))))))
 
 (defn- run-var-tests

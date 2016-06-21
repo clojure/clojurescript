@@ -21,7 +21,7 @@
    `(cljs.spec.test/run-var-tests
       (->> #?(:clj  ~(spec/speced-vars* ns-syms)
               :cljs ~(cljs.spec$macros/speced-vars* ns-syms))
-        (filter (fn [v#] (:args (cljs.spec/fn-specs v#))))))))
+        (filter (fn [v#] (:args (cljs.spec/get-spec v#))))))))
 
 (defmacro run-all-tests
   "Like clojure.test/run-all-tests, but runs test.check tests
