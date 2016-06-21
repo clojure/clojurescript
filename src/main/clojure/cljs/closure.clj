@@ -169,7 +169,7 @@
     :optimize-constants :output-dir :output-to :output-wrapper :parallel-build :preamble
     :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
     :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings
-    :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers})
+    :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1362,6 +1362,11 @@
 
 (declare foreign-deps-str add-header add-source-map-link)
 
+(defn preloads [syms]
+  (letfn [(preload-str [sym]
+            (str "document.write('<script>goog.require(\"" (comp/munge sym) "\");</script>');\n"))]
+    (map preload-str syms)))
+
 (defn output-main-file [opts]
   (let [asset-path (or (:asset-path opts)
                        (util/output-directory opts))
@@ -1385,6 +1390,7 @@
              "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
              "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
              "document.write('<script>if (typeof goog == \"undefined\") console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\");</script>');\n"
+             (apply str (preloads (:preloads opts)))
              "document.write('<script>goog.require(\"" (comp/munge (:main opts))"\");</script>');\n")))))
 
 (defn output-modules
