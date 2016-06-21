@@ -763,9 +763,9 @@
                   (javascript-file foreign url provides requires)
                   js-map)))
             required-js)
-          [(when (-> @env/*compiler* :options :emit-constants)
-             (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
-               (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
+          (when (-> @env/*compiler* :options :emit-constants)
+            (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
+              [(javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)]))
           required-cljs
           inputs)))))
 
@@ -878,12 +878,11 @@
         inputs))
 
 (defn add-js-sources
-  "Given list of IJavaScript objects, add foreign-deps, constants-table, and
-   preloads IJavaScript objects to the list."
+  "Given list of IJavaScript objects, add foreign-deps, constants-table
+   IJavaScript objects to the list."
   [inputs opts]
   (let [requires    (set (mapcat deps/-requires inputs))
-        required-js (js-dependencies opts requires)
-        cenv        @env/*compiler*]
+        required-js (js-dependencies opts requires)]
     (concat
       (map
         (fn [{:keys [foreign url file provides requires] :as js-map}]
@@ -892,16 +891,52 @@
               (javascript-file foreign url provides requires)
               js-map)))
         required-js)
-      [(when (-> cenv :options :emit-constants)
-         (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
-           (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
-      (remove nil?
-        (map (fn [preload]
-               (if-let [uri (:uri (source-for-namespace preload cenv))]
-                 (-compile uri opts)
-                 (util/debug-prn "WARNING: preloads namespace" preload "does not exist")))
-          (:preloads opts)))
+      (when (-> @env/*compiler* :options :emit-constants)
+        (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
+          [(javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)]))
       inputs)))
+
+(defn distinct-by
+  ([k coll]
+   (let [step (fn step [xs seen]
+                (lazy-seq
+                  ((fn [[f :as xs] seen]
+                     (when-let [s (seq xs)]
+                       (let [v (get f k)]
+                         (if (contains? seen v)
+                          (recur (rest s) seen)
+                          (cons f (step (rest s) (conj seen v)))))))
+                    xs seen)))]
+     (step coll #{}))))
+
+(defn add-preloads
+  "Add :preloads to a given set of inputs (IJavaScript). Returns a new
+  list of inputs where the preloaded namespaces and their deps come immediately after
+  cljs.core or the constants table depending on the optimization setting. Any
+  files needing copying or compilation will be compiled and/or copied to the
+  appropiate location."
+  [inputs opts]
+  (let [pred     (fn [x]
+                   (if (:emit-constants opts)
+                     (not= ["constants-table"] (:provides x))
+                     (not= ["cljs.core"] (:provides x))))
+        pre      (take-while pred inputs)
+        post     (drop-while pred inputs)
+        preloads (remove nil?
+                   (map
+                     (fn [preload]
+                       (try
+                         (comp/find-source preload)
+                         (catch Throwable t
+                           (util/debug-prn "WARNING: preload namespace" preload "does not exist"))))
+                     (:preloads opts)))]
+    (distinct-by :provides
+      (concat pre [(first post)]
+        (-> (add-dependency-sources preloads opts)
+          deps/dependency-order
+          (compile-sources opts)
+          (add-js-sources opts))
+        (next post)))))
 
 (comment
   (comp/find-sources-root "samples/hello/src")
@@ -1965,6 +2000,7 @@
                                 (add-js-sources all-opts)
                                 (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") all-opts)]))
                                 deps/dependency-order
+                                (add-preloads all-opts)
                                 add-goog-base
                                 (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)])))
                  _ (when (:emit-constants all-opts)
