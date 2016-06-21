@@ -878,8 +878,8 @@
         inputs))
 
 (defn add-js-sources
-  "Given list of IJavaScript objects, add foreign-deps and constants-table
-  IJavaScript objects to the list."
+  "Given list of IJavaScript objects, add foreign-deps, constants-table, and
+   preloads IJavaScript objects to the list."
   [inputs opts]
   (let [requires      (set (mapcat deps/-requires inputs))
         required-js   (js-dependencies opts requires)]
@@ -894,6 +894,12 @@
       [(when (-> @env/*compiler* :options :emit-constants)
          (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
            (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
+      (remove nil?
+        (map (fn [preload]
+               (if-let [uri (:uri (cljs-source-for-namespace preload))]
+                 (-compile uri opts)
+                 (util/debug-prn "WARNING: preloads namespace" preload "does not exist")))
+          (:preloads opts)))
       inputs)))
 
 (comment
@@ -1362,10 +1368,15 @@
 
 (declare foreign-deps-str add-header add-source-map-link)
 
-(defn preloads [syms]
-  (letfn [(preload-str [sym]
-            (str "document.write('<script>goog.require(\"" (comp/munge sym) "\");</script>');\n"))]
-    (map preload-str syms)))
+(defn preloads
+  ([syms]
+    (preloads syms nil))
+  ([syms mode]
+   (letfn [(preload-str [sym]
+             (str (when (= :browser mode) "document.write('<script>")
+                  "goog.require(\"" (comp/munge sym) "\");"
+                  (if (= :browser mode) "</script>');\n" "\n")))]
+     (map preload-str syms))))
 
 (defn output-main-file [opts]
   (let [asset-path (or (:asset-path opts)
@@ -1383,6 +1394,7 @@
                "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
                "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
                "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+               (apply str (preloads (:preloads opts)))
                "goog.require(\"" (comp/munge (:main opts)) "\");\n"
                "goog.require(\"cljs.nodejscli\");\n")))
       (output-one-file opts
@@ -1390,7 +1402,7 @@
              "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
              "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
              "document.write('<script>if (typeof goog == \"undefined\") console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\");</script>');\n"
-             (apply str (preloads (:preloads opts)))
+             (apply str (preloads (:preloads opts) :browser))
              "document.write('<script>goog.require(\"" (comp/munge (:main opts))"\");</script>');\n")))))
 
 (defn output-modules
