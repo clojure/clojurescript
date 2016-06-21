@@ -881,8 +881,9 @@
   "Given list of IJavaScript objects, add foreign-deps, constants-table, and
    preloads IJavaScript objects to the list."
   [inputs opts]
-  (let [requires      (set (mapcat deps/-requires inputs))
-        required-js   (js-dependencies opts requires)]
+  (let [requires    (set (mapcat deps/-requires inputs))
+        required-js (js-dependencies opts requires)
+        cenv        @env/*compiler*]
     (concat
       (map
         (fn [{:keys [foreign url file provides requires] :as js-map}]
@@ -891,12 +892,12 @@
               (javascript-file foreign url provides requires)
               js-map)))
         required-js)
-      [(when (-> @env/*compiler* :options :emit-constants)
+      [(when (-> cenv :options :emit-constants)
          (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
            (javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)))]
       (remove nil?
         (map (fn [preload]
-               (if-let [uri (:uri (cljs-source-for-namespace preload))]
+               (if-let [uri (:uri (source-for-namespace preload cenv))]
                  (-compile uri opts)
                  (util/debug-prn "WARNING: preloads namespace" preload "does not exist")))
           (:preloads opts)))
