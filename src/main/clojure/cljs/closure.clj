@@ -642,14 +642,14 @@
   [ns]
   (if (= "cljs.core$macros" (str ns))
     (let [relpath "cljs/core.cljc"]
-      {:relative-path relpath :uri (io/resource relpath)})
+      {:relative-path relpath :uri (io/resource relpath) :ext :cljc})
     (let [path    (-> (munge ns) (string/replace \. \/))
           relpath (str path ".cljs")]
       (if-let [res (io/resource relpath)]
-        {:relative-path relpath :uri res}
+        {:relative-path relpath :uri res :ext :cljs}
         (let [relpath (str path ".cljc")]
           (if-let [res (io/resource relpath)]
-            {:relative-path relpath :uri res}))))))
+            {:relative-path relpath :uri res :ext :cljc}))))))
 
 (defn source-for-namespace
   "Given a namespace and compilation environment return the relative path and
@@ -660,13 +660,13 @@
         path    (string/replace ns-str \. \/)
         relpath (str path ".cljs")]
     (if-let [cljs-res (io/resource relpath)]
-      {:relative-path relpath :uri cljs-res}
+      {:relative-path relpath :uri cljs-res :ext :cljs}
       (let [relpath (str path ".cljc")]
         (if-let [cljc-res (io/resource relpath)]
-          {:relative-path relpath :uri cljc-res}
+          {:relative-path relpath :uri cljc-res :ext :cljc}
           (let [relpath (str path ".js")]
             (if-let [js-res (io/resource relpath)]
-              {:relative-path relpath :uri js-res}
+              {:relative-path relpath :uri js-res :ext :js}
               (let [ijs (get-in @compiler-env [:js-dependency-index (str ns)])
                    relpath (or (:file ijs) (:url ijs))]
                (if-let [js-res (and relpath
@@ -675,7 +675,7 @@
                                  (or (and (util/url? relpath) relpath)
                                    (try (URL. relpath) (catch Throwable t))
                                    (io/resource relpath)))]
-                 {:relative-path relpath :uri js-res}
+                 {:relative-path relpath :uri js-res :ext :js}
                  (throw
                    (IllegalArgumentException.
                      (str "Namespace " ns " does not exist"))))))))))))
