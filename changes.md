@@ -1,3 +1,18 @@
+## 1.9.89
+
+### Enhancements
+* CLJS-1688: :preloads compiler option for loading other entry points prior to :main
+* cljs.spec - support gen overrides by name in addition to path
+* cljs.spec - every and every-kv
+
+### Changes
+* added bounded-count
+
+### Fixes
+* missing cljs.spec/fn-specs -> cljs.spec/get-spec in cljs.spec.test ns
+* CLJS-1687: Self-host: cljs.spec: inst-in-range? and int-in-range? need qualification
+* CLJS-1668: cljs.spec: c alias needs expansion in int-in
+
 ## 1.9.76
 
 ### Enhancements
