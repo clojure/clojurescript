@@ -193,26 +193,24 @@
             [] cols)))
       [] lines)))
 
-(defn relativize-path [path {:keys [output-dir source-map-path source-map relpaths]}]
-  (let [bare-munged-path (cond
-                          (re-find #"\.jar!/" path)
-                          (str (or source-map-path output-dir) (second (string/split path #"\.jar!")))
-
-                          :else
-                          (str (or source-map-path output-dir) "/" (get relpaths path)))]
-    (cond source-map-path
-          bare-munged-path
-
-          :default
-          (let [unrelativized-juri     (-> bare-munged-path
-                                            io/file
-                                            .toURI)
-                source-map-parent-juri (-> source-map
-                                            io/file
-                                            .getAbsoluteFile
-                                            .getParentFile
-                                            .toURI)]
-            (str (.relativize source-map-parent-juri unrelativized-juri))))))
+(defn relativize-path
+  "Relativize a path using :source-map-path if provided or the parent directory
+   otherwise."
+  [path {:keys [output-dir source-map-path source-map relpaths] :as opts}]
+  (let [bare-munged-path
+        (cond
+          (re-find #"\.jar!/" path)
+          (str (or source-map-path output-dir)
+               (second (string/split path #"\.jar!")))
+          :else
+          (str (or source-map-path output-dir)
+               "/" (get relpaths path)))]
+    (cond
+      source-map-path bare-munged-path
+      :else
+      (let [unrel-uri (-> bare-munged-path io/file .toURI)
+            sm-parent-uri (-> source-map io/file .getAbsoluteFile .getParentFile .toURI)]
+        (str (.relativize sm-parent-uri unrel-uri))))))
 
 (defn encode*
   "Take an internal source map representation represented as nested
