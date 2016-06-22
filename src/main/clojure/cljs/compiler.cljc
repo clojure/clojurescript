@@ -1222,8 +1222,11 @@
          (sm/encode {(url-path src) (:source-map sm-data)}
            {:lines (+ (:gen-line sm-data) 2)
             :file (url-path dest)
+            :source-map-path (:source-map-path opts)
             :source-map-timestamp (:source-map-timestamp opts)
-            :source-map-pretty-print (:source-map-pretty-print opts)})))))
+            :source-map-pretty-print (:source-map-pretty-print opts)
+            :relpaths {(util/path src)
+                       (util/ns->relpath (first (:provides opts)) (:ext opts))}})))))
 
 #?(:clj
    (defn emit-source [src dest ext opts]
@@ -1271,7 +1274,8 @@
                                  (when sm-data
                                    {:source-map (:source-map sm-data)}))]
                    (when (and sm-data (= :none (:optimizations opts)))
-                     (emit-source-map src dest sm-data opts))
+                     (emit-source-map src dest sm-data
+                       (merge opts {:ext ext :provides [ns-name]})))
                    (let [path (.getPath (.toURL ^File dest))]
                      (swap! env/*compiler* assoc-in [::compiled-cljs path] ret))
                    (let [{:keys [output-dir cache-analysis]} opts]
