@@ -255,13 +255,16 @@
              "sources" (into []
                              (let [paths (keys m)
                                    f (comp
-                                      (if (true? (:source-map-timestamp opts))
-                                        #(str % "?rel=" (System/currentTimeMillis))
-                                        identity)
-                                      (if (or (:output-dir opts)
-                                              (:source-map-path opts))
-                                        #(relativize-path % opts)
-                                        #(last (string/split % #"/"))))]
+                                       (if (true? (:source-map-timestamp opts))
+                                         (fn [uri]
+                                           (if (= -1 (string/index-of uri "?"))
+                                             (str uri "?rel=" (System/currentTimeMillis))
+                                             (str uri "&rel=" (System/currentTimeMillis))))
+                                         identity)
+                                       (if (or (:output-dir opts)
+                                               (:source-map-path opts))
+                                         #(relativize-path % opts)
+                                         #(last (string/split % #"/"))))]
                                (map f paths)))
              "lineCount" (:lines opts)
              "mappings" (->> (lines->segs (concat preamble-lines @lines))
