@@ -419,10 +419,10 @@ specified, return speced vars from all namespaces."
   "Returns a spec that validates insts in the range from start
   (inclusive) to end (exclusive)."
   [start end]
-  `(let [st# (inst-ms ~start)
-         et# (inst-ms ~end)
+  `(let [st# (cljs.core/inst-ms ~start)
+         et# (cljs.core/inst-ms ~end)
          mkdate# (fn [d#] (js/Date. d#))]
-     (spec (and inst? #(cljs.spec/inst-in-range? ~start ~end %))
+     (spec (and cljs.core/inst? #(cljs.spec/inst-in-range? ~start ~end %))
        :gen (fn []
               (gen/fmap mkdate#
                 (gen/large-integer* {:min st# :max et#}))))))

@@ -2,7 +2,6 @@
   (:require [cljs.test :refer-macros [deftest is]])
   (:import [goog.math Long]))
 
-
 (def pred-val-table
   (let [now (js/Date.)
         uuid (uuid nil)]
@@ -36,7 +35,7 @@
         natl (goog.math.Long.getZero)
         posl (goog.math.Long.fromNumber posint)
         negl (goog.math.Long.fromNumber negint)]
-    [[identity  neg?  pos?   integer? long?  neg-long? pos-long? nat-long?]
+    [[identity  neg?  pos?   integer? int?   neg-int?  pos-int?  nat-int?]
      [0         false false  true     false  false     false     false    ]
      [1         false true   true     false  false     false     false    ]
      [-1        true  false  true     false  false     false     false    ]
