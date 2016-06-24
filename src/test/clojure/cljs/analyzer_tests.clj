@@ -273,12 +273,12 @@
                   (:require (bar :refer [baz]) :reload)))))))
 
 (deftest test-rewrite-cljs-aliases
-  (is (= (cljs.analyzer/rewrite-cljs-aliases
+  (is (= (a/rewrite-cljs-aliases
            '((:require-macros (bar :refer [quux]) :reload)
              (:require (clojure.spec :as [s]) :reload)))
          '((:require-macros (bar :refer [quux]) :reload)
            (:require (cljs.spec :as [s]) :reload))))
-  (is (= (cljs.analyzer/rewrite-cljs-aliases
+  (is (= (a/rewrite-cljs-aliases
            '((:refer-clojure :exclude [first])
               (:require-macros (bar :refer [quux]) :reload)
               (:require (clojure.spec :as [s]) :reload)))
