@@ -1854,6 +1854,39 @@
       (or (some #{ns} (vals use-macros))
           (some #{ns} (vals require-macros))))))
 
+(defn clj-ns->cljs-ns
+  "Given a symbol that starts with clojure as the first segment return the
+   same symbol with the first segment replaced with cljs"
+  [sym]
+  (let [segs (string/split (clojure.core/name sym) #"\.")]
+    (if (= "clojure" (first segs))
+      (symbol (string/join "." (cons "cljs" (next segs))))
+      sym)))
+
+(defn aliasable-clj-ns?
+  "Predicate for testing with a symbol represents an aliasable clojure namespace."
+  [sym]
+  (when-not (util/ns->source sym)
+    (let [[seg1 :as segs] (string/split (clojure.core/name sym) #"\.")]
+      (when (= "clojure" seg1)
+        (let [sym' (clj-ns->cljs-ns sym)]
+          (util/ns->source sym'))))))
+
+(defn rewrite-cljs-aliases
+  "Alias non-existing clojure.* namespaces to existing cljs.* namespaces if
+   possible."
+  [args]
+  (letfn [(process-spec [maybe-spec]
+            (if (sequential? maybe-spec)
+              (let [[lib & xs] maybe-spec]
+                (cons (cond-> lib (aliasable-clj-ns? lib) clj-ns->cljs-ns) xs))
+              maybe-spec))
+          (process-form [[k & specs :as form]]
+            (if (#{:use :require} k)
+              (cons k (map process-spec specs))
+              form))]
+    (map process-form args)))
+
 (defn desugar-ns-specs
   "Given an original set of ns specs desugar :include-macros and :refer-macros
    usage into only primitive spec forms - :use, :require, :use-macros,
@@ -1942,7 +1975,9 @@
           args         (if docstring (next args) args)
           metadata     (if (map? (first args)) (first args))
           form-meta    (meta form)
-          args         (desugar-ns-specs (if metadata (next args) args))
+          args         (desugar-ns-specs
+                         (rewrite-cljs-aliases
+                           (if metadata (next args) args)))
           name         (vary-meta name merge metadata)
           excludes     (parse-ns-excludes env args)
           deps         (atom #{})
