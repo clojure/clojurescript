@@ -1905,11 +1905,15 @@
      (letfn [(process-spec [maybe-spec]
                (if (sequential? maybe-spec)
                  (let [[lib & xs] maybe-spec]
-                   (cons (cond-> lib (aliasable-clj-ns? lib) clj-ns->cljs-ns) xs))
-                 maybe-spec))
+                   (if (aliasable-clj-ns? lib)
+                     (let [lib' (clj-ns->cljs-ns lib)
+                           spec (cons lib' xs)]
+                       [spec (list lib' :as lib)])
+                     [maybe-spec]))
+                 [maybe-spec]))
              (process-form [[k & specs :as form]]
                (if (#{:use :require} k)
-                 (cons k (map process-spec specs))
+                 (cons k (mapcat process-spec specs))
                  form))]
        (map process-form args))))
 
@@ -2414,15 +2418,18 @@
     (not (nil? (gets @env/*compiler* ::namespaces (gets env :ns :name) :use-macros sym)))))
 
 (defn get-expander-ns [env ^String nstr]
-  (cond
-    #?@(:clj  [(= "clojure.core" nstr)          (find-ns 'cljs.core)]
-        :cljs [(identical? "clojure.core" nstr) (find-macros-ns CLJS_CORE_MACROS_SYM)])
-    #?@(:clj  [(= "clojure.repl" nstr)          (find-ns 'cljs.repl)]
-        :cljs [(identical? "clojure.repl" nstr) (find-macros-ns 'cljs.repl)])
-    #?@(:clj  [(.contains nstr ".")             (find-ns (symbol nstr))]
-        :cljs [(goog.string/contains nstr ".")  (find-macros-ns (symbol nstr))])
-    :else (some-> env :ns :require-macros (get (symbol nstr)) #?(:clj  find-ns
-                                                                 :cljs find-macros-ns))))
+  ;; first check for clojure.* -> cljs.* cases
+  (let [res  (resolve-ns-alias env (symbol nstr))
+        nstr (if res (str res) nstr)]
+    (cond
+     #?@(:clj  [(= "clojure.core" nstr) (find-ns 'cljs.core)]
+         :cljs [(identical? "clojure.core" nstr) (find-macros-ns CLJS_CORE_MACROS_SYM)])
+     #?@(:clj  [(= "clojure.repl" nstr) (find-ns 'cljs.repl)]
+         :cljs [(identical? "clojure.repl" nstr) (find-macros-ns 'cljs.repl)])
+     #?@(:clj  [(.contains nstr ".") (find-ns (symbol nstr))]
+         :cljs [(goog.string/contains nstr ".") (find-macros-ns (symbol nstr))])
+     :else (some-> env :ns :require-macros (get (symbol nstr)) #?(:clj  find-ns
+                                                                  :cljs find-macros-ns)))))
 
 (defn get-expander* [sym env]
   (when-not (or (not (nil? (gets env :locals sym))) ; locals hide macros

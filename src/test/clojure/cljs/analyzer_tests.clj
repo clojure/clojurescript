@@ -275,16 +275,17 @@
 (deftest test-rewrite-cljs-aliases
   (is (= (a/rewrite-cljs-aliases
            '((:require-macros (bar :refer [quux]) :reload)
-             (:require (clojure.spec :as [s]) :reload)))
+             (:require (clojure.spec :as s :refer [fdef]) :reload)))
          '((:require-macros (bar :refer [quux]) :reload)
-           (:require (cljs.spec :as [s]) :reload))))
+           (:require (cljs.spec :as s :refer [fdef])
+                     (cljs.spec :as clojure.spec) :reload))))
   (is (= (a/rewrite-cljs-aliases
            '((:refer-clojure :exclude [first])
               (:require-macros (bar :refer [quux]) :reload)
-              (:require (clojure.spec :as [s]) :reload)))
+              (:require (clojure.spec :as s) :reload)))
          '((:refer-clojure :exclude [first])
            (:require-macros (bar :refer [quux]) :reload)
-           (:require (cljs.spec :as [s]) :reload)))))
+           (:require (cljs.spec :as s) (cljs.spec :as clojure.spec) :reload)))))
 
 ;; =============================================================================
 ;; Namespace metadata
