@@ -1754,6 +1754,14 @@
      (check-uses (missing-use-macros missing-uses env) env)
      (inferred-use-macros missing-uses env))))
 
+(defn check-use-macros-inferring-missing
+  [ast name use-macros missing-uses env]
+  (let [ast' (update-in ast [:use-macros] merge
+               (check-use-macros use-macros missing-uses env))]
+    (swap! env/*compiler* update-in
+      [::namespaces name :use-macros] merge (:use-macros ast'))
+    ast'))
+
 (defn parse-ns-error-msg [spec msg]
   (str msg "; offending spec: " (pr-str spec)))
 
@@ -2653,11 +2661,7 @@
                      (locking load-mutex
                        (clojure.core/require nsym)))
                    (intern-macros nsym k)))
-               (let [ast' (update-in ast [:use-macros] merge
-                            (check-use-macros use-macros missing env))]
-                 (swap! env/*compiler* update-in
-                   [::namespaces name :use-macros] merge (:use-macros ast'))
-                 ast'))
+               (check-use-macros-inferring-missing ast name use-macros missing env))
              (do
                (check-uses missing env)
                ast))))

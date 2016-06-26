@@ -390,43 +390,47 @@
        (letfn [(check-uses-and-load-macros [res]
                  (if (:error res)
                    (cb res)
-                   (let [res (try
-                               (when (and (:*analyze-deps* bound-vars) (seq uses))
-                                 (when (:verbose opts) (debug-prn "Checking uses"))
-                                 (ana/check-uses uses env)
-                                 {:value nil})
-                               (catch :default cause
-                                 (wrap-error
-                                   (ana/error ana-env
-                                     (str "Could not parse ns form " (:name ast)) cause))))]
-                     (if (:error res)
-                       (cb res)
-                       (if (:*load-macros* bound-vars)
-                         (do
-                           (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
-                           (load-macros bound-vars :use-macros use-macros reload reloads opts
-                             (fn [res]
-                               (if (:error res)
-                                 (cb res)
-                                 (do
-                                   (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
-                                   (load-macros bound-vars :require-macros require-macros reloads reloads opts
-                                     (fn [res]
-                                       (if (:error res)
-                                         (cb res)
-                                         (let [res (try
-                                                     (when (seq use-macros)
-                                                       (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
-                                                       (ana/check-use-macros use-macros env))
-                                                     {:value nil}
-                                                     (catch :default cause
-                                                       (wrap-error
-                                                         (ana/error ana-env
-                                                           (str "Could not parse ns form " (:name ast)) cause))))]
-                                           (if (:error res)
-                                             (cb res)
-                                             (cb {:value ast})))))))))))
-                        (cb {:value ast}))))))]
+                   (let [missing (when (and (:*analyze-deps* bound-vars) (seq uses))
+                                   (ana/missing-uses uses env))]
+                     (if (:*load-macros* bound-vars)
+                       (do
+                         (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
+                         (load-macros bound-vars :use-macros use-macros reload reloads opts
+                           (fn [res]
+                             (if (:error res)
+                               (cb res)
+                               (do
+                                 (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
+                                 (load-macros bound-vars :require-macros require-macros reloads reloads opts
+                                   (fn [res]
+                                     (if (:error res)
+                                       (cb res)
+                                       (let [res (try
+                                                   (when (seq use-macros)
+                                                     (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
+                                                     (ana/check-use-macros use-macros env))
+                                                   {:value nil}
+                                                   (catch :default cause
+                                                     (wrap-error
+                                                       (ana/error ana-env
+                                                         (str "Could not parse ns form " (:name ast)) cause))))]
+                                         (if (:error res)
+                                           (cb res)
+                                           (try
+                                             (let [ast' (ana/check-use-macros-inferring-missing ast (:name ast) use-macros missing env)]
+                                               (cb {:value ast'}))
+                                             (catch :default cause
+                                               (cb (wrap-error
+                                                     (ana/error ana-env
+                                                       (str "Could not parse ns form " (:name ast)) cause)))))))))))))))
+                       (try
+                         (when (:verbose opts) (debug-prn "Checking uses"))
+                         (ana/check-uses missing env)
+                         (cb {:value ast})
+                         (catch :default cause
+                           (cb (wrap-error
+                                 (ana/error ana-env
+                                   (str "Could not parse ns form " (:name ast)) cause)))))))))]
          (cond
            (and load (seq deps))
            (load-deps bound-vars ana-env (:name ast) deps (dissoc opts :macros-ns)

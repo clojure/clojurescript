@@ -164,7 +164,8 @@
        'cljs.pprint
        'cljs.env.macros
        'cljs.analyzer.macros
-       'cljs.compiler.macros}
+       'cljs.compiler.macros
+       'clojure.template}
      #{'goog.object
        'goog.string
        'goog.string.StringBuffer
