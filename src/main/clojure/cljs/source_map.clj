@@ -257,7 +257,7 @@
                                    f (comp
                                        (if (true? (:source-map-timestamp opts))
                                          (fn [uri]
-                                           (if (= -1 (string/index-of uri "?"))
+                                           (if-not (string/index-of uri "?")
                                              (str uri "?rel=" (System/currentTimeMillis))
                                              (str uri "&rel=" (System/currentTimeMillis))))
                                          identity)

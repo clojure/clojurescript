@@ -1210,7 +1210,7 @@
              "")
            (if (true? (:source-map-timestamp opts))
              (str
-               (if (= -1 (string/index-of smap "?")) "?" "&")
+               (if-not (string/index-of smap "?") "?" "&")
                "rel=" (System/currentTimeMillis))
              ""))
          (emits "\n//# sourceMappingURL="
