@@ -482,3 +482,20 @@ by ns-syms. Idempotent."
   []
   `(do
      ~@(map #(list 'cljs.spec/unstrument %) (speced-vars*))))
+
+(defmacro exercise-fn
+  "exercises the fn named by sym (a symbol) by applying it to
+  n (default 10) generated samples of its args spec. When fspec is
+  supplied its arg spec is used, and sym-or-f can be a fn.  Returns a
+  sequence of tuples of [args ret]. "
+  ([sym]
+   `(exercise-fn ~sym 10))
+  ([sym n]
+   `(exercise-fn ~sym ~n nil))
+  ([sym n fspec]
+   `(let [fspec# ~(if-not fspec
+                    `(cljs.spec/get-spec '~(:name (resolve &env sym)))
+                    fspec)
+          f#     ~sym]
+      (for [args# (gen/sample (gen (:args fspec#)) ~n)]
+        [args# (apply f# args#)]))))
