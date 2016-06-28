@@ -200,6 +200,7 @@
 
   Takes several kwargs options that further constrain the collection:
 
+  :kind - one of [], (), {}, #{} - must be this kind of collection - (default nil)
   :count - specifies coll has exactly this count (default nil)
   :min-count, :max-count - coll has count (<= min-count count max-count) (defaults nil)
   :distinct - all the elements are distinct (default nil)
@@ -207,20 +208,20 @@
   And additional args that control gen
 
   :gen-max - the maximum coll size to generate (default 20)
-  :gen-into - the default colection to generate into (will be emptied) (default [])
+  :into - one of [], (), {}, #{} - the default collection to generate into (default same as :kind if supplied, else []
 
   Optionally takes :gen generator-fn, which must be a fn of no args that
   returns a test.check generator
 
   See also - coll-of, every-kv
 "
-  [pred & {:keys [count max-count min-count distinct gen-max gen-into gen] :as opts}]
+  [pred & {:keys [into kind count max-count min-count distinct gen-max gen-into gen] :as opts}]
   `(cljs.spec/every-impl '~pred ~pred ~(dissoc opts :gen) ~gen))
 
 (defmacro every-kv
   "like 'every' but takes separate key and val preds and works on associative collections.
 
-  Same options as 'every'
+  Same options as 'every', :into defaults to {}
 
   See also - map-of"
 
@@ -228,28 +229,31 @@
   `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (key v#)) :gen-into {} ~@opts))
 
 (defmacro coll-of
-  "Returns a spec for a collection of items satisfying pred. The
-  generator will fill an empty init-coll.  Unlike 'every', coll-of
-  will exhaustively conform every value.
+  "Returns a spec for a collection of items satisfying pred. Unlike
+  generator will fill an empty init-coll.
+
+  Same options as 'every'. conform will produce a collection
+  corresponding to :into if supplied, else will match the input collection,
+  avoiding rebuilding when possible.
 
   Same options as 'every'.
 
   See also - every, map-of"
-  [pred init-coll & opts]
-  `(every ~pred ::conform-all true :gen-into ~init-coll ~@opts))
+  [pred & opts]
+  `(every ~pred ::conform-all true ~@opts))
 
 (defmacro map-of
   "Returns a spec for a map whose keys satisfy kpred and vals satisfy
   vpred. Unlike 'every-kv', map-of will exhaustively conform every
   value.
 
-  Same options as 'every', with the addition of:
+  Same options as 'every', :kind set to {}, with the addition of:
 
   :conform-keys - conform keys as well as values (default false)
 
   See also - every-kv"
   [kpred vpred & opts]
-  `(and (every-kv ~kpred ~vpred ::conform-all true ~@opts) map?))
+  `(every-kv ~kpred ~vpred ::conform-all true ~@opts :kind {}))
 
 (defmacro *
   "Returns a regex op that matches zero or more values matching
@@ -500,6 +504,15 @@ by ns-syms. Idempotent."
   []
   `(do
      ~@(map #(list 'cljs.spec/unstrument %) (speced-vars*))))
+
+(defmacro merge
+  "Takes map-validating specs (e.g. 'keys' specs) and
+  returns a spec that returns a conformed map satisfying all of the
+  specs.  Successive conformed values propagate through rest of
+  predicates. Unlike 'and', merge can generate maps satisfying the
+  union of the predicates."
+  [& pred-forms]
+  `(cljs.spec/merge-spec-impl '~(mapv res pred-forms) ~(vec pred-forms) nil))
 
 (defmacro exercise-fn
   "exercises the fn named by sym (a symbol) by applying it to
