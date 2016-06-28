@@ -201,7 +201,7 @@
   Takes several kwargs options that further constrain the collection:
 
   :count - specifies coll has exactly this count (default nil)
-  :min-count, :max-count - coll has count (<= min count max) (default nil)
+  :min-count, :max-count - coll has count (<= min-count count max-count) (defaults nil)
   :distinct - all the elements are distinct (default nil)
 
   And additional args that control gen

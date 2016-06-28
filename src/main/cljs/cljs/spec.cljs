@@ -686,13 +686,13 @@
     {path {:pred 'distinct? :val x :via via :in in}}
 
     (c/and count (not= count (bounded-count count x)))
-    {path {:pred `(= ~count (c/count %)) :val x :via via :in in}}
+    {path {:pred `(= ~count ~(c/count x)) :val x :via via :in in}}
 
     (c/and (c/or min-count max-count)
            (not (<= (c/or min-count 0)
                     (bounded-count (if max-count (inc max-count) min-count) x)
                     (c/or max-count MAX_INT))))
-    {path {:pred `(<= ~(c/or min-count 0) (c/count %) ~(c/or max-count 'js/Number.MAX_SAFE_INTEGER)) :val x :via via :in in}}))
+    {path {:pred `(<= ~(c/or min-count 0) ~(c/count x) ~(c/or max-count 'js/Number.MAX_SAFE_INTEGER)) :val x :via via :in in}}))
 
 (defn ^:skip-wiki every-impl
   "Do not call this directly, use 'every', 'every-kv', 'coll-of' or 'map-of'"
