@@ -166,7 +166,8 @@
 
 (defn explain-data* [spec path via in x]
   (when-let [probs (explain* (specize spec) path via in x)]
-    {::problems probs}))
+    (when-not (empty? probs)
+      {::problems probs})))
 
 (defn explain-data
   "Given a spec and a value x which ought to conform, returns nil if x
@@ -195,7 +196,7 @@
           (when-not (empty? path)
             (print " at:" (pr-str path)))
           (print " predicate: ")
-          (pr pred)
+          (pr (abbrev pred))
           (when reason (print ", " reason))
           (doseq [[k v] prob]
             (when-not (#{:path :pred :val :reason :via :in} k)
@@ -432,12 +433,14 @@
                                               pred-exprs pred-forms)
                                          (keep identity)
                                          seq)]
-                     [{:path path :pred (vec probs) :val x :via via :in in}])
+                     (map
+                       #(identity {:path path :pred % :val x :via via :in in})
+                       probs))
                    (map (fn [[k v]]
                           (when-not (c/or (not (contains? reg (keys->specs k)))
-                                          (valid? (keys->specs k) v k))
+                                      (valid? (keys->specs k) v k))
                             (explain-1 (keys->specs k) (keys->specs k) (conj path k) via (conj in k) v)))
-                        (seq x))))))
+                     (seq x))))))
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
@@ -464,9 +467,6 @@
                                    opt (conj :opt opt)
                                    req-un (conj :req-un req-un)
                                    opt-un (conj :opt-un opt-un)))))))
-
-
-
 
 (defn ^:skip-wiki spec-impl
   "Do not call this directly, use 'spec'"
@@ -520,7 +520,7 @@
                path (conj path dv)]
            (if-let [pred (predx x)]
              (explain-1 form pred path via in x)
-             [{:path path :pred form :val x :reason "no method" :via via :in in}])))
+             [{:path path :pred (abbrev form) :val x :reason "no method" :via via :in in}])))
        (gen* [_ overrides path rmap]
          (if gfn
            (gfn)
@@ -678,21 +678,23 @@
 
 (defn- coll-prob [x kfn kform distinct count min-count max-count
                   path via in]
-  (cond
-    (not (seqable? x))
-    [{:path path :pred 'seqable? :val x :via via :in in}]
+  (let [pred (c/or kfn coll?)
+        kform (c/or kform `coll?)]
+    (cond
+     (not (valid? pred x))
+     (explain-1 kform pred path via in x)
 
-    (c/and distinct (not (empty? x)) (not (apply distinct? x)))
-    [{:path path :pred 'distinct? :val x :via via :in in}]
+     (c/and distinct (not (empty? x)) (not (apply distinct? x)))
+     [{:path path :pred 'distinct? :val x :via via :in in}]
 
-    (c/and count (not= count (bounded-count count x)))
-    [{:path path :pred `(= ~count (c/count ~'%)) :val x :via via :in in}]
+     (c/and count (not= count (bounded-count count x)))
+     [{:path path :pred `(= ~count (c/count ~'%)) :val x :via via :in in}]
 
-    (c/and (c/or min-count max-count)
-           (not (<= (c/or min-count 0)
-                    (bounded-count (if max-count (inc max-count) min-count) x)
-                    (c/or max-count MAX_INT))))
-    [{:path path :pred `(<= ~(c/or min-count 0) ~(c/count ~'%) ~(c/or max-count 'js/Number.MAX_SAFE_INTEGER)) :val x :via via :in in}]))
+     (c/and (c/or min-count max-count)
+       (not (<= (c/or min-count 0)
+              (bounded-count (if max-count (inc max-count) min-count) x)
+              (c/or max-count MAX_INT))))
+     [{:path path :pred `(<= ~(c/or min-count 0) ~(c/count ~'%) ~(c/or max-count 'js/Number.MAX_SAFE_INTEGER)) :val x :via via :in in}])))
 
 (defn ^:skip-wiki merge-spec-impl
   "Do not call this directly, use 'merge'"
@@ -719,13 +721,12 @@
   "Do not call this directly, use 'every', 'every-kv', 'coll-of' or 'map-of'"
   ([form pred opts] (every-impl form pred opts nil))
   ([form pred {gen-into :into
-               :keys [kind count max-count min-count distinct gen-max ::kfn
+               :keys [kind ::kind-form count max-count min-count distinct gen-max ::kfn
                       conform-keys ::conform-all]
                :or {gen-max 20, gen-into []}
                :as opts}
     gfn]
-   (let [conform-into (c/or gen-into kind)
-         gen-into (c/or gen-into kind [])
+   (let [conform-into gen-into
          check? #(valid? pred %)
          kfn (c/or kfn (fn [i v] i))
          addcv (fn [ret i v cv] (conj ret cv))
@@ -746,7 +747,7 @@
                        (assoc ret i cv)))
                    identity]
 
-                  (c/and (map? x) (map? conform-into))
+                  (c/and (map? x) (c/or (c/and kind (not conform-into)) (map? conform-into)))
                   [(if conform-keys empty identity)
                    (fn [ret i v cv]
                      (if (c/and (identical? v cv) (not conform-keys))
@@ -761,7 +762,7 @@
        Spec
        (conform* [_ x]
          (cond
-           (coll-prob x kindfn kindform distinct count min-count max-count
+           (coll-prob x kind kind-form distinct count min-count max-count
                       nil nil nil)
            ::invalid
 
@@ -788,7 +789,7 @@
                ::invalid))))
        (unform* [_ x] x)
        (explain* [_ path via in x]
-         (c/or (coll-prob x kindfn kindform distinct count min-count max-count
+         (c/or (coll-prob x kind kind-form distinct count min-count max-count
                           path via in)
            (apply concat
              ((if conform-all identity (partial take *coll-error-limit*))
@@ -802,26 +803,32 @@
        (gen* [_ overrides path rmap]
          (if gfn
            (gfn)
-           (let [init (empty gen-into)
-                 pgen (gensub pred overrides path rmap form)]
-             (gen/fmap
-               #(if (vector? init) % (into init %))
+           (let [pgen (gensub pred overrides path rmap form)]
+             (gen/bind
                (cond
-                 distinct
-                 (if count
-                   (gen/vector-distinct pgen {:num-elements count :max-tries 100})
-                   (gen/vector-distinct pgen {:min-elements (c/or min-count 0)
-                                              :max-elements (c/or max-count (max gen-max (c/* 2 (c/or min-count 0))))
-                                              :max-tries 100}))
+                 gen-into (gen/return (empty gen-into))
+                 kind (gen/fmap #(if (empty? %) % (empty %))
+                        (gensub kind overrides path rmap form))
+                 :else (gen/return []))
+               (fn [init]
+                 (gen/fmap
+                   #(if (vector? init) % (into init %))
+                   (cond
+                     distinct
+                     (if count
+                       (gen/vector-distinct pgen {:num-elements count :max-tries 100})
+                       (gen/vector-distinct pgen {:min-elements (c/or min-count 0)
+                                                  :max-elements (c/or max-count (max gen-max (c/* 2 (c/or min-count 0))))
+                                                  :max-tries 100}))
 
-                 count
-                 (gen/vector pgen count)
+                     count
+                     (gen/vector pgen count)
 
-                 (c/or min-count max-count)
-                 (gen/vector pgen (c/or min-count 0) (c/or max-count (max gen-max (c/* 2 (c/or min-count 0)))))
+                     (c/or min-count max-count)
+                     (gen/vector pgen (c/or min-count 0) (c/or max-count (max gen-max (c/* 2 (c/or min-count 0)))))
 
-                 :else
-                 (gen/vector pgen 0 gen-max))))))
+                     :else
+                     (gen/vector pgen 0 gen-max))))))))
 
        (with-gen* [_ gfn] (every-impl form pred opts gfn))
        (describe* [_] `(every ~form ~@(mapcat identity opts)))))))

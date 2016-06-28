@@ -200,7 +200,9 @@
 
   Takes several kwargs options that further constrain the collection:
 
-  :kind - one of [], (), {}, #{} - must be this kind of collection - (default nil)
+  :kind - a pred/spec that the collection type must satisfy, e.g. vector?
+          (default nil) Note that if :kind is specified and :into is
+          not, this pred must generate in order for every to generate.
   :count - specifies coll has exactly this count (default nil)
   :min-count, :max-count - coll has count (<= min-count count max-count) (defaults nil)
   :distinct - all the elements are distinct (default nil)
@@ -208,7 +210,8 @@
   And additional args that control gen
 
   :gen-max - the maximum coll size to generate (default 20)
-  :into - one of [], (), {}, #{} - the default collection to generate into (default same as :kind if supplied, else []
+  :into - one of [], (), {}, #{} - the default collection to generate into
+      (default same as :kind if supplied, else []
 
   Optionally takes :gen generator-fn, which must be a fn of no args that
   returns a test.check generator
@@ -216,7 +219,8 @@
   See also - coll-of, every-kv
 "
   [pred & {:keys [into kind count max-count min-count distinct gen-max gen-into gen] :as opts}]
-  `(cljs.spec/every-impl '~pred ~pred ~(dissoc opts :gen) ~gen))
+  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res (:kind opts))))]
+    `(cljs.spec/every-impl '~pred ~pred ~nopts ~gen)))
 
 (defmacro every-kv
   "like 'every' but takes separate key and val preds and works on associative collections.
@@ -247,13 +251,13 @@
   vpred. Unlike 'every-kv', map-of will exhaustively conform every
   value.
 
-  Same options as 'every', :kind set to {}, with the addition of:
+  Same options as 'every', :kind defaults to map?, with the addition of:
 
   :conform-keys - conform keys as well as values (default false)
 
   See also - every-kv"
   [kpred vpred & opts]
-  `(every-kv ~kpred ~vpred ::conform-all true ~@opts :kind {}))
+  `(every-kv ~kpred ~vpred ::conform-all true :kind map? ~@opts))
 
 (defmacro *
   "Returns a regex op that matches zero or more values matching
