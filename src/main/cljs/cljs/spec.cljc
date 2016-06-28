@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.spec
-  (:refer-clojure :exclude [+ * and or cat def keys resolve])
+  (:refer-clojure :exclude [+ * and or cat def keys merge resolve])
   (:require [cljs.core :as c]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :refer [resolve]]
