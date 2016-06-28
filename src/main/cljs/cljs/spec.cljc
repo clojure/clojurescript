@@ -211,6 +211,8 @@
 
   Optionally takes :gen generator-fn, which must be a fn of no args that
   returns a test.check generator
+
+  See also - coll-of, every-kv
 "
   [pred & {:keys [count max-count min-count distinct gen-max gen-into gen] :as opts}]
   `(cljs.spec/every-impl '~pred ~pred ~(dissoc opts :gen) ~gen))
@@ -218,10 +220,36 @@
 (defmacro every-kv
   "like 'every' but takes separate key and val preds and works on associative collections.
 
-  Same options as 'every'"
+  Same options as 'every'
+
+  See also - map-of"
 
   [kpred vpred & opts]
   `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (key v#)) :gen-into {} ~@opts))
+
+(defmacro coll-of
+  "Returns a spec for a collection of items satisfying pred. The
+  generator will fill an empty init-coll.  Unlike 'every', coll-of
+  will exhaustively conform every value.
+
+  Same options as 'every'.
+
+  See also - every, map-of"
+  [pred init-coll & opts]
+  `(every ~pred ::conform-all true :gen-into ~init-coll ~@opts))
+
+(defmacro map-of
+  "Returns a spec for a map whose keys satisfy kpred and vals satisfy
+  vpred. Unlike 'every-kv', map-of will exhaustively conform every
+  value.
+
+  Same options as 'every', with the addition of:
+
+  :conform-keys - conform keys as well as values (default false)
+
+  See also - every-kv"
+  [kpred vpred & opts]
+  `(and (every-kv ~kpred ~vpred ::conform-all true ~@opts) map?))
 
 (defmacro *
   "Returns a regex op that matches zero or more values matching
@@ -404,16 +432,6 @@ specified, return speced vars from all namespaces."
   "returns a spec that accepts nil and values satisfiying pred"
   [pred]
   `(and (or ::nil nil? ::pred ~pred) (conformer second)))
-
-(defmacro coll-of
-  "Returns a spec for a collection of items satisfying pred. The generator will fill an empty init-coll."
-  [pred init-coll]
-  `(spec (cljs.spec/coll-checker ~pred) :gen (cljs.spec/coll-gen ~pred ~init-coll)))
-
-(defmacro map-of
-  "Returns a spec for a map whose keys satisfy kpred and vals satisfy vpred."
-  [kpred vpred]
-  `(and (coll-of (tuple ~kpred ~vpred) {}) map?))
 
 (defmacro inst-in
   "Returns a spec that validates insts in the range from start
