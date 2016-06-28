@@ -708,7 +708,7 @@
          cfns (fn [x]
                 ;;returns a tuple of [init add complete] fns
                 (cond
-                  (c/and (vector? x) (vector? gen-into))
+                  (vector? x)
                   [identity
                    (fn [ret i v cv]
                      (if (identical? v cv)
