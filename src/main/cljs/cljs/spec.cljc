@@ -219,7 +219,7 @@
   See also - coll-of, every-kv
 "
   [pred & {:keys [into kind count max-count min-count distinct gen-max gen-into gen] :as opts}]
-  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res (:kind opts))))]
+  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res &env (:kind opts))))]
     `(cljs.spec/every-impl '~pred ~pred ~nopts ~gen)))
 
 (defmacro every-kv
