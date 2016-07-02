@@ -10,6 +10,7 @@
   (:require-macros [cljs.js :refer [dump-core]]
                    [cljs.env.macros :as env])
   (:require [clojure.string :as string]
+            [clojure.walk :as walk]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
@@ -296,6 +297,21 @@
 
 (declare ns-side-effects analyze-deps)
 
+(defn- patch-alias-map
+  [compiler in from to]
+  (let [patch (fn [k add-if-present?]
+                (swap! compiler update-in [::ana/namespaces in k]
+                  (fn [m]
+                    (let [replaced (walk/postwalk-replace {from to} m)]
+                      (if (and add-if-present?
+                               (some #{to} (vals replaced)))
+                        (assoc replaced from to)
+                        replaced)))))]
+    (patch :requires true)
+    (patch :require-macros true)
+    (patch :uses false)
+    (patch :use-macros false)))
+
 (defn- load-deps
   ([bound-vars ana-env lib deps cb]
    (analyze-deps bound-vars ana-env lib deps nil cb))
@@ -308,15 +324,28 @@
        (str "Circular dependency detected "
          (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
      (if (seq deps)
-       (let [dep (first deps)]
-         (require bound-vars dep
-           (-> opts
-             (dissoc :context)
-             (dissoc :ns))
+       (let [dep (first deps)
+             opts' (-> opts
+                     (dissoc :context)
+                     (dissoc :ns))]
+         (require bound-vars dep opts'
            (fn [res]
              (if-not (:error res)
                (load-deps bound-vars ana-env lib (next deps) opts cb)
-               (cb res)))))
+               (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
+                                   (get {dep nil} cljs-ns cljs-ns))]
+                 (require bound-vars cljs-dep opts'
+                   (fn [res]
+                     (if (:error res)
+                       (cb res)
+                       (do
+                         (patch-alias-map (:*compiler* bound-vars) lib dep cljs-dep)
+                         (load-deps bound-vars ana-env lib (next deps) opts
+                           (fn [res]
+                             (if (:error res)
+                               (cb res)
+                               (cb (update res :aliased-loads assoc dep cljs-dep)))))))))
+                 (cb res))))))
        (cb {:value nil})))))
 
 (declare analyze-str*)
@@ -378,6 +407,12 @@
             (cb res)))))
     (cb {:value nil})))
 
+(defn- rewrite-ns-ast
+  [ast smap]
+  (-> ast
+    (update :uses #(walk/postwalk-replace smap %))
+    (update :requires #(merge smap (walk/postwalk-replace smap %)))))
+
 (defn- ns-side-effects
   ([bound-vars ana-env ast opts cb]
     (ns-side-effects false bound-vars ana-env ast opts cb))
@@ -385,9 +420,9 @@
    (when (:verbose opts)
      (debug-prn "Namespace side effects for" (:name ast)))
    (if (= :ns op)
-     (let [{:keys [deps uses requires require-macros use-macros reload reloads]} ast
-           env (:*compiler* bound-vars)]
-       (letfn [(check-uses-and-load-macros [res]
+     (letfn [(check-uses-and-load-macros [res rewritten-ast]
+               (let [env (:*compiler* bound-vars)
+                     {:keys [uses requires require-macros use-macros reload reloads]} rewritten-ast]
                  (if (:error res)
                    (cb res)
                    (let [missing (when (and (:*analyze-deps* bound-vars) (seq uses))
@@ -417,7 +452,7 @@
                                          (if (:error res)
                                            (cb res)
                                            (try
-                                             (let [ast' (ana/check-use-macros-inferring-missing ast (:name ast) use-macros missing env)]
+                                             (let [ast' (ana/check-use-macros-inferring-missing rewritten-ast (:name ast) use-macros missing env)]
                                                (cb {:value ast'}))
                                              (catch :default cause
                                                (cb (wrap-error
@@ -430,18 +465,18 @@
                          (catch :default cause
                            (cb (wrap-error
                                  (ana/error ana-env
-                                   (str "Could not parse ns form " (:name ast)) cause)))))))))]
-         (cond
-           (and load (seq deps))
-           (load-deps bound-vars ana-env (:name ast) deps (dissoc opts :macros-ns)
-             check-uses-and-load-macros)
+                                   (str "Could not parse ns form " (:name ast)) cause))))))))))]
+       (cond
+         (and load (seq (:deps ast)))
+         (load-deps bound-vars ana-env (:name ast) (:deps ast) (dissoc opts :macros-ns)
+           #(check-uses-and-load-macros % (rewrite-ns-ast ast (:aliased-loads %))))
 
-           (and (not load) (:*analyze-deps* bound-vars) (seq deps))
-           (analyze-deps bound-vars ana-env (:name ast) deps (dissoc opts :macros-ns)
-             check-uses-and-load-macros)
+         (and (not load) (:*analyze-deps* bound-vars) (seq (:deps ast)))
+         (analyze-deps bound-vars ana-env (:name ast) (:deps ast) (dissoc opts :macros-ns)
+           #(check-uses-and-load-macros % ast))
 
-           :else
-           (check-uses-and-load-macros {:value nil}))))
+         :else
+         (check-uses-and-load-macros {:value nil} ast)))
      (cb {:value ast}))))
 
 (defn- analyze-str* [bound-vars source name opts cb]

@@ -15,7 +15,8 @@
             [cljs.import-test]
             [cljs.ns-test.foo]
             [cljs.pprint]
-            [cljs.spec-test]))
+            [cljs.spec-test]
+            [cljs.clojure-alias-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -36,4 +37,5 @@
   'foo.ns-shadow-test
   'cljs.import-test
   'cljs.pprint
-  'cljs.spec-test)
+  'cljs.spec-test
+  'cljs.clojure-alias-test)

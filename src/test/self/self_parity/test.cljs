@@ -265,7 +265,8 @@
                    [cljs.import-test]
                    [cljs.ns-test.foo]
                    #_[cljs.pprint]
-                   [cljs.spec-test]))
+                   [cljs.spec-test]
+                   [cljs.clojure-alias-test]))
       (fn [{:keys [value error]}]
         (if error
           (prn error)
@@ -286,7 +287,8 @@
                'foo.ns-shadow-test
                'cljs.import-test
                #_'cljs.pprint
-               'cljs.spec-test)
+               'cljs.spec-test
+               'cljs.clojure-alias-test)
             (fn [{:keys [value error]}]
               (when error
                 (prn error)))))))))
