@@ -1021,18 +1021,26 @@
     * :import is available for importing Google Closure classes
       - ClojureScript types and records should be brought in with :use
         or :require :refer, not :import ed
-    * Macros are written in Clojure, and are referenced via the new
-      :require-macros / :use-macros options to ns
+    * Macros must be defined in a different compilation stage than the one
+      from where they are consumed. One way to achieve this is to define
+      them in one namespace and use them from another. They are referenced
+      via the :require-macros / :use-macros options to ns
       - :require-macros and :use-macros support the same forms that
         :require and :use do
 
   Implicit macro loading: If a namespace is required or used, and that
   namespace itself requires or uses macros from its own namespace, then
   the macros will be implicitly required or used using the same
-  specifications. This oftentimes leads to simplified library usage,
-  such that the consuming namespace need not be concerned about
+  specifications. Furthermore, in this case, macro vars may be included
+  in a :refer or :only spec. This oftentimes leads to simplified library
+  usage, such that the consuming namespace need not be concerned about
   explicitly distinguishing between whether certain vars are functions
-  or macros.
+  or macros. For example:
+
+  (ns testme.core (:require [cljs.test :as test :refer [test-var deftest]]))
+
+  will result in test/is resolving properly, along with the test-var
+  function and the deftest macro being available unqualified.
 
   Inline macro specification: As a convenience, :require can be given
   either :include-macros true or :refer-macros [syms...]. Both desugar
@@ -1050,7 +1058,18 @@
   (:require [foo.core :as foo :refer [foo-fn]]
             [woz.core :as woz :refer [woz-fn]])
   (:require-macros [foo.core :as foo]
-                   [woz.core :as woz :refer [app jx]]))"}
+                   [woz.core :as woz :refer [app jx]]))
+
+  Auto-aliasing clojure namespaces: If a non-existing clojure.* namespace
+  is required or used and a matching cljs.* namespace exists, the cljs.*
+  namespace will be loaded and an alias will be automatically established
+  from the clojure.* namespace to the cljs.* namespace. For example:
+
+  (ns testme.core (:require [clojure.test]))
+
+  will be automatically converted to
+
+  (ns testme.core (:require [cljs.test :as clojure.test]))"}
     def {:forms [(def symbol doc-string? init?)]
          :doc "Creates and interns a global var with the name
   of symbol in the current namespace (*ns*) or locates such a var if
