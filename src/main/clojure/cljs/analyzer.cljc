@@ -1756,10 +1756,14 @@
 
 (defn check-use-macros-inferring-missing
   [ast name use-macros missing-uses env]
-  (let [ast' (update-in ast [:use-macros] merge
-               (check-use-macros use-macros missing-uses env))]
-    (swap! env/*compiler* update-in
-      [::namespaces name :use-macros] merge (:use-macros ast'))
+  (let [remove-missing-uses #(apply dissoc % (keys missing-uses))
+        ast' (-> ast
+               (update-in [:use-macros] merge
+                 (check-use-macros use-macros missing-uses env))
+               (update-in [:uses] remove-missing-uses))]
+    (swap! env/*compiler* #(-> %
+                            (update-in [::namespaces name :use-macros] merge (:use-macros ast'))
+                            (update-in [::namespaces name :uses] remove-missing-uses)))
     ast'))
 
 (defn parse-ns-error-msg [spec msg]
