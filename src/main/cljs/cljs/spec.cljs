@@ -226,17 +226,18 @@
   [spec overrides path rmap form]
   ;;(prn {:spec spec :over overrides :path path :form form})
   (let [spec (specize spec)]
-    (if-let [g (c/or (get overrides (c/or (spec-name spec) spec))
-                     (get overrides path)
-                     (gen* spec overrides path rmap))]
+    (if-let [g (c/or (when-let [gfn (c/or (get overrides (c/or (spec-name spec) spec))
+                                          (get overrides path))]
+                       (gfn))
+                 (gen* spec overrides path rmap))]
       (gen/such-that #(valid? spec %) g 100)
       (throw (js/Error. (str "Unable to construct gen at: " path " for: " (abbrev form)))))))
 
 (defn gen
   "Given a spec, returns the generator for it, or throws if none can
   be constructed. Optionally an overrides map can be provided which
-  should map spec names or paths (vectors of keywords) to
-  generators. These will be used instead of the generators at those
+  should map spec names or paths (vectors of keywords) to no-arg
+  generator-creating fns. These will be used instead of the generators at those
   names/paths. Note that parent generator (in the spec or overrides
   map) will supersede those of any subtrees. A generator for a regex
   op must always return a sequential collection (i.e. a generator for
