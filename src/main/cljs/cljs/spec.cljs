@@ -36,10 +36,6 @@
   "The number of errors reported by explain in a collection spec'ed with 'every'"
   20)
 
-(def ^:private ^:dynamic *instrument-enabled*
-  "if false, instrumented fns call straight through"
-  true)
-
 (defprotocol Spec
   (conform* [spec x])
   (unform* [spec y])
@@ -278,41 +274,6 @@
 
 (declare map-spec)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; instrument ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn- expect
-  "Returns nil if v conforms to spec, else throws ex-info with explain-data."
-  [spec v]
-  )
-
-(defn- fn-spec?
-  "Fn-spec must include at least :args or :ret specs."
-  [m]
-  (c/or (:args m) (:ret m)))
-
-(defn- spec-checking-fn
-  [v f]
-  (let [conform! (fn [v role spec data args]
-                   (let [conformed (conform spec data)]
-                     (if (= ::invalid conformed)
-                       (let [ed (assoc (explain-data* spec [role] [] [] data)
-                                  ::args args)]
-                         (throw (ex-info
-                                  (str "Call to " (pr-str v) " did not conform to spec:\n" (with-out-str (explain-out ed)))
-                                  ed)))
-                       conformed)))]
-    (cond->
-      (c/fn
-        [& args]
-        (if *instrument-enabled*
-          (s/with-instrument-disabled
-            (let [specs (get-spec v)]
-              (when (:args specs) (conform! v :args (:args specs) args args))
-              (binding [*instrument-enabled* true]
-                (apply f args))))
-          (apply f args)))
-      (not (instance? MultiFn f)) (doto (gobj/extend f)))))
-
 (defn- macroexpand-check
   [v args]
   (let [specs (get-spec v)]
@@ -325,37 +286,6 @@
                    (str
                      "Call to " (->sym v) " did not conform to spec:\n"
                      (with-out-str (explain-out ed))))))))))
-
-(defn- no-fn-spec
-  [v specs]
-  (ex-info (str "Fn at " (pr-str v) " is not spec'ed.")
-           {:var v :specs specs}))
-
-(def ^:private instrumented-vars
-  "Map for instrumented vars to :raw/:wrapped fns"
-  (atom {}))
-
-(defn instrument*
-  [v]
-  (let [spec (get-spec v)]
-    (if (fn-spec? spec)
-      (locking instrumented-vars
-               (let [{:keys [raw wrapped]} (get @instrumented-vars v)
-                     current @v]
-                 (when-not (= wrapped current)
-                   (let [checked (spec-checking-fn v current)]
-                     (swap! instrumented-vars assoc v {:raw current :wrapped checked})
-                     checked))))
-      (throw (no-fn-spec v spec)))))
-
-(defn unstrument*
-  [v]
-  (locking instrumented-vars
-           (when-let [{:keys [raw wrapped]} (get @instrumented-vars v)]
-             (let [current @v]
-               (when (= wrapped current)
-                 (swap! instrumented-vars dissoc v)
-                 raw)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; impl ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn- recur-limit? [rmap id path k]

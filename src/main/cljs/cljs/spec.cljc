@@ -413,12 +413,6 @@ specified, return speced vars from all namespaces."
   (swap! _speced_vars conj (ns-qualify &env fn-sym))
   `(cljs.spec/def ~fn-sym (cljs.spec/fspec ~@specs)))
 
-(defmacro with-instrument-disabled
-  "Disables instrument's checking of calls, within a scope."
-  [& body]
-  `(binding [cljs.spec/*instrument-enabled* nil]
-     ~@body))
-
 (defmacro keys*
   "takes the same arguments as spec/keys and returns a regex op that matches sequences of key/values,
   converts them into a map, and conforms that map with a corresponding
@@ -461,55 +455,6 @@ specified, return speced vars from all namespaces."
   [start end]
   `(spec (and c/int? #(cljs.spec/int-in-range? ~start ~end %))
      :gen #(gen/large-integer* {:min ~start :max (dec ~end)})))
-
-(defmacro instrument
-  "Instruments the var at v, a var or symbol, to check specs
-  registered with fdef. Wraps the fn at v to check :args
-  spec, if it exist, throwing an ex-info with explain-data if a
-  check fails. Idempotent."
-  [v]
-  (let [v   (if-not (seq? v) (list 'var v) v)
-        sym (second v)]
-    `(do
-       (when-let [checked# (cljs.spec/instrument* ~v)]
-         (set! ~sym checked#))
-       ~v)))
-
-(defmacro unstrument
-  "Undoes instrument on the var at v, a var or symbol. Idempotent."
-  [v]
-  (let [v   (if-not (seq? v) (list 'var v) v)
-        sym (second v)]
-    `(do
-       (when-let [raw# (cljs.spec/unstrument* ~v)]
-         (set! ~sym raw#))
-       ~v)))
-
-(defmacro instrument-ns
-  "Call instrument for all speced-vars in namespaces named
-by ns-syms. Idempotent."
-  [& ns-syms]
-  `(do
-     ~@(map #(list 'cljs.spec/instrument %) (speced-vars* ns-syms))))
-
-(defmacro unstrument-ns
-  "Call unstrument for all speced-vars in namespaces named
-by ns-syms. Idempotent."
-  [& ns-syms]
-  `(do
-     ~@(map #(list 'cljs.spec/unstrument %) (speced-vars* ns-syms))))
-
-(defmacro instrument-all
-  "Call instrument for all speced-vars. Idempotent."
-  []
-  `(do
-     ~@(map #(list 'cljs.spec/instrument %) (speced-vars*))))
-
-(defmacro unstrument-all
-  "Call unstrument for all speced-vars. Idempotent"
-  []
-  `(do
-     ~@(map #(list 'cljs.spec/unstrument %) (speced-vars*))))
 
 (defmacro merge
   "Takes map-validating specs (e.g. 'keys' specs) and
