@@ -231,7 +231,7 @@
   [x]
   (gstring/isUnicodeChar x))
 
-(defn ^boolean any
+(defn ^boolean any?
   "Returns true if given any argument."
   [x] true)
 
