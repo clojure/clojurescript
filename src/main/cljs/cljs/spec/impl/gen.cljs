@@ -87,7 +87,8 @@ gens, each of which should generate something sequential."
 gen-builtins
   (c/delay
     (let [simple (simple-type-printable)]
-      {number? (one-of [(large-integer) (double)])
+      {any? (one-of [(return nil) (any-printable)])
+       number? (one-of [(large-integer) (double)])
        integer? (large-integer)
        int? (large-integer)
        pos-int? (large-integer* {:min 1})

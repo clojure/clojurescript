@@ -231,6 +231,10 @@
   [x]
   (gstring/isUnicodeChar x))
 
+(defn ^boolean any
+  "Returns true if given any argument."
+  [x] true)
+
 (set! *unchecked-if* true)
 (defn ^boolean native-satisfies?
   "Internal - do not use!"

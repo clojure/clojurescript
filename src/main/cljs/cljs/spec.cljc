@@ -434,7 +434,7 @@ specified, return speced vars from all namespaces."
   user=> (s/conform (s/cat :i1 integer? :m (s/keys* :req-un [::a ::c]) :i2 integer?) [42 :a 1 :c 2 :d 4 99])
   {:i1 42, :m {:a 1, :c 2, :d 4}, :i2 99}"
   [& kspecs]
-  `(& (* (cat ::k keyword? ::v ::any)) ::kvs->map (keys ~@kspecs)))
+  `(& (* (cat ::k keyword? ::v cljs.core/any?)) ::kvs->map (keys ~@kspecs)))
 
 (defmacro nilable
   "returns a spec that accepts nil and values satisfiying pred"
