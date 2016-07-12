@@ -53,10 +53,6 @@
   (is (s/valid? (s/inst-in #inst "1999" #inst "2001") #inst "2000"))
   (is (not (s/valid? (s/inst-in #inst "1999" #inst "2001") #inst "1492"))))
 
-(comment
-
-  (s/conform s2 [42 11 13 15 {:a 1 :b 2 :c 3} 1 2 3 42 43 44 11])
-  (s/unform s2
-    (s/conform s2 [42 11 13 15 {:a 1 :b 2 :c 3} 1 2 3 42 43 44 11]))
-
-  )
+(deftest test-conform-unform
+  (let [xs [42 11 13 15 {:a 1 :b 2 :c 3} 1 2 3 42 43 44 11]]
+    (is (= xs (s/unform s2 (s/conform s2 xs))))))
