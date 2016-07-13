@@ -9,8 +9,14 @@
 (ns cljs.spec.test
   (:require
     [cljs.analyzer :as ana]
-    [cljs.spec :as spec]
+    [cljs.spec :as s]
     [cljs.spec.impl.gen :as gen]))
+
+(defmacro with-instrument-disabled
+  "Disables instrument's checking of calls, within a scope."
+  [& body]
+  `(binding [*instrument-enabled* nil]
+     ~@body))
 
 (defmacro run-tests
   "Like run-all-tests, but scoped to specific namespaces, or to
@@ -19,7 +25,7 @@
    `(cljs.spec.test/run-tests '~ana/*cljs-ns*))
   ([& ns-syms]
    `(cljs.spec.test/run-var-tests
-      (->> #?(:clj  ~(spec/speced-vars* ns-syms)
+      (->> #?(:clj  ~(s/speced-vars* ns-syms)
               :cljs ~(cljs.spec$macros/speced-vars* ns-syms))
         (filter (fn [v#] (:args (cljs.spec/get-spec v#))))))))
 
@@ -28,5 +34,5 @@
 for all speced vars. Prints per-test results to *out*, and
 returns a map with :test,:pass,:fail, and :error counts."
   []
-  `(cljs.spec.test/run-var-tests #?(:clj  ~(spec/speced-vars*)
+  `(cljs.spec.test/run-var-tests #?(:clj  ~(s/speced-vars*)
                                     :cljs ~(cljs.spec$macros/speced-vars*))))
