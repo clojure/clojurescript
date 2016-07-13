@@ -498,6 +498,50 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   )
 
 ;; -----------------------------------------------------------------------------
+;; Node.js Stacktrace
+
+(defmethod parse-stacktrace :nodejs
+  [repl-env st err {:keys [output-dir] :as opts}]
+  (letfn [(process-frame [frame-str]
+            (when-not (or (string/blank? frame-str)
+                          (== -1 (.indexOf frame-str "    at")))
+              (let [frame-str               (string/replace frame-str #"\s+at\s+" "")
+                    [function file-and-line] (string/split frame-str #"\s+")
+                    [file-part line-part]    (string/split file-and-line #":")]
+                {:file     (string/replace (.substring file-part 1)
+                             (str output-dir
+                               #?(:clj File/separator :cljs "/"))
+                             "")
+                 :function function
+                 :line     (when (and line-part (not (string/blank? line-part)))
+                             (parse-int
+                               (.substring line-part 0
+                                 (dec (count line-part)))))
+                 :column   0})))]
+    (->> (string/split st #"\n")
+      (map process-frame)
+      (remove nil?)
+      vec)))
+
+(comment
+  (parse-stacktrace {}
+    "Error: 1 is not ISeqable
+    at cljs$core$seq (.cljs_node_repl/cljs/core.cljs:1118:20)
+    at repl:1:65
+    at repl:9:4
+    at repl:17:3
+    at repl:22:4
+    at Object.exports.runInThisContext (vm.js:54:17)
+    at Domain.<anonymous> ([stdin]:41:34)
+    at Domain.run (domain.js:228:14)
+    at Socket.<anonymous> ([stdin]:40:25)
+    at emitOne (events.js:77:13)"
+
+    {:ua-product :nodejs}
+    {:output-dir ".cljs_node_repl"})
+  )
+
+;; -----------------------------------------------------------------------------
 ;; Stacktrace Mapping
 
 (defn remove-ext [file]
