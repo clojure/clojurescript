@@ -504,20 +504,22 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   [repl-env st err {:keys [output-dir] :as opts}]
   (letfn [(process-frame [frame-str]
             (when-not (or (string/blank? frame-str)
-                          (== -1 (.indexOf frame-str "    at")))
-              (let [frame-str               (string/replace frame-str #"\s+at\s+" "")
-                    [function file-and-line] (string/split frame-str #"\s+")
-                    [file-part line-part]    (string/split file-and-line #":")]
-                {:file     (string/replace (.substring file-part 1)
-                             (str output-dir
-                               #?(:clj File/separator :cljs "/"))
-                             "")
-                 :function function
-                 :line     (when (and line-part (not (string/blank? line-part)))
-                             (parse-int
-                               (.substring line-part 0
-                                 (dec (count line-part)))))
-                 :column   0})))]
+                          (== -1 (.indexOf frame-str "    at"))
+                        )
+              (let [frame-str (string/replace frame-str #"\s+at\s+" "")]
+                (when-not (string/starts-with? frame-str "repl:")
+                  (let [[function file-and-line] (string/split frame-str #"\s+")
+                        [file-part line-part]    (string/split file-and-line #":")]
+                    {:file (string/replace (.substring file-part 1)
+                            (str output-dir
+                              #?(:clj File/separator :cljs "/"))
+                            "")
+                    :function function
+                    :line (when (and line-part (not (string/blank? line-part)))
+                            (parse-int
+                              (.substring line-part 0
+                                (dec (count line-part)))))
+                    :column 0})))))]
     (->> (string/split st #"\n")
       (map process-frame)
       (remove nil?)
