@@ -18,6 +18,10 @@
     [clojure.test.check]
     [clojure.test.check.properties]))
 
+(defn ->sym
+  [x]
+  (@#'s/->sym x))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; instrument ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def ^:private ^:dynamic *instrument-enabled*
@@ -81,6 +85,50 @@
           (binding [*instrument-enabled* true]
             (apply f args)))
         (apply f args)))))
+
+(defn- no-fspec
+  [v spec]
+  (ex-info (str "Fn at " v " is not spec'ed.")
+    {:var v :spec spec ::s/failure :no-fspec}))
+
+(defonce ^:private instrumented-vars (atom {}))
+
+(defn- instrument-choose-fn
+  "Helper for instrument."
+  [f spec sym {over :gen :keys [stub replace]}]
+  (if (some #{sym} stub)
+    (-> spec (s/gen over) gen/generate)
+    (get replace sym f)))
+
+(defn- instrument-choose-spec
+  "Helper for instrument"
+  [spec sym {overrides :spec}]
+  (get overrides sym spec))
+
+(defn- instrument-1*
+  [s v opts]
+  (when v
+    (let [spec (s/get-spec v)
+          {:keys [raw wrapped]} (get @instrumented-vars v)
+          current @v
+          to-wrap (if (= wrapped current) raw current)
+          ospec (or (instrument-choose-spec spec s opts)
+                  (throw (no-fspec v spec)))
+          ofn (instrument-choose-fn to-wrap ospec s opts)
+          checked (spec-checking-fn v ofn ospec)]
+      ;(alter-var-root v (constantly checked))
+      (swap! instrumented-vars assoc v {:raw to-wrap :wrapped checked})
+      (->sym v))))
+
+(defn- unstrument-1*
+  [s v]
+  (when v
+    (when-let [{:keys [raw wrapped]} (get @instrumented-vars v)]
+      (swap! instrumented-vars dissoc v)
+      (let [current @v]
+        (when (= wrapped current)
+          ;(alter-var-root v (constantly raw))
+          (->sym v))))))
 
 ;; wrap and unwrap spec failure data in an exception so that
 ;; quick-check will treat it as a failure.
