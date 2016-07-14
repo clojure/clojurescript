@@ -504,8 +504,7 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   [repl-env st err {:keys [output-dir] :as opts}]
   (letfn [(process-frame [frame-str]
             (when-not (or (string/blank? frame-str)
-                          (== -1 (.indexOf frame-str "    at"))
-                        )
+                          (== -1 (.indexOf frame-str "    at")))
               (let [frame-str (string/replace frame-str #"\s+at\s+" "")]
                 (when-not (string/starts-with? frame-str "repl:")
                   (let [[function file-and-line] (string/split frame-str #"\s+")
