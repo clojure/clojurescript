@@ -9,6 +9,7 @@
 (ns cljs.spec.test
   (:require
     [cljs.analyzer :as ana]
+    [cljs.analyzer.api :as ana-api]
     [cljs.spec :as s]
     [cljs.spec.impl.gen :as gen]))
 
@@ -17,6 +18,22 @@
   [& body]
   `(binding [*instrument-enabled* nil]
      ~@body))
+
+(defmacro instrument-1
+  [s opts]
+  (let [v (ana-api/resolve &env s)]
+    (when v
+      `(let [checked# (instrument-1* ~s (var ~s) ~opts)]
+         (when checked# (set! ~s checked#))
+         '~(:name v)))))
+
+(defmacro unstrument-1
+  [s opts]
+  (let [v (ana-api/resolve &env s)]
+    (when v
+      `(let [raw# (unstrument-1* ~s (var ~s))]
+         (when raw# (set! ~s raw#))
+         '~(:name v)))))
 
 (defmacro run-tests
   "Like run-all-tests, but scoped to specific namespaces, or to
