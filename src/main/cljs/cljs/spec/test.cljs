@@ -11,6 +11,7 @@
   (:require
     [goog.userAgent.product :as product]
     [clojure.string :as str]
+    [cljs.stacktrace :as st]
     [cljs.pprint :as pp]
     [cljs.spec :as s]
     [cljs.spec.impl.gen :as gen]
@@ -23,6 +24,12 @@
   "if false, instrumented fns call straight through"
   true)
 
+(defn get-host-port []
+  (if (not= "browser" *target*)
+    {}
+    {:host (.. js/window -location -host)
+     :port (.. js/window -location -port)}))
+
 (defn get-ua-product []
   (if (not= "browser" *target*)
     (keyword *target*)
@@ -31,6 +38,9 @@
       product/CHROME :chrome
       product/FIREFOX :firefox
       product/IE :ie)))
+
+(defn get-env []
+  {:ua-product (get-ua-product)})
 
 (defn- fn-spec?
   "Fn-spec must include at least :args or :ret specs."
@@ -43,66 +53,22 @@
   (when-not (s/valid? spec v nil)
     (s/explain-data spec v)))
 
-(defn- interpret-stack-trace-element
-  "Given the vector-of-syms form of a stacktrace element produced
-by e.g. Throwable->map, returns a map form that adds some keys
-guessing the original Clojure names. Returns a map with
-
-  :class         class name symbol from stack trace
-  :method        method symbol from stack trace
-  :file          filename from stack trace
-  :line          line number from stack trace
-  :var-scope     optional Clojure var symbol scoping fn def
-  :local-fn      optional local Clojure symbol scoping fn def
-
-For non-Clojure fns, :scope and :local-fn will be absent."
-  [[cls method file line]]
-  (let [clojure? (contains? '#{invoke invokeStatic} method)
-        demunge  #(demunge %)
-        degensym #(str/replace % #"--.*" "")
-        [ns-sym name-sym local] (when clojure?
-                                  (->> (str/split (str cls) #"\$" 3)
-                                    (map demunge)))]
-    (merge {:file file
-            :line line
-            :method method
-            :class cls}
-      (when (and ns-sym name-sym)
-        {:var-scope (symbol ns-sym name-sym)})
-      (when local
-        {:local-fn (symbol (degensym local))}))))
-
-(defn- StacktTraceElement->vec [o]
-  [])
-
-(defn- stacktrace-relevant-to-instrument
-  "Takes a coll of stack trace elements (as returned by
-StackTraceElement->vec) and returns a coll of maps as per
-interpret-stack-trace-element that are relevant to a
-failure in instrument."
-  [elems]
-  (let [plumbing? (fn [{:keys [var-scope]}]
-                    (contains? '#{clojure.spec.test/spec-checking-fn} var-scope))]
-    (sequence (comp (map StackTraceElement->vec)
-                (map interpret-stack-trace-element)
-                (filter :var-scope)
-                (drop-while plumbing?))
-      elems)))
-
 (defn- spec-checking-fn
   [v f fn-spec]
   (let [fn-spec (@#'s/maybe-spec fn-spec)
         conform! (fn [v role spec data args]
                    (let [conformed (s/conform spec data)]
                      (if (= ::s/invalid conformed)
-                       (let [caller (->> (.-stack (js/Error.))
-                                      stacktrace-relevant-to-instrument
+                       (let [caller (-> (st/parse-stacktrace
+                                          (get-host-port)
+                                          (.-stack (js/Error.))
+                                          (get-env) nil)
                                       first)
                              ed (merge (assoc (s/explain-data* spec [role] [] [] data)
                                          ::s/args args
                                          ::s/failure :instrument)
                                   (when caller
-                                    {::caller (dissoc caller :class :method)}))]
+                                    {::caller caller}))]
                          (throw (ex-info
                                   (str "Call to " v " did not conform to spec:\n" (with-out-str (s/explain-out ed)))
                                   ed)))
