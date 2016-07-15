@@ -43,7 +43,7 @@ returns the set of all symbols naming vars in those nses."
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
   [& body]
-  `(binding [*instrument-enabled* nil]
+  `(binding [cljs.spec.test/*instrument-enabled* nil]
      ~@body))
 
 (defmacro instrument-1
