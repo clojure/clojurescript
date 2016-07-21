@@ -33,6 +33,7 @@
                      [cljs.tools.reader.reader-types :as readers]
                      [cljs.reader :as edn]))
   #?(:clj (:import [java.io File Reader PushbackReader FileOutputStream FileInputStream]
+                   [java.util.regex Pattern]
                    [java.net URL]
                    [java.lang Throwable]
                    [clojure.lang Namespace Var LazySeq ArityException]
@@ -61,7 +62,10 @@
        {:handlers
         {"cljs/js"
          (reify com.cognitect.transit.ReadHandler
-           (fromRep [_ v] (JSValue. v)))}})))
+           (fromRep [_ v] (JSValue. v)))
+         "cljs/regex"
+          (reify com.cognitect.transit.ReadHandler
+           (fromRep [_ v] (Pattern/compile v)))}})))
 
 #?(:clj
    (def transit-write-opts
@@ -71,6 +75,11 @@
          (reify com.cognitect.transit.WriteHandler
            (tag [_ _] "cljs/js")
            (rep [_ js] (.val ^JSValue js))
+           (stringRep [_ _] nil))
+        Pattern
+         (reify com.cognitect.transit.WriteHandler
+           (tag [_ _] "cljs/regex")
+           (rep [_ pat] (.pattern ^Pattern pat))
            (stringRep [_ _] nil))}})))
 
 #?(:clj
