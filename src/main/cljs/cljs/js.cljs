@@ -156,7 +156,7 @@
      (.append sb
        (str "\n//# sourceURL=" file
             "\n//# sourceMappingURL=data:application/json;base64,"
-            (base64/encodeString json)))))
+            (base64/encodeString (string/replace json #"%([0-9A-F]{2})" (.fromCharCode js/String "0x$1")))))))
 
 (defn- current-alias-map
   []
