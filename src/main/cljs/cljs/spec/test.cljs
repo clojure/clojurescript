@@ -7,10 +7,10 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.spec.test
-  (:require-macros [cljs.spec.test :refer [with-instrument-disabled]])
+  (:require-macros [cljs.spec.test :as m :refer [with-instrument-disabled]])
   (:require
     [goog.userAgent.product :as product]
-    [clojure.string :as str]
+    [clojure.string :as string]
     [cljs.stacktrace :as st]
     [cljs.pprint :as pp]
     [cljs.spec :as s]
@@ -57,17 +57,28 @@
   (when-not (s/valid? spec v nil)
     (s/explain-data spec v)))
 
+(defn- find-caller [st]
+  (letfn [(search-spec-fn [frame]
+            (when frame
+              (let [s (:function frame)]
+                (and (string? s) (not (string/blank? s))
+                     (re-find #"cljs\.spec\.test\.spec_checking_fn" s)))))]
+    (->> st
+         (drop-while #(not (search-spec-fn %)))
+         (drop-while search-spec-fn)
+         first)))
+
 (defn- spec-checking-fn
   [v f fn-spec]
   (let [fn-spec (@#'s/maybe-spec fn-spec)
         conform! (fn [v role spec data args]
                    (let [conformed (s/conform spec data)]
                      (if (= ::s/invalid conformed)
-                       (let [caller (-> (st/parse-stacktrace
-                                          (get-host-port)
-                                          (.-stack (js/Error.))
-                                          (get-env) nil)
-                                      first)
+                       (let [caller (find-caller
+                                      (st/parse-stacktrace
+                                        (get-host-port)
+                                        (.-stack (js/Error.))
+                                        (get-env) nil))
                              ed (merge (assoc (s/explain-data* spec [role] [] [] data)
                                          ::s/args args
                                          ::s/failure :instrument)
@@ -208,7 +219,8 @@ Returns a map as quick-check, with :explain-data added if
 
 
 (comment
-  (require '[cljs.pprint :as pp]
+  (require
+    '[cljs.pprint :as pp]
     '[cljs.spec :as s]
     '[cljs.spec.impl.gen :as gen]
     '[cljs.test :as ctest])
@@ -232,6 +244,27 @@ Returns a map as quick-check, with :explain-data added if
   (cljs.spec.test/run-tests 'clojure.core)
   (test/run-all-tests)
 
+  ;; example evaluation
+  (defn ranged-rand
+    "Returns random int in range start <= rand < end"
+    [start end]
+    (+ start (long (rand (- end start)))))
+
+  (s/fdef ranged-rand
+    :args (s/and (s/cat :start int? :end int?)
+            #(< (:start %) (:end %)))
+    :ret int?
+    :fn (s/and #(>= (:ret %) (-> % :args :start))
+          #(< (:ret %) (-> % :args :end))))
+
+  (m/instrument-1 ranged-rand {})
+  (ranged-rand 8 5)
+  (defn foo
+    ([a])
+    ([a b]
+     (ranged-rand 8 5)))
+  (foo 1 2)
+  (m/unstrument-1 ranged-rand)
   )
 
 

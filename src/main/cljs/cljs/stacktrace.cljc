@@ -452,7 +452,7 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
   [repl-env st err {:keys [output-dir] :as opts}]
   (letfn [(process-frame [frame-str]
             (when-not (or (string/blank? frame-str)
-                        (== -1 (.indexOf frame-str "\tat")))
+                          (== -1 (.indexOf frame-str "\tat")))
               (let [frame-str               (string/replace frame-str #"\s+at\s+" "")
                     [function file-and-line] (string/split frame-str #"\s+")
                     [file-part line-part]    (string/split file-and-line #":")]
@@ -502,23 +502,32 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
 
 (defmethod parse-stacktrace :nodejs
   [repl-env st err {:keys [output-dir] :as opts}]
-  (letfn [(process-frame [frame-str]
+  (letfn [(parse-source-loc-info [x]
+            (when (and x (not (string/blank? x)))
+              (parse-int x)))
+          (process-frame [frame-str]
             (when-not (or (string/blank? frame-str)
-                          (== -1 (.indexOf frame-str "    at")))
+                          (nil? (re-find #"^\s+at" frame-str)))
               (let [frame-str (string/replace frame-str #"\s+at\s+" "")]
                 (when-not (string/starts-with? frame-str "repl:")
-                  (let [[function file-and-line] (string/split frame-str #"\s+")
-                        [file-part line-part]    (string/split file-and-line #":")]
-                    {:file (string/replace (.substring file-part 1)
-                            (str output-dir
-                              #?(:clj File/separator :cljs "/"))
-                            "")
-                    :function function
-                    :line (when (and line-part (not (string/blank? line-part)))
-                            (parse-int
-                              (.substring line-part 0
-                                (dec (count line-part)))))
-                    :column 0})))))]
+                  (let [parts (string/split frame-str #"\s+")
+                        [function file&line] (if (== 2 (count parts))
+                                                   [(first parts)
+                                                    (subs (second parts) 1
+                                                      (dec (count (second parts))))]
+                                                   [nil (first parts)])
+                        [file-part line-part col-part] (string/split file&line #":")]
+                    {:file     (if function
+                                 (cond-> file-part
+                                   output-dir
+                                   (string/replace
+                                     (str output-dir
+                                       #?(:clj File/separator :cljs "/"))
+                                     ""))
+                                 file-part)
+                     :function function
+                     :line     (parse-source-loc-info line-part)
+                     :column   (parse-source-loc-info col-part)})))))]
     (->> (string/split st #"\n")
       (map process-frame)
       (remove nil?)

@@ -28,7 +28,7 @@
          '~(:name v)))))
 
 (defmacro unstrument-1
-  [s opts]
+  [s]
   (let [v (ana-api/resolve &env s)]
     (when v
       `(let [raw# (unstrument-1* ~s (var ~s))]
