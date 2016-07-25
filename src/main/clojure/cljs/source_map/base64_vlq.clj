@@ -1,5 +1,5 @@
 (ns cljs.source-map.base64-vlq
-  (require [clojure.string :as string]
+  (:require [clojure.string :as string]
            [cljs.source-map.base64 :as base64]))
 
 (def ^:const vlq-base-shift 5)
