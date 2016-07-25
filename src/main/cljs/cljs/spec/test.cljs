@@ -138,6 +138,27 @@
         (when (= wrapped current)
           raw)))))
 
+(defn- fn-spec-name?
+  [s]
+  (symbol? s))
+
+(defn- collectionize
+  [x]
+  (if (symbol? x)
+    (list x)
+    x))
+
+(defn instrumentable-syms
+  "Given an opts map as per instrument, returns the set of syms
+that can be instrumented."
+  ([] (instrumentable-syms nil))
+  ([opts]
+   (assert (every? ident? (keys (:gen opts))) "instrument :gen expects ident keys")
+   (reduce into #{} [(filter fn-spec-name? (keys (s/registry)))
+                     (keys (:spec opts))
+                     (:stub opts)
+                     (keys (:replace opts))])))
+
 ;; wrap and unwrap spec failure data in an exception so that
 ;; quick-check will treat it as a failure.
 (defn- wrap-failing

@@ -35,6 +35,70 @@
          (when raw# (set! ~s raw#))
          '~(:name v)))))
 
+(defmacro instrument
+  "Instruments the vars named by sym-or-syms, a symbol or collection
+of symbols, or all instrumentable vars if sym-or-syms is not
+specified.
+
+If a var has an :args fn-spec, sets the var's root binding to a
+fn that checks arg conformance (throwing an exception on failure)
+before delegating to the original fn.
+
+The opts map can be used to override registered specs, and/or to
+replace fn implementations entirely. Opts for symbols not included
+in sym-or-syms are ignored. This facilitates sharing a common
+options map across many different calls to instrument.
+
+The opts map may have the following keys:
+
+  :spec     a map from var-name symbols to override specs
+  :stub     a set of var-name symbols to be replaced by stubs
+  :gen      a map from spec names to generator overrides
+  :replace  a map from var-name symbols to replacement fns
+
+:spec overrides registered fn-specs with specs your provide. Use
+:spec overrides to provide specs for libraries that do not have
+them, or to constrain your own use of a fn to a subset of its
+spec'ed contract.
+
+:stub replaces a fn with a stub that checks :args, then uses the
+:ret spec to generate a return value.
+
+:gen overrides are used only for :stub generation.
+
+:replace replaces a fn with a fn that checks args conformance, then
+invokes the fn you provide, enabling arbitrary stubbing and mocking.
+
+:spec can be used in combination with :stub or :replace.
+
+Returns a collection of syms naming the vars instrumented."
+  ([]
+   `(instrument (instrumentable-syms)))
+  ([sym-or-syms]
+   `(instrument ~sym-or-syms nil))
+  ([sym-or-syms opts]
+   `(into
+      []
+      (comp (filter (instrumentable-syms opts))
+        (distinct)
+        (map #(instrument-1* % opts))
+        (remove nil?))
+      (collectionize sym-or-syms))))
+
+(defmacro unstrument
+  "Undoes instrument on the vars named by sym-or-syms, specified
+as in instrument. With no args, unstruments all instrumented vars.
+Returns a collection of syms naming the vars unstrumented."
+  ([]
+   `(unstrument (map ->sym (keys @instrumented-vars))))
+  ([sym-or-syms]
+   `(into
+     []
+     (comp (filter symbol?)
+       (map unstrument-1*)
+       (remove nil?))
+      (collectionize sym-or-syms))))
+
 (defmacro run-tests
   "Like run-all-tests, but scoped to specific namespaces, or to
 *ns* if no ns-sym are specified."
