@@ -248,3 +248,16 @@
     [unknown (some-> (suggestion 3 (str unknown) (map str knowns))
                (subs 1)
                keyword)]))
+
+(defn distinct-by
+  ([f coll]
+   (let [step (fn step [xs seen]
+                (lazy-seq
+                  ((fn [[x :as xs] seen]
+                     (when-let [s (seq xs)]
+                       (let [v (f x)]
+                         (if (contains? seen v)
+                           (recur (rest s) seen)
+                           (cons x (step (rest s) (conj seen v)))))))
+                    xs seen)))]
+     (step coll #{}))))

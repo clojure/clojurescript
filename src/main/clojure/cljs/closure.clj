@@ -34,7 +34,7 @@
    JavaScript or a deps file for use during development.
   "
   (:refer-clojure :exclude [compile])
-  (:require [cljs.util :as util]
+  (:require [cljs.util :as util :refer [distinct-by]]
             [cljs.core :as cljsm]
             [cljs.compiler :as comp]
             [cljs.analyzer :as ana]
@@ -895,19 +895,6 @@
         (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
           [(javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)]))
       inputs)))
-
-(defn distinct-by
-  ([k coll]
-   (let [step (fn step [xs seen]
-                (lazy-seq
-                  ((fn [[f :as xs] seen]
-                     (when-let [s (seq xs)]
-                       (let [v (get f k)]
-                         (if (contains? seen v)
-                          (recur (rest s) seen)
-                          (cons f (step (rest s) (conj seen v)))))))
-                    xs seen)))]
-     (step coll #{}))))
 
 (defn add-preloads
   "Add :preloads to a given set of inputs (IJavaScript). Returns a new
