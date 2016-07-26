@@ -294,6 +294,7 @@ Returns a map as quick-check, with :explain-data added if
   (instrumentable-syms)
 
   (m/instrument-1 `ranged-rand {})
+  (m/unstrument-1 `ranged-rand)
 
   (m/instrument)
   (m/instrument `ranged-rand)
