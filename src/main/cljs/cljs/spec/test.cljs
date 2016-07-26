@@ -18,6 +18,19 @@
     [clojure.test.check]
     [clojure.test.check.properties]))
 
+(defn distinct-by
+  ([f coll]
+   (let [step (fn step [xs seen]
+                (lazy-seq
+                  ((fn [[x :as xs] seen]
+                     (when-let [s (seq xs)]
+                       (let [v (f x)]
+                         (if (contains? seen v)
+                           (recur (rest s) seen)
+                           (cons x (step (rest s) (conj seen v)))))))
+                    xs seen)))]
+     (step coll #{}))))
+
 (defn ->sym
   [x]
   (@#'s/->sym x))
@@ -281,6 +294,10 @@ Returns a map as quick-check, with :explain-data added if
   (instrumentable-syms)
 
   (m/instrument-1 ranged-rand {})
+
+  (m/instrument `ranged-rand)
+  (m/instrument `[ranged-rand])
+
   (ranged-rand 8 5)
   (defn foo
     ([a])

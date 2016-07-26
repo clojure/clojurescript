@@ -8,7 +8,6 @@
 
 (ns cljs.spec.test
   (:require
-    [cljs.util :refer [distinct-by]]
     [cljs.analyzer :as ana]
     [cljs.analyzer.api :as ana-api]
     [cljs.spec :as s]
@@ -99,20 +98,22 @@ Returns a collection of syms naming the vars instrumented."
   ([xs]
    `(instrument ~xs nil))
   ([[quote sym-or-syms] opts]
-   `(let [opts# ~opts]
-      (reduce
-        (fn [ret [_ f]]
-          (let [sym (f)]
-            (cond-> ret sym (conj sym))))
-        []
-        (->> (zipmap
-                (collectionize ~sym-or-syms)
-                ~@(map
-                    (fn [sym]
-                      `(fn [] (instrument-1 '~sym opts#)))
-                    (collectionize ~sym-or-syms)))
-           (filter #((instrumentable-syms opts#) (first %)))
-           (distinct-by first))))))
+   (let [opts-sym (gensym "opts")]
+     `(let [~opts-sym ~opts]
+        (reduce
+          (fn [ret# [_# f#]]
+            (let [sym# (f#)]
+              (cond-> ret# sym# (conj sym#))))
+          []
+          (->> (zipmap
+                 (collectionize ~sym-or-syms)
+                 ~(into []
+                    (map
+                      (fn [sym]
+                        `(fn [] (instrument-1 '~sym ~opts-sym))))
+                    (collectionize sym-or-syms)))
+            (filter #((instrumentable-syms ~opts-sym) (first %)))
+            (distinct-by first)))))))
 
 (defmacro unstrument
   "Undoes instrument on the vars named by sym-or-syms, specified
