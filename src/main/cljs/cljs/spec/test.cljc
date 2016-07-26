@@ -13,6 +13,27 @@
     [cljs.spec :as s]
     [cljs.spec.impl.gen :as gen]))
 
+(defn- collectionize
+  [x]
+  (if (symbol? x)
+    (list x)
+    x))
+
+(defmacro enumerate-namespace
+  "Given a symbol naming an ns, or a collection of such symbols,
+returns the set of all symbols naming vars in those nses."
+  [[quote ns-sym-or-syms]]
+  (let [xs (into #{}
+             (mapcat (fn [ns-sym]
+                       (->> (vals (ana-api/ns-interns ns-sym))
+                         (filter #(not (:macro %)))
+                         (map :name)
+                         (map
+                           (fn [name-sym]
+                             (symbol (name ns-sym) (name name-sym)))))))
+             (collectionize ns-sym-or-syms))]
+    `(quote ~xs)))
+
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
   [& body]
@@ -77,13 +98,14 @@ Returns a collection of syms naming the vars instrumented."
   ([sym-or-syms]
    `(instrument ~sym-or-syms nil))
   ([sym-or-syms opts]
-   `(into
-      []
-      (comp (filter (instrumentable-syms opts))
-        (distinct)
-        (map #(instrument-1* % opts))
-        (remove nil?))
-      (collectionize sym-or-syms))))
+   `(let [opts# ~opts]
+      (into
+        []
+        (comp (filter (instrumentable-syms opts#))
+          (distinct)
+          (map #(instrument-1* % opts#))
+          (remove nil?))
+        (collectionize ~sym-or-syms)))))
 
 (defmacro unstrument
   "Undoes instrument on the vars named by sym-or-syms, specified
@@ -93,11 +115,11 @@ Returns a collection of syms naming the vars unstrumented."
    `(unstrument (map ->sym (keys @instrumented-vars))))
   ([sym-or-syms]
    `(into
-     []
-     (comp (filter symbol?)
-       (map unstrument-1*)
-       (remove nil?))
-      (collectionize sym-or-syms))))
+      []
+      (comp (filter symbol?)
+        (map unstrument-1*)
+        (remove nil?))
+      (collectionize ~sym-or-syms))))
 
 (defmacro run-tests
   "Like run-all-tests, but scoped to specific namespaces, or to
