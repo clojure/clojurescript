@@ -13,6 +13,8 @@
     [cljs.spec :as s]
     [cljs.spec.impl.gen :as gen]))
 
+(defonce ^:private instrumented-vars (atom #{}))
+
 (defn- collectionize
   [x]
   (if (symbol? x)
@@ -44,6 +46,7 @@ returns the set of all symbols naming vars in those nses."
   [[quote s] opts]
   (let [v (ana-api/resolve &env s)]
     (when v
+      (swap! instrumented-vars conj v)
       `(let [checked# (instrument-1* ~s (var ~s) ~opts)]
          (when checked# (set! ~s checked#))
          '~(:name v)))))
@@ -52,6 +55,7 @@ returns the set of all symbols naming vars in those nses."
   [[quote s]]
   (let [v (ana-api/resolve &env s)]
     (when v
+      (swap! instrumented-vars disj v)
       `(let [raw# (unstrument-1* ~s (var ~s))]
          (when raw# (set! ~s raw#))
          '~(:name v)))))
@@ -94,7 +98,7 @@ invokes the fn you provide, enabling arbitrary stubbing and mocking.
 
 Returns a collection of syms naming the vars instrumented."
   ([]
-   `(instrument (instrumentable-syms)))
+   `(instrument '[~@(s/speced-vars)]))
   ([xs]
    `(instrument ~xs nil))
   ([[quote sym-or-syms] opts]
@@ -119,30 +123,35 @@ Returns a collection of syms naming the vars instrumented."
 as in instrument. With no args, unstruments all instrumented vars.
 Returns a collection of syms naming the vars unstrumented."
   ([]
-   `(unstrument (map ->sym (keys @instrumented-vars))))
-  ([sym-or-syms]
-   `(into
+   `(unstrument '[~@(deref instrumented-vars)]))
+  ([[quote sym-or-syms]]
+   `(reduce
+      (fn [ret# f#]
+        (let [sym# (f#)]
+          (cond-> ret# sym# (conj sym#))))
       []
-      (comp (filter symbol?)
-        (map unstrument-1*)
-        (remove nil?))
-      (collectionize ~sym-or-syms))))
+      [~@(->> (collectionize sym-or-syms)
+           (map
+             (fn [sym]
+               (when (symbol? symbol)
+                 `(fn [] (unstrument-1 ~'sym)))))
+           (remove nil?))])))
 
-(defmacro run-tests
-  "Like run-all-tests, but scoped to specific namespaces, or to
-*ns* if no ns-sym are specified."
-  ([]
-   `(cljs.spec.test/run-tests '~ana/*cljs-ns*))
-  ([& ns-syms]
-   `(cljs.spec.test/run-var-tests
-      (->> #?(:clj  ~(s/speced-vars* ns-syms)
-              :cljs ~(cljs.spec$macros/speced-vars* ns-syms))
-        (filter (fn [v#] (:args (cljs.spec/get-spec v#))))))))
-
-(defmacro run-all-tests
-  "Like clojure.test/run-all-tests, but runs test.check tests
-for all speced vars. Prints per-test results to *out*, and
-returns a map with :test,:pass,:fail, and :error counts."
-  []
-  `(cljs.spec.test/run-var-tests #?(:clj  ~(s/speced-vars*)
-                                    :cljs ~(cljs.spec$macros/speced-vars*))))
+;(defmacro run-tests
+;  "Like run-all-tests, but scoped to specific namespaces, or to
+;*ns* if no ns-sym are specified."
+;  ([]
+;   `(cljs.spec.test/run-tests '~ana/*cljs-ns*))
+;  ([& ns-syms]
+;   `(cljs.spec.test/run-var-tests
+;      (->> #?(:clj  ~(s/speced-vars* ns-syms)
+;              :cljs ~(cljs.spec$macros/speced-vars* ns-syms))
+;        (filter (fn [v#] (:args (cljs.spec/get-spec v#))))))))
+;
+;(defmacro run-all-tests
+;  "Like clojure.test/run-all-tests, but runs test.check tests
+;for all speced vars. Prints per-test results to *out*, and
+;returns a map with :test,:pass,:fail, and :error counts."
+;  []
+;  `(cljs.spec.test/run-var-tests #?(:clj  ~(s/speced-vars)
+;                                    :cljs ~(cljs.spec$macros/speced-vars*))))

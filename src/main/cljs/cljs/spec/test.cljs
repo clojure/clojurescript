@@ -295,8 +295,13 @@ Returns a map as quick-check, with :explain-data added if
 
   (m/instrument-1 `ranged-rand {})
 
+  (m/instrument)
   (m/instrument `ranged-rand)
   (m/instrument `[ranged-rand])
+
+  (m/unstrument)
+  (m/unstrument `ranged-rand)
+  (m/unstrument `[ranged-rand])
 
   (ranged-rand 8 5)
   (defn foo

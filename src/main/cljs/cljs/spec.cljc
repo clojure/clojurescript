@@ -356,26 +356,8 @@
 
 (def ^:private _speced_vars (atom #{}))
 
-(defn speced-vars*
-  ([]
-    (speced-vars* nil))
-  ([ns-syms]
-   (let [ns-match? (if (seq ns-syms)
-                     (set (map second ns-syms))
-                     (constantly true))]
-     (reduce
-       (fn [ret sym]
-         (if (ns-match? (symbol (namespace sym)))
-           (conj ret (list 'var sym))
-           ret))
-       #{} @_speced_vars))))
-
-(defmacro speced-vars
-  "Returns the set of vars whose namespace is in ns-syms AND
-whose vars have been speced with fdef. If no ns-syms are
-specified, return speced vars from all namespaces."
-  [& ns-syms]
-  (speced-vars* ns-syms))
+(defn speced-vars []
+  @_speced_vars)
 
 (defmacro fdef
   "Takes a symbol naming a function, and one or more of the following:
