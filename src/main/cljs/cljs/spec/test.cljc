@@ -106,12 +106,11 @@ Returns a collection of syms naming the vars instrumented."
               (cond-> ret# sym# (conj sym#))))
           []
           (->> (zipmap
-                 (collectionize ~sym-or-syms)
-                 ~(into []
-                    (map
+                 (collectionize '~sym-or-syms)
+                 [~@(map
                       (fn [sym]
-                        `(fn [] (instrument-1 '~sym ~opts-sym))))
-                    (collectionize sym-or-syms)))
+                        `(fn [] (instrument-1 '~sym ~opts-sym)))
+                      (collectionize sym-or-syms))])
             (filter #((instrumentable-syms ~opts-sym) (first %)))
             (distinct-by first)))))))
 
