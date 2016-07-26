@@ -538,7 +538,8 @@
                          (let [ns (.getName ^Namespace (:ns vm))]
                            (assoc vm
                              :ns ns
-                             :name (symbol (str ns) (str k)))))]))
+                             :name (symbol (str ns) (str k))
+                             :macro true)))]))
              (into {}))))))
 
 #?(:clj
