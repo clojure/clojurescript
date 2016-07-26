@@ -41,7 +41,7 @@ returns the set of all symbols naming vars in those nses."
      ~@body))
 
 (defmacro instrument-1
-  [s opts]
+  [[quote s] opts]
   (let [v (ana-api/resolve &env s)]
     (when v
       `(let [checked# (instrument-1* ~s (var ~s) ~opts)]
@@ -49,7 +49,7 @@ returns the set of all symbols naming vars in those nses."
          '~(:name v)))))
 
 (defmacro unstrument-1
-  [s]
+  [[quote s]]
   (let [v (ana-api/resolve &env s)]
     (when v
       `(let [raw# (unstrument-1* ~s (var ~s))]

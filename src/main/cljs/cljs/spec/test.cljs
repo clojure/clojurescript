@@ -293,7 +293,7 @@ Returns a map as quick-check, with :explain-data added if
 
   (instrumentable-syms)
 
-  (m/instrument-1 ranged-rand {})
+  (m/instrument-1 `ranged-rand {})
 
   (m/instrument `ranged-rand)
   (m/instrument `[ranged-rand])
