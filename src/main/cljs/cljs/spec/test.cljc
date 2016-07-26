@@ -96,9 +96,9 @@ invokes the fn you provide, enabling arbitrary stubbing and mocking.
 Returns a collection of syms naming the vars instrumented."
   ([]
    `(instrument (instrumentable-syms)))
-  ([sym-or-syms]
-   `(instrument ~sym-or-syms nil))
-  ([sym-or-syms opts]
+  ([xs]
+   `(instrument ~xs nil))
+  ([[quote sym-or-syms] opts]
    `(let [opts# ~opts]
       (reduce
         (fn [ret [_ f]]
@@ -109,7 +109,7 @@ Returns a collection of syms naming the vars instrumented."
                 (collectionize ~sym-or-syms)
                 ~@(map
                     (fn [sym]
-                      `(fn [] (instrument-1 ~sym opts#)))
+                      `(fn [] (instrument-1 '~sym opts#)))
                     (collectionize ~sym-or-syms)))
            (filter #((instrumentable-syms opts#) (first %)))
            (distinct-by first))))))

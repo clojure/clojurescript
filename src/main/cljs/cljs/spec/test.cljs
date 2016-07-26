@@ -246,7 +246,7 @@ Returns a map as quick-check, with :explain-data added if
     '[cljs.spec.impl.gen :as gen]
     '[cljs.test :as ctest])
 
-  (require :reload '[cjls.spec.test :as test])
+  (require :reload '[cljs.spec.test :as test])
 
   ;; discover speced vars for your own test runner
   (s/speced-vars)
@@ -277,6 +277,8 @@ Returns a map as quick-check, with :explain-data added if
     :ret int?
     :fn (s/and #(>= (:ret %) (-> % :args :start))
           #(< (:ret %) (-> % :args :end))))
+
+  (instrumentable-syms)
 
   (m/instrument-1 ranged-rand {})
   (ranged-rand 8 5)
