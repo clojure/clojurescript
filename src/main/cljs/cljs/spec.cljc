@@ -411,7 +411,7 @@
   {:i1 42, :m {:a 1, :c 2, :d 4}, :i2 99}"
   [& kspecs]
   `(let [mspec# (keys ~@kspecs)]
-     (with-gen (& (* (cat ::k keyword? ::v cljs.core/any?)) ::kvs->map mspec#)
+     (with-gen (cljs.spec/& (* (cat ::k keyword? ::v cljs.core/any?)) ::kvs->map mspec#)
        (fn [] (gen/fmap (fn [m#] (apply concat m#)) (gen mspec#))))))
 
 (defmacro nilable
