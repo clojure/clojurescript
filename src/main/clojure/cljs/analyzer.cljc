@@ -2441,7 +2441,8 @@
 
 (defn get-expander-ns [env ^String nstr]
   ;; first check for clojure.* -> cljs.* cases
-  (let [res  (resolve-ns-alias env (symbol nstr))
+  (let [res  (or (resolve-macro-ns-alias env (symbol nstr))
+                 (resolve-ns-alias env (symbol nstr)))
         nstr (if res (str res) nstr)]
     (cond
      #?@(:clj  [(= "clojure.core" nstr) (find-ns 'cljs.core)]
