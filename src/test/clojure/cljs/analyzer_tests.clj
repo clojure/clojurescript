@@ -285,7 +285,12 @@
               (:require (clojure.spec :as s) :reload)))
          '((:refer-clojure :exclude [first])
            (:require-macros (bar :refer [quux]) :reload)
-           (:require (cljs.spec :as s) (cljs.spec :as clojure.spec) :reload)))))
+           (:require (cljs.spec :as s) (cljs.spec :as clojure.spec) :reload))))
+  (is (= (a/rewrite-cljs-aliases
+           '((:require-macros (bar :refer [quux]) :reload)
+             (:require clojure.spec :reload)))
+         '((:require-macros (bar :refer [quux]) :reload)
+           (:require (cljs.spec :as clojure.spec) :reload)))))
 
 ;; =============================================================================
 ;; Namespace metadata

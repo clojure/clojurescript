@@ -1925,14 +1925,14 @@
       possible."
      [args]
      (letfn [(process-spec [maybe-spec]
-               (if (sequential? maybe-spec)
-                 (let [[lib & xs] maybe-spec]
-                   (if (aliasable-clj-ns? lib)
-                     (let [lib' (clj-ns->cljs-ns lib)
-                           spec (cons lib' xs)]
-                       [spec (list lib' :as lib)])
-                     [maybe-spec]))
-                 [maybe-spec]))
+               (let [[lib & xs] (if (sequential? maybe-spec)
+                                  maybe-spec
+                                  [maybe-spec])]
+                 (if (and (symbol? lib) (aliasable-clj-ns? lib))
+                   (let [lib' (clj-ns->cljs-ns lib)
+                         spec (cons lib' xs)]
+                     (into (if xs [spec] []) [(list lib' :as lib)]))
+                   [maybe-spec])))
              (process-form [[k & specs :as form]]
                (if (#{:use :require} k)
                  (cons k (mapcat process-spec specs))
