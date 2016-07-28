@@ -448,11 +448,9 @@
   ([repl-env env filename form wrap opts]
    (binding [ana/*cljs-file* filename]
      (let [env (assoc env
-                      :root-source-info
-                      {:source-type :fragment
-                       :source-form form })
-           ast (ana/analyze env form nil opts)
-           js (comp/emit-str ast)
+                 :root-source-info
+                 {:source-type :fragment
+                  :source-form form})
            def-emits-var (:def-emits-var opts)
            wrap-js
            ;; TODO: check opts as well - David
@@ -485,13 +483,16 @@
                (ana/no-warn
                  (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
                    (wrap form) nil opts))))]
-       (when (= (:op ast) :ns)
-         (load-dependencies repl-env
-           (into (vals (:requires ast))
-             (distinct (vals (:uses ast))))
-           opts))
+       ;; NOTE: means macros which expand to ns aren't supported for now
+       ;; when eval'ing individual forms at the REPL - David
+       (when (= 'ns (first form))
+         (let [ast (ana/analyze env form nil opts)]
+           (load-dependencies repl-env
+             (into (vals (:requires ast))
+               (distinct (vals (:uses ast))))
+             opts)))
        (when *cljs-verbose*
-         (err-out (println js)))
+         (err-out (println wrap-js)))
        (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
          (case (:status ret)
            :error (throw
@@ -506,7 +507,7 @@
                            :error ret
                            :repl-env repl-env
                            :form form
-                           :js js}))
+                           :js wrap-js}))
            :success (:value ret)))))))
 
 (defn load-stream [repl-env filename res]
