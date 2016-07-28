@@ -101,8 +101,9 @@ Returns a collection of syms naming the vars instrumented."
    `(instrument '[~@(s/speced-vars)]))
   ([xs]
    `(instrument ~xs nil))
-  ([[quote sym-or-syms] opts]
-   (let [opts-sym (gensym "opts")]
+  ([sym-or-syms opts]
+   (let [sym-or-syms (eval sym-or-syms)
+         opts-sym    (gensym "opts")]
      `(let [~opts-sym ~opts]
         (reduce
           (fn [ret# [_# f#]]
@@ -124,18 +125,20 @@ as in instrument. With no args, unstruments all instrumented vars.
 Returns a collection of syms naming the vars unstrumented."
   ([]
    `(unstrument '[~@(deref instrumented-vars)]))
-  ([[quote sym-or-syms]]
-   `(reduce
-      (fn [ret# f#]
-        (let [sym# (f#)]
-          (cond-> ret# sym# (conj sym#))))
-      []
-      [~@(->> (collectionize sym-or-syms)
-           (map
-             (fn [sym]
-               (when (symbol? sym)
-                 `(fn [] (unstrument-1 '~sym)))))
-           (remove nil?))])))
+  ([sym-or-syms]
+   (let [sym-or-syms (eval sym-or-syms)]
+     `(reduce
+        (fn [ret# f#]
+          (let [sym# (f#)]
+            (cond-> ret# sym# (conj sym#))))
+        []
+        [~@(->> (collectionize sym-or-syms)
+             (map
+               (fn [sym]
+                 (when (symbol? sym)
+                   `(fn []
+                      (unstrument-1 '~sym)))))
+             (remove nil?))]))))
 
 ;(defmacro run-tests
 ;  "Like run-all-tests, but scoped to specific namespaces, or to
