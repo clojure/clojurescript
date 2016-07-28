@@ -139,22 +139,3 @@ Returns a collection of syms naming the vars unstrumented."
                    `(fn []
                       (unstrument-1 '~sym)))))
              (remove nil?))]))))
-
-;(defmacro run-tests
-;  "Like run-all-tests, but scoped to specific namespaces, or to
-;*ns* if no ns-sym are specified."
-;  ([]
-;   `(cljs.spec.test/run-tests '~ana/*cljs-ns*))
-;  ([& ns-syms]
-;   `(cljs.spec.test/run-var-tests
-;      (->> #?(:clj  ~(s/speced-vars* ns-syms)
-;              :cljs ~(cljs.spec$macros/speced-vars* ns-syms))
-;        (filter (fn [v#] (:args (cljs.spec/get-spec v#))))))))
-;
-;(defmacro run-all-tests
-;  "Like clojure.test/run-all-tests, but runs test.check tests
-;for all speced vars. Prints per-test results to *out*, and
-;returns a map with :test,:pass,:fail, and :error counts."
-;  []
-;  `(cljs.spec.test/run-var-tests #?(:clj  ~(s/speced-vars)
-;                                    :cljs ~(cljs.spec$macros/speced-vars*))))
