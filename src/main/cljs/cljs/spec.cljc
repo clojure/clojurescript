@@ -15,6 +15,8 @@
             [cljs.spec.impl.gen :as gen]
             [clojure.string :as str]))
 
+(defonce registry-ref (atom {}))
+
 (defn- ->sym
   "Returns a symbol from a symbol or var"
   [x]
@@ -51,8 +53,10 @@
    spec-name, predicate or regex-op makes an entry in the registry mapping k to
    the spec"
   [k spec-form]
-  (let [k (if (symbol? k) (ns-qualify &env k) k)]
-    `(cljs.spec/def-impl '~k '~(res &env spec-form) ~spec-form)))
+  (let [k    (if (symbol? k) (ns-qualify &env k) k)
+        form (res &env spec-form)]
+    (swap! registry-ref assoc k form)
+    `(cljs.spec/def-impl '~k '~form ~spec-form)))
 
 (defmacro spec
   "Takes a single predicate form, e.g. can be the name of a predicate,
