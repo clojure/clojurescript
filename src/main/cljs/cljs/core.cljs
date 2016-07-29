@@ -5776,10 +5776,9 @@ reduces them without incurring seq initialization"
     (when (map? y)
       ; assume all maps are counted
       (when (== (count x) (count y))
-        (every? identity
-                (map (fn [xkv] (= (get y (first xkv) never-equiv)
-                                  (second xkv)))
-                     x))))))
+        (every? (fn [xkv] (= (get y (first xkv) never-equiv)
+                             (second xkv)))
+                x)))))
 
 
 (defn- scan-array [incr k array]
