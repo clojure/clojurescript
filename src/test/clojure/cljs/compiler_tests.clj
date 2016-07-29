@@ -147,6 +147,39 @@
         `(cljs.user/foo ~(tags/->JSValue []))
         '(cljs.user/foo (make-array 0))))))
 
+;; CLJS-1607
+
+(deftest test-cljs-1607
+  (let [define-Foo #(assoc-in % [::ana/namespaces 'cljs.user :defs 'Foo]
+                      {:ns 'cljs.user
+                       :name 'cljs.user/Foo
+                       :protocol-symbol true
+                       :protocol-info {:methods '{foo [[this]]}}
+                       :protocol 'cljs.user/Foo})
+        define-foo #(assoc-in % [::ana/namespaces 'cljs.user :defs 'foo]
+                      {:ns 'cljs.user
+                       :name 'cljs.user/foo
+                       :fn-var true
+                       :method-params '([x])
+                       :protocol 'cljs.user/Foo})
+        aenv-with-foo (-> aenv define-foo define-Foo)
+        cenv-with-foo (-> @cenv define-foo define-Foo)]
+    (binding [ana/*cljs-static-fns* true]
+      (are [form]
+        (empty?
+         (capture-warnings
+          (env/with-compiler-env (atom cenv-with-foo)
+            (with-out-str
+              (comp/emit
+               (ana/analyze aenv-with-foo form))))))
+        '(specify! []
+           cljs.user/Foo
+           (cljs.user/foo [this]
+             :none)
+           Object
+           (bar [this]
+             (cljs.user/foo this)))))))
+
 ;; CLJS-1225
 
 (comment
