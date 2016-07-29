@@ -657,24 +657,40 @@
                                                         (if (:as b)
                                                           (conj ret (:as b) gmap)
                                                           ret))))
-                                             bes (reduce
-                                                  (core/fn [bes entry]
-                                                    (reduce #(assoc %1 %2 ((val entry) %2))
-                                                            (dissoc bes (key entry))
-                                                            ((key entry) bes)))
-                                                  (dissoc b :as :or)
-                                                  {:keys #(if (core/keyword? %) % (keyword (core/str %))),
-                                                   :strs core/str, :syms #(core/list `quote %)})]
+                                             bes (core/let [transforms
+                                                            (reduce
+                                                              (core/fn [transforms mk]
+                                                                (if (core/keyword? mk)
+                                                                  (core/let [mkns (namespace mk)
+                                                                        mkn (name mk)]
+                                                                    (core/cond (= mkn "keys") (assoc transforms mk #(keyword (core/or mkns (namespace %)) (name %)))
+                                                                               (= mkn "syms") (assoc transforms mk #(core/list `quote (symbol (core/or mkns (namespace %)) (name %))))
+                                                                               (= mkn "strs") (assoc transforms mk core/str)
+                                                                               :else transforms))
+                                                                  transforms))
+                                                              {}
+                                                              (keys b))]
+                                                   (reduce
+                                                     (core/fn [bes entry]
+                                                       (reduce #(assoc %1 %2 ((val entry) %2))
+                                                         (dissoc bes (key entry))
+                                                         ((key entry) bes)))
+                                                     (dissoc b :as :or)
+                                                     transforms))]
                                    (if (seq bes)
                                      (core/let [bb (key (first bes))
                                                 bk (val (first bes))
-                                                bv (if (contains? defaults bb)
-                                                     (core/list 'cljs.core/get gmap bk (defaults bb))
+                                                local (if #?(:clj  (core/instance? clojure.lang.Named bb)
+                                                             :cljs (cljs.core/implements? INamed bb))
+                                                          (symbol nil (name bb))
+                                                        bb)
+                                                bv (if (contains? defaults local)
+                                                     (core/list 'cljs.core/get gmap bk (defaults local))
                                                      (core/list 'cljs.core/get gmap bk))]
-                                       (recur (core/cond
-                                                (core/symbol? bb) (core/-> ret (conj (if (namespace bb) (symbol (name bb)) bb)) (conj bv))
-                                                (core/keyword? bb) (core/-> ret (conj (symbol (name bb)) bv))
-                                                :else (pb ret bb bv))
+                                       (recur
+                                         (if (core/or (core/keyword? bb) (core/symbol? bb)) ;(ident? bb)
+                                           (core/-> ret (conj local bv))
+                                           (pb ret bb bv))
                                               (next bes)))
                                      ret))))]
                     (core/cond

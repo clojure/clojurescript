@@ -102,6 +102,21 @@
 (defmacro capture-warnings [& body]
   `(capture-warnings* (fn [] ~@body)))
 
+(deftest or-doesnt-create-bindings
+  (let [cenv (atom @cenv)]
+    (binding [ana/*cljs-static-fns* true
+              ana/*analyze-deps* false]
+      (env/with-compiler-env cenv
+        (ana/analyze-file (File. "src/main/cljs/cljs/core.cljs"))
+        (let [warnings (-> (capture-warnings
+                             (with-out-str
+                               (comp/emit
+                                 (ana/analyze aenv
+                                   '(let [{:keys [a] :or {b 2}} {:a 1}] [a b]))))))]
+          (is (= (ffirst warnings) :undeclared-var))
+          (is (.startsWith (-> warnings first second)
+                "WARNING: Use of undeclared Var cljs.user/b")))))))
+
 (deftest no-warn-on-emit-invoke-protocol-method
   (let [define-foo #(assoc-in % [::ana/namespaces 'cljs.user :defs 'foo]
                               {:ns 'cljs.user
