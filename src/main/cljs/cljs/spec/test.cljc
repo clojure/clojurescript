@@ -142,10 +142,27 @@ Returns a collection of syms naming the vars unstrumented."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; testing  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro sym->check-map
-  [[quote s]]
-  (if-let [{:keys [name] :as v} (ana-api/resolve &env s)]
-    `{:s    '~s
-      :v    (var ~name)
-      :spec (s/get-spec (var ~name))}
-    `{:s    '~s}))
+(defmacro check-1
+  [[quote s] f opts]
+  (let [{:keys [name] :as v} (ana-api/resolve &env s)]
+    `(let [s#        '~name
+           opts#     ~opts
+           v#        ~(when v `(var ~name))
+           spec#     ~(when v `(s/get-spec (var ~name)))
+           re-inst?# (and v# (seq (unstrument '~name)) true)
+           f#        (or ~f (when v# @v#))]
+       (try
+         (cond
+           (nil? f#)
+           {:failure (ex-info "No fn to spec" {::s/failure :no-fn})
+            :sym     s# :spec spec#}
+
+           (:args spec#)
+           (let [tcret# (quick-check f# spec# opts#)]
+             (make-check-result s# spec# tcret#))
+
+           :default
+           {:failure (ex-info "No :args spec" {::s/failure :no-args-spec})
+            :sym     s# :spec spec#})
+         (finally
+           (when re-inst?# (instrument '~name)))))))

@@ -222,26 +222,6 @@ with explain-data + ::s/failure."
     (when-let [shrunk (-> test-check-ret :shrunk)]
       {:failure (:result shrunk)})))
 
-(defn- check-1
-  [{:keys [s f v spec]} opts]
-  (let [re-inst? (and v (seq (unstrument s)) true)
-        f (or f (when v @v))]
-    (try
-      (cond
-        (nil? f)
-        {:failure (ex-info "No fn to spec" {::s/failure :no-fn})
-         :sym s :spec spec}
-
-        (:args spec)
-        (let [tcret (quick-check f spec opts)]
-          (make-check-result s spec tcret))
-
-        :default
-        {:failure (ex-info "No :args spec" {::s/failure :no-args-spec})
-         :sym s :spec spec})
-      (finally
-        (when re-inst? (instrument s))))))
-
 (defn- validate-check-opts
   [opts]
   (assert (every? ident? (keys (:gen opts))) "check :gen expects ident keys"))
@@ -414,9 +394,9 @@ key with a count for each different :type of result."
     ([a b]
      (ranged-rand 8 5)))
   (foo 1 2)
-  (m/unstrument-1 ranged-rand)
+  (m/unstrument-1 `ranged-rand)
 
-  (m/sym->check-map 'ranged-rand)
+  (m/check-1 `ranged-rand nil {})
   )
 
 
