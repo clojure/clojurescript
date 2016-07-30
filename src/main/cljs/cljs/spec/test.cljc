@@ -21,6 +21,10 @@
     (list x)
     x))
 
+(defn- fn-spec-name?
+  [s]
+  (symbol? s))
+
 (defmacro enumerate-namespace
   "Given a symbol naming an ns, or a collection of such symbols,
 returns the set of all symbols naming vars in those nses."
@@ -176,3 +180,15 @@ Returns a collection of syms naming the vars unstrumented."
    `(let [opts# ~opts]
       (validate-check-opts opts#)
       (check-1 nil ~f ~spec opts#))))
+
+(defmacro checkable-syms
+  "Given an opts map as per check, returns the set of syms that
+can be checked."
+  ([]
+   `(checkable-syms nil))
+  ([opts]
+   `(let [opts# ~opts]
+      (validate-check-opts opts#)
+      (reduce conj #{}
+        '[~@(filter fn-spec-name? (keys @s/registry-ref))
+          ~@(keys (:spec opts))]))))

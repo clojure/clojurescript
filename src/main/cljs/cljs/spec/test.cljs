@@ -226,15 +226,6 @@ with explain-data + ::s/failure."
   [opts]
   (assert (every? ident? (keys (:gen opts))) "check :gen expects ident keys"))
 
-(defn checkable-syms
-  "Given an opts map as per check, returns the set of syms that
-can be checked."
-  ([] (checkable-syms nil))
-  ([opts]
-   (validate-check-opts opts)
-   (reduce into #{} [(filter fn-spec-name? (keys (s/registry)))
-                     (keys (:spec opts))])))
-
 (defn check
   "Run generative tests for spec conformance on vars named by
 sym-or-syms, a symbol or collection of symbols. If sym-or-syms
@@ -394,6 +385,8 @@ key with a count for each different :type of result."
     (s/fspec
       :args (s/cat :x int?)
       :ret  int?))
+
+  (m/checkable-syms)
   )
 
 
