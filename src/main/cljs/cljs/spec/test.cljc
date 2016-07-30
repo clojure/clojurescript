@@ -139,3 +139,13 @@ Returns a collection of syms naming the vars unstrumented."
                    `(fn []
                       (unstrument-1 '~sym)))))
              (remove nil?))]))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; testing  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro sym->check-map
+  [[quote s]]
+  (if-let [{:keys [name] :as v} (ana-api/resolve &env s)]
+    `{:s    '~s
+      :v    (var ~name)
+      :spec (s/get-spec (var ~name))}
+    `{:s    '~s}))

@@ -242,13 +242,6 @@ with explain-data + ::s/failure."
       (finally
         (when re-inst? (instrument s))))))
 
-(defn- sym->check-map
-  [s]
-  (let [v (resolve s)]
-    {:s s
-     :v v
-     :spec (when v (s/get-spec v))}))
-
 (defn- validate-check-opts
   [opts]
   (assert (every? ident? (keys (:gen opts))) "check :gen expects ident keys"))
@@ -422,6 +415,8 @@ key with a count for each different :type of result."
      (ranged-rand 8 5)))
   (foo 1 2)
   (m/unstrument-1 ranged-rand)
+
+  (m/sym->check-map 'ranged-rand)
   )
 
 
