@@ -2043,6 +2043,26 @@
        :entries '#{cljs.reader hello.core}}}})
   )
 
+(defn ^File target-file-for-cljs-ns
+  [ns-sym output-dir]
+  (util/to-target-file
+    (util/output-directory {:output-dir output-dir})
+    {:ns ns-sym}))
+
+(defn mark-cljs-ns-for-recompile!
+  [ns-sym output-dir]
+  (let [s (target-file-for-cljs-ns ns-sym output-dir)]
+    (when (.exists s)
+      (.setLastModified s 5000))))
+
+(defn cljs-dependents-for-macro-namespaces
+  [state namespaces]
+  (map :name
+    (let [namespaces-set (set namespaces)]
+      (filter (fn [x] (not-empty
+                        (set/intersection namespaces-set (-> x :require-macros vals set))))
+        (vals (:cljs.analyzer/namespaces @state))))))
+
 (defn watch
   "Given a source directory, produce runnable JavaScript. Watch the source
    directory for changes rebuliding when necessary. Takes the same arguments as
@@ -2103,16 +2123,33 @@
         (loop [key nil]
           (when (and (or (nil? quit) (not @quit))
                      (or (nil? key) (. ^WatchKey key reset)))
-            (let [key (. srvc (poll 300 TimeUnit/MILLISECONDS))]
+            (let [key (. srvc (poll 300 TimeUnit/MILLISECONDS))
+                  poll-events-seq (when key (seq (.pollEvents key)))]
               (when (and key
                          (some
                            (fn [^WatchEvent e]
                              (let [fstr (.. e context toString)]
                                (and (or (. fstr (endsWith "cljc"))
                                         (. fstr (endsWith "cljs"))
+                                        (. fstr (endsWith "clj"))
                                         (. fstr (endsWith "js")))
                                     (not (. fstr (startsWith ".#"))))))
-                           (seq (.pollEvents key))))
+                           poll-events-seq))
+                (when-let [clj-files (seq (keep (fn [^WatchEvent e]
+                                                  (let [ctx (.context e)
+                                                        fstr (.toString ctx)]
+                                                    (when (and (or (. fstr (endsWith "cljc"))
+                                                                   (. fstr (endsWith "clj")))
+                                                               (not (. fstr (startsWith ".#"))))
+                                                      ctx)))
+                                            poll-events-seq))]
+                  (let [^Path dir (.watchable key)
+                        file-seq (map #(.toFile (.resolve dir %)) clj-files)
+                        nses (map (comp :ns ana/parse-ns) file-seq)]
+                    (doseq [ns nses]
+                      (require ns :reload))
+                    (doseq [ns (cljs-dependents-for-macro-namespaces compiler-env nses)]
+                      (mark-cljs-ns-for-recompile! ns (:output-dir opts)))))
                 (println "Change detected, recompiling ...")
                 (flush)
                 (buildf))

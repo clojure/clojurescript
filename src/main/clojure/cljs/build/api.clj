@@ -17,7 +17,6 @@
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.closure :as closure]
-            [clojure.set :refer [intersection]]
             [cljs.js-deps :as js-deps]
             [clojure.java.io :as io])
   (:import java.io.File))
@@ -32,19 +31,13 @@
   For example:
   (target-file-from-cljs-ns \"resources/out\" 'example.core) ->
   <File: \"resources/out/example/core.js\">"
-  ([ns-sym] (target-file-for-cljs-ns ns-sym nil))
-  ([ns-sym output-dir]
-    (util/to-target-file
-      (util/output-directory {:output-dir output-dir})
-      {:ns ns-sym})))
+  ([ns-sym] (closure/target-file-for-cljs-ns ns-sym nil))
+  ([ns-sym output-dir] (closure/target-file-for-cljs-ns ns-sym output-dir)))
 
 (defn mark-cljs-ns-for-recompile!
   "Backdates a cljs target file so that it the cljs compiler will recompile it."
-  ([ns-sym] (mark-cljs-ns-for-recompile! ns-sym nil))
-  ([ns-sym output-dir]
-    (let [s (target-file-for-cljs-ns ns-sym output-dir)]
-      (when (.exists s)
-        (.setLastModified s 5000)))))
+  ([ns-sym] (closure/mark-cljs-ns-for-recompile! ns-sym nil))
+  ([ns-sym output-dir] (closure/mark-cljs-ns-for-recompile! ns-sym output-dir)))
 
 (defn cljs-dependents-for-macro-namespaces
   "Takes a list of Clojure (.clj) namespaces that define macros and
@@ -58,17 +51,13 @@
   (cljs-dependents-for-macro-namespaces 'example.macros) ->
   ('example.core 'example.util)"
   ([namespaces]
-   (cljs-dependents-for-macro-namespaces
+   (closure/cljs-dependents-for-macro-namespaces
      (if-not (nil? env/*compiler*)
        env/*compiler*
        (env/default-compiler-env))
      namespaces))
   ([state namespaces]
-   (map :name
-     (let [namespaces-set (set namespaces)]
-       (filter (fn [x] (not-empty
-                         (intersection namespaces-set (-> x :require-macros vals set))))
-         (vals (:cljs.analyzer/namespaces @state)))))))
+   (closure/cljs-dependents-for-macro-namespaces state namespaces)))
 
 (defn parse-js-ns
   "Given a Google Closure style JavaScript file or resource return the namespace
