@@ -1939,20 +1939,27 @@
                                 (core/str "Invalid protocol, " psym
                                   " defines method " mname " with arity 0"))))))
              expand-sig (core/fn [fname slot sig]
-                          `(~sig
-                             (if (and (not (nil? ~(first sig)))
-                                      (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
-                               (. ~(first sig) ~slot ~@sig)
-                               (let [x# (if (nil? ~(first sig)) nil ~(first sig))
-                                     m# (aget ~(fqn fname) (goog/typeOf x#))]
-                                 (if-not (nil? m#)
-                                   (m# ~@sig)
-                                   (let [m# (aget ~(fqn fname) "_")]
-                                     (if-not (nil? m#)
-                                       (m# ~@sig)
-                                       (throw
-                                         (missing-protocol
-                                           ~(core/str psym "." fname) ~(first sig))))))))))
+                          (core/let [sig (core/if-not (every? core/symbol? sig)
+                                           (mapv (core/fn [arg]
+                                                   (core/cond
+                                                     (core/symbol? arg) arg
+                                                     (core/and (map? arg) (some? (:as arg))) (:as arg)
+                                                     :else (gensym))) sig)
+                                           sig)]
+                            `(~sig
+                              (if (and (not (nil? ~(first sig)))
+                                    (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
+                                (. ~(first sig) ~slot ~@sig)
+                                (let [x# (if (nil? ~(first sig)) nil ~(first sig))
+                                      m# (aget ~(fqn fname) (goog/typeOf x#))]
+                                  (if-not (nil? m#)
+                                    (m# ~@sig)
+                                    (let [m# (aget ~(fqn fname) "_")]
+                                      (if-not (nil? m#)
+                                        (m# ~@sig)
+                                        (throw
+                                          (missing-protocol
+                                            ~(core/str psym "." fname) ~(first sig)))))))))))
              psym (core/-> psym
                     (vary-meta update-in [:jsdoc] conj
                       "@interface")
