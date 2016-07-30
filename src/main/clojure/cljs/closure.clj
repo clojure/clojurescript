@@ -1753,10 +1753,12 @@
 
 (defn foreign-deps-str [opts sources]
   (letfn [(to-js-str [ijs]
-            (let [url (or (and (#{:advanced :simple} (:optimizations opts))
-                               (:url-min ijs))
-                          (:url ijs))]
-              (slurp url)))]
+            (if-let [url (or (and (#{:advanced :simple} (:optimizations opts))
+                                  (:url-min ijs))
+                             (:url ijs))]
+              (slurp url)
+              (throw (IllegalArgumentException.
+                       (str "Foreign lib " ijs " does not exist")))))]
     (str (string/join "\n" (map to-js-str sources)) "\n")))
 
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
