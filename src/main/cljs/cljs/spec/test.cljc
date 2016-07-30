@@ -143,12 +143,12 @@ Returns a collection of syms naming the vars unstrumented."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; testing  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro check-1
-  [[quote s] f opts]
-  (let [{:keys [name] :as v} (ana-api/resolve &env s)]
+  [[quote s :as qs] f spec opts]
+  (let [{:keys [name] :as v} (when qs (ana-api/resolve &env s))]
     `(let [s#        '~name
            opts#     ~opts
            v#        ~(when v `(var ~name))
-           spec#     ~(when v `(s/get-spec (var ~name)))
+           spec#     (or ~spec ~(when v `(s/get-spec (var ~name))))
            re-inst?# (and v# (seq (unstrument '~name)) true)
            f#        (or ~f (when v# @v#))]
        (try
@@ -166,3 +166,13 @@ Returns a collection of syms naming the vars unstrumented."
             :sym     s# :spec spec#})
          (finally
            (when re-inst?# (instrument '~name)))))))
+
+(defmacro check-fn
+  "Runs generative tests for fn f using spec and opts. See
+'check' for options and return."
+  ([f spec]
+   `(check-fn ~f ~spec nil))
+  ([f spec opts]
+   `(let [opts# ~opts]
+      (validate-check-opts opts#)
+      (check-1 nil ~f ~spec opts#))))

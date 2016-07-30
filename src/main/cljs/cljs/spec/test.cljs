@@ -226,14 +226,6 @@ with explain-data + ::s/failure."
   [opts]
   (assert (every? ident? (keys (:gen opts))) "check :gen expects ident keys"))
 
-(defn check-fn
-  "Runs generative tests for fn f using spec and opts. See
-'check' for options and return."
-  ([f spec] (check-fn f spec nil))
-  ([f spec opts]
-   (validate-check-opts opts)
-   (check-1 {:f f :spec spec} opts)))
-
 (defn checkable-syms
   "Given an opts map as per check, returns the set of syms that
 can be checked."
@@ -370,10 +362,10 @@ key with a count for each different :type of result."
 
   (s/fdef ranged-rand
     :args (s/and (s/cat :start int? :end int?)
-            #(< (:start %) (:end %)))
-    :ret int?
-    :fn (s/and #(>= (:ret %) (-> % :args :start))
-          #(< (:ret %) (-> % :args :end))))
+                 #(< (:start %) (:end %)))
+    :ret  int?
+    :fn   (s/and #(>= (:ret %) (-> % :args :start))
+                 #(< (:ret %) (-> % :args :end))))
 
   (instrumentable-syms)
 
@@ -396,7 +388,12 @@ key with a count for each different :type of result."
   (foo 1 2)
   (m/unstrument-1 `ranged-rand)
 
-  (m/check-1 `ranged-rand nil {})
+  (m/check-1 `ranged-rand nil nil {})
+
+  (m/check-fn inc
+    (s/fspec
+      :args (s/cat :x int?)
+      :ret  int?))
   )
 
 
