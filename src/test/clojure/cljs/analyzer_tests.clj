@@ -54,13 +54,13 @@
           (a/analyze ns-env '(ns foo.bar (:require [baz.woz :as woz :refer [] :plop])))
           (catch Exception e
             (.getMessage e)))
-        "Only :as alias and :refer (names) options supported in :require"))
+        "Only :as alias, :refer (names) and :rename {from to} options supported in :require"))
   (is (.startsWith
         (try
           (a/analyze ns-env '(ns foo.bar (:require [baz.woz :as woz :refer [] :plop true])))
           (catch Exception e
             (.getMessage e)))
-        "Only :as and :refer options supported in :require / :require-macros"))
+        "Only :as, :refer and :rename options supported in :require / :require-macros"))
   (is (.startsWith
         (try
           (a/analyze ns-env '(ns foo.bar (:require [baz.woz :as woz :refer [] :as boz :refer []])))
@@ -72,13 +72,55 @@
           (a/analyze ns-env '(ns foo.bar (:refer-clojure :refer [])))
           (catch Exception e
             (.getMessage e)))
-        "Only [:refer-clojure :exclude (names)] form supported"))
+        "Only [:refer-clojure :exclude (names)] and optionally `:rename {from to}` specs supported"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:refer-clojure :rename [1 2])))
+          (catch Exception e
+            (.getMessage e)))
+        "Only [:refer-clojure :exclude (names)] and optionally `:rename {from to}` specs supported"))
   (is (.startsWith
         (try
           (a/analyze ns-env '(ns foo.bar (:use [baz.woz :exclude []])))
           (catch Exception e
             (.getMessage e)))
-        "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))
+        "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:use [baz.woz])))
+          (catch Exception e
+            (.getMessage e)))
+        "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:use [baz.woz :only])))
+          (catch Exception e
+            (.getMessage e)))
+        "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:use [baz.woz :only [1 2 3]])))
+          (catch Exception e
+            (.getMessage e)))
+        "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:use [baz.woz :rename [1 2]])))
+          (catch Exception e
+            (.getMessage e)))
+        "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:use [foo.bar :rename {baz qux}])))
+          (catch Exception e
+            (.getMessage e)))
+        "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:use [baz.woz :only [foo] :only [bar]])))
+          (catch Exception e
+            (.getMessage e)))
+        "Each of :only and :rename options may only be specified once in :use / :use-macros"))
   (is (.startsWith
         (try
           (a/analyze ns-env '(ns foo.bar (:require [baz.woz :as []])))
@@ -91,6 +133,12 @@
           (catch Exception e
             (.getMessage e)))
         ":as alias must be unique"))
+  (is (.startsWith
+        (try
+          (a/analyze ns-env '(ns foo.bar (:require [foo.bar :rename {baz qux}])))
+          (catch Exception e
+            (.getMessage e)))
+        "Renamed symbol baz not referred"))
   (is (.startsWith
         (try
           (a/analyze ns-env '(ns foo.bar (:unless [])))
@@ -355,3 +403,41 @@
           (catch Exception e
             (.getMessage e)))
         "Can't set! a constant")))
+
+(deftest test-cljs-1508-rename
+  (binding [a/*cljs-ns* a/*cljs-ns*]
+    (let [parsed-ns (e/with-compiler-env test-cenv
+                      (a/analyze test-env
+                        '(ns foo.core
+                           (:require [clojure.set :as set :refer [intersection] :rename {intersection foo}]))))]
+      (is (nil? (-> parsed-ns :uses (get 'foo))))
+      (is (nil? (-> parsed-ns :uses (get 'intersection))))
+      (is (some? (-> parsed-ns :renames (get 'foo))))
+      (is (= (-> parsed-ns :renames (get 'foo))
+             'clojure.set/intersection)))
+    (is (e/with-compiler-env test-cenv
+          (a/analyze test-env
+            '(ns foo.core
+               (:use [clojure.set :only [intersection] :rename {intersection foo}])))))
+    (is (= (e/with-compiler-env (atom {::a/namespaces
+                                       {'foo.core {:renames '{foo clojure.set/intersection}}}})
+             (a/resolve-var {:ns {:name 'foo.core}} 'foo))
+            '{:name clojure.set/intersection
+              :ns   clojure.set}))
+    (let [rwhen (e/with-compiler-env (atom (update-in @test-cenv [::a/namespaces]
+                                             merge {'foo.core {:rename-macros '{always cljs.core/when}}}))
+                  (a/resolve-macro-var {:ns {:name 'foo.core}} 'always))]
+      (is (= (-> rwhen :name)
+             'cljs.core/when)))
+    (let [parsed-ns (e/with-compiler-env test-cenv
+                      (a/analyze test-env
+                        '(ns foo.core
+                           (:refer-clojure :rename {when always
+                                                    map  core-map}))))]
+      (is (= (-> parsed-ns :excludes) #{}))
+      (is (= (-> parsed-ns :rename-macros) '{always cljs.core/when}))
+      (is (= (-> parsed-ns :renames) '{core-map cljs.core/map})))
+    (is (thrown? Exception (e/with-compiler-env test-cenv
+                             (a/analyze test-env
+                               '(ns foo.core
+                                  (:require [clojure.set :rename {intersection foo}]))))))))

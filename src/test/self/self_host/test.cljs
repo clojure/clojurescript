@@ -349,7 +349,7 @@
 
 (deftest test-load-and-invoke-macros
   (async done
-    (let [l (latch 10 done)]
+    (let [l (latch 11 done)]
       ;; Normal require macros
       (let [st (cljs/empty-state)]
         (cljs/eval-str st
@@ -541,6 +541,27 @@
             (is (nil? error))
             (cljs/eval-str st
               "(add 110 210)"
+              nil
+              {:eval    node-eval
+               :context :expr}
+              (fn [{:keys [error value]}]
+                (is (nil? error))
+                (is (= 320 value))
+                (inc! l))))))
+      (let [st (cljs/empty-state)]
+        ;; Rely on implicit macro inference for renames (ns loads its own macros)
+        (cljs/eval-str st
+          "(ns cljs.user (:require [foo.core :refer [add] :rename {add plus}]))"
+          nil
+          {:eval node-eval
+           :load (fn [{:keys [macros]} cb]
+                   (if macros
+                     (cb {:lang :clj :source "(ns foo.core) (defmacro add [a b] `(+ ~a ~b))"})
+                     (cb {:lang :clj :source "(ns foo.core (:require-macros foo.core))"})))}
+          (fn [{:keys [value error]}]
+            (is (nil? error))
+            (cljs/eval-str st
+              "(plus 110 210)"
               nil
               {:eval    node-eval
                :context :expr}

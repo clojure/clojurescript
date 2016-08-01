@@ -306,11 +306,22 @@
                       (if (and add-if-present?
                                (some #{to} (vals replaced)))
                         (assoc replaced from to)
-                        replaced)))))]
+                        replaced)))))
+        patch-renames (fn [k]
+                        (swap! compiler update-in [::ana/namespaces in k]
+                          (fn [m]
+                            (when m
+                              (reduce (fn [acc [renamed qualified-sym :as entry]]
+                                        (if (= (str from) (namespace qualified-sym))
+                                          (assoc acc renamed (symbol (str to) (name qualified-sym)))
+                                          (merge acc entry)))
+                                {} m)))))]
     (patch :requires true)
     (patch :require-macros true)
     (patch :uses false)
-    (patch :use-macros false)))
+    (patch :use-macros false)
+    (patch-renames :renames)
+    (patch-renames :rename-macros)))
 
 (defn- load-deps
   ([bound-vars ana-env lib deps cb]
@@ -409,9 +420,20 @@
 
 (defn- rewrite-ns-ast
   [ast smap]
-  (-> ast
-    (update :uses #(walk/postwalk-replace smap %))
-    (update :requires #(merge smap (walk/postwalk-replace smap %)))))
+  (let [rewrite-renames (fn [m]
+                          (when m
+                            (reduce (fn [acc [renamed qualified-sym :as entry]]
+                                      (let [from (symbol (namespace qualified-sym))
+                                            to   (get smap from)]
+                                        (if (some? to)
+                                          (assoc acc renamed (symbol (str to) (name qualified-sym)))
+                                          (merge acc entry))))
+                              {} m)))]
+    (-> ast
+      (update :uses #(walk/postwalk-replace smap %))
+      (update :requires #(merge smap (walk/postwalk-replace smap %)))
+      (update :renames rewrite-renames)
+      (update :rename-macros rewrite-renames))))
 
 (defn- ns-side-effects
   ([bound-vars ana-env ast opts cb]

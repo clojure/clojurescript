@@ -781,6 +781,15 @@
                {:name (symbol (str full-ns) (str sym))
                 :ns full-ns}))
 
+           (not (nil? (gets @env/*compiler* ::namespaces (-> env :ns :name) :renames sym)))
+           (let [qualified-symbol (gets @env/*compiler* ::namespaces (-> env :ns :name) :renames sym)
+                 full-ns (symbol (namespace qualified-symbol))
+                 sym     (symbol (name qualified-symbol))]
+             (merge
+               (gets @env/*compiler* ::namespaces full-ns :defs sym)
+               {:name qualified-symbol
+                :ns full-ns}))
+
            (not (nil? (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym)))
            (recur env (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym) confirm)
 
@@ -828,6 +837,12 @@
 
       (get-in namespaces [ns :use-macros sym])
       (let [full-ns (get-in namespaces [ns :use-macros sym])]
+        (get-in namespaces [full-ns :macros sym]))
+
+      (get-in namespaces [ns :rename-macros sym])
+      (let [qualified-symbol (get-in namespaces [ns :rename-macros sym])
+            full-ns (symbol (namespace qualified-symbol))
+            sym     (symbol (name qualified-symbol))]
         (get-in namespaces [full-ns :macros sym]))
 
       :else
@@ -1727,13 +1742,28 @@
          (not (= (get js-lib :group) :goog))
          (not (get js-lib :closure-lib)))))
 
+(defn missing-rename? [sym cenv]
+  (let [lib (symbol (namespace sym))
+        sym (symbol (name sym))]
+    (missing-use? lib sym cenv)))
+
 (defn missing-use-macro? [lib sym]
   (let [the-ns #?(:clj (find-ns lib) :cljs (find-macros-ns lib))]
+    (or (nil? the-ns) (nil? (.findInternedVar ^clojure.lang.Namespace the-ns sym)))))
+
+(defn missing-rename-macro? [sym]
+  (let [lib (symbol (namespace sym))
+        sym (symbol (name sym))
+        the-ns #?(:clj (find-ns lib) :cljs (find-macros-ns lib))]
     (or (nil? the-ns) (nil? (.findInternedVar ^clojure.lang.Namespace the-ns sym)))))
 
 (defn missing-uses [uses env]
   (let [cenv @env/*compiler*]
     (into {} (filter (fn [[sym lib]] (missing-use? lib sym cenv)) uses))))
+
+(defn missing-renames [renames]
+  (let [cenv @env/*compiler*]
+    (into {} (filter (fn [[_ qualified-sym]] (missing-rename? qualified-sym cenv)) renames))))
 
 (defn missing-use-macros [use-macros env]
   (let [cenv @env/*compiler*]
@@ -1742,6 +1772,9 @@
 (defn inferred-use-macros [use-macros env]
   (let [cenv @env/*compiler*]
     (into {} (filter (fn [[sym lib]] (not (missing-use-macro? lib sym))) use-macros))))
+
+(defn inferred-rename-macros [rename-macros env]
+  (into {} (filter (fn [[_ qualified-sym]] (not (missing-rename-macro? qualified-sym))) rename-macros)))
 
 (defn check-uses [uses env]
   (let [cenv @env/*compiler*]
@@ -1766,14 +1799,21 @@
 
 (defn check-use-macros-inferring-missing
   [ast name use-macros missing-uses env]
-  (let [remove-missing-uses #(apply dissoc % (keys missing-uses))
+  (let [remove-missing-uses  #(apply dissoc % (keys missing-uses))
+        missing-renames       (missing-renames (:renames ast))
+        missing-rename-macros (inferred-rename-macros missing-renames env)
+        remove-missing-renames #(apply dissoc % (keys missing-renames))
         ast' (-> ast
                (update-in [:use-macros] merge
                  (check-use-macros use-macros missing-uses env))
-               (update-in [:uses] remove-missing-uses))]
+               (update-in [:uses] remove-missing-uses)
+               (update-in [:rename-macros] merge missing-rename-macros)
+               (update-in [:renames] remove-missing-renames))]
     (swap! env/*compiler* #(-> %
                             (update-in [::namespaces name :use-macros] merge (:use-macros ast'))
-                            (update-in [::namespaces name :uses] remove-missing-uses)))
+                            (update-in [::namespaces name :uses] remove-missing-uses)
+                            (update-in [::namespaces name :rename-macros] merge (:rename-macros ast'))
+                            (update-in [::namespaces name :renames] remove-missing-renames)))
     ast'))
 
 (defn parse-ns-error-msg [spec msg]
@@ -1795,12 +1835,12 @@
       (throw
         (error env
           (parse-ns-error-msg spec
-            "Only :as alias and :refer (names) options supported in :require"))))
-    (when-not (every? #{:as :refer} (map first (partition 2 (next spec))))
+            "Only :as alias, :refer (names) and :rename {from to} options supported in :require"))))
+    (when-not (every? #{:as :refer :rename} (map first (partition 2 (next spec))))
       (throw
         (error env
           (parse-ns-error-msg spec
-            "Only :as and :refer options supported in :require / :require-macros"))))
+            "Only :as, :refer and :rename options supported in :require / :require-macros"))))
     (when-not (let [fs (frequencies (next spec))]
                 (and (<= (fs :as 0) 1)
                      (<= (fs :refer 0) 1)))
@@ -1811,24 +1851,76 @@
 
 (defn parse-ns-excludes [env args]
   (reduce
-    (fn [s [k exclude xs]]
+    (fn [s [k & filters]]
       (if (= k :refer-clojure)
         (do
-          (when-not (= exclude :exclude)
-            (throw (error env "Only [:refer-clojure :exclude (names)] form supported")))
           (when (seq s)
             (throw (error env "Only one :refer-clojure form is allowed per namespace definition")))
-          (into s xs))
-        s))
-    #{} args))
+          (let [valid-kws #{:exclude :rename}
+                xs
+                (loop [fs (seq filters)
+                       ret {:excludes #{}
+                            :renames {}}
+                       err (not (even? (count filters)))]
+                  (cond
+                    (true? err)
+                    (throw
+                      (error env "Only [:refer-clojure :exclude (names)] and optionally `:rename {from to}` specs supported"))
 
-(defn use->require [env [lib kw referred :as spec]]
-  (when-not (and (symbol? lib) (= :only kw) (sequential? referred) (every? symbol? referred))
+                    (not (nil? fs))
+                    (let [kw (first fs)]
+                      (if (valid-kws kw)
+                        (let [refs (second fs)]
+                          (cond
+                            (not (or (and (= kw :exclude) (sequential? refs) (every? symbol? refs))
+                                   (and (= kw :rename) (map? refs) (every? #(every? symbol? %) refs))))
+                            (recur fs ret true)
+
+                            (= kw :exclude)
+                            (recur (nnext fs) (update-in ret [:excludes] into refs) false)
+
+                            (= kw :rename)
+                            (recur (nnext fs) (update-in ret [:renames] merge refs) false)))
+                        (recur fs ret true )))
+
+                    :else ret))]
+            (merge-with into s xs)))
+        s))
+    {} args))
+
+(defn use->require [env [lib & filters :as spec]]
+  (when-not (and (symbol? lib) (odd? (count spec)))
     (throw
       (error env
         (parse-ns-error-msg spec
-          "Only [lib.ns :only (names)] specs supported in :use / :use-macros"))))
-  [lib :refer referred])
+          "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros"))))
+  (loop [fs (seq filters) ret [lib] err false]
+    (cond
+      (true? err)
+      (throw
+        (error env
+          (parse-ns-error-msg spec
+            "Only [lib.ns :only (names)] and optionally `:rename {from to}` specs supported in :use / :use-macros")))
+
+      (not (nil? fs))
+      (let [kw (first fs)
+            only? (= kw :only)]
+        (if (or only? (= kw :rename))
+          (if (some #{(if only? :refer kw)} ret)
+            (throw
+              (error env
+                (parse-ns-error-msg spec
+                  "Each of :only and :rename options may only be specified once in :use / :use-macros")))
+            (let [refs (second fs)]
+              (if-not (or (and only? (sequential? refs) (every? symbol? refs))
+                          (and (= kw :rename) (map? refs) (every? #(every? symbol? %) refs)))
+                (recur fs ret true)
+                (recur (nnext fs) (into ret [(if only? :refer kw) refs]) false))))
+          (recur fs ret true )))
+
+      :else (if (some #{:refer} ret)
+              ret
+              (recur fs ret true)))))
 
 (defn parse-require-spec [env macros? deps aliases spec]
   (if (symbol? spec)
@@ -1839,8 +1931,9 @@
             lib (if-let [js-module-name (get-in @env/*compiler* [:js-module-index (name lib)])]
                   (symbol js-module-name)
                   lib)
-            {alias :as referred :refer :or {alias lib}} (apply hash-map opts)
-            [rk uk] (if macros? [:require-macros :use-macros] [:require :use])]
+            {alias :as referred :refer renamed :rename :or {alias lib}} (apply hash-map opts)
+            referred-without-renamed (seq (remove (set (keys renamed)) referred))
+            [rk uk renk] (if macros? [:require-macros :use-macros :rename-macros] [:require :use :rename])]
         (when-not (or (symbol? alias) (nil? alias))
           (throw
             (error env
@@ -1866,7 +1959,14 @@
         (merge
           (when alias
             {rk (merge {alias lib} {lib lib})})
-          (when referred {uk (apply hash-map (interleave referred (repeat lib)))}))))))
+          (when referred-without-renamed {uk (apply hash-map (interleave referred-without-renamed (repeat lib)))})
+          (when renamed
+            {renk (reduce (fn [m [original renamed]]
+                            (when-not (some #{original} referred)
+                              (throw (error env
+                                       (str "Renamed symbol " original " not referred"))))
+                            (assoc m renamed (symbol (str lib) (str original))))
+                    {} renamed)}))))))
 
 (defn parse-import-spec [env deps spec]
   (when-not (or (and (sequential? spec)
@@ -1977,6 +2077,7 @@
                    (if-not (reload-spec? x)
                      (->> x (remove-from-spec #{:include-macros})
                             (remove-from-spec #{:refer})
+                            (remove-from-spec #{:rename})
                             (replace-refer-macros))
                      x)))))
         remove-sugar (partial remove-from-spec sugar-keys)]
@@ -2034,7 +2135,10 @@
                                     (if metadata (next args) args))
                             :cljs (if metadata (next args) args)))
           name         (vary-meta name merge metadata)
-          excludes     (parse-ns-excludes env args)
+          {excludes :excludes core-renames :renames} (parse-ns-excludes env args)
+          core-renames (reduce (fn [m [original renamed]]
+                                 (assoc m renamed (symbol "cljs.core" (str original))))
+                         {} core-renames)
           deps         (atom #{})
           aliases      (atom {:fns {} :macros {}})
           spec-parsers {:require        (partial parse-require-spec env false deps aliases)
@@ -2047,7 +2151,9 @@
           valid-forms  (atom #{:use :use-macros :require :require-macros :import})
           reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
           reloads      (atom {})
-          {uses :use requires :require use-macros :use-macros require-macros :require-macros imports :import :as params}
+          {uses :use requires :require renames :rename
+           use-macros :use-macros require-macros :require-macros
+           rename-macros :rename-macros imports :import :as params}
           (reduce
             (fn [m [k & libs]]
               (when-not (#{:use :use-macros :require :require-macros :import} k)
@@ -2076,8 +2182,10 @@
              :excludes       excludes
              :use-macros     use-macros
              :require-macros require-macros
+             :rename-macros  rename-macros
              :uses           uses
              :requires       requires
+             :renames        (merge renames core-renames)
              :imports        imports}
             ns-info
             (if (:merge form-meta)
@@ -2085,7 +2193,8 @@
               (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
                 (if (pos? (count ns-info'))
                   (let [merge-keys
-                        [:use-macros :require-macros :uses :requires :imports]]
+                        [:use-macros :require-macros :rename-macros
+                         :uses :requires :renames :imports]]
                     (merge
                       ns-info'
                       (merge-with merge
@@ -2458,10 +2567,20 @@
   (when-not (or (not (nil? (gets env :locals sym))) ; locals hide macros
                 (and (excluded? env sym) (not (used? env sym))))
     (let [nstr (namespace sym)]
-      (if-not (nil? nstr)
+      (cond
+        (not (nil? nstr))
         (let [ns (get-expander-ns env nstr)]
           (when-not (nil? ns)
             (.findInternedVar ^clojure.lang.Namespace ns (symbol (name sym)))))
+
+        (not (nil? (gets env :ns :rename-macros sym)))
+        (let [qualified-symbol (gets env :ns :rename-macros sym)
+              nsym (symbol (namespace qualified-symbol))
+              sym  (symbol (name qualified-symbol))]
+          (.findInternedVar ^clojure.lang.Namespace
+            #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym))
+
+        :else
         (let [nsym (gets env :ns :use-macros sym)]
           (if-not (nil? nsym)
             (.findInternedVar ^clojure.lang.Namespace
