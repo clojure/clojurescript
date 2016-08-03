@@ -2373,6 +2373,29 @@ reduces them without incurring seq initialization"
     (garray/shuffle a)
     (vec a)))
 
+(defn- iter-reduce
+  ([coll f]
+   (let [iter (-iterator coll)]
+     (if (.hasNext iter)
+       (let [init (.next iter)]
+         (loop [acc init]
+           (if (.hasNext iter)
+             (let [nacc (f acc (.next iter))]
+               (if (reduced? nacc)
+                 @nacc
+                 (recur nacc)))
+             acc)))
+       (f))))
+  ([coll f init]
+   (let [iter (-iterator coll)]
+     (loop [acc init]
+       (if (.hasNext iter)
+         (let [nacc (f acc (.next iter))]
+           (if (reduced? nacc)
+             @nacc
+             (recur nacc)))
+         acc)))))
+
 (defn reduce
   "f should be a function of 2 arguments. If val is not supplied,
   returns the result of applying f to the first 2 items in coll, then
@@ -2397,6 +2420,9 @@ reduces them without incurring seq initialization"
        (native-satisfies? IReduce coll)
        (-reduce coll f)
 
+       (iterable? coll)
+       (iter-reduce coll f)
+
        :else
        (seq-reduce f coll)))
   ([f val coll]
@@ -2412,6 +2438,9 @@ reduces them without incurring seq initialization"
 
        (native-satisfies? IReduce coll)
        (-reduce coll f val)
+
+       (iterable? coll)
+       (iter-reduce coll f val)
 
        :else
        (seq-reduce f val coll))))
@@ -6505,9 +6534,9 @@ reduces them without incurring seq initialization"
   
   IReduce
   (-reduce [coll f]
-    (seq-reduce f coll))
+    (iter-reduce coll f))
   (-reduce [coll f start]
-    (seq-reduce f start coll))
+    (iter-reduce coll f start))
   
   IFn
   (-invoke [coll k]
