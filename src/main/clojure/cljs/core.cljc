@@ -803,7 +803,7 @@
                  IPrintWithWriter IPending IWatchable IEditableCollection ITransientCollection
                  ITransientAssociative ITransientMap ITransientVector ITransientSet
                  IMultiFn IChunkedSeq IChunkedNext IComparable INamed ICloneable IAtom
-                 IReset ISwap])
+                 IReset ISwap IIterable])
           (iterate (core/fn [[p b]]
                      (if (core/== 2147483648 b)
                        [(core/inc p) 1]
