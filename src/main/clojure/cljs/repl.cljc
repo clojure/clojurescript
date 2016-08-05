@@ -485,7 +485,7 @@
                    (wrap form) nil opts))))]
        ;; NOTE: means macros which expand to ns aren't supported for now
        ;; when eval'ing individual forms at the REPL - David
-       (when (= 'ns (first form))
+       (when (and (sequential? form) (= 'ns (first form)))
          (let [ast (ana/analyze env form nil opts)]
            (load-dependencies repl-env
              (into (vals (:requires ast))
