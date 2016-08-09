@@ -1868,7 +1868,9 @@
                  (into {}
                    (map (fn [[k v]]
                           [(if (symbol? k) (str (comp/munge k)) k) v])
-                     (:closure-defines opts)))))
+                     (:closure-defines opts))))
+               (:browser-repl opts)
+               (update-in [:preloads] (fnil conj []) 'clojure.browser.repl.preload))
         {:keys [libs foreign-libs externs]} (get-upstream-deps)
         emit-constants (or (and (= optimizations :advanced)
                                 (not (false? (:optimize-constants opts))))
