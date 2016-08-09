@@ -81,6 +81,8 @@
          (drop-while search-spec-fn)
          first)))
 
+;; TODO: check ::caller result in other browsers - David
+
 (defn- spec-checking-fn
   [v f fn-spec]
   (let [fn-spec (@#'s/maybe-spec fn-spec)
