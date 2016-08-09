@@ -1041,11 +1041,13 @@
         :doc "You must currently use the ns form only with the following caveats
 
     * You must use the :only form of :use
-    * :require supports :as and :refer
-      - both options can be skipped
+    * :require supports :as, :refer, and :rename
+      - all options can be skipped
       - in this case a symbol can be used as a libspec directly
         - that is, (:require lib.foo) and (:require [lib.foo]) are both
           supported and mean the same thing
+      - :rename specifies a map from referred var names to different
+        symbols (and can be used to prevent clashes)
       - prefix lists are not supported
     * The only option for :refer-clojure is :exclude
     * :import is available for importing Google Closure classes
