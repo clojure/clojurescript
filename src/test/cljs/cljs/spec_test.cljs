@@ -133,8 +133,7 @@
       c ["s" :k] '{:a "s" :b :k} nil
       c ["s" :k 5] ::s/invalid '[{:reason "Extra input", :pred (cat :a string? :b keyword?), :val (5)}]
 
-      ;; TODO: prevents termination for some reason - David
-      ;(s/cat) nil {} nil
+      (s/cat) nil {} nil
       ;(s/cat) [5] ::s/invalid '[{:reason "Extra input", :pred (cat), :val (5), :in [0]}]
 
       either nil ::s/invalid '[{:reason "Insufficient input", :pred (alt :a string? :b keyword?), :val () :via []}]
