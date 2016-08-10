@@ -234,7 +234,7 @@
   See also - map-of"
 
   [kpred vpred & opts]
-  `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (key v#)) :gen-into {} ~@opts))
+  `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (nth v# 0)) :into {} ~@opts))
 
 (defmacro coll-of
   "Returns a spec for a collection of items satisfying pred. Unlike
