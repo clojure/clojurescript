@@ -1008,6 +1008,8 @@
   Object
   (isMacro [_]
     (. (val) -cljs$lang$macro))
+  (toString [_]
+    (str "#'" sym))
   IDeref
   (-deref [_] (val))
   IMeta
