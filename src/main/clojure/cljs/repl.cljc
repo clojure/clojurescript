@@ -751,6 +751,17 @@
                                  specs)))
                           {:merge true :line 1 :column 1})
                         identity opts)))
+      'refer-clojure
+      (fn self
+        ([repl-env env form]
+         (self repl-env env form nil))
+        ([repl-env env [_ & specs :as form] opts]
+         (evaluate-form repl-env env "<cljs repl>"
+                        (with-meta
+                          `(~'ns ~ana/*cljs-ns*
+                             (:refer-clojure ~@specs))
+                          {:merge true :line 1 :column 1})
+                        identity opts)))
       'load-file load-file-fn
       'clojure.core/load-file load-file-fn
       'load-namespace
