@@ -4798,13 +4798,11 @@ reduces them without incurring seq initialization"
      (loop [sentinel lookup-sentinel
             m m
             ks (seq ks)]
-       (if ks
-         (if (not (satisfies? ILookup m))
-           not-found
-           (let [m (get m (first ks) sentinel)]
-             (if (identical? sentinel m)
-               not-found
-               (recur sentinel m (next ks)))))
+       (if-not (nil? ks)
+         (let [m (get m (first ks) sentinel)]
+           (if (identical? sentinel m)
+             not-found
+             (recur sentinel m (next ks))))
          m))))
 
 (defn assoc-in

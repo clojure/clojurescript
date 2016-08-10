@@ -3210,6 +3210,12 @@
   (is (zero? (hash-string nil)))
   (is (not (zero? (hash-string "null")))))
 
+(deftest test-cljs-1721
+  (is (= 1          (get-in {:a (array 1 2 3 4)} [:a 0] :not-found)))
+  (is (= :not-found (get-in {:a (array 1 2 3 4)} [:a 4] :not-found)))
+  (is (= "d"        (get-in {:a "data"} [:a 0] :not-found)))
+  (is (= :not-found (get-in {:a "data"} [:a 4] :not-found))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
