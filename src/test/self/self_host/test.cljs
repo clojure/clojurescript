@@ -2,6 +2,7 @@
   (:require [cljs.test :as test
              :refer-macros [run-tests deftest testing is async]]
             [cljs.js :as cljs]
+            [cljs.analyzer :as ana]
             [clojure.string :as string]
             [cljs.nodejs :as nodejs]))
 
@@ -46,6 +47,27 @@
 
 (defn elide-env [env ast opts]
   (dissoc ast :env))
+
+(defn var-ast
+  "Given an already derefed compiler state plus the symbols of a
+  namespace and a var (e.g. 'clojure.string and 'trim) , return the var
+  AST representation or nil if not found, probably because not required
+  yet.
+
+  The 1-arity function does the splitting in case of a fully qualified
+  symbol (e.g. 'clojure.string/trim)."
+  ([st sym]
+   (var-ast st (symbol (namespace sym)) (symbol (name sym))))
+  ([st ns-sym sym]
+   (get-in st [:cljs.analyzer/namespaces ns-sym :defs sym])))
+
+(defn file->lang
+  "Converts a file path to a :lang keyword by inspecting the file
+   extension."
+  [file-path]
+  (if (string/ends-with? file-path ".js")
+    :js
+    :clj))
 
 (defn str-evals-to
   "Checks that a string evaluates to an expected value."
@@ -750,7 +772,7 @@
         (str-evals-to st l [1 1 1 1 1]
           "(let [an-array (int-array 5 0)] (js->clj (amap an-array idx ret (+ 1 (aget an-array idx)))))" {:ns 'foo.core})))))
 
-#_(deftest test-eval-str-with-require
+(deftest test-eval-str-with-require
   (async done
     (let [l (latch 3 done)]
       (cljs/eval-str st

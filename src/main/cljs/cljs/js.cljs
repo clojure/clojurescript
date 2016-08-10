@@ -71,6 +71,8 @@
 
   :lang       - the language, :clj or :js
   :source     - the source of the library (a string)
+  :file       - optional, the file path, it will be added to AST's :file keyword
+                (but not in :meta)
   :cache      - optional, if a :clj namespace has been precompiled to :js, can
                 give an analysis cache for faster loads.
   :source-map - optional, if a :clj namespace has been precompiled to :js, can
@@ -246,9 +248,9 @@
                (assert (or (map? resource) (nil? resource))
                  "*load-fn* may only return a map or nil")
                (if resource
-                 (let [{:keys [lang source cache source-map]} resource]
+                 (let [{:keys [lang source cache source-map file]} resource]
                    (condp = lang
-                     :clj (eval-str* bound-vars source name opts
+                     :clj (eval-str* bound-vars source name (assoc opts :cljs-file file)
                             (fn [res]
                               (if (:error res)
                                 (cb res)
@@ -379,9 +381,9 @@
                 (assert (or (map? resource) (nil? resource))
                   "*load-fn* may only return a map or nil")
                 (if resource
-                  (let [{:keys [name lang source]} resource]
+                  (let [{:keys [name lang source file]} resource]
                     (condp = lang
-                      :clj (analyze-str* bound-vars source name opts
+                      :clj (analyze-str* bound-vars source name (assoc opts :cljs-file file)
                              (fn [res]
                                (if-not (:error res)
                                  (analyze-deps bound-vars ana-env lib (next deps) opts cb)
@@ -517,7 +519,8 @@
                  r/*alias-map*          (current-alias-map)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
-                 comp/*source-map-data* (:*sm-data* bound-vars)]
+                 comp/*source-map-data* (:*sm-data* bound-vars)
+                 ana/*cljs-file*        (:cljs-file opts)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
                      (catch :default cause
@@ -780,7 +783,8 @@
                  r/*alias-map*          (current-alias-map)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
-                 comp/*source-map-data* (:*sm-data* bound-vars)]
+                 comp/*source-map-data* (:*sm-data* bound-vars)
+                 ana/*cljs-file*        (:cljs-file opts)]
          (let [res (try
                      {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
                      (catch :default cause
