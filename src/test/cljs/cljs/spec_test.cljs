@@ -134,7 +134,7 @@
       c ["s" :k 5] ::s/invalid '[{:reason "Extra input", :pred (cat :a string? :b keyword?), :val (5)}]
 
       (s/cat) nil {} nil
-      ;(s/cat) [5] ::s/invalid '[{:reason "Extra input", :pred (cat), :val (5), :in [0]}]
+      (s/cat) [5] ::s/invalid '[{:reason "Extra input", :pred (cat), :val (5), :in [0]}]
 
       either nil ::s/invalid '[{:reason "Insufficient input", :pred (alt :a string? :b keyword?), :val () :via []}]
       either [] ::s/invalid '[{:reason "Insufficient input", :pred (alt :a string? :b keyword?), :val () :via []}]

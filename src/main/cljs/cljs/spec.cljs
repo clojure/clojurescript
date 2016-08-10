@@ -953,7 +953,7 @@
         ::amp (list* 'clojure.spec/& (op-describe p1) forms)
         ::pcat (if rep+
                  (list `+ rep+)
-                 (cons `cat (mapcat vector (c/or (seq ks) (repeat :_)) (c/or (seq forms) (repeat nil)))))
+                 (cons `cat (mapcat vector (c/or (seq ks) (repeat :_)) forms)))
         ::alt (if maybe
                 (list `? maybe)
                 (cons `alt (mapcat vector ks forms)))
