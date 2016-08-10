@@ -705,6 +705,35 @@
                              (:require-macros ~@(-> specs canonicalize-specs decorate-specs)))
                           {:merge true :line 1 :column 1})
                         identity opts)))
+      'use
+      (fn self
+        ([repl-env env form]
+         (self repl-env env form nil))
+        ([repl-env env [_ & specs :as form] opts]
+         (let [is-self-require? (self-require? specs)
+               [target-ns restore-ns]
+               (if-not is-self-require?
+                 [ana/*cljs-ns* nil]
+                 ['cljs.user ana/*cljs-ns*])]
+           (evaluate-form repl-env env "<cljs repl>"
+                          (with-meta
+                            `(~'ns ~target-ns
+                               (:use ~@(-> specs canonicalize-specs decorate-specs)))
+                            {:merge true :line 1 :column 1})
+                          identity opts)
+           (when is-self-require?
+             (set! ana/*cljs-ns* restore-ns)))))
+      'use-macros
+      (fn self
+        ([repl-env env form]
+         (self repl-env env form nil))
+        ([repl-env env [_ & specs :as form] opts]
+         (evaluate-form repl-env env "<cljs repl>"
+                        (with-meta
+                          `(~'ns ~ana/*cljs-ns*
+                             (:use-macros ~@(-> specs canonicalize-specs decorate-specs)))
+                          {:merge true :line 1 :column 1})
+                        identity opts)))
       'import
       (fn self
         ([repl-env env form]
