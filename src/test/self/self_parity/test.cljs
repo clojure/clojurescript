@@ -164,8 +164,7 @@
        'cljs.pprint
        'cljs.env.macros
        'cljs.analyzer.macros
-       'cljs.compiler.macros
-       'clojure.template}
+       'cljs.compiler.macros}
      #{'goog.object
        'goog.string
        'goog.string.StringBuffer
@@ -173,7 +172,8 @@
        'cljs.core
        'cljs.env
        'cljs.pprint
-       'cljs.tools.reader}) name))
+       'cljs.tools.reader
+       'clojure.walk}) name))
 
 ;; An atom to keep track of things we've already loaded
 (def loaded (atom #{}))
