@@ -102,7 +102,8 @@ invokes the fn you provide, enabling arbitrary stubbing and mocking.
 
 Returns a collection of syms naming the vars instrumented."
   ([]
-   `(instrument '[~@(s/speced-vars)]))
+   `(instrument '[~@(#?(:clj  s/speced-vars
+                        :cljs cljs.spec$macros/speced-vars))]))
   ([xs]
    `(instrument ~xs nil))
   ([sym-or-syms opts]
