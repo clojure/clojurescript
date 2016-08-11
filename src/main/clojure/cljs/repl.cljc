@@ -1200,6 +1200,19 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     require-macros {:arglists ([& args])
                     :doc "Similar to the require REPL special function but
     only for macros."}
+    use {:arglists ([& args])
+         :doc "Like require, but referring vars specified by the mandatory
+  :only option.
+   
+  Example:
+   
+  The following would load the library clojure.set while referring
+  the intersection var.
+   
+  (use '[clojure.set :only [intersection]])"}
+    use-macros {:arglists ([& args])
+                :doc "Similar to the use REPL special function but
+    only for macros."}
     import {:arglists ([& import-symbols-or-lists])
             :doc "import-list => (closure-namespace constructor-name-symbols*)
 
