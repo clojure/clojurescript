@@ -223,7 +223,7 @@
   See also - coll-of, every-kv
 "
   [pred & {:keys [into kind count max-count min-count distinct gen-max gen-into gen] :as opts}]
-  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res &env (:kind opts))))]
+  (let [nopts (-> opts (dissoc :gen) (assoc :cljs.spec/kind-form `'~(res &env (:kind opts))))]
     `(cljs.spec/every-impl '~pred ~pred ~nopts ~gen)))
 
 (defmacro every-kv
@@ -234,7 +234,7 @@
   See also - map-of"
 
   [kpred vpred & opts]
-  `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (nth v# 0)) :into {} ~@opts))
+  `(every (tuple ~kpred ~vpred) :cljs.spec/kfn (fn [i# v#] (nth v# 0)) :into {} ~@opts))
 
 (defmacro coll-of
   "Returns a spec for a collection of items satisfying pred. Unlike
@@ -248,7 +248,7 @@
 
   See also - every, map-of"
   [pred & opts]
-  `(every ~pred ::conform-all true ~@opts))
+  `(every ~pred :cljs.spec/conform-all true ~@opts))
 
 (defmacro map-of
   "Returns a spec for a map whose keys satisfy kpred and vals satisfy
@@ -261,7 +261,7 @@
 
   See also - every-kv"
   [kpred vpred & opts]
-  `(every-kv ~kpred ~vpred ::conform-all true :kind map? ~@opts))
+  `(every-kv ~kpred ~vpred :cljs.spec/conform-all true :kind map? ~@opts))
 
 (defmacro *
   "Returns a regex op that matches zero or more values matching
@@ -415,13 +415,13 @@
   {:i1 42, :m {:a 1, :c 2, :d 4}, :i2 99}"
   [& kspecs]
   `(let [mspec# (keys ~@kspecs)]
-     (with-gen (cljs.spec/& (* (cat ::k keyword? ::v cljs.core/any?)) ::kvs->map mspec#)
-       (fn [] (gen/fmap (fn [m#] (apply concat m#)) (gen mspec#))))))
+     (cljs.spec/with-gen (cljs.spec/& (* (cat :cljs.spec/k keyword? :cljs.spec/v cljs.core/any?)) :cljs.spec/kvs->map mspec#)
+       (fn [] (gen/fmap (fn [m#] (apply concat m#)) (cljs.spec/gen mspec#))))))
 
 (defmacro nilable
   "returns a spec that accepts nil and values satisfiying pred"
   [pred]
-  `(and (or ::nil nil? ::pred ~pred) (conformer second)))
+  `(and (or :cljs.spec/nil nil? :cljs.spec/pred ~pred) (conformer second)))
 
 (defmacro inst-in
   "Returns a spec that validates insts in the range from start
