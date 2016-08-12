@@ -1805,12 +1805,15 @@
 
 (defn check-use-macros-inferring-missing
   [{:keys [name uses use-macros] :as ast} env]
-  (let [missing-uses         (when (and *analyze-deps* (seq uses))
-                               (missing-uses uses env))
+  (let [missing-uses        (when (and *analyze-deps* (seq uses))
+                              (missing-uses uses env))
+        maybe-macros        (apply dissoc uses (keys missing-uses))
         remove-missing-uses #(apply dissoc % (keys missing-uses))
         ast' (-> ast
-               (update-in [:use-macros] merge
-                 (check-use-macros use-macros missing-uses env))
+               (update-in [:use-macros]
+                 #(-> %
+                   (merge (check-use-macros use-macros missing-uses env))
+                   (merge (inferred-use-macros maybe-macros env))))
                (update-in [:uses] remove-missing-uses))]
     (swap! env/*compiler*
       #(-> %
