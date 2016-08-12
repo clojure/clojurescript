@@ -1809,6 +1809,8 @@
                (update-in [:uses] remove-missing-uses)
                (update-in [:rename-macros] merge missing-rename-macros)
                (update-in [:renames] remove-missing-renames))]
+    ;; we also need to side-effect the compilation environment
+    ;; the returned AST isn't actually used directly
     (swap! env/*compiler*
       #(-> %
         (update-in [::namespaces name :use-macros] merge (:use-macros ast'))
