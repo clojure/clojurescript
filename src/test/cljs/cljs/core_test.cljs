@@ -3225,6 +3225,11 @@
   (is (= "d"        (get-in {:a "data"} [:a 0] :not-found)))
   (is (= :not-found (get-in {:a "data"} [:a 4] :not-found))))
 
+(deftest test-cljs-1739
+  (is (= (-> {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7 :h 8 :i 9}
+           rest rest rest rest rest rest rest rest rest)
+         ())))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

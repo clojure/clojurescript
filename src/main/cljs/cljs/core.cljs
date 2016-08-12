@@ -7032,7 +7032,8 @@ reduces them without incurring seq initialization"
                  (if-let [node-seq (.inode-seq node)]
                    (NodeSeq. nil nodes (+ j 2) node-seq nil)
                    (recur (+ j 2)))
-                 (recur (+ j 2)))))))
+                 (recur (+ j 2))))
+             ())))
        (NodeSeq. nil nodes i s nil))))
 
 (deftype ArrayNodeSeq [meta nodes i s ^:mutable __hash]
