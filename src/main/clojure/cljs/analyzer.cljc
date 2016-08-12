@@ -1757,22 +1757,28 @@
         the-ns #?(:clj (find-ns lib) :cljs (find-macros-ns lib))]
     (or (nil? the-ns) (nil? (.findInternedVar ^clojure.lang.Namespace the-ns sym)))))
 
-(defn missing-uses [uses env]
+;; returns (s/map-of symbol? symbol?)
+(defn missing-uses
+  [uses env]
   (let [cenv @env/*compiler*]
     (into {} (filter (fn [[sym lib]] (missing-use? lib sym cenv)) uses))))
 
-(defn missing-renames [renames]
+;; returns (s/map-of symbol? qualified-symbol?)
+(defn missing-renames [renames env]
   (let [cenv @env/*compiler*]
     (into {} (filter (fn [[_ qualified-sym]] (missing-rename? qualified-sym cenv)) renames))))
 
+;; returns (s/map-of symbol? symbol?)
 (defn missing-use-macros [use-macros env]
   (let [cenv @env/*compiler*]
     (into {} (filter (fn [[sym lib]] (missing-use-macro? lib sym)) use-macros))))
 
+;; returns (s/map-of symbol? symbol?)
 (defn inferred-use-macros [use-macros env]
   (let [cenv @env/*compiler*]
     (into {} (filter (fn [[sym lib]] (not (missing-use-macro? lib sym))) use-macros))))
 
+;; returns (s/map-of symbol? symbol?)
 (defn inferred-rename-macros [rename-macros env]
   (into {} (filter (fn [[_ qualified-sym]] (not (missing-rename-macro? qualified-sym))) rename-macros)))
 
@@ -1798,23 +1804,31 @@
      (inferred-use-macros missing-uses env))))
 
 (defn check-use-macros-inferring-missing
-  [ast name use-macros missing-uses env]
-  (let [remove-missing-uses   #(apply dissoc % (keys missing-uses))
-        missing-renames       (missing-renames (:renames ast))
-        missing-rename-macros (inferred-rename-macros missing-renames env)
-        remove-missing-renames #(apply dissoc % (keys missing-renames))
+  [{:keys [name uses use-macros] :as ast} env]
+  (let [missing-uses         (when (and *analyze-deps* (seq uses))
+                               (missing-uses uses env))
+        remove-missing-uses #(apply dissoc % (keys missing-uses))
         ast' (-> ast
                (update-in [:use-macros] merge
                  (check-use-macros use-macros missing-uses env))
-               (update-in [:uses] remove-missing-uses)
-               (update-in [:rename-macros] merge missing-rename-macros)
-               (update-in [:renames] remove-missing-renames))]
-    ;; we also need to side-effect the compilation environment
-    ;; the returned AST isn't actually used directly
+               (update-in [:uses] remove-missing-uses))]
     (swap! env/*compiler*
       #(-> %
         (update-in [::namespaces name :use-macros] merge (:use-macros ast'))
-        (update-in [::namespaces name :uses] remove-missing-uses)
+        (update-in [::namespaces name :uses] remove-missing-uses)))
+    ast'))
+
+(defn check-rename-macros-inferring-missing
+  [{:keys [name renames] :as ast} env]
+  (let [missing-renames        (when (and *analyze-deps* (seq renames))
+                                 (missing-renames (:renames ast) env))
+        missing-rename-macros  (inferred-rename-macros missing-renames env)
+        remove-missing-renames #(apply dissoc % (keys missing-renames))
+        ast' (-> ast
+               (update-in [:rename-macros] merge missing-rename-macros)
+               (update-in [:renames] remove-missing-renames))]
+    (swap! env/*compiler*
+      #(-> %
         (update-in [::namespaces name :rename-macros] merge (:rename-macros ast'))
         (update-in [::namespaces name :renames] remove-missing-renames)))
     ast'))
@@ -2773,35 +2787,38 @@
        (let [{:keys [name deps uses require-macros use-macros reload reloads]} ast]
          (when (and *analyze-deps* (seq deps))
            (analyze-deps name deps env (dissoc opts :macros-ns)))
-         (let [missing (when (and *analyze-deps* (seq uses))
-                         (missing-uses uses env))]
-           (if *load-macros*
-             (do
-               (load-core)
-               (doseq [nsym (vals use-macros)]
-                 (let [k (or (:use-macros reload)
-                           (get-in reloads [:use-macros nsym])
-                           (and (= nsym name) *reload-macros* :reload))]
-                   (if k
-                     (locking load-mutex
-                       (clojure.core/require nsym k))
-                     (locking load-mutex
-                       (clojure.core/require nsym)))
-                   (intern-macros nsym k)))
-               (doseq [nsym (vals require-macros)]
-                 (let [k (or (:require-macros reload)
-                           (get-in reloads [:require-macros nsym])
-                           (and (= nsym name) *reload-macros* :reload))]
-                   (if k
-                     (locking load-mutex
-                       (clojure.core/require nsym k))
-                     (locking load-mutex
-                       (clojure.core/require nsym)))
-                   (intern-macros nsym k)))
-               (check-use-macros-inferring-missing ast name use-macros missing env))
-             (do
-               (check-uses missing env)
-               ast))))
+         (if *load-macros*
+           (do
+             (load-core)
+             (doseq [nsym (vals use-macros)]
+               (let [k (or (:use-macros reload)
+                         (get-in reloads [:use-macros nsym])
+                         (and (= nsym name) *reload-macros* :reload))]
+                 (if k
+                   (locking load-mutex
+                     (clojure.core/require nsym k))
+                   (locking load-mutex
+                     (clojure.core/require nsym)))
+                 (intern-macros nsym k)))
+             (doseq [nsym (vals require-macros)]
+               (let [k (or (:require-macros reload)
+                         (get-in reloads [:require-macros nsym])
+                         (and (= nsym name) *reload-macros* :reload))]
+                 (if k
+                   (locking load-mutex
+                     (clojure.core/require nsym k))
+                   (locking load-mutex
+                     (clojure.core/require nsym)))
+                 (intern-macros nsym k)))
+             (-> ast
+               (check-use-macros-inferring-missing env)
+               (check-rename-macros-inferring-missing env)))
+           (do
+             (check-uses
+               (when (and *analyze-deps* (seq uses))
+                 (missing-uses uses env))
+               env)
+             ast)))
        ast)))
 
 (def ^:dynamic *passes* nil)
