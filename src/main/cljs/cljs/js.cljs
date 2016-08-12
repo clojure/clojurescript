@@ -476,7 +476,9 @@
                                          (if (:error res)
                                            (cb res)
                                            (try
-                                             (let [ast' (ana/check-use-macros-inferring-missing rewritten-ast (:name ast) use-macros missing env)]
+                                             (let [ast' (-> rewritten-ast 
+                                                          (ana/check-use-macros-inferring-missing env)
+                                                          (ana/check-rename-macros-inferring-missing env))]
                                                (cb {:value ast'}))
                                              (catch :default cause
                                                (cb (wrap-error
