@@ -1824,11 +1824,15 @@
 (defn check-rename-macros-inferring-missing
   [{:keys [name renames] :as ast} env]
   (let [missing-renames        (when (and *analyze-deps* (seq renames))
-                                 (missing-renames (:renames ast) env))
+                                 (missing-renames renames env))
+        maybe-macros           (apply dissoc renames (keys missing-renames))
         missing-rename-macros  (inferred-rename-macros missing-renames env)
         remove-missing-renames #(apply dissoc % (keys missing-renames))
         ast' (-> ast
-               (update-in [:rename-macros] merge missing-rename-macros)
+               (update-in [:rename-macros]
+                 #(-> %
+                   (merge missing-rename-macros)
+                   (merge (inferred-rename-macros maybe-macros env))))
                (update-in [:renames] remove-missing-renames))]
     (swap! env/*compiler*
       #(-> %
