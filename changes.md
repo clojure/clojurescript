@@ -1,3 +1,56 @@
+## 1.9.198
+
+### Enhancements
+* CLJS-1508: Extend ns form to support :rename option
+* CLJS-1507: Implicit macro loading: macro var inference in :refer
+* CLJS-1692: Autoalias clojure.* to exisiting cljs.* namespaces if
+possible
+* CLJS-1350: Compiler support for browser REPL
+* CLJS-1729: Support `use` special function in REPLs
+* CLJS-1730: Support `refer-clojure` special function in REPLs
+
+### Changes
+* CLJS-1515: Self-host: Allow :file key in cljs.js/*load-fn*
+* add toString implementation to Vars
+* Use a js array to create collections in cljs.reader
+* CLJS-1640: Use the unshaded version of the closure compiler
+* add :browser-repl to list of known opts
+* add browser REPL preload
+* parity with Clojure 1.9.0-alpha10 clojure.spec
+* bump to tools.reader 1.0.0-beta3
+
+### Fixes
+* CLJS-1733: Macro inference issue for macros & runtime vars with the same name
+* CLJS-1735: Self-host: cljs.spec speced-vars instance
+* CLJS-1736: cljs.spec.test: checkable-syms* called with 0-arity
+* CLJS-1708: Self-host: [iu]nstrument-1 needs to qualify [iu]nstrument-1*
+* CLJS-1707: Self-host: with-instrument-disabled needs to qualify *instrument-enabled*
+* CLJS-1732: Add docstrings for new use and use-macros REPL specials
+* CLJS-1720: Qualify symbols and namespaced keywords in spec macros
+* CLJS-1731: Self-host: do_template problem with script/test-self-parity
+* CLJS-1556: Invalid code emit for obj literal
+* CLJS-1607: bug with `specify!` in JS prototypes with `static-fns` true
+* CLJS-1591 avoid analyzing invoke arguments multiple times
+* CLJS-1638: :elide-asserts disables atom validators in :advanced
+* CLJS-1721: 3-arity get-in fails on types which do not implement ILookup
+* CLJS-1728: Update doc for ns for new :rename capability
+* CLJS-1727: Regression when evaluating non-sequential forms at the REPL
+* CLJS-1490: Watch macro files in cljs.build.api/watch
+* CLJS-1719: Port destructuring namespaced keys and symbols
+* CLJS-1653: cljs.spec: keys* causes exception
+* CLJS-1700: Support clojure.* aliasing when not in vector
+* CLJS-1717 remove map from equiv-map
+* CLJS-1716: No longer possible to use same alias for :require-macros and :require
+* Use keyword options in js->clj 1-arg impl
+* Add support for regex in transit for compiler analysis cache
+* Escape non-Latin1 characters before base64 encoding the source-map string
+* CLJS-1698: cljs.spec: every res call needs &env
+* CLJS-1695: Self-host: Port cljs / clojure namespace aliasing
+* CLJS-1697: doc on inferred macros fails
+* CLJS-1699: Update docstring for ns
+* CLJS-1694: Self-host: Port macro var inference in :refer
+
+
 ## 1.9.89
 
 ### Enhancements
