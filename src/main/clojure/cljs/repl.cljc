@@ -1060,7 +1060,7 @@
       - :rename specifies a map from referred var names to different
         symbols (and can be used to prevent clashes)
       - prefix lists are not supported
-    * The only option for :refer-clojure is :exclude
+    * The only options for :refer-clojure are :exclude and :rename
     * :import is available for importing Google Closure classes
       - ClojureScript types and records should be brought in with :use
         or :require :refer, not :import ed
