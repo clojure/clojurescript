@@ -449,7 +449,7 @@
   predicates. Unlike 'and', merge can generate maps satisfying the
   union of the predicates."
   [& pred-forms]
-  `(cljs.spec/merge-spec-impl '~(mapv res pred-forms) ~(vec pred-forms) nil))
+  `(cljs.spec/merge-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
 
 (defmacro exercise-fn
   "exercises the fn named by sym (a symbol) by applying it to
