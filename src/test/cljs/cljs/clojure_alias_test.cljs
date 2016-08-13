@@ -9,3 +9,7 @@
 (deftest aliases-test
   (is? (= spec? clojure.spec/spec? cljs.spec/spec?))
   (is? (foo number?)))
+
+(deftest use-macros
+  (s/def ::even? (s/and number? even?))
+  (is? (s/valid? ::even? 2)))

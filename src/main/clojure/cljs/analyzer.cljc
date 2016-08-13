@@ -690,13 +690,19 @@
       (fn [env prefix suffix]
         (throw (error env (str "Unable to resolve var: " suffix " in this context")))))))
 
-(defn resolve-ns-alias [env name]
-  (let [sym (symbol name)]
-    (get (:requires (:ns env)) sym sym)))
+(defn resolve-ns-alias
+  ([env name]
+   (resolve-ns-alias env name (symbol name)))
+  ([env name default]
+   (let [sym (symbol name)]
+     (get (:requires (:ns env)) sym default))))
 
-(defn resolve-macro-ns-alias [env name]
-  (let [sym (symbol name)]
-    (get (:require-macros (:ns env)) sym sym)))
+(defn resolve-macro-ns-alias
+  ([env name]
+   (resolve-macro-ns-alias env name (symbol name)))
+  ([env name default]
+   (let [sym (symbol name)]
+     (get (:require-macros (:ns env)) sym default))))
 
 (defn confirm-ns
   "Given env, an analysis environment, and ns-sym, a symbol identifying a
@@ -2574,8 +2580,8 @@
 
 (defn get-expander-ns [env ^String nstr]
   ;; first check for clojure.* -> cljs.* cases
-  (let [res  (or (resolve-macro-ns-alias env (symbol nstr))
-                 (resolve-ns-alias env (symbol nstr)))
+  (let [res  (or (resolve-macro-ns-alias env nstr nil)
+                 (resolve-ns-alias env nstr nil))
         nstr (if res (str res) nstr)]
     (cond
      #?@(:clj  [(= "clojure.core" nstr) (find-ns 'cljs.core)]
