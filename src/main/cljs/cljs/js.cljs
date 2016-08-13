@@ -449,49 +449,51 @@
                      {:keys [uses requires require-macros use-macros reload reloads]} rewritten-ast]
                  (if (:error res)
                    (cb res)
-                   (let [missing (when (and (:*analyze-deps* bound-vars) (seq uses))
-                                   (ana/missing-uses uses env))]
-                     (if (:*load-macros* bound-vars)
-                       (do
-                         (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
-                         (load-macros bound-vars :use-macros use-macros reload reloads opts
-                           (fn [res]
-                             (if (:error res)
-                               (cb res)
-                               (do
-                                 (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
-                                 (load-macros bound-vars :require-macros require-macros reloads reloads opts
-                                   (fn [res]
-                                     (if (:error res)
-                                       (cb res)
-                                       (let [res (try
-                                                   (when (seq use-macros)
-                                                     (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
-                                                     (ana/check-use-macros use-macros env))
-                                                   {:value nil}
-                                                   (catch :default cause
-                                                     (wrap-error
-                                                       (ana/error ana-env
-                                                         (str "Could not parse ns form " (:name ast)) cause))))]
-                                         (if (:error res)
-                                           (cb res)
-                                           (try
-                                             (let [ast' (-> rewritten-ast 
+                   (if (:*load-macros* bound-vars)
+                     (do
+                       (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
+                       (load-macros bound-vars :use-macros use-macros reload reloads opts
+                         (fn [res]
+                           (if (:error res)
+                             (cb res)
+                             (do
+                               (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
+                               (load-macros bound-vars :require-macros require-macros reloads reloads opts
+                                 (fn [res]
+                                   (if (:error res)
+                                     (cb res)
+                                     (let [res (try
+                                                 (when (seq use-macros)
+                                                   (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
+                                                   (ana/check-use-macros use-macros env))
+                                                 {:value nil}
+                                                 (catch :default cause
+                                                   (wrap-error
+                                                     (ana/error ana-env
+                                                       (str "Could not parse ns form " (:name ast)) cause))))]
+                                       (if (:error res)
+                                         (cb res)
+                                         (try
+                                           (binding [ana/*analyze-deps* (:*analyze-deps* bound-vars)]
+                                             (let [ast' (-> rewritten-ast
                                                           (ana/check-use-macros-inferring-missing env)
                                                           (ana/check-rename-macros-inferring-missing env))]
-                                               (cb {:value ast'}))
-                                             (catch :default cause
-                                               (cb (wrap-error
-                                                     (ana/error ana-env
-                                                       (str "Could not parse ns form " (:name ast)) cause)))))))))))))))
-                       (try
-                         (when (:verbose opts) (debug-prn "Checking uses"))
-                         (ana/check-uses missing env)
-                         (cb {:value ast})
-                         (catch :default cause
-                           (cb (wrap-error
-                                 (ana/error ana-env
-                                   (str "Could not parse ns form " (:name ast)) cause))))))))))]
+                                               (cb {:value ast'})))
+                                           (catch :default cause
+                                             (cb (wrap-error
+                                                   (ana/error ana-env
+                                                     (str "Could not parse ns form " (:name ast)) cause)))))))))))))))
+                     (try
+                       (when (:verbose opts) (debug-prn "Checking uses"))
+                       (ana/check-uses
+                         (when (and (:*analyze-deps* bound-vars) (seq uses))
+                           (ana/missing-uses uses env))
+                         env)
+                       (cb {:value ast})
+                       (catch :default cause
+                         (cb (wrap-error
+                               (ana/error ana-env
+                                 (str "Could not parse ns form " (:name ast)) cause)))))))))]
        (cond
          (and load (seq (:deps ast)))
          (load-deps bound-vars ana-env (:name ast) (:deps ast) (dissoc opts :macros-ns)
