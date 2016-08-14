@@ -3235,6 +3235,12 @@
     (let [m (zipmap (range i) (range i))]
       (is (= () (last (take (inc i) (iterate rest m))))))))
 
+(def cljs.core-test/foo-1274 42)
+
+(deftest test-cljs-1274
+  (is (= foo-1274 42))
+  (is (= cljs.core-test/foo-1274 42)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

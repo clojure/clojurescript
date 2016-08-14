@@ -1137,7 +1137,7 @@
   (when (symbol? x) x))
 
 (defmethod parse 'def
-  [op env form name _]
+  [op env form _ _]
   (let [pfn (fn
               ([_ sym] {:sym sym})
               ([_ sym init] {:sym sym :init init})
@@ -1150,13 +1150,21 @@
         dynamic (-> sym meta :dynamic)
         ns-name (-> env :ns :name)
         locals (:locals env)
-        clash-ns (symbol (str ns-name "." sym))]
+        clash-ns (symbol (str ns-name "." sym))
+        sym-ns   (namespace sym)
+        sym      (cond
+                   (and sym-ns (not #?(:clj  (= (symbol sym-ns) ns-name)
+                                       :cljs (symbol-identical? (symbol sym-ns) ns-name))))
+                   (throw (error env (str "Can't def ns-qualified name in namespace " sym-ns)))
+
+                   (some? sym-ns)
+                   (symbol (name sym))
+
+                   :else sym)]
     (when (get-in @env/*compiler* [::namespaces clash-ns])
       (warning :ns-var-clash env
         {:ns (symbol (str ns-name "." sym))
          :var (symbol (str ns-name) (str sym))}))
-    (when (namespace sym)
-      (throw (error env "Can't def ns-qualified name")))
     (when (:const (resolve-var (dissoc env :locals) sym))
       (throw (error env "Can't redefine a constant")))
     (when-let [doc (:doc args)]

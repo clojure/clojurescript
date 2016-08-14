@@ -441,3 +441,11 @@
                              (a/analyze test-env
                                '(ns foo.core
                                   (:require [clojure.set :rename {intersection foo}]))))))))
+
+
+(deftest test-cljs-1274
+  (let [test-env (assoc-in (a/empty-env) [:ns :name] 'cljs.user)]
+    (binding [a/*cljs-ns* a/*cljs-ns*]
+      (is (thrown-with-msg? Exception #"Can't def ns-qualified name in namespace foo.core"
+            (a/analyze test-env '(def foo.core/foo 43))))
+      (is (a/analyze test-env '(def cljs.user/foo 43))))))
