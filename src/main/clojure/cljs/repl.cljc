@@ -1224,6 +1224,16 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     use-macros {:arglists ([& args])
                 :doc "Similar to the use REPL special function but
     only for macros."}
+    refer-clojure {:arglists ([& args])
+                   :doc "Refers to all the public vars of `cljs.core`, subject to
+  filters.
+  Filters can include at most one each of:
+
+  :exclude list-of-symbols
+  :rename map-of-fromsymbol-tosymbol
+
+  Filters can be used to select a subset, via exclusion, or to provide a mapping
+  to a symbol different from the var's name, in order to prevent clashes."}
     import {:arglists ([& import-symbols-or-lists])
             :doc "import-list => (closure-namespace constructor-name-symbols*)
 
