@@ -371,7 +371,7 @@
 
 (deftest test-load-and-invoke-macros
   (async done
-    (let [l (latch 11 done)]
+    (let [l (latch 12 done)]
       ;; Normal require macros
       (let [st (cljs/empty-state)]
         (cljs/eval-str st
@@ -590,6 +590,28 @@
               (fn [{:keys [error value]}]
                 (is (nil? error))
                 (is (= 320 value))
+                (inc! l))))))
+      (let [st (cljs/empty-state)]
+        ;; Rely on implicit macro loading (ns loads its own macros), with an alias
+        ;; CLJS-1657
+        (cljs/eval-str st
+          "(ns cljs.user (:require [foo.core :as foo]))"
+          nil
+          {:eval node-eval
+           :load (fn [{:keys [macros]} cb]
+                   (if macros
+                     (cb {:lang :clj :source "(ns foo.core) (defmacro add [a b] `(+ ~a ~b))"})
+                     (cb {:lang :clj :source "(ns foo.core (:require-macros foo.core))"})))}
+          (fn [{:keys [value error]}]
+            (is (nil? error))
+            (cljs/eval-str st
+              "(foo/add 300 500)"
+              nil
+              {:eval    node-eval
+               :context :expr}
+              (fn [{:keys [error value]}]
+                (is (nil? error))
+                (is (= 800 value))
                 (inc! l)))))))))
 
 (deftest test-eval-str-with-require-macros

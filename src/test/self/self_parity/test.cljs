@@ -230,23 +230,15 @@
      :verbose false}
     cb))
 
-(defn prime-analysis-cache-for-implicit-macro-loading
-  "Supports priming analysis cache in order to work around
-  http://dev.clojure.org/jira/browse/CLJS-1657"
-  [st ns-sym]
-  (swap! st assoc-in [::cljs.analyzer/namespaces ns-sym :require-macros] {ns-sym ns-sym}))
-
 ;; Test suite runner
 
-(defn run-tests 
+(defn run-tests
   "Runs the tests."
   []
   ;; Ideally we'd just load test_runner.cljs, but a few namespace tests
   ;; don't yet run in bootstrapped ClojureScript. These are commented
   ;; out below and can be uncommented as fixed.
   (let [st (cljs/empty-state)]
-    (prime-analysis-cache-for-implicit-macro-loading st 'cljs.spec)
-    (prime-analysis-cache-for-implicit-macro-loading st 'cljs.spec.impl.gen)
     (eval-form st 'cljs.user
       '(ns parity.core
          (:require [cljs.test :refer-macros [run-tests]]
