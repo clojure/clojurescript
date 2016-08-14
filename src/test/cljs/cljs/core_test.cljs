@@ -3230,6 +3230,11 @@
            rest rest rest rest rest rest rest rest rest)
          ())))
 
+(deftest test-cljs-1744
+  (doseq [i (range 1 64)]
+    (let [m (zipmap (range i) (range i))]
+      (is (= () (last (take (inc i) (iterate rest m))))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

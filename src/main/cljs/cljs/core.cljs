@@ -6999,9 +6999,10 @@ reduces them without incurring seq initialization"
       (first s)))
 
   (-rest [coll]
-    (if (nil? s)
-      (create-inode-seq nodes (+ i 2) nil)
-      (create-inode-seq nodes i (next s))))
+    (let [ret (if (nil? s)
+                (create-inode-seq nodes (+ i 2) nil)
+                (create-inode-seq nodes i (next s)))]
+      (if-not (nil? ret) ret ())))
 
   ISeqable
   (-seq [this] this)
@@ -7032,8 +7033,7 @@ reduces them without incurring seq initialization"
                  (if-let [node-seq (.inode-seq node)]
                    (NodeSeq. nil nodes (+ j 2) node-seq nil)
                    (recur (+ j 2)))
-                 (recur (+ j 2))))
-             ())))
+                 (recur (+ j 2)))))))
        (NodeSeq. nil nodes i s nil))))
 
 (deftype ArrayNodeSeq [meta nodes i s ^:mutable __hash]
@@ -7066,7 +7066,9 @@ reduces them without incurring seq initialization"
   ISequential
   ISeq
   (-first [coll] (first s))
-  (-rest  [coll] (create-array-node-seq nil nodes i (next s)))
+  (-rest  [coll]
+    (let [ret (create-array-node-seq nil nodes i (next s))]
+      (if-not (nil? ret) ret ())))
 
   ISeqable
   (-seq [this] this)
