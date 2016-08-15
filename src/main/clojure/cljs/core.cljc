@@ -682,7 +682,7 @@
                                                 bk (val (first bes))
                                                 local (if #?(:clj  (core/instance? clojure.lang.Named bb)
                                                              :cljs (cljs.core/implements? INamed bb))
-                                                          (symbol nil (name bb))
+                                                          (with-meta (symbol nil (name bb)) (meta bb))
                                                         bb)
                                                 bv (if (contains? defaults local)
                                                      (core/list 'cljs.core/get gmap bk (defaults local))
