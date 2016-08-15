@@ -343,6 +343,8 @@
                      (dissoc :ns))]
          (require bound-vars dep opts'
            (fn [res]
+             (when (:verbose opts)
+               (debug-prn "Loading result: " res))
              (if-not (:error res)
                (load-deps bound-vars ana-env lib (next deps) opts cb)
                (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
