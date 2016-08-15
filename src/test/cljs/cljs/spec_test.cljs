@@ -57,6 +57,14 @@
   (let [xs [42 11 13 15 {:a 1 :b 2 :c 3} 1 2 3 42 43 44 11]]
     (is (= xs (s/unform s2 (s/conform s2 xs))))))
 
+(deftest test-assert
+  (s/def ::even-number (s/and number? even?))
+  ;; assertions off by default
+  (is (= 42 (s/assert ::even-number 42)))
+  (s/check-asserts true)
+  (is (= 42 (s/assert ::even-number 42)))
+  (is (thrown? js/Error (s/assert ::even-number 5))))
+
 ;; Copied from Clojure spec tests
 
 (def even-count? #(even? (count %)))

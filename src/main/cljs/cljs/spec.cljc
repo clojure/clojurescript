@@ -7,9 +7,10 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.spec
-  (:refer-clojure :exclude [+ * and or cat def keys merge resolve])
+  (:refer-clojure :exclude [+ * and or cat def keys merge resolve assert])
   (:require [cljs.core :as c]
             [cljs.analyzer :as ana]
+            [cljs.env :as env]
             [cljs.analyzer.api :refer [resolve]]
             [clojure.walk :as walk]
             [cljs.spec.impl.gen :as gen]
@@ -44,7 +45,7 @@
   [env s]
   (if (namespace s)
     (let [v (resolve env s)]
-      (assert v (str "Unable to resolve: " s))
+      (clojure.core/assert v (str "Unable to resolve: " s))
       (->sym v))
     (symbol (str ana/*cljs-ns*) (str s))))
 
@@ -138,7 +139,7 @@
   (let [unk #(-> % name keyword)
         req-keys (filterv keyword? (flatten req))
         req-un-specs (filterv keyword? (flatten req-un))
-        _ (assert (every? #(clojure.core/and (keyword? %) (namespace %)) (concat req-keys req-un-specs opt opt-un))
+        _ (clojure.core/assert (every? #(clojure.core/and (keyword? %) (namespace %)) (concat req-keys req-un-specs opt opt-un))
                   "all keys must be namespace-qualified keywords")
         req-specs (into req-keys req-un-specs)
         req-keys (into req-keys (map unk req-un-specs))
@@ -180,7 +181,7 @@
         keys (mapv first pairs)
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
-    (assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "spec/or expects k1 p1 k2 p2..., where ks are keywords")
+    (clojure.core/assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "spec/or expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/or-spec-impl ~keys '~pf ~pred-forms nil)))
 
 (defmacro and
@@ -295,7 +296,7 @@
         keys (mapv first pairs)
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
-    (assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "alt expects k1 p1 k2 p2..., where ks are keywords")
+    (clojure.core/assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "alt expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/alt-impl ~keys ~pred-forms '~pf)))
 
 (defmacro cat
@@ -311,7 +312,7 @@
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
     ;;(prn key-pred-forms)
-    (assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "cat expects k1 p1 k2 p2..., where ks are keywords")
+    (clojure.core/assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "cat expects k1 p1 k2 p2..., where ks are keywords")
     `(cljs.spec/cat-impl ~keys ~pred-forms '~pf)))
 
 (defmacro &
@@ -355,7 +356,7 @@
   where each element conforms to the corresponding pred. Each element
   will be referred to in paths using its ordinal."
   [& preds]
-  (assert (not (empty? preds)))
+  (clojure.core/assert (not (empty? preds)))
   `(cljs.spec/tuple-impl '~(mapv #(res &env %) preds) ~(vec preds)))
 
 (def ^:private _speced_vars (atom #{}))
@@ -467,3 +468,25 @@
           f#     ~sym]
       (for [args# (gen/sample (gen (:args fspec#)) ~n)]
         [args# (apply f# args#)]))))
+
+(defmacro ^:private init-compile-asserts []
+  (let [compile-asserts (not (-> env/*compiler* deref :options :elide-asserts))]
+    compile-asserts))
+
+(defmacro assert
+  "spec-checking assert expression. Returns x if x is valid? according
+to spec, else throws an error with explain-data plus ::failure of
+:assertion-failed.
+Can be disabled at either compile time or runtime:
+If *compile-asserts* is false at compile time, compiles to x. Defaults
+to the negation value of the ':elide-asserts' compiler option, or true if
+not set.
+If (check-asserts?) is false at runtime, always returns x. Defaults to
+value of 'cljs.spec/*runtime-asserts*', or false if not set. You can
+toggle check-asserts? with (check-asserts bool)."
+  [spec x]
+  `(if cljs.spec/*compile-asserts*
+     (if cljs.spec/*runtime-asserts*
+       (cljs.spec/assert* ~spec ~x)
+       ~x)
+    ~x))

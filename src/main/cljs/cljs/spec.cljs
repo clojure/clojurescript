@@ -1208,3 +1208,42 @@
            (.lessThan val end))
 
     :else false))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; assert ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defonce
+  ^{:dynamic true
+    :doc "If true, compiler will enable spec asserts, which are then
+subject to runtime control via check-asserts? If false, compiler
+will eliminate all spec assert overhead. See 'assert'.
+Initially set to the negation of the ':elide-asserts' compiler option.
+Defaults to true."}
+  *compile-asserts*
+  (s/init-compile-asserts))
+
+(defonce ^{:private true
+           :dynamic true}
+  *runtime-asserts*
+  false)
+
+(defn ^boolean check-asserts?
+  "Returns the value set by check-asserts."
+  []
+  *runtime-asserts*)
+
+(defn check-asserts
+  "Enable or disable spec asserts that have been compiled
+with '*compile-asserts*' true.  See 'assert'.
+Initially set to boolean value of cljs.spec/*runtime-asserts*.
+Defaults to false."
+  [^boolean flag]
+  (set! *runtime-asserts* flag))
+
+(defn assert*
+  "Do not call this directly, use 'assert'."
+  [spec x]
+  (if (valid? spec x)
+    x
+    (let [ed (c/merge (assoc (explain-data* spec [] [] [] x)
+                        ::failure :assertion-failed))]
+      (throw (js/Error.
+              (str "Spec assertion failed\n" (with-out-str (explain-out ed))))))))
