@@ -9,6 +9,7 @@
 (ns cljs.spec.test
   (:require-macros [cljs.spec.test :as m :refer [with-instrument-disabled]])
   (:require
+    [goog.object :as gobj]
     [goog.userAgent.product :as product]
     [clojure.string :as string]
     [cljs.stacktrace :as st]
@@ -103,14 +104,16 @@
                                   (str "Call to " v " did not conform to spec:\n" (with-out-str (s/explain-out ed)))
                                   ed)))
                        conformed)))]
-    (fn
-      [& args]
-      (if *instrument-enabled*
-        (with-instrument-disabled
-          (when (:args fn-spec) (conform! v :args (:args fn-spec) args args))
-          (binding [*instrument-enabled* true]
-            (apply f args)))
-        (apply f args)))))
+    (doto
+      (fn
+        [& args]
+        (if *instrument-enabled*
+          (with-instrument-disabled
+            (when (:args fn-spec) (conform! v :args (:args fn-spec) args args))
+            (binding [*instrument-enabled* true]
+              (apply f args)))
+          (apply f args)))
+      (gobj/extend f))))
 
 (defn- no-fspec
   [v spec]
