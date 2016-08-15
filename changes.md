@@ -1,3 +1,10 @@
+## 1.9.216
+
+### Fixes
+* CLJS-1749: Missing `cljs.spec.impl.gen/double*`
+* CLJS-1747: Port `clojure.spec/assert` over to ClojureScript
+* fix CLJS-1663 multi-arity fn instrument regression
+
 ## 1.9.211
 
 ### Fixes
