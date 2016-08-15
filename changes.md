@@ -1,3 +1,18 @@
+## 1.9.211
+
+### Fixes
+* CLJS-1746: Log the result of loading a dependency
+* CLJS-1657: Self-host: Implicit macro loading with alias
+* CLJS-1742: Add docstring for new refer-clojure REPL special
+* CLJS-1274: Allow assignment to namespace-qualified names in current namespace
+* CLJS-1744: rest produces nil for larger maps
+* CLJS-1740: Self-host: Need to port more of CLJS-1733
+* CLJS-1741: Add :rename to :refer-clojure in ns docstring
+* CLJS-1737: Self-host: clojure alias implicit macro use regression
+* invalid cljs.spec/merge res call
+* CLJS-1739: seq on map literal with 9 elements leads to rest producing nil
+* CLJS-1738: Self-host: need to update call to check-use-macros-inferring-missing
+
 ## 1.9.198
 
 ### Enhancements
