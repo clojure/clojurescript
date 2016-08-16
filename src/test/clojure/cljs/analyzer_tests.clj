@@ -591,3 +591,13 @@
           nsb (str (a/gen-user-ns b))]
       (is (not= (.substring nsa (- (count nsa) 7)) (.substring nsb (- (count nsb) 7))))
       (is (= (.substring nsa 0 (- (count nsa) 7)) (.substring nsb 0 (- (count nsb) 7)))))))
+
+(deftest test-cljs-1536
+  (let [parsed (e/with-compiler-env test-cenv
+                 (a/analyze (assoc test-env :def-emits-var true)
+                   '(def x 1)))]
+    (is (some? (:var-ast parsed))))
+  (let [parsed (e/with-compiler-env test-cenv
+                 (a/analyze (assoc test-env :def-emits-var true)
+                   '(let [y 1] (def y 2))))]
+    (is (some? (-> parsed :expr :ret :var-ast)))))

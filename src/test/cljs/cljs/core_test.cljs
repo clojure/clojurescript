@@ -1135,6 +1135,20 @@
   (is (= (nth "012"  3 :not-found) :not-found))
   (is (= (nth "012" -1 :not-found) :not-found)))
 
+(let [foo-1536 2]
+  (def foo-1536 foo-1536))
+
+(let [foo-1536-2 1]
+  (defn foo-1536-2 []
+    foo-1536-2))
+
+(deftest test-cljs-1536
+  (is (= foo-1536 2))
+  (is (= (foo-1536-2) 1))
+  ;; these two lines generate a `:redef-in-file` warning, which is caused by `cljs.test/is`
+  (is (= ((let [z 1] (defn z [] z))) 1))
+  (is (= (let [w 1] ((defn w [] w))) 1)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

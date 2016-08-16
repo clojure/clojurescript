@@ -1022,7 +1022,10 @@
 
 (defn- var-ast
   [env sym]
-  (let [var (resolve-var env sym (confirm-var-exists-throw))
+  ;; we need to dissoc locals for the `(let [x 1] (def x x))` case, because we
+  ;; want the var's AST and `resolve-var` will check locals first. - António Monteiro
+  (let [env (dissoc env :locals)
+        var (resolve-var env sym (confirm-var-exists-throw))
         expr-env (assoc env :context :expr)]
     (if-let [var-ns (:ns var)]
       {:var (analyze expr-env sym)
@@ -1384,9 +1387,10 @@
 
 (defmethod parse 'fn*
   [op env [_ & args :as form] name _]
-  (let [[name meths] (if (symbol? (first args))
-                       [(first args) (next args)]
-                       [name (seq args)])
+  (let [named-fn?    (symbol? (first args))
+        [name meths] (if named-fn?
+                         [(first args) (next args)]
+                         [name (seq args)])
         ;; turn (fn [] ...) into (fn ([]...))
         meths        (if (vector? (first meths))
                        (list meths)
@@ -1397,7 +1401,7 @@
                        (update-in env [:fn-scope] conj name-var)
                        env)
         locals       (if (and (not (nil? locals))
-                              (not (nil? name)))
+                              named-fn?)
                        (assoc locals name name-var)
                        locals)
         form-meta    (meta form)
@@ -1413,7 +1417,7 @@
         methods      (map #(disallowing-ns* (analyze-fn-method menv locals % type)) meths)
         mfa          (apply max (map :max-fixed-arity methods))
         variadic     (boolean (some :variadic methods))
-        locals       (if-not (nil? name)
+        locals       (if named-fn?
                        (update-in locals [name] assoc
                          ;; TODO: can we simplify? - David
                          :fn-var true
