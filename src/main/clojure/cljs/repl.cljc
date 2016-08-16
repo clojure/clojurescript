@@ -460,9 +460,8 @@
                               :gen-col 0
                               :gen-line 0})]
                (let [js (comp/emit-str
-                          (ana/no-warn
-                            (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
-                              (wrap form) nil opts)))
+                          (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
+                            (wrap form) nil opts))
                      t (System/currentTimeMillis)]
                  (str js
                    "\n//# sourceURL=repl-" t ".js"
@@ -480,13 +479,12 @@
                              (with-out-str (pr form)))]})
                        "UTF-8")))))
              (comp/emit-str
-               (ana/no-warn
-                 (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
-                   (wrap form) nil opts))))]
+               (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
+                 (wrap form) nil opts)))]
        ;; NOTE: means macros which expand to ns aren't supported for now
        ;; when eval'ing individual forms at the REPL - David
        (when (and (sequential? form) (= 'ns (first form)))
-         (let [ast (ana/analyze env form nil opts)]
+         (let [ast (ana/no-warn (ana/analyze env form nil opts))]
            (load-dependencies repl-env
              (into (vals (:requires ast))
                (distinct (vals (:uses ast))))
