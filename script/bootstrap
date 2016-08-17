@@ -9,6 +9,7 @@ TRANSIT_RELEASE="0.8.285"
 GCLOSURE_LIB_RELEASE="0.0-20160609-f42b4a24"
 RHINO_RELEASE="1_7R5"
 TREADER_RELEASE="1.0.0-beta3"
+TEST_CHECK_RELEASE="0.9.0"
 
 # check dependencies
 curl -V >/dev/null  || { echo "cURL is missing, or not on your system path."; exit 1; }
@@ -104,5 +105,11 @@ curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/tools.reader/$TR
 
 echo "Moving tools.reader.jar to lib/tools.reader.jar"
 mv tools.reader-$TREADER_RELEASE.jar lib/tools.reader-$TREADER_RELEASE.jar
+
+echo "Fetching test.check $TEST_CHECK_RELEASE ..."
+curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/test.check/$TEST_CHECK_RELEASE/test.check-$TEST_CHECK_RELEASE.jar || { echo "Download failed."; exit 1; }
+
+echo "Moving test.check.jar to lib/test.check.jar"
+mv test.check-$TEST_CHECK_RELEASE.jar lib/test.check.jar
 
 echo "[Bootstrap Completed]"
