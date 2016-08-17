@@ -124,6 +124,7 @@ gen-builtins
        nil? (return nil)
        false? (return false)
        true? (return true)
+       boolean? (boolean)
        zero? (return 0)
        ;rational? (one-of [(large-integer) (ratio)])
        coll? (one-of [(map simple simple)

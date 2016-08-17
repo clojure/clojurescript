@@ -1,6 +1,8 @@
 (ns cljs.spec-test
   (:require [cljs.spec :as s]
-            [cljs.test :as test :refer-macros [deftest is are run-tests]]))
+            [cljs.test :as test :refer-macros [deftest is are run-tests]]
+            [cljs.spec.impl.gen :as gen]
+            [clojure.test.check.generators]))
 
 (s/def ::even? (s/and number? even?))
 (s/def ::odd? (s/and number? odd?))
@@ -64,6 +66,9 @@
   (s/check-asserts true)
   (is (= 42 (s/assert ::even-number 42)))
   (is (thrown? js/Error (s/assert ::even-number 5))))
+
+(deftest test-cljs-1754
+  (is (boolean? (gen/generate (s/gen boolean?)))))
 
 ;; Copied from Clojure spec tests
 
