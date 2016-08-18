@@ -70,6 +70,12 @@
 (deftest test-cljs-1754
   (is (boolean? (gen/generate (s/gen boolean?)))))
 
+(s/fdef cljs-1757-x :args (s/cat ::first number?) :ret #(= % 2))
+(defn cljs-1757-x [b] 2)
+
+(deftest test-cljs-1757
+  (is (s/exercise-fn `cljs-1757-x)))
+
 ;; Copied from Clojure spec tests
 
 (def even-count? #(even? (count %)))

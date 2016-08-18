@@ -462,12 +462,16 @@
   ([sym n]
    `(exercise-fn ~sym ~n nil))
   ([sym n fspec]
-   `(let [fspec# ~(if-not fspec
-                    `(cljs.spec/get-spec '~(:name (resolve &env sym)))
-                    fspec)
-          f#     ~sym]
-      (for [args# (gen/sample (gen (:args fspec#)) ~n)]
-        [args# (apply f# args#)]))))
+   (let [sym (cond-> sym
+               (clojure.core/and (sequential? sym)
+                                 (= (first sym) 'quote))
+               second)]
+     `(let [fspec# ~(if-not fspec
+                      `(cljs.spec/get-spec '~(:name (resolve &env sym)))
+                      fspec)
+            f#     ~sym]
+        (for [args# (gen/sample (gen (:args fspec#)) ~n)]
+          [args# (apply f# args#)])))))
 
 (defmacro ^:private init-compile-asserts []
   (let [compile-asserts (not (-> env/*compiler* deref :options :elide-asserts))]
