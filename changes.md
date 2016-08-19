@@ -1,3 +1,14 @@
+## 1.9.225
+
+### Fixes
+* CLJS-1759: Errors writing transit analysis cache if parallel build
+* CLJS-1760: Self-host: test-cljs-1757 failing in test-self-parity
+* CLJS-1751: port fix lost type hints in map destructuring
+* CLJS-1756: Add test.check JAR to the bootstrap script
+* CLJS-1757: cljs.spec/exercise-fn doesn't work when passed a quoted symbol
+* CLJS-1754: Add boolean? generator
+* fix REPL regression which removed warnings
+
 ## 1.9.216
 
 ### Fixes
