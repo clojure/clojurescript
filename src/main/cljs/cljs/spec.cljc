@@ -470,7 +470,7 @@
                       `(cljs.spec/get-spec '~(:name (resolve &env sym)))
                       fspec)
             f#     ~sym]
-        (for [args# (gen/sample (gen (:args fspec#)) ~n)]
+        (for [args# (gen/sample (cljs.spec/gen (:args fspec#)) ~n)]
           [args# (apply f# args#)])))))
 
 (defmacro ^:private init-compile-asserts []
