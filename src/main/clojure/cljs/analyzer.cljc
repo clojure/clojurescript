@@ -3111,6 +3111,9 @@
             (util/changed? src cache)))))))
 
 #?(:clj
+   (def transit-write-mutex (Object.)))
+
+#?(:clj
    (defn write-analysis-cache
      ([ns cache-file]
        (write-analysis-cache ns cache-file nil))
@@ -3124,10 +3127,11 @@
                      (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"))
                        (pr-str analysis)))
           "json" (when-let [{:keys [writer write]} @transit]
-                   (write
-                     (writer (FileOutputStream. cache-file) :json
-                       transit-write-opts)
-                     analysis))))
+                   (locking transit-write-mutex
+                     (write
+                       (writer (FileOutputStream. cache-file) :json
+                         transit-write-opts)
+                       analysis)))))
       (when src
         (.setLastModified ^File cache-file (util/last-modified src))))))
 
