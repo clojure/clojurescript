@@ -58,41 +58,48 @@
 
 #?(:clj
    (def transit-read-opts
-     (util/compile-if (import '[com.cognitect.transit ReadHandler])
-       {:handlers
-        {"cljs/js"
-         (reify com.cognitect.transit.ReadHandler
-           (fromRep [_ v] (JSValue. v)))
-         "cljs/regex"
-          (reify com.cognitect.transit.ReadHandler
-           (fromRep [_ v] (Pattern/compile v)))}})))
+     (try
+       (require '[cognitect.transit])
+       (when-some [ns (find-ns 'cognitect.transit)]
+         (let [read-handler     @(ns-resolve ns 'read-handler)
+               read-handler-map @(ns-resolve ns 'read-handler-map)]
+           {:handlers
+             (read-handler-map
+               {"cljs/js"    (read-handler (fn [_ v] (JSValue. v)))
+                "cljs/regex" (read-handler (fn [_ v] (Pattern/compile v)))})}))
+       (catch Throwable t
+         nil))))
 
 #?(:clj
    (def transit-write-opts
-     (util/compile-if (import '[com.cognitect.transit WriteHandler])
-       {:handlers
-        {JSValue
-         (reify com.cognitect.transit.WriteHandler
-           (tag [_ _] "cljs/js")
-           (rep [_ js] (.val ^JSValue js))
-           (stringRep [_ _] nil))
-        Pattern
-         (reify com.cognitect.transit.WriteHandler
-           (tag [_ _] "cljs/regex")
-           (rep [_ pat] (.pattern ^Pattern pat))
-           (stringRep [_ _] nil))}})))
+     (try
+       (require '[cognitect.transit])
+       (when-some [ns (find-ns 'cognitect.transit)]
+         (let [write-handler     @(ns-resolve ns 'write-handler)
+               write-handler-map @(ns-resolve ns 'write-handler-map)]
+           {:handlers
+             (write-handler-map
+               {JSValue
+                (write-handler
+                  (fn [_ _] "cljs/js")
+                  (fn [_ js] (.val ^JSValue js)))
+                Pattern
+                (write-handler
+                  (fn [_ _] "cljs/regex")
+                  (fn [_ pat] (.pattern ^Pattern pat)))})}))
+       (catch Throwable t
+         nil))))
 
 #?(:clj
    (def transit
      (delay
        (try
          (require '[cognitect.transit])
-         (let [ns (find-ns 'cognitect.transit)]
-           (when ns
-             {:writer @(ns-resolve ns 'writer)
-              :reader @(ns-resolve ns 'reader)
-              :write  @(ns-resolve ns 'write)
-              :read   @(ns-resolve ns 'read)}))
+         (when-some [ns (find-ns 'cognitect.transit)]
+           {:writer @(ns-resolve ns 'writer)
+            :reader @(ns-resolve ns 'reader)
+            :write  @(ns-resolve ns 'write)
+            :read   @(ns-resolve ns 'read)})
          (catch Throwable t
            nil)))))
 
@@ -3114,9 +3121,6 @@
             (util/changed? src cache)))))))
 
 #?(:clj
-   (def transit-write-mutex (Object.)))
-
-#?(:clj
    (defn write-analysis-cache
      ([ns cache-file]
        (write-analysis-cache ns cache-file nil))
@@ -3130,11 +3134,10 @@
                      (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"))
                        (pr-str analysis)))
           "json" (when-let [{:keys [writer write]} @transit]
-                   (locking transit-write-mutex
-                     (write
-                       (writer (FileOutputStream. cache-file) :json
-                         transit-write-opts)
-                       analysis)))))
+                   (write
+                     (writer (FileOutputStream. cache-file) :json
+                       transit-write-opts)
+                     analysis))))
       (when src
         (.setLastModified ^File cache-file (util/last-modified src))))))
 
