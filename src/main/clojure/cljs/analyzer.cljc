@@ -1892,7 +1892,7 @@
     (fn [s [k & filters]]
       (if (= k :refer-clojure)
         (do
-          (when (seq s)
+          (when (seq (:excludes s))
             (throw (error env "Only one :refer-clojure form is allowed per namespace definition")))
           (let [valid-kws #{:exclude :rename}
                 xs
@@ -1924,7 +1924,8 @@
                     :else ret))]
             (merge-with into s xs)))
         s))
-    {} args))
+    {:excludes #{}
+     :renames {}} args))
 
 (defn use->require [env [lib & filters :as spec]]
   (when-not (and (symbol? lib) (odd? (count spec)))

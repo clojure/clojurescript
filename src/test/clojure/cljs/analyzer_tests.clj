@@ -449,3 +449,10 @@
       (is (thrown-with-msg? Exception #"Can't def ns-qualified name in namespace foo.core"
             (a/analyze test-env '(def foo.core/foo 43))))
       (is (a/analyze test-env '(def cljs.user/foo 43))))))
+
+(deftest test-cljs-1763
+  (let [parsed (a/parse-ns-excludes {} '())]
+    (is (= parsed
+           {:excludes #{}
+            :renames {}}))
+    (is (set? (:excludes parsed)))))
