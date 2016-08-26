@@ -1,3 +1,8 @@
+## 1.9.227
+
+### Fixes
+* CLJS-1763: Defining a var that clashes with `cljs.core` throws a compiler error instead of warning
+
 ## 1.9.225
 
 ### Fixes
