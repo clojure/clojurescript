@@ -3,7 +3,7 @@
 set -e
 
 CLOJURE_RELEASE="1.9.0-alpha7"
-CLOSURE_RELEASE="20160315"
+CLOSURE_RELEASE="20160911"
 DJSON_RELEASE="0.2.6"
 TRANSIT_RELEASE="0.8.285"
 GCLOSURE_LIB_RELEASE="0.0-20160609-f42b4a24"
@@ -98,7 +98,7 @@ echo "Cleaning up Rhino archive..."
 rm rhino$RHINO_RELEASE.zip
 
 echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
-cp closure/compiler/compiler.jar lib
+cp closure/compiler/closure-compiler-v$CLOSURE_RELEASE.jar lib
 
 echo "Fetching tools.reader $TREADER_RELEASE ..."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/tools.reader/$TREADER_RELEASE/tools.reader-$TREADER_RELEASE.jar || { echo "Download failed."; exit 1; }
