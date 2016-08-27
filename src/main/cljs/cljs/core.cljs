@@ -7115,12 +7115,12 @@ reduces them without incurring seq initialization"
 (deftype HashMapIter [nil-val root-iter ^:mutable seen]
   Object
   (hasNext [_]
-    (and ^boolean seen ^boolean (.hasNext root-iter)))
+    (or (not seen) ^boolean (.hasNext root-iter)))
   (next [_]
     (if-not ^boolean seen
       (do
         (set! seen true)
-        nil-val)
+        [nil nil-val])
       (.next root-iter)))
   (remove [_] (js/Error. "Unsupported operation")))
 
@@ -7151,7 +7151,7 @@ reduces them without incurring seq initialization"
 
   IIterable
   (-iterator [coll]
-    (let [root-iter (if ^boolean root (-iterator root) nil-iter)]
+    (let [root-iter (if ^boolean root (-iterator root) (nil-iter))]
       (if has-nil?
         (HashMapIter. nil-val root-iter false)
         root-iter)))
