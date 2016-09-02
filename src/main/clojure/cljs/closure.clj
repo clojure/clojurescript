@@ -263,8 +263,7 @@
       (let [key (name key)]
         (cond
           (string? val) (.setDefineToStringLiteral compiler-options key val)
-          (integer? val) (.setDefineToIntegerLiteral compiler-options key val)
-          (float? val) (.setDefineToDoubleLiteral compiler-options key val)
+          (number? val) (.setDefineToDoubleLiteral compiler-options key val)
           (or (true? val)
               (false? val)) (.setDefineToBooleanLiteral compiler-options key val)
           :else (println "value for" key "must be string, int, float, or bool"))))
