@@ -854,9 +854,11 @@
       :else
       (let [ns (cond
                  (get-in namespaces [ns :macros sym]) ns
-                 (core-name? env sym) 'cljs.core)]
+                 (core-name? env sym) #?(:clj  'cljs.core
+                                         :cljs CLJS_CORE_MACROS_SYM))]
         (when ns
-          (get-in namespaces [ns :macros sym]))))))
+          #?(:clj  (get-in namespaces [ns :macros sym])
+             :cljs (get-in namespaces [ns :defs sym])))))))
 
 (declare analyze analyze-symbol analyze-seq)
 
