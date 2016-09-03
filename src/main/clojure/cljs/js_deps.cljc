@@ -133,7 +133,18 @@ case."
                          (fn [index' provide]
                            (if (:foreign dep)
                              (update-in index' [provide] merge dep)
-                             (assoc index' provide dep)))
+                             ;; when building the dependency index, we need to
+                             ;; avoid overwriting a CLJS dep with a CLJC dep of
+                             ;; the same namespace - António Monteiro
+                             (let [file (when-let [f (or (:source-file dep) (:file dep))]
+                                          (.toString f))
+                                   ext (when file
+                                         (.substring file (inc (.lastIndexOf file "."))))]
+                               (update-in index' [provide]
+                                 (fn [d]
+                                   (if (and (= ext "cljc") (some? d))
+                                     d
+                                     dep))))))
                          index provides)
                        index)]
         (if (:foreign dep)
