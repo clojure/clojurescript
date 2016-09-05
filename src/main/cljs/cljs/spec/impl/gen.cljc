@@ -34,7 +34,7 @@
   generator that delegates to that, but delays
   creation until used."
   [& body]
-  `(cljs.spec.impl.gen/delay-impl (c/delay ~@body)))
+  `(delay-impl (c/delay ~@body)))
 
 (defmacro ^:skip-wiki lazy-combinator
   "Implementation macro, do not call directly."

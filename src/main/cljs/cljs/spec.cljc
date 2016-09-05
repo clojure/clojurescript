@@ -57,7 +57,7 @@
   (let [k    (if (symbol? k) (ns-qualify &env k) k)
         form (res &env spec-form)]
     (swap! registry-ref assoc k form)
-    `(cljs.spec/def-impl '~k '~form ~spec-form)))
+    `(def-impl '~k '~form ~spec-form)))
 
 (defmacro spec
   "Takes a single predicate form, e.g. can be the name of a predicate,
@@ -76,7 +76,7 @@
   Returns a spec."
   [form & {:keys [gen]}]
   (when form
-    `(cljs.spec/spec-impl '~(res &env form) ~form ~gen nil)))
+    `(spec-impl '~(res &env form) ~form ~gen nil)))
 
 (defmacro multi-spec
   "Takes the name of a spec/predicate-returning multimethod and a
@@ -105,7 +105,7 @@
   though those values are not evident in the spec.
 "
   [mm retag]
-  `(cljs.spec/multi-spec-impl '~(res &env mm) (var ~mm) ~retag))
+  `(multi-spec-impl '~(res &env mm) (var ~mm) ~retag))
 
 (defmacro keys
   "Creates and returns a map validating spec. :req and :opt are both
@@ -160,12 +160,12 @@
         pred-exprs (into pred-exprs (parse-req req-un unk))
         pred-forms (walk/postwalk #(res &env %) pred-exprs)]
     ;; `(map-spec-impl ~req-keys '~req ~opt '~pred-forms ~pred-exprs ~gen)
-    `(cljs.spec/map-spec-impl {:req '~req :opt '~opt :req-un '~req-un :opt-un '~opt-un
-                               :req-keys '~req-keys :req-specs '~req-specs
-                               :opt-keys '~opt-keys :opt-specs '~opt-specs
-                               :pred-forms '~pred-forms
-                               :pred-exprs ~pred-exprs
-                               :gfn ~gen})))
+    `(map-spec-impl {:req '~req :opt '~opt :req-un '~req-un :opt-un '~opt-un
+                     :req-keys '~req-keys :req-specs '~req-specs
+                     :opt-keys '~opt-keys :opt-specs '~opt-specs
+                     :pred-forms '~pred-forms
+                     :pred-exprs ~pred-exprs
+                     :gfn ~gen})))
 
 (defmacro or
   "Takes key+pred pairs, e.g.
@@ -182,7 +182,7 @@
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
     (clojure.core/assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "spec/or expects k1 p1 k2 p2..., where ks are keywords")
-    `(cljs.spec/or-spec-impl ~keys '~pf ~pred-forms nil)))
+    `(or-spec-impl ~keys '~pf ~pred-forms nil)))
 
 (defmacro and
   "Takes predicate/spec-forms, e.g.
@@ -192,7 +192,7 @@
   Returns a spec that returns the conformed value. Successive
   conformed values propagate through rest of predicates."
   [& pred-forms]
-  `(cljs.spec/and-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
+  `(and-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
 
 (defmacro every
   "takes a pred and validates collection elements against that pred.
@@ -224,8 +224,8 @@
   See also - coll-of, every-kv
 "
   [pred & {:keys [into kind count max-count min-count distinct gen-max gen-into gen] :as opts}]
-  (let [nopts (-> opts (dissoc :gen) (assoc :cljs.spec/kind-form `'~(res &env (:kind opts))))]
-    `(cljs.spec/every-impl '~pred ~pred ~nopts ~gen)))
+  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res &env (:kind opts))))]
+    `(every-impl '~pred ~pred ~nopts ~gen)))
 
 (defmacro every-kv
   "like 'every' but takes separate key and val preds and works on associative collections.
@@ -235,7 +235,7 @@
   See also - map-of"
 
   [kpred vpred & opts]
-  `(every (tuple ~kpred ~vpred) :cljs.spec/kfn (fn [i# v#] (nth v# 0)) :into {} ~@opts))
+  `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (nth v# 0)) :into {} ~@opts))
 
 (defmacro coll-of
   "Returns a spec for a collection of items satisfying pred. Unlike
@@ -249,7 +249,7 @@
 
   See also - every, map-of"
   [pred & opts]
-  `(every ~pred :cljs.spec/conform-all true ~@opts))
+  `(every ~pred ::conform-all true ~@opts))
 
 (defmacro map-of
   "Returns a spec for a map whose keys satisfy kpred and vals satisfy
@@ -262,25 +262,25 @@
 
   See also - every-kv"
   [kpred vpred & opts]
-  `(every-kv ~kpred ~vpred :cljs.spec/conform-all true :kind map? ~@opts))
+  `(every-kv ~kpred ~vpred ::conform-all true :kind map? ~@opts))
 
 (defmacro *
   "Returns a regex op that matches zero or more values matching
   pred. Produces a vector of matches iff there is at least one match"
   [pred-form]
-  `(cljs.spec/rep-impl '~(res &env pred-form) ~pred-form))
+  `(rep-impl '~(res &env pred-form) ~pred-form))
 
 (defmacro +
   "Returns a regex op that matches one or more values matching
   pred. Produces a vector of matches"
   [pred-form]
-  `(cljs.spec/rep+impl '~(res &env pred-form) ~pred-form))
+  `(rep+impl '~(res &env pred-form) ~pred-form))
 
 (defmacro ?
   "Returns a regex op that matches zero or one value matching
   pred. Produces a single value (not a collection) if matched."
   [pred-form]
-  `(cljs.spec/maybe-impl ~pred-form '~pred-form))
+  `(maybe-impl ~pred-form '~pred-form))
 
 (defmacro alt
   "Takes key+pred pairs, e.g.
@@ -297,7 +297,7 @@
         pred-forms (mapv second pairs)
         pf (mapv #(res &env %) pred-forms)]
     (clojure.core/assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "alt expects k1 p1 k2 p2..., where ks are keywords")
-    `(cljs.spec/alt-impl ~keys ~pred-forms '~pf)))
+    `(alt-impl ~keys ~pred-forms '~pf)))
 
 (defmacro cat
   "Takes key+pred pairs, e.g.
@@ -313,7 +313,7 @@
         pf (mapv #(res &env %) pred-forms)]
     ;;(prn key-pred-forms)
     (clojure.core/assert (clojure.core/and (even? (count key-pred-forms)) (every? keyword? keys)) "cat expects k1 p1 k2 p2..., where ks are keywords")
-    `(cljs.spec/cat-impl ~keys ~pred-forms '~pf)))
+    `(cat-impl ~keys ~pred-forms '~pf)))
 
 (defmacro &
   "takes a regex op re, and predicates. Returns a regex-op that consumes
@@ -321,15 +321,15 @@
   conjunction of the predicates, and any conforming they might perform."
   [re & preds]
   (let [pv (vec preds)]
-    `(cljs.spec/amp-impl ~re ~pv '~(mapv #(res &env %) pv))))
+    `(amp-impl ~re ~pv '~(mapv #(res &env %) pv))))
 
 (defmacro conformer
   "takes a predicate function with the semantics of conform i.e. it should return either a
   (possibly converted) value or :cljs.spec/invalid, and returns a
   spec that uses it as a predicate/conformer. Optionally takes a
   second fn that does unform of result of first"
-  ([f] `(cljs.spec/spec-impl '~f ~f nil true))
-  ([f unf] `(cljs.spec/spec-impl '~f ~f nil true ~unf)))
+  ([f] `(spec-impl '~f ~f nil true))
+  ([f unf] `(spec-impl '~f ~f nil true ~unf)))
 
 (defmacro fspec
   "takes :args :ret and (optional) :fn kwargs whose values are preds
@@ -347,7 +347,7 @@
   that returns a test.check generator."
   [& {:keys [args ret fn gen]}]
   (let [env &env]
-    `(cljs.spec/fspec-impl (spec ~args) '~(res env args)
+    `(fspec-impl (spec ~args) '~(res env args)
                            (spec ~ret) '~(res env ret)
                            (spec ~fn) '~(res env fn) ~gen)))
 
@@ -357,7 +357,7 @@
   will be referred to in paths using its ordinal."
   [& preds]
   (clojure.core/assert (not (empty? preds)))
-  `(cljs.spec/tuple-impl '~(mapv #(res &env %) preds) ~(vec preds)))
+  `(tuple-impl '~(mapv #(res &env %) preds) ~(vec preds)))
 
 (def ^:private _speced_vars (atom #{}))
 
@@ -398,7 +398,7 @@
     :ret symbol?)"
   [fn-sym & specs]
   (swap! _speced_vars conj (ns-qualify &env fn-sym))
-  `(cljs.spec/def ~fn-sym (cljs.spec/fspec ~@specs)))
+  `(cljs.spec/def ~fn-sym (fspec ~@specs)))
 
 (defmacro keys*
   "takes the same arguments as spec/keys and returns a regex op that matches sequences of key/values,
@@ -416,13 +416,13 @@
   {:i1 42, :m {:a 1, :c 2, :d 4}, :i2 99}"
   [& kspecs]
   `(let [mspec# (keys ~@kspecs)]
-     (cljs.spec/with-gen (cljs.spec/& (* (cat :cljs.spec/k keyword? :cljs.spec/v cljs.core/any?)) :cljs.spec/kvs->map mspec#)
-       (fn [] (gen/fmap (fn [m#] (apply concat m#)) (cljs.spec/gen mspec#))))))
+     (with-gen (& (* (cat ::k keyword? ::v cljs.core/any?)) ::kvs->map mspec#)
+       (fn [] (gen/fmap (fn [m#] (apply concat m#)) (gen mspec#))))))
 
 (defmacro nilable
   "returns a spec that accepts nil and values satisfiying pred"
   [pred]
-  `(and (or :cljs.spec/nil nil? :cljs.spec/pred ~pred) (conformer second)))
+  `(and (or ::nil nil? ::pred ~pred) (conformer second)))
 
 (defmacro inst-in
   "Returns a spec that validates insts in the range from start
@@ -431,7 +431,7 @@
   `(let [st# (cljs.core/inst-ms ~start)
          et# (cljs.core/inst-ms ~end)
          mkdate# (fn [d#] (js/Date. d#))]
-     (spec (and cljs.core/inst? #(cljs.spec/inst-in-range? ~start ~end %))
+     (spec (and cljs.core/inst? #(inst-in-range? ~start ~end %))
        :gen (fn []
               (gen/fmap mkdate#
                 (gen/large-integer* {:min st# :max et#}))))))
@@ -440,7 +440,7 @@
   "Returns a spec that validates longs in the range from start
   (inclusive) to end (exclusive)."
   [start end]
-  `(spec (and c/int? #(cljs.spec/int-in-range? ~start ~end %))
+  `(spec (and c/int? #(int-in-range? ~start ~end %))
      :gen #(gen/large-integer* {:min ~start :max (dec ~end)})))
 
 (defmacro merge
@@ -450,7 +450,7 @@
   predicates. Unlike 'and', merge can generate maps satisfying the
   union of the predicates."
   [& pred-forms]
-  `(cljs.spec/merge-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
+  `(merge-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
 
 (defmacro exercise-fn
   "exercises the fn named by sym (a symbol) by applying it to
@@ -467,10 +467,10 @@
                                  (= (first sym) 'quote))
                second)]
      `(let [fspec# ~(if-not fspec
-                      `(cljs.spec/get-spec '~(:name (resolve &env sym)))
+                      `(get-spec '~(:name (resolve &env sym)))
                       fspec)
             f#     ~sym]
-        (for [args# (gen/sample (cljs.spec/gen (:args fspec#)) ~n)]
+        (for [args# (gen/sample (gen (:args fspec#)) ~n)]
           [args# (apply f# args#)])))))
 
 (defmacro ^:private init-compile-asserts []
@@ -489,8 +489,8 @@ If (check-asserts?) is false at runtime, always returns x. Defaults to
 value of 'cljs.spec/*runtime-asserts*', or false if not set. You can
 toggle check-asserts? with (check-asserts bool)."
   [spec x]
-  `(if cljs.spec/*compile-asserts*
-     (if cljs.spec/*runtime-asserts*
-       (cljs.spec/assert* ~spec ~x)
+  `(if *compile-asserts*
+     (if *runtime-asserts*
+       (assert* ~spec ~x)
        ~x)
     ~x))

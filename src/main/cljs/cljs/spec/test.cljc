@@ -43,7 +43,7 @@ returns the set of all symbols naming vars in those nses."
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
   [& body]
-  `(binding [cljs.spec.test/*instrument-enabled* nil]
+  `(binding [*instrument-enabled* nil]
      ~@body))
 
 (defmacro instrument-1
@@ -51,7 +51,7 @@ returns the set of all symbols naming vars in those nses."
   (let [v (ana-api/resolve &env s)]
     (when v
       (swap! instrumented-vars conj (:name v))
-      `(let [checked# (cljs.spec.test/instrument-1* ~s (var ~s) ~opts)]
+      `(let [checked# (instrument-1* ~s (var ~s) ~opts)]
          (when checked# (set! ~s checked#))
          '~(:name v)))))
 
@@ -60,7 +60,7 @@ returns the set of all symbols naming vars in those nses."
   (let [v (ana-api/resolve &env s)]
     (when v
       (swap! instrumented-vars disj (:name v))
-      `(let [raw# (cljs.spec.test/unstrument-1* ~s (var ~s))]
+      `(let [raw# (unstrument-1* ~s (var ~s))]
          (when raw# (set! ~s raw#))
          '~(:name v)))))
 

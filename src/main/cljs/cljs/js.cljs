@@ -39,11 +39,25 @@
                    0 (- (count file) 5))]
     (symbol (demunge lib-name))))
 
+(defn- drop-macros-suffix
+  [ns-name]
+  (if (string/ends-with? ns-name "$macros")
+    (subs ns-name 0 (- (count ns-name) 7))
+    ns-name))
+
+(defn- elide-macros-suffix
+  [sym]
+  (symbol (drop-macros-suffix (namespace sym)) (name sym)))
+
 (defn- resolve-symbol
   [sym]
   (if (string/starts-with? (str sym) ".")
     sym
-    (ana/resolve-symbol sym)))
+    (elide-macros-suffix (ana/resolve-symbol sym))))
+
+(defn- read [eof rdr]
+  (binding [*ns* (symbol (drop-macros-suffix (str *ns*)))]
+    (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)))
 
 (defn- atom? [x]
   (instance? Atom x))
@@ -528,7 +542,7 @@
                  comp/*source-map-data* (:*sm-data* bound-vars)
                  ana/*cljs-file*        (:cljs-file opts)]
          (let [res (try
-                     {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
+                     {:value (read eof rdr)}
                      (catch :default cause
                        (wrap-error
                          (ana/error aenv
@@ -692,7 +706,7 @@
                  r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
          (let [res (try
-                     {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
+                     {:value (read eof rdr)}
                      (catch :default cause
                        (wrap-error
                          (ana/error aenv
@@ -792,7 +806,7 @@
                  comp/*source-map-data* (:*sm-data* bound-vars)
                  ana/*cljs-file*        (:cljs-file opts)]
          (let [res (try
-                     {:value (r/read {:eof eof :read-cond :allow :features #{:cljs}} rdr)}
+                     {:value (read eof rdr)}
                      (catch :default cause
                        (wrap-error
                          (ana/error aenv
