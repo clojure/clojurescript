@@ -1,3 +1,9 @@
+## 1.9.229
+
+### Fixes
+* CLJS-1772: Dependency index can incorrectly overwrite `.cljs` files with `.cljc` files if both are present
+* pass unconform along on conformer with-gen instead of warning
+
 ## 1.9.227
 
 ### Fixes
