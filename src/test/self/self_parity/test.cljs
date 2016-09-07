@@ -123,6 +123,7 @@
       (fn [source]
         (if source
           (let [source-cb-value {:lang   (filename->lang filename)
+                                 :file   filename
                                  :source source}]
             (if (or (string/ends-with? filename ".cljs")
                     (string/ends-with? filename ".cljc"))
