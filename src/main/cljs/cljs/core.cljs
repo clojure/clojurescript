@@ -3207,7 +3207,16 @@ reduces them without incurring seq initialization"
                              (if (== (alength parts) 2)
                                (Keyword. (aget parts 0) (aget parts 1) name nil)
                                (Keyword. nil (aget parts 0) name nil)))))
-  ([ns name] (Keyword. ns name (str (when ns (str ns "/")) name) nil)))
+  ([ns name]
+   (let [ns   (cond
+                (keyword? ns) (cljs.core/name ns)
+                (symbol? ns)  (cljs.core/name ns)
+                :else ns)
+         name (cond
+                (keyword? name) (cljs.core/name name)
+                (symbol? name) (cljs.core/name name)
+                :else name)]
+     (Keyword. ns name (str (when ns (str ns "/")) name) nil))))
 
 
 (deftype LazySeq [meta ^:mutable fn ^:mutable s ^:mutable __hash]

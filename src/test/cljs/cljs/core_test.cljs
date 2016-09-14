@@ -3241,6 +3241,10 @@
   (is (= foo-1274 42))
   (is (= cljs.core-test/foo-1274 42)))
 
+(deftest test-cljs-1779
+  (is (= (hash (keyword 'app "foo"))
+         (hash (keyword "app" "foo")))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
