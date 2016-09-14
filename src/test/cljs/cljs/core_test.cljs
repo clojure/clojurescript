@@ -3256,6 +3256,12 @@
                                (assoc record :d 4 :e 5)) )
            #{[:a 1] [:b 2] [:c 3] [:d 4] [:e 5]}))))
 
+(deftest test-cljs-1775
+  (is (nil? (get "foo" nil)))
+  (is (= 42 (get {nil 42} nil) 42))
+  (is (= (get #js [\h \i] 1.7 :not-found) \i))
+  (is (= (get "hi" 1.7 :not-found) \i)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

@@ -1819,7 +1819,7 @@ reduces them without incurring seq initialization"
           (aget o (int k)))
         
         (string? o)
-        (when (< k (.-length o))
+        (when (and (some? k) (< k (.-length o)))
           (aget o (int k)))
 
         (native-satisfies? ILookup o)
@@ -1834,12 +1834,12 @@ reduces them without incurring seq initialization"
 
         (array? o)
         (if (< k (.-length o))
-          (aget o k)
+          (aget o (int k))
           not-found)
-        
+
         (string? o)
         (if (< k (.-length o))
-          (aget o k)
+          (aget o (int k))
           not-found)
 
         (native-satisfies? ILookup o)
