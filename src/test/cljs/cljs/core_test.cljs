@@ -3245,6 +3245,17 @@
   (is (= (hash (keyword 'app "foo"))
          (hash (keyword "app" "foo")))))
 
+(defrecord CLJS1780 [a b c])
+
+(deftest test-cljs-1780
+  (let [record (->CLJS1780 1 2 3)]
+    (is (= (into #{} (sequence (map identity)
+                               record))
+           #{[:a 1] [:b 2] [:c 3]}))
+    (is (= (into #{} (sequence (map identity)
+                               (assoc record :d 4 :e 5)) )
+           #{[:a 1] [:b 2] [:c 3] [:d 4] [:e 5]}))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

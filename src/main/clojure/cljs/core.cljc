@@ -1778,7 +1778,10 @@
                                                 ~'__extmap)))
 
                         'IIterable
-                        `(~'-iterator [~gs] (RecordIter. 0 ~gs ~(count base-fields) [~@(map keyword base-fields)]  (-iterator ~'__extmap) ))
+                        `(~'-iterator [~gs]
+                          (RecordIter. 0 ~gs ~(count base-fields) [~@(map keyword base-fields)] (if ~'__extmap
+                                                                                                  (-iterator ~'__extmap)
+                                                                                                  (core/nil-iter))))
 
                         'IPrintWithWriter
                         `(~'-pr-writer [this# writer# opts#]
