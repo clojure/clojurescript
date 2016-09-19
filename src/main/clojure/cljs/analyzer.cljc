@@ -2230,7 +2230,19 @@
               (apply merge-with merge m
                 (map (spec-parsers k)
                   (remove #{:reload :reload-all} libs))))
-            {} (remove (fn [[r]] (= r :refer-clojure)) args))]
+            {} (remove (fn [[r]] (= r :refer-clojure)) args))
+          ;; patch `require-macros` and `use-macros` in Bootstrap for namespaces
+          ;; that require their own macros
+          #?@(:cljs [[require-macros use-macros]
+                     (map (fn [spec-map]
+                            (if (:macros-ns opts)
+                              (let [ns (symbol (subs (str name) 0 (- (count (str name)) 7)))]
+                                (reduce (fn [m [k v]]
+                                          (cond-> m
+                                            (not (symbol-identical? v ns))
+                                            (assoc k v)))
+                                  {} spec-map))
+                              spec-map)) [require-macros use-macros])])]
       (set! *cljs-ns* name)
       (let [ns-info
             {:name           name
@@ -2528,10 +2540,17 @@
         fexpr   (analyze enve f)
         argc    (count args)
         fn-var? (-> fexpr :info :fn-var)
-        kw?     (= 'cljs.core/Keyword (:tag fexpr))]
+        kw?     (= 'cljs.core/Keyword (:tag fexpr))
+        cur-ns  (-> env :ns :name)]
     (when ^boolean fn-var?
-      (let [{:keys [^boolean variadic max-fixed-arity method-params name]} (:info fexpr)]
-        (when (and (not (valid-arity? argc method-params))
+      (let [{:keys [^boolean variadic max-fixed-arity method-params name ns macro]} (:info fexpr)]
+        ;; don't warn about invalid arity when when compiling a macros namespace
+        ;; that requires itself, as that code is not meant to be executed in the
+        ;; `$macros` ns - António Monteiro
+        (when (and #?(:cljs (not (and (gstring/endsWith (str cur-ns) "$macros")
+                                      (symbol-identical? cur-ns ns)
+                                      (true? macro))))
+                   (not (valid-arity? argc method-params))
                    (or (not variadic)
                        (and variadic (< argc max-fixed-arity))))
           (warning :fn-arity env {:name name :argc argc}))))
@@ -2581,14 +2600,26 @@
           lb   (get lcls sym)]
       (if-not (nil? lb)
         (assoc ret :op :var :info lb)
-        (if-not (true? (:def-var env))
-          (let [sym-meta (meta sym)
-                info     (if-not (contains? sym-meta ::analyzed)
-                           (resolve-existing-var env sym)
-                           (resolve-var env sym))]
-            (assoc ret :op :var :info info))
-          (let [info (resolve-var env sym)]
-            (assoc ret :op :var :info info)))))))
+        (let [sym-meta (meta sym)
+              sym-ns (namespace sym)
+              cur-ns (str (-> env :ns :name))
+              ;; when compiling a macros namespace that requires itself, we need
+              ;; to resolve calls to `my-ns.core/foo` to `my-ns.core$macros/foo`
+              ;; to avoid undeclared variable warnings - António Monteiro
+              #?@(:cljs [sym (if (and sym-ns
+                                   (not= sym-ns "cljs.core")
+                                   (gstring/endsWith cur-ns "$macros")
+                                   (not (gstring/endsWith sym-ns "$macros"))
+                                   (= sym-ns (subs cur-ns 0 (- (count cur-ns) 7))))
+                               (symbol (str sym-ns "$macros") (name sym))
+                               sym)])
+              info     (if-not (contains? sym-meta ::analyzed)
+                         (resolve-existing-var env sym)
+                         (resolve-var env sym))]
+          (if-not (true? (:def-var env))
+            (assoc ret :op :var :info info)
+            (let [info (resolve-var env sym)]
+              (assoc ret :op :var :info info))))))))
 
 (defn excluded?
   #?(:cljs {:tag boolean})
