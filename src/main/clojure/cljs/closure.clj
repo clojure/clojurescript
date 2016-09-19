@@ -1807,6 +1807,7 @@
 (defn check-source-map [{:keys [output-to source-map output-dir optimizations] :as opts}]
   "When :source-map is specified in opts, "
   (when (and (contains? opts :source-map)
+             (some? (:source-map opts))
              (not (= optimizations :none)))
     (assert (and (or (contains? opts :output-to)
                      (contains? opts :modules))
