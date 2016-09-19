@@ -17,7 +17,8 @@
             [cljs.import-test]
             [cljs.ns-test.foo]
             [cljs.pprint]
-            [cljs.clojure-alias-test]))
+            [cljs.clojure-alias-test]
+            [cljs.hash-map-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -40,4 +41,5 @@
   'foo.ns-shadow-test
   'cljs.import-test
   'cljs.pprint
-  'cljs.clojure-alias-test)
+  'cljs.clojure-alias-test
+  'cljs.hash-map-test)
