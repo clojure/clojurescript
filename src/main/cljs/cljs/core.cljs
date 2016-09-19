@@ -1742,7 +1742,7 @@ reduces them without incurring seq initialization"
   ([coll n]
     (cond
       (not (number? n))
-      (throw (js/Error. "index argument to nth must be a number"))
+      (throw (js/Error. "Index argument to nth must be a number"))
 
       (nil? coll)
       coll
@@ -1751,12 +1751,14 @@ reduces them without incurring seq initialization"
       (-nth ^not-native coll n)
 
       (array? coll)
-      (when (< n (.-length coll))
-        (aget coll n))
+      (if (and (>= n 0) (< n (.-length coll)))
+        (aget coll n)
+        (throw (js/Error. "Index out of bounds")))
 
       (string? coll)
-      (when (< n (.-length coll))
-        (.charAt coll n))
+      (if (and (>= n 0) (< n (.-length coll)))
+        (.charAt coll n)
+        (throw (js/Error. "Index out of bounds")))
 
       (implements? ISeq coll)
       (linear-traversal-nth coll n)
@@ -1770,7 +1772,7 @@ reduces them without incurring seq initialization"
   ([coll n not-found]
     (cond
       (not (number? n))
-      (throw (js/Error. "index argument to nth must be a number."))
+      (throw (js/Error. "Index argument to nth must be a number."))
 
       (nil? coll)
       not-found
@@ -1779,12 +1781,12 @@ reduces them without incurring seq initialization"
       (-nth ^not-native coll n not-found)
 
       (array? coll)
-      (if (< n (.-length coll))
+      (if (and (>= n 0) (< n (.-length coll)))
         (aget coll n)
         not-found)
 
       (string? coll)
-      (if (< n (.-length coll))
+      (if (and (>= n 0) (< n (.-length coll)))
         (.charAt coll n)
         not-found)
 

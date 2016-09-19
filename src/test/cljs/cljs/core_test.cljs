@@ -3293,6 +3293,17 @@
     (is (= (foo-fn foo {:a 1 :b 2})
            {:c 3}))))
 
+(deftest test-cljs-1748
+  (is (thrown? js/Error (nth (array 0 1 2)  3)))
+  (is (thrown? js/Error (nth (array 0 1 2) -1)))
+  (is (= (nth (array 0 1 2)  3 :not-found) :not-found))
+  (is (= (nth (array 0 1 2) -1 :not-found) :not-found))
+
+  (is (thrown? js/Error (nth "012"  3)))
+  (is (thrown? js/Error (nth "012" -1)))
+  (is (= (nth "012"  3 :not-found) :not-found))
+  (is (= (nth "012" -1 :not-found) :not-found)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
