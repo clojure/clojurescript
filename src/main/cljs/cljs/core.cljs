@@ -9965,17 +9965,17 @@ reduces them without incurring seq initialization"
      false)))
 
 (defn- dominates
-  [x y prefer-table]
-  (or (prefers* x y prefer-table) (isa? x y)))
+  [x y prefer-table hierarchy]
+  (or (prefers* x y prefer-table) (isa? hierarchy x y)))
 
 (defn- find-and-cache-best-method
   [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
   (let [best-entry (reduce (fn [be [k _ :as e]]
                              (if (isa? @hierarchy dispatch-val k)
-                               (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table))
+                               (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table @hierarchy))
                                            e
                                            be)]
-                                 (when-not (dominates (first be2) k prefer-table)
+                                 (when-not (dominates (first be2) k prefer-table @hierarchy)
                                    (throw (js/Error.
                                            (str "Multiple methods in multimethod '" name
                                                 "' match dispatch value: " dispatch-val " -> " k

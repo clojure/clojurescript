@@ -243,6 +243,14 @@
 (defmulti foo2' identity)
 (defmethod foo2' 0 [x] x)
 
+(def three-levels-h (-> (make-hierarchy)
+                        (derive :parent :gparent)
+                        (derive :child :parent)))
+
+(defmulti multi-with-h (fn [v] v) :hierarchy #'three-levels-h)
+(defmethod multi-with-h :gparent [_] :gparent)
+(defmethod multi-with-h :parent [_] :parent)
+
 (deftest test-multimethods-2
   (let [r (rect 4 13)
         c (circle 12)]
@@ -272,6 +280,7 @@
         (is (not (my-map? not-m))))
       ;; multimethod hashing
       (is (= foo2' (ffirst {foo2' 1})))
+      (is (= :parent (multi-with-h :child)))
 )))
 
 (deftest test-transducers
