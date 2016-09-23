@@ -243,6 +243,7 @@
     (eval-form st 'cljs.user
       '(ns parity.core
          (:require [cljs.test :refer-macros [run-tests]]
+                   [cljs.primitives-test]
                    [cljs.core-test :as core-test]
                    [cljs.reader-test]
                    [cljs.binding-test]
@@ -266,6 +267,7 @@
           (prn error)
           (eval-form st 'parity.core
             '(run-tests
+               'cljs.primitives-test
                'cljs.core-test
                'cljs.reader-test
                'clojure.string-test
