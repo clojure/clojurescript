@@ -528,3 +528,150 @@
     ; new RegExp("").source => "(?:)" on webkit-family envs, "" elsewhere
     (is (#{"#\"\"" "#\"(?:)\""} (pr-str #"")))
     (is (= (re-find (re-pattern "[\u2028]") " \u2028 ") "\u2028")))) ; regression test for CLJS-889
+
+(deftest test-arrays
+  (testing "Testing array operations"
+    (let [a (to-array [1 2 3])]
+      (testing "basic ops"
+        (is (= [10 20 30] (seq (amap a i ret (* 10 (aget a i))))))
+        (is (= 6 (areduce a i ret 0 (+ ret (aget a i)))))
+        (is (= (seq a) (seq (to-array [1 2 3]))))
+        (is (= 42 (aset a 0 42)))
+        (is (not= (seq a) (seq (to-array [1 2 3]))))
+        (is (not= a (aclone a)))))
+    (let [a (array (array 1 2 3) (array 4 5 6))]
+      (testing "aget"
+        (is (= (aget a 0 1) 2))
+        (is (= (apply aget a [0 1]) 2))
+        (is (= (aget a 1 1) 5))
+        (is (= (apply aget a [1 1]) 5))
+        (aset a 0 0 "foo")
+        (is (= (aget a 0 0) "foo"))
+        (apply aset a [0 0 "bar"])
+        (is (= (aget a 0 0) "bar"))))))
+
+(defn- primitive-arrays-equal
+  [a b]
+  (= (js->clj a) (js->clj b)))
+
+(deftest test-make-array
+  (testing "Testing make-array"
+    (is (primitive-arrays-equal #js [] (make-array 0)))
+    (is (primitive-arrays-equal #js [] (apply make-array [0])))
+    (is (primitive-arrays-equal #js [nil] (make-array 1)))
+    (is (primitive-arrays-equal #js [nil] (apply make-array [1])))
+    (is (primitive-arrays-equal #js [nil nil] (make-array 2)))
+    (is (primitive-arrays-equal #js [nil nil] (apply make-array [2])))
+    (is (primitive-arrays-equal #js [] (make-array nil 0)))
+    (is (primitive-arrays-equal #js [] (apply make-array [nil 0])))
+    (is (primitive-arrays-equal #js [nil] (make-array nil 1)))
+    (is (primitive-arrays-equal #js [nil] (apply make-array [nil 1])))
+    (is (primitive-arrays-equal #js [nil nil] (make-array nil 2)))
+    (is (primitive-arrays-equal #js [nil nil] (apply make-array [nil 2])))
+    (is (primitive-arrays-equal #js [] (make-array nil 0 0)))
+    (is (primitive-arrays-equal #js [] (apply make-array [nil 0 0])))
+    (is (primitive-arrays-equal #js [] (make-array nil 0 1)))
+    (is (primitive-arrays-equal #js [] (apply make-array [nil 0 1])))
+    (is (primitive-arrays-equal #js [#js []] (make-array nil 1 0)))
+    (is (primitive-arrays-equal #js [#js []] (apply make-array [nil 1 0])))
+    (is (primitive-arrays-equal #js [#js [] #js []] (make-array nil 2 0)))
+    (is (primitive-arrays-equal #js [#js [] #js []] (apply make-array [nil 2 0])))
+    (is (primitive-arrays-equal #js [#js [nil]] (make-array nil 1 1)))
+    (is (primitive-arrays-equal #js [#js [nil]] (apply make-array [nil 1 1])))
+    (is (primitive-arrays-equal #js [#js [nil] #js [nil]] (make-array nil 2 1)))
+    (is (primitive-arrays-equal #js [#js [nil] #js [nil]] (apply make-array [nil 2 1])))
+    (is (primitive-arrays-equal #js [#js [nil nil] #js [nil nil]] (make-array nil 2 2)))
+    (is (primitive-arrays-equal #js [#js [nil nil] #js [nil nil]] (apply make-array [nil 2 2])))
+    (is (primitive-arrays-equal #js [] (make-array nil 0 0 0)))
+    (is (primitive-arrays-equal #js [] (apply make-array [nil 0 0 0])))
+    (is (primitive-arrays-equal #js [] (make-array nil 0 1 1)))
+    (is (primitive-arrays-equal #js [] (apply make-array [nil 0 1 1])))
+    (is (primitive-arrays-equal #js [#js []] (make-array nil 1 0 0)))
+    (is (primitive-arrays-equal #js [#js []] (apply make-array [nil 1 0 0])))
+    (is (primitive-arrays-equal #js [#js [] #js []] (make-array nil 2 0 0)))
+    (is (primitive-arrays-equal #js [#js [] #js []] (apply make-array [nil 2 0 0])))
+    (is (primitive-arrays-equal #js [#js [#js []]] (make-array nil 1 1 0)))
+    (is (primitive-arrays-equal #js [#js [#js []]] (apply make-array [nil 1 1 0])))
+    (is (primitive-arrays-equal #js [#js [#js [nil]]] (make-array nil 1 1 1)))
+    (is (primitive-arrays-equal #js [#js [#js [nil]]] (apply make-array [nil 1 1 1])))
+    (is (primitive-arrays-equal #js [#js [#js [nil nil] #js [nil nil]] #js [#js [nil nil] #js [nil nil]]]
+          (make-array nil 2 2 2)))
+    (is (primitive-arrays-equal #js [#js [#js [nil nil] #js [nil nil]] #js [#js [nil nil] #js [nil nil]]]
+          (apply make-array [nil 2 2 2])))))
+
+(deftest test-comparable
+  (testing "Testing IComparable"
+    (is (=  0 (compare false false)))
+    (is (= -1 (compare false true)))
+    (is (=  1 (compare true  false)))
+
+    (is (= -1 (compare  0  1)))
+    (is (= -1 (compare -1  1)))
+    (is (=  0 (compare  1  1)))
+    (is (=  1 (compare  1  0)))
+    (is (=  1 (compare  1 -1)))
+
+    (is (=  0 (compare "cljs" "cljs")))
+    (is (=  0 (compare :cljs :cljs)))
+    (is (=  0 (compare 'cljs 'cljs)))
+    (is (= -1 (compare "a" "b")))
+    (is (= -1 (compare :a :b)))
+    (is (= -1 (compare 'a 'b)))
+    ;; cases involving ns
+    (is (= -1 (compare :b/a :c/a)))
+    (is (= -1 (compare :c :a/b)))
+    (is (=  1 (compare :a/b :c)))
+    (is (= -1 (compare 'b/a 'c/a)))
+    (is (= -1 (compare 'c 'a/b)))
+    (is (=  1 (compare 'a/b 'c)))
+
+    ;; This is different from clj. clj gives -2 next 3 tests
+    (is (= -1 (compare "a" "c")))
+    (is (= -1 (compare :a :c)))
+    (is (= -1 (compare 'a 'c)))
+
+    (is (= -1 (compare [1 2] [1 1 1])))
+    (is (= -1 (compare [1 2] [1 2 1])))
+    (is (= -1 (compare [1 1] [1 2])))
+    (is (=  0 (compare [1 2] [1 2])))
+    (is (=  1 (compare [1 2] [1 1])))
+    (is (=  1 (compare [1 1 1] [1 2])))
+    (is (=  1 (compare [1 1 2] [1 1 1])))
+    (is (=  0 (compare [] [])))
+    (is (=  0 (compare (vec #js []) [])))
+    (is (=  0 (compare (with-meta [] {}) [])))
+    (is (=  0 (compare (pop [1]) [])))
+
+    (is (= -1 (compare (subvec [1 2 3] 1) (subvec [1 2 4] 1))))
+    (is (=  0 (compare (subvec [1 2 3] 1) (subvec [1 2 3] 1))))
+    (is (=  1 (compare (subvec [1 2 4] 1) (subvec [1 2 3] 1))))
+    (is (=  0 (compare (subvec [1] 0 0) (subvec [2] 0 0))))
+
+    (is (=  0 (compare (js/Date. 2015 2 8 19 13 00 999)
+                (js/Date. 2015 2 8 19 13 00 999))))
+    (is (= -1 (compare (js/Date. 2015 2 8 19 12 00 999)
+                (js/Date. 2015 2 8 19 13 00 999))))
+    (is (=  1 (compare (js/Date. 2015 2 8 19 14 00 999)
+                (js/Date. 2015 2 8 19 13 00 999))))
+    ))
+
+(deftest test-dot
+  (let [s "abc"]
+    (testing "Testing dot operations"
+      (is (= 3 (.-length s)))
+      (is (= 3 (. s -length)))
+      (is (= 3 (. (str 138) -length)))
+      (is (= 3 (. "abc" -length)))
+      (is (= "bc" (.substring s 1)))
+      (is (= "bc" (.substring "abc" 1)))
+      (is (= "bc" ((memfn substring start) s 1)))
+      (is (= "bc" (. s substring 1)))
+      (is (= "bc" (. s (substring 1))))
+      (is (= "bc" (. s (substring 1 3))))
+      (is (= "bc" (.substring s 1 3)))
+      (is (= "ABC" (. s (toUpperCase))))
+      (is (= "ABC" (. "abc" (toUpperCase))))
+      (is (= "ABC" ((memfn toUpperCase) s)))
+      (is (= "BC" (. (. s (toUpperCase)) substring 1)))
+      (is (= 2 (.-length (. (. s (toUpperCase)) substring 1))))
+      )))
