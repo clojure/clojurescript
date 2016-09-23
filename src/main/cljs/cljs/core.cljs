@@ -2185,6 +2185,22 @@ reduces them without incurring seq initialization"
 
     :else false))
 
+(defn ^boolean float?
+  "Returns true for JavaScript numbers, false otherwise."
+  [x]
+  (number? x))
+
+(defn ^boolean double?
+  "Returns true for JavaScript numbers, false otherwise."
+  [x]
+  (number? x))
+
+(defn ^boolean infinite?
+  "Returns true for Infinity and -Infinity values."
+  [x]
+  (or (identical? x js/Number.POSITIVE_INFINITY)
+      (identical? x js/Number.NEGATIVE_INFINITY)))
+
 (defn ^boolean contains?
   "Returns true if key is present in the given collection, otherwise
   returns false.  Note that for numerically indexed collections like

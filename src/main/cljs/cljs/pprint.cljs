@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.pprint
-  (:refer-clojure :exclude [deftype print println pr prn])
+  (:refer-clojure :exclude [deftype print println pr prn float?])
   (:require-macros
     [cljs.pprint :as m :refer [with-pretty-writer getf setf deftype
                                pprint-logical-block print-length-loop

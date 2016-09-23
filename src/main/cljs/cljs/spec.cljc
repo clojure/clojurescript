@@ -443,6 +443,23 @@
   `(spec (and c/int? #(int-in-range? ~start ~end %))
      :gen #(gen/large-integer* {:min ~start :max (dec ~end)})))
 
+(defmacro double-in
+  "Specs a 64-bit floating point number. Options:
+
+    :infinite? - whether +/- infinity allowed (default true)
+    :NaN?      - whether NaN allowed (default true)
+    :min       - minimum value (inclusive, default none)
+    :max       - maximum value (inclusive, default none)"
+  [& {:keys [infinite? NaN? min max]
+      :or {infinite? true NaN? true}
+      :as m}]
+  `(spec (and c/double?
+           ~@(when-not infinite? '[#(not (infinite? %))])
+           ~@(when-not NaN? '[#(not (js/isNaN %))])
+           ~@(when max `[#(<= % ~max)])
+           ~@(when min `[#(<= ~min %)]))
+     :gen #(gen/double* ~m)))
+
 (defmacro merge
   "Takes map-validating specs (e.g. 'keys' specs) and
   returns a spec that returns a conformed map satisfying all of the
