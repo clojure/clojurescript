@@ -247,6 +247,9 @@
                    [cljs.destructuring-test]
                    [cljs.new-new-test]
                    [cljs.printing-test]
+                   [cljs.seqs-test]
+                   [cljs.collections-test]
+                   [cljs.hashing-test]
                    [cljs.core-test :as core-test]
                    [cljs.reader-test]
                    [cljs.binding-test]
@@ -274,6 +277,9 @@
                'cljs.destructuring-test
                'cljs.new-new-test
                'cljs.printing-test
+               'cljs.seqs-test
+               'cljs.collections-test
+               'cljs.hashing-test
                'cljs.core-test
                'cljs.reader-test
                'clojure.string-test

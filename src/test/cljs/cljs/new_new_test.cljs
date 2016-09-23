@@ -116,3 +116,8 @@
 (deftest test-get-basis
   (is (= (.getBasis TypeBasis) '[a b]))
   (is (= (.getBasis RecordBasis) '[c d e])))
+
+(deftype PositionalFactoryTest [x])
+
+(deftest test-515
+  (is (== 1 (.-x (->PositionalFactoryTest 1)))))

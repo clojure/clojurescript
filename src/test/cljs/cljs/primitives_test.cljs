@@ -928,3 +928,26 @@
              (catch js/Error e true)))
     (is (try (do (take-nth nil [1 2 3]) false)
              (catch js/Error e true)))))
+
+(deftest test-496
+  (is (= (char 65) \A))
+  (is (= (char \A) \A)))
+
+(deftest test-717
+  (testing "Testing CLJS-717, JS literals"
+    (is (array? #js [1 2 3]))
+    (is (= (alength #js [1 2 3]) 3))
+    (is (= (seq #js [1 2 3]) (seq [1 2 3])))
+    (is (= (set (js-keys #js {:foo "bar" :baz "woz"})) #{"foo" "baz"}))
+    (is (= (aget #js {:foo "bar"} "foo") "bar"))
+    (is (= (aget #js {"foo" "bar"} "foo") "bar"))
+    (is (array? (aget #js {"foo" #js [1 2 3]} "foo")))
+    (is (= (seq (aget #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))))
+
+(deftest test-1556
+  (testing "Testing CLJS-1556, JS object literal code emission, beginning of statement"
+    ;; Really testing that this evaluates properly
+    (is (= 1 (do #js {:a 1}
+                 1)))
+    (is (= 1 (aget #js {:a 1} "a")))
+    (is (= 1 (.-a #js {:a 1})))))

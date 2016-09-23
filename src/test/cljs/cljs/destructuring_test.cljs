@@ -146,3 +146,34 @@
           (apply destructure-1216 [1 2 3 4])))
     (is (= (destructure-1216 1 2 3 4)[1 2 [3 4]]
           (apply destructure-1216 [1 2 3 4])))))
+
+(defprotocol CLJS-1600-IFoo
+  (foo-fn [_ {:keys [a b] :as x}]))
+
+(defrecord CLJS-1600-Foo []
+  CLJS-1600-IFoo
+  (foo-fn [_ {:keys [a b] :as args}]
+    args))
+
+(deftest test-cljs-1600
+  (let [foo (reify
+              CLJS-1600-IFoo
+              (foo-fn [_ {:keys [a b] :as args}]
+                args))]
+    (is (= (foo-fn (->CLJS-1600-Foo) {:a 1 :b 2})
+          {:a 1 :b 2}))
+    (is (= (foo-fn foo {:a 1 :b 2})
+          {:a 1 :b 2})))
+  ;; test that the destructuring works
+  (let [foo (reify
+              CLJS-1600-IFoo
+              (foo-fn [_ {:keys [a b] :as args}]
+                {:a a :b b}))]
+    (is (= (foo-fn foo {:a 1 :b 2})
+          {:a 1 :b 2})))
+  (let [foo (reify
+              CLJS-1600-IFoo
+              (foo-fn [_ {:keys [a b c] :or {c 3}}]
+                {:c c}))]
+    (is (= (foo-fn foo {:a 1 :b 2})
+          {:c 3}))))
