@@ -245,6 +245,8 @@
          (:require [cljs.test :refer-macros [run-tests]]
                    [cljs.primitives-test]
                    [cljs.destructuring-test]
+                   [cljs.new-new-test]
+                   [cljs.printing-test]
                    [cljs.core-test :as core-test]
                    [cljs.reader-test]
                    [cljs.binding-test]
@@ -270,6 +272,8 @@
             '(run-tests
                'cljs.primitives-test
                'cljs.destructuring-test
+               'cljs.new-new-test
+               'cljs.printing-test
                'cljs.core-test
                'cljs.reader-test
                'clojure.string-test

@@ -675,3 +675,256 @@
       (is (= "BC" (. (. s (toUpperCase)) substring 1)))
       (is (= 2 (.-length (. (. s (toUpperCase)) substring 1))))
       )))
+
+(deftest test-type
+  (is (= nil         (type nil)))
+  (is (= js/Number   (type 0)))
+  (is (= js/Number   (type js/NaN)))
+  (is (= js/Number   (type js/Infinity)))
+  (is (= js/String   (type "")))
+  (is (= js/Boolean  (type true)))
+  (is (= js/Boolean  (type false)))
+  (is (= js/Function (type identity)))
+  (is (= js/Function (type (fn [x] x))))
+  (is (= js/Object   (type (js-obj))))
+  (is (= js/Array    (type (array))))
+  (is (= js/Date     (type (js/Date.))))
+  (is (= js/Function (type js/Object))))
+
+(deftest test-instance?
+  (is (not (instance? js/Object  nil)))
+  (is (not (instance? js/Number  0)))
+  (is (not (instance? js/Number  js/NaN)))
+  (is (not (instance? js/Number  js/Infinity)))
+  (is (not (instance? js/String  "")))
+  (is (not (instance? js/Boolean true)))
+  (is (not (instance? js/Boolean false)))
+  (is (instance? js/Number   (js/Number. 0)))
+  (is (instance? js/Object   (js/Number. 0)))
+  (is (instance? js/String   (js/String. "")))
+  (is (instance? js/Object   (js/String. "")))
+  (is (instance? js/Boolean  (js/Boolean.)))
+  (is (instance? js/Object   (js/Boolean.)))
+  (is (instance? js/Function identity))
+  (is (instance? js/Object   identity))
+  (is (instance? js/Function (fn [x] x)))
+  (is (instance? js/Object   (js-obj)))
+  (is (instance? js/Array    (array)))
+  (is (instance? js/Object   (array)))
+  (is (instance? js/Date     (js/Date.)))
+  (is (instance? js/Object   (js/Date.)))
+  (is (instance? js/Function js/Object)))
+
+(deftest test-case
+  (testing "Test case expr"
+    (let [x 1]
+      (is (= (case x 1 :one) :one)))
+    (let [x 1]
+      (is (= (case x 2 :two :default) :default)))
+    (let [x 1]
+      (is (= (try
+               (case x 3 :three)
+               (catch js/Error e
+                 :fail))
+            :fail)))
+    (let [x 1]
+      (is (= (case x
+               (1 2 3) :ok
+               :fail)
+            :ok)))
+    (let [x [:a :b]]
+      (is (= (case x
+               [:a :b] :ok)
+            :ok)))
+    (let [a 'a]
+      (is (= (case a
+               nil nil
+               & :amp
+               :none)
+            :none)))
+    (let [a '&]
+      (is (= (case a
+               nil nil
+               & :amp
+               :none)
+            :amp)))
+    (let [foo 'a]
+      (testing "multiple match"
+        (is (= (case foo
+                 (a b c) :sym
+                 :none)
+              :sym))
+        (is (= (case foo
+                 (b c d) :sym
+                 :none)
+              :none))))
+    ))
+
+(deftest test-inext
+  (testing "Testing INext"
+    (is (= nil (next nil)))
+    (is (= nil (next (seq (array 1)))))
+    (is (= '(2 3) (next (seq (array 1 2 3)))))
+    (is (= nil (next (reverse (seq (array 1))))))
+    (is (= '(2 1) (next (reverse (seq (array 1 2 3))))))
+    (is (= nil (next (cons 1 nil))))
+    (is (= '(2 3) (next (cons 1 (cons 2 (cons 3 nil))))))
+    (is (= nil (next (lazy-seq (cons 1 nil)))))
+    (is (= '(2 3) (next (lazy-seq
+                          (cons 1
+                            (lazy-seq
+                              (cons 2
+                                (lazy-seq (cons 3 nil)))))))))
+    (is (= nil (next (list 1))))
+    (is (= '(2 3) (next (list 1 2 3))))
+    (is (= nil (next [1])))
+    (is (= '(2 3) (next [1 2 3])))
+    (is (= nil (next (range 1 2))))
+    (is (= '(2 3) (next (range 1 4))))
+    ))
+
+;; this fails in v8 - why?
+;; (assert (= "symbol\"'string" (pr-str (str 'symbol \" \' "string"))))
+(deftest test-misc
+  (testing "Testing miscellaneous operations"
+    (is (= 9 (reduce + (next (seq (array 1 2 3 4))))))
+    (is (not (= "one" "two")))
+    (is (= 3 (count "abc")))
+    (is (= 4 (count (array 1 2 3 4))))
+    (is (= "c" (nth "abc" 2)))
+    (is (= "quux" (nth "abc" 3 "quux")))
+    (is (= 1 (nth (array 1 2 3 4) 0)))
+    (is (= "val" (nth (array 1 2 3 4) 4 "val")))
+    (is (= "b" (get "abc" 1)))
+    (is (= "harriet" (get "abcd" 4 "harriet")))
+    (is (= 4 (get (array 1 2 3 4) 3)))
+    (is (= "zot" (get (array 1 2 3 4) 4 "zot")))
+    (is (= 10 (reduce + (array 1 2 3 4))))
+    (is (= 20 (reduce + 10 (array 1 2 3 4))))
+    (is (= "cabd" (let [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
+                    (reduce jumble "abcd"))))
+    (is (= "cafrogbd" (let [jumble (fn [a b] (str (apply str (reverse (str a))) b))]
+                        (reduce jumble "frog" "abcd"))))
+    (is (= [3] (nthnext [1 2 3] 2)))
+    (assert (not= 1 2))
+    (is (not (not= 1 1)))
+    (is (not (not-empty [])))
+    (is (boolean (not-empty [1 2 3])))
+    (is (= "joel" (min-key count "joel" "tom servo" "crooooooooow")))
+    (is (= "crooooooooow" (max-key count "joel" "tom servo" "crooooooooow")))
+    (is (= (partition-all 4 [1 2 3 4 5 6 7 8 9])
+          [[1 2 3 4] [5 6 7 8] [9]]))
+    (is (= (partition-all 4 2 [1 2 3 4 5 6 7 8 9])
+          [[1 2 3 4] [3 4 5 6] [5 6 7 8] [7 8 9] [9]]))
+    (is (= [true true] (take-while true? [true true 2 3 4])))
+    (is (= [[true true] [false false false] [true true]]
+          (partition-by true? [true true false false false true true])))
+    (is (= [0 2 4 6 8 10] (take-nth 2 [0 1 2 3 4 5 6 7 8 9 10])))
+    (let [sf (some-fn number? keyword? symbol?)]
+      (testing "Testing some-fn"
+        (is (sf :foo 1))
+        (is (sf :foo))
+        (is (sf 'bar 1))
+        (is (not (sf [] ())))))
+    (let [ep (every-pred number? zero?)]
+      (testing "Testing every-pred"
+        (is (ep 0 0 0))
+        (is (not (ep 1 2 3 0)))))
+    (is ((complement number?) :foo))
+    (is (= [1 [2 3] [1 2 3]] ((juxt first rest seq) [1 2 3])))
+    (is (= 5 (max 1 2 3 4 5)))
+    (is (= 5 (max 5 4 3 2 1)))
+    (is (= 5.5 (max 1 2 3 4 5 5.5)))
+    (is (= 1 (min 5 4 3 2 1)))
+    (is (= 1 (min 1 2 3 4 5)))
+    (is (= 0.5 (min 5 4 3 0.5 2 1)))
+    (let [x (array 1 2 3)]
+      (testing "Testing setting property on JS array"
+        (set! (.-foo x) :hello)
+        (is (= (.-foo x) :hello))))
+    ;; last
+    (is (= nil (last nil)))
+    (is (= 3 (last [1 2 3])))
+    ;; dotimes
+    (let [s (atom [])]
+      (dotimes [n 5]
+        (swap! s conj n))
+      (is (= [0 1 2 3 4] @s)))
+    ;; doseq
+    (let [v [1 2 3 4 5]
+          s (atom ())]
+      (doseq [n v] (swap! s conj n))
+      (is (= @s (reverse v))))
+    ;; memoize
+    (let [f (memoize (fn [] (rand)))]
+      (f)
+      (is (= (f) (f))))
+    ;; range
+    (is (= (range 10) (list 0 1 2 3 4 5 6 7 8 9)))
+    (is (= (range 10 20) (list 10 11 12 13 14 15 16 17 18 19)))
+    (is (= (range 10 20 2) (list 10 12 14 16 18)))
+    (is (= (take 20 (range)) (list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19)))
+    ;; group-by
+    (let [d (group-by second {:a 1 :b 2 :c 1 :d 4 :e 1 :f 2})]
+      (testing "group-by"
+        (is (= 3 (count (get d 1))))
+        (is (= 2 (count (get d 2))))
+        (is (= 1 (count (get d 4))))))
+    (is (= {1 2 3 4 5 6} (merge {1 2} {3 4} {5 6})))
+    (is (= {1 2 3 4} (merge {1 2} {3 4} nil)))
+    ;; frequencies
+    (is (= {:a 3 :b 2} (frequencies [:a :b :a :b :a])))
+    ;; reductions
+    (is (= [1 3 6 10 15] (reductions + [1 2 3 4 5])))
+    ;; keep
+    (is (= [1 3 5 7 9] (keep #(if (odd? %) %) [1 2 3 4 5 6 7 8 9 10])))
+    (is (= [2 4 6 8 10] (keep #(if (even? %) %) [1 2 3 4 5 6 7 8 9 10])))
+    ;; keep-indexed
+    (is (= [1 3 5 7 9] (keep-indexed #(if (odd? %1) %2) [0 1 2 3 4 5 6 7 8 9 10])))
+    (is (= [2 4 5] (keep-indexed #(if (pos? %2) %1) [-9 0 29 -7 45 3 -8])))
+    ;; map-indexed
+    (is (= [[0 :a] [1 :b] [2 :c]] (map-indexed #(vector % %2) [:a :b :c])))
+    ;; merge-with
+    (is (= '{"Foo" ("foo" "FOO" "fOo"), "Bar" ("bar" "BAR" "BAr"), "Baz" ["baz"], "Qux" ["qux" "quux"]}
+          (merge-with concat
+            {"Foo" ["foo" "FOO"]
+             "Bar" ["bar" "BAR"]
+             "Baz" ["baz"]}
+            {"Foo" ["fOo"]
+             "Bar" ["BAr"]
+             "Qux" ["qux" "quux"]})))
+    (is (= {:a 111, :b 102, :c 13}
+          (merge-with +
+            {:a 1 :b 2 :c 3}
+            {:a 10 :c 10}
+            {:a 100 :b 100})))
+    (is (= {:a 3, :b 102, :c 13}
+          (apply merge-with [+
+                             {:a 1 :b 100}
+                             {:a 1 :b 2 :c 3}
+                             {:a 1 :c 10}])))
+    (is (= '[a c e] (replace '[a b c d e] [0 2 4])))
+    (is (= [:one :zero :two :zero]
+          (replace {0 :zero 1 :one 2 :two} '(1 0 2 0))))
+    ;; split-at
+    (is (= [[1 2] [3 4 5]] (split-at 2 [1 2 3 4 5])))
+    ;; split-with
+    (is (= [[1 2 3] [4 5]] (split-with (partial >= 3) [1 2 3 4 5])))
+    ;; trampoline
+    (is (= 10000 (trampoline (fn f [n] (if (>= n 10000) n #(f (inc n)))) 0)))
+    ;; vary-meta
+    (is (= {:a 1} (meta (vary-meta [] assoc :a 1))))
+    (is (= {:a 1 :b 2} (meta (vary-meta (with-meta [] {:b 2}) assoc :a 1))))
+    ;; comparator
+    (is (= [1 1 2 2 3 5] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator <)))))
+    (is (= [5 3 2 2 1 1] (seq (.sort (to-array [2 3 1 5 2 1]) (comparator >)))))
+    (is (= (hash 'foo) (hash (symbol "foo"))))
+    (is (= (hash 'foo/bar) (hash (symbol "foo" "bar"))))
+    (is (= (lazy-cat [1] [2] [3]) '(1 2 3)))
+    ;; Make sure take/drop raise an error when given nil as an argument
+    (is (try (do (take nil [1 2 3]) false)
+             (catch js/Error e true)))
+    (is (try (do (drop nil [1 2 3]) false)
+             (catch js/Error e true)))
+    (is (try (do (take-nth nil [1 2 3]) false)
+             (catch js/Error e true)))))

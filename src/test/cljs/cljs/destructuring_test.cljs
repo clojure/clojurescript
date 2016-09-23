@@ -83,3 +83,66 @@
 (deftest resolve-keyword-ns-alias-in-destructuring
   (let [{:keys [::s/x ::s/y ::s/z] :or {z 3}} {:clojure.string/x 1 :clojure.string/y 2}]
     (is (= [1 2 3] [x y z]))))
+
+(defprotocol IHasFirst
+  (-get-first [this]))
+
+(defprotocol IFindsFirst
+  (-find-first [this other]))
+
+(deftype First [xs]
+  ISeqable
+  (-seq [this] (seq xs))
+  IIndexed
+  (-nth [this i] (nth xs i))
+  (-nth [this i not-found] (nth xs i not-found))
+  IFn
+  (-invoke [[x]] x)
+  (-invoke [this x] this)
+  Object
+  (toString [[x]] (str x))
+  IHasFirst
+  (-get-first [[x]] x)
+  IFindsFirst
+  (-find-first [_ [x]] x))
+
+(deftype DestructuringWithLocals [a]
+  IFindsFirst
+  (-find-first [_ [x y]]
+    [x y a]))
+
+(deftest test-protocol-method-destructuring
+  (testing "Testing protocol method destructuring"
+    (let [fv (First. [1 2 3])
+          fs (First. "asdf")]
+      (testing "basic operations"
+        (is (= (fv) 1))
+        (is (= (fs) \a))
+        (is (= (str fs) \a))
+        (is (= (-get-first fv) 1))
+        (is (= (-get-first fs) \a))
+        (is (= (-find-first fv [1]) 1))
+        (is (identical? (fv 1) fv))))
+    (let [t (DestructuringWithLocals. 1)]
+      (testing "with locals"
+        (is (= [2 3 1] (-find-first t [2 3])))))))
+
+(defn destructure-1216
+  ([kvs] kvs)
+  ([k v & args] [k v args]))
+
+(defn foo-1216
+  ([a] (foo-1216 a 10))
+  ([a b & [c]] [a b c]))
+
+(deftest test-cljs-1216
+  (testing "varargs regression"
+    (is (= (foo-1216 1) [1 10 nil]))
+    (is (= (foo-1216 1 2) [1 2 nil]))
+    (is (= (foo-1216 1 2 3) [1 2 3]))
+    (is (= [1 2 [3 4]]
+          (destructure-1216 1 2 3 4)))
+    (is (= [1 2 [3 4]]
+          (apply destructure-1216 [1 2 3 4])))
+    (is (= (destructure-1216 1 2 3 4)[1 2 [3 4]]
+          (apply destructure-1216 [1 2 3 4])))))
