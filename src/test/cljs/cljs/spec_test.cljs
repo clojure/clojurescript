@@ -76,6 +76,12 @@
 (deftest test-cljs-1757
   (is (s/exercise-fn `cljs-1757-x)))
 
+(deftest test-cljs-1788
+  (defmulti mm :mm/type)
+  (s/def ::foo-1788 (s/multi-spec mm :mm/type))
+  (is (= (s/form ::foo-1788)
+         '(cljs.spec/multi-spec cljs.spec-test/mm :mm/type))))
+
 ;; Copied from Clojure spec tests
 
 (def even-count? #(even? (count %)))
