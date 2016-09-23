@@ -6,6 +6,12 @@
             [cljs.analyzer.api :as ana-api])
   (:use clojure.test))
 
+(defn collecting-warning-handler [state]
+  (fn [warning-type env extra]
+    (when (warning-type a/*cljs-warnings*)
+      (when-let [s (a/error-message warning-type extra)]
+        (swap! state conj s)))))
+
 ;;******************************************************************************
 ;;  cljs-warnings tests
 ;;******************************************************************************
@@ -456,3 +462,12 @@
            {:excludes #{}
             :renames {}}))
     (is (set? (:excludes parsed)))))
+
+(deftest test-cljs-1785-js-shadowed-by-local
+  (let [ws (atom [])]
+    (a/with-warning-handlers [(collecting-warning-handler ws)]
+      (a/analyze ns-env
+        '(fn [foo]
+           (let [x js/foo]
+             (println x)))))
+    (is (.startsWith (first @ws) "js/foo is shadowed by a local"))))

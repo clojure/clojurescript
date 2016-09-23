@@ -138,7 +138,8 @@
    :ns-var-clash true
    :extend-type-invalid-method-shape true
    :unsupported-js-module-type true
-   :unsupported-preprocess-value true})
+   :unsupported-preprocess-value true
+   :js-shadowed-by-local true})
 
 (def js-reserved
   #{"arguments" "abstract" "boolean" "break" "byte" "case"
@@ -408,6 +409,10 @@
   [warning-type {:keys [preprocess file]}]
   (str "Unsupported preprocess value " preprocess " for foreign library "
        file "."))
+
+(defmethod error-message :js-shadowed-by-local
+  [warning-type {:keys [name]}]
+  (str name " is shadowed by a local"))
 
 (defn default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -740,12 +745,15 @@
    warnings about unresolved vars."
   ([env sym] (resolve-var env sym nil))
   ([env sym confirm]
+   (let [locals (:locals env)]
      (if #?(:clj  (= "js" (namespace sym))
             :cljs (identical? "js" (namespace sym)))
-       {:name sym :ns 'js}
-       (let [s    (str sym)
-             lcls (:locals env)
-             lb   (get lcls sym)]
+       (do
+         (when (contains? locals (-> sym name symbol))
+           (warning :js-shadowed-by-local env {:name sym}))
+         {:name sym :ns 'js})
+       (let [s  (str sym)
+             lb (get locals sym)]
          (cond
            (not (nil? lb)) lb
 
@@ -771,7 +779,7 @@
            (let [idx    (.indexOf s ".")
                  prefix (symbol (subs s 0 idx))
                  suffix (subs s (inc idx))
-                 lb     (get lcls prefix)]
+                 lb     (get locals prefix)]
              (if-not (nil? lb)
                {:name (symbol (str (:name lb)) suffix)}
                (let [cur-ns  (-> env :ns :name)
@@ -816,7 +824,7 @@
                (confirm env full-ns sym))
              (merge (gets @env/*compiler* ::namespaces full-ns :defs sym)
                {:name (symbol (str full-ns) (str sym))
-                :ns full-ns})))))))
+                :ns full-ns}))))))))
 
 (defn resolve-existing-var
   "Given env, an analysis environment, and sym, a symbol, resolve an existing var.
