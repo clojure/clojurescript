@@ -442,8 +442,7 @@
   ([form mmvar retag gfn]
    (let [id (random-uuid)
          predx #(let [mm @mmvar]
-                 (c/and (contains? (methods mm)
-                                   ((-dispatch-fn mm) %))
+                 (c/and (-get-method mm ((-dispatch-fn mm) %))
                         (mm %)))
          dval #((-dispatch-fn @mmvar) %)
          tag (if (keyword? retag)

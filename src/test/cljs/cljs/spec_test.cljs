@@ -82,6 +82,16 @@
   (is (= (s/form ::foo-1788)
          '(cljs.spec/multi-spec cljs.spec-test/mm :mm/type))))
 
+(def h-cljs-1790 (derive (make-hierarchy) :a :b))
+(defmulti spec-type-1790 identity :hierarchy #'h-cljs-1790)
+(defmethod spec-type-1790 :b [_]
+           (s/spec (constantly true)))
+
+(deftest test-cljs-1790
+  (s/def ::multi (s/multi-spec spec-type-1790 identity))
+  (is (= :b (s/conform ::multi :b)))
+  (is (= :a (s/conform ::multi :a))))
+
 ;; Copied from Clojure spec tests
 
 (def even-count? #(even? (count %)))
