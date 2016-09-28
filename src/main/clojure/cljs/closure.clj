@@ -1267,7 +1267,9 @@
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
         ^List inputs (map #(js-source-file (javascript-name %) %) sources)
-        ^Result result (.compile closure-compiler externs inputs compiler-options)]
+        ^Result result (util/measure (:compiler-stats opts)
+                         "Optimizing with Google Closure Compiler"
+                         (.compile closure-compiler externs inputs compiler-options))]
     (if (.success result)
       ;; compiler.getSourceMap().reset()
       (let [source (.toSource closure-compiler)]
