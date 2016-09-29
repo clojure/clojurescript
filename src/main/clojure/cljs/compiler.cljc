@@ -1059,6 +1059,11 @@
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
+(defmethod emit* :ns*
+  [{:keys [name requires uses require-macros reloads env]}]
+  (load-libs requires nil (:require reloads))
+  (load-libs uses requires (:use reloads)))
+
 (defmethod emit* :ns
   [{:keys [name requires uses require-macros reloads env]}]
   (emitln "goog.provide('" (munge name) "');")
@@ -1244,21 +1249,40 @@
          (emitln (compiled-by-string opts))
          (with-open [rdr (io/reader src)]
            (let [env (ana/empty-env)]
-             (loop [forms   (ana/forms-seq* rdr (util/path src))
-                    ns-name nil
-                    deps    nil]
+             (loop [forms       (ana/forms-seq* rdr (util/path src))
+                    ns-name     nil
+                    deps        nil]
                (if (seq forms)
                  (let [env (assoc env :ns (ana/get-namespace ana/*cljs-ns*))
-                       ast (ana/analyze env (first forms) nil opts)]
-                   (emit ast)
-                   (if (= :ns (:op ast))
+                       {:keys [op] :as ast} (ana/analyze env (first forms) nil opts)]
+                   (cond
+                     (= op :ns)
                      (let [ns-name (:name ast)
                            ns-name (if (and (= 'cljs.core ns-name)
-                                            (= "cljc" ext))
+                                         (= "cljc" ext))
                                      'cljs.core$macros
                                      ns-name)]
+                       (emit ast)
                        (recur (rest forms) ns-name (merge (:uses ast) (:requires ast))))
-                     (recur (rest forms) ns-name deps)))
+
+                     (= :ns* (:op ast))
+                     (let [ns-emitted? (some? ns-name)
+                           ns-name (ana/gen-user-ns src)]
+                       (if-not ns-emitted?
+                         (emit (assoc ast :name ns-name :op :ns))
+                         (emit ast))
+                       (recur (rest forms) ns-name (merge deps (:uses ast) (:requires ast))))
+
+                     :else
+                     (let [ns-emitted? (some? ns-name)
+                           ns-name (if-not ns-emitted?
+                                     (ana/gen-user-ns src)
+                                     ns-name)]
+                       (when-not ns-emitted?
+                         (emit {:op :ns
+                                :name ns-name}))
+                       (emit ast)
+                       (recur (rest forms) ns-name deps))))
                  (let [sm-data (when *source-map-data* @*source-map-data*)
                        ret     (merge
                                  {:ns         (or ns-name 'cljs.user)

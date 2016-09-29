@@ -34,6 +34,8 @@
 
                             cond-> cond->> as-> some-> some->>
 
+                            require use refer-clojure
+
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
                             #?@(:cljs [alias coercive-not coercive-not= coercive-= coercive-boolean
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
@@ -41,7 +43,7 @@
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
                                        specify copy-arguments goog-define js-comment js-inline-comment
-                                       unsafe-cast])])
+                                       unsafe-cast require-macros use-macros])])
   #?(:cljs (:require-macros [cljs.core :as core]
                             [cljs.support :refer [assert-args]]))
   (:require clojure.walk
@@ -2725,6 +2727,30 @@
 (core/defmacro locking
   [x & forms]
   `(do ~@forms))
+
+(core/defmacro require
+  [& specs]
+  `(~'ns* ~(cons :require specs)))
+
+(core/defmacro require-macros
+  [& specs]
+  `(~'ns* ~(cons :require-macros specs)))
+
+(core/defmacro use
+  [& specs]
+  `(~'ns* ~(cons :use specs)))
+
+(core/defmacro use-macros
+  [& specs]
+  `(~'ns* ~(cons :use-macros specs)))
+
+(core/defmacro import
+  [& specs]
+  `(~'ns* ~(cons :import specs)))
+
+(core/defmacro refer-clojure
+  [& specs]
+  `(~'ns* ~(cons :refer-clojure specs)))
 
 ;; INTERNAL - do not use, only for Node.js
 (core/defmacro load-file* [f]

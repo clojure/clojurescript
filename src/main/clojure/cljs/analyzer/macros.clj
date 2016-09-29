@@ -52,3 +52,6 @@
 (defmacro allowing-redef [& body]
   `(binding [cljs.analyzer/*allow-redef* true]
      ~@body))
+
+(defmacro disallowing-ns* [& body]
+  `(binding [cljs.analyzer/*allow-ns* false] ~@body))

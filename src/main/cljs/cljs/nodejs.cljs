@@ -9,7 +9,8 @@
 ; Projects compiled with :target :nodejs can 'require' this namespace
 ; to get the nodejs globals loaded into cljs.nodejs and get
 ; ClojureScript's 'print' set up correctly.
-(ns cljs.nodejs)
+(ns cljs.nodejs
+  (:refer-clojure :exclude [require]))
 
 ; Define namespaced references to Node's externed globals:
 (def require (js* "require"))

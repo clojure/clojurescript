@@ -579,29 +579,21 @@
      ((or (:wrap opts) wrap-fn) form)
      opts)))
 
-(defn canonicalize-specs [specs]
-  (letfn [(canonicalize [quoted-spec-or-kw]
-            (if (keyword? quoted-spec-or-kw)
-              quoted-spec-or-kw
-              (as-> (second quoted-spec-or-kw) spec
-                (if (vector? spec) spec [spec]))))]
-    (map canonicalize specs)))
-
 (defn decorate-specs [specs]
   (if-let [k (some #{:reload :reload-all} specs)]
     (->> specs (remove #{k}) (map #(vary-meta % assoc :reload k)))
     specs))
 
 (comment
-  (canonicalize-specs
+  (ana/canonicalize-specs
     '['foo.bar '[bar.core :as bar]])
 
-  (canonicalize-specs
+  (ana/canonicalize-specs
     '['foo.bar '[bar.core :as bar] :reload])
 
   (map meta
     (decorate-specs
-      (canonicalize-specs
+      (ana/canonicalize-specs
         '['foo.bar '[bar.core :as bar] :reload])))
   )
 
@@ -687,7 +679,7 @@
            (evaluate-form repl-env env "<cljs repl>"
                           (with-meta
                             `(~'ns ~target-ns
-                               (:require ~@(-> specs canonicalize-specs decorate-specs)))
+                               (:require ~@(-> specs ana/canonicalize-specs decorate-specs)))
                             {:merge true :line 1 :column 1})
                           identity opts)
            (when is-self-require?
@@ -700,7 +692,7 @@
          (evaluate-form repl-env env "<cljs repl>"
                         (with-meta
                           `(~'ns ~ana/*cljs-ns*
-                             (:require-macros ~@(-> specs canonicalize-specs decorate-specs)))
+                             (:require-macros ~@(-> specs ana/canonicalize-specs decorate-specs)))
                           {:merge true :line 1 :column 1})
                         identity opts)))
       'use
@@ -716,7 +708,7 @@
            (evaluate-form repl-env env "<cljs repl>"
                           (with-meta
                             `(~'ns ~target-ns
-                               (:use ~@(-> specs canonicalize-specs decorate-specs)))
+                               (:use ~@(-> specs ana/canonicalize-specs decorate-specs)))
                             {:merge true :line 1 :column 1})
                           identity opts)
            (when is-self-require?
@@ -729,7 +721,7 @@
          (evaluate-form repl-env env "<cljs repl>"
                         (with-meta
                           `(~'ns ~ana/*cljs-ns*
-                             (:use-macros ~@(-> specs canonicalize-specs decorate-specs)))
+                             (:use-macros ~@(-> specs ana/canonicalize-specs decorate-specs)))
                           {:merge true :line 1 :column 1})
                         identity opts)))
       'import
@@ -1212,12 +1204,12 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     use {:arglists ([& args])
          :doc "Like require, but referring vars specified by the mandatory
   :only option.
-   
+
   Example:
-   
+
   The following would load the library clojure.set while referring
   the intersection var.
-   
+
   (use '[clojure.set :only [intersection]])"}
     use-macros {:arglists ([& args])
                 :doc "Similar to the use REPL special function but

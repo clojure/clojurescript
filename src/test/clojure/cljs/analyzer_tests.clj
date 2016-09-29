@@ -448,7 +448,6 @@
                                '(ns foo.core
                                   (:require [clojure.set :rename {intersection foo}]))))))))
 
-
 (deftest test-cljs-1274
   (let [test-env (assoc-in (a/empty-env) [:ns :name] 'cljs.user)]
     (binding [a/*cljs-ns* a/*cljs-ns*]
@@ -471,3 +470,100 @@
            (let [x js/foo]
              (println x)))))
     (is (.startsWith (first @ws) "js/foo is shadowed by a local"))))
+
+(deftest test-canonicalize-specs
+  (is (= (a/canonicalize-specs '((quote [clojure.set :as set])))
+         '([clojure.set :as set])))
+  (is (= (a/canonicalize-specs '(:exclude (quote [map mapv])))
+         '(:exclude [map mapv])))
+  (is (= (a/canonicalize-specs '(:require (quote [clojure.set :as set])))
+         '(:require [clojure.set :as set]))))
+
+(deftest test-cljs-1346
+  (testing "`ns*` special form conformance"
+    (let [test-env (a/empty-env)]
+      (is (= (-> (a/parse-ns '((require '[clojure.set :as set]))) :requires)
+            '#{cljs.core clojure.set})))
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* nil]
+      (let [test-env (a/empty-env)]
+        (is (= (-> (a/analyze test-env '(require '[clojure.set :as set])) :requires vals set)
+              '#{clojure.set})))
+      (let [test-env (a/empty-env)]
+        (is (= (-> (a/analyze test-env '(require '[clojure.set :as set :refer [union intersection]])) :uses keys set)
+              '#{union intersection})))
+      (let [test-env (a/empty-env)]
+        (is (= (-> (a/analyze test-env '(require '[clojure.set :as set]
+                                          '[clojure.string :as str]))
+                 :requires vals set)
+              '#{clojure.set clojure.string})))
+      (let [test-env (a/empty-env)]
+        (is (= (-> (a/analyze test-env '(require-macros '[cljs.test :as test])) :require-macros vals set)
+              '#{cljs.test})))
+      (let [test-env (a/empty-env)
+            parsed (a/analyze test-env '(require-macros '[cljs.test :as test  :refer [deftest is]]))]
+        (is (= (-> parsed :require-macros vals set)
+              '#{cljs.test}))
+        (is (= (-> parsed :use-macros keys set)
+              '#{is deftest})))
+      (let [test-env (a/empty-env)
+            parsed (a/analyze test-env '(require '[cljs.test :as test :refer-macros [deftest is]]))]
+        (is (= (-> parsed :requires vals set)
+              '#{cljs.test}))
+        (is (= (-> parsed :require-macros vals set)
+              '#{cljs.test}))
+        (is (= (-> parsed :use-macros keys set)
+              '#{is deftest})))
+      (let [test-env (a/empty-env)
+            parsed (a/analyze test-env '(use '[clojure.set :only [intersection]]))]
+        (is (= (-> parsed :uses keys set)
+              '#{intersection}))
+        (is (= (-> parsed :requires)
+              '{clojure.set clojure.set})))
+      (let [test-env (a/empty-env)
+            parsed (a/analyze test-env '(use-macros '[cljs.test :only [deftest is]]))]
+        (is (= (-> parsed :use-macros keys set)
+              '#{deftest is}))
+        (is (= (-> parsed :require-macros)
+              '{cljs.test cljs.test}))
+        (is (nil? (-> parsed :requires))))
+      (let [test-env (a/empty-env)
+            parsed (a/analyze test-env '(import '[goog.math Long Integer]))]
+        (is (= (-> parsed :imports)
+              (-> parsed :requires)
+              '{Long goog.math.Long
+                Integer goog.math.Integer})))
+      (let [test-env (a/empty-env)
+            parsed (a/analyze test-env '(refer-clojure :exclude '[map mapv]))]
+        (is (= (-> parsed :excludes)
+              '#{map mapv})))))
+  (testing "arguments to require should be quoted"
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* nil]
+      (is (thrown-with-msg? Exception #"Arguments to require must be quoted"
+            (a/analyze test-env
+              '(require [clojure.set :as set]))))))
+  (testing "`:ns` and `:ns*` should throw if not `:top-level`"
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* nil]
+      (are [analyzed] (thrown-with-msg? Exception
+                        #"Namespace declarations must be at the top-level."
+                        analyzed)
+          (a/analyze test-env
+          '(def foo
+             (ns foo.core
+               (:require [clojure.set :as set]))))
+        (a/analyze test-env
+          '(def foo
+             (require '[clojure.set :as set])))
+        (a/analyze test-env
+          '(fn []
+             (ns foo.core
+               (:require [clojure.set :as set]))))
+        (a/analyze test-env
+          '(fn [] (require '[clojure.set :as set])))
+        (a/analyze test-env
+          '(map #(ns foo.core
+                   (:require [clojure.set :as set])) [1 2]))
+        (a/analyze test-env
+          '(map #(require '[clojure.set :as set]) [1 2]))))))

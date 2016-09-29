@@ -7,6 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.js
+  (:refer-clojure :exclude [require])
   (:require-macros [cljs.js :refer [dump-core]]
                    [cljs.env.macros :as env])
   (:require [clojure.string :as string]
