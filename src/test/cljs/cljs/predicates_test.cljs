@@ -35,7 +35,7 @@
         natl   (Long.getZero)
         posl   (Long.fromNumber posint)
         negl   (Long.fromNumber negint)
-        nati   (Integer.ZERO)
+        nati   Integer.ZERO
         posi   (Integer.fromNumber posint)
         negi   (Integer.fromNumber negint)]
     [[identity  neg?  pos?   integer? int?   neg-int?  pos-int?  nat-int?]
