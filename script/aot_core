@@ -2,19 +2,27 @@
 
 set -ex
 
+FILE_SEP='/'
+PATH_SEP=':'
+OS_ID=`uname | tr [:upper:] [:lower:]`
+
+if [[ $OS_ID == *mingw* ]]
+then
+    echo "MINGW detected"
+    # Refer to http://www.mingw.org/wiki/Posix_path_conversion
+    FILE_SEP='//'
+    PATH_SEP=';'
+fi
+
 CP_FILE=`mktemp /tmp/cljs_cp.txt.XXXXXXXXXXX`
 
-mvn -f pom.template.xml dependency:build-classpath -Dmdep.outputFile=$CP_FILE
+mvn -f pom.template.xml dependency:build-classpath -Dmdep.outputFile=$CP_FILE -Dmdep.fileSeparator=$FILE_SEP -Dmdep.pathSeparator=$PATH_SEP
 
 CLJS_CP=`cat $CP_FILE`
 
 # For Hudson server
 if [ "$HUDSON" = "true" ]; then
-    $JAVA_HOME/bin/java -server -cp "$CLJS_CP:src/main/clojure:src/main/cljs" clojure.main script/aot.clj
+    $JAVA_HOME/bin/java -server -cp "$CLJS_CP""$PATH_SEP""src/main/clojure""$PATH_SEP""src/main/cljs" clojure.main script/aot.clj
 else
-    java -server -cp "$CLJS_CP:src/main/clojure:src/main/cljs" clojure.main script/aot.clj
+    java -server -cp "$CLJS_CP""$PATH_SEP""src/main/clojure""$PATH_SEP""src/main/cljs" clojure.main script/aot.clj
 fi
-
-
-
-
