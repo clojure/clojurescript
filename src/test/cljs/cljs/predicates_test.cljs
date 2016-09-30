@@ -39,19 +39,19 @@
         posi   (Integer.fromNumber posint)
         negi   (Integer.fromNumber negint)]
     [[identity  neg?  pos?   integer? int?   neg-int?  pos-int?  nat-int?]
-     [0         false false  true     true   false     false     true     ]
-     [1         false true   true     true   false     true      true     ]
-     [-1        true  false  true     true   true      false     false    ]
-     [1.0       false true   true     true   false     true      true     ]
-     [-1.0      true  false  true     true   true      false     false    ]
-     [posint    false true   true     true   false     true      true     ]
-     [negint    true  false  true     true   true      false     false    ]
-     [natl      false false  false    true   false     false     true     ]
-     [posl      false true   false    true   false     true      true     ]
-     [negl      true  false  false    true   true      false     false    ]
-     [nati      false false  false    true   false     false     true     ]
-     [posi      false true   false    true   false     true      true     ]
-     [negi      true  false  false    true   true      false     false    ]]))
+     [0         false false  true     true   false     false     true    ]
+     [1         false true   true     true   false     true      true    ]
+     [-1        true  false  true     true   true      false     false   ]
+     [1.0       false true   true     true   false     true      true    ]
+     [-1.0      true  false  true     true   true      false     false   ]
+     [posint    false true   true     true   false     true      true    ]
+     [negint    true  false  true     true   true      false     false   ]
+     [natl      false false  false    true   false     false     true    ]
+     [posl      false true   false    true   false     true      true    ]
+     [negl      true  false  false    true   true      false     false   ]
+     [nati      false false  false    true   false     false     true    ]
+     [posi      false true   false    true   false     true      true    ]
+     [negi      true  false  false    true   true      false     false   ]]))
 
 (deftest test-int-preds
   (let [[preds & rows] int-val-table]

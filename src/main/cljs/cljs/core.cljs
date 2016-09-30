@@ -2126,7 +2126,7 @@ reduces them without incurring seq initialization"
   (or (fn? f) (satisfies? IFn f)))
 
 (defn ^boolean integer?
-  "Returns true if n is an integer."
+  "Returns true if n is a JavaScript number with no decimal part."
   [n]
   (and (number? n)
        (not ^boolean (js/isNaN n))
@@ -2134,14 +2134,15 @@ reduces them without incurring seq initialization"
        (== (js/parseFloat n) (js/parseInt n 10))))
 
 (defn ^boolean int?
-  "Return true if x is an integer"
+  "Return true if x satisfies integer? or is an instance of goog.math.Integer
+   or goog.math.Long."
   [x]
   (or (integer? x)
       (instance? goog.math.Integer x)
       (instance? goog.math.Long x)))
 
 (defn ^boolean pos-int?
-  "Return true if x is a positive integer"
+  "Return true if x satisfies int? and is positive."
   [x]
   (cond
     (integer? x) (pos? x)
@@ -2157,7 +2158,7 @@ reduces them without incurring seq initialization"
     :else false))
 
 (defn ^boolean neg-int?
-  "Return true if x is a negative integer"
+  "Return true if x satisfies int? and is positive."
   [x]
   (cond
     (integer? x) (neg? x)
@@ -2171,7 +2172,7 @@ reduces them without incurring seq initialization"
     :else false))
 
 (defn ^boolean nat-int?
-  "Return true if x is a non-negative integer"
+  "Return true if x satisfies int? and is a natural integer value."
   [x]
   (cond
     (integer? x)
