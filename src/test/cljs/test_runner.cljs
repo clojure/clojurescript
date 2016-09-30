@@ -61,6 +61,5 @@
   'cljs.clojure-alias-test
   'cljs.hash-map-test
   'cljs.pprint-test
-  ;; TODO: CLJS-1799
-  #_'cljs.predicates-test
+  'cljs.predicates-test
   'cljs.syntax-quote-test)
