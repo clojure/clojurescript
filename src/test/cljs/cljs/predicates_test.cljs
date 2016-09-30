@@ -3,8 +3,7 @@
   (:import [goog.math Long Integer]))
 
 (def pred-val-table
-  (let [now (js/Date.)
-        uuid (uuid nil)]
+  (let [uuid (uuid nil)]
     [[identity    boolean? indexed? seqable?  ident?  uuid?    inst?  simple-ident? qualified-ident? simple-symbol? qualified-symbol? simple-keyword? qualified-keyword?]
      [0             false    false    false    false  false    false  false         false            false          false             false           false]
      [1             false    false    false    false  false    false  false         false            false          false             false           false]
@@ -18,8 +17,7 @@
      [::foo         false    false    false    true   false    false  false         true             false          false             false           true]
      ['foo          false    false    false    true   false    false  true          nil              true           nil               false           false]
      ['foo/bar      false    false    false    true   false    false  false         true             false          true              false           false]
-     [uuid          false    false    false    false  true     false  false         false            false          false             false           false]
-     [now           false    false    false    false  false    true   false         false            false          false             false           false]]))
+     [uuid          false    false    false    false  true     false  false         false            false          false             false           false]]))
 
 (deftest test-preds
   (let [[preds & rows] pred-val-table]
