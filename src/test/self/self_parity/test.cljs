@@ -2,7 +2,7 @@
   ^{:doc "Builds and runs the ClojureScript compiler test suite
   in self-host mode, ensuring parity of bootstrapped ClojureScript
   with JVM based ClojureScript.
-  
+
   This involves dynamically loading the test suite files at runtime,
   excercising that they can be compiled by the bootstrapped
   ClojureScript compiler, and also running the resulting tests."}
@@ -19,7 +19,7 @@
                 "src/main/clojure"
                 "src/test/cljs"])
 
-(defn init-runtime 
+(defn init-runtime
   "Initializes the runtime so that we can use the cljs.user
   namespace and so that Google Closure is set up to work
   properly with :optimizations :none."
@@ -65,7 +65,7 @@
 ;; Facilities for loading Closure deps
 
 (defn closure-index
-  "Builds an index of Closure files. Similar to 
+  "Builds an index of Closure files. Similar to
   cljs.js-deps/goog-dependencies*"
   []
   (let [paths-to-provides
@@ -207,7 +207,7 @@
 
 (def vm (nodejs/require "vm"))
 
-(defn node-eval 
+(defn node-eval
   "Evaluates JavaScript in node."
   [{:keys [name source]}]
   (if-not js/COMPILED
@@ -218,7 +218,7 @@
 
 (def load-fn (make-load-fn src-paths node-read-file))
 
-(defn eval-form 
+(defn eval-form
   "Evaluates a supplied form in a given namespace,
   calling back with the evaluation result."
   [st ns form cb]
@@ -256,6 +256,7 @@
                    #_[cljs.ns-test]
                    [clojure.string-test]
                    [clojure.data-test]
+                   [clojure.walk-test]
                    [cljs.macro-test]
                    [cljs.letfn-test]
                    [foo.ns-shadow-test]
@@ -265,9 +266,12 @@
                    [cljs.import-test]
                    [cljs.ns-test.foo]
                    #_[cljs.pprint]
+                   #_[cljs.pprint-test]
                    [cljs.spec-test]
                    [cljs.clojure-alias-test]
-                   [cljs.hash-map-test]))
+                   [cljs.hash-map-test]
+                   [cljs.syntax-quote-test]
+                   [cljs.predicates-test]))
       (fn [{:keys [value error]}]
         (if error
           (prn error)
@@ -284,6 +288,7 @@
                'cljs.reader-test
                'clojure.string-test
                'clojure.data-test
+               'clojure.walk-test
                'cljs.letfn-test
                'cljs.reducers-test
                'cljs.binding-test
@@ -295,9 +300,13 @@
                'foo.ns-shadow-test
                'cljs.import-test
                #_'cljs.pprint
+               #_'cljs.pprint-test
                'cljs.spec-test
                'cljs.clojure-alias-test
-               'cljs.hash-map-test)
+               'cljs.hash-map-test
+               'cljs.syntax-quote-test
+               ;; TODO: CLJS-1799
+               #_'cljs.predicates-test)
             (fn [{:keys [value error]}]
               (when error
                 (prn error)))))))))
