@@ -305,8 +305,7 @@
                'cljs.clojure-alias-test
                'cljs.hash-map-test
                'cljs.syntax-quote-test
-               ;; TODO: CLJS-1799
-               #_'cljs.predicates-test)
+               'cljs.predicates-test)
             (fn [{:keys [value error]}]
               (when error
                 (prn error)))))))))
