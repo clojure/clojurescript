@@ -460,7 +460,7 @@
   ([load bound-vars ana-env {:keys [op] :as ast} opts cb]
    (when (:verbose opts)
      (debug-prn "Namespace side effects for" (:name ast)))
-   (if (= :ns op)
+   (if (#{:ns :ns*} op)
      (letfn [(check-uses-and-load-macros [res rewritten-ast]
                (let [env (:*compiler* bound-vars)
                      {:keys [uses requires require-macros use-macros reload reloads]} rewritten-ast]
@@ -564,7 +564,7 @@
                    (if (:error res)
                      (cb res)
                      (let [ast (:value res)]
-                       (if (= :ns (:op ast))
+                       (if (#{:ns :ns*} (:op ast))
                          (ns-side-effects bound-vars aenv ast opts
                            (fn [res]
                              (if (:error res)
@@ -643,7 +643,7 @@
         (if (:error res)
           (cb res)
           (let [ast (:value res)]
-            (if (= :ns (:op ast))
+            (if (#{:ns :ns*} (:op ast))
               (ns-side-effects true bound-vars aenv ast opts
                 (fn [res]
                   (if (:error res)
@@ -729,7 +729,7 @@
                      (cb res)
                      (let [ast (:value res)]
                        (.append sb (with-out-str (comp/emit ast)))
-                       (if (= :ns (:op ast))
+                       (if (#{:ns :ns*} (:op ast))
                          (ns-side-effects bound-vars aenv ast opts
                            (fn [res]
                              (if (:error res)
@@ -829,7 +829,7 @@
                      (cb res)
                      (let [ast (:value res)
                            ns' ana/*cljs-ns*]
-                      (if (= :ns (:op ast))
+                      (if (#{:ns :ns*} (:op ast))
                         (do
                           (.append sb
                             (with-out-str (comp/emitln (str "goog.provide(\"" (munge (:name ast)) "\");"))))
