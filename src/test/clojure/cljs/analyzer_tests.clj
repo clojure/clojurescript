@@ -3,7 +3,8 @@
             [cljs.analyzer :as a]
             [cljs.env :as e]
             [cljs.env :as env]
-            [cljs.analyzer.api :as ana-api])
+            [cljs.analyzer.api :as ana-api]
+            [cljs.util :as util])
   (:use clojure.test))
 
 (defn collecting-warning-handler [state]
@@ -567,3 +568,18 @@
                    (:require [clojure.set :as set])) [1 2]))
         (a/analyze test-env
           '(map #(require '[clojure.set :as set]) [1 2]))))))
+
+(deftest test-gen-user-ns
+  ;; note: can't use `with-redefs` because direct-linking is enabled
+  (let [s   "src/cljs/foo.cljs"
+        sha (util/content-sha s)]
+    (is (= (a/gen-user-ns s) (symbol (str "cljs.user.foo" (apply str (take 7 sha)))))))
+  (let [a   "src/cljs/foo.cljs"
+        b   "src/cljs/foo.cljc"]
+    ;; namespaces should have different names because the filename hash will be different
+    (is (not= (a/gen-user-ns a) (a/gen-user-ns b)))
+    ;; specifically, only the hashes should differ
+    (let [nsa (str (a/gen-user-ns a))
+          nsb (str (a/gen-user-ns b))]
+      (is (not= (.substring nsa (- (count nsa) 7)) (.substring nsb (- (count nsb) 7))))
+      (is (= (.substring nsa 0 (- (count nsa) 7)) (.substring nsb 0 (- (count nsb) 7)))))))

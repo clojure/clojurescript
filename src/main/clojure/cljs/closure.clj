@@ -60,8 +60,6 @@
               ES6ModuleLoader AbstractCompiler TransformAMDToCJSModule
               ProcessEs6Modules CompilerInput]
            [com.google.javascript.rhino Node]
-           [java.security MessageDigest]
-           [javax.xml.bind DatatypeConverter]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult]
            [java.nio.charset Charset StandardCharsets]
@@ -1506,14 +1504,11 @@
          :else (path-from-jarfile url))
 
        (string? js)
-       (let [digest (MessageDigest/getInstance "SHA-1")]
-         (.reset digest)
-         (.update digest (.getBytes ^String js "utf8"))
-         (str
-           (->> (DatatypeConverter/printHexBinary (.digest digest))
-             (take 7)
-             (apply str))
-           ".js"))
+       (str
+         (->> (util/content-sha js)
+           (take 7)
+           (apply str))
+         ".js")
 
        :else (str (random-string 5) ".js")))))
 

@@ -36,8 +36,6 @@
                    [java.util.regex Pattern]
                    [java.net URL]
                    [java.lang Throwable]
-                   [java.security MessageDigest]
-                   [javax.xml.bind DatatypeConverter]
                    [clojure.lang Namespace Var LazySeq ArityException]
                    [cljs.tagged_literals JSValue])))
 
@@ -3144,17 +3142,14 @@
 
 #?(:clj
    (defn gen-user-ns [src]
-     (let [name (str src)
-           name (.substring name (inc (.lastIndexOf name "/")) (.lastIndexOf name "."))
-           digest (MessageDigest/getInstance "SHA-1")]
-       (.reset digest)
-       (.update digest (.getBytes ^String name "utf8"))
+     (let [full-name (str src)
+           name (.substring full-name
+                  (inc (.lastIndexOf full-name "/"))
+                  (.lastIndexOf full-name "."))]
        (symbol
-         (str
-           "cljs.user$$gen_ns$$_" name
-           (->> (DatatypeConverter/printHexBinary (.digest digest))
-             (take 7)
-             (apply str)))))))
+         (apply str
+           "cljs.user." name
+           (take 7 (util/content-sha full-name)))))))
 
 #?(:clj
    (defn parse-ns
@@ -3198,9 +3193,7 @@
                                    (forms-seq* rdr (source-path src))
                                    src)
                            ret (merge
-                                 {:ns           (gen-user-ns src)
-                                  :provides     [(gen-user-ns src)]
-                                  :file         dest
+                                 {:file         dest
                                   :source-file  (when rdr src)
                                   :source-forms (when-not rdr src)
                                   :macros-ns    (:macros-ns opts)
@@ -3242,7 +3235,12 @@
                             (= :ns* (:op ast))
                             (let [deps (merge (:uses ast) (:requires ast))]
                               (recur (rest forms)
-                                (update-in ret [:requires] into (set (vals deps)))))
+                                (cond-> (update-in ret [:requires] into (set (vals deps)))
+                                  ;; we need to defer generating the user namespace
+                                  ;; until we actually need or it will break when
+                                  ;; `src` is a sequence of forms - António Monteiro
+                                  (not (:ns ret))
+                                  (assoc :ns (gen-user-ns src) :provides [(gen-user-ns src)]))))
 
                             :else ret))
                         ret))
