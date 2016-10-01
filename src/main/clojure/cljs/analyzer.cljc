@@ -2315,7 +2315,7 @@
   (when-not *allow-ns*
     (throw (error env "Namespace declarations must be at the top-level.")))
   (let [specs        (canonicalize-specs quoted-specs)
-        name         'cljs.user
+        name         (-> env :ns :name)
         args         (desugar-ns-specs
                        #?(:clj  (list (process-rewrite-form
                                         specs))
@@ -2354,7 +2354,7 @@
               (map (spec-parsers k)
                 (remove #{:reload :reload-all} libs))))
           {} (remove (fn [[r]] (= r :refer-clojure)) args))]
-    (set! *cljs-ns* 'cljs.user)
+    (set! *cljs-ns* name)
     (let [require-info
           {:name           name
            :excludes       excludes

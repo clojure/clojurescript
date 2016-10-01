@@ -452,6 +452,8 @@
                  {:source-type :fragment
                   :source-form form})
            def-emits-var (:def-emits-var opts)
+           ast (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
+                 (wrap form) nil opts)
            wrap-js
            ;; TODO: check opts as well - David
            (if (:source-map repl-env)
@@ -459,9 +461,7 @@
                        (atom {:source-map (sorted-map)
                               :gen-col 0
                               :gen-line 0})]
-               (let [js (comp/emit-str
-                          (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
-                            (wrap form) nil opts))
+               (let [js (comp/emit-str ast)
                      t (System/currentTimeMillis)]
                  (str js
                    "\n//# sourceURL=repl-" t ".js"
@@ -478,12 +478,10 @@
                              ;; handle strings / primitives without metadata
                              (with-out-str (pr form)))]})
                        "UTF-8")))))
-             (comp/emit-str
-               (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
-                 (wrap form) nil opts)))]
+             (comp/emit-str ast))]
        ;; NOTE: means macros which expand to ns aren't supported for now
        ;; when eval'ing individual forms at the REPL - David
-       (when (and (sequential? form) (= 'ns (first form)))
+       (when (#{:ns :ns*} (:op ast))
          (let [ast (ana/no-warn (ana/analyze env form nil opts))]
            (load-dependencies repl-env
              (into (vals (:requires ast))
@@ -548,7 +546,11 @@
 
 (defn- wrap-fn [form]
   (cond
-    (and (seq? form) (= 'ns (first form))) identity
+    (and (seq? form)
+         (#{'ns 'require 'require-macros
+            'use 'use-macros 'import 'refer-clojure} (first form)))
+    identity
+
     ('#{*1 *2 *3 *e} form) (fn [x] `(cljs.core.pr-str ~x))
     :else
     (fn [x]
@@ -612,17 +614,6 @@
 ;; form     - complete form entered at the repl
 ;; opts     - REPL options, essentially augmented cljs.closure/build options
 
-(defn self-require? [specs]
-  (some
-    (fn [quoted-spec-or-kw]
-      (and (not (keyword? quoted-spec-or-kw))
-           (let [spec (second quoted-spec-or-kw)
-                 ns (if (sequential? spec)
-                      (first spec)
-                      spec)]
-             (= ns ana/*cljs-ns*))))
-    specs))
-
 (defn- wrap-self
   "Takes a self-ish fn and returns it wrapped with exception handling.
   Compiler state is restored if self-ish fn fails."
@@ -666,92 +657,6 @@
     (wrap-special-fns wrap-self
      {'in-ns in-ns-fn
       'clojure.core/in-ns in-ns-fn
-      'require
-      (fn self
-        ([repl-env env form]
-         (self repl-env env form nil))
-        ([repl-env env [_ & specs :as form] opts]
-         (let [is-self-require? (self-require? specs)
-               [target-ns restore-ns]
-               (if-not is-self-require?
-                 [ana/*cljs-ns* nil]
-                 ['cljs.user ana/*cljs-ns*])]
-           (evaluate-form repl-env env "<cljs repl>"
-                          (with-meta
-                            `(~'ns ~target-ns
-                               (:require ~@(-> specs ana/canonicalize-specs decorate-specs)))
-                            {:merge true :line 1 :column 1})
-                          identity opts)
-           (when is-self-require?
-             (set! ana/*cljs-ns* restore-ns)))))
-      'require-macros
-      (fn self
-        ([repl-env env form]
-         (self repl-env env form nil))
-        ([repl-env env [_ & specs :as form] opts]
-         (evaluate-form repl-env env "<cljs repl>"
-                        (with-meta
-                          `(~'ns ~ana/*cljs-ns*
-                             (:require-macros ~@(-> specs ana/canonicalize-specs decorate-specs)))
-                          {:merge true :line 1 :column 1})
-                        identity opts)))
-      'use
-      (fn self
-        ([repl-env env form]
-         (self repl-env env form nil))
-        ([repl-env env [_ & specs :as form] opts]
-         (let [is-self-require? (self-require? specs)
-               [target-ns restore-ns]
-               (if-not is-self-require?
-                 [ana/*cljs-ns* nil]
-                 ['cljs.user ana/*cljs-ns*])]
-           (evaluate-form repl-env env "<cljs repl>"
-                          (with-meta
-                            `(~'ns ~target-ns
-                               (:use ~@(-> specs ana/canonicalize-specs decorate-specs)))
-                            {:merge true :line 1 :column 1})
-                          identity opts)
-           (when is-self-require?
-             (set! ana/*cljs-ns* restore-ns)))))
-      'use-macros
-      (fn self
-        ([repl-env env form]
-         (self repl-env env form nil))
-        ([repl-env env [_ & specs :as form] opts]
-         (evaluate-form repl-env env "<cljs repl>"
-                        (with-meta
-                          `(~'ns ~ana/*cljs-ns*
-                             (:use-macros ~@(-> specs ana/canonicalize-specs decorate-specs)))
-                          {:merge true :line 1 :column 1})
-                        identity opts)))
-      'import
-      (fn self
-        ([repl-env env form]
-         (self repl-env env form nil))
-        ([repl-env env [_ & specs :as form] opts]
-         (evaluate-form repl-env env "<cljs repl>"
-                        (with-meta
-                          `(~'ns ~ana/*cljs-ns*
-                             (:import
-                              ~@(map
-                                 (fn [quoted-spec-or-kw]
-                                   (if (keyword? quoted-spec-or-kw)
-                                     quoted-spec-or-kw
-                                     (second quoted-spec-or-kw)))
-                                 specs)))
-                          {:merge true :line 1 :column 1})
-                        identity opts)))
-      'refer-clojure
-      (fn self
-        ([repl-env env form]
-         (self repl-env env form nil))
-        ([repl-env env [_ & specs :as form] opts]
-         (evaluate-form repl-env env "<cljs repl>"
-                        (with-meta
-                          `(~'ns ~ana/*cljs-ns*
-                             (:refer-clojure ~@specs))
-                          {:merge true :line 1 :column 1})
-                        identity opts)))
       'load-file load-file-fn
       'clojure.core/load-file load-file-fn
       'load-namespace

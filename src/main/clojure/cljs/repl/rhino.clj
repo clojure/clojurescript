@@ -39,7 +39,7 @@
   String
   (-eval [this {:keys [cx scope]} filename line]
     (.evaluateString cx scope this filename line nil))
-  
+
   Reader
   (-eval [this {:keys [cx scope]} filename line]
     (.evaluateReader cx scope this filename line nil)))
@@ -159,8 +159,13 @@
 ;; https://groups.google.com/d/msg/mozilla.dev.tech.js-engine.rhino/inMyVKhPq6M/cY39hX20_z8J
 (defn wrap-fn [form]
   (cond
-    (and (seq? form) (= 'ns (first form))) identity
+    (and (seq? form)
+      (#{'ns 'require 'require-macros
+         'use 'use-macros 'import 'refer-clojure} (first form)))
+    identity
+
     ('#{*1 *2 *3 *e} form) (fn [x] `(cljs.core.pr-str ~x))
+
     :else
     (fn [x]
       `(cljs.core.pr-str
@@ -254,5 +259,5 @@
 
   (load-namespace 'goog.date.Date)
   (goog.date.Date.)
- 
+
   )
