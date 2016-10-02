@@ -2183,7 +2183,7 @@
 (defmethod parse 'ns
   [_ env [_ name & args :as form] _ opts]
   (when-not *allow-ns*
-    (throw (error env "Namespace declarations must be at the top-level.")))
+    (throw (error env "Namespace declarations must appear at the top-level.")))
   (when-not (symbol? name)
     (throw (error env "Namespaces must be named by a symbol.")))
   (let [name (cond-> name (:macros-ns opts) macro-ns-name)]
@@ -2311,7 +2311,8 @@
     (throw (error env (str "Arguments to " (name (first quoted-specs))
                         " must be quoted. Offending spec: " not-quoted))))
   (when-not *allow-ns*
-    (throw (error env "Namespace declarations must be at the top-level.")))
+    (throw (error env (str "Calls to `" (name (first quoted-specs))
+                        "` must appear at the top-level."))))
   (let [specs        (canonicalize-specs quoted-specs)
         name         (-> env :ns :name)
         args         (desugar-ns-specs
