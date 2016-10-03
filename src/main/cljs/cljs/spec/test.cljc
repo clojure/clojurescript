@@ -208,7 +208,7 @@ sym-or-syms, a symbol or collection of symbols. If sym-or-syms
 is not specified, check all checkable vars.
 
 The opts map includes the following optional keys, where stc
-aliases clojure.spec.test.check:
+aliases clojure.test.check:
 
 ::stc/opts  opts to flow through test.check/quick-check
 :gen        map from spec names to generator overrides
