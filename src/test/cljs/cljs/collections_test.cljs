@@ -611,3 +611,7 @@
     (is (= (get m 1) 2))
     (is (= (get m 3) 4))
     (is (= m {1 2 3 4}))))
+
+(deftest test-cljs-1809
+  (is (= (into) []))
+  (is (= (into [1 2]) [1 2])))
