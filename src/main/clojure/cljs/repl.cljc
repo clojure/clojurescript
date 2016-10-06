@@ -822,13 +822,17 @@
                       (swap! env/*compiler* assoc :js-dependency-index (deps/js-dependency-index opts))
                       opts)
                     opts)
-             init (or init
-                      #(evaluate-form repl-env env "<cljs repl>"
-                         (with-meta
-                           `(~'ns ~'cljs.user
-                              (:require ~@repl-requires))
-                           {:line 1 :column 1})
-                         identity opts))
+             init (do
+                    (evaluate-form repl-env env "<cljs repl>"
+                      `(~'set! ~'cljs.core/*print-namespace-maps* true)
+                      identity opts)
+                    (or init
+                        #(evaluate-form repl-env env "<cljs repl>"
+                           (with-meta
+                             `(~'ns ~'cljs.user
+                                (:require ~@repl-requires))
+                             {:line 1 :column 1})
+                           identity opts)))
              read-eval-print
              (fn []
                (let [input (binding [*ns* (create-ns ana/*cljs-ns*)

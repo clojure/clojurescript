@@ -109,6 +109,14 @@
 
 (def
   ^{:dynamic true
+    :doc "*print-namespace-maps* controls whether the printer will print
+  namespace map literal syntax.
+
+  Defaults to false, but the REPL binds it to true."}
+  *print-namespace-maps* false)
+
+(def
+  ^{:dynamic true
     :doc "*print-length* controls how many items of each collection the
   printer will print. If it is bound to logical false, there is no
   limit. Otherwise, it must be bound to an integer indicating the maximum
@@ -9411,15 +9419,43 @@ reduces them without incurring seq initialization"
   (when *print-newline*
     (newline (pr-opts))))
 
-(defn print-map [m print-one writer opts]
+(defn- strip-ns
+  [named]
+  (if (symbol? named)
+    (symbol nil (name named))
+    (keyword nil (name named))))
+
+(defn- lift-ns
+  "Returns [lifted-ns lifted-map] or nil if m can't be lifted."
+  [m]
+  (when *print-namespace-maps*
+    (loop [ns nil
+           [[k v :as entry] & entries] (seq m)
+           lm (empty m)]
+      (if entry
+        (when (or (keyword? k) (symbol? k))
+          (if ns
+            (when (= ns (namespace k))
+              (recur ns entries (assoc lm (strip-ns k) v)))
+            (when-let [new-ns (namespace k)]
+              (recur new-ns entries (assoc lm (strip-ns k) v)))))
+        [ns lm]))))
+
+(defn print-prefix-map [prefix m print-one writer opts]
   (pr-sequential-writer
     writer
     (fn [e w opts]
       (do (print-one (key e) w opts)
           (-write w \space)
           (print-one (val e) w opts)))
-    "{" ", " "}"
+    (str prefix "{") ", " "}"
     opts (seq m)))
+
+(defn print-map [m print-one writer opts]
+  (let [[ns lift-map] (lift-ns m)]
+    (if ns
+      (print-prefix-map (str "#:" ns) lift-map print-one writer opts)
+      (print-prefix-map nil m print-one writer opts))))
 
 (extend-protocol IPrintWithWriter
   LazySeq

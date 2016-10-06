@@ -231,6 +231,13 @@ Usage: *hello*
   "#{123\n  456\n  789}\n"
 )
 
+(simple-tests print-namespace-maps-tests
+  (binding [*print-namespace-maps* true] (with-out-str (pprint {:user/a 1})))
+  "#:user{:a 1}\n"
+  (binding [*print-namespace-maps* false] (with-out-str (pprint {:user/a 1})))
+  "{:user/a 1}\n"
+  )
+
 ;;----------------------------------------------------------------------------
 ;; clj-format tests
 ;;----------------------------------------------------------------------------

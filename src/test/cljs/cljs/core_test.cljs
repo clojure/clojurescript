@@ -759,6 +759,11 @@
       (is (= (with-out-str (doseq [fn (cljs-739 [] [:a :b :c :d])] (fn)))
           ":a\n:b\n:c\n:d\n")))))
 
+(deftest print-ns-maps
+  (testing "Testing CLJS-1786, *print-namespace-maps*"
+    (is (= "#:user{:a 1}" (binding [*print-namespace-maps* true] (pr-str {:user/a 1}))))
+    (is (= "{:user/a 1}" (binding [*print-namespace-maps* false] (pr-str {:user/a 1}))))))
+
 (deftest test-728
   (testing "Testing CLJS-728, lookup with default"
     (doseq [n [nil "-1" "" "0" "1" false true (js-obj)]]

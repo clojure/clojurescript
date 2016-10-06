@@ -611,7 +611,7 @@ beginning of aseq"
 ;; Variables that control the pretty printer
 ;;======================================================================
 
-;; *print-length*, *print-level* and *print-dup* are defined in cljs.core
+;; *print-length*, *print-level*, *print-namespace-maps* and *print-dup* are defined in cljs.core
 (def ^:dynamic
  ^{:doc "Bind to true if you want write to use pretty printing"}
  *print-pretty* true)
@@ -2837,21 +2837,25 @@ column number or pretty printing"
 
 ;;; (def pprint-map (formatter-out "~<{~;~@{~<~w~^ ~_~w~:>~^, ~_~}~;}~:>"))
 (defn- pprint-map [amap]
-  (pprint-logical-block :prefix "{" :suffix "}"
-    (print-length-loop [aseq (seq amap)]
-      (when aseq
-        ;;compiler gets confused with nested macro if it isn't namespaced
-        ;;it tries to use clojure.pprint/pprint-logical-block for some reason
-        (m/pprint-logical-block
-          (write-out (ffirst aseq))
-          (-write *out* " ")
-          (pprint-newline :linear)
-          (set! *current-length* 0)   ;always print both parts of the [k v] pair
-          (write-out (fnext (first aseq))))
-        (when (next aseq)
-          (-write *out* ", ")
-          (pprint-newline :linear)
-          (recur (next aseq)))))))
+  (let [[ns lift-map] (when (not (record? amap))
+                            (#'cljs.core/lift-ns amap))
+        amap (or lift-map amap)
+        prefix (if ns (str "#:" ns "{") "{")]
+    (pprint-logical-block :prefix prefix :suffix "}"
+      (print-length-loop [aseq (seq amap)]
+        (when aseq
+          ;;compiler gets confused with nested macro if it isn't namespaced
+          ;;it tries to use clojure.pprint/pprint-logical-block for some reason
+          (m/pprint-logical-block
+            (write-out (ffirst aseq))
+            (-write *out* " ")
+            (pprint-newline :linear)
+            (set! *current-length* 0)   ;always print both parts of the [k v] pair
+            (write-out (fnext (first aseq))))
+          (when (next aseq)
+            (-write *out* ", ")
+            (pprint-newline :linear)
+            (recur (next aseq))))))))
 
 (defn- pprint-simple-default [obj]
   ;;TODO: Update to handle arrays (?) and suppressing namespaces
