@@ -556,24 +556,27 @@
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* nil]
       (are [analyzed] (thrown-with-msg? Exception
-                        #"Namespace declarations must be at the top-level."
+                        #"Namespace declarations must appear at the top-level."
                         analyzed)
           (a/analyze test-env
           '(def foo
              (ns foo.core
                (:require [clojure.set :as set]))))
         (a/analyze test-env
-          '(def foo
-             (require '[clojure.set :as set])))
-        (a/analyze test-env
           '(fn []
              (ns foo.core
                (:require [clojure.set :as set]))))
         (a/analyze test-env
-          '(fn [] (require '[clojure.set :as set])))
-        (a/analyze test-env
           '(map #(ns foo.core
-                   (:require [clojure.set :as set])) [1 2]))
+                   (:require [clojure.set :as set])) [1 2])))
+      (are [analyzed] (thrown-with-msg? Exception
+                        #"Calls to `require` must appear at the top-level."
+                        analyzed)
+        (a/analyze test-env
+          '(def foo
+             (require '[clojure.set :as set])))
+        (a/analyze test-env
+          '(fn [] (require '[clojure.set :as set])))
         (a/analyze test-env
           '(map #(require '[clojure.set :as set]) [1 2]))))))
 
