@@ -2763,7 +2763,9 @@
   (core/assert (core/= (core/first quoted) 'quote)
     "Argument to macroexpand-1 must be quoted")
   (core/let [form (second quoted)]
-    `(quote ~(ana/macroexpand-1 &env form))))
+    (if (seq? form)
+      `(quote ~(ana/macroexpand-1 &env form))
+      form)))
 
 (core/defmacro macroexpand
   "Repeatedly calls macroexpand-1 on form until it no longer
@@ -2774,10 +2776,12 @@
     "Argument to macroexpand must be quoted")
   (core/let [form (second quoted)
              env &env]
-    (core/loop [form form form' (ana/macroexpand-1 env form)]
-      (core/if-not (core/identical? form form')
-        (recur form' (ana/macroexpand-1 env form'))
-        `(quote ~form')))))
+    (if (seq? form)
+      (core/loop [form form form' (ana/macroexpand-1 env form)]
+        (core/if-not (core/identical? form form')
+          (recur form' (ana/macroexpand-1 env form'))
+          `(quote ~form')))
+      form)))
 
 (core/defn- multi-arity-fn? [fdecl]
   (core/< 1 (count fdecl)))

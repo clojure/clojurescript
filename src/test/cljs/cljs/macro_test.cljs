@@ -13,3 +13,9 @@
 
 (deftest test-macros
   (is (= (== 1 1) 2)))
+
+(deftest macroexpansion
+  (is (= 1 (macroexpand-1 '1)))
+  (is (= '(if true (do 1)) (macroexpand-1 '(when true 1))))
+  (is (= 1 (macroexpand '1)))
+  (is (= '(if true (do 1)) (macroexpand '(when true 1)))))
