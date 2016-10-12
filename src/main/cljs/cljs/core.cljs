@@ -6888,7 +6888,7 @@ reduces them without incurring seq initialization"
             (aset new-arr (inc len) val)
             (set! (.-val added-leaf?) true)
             (HashCollisionNode. nil collision-hash (inc cnt) new-arr))
-          (if (= (aget arr idx) val)
+          (if (= (aget arr (inc idx)) val)
             inode
             (HashCollisionNode. nil collision-hash cnt (clone-and-set arr (inc idx) val)))))
       (.inode-assoc (BitmapIndexedNode. nil (bitpos collision-hash shift) (array nil inode))

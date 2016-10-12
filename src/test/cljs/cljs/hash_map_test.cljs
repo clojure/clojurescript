@@ -29,3 +29,11 @@
          (-> (hash-map :a 1 :b 2 :c 3 :d 4 nil 5)
              (-iterator)
              (iter->set)))))
+
+(deftest test-cljs-1817
+  (let [cljscore-hash hash]
+    (with-redefs [hash (fn [x]
+                         (if (or (#{:a :b} x) 0)
+                           cljscore-hash))]
+      (let [x (hash-map :a :a :b -1)]
+        (is (= (assoc x :b :b) {:a :a :b :b}))))))
