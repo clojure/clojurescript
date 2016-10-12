@@ -88,3 +88,7 @@
     (is (== (imul 0xffffffff 5) -5))
     (is (== (imul 0xfffffffe 5) -10))
     ))
+
+(deftest test-cljs-1818
+  (is (= (hash true) 1231))
+  (is (= (hash false) 1237)))

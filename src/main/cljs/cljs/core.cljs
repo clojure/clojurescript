@@ -902,9 +902,12 @@
         -1048576
         2146959360))
 
-    (true? o) 1
+    ;; note: mirrors Clojure's behavior on the JVM, where the hashCode is
+    ;; 1231 for true and 1237 for false
+    ;; http://docs.oracle.com/javase/7/docs/api/java/lang/Boolean.html#hashCode%28%29
+    (true? o) 1231
 
-    (false? o) 0
+    (false? o) 1237
 
     (string? o)
     (m3-hash-int (hash-string o))
