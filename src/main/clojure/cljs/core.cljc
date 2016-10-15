@@ -2457,7 +2457,7 @@
                      (map #(cljs.analyzer/analyze &env %) keys))
            (= (count (into #{} keys)) (count keys)))
        `(cljs.core/PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil)
-       `(.fromArray cljs.core/PersistentArrayMap (array ~@kvs) true false)))))
+       `(.createAsIfByAssoc cljs.core/PersistentArrayMap (array ~@kvs))))))
 
 (core/defmacro hash-map
   ([] `(.-EMPTY cljs.core/PersistentHashMap))
@@ -2480,7 +2480,7 @@
          (cljs.core/PersistentArrayMap. nil ~(count xs) (array ~@(interleave xs (repeat nil))) nil)
          nil)
       (vary-meta
-        `(.fromArray cljs.core/PersistentHashSet (array ~@xs) true)
+        `(.createAsIfByAssoc cljs.core/PersistentHashSet (array ~@xs))
         assoc :tag 'cljs.core/PersistentHashSet))))
 
 (core/defn- js-obj* [kvs]

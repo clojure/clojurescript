@@ -287,8 +287,8 @@ nil if the end of stream has been reached")
     (when (odd? c)
       (reader-error rdr "Map literal must contain an even number of forms"))
     (if (<= c (* 2 (.-HASHMAP-THRESHOLD PersistentArrayMap)))
-      (.fromArray PersistentArrayMap l true true)
-      (.fromArray PersistentHashMap l true))))
+      (.createWithCheck PersistentArrayMap l)
+      (.createWithCheck PersistentHashMap l))))
 
 (defn read-number
   [reader initch]
@@ -407,7 +407,7 @@ nil if the end of stream has been reached")
 
 (defn read-set
   [rdr _]
-  (.fromArray PersistentHashSet (read-delimited-list "}" rdr true) true))
+  (.createWithCheck PersistentHashSet (read-delimited-list "}" rdr true)))
 
 (defn read-regex
   [rdr ch]

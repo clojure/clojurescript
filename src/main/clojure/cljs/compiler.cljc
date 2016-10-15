@@ -363,9 +363,9 @@
         (emits "new cljs.core.PersistentArrayMap(null, " (count keys) ", ["
           (comma-sep (interleave keys vals))
           "], null)")
-        (emits "cljs.core.PersistentArrayMap.fromArray(["
+        (emits "cljs.core.PersistentArrayMap.createAsIfByAssoc(["
           (comma-sep (interleave keys vals))
-          "], true, false)"))
+          "])"))
 
       :else
       (emits "cljs.core.PersistentHashMap.fromArrays(["
@@ -407,7 +407,7 @@
       (emits "new cljs.core.PersistentHashSet(null, new cljs.core.PersistentArrayMap(null, " (count items) ", ["
         (comma-sep (interleave items (repeat "null"))) "], null), null)")
 
-      :else (emits "cljs.core.PersistentHashSet.fromArray([" (comma-sep items) "], true)"))))
+      :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "], true)"))))
 
 (defmethod emit* :js-value
   [{:keys [items js-type env]}]

@@ -37,3 +37,16 @@
                            cljscore-hash))]
       (let [x (hash-map :a :a :b -1)]
         (is (= (assoc x :b :b) {:a :a :b :b}))))))
+
+(deftest test-array-map-with-duplicate-keys
+  (testing "Testing duplicate keys in array maps"
+    ;; runtime
+    (is (= [:foo] (keys (apply array-map [:foo 1 :foo 2]))))
+    (let [sym-a (with-meta 'foo :first)
+          sym-b (with-meta 'foo :second)]
+      (is (= {sym-a 2} (apply array-map [sym-a 1 sym-b 2]))))
+    ;; compile-time
+    (is (= {:foo 2} (array-map :foo 1 :foo 2)))
+    (let [sym-a (with-meta 'foo :first)
+          sym-b (with-meta 'foo :second)]
+      (is (= {sym-a 2} (array-map sym-a 1 sym-b 2))))))
