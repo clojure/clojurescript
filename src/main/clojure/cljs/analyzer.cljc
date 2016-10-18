@@ -3393,8 +3393,8 @@
                           cached-ns    (case ext
                                          "edn"  (edn/read-string (slurp cache))
                                          "json" (let [{:keys [reader read]} @transit]
-                                                  (read (reader (io/input-stream cache) :json
-                                                          transit-read-opts))))]
+                                                  (with-open [is (io/input-stream cache)]
+                                                    (read (reader is :json transit-read-opts)))))]
                      (when (or *verbose* (:verbose opts))
                        (util/debug-prn "Reading analysis cache for" (str res)))
                      (swap! env/*compiler*
