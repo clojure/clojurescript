@@ -901,27 +901,29 @@
   files needing copying or compilation will be compiled and/or copied to the
   appropiate location."
   [inputs opts]
-  (let [pred     (fn [x]
-                   (if (:emit-constants opts)
-                     (not= ["constants-table"] (:provides x))
-                     (not= ["cljs.core"] (:provides x))))
-        pre      (take-while pred inputs)
-        post     (drop-while pred inputs)
-        preloads (remove nil?
-                   (map
-                     (fn [preload]
-                       (try
-                         (comp/find-source preload)
-                         (catch Throwable t
-                           (util/debug-prn "WARNING: preload namespace" preload "does not exist"))))
-                     (:preloads opts)))]
-    (distinct-by :provides
-      (concat pre [(first post)]
-        (-> (add-dependency-sources preloads opts)
-          deps/dependency-order
-          (compile-sources opts)
-          (add-js-sources opts))
-        (next post)))))
+  (if-not (:preloads opts)
+    inputs
+    (let [pred     (fn [x]
+                     (if (:emit-constants opts)
+                       (not= ["constants-table"] (:provides x))
+                       (not= ["cljs.core"] (:provides x))))
+          pre      (take-while pred inputs)
+          post     (drop-while pred inputs)
+          preloads (remove nil?
+                     (map
+                       (fn [preload]
+                         (try
+                           (comp/find-source preload)
+                           (catch Throwable t
+                             (util/debug-prn "WARNING: preload namespace" preload "does not exist"))))
+                       (:preloads opts)))]
+      (distinct-by :provides
+        (concat pre [(first post)]
+          (-> (add-dependency-sources preloads opts)
+            deps/dependency-order
+            (compile-sources opts)
+            (add-js-sources opts))
+          (next post))))))
 
 (comment
   (comp/find-sources-root "samples/hello/src")
@@ -1854,6 +1856,11 @@
   (assert (not (and (= target :nodejs) (= optimizations :whitespace)))
     (format ":nodejs target not compatible with :whitespace optimizations")))
 
+(defn check-preloads [{:keys [preloads optimizations] :as opts}]
+  (when (and (some? preloads) (not= optimizations :none))
+    (binding [*out* *err*]
+      (println "WARNING: :preloads should only be specified with :none optimizations"))))
+
 (defn foreign-source? [js]
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
@@ -1949,6 +1956,7 @@
          (check-source-map-path opts)
          (check-output-wrapper opts)
          (check-node-target opts)
+         (check-preloads opts)
          (swap! compiler-env
            #(-> %
              (update-in [:options] merge all-opts)
