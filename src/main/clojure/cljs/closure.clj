@@ -267,7 +267,7 @@
           :else (println "value for" key "must be string, int, float, or bool"))))
     (if-let [extra-annotations (:closure-extra-annotations opts)]
       (. compiler-options (setExtraAnnotationNames (map name extra-annotations))))
-    (when (contains? opts :source-map)
+    (when (:source-map opts)
       (if (:modules opts)
         ;; name is not actually used by Closur in :modules case,
         ;; but we need to provide _something_ for Closure to not
