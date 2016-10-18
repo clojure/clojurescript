@@ -342,8 +342,8 @@
 
 (defn- load-deps
   ([bound-vars ana-env lib deps cb]
-   (analyze-deps bound-vars ana-env lib deps nil cb))
-  ([bound-vars ana-env lib deps opts cb]
+   (analyze-deps bound-vars ana-env lib deps nil nil cb))
+  ([bound-vars ana-env lib deps reload opts cb]
    (when (:verbose opts)
      (debug-prn "Loading dependencies for" lib))
    (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
@@ -356,12 +356,12 @@
              opts' (-> opts
                      (dissoc :context)
                      (dissoc :ns))]
-         (require bound-vars dep opts'
+         (require bound-vars dep reload opts'
            (fn [res]
              (when (:verbose opts)
                (debug-prn "Loading result: " res))
              (if-not (:error res)
-               (load-deps bound-vars ana-env lib (next deps) opts cb)
+               (load-deps bound-vars ana-env lib (next deps) nil opts cb)
                (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
                                    (get {dep nil} cljs-ns cljs-ns))]
                  (require bound-vars cljs-dep opts'
@@ -370,7 +370,7 @@
                        (cb res)
                        (do
                          (patch-alias-map (:*compiler* bound-vars) lib dep cljs-dep)
-                         (load-deps bound-vars ana-env lib (next deps) opts
+                         (load-deps bound-vars ana-env lib (next deps) nil opts
                            (fn [res]
                              (if (:error res)
                                (cb res)
@@ -513,8 +513,9 @@
                                  (str "Could not parse ns form " (:name ast)) cause)))))))))]
        (cond
          (and load (seq (:deps ast)))
-         (load-deps bound-vars ana-env (:name ast) (:deps ast) (dissoc opts :macros-ns)
-           #(check-uses-and-load-macros % (rewrite-ns-ast ast (:aliased-loads %))))
+         (let [{:keys [reload name deps]} ast]
+           (load-deps bound-vars ana-env name deps (or (:require reload) (:use reload)) (dissoc opts :macros-ns)
+             #(check-uses-and-load-macros % (rewrite-ns-ast ast (:aliased-loads %)))))
 
          (and (not load) (:*analyze-deps* bound-vars) (seq (:deps ast)))
          (analyze-deps bound-vars ana-env (:name ast) (:deps ast) (dissoc opts :macros-ns)
