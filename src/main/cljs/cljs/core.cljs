@@ -19,6 +19,8 @@
 
 (def *unchecked-if* false)
 
+(defonce PROTOCOL_SENTINEL #js {})
+
 (goog-define
   ^{:dynamic true
     :doc "Var bound to the name value of the compiler build :target option.

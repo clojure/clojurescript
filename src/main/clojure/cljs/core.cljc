@@ -1454,7 +1454,7 @@
       (add-obj-methods type type-sym sigs)
       (concat
         (core/when-not (skip-flag psym)
-          [`(set! ~(extend-prefix type-sym pprefix) true)])
+          [`(set! ~(extend-prefix type-sym pprefix) cljs.core/PROTOCOL_SENTINEL)])
         (mapcat
           (core/fn [sig]
             (if (= psym 'cljs.core/IFn)
@@ -2014,13 +2014,13 @@
       `(let [~xsym ~x]
          (if ~xsym
            (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
-                   ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+                    (identical? cljs.core/PROTOCOL_SENTINEL (. ~xsym ~(symbol (core/str "-" prefix)))))
              true
              false)
            false))
       `(if-not (nil? ~x)
          (if (or ~(if bit `(unsafe-bit-and (. ~x ~msym) ~bit) false)
-                 ~(bool-expr `(. ~x ~(symbol (core/str "-" prefix)))))
+                  (identical? cljs.core/PROTOCOL_SENTINEL (. ~x ~(symbol (core/str "-" prefix)))))
            true
            false)
          false))))
@@ -2040,7 +2040,7 @@
       `(let [~xsym ~x]
          (if-not (nil? ~xsym)
            (if (or ~(if bit `(unsafe-bit-and (. ~xsym ~msym) ~bit) false)
-                   ~(bool-expr `(. ~xsym ~(symbol (core/str "-" prefix)))))
+                    (identical? cljs.core/PROTOCOL_SENTINEL (. ~xsym ~(symbol (core/str "-" prefix)))))
              true
              (if (coercive-not (. ~xsym ~msym))
                (cljs.core/native-satisfies? ~psym ~xsym)
@@ -2048,7 +2048,7 @@
            (cljs.core/native-satisfies? ~psym ~xsym)))
       `(if-not (nil? ~x)
          (if (or ~(if bit `(unsafe-bit-and (. ~x ~msym) ~bit) false)
-                 ~(bool-expr `(. ~x ~(symbol (core/str "-" prefix)))))
+                  (identical? cljs.core/PROTOCOL_SENTINEL (. ~x ~(symbol (core/str "-" prefix)))))
            true
            (if (coercive-not (. ~x ~msym))
              (cljs.core/native-satisfies? ~psym ~x)
