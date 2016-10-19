@@ -1,3 +1,54 @@
+## 1.9.293
+
+### Enhancements
+* CLJS-1346: Support require outside of ns
+
+### Changes
+* CLJS-1762: Bump Closure Compiler, refactor module support
+* CLJS-1658: testing for protocol membership may return false positives
+* CLJS-1536: REPL def symbol init collision
+* CLJS-1805: Source map should take false
+* CLJS-1804: Self-host: process namespace side-effects for new require without NS
+* CLJS-1803: Use new require capability in REPLs
+* CLJS-1796: Measure Google Closure specific optimization time
+* CLJS-1782: Self-host: allow namespaces to require their own macros
+* CLJS-1563: :source-map option to cljs.build.api/build should take nil
+* CLJS-1785: Warn on reference to js/foo shadowed by local binding
+
+### Fixes
+* make String an implicit ns like Math. revert char? and clarify docstring. add unit tests for char?
+* fix cljs.spec.test/check docstring
+* CLJS-1826: Self-host: load-deps doesn't honor `:reload` and `reload-all`
+* CLJS-1825: :source-map error when passing `false` under simple optimizations
+* CLJS-1821: `add-preloads` should only touch sources if `:preloads` option specified
+* CLJS-1814: Move docstrings for require, etc. from `cljs.repl` to their new definitions in `cljs.core`
+* CLJS-1809: Add 0/1 arity to `into`
+* CLJS-1824: transit cache feature leaks files
+* CLJS-1294: Let macroexpand(-1) accept any quoted argument.
+* CLJS-1818: (hash false) returns different value from Clojure
+* CLJS-1817: Strange result when assoc'ing 0 to persistent hash map
+* CLJS-1815: Fix failing analyzer tests
+* follow-up on CLJS-460 defmulti ignores optional :hierarchy argument
+* CLJS-1807: Better error messages for `ns*` calls
+* CLJS-1802: Generated namespaces should be of the form `cljs.user.fileXXXX`
+* CLJ-1935: Use multimethod dispatch value method lookup to take hierarchies into account in multi-spec
+* CLJS-1682 :foreign-libs with module conversion does not works properly if it is used form deps.cljs
+* CLJS-1710: spec/double-in not implemented
+* CLJS-1787: Make cljs.spec explain pluggable
+* CLJS-1781: Add cljs.hash-map-test to self-parity tests
+* CLJS-1788: Port CLJ-2004: include retag in multi-spec form
+* CLJS-1765: Empty iterator for hash maps with nil key
+* CLJS-1784: nth doesn't throw on strings or arrays
+* CLJS-1773: Self-host: Don't resolve unqualified symbols / keywords with $macros
+* CLJS-1770: goog-defines broken for integers
+* CLJS-1600: Destructuring defprotocol fn args causes defrecord impls to silently fail
+* CLJS-1335: resolve-macro-var: information missing for macros
+* CLJS-1633: Improve error associated with invalid foreign-libs :file path
+* CLJS-1775: `get` with `nil` returns as if `get` with `0`
+* CLJS-1780: Records without extmaps fail to iterate
+* CLJS-1774: Self-host: Report filenames in warns in test-self-parity
+* CLJS-1779: keyword 2-arity constructor accepts anything for both parameters which leads to different hashing
+
 ## 1.9.229
 
 ### Fixes
