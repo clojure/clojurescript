@@ -648,7 +648,7 @@
             (throw (error ~env (.getMessage err#) err#)))))))
 
 ;; namespaces implicit to the inclusion of cljs.core
-(def implicit-nses '#{goog goog.object goog.string goog.array Math})
+(def implicit-nses '#{goog goog.object goog.string goog.array Math String})
 
 (defn implicit-import?
   #?(:cljs {:tag boolean})

@@ -951,3 +951,13 @@
                  1)))
     (is (= 1 (aget #js {:a 1} "a")))
     (is (= 1 (.-a #js {:a 1})))))
+
+(deftest test-char?
+  (is (char? "0"))
+  (is (char? (String/fromCharCode 13)))
+  (is (char? (String/fromCharCode 10)))
+  (is (char? \newline))
+  (is (char? \space))
+  (is (char? "0"))
+  (is (char? "\u0080"))
+  (is (char? "\uFFFD")))

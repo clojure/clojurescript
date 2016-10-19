@@ -229,9 +229,9 @@
   (goog/isString x))
 
 (defn ^boolean char?
-  "Returns true if x is a JavaScript char."
+  "Returns true if x is a JavaScript string of length one."
   [x]
-  (gstring/isUnicodeChar x))
+  (and (string? x) (== 1 (.-length x))))
 
 (defn ^boolean any?
   "Returns true if given any argument."
