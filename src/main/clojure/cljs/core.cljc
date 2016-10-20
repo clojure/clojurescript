@@ -2761,6 +2761,9 @@
   :refer takes a list of symbols to refer from the namespace..
   :refer-macros takes a list of macro symbols to refer from the namespace.
   :include-macros true causes macros from the namespace to be required.
+  :rename specifies a map from referred var names to different
+    symbols (and can be used to prevent clashes)
+
 
   Flags
 
