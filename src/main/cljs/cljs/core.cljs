@@ -1832,16 +1832,16 @@ reduces them without incurring seq initialization"
         (-lookup ^not-native o k)
 
         (array? o)
-        (when (< k (.-length o))
-          (aget o (int k)))
-        
-        (string? o)
         (when (and (some? k) (< k (.-length o)))
           (aget o (int k)))
 
+        (string? o)
+        (when (and (some? k) (< k (.-length o)))
+          (.charAt o (int k)))
+
         (native-satisfies? ILookup o)
         (-lookup o k)
-        
+
         :else nil)))
   ([o k not-found]
     (if-not (nil? o)
@@ -1850,13 +1850,13 @@ reduces them without incurring seq initialization"
         (-lookup ^not-native o k not-found)
 
         (array? o)
-        (if (< k (.-length o))
+        (if (and (some? k) (>= k 0) (< k (.-length o)))
           (aget o (int k))
           not-found)
 
         (string? o)
-        (if (< k (.-length o))
-          (aget o (int k))
+        (if (and (some? k) (>= k 0) (< k (.-length o)))
+          (.charAt o (int k))
           not-found)
 
         (native-satisfies? ILookup o)

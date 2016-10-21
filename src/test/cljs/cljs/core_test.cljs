@@ -1183,6 +1183,12 @@
     (is (thrown? js/Error (assoc sv 5 0)))
     (is (thrown? js/Error (assoc sv -1 0)))))
 
+(deftest test-cljs-1829
+  (is (= (get "0123" -1 :not-found) :not-found))
+  (is (= (get #js [0 1 2 3] -1 :not-found) :not-found))
+  (is (= (get "0123" nil :not-found) :not-found))
+  (is (= (get #js [0 1 2 3] nil :not-found) :not-found)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
