@@ -37,6 +37,7 @@
                             require use refer-clojure
 
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
+                            some?
                             #?@(:cljs [alias coercive-not coercive-not= coercive-= coercive-boolean
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
@@ -856,6 +857,9 @@
 
 (core/defmacro nil? [x]
   `(coercive-= ~x nil))
+
+(core/defmacro some? [x]
+  `(not (nil? ~x)))
 
 ;; internal - do not use.
 (core/defmacro coercive-not [x]
@@ -1945,7 +1949,7 @@
                                            (mapv (core/fn [arg]
                                                    (core/cond
                                                      (core/symbol? arg) arg
-                                                     (core/and (map? arg) (some? (:as arg))) (:as arg)
+                                                     (core/and (map? arg) (core/some? (:as arg))) (:as arg)
                                                      :else (gensym))) sig)
                                            sig)]
                             `(~sig
