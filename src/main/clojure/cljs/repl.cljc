@@ -447,12 +447,12 @@
     (evaluate-form repl-env env filename form wrap *repl-opts*))
   ([repl-env env filename form wrap opts]
    (binding [ana/*cljs-file* filename]
-     (let [env (assoc env
-                 :root-source-info
-                 {:source-type :fragment
-                  :source-form form})
+     (let [env (merge env
+                 {:root-source-info {:source-type :fragment
+                                     :source-form form}
+                  :repl-env repl-env})
            def-emits-var (:def-emits-var opts)
-           ast (ana/analyze (assoc env :repl-env repl-env :def-emits-var def-emits-var)
+           ast (ana/analyze (assoc env :def-emits-var def-emits-var)
                  (wrap form) nil opts)
            wrap-js
            ;; TODO: check opts as well - David

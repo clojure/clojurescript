@@ -2971,13 +2971,18 @@
           ast))
       ast)))
 
+(defn- repl-self-require? [env deps]
+  (and (:repl-env env) (some #{*cljs-ns*} deps)))
+
 #?(:clj
    (defn ns-side-effects
      [env {:keys [op] :as ast} opts]
      (if (#{:ns :ns*} op)
        (let [{:keys [name deps uses require-macros use-macros reload reloads]} ast]
          (when (and *analyze-deps* (seq deps))
-           (analyze-deps name deps env (dissoc opts :macros-ns)))
+           (analyze-deps
+             (if (repl-self-require? env deps) 'cljs.user name)
+             deps env (dissoc opts :macros-ns)))
          (if *load-macros*
            (do
              (load-core)
