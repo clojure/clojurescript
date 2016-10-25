@@ -1516,11 +1516,12 @@ reduces them without incurring seq initialization"
   IIndexed
   (-nth [coll n]
     (let [i (+ n i)]
-      (when (< i (alength arr))
-        (aget arr i))))
+      (if (and (<= 0 i) (< i (alength arr)))
+        (aget arr i)
+        (throw (js/Error. "Index out of bounds")))))
   (-nth [coll n not-found]
     (let [i (+ n i)]
-      (if (< i (alength arr))
+      (if (and (<= 0 i) (< i (alength arr)))
         (aget arr i)
         not-found)))
 

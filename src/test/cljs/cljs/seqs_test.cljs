@@ -188,3 +188,18 @@
     (is (= (-rest (rseq [0])) ()))
     (is (nil? (-next (rseq [0]))))
     (is (= (set (rseq [0])) #{0}))))
+
+(deftest test-indexed-seqs
+  (testing "Testing IndexedSeq"
+    (testing "Sequence equality"
+      (is (= (list 0 1 2 3 4 5) (seq (array 0 1 2 3 4 5)))))
+    (testing "nth lookup within bounds"
+      (is (= 0 (nth (seq (array 0 1 2 3 4 5)) 0)))
+      (is (= 0 (nth (seq (array 0 1 2 3 4 5)) 0 :not-found)))
+      (is (= 5 (nth (seq (array 0 1 2 3 4 5)) 5)))
+      (is (= 5 (nth (seq (array 0 1 2 3 4 5)) 5 :not-found))))
+    (testing "nth lookup out of bounds"
+      (is (thrown? js/Error (nth (seq (array 0 1 2 3 4 5)) 6)))
+      (is (= :not-found (nth (seq (array 0 1 2 3 4 5)) 6 :not-found)))
+      (is (thrown? js/Error (nth (seq (array 0 1 2 3 4 5)) -1)))
+      (is (= :not-found (nth (seq (array 0 1 2 3 4 5)) -1 :not-found))))))
