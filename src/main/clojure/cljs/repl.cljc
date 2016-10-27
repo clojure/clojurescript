@@ -544,6 +544,30 @@
           (assert res (str "Can't find " f " in classpath"))
           (load-stream repl-env f res))))))
 
+(defn- root-resource
+  "Returns the root directory path for a lib"
+  {:tag String}
+  [lib]
+  (str \/
+       (.. (name lib)
+           (replace \- \_)
+           (replace \. \/))))
+
+(defn- root-directory
+  "Returns the root resource path for a lib"
+  [lib]
+  (let [d (root-resource lib)]
+    (subs d 0 (.lastIndexOf d "/"))))
+
+(defn- load-path->cp-path
+  [path]
+  (let [src (if (= File/separatorChar (first path))
+              path
+              (str (root-directory ana/*cljs-ns*) \/ path))
+        src (.substring src 1)]
+    (or (io/resource (str src ".cljs"))
+        (io/resource (str src ".cljc")))))
+
 (defn- wrap-fn [form]
   (cond
     (and (seq? form)
@@ -664,7 +688,14 @@
         ([repl-env env form]
          (self env repl-env form nil))
         ([repl-env env [_ ns :as form] opts]
-         (load-namespace repl-env ns opts)))})))
+         (load-namespace repl-env ns opts)))
+      'load
+      (fn self
+        ([repl-env env form]
+         (self env repl-env form nil))
+        ([repl-env env [_ & paths :as form] opts]
+         (let [cp-paths (map load-path->cp-path paths)]
+           (run! #(load-file repl-env % opts) cp-paths))))})))
 
 (defn analyze-source
   "Given a source directory, analyzes all .cljs files. Used to populate
@@ -1055,7 +1086,11 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
   '{in-ns {:arglists ([name])
            :doc "Sets *cljs-ns* to the namespace named by the symbol, creating it if needed."}
     load-file {:arglists ([name])
-               :doc "Sequentially read and evaluate the set of forms contained in the file."}})
+               :doc "Sequentially read and evaluate the set of forms contained in the file."}
+    load {:arglists ([& paths])
+               :doc "Loads Clojure code from resources in classpath. A path is interpreted as
+  classpath-relative if it begins with a slash or relative to the root
+  directory for the current namespace otherwise."}})
 
 (defn- repl-special-doc [name-symbol]
   (assoc (repl-special-doc-map name-symbol)
