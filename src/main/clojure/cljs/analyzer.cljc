@@ -677,6 +677,10 @@
           true
           false)))))
 
+(defn js-module-exists?
+  [module]
+  (-> (get-in @env/*compiler* [:js-module-index]) vals set (contains? module)))
+
 (defn confirm-var-exists
   ([env prefix suffix]
    (let [warn (confirm-var-exist-warning env prefix suffix)]
@@ -693,7 +697,8 @@
      (when (and (not (implicit-import? env prefix suffix))
                 (not (loaded-js-ns? env prefix))
                 (not (and (= 'cljs.core prefix) (= 'unquote suffix)))
-                (nil? (gets @env/*compiler* ::namespaces prefix :defs suffix)))
+                (nil? (gets @env/*compiler* ::namespaces prefix :defs suffix))
+                (not (js-module-exists? (str prefix))))
        (missing-fn env prefix suffix)))))
 
 (defn confirm-var-exists-throw []
@@ -727,7 +732,8 @@
              (nil? (gets @env/*compiler* ::namespaces ns-sym))
              ;; macros may refer to namespaces never explicitly required
              ;; confirm that the library at least exists
-             #?(:clj (nil? (util/ns->source ns-sym))))
+             #?(:clj (nil? (util/ns->source ns-sym)))
+             (not (js-module-exists? (str ns-sym))))
     (warning :undeclared-ns env {:ns-sym ns-sym})))
 
 (defn core-name?
@@ -1994,9 +2000,13 @@
     (do
       (basic-validate-ns-spec env macros? spec)
       (let [[lib & opts] spec
-            lib (if-let [js-module-name (get-in @env/*compiler* [:js-module-index (name lib)])]
-                  (symbol js-module-name)
-                  lib)
+            ;; We need to load JS modules by the name that has been created by the
+            ;; Google Closure compiler, e.g. module$resources$libs$calculator.
+            ;; This means that we need to create an alias from the module name
+            ;; given with :provides to the new name.
+            [lib js-module-provides] (if-let [js-module-name (get-in @env/*compiler* [:js-module-index (str lib)])]
+                                       [(symbol js-module-name) lib]
+                                       [lib nil])
             {alias :as referred :refer renamed :rename :or {alias lib}} (apply hash-map opts)
             referred-without-renamed (seq (remove (set (keys renamed)) referred))
             [rk uk renk] (if macros? [:require-macros :use-macros :rename-macros] [:require :use :rename])]
@@ -2012,7 +2022,7 @@
               (throw (error env (parse-ns-error-msg spec ":as alias must be unique"))))
             (swap! aliases
               update-in [alias-type]
-              conj [alias lib])))
+              conj [alias lib] (when js-module-provides [js-module-provides lib]))))
         (when-not (or (and (sequential? referred)
                            (every? symbol? referred))
                       (nil? referred))
@@ -2024,7 +2034,7 @@
           (swap! deps conj lib))
         (merge
           (when alias
-            {rk (merge {alias lib} {lib lib})})
+            {rk (merge {alias lib} (when js-module-provides {js-module-provides lib}))})
           (when referred-without-renamed {uk (apply hash-map (interleave referred-without-renamed (repeat lib)))})
           (when renamed
             {renk (reduce (fn [m [original renamed]]
