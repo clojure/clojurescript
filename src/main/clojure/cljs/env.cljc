@@ -29,6 +29,10 @@ state that is accessed/maintained by many different components."}
 ;; * :cljs.analyzer/constant-table - map of (currently only keyword) constant
 ;;   values to fixed ids
 ;; * :cljs.analyzer/namespaces - map of symbols to "namespace" maps
+;; * :cljs.analyzer/data-readers - literal map of symbols, where the first
+;;   symbol in each pair is a tag that will be recognized by the reader. The
+;;   second symbol in the pair is the fully-qualified name of a Var which will
+;;   be invoked by the reader to parse the form following the tag.
 ;; * :cljs.compiler/compiled-cljs - cache of intermediate compilation results
 ;;   that speeds incremental builds in conjunction with source map generation
 ;; * :cljs.closure/compiled-cljs - cache from js file path to map of
@@ -43,6 +47,7 @@ state that is accessed/maintained by many different components."}
   ([options]
      (atom (merge {:cljs.analyzer/namespaces {'cljs.user {:name 'cljs.user}}
                    :cljs.analyzer/constant-table {}
+                   :cljs.analyzer/data-readers {}
                    :options options}
              #?(:clj {:js-dependency-index (js-dependency-index options)})))))
 

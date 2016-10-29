@@ -36,7 +36,8 @@
             [cljs.spec-test]
             [cljs.clojure-alias-test]
             [cljs.hash-map-test]
-            [cljs.predicates-test]))
+            [cljs.predicates-test]
+            [cljs.tagged-literals-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -70,4 +71,5 @@
   'cljs.hash-map-test
   'cljs.pprint-test
   'cljs.predicates-test
-  'cljs.syntax-quote-test)
+  'cljs.syntax-quote-test
+  'cljs.tagged-literals-test)

@@ -85,7 +85,9 @@
   (JSValue. form))
 
 (def ^:dynamic *cljs-data-readers*
-  {'queue read-queue
-   'uuid  read-uuid
-   'inst  read-inst
-   'js    read-js})
+  (merge ;; assumes we can read all data_readers
+    #?(:clj *data-readers*)
+    {'queue read-queue
+     'uuid  read-uuid
+     'inst  read-inst
+     'js    read-js}))

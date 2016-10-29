@@ -44,7 +44,9 @@
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as string]
-            [clojure.data.json :as json])
+            [clojure.data.json :as json]
+            [clojure.tools.reader :as reader]
+            [clojure.tools.reader.reader-types :as readers])
   (:import [java.io File BufferedInputStream StringWriter]
            [java.net URL]
            [java.util.logging Level]
@@ -1886,6 +1888,43 @@
                   opts js-modules)))
       opts)))
 
+(defn- load-data-reader-file [mappings ^java.net.URL url]
+  (with-open [rdr (readers/input-stream-push-back-reader (.openStream url))]
+    (binding [*file* (.getFile url)]
+      (let [new-mappings (reader/read {:eof nil :read-cond :allow} rdr)]
+        (when (not (map? new-mappings))
+          (throw (ex-info (str "Not a valid data-reader map")
+                   {:url url})))
+        (reduce
+          (fn [m [k v]]
+            (when (not (symbol? k))
+              (throw (ex-info (str "Invalid form in data-reader file")
+                       {:url url
+                        :form k})))
+            (when (and (contains? mappings k)
+                    (not= (mappings k) v))
+              (throw (ex-info "Conflicting data-reader mapping"
+                       {:url url
+                        :conflict k
+                        :mappings m})))
+            (assoc m k v))
+          mappings
+          new-mappings)))))
+
+(defn get-data-readers*
+  "returns a merged map containing all data readers defined by libraries
+   on the classpath."
+  ([]
+   (get-data-readers* (. (Thread/currentThread) (getContextClassLoader))))
+  ([classloader]
+   (let [data-reader-urls (enumeration-seq (. classloader (getResources "data_readers.cljc")))]
+     (reduce load-data-reader-file {} data-reader-urls))))
+
+(def get-data-readers (memoize get-data-readers*))
+
+(defn load-data-readers! [compiler]
+  (swap! compiler update-in [:cljs.analyzer/data-readers] merge (get-data-readers)))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
@@ -1946,6 +1985,7 @@
                  compile-opts (if one-file?
                                 (assoc all-opts :output-file (:output-to all-opts))
                                 all-opts)
+                 _ (load-data-readers! compiler-env)
                  js-sources (-> (-find-sources source all-opts)
                                 (add-dependency-sources compile-opts)
                                 deps/dependency-order

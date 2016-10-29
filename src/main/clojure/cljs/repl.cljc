@@ -24,7 +24,6 @@
             [cljs.analyzer.api :as ana-api]
             [cljs.env :as env]
             [cljs.js-deps :as deps]
-            [cljs.tagged-literals :as tags]
             [cljs.closure :as cljsc]
             [cljs.source-map :as sm])
   (:import [java.io File PushbackReader FileWriter PrintWriter]

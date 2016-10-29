@@ -7,6 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.reader
+  (:require-macros [cljs.reader :refer [add-data-readers]])
   (:require [goog.string :as gstring])
   (:import goog.string.StringBuffer))
 
@@ -515,11 +516,11 @@ nil if the end of stream has been reached")
 
 (defn ^:private check [low n high msg]
   (when-not (<= low n high)
-    (reader-error nil (str msg " Failed:  " low "<=" n "<=" high))) 
+    (reader-error nil (str msg " Failed:  " low "<=" n "<=" high)))
   n)
 
 (defn parse-and-validate-timestamp [s]
-  (let [[_ years months days hours minutes seconds fraction offset-sign offset-hours offset-minutes :as v] 
+  (let [[_ years months days hours minutes seconds fraction offset-sign offset-hours offset-minutes :as v]
         (re-matches timestamp-regex s)]
     (if-not v
       (reader-error nil (str "Unrecognized date/time syntax: " s))
@@ -580,7 +581,7 @@ nil if the end of stream has been reached")
       (doseq [[k v] form]
         (aset obj (name k) v))
       obj)
-    
+
     :else
     (reader-error nil
       (str "JS literal expects a vector or map containing "
@@ -594,10 +595,11 @@ nil if the end of stream has been reached")
     (reader-error nil "UUID literal expects a string as its representation.")))
 
 (def ^:dynamic *tag-table*
-  (atom {"inst"  read-date
-         "uuid"  read-uuid
-         "queue" read-queue
-         "js"    read-js}))
+  (atom (add-data-readers
+          {"inst"  read-date
+           "uuid"  read-uuid
+           "queue" read-queue
+           "js"    read-js})))
 
 (def ^:dynamic *default-data-reader-fn*
   (atom nil))
