@@ -1149,6 +1149,19 @@
   (is (= ((let [z 1] (defn z [] z))) 1))
   (is (= (let [w 1] ((defn w [] w))) 1)))
 
+(deftest test-cljs-1837
+  (testing "halt-when transducer"
+    (is (= (transduce (halt-when #{1}) conj [] [5 4 1 2 3])
+           1))
+    (is (= (transduce (halt-when #{1} (fn [ret input] input)) conj [] [5 4 1 2 3])
+           1))
+    (is (= (transduce (halt-when #{1} (fn [ret input] ret)) conj [] [5 4 1 2 3])
+           [5 4]))
+    (is (= (transduce (halt-when #{1} (fn [ret input] (conj ret input))) conj [] [5 4 1 2 3])
+           [5 4 1]))
+    (is (= (into [] (halt-when #{1} (fn [ret in] (conj! ret in)))  [2 3 1]))
+        [2 3 1])))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
