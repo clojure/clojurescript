@@ -152,6 +152,16 @@
              (string/join ", " (keys string->charset)) " supported ")
         {}))))
 
+(defn ^CompilerOptions$LanguageMode lang-key->lang-mode [key]
+  (case key
+    :no-transpile       CompilerOptions$LanguageMode/NO_TRANSPILE
+    :ecmascript6        CompilerOptions$LanguageMode/ECMASCRIPT6
+    :ecmascript6-strict CompilerOptions$LanguageMode/ECMASCRIPT6_STRICT
+    :ecmascript6-typed  CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
+    :ecmascript5        CompilerOptions$LanguageMode/ECMASCRIPT5
+    :ecmascript5-strict CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT
+    :ecmascript3        CompilerOptions$LanguageMode/ECMASCRIPT3))
+
 (defn set-options
   "TODO: Add any other options that we would like to support."
   [opts ^CompilerOptions compiler-options]
@@ -170,25 +180,11 @@
           :mapped AnonymousFunctionNamingPolicy/MAPPED
           (throw (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted")))))))
 
-  (when (contains? opts :language-in)
-    (case (:language-in opts)
-      :no-transpile       (.setLanguageIn compiler-options CompilerOptions$LanguageMode/NO_TRANSPILE)
-      :ecmascript6        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT6)
-      :ecmascript6-strict (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT6_STRICT)
-      :ecmascript6-typed  (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED)
-      :ecmascript5        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
-      :ecmascript5-strict (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
-      :ecmascript3        (.setLanguageIn compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
+  (when-let [lang-key (:language-in opts)]
+    (.setLanguageIn compiler-options (lang-key->lang-mode lang-key)))
 
-  (when (contains? opts :language-out)
-    (case (:language-out opts)
-      :no-transpile       (.setLanguageOut compiler-options CompilerOptions$LanguageMode/NO_TRANSPILE)
-      :ecmascript6        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT6)
-      :ecmascript6-strict (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT6_STRICT)
-      :ecmascript6-typed  (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED)
-      :ecmascript5        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5)
-      :ecmascript5-strict (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT)
-      :ecmascript3        (.setLanguageOut compiler-options CompilerOptions$LanguageMode/ECMASCRIPT3)))
+  (when-let [lang-key (:language-out opts)]
+    (.setLanguageOut compiler-options (lang-key->lang-mode lang-key)))
 
   (when (contains? opts :print-input-delimiter)
     (set! (.printInputDelimiter compiler-options)
@@ -1526,7 +1522,7 @@
         ^List source-files (get-source-files js-modules)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                    (.setLanguageIn CompilerOptions$LanguageMode/ECMASCRIPT6)
-                                   (.setLanguageOut CompilerOptions$LanguageMode/ECMASCRIPT5))
+                                   (.setLanguageOut (lang-key->lang-mode (:language-out opts))))
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))]
     (.parse closure-compiler)
