@@ -2034,7 +2034,8 @@
           (swap! deps conj lib))
         (merge
           (when alias
-            {rk (merge {alias lib} (when js-module-provides {js-module-provides lib}))})
+            {rk (merge {alias lib} {lib lib}
+                  (when js-module-provides {js-module-provides lib}))})
           (when referred-without-renamed {uk (apply hash-map (interleave referred-without-renamed (repeat lib)))})
           (when renamed
             {renk (reduce (fn [m [original renamed]]
