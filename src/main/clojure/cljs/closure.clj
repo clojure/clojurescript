@@ -1522,7 +1522,7 @@
         ^List source-files (get-source-files js-modules)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                    (.setLanguageIn CompilerOptions$LanguageMode/ECMASCRIPT6)
-                                   (.setLanguageOut (lang-key->lang-mode (:language-out opts))))
+                                   (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))]
     (.parse closure-compiler)
