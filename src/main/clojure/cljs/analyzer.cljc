@@ -1656,12 +1656,11 @@
 
 (defmethod parse 'new
   [_ env [_ ctor & args :as form] _ _]
-  (when-not (symbol? ctor)
-    (throw (error env "First arg to new must be a symbol")))
   (disallowing-recur
    (let [enve (assoc env :context :expr)
          ctorexpr (analyze enve ctor)
-         ctor-var (resolve-existing-var env ctor)
+         ctor-var (when (= (:op ctorexpr) :var)
+                    (resolve-existing-var env ctor))
          record-args
          (when (and (:record ctor-var) (not (-> ctor meta :internal-ctor)))
            (repeat 3 (analyze enve nil)))

@@ -1162,6 +1162,13 @@
     (is (= (into [] (halt-when #{1} (fn [ret in] (conj! ret in)))  [2 3 1]))
         [2 3 1])))
 
+(deftest test-cljs-1839
+  (let [x #js {:foo (fn [])}
+        foo (.-foo x)]
+    (is (instance? foo (new foo)))
+    (is (instance? foo (foo.)))
+    (is (instance? foo (new (.-foo x))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
