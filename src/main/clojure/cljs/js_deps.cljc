@@ -67,7 +67,7 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
     (when (.exists file)
       (map to-url (filter #(.endsWith ^String (.getName ^File %) ".js") (file-seq (io/file path)))))))
 
-(defn find-js-classpath 
+(defn find-js-classpath
   "Returns a seq of URLs of all JavaScript files on the classpath."
   [path]
   (->> (all-classpath-urls)
@@ -123,12 +123,12 @@ case."
   library (a js file that not have any goog.provide statement")
   (-closure-lib? [this] "Whether the Javascript represents a Closure style
   library")
-  (-url [this] "The URL where this JavaScript is located. Returns nil
+  (-url [this] [this opts] "The URL where this JavaScript is located. Returns nil
   when JavaScript exists in memory only.")
-  (-relative-path [this] "Relative path for this JavaScript.")
+  (-relative-path [this] [this opts] "Relative path for this JavaScript.")
   (-provides [this] "A list of namespaces that this JavaScript provides.")
   (-requires [this] "A list of namespaces that this JavaScript requires.")
-  (-source [this] "The JavaScript source string."))
+  (-source [this] [this opts] "The JavaScript source string."))
 
 (defn build-index
   "Index a list of dependencies by namespace and file name. There can

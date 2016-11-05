@@ -25,26 +25,24 @@
 (deftest commonjs-module-processing
   (test/delete-out-files)
   (let [cenv (env/default-compiler-env)]
-
     ;; Reset load-library cache so that changes to processed files are noticed
-    (alter-var-root #'cljs.js-deps/load-library (constantly (memoize cljs.js-deps/load-library*)))
-
-    (is (= {:foreign-libs []
-            :ups-foreign-libs []
-            :libs ["out/src/test/cljs/react.js"
-                   "out/src/test/cljs/Circle.js"]
-            :closure-warnings {:non-standard-jsdoc :off}}
-           (env/with-compiler-env cenv
-             (closure/process-js-modules
-              {:foreign-libs [{:file        "src/test/cljs/react.js"
-                               :provides    ["React"]
-                               :module-type :commonjs}
-                              {:file        "src/test/cljs/Circle.js"
-                               :provides    ["Circle"]
-                               :module-type :commonjs
-                               :preprocess  :jsx}]
-               :closure-warnings {:non-standard-jsdoc :off}})))
-        "processed modules are added to :libs")
+    (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)]
+      (is (= {:foreign-libs []
+              :ups-foreign-libs []
+              :libs ["out/src/test/cljs/react.js"
+                     "out/src/test/cljs/Circle.js"]
+              :closure-warnings {:non-standard-jsdoc :off}}
+            (env/with-compiler-env cenv
+              (closure/process-js-modules
+                {:foreign-libs [{:file        "src/test/cljs/react.js"
+                                 :provides    ["React"]
+                                 :module-type :commonjs}
+                                {:file        "src/test/cljs/Circle.js"
+                                 :provides    ["Circle"]
+                                 :module-type :commonjs
+                                 :preprocess  :jsx}]
+                 :closure-warnings {:non-standard-jsdoc :off}})))
+        "processed modules are added to :libs"))
 
     (is (= {"React" "module$src$test$cljs$react"
             "Circle" "module$src$test$cljs$Circle"}
@@ -71,3 +69,33 @@
           (is (= (compile '(add 3 4)) output))
           (is (= (compile '(sub 5 4))
                  "module$src$test$cljs$calculator.subtract((5),(4));\n")))))))
+
+(deftest test-cljs-1822
+  (test/delete-out-files)
+  (let [cenv (env/default-compiler-env)]
+    (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)
+                  cljs.js-deps/load-foreign-library (memoize cljs.js-deps/load-foreign-library*)]
+      (is (= {:optimizations :simple
+              :foreign-libs []
+              :ups-foreign-libs []
+              :libs ["out/src/test/cljs/react-min.js"
+                     "out/src/test/cljs/Circle-min.js"]
+              :closure-warnings {:non-standard-jsdoc :off}}
+            (env/with-compiler-env cenv
+              (closure/process-js-modules
+                {:optimizations :simple
+                 :foreign-libs [{:file        "src/test/cljs/react.js"
+                                 :file-min    "src/test/cljs/react-min.js"
+                                 :provides    ["React"]
+                                 :module-type :commonjs}
+                                {:file        "src/test/cljs/Circle.js"
+                                 :file-min    "src/test/cljs/Circle-min.js"
+                                 :provides    ["Circle"]
+                                 :module-type :commonjs
+                                 :preprocess  :jsx}]
+                 :closure-warnings {:non-standard-jsdoc :off}})))
+        "processed modules are added to :libs"))
+    (is (= {"React" "module$src$test$cljs$react-min"
+            "Circle" "module$src$test$cljs$Circle-min"}
+           (:js-module-index @cenv))
+        "Processed modules are added to :js-module-index")))

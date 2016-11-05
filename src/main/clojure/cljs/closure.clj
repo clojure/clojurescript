@@ -367,35 +367,61 @@
   String
   (-foreign? [this] false)
   (-closure-lib? [this] false)
-  (-url [this] nil)
-  (-relative-path [this] nil)
+  (-url
+    ([this] nil)
+    ([this _] nil))
+  (-relative-path
+    ([this] nil)
+    ([this _] nil))
   (-provides [this] (:provides (deps/parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (deps/parse-js-ns (string/split-lines this))))
-  (-source [this] this)
+  (-source
+    ([this] this)
+    ([this _] this))
 
   clojure.lang.IPersistentMap
   (-foreign? [this] (:foreign this))
   (-closure-lib? [this] (:closure-lib this))
-  (-url [this] (or (:url this)
-                   (deps/to-url (:file this))))
-  (-relative-path [this] (let [file (io/as-file (:file this))]
-                           (if (and file (not (.isAbsolute file)))
-                             (:file this))))
+  (-url
+    ([this] (deps/-url this nil))
+    ([this opts]
+     (let [[url file] (if-let [url-min (and (#{:advanced :simple} (:optimizations opts))
+                                            (:url-min this))]
+                        [url-min (:file-min this)]
+                        [(:url this) (:file this)])]
+       (or url (deps/to-url file)))))
+  (-relative-path
+    ([this] (deps/-relative-path this nil))
+    ([this opts]
+     (let [file (if-let [file-min (and (#{:advanced :simple} (:optimizations opts))
+                                       (:file-min this))]
+                  file-min
+                  (:file this))
+           as-file (io/as-file file)]
+       (when (and as-file (not (.isAbsolute as-file)))
+         file))))
   (-provides [this] (map name (:provides this)))
   (-requires [this] (map name (:requires this)))
-  (-source [this] (if-let [s (:source this)]
-                    s (with-open [reader (io/reader (deps/-url this))]
-                        (slurp reader)))))
+  (-source
+    ([this] (deps/-source this nil))
+    ([this opts]
+      (if-let [s (:source this)]
+        s
+        (with-open [reader (io/reader (deps/-url this opts))]
+          (slurp reader))))))
 
 (defrecord JavaScriptFile [foreign ^URL url ^URL source-url provides requires lines source-map]
   deps/IJavaScript
   (-foreign? [this] foreign)
   (-closure-lib? [this] (:closure-lib this))
   (-url [this] url)
+  (-url [this opts] url)
   (-relative-path [this] nil)
+  (-relative-path [this opts] nil)
   (-provides [this] provides)
   (-requires [this] requires)
-  (-source [this]
+  (-source [this] (deps/-source this nil))
+  (-source [this opts]
     (with-open [reader (io/reader url)]
       (slurp reader)))
   ISourceMap
@@ -1539,12 +1565,12 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([js opts]
-   (let [url (deps/-url js)]
+   (let [url (deps/-url js opts)]
      (cond
        url
        (cond
          (deps/-closure-lib? js) (lib-rel-path js)
-         (deps/-foreign? js) (or (deps/-relative-path js)
+         (deps/-foreign? js) (or (deps/-relative-path js opts)
                                  (util/relative-name url))
          :else (path-from-jarfile url))
 
@@ -1557,10 +1583,14 @@
 
        :else (str (random-string 5) ".js")))))
 
-(defn get-source-files [js-modules]
+(defn get-source-files [js-modules opts]
   (map (fn [lib]
-         (js-source-file (:file lib) (deps/-source lib)))
-       js-modules))
+         (let [file (if-let [file-min (and (#{:advanced :simple} (:optimizations opts))
+                                           (:file-min lib))]
+                      file-min
+                      (:file lib))]
+           (js-source-file file (deps/-source lib))))
+    js-modules))
 
 (defmulti convert-js-modules
   "Takes a list JavaScript modules as an IJavaScript and rewrites them into a Google
@@ -1588,12 +1618,18 @@
   (let [source-nodes (.children (get-js-root closure-compiler))]
     (into {} (map (juxt #(.getSourceFileName ^Node %) identity) source-nodes))))
 
-(defn add-converted-source [closure-compiler result-nodes {:keys [file] :as ijs}]
-  (assoc ijs :source (.toSource closure-compiler ^Node (get result-nodes file))))
+(defn add-converted-source
+  [closure-compiler result-nodes opts {:keys [file-min file] :as ijs}]
+  (let [processed-file (if-let [min (and (#{:advanced :simple} (:optimizations opts))
+                                         file-min)]
+                         min
+                         file)]
+    (assoc ijs :source
+      (.toSource closure-compiler ^Node (get result-nodes processed-file)))))
 
 (defmethod convert-js-modules :commonjs [module-type js-modules opts]
   (let [^List externs '()
-        ^List source-files (get-source-files js-modules)
+        ^List source-files (get-source-files js-modules opts)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                    (.setProcessCommonJSModules true)
                                    (.setTransformAMDToCJSModules (= module-type :amd)))
@@ -1601,11 +1637,13 @@
                            (.init externs source-files options))]
     (.parse closure-compiler)
     (report-failure (.getResult closure-compiler))
-    (map (partial add-converted-source closure-compiler (get-closure-sources closure-compiler)) js-modules)))
+    (map (partial add-converted-source
+           closure-compiler (get-closure-sources closure-compiler) opts)
+      js-modules)))
 
 (defmethod convert-js-modules :es6 [module-type js-modules opts]
   (let [^List externs '()
-        ^List source-files (get-source-files js-modules)
+        ^List source-files (get-source-files js-modules opts)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
@@ -1613,7 +1651,9 @@
                            (.init externs source-files options))]
     (.parse closure-compiler)
     (report-failure (.getResult closure-compiler))
-    (map (partial add-converted-source closure-compiler (get-closure-sources closure-compiler)) js-modules)))
+    (map (partial add-converted-source
+           closure-compiler (get-closure-sources closure-compiler) opts)
+      js-modules)))
 
 (defmethod convert-js-modules :default [module-type js-modules opts]
   (ana/warning :unsupported-js-module-type @env/*compiler* (first js-modules))
@@ -2169,7 +2209,7 @@
         (let [;; Load all modules - add :source so preprocessing and conversion can access it
               js-modules (map (fn [lib]
                                 (let [js (deps/load-foreign-library lib)]
-                                  (assoc js :source (deps/-source js))))
+                                  (assoc js :source (deps/-source js opts))))
                               js-modules)
               js-modules (map (fn [js]
                                 (if (:preprocess js)
