@@ -2243,9 +2243,9 @@
            use-macros :use-macros require-macros :require-macros
            rename-macros :rename-macros imports :import :as params}
           (reduce
-            (fn [m [k & libs]]
+            (fn [m [k & libs :as libspec]]
               (when-not (#{:use :use-macros :require :require-macros :import} k)
-                (throw (error env "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported")))
+                (throw (error env (str "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported. Got " libspec " instead."))))
               (when-not (@valid-forms k)
                 (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
               (swap! valid-forms disj k)
