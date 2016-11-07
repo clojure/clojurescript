@@ -2286,22 +2286,7 @@
              :uses           uses
              :requires       requires
              :renames        (merge renames core-renames)
-             :imports        imports}
-            ns-info
-            (if (:merge form-meta)
-              ;; for merging information in via require usage in REPLs
-              (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
-                (if (pos? (count ns-info'))
-                  (let [merge-keys
-                        [:use-macros :require-macros :rename-macros
-                         :uses :requires :renames :imports]]
-                    (merge
-                      ns-info'
-                      (merge-with merge
-                        (select-keys ns-info' merge-keys)
-                        (select-keys ns-info merge-keys))))
-                  ns-info))
-              ns-info)]
+             :imports        imports}]
         (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
         (merge {:op      :ns
                 :env     env
