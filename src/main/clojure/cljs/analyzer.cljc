@@ -2371,6 +2371,7 @@
                      :uses :requires :renames :imports]]
                 (merge
                   ns-info'
+                  {:excludes excludes}
                   (merge-with merge
                     (select-keys ns-info' merge-keys)
                     (select-keys require-info merge-keys))))
