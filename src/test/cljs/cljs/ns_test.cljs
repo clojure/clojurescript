@@ -13,7 +13,8 @@
                    [cljs.test :refer [deftest is]])
   (:require [cljs.test]
             [cljs.ns-test.foo :refer [baz]]
-            [clojure.set :as s :refer [intersection] :rename {intersection itsc}])
+            [clojure.set :as s :refer [intersection] :rename {intersection itsc}]
+            [cljs.analyzer :as ana])
   (:use [cljs.ns-test.bar :only [quux]]))
 
 (def + -)
