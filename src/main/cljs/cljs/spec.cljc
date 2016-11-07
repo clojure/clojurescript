@@ -145,19 +145,20 @@
         req-keys (into req-keys (map unk req-un-specs))
         opt-keys (into (vec opt) (map unk opt-un))
         opt-specs (into (vec opt) opt-un)
+        gx (gensym)
         parse-req (fn [rk f]
                     (map (fn [x]
                            (if (keyword? x)
-                             `#(contains? % ~(f x))
-                             (let [gx (gensym)]
-                               `(fn* [~gx]
-                                  ~(walk/postwalk
-                                     (fn [y] (if (keyword? y) `(contains? ~gx ~(f y)) y))
-                                     x)))))
+                             `(contains? ~gx ~(f x))
+                             (walk/postwalk
+                               (fn [y] (if (keyword? y) `(contains? ~gx ~(f y)) y))
+                               x)))
                          rk))
-        pred-exprs [`map?]
+        pred-exprs [`(map? ~gx)]
         pred-exprs (into pred-exprs (parse-req req identity))
         pred-exprs (into pred-exprs (parse-req req-un unk))
+        keys-pred `(fn* [~gx] (c/and ~@pred-exprs))
+        pred-exprs (mapv (fn [e] `(fn* [~gx] ~e)) pred-exprs)
         pred-forms (walk/postwalk #(res &env %) pred-exprs)]
     ;; `(map-spec-impl ~req-keys '~req ~opt '~pred-forms ~pred-exprs ~gen)
     `(map-spec-impl {:req '~req :opt '~opt :req-un '~req-un :opt-un '~opt-un
@@ -165,6 +166,7 @@
                      :opt-keys '~opt-keys :opt-specs '~opt-specs
                      :pred-forms '~pred-forms
                      :pred-exprs ~pred-exprs
+                     :keys-pred ~keys-pred
                      :gfn ~gen})))
 
 (defmacro or
@@ -224,8 +226,19 @@
   See also - coll-of, every-kv
 "
   [pred & {:keys [into kind count max-count min-count distinct gen-max gen-into gen] :as opts}]
-  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res &env (:kind opts))))]
-    `(every-impl '~pred ~pred ~nopts ~gen)))
+  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res &env (:kind opts))))
+        gx (gensym)
+        cpreds (cond-> [(list (clojure.core/or kind `coll?) gx)]
+                 count (conj `(= ~count (c/bounded-count ~count ~gx)))
+
+                 (clojure.core/or min-count max-count)
+                 (conj `(<= (c/or ~min-count 0)
+                          (c/bounded-count (if ~max-count (inc ~max-count) ~min-count) ~gx)
+                          (c/or ~max-count MAX_INT)))
+
+                 distinct
+                 (conj `(c/or (empty? ~gx) (apply distinct? ~gx))))]
+    `(every-impl '~pred ~pred ~(assoc nopts ::cpred `(fn* [~gx] (c/and ~@cpreds))) ~gen)))
 
 (defmacro every-kv
   "like 'every' but takes separate key and val preds and works on associative collections.
@@ -422,7 +435,7 @@
 (defmacro nilable
   "returns a spec that accepts nil and values satisfiying pred"
   [pred]
-  `(and (or ::nil nil? ::pred ~pred) (conformer second)))
+  `(nonconforming (or ::nil nil? ::pred ~pred)))
 
 (defmacro inst-in
   "Returns a spec that validates insts in the range from start
