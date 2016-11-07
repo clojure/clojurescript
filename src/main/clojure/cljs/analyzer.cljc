@@ -3255,25 +3255,30 @@
           ijs)))))
 
 #?(:clj
+   (defn- cache-analysis-ext
+     ([] (cache-analysis-ext (get-in @env/*compiler* [:options :cache-analysis-format] :transit)))
+     ([format]
+      (if (and (= format :transit) @transit) "json" "edn"))))
+
+#?(:clj
    (defn cache-file
      "Given a ClojureScript source file returns the read/write path to the analysis
       cache file. Defaults to the read path which is usually also the write path."
      ([src] (cache-file src "out"))
      ([src output-dir] (cache-file src (parse-ns src) output-dir))
-     ([src ns-info output-dir] (cache-file src (parse-ns src) output-dir :read))
+     ([src ns-info output-dir]
+      (cache-file src (parse-ns src) output-dir :read))
      ([src ns-info output-dir mode]
       {:pre [(map? ns-info)]}
-      (if-let [core-cache
-               (and (= mode :read)
-                    (= (:ns ns-info) 'cljs.core)
-                    (or (and @transit (io/resource "cljs/core.cljs.cache.aot.json"))
-                        (io/resource "cljs/core.cljs.cache.aot.edn")))]
-        core-cache
-        (let [target-file (util/to-target-file output-dir ns-info
-                            (util/ext (:source-file ns-info)))]
-          (if @transit
-            (io/file (str target-file ".cache.json"))
-            (io/file (str target-file ".cache.edn"))))))))
+      (let [ext (cache-analysis-ext)]
+        (if-let [core-cache
+                 (and (= mode :read)
+                      (= (:ns ns-info) 'cljs.core)
+                      (io/resource (str "cljs/core.cljs.cache.aot" ext)))]
+          core-cache
+          (let [target-file (util/to-target-file output-dir ns-info
+                              (util/ext (:source-file ns-info)))]
+            (io/file (str target-file ".cache." ext))))))))
 
 #?(:clj
    (defn requires-analysis?

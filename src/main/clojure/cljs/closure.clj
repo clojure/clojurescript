@@ -129,7 +129,7 @@
     :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
     :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
-    :browser-repl})
+    :browser-repl :cache-analysis-format})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1782,6 +1782,11 @@
     (binding [*out* *err*]
       (println "WARNING: :preloads should only be specified with :none optimizations"))))
 
+(defn check-cache-analysis-format [{:keys [cache-analysis cache-analysis-format] :as opts}]
+  (assert (not (and cache-analysis ((complement #{nil :edn :transit}) cache-analysis-format)))
+    (format ":cache-analysis format must be :edn or :transit but it is: %s"
+      (pr-str cache-analysis-format))))
+
 (defn foreign-source? [js]
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
@@ -1812,7 +1817,8 @@
           :ups-libs libs
           :ups-foreign-libs foreign-libs
           :ups-externs externs
-          :emit-constants emit-constants)
+          :emit-constants emit-constants
+          :cache-analysis-format (:cache-analysis-format opts :transit))
         (update-in [:preamble] #(into (or % []) ["cljs/imul.js"])))
 
       (:target opts)
@@ -1896,6 +1902,7 @@
          (check-output-wrapper opts)
          (check-node-target opts)
          (check-preloads opts)
+         (check-cache-analysis-format opts)
          (swap! compiler-env
            #(-> %
              (update-in [:options] merge all-opts)
