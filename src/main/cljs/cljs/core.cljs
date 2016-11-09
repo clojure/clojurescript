@@ -5426,7 +5426,9 @@ reduces them without incurring seq initialization"
   IVector
   (-assoc-n [coll n val]
     (let [v-pos (+ start n)]
-      (build-subvec meta (assoc v v-pos val) start (max end (inc v-pos)) nil)))
+      (if (or (neg? n) (<= (inc end) v-pos))
+        (throw (js/Error. (str "Index " n " out of bounds [0," (-count coll) "]")))
+        (build-subvec meta (assoc v v-pos val) start (max end (inc v-pos)) nil))))
 
   IReduce
   (-reduce [coll f]

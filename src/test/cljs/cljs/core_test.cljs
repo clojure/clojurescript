@@ -1169,6 +1169,15 @@
     (is (instance? foo (foo.)))
     (is (instance? foo (new (.-foo x))))))
 
+(deftest test-cljs-1845
+  (let [sv (subvec [0 1 2 3 4 5 7 8 9] 2 6)]
+    (is (= [2 3 4 5] sv))
+    (is (= [2 3 0 5] (assoc sv 2 0)))
+    (is (= [2 3 4 0] (assoc sv 3 0)))
+    (is (= [2 3 4 5 0] (assoc sv 4 0)))
+    (is (thrown? js/Error (assoc sv 5 0)))
+    (is (thrown? js/Error (assoc sv -1 0)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
