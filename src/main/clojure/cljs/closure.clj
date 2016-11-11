@@ -129,7 +129,7 @@
     :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
     :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
-    :browser-repl :cache-analysis-format})
+    :browser-repl :cache-analysis-format :infer-externs})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -251,7 +251,7 @@
   Options may contain an :externs key with a list of file paths to
   load. The :use-only-custom-externs flag may be used to indicate that
   the default externs should be excluded."
-  [{:keys [externs use-only-custom-externs target ups-externs]}]
+  [{:keys [externs use-only-custom-externs target ups-externs infer-externs] :as opts}]
   (let [validate (fn validate [p us]
                    (if (empty? us)
                      (throw (IllegalArgumentException.
@@ -273,12 +273,16 @@
                          ext)))
         load-js (fn [ext]
                   (map #(js-source-file (.getFile %) (slurp %)) ext))]
-    (let [js-sources (-> externs filter-js add-target load-js)
+    (let [js-sources  (-> externs filter-js add-target load-js)
           ups-sources (-> ups-externs filter-cp-js load-js)
-          all-sources (concat js-sources ups-sources)] 
-      (if use-only-custom-externs
-        all-sources
-        (into all-sources (CommandLineRunner/getDefaultExterns))))))
+          all-sources (vec (concat js-sources ups-sources))]
+      (cond->
+        (if use-only-custom-externs
+          all-sources
+          (into all-sources (CommandLineRunner/getDefaultExterns)))
+        infer-externs
+        (conj (js-source-file nil
+                (io/file (util/output-directory opts) "inferred_externs.js")))))))
 
 (defn ^com.google.javascript.jscomp.Compiler make-closure-compiler []
   (let [compiler (com.google.javascript.jscomp.Compiler.)]
@@ -1957,6 +1961,12 @@
                      (comp/emit-constants-table-to-file
                        (::ana/constant-table @env/*compiler*)
                        (str (util/output-directory all-opts) "/constants_table.js")))
+                 _ (when (:infer-externs all-opts)
+                     (comp/emit-inferred-externs-to-file
+                       (reduce util/map-merge {}
+                         (map (comp :externs second)
+                           (get @compiler-env ::ana/namespaces)))
+                       (str (util/output-directory all-opts) "/inferred_externs.js")))
                  optim (:optimizations all-opts)
                  ret (if (and optim (not= optim :none))
                        (do
