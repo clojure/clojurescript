@@ -9,7 +9,6 @@
 (ns cljs.externs
   (:require [clojure.string :as string])
   (:import [java.util.logging Level]
-           [java.io File BufferedInputStream]
            [com.google.javascript.jscomp CompilerOptions SourceFile JsAst]
            [com.google.javascript.rhino Node Token]))
 
