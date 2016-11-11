@@ -677,7 +677,14 @@
              (swap! env/*compiler* assoc-in [::ana/namespaces ns-name] {:name ns-name})
              (-evaluate repl-env "<cljs repl>" 1
                (str "goog.provide('" (comp/munge ns-name) "');")))
-           (set! ana/*cljs-ns* ns-name)))]
+           (set! ana/*cljs-ns* ns-name)))
+        load-fn
+        (fn self
+          ([repl-env env form]
+           (self env repl-env form nil))
+          ([repl-env env [_ & paths :as form] opts]
+           (let [cp-paths (map load-path->cp-path paths)]
+             (run! #(load-file repl-env % opts) cp-paths))))]
     (wrap-special-fns wrap-self
      {'in-ns in-ns-fn
       'clojure.core/in-ns in-ns-fn
@@ -689,13 +696,8 @@
          (self env repl-env form nil))
         ([repl-env env [_ ns :as form] opts]
          (load-namespace repl-env ns opts)))
-      'load
-      (fn self
-        ([repl-env env form]
-         (self env repl-env form nil))
-        ([repl-env env [_ & paths :as form] opts]
-         (let [cp-paths (map load-path->cp-path paths)]
-           (run! #(load-file repl-env % opts) cp-paths))))})))
+      'load load-fn
+      'clojure.core/load load-fn})))
 
 (defn analyze-source
   "Given a source directory, analyzes all .cljs files. Used to populate
