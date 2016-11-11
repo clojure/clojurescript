@@ -1483,3 +1483,29 @@
      (with-open [out ^java.io.Writer (io/make-writer dest {})]
        (binding [*out* out]
          (emit-constants-table table)))))
+
+(defn emit-externs
+  ([externs]
+   (emit-externs [] externs (atom #{})))
+  ([prefix externs top-level]
+   (loop [ks (seq (keys externs))]
+     (when ks
+       (let [k (first ks)
+             [top :as prefix'] (conj prefix k)]
+         (when-not (= 'prototype k)
+           (if-not (contains? @top-level top)
+             (do
+               (emitln "var " (string/join "." (map munge prefix')) ";")
+               (swap! top-level conj top))
+             (emitln (string/join "." (map munge prefix')) ";")))
+         (let [m (get externs k)]
+           (when-not (empty? m)
+             (emit-externs prefix' m top-level))))
+       (recur (next ks))))))
+
+#?(:clj
+   (defn emit-inferred-externs-to-file [externs dest]
+     (io/make-parents dest)
+     (with-open [out ^java.io.Writer (io/make-writer dest {})]
+       (binding [*out* out]
+         (emit-externs externs)))))
