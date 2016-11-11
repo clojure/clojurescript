@@ -269,3 +269,17 @@
     (.reset digest)
     (.update digest (.getBytes s "utf8"))
     (DatatypeConverter/printHexBinary (.digest digest))))
+
+(defn map-merge [a b]
+  (if (and (map? a) (map? b))
+    (loop [ks (seq (keys a)) ret a b' b]
+      (if ks
+        (let [k (first ks)]
+          (if (contains? b' k)
+            (recur
+              (next ks)
+              (assoc ret k (map-merge (get ret k) (get b' k)))
+              (dissoc b' k))
+            (recur (next ks) ret b')))
+        (merge ret b')))
+    a))
