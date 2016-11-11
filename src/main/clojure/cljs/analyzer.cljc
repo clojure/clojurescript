@@ -3330,6 +3330,26 @@
       (when src
         (.setLastModified ^File cache-file (util/last-modified src))))))
 
+(defn analyze-form-seq
+  ([forms]
+   (analyze-form-seq forms nil))
+  ([forms opts]
+   (let [env (assoc (empty-env) :build-options opts)]
+     (binding [*file-defs* nil
+               *unchecked-if* false
+               *cljs-ns* 'cljs.user
+               *cljs-file* nil
+               reader/*alias-map* (or reader/*alias-map* {})]
+       (loop [ns nil forms forms]
+         (if forms
+           (let [form (first forms)
+                 env  (assoc env :ns (get-namespace *cljs-ns*))
+                 ast  (analyze env form nil opts)]
+             (if (= (:op ast) :ns)
+               (recur (:name ast) (next forms))
+               (recur ns (next forms))))
+           ns))))))
+
 #?(:clj
    (defn analyze-file
      "Given a java.io.File, java.net.URL or a string identifying a resource on the
