@@ -2004,6 +2004,11 @@
      {:hello
       {:output-to "samples/hello/out/hello.js"
        :entries '#{cljs.reader hello.core}}}})
+
+  (require '[cljs.externs :as externs])
+
+  (externs/parse-externs
+    (js-source-file "cljs/externs.js" (io/file "src/main/cljs/cljs/externs.js")))
   )
 
 (defn ^File target-file-for-cljs-ns
