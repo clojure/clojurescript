@@ -2802,8 +2802,7 @@
                :cljs [do])
             (let [mchk  #?(:clj  (some-> (find-ns 'clojure.spec)
                                    (ns-resolve 'macroexpand-check))
-                           :cljs (and (find-ns 'cljs.spec)
-                                      ^::no-resolve cljs.spec/macroexpand-check))
+                           :cljs (get (ns-interns* 'cljs.spec) 'macroexpand-check))
                   _     (when mchk
                           (mchk mac-var (next form)))
                   form' (try
