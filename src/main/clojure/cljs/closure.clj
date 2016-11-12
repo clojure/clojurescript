@@ -1850,7 +1850,7 @@
         ;; e.g. commonjs module in :foreign-libs can depend on commonjs module from :ups-foreign-libs.
         js-modules (filter :module-type (concat (:foreign-libs opts) (:ups-foreign-libs opts)))]
     (if (seq js-modules)
-      (util/measure
+      (util/measure (:compiler-stats opts)
         "Process JS modules"
         (let [;; Load all modules - add :source so preprocessing and conversion can access it
               js-modules (map (fn [lib]
