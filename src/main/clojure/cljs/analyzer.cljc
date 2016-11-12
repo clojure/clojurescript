@@ -3335,7 +3335,7 @@
   ([forms opts]
    (let [env (assoc (empty-env) :build-options opts)]
      (binding [*file-defs* nil
-               *unchecked-if* false
+               #?@(:clj [*unchecked-if* false])
                *cljs-ns* 'cljs.user
                *cljs-file* nil
                reader/*alias-map* (or reader/*alias-map* {})]
