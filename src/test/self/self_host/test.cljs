@@ -833,6 +833,23 @@
           (is (== 1 value))
           (inc! l))))))
 
+(deftest test-cljs-1651
+  (let [st (cljs/empty-state)]
+    (cljs/eval-str st
+      "(defn double [x] (* 2 x))"
+      nil
+      {:eval node-eval
+       :context :expr}
+      (fn [{:keys [value error]}]
+        (is (nil? error))
+        (cljs/eval-str st
+          "[(double 3) (apply double [3])]"
+          nil
+          {:eval node-eval
+           :context :expr}
+          (fn [{:keys [value error]}]
+            (is (= value [6 6]))))))))
+
 (defn -main [& args]
   (run-tests))
 

@@ -1216,10 +1216,12 @@
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (get-in @env/*compiler* [::namespaces ns-name :uses sym]))
-                (let [ev (resolve-existing-var (dissoc env :locals) sym)]
+                (let [ev (resolve-existing-var (dissoc env :locals) sym)
+                      conj-to-set (fnil conj #{})]
                   (warning :redef env {:sym sym :ns (:ns ev) :ns-name ns-name})
-                  (swap! env/*compiler* update-in [::namespaces ns-name :excludes] conj sym)
-                  (update-in env [:ns :excludes] conj sym))
+                  (swap! env/*compiler* update-in [::namespaces ns-name :excludes]
+                     conj-to-set sym)
+                  (update-in env [:ns :excludes] conj-to-set sym))
                 env)
           var-name (:name (resolve-var (dissoc env :locals) sym))
           init-expr (when (contains? args :init)
