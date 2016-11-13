@@ -189,6 +189,10 @@
            (bar [this]
              (cljs.user/foo this)))))))
 
+(deftest test-cljs-1643
+  (is (thrown-with-msg? Exception #"is not a valid ClojureScript constant."
+        (comp/emit-constant clojure.core/inc))))
+
 ;; CLJS-1225
 
 (comment

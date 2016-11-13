@@ -204,6 +204,14 @@
    :cljs
    (defmulti emit-constant type))
 
+(defmethod emit-constant :default
+  [x]
+  (throw
+    (ex-info (str "failed compiling constant: " x "; "
+               (type x) " is not a valid ClojureScript constant.")
+      {:constant x
+       :type (type x)})))
+
 (defmethod emit-constant nil [x] (emits "null"))
 
 #?(:clj
