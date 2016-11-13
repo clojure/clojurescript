@@ -619,3 +619,36 @@
 (deftest test-cljs-1951
   (is (= () (interleave)))
   (is (= '(1 2 3) (interleave [1 2 3]))))
+
+(deftest test-cljs-1497
+  (testing "PersistentArrayMap"
+    (let [metadata {:a 1}
+          k [1 2 3]
+          v 1
+          map (array-map (with-meta k metadata) v)
+          [k' v'] (find map k)]
+      (is (= k k'))
+      (is (= v v'))
+      (is (= metadata (meta k')))))
+  (testing "PersistentHashMap"
+    (let [metadata {:a 1}
+          k [1 2 3]
+          v 1
+          map (hash-map (with-meta k metadata) v)
+          [k' v'] (find map k)]
+      (is (= k k'))
+      (is (= v v'))
+      (is (= metadata (meta k'))))
+    (let [map (hash-map nil :foo)]
+      (is (= (find map nil) [nil :foo]))))
+  (testing "PersistentTreeMap"
+    (let [metadata {:a 1}
+          k [1 2 3]
+          v 1
+          map (sorted-map (with-meta k metadata) v)
+          [k' v'] (find map k)]
+      (is (= k k'))
+      (is (= v v'))
+      (is (= metadata (meta k'))))
+    (let [map (sorted-map nil :foo)]
+      (is (= (find map nil) [nil :foo])))))

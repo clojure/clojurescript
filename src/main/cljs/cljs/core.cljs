@@ -546,6 +546,10 @@
     "Returns a new collection of coll with a mapping from key k to
      value v added to it."))
 
+(defprotocol IFind
+  "Protocol for implementing entry finding in collections."
+  (-find [coll k]))
+
 (defprotocol IMap
   "Protocol for adding mapping functionality to collections."
   #_(-assoc-ex [coll k v])
@@ -2023,6 +2027,10 @@ reduces them without incurring seq initialization"
  "Returns true if coll implements Associative"
   [x] (satisfies? IAssociative x))
 
+(defn ^boolean ifind?
+ "Returns true if coll implements IFind"
+  [x] (satisfies? IFind x))
+
 (defn ^boolean sequential?
   "Returns true if coll satisfies ISequential"
   [x] (satisfies? ISequential x))
@@ -2237,7 +2245,9 @@ reduces them without incurring seq initialization"
   (when (and (not (nil? coll))
              (associative? coll)
              (contains? coll k))
-    [k (get coll k)]))
+    (if (ifind? coll)
+      (-find coll k)
+      [k (get coll k)])))
 
 (defn ^boolean distinct?
   "Returns true if no two of the arguments are ="
@@ -5152,6 +5162,10 @@ reduces them without incurring seq initialization"
       (-assoc-n coll k v)
       (throw (js/Error. "Vector's key for assoc must be a number."))))
 
+  IFind
+  (-find [coll k]
+    [k (get coll k)])
+
   IVector
   (-assoc-n [coll n val]
     (cond
@@ -5437,6 +5451,10 @@ reduces them without incurring seq initialization"
     (if (number? key)
       (-assoc-n coll key val)
       (throw (js/Error. "Subvec's key for assoc must be a number."))))
+
+  IFind
+  (-find [coll key]
+    [key (get coll key)])
 
   IVector
   (-assoc-n [coll n val]
@@ -5954,6 +5972,10 @@ reduces them without incurring seq initialization"
       true
       false))
 
+  IFind
+  (-find [coll k]
+    [k (get coll k)])
+
   IKVReduce
   (-kv-reduce [coll f init]
     (let [len (alength keys)]
@@ -6126,7 +6148,7 @@ reduces them without incurring seq initialization"
     (-lastIndexOf coll x (count coll)))
   (lastIndexOf [coll x start]
     (-lastIndexOf coll x start))
-  
+
   IMeta
   (-meta [coll] _meta)
 
@@ -6154,7 +6176,7 @@ reduces them without incurring seq initialization"
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
-  
+
   ISeq
   (-first [coll]
     [(aget arr i) (aget arr (inc i))])
@@ -6261,7 +6283,7 @@ reduces them without incurring seq initialization"
   IIterable
   (-iterator [this]
     (PersistentArrayMapIterator. arr 0 (* cnt 2)))
-  
+
   ISeqable
   (-seq [coll]
     (persistent-array-map-seq arr 0 nil))
@@ -6301,6 +6323,11 @@ reduces them without incurring seq initialization"
 
   (-contains-key? [coll k]
     (not (== (array-map-index-of coll k) -1)))
+
+  IFind
+  (-find [coll k]
+    (let [idx (array-map-index-of coll k)]
+      [(aget arr idx) (get coll k)]))
 
   IMap
   (-dissoc [coll k]
@@ -6472,7 +6499,7 @@ reduces them without incurring seq initialization"
         tcoll)
       (throw (js/Error. "dissoc! after persistent!")))))
 
-(declare TransientHashMap PersistentHashMap)
+(declare TransientHashMap)
 
 (defn- array->transient-hash-map [len arr]
   (loop [out (transient (.-EMPTY PersistentHashMap))
@@ -7184,8 +7211,6 @@ reduces them without incurring seq initialization"
                (recur (inc j))))))
        (ArrayNodeSeq. meta nodes i s nil))))
 
-(declare TransientHashMap)
-
 (deftype HashMapIter [nil-val root-iter ^:mutable seen]
   Object
   (hasNext [_]
@@ -7300,6 +7325,12 @@ reduces them without incurring seq initialization"
           (nil? root) false
           :else       (not (identical? (.inode-lookup root 0 (hash k) k lookup-sentinel)
                                        lookup-sentinel))))
+
+  IFind
+  (-find [coll k]
+    (if has-nil?
+      [nil nil-val]
+      (.inode-find root 0 (hash k) k nil)))
 
   IMap
   (-dissoc [coll k]
@@ -7738,6 +7769,10 @@ reduces them without incurring seq initialization"
   (-assoc [node k v]
     (assoc [key val] k v))
 
+  IFind
+  (-find [node k]
+    [key val])
+
   IVector
   (-assoc-n [node n v]
     (-assoc-n [key val] n v))
@@ -7889,6 +7924,10 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [node k v]
     (assoc [key val] k v))
+
+  IFind
+  (-find [node k]
+    [key val])
 
   IVector
   (-assoc-n [node n v]
@@ -8127,6 +8166,10 @@ reduces them without incurring seq initialization"
 
   (-contains-key? [coll k]
     (not (nil? (.entry-at coll k))))
+
+  IFind
+  (-find [coll k]
+    (.entry-at coll k))
 
   IMap
   (-dissoc [coll k]
