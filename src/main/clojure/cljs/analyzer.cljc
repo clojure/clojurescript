@@ -679,7 +679,10 @@
 
 (defn js-module-exists?
   [module]
-  (-> (get-in @env/*compiler* [:js-module-index]) vals set (contains? module)))
+  ;; we need to check both keys and values of the JS module index, because
+  ;; macroexpansion will be looking for the provided name - António Monteiro
+  (-> (into #{} (mapcat identity) (get-in @env/*compiler* [:js-module-index]))
+    (contains? module)))
 
 (defn confirm-var-exists
   ([env prefix suffix]
