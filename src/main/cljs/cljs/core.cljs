@@ -5450,7 +5450,11 @@ reduces them without incurring seq initialization"
   (-invoke [coll k]
     (-nth coll k))
   (-invoke [coll k not-found]
-    (-nth coll k not-found)))
+    (-nth coll k not-found))
+
+  IIterable
+  (-iterator [coll]
+    (ranged-iterator v start end)))
 
 (es6-iterable Subvec)
 
