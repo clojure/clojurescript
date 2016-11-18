@@ -616,7 +616,7 @@
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
           '[(ns foo.core)
-            (defn bar [a b] (+ a (.render b)))
+            (defn bar [a] (js/parseInt a))
             (def c js/React.Component)
             (js/console.log "Hello world!")]))
       (cc/emit-externs

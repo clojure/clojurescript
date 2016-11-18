@@ -769,6 +769,14 @@
                  'prototype)})
     x))
 
+(defn default-extern? [pre]
+  (let [externs (get @env/*compiler* ::externs)]
+    (or (get-in externs pre)
+      (when (= 1 (count pre))
+        (let [x (first pre)]
+          (or (get-in externs (conj '[Window prototype] x))
+            (get-in externs (conj '[Number] x))))))))
+
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
@@ -781,7 +789,7 @@
          (when (contains? locals (-> sym name symbol))
            (warning :js-shadowed-by-local env {:name sym}))
          (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)]
-           (when-not (get-in @env/*compiler* (into [::externs] pre))
+           (when-not (default-extern? pre)
              (swap! env/*compiler* update-in
                (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))
            {:name sym
@@ -2558,7 +2566,7 @@
         (warning :infer-warning env {:form form})))
     (when (js-tag? tag)
       (let [pre (-> tag meta :prefix)]
-        (when-not (get-in @env/*compiler* (into [::externs] pre))
+        (when-not (default-extern? pre)
           (swap! env/*compiler* update-in
             (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))))
     (case dot-action
