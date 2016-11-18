@@ -139,7 +139,8 @@
    :extend-type-invalid-method-shape true
    :unsupported-js-module-type true
    :unsupported-preprocess-value true
-   :js-shadowed-by-local true})
+   :js-shadowed-by-local true
+   :infer-warning false})
 
 (def js-reserved
   #{"arguments" "abstract" "boolean" "break" "byte" "case"
@@ -413,6 +414,10 @@
 (defmethod error-message :js-shadowed-by-local
   [warning-type {:keys [name]}]
   (str name " is shadowed by a local"))
+
+(defmethod error-message :infer-warning
+  [warning-type {:keys [form]}]
+  (str "Cannot infer target type for " form ""))
 
 (defn default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -748,6 +753,21 @@
              (let [^Namespace ns (-> mac meta :ns)]
                (= (.getName ns) #?(:clj 'cljs.core :cljs 'cljs.core$macros)))))
        (not (contains? (-> env :ns :excludes) sym))))
+
+(defn js-tag? [x]
+  (if (symbol? x)
+    (or (= 'js x)
+        (= "js" (namespace x)))
+    false))
+
+(defn normalize-js-tag [x]
+  ;; if not 'js, assume constructor
+  (if-not (= 'js x)
+    (with-meta 'js
+      {:prefix (conj (->> (string/split (name x) #"\.")
+                       (map symbol) vec)
+                 'prototype)})
+    x))
 
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
@@ -1701,12 +1721,17 @@
     (disallowing-recur
      (let [enve (assoc env :context :expr)
            targetexpr (cond
-                       (and
-                         (= target '*unchecked-if*) ;; TODO: proper resolve
-                         (or (true? val) (false? val)))
+                       (and (= target '*unchecked-if*) ;; TODO: proper resolve
+                            (or (true? val) (false? val)))
                        (do
                          (set! *unchecked-if* val)
                          ::set-unchecked-if)
+
+                       (and
+                         (= target '*warn-on-infer*))
+                       (do
+                         (set! *cljs-warnings* (assoc *cljs-warnings* :infer-warning true))
+                         ::set-warn-on-infer)
 
                        (symbol? target)
                        (do
@@ -1730,9 +1755,12 @@
        (when-not targetexpr
          (throw (error env "set! target must be a field or a symbol naming a var")))
        (cond
-        (= targetexpr ::set-unchecked-if) {:env env :op :no-op}
-        :else {:env env :op :set! :form form :target targetexpr :val valexpr
-               :children [targetexpr valexpr]})))))
+        (#{::set-unchecked-if ::set-warn-on-infer} targetexpr)
+        {:env env :op :no-op}
+
+        :else
+        {:env env :op :set! :form form :target targetexpr :val valexpr
+         :children [targetexpr valexpr]})))))
 
 (declare analyze-file)
 
@@ -2515,7 +2543,24 @@
         enve       (assoc env :context :expr)
         targetexpr (analyze enve target)
         form-meta  (meta form)
-        tag        (:tag form-meta)]
+        target-tag (:tag targetexpr)
+        prop       (or field method)
+        tag        (or (:tag form-meta)
+                       (and (js-tag? target-tag)
+                            (vary-meta (normalize-js-tag target-tag)
+                              update-in [:prefix] (fnil conj []) prop))
+                       nil)]
+    (when (and (not (string/starts-with? (str prop) "cljs$"))
+               (not= 'js target-tag)
+               (get-in env [:locals target]))
+      (when (or (nil? target-tag)
+                ('#{any} target-tag))
+        (warning :infer-warning env {:form form})))
+    (when (js-tag? tag)
+      (let [pre (-> tag meta :prefix)]
+        (when-not (get-in @env/*compiler* (into [::externs] pre))
+          (swap! env/*compiler* update-in
+            (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))))
     (case dot-action
       ::access (let [children [targetexpr]]
                  {:op :dot
@@ -2579,8 +2624,10 @@
   ;; when functions like first won't return nil, so variadic
   ;; numeric functions like cljs.core/< would produce a spurious
   ;; warning without this - David
-  (if (nil? t)
-    true
+  (cond
+    (nil? t) true
+    (js-tag? t) true ;; TODO: revisit
+    :else
     (if (and (symbol? t) (not (nil? (get NUMERIC_SET t))))
       true
       (when #?(:clj  (set? t)
@@ -3375,8 +3422,9 @@
      ([f opts]
       (analyze-file f false opts))
      ([f skip-cache opts]
-      (binding [*file-defs*    (atom #{})
-                *unchecked-if* false]
+      (binding [*file-defs*     (atom #{})
+                *unchecked-if*  false
+                *cljs-warnings* *cljs-warnings*]
         (let [output-dir (util/output-directory opts)
               res        (cond
                            (instance? File f) f

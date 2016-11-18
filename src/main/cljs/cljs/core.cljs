@@ -18,6 +18,7 @@
 (def *clojurescript-version*)
 
 (def *unchecked-if* false)
+(def *warn-on-infer* false)
 
 (defonce PROTOCOL_SENTINEL #js {})
 
