@@ -7,9 +7,11 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.externs
-  (:require [clojure.string :as string])
+  (:require [clojure.string :as string]
+            [cljs.util :as util])
   (:import [java.util.logging Level]
-           [com.google.javascript.jscomp CompilerOptions SourceFile JsAst]
+           [com.google.javascript.jscomp
+            CompilerOptions SourceFile JsAst CommandLineRunner]
            [com.google.javascript.rhino Node Token]))
 
 ;; ------------------------------------------------------------------------------
@@ -80,3 +82,22 @@
         (let [node (first nodes)
               new-extern (parse-extern-node node)]
           (recur (rest nodes) (concat externs new-extern)))))))
+
+(defn index-externs [externs]
+  (reduce
+    (fn [m xs]
+      (cond-> m
+        (seq xs) (update-in xs merge {})))
+    {} externs))
+
+(defn default-externs []
+  (let [xs (CommandLineRunner/getDefaultExterns)]
+    (reduce
+      (fn [externs externs-file]
+        (util/map-merge
+          externs (index-externs (parse-externs externs-file))))
+      {} xs)))
+
+(comment
+  (default-externs)
+  )
