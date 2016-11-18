@@ -1401,9 +1401,10 @@
        ~@body)))
 
 (core/defn- adapt-proto-params [type [[this & args :as sig] & body]]
-  `(~(vec (cons (vary-meta this assoc :tag type) args))
-     (this-as ~this
-       ~@body)))
+  (let [this' (vary-meta this assoc :tag type)]
+    `(~(vec (cons this' args))
+      (this-as ~this'
+        ~@body))))
 
 (core/defn- add-obj-methods [type type-sym sigs]
   (map (core/fn [[f & meths :as form]]
