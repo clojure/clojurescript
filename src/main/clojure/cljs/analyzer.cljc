@@ -2556,7 +2556,7 @@
         tag        (or (:tag form-meta)
                        (and (js-tag? target-tag)
                             (vary-meta (normalize-js-tag target-tag)
-                              update-in [:prefix] (fnil conj []) prop))
+                              update-in [:prefix] (fnil conj '[Object]) prop))
                        nil)]
     (when (and (not (string/starts-with? (str prop) "cljs$"))
                (not= 'js target-tag)
