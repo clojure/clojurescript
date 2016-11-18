@@ -9,7 +9,8 @@
 (ns ^{:doc "A namespace that exists solely to provide a place for \"compiler\"
 state that is accessed/maintained by many different components."}
   cljs.env
-  #?(:clj (:require [cljs.js-deps :refer (js-dependency-index)]))
+  #?(:clj (:require [cljs.js-deps :refer (js-dependency-index)]
+                    [cljs.externs :as externs]))
   (:refer-clojure :exclude [ensure]))
 
 ;; bit of a misnomer, but: an atom containing a map that serves as the bag of
@@ -45,11 +46,14 @@ state that is accessed/maintained by many different components."}
 (defn default-compiler-env
   ([] (default-compiler-env {}))
   ([options]
-     (atom (merge {:cljs.analyzer/namespaces {'cljs.user {:name 'cljs.user}}
-                   :cljs.analyzer/constant-table {}
-                   :cljs.analyzer/data-readers {}
-                   :options options}
-             #?(:clj {:js-dependency-index (js-dependency-index options)})))))
+   (atom
+     (merge
+       {:cljs.analyzer/namespaces {'cljs.user {:name 'cljs.user}}
+        :cljs.analyzer/constant-table {}
+        :cljs.analyzer/data-readers {}
+        :cljs.analyzer/externs (externs/default-externs)
+        :options options}
+       #?(:clj {:js-dependency-index (js-dependency-index options)})))))
 
 #?(:clj
    (defmacro with-compiler-env

@@ -760,7 +760,13 @@
        (do
          (when (contains? locals (-> sym name symbol))
            (warning :js-shadowed-by-local env {:name sym}))
-         {:name sym :ns 'js})
+         (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)]
+           (when-not (get-in @env/*compiler* (into [::externs] pre))
+             (swap! env/*compiler* update-in
+               (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))
+           {:name sym
+            :ns 'js
+            :tag (with-meta 'js {:prefix pre})}))
        (let [s  (str sym)
              lb (get locals sym)]
          (cond

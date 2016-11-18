@@ -12,7 +12,8 @@
             [cljs.env :as e]
             [cljs.env :as env]
             [cljs.analyzer.api :as ana-api]
-            [cljs.util :as util])
+            [cljs.util :as util]
+            [cljs.externs :as externs])
   (:use clojure.test))
 
 (defn collecting-warning-handler [state]
@@ -604,3 +605,21 @@
                  (a/analyze (assoc test-env :def-emits-var true)
                    '(let [y 1] (def y 2))))]
     (is (some? (-> parsed :expr :ret :var-ast)))))
+
+(comment
+  (require '[cljs.compiler :as cc])
+
+  ;; empty?
+  (let [test-cenv (atom {::a/externs (externs/default-externs)})]
+    (binding [a/*cljs-ns* a/*cljs-ns*]
+     (e/with-compiler-env test-cenv
+       (a/analyze-form-seq
+         '[(ns foo.core)
+           (defn bar [a b] (+ a b))
+           (def c js/React.Component)
+           (js/console.log "Hello world!")]))
+     (cc/emit-externs
+       (reduce util/map-merge {}
+         (map (comp :externs second)
+           (get @test-cenv ::a/namespaces))))))
+  )
