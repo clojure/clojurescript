@@ -342,7 +342,7 @@
 
 (defn- load-deps
   ([bound-vars ana-env lib deps cb]
-   (analyze-deps bound-vars ana-env lib deps nil nil cb))
+   (load-deps bound-vars ana-env lib deps nil nil cb))
   ([bound-vars ana-env lib deps reload opts cb]
    (when (:verbose opts)
      (debug-prn "Loading dependencies for" lib))
