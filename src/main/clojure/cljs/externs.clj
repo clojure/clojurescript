@@ -68,11 +68,12 @@
 
 (defn parse-externs [^SourceFile source-file]
   (let [^CompilerOptions compiler-options (CompilerOptions.)
-        closure-compiler (doto
-                           (let [compiler (com.google.javascript.jscomp.Compiler.)]
-                             (com.google.javascript.jscomp.Compiler/setLoggingLevel Level/WARNING)
-                             compiler)
-                           (.init (list source-file) '() compiler-options))
+        closure-compiler
+        (doto
+          (let [compiler (com.google.javascript.jscomp.Compiler.)]
+            (com.google.javascript.jscomp.Compiler/setLoggingLevel Level/WARNING)
+            compiler)
+          (.init (list source-file) '() compiler-options))
         js-ast (JsAst. source-file)
         ^Node root (.getAstRoot js-ast closure-compiler)]
     (loop [nodes (.children root)
@@ -100,4 +101,19 @@
 
 (comment
   (default-externs)
+
+  ;; webkit_dom.js defines Console and Window.prototype.console
+  (filter
+    (fn [s]
+      (let [m (-> s parse-externs index-externs)]
+        (get-in m '[Window prototype console])))
+    (CommandLineRunner/getDefaultExterns))
+
+  (->
+    (filter
+      (fn [s]
+        (= "externs.zip//webkit_dom.js" (.getName s)))
+      (CommandLineRunner/getDefaultExterns))
+    first parse-externs index-externs)
+
   )

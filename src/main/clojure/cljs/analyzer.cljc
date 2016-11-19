@@ -772,10 +772,11 @@
 (defn default-extern? [pre]
   (let [externs (get @env/*compiler* ::externs)]
     (or (get-in externs pre)
-      (when (= 1 (count pre))
-        (let [x (first pre)]
-          (or (get-in externs (conj '[Window prototype] x))
-            (get-in externs (conj '[Number] x))))))))
+        (when (= 1 (count pre))
+          (let [x (first pre)]
+            (or (get-in externs (conj '[Window prototype] x))
+                (get-in externs (conj '[Number] x)))))
+        (-> (last pre) str (string/starts-with? "cljs$")))))
 
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
