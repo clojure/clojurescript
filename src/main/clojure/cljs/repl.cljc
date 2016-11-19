@@ -791,7 +791,7 @@
                  (merge
                    ana/*cljs-warnings*
                    (if (or (true? warnings)
-                         (false? warnings))
+                           (false? warnings))
                      (zipmap (keys ana/*cljs-warnings*) (repeat warnings))
                      warnings)
                    (zipmap
@@ -799,7 +799,8 @@
                       :undeclared-ns :undeclared-ns-form]
                      (repeat (if (false? warnings)
                                false
-                               warn-on-undeclared)))))
+                               warn-on-undeclared)))
+                   {:infer-warning false}))
                ana/*cljs-static-fns* static-fns
                *repl-opts* opts]
        (let [env {:context :expr :locals {}}
