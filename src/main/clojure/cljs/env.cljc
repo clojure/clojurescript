@@ -51,7 +51,8 @@ state that is accessed/maintained by many different components."}
        {:cljs.analyzer/namespaces {'cljs.user {:name 'cljs.user}}
         :cljs.analyzer/constant-table {}
         :cljs.analyzer/data-readers {}
-        :cljs.analyzer/externs (externs/default-externs)
+        :cljs.analyzer/externs #?(:clj (externs/default-externs)
+                                  :cljs nil)
         :options options}
        #?(:clj {:js-dependency-index (js-dependency-index options)})))))
 
