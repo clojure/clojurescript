@@ -1794,7 +1794,9 @@
       (println "WARNING: :preloads should only be specified with :none optimizations"))))
 
 (defn check-cache-analysis-format [{:keys [cache-analysis cache-analysis-format] :as opts}]
-  (assert (not (and cache-analysis ((complement #{nil :edn :transit}) cache-analysis-format)))
+  (assert (not (and cache-analysis
+                    ((complement #{:edn :transit}) cache-analysis-format)
+                    (not (nil? cache-analysis-format))))
     (format ":cache-analysis format must be :edn or :transit but it is: %s"
       (pr-str cache-analysis-format))))
 
