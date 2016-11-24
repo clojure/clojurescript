@@ -807,7 +807,10 @@
                                 :cljs (identical? "clojure.core" ns))
                            "cljs.core"
                            ns)
-                 full-ns (resolve-ns-alias env ns)]
+                 full-ns (resolve-ns-alias env ns
+                           (or (and (js-module-exists? ns)
+                                    (get-in @env/*compiler* [:js-module-index ns]))
+                             (symbol ns)))]
              (when-not (nil? confirm)
                (when (not= (-> env :ns :name) full-ns)
                  (confirm-ns env full-ns))
