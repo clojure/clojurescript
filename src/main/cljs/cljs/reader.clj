@@ -11,10 +11,9 @@
             [cljs.analyzer :as ana]))
 
 (defmacro add-data-readers [default-readers]
-  (let [data-readers (get @env/*compiler* ::ana/data-readers)
-        data-readers (into {}
-                       (map (fn [[k v]]
-                              [(str k) (:name (ana/resolve-var (dissoc &env :locals) v))]))
-                       data-readers)]
-    `(do
-       (merge ~default-readers ~data-readers))))
+  (let [data-readers
+        (->> (get @env/*compiler* ::ana/data-readers)
+          (map (fn [[k v]]
+                 [(str k) `(fn [x#] (~(vary-meta v assoc ::ana/no-resolve true) x#))]))
+          (into {}))]
+    `(do (merge ~default-readers ~data-readers))))
