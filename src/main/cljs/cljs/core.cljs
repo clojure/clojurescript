@@ -5811,7 +5811,7 @@ reduces them without incurring seq initialization"
 
 (def ^:private never-equiv (NeverEquiv.))
 
-(defn- equiv-map
+(defn- ^boolean equiv-map
   "Assumes y is a map. Returns true if x equals y, otherwise returns
   false."
   [x y]
