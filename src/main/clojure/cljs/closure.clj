@@ -1470,7 +1470,7 @@
        url
        (cond
          (deps/-closure-lib? js) (lib-rel-path js)
-         (deps/-foreign? js) (util/get-name url)
+         (deps/-foreign? js) (util/relative-name url)
          :else (path-from-jarfile url))
 
        (string? js)

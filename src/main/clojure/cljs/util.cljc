@@ -142,6 +142,17 @@
     (filename x)
     (last (string/split (path x) #"\/"))))
 
+(defn ^String relative-name
+  "Given a file return a path relative to the working directory. Given a
+   URL return the JAR relative path of the resource."
+  [x]
+  {:pre [(or (file? x) (url? x))]}
+  (if (file? x)
+    (string/replace
+      (.getAbsolutePath x)
+      (str (System/getProperty "user.dir") File/separator))
+    (last (string/split (.getFile x) #"\.jar!/"))))
+
 (defn last-modified [src]
   (cond
     (file? src) (.lastModified ^File src)
