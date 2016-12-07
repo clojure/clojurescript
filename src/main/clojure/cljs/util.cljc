@@ -148,9 +148,8 @@
   [x]
   {:pre [(or (file? x) (url? x))]}
   (if (file? x)
-    (string/replace
-      (.getAbsolutePath x)
-      (str (System/getProperty "user.dir") File/separator))
+    (string/replace (.getAbsolutePath x)
+      (str (System/getProperty "user.dir") File/separator) "")
     (last (string/split (.getFile x) #"\.jar!/"))))
 
 (defn last-modified [src]
