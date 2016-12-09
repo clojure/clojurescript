@@ -53,7 +53,9 @@
 
 (defmethod parse-extern-node Token/ASSIGN [node]
   (when (> (.getChildCount node) 0)
-    (let [lhs (first (parse-extern-node (.getFirstChild node)))]
+    (let [ty  (get-type node)
+          lhs (cond-> (first (parse-extern-node (.getFirstChild node)))
+                ty (annotate ty))]
       (if (> (.getChildCount node) 1)
         (let [externs (parse-extern-node (.getChildAtIndex node 1))]
           (conj (map (fn [ext] (concat lhs ext)) externs)
