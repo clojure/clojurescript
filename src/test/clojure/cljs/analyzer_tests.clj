@@ -609,7 +609,6 @@
 (comment
   (require '[cljs.compiler :as cc])
 
-  ;; empty?
   (let [test-cenv (atom {::a/externs (externs/default-externs)})]
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]

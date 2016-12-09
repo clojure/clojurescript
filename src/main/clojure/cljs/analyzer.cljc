@@ -769,6 +769,22 @@
                  'prototype)})
     x))
 
+(defn has-extern?*
+  ([pre externs]
+   (has-extern?* pre externs externs))
+  ([pre externs top]
+   (if (empty? pre)
+     true
+     (let [x  (first pre)
+           me (find externs x)]
+       (if-not me
+         false
+         (let [[x' externs'] me]
+           (if-let [tag (-> x' meta :tag)]
+             (let [pre' (into [] (map symbol) (string/split (str tag) #"\."))]
+               (has-extern?* (into (conj pre' 'prototype) (next pre)) top top))
+             (recur (next pre) externs' top))))))))
+
 (defn has-extern?
   ([pre]
     (has-extern? pre (get @env/*compiler* ::externs)))
@@ -777,7 +793,7 @@
        (when (= 1 (count pre))
          (let [x (first pre)]
            (or (get-in externs (conj '[Window prototype] x))
-             (get-in externs (conj '[Number] x)))))
+               (get-in externs (conj '[Number] x)))))
        (-> (last pre) str (string/starts-with? "cljs$")))))
 
 (defn resolve-var
