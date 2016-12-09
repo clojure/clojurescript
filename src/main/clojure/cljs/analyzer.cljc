@@ -789,7 +789,7 @@
   ([pre]
     (has-extern? pre (get @env/*compiler* ::externs)))
   ([pre externs]
-   (or (get-in externs pre)
+   (or (has-extern?* pre externs)
        (when (= 1 (count pre))
          (let [x (first pre)]
            (or (get-in externs (conj '[Window prototype] x))
