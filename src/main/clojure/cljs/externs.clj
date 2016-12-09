@@ -12,16 +12,40 @@
   (:import [java.util.logging Level]
            [com.google.javascript.jscomp
             CompilerOptions SourceFile JsAst CommandLineRunner]
-           [com.google.javascript.rhino Node Token]))
+           [com.google.javascript.rhino
+            Node Token JSTypeExpression]))
 
 ;; ------------------------------------------------------------------------------
 ;; Externs Parsing
 
-(defmulti parse-extern-node (fn [^Node node] (.getType node)))
+(defn annotate [props ty]
+  (conj
+    (into [] (butlast props))
+    (vary-meta (last props) assoc :tag ty)))
+
+(defn get-type [^Node node]
+  (when node
+    (let [info (.getJSDocInfo node)]
+      (when info
+        (if-let [^JSTypeExpression ty (.getType info)]
+          (when-let [root (.getRoot ty)]
+            (if (.isString root)
+              (symbol (.getString root))
+              (if-let [child (.. root getFirstChild)]
+                (if (.isString child)
+                  (symbol (.. child getString))))))
+          (when (or (.isConstructor info) (.isInterface info))
+            (symbol (.. node getFirstChild getQualifiedName))))))))
+
+(defmulti parse-extern-node
+  (fn [^Node node]
+    (.getType node)))
 
 (defmethod parse-extern-node Token/VAR [node]
   (when (> (.getChildCount node) 0)
-    (parse-extern-node (.getFirstChild node))))
+    (let [ty (get-type node)]
+      (cond-> (parse-extern-node (.getFirstChild node))
+        ty (-> first (annotate ty) vector)))))
 
 (defmethod parse-extern-node Token/EXPR_RESULT [node]
   (when (> (.getChildCount node) 0)
@@ -45,7 +69,10 @@
       [lhs])))
 
 (defmethod parse-extern-node Token/GETPROP [node]
-  [(map symbol (string/split (.getQualifiedName node) #"\."))])
+  (let [props (map symbol (string/split (.getQualifiedName node) #"\."))]
+    [(if-let [ty (get-type node)]
+       (annotate props ty)
+       props)]))
 
 (defmethod parse-extern-node Token/OBJECTLIT [node]
   (when (> (.getChildCount node) 0)
@@ -102,6 +129,9 @@
 (comment
   (default-externs)
 
+  (-> (default-externs)
+    (find 'console) first meta)
+
   ;; webkit_dom.js defines Console and Window.prototype.console
   (filter
     (fn [s]
@@ -114,14 +144,6 @@
       (fn [s]
         (= "externs.zip//webkit_dom.js" (.getName s)))
       (CommandLineRunner/getDefaultExterns))
-    first parse-externs index-externs)
-
-  ;; interacting with JSDocInfo (put this in dispatch fn)
-  (let [info (.getJSDocInfo node)]
-    (when info
-      (when (or (.isConstructor info) (.isInterface info))
-        (println node (.. node getFirstChild getQualifiedName)))
-      (when-let [ty (.getType info)]
-        (println ">>>>>" node ty)))
-    (.getType node))
+    first parse-externs index-externs
+    (find 'console) first meta)
   )
