@@ -34,8 +34,11 @@
               (if-let [child (.. root getFirstChild)]
                 (if (.isString child)
                   (symbol (.. child getString))))))
-          (when (or (.isConstructor info) (.isInterface info))
-            (symbol (.. node getFirstChild getQualifiedName))))))))
+          (if (or (.isConstructor info) (.isInterface info))
+            (symbol (.. node getFirstChild getQualifiedName))
+            (if (.hasReturnType info)
+              nil
+              nil)))))))
 
 (defmulti parse-extern-node
   (fn [^Node node]
