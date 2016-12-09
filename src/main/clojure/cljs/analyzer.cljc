@@ -769,7 +769,7 @@
                  'prototype)})
     x))
 
-(defn default-extern? [pre]
+(defn has-extern? [pre]
   (let [externs (get @env/*compiler* ::externs)]
     (or (get-in externs pre)
         (when (= 1 (count pre))
@@ -790,7 +790,7 @@
          (when (contains? locals (-> sym name symbol))
            (warning :js-shadowed-by-local env {:name sym}))
          (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)]
-           (when-not (default-extern? pre)
+           (when-not (has-extern? pre)
              (swap! env/*compiler* update-in
                (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))
            {:name sym
@@ -2570,7 +2570,7 @@
         (warning :infer-warning env {:form form})))
     (when (js-tag? tag)
       (let [pre (-> tag meta :prefix)]
-        (when-not (default-extern? pre)
+        (when-not (has-extern? pre)
           (swap! env/*compiler* update-in
             (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))))
     (case dot-action
