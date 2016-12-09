@@ -146,4 +146,12 @@
       (CommandLineRunner/getDefaultExterns))
     first parse-externs index-externs
     (find 'console) first meta)
+
+  (require '[clojure.java.io :as io]
+           '[cljs.closure :as cc])
+
+  (-> (cc/js-source-file nil (io/file "react.ext.js"))
+    parse-externs index-externs
+    (get 'React)
+    (find 'Component) first meta)
   )
