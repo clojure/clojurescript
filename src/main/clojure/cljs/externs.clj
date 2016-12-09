@@ -116,4 +116,12 @@
       (CommandLineRunner/getDefaultExterns))
     first parse-externs index-externs)
 
+  ;; interacting with JSDocInfo (put this in dispatch fn)
+  (let [info (.getJSDocInfo node)]
+    (when info
+      (when (or (.isConstructor info) (.isInterface info))
+        (println node (.. node getFirstChild getQualifiedName)))
+      (when-let [ty (.getType info)]
+        (println ">>>>>" node ty)))
+    (.getType node))
   )
