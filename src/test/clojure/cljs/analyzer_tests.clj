@@ -609,6 +609,7 @@
 (comment
   (require '[cljs.compiler :as cc])
 
+  ;; TODO: need to handle the method/fn case
   (let [test-cenv (atom {::a/externs (externs/default-externs)})]
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
@@ -617,9 +618,12 @@
           '[(ns foo.core)
             (defn bar [a] (js/parseInt a))
             (def c js/React.Component)
-            (js/console.log "Hello world!")]))
+            (js/console.log "Hello world!")
+            (fn [& args]
+              (.apply (.-log js/console) js/console (into-array args)))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
+
   )
