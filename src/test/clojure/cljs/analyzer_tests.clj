@@ -620,7 +620,9 @@
             (def c js/React.Component)
             (js/console.log "Hello world!")
             (fn [& args]
-              (.apply (.-log js/console) js/console (into-array args)))]))
+              (.apply (.-log js/console) js/console (into-array args)))
+            (js/console.log js/Number.MAX_VALUE)
+            (js/console.log js/Symbol.iterator)]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)

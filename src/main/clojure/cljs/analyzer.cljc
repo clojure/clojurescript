@@ -769,6 +769,15 @@
                  'prototype)})
     x))
 
+(def alias->type
+  '{object   Object
+    string   String
+    number   Number
+    array    Array
+    function Function
+    boolean  Boolean
+    symbol   Symbol})
+
 (defn has-extern?*
   ([pre externs]
    (let [pre (if-let [me (find
@@ -788,8 +797,10 @@
          false
          (let [[x' externs'] me]
            (if-let [tag (-> x' meta :tag)]
-             (let [pre' (into [] (map symbol) (string/split (str tag) #"\."))]
-               (has-extern?* (into (conj pre' 'prototype) (next pre)) top top))
+             (let [pre' (into [] (map symbol)
+                          (string/split (str (alias->type tag tag)) #"\."))]
+               (or (has-extern?* (into pre' (next pre)) top top)
+                   (has-extern?* (into (conj pre' 'prototype) (next pre)) top top)))
              (recur (next pre) externs' top))))))))
 
 (defn has-extern?
