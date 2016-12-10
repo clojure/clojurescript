@@ -771,7 +771,14 @@
 
 (defn has-extern?*
   ([pre externs]
-   (has-extern?* pre externs externs))
+   (let [pre (if-let [me (find
+                           (get-in externs '[Window prototype])
+                           (first pre))]
+               (if-let [tag (-> me first meta :tag)]
+                 (into [tag 'prototype] (next pre))
+                 pre)
+               pre)]
+     (has-extern?* pre externs externs)))
   ([pre externs top]
    (if (empty? pre)
      true

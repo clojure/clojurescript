@@ -143,6 +143,15 @@
 
   (get (default-externs) 'Function)
 
+  (get (default-externs) 'Error)
+
+  ;; values are not on the prototype
+  (get (default-externs) 'Symbol)
+  (get (default-externs) 'Number)
+
+  (-> (get-in (default-externs) '[Window prototype])
+    (find 'performance) first meta)
+
   ;; webkit_dom.js defines Console and Window.prototype.console
   (filter
     (fn [s]
