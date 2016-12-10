@@ -41,7 +41,8 @@
           (if (or (.isConstructor info) (.isInterface info))
             {:tag (symbol (.. node getFirstChild getQualifiedName))}
             (if (.hasReturnType info)
-              {:ret-tag (get-type* (.getReturnType info))})))))))
+              {:tag 'Function
+               :ret-tag (get-type* (.getReturnType info))})))))))
 
 (defmulti parse-extern-node
   (fn [^Node node]
@@ -139,6 +140,8 @@
 
   (-> (default-externs)
     (find 'console) first meta)
+
+  (get (default-externs) 'Function)
 
   ;; webkit_dom.js defines Console and Window.prototype.console
   (filter
