@@ -127,13 +127,23 @@
         (seq xs) (update-in xs merge {})))
     {} externs))
 
-(defn default-externs []
-  (let [xs (CommandLineRunner/getDefaultExterns)]
-    (reduce
-      (fn [externs externs-file]
-        (util/map-merge
-          externs (index-externs (parse-externs externs-file))))
-      {} xs)))
+(defn default-externs
+  ([]
+    (default-externs
+      '{eval {}
+        global {}
+        goog {nodeGlobalRequire {}}
+        COMPILED {}
+        TypeError {}
+        Error {prototype {number {} columnNumber {}}}
+        ReferenceError {}}))
+  ([defaults]
+   (let [xs (CommandLineRunner/getDefaultExterns)]
+     (reduce
+       (fn [externs externs-file]
+         (util/map-merge
+           externs (index-externs (parse-externs externs-file))))
+       defaults xs))))
 
 (comment
   (default-externs)
