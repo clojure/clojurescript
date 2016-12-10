@@ -19,26 +19,29 @@
 ;; Externs Parsing
 
 (defn annotate [props ty]
-  (conj
-    (into [] (butlast props))
-    (vary-meta (last props) assoc :tag ty)))
+  (when (seq props)
+    (conj
+      (into [] (butlast props))
+      (with-meta (last props) ty))))
+
+(defn get-type* [^JSTypeExpression texpr]
+  (when-let [root (.getRoot texpr)]
+    (if (.isString root)
+      (symbol (.getString root))
+      (if-let [child (.. root getFirstChild)]
+        (if (.isString child)
+          (symbol (.. child getString)))))))
 
 (defn get-type [^Node node]
   (when node
     (let [info (.getJSDocInfo node)]
       (when info
         (if-let [^JSTypeExpression ty (.getType info)]
-          (when-let [root (.getRoot ty)]
-            (if (.isString root)
-              (symbol (.getString root))
-              (if-let [child (.. root getFirstChild)]
-                (if (.isString child)
-                  (symbol (.. child getString))))))
+          {:tag (get-type* ty)}
           (if (or (.isConstructor info) (.isInterface info))
-            (symbol (.. node getFirstChild getQualifiedName))
+            {:tag (symbol (.. node getFirstChild getQualifiedName))}
             (if (.hasReturnType info)
-              nil
-              nil)))))))
+              {:ret-tag (get-type* (.getReturnType info))})))))))
 
 (defmulti parse-extern-node
   (fn [^Node node]
@@ -151,6 +154,15 @@
       (CommandLineRunner/getDefaultExterns))
     first parse-externs index-externs
     (find 'console) first meta)
+
+  (->
+    (filter
+      (fn [s]
+        (= "externs.zip//webkit_dom.js" (.getName s)))
+      (CommandLineRunner/getDefaultExterns))
+    first parse-externs index-externs
+    (get-in '[Console prototype])
+    (find 'log) first meta)
 
   (require '[clojure.java.io :as io]
            '[cljs.closure :as cc])
