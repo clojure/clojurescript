@@ -2402,7 +2402,7 @@
 (defmethod parse 'ns*
   [_ env [_ quoted-specs :as form] _ opts]
   (when-let [not-quoted (->> (remove keyword? quoted-specs)
-                          (filter #(not= 'quote (first %)) )
+                          (remove #(and (seq? %) (= 'quote (first %))) )
                           first)]
     (throw (error env (str "Arguments to " (name (first quoted-specs))
                         " must be quoted. Offending spec: " not-quoted))))

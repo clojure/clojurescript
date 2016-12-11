@@ -562,7 +562,10 @@
               a/*cljs-warnings* nil]
       (is (thrown-with-msg? Exception #"Arguments to require must be quoted"
             (a/analyze test-env
-              '(require [clojure.set :as set]))))))
+              '(require [clojure.set :as set]))))
+      (is (thrown-with-msg? Exception #"Arguments to require must be quoted"
+            (a/analyze test-env
+              '(require clojure.set))))))
   (testing "`:ns` and `:ns*` should throw if not `:top-level`"
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* nil]
