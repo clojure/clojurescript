@@ -787,21 +787,24 @@
                  (into [tag 'prototype] (next pre))
                  pre)
                pre)]
-     (has-extern?* pre externs externs)))
-  ([pre externs top]
+     (has-extern?* pre externs externs #{})))
+  ([pre externs top seen]
    (if (empty? pre)
      true
      (let [x  (first pre)
            me (find externs x)]
-       (if-not me
-         false
-         (let [[x' externs'] me]
+       (cond
+         (seen x) true
+         (not me) false
+         :else
+         (let [seen' (conj seen x)
+               [x' externs'] me]
            (if-let [tag (-> x' meta :tag)]
              (let [pre' (into [] (map symbol)
                           (string/split (str (alias->type tag tag)) #"\."))]
-               (or (has-extern?* (into pre' (next pre)) top top)
-                   (has-extern?* (into (conj pre' 'prototype) (next pre)) top top)))
-             (recur (next pre) externs' top))))))))
+               (or (has-extern?* (into pre' (next pre)) top top seen')
+                   (has-extern?* (into (conj pre' 'prototype) (next pre)) top top seen')))
+             (recur (next pre) externs' top seen'))))))))
 
 (defn has-extern?
   ([pre]
