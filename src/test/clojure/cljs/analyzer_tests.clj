@@ -487,7 +487,17 @@
   (is (= (a/canonicalize-specs '(:exclude (quote [map mapv])))
          '(:exclude [map mapv])))
   (is (= (a/canonicalize-specs '(:require (quote [clojure.set :as set])))
-         '(:require [clojure.set :as set]))))
+         '(:require [clojure.set :as set])))
+  (is (= (a/canonicalize-specs '(:require (quote clojure.set)))
+         '(:require [clojure.set]))))
+
+(deftest test-canonicalize-import-specs
+  (is (= (a/canonicalize-import-specs '(:import (quote [goog Uri])))
+         '(:import [goog Uri])))
+  (is (= (a/canonicalize-import-specs '(:import (quote (goog Uri))))
+         '(:import (goog Uri))))
+  (is (= (a/canonicalize-import-specs '(:import (quote goog.Uri)))
+         '(:import goog.Uri))))
 
 (deftest test-cljs-1346
   (testing "`ns*` special form conformance"

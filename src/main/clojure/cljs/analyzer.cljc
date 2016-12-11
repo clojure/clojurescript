@@ -2215,6 +2215,13 @@
                 (if (vector? spec) spec [spec]))))]
     (map canonicalize specs)))
 
+(defn canonicalize-import-specs [specs]
+  (letfn [(canonicalize [quoted-spec-or-kw]
+            (if (keyword? quoted-spec-or-kw)
+              quoted-spec-or-kw
+              (second quoted-spec-or-kw)))]
+    (map canonicalize specs)))
+
 (defn desugar-ns-specs
   "Given an original set of ns specs desugar :include-macros and :refer-macros
    usage into only primitive spec forms - :use, :require, :use-macros,
@@ -2402,7 +2409,9 @@
   (when-not *allow-ns*
     (throw (error env (str "Calls to `" (name (first quoted-specs))
                         "` must appear at the top-level."))))
-  (let [specs        (canonicalize-specs quoted-specs)
+  (let [specs        (if (= :import (first quoted-specs))
+                       (canonicalize-import-specs quoted-specs)
+                       (canonicalize-specs quoted-specs))
         name         (-> env :ns :name)
         args         (desugar-ns-specs
                        #?(:clj  (list (process-rewrite-form
