@@ -147,10 +147,15 @@
    URL return the JAR relative path of the resource."
   [x]
   {:pre [(or (file? x) (url? x))]}
-  (if (file? x)
-    (string/replace (.getAbsolutePath x)
-      (str (System/getProperty "user.dir") File/separator) "")
-    (last (string/split (.getFile x) #"\.jar!/"))))
+  (letfn [(strip-user-dir [s]
+            (string/replace s
+              (str (System/getProperty "user.dir") File/separator) ""))]
+    (if (file? x)
+      (strip-user-dir (.getAbsolutePath x))
+      (let [f (.getFile x)]
+        (if (string/includes? f ".jar!/")
+          (last (string/split f #"\.jar!/"))
+          (strip-user-dir f))))))
 
 (defn last-modified [src]
   (cond

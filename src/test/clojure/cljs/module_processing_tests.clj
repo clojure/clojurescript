@@ -38,8 +38,8 @@
 
     (is (= {:foreign-libs []
             :ups-foreign-libs []
-            :libs ["out/react.js"
-                   "out/Circle.js"]
+            :libs ["out/src/test/cljs/react.js"
+                   "out/src/test/cljs/Circle.js"]
             :closure-warnings {:non-standard-jsdoc :off}}
            (env/with-compiler-env cenv
              (closure/process-js-modules
