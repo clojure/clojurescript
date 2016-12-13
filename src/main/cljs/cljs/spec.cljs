@@ -756,7 +756,7 @@
        (not (<= (c/or min-count 0)
               (bounded-count (if max-count (inc max-count) min-count) x)
               (c/or max-count MAX_INT))))
-     [{:path path :pred `(<= ~(c/or min-count 0) ~(c/count ~'%) ~(c/or max-count MAX_INT)) :val x :via via :in in}]
+     [{:path path :pred `(<= ~(c/or min-count 0) (c/count ~'%) ~(c/or max-count MAX_INT)) :val x :via via :in in}]
 
      (c/and distinct (not (empty? x)) (not (apply distinct? x)))
      [{:path path :pred 'distinct? :val x :via via :in in}])))
