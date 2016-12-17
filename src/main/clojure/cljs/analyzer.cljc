@@ -1341,7 +1341,7 @@
           (when fn-var?
             (let [params (map #(vec (map :name (:params %))) (:methods init-expr))]
               (merge
-                {:fn-var true
+                {:fn-var (not (:macro sym-meta))
                  ;; protocol implementation context
                  :protocol-impl (:protocol-impl init-expr)
                  ;; inline protocol implementation context

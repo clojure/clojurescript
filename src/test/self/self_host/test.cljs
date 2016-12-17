@@ -850,6 +850,19 @@
           (fn [{:keys [value error]}]
             (is (= value [6 6]))))))))
 
+(deftest test-cljs-1874
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 1 done)]
+      (cljs/eval st '(ns foo.core
+                       (:require-macros [bar.core]))
+        {:load (fn [_ cb]
+                 (cb {:lang   :clj
+                      :source "(ns bar.core) (defmacro add [a b] `(+ ~a ~b))"}))}
+        (fn [_]
+          (is (false? (:fn-var (var-ast @st 'bar.core$macros/add))))
+          (inc! l))))))
+
 (defn -main [& args]
   (run-tests))
 
