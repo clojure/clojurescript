@@ -2123,9 +2123,12 @@ reduces them without incurring seq initialization"
     (satisfies? ISeq s)))
 
 (defn ^boolean seqable?
-  "Return true if s satisfies ISeqable"
+  "Return true if the seq function is supported for s"
   [s]
-  (satisfies? ISeqable s))
+  (or
+   (satisfies? ISeqable s)
+   (array? s)
+   (string? s)))
 
 (defn ^boolean boolean
   "Coerce to boolean"

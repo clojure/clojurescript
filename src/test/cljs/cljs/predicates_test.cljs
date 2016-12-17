@@ -25,7 +25,9 @@
      [::foo         false    false    false    true   false    false  false         true             false          false             false           true]
      ['foo          false    false    false    true   false    false  true          nil              true           nil               false           false]
      ['foo/bar      false    false    false    true   false    false  false         true             false          true              false           false]
-     [uuid          false    false    false    false  true     false  false         false            false          false             false           false]]))
+     [uuid          false    false    false    false  true     false  false         false            false          false             false           false]
+     [(array)       false    false    true     false  false    false  false         false            false          false             false           false]
+     ["string"      false    false    true     false  false    false  false         false            false          false             false           false]]))
 
 (deftest test-preds
   (let [[preds & rows] pred-val-table]
