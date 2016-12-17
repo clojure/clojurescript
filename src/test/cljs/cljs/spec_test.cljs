@@ -8,7 +8,6 @@
 
 (ns cljs.spec-test
   (:require [cljs.spec :as s]
-            [cljs.spec.test :as stest]
             [cljs.test :as test :refer-macros [deftest is are run-tests]]
             [cljs.spec.impl.gen :as gen]
             [clojure.test.check.generators]))
@@ -100,19 +99,6 @@
   (s/def ::multi (s/multi-spec spec-type-1790 identity))
   (is (= :b (s/conform ::multi :b)))
   (is (= :a (s/conform ::multi :a))))
-
-(defn h-cljs-1812 [x] true)
-(s/fdef h-cljs-1812 :args (s/cat :x int?) :ret true?)
-
-(deftest test-cljs-1812
-  (is (= (stest/unstrument `h-cljs-1812)
-         []))
-
-  (stest/check `h-cljs-1812 {:clojure.test.check/opts {:num-tests 1}})
-
-  ; Calling h-cljs-1812 with an argument of the wrong type shouldn't throw,
-  ; because the function should not have been instrumented by stest/check.
-  (h-cljs-1812 "foo"))
 
 ;; Copied from Clojure spec tests
 

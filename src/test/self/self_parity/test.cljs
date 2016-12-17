@@ -276,6 +276,7 @@
                    #_[cljs.pprint]
                    #_[cljs.pprint-test]
                    [cljs.spec-test]
+                   #_[cljs.spec.test-test]
                    [cljs.clojure-alias-test]
                    [cljs.hash-map-test]
                    [cljs.syntax-quote-test]
@@ -310,6 +311,7 @@
                #_'cljs.pprint
                #_'cljs.pprint-test
                'cljs.spec-test
+               #_'cljs.spec.test-test
                'cljs.clojure-alias-test
                'cljs.hash-map-test
                'cljs.syntax-quote-test
