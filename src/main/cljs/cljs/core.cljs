@@ -6347,34 +6347,53 @@ reduces them without incurring seq initialization"
 
 (set! (.-HASHMAP-THRESHOLD PersistentArrayMap) 8)
 
-(set! (.-createWithCheck PersistentArrayMap)
-      (fn [arr]
+(set! (.-fromArray PersistentArrayMap)
+  (fn [arr ^boolean no-clone ^boolean no-check]
+    (as-> (if no-clone arr (aclone arr)) arr
+      (if no-check
+        arr
         (let [ret (array)]
           (loop [i 0]
             (when (< i (alength arr))
               (let [k (aget arr i)
                     v (aget arr (inc i))
                     idx (array-index-of ret k)]
-                (if (== idx -1)
-                  (doto ret (.push k) (.push v))
-                  (throw (js/Error. (str "Duplicate key: " k)))))
+                (when (== idx -1)
+                  (.push ret k)
+                  (.push ret v)))
               (recur (+ i 2))))
-          (let [cnt (/ (alength arr) 2)]
-            (PersistentArrayMap. nil cnt arr nil)))))
+          ret))
+      (let [cnt (/ (alength arr) 2)]
+        (PersistentArrayMap. nil cnt arr nil)))))
+
+(set! (.-createWithCheck PersistentArrayMap)
+  (fn [arr]
+    (let [ret (array)]
+      (loop [i 0]
+        (when (< i (alength arr))
+          (let [k (aget arr i)
+                v (aget arr (inc i))
+                idx (array-index-of ret k)]
+            (if (== idx -1)
+              (doto ret (.push k) (.push v))
+              (throw (js/Error. (str "Duplicate key: " k)))))
+          (recur (+ i 2))))
+      (let [cnt (/ (alength arr) 2)]
+        (PersistentArrayMap. nil cnt arr nil)))))
 
 (set! (.-createAsIfByAssoc PersistentArrayMap)
-      (fn [arr]
-        (let [ret (array)]
-          (loop [i 0]
-            (when (< i (alength arr))
-              (let [k (aget arr i)
-                    v (aget arr (inc i))
-                    idx (array-index-of ret k)]
-                (if (== idx -1)
-                  (doto ret (.push k) (.push v))
-                  (aset ret (inc idx) v)))
-              (recur (+ i 2))))
-          (PersistentArrayMap. nil (/ (alength ret) 2) ret nil))))
+  (fn [arr]
+    (let [ret (array)]
+      (loop [i 0]
+        (when (< i (alength arr))
+          (let [k (aget arr i)
+                v (aget arr (inc i))
+                idx (array-index-of ret k)]
+            (if (== idx -1)
+              (doto ret (.push k) (.push v))
+              (aset ret (inc idx) v)))
+          (recur (+ i 2))))
+      (PersistentArrayMap. nil (/ (alength ret) 2) ret nil))))
 
 (es6-iterable PersistentArrayMap)
 
@@ -7311,8 +7330,9 @@ reduces them without incurring seq initialization"
 (set! (.-EMPTY PersistentHashMap) (PersistentHashMap. nil 0 nil false nil empty-unordered-hash))
 
 (set! (.-fromArray PersistentHashMap)
-  (fn [arr]
-    (let [len (alength arr)]
+  (fn [arr ^boolean no-clone]
+    (let [arr (if no-clone arr (aclone arr))
+          len (alength arr)]
       (loop [i 0 ret (transient (.-EMPTY PersistentHashMap))]
         (if (< i len)
           (recur (+ i 2)
@@ -7328,16 +7348,16 @@ reduces them without incurring seq initialization"
           (persistent! out))))))
 
 (set! (.-createWithCheck PersistentHashMap)
-      (fn [arr]
-        (let [len (alength arr)
-              ret (transient (.-EMPTY PersistentHashMap))]
-          (loop [i 0]
-            (when (< i len)
-              (-assoc! ret (aget arr i) (aget arr (inc i)))
-              (if (not= (-count ret) (inc (/ i 2)))
-                (throw (js/Error. (str "Duplicate key: " (aget arr i))))
-                (recur (+ i 2)))))
-          (-persistent! ret))))
+  (fn [arr]
+    (let [len (alength arr)
+          ret (transient (.-EMPTY PersistentHashMap))]
+      (loop [i 0]
+        (when (< i len)
+          (-assoc! ret (aget arr i) (aget arr (inc i)))
+          (if (not= (-count ret) (inc (/ i 2)))
+            (throw (js/Error. (str "Duplicate key: " (aget arr i))))
+            (recur (+ i 2)))))
+      (-persistent! ret))))
 
 (es6-iterable PersistentHashMap)
 
@@ -8641,6 +8661,12 @@ reduces them without incurring seq initialization"
   (PersistentTreeSet. nil (.-EMPTY PersistentTreeMap) empty-unordered-hash))
 
 (es6-iterable PersistentTreeSet)
+
+(defn set-from-indexed-seq [iseq]
+  (let [arr (.-arr iseq)
+        ret (areduce arr i ^not-native res (-as-transient #{})
+              (-conj! res (aget arr i)))]
+    (-persistent! ^not-native ret)))
 
 (defn set
   "Returns a set of the distinct elements of coll."
