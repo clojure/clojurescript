@@ -388,3 +388,12 @@
                       (recur xs)
                       x))
                   10)
+
+(println "\n")
+(println ";;; str")
+(simple-benchmark [] (str 1) 1000000)
+(simple-benchmark [] (str nil) 1000000)
+(simple-benchmark [] (str "1") 1000000)
+(simple-benchmark [] (str "1" "2") 1000000)
+(simple-benchmark [] (str "1" "2" "3") 1000000)
+(println)
