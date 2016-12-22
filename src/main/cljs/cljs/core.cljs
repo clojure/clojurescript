@@ -3839,7 +3839,7 @@ reduces them without incurring seq initialization"
         (set! _next (next _seq))))
     (not (nil? _next)))
   (next [this]
-    (if-not (.hasNext this)
+    (if-not ^boolean (.hasNext this)
       (throw (js/Error. "No such element"))
       (do
         (set! _seq _next)
@@ -3898,7 +3898,7 @@ reduces them without incurring seq initialization"
     (loop [iters (seq iters)]
       (if-not (nil? iters)
         (let [iter (first iters)]
-          (if-not (.hasNext iter)
+          (if-not ^boolean (.hasNext iter)
             false
             (recur (next iters))))
         true)))
@@ -5101,7 +5101,7 @@ reduces them without incurring seq initialization"
         (let [me-iter  (-iterator coll)
               you-iter (-iterator other)]
           (loop []
-            (if (.hasNext me-iter)
+            (if ^boolean (.hasNext me-iter)
               (let [x (.next me-iter)
                     y (.next you-iter)]
                 (if (= x y)
@@ -7187,7 +7187,7 @@ reduces them without incurring seq initialization"
 (deftype HashMapIter [nil-val root-iter ^:mutable seen]
   Object
   (hasNext [_]
-    (or (not seen) ^boolean (.hasNext root-iter)))
+    (or (not ^boolean seen) ^boolean (.hasNext root-iter)))
   (next [_]
     (if-not ^boolean seen
       (do
