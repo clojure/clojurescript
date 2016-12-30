@@ -699,6 +699,18 @@
                  (conj cljs-namespaces ns-info)))
         (disj cljs-namespaces nil)))))
 
+(defn- constants-filename
+  "Returns the filename of the constants table."
+  [opts]
+  (str (util/output-directory opts) File/separator
+       (string/replace (str ana/constants-ns-sym) "." File/separator) ".js"))
+
+(defn- constants-javascript-file
+  "Returns the constants table as a JavaScriptFile."
+  [opts]
+  (let [url (deps/to-url (constants-filename opts))]
+    (javascript-file nil url url [(str ana/constants-ns-sym)] ["cljs.core"] nil nil)))
+
 (defn add-dependencies
   "Given one or more IJavaScript objects in dependency order, produce
   a new sequence of IJavaScript objects which includes the input list
@@ -710,7 +722,7 @@
         required-js   (js-dependencies opts
                         (into (set (mapcat deps/-requires required-cljs)) requires))
         provided      (set (mapcat deps/-provides (clojure.set/union inputs required-cljs required-js)))
-        unprovided    (clojure.set/difference requires provided #{"constants-table"})]
+        unprovided    (clojure.set/difference requires provided)]
     (when (seq unprovided)
       (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
     (cons
@@ -725,8 +737,7 @@
                   js-map)))
             required-js)
           (when (-> @env/*compiler* :options :emit-constants)
-            (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
-              [(javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)]))
+            [(constants-javascript-file opts)])
           required-cljs
           inputs)))))
 
@@ -764,7 +775,7 @@
   [inputs]
   (let [requires   (set (mapcat deps/-requires inputs))
         provided   (set (mapcat deps/-provides inputs))
-        unprovided (clojure.set/difference requires provided #{"constants-table"})]
+        unprovided (clojure.set/difference requires provided)]
     (when (seq unprovided)
       (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
     inputs))
@@ -858,8 +869,7 @@
               js-map)))
         required-js)
       (when (-> @env/*compiler* :options :emit-constants)
-        (let [url (deps/to-url (str (util/output-directory opts) "/constants_table.js"))]
-          [(javascript-file nil url url ["constants-table"] ["cljs.core"] nil nil)]))
+        [(constants-javascript-file opts)])
       inputs)))
 
 (defn add-preloads
@@ -873,7 +883,7 @@
     inputs
     (let [pred     (fn [x]
                      (if (:emit-constants opts)
-                       (not= ["constants-table"] (:provides x))
+                       (not= [(str ana/constants-ns-sym)] (:provides x))
                        (not= ["cljs.core"] (:provides x))))
           pre      (take-while pred inputs)
           post     (drop-while pred inputs)
@@ -2018,8 +2028,8 @@
                                 (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)])))
                  _ (when (:emit-constants all-opts)
                      (comp/emit-constants-table-to-file
-                       (::ana/constant-table @env/*compiler*)
-                       (str (util/output-directory all-opts) "/constants_table.js")))
+                      (::ana/constant-table @env/*compiler*)
+                      (constants-filename all-opts)))
                  _ (when (:infer-externs all-opts)
                      (comp/emit-inferred-externs-to-file
                        (reduce util/map-merge {}

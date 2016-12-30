@@ -1076,7 +1076,9 @@
   [{:keys [name requires uses require-macros reloads env]}]
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
-    (emitln "goog.require('cljs.core');"))
+    (emitln "goog.require('cljs.core');")
+    (when (-> @env/*compiler* :options :emit-constants)
+      (emitln "goog.require('" (munge ana/constants-ns-sym) "');")))
   (load-libs requires nil (:require reloads))
   (load-libs uses requires (:use reloads)))
 
@@ -1300,7 +1302,7 @@
                                                 (set (vals deps))
                                                 (cond-> (conj (set (vals deps)) 'cljs.core)
                                                   (get-in @env/*compiler* [:options :emit-constants])
-                                                  (conj 'constants-table)))
+                                                  (conj ana/constants-ns-sym)))
                                   :file        dest
                                   :source-file src}
                                  (when sm-data
@@ -1473,6 +1475,8 @@
 ;; TODO: needs fixing, table will include other things than keywords - David
 
 (defn emit-constants-table [table]
+  (emitln "goog.provide('" (munge ana/constants-ns-sym) "');")
+  (emitln "goog.require('cljs.core');")
   (doseq [[sym value] table]
     (let [ns   (namespace sym)
           name (name sym)]

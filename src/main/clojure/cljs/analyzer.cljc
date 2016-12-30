@@ -56,6 +56,10 @@
 
 (def ^:dynamic *file-defs* nil)
 
+(def constants-ns-sym
+  "The namespace of the constants table as a symbol."
+  'cljs.core.constants)
+
 #?(:clj
    (def transit-read-opts
      (try
@@ -3300,7 +3304,7 @@
                                   :macros-ns    (:macros-ns opts)
                                   :requires     (cond-> #{'cljs.core}
                                                   (get-in @env/*compiler* [:options :emit-constants])
-                                                  (conj 'constants-table))}
+                                                  (conj constants-ns-sym))}
                                  (when (and dest (.exists ^File dest))
                                    {:lines (with-open [reader (io/reader dest)]
                                              (-> reader line-seq count))}))]
@@ -3322,7 +3326,7 @@
                                                  (set (vals deps))
                                                  (cond-> (conj (set (vals deps)) 'cljs.core)
                                                    (get-in @env/*compiler* [:options :emit-constants])
-                                                   (conj 'constants-table)))
+                                                   (conj constants-ns-sym)))
                                  :file         dest
                                  :source-file  (when rdr src)
                                  :source-forms (when-not rdr src)

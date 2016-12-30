@@ -13,7 +13,8 @@
   (:import java.io.File)
   (:require [clojure.java.io :as io]
             [cljs.env :as env]
-            [cljs.analyzer :as ana]))
+            [cljs.analyzer :as ana]
+            [cljs.test-util :as test]))
 
 (deftest test-target-file-for-cljs-ns
   (is (= (.getPath (target-file-for-cljs-ns 'example.core-lib nil))
@@ -130,29 +131,14 @@
       "The files are not empty after compilation")))
 
 (deftest cljs-1500-test-modules
-  (let [module-main (io/file "out/module-main.js")
-        module-a (io/file "out/module-a.js")
-        module-b (io/file "out/module-b.js")]
-    (.delete module-main)
-    (.delete module-a)
-    (.delete module-b)
-    (build
-     (inputs "src/test/cljs")
-     {:main "module-test.main"
-      :optimizations :advanced
-      :verbose true
-      :modules
-      {:cljs-base
-       {:output-to (str module-main)}
-       :module-a
-       {:output-to (str module-a)
-        :entries #{'module-test.modules.a}}
-       :module-b
-       {:output-to (str module-b)
-        :entries #{'module-test.modules.b}}}})
-    (is (re-find #"Loading modules A and B" (slurp module-main)))
-    (is (re-find #"Module A loaded" (slurp module-a)))
-    (is (re-find #"Module B loaded" (slurp module-b)))))
+  (let [out (str (System/getProperty "java.io.tmpdir") "/cljs-1500-out")
+        project (test/project-with-modules out)
+        modules (-> project :opts :modules)]
+    (test/clean-outputs (:opts project))
+    (build (inputs (:inputs project)) (:opts project))
+    (is (re-find #"Loading modules A and B" (slurp (-> modules :cljs-base :output-to))))
+    (is (re-find #"Module A loaded" (slurp (-> modules :module-a :output-to))))
+    (is (re-find #"Module B loaded" (slurp (-> modules :module-b :output-to))))))
 
 (deftest cljs-1537-circular-deps
   (let [out-file (io/file "out/main.js")]
