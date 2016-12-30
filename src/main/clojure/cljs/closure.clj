@@ -1804,6 +1804,18 @@
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
 
+(defn expand-foreign [{:keys [foreign-libs]}]
+  (letfn [(expand-foreign* [{:keys [file] :as lib}]
+            (let [dir (io/file file)]
+              (if (.isDirectory dir)
+                (into []
+                  (comp
+                    (filter #(.endsWith (.getName ^File %) ".js"))
+                    (map #(assoc lib :file (.getPath ^File %))))
+                  (file-seq dir))
+                [lib])))]
+    (into [] (mapcat expand-foreign* foreign-libs))))
+
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
     :or {optimizations :none
