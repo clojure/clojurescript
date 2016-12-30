@@ -1828,24 +1828,43 @@
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
 
-(defn expand-foreign [{:keys [foreign-libs]}]
-  (letfn [(expand-foreign* [{:keys [file] :as lib}]
-            (let [dir (io/file file)]
+(defn expand-libs
+  "EXPERIMENTAL. Given a set of libs expand any entries which only name
+   directories into a sequence of lib entries for all JS files recursively
+   found in that directory. All other options will be shared with the original
+   entry. The computed :provides assumes the specified directory is on the
+   classpath."
+  [libs]
+  (letfn [(prep-path [p root]
+            (subs (string/replace (subs p 0 (- (count p) 3)) root "") 1))
+          (path->provides [p]
+            (let [p' (string/replace p File/separator ".")]
+              (cond-> [p']
+                (string/includes? p' "_")
+                (conj (string/replace p' "_" "-")))))
+          (expand-lib* [{:keys [file] :as lib}]
+            (let [root (.getAbsolutePath (io/file file))
+                  dir  (io/file file)]
               (if (.isDirectory dir)
                 (into []
                   (comp
                     (filter #(.endsWith (.getName ^File %) ".js"))
-                    (map #(assoc lib :file (.getPath ^File %))))
+                    (map
+                      (fn [^File f]
+                        (let [p  (.getPath f)
+                              ap (.getAbsolutePath f)]
+                          (merge lib
+                            {:file p :provides (path->provides (prep-path ap root))})))))
                   (file-seq dir))
                 [lib])))]
-    (into [] (mapcat expand-foreign* foreign-libs))))
+    (into [] (mapcat expand-lib* libs))))
 
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
     :or {optimizations :none
          output-dir "out"}
     :as opts}]
-  (let [opts (cond-> opts
+  (let [opts (cond-> (update opts :foreign-libs expand-libs)
                (:closure-defines opts)
                (assoc :closure-defines
                  (into {}
