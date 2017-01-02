@@ -689,23 +689,25 @@ radix specifier is in the form #XXr where XX is the decimal value of *print-base
 
 (declare format-simple-number)
 
-(def ^{:private true} write-option-table
-  {;:array            *print-array*
-   :base             #'cljs.pprint/*print-base*,
-   ;;:case             *print-case*,
-   :circle           #'cljs.pprint/*print-circle*,
-   ;;:escape           *print-escape*,
-   ;;:gensym           *print-gensym*,
-   :length           #'cljs.core/*print-length*,
-   :level            #'cljs.core/*print-level*,
-   :lines            #'cljs.pprint/*print-lines*,
-   :miser-width      #'cljs.pprint/*print-miser-width*,
-   :dispatch         #'cljs.pprint/*print-pprint-dispatch*,
-   :pretty           #'cljs.pprint/*print-pretty*,
-   :radix            #'cljs.pprint/*print-radix*,
-   :readably         #'cljs.core/*print-readably*,
-   :right-margin     #'cljs.pprint/*print-right-margin*,
-   :suppress-namespaces #'cljs.pprint/*print-suppress-namespaces*})
+;; This map causes var metadata to be included in the compiled output, even
+;; in advanced compilation. See CLJS-1853 - António Monteiro
+;; (def ^{:private true} write-option-table
+;;   {;:array            *print-array*
+;;    :base             #'cljs.pprint/*print-base*,
+;;    ;;:case             *print-case*,
+;;    :circle           #'cljs.pprint/*print-circle*,
+;;    ;;:escape           *print-escape*,
+;;    ;;:gensym           *print-gensym*,
+;;    :length           #'cljs.core/*print-length*,
+;;    :level            #'cljs.core/*print-level*,
+;;    :lines            #'cljs.pprint/*print-lines*,
+;;    :miser-width      #'cljs.pprint/*print-miser-width*,
+;;    :dispatch         #'cljs.pprint/*print-pprint-dispatch*,
+;;    :pretty           #'cljs.pprint/*print-pretty*,
+;;    :radix            #'cljs.pprint/*print-radix*,
+;;    :readably         #'cljs.core/*print-readably*,
+;;    :right-margin     #'cljs.pprint/*print-right-margin*,
+;;    :suppress-namespaces #'cljs.pprint/*print-suppress-namespaces*})
 
 (defn- table-ize [t m]
   (apply hash-map (mapcat
