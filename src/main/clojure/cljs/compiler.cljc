@@ -1426,7 +1426,7 @@
      (filter
        #(let [name (.getName ^File %)]
          (and (or (.endsWith name ".cljs")
-                (.endsWith name ".cljc"))
+                  (.endsWith name ".cljc"))
            (not= \. (first name))
            (not (contains? cljs-reserved-file-names name))))
        (file-seq dir))))
