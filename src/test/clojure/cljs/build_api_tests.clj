@@ -14,7 +14,8 @@
   (:require [clojure.java.io :as io]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
-            [cljs.test-util :as test]))
+            [cljs.test-util :as test]
+            [cljs.build.api :as build]))
 
 (deftest test-target-file-for-cljs-ns
   (is (= (.getPath (target-file-for-cljs-ns 'example.core-lib nil))
@@ -131,14 +132,31 @@
       "The files are not empty after compilation")))
 
 (deftest cljs-1500-test-modules
-  (let [out (str (System/getProperty "java.io.tmpdir") "/cljs-1500-out")
-        project (test/project-with-modules out)
+  (let [out (io/file (test/tmp-dir) "cljs-1500-out")
+        project (test/project-with-modules (str out))
         modules (-> project :opts :modules)]
-    (test/clean-outputs (:opts project))
+    (test/delete-out-files out)
     (build (inputs (:inputs project)) (:opts project))
     (is (re-find #"Loading modules A and B" (slurp (-> modules :cljs-base :output-to))))
     (is (re-find #"Module A loaded" (slurp (-> modules :module-a :output-to))))
     (is (re-find #"Module B loaded" (slurp (-> modules :module-b :output-to))))))
+
+(deftest cljs-1883-test-foreign-libs-use-relative-path
+  (let [out (io/file (test/tmp-dir) "cljs-1883-out")
+        root (io/file "src" "test" "cljs_build")
+        opts {:foreign-libs
+              [{:file (str (io/file root "thirdparty" "add.js"))
+                :provides  ["thirdparty.add"]}]
+              :output-dir (str out)
+              :target :nodejs}]
+    (test/delete-out-files out)
+    (build (inputs (io/file root "foreign_libs") (io/file root "thirdparty")) opts)
+    (let [foreign-lib-file (io/file out (-> opts :foreign-libs first :file))]
+      (is (.exists foreign-lib-file))
+      (is (= (->> (slurp (io/file out "foreign_libs" "core.js"))
+                  (re-matches #"(?s).*cljs\.core\.load_file\(\"([^\"]+)\"\);.*")
+                  (second))
+             (str foreign-lib-file))))))
 
 (deftest cljs-1537-circular-deps
   (let [out-file (io/file "out/main.js")]

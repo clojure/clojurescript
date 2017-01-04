@@ -1050,7 +1050,7 @@
                    (let [{:keys [js-dependency-index options]} @env/*compiler*
                          ijs-url (get-in js-dependency-index [(name lib) :url])]
                      (emitln "cljs.core.load_file(\""
-                       (str (io/file (util/output-directory options) (util/get-name ijs-url)))
+                       (str (io/file (util/output-directory options) (util/relative-name ijs-url)))
                        "\");"))
                    (emitln "goog.require('" (munge lib) "');"))))])
 

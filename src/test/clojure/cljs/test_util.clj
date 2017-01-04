@@ -9,17 +9,20 @@
 (ns cljs.test-util
   (:require [clojure.java.io :as io]))
 
-(defn clean-outputs
-  "Remove the :output-to artifacts of a ClojureScript build."
-  [{:keys [output-to modules] :as opts}]
-  (some-> output-to io/file .delete)
-  (doseq [{:keys [output-to]} (vals modules)]
-    (.delete (io/file output-to))))
+(defn delete-out-files
+  "Processed files are only copied/written if input has changed. In test case it
+   makes sense to write files always, in case the processing logic has changed."
+  ([]
+   (delete-out-files "out"))
+  ([directory]
+   (doseq [f (file-seq (io/file directory))
+           :when (.isFile f)]
+     (.delete f))))
 
 (defn project-with-modules
   "Returns the build config for a project that uses Google Closure modules."
   [output-dir]
-  {:inputs "src/test/cljs"
+  {:inputs (str (io/file "src" "test" "cljs"))
    :opts
    {:main "module-test.main"
     :output-dir output-dir
@@ -27,10 +30,15 @@
     :verbose true
     :modules
     {:cljs-base
-     {:output-to (str output-dir "/module-main.js")}
+     {:output-to (str (io/file output-dir "module-main.js"))}
      :module-a
-     {:output-to (str output-dir "/module-a.js")
+     {:output-to (str (io/file output-dir "module-a.js"))
       :entries #{'module-test.modules.a}}
      :module-b
-     {:output-to (str output-dir "/module-b.js")
+     {:output-to (str (io/file output-dir "module-b.js"))
       :entries #{'module-test.modules.b}}}}})
+
+(defn tmp-dir
+  "Returns the temporary directory of the system."
+  []
+  (System/getProperty "java.io.tmpdir"))

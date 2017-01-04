@@ -5,7 +5,8 @@
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
-            [cljs.js-deps :as deps]))
+            [cljs.js-deps :as deps]
+            [cljs.test-util :as test]))
 
 ;; Hard coded JSX transform for the test case
 (defmethod closure/js-transforms :jsx [ijs _]
@@ -21,16 +22,8 @@
                             "React.createElement(\"circle\", {cx:\"100px\", cy:\"100px\", r:\"100px\", fill:this.props.color})"
                             ")"))))
 
-(defn delete-out-files
-  "Processed files are only copied/written if input has changed. In test case it
-   makes sense to write files always, in case the processing logic has changed."
-  []
-  (doseq [f (file-seq (io/file "out"))
-          :when (.isFile f)]
-    (.delete f)))
-
 (deftest commonjs-module-processing
-  (delete-out-files)
+  (test/delete-out-files)
   (let [cenv (env/default-compiler-env)]
 
     ;; Reset load-library cache so that changes to processed files are noticed
@@ -59,7 +52,7 @@
         "Processed modules are added to :js-module-index")))
 
 (deftest test-module-name-substitution
-  (delete-out-files)
+  (test/delete-out-files)
   (let [cenv (env/default-compiler-env)]
     (env/with-compiler-env cenv
       (let [opts (closure/process-js-modules {:foreign-libs [{:file "src/test/cljs/calculator.js"

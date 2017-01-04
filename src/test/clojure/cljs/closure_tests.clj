@@ -50,10 +50,10 @@
     (is (thrown? AssertionError (check-source-map {:source-map "target/build/app.js.map" :optimizations :none})))))
 
 (deftest test-cljs-1882-constants-table-is-sorted
-  (let [out (.getPath (io/file (System/getProperty "java.io.tmpdir") "cljs-1882-out"))
+  (let [out (.getPath (io/file (test/tmp-dir) "cljs-1882-out"))
         project (test/project-with-modules out)
         modules (-> project :opts :modules)]
-    (test/clean-outputs (:opts project))
+    (test/delete-out-files out)
     (build/build (build/inputs (:inputs project)) (:opts project))
     (let [compiler (closure/make-closure-compiler)
           module (JSModule. "module-c")]
