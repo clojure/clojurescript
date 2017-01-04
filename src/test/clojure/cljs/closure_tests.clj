@@ -8,14 +8,14 @@
 
 (ns cljs.closure-tests
   (:refer-clojure :exclude [compile])
-  (:use cljs.closure)
-  (:use clojure.test)
-  (:import [com.google.javascript.jscomp JSModule])
+  (:use cljs.closure clojure.test)
   (:require [cljs.build.api :as build]
             [cljs.closure :as closure]
             [cljs.test-util :as test]
             [clojure.java.io :as io]
-            [clojure.string :as string]))
+            [clojure.string :as string])
+  (:import [java.io File]
+           [com.google.javascript.jscomp JSModule]))
 
 (deftest test-make-preamble
   (testing "no options"
@@ -50,7 +50,7 @@
     (is (thrown? AssertionError (check-source-map {:source-map "target/build/app.js.map" :optimizations :none})))))
 
 (deftest test-cljs-1882-constants-table-is-sorted
-  (let [out (str (System/getProperty "java.io.tmpdir") "/cljs-1882-out")
+  (let [out (.getPath (io/file (System/getProperty "java.io.tmpdir") "cljs-1882-out"))
         project (test/project-with-modules out)
         modules (-> project :opts :modules)]
     (test/clean-outputs (:opts project))
@@ -64,7 +64,7 @@
         (.add module (closure/js-source-file nil (io/file out file))))
       (.sortInputsByDeps module compiler)
       (is (= (->> (.getInputs module)
-                  (map #(string/replace (.getName %) (str out "/") "")))
+                  (map #(string/replace (.getName %) (str out File/separator) "")))
              ["cljs/core.js"
               "cljs/core/constants.js"
               "module_test/modules/a.js"])))))
