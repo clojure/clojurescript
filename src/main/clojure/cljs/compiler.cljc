@@ -1032,13 +1032,13 @@
   (emit-wrap env (emits target " = " val)))
 
 (defn load-libs
-  [libs seen reloads]
+  [libs seen reloads deps]
   (let [loaded-libs (munge 'cljs.core.*loaded-libs*)
         loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))]
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
-    (doseq [lib (remove (set (vals seen)) (distinct (vals libs)))]
+    (doseq [lib (remove (set (vals seen)) (filter #(get libs %) deps))]
       (cond
         #?@(:clj
             [(ana/foreign-dep? lib)
@@ -1068,19 +1068,19 @@
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
 (defmethod emit* :ns*
-  [{:keys [name requires uses require-macros reloads env]}]
-  (load-libs requires nil (:require reloads))
-  (load-libs uses requires (:use reloads)))
+  [{:keys [name requires uses require-macros reloads env deps]}]
+  (load-libs requires nil (:require reloads) deps)
+  (load-libs uses requires (:use reloads) deps))
 
 (defmethod emit* :ns
-  [{:keys [name requires uses require-macros reloads env]}]
+  [{:keys [name requires uses require-macros reloads env deps]}]
   (emitln "goog.provide('" (munge name) "');")
   (when-not (= name 'cljs.core)
     (emitln "goog.require('cljs.core');")
     (when (-> @env/*compiler* :options :emit-constants)
       (emitln "goog.require('" (munge ana/constants-ns-sym) "');")))
-  (load-libs requires nil (:require reloads))
-  (load-libs uses requires (:use reloads)))
+  (load-libs requires nil (:require reloads) deps)
+  (load-libs uses requires (:use reloads) deps))
 
 (defmethod emit* :deftype*
   [{:keys [t fields pmasks body protocols]}]

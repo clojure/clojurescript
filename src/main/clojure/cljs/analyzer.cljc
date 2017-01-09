@@ -2342,7 +2342,7 @@
           core-renames (reduce (fn [m [original renamed]]
                                  (assoc m renamed (symbol "cljs.core" (str original))))
                          {} core-renames)
-          deps         (atom #{})
+          deps         (atom [])
           aliases      (atom {:fns {} :macros {}})
           spec-parsers {:require        (partial parse-require-spec env false deps aliases)
                         :require-macros (partial parse-require-spec env true deps aliases)
@@ -2406,7 +2406,7 @@
         (merge {:op      :ns
                 :env     env
                 :form    form
-                :deps    @deps
+                :deps    (into [] (distinct @deps))
                 :reload  @reload
                 :reloads @reloads}
           (cond-> ns-info
@@ -2439,7 +2439,7 @@
         core-renames (reduce (fn [m [original renamed]]
                                (assoc m renamed (symbol "cljs.core" (str original))))
                        {} core-renames)
-        deps         (atom #{})
+        deps         (atom [])
         aliases      (atom {:fns {} :macros {}})
         spec-parsers {:require        (partial parse-require-spec env false deps aliases)
                       :require-macros (partial parse-require-spec env true deps aliases)
@@ -2497,7 +2497,7 @@
       (merge {:op      :ns*
               :env     env
               :form    form
-              :deps    @deps
+              :deps    (into [] (distinct @deps))
               :reload  @reload
               :reloads @reloads}
         (cond-> require-info
