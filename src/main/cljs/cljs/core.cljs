@@ -1637,7 +1637,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -3115,7 +3115,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (Cons. nil o coll nil))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   ISequential
   IEquiv
@@ -3319,7 +3319,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   ISequential
   IEquiv
@@ -3460,7 +3460,7 @@ reduces them without incurring seq initialization"
     (cons o this))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash)))
@@ -4772,12 +4772,12 @@ reduces them without incurring seq initialization"
   ([to from]
      (if-not (nil? to)
        (if (implements? IEditableCollection to)
-         (with-meta (persistent! (reduce -conj! (transient to) from)) (meta to))
+         (-with-meta (persistent! (reduce -conj! (transient to) from)) (meta to))
          (reduce -conj to from))
        (reduce conj () from)))
   ([to xform from]
      (if (implements? IEditableCollection to)
-       (with-meta (persistent! (transduce xform conj! (transient to) from)) (meta to))
+       (-with-meta (persistent! (transduce xform conj! (transient to) from)) (meta to))
        (transduce xform conj to from))))
 
 (defn mapv
@@ -5081,7 +5081,7 @@ reduces them without incurring seq initialization"
         (PersistentVector. meta (inc cnt) new-shift new-root (array o) nil))))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY PersistentVector) meta))
+  (-empty [coll] (-with-meta (.-EMPTY PersistentVector) meta))
 
   ISequential
   IEquiv
@@ -5312,7 +5312,7 @@ reduces them without incurring seq initialization"
 
   IEmptyableCollection
   (-empty [coll]
-    (with-meta (.-EMPTY PersistentVector) meta))
+    (-with-meta (.-EMPTY PersistentVector) meta))
 
   IChunkedSeq
   (-chunked-first [coll]
@@ -5386,7 +5386,7 @@ reduces them without incurring seq initialization"
     (build-subvec meta (-assoc-n v end o) start (inc end) nil))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY PersistentVector) meta))
+  (-empty [coll] (-with-meta (.-EMPTY PersistentVector) meta))
 
   ISequential
   IEquiv
@@ -5732,7 +5732,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   ISequential
   IEquiv
@@ -5794,7 +5794,7 @@ reduces them without incurring seq initialization"
       (PersistentQueue. meta (inc count) (conj front o) [] nil)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY PersistentQueue) meta))
+  (-empty [coll] (-with-meta (.-EMPTY PersistentQueue) meta))
 
   ISequential
   IEquiv
@@ -5870,7 +5870,7 @@ reduces them without incurring seq initialization"
       (if (< i len)
         (let [k (aget ks i)]
           (recur (inc i) (assoc! out k (aget so k))))
-        (with-meta (persistent! (assoc! out k v)) mm)))))
+        (-with-meta (persistent! (assoc! out k v)) mm)))))
 
 ;;; ObjMap - DEPRECATED
 
@@ -5906,7 +5906,7 @@ reduces them without incurring seq initialization"
               entry)))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY ObjMap) meta))
+  (-empty [coll] (-with-meta (.-EMPTY ObjMap) meta))
 
   IEquiv
   (-equiv [coll other] (equiv-map coll other))
@@ -6246,7 +6246,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) _meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) _meta))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -7175,7 +7175,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   ISequential
   ISeq
@@ -7247,7 +7247,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   ISequential
   ISeq
@@ -7626,7 +7626,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
@@ -7804,7 +7804,7 @@ reduces them without incurring seq initialization"
 
   IWithMeta
   (-with-meta [node meta]
-    (with-meta [key val] meta))
+    (-with-meta [key val] meta))
 
   IStack
   (-peek [node] val)
@@ -7965,7 +7965,7 @@ reduces them without incurring seq initialization"
 
   IWithMeta
   (-with-meta [node meta]
-    (with-meta [key val] meta))
+    (-with-meta [key val] meta))
 
   IStack
   (-peek [node] val)
@@ -8377,7 +8377,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) _meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) _meta))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -8453,7 +8453,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY List) _meta))
+  (-empty [coll] (-with-meta (.-EMPTY List) _meta))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -8532,7 +8532,7 @@ reduces them without incurring seq initialization"
              (assoc ret key entry)
              ret)
            (next keys)))
-        (with-meta ret (meta map)))))
+        (-with-meta ret (meta map)))))
 
 ;;; PersistentHashSet
 
@@ -8586,7 +8586,7 @@ reduces them without incurring seq initialization"
     (PersistentHashSet. meta (assoc hash-map o nil) nil))
 
   IEmptyableCollection
-  (-empty [coll] (with-meta (.-EMPTY PersistentHashSet) meta))
+  (-empty [coll] (-with-meta (.-EMPTY PersistentHashSet) meta))
 
   IEquiv
   (-equiv [coll other]
@@ -9084,7 +9084,7 @@ reduces them without incurring seq initialization"
   (-conj [rng o] (cons o rng))
 
   IEmptyableCollection
-  (-empty [rng] (with-meta (.-EMPTY List) meta))
+  (-empty [rng] (-with-meta (.-EMPTY List) meta))
 
   ISequential
   IEquiv
