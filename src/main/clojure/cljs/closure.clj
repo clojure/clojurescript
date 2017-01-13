@@ -2112,9 +2112,10 @@
 
 (defn watch
   "Given a source directory, produce runnable JavaScript. Watch the source
-   directory for changes rebuliding when necessary. Takes the same arguments as
-   cljs.closure/build in addition to :watch-fn, a function of no arguments to
-   run after a successful build."
+   directory for changes rebuilding when necessary. Takes the same arguments as
+   cljs.closure/build in addition to some watch-specific options:
+    - :watch-fn, a function of no arguments to run after a successful build.
+    - :watch-error-fn, a function receiving the exception of a failed build."
   ([source opts]
     (watch source opts
       (if-not (nil? env/*compiler*)
@@ -2140,8 +2141,10 @@
                   (when-let [f (:watch-fn opts)]
                     (f))
                   (catch Throwable e
-                    (binding [*out* *err*]
-                      (println (Throwables/getStackTraceAsString e))))))
+                    (if-let [f (:watch-error-fn opts)]
+                      (f e)
+                      (binding [*out* *err*]
+                        (println (Throwables/getStackTraceAsString e)))))))
               (watch-all [^Path root]
                 (Files/walkFileTree root
                   (reify
