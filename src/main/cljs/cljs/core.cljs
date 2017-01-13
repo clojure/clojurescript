@@ -1742,7 +1742,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -4874,7 +4874,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   ISequential
   ISeqable
@@ -4963,7 +4963,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   IHash
   (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
@@ -5060,7 +5060,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   ISequential
   ISeqable
@@ -6774,7 +6774,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) _meta))
+  (-empty [coll] (.-EMPTY List))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -6785,13 +6785,13 @@ reduces them without incurring seq initialization"
 
   (-rest [coll]
     (if (< i (- (alength arr) 2))
-      (PersistentArrayMapSeq. arr (+ i 2) _meta)
+      (PersistentArrayMapSeq. arr (+ i 2) nil)
       ()))
 
   INext
   (-next [coll]
     (when (< i (- (alength arr) 2))
-      (PersistentArrayMapSeq. arr (+ i 2) _meta)))
+      (PersistentArrayMapSeq. arr (+ i 2) nil)))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
@@ -7722,7 +7722,7 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   ISequential
   ISeq
@@ -7803,18 +7803,18 @@ reduces them without incurring seq initialization"
   (-conj [coll o] (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+  (-empty [coll] (.-EMPTY List))
 
   ISequential
   ISeq
   (-first [coll] (first s))
   (-rest  [coll]
-    (let [ret (create-array-node-seq nil nodes i (next s))]
+    (let [ret (create-array-node-seq nodes i (next s))]
       (if-not (nil? ret) ret ())))
 
   INext
   (-next [coll]
-    (create-array-node-seq nil nodes i (next s)))
+    (create-array-node-seq nodes i (next s)))
 
   ISeqable
   (-seq [this] this)
@@ -7832,18 +7832,18 @@ reduces them without incurring seq initialization"
 (es6-iterable ArrayNodeSeq)
 
 (defn- create-array-node-seq
-  ([nodes] (create-array-node-seq nil nodes 0 nil))
-  ([meta nodes i s]
+  ([nodes] (create-array-node-seq nodes 0 nil))
+  ([nodes i s]
      (if (nil? s)
        (let [len (alength nodes)]
          (loop [j i]
            (if (< j len)
              (if-let [nj (aget nodes j)]
                (if-let [ns (.inode-seq nj)]
-                 (ArrayNodeSeq. meta nodes (inc j) ns nil)
+                 (ArrayNodeSeq. nil nodes (inc j) ns nil)
                  (recur (inc j)))
                (recur (inc j))))))
-       (ArrayNodeSeq. meta nodes i s nil))))
+       (ArrayNodeSeq. nil nodes i s nil))))
 
 (deftype HashMapIter [nil-val root-iter ^:mutable seen]
   Object
@@ -8972,7 +8972,7 @@ reduces them without incurring seq initialization"
     (cons o coll))
 
   IEmptyableCollection
-  (-empty [coll] (-with-meta (.-EMPTY List) _meta))
+  (-empty [coll] (.-EMPTY List))
 
   IHash
   (-hash [coll] (hash-ordered-coll coll))
@@ -8987,7 +8987,7 @@ reduces them without incurring seq initialization"
                  (-next mseq)
                  (next mseq))]
       (if-not (nil? nseq)
-        (KeySeq. nseq _meta)
+        (KeySeq. nseq nil)
         ())))
 
   INext
@@ -8996,7 +8996,7 @@ reduces them without incurring seq initialization"
                  (-next mseq)
                  (next mseq))]
       (when-not (nil? nseq)
-        (KeySeq. nseq _meta))))
+        (KeySeq. nseq nil))))
 
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
@@ -9724,9 +9724,9 @@ reduces them without incurring seq initialization"
   (-next [rng]
     (if (pos? step)
       (when (< (+ start step) end)
-        (Range. meta (+ start step) end step nil nil nil))
+        (Range. nil (+ start step) end step nil nil nil))
       (when (> (+ start step) end)
-        (Range. meta (+ start step) end step nil nil nil))))
+        (Range. nil (+ start step) end step nil nil nil))))
 
   IChunkedSeq
   (-chunked-first [rng]
@@ -9746,7 +9746,7 @@ reduces them without incurring seq initialization"
   (-conj [rng o] (cons o rng))
 
   IEmptyableCollection
-  (-empty [rng] (-with-meta (.-EMPTY List) meta))
+  (-empty [rng] (-with-meta (.-EMPTY List) nil))
 
   ISequential
   IEquiv

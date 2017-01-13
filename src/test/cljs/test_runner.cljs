@@ -39,6 +39,7 @@
             [cljs.clojure-alias-test]
             [cljs.hash-map-test]
             [cljs.map-entry-test]
+            [cljs.metadata-test]
             [cljs.npm-deps-test]
             [cljs.predicates-test]
             [cljs.tagged-literals-test]
@@ -83,6 +84,7 @@
   'cljs.clojure-alias-test
   'cljs.hash-map-test
   'cljs.map-entry-test
+  'cljs.metadata-test
   'cljs.npm-deps-test
   'cljs.pprint-test
   'cljs.predicates-test

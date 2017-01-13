@@ -202,7 +202,7 @@
     (is (= -1 (.lastIndexOf (cycle []) 19 2)))
 
     (is (= {:a 1} (meta (with-meta (cycle [1 2 3]) {:a 1}))))
-    (is (= {:a 1} (meta (empty (with-meta (cycle [1 2 3]) {:a 1})))))
+    (is (nil? (meta (empty (with-meta (cycle [1 2 3]) {:a 1})))))
     (is (= (take 7 (with-meta (cycle [1 2 3]) {:a 1})) (take 7 (cycle [1 2 3]))))
 
     (is (realized? (cycle [1 2 3])))
@@ -291,7 +291,7 @@
     (is (= 3 (.lastIndexOf (repeat 7 5) 5 3)))
 
     (is (= {:a 1} (meta (with-meta (repeat 5 7) {:a 1}))))
-    (is (= {:a 1} (meta (empty (with-meta (repeat 5 7) {:a 1})))))
+    (is (nil? (meta (empty (with-meta (repeat 5 7) {:a 1})))))
     (is (= (with-meta (repeat 5 7) {:a 1}) (repeat 5 7)))
 
     (is (not (realized? (repeat 5 7))))
@@ -338,7 +338,7 @@
     (is (not (realized? (rest (iterate inc 0)))))
 
     (is (= {:a 1} (meta (with-meta (iterate inc 0) {:a 1}))))
-    (is (= {:a 1} (meta (empty (with-meta (iterate inc 0) {:a 1})))))
+    (is (nil? (meta (empty (with-meta (iterate inc 0) {:a 1})))))
     (is (= (take 20 (with-meta (iterate inc 0) {:a 1})) (take 20 (iterate inc 0))))
 
     (is (= [:first 0 1] (take 3 (conj (iterate inc 0) :first))))

@@ -97,3 +97,64 @@
       (let [m (array-map nil nil 1 1 2 2)]
         (is (every? map-entry? m))
         (is (every? map-entry? (iter->set (-iterator m))))))))
+
+(deftest test-cljs-1888
+  (let [arr-map-seq (seq (array-map :a 1 :b 2))
+        ;; small hash map will produce a NodeSeq
+        node-seq (seq (hash-map :a 1 :b 2 :c 3))
+        ;; Large hash map will produce an ArrayNodeSeq
+        array-node-seq (seq (into {}
+                                  (map (fn [e] [e nil]))
+                                  (range 1000)))]
+    (testing "PersistentArrayMapSeq"
+      (is (= {:has :meta} (-> arr-map-seq
+                              (with-meta {:has :meta})
+                              (meta))))
+      (is (= nil (-> arr-map-seq
+                     (with-meta {:has :meta})
+                     (rest)
+                     (meta))))
+      (is (= nil (-> arr-map-seq
+                     (with-meta {:has :meta})
+                     (next)
+                     (meta))))
+      (is (= nil (-> arr-map-seq
+                     (with-meta {:has :meta})
+                     (empty)
+                     (meta)))))
+
+    (testing "NodeSeq"
+      (is (instance? NodeSeq node-seq))
+      (is (= {:has :meta} (-> node-seq
+                              (with-meta {:has :meta})
+                              (meta))))
+      (is (= nil (-> node-seq
+                     (with-meta {:has :meta})
+                     (rest)
+                     (meta))))
+      (is (= nil (-> node-seq
+                     (with-meta {:has :meta})
+                     (next)
+                     (meta))))
+      (is (= nil (-> node-seq
+                     (with-meta {:has :meta})
+                     (empty)
+                     (meta)))))
+
+    (testing "ArrayNodeSeq"
+      (is (instance? ArrayNodeSeq array-node-seq))
+      (is (= {:has :meta} (-> array-node-seq
+                              (with-meta {:has :meta})
+                              (meta))))
+      (is (= nil (-> array-node-seq
+                     (with-meta {:has :meta})
+                     (rest)
+                     (meta))))
+      (is (= nil (-> array-node-seq
+                     (with-meta {:has :meta})
+                     (next)
+                     (meta))))
+      (is (= nil (-> array-node-seq
+                     (with-meta {:has :meta})
+                     (empty)
+                     (meta)))))))
