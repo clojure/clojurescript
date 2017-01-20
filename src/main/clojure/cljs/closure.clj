@@ -1583,17 +1583,22 @@
    does not already exist. Return IJavaScript for the file on disk at the new
    location."
   [opts js]
-  (let [out-dir  (io/file (util/output-directory opts))
-        out-name (rel-output-path js opts)
-        out-file (io/file out-dir out-name)
-        ijs      {:url      (deps/to-url out-file)
-                  :out-file (.toString out-file)
-                  :requires (deps/-requires js)
-                  :provides (deps/-provides js)
-                  :group    (:group js)}
-        res      (or (:url js) (:source-file js))]
-    (when (or (not (.exists out-file))
-              (and res (util/changed? out-file res)))
+  (let [out-dir    (io/file (util/output-directory opts))
+        out-name   (rel-output-path js opts)
+        out-file   (io/file out-dir out-name)
+        res        (or (:url js) (:source-file js))
+        js-module? (and res out-dir
+                     (.startsWith (util/path res) (util/path out-dir))) ;; We already Closure processed it and wrote it out
+        ijs        (merge
+                     {:requires (deps/-requires js)
+                      :provides (deps/-provides js)
+                      :group (:group js)}
+                     (when (not js-module?)
+                       {:url (deps/to-url out-file)
+                        :out-file (.toString out-file)}))]
+    (when (and (not js-module?)
+               (or (not (.exists out-file))
+                   (and res (util/changed? out-file res))))
       (when (and res (or ana/*verbose* (:verbose opts)))
         (util/debug-prn "Copying" (str res) "to" (str out-file)))
       (util/mkdirs out-file)
