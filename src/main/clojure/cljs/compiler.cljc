@@ -1159,7 +1159,9 @@
 #?(:clj
    (defn with-core-cljs
      "Ensure that core.cljs has been loaded."
-     ([] (with-core-cljs nil))
+     ([] (with-core-cljs
+           (when env/*compiler*
+             (:options @env/*compiler*))))
      ([opts] (with-core-cljs opts (fn [])))
      ([opts body]
       {:pre [(or (nil? opts) (map? opts))
@@ -1177,7 +1179,10 @@
 
 #?(:clj
    (defn compiled-by-string
-     ([] (compiled-by-string nil))
+     ([]
+      (compiled-by-string
+        (when env/*compiler*
+          (:options @env/*compiler*))))
      ([opts]
       (str "// Compiled by ClojureScript "
         (util/clojurescript-version)
@@ -1321,7 +1326,10 @@
 
 #?(:clj
    (defn compile-file*
-     ([src dest] (compile-file* src dest nil))
+     ([src dest]
+      (compile-file* src dest
+        (when env/*compiler*
+          (:options @env/*compiler*))))
      ([src dest opts]
       (ensure
         (with-core-cljs opts
@@ -1342,7 +1350,10 @@
 #?(:clj
    (defn requires-compilation?
      "Return true if the src file requires compilation."
-     ([src dest] (requires-compilation? src dest nil))
+     ([src dest]
+      (requires-compilation? src dest
+        (when env/*compiler*
+          (:options @env/*compiler*))))
      ([^File src ^File dest opts]
       (let [{:keys [ns requires]} (ana/parse-ns src)]
         (ensure
@@ -1378,9 +1389,13 @@
       If the file was not compiled returns only {:file ...}"
      ([src]
       (let [dest (rename-to-js src)]
-        (compile-file src dest nil)))
+        (compile-file src dest
+          (when env/*compiler*
+            (:options @env/*compiler*)))))
      ([src dest]
-      (compile-file src dest nil))
+      (compile-file src dest
+        (when env/*compiler*
+          (:options @env/*compiler*))))
      ([src dest opts]
       {:post [map?]}
       (binding [ana/*file-defs*     (atom #{})
@@ -1443,7 +1458,9 @@
      ([src-dir]
       (compile-root src-dir "out"))
      ([src-dir target-dir]
-      (compile-root src-dir target-dir nil))
+      (compile-root src-dir target-dir
+        (when env/*compiler*
+          (:options @env/*compiler*))))
      ([src-dir target-dir opts]
       (swap! env/*compiler* assoc :root src-dir)
       (let [src-dir-file (io/file src-dir)

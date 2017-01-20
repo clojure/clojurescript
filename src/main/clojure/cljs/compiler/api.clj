@@ -32,7 +32,10 @@
 
 (defn with-core-cljs
   "Ensure that core.cljs has been loaded."
-  ([] (comp/with-core-cljs nil))
+  ([]
+   (comp/with-core-cljs
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([opts] (with-core-cljs opts (fn [])))
   ([opts body]
    (with-core-cljs

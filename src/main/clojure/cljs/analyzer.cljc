@@ -1837,7 +1837,10 @@
   "Given a lib, a namespace, deps, its dependencies, env, an analysis environment
    and opts, compiler options - analyze all of the dependencies. Required to
    correctly analyze usage of other namespaces."
-  ([lib deps env] (analyze-deps lib deps env nil))
+  ([lib deps env]
+   (analyze-deps lib deps env
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([lib deps env opts]
    (let [compiler @env/*compiler*]
      (binding [*cljs-dep-set* (vary-meta (conj *cljs-dep-set* lib) update-in [:dep-path] conj lib)]
@@ -2969,7 +2972,10 @@
     (analyze-seq* op env form name opts)))
 
 (defn analyze-seq
-  ([env form name] (analyze-seq env form name nil))
+  ([env form name]
+   (analyze-seq env form name
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([env form name opts]
    (if ^boolean (:quoted? env)
      (analyze-list env form)
@@ -3270,7 +3276,10 @@
       be used for *analyze-deps* and *load-macros* bindings respectively. This
       function does _not_ side-effect the ambient compilation environment unless
       requested via opts where :restore is false."
-     ([src] (parse-ns src nil nil))
+     ([src]
+      (parse-ns src nil
+        (when env/*compiler*
+          (:options @env/*compiler*))))
      ([src opts] (parse-ns src nil opts))
      ([src dest opts]
       (ensure
@@ -3434,7 +3443,9 @@
 
 (defn analyze-form-seq
   ([forms]
-   (analyze-form-seq forms nil))
+   (analyze-form-seq forms
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([forms opts]
    (let [env (assoc (empty-env) :build-options opts)]
      (binding [*file-defs* nil
@@ -3463,7 +3474,9 @@
       \":output-dir/some/ns/foo.cljs.cache.edn\". This function does not return a
       meaningful value."
      ([f]
-      (analyze-file f nil))
+      (analyze-file f
+        (when env/*compiler*
+          (:options @env/*compiler*))))
      ([f opts]
       (analyze-file f false opts))
      ([f skip-cache opts]
@@ -3490,7 +3503,7 @@
                             *cljs-file* path
                             reader/*alias-map* (or reader/*alias-map* {})]
                     (when (or *verbose* (:verbose opts))
-                      (util/debug-prn "Analyzing" (str res)))
+                      (util/debug-prn "Analyzing" (str res) "cache" cache "opts" opts))
                     (let [env (assoc (empty-env) :build-options opts)
                           ns  (with-open [rdr (io/reader res)]
                                 (loop [ns nil forms (seq (forms-seq* rdr (util/path res)))]

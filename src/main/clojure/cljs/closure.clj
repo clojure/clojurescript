@@ -394,13 +394,17 @@
 
 (defn compile-form-seq
   "Compile a sequence of forms to a JavaScript source string."
-  [forms]
-  (comp/with-core-cljs nil
-    (fn []
-      (with-out-str
-        (binding [ana/*cljs-ns* 'cljs.user]
-          (doseq [form forms]
-            (comp/emit (ana/analyze (ana/empty-env) form))))))))
+  ([forms]
+    (compile-form-seq forms
+      (when env/*compiler*
+        (:options @env/*compiler*))))
+  ([forms opts]
+   (comp/with-core-cljs opts
+     (fn []
+       (with-out-str
+         (binding [ana/*cljs-ns* 'cljs.user]
+           (doseq [form forms]
+             (comp/emit (ana/analyze (ana/empty-env) form)))))))))
 
 (defn compiled-file
   "Given a map with at least a :file key, return a map with
@@ -454,7 +458,9 @@
 (defn jar-file-to-disk
   "Copy a file contained within a jar to disk. Return the created file."
   ([url out-dir]
-    (jar-file-to-disk url out-dir nil))
+    (jar-file-to-disk url out-dir
+      (when env/*compiler*
+        (:options @env/*compiler*))))
   ([url out-dir opts]
    (let [out-file (io/file out-dir (path-from-jarfile url))
          content  (with-open [reader (io/reader url)]
@@ -764,7 +770,9 @@
   "Given list of IJavaScript objects, produce a new sequence of IJavaScript objects
   of all dependencies of inputs."
   ([inputs]
-   (add-dependency-sources inputs nil))
+   (add-dependency-sources inputs
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([inputs compile-opts]
    (let [inputs         (set inputs)
          requires       (set (mapcat deps/-requires inputs))
@@ -966,7 +974,10 @@
     (js-source-file (javascript-name url) (io/input-stream url))))
 
 (defn add-cljs-base-module
-  ([modules] (add-cljs-base-module modules nil))
+  ([modules]
+   (add-cljs-base-module modules
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([modules opts]
    (reduce
      (fn [modules module-name]
@@ -1473,7 +1484,10 @@
   "Given an IJavaScript which is either in memory, in a jar file,
   or is a foreign lib, return the path relative to the output
   directory."
-  ([js] (rel-output-path js nil))
+  ([js]
+   (rel-output-path js
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([js opts]
    (let [url (deps/-url js)]
      (cond
@@ -2229,7 +2243,10 @@
   (deps/parse-js-ns (line-seq (io/reader f))))
 
 (defn ^File src-file->target-file
-  ([src] (src-file->target-file src nil))
+  ([src]
+   (src-file->target-file src
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([src opts]
     (util/to-target-file
       (when (:output-dir opts)
