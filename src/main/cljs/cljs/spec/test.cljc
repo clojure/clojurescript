@@ -10,6 +10,7 @@
   (:require
     [cljs.analyzer :as ana]
     [cljs.analyzer.api :as ana-api]
+    [clojure.string :as string]
     [cljs.spec :as s]
     [cljs.spec.impl.gen :as gen]))
 
@@ -24,21 +25,6 @@
 (defn- fn-spec-name?
   [s]
   (symbol? s))
-
-(defmacro enumerate-namespace
-  "Given a symbol naming an ns, or a collection of such symbols,
-returns the set of all symbols naming vars in those nses."
-  [[quote ns-sym-or-syms]]
-  (let [xs (into #{}
-             (mapcat (fn [ns-sym]
-                       (->> (vals (ana-api/ns-interns ns-sym))
-                         (filter #(not (:macro %)))
-                         (map :name)
-                         (map
-                           (fn [name-sym]
-                             (symbol (name ns-sym) (name name-sym)))))))
-             (collectionize ns-sym-or-syms))]
-    `(quote ~xs)))
 
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
@@ -63,10 +49,26 @@ returns the set of all symbols naming vars in those nses."
          (when raw# (set! ~s raw#))
          '~(:name v)))))
 
+(defn- sym-or-syms->syms [sym-or-syms]
+  (into []
+    (mapcat
+      (fn [sym]
+        (if (and (string/includes? (str sym) ".")
+                 (ana-api/find-ns sym))
+          (->> (vals (ana-api/ns-interns sym))
+            (filter #(not (:macro %)))
+            (map :name)
+            (map
+              (fn [name-sym]
+                (symbol (name sym) (name name-sym)))))
+          [sym])))
+    (collectionize sym-or-syms)))
+
 (defmacro instrument
   "Instruments the vars named by sym-or-syms, a symbol or collection
 of symbols, or all instrumentable vars if sym-or-syms is not
-specified.
+specified. If a symbol identifies a namespace then all symbols in that
+namespace will be enumerated.
 
 If a var has an :args fn-spec, sets the var's root binding to a
 fn that checks arg conformance (throwing an exception on failure)
@@ -106,20 +108,19 @@ Returns a collection of syms naming the vars instrumented."
   ([xs]
    `(instrument ~xs nil))
   ([sym-or-syms opts]
-   (let [sym-or-syms (eval sym-or-syms)
-         opts-sym    (gensym "opts")]
+   (let [syms (sym-or-syms->syms (eval sym-or-syms))
+         opts-sym (gensym "opts")]
      `(let [~opts-sym ~opts]
         (reduce
           (fn [ret# [_# f#]]
             (let [sym# (f#)]
               (cond-> ret# sym# (conj sym#))))
           []
-          (->> (zipmap
-                 (collectionize '~sym-or-syms)
+          (->> (zipmap '~syms
                  [~@(map
                       (fn [sym]
                         `(fn [] (instrument-1 '~sym ~opts-sym)))
-                      (collectionize sym-or-syms))])
+                      syms)])
             (filter #((instrumentable-syms ~opts-sym) (first %)))
             (distinct-by first)))))))
 
@@ -130,13 +131,13 @@ Returns a collection of syms naming the vars unstrumented."
   ([]
    `(unstrument '[~@(deref instrumented-vars)]))
   ([sym-or-syms]
-   (let [sym-or-syms (eval sym-or-syms)]
+   (let [syms (sym-or-syms->syms (eval sym-or-syms))]
      `(reduce
         (fn [ret# f#]
           (let [sym# (f#)]
             (cond-> ret# sym# (conj sym#))))
         []
-        [~@(->> (collectionize sym-or-syms)
+        [~@(->> syms
              (map
                (fn [sym]
                  (when (symbol? sym)
@@ -204,7 +205,8 @@ can be checked."
 (defmacro check
   "Run generative tests for spec conformance on vars named by
 sym-or-syms, a symbol or collection of symbols. If sym-or-syms
-is not specified, check all checkable vars.
+is not specified, check all checkable vars. If a symbol identifies a
+namespace then all symbols in that namespace will be enumerated.
 
 The opts map includes the following optional keys, where stc
 aliases clojure.test.check:
@@ -239,10 +241,10 @@ spec itself will have an ::s/failure value in ex-data:
   ([sym-or-syms]
    `(check ~sym-or-syms nil))
   ([sym-or-syms opts]
-   (let [sym-or-syms (eval sym-or-syms)
-         opts-sym    (gensym "opts")]
+   (let [syms (sym-or-syms->syms (eval sym-or-syms))
+         opts-sym (gensym "opts")]
      `(let [~opts-sym ~opts]
-        [~@(->> (collectionize sym-or-syms)
+        [~@(->> syms
              (filter (checkable-syms* opts))
              (map
                (fn [sym]
