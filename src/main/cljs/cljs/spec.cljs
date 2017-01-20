@@ -1351,6 +1351,32 @@
      (with-gen* [_ gfn] (nonconforming (with-gen* spec gfn)))
      (describe* [_] `(nonconforming ~(describe* spec))))))
 
+(defn ^:skip-wiki nilable-impl
+  "Do not call this directly, use 'nilable'"
+  [form pred gfn]
+  (let [spec (specize pred form)]
+    (reify
+      Specize
+      (specize* [s] s)
+      (specize* [s _] s)
+
+      Spec
+      (conform* [_ x] (if (nil? x) nil (conform* spec x)))
+      (unform* [_ x] (if (nil? x) nil (unform* spec x)))
+      (explain* [_ path via in x]
+        (when-not (c/or (pvalid? spec x) (nil? x))
+          (conj
+            (explain-1 form pred (conj path ::pred) via in x)
+            {:path (conj path ::nil) :pred 'nil? :val x :via via :in in})))
+      (gen* [_ overrides path rmap]
+        (if gfn
+          (gfn)
+          (gen/frequency
+            [[1 (gen/delay (gen/return nil))]
+             [9 (gen/delay (gensub pred overrides (conj path ::pred) rmap form))]])))
+      (with-gen* [_ gfn] (nilable-impl form pred gfn))
+      (describe* [_] `(nilable ~(describe* spec))))))
+
 (defn exercise
   "generates a number (default 10) of values compatible with spec and maps conform over them,
   returning a sequence of [val conformed-val] tuples. Optionally takes

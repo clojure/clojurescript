@@ -435,7 +435,8 @@
 (defmacro nilable
   "returns a spec that accepts nil and values satisfiying pred"
   [pred]
-  `(nonconforming (or ::nil nil? ::pred ~pred)))
+  (let [pf (res &env pred)]
+    `(nilable-impl '~pf ~pred nil)))
 
 (defmacro inst-in
   "Returns a spec that validates insts in the range from start
