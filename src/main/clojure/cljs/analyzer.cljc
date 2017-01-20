@@ -3166,7 +3166,10 @@
   nested exprs, must have :children [exprs...] entry. This will
   facilitate code walking without knowing the details of the op set."
   ([env form] (analyze env form nil))
-  ([env form name] (analyze env form name nil))
+  ([env form name]
+   (analyze env form name
+     (when env/*compiler*
+       (:options @env/*compiler*))))
   ([env form name opts]
    (ensure
      (wrapping-errors env
