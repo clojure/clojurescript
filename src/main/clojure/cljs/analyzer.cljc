@@ -3386,7 +3386,7 @@
         (if-let [core-cache
                  (and (= mode :read)
                       (= (:ns ns-info) 'cljs.core)
-                      (io/resource (str "cljs/core.cljs.cache.aot" ext)))]
+                      (io/resource (str "cljs/core.cljs.cache.aot." ext)))]
           core-cache
           (let [target-file (util/to-target-file output-dir ns-info
                               (util/ext (:source-file ns-info)))]
