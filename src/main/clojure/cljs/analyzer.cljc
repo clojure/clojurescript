@@ -3503,7 +3503,7 @@
                             *cljs-file* path
                             reader/*alias-map* (or reader/*alias-map* {})]
                     (when (or *verbose* (:verbose opts))
-                      (util/debug-prn "Analyzing" (str res) "cache" cache "opts" opts))
+                      (util/debug-prn "Analyzing" (str res)))
                     (let [env (assoc (empty-env) :build-options opts)
                           ns  (with-open [rdr (io/reader res)]
                                 (loop [ns nil forms (seq (forms-seq* rdr (util/path res)))]
