@@ -2631,7 +2631,13 @@
                   :method method
                   :args argexprs
                   :children children
-                  :tag tag}))))
+                  :tag (if (js-tag? tag)
+                         (let [pre (-> tag meta :prefix)
+                               [sym _] (find (get-in @env/*compiler*
+                                               (into [::externs] (butlast pre)))
+                                         (last pre))]
+                           (:ret-tag (meta sym) tag))
+                         tag)}))))
 
 (defmethod parse '.
   [_ env [_ target & [field & member+] :as form] _ _]
