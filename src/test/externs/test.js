@@ -1,11 +1,11 @@
-/*
- @constructor
+/**
+ * @constructor
  */
 var Foo = function() {};
 Foo.prototype.wozMethod = function() {
 };
 
 /**
- @return {Foo}
+ * @return {Foo}
  */
-baz = function() {};
+var baz = function() {};

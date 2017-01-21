@@ -642,22 +642,32 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
+  (->
+    (find (externs/externs-map
+            (closure/load-externs
+              {:externs ["src/test/externs/test.js"]
+               :use-only-custom-externs true}))
+      'baz)
+    first meta)
+
   ;; User supplied externs
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
-                                         {:externs ["src/test/externs/test.js"]
-                                          :use-only-custom-externs true}))})]
+                                         {:externs ["src/test/externs/test.js"]}))})]
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
           '[(ns foo.core)
-            (defn bar [^js/Foo a]
+            (defn baz [^js/Foo a]
               (.wozMethod a)
-              (.gozMethod a))]))
+              (.gozMethod a))
+            (js/console.log (.wozMethod (js/Foo.)))
+            (js/console.log (.wozMethod (js/baz)))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
+
 
   )
