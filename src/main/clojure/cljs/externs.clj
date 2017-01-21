@@ -127,39 +127,43 @@
         (seq xs) (update-in xs merge {})))
     {} externs))
 
-(defn default-externs
+(defn externs-map
   ([]
-    (default-externs
-      '{eval {}
-        global {}
-        goog {nodeGlobalRequire {}}
-        COMPILED {}
-        TypeError {}
-        Error {prototype {number {} columnNumber {}}}
-        ReferenceError {}}))
-  ([defaults]
-   (let [xs (CommandLineRunner/getDefaultExterns)]
+   (externs-map (CommandLineRunner/getDefaultExterns)))
+  ([sources]
+   (externs-map sources
+     '{eval {}
+       global {}
+       goog {nodeGlobalRequire {}}
+       COMPILED {}
+       TypeError {}
+       Error {prototype {number {} columnNumber {}}}
+       ReferenceError {}}))
+  ([sources defaults]
+   (let [sources (if-not (empty? sources)
+                   sources
+                   (CommandLineRunner/getDefaultExterns))]
      (reduce
        (fn [externs externs-file]
          (util/map-merge
            externs (index-externs (parse-externs externs-file))))
-       defaults xs))))
+       defaults sources))))
 
 (comment
-  (default-externs)
+  (externs-map)
 
-  (-> (default-externs)
+  (-> (externs-map)
     (find 'console) first meta)
 
-  (get (default-externs) 'Function)
+  (get (externs-map) 'Function)
 
-  (get (default-externs) 'Error)
+  (get (externs-map) 'Error)
 
   ;; values are not on the prototype
-  (get (default-externs) 'Symbol)
-  (get (default-externs) 'Number)
+  (get (externs-map) 'Symbol)
+  (get (externs-map) 'Number)
 
-  (-> (get-in (default-externs) '[Window prototype])
+  (-> (get-in (externs-map) '[Window prototype])
     (find 'performance) first meta)
 
   ;; webkit_dom.js defines Console and Window.prototype.console

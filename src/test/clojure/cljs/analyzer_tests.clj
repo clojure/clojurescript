@@ -621,9 +621,10 @@
 
 (comment
   (require '[cljs.compiler :as cc])
+  (require '[cljs.closure :as closure])
 
   ;; TODO: need to handle the method/fn case
-  (let [test-cenv (atom {::a/externs (externs/default-externs)})]
+  (let [test-cenv (atom {::a/externs (externs/externs-map)})]
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
       (e/with-compiler-env test-cenv
@@ -636,6 +637,24 @@
               (.apply (.-log js/console) js/console (into-array args)))
             (js/console.log js/Number.MAX_VALUE)
             (js/console.log js/Symbol.iterator)]))
+      (cc/emit-externs
+        (reduce util/map-merge {}
+          (map (comp :externs second)
+            (get @test-cenv ::a/namespaces))))))
+
+  ;; User supplied externs
+  (let [test-cenv (atom {::a/externs (externs/externs-map
+                                       (closure/load-externs
+                                         {:externs ["src/test/externs/test.js"]
+                                          :use-only-custom-externs true}))})]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(ns foo.core)
+            (defn bar [^js/Foo a]
+              (.wozMethod a)
+              (.gozMethod a))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)

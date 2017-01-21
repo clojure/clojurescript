@@ -1992,13 +1992,19 @@
 (defn load-data-readers! [compiler]
   (swap! compiler update-in [:cljs.analyzer/data-readers] merge (get-data-readers)))
 
+(defn add-externs-sources [opts]
+  (cond-> opts
+    (:infer-externs opts)
+    (assoc :externs-sources (load-externs (dissoc opts :infer-externs)))))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
     (build source opts
       (if-not (nil? env/*compiler*)
         env/*compiler*
-        (env/default-compiler-env opts))))
+        (env/default-compiler-env
+          (add-externs-sources opts)))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)

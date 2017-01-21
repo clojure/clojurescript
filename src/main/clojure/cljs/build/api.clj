@@ -190,7 +190,8 @@
    (build source opts
      (if-not (nil? env/*compiler*)
        env/*compiler*
-       (env/default-compiler-env opts))))
+       (env/default-compiler-env
+         (closure/add-externs-sources opts)))))
   ([source opts compiler-env]
    (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) closure/known-opts)]
      (when suggested-opt
@@ -204,7 +205,8 @@
    (watch source opts
      (if-not (nil? env/*compiler*)
        env/*compiler*
-       (env/default-compiler-env opts))))
+       (env/default-compiler-env
+         (closure/add-externs-sources opts)))))
   ([source opts compiler-env]
    (watch source opts compiler-env nil))
   ([source opts compiler-env stop]

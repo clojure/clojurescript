@@ -52,7 +52,7 @@ state that is accessed/maintained by many different components."}
         :cljs.analyzer/constant-table {}
         :cljs.analyzer/data-readers {}
         :cljs.analyzer/externs #?(:clj  (when (:infer-externs options)
-                                          (externs/default-externs))
+                                          (externs/externs-map (:externs-sources options)))
                                   :cljs nil)
         :options options}
        #?(:clj {:js-dependency-index (js-dependency-index options)})))))
