@@ -660,10 +660,26 @@
         (a/analyze-form-seq
           '[(ns foo.core)
             (defn baz [^js/Foo a]
-              (.wozMethod a)
-              (.gozMethod a))
+              (.wozMethod a))
             (js/console.log (.wozMethod (js/Foo.)))
             (js/console.log (.wozMethod (js/baz)))]))
+      (cc/emit-externs
+        (reduce util/map-merge {}
+          (map (comp :externs second)
+            (get @test-cenv ::a/namespaces))))))
+
+  ;; the following should produce externs, but does not
+  (let [test-cenv (atom {::a/externs (externs/externs-map
+                                       (closure/load-externs
+                                         {:externs ["src/test/externs/test.js"]}))})]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(ns foo.core)
+            (defn baz [^js/Foo a]
+              (.gozMethod a))
+            (js/console.log (.gozMethod (js/baz)))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)
