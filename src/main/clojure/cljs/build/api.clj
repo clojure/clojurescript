@@ -89,7 +89,7 @@
    (src-file->goog-require
      (if-not (nil? env/*compiler*)
        env/*compiler*
-       (env/default-compiler-env))
+       (env/default-compiler-env options))
      src options))
   ([state src options]
    (env/with-compiler-env state

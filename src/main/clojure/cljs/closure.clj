@@ -2306,7 +2306,7 @@
         cache     (io/file base-path "core.cljs.cache.aot.edn")
         tcache    (io/file base-path "core.cljs.cache.aot.json")]
     (util/mkdirs dest)
-    (env/with-compiler-env (env/default-compiler-env)
+    (env/with-compiler-env (env/default-compiler-env {:infer-externs true})
       (comp/compile-file src dest
         {:source-map true
          :source-map-url "core.js.map"
