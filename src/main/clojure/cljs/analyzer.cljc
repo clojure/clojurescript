@@ -850,7 +850,8 @@
               :ns   'js
               :tag  (with-meta (or (js-tag pre) 'js) {:prefix pre})}
              (when-let [ret-tag (js-tag pre :ret-tag)]
-               {:ret-tag ret-tag}))))
+               {:js-fn-var true
+                :ret-tag ret-tag}))))
        (let [s  (str sym)
              lb (get locals sym)]
          (cond
@@ -1076,7 +1077,10 @@
 
 (defn infer-invoke [env e]
   (let [{info :info :as f} (:f e)]
-    (if-some [ret-tag (when (true? (:fn-var info)) (:ret-tag info))]
+    (if-some [ret-tag (if (or (true? (:fn-var info))
+                              (true? (:js-fn-var info)))
+                        (:ret-tag info)
+                        (when (= 'js (:ns info)) 'js))]
       ret-tag
       (let [args (:args e)
             me (assoc (find-matching-method f args) :op :method)]

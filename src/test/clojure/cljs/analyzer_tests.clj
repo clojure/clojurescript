@@ -659,7 +659,17 @@
          (-> (binding [a/*cljs-ns* a/*cljs-ns*]
                (e/with-compiler-env externs-cenv
                  (a/analyze (a/empty-env) 'js/baz)))
-           :info :ret-tag))))
+           :info :ret-tag)))
+  (is (= 'js/Foo
+         (-> (binding [a/*cljs-ns* a/*cljs-ns*]
+               (e/with-compiler-env externs-cenv
+                 (a/analyze (a/empty-env) '(js/baz))))
+           :tag)))
+  (is (= 'js
+         (-> (binding [a/*cljs-ns* a/*cljs-ns*]
+               (e/with-compiler-env externs-cenv
+                 (a/analyze (a/empty-env) '(js/woz))))
+           :tag))))
 
 (comment
   (require '[cljs.compiler :as cc])
@@ -691,8 +701,7 @@
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
-          '[(ns foo.core)
-            (js/console.log (.wozMethod (js/baz)))]))
+          '[(js/console.log (.wozMethod (js/baz)))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)
@@ -706,8 +715,7 @@
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
-          '[(ns foo.core)
-            (defn baz [^js/Foo x]
+          '[(defn afun [^js/Foo x]
               (.wozMethod x))]))
       (cc/emit-externs
         (reduce util/map-merge {}
@@ -722,8 +730,7 @@
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
-          '[(ns foo.core)
-            (defn baz [^js/Foo a]
+          '[(defn baz [^js/Foo a]
               (.gozMethod a))]))
       (cc/emit-externs
         (reduce util/map-merge {}
@@ -738,8 +745,7 @@
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
-          '[(ns foo.core)
-            (js/console.log (.gozMethod (js/baz)))]))
+          '[(.gozMethod (js/baz))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)
