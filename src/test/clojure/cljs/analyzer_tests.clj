@@ -703,6 +703,18 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
+  (let [test-cenv (atom {::a/externs (externs/externs-map)})]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(defn foo [^js/React.Component c]
+              (.render c))]))
+      (cc/emit-externs
+        (reduce util/map-merge {}
+          (map (comp :externs second)
+            (get @test-cenv ::a/namespaces))))))
+
   ;; works, does not generate extern
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
@@ -761,7 +773,7 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
-  ;; works, generates externs
+  ;; known extern
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
                                          {:externs ["src/test/externs/test.js"]}))})]
@@ -769,11 +781,10 @@
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
-          '[(.gozMethod (js/woz))]))
+          '[(.gozMethod (js/baz))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
-
 
   )

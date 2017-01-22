@@ -420,8 +420,11 @@
   (str name " is shadowed by a local"))
 
 (defmethod error-message :infer-warning
-  [warning-type {:keys [form]}]
-  (str "Cannot infer target type for " form ""))
+  [warning-type {:keys [warn-type form type property]}]
+  (case warn-type
+    :target   (str "Cannot infer target type in expression " form "")
+    :property (str "Cannot resolve property " property
+                   " for inferred type " type  " in expression " form)))
 
 (defn default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -2623,11 +2626,19 @@
                               update-in [:prefix] (fnil conj '[Object]) prop))
                        nil)]
     (when (and (not (string/starts-with? (str prop) "cljs$"))
-               (not= 'js target-tag)
-               (get-in env [:locals target]))
-      (when (or (nil? target-tag)
-                ('#{any} target-tag))
-        (warning :infer-warning env {:form form})))
+               (not= 'js target-tag))
+      (when (and (get-in env [:locals target])
+                 (or (nil? target-tag)
+                     ('#{any} target-tag)))
+        (warning :infer-warning env
+          {:warn-type :target :form form}))
+      (let [[pre' pre] ((juxt (comp butlast butlast) identity) ;; drop prototype from pre'
+                         (-> tag meta :prefix))]
+        (when (and (has-extern? pre') (not (has-extern? pre)))
+          (warning :infer-warning env
+            {:warn-type :property :form form
+             :type (symbol "js" (string/join "." pre'))
+             :property prop}))))
     (when (js-tag? tag)
       (let [pre (-> tag meta :prefix)]
         (when-not (has-extern? pre)
