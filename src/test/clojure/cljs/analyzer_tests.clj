@@ -620,7 +620,7 @@
                    '(let [y 1] (def y 2))))]
     (is (some? (-> parsed :expr :ret :var-ast)))))
 
-(deftest test-infer-externs-basic
+(deftest test-has-extern?-basic
   (let [externs (externs/externs-map
                   (closure/load-externs
                     {:externs ["src/test/externs/test.js"]
@@ -632,7 +632,7 @@
     (is (true? (a/has-extern? '[baz] externs)))
     (is (false? (a/has-extern? '[Baz] externs)))))
 
-(deftest test-infer-externs-default
+(deftest test-has-extern?-defaults
   (let [externs (externs/externs-map)]
     (is (true? (a/has-extern? '[console] externs)))
     (is (true? (a/has-extern? '[console log] externs)))
