@@ -787,24 +787,22 @@
                  (into [tag 'prototype] (next pre))
                  pre)
                pre)]
-     (has-extern?* pre externs externs #{})))
-  ([pre externs top seen]
-   (if (empty? pre)
-     true
+     (has-extern?* pre externs externs)))
+  ([pre externs top]
+   (cond
+     (empty? pre) true
+     :else
      (let [x  (first pre)
            me (find externs x)]
        (cond
-         (seen x) true
          (not me) false
          :else
-         (let [seen' (conj seen x)
-               [x' externs'] me
+         (let [[x' externs'] me
                xmeta (meta x')]
            (if (and (= 'Function (:tag xmeta)) (:ctor xmeta))
-             (let [pre' [(:ctor xmeta)]]
-               (or (has-extern?* (into pre' (next pre)) top top seen')
-                   (has-extern?* (into (conj pre' 'prototype) (next pre)) top top seen')))
-             (recur (next pre) externs' top seen'))))))))
+             (or (has-extern?* (into '[prototype] (next pre)) externs' top)
+                 (has-extern?* (next pre) externs' top))
+             (recur (next pre) externs' top))))))))
 
 (defn has-extern?
   ([pre]

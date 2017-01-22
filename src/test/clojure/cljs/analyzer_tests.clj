@@ -8,11 +8,12 @@
 
 (ns cljs.analyzer-tests
   (:require [clojure.java.io :as io]
-            [cljs.analyzer :as a]
+            [cljs.util :as util]
             [cljs.env :as e]
             [cljs.env :as env]
+            [cljs.analyzer :as a]
             [cljs.analyzer.api :as ana-api]
-            [cljs.util :as util]
+            [cljs.closure :as closure]
             [cljs.externs :as externs])
   (:use clojure.test))
 
@@ -625,7 +626,9 @@
                     {:externs ["src/test/externs/test.js"]
                      :use-only-custom-externs true}))]
     (is (true? (a/has-extern? '[Foo] externs)))
+    (is (true? (a/has-extern? '[Foo wozMethod] externs)))
     (is (false? (a/has-extern? '[foo] externs)))
+    (is (false? (a/has-extern? '[Foo gozMethod] externs)))
     (is (true? (a/has-extern? '[baz] externs)))
     (is (false? (a/has-extern? '[Baz] externs)))))
 
@@ -658,22 +661,6 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
-  (->
-    (find (externs/externs-map
-            (closure/load-externs
-              {:externs ["src/test/externs/test.js"]
-               :use-only-custom-externs true}))
-      'baz)
-    first meta)
-
-  (->
-    (find (externs/externs-map
-            (closure/load-externs
-              {:externs ["src/test/externs/test.js"]
-               :use-only-custom-externs true}))
-      'Foo)
-    first meta)
-
   ;; works, does not generate extern
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
@@ -688,12 +675,6 @@
         (reduce util/map-merge {}
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
-
-  (a/has-extern?* '[baz]
-    (externs/externs-map
-      (closure/load-externs
-        {:externs ["src/test/externs/test.js"]
-         :use-only-custom-externs true})))
 
   ;; works, does not generate extern
   (let [test-cenv (atom {::a/externs (externs/externs-map
