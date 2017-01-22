@@ -156,13 +156,13 @@
 
 (defn ^CompilerOptions$LanguageMode lang-key->lang-mode [key]
   (case key
-    :no-transpile       CompilerOptions$LanguageMode/NO_TRANSPILE
-    :ecmascript6        CompilerOptions$LanguageMode/ECMASCRIPT6
-    :ecmascript6-strict CompilerOptions$LanguageMode/ECMASCRIPT6_STRICT
-    :ecmascript6-typed  CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
-    :ecmascript5        CompilerOptions$LanguageMode/ECMASCRIPT5
-    :ecmascript5-strict CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT
-    :ecmascript3        CompilerOptions$LanguageMode/ECMASCRIPT3))
+    :no-transpile                     CompilerOptions$LanguageMode/NO_TRANSPILE
+    (:ecmascript6 :es6)               CompilerOptions$LanguageMode/ECMASCRIPT6
+    (:ecmascript6-strict :es6-strict) CompilerOptions$LanguageMode/ECMASCRIPT6_STRICT
+    (:ecmascript6-typed :es6-typed)   CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
+    (:ecmascript5 :es5)               CompilerOptions$LanguageMode/ECMASCRIPT5
+    (:ecmascript5-strict :es5-strict) CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT
+    (:ecmascript3 :es3)               CompilerOptions$LanguageMode/ECMASCRIPT3))
 
 (defn set-options
   "TODO: Add any other options that we would like to support."
