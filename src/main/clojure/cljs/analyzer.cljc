@@ -815,6 +815,21 @@
                (get-in externs (conj '[Number] x)))))
        (-> (last pre) str (string/starts-with? "cljs$")))))
 
+(defn js-tag
+  ([pre]
+   (js-tag pre :tag))
+  ([pre tag-type]
+   (js-tag pre :tag (get @env/*compiler* ::externs)))
+  ([pre tag-type externs]
+   (js-tag pre tag-type externs externs))
+  ([pre tag-type externs top]
+   (when-let [[p externs' :as me] (find externs (first pre))]
+     (let [tag (-> p meta tag-type)]
+       (if (= (count pre) 1)
+         (when tag (symbol "js" (str (alias->type tag tag))))
+         (or (js-tag (next pre) tag-type externs' top)
+             (js-tag (into '[prototype] (next pre)) tag-type (get top tag) top)))))))
+
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
@@ -830,9 +845,12 @@
            (when-not (has-extern? pre)
              (swap! env/*compiler* update-in
                (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))
-           {:name sym
-            :ns 'js
-            :tag (with-meta 'js {:prefix pre})}))
+           (merge
+             {:name sym
+              :ns   'js
+              :tag  (with-meta (or (js-tag pre) 'js) {:prefix pre})}
+             (when-let [ret-tag (js-tag pre :ret-tag)]
+               {:ret-tag ret-tag}))))
        (let [s  (str sym)
              lb (get locals sym)]
          (cond

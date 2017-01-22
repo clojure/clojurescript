@@ -646,6 +646,12 @@
          {:externs ["src/test/externs/test.js"]
           :use-only-custom-externs true}))}))
 
+(deftest test-js-tag
+  (let [externs (externs/externs-map)]
+    (is (= 'js/Console (a/js-tag '[console] :tag externs)))
+    (is (= 'js/Function (a/js-tag '[console log] :tag externs)))
+    (is (= 'js/Boolean (a/js-tag '[Number isNaN] :ret-tag externs)))))
+
 (deftest test-externs-infer
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (e/with-compiler-env externs-cenv
