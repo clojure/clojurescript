@@ -669,7 +669,17 @@
          (-> (binding [a/*cljs-ns* a/*cljs-ns*]
                (e/with-compiler-env externs-cenv
                  (a/analyze (a/empty-env) '(js/woz))))
-           :tag))))
+           :tag)))
+  (is (= 'js
+         (-> (binding [a/*cljs-ns* a/*cljs-ns*]
+               (e/with-compiler-env externs-cenv
+                 (a/analyze (a/empty-env) '(def foo (js/woz)))))
+           :tag)))
+  (is (= 'js
+        (-> (binding [a/*cljs-ns* a/*cljs-ns*]
+              (e/with-compiler-env externs-cenv
+                (a/analyze (a/empty-env) '(def foo js/boz))))
+          :tag))))
 
 (comment
   (require '[cljs.compiler :as cc])
