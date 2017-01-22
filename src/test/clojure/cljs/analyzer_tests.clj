@@ -643,24 +643,23 @@
     {::a/externs
      (externs/externs-map
        (closure/load-externs
-         {:externs ["src/test/externs/test.js"]
-          :use-only-custom-externs true}))}))
+         {:externs ["src/test/externs/test.js"]}))}))
 
 (deftest test-js-tag
-  (let [externs (externs/externs-map)]
+  (let [externs (externs/externs-map
+                  (closure/load-externs
+                    {:externs ["src/test/externs/test.js"]}))]
     (is (= 'js/Console (a/js-tag '[console] :tag externs)))
     (is (= 'js/Function (a/js-tag '[console log] :tag externs)))
-    (is (= 'js/Boolean (a/js-tag '[Number isNaN] :ret-tag externs)))))
+    (is (= 'js/Boolean (a/js-tag '[Number isNaN] :ret-tag externs)))
+    (is (= 'js/Foo (a/js-tag '[baz] :ret-tag externs)))))
 
 (deftest test-externs-infer
-  (binding [a/*cljs-ns* a/*cljs-ns*]
-    (e/with-compiler-env externs-cenv
-      (a/analyze (a/empty-env)
-        '(js/baz))))
-  (binding [a/*cljs-ns* a/*cljs-ns*]
-    (e/with-compiler-env externs-cenv
-      (a/analyze (a/empty-env)
-        '(let [x (js/baz)] x)))))
+  (is (= 'js/Foo
+         (-> (binding [a/*cljs-ns* a/*cljs-ns*]
+               (e/with-compiler-env externs-cenv
+                 (a/analyze (a/empty-env) 'js/baz)))
+           :info :ret-tag))))
 
 (comment
   (require '[cljs.compiler :as cc])

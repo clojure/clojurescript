@@ -819,7 +819,7 @@
   ([pre]
    (js-tag pre :tag))
   ([pre tag-type]
-   (js-tag pre :tag (get @env/*compiler* ::externs)))
+   (js-tag pre tag-type (get @env/*compiler* ::externs)))
   ([pre tag-type externs]
    (js-tag pre tag-type externs externs))
   ([pre tag-type externs top]
