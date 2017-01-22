@@ -5035,6 +5035,9 @@ reduces them without incurring seq initialization"
 (declare tv-editable-root tv-editable-tail TransientVector deref
          pr-sequential-writer pr-writer chunked-seq)
 
+(defprotocol APersistentVector
+  "Marker protocol")
+
 (deftype PersistentVector [meta cnt shift root tail ^:mutable __hash]
   Object
   (toString [coll]
@@ -5164,6 +5167,7 @@ reduces them without incurring seq initialization"
   (-find [coll k]
     [k (get coll k)])
 
+  APersistentVector
   IVector
   (-assoc-n [coll n val]
     (cond
@@ -5485,7 +5489,9 @@ reduces them without incurring seq initialization"
 
   IIterable
   (-iterator [coll]
-    (ranged-iterator v start end)))
+    (if (implements? APersistentVector coll)
+      (ranged-iterator v start end)
+      (seq-iter coll))))
 
 (es6-iterable Subvec)
 
