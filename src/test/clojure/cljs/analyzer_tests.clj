@@ -737,7 +737,7 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
-  ;; does NOT work, does not generate extern
+  ;; works, generates extern
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
                                          {:externs ["src/test/externs/test.js"]}))})]
@@ -746,6 +746,20 @@
       (e/with-compiler-env test-cenv
         (a/analyze-form-seq
           '[(.gozMethod (js/baz))]))
+      (cc/emit-externs
+        (reduce util/map-merge {}
+          (map (comp :externs second)
+            (get @test-cenv ::a/namespaces))))))
+
+  ;; works, generates externs
+  (let [test-cenv (atom {::a/externs (externs/externs-map
+                                       (closure/load-externs
+                                         {:externs ["src/test/externs/test.js"]}))})]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(.gozMethod (js/woz))]))
       (cc/emit-externs
         (reduce util/map-merge {}
           (map (comp :externs second)
