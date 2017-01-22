@@ -619,6 +619,22 @@
                    '(let [y 1] (def y 2))))]
     (is (some? (-> parsed :expr :ret :var-ast)))))
 
+(deftest test-infer-externs-basic
+  (let [externs (externs/externs-map
+                  (closure/load-externs
+                    {:externs ["src/test/externs/test.js"]
+                     :use-only-custom-externs true}))]
+    (is (true? (a/has-extern? '[Foo] externs)))
+    (is (false? (a/has-extern? '[foo] externs)))
+    (is (true? (a/has-extern? '[baz] externs)))
+    (is (false? (a/has-extern? '[Baz] externs)))))
+
+(deftest test-infer-externs-default
+  (let [externs (externs/externs-map)]
+    (is (true? (a/has-extern? '[console] externs)))
+    (is (true? (a/has-extern? '[console log] externs)))
+    (is (true? (a/has-extern? '[Number isNaN] externs)))))
+
 (comment
   (require '[cljs.compiler :as cc])
   (require '[cljs.closure :as closure])
@@ -672,6 +688,12 @@
         (reduce util/map-merge {}
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
+
+  (a/has-extern?* '[baz]
+    (externs/externs-map
+      (closure/load-externs
+        {:externs ["src/test/externs/test.js"]
+         :use-only-custom-externs true})))
 
   ;; works, does not generate extern
   (let [test-cenv (atom {::a/externs (externs/externs-map

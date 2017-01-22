@@ -39,7 +39,10 @@
         (if-let [^JSTypeExpression ty (.getType info)]
           {:tag (get-type* ty)}
           (if (or (.isConstructor info) (.isInterface info))
-            {:tag 'Function}
+            (let [qname (symbol (.. node getFirstChild getQualifiedName))]
+              (cond-> {:tag 'Function}
+                (.isConstructor info) (merge {:ctor qname})
+                (.isInterface info) (merge {:iface qname})))
             (if (.hasReturnType info)
               {:tag 'Function
                :ret-tag (get-type* (.getReturnType info))})))))))

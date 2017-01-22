@@ -798,10 +798,10 @@
          (not me) false
          :else
          (let [seen' (conj seen x)
-               [x' externs'] me]
-           (if-some [tag (-> x' meta :tag)]
-             (let [pre' (into [] (map symbol)
-                          (string/split (str (alias->type tag tag)) #"\."))]
+               [x' externs'] me
+               xmeta (meta x')]
+           (if (and (= 'Function (:tag xmeta)) (:ctor xmeta))
+             (let [pre' [(:ctor xmeta)]]
                (or (has-extern?* (into pre' (next pre)) top top seen')
                    (has-extern?* (into (conj pre' 'prototype) (next pre)) top top seen')))
              (recur (next pre) externs' top seen'))))))))
