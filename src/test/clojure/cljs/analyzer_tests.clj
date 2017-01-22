@@ -665,7 +665,6 @@
   (require '[cljs.compiler :as cc])
   (require '[cljs.closure :as closure])
 
-  ;; TODO: need to handle the method/fn case
   (let [test-cenv (atom {::a/externs (externs/externs-map)})]
     (binding [a/*cljs-ns* a/*cljs-ns*
               a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
@@ -715,7 +714,7 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
-  ;; does NOT work, does not generate extern
+  ;; works, generates extern
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
                                          {:externs ["src/test/externs/test.js"]}))})]

@@ -2637,7 +2637,9 @@
                   :target targetexpr
                   :field field
                   :children children
-                  :tag tag})
+                  :tag (if (js-tag? tag)
+                         (or (js-tag (-> tag meta :prefix) :tag) tag)
+                         tag)})
       ::call   (let [argexprs (map #(analyze enve %) args)
                      children (into [targetexpr] argexprs)]
                  {:op :dot
@@ -2648,11 +2650,7 @@
                   :args argexprs
                   :children children
                   :tag (if (js-tag? tag)
-                         (let [pre (-> tag meta :prefix)
-                               [sym _] (find (get-in @env/*compiler*
-                                               (into [::externs] (butlast pre)))
-                                         (last pre))]
-                           (:ret-tag (meta sym) tag))
+                         (or (js-tag (-> tag meta :prefix) :ret-tag) tag)
                          tag)}))))
 
 (defmethod parse '.
