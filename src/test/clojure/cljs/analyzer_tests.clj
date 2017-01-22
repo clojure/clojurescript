@@ -638,6 +638,24 @@
     (is (true? (a/has-extern? '[console log] externs)))
     (is (true? (a/has-extern? '[Number isNaN] externs)))))
 
+(def externs-cenv
+  (atom
+    {::a/externs
+     (externs/externs-map
+       (closure/load-externs
+         {:externs ["src/test/externs/test.js"]
+          :use-only-custom-externs true}))}))
+
+(deftest test-externs-infer
+  (binding [a/*cljs-ns* a/*cljs-ns*]
+    (e/with-compiler-env externs-cenv
+      (a/analyze (a/empty-env)
+        '(js/baz))))
+  (binding [a/*cljs-ns* a/*cljs-ns*]
+    (e/with-compiler-env externs-cenv
+      (a/analyze (a/empty-env)
+        '(let [x (js/baz)] x)))))
+
 (comment
   (require '[cljs.compiler :as cc])
   (require '[cljs.closure :as closure])
