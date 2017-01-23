@@ -2634,9 +2634,7 @@
           {:warn-type :object :form form :property prop}))
       (when (not= 'js target-tag)
         ;; Cannot determine type of the target
-        (when (and (get-in env [:locals target])
-                   (or (nil? target-tag)
-                       ('#{any} target-tag)))
+        (when (or (nil? target-tag) ('#{any} target-tag))
           (warning :infer-warning env
             {:warn-type :target :form form}))
         ;; Unresolveable property on existing extern
