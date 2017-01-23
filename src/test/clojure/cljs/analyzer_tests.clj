@@ -751,6 +751,22 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
+  ;; FIXME: generates externs we know about including the one we don't
+  (let [test-cenv (atom {::a/externs (externs/externs-map
+                                       (closure/load-externs
+                                         {:externs ["src/test/externs/test.js"]}))})]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(defn afun [^js/Foo.Bar x]
+              (let [z (.baz x)]
+                (.wozz z)))]))
+      (cc/emit-externs
+        (reduce util/map-merge {}
+          (map (comp :externs second)
+            (get @test-cenv ::a/namespaces))))))
+
   ;; works, generates extern
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
