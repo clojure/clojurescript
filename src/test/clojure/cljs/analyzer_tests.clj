@@ -794,7 +794,6 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
-  ;; wrong
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
                                          {:externs ["src/test/externs/test.js"]}))})]

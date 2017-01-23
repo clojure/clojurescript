@@ -424,7 +424,9 @@
   (case warn-type
     :target   (str "Cannot infer target type in expression " form "")
     :property (str "Cannot resolve property " property
-                   " for inferred type " type  " in expression " form)))
+                   " for inferred type " type  " in expression " form)
+    :object   (str "Adding extern to Object for property " property " due to "
+                   "ambiguous expression " form)))
 
 (defn default-warning-handler [warning-type env extra]
   (when (warning-type *cljs-warnings*)
@@ -2625,24 +2627,27 @@
                             (vary-meta (normalize-js-tag target-tag)
                               update-in [:prefix] (fnil conj '[Object]) prop))
                        nil)]
-    (when (and (not (string/starts-with? (str prop) "cljs$"))
-               (not= 'js target-tag))
-      ;; Cannot determine type of the target
-      (when (and (get-in env [:locals target])
-                 (or (nil? target-tag)
-                     ('#{any} target-tag)))
+    (when (not (string/starts-with? (str prop) "cljs$"))
+      ;; Adding to Object
+      (when (= 'Object (first (-> tag meta :prefix)))
         (warning :infer-warning env
-          {:warn-type :target :form form}))
-      ;; Unresolveable property on existing extern
-      (let [[pre' pre] ((juxt butlast identity) ;; drop prototype from pre'
-                         (-> tag meta :prefix))]
-        (when (and (has-extern? pre') (not (has-extern? pre)))
+          {:warn-type :object :form form :property prop}))
+      (when (not= 'js target-tag)
+        ;; Cannot determine type of the target
+        (when (and (get-in env [:locals target])
+                   (or (nil? target-tag)
+                     ('#{any} target-tag)))
           (warning :infer-warning env
-            {:warn-type :property :form form
-             :type (symbol "js"
-                     (string/join "."
-                       (cond-> pre' (= 'prototype (last pre')) butlast)))
-             :property prop}))))
+            {:warn-type :target :form form}))
+        ;; Unresolveable property on existing extern
+        (let [[pre' pre] ((juxt butlast identity) (-> tag meta :prefix))]
+          (when (and (has-extern? pre') (not (has-extern? pre)))
+            (warning :infer-warning env
+              {:warn-type :property :form form
+               :type (symbol "js"
+                       (string/join "."
+                         (cond-> pre' (= 'prototype (last pre')) butlast)))
+               :property prop})))))
     (when (js-tag? tag)
       (let [pre (-> tag meta :prefix)]
         (when-not (has-extern? pre)
