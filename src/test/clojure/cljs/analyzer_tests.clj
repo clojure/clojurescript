@@ -689,6 +689,27 @@
               :tag meta :prefix))))
 
 (comment
+  (binding [a/*cljs-ns* a/*cljs-ns*]
+    (a/no-warn
+      (e/with-compiler-env externs-cenv
+        (a/analyze (a/empty-env)
+          '(let [React (js/require "react")]
+             React)))))
+
+  ;; FIXME: we don't preserve tag information
+  (binding [a/*cljs-ns* a/*cljs-ns*]
+    (a/no-warn
+      (e/with-compiler-env externs-cenv
+        (let [aenv (a/empty-env)
+              _ (a/analyze aenv '(ns foo.core))
+              aenv' (assoc-in aenv [:ns :name] 'foo.core)
+              _ (a/analyze aenv' '(def x 1))]
+          (dissoc (a/analyze-symbol (assoc-in aenv [:ns :name] 'foo.core) 'x) :env)
+          ;(get-in @externs-cenv [::a/namespaces 'foo.core])
+          ))))
+  )
+
+(comment
   (require '[cljs.compiler :as cc])
   (require '[cljs.closure :as closure])
 
