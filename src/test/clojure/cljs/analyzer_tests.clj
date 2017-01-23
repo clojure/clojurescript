@@ -787,4 +787,22 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
+  ;; wrong
+  (let [test-cenv (atom {::a/externs (externs/externs-map
+                                       (closure/load-externs
+                                         {:externs ["src/test/externs/test.js"]}))})]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(fn [^js/Foo.Bar x]
+              (let [z (.baz x)]
+                (.-wozz z)))]))
+      (cc/emit-externs
+        (reduce util/map-merge {}
+          (map (comp :externs second)
+            (get @test-cenv ::a/namespaces))))))
+
+  ;; TODO: test (def foo (js/require "bar.js")) pattern
+
   )
