@@ -846,7 +846,6 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
-  ;; FIXME: we don't get an extern for Component
   (let [test-cenv (atom {::a/externs (externs/externs-map
                                        (closure/load-externs
                                          {:externs ["src/test/externs/test.js"]}))})]
