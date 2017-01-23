@@ -2627,17 +2627,21 @@
                        nil)]
     (when (and (not (string/starts-with? (str prop) "cljs$"))
                (not= 'js target-tag))
+      ;; Cannot determine type of the target
       (when (and (get-in env [:locals target])
                  (or (nil? target-tag)
                      ('#{any} target-tag)))
         (warning :infer-warning env
           {:warn-type :target :form form}))
-      (let [[pre' pre] ((juxt (comp butlast butlast) identity) ;; drop prototype from pre'
+      ;; Unresolveable property on existing extern
+      (let [[pre' pre] ((juxt butlast identity) ;; drop prototype from pre'
                          (-> tag meta :prefix))]
         (when (and (has-extern? pre') (not (has-extern? pre)))
           (warning :infer-warning env
             {:warn-type :property :form form
-             :type (symbol "js" (string/join "." pre'))
+             :type (symbol "js"
+                     (string/join "."
+                       (cond-> pre' (= 'prototype (last pre')) butlast)))
              :property prop}))))
     (when (js-tag? tag)
       (let [pre (-> tag meta :prefix)]
@@ -2665,7 +2669,7 @@
                   :args argexprs
                   :children children
                   :tag (if (js-tag? tag)
-                         (or (js-tag (-> tag meta :prefix) :ret-tag) tag)
+                         (or (js-tag (-> tag meta :prefix) :ret-tag) 'js)
                          tag)}))))
 
 (defmethod parse '.

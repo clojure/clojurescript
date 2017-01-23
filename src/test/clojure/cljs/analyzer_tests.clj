@@ -676,10 +676,17 @@
                  (a/analyze (a/empty-env) '(def foo (js/woz)))))
            :tag)))
   (is (= 'js
-        (-> (binding [a/*cljs-ns* a/*cljs-ns*]
-              (e/with-compiler-env externs-cenv
-                (a/analyze (a/empty-env) '(def foo js/boz))))
-          :tag))))
+          (-> (binding [a/*cljs-ns* a/*cljs-ns*]
+                (e/with-compiler-env externs-cenv
+                  (a/analyze (a/empty-env) '(def foo js/boz))))
+            :tag)))
+  (is (nil? (-> (binding [a/*cljs-ns* a/*cljs-ns*]
+                  (a/no-warn
+                    (e/with-compiler-env externs-cenv
+                      (a/analyze (a/empty-env)
+                        '(let [z (.baz ^js/Foo.Bar x)]
+                           z)))))
+              :tag meta :prefix))))
 
 (comment
   (require '[cljs.compiler :as cc])
