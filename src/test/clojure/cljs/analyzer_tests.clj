@@ -825,6 +825,20 @@
           (map (comp :externs second)
             (get @test-cenv ::a/namespaces))))))
 
-  ;; TODO: test (def foo (js/require "bar.js")) pattern
+  ;; FIXME: we don't get an extern for Component
+  (let [test-cenv (atom {::a/externs (externs/externs-map
+                                       (closure/load-externs
+                                         {:externs ["src/test/externs/test.js"]}))})]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(ns foo.core)
+            (def React (js/require "react"))
+            (.log js/console (.-Component React))]))
+      (cc/emit-externs
+        (reduce util/map-merge {}
+          (map (comp :externs second)
+            (get @test-cenv ::a/namespaces))))))
 
   )
