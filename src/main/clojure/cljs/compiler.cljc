@@ -1516,21 +1516,25 @@
 
 (defn emit-externs
   ([externs]
-   (emit-externs [] externs (atom #{})))
-  ([prefix externs top-level]
+   (emit-externs [] externs (atom #{})
+     (when env/*compiler*
+       (::ana/externs @env/*compiler*))))
+  ([prefix externs top-level known-externs]
    (loop [ks (seq (keys externs))]
      (when ks
        (let [k (first ks)
              [top :as prefix'] (conj prefix k)]
-         (when-not (= 'prototype k)
-           (if-not (contains? @top-level top)
+         (when (and (not= 'prototype k)
+                    (nil? (get-in known-externs prefix')))
+           (if-not (or (contains? @top-level top)
+                       (contains? known-externs top))
              (do
                (emitln "var " (string/join "." (map munge prefix')) ";")
                (swap! top-level conj top))
              (emitln (string/join "." (map munge prefix')) ";")))
          (let [m (get externs k)]
            (when-not (empty? m)
-             (emit-externs prefix' m top-level))))
+             (emit-externs prefix' m top-level known-externs))))
        (recur (next ks))))))
 
 #?(:clj
