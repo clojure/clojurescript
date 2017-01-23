@@ -1330,7 +1330,7 @@
           fn-var? (and (some? init-expr) (= (:op init-expr) :fn))
           tag (if fn-var?
                 (or (:ret-tag init-expr) tag)
-                tag)
+                (or tag (:tag init-expr)))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) var-name export-val))
           doc (or (:doc args) (-> sym meta :doc))]
@@ -1377,9 +1377,10 @@
                    :max-fixed-arity (:max-fixed-arity init-expr)
                    :method-params params
                    :arglists (:arglists sym-meta)
-                   :arglists-meta (doall (map meta (:arglists sym-meta)))}))) )
-          (when (and fn-var? (some? tag))
-            {:ret-tag tag})))
+                   :arglists-meta (doall (map meta (:arglists sym-meta)))}))))
+          (if (and fn-var? (some? tag))
+            {:ret-tag tag}
+            (when tag {:tag tag}))))
       (merge
         {:env env
          :op :def
@@ -2719,6 +2720,7 @@
   ;; warning without this - David
   (cond
     (nil? t) true
+    (= 'clj-nil t) true
     (js-tag? t) true ;; TODO: revisit
     :else
     (if (and (symbol? t) (some? (get NUMERIC_SET t)))
@@ -2728,7 +2730,8 @@
         (or (contains? t 'number)
             (contains? t 'long)
             (contains? t 'double)
-            (contains? t 'any))))))
+            (contains? t 'any)
+            (contains? t 'js))))))
 
 (defn analyze-js-star* [env jsform args form]
   (let [enve      (assoc env :context :expr)
