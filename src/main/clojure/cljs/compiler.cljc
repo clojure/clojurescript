@@ -1038,7 +1038,7 @@
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
-    (doseq [lib (remove (set (vals seen)) (filter #(get libs %) deps))]
+    (doseq [lib (remove (set (vals seen)) (filter (set (vals libs)) deps))]
       (cond
         #?@(:clj
             [(ana/foreign-dep? lib)
