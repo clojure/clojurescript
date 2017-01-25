@@ -8,7 +8,10 @@ mkdir -p builds/out-adv
 possible=4
 ran=0
 
-bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\"}" > builds/out-adv/core-advanced-test.js
+if ! bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\"}" > builds/out-adv/core-advanced-test.js; then
+  >&2 echo ClojureScript compilation failed
+  exit 1
+fi;
 
 if [ "$V8_HOME" = "" ]; then
   echo "V8_HOME not set, skipping V8 tests"

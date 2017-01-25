@@ -4,7 +4,10 @@
 rm -rf builds/out-self
 mkdir -p builds/out-self
 
-bin/cljsc src/test/self/self_host  "{:optimizations :simple :static-fns true :output-dir \"builds/out-self\" :optimize-constants true :verbose true :compiler-stats true :parallel-build true :target :nodejs}" > builds/out-self/core-self-test.js
+if ! bin/cljsc src/test/self/self_host  "{:optimizations :simple :static-fns true :output-dir \"builds/out-self\" :optimize-constants true :verbose true :compiler-stats true :parallel-build true :target :nodejs}" > builds/out-self/core-self-test.js; then
+  >&2 echo ClojureScript compilation failed
+  exit 1
+fi;
 
 echo "Testing with Node"
 node builds/out-self/core-self-test.js

@@ -7,6 +7,11 @@ if [ "$CLOJURESCRIPT_HOME" = "" ]; then
   CLOJURESCRIPT_HOME="`dirname $0`/.."
 fi
 
+if ! test "$(ls -A "$CLOJURESCRIPT_HOME/lib" 2>/dev/null)"; then
+    >&2 echo lib/ folder is empty, have you run \`script/bootstrap\`?
+    exit 1
+fi
+
 CLJSC_CP=''
 for next in lib/*: src/main/clojure: src/main/cljs: src/test/cljs; do
   CLJSC_CP="${CLJSC_CP}${CLOJURESCRIPT_HOME}/${next}"

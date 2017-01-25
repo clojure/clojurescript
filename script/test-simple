@@ -8,7 +8,10 @@ possible=4
 ran=0
 
 #bin/cljsc test >out/core-test.js
-bin/cljsc src/test/cljs  "{:optimizations :simple :static-fns true :output-dir \"builds/out-simp\" :cache-analysis true :output-wrapper true :compiler-stats true}" > builds/out-simp/core-simple-test.js
+if ! bin/cljsc src/test/cljs  "{:optimizations :simple :static-fns true :output-dir \"builds/out-simp\" :cache-analysis true :output-wrapper true :compiler-stats true}" > builds/out-simp/core-simple-test.js; then
+  >&2 echo ClojureScript compilation failed
+  exit 1
+fi;
 
 if [ "$V8_HOME" = "" ]; then
   echo "V8_HOME not set, skipping V8 tests"

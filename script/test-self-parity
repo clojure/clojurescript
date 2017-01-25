@@ -15,7 +15,10 @@ mkdir -p builds/out-self-parity/clojure/test
 mv clojure/template.clj builds/out-self-parity/clojure
 mv clojure/test builds/out-self-parity/clojure
 
-bin/cljsc src/test/self/self_parity  "{:optimizations :none :output-to \"builds/out-self-parity/main.js\" :output-dir \"builds/out-self-parity\" :main self-parity.test :target :nodejs}"
+if ! bin/cljsc src/test/self/self_parity "{:optimizations :none :output-to \"builds/out-self-parity/main.js\" :output-dir \"builds/out-self-parity\" :main self-parity.test :target :nodejs}"; then
+  >&2 echo ClojureScript compilation failed
+  exit 1
+fi;
 
 echo "Testing with Node"
 node builds/out-self-parity/main.js
