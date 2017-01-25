@@ -1210,6 +1210,13 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
   [n]
   `(println ~(or (source-fn &env n) (str "Source not found"))))
 
+(defn- named-publics-vars
+  "Gets the public vars in a namespace that are not anonymous."
+  [ns]
+  (->> (ana-api/ns-publics ns)
+       (remove (comp :anonymous val))
+       (map key)))
+
 (defmacro apropos
   "Given a regular expression or stringable thing, return a seq of all
 public definitions in all currently-loaded namespaces that match the
@@ -1224,13 +1231,13 @@ str-or-pattern."
             (fn [ns]
               (let [ns-name (str ns)]
                 (map #(symbol ns-name (str %))
-                  (filter matches? (keys (ana-api/ns-publics ns))))))
+                  (filter matches? (named-publics-vars ns)))))
             (ana-api/all-ns))))))
 
 (defmacro dir
   "Prints a sorted directory of public vars in a namespace"
   [ns]
-  `(doseq [sym# (quote ~(sort (keys (ana-api/ns-publics ns))))]
+  `(doseq [sym# (quote ~(sort (named-publics-vars ns)))]
      (println sym#)))
 
 (defmacro pst
