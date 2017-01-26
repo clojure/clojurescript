@@ -491,7 +491,8 @@
                                        (if (:error res)
                                          (cb res)
                                          (try
-                                           (binding [ana/*analyze-deps* (:*analyze-deps* bound-vars)]
+                                           (binding [ana/*analyze-deps* (:*analyze-deps* bound-vars)
+                                                     env/*compiler* (:*compiler* bound-vars)]
                                              (let [ast' (-> rewritten-ast
                                                           (ana/check-use-macros-inferring-missing env)
                                                           (ana/check-rename-macros-inferring-missing env))]
