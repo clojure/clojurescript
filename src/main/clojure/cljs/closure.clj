@@ -1352,7 +1352,9 @@
          "\", ["
          (ns-list (deps/-provides input))
          "], ["
-         (ns-list (deps/-requires input))
+         ;; under Node.js runtime require is possible
+         (when-not (= :nodejs (:target opts))
+           (ns-list (deps/-requires input)))
          "]);\n")))
 
 (defn deps-file
