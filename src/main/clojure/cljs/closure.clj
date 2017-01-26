@@ -1908,7 +1908,10 @@
       (= optimizations :advanced)
       (cond->
         (not (false? (:static-fns opts))) (assoc :static-fns true)
-        (not (false? (:optimize-constants opts))) (assoc :optimize-constants true)))))
+        (not (false? (:optimize-constants opts))) (assoc :optimize-constants true))
+
+      (nil? (find (:closure-warnings opts) :check-types))
+      (assoc-in [:closure-warnings :check-types] :off))))
 
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
