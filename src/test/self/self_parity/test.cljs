@@ -18,7 +18,8 @@
   (:require [clojure.string :as string]
             [cljs.nodejs :as nodejs]
             [cljs.js :as cljs]
-            [cljs.reader :as reader]))
+            [cljs.reader :as reader]
+            [cljs.stacktrace :as st]))
 
 (def out-dir "builds/out-self-parity")
 
@@ -232,14 +233,31 @@
   [st ns form cb]
   (cljs/eval st
     form
-    {:ns      ns
-     :context :expr
-     :load    load-fn
-     :eval    node-eval
-     :verbose false}
+    {:ns         ns
+     :context    :expr
+     :load       load-fn
+     :eval       node-eval
+     :source-map true
+     :verbose    false}
     cb))
 
 ;; Test suite runner
+
+(defn- handle-error
+  [error sms]
+  (loop [error error]
+    (let [message (if (instance? ExceptionInfo error)
+                    (ex-message error)
+                    (.-message error))
+          parsed-stacktrace (st/parse-stacktrace {}
+                              (.-stack error)
+                              {:ua-product :nodejs}
+                              {})]
+      (println message)
+      (print (st/mapped-stacktrace-str parsed-stacktrace sms))
+      (when-some [cause (.-cause error)]
+        (print "caused by: ")
+        (recur cause)))))
 
 (defn run-tests
   "Runs the tests."
@@ -285,7 +303,7 @@
                    [static.core-test]))
       (fn [{:keys [value error]}]
         (if error
-          (prn error)
+          (handle-error error (:source-maps @st))
           (eval-form st 'parity.core
             '(run-tests
                'cljs.primitives-test
@@ -322,7 +340,7 @@
                'static.core-test)
             (fn [{:keys [value error]}]
               (when error
-                (prn error)))))))))
+                (handle-error error (:source-maps @st))))))))))
 
 (defn -main [& args]
   (init-runtime)
