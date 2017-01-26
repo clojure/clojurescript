@@ -36,7 +36,8 @@
       :entries #{'module-test.modules.a}}
      :module-b
      {:output-to (str (io/file output-dir "module-b.js"))
-      :entries #{'module-test.modules.b}}}}})
+      :entries #{'module-test.modules.b}}}
+    :closure-warnings {:check-types :off}}})
 
 (defn tmp-dir
   "Returns the temporary directory of the system."

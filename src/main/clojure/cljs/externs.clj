@@ -49,7 +49,7 @@
 
 (defmulti parse-extern-node
   (fn [^Node node]
-    (.getType node)))
+    (.getToken node)))
 
 (defmethod parse-extern-node Token/VAR [node]
   (when (> (.getChildCount node) 0)
