@@ -1918,7 +1918,7 @@
       (assoc-in [:closure-warnings :check-types] :off)
 
       (nil? (:closure-module-roots opts))
-      (assoc opts :closure-module-roots []))))
+      (assoc :closure-module-roots []))))
 
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
