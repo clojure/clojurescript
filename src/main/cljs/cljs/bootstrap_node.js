@@ -72,7 +72,7 @@ global.CLOSURE_IMPORT_SCRIPT = function(src) {
 
   // Sources are always expressed relative to closure's base.js, but
   // require() is always relative to the current source.
-  require(path.join(".", "..", src));
+  nodeGlobalRequire(path.resolve(__dirname, '..', src));
   return true;
 };
 

@@ -153,7 +153,7 @@
           (string/replace "path.resolve(__dirname, '..', 'base.js')"
             (platform-path (conj rewrite-path "bootstrap" ".." "base.js")))
           (string/replace
-            "path.join(\".\", \"..\", src)"
+            "path.resolve(__dirname, '..', src)"
             (str "path.join(" (platform-path rewrite-path) ", src)"))
           (string/replace
             "var CLJS_ROOT = \".\";"
