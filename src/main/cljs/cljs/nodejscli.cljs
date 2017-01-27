@@ -18,4 +18,4 @@
 
 ;; Call the user's main function
 (when (fn? cljs.core/*main-cli-fn*)
-  (apply cljs.core/*main-cli-fn* (drop 2 (.-argv nodejs/process))))
+  (apply cljs.core/*main-cli-fn* (drop 2 (.-argv js/process))))
