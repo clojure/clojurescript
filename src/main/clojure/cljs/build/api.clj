@@ -252,10 +252,13 @@
     (if (zero? err)
       (let [is (.getInputStream proc)]
         (into []
-          (map (fn [{:strs [file]}] file
-                 {:file file :module-type :commonjs}))
-          (butlast (json/read-str (slurp is)))))
-      [])))
+         (map (fn [{:strs [file]}] file
+                {:file file :module-type :commonjs}))
+         (butlast (json/read-str (slurp is)))))
+      (let [es (.getErrorStream proc)]
+        (binding [*out* *err*]
+          (println (slurp es)))
+        []))))
 
 (comment
   (add-package-jsons
