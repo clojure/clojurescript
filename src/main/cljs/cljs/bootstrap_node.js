@@ -49,7 +49,7 @@ var CLJS_ROOT = ".";
  * The goog namespace in the global scope.
  */
 global.goog = {};
-
+global.require = require;
 
 /**
  * Imports a script using Node's require() API.
@@ -82,7 +82,6 @@ function nodeGlobalRequire(file) {
   var _module = global.module, _exports = global.exports;
   global.module = undefined;
   global.exports = undefined;
-  global.require = require;
   vm.runInThisContext(fs.readFileSync(file), file);
   global.exports = _exports;
   global.module = _module;
