@@ -1,4 +1,4 @@
-## 1.9.454
+## 1.9.456
 
 ### Enhancements
 * Enhanced JavaScript module support
