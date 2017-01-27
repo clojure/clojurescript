@@ -1,3 +1,86 @@
+## 1.9.454
+
+### Enhancements
+* Enhanced JavaScript module support
+* Support Node resolution for CommonJS modules
+* Externs inference
+* Performance enhancements
+* CLJS-1835: REPL load special fn
+* CLJS-1194: Support for `data_readers.cljc`
+
+### Changes
+* expose :closure-module-roots option
+* bump Closure Compiler dep
+* Under Node.js don't need require entries in the goog.addDependency calls in cljs_deps.js
+* do not throw on circular dependencies between Google Closure JS libs
+* str macro should call str/1 function directly, added str benchmark
+* CLJS-1718: Foreign lib files should be placed in a relative location
+* CLJS-1858: Should allow `:cache-analysis true` and `cache-analysis-format nil`
+* CLJS-1616: Self-host: improve documentation for compile-str
+* CLJS-1643: Emit more informative error when emitting a type which has no emit multimethod case
+* CLJS-1816: Basic timing info in verbose output
+* add support for emitting inferred externs file
+* add cljs.analyzer/analyze-form-seq
+* CLJS-1666: Flag to optionally disable transit analysis cache encoding
+* Provide more descriptive error message when invalid libspec detected
+* CLJS-1768: cljs.spec perf tweaks
+* CLJS-1842: Remove analyzer `:merge` hack for REPLs
+* CLJS-1839: Relax the constraint that `new` and dot forms must be passed a symbol
+* default to :ecmascript3 if :language-out not specified for :es6 module
+* respect :language-out when processing ES6 modules
+* default to :ecmascript3 if :language-out not specified for :es6 module
+* inline some?
+
+### Fixes
+* CLJS-1911: Need to bind Node.js require
+* CLJS-1909: Self-host: circular dependency when requiring cljs.reader
+* CLJS-1906: Self-host: script/test-self-parity fails
+* CLJS-1903: Remove anonymous vars from dir and apropos output
+* CLJS-1897: Too many externs generated
+* CLJS-1895: Externs inference needs to support user supplied externs
+* CLJS-1873: Self-host: Unit tests fail owing to test.check dep
+* CLJS-1874: Self-host: :fn-var true for macros
+* CLJS-1877: :foreign-libs entries should be allowed to specify directories along with individual files
+* CLJS-1890: s/form for s/nilable in cljs.spec does not match clojure.spec
+* CLJS-1811: Can't compose cljs.spec.test.instrument (or cljs.spec.test.check) with cljs.spec.test.enumerate-namespace
+* CLJS-1894: Unnecessary analysis of core.cljs on first compile
+* CLJS-1893: Unnecessary analysis of core.cljs
+* CLJS-1892: Dependencies in JARs are analyzed every time even if an analysis cache file exists
+* CLJS-1887: add :watch-error-fn option
+* CLJS-1883 Foreign libs can't be found on Node.js
+* CLJS-1882 Fix constant table sort order when using :modules
+* CLJS-1853: var metadata in compiled output
+* CLJS-1878: prefer `some?` over `(not (nil? %))` in analyzer
+* CLJS-1880: missing ^boolean on some hasNext calls
+* CLJS-1875 Difference in seqable? between CLJ & CLJS
+* CLJS-1829: get does not return not-found on negative indexes
+* cljs.spec.test/unstrument shouldn't return the names of vars that weren't instrumented in the first place. Fixes CLJS-1812
+* CLJS-1786: Add knob for controlling printing of namespaced maps
+* CLJS-1836: nth doesn't throw for IndexedSeqs
+* CLJS-1870: Quoted specs check in require macro symbols
+* CLJS-1869: Regression importing goog.Uri
+* Fix CLJS-1653 regression
+* CLJS-1860: Resolve JS modules referred by their fully-qualified namespace
+* CLJS-1861: Use usr/bin/env in build scripts for portability
+* CLJS-1857: Fix self-host tests
+* CLJS-1855: Subvec should implement IIterable
+* CLJS-1856: Self-host: load-deps doesn't delegate to itself
+* CLJS-1651: Self-host: Cannot replace core macro-function
+* CLJS-1848: Analyzer can't find JS modules during macro-expansion
+* CLJS-1851: Only output JS module processing time when `:compiler-stats` is true
+* CLJS-1850: *unchecked-if* not declared ^:dynamic warning after commit a732f0
+* CLJS-1849: Self-host: regression introduced by CLJS-1794
+* CLJS-1844: port over Maria Geller's externs file parsing code
+* CLJS-1845: Assoc on subvec should throw if out of bounds
+* CLJS-1847: REPL should recognize `clojure.core/load`
+* CLJS-1745: refer-clojure doesn't pull in previously excluded vars
+* CLJS-1794: incomplete alias created for namespace cljs.spec warning under advanced compilation
+* CLJS-1834: REPL regression, require of ns from the ns itself errors out in circular reference
+* fix ns aliasing regression for JS namespaces
+* CLJS-1837: Port halt-when over from Clojure
+* CLJS-1820: "No such namespace" warning when referring to JS module namespace without using alias
+* CLJS-1828: Add `:rename` to `require`'s docstring
+
 ## 1.9.293
 
 ### Enhancements
