@@ -201,6 +201,10 @@
     (. compiler-options
       (setExtraAnnotationNames (map name (:closure-extra-annotations opts)))))
 
+  (when (contains? opts :closure-module-roots)
+    (. compiler-options
+      (setModuleRoots (:closure-module-roots opts))))
+
   (. compiler-options
     (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
     )
@@ -1527,7 +1531,7 @@
   (-> opts
     (select-keys
       [:closure-warnings :closure-extra-annotations :pretty-print
-       :language-in :language-out])
+       :language-in :language-out :closure-module-roots])
     (set-options (CompilerOptions.))))
 
 (defn get-js-root [closure-compiler]
