@@ -365,6 +365,7 @@ nil if the end of stream has been reached")
   [reader initch]
   (let [token (read-token reader (read-char reader))
         a (re-matches* symbol-pattern token)
+        _ (when (nil? a) (reader-error reader "Invalid keyword " (str ":" token)))
         token (aget a 0)
         ns (aget a 1)
         name (aget a 2)]

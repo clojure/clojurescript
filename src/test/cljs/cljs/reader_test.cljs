@@ -223,3 +223,7 @@
     (is (= "Duplicate key: :a" b))
     (is (= "Duplicate key: :a" c))
     (is (= "Duplicate key: :a" d))))
+
+(deftest test-error-messages
+  (testing "Leading numbers in keywords"
+    (is (thrown-with-msg? js/Error #"Invalid keyword :0s" (reader/read-string ":0s")))))
