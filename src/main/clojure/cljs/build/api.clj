@@ -235,7 +235,7 @@
                   {:file (.getAbsolutePath f')
                    :module-type :commonjs})
                 (conj ret dep)))
-            ret)))
+            (conj ret dep))))
       [] deps)))
 
 (defn- alive? [proc]
@@ -264,7 +264,9 @@
   [{:keys [file]}]
   (let [code (string/replace
                (slurp (io/resource "cljs/module_deps.js"))
-               "JS_FILE" file)
+               "JS_FILE"
+               (string/replace file
+                 (System/getProperty "user.dir") ""))
         proc (-> (ProcessBuilder.
                    ["node" "--eval" code])
                .start)
@@ -290,9 +292,12 @@
         []))))
 
 (comment
+  (node-module-deps
+    {:file (.getAbsolutePath (io/file "src/test/node/test.js"))})
+
   (add-package-jsons
     (node-module-deps
-      {:file "src/test/node/test.js"}))
+      {:file (.getAbsolutePath (io/file "src/test/node/test.js"))}))
   )
 
 (defn node-inputs
