@@ -13,8 +13,8 @@
   (:refer-clojure :exclude [require]))
 
 ; Define namespaced references to Node's externed globals:
-; (def require (js* "require")) ;
-; (def process (js* "process"))
+(def require (js* "require"))
+(def process (js* "process"))
 
 (defn enable-util-print! []
   (set! *print-newline* false)
