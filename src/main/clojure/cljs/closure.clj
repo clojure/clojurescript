@@ -1915,7 +1915,10 @@
         (not (false? (:optimize-constants opts))) (assoc :optimize-constants true))
 
       (nil? (find (:closure-warnings opts) :check-types))
-      (assoc-in [:closure-warnings :check-types] :off))))
+      (assoc-in [:closure-warnings :check-types] :off)
+
+      (nil? (:closure-module-roots opts))
+      (assoc opts :closure-module-roots []))))
 
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
