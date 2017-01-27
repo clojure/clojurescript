@@ -12,14 +12,17 @@
   For example: a build script may need to how to invalidate compiled
   files so that they will be recompiled."
   (:refer-clojure :exclude [compile])
-  (:require [cljs.util :as util]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as string]
+            [clojure.data.json :as json]
+            [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.closure :as closure]
-            [cljs.js-deps :as js-deps]
-            [clojure.java.io :as io])
-  (:import java.io.File))
+            [cljs.js-deps :as js-deps])
+  (:import [java.io File]
+           [java.lang ProcessBuilder Process]))
 
 ;; =============================================================================
 ;; Useful Utilities
@@ -213,8 +216,60 @@
    (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/watch source opts compiler-env stop))))
 
-(comment
+(defn add-package-jsons
+  "EXPERIMENTAL: see node-module-deps"
+  [deps]
+  (let [checked (atom #{})]
+    (reduce
+      (fn [ret {:keys [file] :as dep}]
+        (let [f (.getParentFile (io/file file))
+              path (.getAbsolutePath f)]
+          (if-not (contains? @checked path)
+            (let [f' (io/file f "package.json")]
+              (swap! checked conj path)
+              (if (.exists f')
+                (conj ret dep
+                  {:file (.getAbsolutePath f')
+                   :module-type :commonjs})
+                (conj ret dep)))
+            ret)))
+      [] deps)))
 
+(defn node-module-deps
+  "EXPERIMENTAL: return the foreign libs entries as computed by running
+   the module-deps package on the supplied JavaScript entry point. Assumes
+   that the module-deps & JSONStream NPM packages are either locally or
+   globally installed."
+  [entry]
+  (let [code (string/replace
+               (slurp (io/resource "cljs/module_deps.js"))
+               "JS_FILE" entry)
+        proc (-> (ProcessBuilder.
+                   (into-array
+                     ["node" "--eval" (str code)]))
+               .start)
+        err (.waitFor proc)]
+    (if (zero? err)
+      (let [is (.getInputStream proc)]
+        (into []
+          (map (fn [{:strs [file]}] file
+                 {:file file :module-type :commonjs}))
+          (butlast (json/read-str (slurp is)))))
+      [])))
+
+(comment
+  (add-package-jsons (node-module-deps "src/test/node/test.js"))
+  )
+
+(defn node-inputs
+  "EXPERIMENTAL: return the foreign libs entries as computed by running
+   the module-deps package on the supplied JavaScript entry points. Assumes
+   that the module-deps & JSONStream NPM packages are either locally or
+   globally installed."
+  [entries]
+  )
+
+(comment
   (def test-cenv (atom {}))
   (def test-env (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
 
