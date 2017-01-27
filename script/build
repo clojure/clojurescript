@@ -8,6 +8,8 @@ set -ex
 cd `dirname $0`/..
 rm -rf target
 
+alias mvn=/var/lib/jenkins/tools/Maven_3.0.2/bin/mvn
+
 POM_TEMPLATE="pom.template.xml"
 POM_FILE="pom.xml"
 
