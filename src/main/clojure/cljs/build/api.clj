@@ -22,7 +22,8 @@
             [cljs.closure :as closure]
             [cljs.js-deps :as js-deps])
   (:import [java.io File]
-           [java.lang ProcessBuilder Process]))
+           [java.lang ProcessBuilder Process]
+           (java.util.concurrent TimeUnit)))
 
 ;; =============================================================================
 ;; Useful Utilities
@@ -241,23 +242,27 @@
    that the module-deps & JSONStream NPM packages are either locally or
    globally installed."
   [{:keys [file]}]
-  (let [code (string/replace
-               (slurp (io/resource "cljs/module_deps.js"))
-               "JS_FILE" file)
-        proc (-> (ProcessBuilder.
-                   (into-array
-                     ["node" "--eval" (str code)]))
-               .start)
-        err (.waitFor proc)]
-    (if (zero? err)
+  (let [code     (string/replace
+                   (slurp (io/resource "cljs/module_deps.js"))
+                   "JS_FILE" file)
+        proc     (-> (ProcessBuilder.
+                       (into-array
+                         ["node" "--eval" (str code)]))
+                   .start)
+        timeout? (.waitFor proc 10 TimeUnit/SECONDS)]
+    (when timeout?
+      (println "Node.js process timed out"))
+    (if (and (not (.isAlive proc))
+             (zero? (.exitValue proc)))
       (let [is (.getInputStream proc)]
         (into []
-         (map (fn [{:strs [file]}] file
-                {:file file :module-type :commonjs}))
-         (butlast (json/read-str (slurp is)))))
-      (let [es (.getErrorStream proc)]
-        (binding [*out* *err*]
-          (println (slurp es)))
+          (map (fn [{:strs [file]}] file
+                 {:file file :module-type :commonjs}))
+          (butlast (json/read-str (slurp is)))))
+      (do
+        (when-not (.isAlive proc)
+          (let [es (.getErrorStream proc)]
+            (println (slurp es))))
         []))))
 
 (comment
