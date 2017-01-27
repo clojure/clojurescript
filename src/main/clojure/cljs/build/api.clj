@@ -306,7 +306,8 @@
    that the module-deps & JSONStream NPM packages are either locally or
    globally installed."
   [entries]
-  (add-package-jsons (vec (mapcat node-module-deps entries))))
+  (add-package-jsons
+    (vec (distinct (mapcat node-module-deps entries)))))
 
 (comment
   (node-inputs
