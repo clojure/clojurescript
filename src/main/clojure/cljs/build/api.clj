@@ -21,9 +21,11 @@
             [cljs.compiler :as comp]
             [cljs.closure :as closure]
             [cljs.js-deps :as js-deps])
-  (:import [java.io File]
-           [java.lang ProcessBuilder Process]
-           (java.util.concurrent TimeUnit)))
+  (:import [java.io
+            File StringWriter
+            BufferedReader
+            Writer InputStreamReader IOException]
+           [java.lang ProcessBuilder]))
 
 ;; =============================================================================
 ;; Useful Utilities
@@ -236,33 +238,55 @@
             ret)))
       [] deps)))
 
+(defn- alive? [proc]
+  (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
+
+(defn- pipe [^Process proc in ^Writer out]
+  ;; we really do want system-default encoding here
+  (with-open [^java.io.Reader in (-> in InputStreamReader. BufferedReader.)]
+    (loop [buf (char-array 1024)]
+      (when (alive? proc)
+        (try
+          (let [len (.read in buf)]
+            (when-not (neg? len)
+              (.write out buf 0 len)
+              (.flush out)))
+          (catch IOException e
+            (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
+              (.printStackTrace e *err*))))
+        (recur buf)))))
+
 (defn node-module-deps
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry point. Assumes
    that the module-deps & JSONStream NPM packages are either locally or
    globally installed."
   [{:keys [file]}]
-  (let [code     (string/replace
-                   (slurp (io/resource "cljs/module_deps.js"))
-                   "JS_FILE" file)
-        proc     (-> (ProcessBuilder.
-                       (into-array
-                         ["node" "--eval" (str code)]))
-                   .start)
-        timeout? (.waitFor proc 10 TimeUnit/SECONDS)]
-    (when timeout?
-      (println "Node.js process timed out"))
-    (if (and (not (.isAlive proc))
-             (zero? (.exitValue proc)))
-      (let [is (.getInputStream proc)]
-        (into []
-          (map (fn [{:strs [file]}] file
-                 {:file file :module-type :commonjs}))
-          (butlast (json/read-str (slurp is)))))
+  (let [code (string/replace
+               (slurp (io/resource "cljs/module_deps.js"))
+               "JS_FILE" file)
+        proc (-> (ProcessBuilder.
+                   ["node" "--eval" code])
+               .start)
+        is   (.getInputStream proc)
+        iw   (StringWriter. (* 16 1024 1024))
+        es   (.getErrorStream proc)
+        ew   (StringWriter. (* 1024 1024))
+        _    (do (.start
+                   (Thread.
+                     (bound-fn [] (pipe proc is iw))))
+                 (.start
+                   (Thread.
+                     (bound-fn [] (pipe proc es ew)))))
+        err  (.waitFor proc)]
+    (if (zero? err)
+      (into []
+        (map (fn [{:strs [file]}] file
+               {:file file :module-type :commonjs}))
+        (butlast (json/read-str (str iw))))
       (do
         (when-not (.isAlive proc)
-          (let [es (.getErrorStream proc)]
-            (println (slurp es))))
+          (println (str ew)))
         []))))
 
 (comment
