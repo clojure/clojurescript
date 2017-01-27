@@ -240,10 +240,10 @@
    the module-deps package on the supplied JavaScript entry point. Assumes
    that the module-deps & JSONStream NPM packages are either locally or
    globally installed."
-  [entry]
+  [{:keys [file]}]
   (let [code (string/replace
                (slurp (io/resource "cljs/module_deps.js"))
-               "JS_FILE" entry)
+               "JS_FILE" file)
         proc (-> (ProcessBuilder.
                    (into-array
                      ["node" "--eval" (str code)]))
@@ -258,7 +258,9 @@
       [])))
 
 (comment
-  (add-package-jsons (node-module-deps "src/test/node/test.js"))
+  (add-package-jsons
+    (node-module-deps
+      {:file "src/test/node/test.js"}))
   )
 
 (defn node-inputs
@@ -267,6 +269,11 @@
    that the module-deps & JSONStream NPM packages are either locally or
    globally installed."
   [entries]
+  (add-package-jsons (vec (mapcat node-module-deps entries))))
+
+(comment
+  (node-inputs
+    [{:file "src/test/node/test.js"}])
   )
 
 (comment
