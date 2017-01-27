@@ -7,13 +7,12 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.reader
-  (:require [cljs.env :as env]
-            [cljs.analyzer :as ana]))
+  (:require [cljs.env :as env]))
 
 (defmacro add-data-readers [default-readers]
   (let [data-readers
-        (->> (get @env/*compiler* ::ana/data-readers)
+        (->> (get @env/*compiler* :cljs.analyzer/data-readers)
           (map (fn [[k v]]
-                 [(str k) `(fn [x#] (~(vary-meta v assoc ::ana/no-resolve true) x#))]))
+                 [(str k) `(fn [x#] (~(vary-meta v assoc :cljs.analyzer/no-resolve true) x#))]))
           (into {}))]
     `(do (merge ~default-readers ~data-readers))))
