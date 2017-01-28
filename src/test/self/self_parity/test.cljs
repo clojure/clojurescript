@@ -280,7 +280,8 @@
                    [cljs.clojure-alias-test]
                    [cljs.hash-map-test]
                    [cljs.syntax-quote-test]
-                   [cljs.predicates-test]))
+                   [cljs.predicates-test]
+                   [cljs.test-test]))
       (fn [{:keys [value error]}]
         (if error
           (prn error)
@@ -315,7 +316,8 @@
                'cljs.clojure-alias-test
                'cljs.hash-map-test
                'cljs.syntax-quote-test
-               'cljs.predicates-test)
+               'cljs.predicates-test
+               'cljs.test-test)
             (fn [{:keys [value error]}]
               (when error
                 (prn error)))))))))

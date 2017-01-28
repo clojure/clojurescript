@@ -364,10 +364,16 @@
 ;; File, Line, and Column Helpers
 
 (defn js-line-and-column [stack-element]
+  "Returns a 2-element vector containing the line and
+  column encoded at the end of a stack element string.
+  A line or column will be represented as NaN if not
+  parsesable."
   (let [parts (.split stack-element ":")
         cnt   (count parts)]
-    [(js/parseInt (nth parts (- cnt 2)) 10)
-     (js/parseInt (nth parts (dec cnt)) 10)]))
+    (if (> cnt 1)
+      [(js/parseInt (nth parts (- cnt 2)) 10)
+       (js/parseInt (nth parts (dec cnt)) 10)]
+      [NaN NaN])))
 
 (defn js-filename [stack-element]
   (first (.split (last (.split stack-element "/out/")) ":")))
