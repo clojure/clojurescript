@@ -219,25 +219,6 @@
    (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/watch source opts compiler-env stop))))
 
-(defn add-package-jsons
-  "EXPERIMENTAL: see node-module-deps"
-  [deps]
-  (let [checked (atom #{})]
-    (reduce
-      (fn [ret {:keys [file] :as dep}]
-        (let [f (.getParentFile (io/file file))
-              path (.getAbsolutePath f)]
-          (if-not (contains? @checked path)
-            (let [f' (io/file f "package.json")]
-              (swap! checked conj path)
-              (if (.exists f')
-                (conj ret dep
-                  {:file (.getAbsolutePath f')
-                   :module-type :commonjs})
-                (conj ret dep)))
-            (conj ret dep))))
-      [] deps)))
-
 (defn- alive? [proc]
   (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
 
@@ -259,8 +240,7 @@
 (defn node-module-deps
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry point. Assumes
-   that the module-deps & JSONStream NPM packages are either locally or
-   globally installed."
+   that the module-deps NPM package is either locally or globally installed."
   [{:keys [file]}]
   (let [code (string/replace
                (slurp (io/resource "cljs/module_deps.js"))
@@ -285,7 +265,7 @@
       (into []
         (map (fn [{:strs [file]}] file
                {:file file :module-type :commonjs}))
-        (butlast (json/read-str (str iw))))
+        (next (json/read-str (str iw))))
       (do
         (when-not (.isAlive proc)
           (println (str ew)))
@@ -295,19 +275,16 @@
   (node-module-deps
     {:file (.getAbsolutePath (io/file "src/test/node/test.js"))})
 
-  (add-package-jsons
-    (node-module-deps
-      {:file (.getAbsolutePath (io/file "src/test/node/test.js"))}))
+  (node-module-deps
+    {:file (.getAbsolutePath (io/file "src/test/node/test.js"))})
   )
 
 (defn node-inputs
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry points. Assumes
-   that the module-deps & JSONStream NPM packages are either locally or
-   globally installed."
+   that the module-deps NPM packages is either locally or globally installed."
   [entries]
-  (add-package-jsons
-    (vec (distinct (mapcat node-module-deps entries)))))
+  (into [] (distinct (mapcat node-module-deps entries))))
 
 (comment
   (node-inputs
