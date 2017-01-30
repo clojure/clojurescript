@@ -85,6 +85,8 @@ function nodeGlobalRequire(file) {
   global.__dirname = file.substring(0, file.lastIndexOf('/'));
   global.__filename = file;
   vm.runInThisContext(fs.readFileSync(file), file);
+  global.__dirname = undefined;
+  global.__filename = undefined;
   global.exports = _exports;
   global.module = _module;
 }
