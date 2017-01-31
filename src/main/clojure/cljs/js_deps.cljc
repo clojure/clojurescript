@@ -123,6 +123,7 @@ case."
   library")
   (-url [this] "The URL where this JavaScript is located. Returns nil
   when JavaScript exists in memory only.")
+  (-relative-path [this] "Relative path for this JavaScript.")
   (-provides [this] "A list of namespaces that this JavaScript provides.")
   (-requires [this] "A list of namespaces that this JavaScript requires.")
   (-source [this] "The JavaScript source string."))

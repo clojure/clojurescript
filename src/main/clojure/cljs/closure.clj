@@ -319,6 +319,7 @@
   (-foreign? [this] false)
   (-closure-lib? [this] false)
   (-url [this] nil)
+  (-relative-path [this] nil)
   (-provides [this] (:provides (deps/parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (deps/parse-js-ns (string/split-lines this))))
   (-source [this] this)
@@ -328,6 +329,9 @@
   (-closure-lib? [this] (:closure-lib this))
   (-url [this] (or (:url this)
                    (deps/to-url (:file this))))
+  (-relative-path [this] (let [file (io/as-file (:file this))]
+                           (if (and file (not (.isAbsolute file)))
+                             (:file this))))
   (-provides [this] (map name (:provides this)))
   (-requires [this] (map name (:requires this)))
   (-source [this] (if-let [s (:source this)]
@@ -339,6 +343,7 @@
   (-foreign? [this] foreign)
   (-closure-lib? [this] (:closure-lib this))
   (-url [this] url)
+  (-relative-path [this] nil)
   (-provides [this] provides)
   (-requires [this] requires)
   (-source [this]
@@ -1500,7 +1505,8 @@
        url
        (cond
          (deps/-closure-lib? js) (lib-rel-path js)
-         (deps/-foreign? js) (util/relative-name url)
+         (deps/-foreign? js) (or (deps/-relative-path js)
+                                 (util/relative-name url))
          :else (path-from-jarfile url))
 
        (string? js)
