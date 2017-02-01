@@ -1351,9 +1351,7 @@
         (cljs.analyzer/warning :undeclared-protocol-symbol env {:protocol p})))))
 
 (core/defn- resolve-var [env sym]
-  (core/let [ret (core/-> (dissoc env :locals)
-                   (cljs.analyzer/resolve-var sym)
-                   :name)]
+  (core/let [ret (:name (cljs.analyzer/resolve-var env sym))]
     (core/assert ret (core/str "Can't resolve: " sym))
     ret))
 

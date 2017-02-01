@@ -155,43 +155,65 @@
         `(cljs.user/foo ~(tags/->JSValue []))
         '(cljs.user/foo (make-array 0))))))
 
-;; CLJS-1607
-;; Commented out this test - too hard coded to unnecessary details - David
-
-#_(deftest test-cljs-1607
-  (let [define-Foo #(assoc-in % [::ana/namespaces 'cljs.user :defs 'Foo]
-                     {:ns 'cljs.user
-                      :name 'cljs.user/Foo
-                      :protocol-symbol true
-                      :protocol-info {:methods '{foo [[this]]}}
-                      :protocol 'cljs.user/Foo})
-        define-foo #(assoc-in % [::ana/namespaces 'cljs.user :defs 'foo]
-                     {:ns 'cljs.user
-                      :name 'cljs.user/foo
-                      :fn-var true
-                      :method-params '([x])
-                      :protocol 'cljs.user/Foo})
-        aenv-with-foo (-> aenv define-foo define-Foo)
-        cenv-with-foo (-> @cenv define-foo define-Foo)]
-    (binding [ana/*cljs-static-fns* true]
-      (are [form]
-        (empty?
-          (capture-warnings
-            (env/with-compiler-env (atom cenv-with-foo)
-              (with-out-str
-                (comp/emit
-                  (ana/analyze aenv-with-foo form))))))
-        '(specify! []
-           cljs.user/Foo
-           (cljs.user/foo [this]
-             :none)
-           Object
-           (bar [this]
-             (cljs.user/foo this)))))))
-
 (deftest test-cljs-1643
   (is (thrown-with-msg? Exception #"is not a valid ClojureScript constant."
         (comp/emit-constant clojure.core/inc))))
+
+(def test-cljs-1925-code
+  '(do
+     (defprotocol X
+       (x [x]))
+
+     (defprotocol Y
+       (y [y]))
+
+     (extend-protocol X
+       js/RegExp
+       (x [x]
+         (y x)))
+
+     (extend-protocol Y
+       js/RegExp
+       (y [y]
+         :y))))
+
+(def specify-test-code
+  '(do
+     (defprotocol IBug
+       (bug [this other] "A sample protocol"))
+
+     (defn MyBug [])
+     (specify! (.-prototype MyBug)
+       IBug
+       (bug [this other]
+         "bug")
+       Object
+       (foo [this]
+         (bug this 3)))))
+
+(deftest test-cljs-1925
+  (let [opts {:static-fns true}
+        cenv (env/default-compiler-env opts)]
+    (is (= [] (binding [ana/*unchecked-if* false
+                        ana/*cljs-static-fns* true]
+                (capture-warnings
+                  (env/with-compiler-env cenv
+                    (with-out-str
+                      (comp/emit
+                        (comp/with-core-cljs
+                          opts
+                          (fn [] (ana/analyze aenv test-cljs-1925-code nil opts)))))))))))
+  (let [opts {:static-fns true}
+        cenv (env/default-compiler-env opts)]
+    (is (= [] (binding [ana/*unchecked-if* false
+                        ana/*cljs-static-fns* true]
+                (capture-warnings
+                  (env/with-compiler-env cenv
+                    (with-out-str
+                      (comp/emit
+                        (comp/with-core-cljs
+                          opts
+                          (fn [] (ana/analyze aenv specify-test-code nil opts))))))))))))
 
 ;; CLJS-1225
 
