@@ -1526,10 +1526,7 @@
     (if (.endsWith lib-path ".js")
       (util/get-name url)
       (let [path (util/path url)]
-        (string/replace
-          path
-          (str (io/file (System/getProperty "user.dir") lib-path) File/separator)
-          "")))))
+        (subs path (+ (.lastIndexOf path lib-path) (.length lib-path)))))))
 
 (defn ^String rel-output-path
   "Given an IJavaScript which is either in memory, in a jar file,
