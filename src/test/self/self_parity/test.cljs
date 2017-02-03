@@ -283,7 +283,7 @@
                    [foo.ns-shadow-test]
                    [cljs.top-level]
                    [cljs.reducers-test]
-                   #_[cljs.keyword-test]
+                   [cljs.keyword-test]
                    [cljs.import-test]
                    [cljs.ns-test.foo]
                    [cljs.pprint]
@@ -318,7 +318,7 @@
                'cljs.binding-test
                'cljs.macro-test
                'cljs.top-level
-               #_'cljs.keyword-test
+               'cljs.keyword-test
                #_'cljs.ns-test
                'cljs.ns-test.foo
                'foo.ns-shadow-test

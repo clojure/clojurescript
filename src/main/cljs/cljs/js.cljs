@@ -177,7 +177,10 @@
 
 (defn- current-alias-map
   []
-  (get-in @env/*compiler* [:cljs.analyzer/namespaces ana/*cljs-ns* :requires]))
+  (->> (merge (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :requires])
+         (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :require-macros]))
+    (remove (fn [[k v]] (= k v)))
+    (into {})))
 
 ;; -----------------------------------------------------------------------------
 ;; Analyze
