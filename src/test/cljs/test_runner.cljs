@@ -39,7 +39,8 @@
             [cljs.hash-map-test]
             [cljs.predicates-test]
             [cljs.tagged-literals-test]
-            [cljs.test-test]))
+            [cljs.test-test]
+            [static.core-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -76,4 +77,5 @@
   'cljs.predicates-test
   'cljs.syntax-quote-test
   'cljs.tagged-literals-test
-  'cljs.test-test)
+  'cljs.test-test
+  'static.core-test)

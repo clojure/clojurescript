@@ -663,7 +663,7 @@
                 (fn [res]
                   (if (:error res)
                     (cb res)
-                    (let [src (str "goog.provide(\"" (munge (:name ast)) "\")")]
+                    (let [src (str "goog.provide(\"" (comp/munge (:name ast)) "\")")]
                       (cb {:value (*eval-fn* {:source src})})))))
               (let [src (with-out-str (comp/emit ast))]
                 (cb {:value (*eval-fn* {:source src})})))))))))
@@ -873,7 +873,7 @@
                       (if (#{:ns :ns*} (:op ast))
                         (do
                           (.append sb
-                            (with-out-str (comp/emitln (str "goog.provide(\"" (munge (:name ast)) "\");"))))
+                            (with-out-str (comp/emitln (str "goog.provide(\"" (comp/munge (:name ast)) "\");"))))
                           (ns-side-effects true bound-vars aenv ast opts
                             (fn [res]
                               (if (:error res)

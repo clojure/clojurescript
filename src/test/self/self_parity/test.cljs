@@ -281,7 +281,8 @@
                    [cljs.hash-map-test]
                    [cljs.syntax-quote-test]
                    [cljs.predicates-test]
-                   [cljs.test-test]))
+                   [cljs.test-test]
+                   [static.core-test]))
       (fn [{:keys [value error]}]
         (if error
           (prn error)
@@ -317,7 +318,8 @@
                'cljs.hash-map-test
                'cljs.syntax-quote-test
                'cljs.predicates-test
-               'cljs.test-test)
+               'cljs.test-test
+               'static.core-test)
             (fn [{:keys [value error]}]
               (when error
                 (prn error)))))))))
