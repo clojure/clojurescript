@@ -1902,6 +1902,7 @@
                 (into []
                   (comp
                     (filter #(.endsWith (.getName ^File %) ".js"))
+                    (filter #(not (.isHidden ^File %)))
                     (map
                       (fn [^File f]
                         (let [p  (.getPath f)
