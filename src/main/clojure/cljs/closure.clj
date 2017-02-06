@@ -97,7 +97,6 @@
 
 (def warning-types
   {:access-controls DiagnosticGroups/ACCESS_CONTROLS
-   :access-controls-const DiagnosticGroups/ACCESS_CONTROLS_CONST
    :ambiguous-function-decl DiagnosticGroups/AMBIGUOUS_FUNCTION_DECL
    :analyzer-checks DiagnosticGroups/ANALYZER_CHECKS
    :check-eventful-object-disposal DiagnosticGroups/CHECK_EVENTFUL_OBJECT_DISPOSAL
@@ -117,8 +116,6 @@
    :duplicate-vars DiagnosticGroups/DUPLICATE_VARS
    :es3 DiagnosticGroups/ES3
    :es5-strict DiagnosticGroups/ES5_STRICT
-   :es5-strict-uncommon DiagnosticGroups/ES5_STRICT_UNCOMMON
-   :es5-strict-reflection DiagnosticGroups/ES5_STRICT_REFLECTION
    :externs-validation DiagnosticGroups/EXTERNS_VALIDATION
    :extra-require DiagnosticGroups/EXTRA_REQUIRE
    :fileoverview-jsdoc DiagnosticGroups/FILEOVERVIEW_JSDOC
@@ -142,7 +139,6 @@
    :non-standard-jsdoc DiagnosticGroups/NON_STANDARD_JSDOC
    :report-unknown-types DiagnosticGroups/REPORT_UNKNOWN_TYPES
    :strict-missing-require DiagnosticGroups/STRICT_MISSING_REQUIRE
-   :strict-module-checks DiagnosticGroups/STRICT_MODULE_CHECKS
    :strict-module-dep-check DiagnosticGroups/STRICT_MODULE_DEP_CHECK
    :strict-requires DiagnosticGroups/STRICT_REQUIRES
    :suspicious-code DiagnosticGroups/SUSPICIOUS_CODE
