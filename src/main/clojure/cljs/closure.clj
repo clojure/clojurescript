@@ -97,29 +97,65 @@
 
 (def warning-types
   {:access-controls DiagnosticGroups/ACCESS_CONTROLS
+   :access-controls-const DiagnosticGroups/ACCESS_CONTROLS_CONST
    :ambiguous-function-decl DiagnosticGroups/AMBIGUOUS_FUNCTION_DECL
-   :debugger-statement-present DiagnosticGroups/DEBUGGER_STATEMENT_PRESENT
+   :analyzer-checks DiagnosticGroups/ANALYZER_CHECKS
+   :check-eventful-object-disposal DiagnosticGroups/CHECK_EVENTFUL_OBJECT_DISPOSAL
    :check-regexp DiagnosticGroups/CHECK_REGEXP
    :check-types DiagnosticGroups/CHECK_TYPES
    :check-useless-code DiagnosticGroups/CHECK_USELESS_CODE
    :check-variables DiagnosticGroups/CHECK_VARIABLES
+   :closure-dep-method-usage-checks DiagnosticGroups/CLOSURE_DEP_METHOD_USAGE_CHECKS
+   :common-js-module-load DiagnosticGroups/COMMON_JS_MODULE_LOAD
+   :conformance-violations DiagnosticGroups/CONFORMANCE_VIOLATIONS
    :const DiagnosticGroups/CONST
    :constant-property DiagnosticGroups/CONSTANT_PROPERTY
+   :debugger-statement-present DiagnosticGroups/DEBUGGER_STATEMENT_PRESENT
    :deprecated DiagnosticGroups/DEPRECATED
+   :deprecated-annotations DiagnosticGroups/DEPRECATED_ANNOTATIONS
    :duplicate-message DiagnosticGroups/DUPLICATE_MESSAGE
+   :duplicate-vars DiagnosticGroups/DUPLICATE_VARS
+   :es3 DiagnosticGroups/ES3
    :es5-strict DiagnosticGroups/ES5_STRICT
+   :es5-strict-uncommon DiagnosticGroups/ES5_STRICT_UNCOMMON
+   :es5-strict-reflection DiagnosticGroups/ES5_STRICT_REFLECTION
    :externs-validation DiagnosticGroups/EXTERNS_VALIDATION
+   :extra-require DiagnosticGroups/EXTRA_REQUIRE
    :fileoverview-jsdoc DiagnosticGroups/FILEOVERVIEW_JSDOC
+   :function-params DiagnosticGroups/FUNCTION_PARAMS
    :global-this DiagnosticGroups/GLOBAL_THIS
+   :inferred-const-checks DiagnosticGroups/INFERRED_CONST_CHECKS
    :internet-explorer-checks DiagnosticGroups/INTERNET_EXPLORER_CHECKS
    :invalid-casts DiagnosticGroups/INVALID_CASTS
+   :j2cl-checks DiagnosticGroups/J2CL_CHECKS
+   :late-provide DiagnosticGroups/LATE_PROVIDE
+   :lint-checks DiagnosticGroups/LINT_CHECKS
+   :message-descriptions DiagnosticGroups/MESSAGE_DESCRIPTIONS
+   :misplaced-type-annotation DiagnosticGroups/MISPLACED_TYPE_ANNOTATION
+   :missing-getcssname DiagnosticGroups/MISSING_GETCSSNAME
+   :missing-override DiagnosticGroups/MISSING_OVERRIDE
+   :missing-polyfill DiagnosticGroups/MISSING_POLYFILL
    :missing-properties DiagnosticGroups/MISSING_PROPERTIES
+   :missing-provide DiagnosticGroups/MISSING_PROVIDE
+   :missing-require DiagnosticGroups/MISSING_REQUIRE
+   :missing-return DiagnosticGroups/MISSING_RETURN
    :non-standard-jsdoc DiagnosticGroups/NON_STANDARD_JSDOC
+   :report-unknown-types DiagnosticGroups/REPORT_UNKNOWN_TYPES
+   :strict-missing-require DiagnosticGroups/STRICT_MISSING_REQUIRE
+   :strict-module-checks DiagnosticGroups/STRICT_MODULE_CHECKS
    :strict-module-dep-check DiagnosticGroups/STRICT_MODULE_DEP_CHECK
+   :strict-requires DiagnosticGroups/STRICT_REQUIRES
+   :suspicious-code DiagnosticGroups/SUSPICIOUS_CODE
    :tweaks DiagnosticGroups/TWEAKS
+   :type-invalidation DiagnosticGroups/TYPE_INVALIDATION
    :undefined-names DiagnosticGroups/UNDEFINED_NAMES
    :undefined-variables DiagnosticGroups/UNDEFINED_VARIABLES
+   :underscore DiagnosticGroups/UNDERSCORE
    :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
+   :unused-local-variable DiagnosticGroups/UNUSED_LOCAL_VARIABLE
+   :unused-private-property DiagnosticGroups/UNUSED_PRIVATE_PROPERTY
+   :use-of-goog-base DiagnosticGroups/USE_OF_GOOG_BASE
+   :violated-module-dep DiagnosticGroups/VIOLATED_MODULE_DEP
    :visiblity DiagnosticGroups/VISIBILITY})
 
 (def known-opts
