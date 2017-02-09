@@ -2941,6 +2941,12 @@
                :cljs ^boolean (.isMacro mvar)))
       mvar)))
 
+#?(:cljs
+   (let [cached-var (delay (get (ns-interns* 'cljs.spec) 'macroexpand-check))]
+     (defn get-macroexpand-check-var []
+       (when (some? (find-ns-obj 'cljs.spec))
+         @cached-var))))
+
 (defn macroexpand-1*
   [env form]
   (let [op (first form)]
@@ -2952,7 +2958,7 @@
                :cljs [do])
             (let [mchk  #?(:clj  (some-> (find-ns 'clojure.spec)
                                    (ns-resolve 'macroexpand-check))
-                           :cljs (get (ns-interns* 'cljs.spec) 'macroexpand-check))
+                           :cljs (get-macroexpand-check-var))
                   _     (when (some? mchk)
                           (mchk mac-var (next form)))
                   form' (try
