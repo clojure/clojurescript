@@ -475,7 +475,7 @@
                              (cb res)
                              (do
                                (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
-                               (load-macros bound-vars :require-macros require-macros reloads reloads opts
+                               (load-macros bound-vars :require-macros require-macros reload reloads opts
                                  (fn [res]
                                    (if (:error res)
                                      (cb res)
