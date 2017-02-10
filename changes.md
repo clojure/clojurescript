@@ -1,6 +1,6 @@
 ## 1.9.473
 
-## Fixes
+### Fixes
 * CLJS-1931: Closure Compiler {{--generate_exports}} flag not supported
 * CLJS-1934: Self-host: require-macros :reload / :reload-all fails
 * CLJS-1932: Self-host: Perf regression macroexpand-check
