@@ -1,3 +1,20 @@
+## 1.9.473
+
+## Fixes
+* CLJS-1931: Closure Compiler {{--generate_exports}} flag not supported
+* CLJS-1934: Self-host: require-macros :reload / :reload-all fails
+* CLJS-1932: Self-host: Perf regression macroexpand-check
+* CLJS-1930: Master broken wrt static field: ES5_STRICT_UNCOMMON
+* CLJS-1929: When expanding libs don't include Hidden files
+* CLJS-1905: Self-host: Stacktraces for script/test-self-parity
+* CLJS-1795: Support more options in the `:closure-warnings` compiler option
+* CLJS-1922: Use :file as relative output path for foreign-libs
+* CLJS-1831: Self-host: Improperly munge ns names
+* CLJS-1925: Use of undeclared Var cljs.user/RegExp when extending protocol for RegExp
+* CLJS-1920: cljs.build.api/node-inputs: package.json files are only added if module entries are top-leve
+* CLJS-1916: __dirname and __filename are not defined when compiling for Node.js with optimizations :none
+* CLJS-1915: cljs.test: Index out of bounds for stack element w/o line/column
+
 ## 1.9.456
 
 ### Enhancements
