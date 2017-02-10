@@ -163,7 +163,7 @@
     :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
     :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
-    :browser-repl :cache-analysis-format :infer-externs})
+    :browser-repl :cache-analysis-format :infer-externs :closure-generate-exports})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -236,6 +236,10 @@
   (when (contains? opts :closure-module-roots)
     (. compiler-options
       (setModuleRoots (:closure-module-roots opts))))
+
+  (when (contains? opts :closure-generate-exports)
+    (. compiler-options
+      (setGenerateExports (:closure-generate-exports opts))))
 
   (. compiler-options
     (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
