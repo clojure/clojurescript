@@ -1827,7 +1827,7 @@
         {:env env :op :set! :form form :target targetexpr :val valexpr
          :children [targetexpr valexpr]})))))
 
-(declare analyze-file)
+#?(:clj (declare analyze-file))
 
 #?(:clj
    (defn locate-src
@@ -2167,7 +2167,7 @@
     {:import  import-map
      :require import-map}))
 
-(declare parse-ns)
+#?(:clj (declare parse-ns))
 
 (defn macro-autoload-ns?
   "Given a spec form check whether the spec namespace requires a macro file
