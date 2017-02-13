@@ -1035,7 +1035,7 @@
   ([x] `(- ~x)))
 
 (core/defmacro ^::ana/numeric unchecked-remainder-int
-  ([x n] `(mod ~x ~n)))
+  ([x n] `(core/mod ~x ~n)))
 
 (core/defmacro ^::ana/numeric unchecked-subtract
   ([& xs] `(- ~@xs)))
