@@ -1048,9 +1048,10 @@
                  (if (= :nodejs target)
                    ;; under node.js we load foreign libs globally
                    (let [{:keys [js-dependency-index options]} @env/*compiler*
-                         ijs-url (get-in js-dependency-index [(name lib) :url])]
+                         ijs (get js-dependency-index (name lib))]
                      (emitln "cljs.core.load_file(\""
-                       (str (io/file (util/output-directory options) (util/relative-name ijs-url)))
+                       (str (io/file (util/output-directory options) (or (deps/-relative-path ijs)
+                                                                         (util/relative-name (:url ijs)))))
                        "\");"))
                    (emitln "goog.require('" (munge lib) "');"))))])
 
