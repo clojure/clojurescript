@@ -14,6 +14,7 @@
   #?(:clj (:require [cljs.util :as util]
                     [clojure.java.io :as io]
                     [clojure.string :as string]
+                    [clojure.set :as set]
                     [clojure.tools.reader :as reader]
                     [cljs.env :as env :refer [ensure]]
                     [cljs.tagged-literals :as tags]
@@ -1446,13 +1447,28 @@
    (defn cljs-files-in
      "Return a sequence of all .cljs and .cljc files in the given directory."
      [dir]
-     (filter
-       #(let [name (.getName ^File %)]
-         (and (or (.endsWith name ".cljs")
-                  (.endsWith name ".cljc"))
-           (not= \. (first name))
-           (not (contains? cljs-reserved-file-names name))))
-       (file-seq dir))))
+     (map io/file
+       (reduce
+         (fn [m x]
+           (if (.endsWith ^String x ".cljs")
+             (cond-> (conj m x)
+               (contains? m (str (subs x 0 (dec (count x))) "c"))
+               (set/difference #{(str (subs x 0 (dec (count x))) "c")}))
+             ;; ends with .cljc
+             (cond-> m
+               (not (contains? m (str (subs x 0 (dec (count x))) "s")))
+               (conj x))))
+         #{}
+         (into []
+           (comp
+             (filter
+               #(let [name (.getName ^File %)]
+                  (and (or (.endsWith name ".cljs")
+                         (.endsWith name ".cljc"))
+                    (not= \. (first name))
+                    (not (contains? cljs-reserved-file-names name)))))
+             (map #(.getPath ^File %)))
+           (file-seq dir))))))
 
 #?(:clj
    (defn compile-root
