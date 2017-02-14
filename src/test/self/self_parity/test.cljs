@@ -171,10 +171,7 @@
   [name macros]
   ((if macros
      #{'cljs.core
-       'cljs.pprint
-       'cljs.env.macros
-       'cljs.analyzer.macros
-       'cljs.compiler.macros}
+       'cljs.pprint}
      #{'goog.object
        'goog.string
        'goog.string.StringBuffer

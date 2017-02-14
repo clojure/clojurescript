@@ -7,11 +7,10 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.compiler.macros
-  (:refer-clojure :exclude [let])
-  (:require [cljs.core :refer [let]]))
+  (:refer-clojure :exclude [let]))
 
 (defmacro emit-wrap [env & body]
-  `(let [env# ~env]
+  `(cljs.core/let [env# ~env]
      (when (= :return (:context env#)) (cljs.compiler/emits "return "))
      ~@body
      (when-not (= :expr (:context env#)) (cljs.compiler/emitln ";"))))

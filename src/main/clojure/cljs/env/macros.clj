@@ -7,8 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.env.macros
-  (:refer-clojure :exclude [binding ensure])
-  (:require [cljs.core :refer [binding]]))
+  (:refer-clojure :exclude [binding ensure]))
 
 (defmacro with-compiler-env
    "Evaluates [body] with [env] bound as the value of the `*compiler*` var in
@@ -23,7 +22,7 @@
                    (js/Error.
                      (str "Compiler environment must be a map or atom containing a map, not "
                        (type env#)))))]
-      (binding [cljs.env/*compiler* env#]
+      (cljs.core/binding [cljs.env/*compiler* env#]
         ~@body)))
 
 (defmacro ensure
