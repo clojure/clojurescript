@@ -723,7 +723,7 @@
               (loop [ret x i 0]
                 (if (< i (count specs))
                   (let [nret (conform* (specs i) ret)]
-                    (if (invalid? ret)
+                    (if (invalid? nret)
                       ::invalid
                       ;;propagate conformed values
                       (recur nret (inc i))))
