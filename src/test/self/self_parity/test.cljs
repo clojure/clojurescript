@@ -170,15 +170,13 @@
   technical issues)."
   [name macros]
   ((if macros
-     #{'cljs.core
-       'cljs.pprint}
+     #{'cljs.core}
      #{'goog.object
        'goog.string
        'goog.string.StringBuffer
        'goog.array
        'cljs.core
        'cljs.env
-       'cljs.pprint
        'cljs.tools.reader
        'clojure.walk}) name))
 
@@ -288,8 +286,8 @@
                    #_[cljs.keyword-test]
                    [cljs.import-test]
                    [cljs.ns-test.foo]
-                   #_[cljs.pprint]
-                   #_[cljs.pprint-test]
+                   [cljs.pprint]
+                   [cljs.pprint-test]
                    [cljs.spec-test]
                    #_[cljs.spec.test-test]
                    [cljs.clojure-alias-test]
@@ -325,8 +323,8 @@
                'cljs.ns-test.foo
                'foo.ns-shadow-test
                'cljs.import-test
-               #_'cljs.pprint
-               #_'cljs.pprint-test
+               'cljs.pprint
+               'cljs.pprint-test
                'cljs.spec-test
                #_'cljs.spec.test-test
                'cljs.clojure-alias-test

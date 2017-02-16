@@ -7,8 +7,9 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.pprint
-  (:refer-clojure :exclude [deftype])
-  (:require [clojure.walk :as walk]))
+  (:refer-clojure :exclude [deftype #?(:cljs macroexpand)])
+  (:require [clojure.walk :as walk]
+            #?(:cljs [cljs.analyzer :as ana])))
 
 
 ;; required the following changes:
@@ -78,10 +79,19 @@
                (cljs.pprint/end-block cljs.core/*out*))))
          nil)))
 
-(defn- pll-mod-body [var-sym body]
+#?(:cljs
+   (defn macroexpand [env form]
+     (loop [form form
+            form' (ana/macroexpand-1 env form)]
+       (if-not (identical? form form')
+         (recur form' (ana/macroexpand-1 env form'))
+         form'))))
+
+(defn- pll-mod-body [env var-sym body]
   (letfn [(inner [form]
                  (if (seq? form)
-                   (let [form (macroexpand form)]
+                   (let [form #?(:clj  (macroexpand form)
+                                 :cljs (macroexpand env form))]
                      (condp = (first form)
                        'loop* form
                        'recur (concat `(recur (inc ~var-sym)) (rest form))
@@ -94,7 +104,7 @@
   for use in pretty-printer dispatch functions."
   [bindings & body]
   (let [count-var (gensym "length-count")
-        mod-body (pll-mod-body count-var body)]
+        mod-body (pll-mod-body &env count-var body)]
     `(loop ~(apply vector count-var 0 bindings)
        (if (or (not cljs.core/*print-length*) (< ~count-var cljs.core/*print-length*))
          (do ~@mod-body)

@@ -7,15 +7,15 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.pprint-test
-  (:require [cljs.test :refer [deftest is]]))
+  (:require cljs.test))
 
 (defmacro simple-tests [name & test-pairs]
-  `(deftest ~name
+  `(cljs.test/deftest ~name
      ~@(for [[x y] (partition 2 test-pairs)]
          `(cond
-            (cljs.core/regexp? ~y) (is (.exec ~y ~x))
-            (cljs.core/string? ~y) (is (= ~x ~y))
-            :else (is (= ~x ~y))))))
+            (cljs.core/regexp? ~y) (cljs.test/is (.exec ~y ~x))
+            (cljs.core/string? ~y) (cljs.test/is (= ~x ~y))
+            :else (cljs.test/is (= ~x ~y))))))
 
 (defmacro code-block
   "Read a string then print it with code-dispatch and succeed if it comes out the same"
@@ -28,4 +28,3 @@
                       (cljs.pprint/with-pprint-dispatch cljs.pprint/code-dispatch
                                             (cljs.pprint/pprint (cljs.reader/read-string ~block)))))
                   (clojure.string/split-lines ~block)]))))
-
