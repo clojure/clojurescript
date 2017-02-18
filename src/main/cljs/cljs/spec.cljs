@@ -803,12 +803,6 @@
          check? #(valid? @spec %)
          kfn (c/or kfn (fn [i v] i))
          addcv (fn [ret i v cv] (conj ret cv))
-         [kindfn kindform] (cond
-                             (map? kind)  [map? `map?]
-                             (vector? kind)  [vector? `vector?]
-                             (list? kind)  [list? `list?]
-                             (set? kind) [set? `set?]
-                             :else [seqable? `seqable?])
          cfns (fn [x]
                 ;;returns a tuple of [init add complete] fns
                 (cond
