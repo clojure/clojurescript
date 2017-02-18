@@ -795,7 +795,7 @@
   ([form pred {gen-into :into
                :keys [kind ::kind-form count max-count min-count distinct gen-max ::kfn ::cpred
                       conform-keys ::conform-all]
-               :or {gen-max 20, gen-into []}
+               :or {gen-max 20}
                :as opts}
     gfn]
    (let [conform-into gen-into

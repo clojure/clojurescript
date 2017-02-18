@@ -100,6 +100,9 @@
   (is (= :b (s/conform ::multi :b)))
   (is (= :a (s/conform ::multi :a))))
 
+(deftest test-cljs-1944
+  (is (not-empty (s/exercise (s/coll-of string? :kind set?)))))
+
 ;; Copied from Clojure spec tests
 
 (def even-count? #(even? (count %)))
