@@ -1053,7 +1053,12 @@
                        (str (io/file (util/output-directory options) (or (deps/-relative-path ijs)
                                                                          (util/relative-name (:url ijs)))))
                        "\");"))
-                   (emitln "goog.require('" (munge lib) "');"))))])
+                   (emitln "goog.require('" (munge lib) "');"))))]
+            :cljs
+            [(and (ana/foreign-dep? lib)
+                  (when-let [{:keys [optimizations]} (get @env/*compiler* :options)]
+                    (not (keyword-identical? optimizations :none))))
+             nil])
 
         (or (-> libs meta :reload)
             (= (get reloads lib) :reload))
