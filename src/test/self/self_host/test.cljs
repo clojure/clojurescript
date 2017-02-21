@@ -863,6 +863,20 @@
           (is (false? (:fn-var (var-ast @st 'bar.core$macros/add))))
           (inc! l))))))
 
+(deftest test-cljs-1949
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 1 done)]
+      (cljs/eval-str
+        st
+        "(.catch (js/Promise. #(%2 \"x\")) #(println %))"
+        nil
+        {:context :expr
+         :eval    node-eval}
+        (fn [{:keys [error] :as m}]
+          (is (nil? error))
+          (inc! l))))))
+
 (defn -main [& args]
   (run-tests))
 

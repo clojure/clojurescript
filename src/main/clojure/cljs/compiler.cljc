@@ -109,7 +109,7 @@
            ss (map rf (string/split ss #"\."))
            ss (string/join "." ss)
            ms #?(:clj (clojure.lang.Compiler/munge ss)
-                 :cljs (cljs.core/munge ss))]
+                 :cljs (cljs.core/munge-str ss))]
        (if (symbol? s)
          (symbol ms)
          ms)))))
