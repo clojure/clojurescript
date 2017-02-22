@@ -779,7 +779,7 @@
              (let ~(vec (interleave bs gs))
                ~@body)))))))
 
-(def #^:private fast-path-protocols
+(def ^:private fast-path-protocols
   "protocol fqn -> [partition number, bit]"
   (zipmap (map #(symbol "cljs.core" (core/str %))
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
@@ -797,7 +797,7 @@
                              :cljs (core/* 2 b))]))
                    [0 1])))
 
-(def #^:private fast-path-protocol-partitions-count
+(def ^:private fast-path-protocol-partitions-count
   "total number of partitions"
   (core/let [c (count fast-path-protocols)
              m (core/mod c 32)]
@@ -1227,7 +1227,7 @@
               (.replace \/ \$))
     "$"))
 
-(def #^:private base-type
+(def ^:private base-type
      {nil "null"
       'object "object"
       'string "string"
@@ -1237,7 +1237,7 @@
       'boolean "boolean"
       'default "_"})
 
-(def #^:private js-base-type
+(def ^:private js-base-type
      {'js/Boolean "boolean"
       'js/String "string"
       'js/Array "array"
@@ -2644,7 +2644,7 @@
          (~print-fn (str ~bs-str ", " ~expr-str ", "
                       ~iterations " runs, " elapsed# " msecs"))))))
 
-(def #^:private cs (into [] (map (comp gensym core/str core/char) (range 97 118))))
+(def ^:private cs (into [] (map (comp gensym core/str core/char) (range 97 118))))
 
 (core/defn- gen-apply-to-helper
   ([] (gen-apply-to-helper 1))
