@@ -615,3 +615,7 @@
 (deftest test-cljs-1809
   (is (= (into) []))
   (is (= (into [1 2]) [1 2])))
+
+(deftest test-cljs-1951
+  (is (= () (interleave)))
+  (is (= '(1 2 3) (interleave [1 2 3]))))
