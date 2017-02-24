@@ -5,3 +5,5 @@ rm -rf compilation
 rm -rf lib
 rm -rf target
 rm -rf builds
+rm -rf clojure
+rm -rf out

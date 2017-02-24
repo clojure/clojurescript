@@ -61,6 +61,7 @@
               JSModule JSModuleGraph SourceMap ProcessCommonJSModules
               AbstractCompiler TransformAMDToCJSModule
               ProcessEs6Modules CompilerInput]
+           [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult]
@@ -199,8 +200,10 @@
 (defn set-options
   "TODO: Add any other options that we would like to support."
   [opts ^CompilerOptions compiler-options]
+  (.setModuleResolutionMode compiler-options ModuleLoader$ResolutionMode/NODE)
+
   (when (contains? opts :pretty-print)
-    (set! (.prettyPrint compiler-options) (:pretty-print opts)))
+    (.setPrettyPrint compiler-options (:pretty-print opts)))
 
   (when (contains? opts :pseudo-names)
     (set! (.generatePseudoNames compiler-options) (:pseudo-names opts)))
