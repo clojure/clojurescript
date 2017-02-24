@@ -1,3 +1,25 @@
+## 1.9.493
+
+### Fixes
+* CLJS-1948: Possible race condition in compiler w/ parallel-build true
+* CLJS-1941: `cljs.compiler/cljs-files-in` shouldn't return `.cljc` files if a `.cljs` file exists for the namespace
+* CLJS-1941: `cljs.compiler/cljs-files-in` shouldn't return `.cljc` files if a `.cljs` file exists for the namespace
+* CLJS-1940: Undeclared var warning when invoking a protocol method on a `js` interop form
+* CLJS-1951: Missing 0 and 1 arity versions of interleave
+* CLJS-1952: Bump Closure Compiler to Feb 2017 release
+* CLJS-1937: Self-host: undeclared cljs.core$macros/mod when compiling cljs/core.cljs
+* CLJS-1936: cljs.analyzer declares vars which are only used in Clojure
+* CLJS-1949: Self-host: cljs.compiler/munge doesn't preserve JVM compiler semantics
+* CLJS-1950: Eliminate instances of #^
+* CLJS-1943: Self-host: `cljs.pprint`'s macros can't be compiled
+* CLJS-1945: cljs.spec/every-impl kind-fn kind-form dead code
+* CLJS-1944: Can't spec generate non-vector collections
+* CLJS-1946: Self-hosted: don't emit `goog.require` calls for foreign libs if optimizations different than `:none`
+* CLJS-1636: Mark some symbols in core macros ns as private
+* CLJS-1939: Fix Node load_file call for foreign-deps
+* CLJS-1942: Self-host: `cljs.env.macros` and `cljs.analyzer.macros` can't be loaded
+* CLJS-1935: When calling cljs.spec/valid?, subsequent predicates of cljs.spec/and are evaluated even when early predicate is unsatisfied
+
 ## 1.9.473
 
 ### Fixes
