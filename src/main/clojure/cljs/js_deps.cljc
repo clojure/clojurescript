@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.js-deps
-  (:require [clojure.java.io :as io]
+  (:require [cljs.util :refer [distinct-by]]
+            [clojure.java.io :as io]
             [clojure.string :as string])
   (:import [java.io File]
            [java.net URL URLClassLoader]
@@ -194,7 +195,7 @@ case."
   [coll]
   (let [state (build-index (map pack-string coll))]
     (map unpack-string
-      (distinct
+      (distinct-by :provides
         (:order (reduce dependency-order-visit (assoc state :order []) (keys state)))))))
 
 
