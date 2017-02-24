@@ -279,6 +279,20 @@
                     xs seen)))]
      (step coll #{}))))
 
+(defn distinct-merge-by
+  [f & xss]
+  (let [xf (map (fn [x]
+                  [(f x) x]))]
+    (vals (apply merge-with
+            (fn [a b]
+              (merge-with
+                (fn [a b]
+                  (cond-> a
+                    (sequential? a)
+                    (into b)))
+                a b))
+            (map #(into {} xf %) xss)))))
+
 (defn content-sha [^String s]
   (let [digest (MessageDigest/getInstance "SHA-1")]
     (.reset digest)

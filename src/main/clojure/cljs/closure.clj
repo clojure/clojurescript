@@ -47,7 +47,9 @@
             [clojure.data.json :as json]
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers])
-  (:import [java.io File BufferedInputStream StringWriter]
+  (:import [java.lang ProcessBuilder]
+           [java.io File BufferedInputStream BufferedReader
+            Writer InputStreamReader IOException StringWriter]
            [java.net URL]
            [java.util.logging Level]
            [java.util List Random]
@@ -342,7 +344,6 @@
     (doseq [next (seq warnings)]
       (println "WARNING:" (.toString ^JSError next)))))
 
-
 ;; Protocols for IJavaScript and Compilable
 ;; ========================================
 
@@ -353,7 +354,7 @@
   (-source-map [this] "Return the CLJS compiler generated JS source mapping"))
 
 (extend-protocol deps/IJavaScript
-  
+
   String
   (-foreign? [this] false)
   (-closure-lib? [this] false)
@@ -362,7 +363,7 @@
   (-provides [this] (:provides (deps/parse-js-ns (string/split-lines this))))
   (-requires [this] (:requires (deps/parse-js-ns (string/split-lines this))))
   (-source [this] this)
-  
+
   clojure.lang.IPersistentMap
   (-foreign? [this] (:foreign this))
   (-closure-lib? [this] (:closure-lib this))
@@ -481,7 +482,7 @@
   returns a JavaScriptFile. In either case the return value satisfies
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
-    (if output-file 
+    (if output-file
       (let [out-file (io/file (util/output-directory opts) output-file)]
         (compiled-file (comp/compile-file file out-file opts)))
       (let [path (.getPath ^File file)]
@@ -567,17 +568,17 @@
     (case (.getProtocol this)
       "file" (-find-sources (io/file this) opts)
       "jar" (find-jar-sources this opts)))
-  
+
   clojure.lang.PersistentList
   (-compile [this opts]
     (compile-form-seq [this]))
   (-find-sources [this opts]
     [(ana/parse-ns [this] opts)])
-  
+
   String
   (-compile [this opts] (-compile (io/file this) opts))
   (-find-sources [this opts] (-find-sources (io/file this) opts))
-  
+
   clojure.lang.PersistentVector
   (-compile [this opts] (compile-form-seq this))
   (-find-sources [this opts]
@@ -1339,7 +1340,7 @@
 
   ;; optimize a ClojureScript form
   (optimize {:optimizations :simple} (-compile '(def x 3) {}))
-  
+
   ;; optimize a project
   (println (->> (-compile "samples/hello/src" {})
                 (apply add-dependencies {})
@@ -1730,7 +1731,7 @@
       (output-deps-file opts disk-sources))))
 
 (comment
-  
+
   ;; output unoptimized alone
   (output-unoptimized {} "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
   ;; output unoptimized with all dependencies
@@ -1916,12 +1917,19 @@
                 [lib])))]
     (into [] (mapcat expand-lib* libs))))
 
+(declare index-node-modules)
+
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
     :or {optimizations :none
          output-dir "out"}
     :as opts}]
-  (let [opts (cond-> (update opts :foreign-libs expand-libs)
+  (let [opts (cond-> (update opts :foreign-libs
+                       (fn [libs]
+                         (into []
+                           (util/distinct-merge-by :file
+                             (index-node-modules opts)
+                             (expand-libs libs)))))
                (:closure-defines opts)
                (assoc :closure-defines
                  (into {}
@@ -1965,6 +1973,118 @@
 
       (nil? (:closure-module-roots opts))
       (assoc :closure-module-roots []))))
+
+(defn- alive? [proc]
+  (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
+
+(defn- pipe [^Process proc in ^Writer out]
+  ;; we really do want system-default encoding here
+  (with-open [^java.io.Reader in (-> in InputStreamReader. BufferedReader.)]
+    (loop [buf (char-array 1024)]
+      (when (alive? proc)
+        (try
+          (let [len (.read in buf)]
+            (when-not (neg? len)
+              (.write out buf 0 len)
+              (.flush out)))
+          (catch IOException e
+            (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
+              (.printStackTrace e *err*))))
+        (recur buf)))))
+
+(defn maybe-install-node-deps!
+  [{:keys [npm-deps verbose] :as opts}]
+  (if-not (empty? npm-deps)
+    (do
+      (when (or ana/*verbose* verbose)
+        (util/debug-prn "Installing Node.js dependencies"))
+      (let [proc (-> (ProcessBuilder.
+                       (into ["npm" "install" "module-deps"]
+                         (map (fn [[dep version]] (str (name dep) "@" version)))
+                         npm-deps))
+                   .start)
+            is   (.getInputStream proc)
+            iw   (StringWriter. (* 16 1024 1024))
+            es   (.getErrorStream proc)
+            ew   (StringWriter. (* 1024 1024))
+            _    (do (.start
+                       (Thread.
+                         (bound-fn [] (pipe proc is iw))))
+                     (.start
+                       (Thread.
+                         (bound-fn [] (pipe proc es ew)))))
+            err  (.waitFor proc)]
+        (when (and (not (zero? err)) (not (.isAlive proc)))
+          (println (str ew)))
+        opts))
+    opts))
+
+(defn node-module-deps
+  "EXPERIMENTAL: return the foreign libs entries as computed by running
+   the module-deps package on the supplied JavaScript entry point. Assumes
+   that the module-deps NPM package is either locally or globally installed."
+  ([entry]
+   (node-module-deps entry
+     (when env/*compiler*
+       (:options @env/*compiler*))))
+  ([{:keys [file]} {:keys [target] :as opts}]
+   (let [code (-> (slurp (io/resource "cljs/module_deps.js"))
+                (string/replace "JS_FILE" file)
+                (string/replace "CLJS_TARGET" (str "" (when target (name target)))))
+         proc (-> (ProcessBuilder.
+                    ["node" "--eval" code])
+                .start)
+         is   (.getInputStream proc)
+         iw   (StringWriter. (* 16 1024 1024))
+         es   (.getErrorStream proc)
+         ew   (StringWriter. (* 1024 1024))
+         _    (do (.start
+                    (Thread.
+                      (bound-fn [] (pipe proc is iw))))
+                  (.start
+                    (Thread.
+                      (bound-fn [] (pipe proc es ew)))))
+         err  (.waitFor proc)]
+     (if (zero? err)
+       (into []
+         (map (fn [{:strs [file provides]}] file
+                (merge
+                  {:file file
+                   :module-type :commonjs}
+                  (when provides
+                    {:provides provides}))))
+         (next (json/read-str (str iw))))
+       (do
+         (when-not (.isAlive proc)
+           (println (str ew)))
+         [])))))
+
+(defn node-inputs
+  "EXPERIMENTAL: return the foreign libs entries as computed by running
+   the module-deps package on the supplied JavaScript entry points. Assumes
+   that the module-deps NPM packages is either locally or globally installed."
+  ([entries]
+   (node-inputs entries
+     (when env/*compiler*
+       (:options @env/*compiler*))))
+  ([entries opts]
+   (into [] (distinct (mapcat #(node-module-deps % opts) entries)))))
+
+(defn index-node-modules
+  ([]
+   (index-node-modules
+     (when env/*compiler*
+       (:options @env/*compiler*))))
+  ([{:keys [npm-deps] :as opts}]
+   (let [node-modules (io/file "node_modules")]
+     (when (and (.exists node-modules) (.isDirectory node-modules))
+       (let [modules (map name (keys npm-deps))
+             deps-file (io/file (str (util/output-directory opts) File/separator
+                                  "cljs$node_modules.js"))]
+         (util/mkdirs deps-file)
+         (with-open [w (io/writer deps-file)]
+           (run! #(.write w (str "require('" % "');\n")) modules))
+         (node-inputs [{:file (.getAbsolutePath deps-file)}]))))))
 
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
@@ -2067,6 +2187,7 @@
      (env/with-compiler-env compiler-env
        (let [compiler-stats (:compiler-stats opts)
              all-opts (-> opts
+                          maybe-install-node-deps!
                           add-implicit-options
                           process-js-modules)]
          (check-output-to opts)

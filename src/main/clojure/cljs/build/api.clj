@@ -21,11 +21,7 @@
             [cljs.compiler :as comp]
             [cljs.closure :as closure]
             [cljs.js-deps :as js-deps])
-  (:import [java.io
-            File StringWriter
-            BufferedReader
-            Writer InputStreamReader IOException]
-           [java.lang ProcessBuilder]))
+  (:import [java.io File]))
 
 ;; =============================================================================
 ;; Useful Utilities
@@ -219,57 +215,12 @@
    (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/watch source opts compiler-env stop))))
 
-(defn- alive? [proc]
-  (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
-
-(defn- pipe [^Process proc in ^Writer out]
-  ;; we really do want system-default encoding here
-  (with-open [^java.io.Reader in (-> in InputStreamReader. BufferedReader.)]
-    (loop [buf (char-array 1024)]
-      (when (alive? proc)
-        (try
-          (let [len (.read in buf)]
-            (when-not (neg? len)
-              (.write out buf 0 len)
-              (.flush out)))
-          (catch IOException e
-            (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
-              (.printStackTrace e *err*))))
-        (recur buf)))))
-
 (defn node-module-deps
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry point. Assumes
    that the module-deps NPM package is either locally or globally installed."
-  [{:keys [file]}]
-  (let [code (string/replace
-               (slurp (io/resource "cljs/module_deps.js"))
-               "JS_FILE"
-               (string/replace file
-                 (System/getProperty "user.dir") ""))
-        proc (-> (ProcessBuilder.
-                   ["node" "--eval" code])
-               .start)
-        is   (.getInputStream proc)
-        iw   (StringWriter. (* 16 1024 1024))
-        es   (.getErrorStream proc)
-        ew   (StringWriter. (* 1024 1024))
-        _    (do (.start
-                   (Thread.
-                     (bound-fn [] (pipe proc is iw))))
-                 (.start
-                   (Thread.
-                     (bound-fn [] (pipe proc es ew)))))
-        err  (.waitFor proc)]
-    (if (zero? err)
-      (into []
-        (map (fn [{:strs [file]}] file
-               {:file file :module-type :commonjs}))
-        (next (json/read-str (str iw))))
-      (do
-        (when-not (.isAlive proc)
-          (println (str ew)))
-        []))))
+  [entry]
+  (closure/node-module-deps entry))
 
 (comment
   (node-module-deps
@@ -284,7 +235,7 @@
    the module-deps package on the supplied JavaScript entry points. Assumes
    that the module-deps NPM packages is either locally or globally installed."
   [entries]
-  (into [] (distinct (mapcat node-module-deps entries))))
+  (closure/node-inputs entries))
 
 (comment
   (node-inputs
