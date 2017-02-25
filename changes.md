@@ -1,3 +1,8 @@
+## 1.9.494
+
+### Fixes
+* revert CLJS-1636: Mark some symbols in core macros ns as private
+
 ## 1.9.493
 
 ### Fixes

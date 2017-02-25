@@ -610,7 +610,7 @@
   `(when-not (exists? ~x)
      (def ~x ~init)))
 
-(core/defn- destructure [bindings]
+(core/defn destructure [bindings]
   (core/let [bents (partition 2 bindings)
              pb (core/fn pb [bvec b v]
                   (core/let [pvec
@@ -779,7 +779,7 @@
              (let ~(vec (interleave bs gs))
                ~@body)))))))
 
-(def ^:private fast-path-protocols
+(def fast-path-protocols
   "protocol fqn -> [partition number, bit]"
   (zipmap (map #(symbol "cljs.core" (core/str %))
                '[IFn ICounted IEmptyableCollection ICollection IIndexed ASeq ISeq INext
@@ -797,7 +797,7 @@
                              :cljs (core/* 2 b))]))
                    [0 1])))
 
-(def ^:private fast-path-protocol-partitions-count
+(def fast-path-protocol-partitions-count
   "total number of partitions"
   (core/let [c (count fast-path-protocols)
              m (core/mod c 32)]
@@ -861,46 +861,41 @@
 (core/defmacro some? [x]
   `(not (nil? ~x)))
 
-;; internal - do not use.
-(core/defmacro ^:private coercive-not [x]
+(core/defmacro coercive-not [x]
   (bool-expr (core/list 'js* "(!~{})" x)))
 
-;; internal - do not use.
-(core/defmacro ^:private coercive-not= [x y]
+(core/defmacro coercive-not= [x y]
   (bool-expr (core/list 'js* "(~{} != ~{})" x y)))
 
-;; internal - do not use.
-(core/defmacro ^:private coercive-= [x y]
+(core/defmacro coercive-= [x y]
   (bool-expr (core/list 'js* "(~{} == ~{})" x y)))
 
-;; internal - do not use.
-(core/defmacro ^:private coercive-boolean [x]
+(core/defmacro coercive-boolean [x]
   (with-meta (core/list 'js* "~{}" x)
     {:tag 'boolean}))
 
 ;; internal - do not use.
-(core/defmacro ^:private truth_ [x]
+(core/defmacro truth_ [x]
   (core/assert (core/symbol? x) "x is substituted twice")
   (core/list 'js* "(~{} != null && ~{} !== false)" x x))
 
-;; internal - do not use
-(core/defmacro ^:private js-arguments []
+(core/defmacro js-arguments []
   (core/list 'js* "arguments"))
 
-(core/defmacro ^:private js-delete [obj key]
+(core/defmacro js-delete [obj key]
   (core/list 'js* "delete ~{}[~{}]" obj key))
 
-(core/defmacro ^:private js-in [key obj]
+(core/defmacro js-in [key obj]
   (core/list 'js* "~{} in ~{}" key obj))
 
-(core/defmacro ^:private js-debugger
+(core/defmacro js-debugger
   "Emit JavaScript \"debugger;\" statement"
   []
   (core/list 'do
              (core/list 'js* "debugger")
              nil))
 
-(core/defmacro ^:private js-comment
+(core/defmacro js-comment
   "Emit a top-level JavaScript multi-line comment. New lines will create a
   new comment line. Comment block will be preceded and followed by a newline"
   [comment]
@@ -914,13 +909,13 @@
           (reduce core/str ""))
         " */\n"))))
 
-(core/defmacro ^:private unsafe-cast
+(core/defmacro unsafe-cast
   "EXPERIMENTAL: Subject to change. Unsafely cast a value to a different type."
   [t x]
   (core/let [cast-expr (core/str "~{} = /** @type {" t "} */ (~{})")]
     (core/list 'js* cast-expr x x)))
 
-(core/defmacro ^:private js-inline-comment
+(core/defmacro js-inline-comment
   "Emit an inline JavaScript comment."
   [comment]
   (core/list 'js* (core/str "/**" comment "*/")))
@@ -1127,7 +1122,7 @@
   ([x y & more] `(bit-and (bit-and ~x ~y) ~@more)))
 
 ;; internal do not use
-(core/defmacro ^:private ^::ana/numeric unsafe-bit-and
+(core/defmacro ^::ana/numeric unsafe-bit-and
   ([x y] (bool-expr (core/list 'js* "(~{} & ~{})" x y)))
   ([x y & more] `(unsafe-bit-and (unsafe-bit-and ~x ~y) ~@more)))
 
@@ -1171,15 +1166,15 @@
   (core/list 'js* "(~{} | (1 << ~{}))" x n))
 
 ;; internal
-(core/defmacro ^:private mask [hash shift]
+(core/defmacro mask [hash shift]
   (core/list 'js* "((~{} >>> ~{}) & 0x01f)" hash shift))
 
 ;; internal
-(core/defmacro ^:private bitpos [hash shift]
+(core/defmacro bitpos [hash shift]
   (core/list 'js* "(1 << ~{})" `(mask ~hash ~shift)))
 
 ;; internal
-(core/defmacro ^:private caching-hash [coll hash-fn hash-key]
+(core/defmacro caching-hash [coll hash-fn hash-key]
   (core/assert (clojure.core/symbol? hash-key) "hash-key is substituted twice")
   `(let [h# ~hash-key]
      (if-not (nil? h#)
@@ -1608,7 +1603,7 @@
     (vary-meta (cons f (map #(cons (second %) (nnext %)) sigs))
       merge annots)))
 
-(core/defn- dt->et
+(core/defn dt->et
   ([type specs fields]
    (dt->et type specs fields false))
   ([type specs fields inline]
@@ -2661,7 +2656,7 @@
             ~(gen-apply-to-helper (core/inc n))))
        `(throw (js/Error. "Only up to 20 arguments supported on functions"))))))
 
-(core/defmacro ^:private gen-apply-to []
+(core/defmacro gen-apply-to []
   `(do
      (set! ~'*unchecked-if* true)
      (defn ~'apply-to [~'f ~'argc ~'args]
@@ -2691,10 +2686,10 @@
   [& colls]
   `(concat ~@(map #(core/list `lazy-seq %) colls)))
 
-(core/defmacro ^:private js-str [s]
+(core/defmacro js-str [s]
   (core/list 'js* "''+~{}" s))
 
-(core/defmacro ^:private es6-iterable [ty]
+(core/defmacro es6-iterable [ty]
   `(aset (.-prototype ~ty) cljs.core/ITER_SYMBOL
      (fn []
        (this-as this#
@@ -2832,7 +2827,7 @@
   `(~'ns* ~(cons :refer-clojure args)))
 
 ;; INTERNAL - do not use, only for Node.js
-(core/defmacro ^:private load-file* [f]
+(core/defmacro load-file* [f]
   `(. js/goog (~'nodeGlobalRequire ~f)))
 
 (core/defmacro macroexpand-1
@@ -2901,7 +2896,7 @@
           (set! (. ~sym ~'-cljs$lang$applyTo)
             ~(apply-to)))))))
 
-(core/defmacro ^:private copy-arguments [dest]
+(core/defmacro copy-arguments [dest]
   `(let [len# (alength (js-arguments))]
      (loop [i# 0]
        (when (< i# len#)
