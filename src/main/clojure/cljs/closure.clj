@@ -339,10 +339,11 @@
 (defn report-failure [^Result result]
   (let [errors (.errors result)
         warnings (.warnings result)]
-    (doseq [next (seq errors)]
-      (println "ERROR:" (.toString ^JSError next)))
-    (doseq [next (seq warnings)]
-      (println "WARNING:" (.toString ^JSError next)))))
+    (binding [*out* *err*]
+      (doseq [next (seq errors)]
+        (println "ERROR:" (.toString ^JSError next)))
+      (doseq [next (seq warnings)]
+        (println "WARNING:" (.toString ^JSError next))))))
 
 ;; Protocols for IJavaScript and Compilable
 ;; ========================================
