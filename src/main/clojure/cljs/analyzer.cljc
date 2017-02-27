@@ -147,7 +147,7 @@
    :infer-warning false})
 
 (def js-reserved
-  #{"arguments" "abstract" "boolean" "break" "byte" "case"
+  #{"arguments" "abstract" "await" "boolean" "break" "byte" "case"
     "catch" "char" "class" "const" "continue"
     "debugger" "default" "delete" "do" "double"
     "else" "enum" "export" "extends" "final"

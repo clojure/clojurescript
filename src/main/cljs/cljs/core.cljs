@@ -10558,7 +10558,7 @@ reduces them without incurring seq initialization"
   ^{:private true
     :jsdoc ["@type {*}"]}
   js-reserved-arr
-  #js ["abstract" "boolean" "break" "byte" "case"
+  #js ["arguments" "abstract" "await" "boolean" "break" "byte" "case"
        "catch" "char" "class" "const" "continue"
        "debugger" "default" "delete" "do" "double"
        "else" "enum" "export" "extends" "final"
@@ -10570,7 +10570,7 @@ reduces them without incurring seq initialization"
        "synchronized" "this" "throw" "throws"
        "transient" "try" "typeof" "var" "void"
        "volatile" "while" "with" "yield" "methods"
-       "null"])
+       "null" "constructor"])
 
 (def
   ^{:jsdoc ["@type {null|Object}"]}
