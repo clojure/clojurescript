@@ -29,16 +29,17 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
        distinct)))
 
 (defn ^ZipFile zip-file [jar-path]
-  (cond
-    (instance? File jar-path) (ZipFile. ^File jar-path)
-    (string? jar-path) (ZipFile. ^String jar-path)
-    :else
-    (throw
-      (IllegalArgumentException. (str "Cannot construct zipfile from " jar-path)))))
+  (try
+    (cond
+      (instance? File jar-path) (ZipFile. ^File jar-path)
+      (string? jar-path) (ZipFile. ^String jar-path))
+    (catch Exception _
+      nil)))
 
 (defn jar-entry-names* [jar-path]
-  (with-open [z (zip-file jar-path)]
-    (doall (map #(.getName ^ZipEntry %) (enumeration-seq (.entries ^ZipFile z))))))
+  (when-let [zf (zip-file jar-path)]
+    (with-open [z zf]
+      (doall (map #(.getName ^ZipEntry %) (enumeration-seq (.entries ^ZipFile z)))))))
 
 (def jar-entry-names (memoize jar-entry-names*))
 
