@@ -1870,7 +1870,9 @@
 
 (defn check-node-target [{:keys [target optimizations] :as opts}]
   (assert (not (and (= target :nodejs) (= optimizations :whitespace)))
-    (format ":nodejs target not compatible with :whitespace optimizations")))
+    (format ":nodejs target not compatible with :whitespace optimizations"))
+  (assert (not (and (= target :nodejs) (= optimizations :none) (not (contains? opts :main))))
+    (format ":nodejs target with :none optimizations requires a :main entry")))
 
 (defn check-preloads [{:keys [preloads optimizations] :as opts}]
   (when (and (some? preloads) (not= optimizations :none))
