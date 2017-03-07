@@ -2185,8 +2185,7 @@
   predicate as its argument, the result of that call being the return
   value of condp. A single default expression can follow the clauses,
   and its value will be returned if no clause matches. If no default
-  expression is provided and no clause matches, an
-  IllegalArgumentException is thrown."
+  expression is provided and no clause matches, an Error is thrown."
   {:added "1.0"}
 
   [pred expr & clauses]
