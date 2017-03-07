@@ -6773,7 +6773,7 @@ reduces them without incurring seq initialization"
                         (== bitmap bit) nil
                         :else (.edit-and-remove-pair inode edit bit idx)))
                 (key-test key key-or-nil)
-                (do (aset removed-leaf? 0 true)
+                (do (set! (.-val removed-leaf?) true)
                     (.edit-and-remove-pair inode edit bit idx))
                 :else inode)))))
 
@@ -7012,7 +7012,7 @@ reduces them without incurring seq initialization"
     (let [idx (hash-collision-node-find-index arr cnt key)]
       (if (== idx -1)
         inode
-        (do (aset removed-leaf? 0 true)
+        (do (set! (.-val removed-leaf?) true)
             (if (== cnt 1)
               nil
               (let [editable (.ensure-editable inode edit)
@@ -7423,7 +7423,7 @@ reduces them without incurring seq initialization"
             (if (identical? node root)
               nil
               (set! root node))
-            (if (aget removed-leaf? 0)
+            (if ^boolean (.-val removed-leaf?)
               (set! count (dec count)))
             tcoll)))
       (throw (js/Error. "dissoc! after persistent!"))))
