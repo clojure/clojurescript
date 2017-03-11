@@ -1754,7 +1754,12 @@
   ([classloader]
    (let [upstream-deps (map #(read-string (slurp %))
                          (enumeration-seq (. classloader (getResources "deps.cljs"))))]
-     (apply merge-with concat upstream-deps))))
+     (apply merge-with
+       (fn [a b]
+         (if (map? a)
+           (merge-with #(into #{%1} #{%2}) a b)
+           (concat a b)))
+       upstream-deps))))
 
 (def get-upstream-deps (memoize get-upstream-deps*))
 
@@ -1879,6 +1884,18 @@
     (format ":cache-analysis format must be :edn or :transit but it is: %s"
       (pr-str cache-analysis-format))))
 
+(defn check-npm-deps [{:keys [npm-deps]}]
+  (let [{ups-npm-deps :npm-deps} (get-upstream-deps)
+        conflicts (filter (fn [[dep v]]
+                            (and (coll? v) (not (contains? npm-deps dep))))
+                    ups-npm-deps)]
+    (binding [*out* *err*]
+      (doseq [[dep versions] conflicts]
+        (println (str "WARNING: NPM dependency " (name dep)
+                   " conflicts between versions "
+                   (util/conjunction-str versions)
+                   ". Specify a version in :npm-deps or the latest will be installed."))))))
+
 (defn foreign-source? [js]
   (and (satisfies? deps/IJavaScript js)
        (deps/-foreign? js)))
@@ -1917,8 +1934,24 @@
 
 (declare index-node-modules)
 
+(defn compute-upstream-npm-deps
+  ([]
+   (compute-upstream-npm-deps
+     (when env/*compiler*
+       (:options @env/*compiler*))))
+  ([{:keys [npm-deps]}]
+   (let [{ups-npm-deps :npm-deps} (get-upstream-deps)]
+     (reduce
+       (fn [m [dep v]]
+         (cond-> m
+           (not (contains? npm-deps dep))
+           (assoc dep (if (coll? v)
+                        (last (sort v))
+                        v))))
+       {} ups-npm-deps))))
+
 (defn add-implicit-options
-  [{:keys [optimizations output-dir]
+  [{:keys [optimizations output-dir npm-deps]
     :or {optimizations :none
          output-dir "out"}
     :as opts}]
@@ -1926,7 +1959,7 @@
                        (fn [libs]
                          (into []
                            (util/distinct-merge-by :file
-                             (index-node-modules opts)
+                             (index-node-modules npm-deps opts)
                              (expand-libs libs)))))
                (:closure-defines opts)
                (assoc :closure-defines
@@ -1946,7 +1979,10 @@
           :optimizations optimizations
           :output-dir output-dir
           :ups-libs libs
-          :ups-foreign-libs foreign-libs
+          :ups-foreign-libs (into []
+                              (util/distinct-merge-by :file
+                                (index-node-modules (compute-upstream-npm-deps opts) opts)
+                                (expand-libs foreign-libs)))
           :ups-externs externs
           :emit-constants emit-constants
           :cache-analysis-format (:cache-analysis-format opts :transit))
@@ -1992,30 +2028,31 @@
 
 (defn maybe-install-node-deps!
   [{:keys [npm-deps verbose] :as opts}]
-  (if-not (empty? npm-deps)
-    (do
-      (when (or ana/*verbose* verbose)
-        (util/debug-prn "Installing Node.js dependencies"))
-      (let [proc (-> (ProcessBuilder.
-                       (into ["npm" "install" "module-deps"]
-                         (map (fn [[dep version]] (str (name dep) "@" version)))
-                         npm-deps))
-                   .start)
-            is   (.getInputStream proc)
-            iw   (StringWriter. (* 16 1024 1024))
-            es   (.getErrorStream proc)
-            ew   (StringWriter. (* 1024 1024))
-            _    (do (.start
-                       (Thread.
-                         (bound-fn [] (pipe proc is iw))))
-                     (.start
-                       (Thread.
-                         (bound-fn [] (pipe proc es ew)))))
-            err  (.waitFor proc)]
-        (when (and (not (zero? err)) (not (.isAlive proc)))
-          (println (str ew)))
-        opts))
-    opts))
+  (let [npm-deps (merge npm-deps (compute-upstream-npm-deps opts))]
+    (if-not (empty? npm-deps)
+      (do
+        (when (or ana/*verbose* verbose)
+          (util/debug-prn "Installing Node.js dependencies"))
+        (let [proc (-> (ProcessBuilder.
+                         (into ["npm" "install" "module-deps"]
+                           (map (fn [[dep version]] (str (name dep) "@" version)))
+                           npm-deps))
+                     .start)
+              is   (.getInputStream proc)
+              iw   (StringWriter. (* 16 1024 1024))
+              es   (.getErrorStream proc)
+              ew   (StringWriter. (* 1024 1024))
+              _    (do (.start
+                         (Thread.
+                           (bound-fn [] (pipe proc is iw))))
+                       (.start
+                         (Thread.
+                           (bound-fn [] (pipe proc es ew)))))
+              err  (.waitFor proc)]
+          (when (and (not (zero? err)) (not (.isAlive proc)))
+            (println (str ew)))
+          opts))
+      opts)))
 
 (defn node-module-deps
   "EXPERIMENTAL: return the foreign libs entries as computed by running
@@ -2069,11 +2106,11 @@
    (into [] (distinct (mapcat #(node-module-deps % opts) entries)))))
 
 (defn index-node-modules
-  ([]
+  ([npm-deps]
    (index-node-modules
      (when env/*compiler*
        (:options @env/*compiler*))))
-  ([{:keys [npm-deps] :as opts}]
+  ([npm-deps opts]
    (let [node-modules (io/file "node_modules")]
      (when (and (.exists node-modules) (.isDirectory node-modules))
        (let [modules (map name (keys npm-deps))
@@ -2183,6 +2220,8 @@
           (add-externs-sources opts)))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
+       ;; we want to warn about NPM dep conflicts before installing the modules
+       (check-npm-deps opts)
        (let [compiler-stats (:compiler-stats opts)
              all-opts (-> opts
                           maybe-install-node-deps!

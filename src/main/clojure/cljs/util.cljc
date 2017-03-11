@@ -312,3 +312,10 @@
             (recur (next ks) ret b')))
         (merge ret b')))
     a))
+
+(defn conjunction-str [xs]
+  (let [xs (vec xs)]
+    (case (count xs)
+      1 (first xs)
+      2 (str (first xs) " and " (second xs))
+      (str (string/join ", " (pop xs)) " and " (peek xs)))))
