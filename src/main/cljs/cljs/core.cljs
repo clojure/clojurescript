@@ -10311,11 +10311,6 @@ reduces them without incurring seq initialization"
        (set! gensym_counter (atom 0)))
      (symbol (str prefix-string (swap! gensym_counter inc)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Fixtures ;;;;;;;;;;;;;;;;
-
-(def fixture1 1)
-(def fixture2 2)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Delay ;;;;;;;;;;;;;;;;;;;;
 
 (deftype Delay [^:mutable f ^:mutable value]
