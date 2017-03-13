@@ -50,3 +50,38 @@
     (let [sym-a (with-meta 'foo :first)
           sym-b (with-meta 'foo :second)]
       (is (= {sym-a 2} (array-map sym-a 1 sym-b 2))))))
+
+(defrecord T [index a b])
+
+(deftest test-cljs-1976
+  ;; We must detect hash collisions when two values have different hashes but
+  ;; still have the same 32-bit hash. Hash producers may be lazy and not
+  ;; truncate their hash to 32-bits.
+  (let [bad-record-1 (->T :eavt 17592186192276 nil)
+        ;; (hash bad-record-1) is 1454955434
+        bad-record-2 (->T :avet 10 :fhir.ElementDefinition/minValueDateTime$cr)
+        ;; (hash bad-record-2) is -2840011862
+        ;; But (bit-or (hash bad-record-2) 0) is 1454955434. Collision!
+        ;; These dates have the same property
+        bad-date-1   #inst "2017-03-13T22:21:08.666-00:00"
+        bad-date-2   #inst "2015-11-02T19:53:15.706-00:00"]
+    (testing "Transient assoc of hash-colliding keys with different hash values"
+      (is (= :ok (try
+                   (hash-map bad-record-1 nil bad-record-2 nil)
+                   :ok
+                   (catch :default _ :error))))
+      (is (= :ok (try
+                   (hash-map bad-date-1 nil bad-date-2 nil)
+                   :ok
+                   (catch :default _ :error)))))
+
+    (testing "Non-transient assoc of hash-colliding keys with different hash values"
+      (is (= :ok (try
+                   (assoc (hash-map bad-record-1 nil) bad-record-2 nil)
+                   :ok
+                   (catch :default _ :error))))
+
+      (is (= :ok (try
+                   (assoc (hash-map bad-date-1 nil) bad-date-2 nil)
+                   :ok
+                   (catch :default _ :error)))))))

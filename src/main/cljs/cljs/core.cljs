@@ -901,7 +901,7 @@
   [o]
   (cond
     (implements? IHash o)
-    (-hash ^not-native o)
+    (bit-xor (-hash ^not-native o) 0)
 
     (number? o)
     (if (js/isFinite o)
@@ -924,12 +924,12 @@
     (m3-hash-int (hash-string o))
 
     (instance? js/Date o)
-    (.valueOf o)
+    (bit-xor (.valueOf o) 0)
 
     (nil? o) 0
 
     :else
-    (-hash o)))
+    (bit-xor (-hash o) 0)))
 
 (defn hash-combine [seed hash]
   ; a la boost
