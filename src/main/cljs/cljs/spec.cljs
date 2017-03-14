@@ -1369,7 +1369,7 @@
             [[1 (gen/delay (gen/return nil))]
              [9 (gen/delay (gensub pred overrides (conj path ::pred) rmap form))]])))
       (with-gen* [_ gfn] (nilable-impl form pred gfn))
-      (describe* [_] `(nilable ~(describe* spec))))))
+      (describe* [_] `(nilable ~(s/mres form))))))
 
 (defn exercise
   "generates a number (default 10) of values compatible with spec and maps conform over them,

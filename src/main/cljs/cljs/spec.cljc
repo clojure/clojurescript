@@ -40,6 +40,11 @@
     (sequential? form) (walk/postwalk #(if (symbol? %) (res env %) %) (unfn form))
     :else form))
 
+(defmacro ^:private mres
+  "a compile time res, for use in cljs/spec.cljs"
+  [form]
+  (res &env form))
+
 (defn- ns-qualify
   "Qualify symbol s by resolving it or using the current *ns*."
   [env s]
