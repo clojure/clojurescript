@@ -793,6 +793,7 @@
   "Do not call this directly, use 'every', 'every-kv', 'coll-of' or 'map-of'"
   ([form pred opts] (every-impl form pred opts nil))
   ([form pred {gen-into :into
+               describe-form ::describe
                :keys [kind ::kind-form count max-count min-count distinct gen-max ::kfn ::cpred
                       conform-keys ::conform-all]
                :or {gen-max 20}
@@ -906,7 +907,7 @@
                      (gen/vector pgen 0 gen-max))))))))
 
        (with-gen* [_ gfn] (every-impl form pred opts gfn))
-       (describe* [_] `(every ~form ~@(mapcat identity opts)))))))
+       (describe* [_] (c/or describe-form `(every ~(s/res form) ~@(mapcat identity opts))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;; regex ;;;;;;;;;;;;;;;;;;;
 ;;See:

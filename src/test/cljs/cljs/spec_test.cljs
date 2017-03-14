@@ -241,6 +241,30 @@
       ;;coll [:a "b"] ::s/invalid '[{:pred (coll-checker keyword?), :val [:a b]}]
       )))
 
+(deftest coll-form
+  (are [spec form]
+    (= (s/form spec) form)
+    (s/map-of int? any?)
+    '(cljs.spec/map-of cljs.core/int? cljs.core/any?)
+
+    (s/coll-of int?)
+    '(cljs.spec/coll-of cljs.core/int?)
+
+    (s/every-kv int? int?)
+    '(cljs.spec/every-kv cljs.core/int? cljs.core/int?)
+
+    (s/every int?)
+    '(cljs.spec/every cljs.core/int?)
+
+    (s/coll-of (s/tuple (s/tuple int?)))
+    '(cljs.spec/coll-of (cljs.spec/tuple (cljs.spec/tuple cljs.core/int?)))
+
+    (s/coll-of int? :kind vector?)
+    '(cljs.spec/coll-of cljs.core/int? :kind cljs.core/vector?)
+
+    (s/coll-of int? :gen #(gen/return [1 2]))
+    '(cljs.spec/coll-of cljs.core/int? :gen (fn* [] (gen/return [1 2])))))
+
 (comment
 
   (run-tests)

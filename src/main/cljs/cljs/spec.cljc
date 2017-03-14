@@ -201,6 +201,15 @@
   [& pred-forms]
   `(and-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
 
+(defn- res-kind
+  [env opts]
+  (let [{kind :kind :as mopts} opts]
+    (->>
+      (if kind
+        (assoc mopts :kind `~(res env kind))
+        mopts)
+      (mapcat identity))))
+
 (defmacro every
   "takes a pred and validates collection elements against that pred.
 
@@ -231,7 +240,11 @@
   See also - coll-of, every-kv
 "
   [pred & {:keys [into kind count max-count min-count distinct gen-max gen-into gen] :as opts}]
-  (let [nopts (-> opts (dissoc :gen) (assoc ::kind-form `'~(res &env (:kind opts))))
+  (let [desc (::describe opts)
+        nopts (-> opts
+                (dissoc :gen ::describe)
+                (assoc ::kind-form `'~(res &env (:kind opts))
+                       ::describe (clojure.core/or desc `'(every ~(res &env pred) ~@(res-kind &env opts)))))
         gx (gensym)
         cpreds (cond-> [(list (clojure.core/or kind `coll?) gx)]
                  count (conj `(= ~count (c/bounded-count ~count ~gx)))
@@ -253,7 +266,8 @@
   See also - map-of"
 
   [kpred vpred & opts]
-  `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (nth v# 0)) :into {} ~@opts))
+  (let [desc `(every-kv ~(res &env kpred) ~(res &env vpred) ~@(res-kind &env opts))]
+    `(every (tuple ~kpred ~vpred) ::kfn (fn [i# v#] (nth v# 0)) :into {} ::describe '~desc ~@opts)))
 
 (defmacro coll-of
   "Returns a spec for a collection of items satisfying pred. Unlike
@@ -267,7 +281,8 @@
 
   See also - every, map-of"
   [pred & opts]
-  `(every ~pred ::conform-all true ~@opts))
+  (let [desc `(coll-of ~(res &env pred) ~@(res-kind &env opts))]
+    `(every ~pred ::conform-all true ::describe '~desc ~@opts)))
 
 (defmacro map-of
   "Returns a spec for a map whose keys satisfy kpred and vals satisfy
@@ -280,7 +295,8 @@
 
   See also - every-kv"
   [kpred vpred & opts]
-  `(every-kv ~kpred ~vpred ::conform-all true :kind map? ~@opts))
+  (let [desc `(map-of ~(res &env kpred) ~(res &env vpred) ~@(res-kind &env opts))]
+    `(every-kv ~kpred ~vpred ::conform-all true :kind map? ::describe '~desc ~@opts)))
 
 (defmacro *
   "Returns a regex op that matches zero or more values matching
