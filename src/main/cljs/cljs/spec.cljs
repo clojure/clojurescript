@@ -907,7 +907,7 @@
                      (gen/vector pgen 0 gen-max))))))))
 
        (with-gen* [_ gfn] (every-impl form pred opts gfn))
-       (describe* [_] (c/or describe-form `(every ~(s/res form) ~@(mapcat identity opts))))))))
+       (describe* [_] (c/or describe-form `(every ~(s/mres form) ~@(mapcat identity opts))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;; regex ;;;;;;;;;;;;;;;;;;;
 ;;See:
