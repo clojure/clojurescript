@@ -2110,6 +2110,7 @@
 (defn index-node-modules
   ([npm-deps]
    (index-node-modules
+     npm-deps
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([npm-deps opts]
