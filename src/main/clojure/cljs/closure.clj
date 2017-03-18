@@ -2121,7 +2121,7 @@
          (util/mkdirs deps-file)
          (with-open [w (io/writer deps-file)]
            (run! #(.write w (str "require('" % "');\n")) modules))
-         (node-inputs [{:file (.getAbsolutePath deps-file)}]))))))
+         (node-inputs [{:file (.getAbsolutePath deps-file)}] opts))))))
 
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
