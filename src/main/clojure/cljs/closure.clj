@@ -2114,7 +2114,7 @@
        (:options @env/*compiler*))))
   ([npm-deps opts]
    (let [node-modules (io/file "node_modules")]
-     (when (and (.exists node-modules) (.isDirectory node-modules))
+     (when (and (not (empty? npm-deps)) (.exists node-modules) (.isDirectory node-modules))
        (let [modules (map name (keys npm-deps))
              deps-file (io/file (str (util/output-directory opts) File/separator
                                   "cljs$node_modules.js"))]
