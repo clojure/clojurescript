@@ -830,7 +830,7 @@
                 (emitln "return " n ".call(this" (if (zero? pcnt) nil
                                                      (list "," (comma-sep (take pcnt maxparams)))) ");"))))
           (emitln "}")
-          (emitln "throw(new Error('Invalid arity: ' + arguments.length));")
+          (emitln "throw(new Error('Invalid arity: ' + (arguments.length - 1)));")
           (emitln "};")
           (when variadic
             (emitln mname ".cljs$lang$maxFixedArity = " max-fixed-arity ";")
