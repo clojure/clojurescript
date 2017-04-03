@@ -2236,7 +2236,7 @@
          (check-source-map-path opts)
          (check-output-wrapper opts)
          (check-node-target opts)
-         (check-preloads opts)
+         (check-preloads all-opts)
          (check-cache-analysis-format opts)
          (swap! compiler-env
            #(-> %
