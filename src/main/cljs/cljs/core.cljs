@@ -1865,7 +1865,7 @@ reduces them without incurring seq initialization"
         :else not-found)
       not-found)))
 
-(declare PersistentHashMap)
+(declare PersistentHashMap PersistentArrayMap)
 
 (defn assoc
   "assoc[iate]. When applied to a map, returns a new map of the
@@ -1875,7 +1875,7 @@ reduces them without incurring seq initialization"
   ([coll k v]
     (if-not (nil? coll)
       (-assoc coll k v)
-      (hash-map k v)))
+      (array-map k v)))
   ([coll k v & kvs]
      (let [ret (assoc coll k v)]
        (if kvs
