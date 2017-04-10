@@ -10801,7 +10801,7 @@ reduces them without incurring seq initialization"
                 :else name')]
     (if (symbol? name)
       (symbol name')
-      (str name'))))
+      name')))
 
 (defn- demunge-str [munged-name]
   (let [r (js/RegExp. (demunge-pattern) "g")
@@ -10825,7 +10825,7 @@ reduces them without incurring seq initialization"
     (let [name' (str name)]
       (if (identical? name' "_DOT__DOT_")
         ".."
-        (demunge-str (str name))))))
+        (demunge-str name')))))
 
 ;; -----------------------------------------------------------------------------
 ;; Bootstrap helpers - incompatible with advanced compilation
