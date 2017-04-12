@@ -1,3 +1,33 @@
+## 1.9.518
+
+### Enhancements
+* CLJS-1973: Add support for `:npm-deps` in upstream `deps.cljs`
+* CLJS-1968: Enable calling JS modules that export a single function
+* CLJS-1960: Require CommonJS modules directly from a ClojureScript namespace
+
+### Changes
+* CLJS-2006: Upgrade Closure Compiler to April 2017 release
+
+### Fixes 
+* CLJS-1497: `find` on an associative collection does not return collection key
+* CLJS-1996: Support correct checking of :preloads when :optimizations not specified
+* CLJS-1994: assoc on nil returns PHM (expected PAM)
+* CLJS-1988: add :npm-deps to recognized compiler options
+* Fix tiny bug in index-node-modules when no second argument is given
+* CLJS-1985: `index-node-modules` should pass opts to `node-inputs`
+* CLJS-1987: don't index node modules blindly
+* CLJS-1519 Collection invoke errors report arity off by 1
+* CLJS-1964: Validate that `:target :nodejs` and no optimizations requires a `:main` option to be present
+* CLJS-1956: Add missing JS reserved keywords
+* CLJS-1983: res -> mres in spec.cljs
+* CLJS-1978: port CLJ-2035
+* CLJS-1979: port CLJ-2043 (fix s/form of s/conformer)
+* CLJS-1980: port CLJ-2100 (s/nilable form should retain original spec form)
+* CLJS-1976: hash-map assoc stackoverflow
+* CLJS-1957: Process JS modules errors and warnings don't get printed
+* CLJS-1868 - Output simpler dependency rel paths when compiling with Closure libs
+* CLJS-1967: Missing ^boolean for removed-leaf? in THM impl
+
 ## 1.9.494
 
 ### Fixes
