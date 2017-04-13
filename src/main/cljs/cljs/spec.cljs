@@ -741,6 +741,63 @@
       (with-gen* [_ gfn] (and-spec-impl forms preds gfn))
       (describe* [_] `(and ~@forms)))))
 
+(defn- explain-all-pred-list
+  [forms preds path via in x]
+  (loop [ret x
+         prb '()
+         [form & forms] forms
+         [pred & preds] preds]
+    (cond pred (let [nret (dt pred x form)]
+                 (if (::invalid nret)
+                   (recur ret (conj prb (explain-1 form pred path via in x)) forms preds)
+                   (recur nret prb forms preds)))
+          (empty? prb) nil
+          :else prb)))
+
+(defn ^:skip-wiki and-all-spec-impl
+  "Do not call this directly, use 'and'"
+  [forms preds gfn]
+  (let [specs (delay (mapv specize preds forms))
+        cform
+        (case (count preds)
+          2 (fn [x]
+              (let [specs @specs
+                    ret (conform* (specs 0) x)]
+                (if (invalid? ret)
+                  ::invalid
+                  (conform* (specs 1) ret))))
+          3 (fn [x]
+              (let [specs @specs
+                    ret (conform* (specs 0) x)]
+                (if (invalid? ret)
+                  ::invalid
+                  (let [ret (conform* (specs 1) ret)]
+                    (if (invalid? ret)
+                      ::invalid
+                      (conform* (specs 2) ret))))))
+          (fn [x]
+            (let [specs @specs]
+              (loop [ret x i 0]
+                (if (< i (count specs))
+                  (let [nret (conform* (specs i) ret)]
+                    (if (invalid? nret)
+                      ::invalid
+                      ;;propagate conformed values
+                      (recur nret (inc i))))
+                  ret)))))]
+    (reify
+      Specize
+      (specize* [s] s)
+      (specize* [s _] s)
+
+      Spec
+      (conform* [_ x] (cform x))
+      (unform* [_ x] (reduce #(unform %2 %1) x (reverse preds)))
+      (explain* [_ path via in x] (explain-all-pred-list forms preds path via in x))
+      (gen* [_ overrides path rmap] (if gfn (gfn) (gensub (first preds) overrides path rmap (first forms))))
+      (with-gen* [_ gfn] (and-spec-impl forms preds gfn))
+      (describe* [_] `(and ~@forms)))))
+
 (defn- coll-prob [x kfn kform distinct count min-count max-count
                   path via in]
   (let [pred (c/or kfn coll?)
