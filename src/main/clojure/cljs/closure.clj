@@ -1959,9 +1959,7 @@
     :as opts}]
   (let [opts (cond-> (update opts :foreign-libs
                        (fn [libs]
-                         (into (into []
-                                 (util/distinct-merge-by :file
-                                   (index-node-modules npm-deps opts)))
+                         (into (index-node-modules npm-deps opts)
                            (expand-libs libs))))
                (:closure-defines opts)
                (assoc :closure-defines
@@ -1981,9 +1979,7 @@
           :optimizations optimizations
           :output-dir output-dir
           :ups-libs libs
-          :ups-foreign-libs (into (into []
-                                    (util/distinct-merge-by :file
-                                      (index-node-modules (compute-upstream-npm-deps opts) opts)))
+          :ups-foreign-libs (into (index-node-modules (compute-upstream-npm-deps opts) opts)
                               (expand-libs foreign-libs))
           :ups-externs externs
           :emit-constants emit-constants
@@ -2115,14 +2111,15 @@
        (:options @env/*compiler*))))
   ([npm-deps opts]
    (let [node-modules (io/file "node_modules")]
-     (when (and (not (empty? npm-deps)) (.exists node-modules) (.isDirectory node-modules))
+     (if (and (not (empty? npm-deps)) (.exists node-modules) (.isDirectory node-modules))
        (let [modules (map name (keys npm-deps))
              deps-file (io/file (str (util/output-directory opts) File/separator
                                   "cljs$node_modules.js"))]
          (util/mkdirs deps-file)
          (with-open [w (io/writer deps-file)]
            (run! #(.write w (str "require('" % "');\n")) modules))
-         (node-inputs [{:file (.getAbsolutePath deps-file)}] opts))))))
+         (node-inputs [{:file (.getAbsolutePath deps-file)}] opts))
+       []))))
 
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
