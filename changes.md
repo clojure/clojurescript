@@ -1,3 +1,8 @@
+## 1.9.521
+
+### Fixes
+* correct CLJS-1923 :foreign-libs regression
+
 ## 1.9.518
 
 ### Enhancements
