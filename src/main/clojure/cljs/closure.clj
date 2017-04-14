@@ -1959,10 +1959,10 @@
     :as opts}]
   (let [opts (cond-> (update opts :foreign-libs
                        (fn [libs]
-                         (into []
-                           (util/distinct-merge-by :file
-                             (index-node-modules npm-deps opts)
-                             (expand-libs libs)))))
+                         (into (into []
+                                 (util/distinct-merge-by :file
+                                   (index-node-modules npm-deps opts)))
+                           (expand-libs libs))))
                (:closure-defines opts)
                (assoc :closure-defines
                  (into {}
@@ -1981,10 +1981,10 @@
           :optimizations optimizations
           :output-dir output-dir
           :ups-libs libs
-          :ups-foreign-libs (into []
-                              (util/distinct-merge-by :file
-                                (index-node-modules (compute-upstream-npm-deps opts) opts)
-                                (expand-libs foreign-libs)))
+          :ups-foreign-libs (into (into []
+                                    (util/distinct-merge-by :file
+                                      (index-node-modules (compute-upstream-npm-deps opts) opts)))
+                              (expand-libs foreign-libs))
           :ups-externs externs
           :emit-constants emit-constants
           :cache-analysis-format (:cache-analysis-format opts :transit))
