@@ -2267,7 +2267,7 @@
                          warnings)))
                    ana/*verbose* (:verbose opts)]
            (let [one-file? (and (:main all-opts)
-                                (#{:advanced :simple} (:optimizations all-opts)))
+                                (#{:advanced :simple :whitespace} (:optimizations all-opts)))
                  source (if one-file?
                           (let [main (:main all-opts)
                                 uri  (:uri (cljs-source-for-namespace main))]
