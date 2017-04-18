@@ -2058,7 +2058,7 @@
                         (let [refs (second fs)]
                           (cond
                             (not (or (and (= kw :exclude) (sequential? refs) (every? symbol? refs))
-                                   (and (= kw :rename) (map? refs) (every? #(every? symbol? %) refs))))
+                                     (and (= kw :rename) (map? refs) (every? #(every? symbol? %) refs))))
                             (recur fs ret true)
 
                             (= kw :exclude)
@@ -2066,7 +2066,7 @@
 
                             (= kw :rename)
                             (recur (nnext fs) (update-in ret [:renames] merge refs) false)))
-                        (recur fs ret true )))
+                        (recur fs ret true)))
 
                     :else ret))]
             (merge-with into s xs)))
@@ -2238,7 +2238,7 @@
             (if (keyword? quoted-spec-or-kw)
               quoted-spec-or-kw
               (as-> (second quoted-spec-or-kw) spec
-                (if (vector? spec) spec [spec]))))]
+                (if (or (vector? spec) (map? spec)) spec [spec]))))]
     (map canonicalize specs)))
 
 (defn canonicalize-import-specs [specs]

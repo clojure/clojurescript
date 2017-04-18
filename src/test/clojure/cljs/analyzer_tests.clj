@@ -490,7 +490,9 @@
   (is (= (a/canonicalize-specs '(:require (quote [clojure.set :as set])))
          '(:require [clojure.set :as set])))
   (is (= (a/canonicalize-specs '(:require (quote clojure.set)))
-         '(:require [clojure.set]))))
+         '(:require [clojure.set])))
+  (is (= (a/canonicalize-specs '(:refer-clojure :exclude '[map] :rename '{map core-map}))
+         '(:refer-clojure :exclude [map] :rename {map core-map}))))
 
 (deftest test-canonicalize-import-specs
   (is (= (a/canonicalize-import-specs '(:import (quote [goog Uri])))
@@ -556,6 +558,10 @@
                 Integer goog.math.Integer})))
       (let [test-env (a/empty-env)
             parsed (a/analyze test-env '(refer-clojure :exclude '[map mapv]))]
+        (is (= (-> parsed :excludes)
+              '#{map mapv})))
+      (let [test-env (a/empty-env)
+            parsed (a/analyze test-env '(refer-clojure :exclude '[map mapv] :rename '{mapv core-mapv}))]
         (is (= (-> parsed :excludes)
               '#{map mapv})))))
   (testing "arguments to require should be quoted"
