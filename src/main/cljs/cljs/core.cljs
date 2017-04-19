@@ -7412,8 +7412,9 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [coll k]
-    (if has-nil?
-      [nil nil-val]
+    (if (nil? k)
+      (when has-nil?
+        [nil nil-val])
       (.inode-find root 0 (hash k) k nil)))
 
   IMap

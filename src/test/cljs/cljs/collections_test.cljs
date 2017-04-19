@@ -640,7 +640,15 @@
       (is (= v v'))
       (is (= metadata (meta k'))))
     (let [map (hash-map nil :foo)]
-      (is (= (find map nil) [nil :foo]))))
+      (is (= (find map nil) [nil :foo])))
+    (let [metadata {:a 1}
+          k [1 2 3]
+          v 1
+          map (hash-map (with-meta k metadata) v nil 2)
+          [k' v'] (find map k)]
+      (is (= k k'))
+      (is (= v v'))
+      (is (= metadata (meta k')))))
   (testing "PersistentTreeMap"
     (let [metadata {:a 1}
           k [1 2 3]
