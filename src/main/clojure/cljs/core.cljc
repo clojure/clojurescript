@@ -3120,9 +3120,9 @@
                     (if p
                       (recur (next p) (cons (first p) d))
                       d))]
-    (core/list 'do
-      (cons `defn decl)
-      (core/list 'set! `(. ~name ~'-cljs$lang$macro) true))))
+    `(let [ret# ~(cons `defn decl)]
+       (set! (. ~name ~'-cljs$lang$macro) true)
+       ret#)))
 
 #?(:clj  (. (var defmacro) (setMacro))
    :cljs (set! (. defmacro -cljs$lang$macro) true))
