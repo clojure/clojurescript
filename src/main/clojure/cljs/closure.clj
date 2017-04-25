@@ -2003,6 +2003,9 @@
       (nil? (find (:closure-warnings opts) :check-types))
       (assoc-in [:closure-warnings :check-types] :off)
 
+      (nil? (find (:closure-warnings opts) :check-variables))
+      (assoc-in [:closure-warnings :check-variables] :off)
+
       (nil? (:closure-module-roots opts))
       (assoc :closure-module-roots []))))
 
