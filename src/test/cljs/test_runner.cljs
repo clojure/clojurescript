@@ -37,6 +37,7 @@
             [cljs.spec.test-test]
             [cljs.clojure-alias-test]
             [cljs.hash-map-test]
+            [cljs.map-entry-test]
             [cljs.predicates-test]
             [cljs.tagged-literals-test]
             [cljs.test-test]
@@ -73,6 +74,7 @@
   'cljs.spec.test-test
   'cljs.clojure-alias-test
   'cljs.hash-map-test
+  'cljs.map-entry-test
   'cljs.pprint-test
   'cljs.predicates-test
   'cljs.syntax-quote-test

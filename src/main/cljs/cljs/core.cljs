@@ -5161,6 +5161,10 @@ reduces them without incurring seq initialization"
     (if (number? k)
       (-assoc-n coll k v)
       (throw (js/Error. "Vector's key for assoc must be a number."))))
+  (-contains-key? [coll k]
+    (if (integer? k)
+      (and (<= 0 k) (< k cnt))
+      false))
 
   IFind
   (-find [coll k]
@@ -6133,6 +6137,98 @@ reduces them without incurring seq initialization"
   (array-extend-kv (.-arr m) k v))
 
 (declare TransientArrayMap)
+
+(deftype MapEntry [key val ^:mutable __hash]
+  Object
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x (count coll)))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
+  IMapEntry
+  (-key [node] key)
+  (-val [node] val)
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
+
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IMeta
+  (-meta [node] nil)
+
+  IWithMeta
+  (-with-meta [node meta]
+    (with-meta [key val] meta))
+
+  IStack
+  (-peek [node] val)
+
+  (-pop [node] [key])
+
+  ICollection
+  (-conj [node o] [key val o])
+
+  IEmptyableCollection
+  (-empty [node] [])
+
+  ISequential
+  ISeqable
+  (-seq [node] (list key val))
+
+  ICounted
+  (-count [node] 2)
+
+  IIndexed
+  (-nth [node n]
+    (cond (== n 0) key
+          (== n 1) val
+          :else    (throw (js/Error. "Index out of bounds"))))
+
+  (-nth [node n not-found]
+    (cond (== n 0) key
+          (== n 1) val
+          :else    not-found))
+
+  ILookup
+  (-lookup [node k] (-nth node k nil))
+  (-lookup [node k not-found] (-nth node k not-found))
+
+  IAssociative
+  (-assoc [node k v]
+    (assoc [key val] k v))
+  (-contains-key? [node k]
+    (or (== k 0) (== k 1)))
+
+  IFind
+  (-find [node k]
+    (cond
+      (== k 0) [0 key]
+      (== k 1) [1 val]
+      :else nil))
+
+  IVector
+  (-assoc-n [node n v]
+    (-assoc-n [key val] n v))
+
+  IReduce
+  (-reduce [node f]
+    (ci-reduce node f))
+
+  (-reduce [node f start]
+    (ci-reduce node f start))
+
+  IFn
+  (-invoke [node k]
+    (-nth node k))
+
+  (-invoke [node k not-found]
+    (-nth node k not-found)))
 
 (deftype PersistentArrayMapSeq [arr i _meta]
   Object
@@ -7754,7 +7850,7 @@ reduces them without incurring seq initialization"
   (-nth [node n]
     (cond (== n 0) key
           (== n 1) val
-          :else    nil))
+          :else    (throw (js/Error. "Index out of bounds"))))
 
   (-nth [node n not-found]
     (cond (== n 0) key
@@ -7768,10 +7864,15 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [node k v]
     (assoc [key val] k v))
+  (-contains-key? [node k]
+    (or (== k 0) (== k 1)))
 
   IFind
   (-find [node k]
-    [key val])
+    (cond
+      (== k 0) [0 key]
+      (== k 1) [1 val]
+      :else nil))
 
   IVector
   (-assoc-n [node n v]
@@ -7786,10 +7887,10 @@ reduces them without incurring seq initialization"
 
   IFn
   (-invoke [node k]
-    (-lookup node k))
+    (-nth node k))
 
   (-invoke [node k not-found]
-    (-lookup node k not-found)))
+    (-nth node k not-found)))
 
 (es6-iterable BlackNode)
 
@@ -7910,7 +8011,7 @@ reduces them without incurring seq initialization"
   (-nth [node n]
     (cond (== n 0) key
           (== n 1) val
-          :else    nil))
+          :else    (throw (js/Error. "Index out of bounds"))))
 
   (-nth [node n not-found]
     (cond (== n 0) key
@@ -7924,10 +8025,15 @@ reduces them without incurring seq initialization"
   IAssociative
   (-assoc [node k v]
     (assoc [key val] k v))
+  (-contains-key? [node k]
+    (or (== k 0) (== k 1)))
 
   IFind
   (-find [node k]
-    [key val])
+    (cond
+      (== k 0) [0 key]
+      (== k 1) [1 val]
+      :else nil))
 
   IVector
   (-assoc-n [node n v]
@@ -7942,10 +8048,10 @@ reduces them without incurring seq initialization"
 
   IFn
   (-invoke [node k]
-    (-lookup node k))
+    (-nth node k))
 
   (-invoke [node k not-found]
-    (-lookup node k not-found)))
+    (-nth node k not-found)))
 
 (es6-iterable RedNode)
 
