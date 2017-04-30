@@ -408,7 +408,7 @@
       (emits "new cljs.core.PersistentHashSet(null, new cljs.core.PersistentArrayMap(null, " (count items) ", ["
         (comma-sep (interleave items (repeat "null"))) "], null), null)")
 
-      :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "], true)"))))
+      :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "])"))))
 
 (defmethod emit* :js-value
   [{:keys [items js-type env]}]
@@ -565,7 +565,7 @@
     :else line))
 
 (defn checking-types? []
-  (#{:error :warn}
+  (#{:error :warning}
     (get-in @env/*compiler*
       [:options :closure-warnings :check-types])))
 
@@ -750,7 +750,7 @@
         (emitln " = null;")
         (emitln "if (arguments.length > " (dec (count params)) ") {")
         (let [a (emit-arguments-to-array (dec (count params)))]
-          (emitln "  " (last params) " = new cljs.core.IndexedSeq(" a ",0);"))
+          (emitln "  " (last params) " = new cljs.core.IndexedSeq(" a ",0,null);"))
         (emitln "} "))
       (emits "return " delegate-name ".call(this,")
       (doseq [param params]
@@ -819,7 +819,7 @@
                     (emitln "var " restarg " = null;")
                     (emitln "if (arguments.length > " max-fixed-arity ") {")
                     (let [a (emit-arguments-to-array max-fixed-arity)]
-                      (emitln restarg " = new cljs.core.IndexedSeq(" a ",0);"))
+                      (emitln restarg " = new cljs.core.IndexedSeq(" a ",0,null);"))
                     (emitln "}")
                     (emitln "return " n ".cljs$core$IFn$_invoke$arity$variadic("
                             (comma-sep (butlast maxparams))
