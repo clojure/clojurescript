@@ -1262,6 +1262,13 @@
       (case (swap! x m) :a 0 :default)
       (is (= :b @x)))))
 
+(deftest test-cljs-2021
+  (let [check-if-throws #(try (%) (catch js/Error e :fail))]
+    (is (= :fail (check-if-throws #(subvec nil 0 0))))
+    (is (= :fail (check-if-throws #(subvec {:foo :bar} 0 1))))
+    (is (= :fail (check-if-throws #(subvec '(:foo) 0 1))))
+    (is (= :fail (check-if-throws #(subvec #{:foo} 0 1))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

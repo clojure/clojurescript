@@ -5476,12 +5476,15 @@ reduces them without incurring seq initialization"
 (defn- build-subvec [meta v start end __hash]
   (if (instance? Subvec v)
     (recur meta (.-v v) (+ (.-start v) start) (+ (.-start v) end) __hash)
-    (let [c (count v)]
-      (when (or (neg? start)
-                (neg? end)
-                (> start c)
-                (> end c))
-        (throw (js/Error. "Index out of bounds")))
+    (do
+      (when-not (vector? v)
+        (throw (js/Error. "v must satisfy IVector")))
+      (let [c (count v)]
+        (when (or (neg? start)
+                  (neg? end)
+                  (> start c)
+                  (> end c))
+          (throw (js/Error. "Index out of bounds"))))
       (Subvec. meta v start end __hash))))
 
 (defn subvec
