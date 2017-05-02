@@ -201,6 +201,17 @@
   [& pred-forms]
   `(and-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
 
+(defmacro and-all
+  "Takes predicate/spec-forms, e.g.
+
+  (s/and even? #(< % 42))
+
+  Returns a spec that returns the conformed value. Successive
+  conformed values propagate through rest of predicates — invalid values are
+  reported)."
+  [& pred-forms]
+  `(and-all-spec-impl '~(mapv #(res &env %) pred-forms) ~(vec pred-forms) nil))
+
 (defn- res-kind
   [env opts]
   (let [{kind :kind :as mopts} opts]
