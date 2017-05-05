@@ -2150,7 +2150,7 @@
           (when (some? alias)
             {rk (merge {alias lib} {lib lib}
                   (when js-module-provides {js-module-provides lib}))})
-          (when (some? referred-without-renamed) 
+          (when (some? referred-without-renamed)
             {uk (apply hash-map (interleave referred-without-renamed (repeat lib)))})
           (when (some? renamed)
             {renk (reduce (fn [m [original renamed]]
@@ -2950,9 +2950,9 @@
       mvar)))
 
 #?(:cljs
-   (let [cached-var (delay (get (ns-interns* 'cljs.spec) 'macroexpand-check))]
+   (let [cached-var (delay (get (ns-interns* 'cljs.spec.alpha) 'macroexpand-check))]
      (defn get-macroexpand-check-var []
-       (when (some? (find-ns-obj 'cljs.spec))
+       (when (some? (find-ns-obj 'cljs.spec.alpha))
          @cached-var))))
 
 (defn macroexpand-1*
@@ -2964,7 +2964,7 @@
         (if-some [mac-var (when (symbol? op) (get-expander op env))]
           (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
                :cljs [do])
-            (let [mchk  #?(:clj  (some-> (find-ns 'clojure.spec)
+            (let [mchk  #?(:clj  (some-> (find-ns 'clojure.spec.alpha)
                                    (ns-resolve 'macroexpand-check))
                            :cljs (get-macroexpand-check-var))
                   _     (when (some? mchk)

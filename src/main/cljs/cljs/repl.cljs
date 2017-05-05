@@ -8,7 +8,7 @@
 
 (ns cljs.repl
   (:require-macros cljs.repl)
-  (:require [cljs.spec :as spec]))
+  (:require [cljs.spec.alpha :as spec]))
 
 (defn print-doc [{n :ns nm :name :as m}]
   (println "-------------------------")
@@ -29,7 +29,7 @@
   (if (:special-form m)
     (do
       (println "Special Form")
-      (println " " (:doc m)) 
+      (println " " (:doc m))
       (if (contains? m :url)
         (when (:url m)
           (println (str "\n  Please see http://clojure.org/" (:url m))))
