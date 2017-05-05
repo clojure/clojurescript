@@ -300,9 +300,9 @@
                                 <namespace>cljs.analyzer.api</namespace>
                                 <namespace>cljs.build.api</namespace>
                                 <namespace>cljs.compiler.api</namespace>
-                                <namespace>cljs.spec</namespace>
-                                <namespace>cljs.spec.test</namespace>
-                                <namespace>cljs.spec.impl.gen</namespace>
+                                <namespace>cljs.spec.alpha</namespace>
+                                <namespace>cljs.spec.test.alpha</namespace>
+                                <namespace>cljs.spec.gen.alpha</namespace>
                                 <namespace>cljs.repl</namespace>
                                 <namespace>cljs.repl.browser</namespace>
                                 <namespace>cljs.repl.nashorn</namespace>

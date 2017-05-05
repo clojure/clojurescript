@@ -13,7 +13,7 @@
   (:require [goog.object :as gobj]
             [cljs.core :as c]
             [clojure.walk :as walk]
-            [cljs.spec.impl.gen.alpha :as gen]
+            [cljs.spec.gen.alpha :as gen]
             [clojure.string :as str]))
 
 (def ^:const MAX_INT 9007199254740991)

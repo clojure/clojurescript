@@ -13,7 +13,7 @@
             [cljs.env :as env]
             [cljs.analyzer.api :refer [resolve]]
             [clojure.walk :as walk]
-            [cljs.spec.impl.gen.alpha :as gen]
+            [cljs.spec.gen.alpha :as gen]
             [clojure.string :as str]))
 
 (defonce registry-ref (atom {}))

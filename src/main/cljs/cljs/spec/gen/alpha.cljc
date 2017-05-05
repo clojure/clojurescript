@@ -6,7 +6,7 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns cljs.spec.impl.gen.alpha
+(ns cljs.spec.gen.alpha
   (:refer-clojure :exclude [delay])
   (:require [cljs.core :as c]
             [clojure.string :as string]))
@@ -19,7 +19,7 @@
                    `(c/exists? ~(symbol (string/join "." (take n xs)))))
                  (range 2 cnt)
                  (repeat xs))]
-    `(cljs.spec.impl.gen.alpha/LazyVar.
+    `(cljs.spec.gen.alpha/LazyVar.
        (fn []
          (if (and ~@checks (c/exists? ~s))
            ~(vary-meta s assoc :cljs.analyzer/no-resolve true)

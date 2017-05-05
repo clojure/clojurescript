@@ -9,7 +9,7 @@
 (ns cljs.spec-test
   (:require [cljs.spec.alpha :as s]
             [cljs.test :as test :refer-macros [deftest is are run-tests]]
-            [cljs.spec.impl.gen.alpha :as gen]
+            [cljs.spec.gen.alpha :as gen]
             [clojure.test.check.generators]))
 
 (s/def ::even? (s/and number? even?))

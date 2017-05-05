@@ -15,7 +15,7 @@
     [cljs.stacktrace :as st]
     [cljs.pprint :as pp]
     [cljs.spec.alpha :as s]
-    [cljs.spec.impl.gen.alpha :as gen]
+    [cljs.spec.gen.alpha :as gen]
     [clojure.test.check :as stc]
     [clojure.test.check.properties]))
 
@@ -287,7 +287,7 @@ key with a count for each different :type of result."
   (require
     '[cljs.pprint :as pp]
     '[cljs.spec :as s]
-    '[cljs.spec.impl.gen :as gen]
+    '[cljs.spec.gen :as gen]
     '[cljs.test :as ctest])
 
   (require :reload '[cljs.spec.test :as test])

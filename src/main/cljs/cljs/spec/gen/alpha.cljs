@@ -6,11 +6,11 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns cljs.spec.impl.gen.alpha
+(ns cljs.spec.gen.alpha
   (:refer-clojure :exclude [boolean cat hash-map list map not-empty set vector
                             char double int keyword symbol string uuid delay])
   (:require-macros [cljs.core :as c]
-                   [cljs.spec.impl.gen.alpha :as gen :refer [dynaload lazy-combinators lazy-prims]])
+                   [cljs.spec.gen.alpha :as gen :refer [dynaload lazy-combinators lazy-prims]])
   (:require [cljs.core :as c]))
 
 (deftype LazyVar [f ^:mutable cached]
@@ -148,8 +148,8 @@ gen-builtins
 (comment
   (require 'clojure.test.check)
   (require 'clojure.test.check.properties)
-  (require 'cljs.spec.impl.gen)
-  (in-ns 'cljs.spec.impl.gen)
+  (require 'cljs.spec.gen)
+  (in-ns 'cljs.spec.gen)
 
   ;; combinators, see call to lazy-combinators above for complete list
   (generate (one-of [(gen-for-pred integer?) (gen-for-pred string?)]))

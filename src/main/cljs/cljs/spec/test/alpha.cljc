@@ -12,7 +12,7 @@
     [cljs.analyzer.api :as ana-api]
     [clojure.string :as string]
     [cljs.spec.alpha :as s]
-    [cljs.spec.impl.gen.alpha :as gen]))
+    [cljs.spec.gen.alpha :as gen]))
 
 (defonce ^:private instrumented-vars (atom #{}))
 
