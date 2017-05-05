@@ -1,7 +1,7 @@
 (ns cljs.spec.test-test
   (:require [cljs.test :as test :refer-macros [deftest is are run-tests]]
-            [cljs.spec :as s]
-            [cljs.spec.test :as stest]))
+            [cljs.spec.alpha :as s]
+            [cljs.spec.test.alpha :as stest]))
 
 (defn h-cljs-1812 [x] true)
 (s/fdef h-cljs-1812 :args (s/cat :x int?) :ret true?)

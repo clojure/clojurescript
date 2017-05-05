@@ -7,9 +7,9 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.spec-test
-  (:require [cljs.spec :as s]
+  (:require [cljs.spec.alpha :as s]
             [cljs.test :as test :refer-macros [deftest is are run-tests]]
-            [cljs.spec.impl.gen :as gen]
+            [cljs.spec.impl.gen.alpha :as gen]
             [clojure.test.check.generators]))
 
 (s/def ::even? (s/and number? even?))
@@ -88,7 +88,7 @@
   (defmulti mm :mm/type)
   (s/def ::foo-1788 (s/multi-spec mm :mm/type))
   (is (= (s/form ::foo-1788)
-         '(cljs.spec/multi-spec cljs.spec-test/mm :mm/type))))
+         '(cljs.spec.alpha/multi-spec cljs.spec-test/mm :mm/type))))
 
 (def h-cljs-1790 (derive (make-hierarchy) :a :b))
 (defmulti spec-type-1790 identity :hierarchy #'h-cljs-1790)
@@ -245,25 +245,25 @@
   (are [spec form]
     (= (s/form spec) form)
     (s/map-of int? any?)
-    '(cljs.spec/map-of cljs.core/int? cljs.core/any?)
+    '(cljs.spec.alpha/map-of cljs.core/int? cljs.core/any?)
 
     (s/coll-of int?)
-    '(cljs.spec/coll-of cljs.core/int?)
+    '(cljs.spec.alpha/coll-of cljs.core/int?)
 
     (s/every-kv int? int?)
-    '(cljs.spec/every-kv cljs.core/int? cljs.core/int?)
+    '(cljs.spec.alpha/every-kv cljs.core/int? cljs.core/int?)
 
     (s/every int?)
-    '(cljs.spec/every cljs.core/int?)
+    '(cljs.spec.alpha/every cljs.core/int?)
 
     (s/coll-of (s/tuple (s/tuple int?)))
-    '(cljs.spec/coll-of (cljs.spec/tuple (cljs.spec/tuple cljs.core/int?)))
+    '(cljs.spec.alpha/coll-of (cljs.spec.alpha/tuple (cljs.spec.alpha/tuple cljs.core/int?)))
 
     (s/coll-of int? :kind vector?)
-    '(cljs.spec/coll-of cljs.core/int? :kind cljs.core/vector?)
+    '(cljs.spec.alpha/coll-of cljs.core/int? :kind cljs.core/vector?)
 
     (s/coll-of int? :gen #(gen/return [1 2]))
-    '(cljs.spec/coll-of cljs.core/int? :gen (fn* [] (gen/return [1 2])))))
+    '(cljs.spec.alpha/coll-of cljs.core/int? :gen (fn* [] (gen/return [1 2])))))
 
 (comment
 
