@@ -877,6 +877,20 @@
           (is (nil? error))
           (inc! l))))))
 
+(deftest test-cljs-2024
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 1 done)]
+      (cljs/eval-str
+        st
+        "(find-ns-obj 'a.x)"
+        nil
+        {:context :expr
+         :eval node-eval}
+        (fn [{:keys [error] :as m}]
+          (is (nil? error))
+          (inc! l))))))
+
 (defn -main [& args]
   (run-tests))
 

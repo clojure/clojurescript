@@ -10852,7 +10852,9 @@ reduces them without incurring seq initialization"
                   ; may throw ReferenceError.
                   (find-ns-obj*
                     (try
-                      (js/eval (first segs))
+                      (let [ctxt (js/eval (first segs))]
+                        (when (and ctxt (object? ctxt))
+                          ctxt))
                       (catch js/ReferenceError e
                         nil))
                     (next segs))
