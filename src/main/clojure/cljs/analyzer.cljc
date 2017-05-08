@@ -968,8 +968,12 @@
       (some? (namespace sym))
       (let [ns (namespace sym)
             ns (if (= "clojure.core" ns) "cljs.core" ns)
-            full-ns (resolve-macro-ns-alias env ns)]
-        (get-in namespaces [full-ns :macros (symbol (name sym))]))
+            full-ns (resolve-macro-ns-alias env ns)
+            #?@(:cljs [full-ns (if-not (string/ends-with? (str full-ns) "$macros")
+                                 (symbol (str full-ns "$macros"))
+                                 full-ns)])]
+        #?(:clj (get-in namespaces [full-ns :macros (symbol (name sym))])
+           :cljs (get-in namespaces [full-ns :defs (symbol (name sym))])))
 
       (some? (get-in namespaces [ns :use-macros sym]))
       (let [full-ns (get-in namespaces [ns :use-macros sym])]
@@ -2865,7 +2869,7 @@
                  env)
           ret  {:env env :form sym}
           lcls (:locals env)]
-      (if-some [lb (get lcls sym)] 
+      (if-some [lb (get lcls sym)]
         (assoc ret :op :var :info lb)
         (let [sym-meta (meta sym)
               sym-ns (namespace sym)

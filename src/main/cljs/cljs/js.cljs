@@ -179,7 +179,7 @@
   []
   (->> (merge (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :requires])
          (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :require-macros]))
-    (remove (fn [[k v]] (= k v)))
+    (remove (fn [[k v]] (symbol-identical? k v)))
     (into {})))
 
 ;; -----------------------------------------------------------------------------
@@ -457,6 +457,19 @@
       (update :renames rewrite-renames)
       (update :rename-macros rewrite-renames))))
 
+(defn- check-macro-autoload-inferring-missing
+  [{:keys [requires name] :as ast} cenv]
+  (let [namespaces (-> @cenv ::ana/namespaces)
+        missing-require-macros (into {}
+                                 (filter (fn [[_ full-ns]]
+                                           (let [{:keys [use-macros require-macros]} (get namespaces full-ns)]
+                                             (or (some #{full-ns} (vals use-macros))
+                                                 (some #{full-ns} (vals require-macros))))))
+                                 requires)
+        ast' (update-in ast [:require-macros] merge missing-require-macros)]
+    (swap! cenv update-in [::ana/namespaces name :require-macros] merge missing-require-macros)
+    ast'))
+
 (defn- ns-side-effects
   ([bound-vars ana-env ast opts cb]
     (ns-side-effects false bound-vars ana-env ast opts cb))
@@ -498,7 +511,8 @@
                                                      env/*compiler* (:*compiler* bound-vars)]
                                              (let [ast' (-> rewritten-ast
                                                           (ana/check-use-macros-inferring-missing env)
-                                                          (ana/check-rename-macros-inferring-missing env))]
+                                                          (ana/check-rename-macros-inferring-missing env)
+                                                          (check-macro-autoload-inferring-missing env))]
                                                (cb {:value ast'})))
                                            (catch :default cause
                                              (cb (wrap-error

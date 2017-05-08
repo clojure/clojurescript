@@ -36,12 +36,19 @@
 (defn- res [env form]
   (cond
     (keyword? form) form
-    (symbol? form) (clojure.core/or (->> form (resolve env) ->sym) form)
+    (symbol? form) #?(:clj  (clojure.core/or (->> form (resolve env) ->sym) form)
+                      :cljs (let [resolved (clojure.core/or (->> form (resolve env) ->sym) form)
+                                  ns-name (namespace resolved)]
+                              (symbol
+                                (if (clojure.core/and ns-name (str/ends-with? ns-name "$macros"))
+                                  (subs ns-name 0 (- (count ns-name) 7))
+                                  ns-name)
+                                (name resolved))))
     (sequential? form) (walk/postwalk #(if (symbol? %) (res env %) %) (unfn form))
     :else form))
 
 (defmacro ^:private mres
-  "a compile time res, for use in cljs/spec.cljs"
+  "a compile time res, for use in cljs/spec/alpha.cljs"
   [form]
   (res &env form))
 
