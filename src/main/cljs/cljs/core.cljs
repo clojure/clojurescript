@@ -4015,7 +4015,11 @@ reduces them without incurring seq initialization"
       (-seq this))
     (if (nil? rest)
       nil
-      (-seq rest))))
+      (-seq rest)))
+
+  IPending
+  (-realized? [_]
+    (nil? stepper)))
 
 (es6-iterable LazyTransformer)
 

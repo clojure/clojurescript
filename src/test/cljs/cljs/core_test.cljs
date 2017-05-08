@@ -846,7 +846,7 @@
   (testing "Testing CLJS-853, function metadata"
     (is (= {:foo true} (meta ^:foo (fn []))))))
 
-(deftest test-807 
+(deftest test-807
   (testing "Testing CLJS-807, big int, float, big dec literals"
     (is (= -1 -1N))
     (is (= 9.007199254740996E15 9007199254740995N))
@@ -1188,6 +1188,12 @@
   (is (= (get #js [0 1 2 3] -1 :not-found) :not-found))
   (is (= (get "0123" nil :not-found) :not-found))
   (is (= (get #js [0 1 2 3] nil :not-found) :not-found)))
+
+(deftest test-cljs-2028
+  (let [x (sequence (filter pos?) [1 2 -1])]
+    (is (not (realized? x)))
+    (is (= x [1 2]))
+    (is (realized? x))))
 
 (comment
   ;; ObjMap
