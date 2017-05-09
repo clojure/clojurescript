@@ -1195,6 +1195,14 @@
     (is (= x [1 2]))
     (is (realized? x))))
 
+(deftest test-1518
+  (testing "Test evaluate expression once - keyword tests"
+    (let [m {:a :b
+             :b :c}
+          x (atom :a)]
+      (case (swap! x m) :a 0 :default)
+      (is (= :b @x)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
