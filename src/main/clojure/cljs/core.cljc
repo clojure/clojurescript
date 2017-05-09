@@ -2248,11 +2248,10 @@
         `(let [~esym ~e] (case* ~esym ~tests ~thens ~default)))
 
       (every? core/keyword? tests)
-      (core/let [tests (core/->> tests
-                         (map #(.substring (core/str %) 1))
-                         vec
-                         (mapv #(if (seq? %) (vec %) [%])))
-                 thens (vec (vals pairs))]
+      (core/let [no-default (if (odd? (count clauses)) (butlast clauses) clauses)
+                 kw-str #(.substring (core/str %) 1)
+                 tests (mapv #(if (seq? %) (mapv kw-str %) [(kw-str %)]) (take-nth 2 no-default))
+                 thens (vec (take-nth 2 (drop 1 no-default)))]
         `(let [~esym ~e
                ~esym (if (keyword? ~esym) (.-fqn ~esym) nil)]
            (case* ~esym ~tests ~thens ~default)))
