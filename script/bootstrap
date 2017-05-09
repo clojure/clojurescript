@@ -37,7 +37,7 @@ rm data.json-$DJSON_RELEASE.jar
 
 echo "Fetching transit-clj..."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/com/cognitect/transit-clj/$TRANSIT_RELEASE/transit-clj-$TRANSIT_RELEASE.jar || { echo "Download failed."; exit 1; }
-echo "Copying transit-cjl-$TRANSIT_RELEASE.jar to lib/transit-clj-$TRANSIT_RELEASE.jar..."
+echo "Copying transit-clj-$TRANSIT_RELEASE.jar to lib/transit-clj-$TRANSIT_RELEASE.jar..."
 cp transit-clj-$TRANSIT_RELEASE.jar lib/transit-clj-$TRANSIT_RELEASE.jar
 echo "Cleaning up data.json..."
 rm transit-clj-$TRANSIT_RELEASE.jar
