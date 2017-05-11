@@ -133,7 +133,11 @@
           :key (e 0 :not-found)
           :val (e 1 :not-found)
           :not-found (e 2 :not-found)
-          :not-found (e -1 :not-found))))))
+          :not-found (e -1 :not-found))))
+
+    (testing "IComparable"
+      (testing "-compare"
+        (is (zero? (-compare e [:key :val])))))))
 
 (deftest all-map-entry-tests
   (testing "BlackNode"

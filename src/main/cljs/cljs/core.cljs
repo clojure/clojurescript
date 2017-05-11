@@ -9756,6 +9756,24 @@ reduces them without incurring seq initialization"
   (-compare [x y]
     (if (vector? y)
       (compare-indexed x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+
+  MapEntry
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+
+  BlackNode
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
+      (throw (js/Error. (str "Cannot compare " x " to " y)))))
+
+  RedNode
+  (-compare [x y]
+    (if (vector? y)
+      (compare-indexed x y)
       (throw (js/Error. (str "Cannot compare " x " to " y))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Reference Types ;;;;;;;;;;;;;;;;
