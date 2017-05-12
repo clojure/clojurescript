@@ -3409,7 +3409,7 @@ reduces them without incurring seq initialization"
     (-lastIndexOf coll x (count coll)))
   (lastIndexOf [coll x start]
     (-lastIndexOf coll x start))
-  
+
   IWithMeta
   (-with-meta [coll m]
     (ChunkedCons. chunk more m __hash))
@@ -3868,41 +3868,53 @@ reduces them without incurring seq initialization"
     (seqable? coll) (seq-iter coll)
     :else (throw (js/Error. (str "Cannot create iterator from " coll)))))
 
-(declare LazyTransformer)
-
-(defn lazy-transformer [stepper]
-  (LazyTransformer. stepper nil nil nil))
-
-(deftype Stepper [xform iter]
+(deftype Many [vals]
   Object
-  (step [this lt]
-    (loop []
-      (if (and (not (nil? (.-stepper lt)))
-               (.hasNext iter))
-        (if (reduced? (xform lt (.next iter)))
-          (when-not (nil? (.-rest lt))
-            (set! (.. lt -rest -stepper) nil))
-          (recur))))
-    (when-not (nil? (.-stepper lt))
-      (xform lt))))
+  (add [this o]
+    (.push vals o)
+    this)
+  (remove [this]
+    (.shift vals))
+  (isEmpty [this]
+    (zero? (.-length vals)))
+  (toString [this]
+    (str "Many: " vals)))
 
-(defn stepper [xform iter]
-  (letfn [(stepfn
-            ([result]
-               (let [lt (if (reduced? result)
-                          @result
-                          result)]
-                 (set! (.-stepper lt) nil)
-                 result))
-            ([result input]
-               (let [lt result]
-                 (set! (.-first lt) input)
-                 (set! (.-rest lt) (lazy-transformer (.-stepper lt)))
-                 (set! (.-stepper lt) nil)
-                 (.-rest lt))))]
-   (Stepper. (xform stepfn) iter)))
+(def ^:private NONE #js {})
 
-(deftype MultiStepper [xform iters nexts]
+(deftype Single [^:mutable val]
+  Object
+  (add [this o]
+    (if (identical? val NONE)
+      (do
+        (set! val o)
+        this)
+      (Many. #js [val o])))
+  (remove [this]
+    (if (identical? val NONE)
+      (throw (js/Error. (str "Removing object from empty buffer")))
+      (let [ret val]
+        (set! val NONE)
+        ret)))
+  (isEmpty [this]
+    (identical? val NONE))
+  (toString [this]
+    (str "Single: " val)))
+
+(deftype Empty []
+  Object
+  (add [this o]
+    (Single. o))
+  (remove [this]
+    (throw (js/Error. (str "Removing object from empty buffer"))))
+  (isEmpty [this]
+    true)
+  (toString [this]
+    "Empty"))
+
+(def ^:private EMPTY (Empty.))
+
+(deftype MultiIterator [iters]
   Object
   (hasNext [_]
     (loop [iters (seq iters)]
@@ -3913,128 +3925,83 @@ reduces them without incurring seq initialization"
             (recur (next iters))))
         true)))
   (next [_]
-    (dotimes [i (alength iters)]
-      (aset nexts i (.next (aget iters i))))
-    (prim-seq nexts 0))
-  (step [this lt]
-    (loop []
-      (if (and (not (nil? (.-stepper lt)))
-               (.hasNext this))
-        (if (reduced? (apply xform (cons lt (.next this))))
-          (when-not (nil? (.-rest lt))
-            (set! (.. lt -rest -stepper) nil))
-          (recur))))
-    (when-not (nil? (.-stepper lt))
-      (xform lt))))
+    (let [nexts (array)]
+      (dotimes [i (alength iters)]
+        (aset nexts i (.next (aget iters i))))
+      (prim-seq nexts 0))))
 
-(defn multi-stepper
-  ([xform iters]
-     (multi-stepper xform iters
-       (make-array (alength iters))))
-  ([xform iters nexts]
-     (letfn [(stepfn
-               ([result]
-                  (let [lt (if (reduced? result)
-                             @result
-                             result)]
-                    (set! (.-stepper lt) nil)
-                    lt))
-               ([result input]
-                  (let [lt result]
-                    (set! (.-first lt) input)
-                    (set! (.-rest lt) (lazy-transformer (.-stepper lt)))
-                    (set! (.-stepper lt) nil)
-                    (.-rest lt))))]
-       (MultiStepper. (xform stepfn) iters nexts))))
+(defn- chunkIteratorSeq [iter]
+  (lazy-seq
+    (when ^boolean (.hasNext iter)
+      (let [arr (array)]
+        (loop [n 0]
+          (if (and (.hasNext iter) (< n 32))
+            (do
+              (aset arr n (.next iter))
+              (recur (inc n)))
+            (chunk-cons (array-chunk arr 0 n) (chunkIteratorSeq iter))))))))
 
-(deftype LazyTransformer [^:mutable stepper ^:mutable first ^:mutable rest meta]
+(deftype TransformerIterator [^:mutable buffer ^:mutable _next ^:mutable completed ^:mutable xf sourceIter multi]
   Object
-  (indexOf [coll x]
-    (-indexOf coll x 0))
-  (indexOf [coll x start]
-    (-indexOf coll x start))
-  (lastIndexOf [coll x]
-    (-lastIndexOf coll x (count coll)))
-  (lastIndexOf [coll x start]
-    (-lastIndexOf coll x start))
+  (step [this]
+    (if-not (identical? _next NONE)
+      true
+      (loop []
+        (if (identical? _next NONE)
+          (if ^boolean (.isEmpty buffer)
+            (if ^boolean completed
+              false
+              (if ^boolean (.hasNext sourceIter)
+                (let [iter (if ^boolean multi
+                             (apply xf (cons nil (.next sourceIter)))
+                             (xf nil (.next sourceIter)))]
+                  (when (reduced? iter)
+                    (xf nil)
+                    (set! completed true))
+                  (recur))
+                (do
+                  (xf nil)
+                  (set! completed true)
+                  (recur))))
+            (do
+              (set! _next (.remove buffer))
+              (recur)))
+          true))))
+  (hasNext [this]
+    (.step this))
+  (next [this]
+    (if ^boolean (.hasNext this)
+      (let [ret _next]
+        (set! _next NONE)
+        ret)
+      (throw (js/Error. "No such element"))))
+  (remove [_]
+    (js/Error. "Unsupported operation")))
 
-  IWithMeta
-  (-with-meta [this new-meta]
-    (LazyTransformer. stepper first rest new-meta))
+(es6-iterable TransformerIterator)
 
-  IMeta
-  (-meta [this] meta)
+(defn transformer-iterator
+  [xform sourceIter multi]
+  (let [iterator (TransformerIterator. EMPTY NONE false nil sourceIter multi)]
+    (set! (.-xf iterator)
+      (xform (fn
+               ([] nil)
+               ([acc] acc)
+               ([acc o]
+                (set! (.-buffer iterator) (.add (.-buffer iterator) o))
+                acc))))
+    iterator))
 
-  ICollection
-  (-conj [this o]
-    (cons o (-seq this)))
-
-  IEmptyableCollection
-  (-empty [this]
-    ())
-
-  ISequential
-  IEquiv
-  (-equiv [this other]
-    (let [s (-seq this)]
-      (if-not (nil? s)
-        (equiv-sequential this other)
-        (and (sequential? other)
-             (nil? (seq other))))))
-
-  IHash
-  (-hash [this]
-    (hash-ordered-coll this))
-
-  ISeqable
-  (-seq [this]
-    (when-not (nil? stepper)
-      (.step stepper this))
-    (if (nil? rest)
-      nil
-      this))
-
-  ISeq
-  (-first [this]
-    (when-not (nil? stepper)
-      (-seq this))
-    (if (nil? rest)
-      nil
-      first))
-
-  (-rest [this]
-    (when-not (nil? stepper)
-      (-seq this))
-    (if (nil? rest)
-      ()
-      rest))
-
-  INext
-  (-next [this]
-    (when-not (nil? stepper)
-      (-seq this))
-    (if (nil? rest)
-      nil
-      (-seq rest)))
-
-  IPending
-  (-realized? [_]
-    (nil? stepper)))
-
-(es6-iterable LazyTransformer)
-
-(set! (.-create LazyTransformer)
+(set! (.-create TransformerIterator)
   (fn [xform coll]
-    (LazyTransformer. (stepper xform (iter coll)) nil nil nil)))
+    (transformer-iterator xform (iter coll) false)))
 
-(set! (.-createMulti LazyTransformer)
+(set! (.-createMulti TransformerIterator)
   (fn [xform colls]
     (let [iters (array)]
       (doseq [coll colls]
         (.push iters (iter coll)))
-      (LazyTransformer.
-        (multi-stepper xform iters (make-array (alength iters)))
-        nil nil nil))))
+      (transformer-iterator xform (MultiIterator. iters) true))))
 
 (defn sequence
   "Coerces coll to a (possibly empty) sequence, if it is not already
@@ -4050,9 +4017,13 @@ reduces them without incurring seq initialization"
        coll
        (or (seq coll) ())))
   ([xform coll]
-     (.create LazyTransformer xform coll))
+   (or (chunkIteratorSeq
+         (.create TransformerIterator xform coll))
+       ()))
   ([xform coll & colls]
-     (.createMulti LazyTransformer xform (to-array (cons coll colls)))))
+   (or (chunkIteratorSeq
+         (.createMulti TransformerIterator xform (to-array (cons coll colls))))
+       ())))
 
 (defn ^boolean every?
   "Returns true if (pred x) is logical true for every x in coll, else
@@ -4257,7 +4228,7 @@ reduces them without incurring seq initialization"
     (-equiv this other))
 
   IAtom
-  
+
   IEquiv
   (-equiv [o other] (identical? o other))
 
@@ -9645,7 +9616,7 @@ reduces them without incurring seq initialization"
   LazySeq
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
-  LazyTransformer
+  TransformerIterator
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   IndexedSeq
@@ -9954,6 +9925,10 @@ reduces them without incurring seq initialization"
     (-lastIndexOf coll x start))
 
   ISequential
+
+  IIterable
+  (-iterator [coll]
+    (.create TransformerIterator xform coll))
 
   ISeqable
   (-seq [_] (seq (sequence xform coll)))

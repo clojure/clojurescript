@@ -348,7 +348,13 @@
       (is (= (sequence xf [0 0] [1 2]) [1 2])))
     (is (= (-> (sequence (map inc) [1 2 3])
              (with-meta {:a 1})
-             meta) {:a 1}))))
+             meta) {:a 1}))
+    (let [xf (fn [rf]
+               (fn
+                 ([] (rf))
+                 ([result] (rf result :foo))
+                 ([result input] (rf result input))))]
+      (is (= (sequence xf [1 2 3]) [1 2 3 :foo])))))
 
 (deftest test-obj-equiv
   (testing "Object equiv method"
