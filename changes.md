@@ -1,3 +1,22 @@
+## 1.9.542
+
+### Enhancements
+* CLJS-1572: REPL doesn't give error for expressions with too many right parentheses
+
+### Changes
+* cljs.spec -> cljs.spec.alpha
+* CLJS-2013 - Add MapEntry type
+* CLJS-2015: Self-host: `defmacro` should return the Var
+* CLJS-2017: Upgrade Closure Compiler to latest April 2017 release
+
+### Fixes
+* CLJS-485: RegExp flags are being dropped by string/replace
+* CLJS-1518: Case macro expansion evaluates expression twice
+* CLJS-2024: Self-host: `find-ns-obj` broken for namespaces with 'a' as the first segment
+* CLJS-2028: `realized?` throws on LazyTransformer
+* CLJS-2010: refer-clojure :rename throws on valid invocations
+* CLJS-2007: Whitespace optimizations should respect :main option.
+
 ## 1.9.521
 
 ### Fixes
