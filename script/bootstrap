@@ -3,6 +3,8 @@
 set -e
 
 CLOJURE_RELEASE="1.9.0-alpha16"
+SPEC_ALPHA_RELEASE="0.1.108"
+CORE_SPECS_ALPHA_RELEASE="0.1.10"
 CLOSURE_RELEASE="20170423"
 DJSON_RELEASE="0.2.6"
 TRANSIT_RELEASE="0.8.285"
@@ -27,6 +29,20 @@ echo "Cleaning up Clojure directory..."
 rm -rf clojure-$CLOJURE_RELEASE/
 echo "Cleaning up Clojure archive..."
 rm clojure-$CLOJURE_RELEASE.zip
+
+echo "Fetching specs.alpha...."
+curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/spec.alpha/$SPEC_ALPHA_RELEASE/spec.alpha-$SPEC_ALPHA_RELEASE.jar || { echo "Download failed."; exit 1; }
+echo "Copying spec.alpha-$SPEC_ALPHA_RELEASE/spec.alpha-$SPEC_ALPHA_RELEASE.jar to lib/spec.alpha.jar..."
+cp spec.alpha-$SPEC_ALPHA_RELEASE.jar lib/spec.alpha-$SPEC_ALPHA_RELEASE.jar
+echo "Cleaning up spec.alpha..."
+rm spec.alpha-$SPEC_ALPHA_RELEASE.jar
+
+echo "Fetching core.specs.alpha...."
+curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/core.specs.alpha/$CORE_SPECS_ALPHA_RELEASE/core.specs.alpha-$CORE_SPECS_ALPHA_RELEASE.jar || { echo "Download failed."; exit 1; }
+echo "Copying core.specs.alpha-$CORE_SPECS_ALPHA_RELEASE/core.specs.alpha-$CORE_SPECS_ALPHA_RELEASE.jar to lib/core.specs.alpha.jar..."
+cp core.specs.alpha-$CORE_SPECS_ALPHA_RELEASE.jar lib/core.specs.alpha-$CORE_SPECS_ALPHA_RELEASE.jar
+echo "Cleaning up core.specs.alpha..."
+rm core.specs.alpha-$CORE_SPECS_ALPHA_RELEASE.jar
 
 echo "Fetching data.json..."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/data.json/$DJSON_RELEASE/data.json-$DJSON_RELEASE.jar || { echo "Download failed."; exit 1; }
