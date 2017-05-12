@@ -340,22 +340,22 @@
 (deftest test-rewrite-cljs-aliases
   (is (= (a/rewrite-cljs-aliases
            '((:require-macros (bar :refer [quux]) :reload)
-             (:require (clojure.spec :as s :refer [fdef]) :reload)))
+             (:require (clojure.spec.alpha :as s :refer [fdef]) :reload)))
          '((:require-macros (bar :refer [quux]) :reload)
-           (:require (cljs.spec :as s :refer [fdef])
-                     (cljs.spec :as clojure.spec) :reload))))
+           (:require (cljs.spec.alpha :as s :refer [fdef])
+                     (cljs.spec.alpha :as clojure.spec.alpha) :reload))))
   (is (= (a/rewrite-cljs-aliases
            '((:refer-clojure :exclude [first])
               (:require-macros (bar :refer [quux]) :reload)
-              (:require (clojure.spec :as s) :reload)))
+              (:require (clojure.spec.alpha :as s) :reload)))
          '((:refer-clojure :exclude [first])
            (:require-macros (bar :refer [quux]) :reload)
-           (:require (cljs.spec :as s) (cljs.spec :as clojure.spec) :reload))))
+           (:require (cljs.spec.alpha :as s) (cljs.spec.alpha :as clojure.spec.alpha) :reload))))
   (is (= (a/rewrite-cljs-aliases
            '((:require-macros (bar :refer [quux]) :reload)
-             (:require clojure.spec :reload)))
+             (:require clojure.spec.alpha :reload)))
          '((:require-macros (bar :refer [quux]) :reload)
-           (:require (cljs.spec :as clojure.spec) :reload)))))
+           (:require (cljs.spec.alpha :as clojure.spec.alpha) :reload)))))
 
 ;; =============================================================================
 ;; Namespace metadata
