@@ -292,6 +292,7 @@
                    #_[cljs.spec.test-test]
                    [cljs.clojure-alias-test]
                    [cljs.hash-map-test]
+                   [cljs.map-entry-test]
                    [cljs.syntax-quote-test]
                    [cljs.predicates-test]
                    [cljs.test-test]
@@ -329,6 +330,7 @@
                #_'cljs.spec.test-test
                'cljs.clojure-alias-test
                'cljs.hash-map-test
+               'cljs.map-entry-test
                'cljs.syntax-quote-test
                'cljs.predicates-test
                'cljs.test-test
