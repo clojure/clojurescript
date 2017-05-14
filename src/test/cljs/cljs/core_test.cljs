@@ -47,6 +47,15 @@
     (testing "Testing atom validators"
       (is (= coll? (get-validator a)))
       (is (thrown? js/Error (reset! a 1)))
+      (is (thrown? js/Error (set-validator! a number?)))
+      (is (some? (get-validator a)))
+      (set-validator! a nil)
+      (is (nil? (get-validator a)))
+      (let [e1 (ex-info "" {})]
+        (try
+          (set-validator! a (fn [_] (throw e1)))
+          (catch :default e2
+            (is (identical? e1 e2)))))
       (is (= {:a 1} (meta a)))
       (alter-meta! a assoc :b 2)
       (is (= {:a 1 :b 2} (meta a)))))

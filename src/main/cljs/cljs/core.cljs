@@ -4325,6 +4325,9 @@ reduces them without incurring seq initialization"
   is not acceptable to the new validator, an Error will be thrown and the
   validator will not be changed."
   [iref val]
+  (when (and (some? val)
+             (not (val (-deref iref))))
+    (throw (js/Error. "Validator rejected reference state")))
   (set! (.-validator iref) val))
 
 (defn get-validator
