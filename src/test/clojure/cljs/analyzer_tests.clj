@@ -694,6 +694,10 @@
                            z)))))
               :tag meta :prefix))))
 
+(deftest test-cljs-2023
+  (let [form (with-meta 'js/goog.DEBUG {:tag 'boolean})]
+    (is (= (-> (ana-api/analyze (a/empty-env) form) :tag) 'boolean))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn

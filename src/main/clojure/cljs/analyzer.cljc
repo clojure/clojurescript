@@ -854,7 +854,7 @@
            (merge
              {:name sym
               :ns   'js
-              :tag  (with-meta (or (js-tag pre) 'js) {:prefix pre})}
+              :tag  (with-meta (or (js-tag pre) (:tag (meta sym)) 'js) {:prefix pre})}
              (when-let [ret-tag (js-tag pre :ret-tag)]
                {:js-fn-var true
                 :ret-tag ret-tag}))))
