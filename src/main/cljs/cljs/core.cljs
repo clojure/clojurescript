@@ -10022,7 +10022,7 @@ reduces them without incurring seq initialization"
 
                 (array? x)
                 (vec (map thisfn x))
-                 
+
                 (identical? (type x) js/Object)
                 (into {} (for [k (js-keys x)]
                            [(keyfn k) (thisfn (aget x k))]))
@@ -10235,7 +10235,7 @@ reduces them without incurring seq initialization"
   (or (prefers* x y prefer-table) (isa? hierarchy x y)))
 
 (defn- find-and-cache-best-method
-  [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy]
+  [name dispatch-val hierarchy method-table prefer-table method-cache cached-hierarchy default-dispatch-val]
   (let [best-entry (reduce (fn [be [k _ :as e]]
                              (if (isa? @hierarchy dispatch-val k)
                                (let [be2 (if (or (nil? be) (dominates k (first be) prefer-table @hierarchy))
@@ -10243,12 +10243,15 @@ reduces them without incurring seq initialization"
                                            be)]
                                  (when-not (dominates (first be2) k prefer-table @hierarchy)
                                    (throw (js/Error.
-                                           (str "Multiple methods in multimethod '" name
-                                                "' match dispatch value: " dispatch-val " -> " k
-                                                " and " (first be2) ", and neither is preferred"))))
+                                            (str "Multiple methods in multimethod '" name
+                                              "' match dispatch value: " dispatch-val " -> " k
+                                              " and " (first be2) ", and neither is preferred"))))
                                  be2)
                                be))
-                           nil @method-table)]
+                     nil @method-table)
+        best-entry (if-let [entry (and (nil? best-entry) (@method-table default-dispatch-val))]
+                     [default-dispatch-val entry]
+                     best-entry)]
     (when best-entry
       (if (= @cached-hierarchy @hierarchy)
         (do
@@ -10257,7 +10260,7 @@ reduces them without incurring seq initialization"
         (do
           (reset-cache method-cache method-table cached-hierarchy hierarchy)
           (find-and-cache-best-method name dispatch-val hierarchy method-table prefer-table
-                                      method-cache cached-hierarchy))))))
+            method-cache cached-hierarchy default-dispatch-val))))))
 
 (defprotocol IMultiFn
   (-reset [mf])
@@ -10432,10 +10435,8 @@ reduces them without incurring seq initialization"
       (reset-cache method-cache method-table cached-hierarchy hierarchy))
     (if-let [target-fn (@method-cache dispatch-val)]
       target-fn
-      (if-let [target-fn (find-and-cache-best-method name dispatch-val hierarchy method-table
-                                                     prefer-table method-cache cached-hierarchy)]
-        target-fn
-        (@method-table default-dispatch-val))))
+      (find-and-cache-best-method name dispatch-val hierarchy method-table
+        prefer-table method-cache cached-hierarchy default-dispatch-val)))
 
   (-prefer-method [mf dispatch-val-x dispatch-val-y]
     (when (prefers* dispatch-val-x dispatch-val-y prefer-table)
@@ -10452,7 +10453,7 @@ reduces them without incurring seq initialization"
   (-prefers [mf] @prefer-table)
   (-default-dispatch-val [mf] default-dispatch-val)
   (-dispatch-fn [mf] dispatch-fn)
-  
+
   INamed
   (-name [this] (-name name))
   (-namespace [this] (-namespace name))
