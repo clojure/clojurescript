@@ -2192,11 +2192,12 @@
   expression, a vector can be used to match a list if needed. The
   test-constants need not be all of the same type."
   [e & clauses]
-  (core/let [default (if (odd? (count clauses))
+  (core/let [esym    (gensym)
+             default (if (odd? (count clauses))
                        (last clauses)
                        `(throw
                           (js/Error.
-                            (cljs.core/str "No matching clause: " ~e))))
+                            (cljs.core/str "No matching clause: " ~esym))))
              env     &env
              pairs   (reduce
                        (core/fn [m [test expr]]
@@ -2214,7 +2215,6 @@
                            :else
                            (assoc-test m test expr env)))
                      {} (partition 2 clauses))
-             esym    (gensym)
              tests   (keys pairs)]
     (core/cond
       (every? (some-fn core/number? core/string? #?(:clj core/char? :cljs (core/fnil core/char? :nonchar)) #(const? env %)) tests)
