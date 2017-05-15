@@ -449,10 +449,13 @@
      [expr & clauses]
      (core/assert (even? (count clauses)))
      (core/let [g (gensym)
-                pstep (core/fn [[test step]] `(if ~test (-> ~g ~step) ~g))]
+                steps (map (core/fn [[test step]] `(if ~test (-> ~g ~step) ~g))
+                        (partition 2 clauses))]
        `(let [~g ~expr
-              ~@(interleave (repeat g) (map pstep (partition 2 clauses)))]
-          ~g))))
+              ~@(interleave (repeat g) (butlast steps))]
+          ~(if (empty? steps)
+             g
+             (last steps))))))
 
 #?(:cljs
    (core/defmacro cond->>
@@ -463,10 +466,13 @@
      [expr & clauses]
      (core/assert (even? (count clauses)))
      (core/let [g (gensym)
-                pstep (core/fn [[test step]] `(if ~test (->> ~g ~step) ~g))]
+                steps (map (core/fn [[test step]] `(if ~test (->> ~g ~step) ~g))
+                        (partition 2 clauses))]
        `(let [~g ~expr
-              ~@(interleave (repeat g) (map pstep (partition 2 clauses)))]
-          ~g))))
+              ~@(interleave (repeat g) (butlast steps))]
+          ~(if (empty? steps)
+             g
+             (last steps))))))
 
 #?(:cljs
    (core/defmacro as->
@@ -475,8 +481,10 @@
      successive form, returning the result of the last form."
      [expr name & forms]
      `(let [~name ~expr
-            ~@(interleave (repeat name) forms)]
-        ~name)))
+            ~@(interleave (repeat name) (butlast forms))]
+        ~(if (empty? forms)
+           name
+           (last forms)))))
 
 #?(:cljs
    (core/defmacro some->
@@ -484,10 +492,13 @@
      and when that result is not nil, through the next etc"
      [expr & forms]
      (core/let [g (gensym)
-                pstep (core/fn [step] `(if (nil? ~g) nil (-> ~g ~step)))]
+                steps (map (core/fn [step] `(if (nil? ~g) nil (-> ~g ~step)))
+                        forms)]
        `(let [~g ~expr
-              ~@(interleave (repeat g) (map pstep forms))]
-          ~g))))
+              ~@(interleave (repeat g) (butlast steps))]
+          ~(if (empty? steps)
+             g
+             (last steps))))))
 
 #?(:cljs
    (core/defmacro some->>
@@ -495,10 +506,13 @@
      and when that result is not nil, through the next etc"
      [expr & forms]
      (core/let [g (gensym)
-                pstep (core/fn [step] `(if (nil? ~g) nil (->> ~g ~step)))]
+                steps (map (core/fn [step] `(if (nil? ~g) nil (->> ~g ~step)))
+                        forms)]
        `(let [~g ~expr
-              ~@(interleave (repeat g) (map pstep forms))]
-          ~g))))
+              ~@(interleave (repeat g) (butlast steps))]
+          ~(if (empty? steps)
+             g
+             (last steps))))))
 
 #?(:cljs
    (core/defmacro if-some
