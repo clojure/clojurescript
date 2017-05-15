@@ -246,6 +246,10 @@
     (. compiler-options
       (setGenerateExports (:closure-generate-exports opts))))
 
+  (when (contains? opts :rewrite-polyfills)
+    (. compiler-options
+      (setRewritePolyfills (:rewrite-polyfills opts))))
+
   (. compiler-options
     (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
     )
@@ -1575,7 +1579,7 @@
   (-> opts
     (select-keys
       [:closure-warnings :closure-extra-annotations :pretty-print
-       :language-in :language-out :closure-module-roots])
+       :language-in :language-out :closure-module-roots :rewrite-polyfills])
     (set-options (CompilerOptions.))))
 
 (defn get-js-root [closure-compiler]
