@@ -2973,7 +2973,10 @@
                            :method-params sigs
                            :arglists arglists
                            :arglists-meta (doall (map meta arglists))})
-               args-sym (gensym "args")]
+               args-sym (gensym "args")
+               param-counts (map count arglists)]
+      (core/when (not= (distinct param-counts) param-counts)
+        (ana/warning :overload-arity {} {:name name}))
       `(do
          (def ~(with-meta name meta)
            (fn [~'var_args]

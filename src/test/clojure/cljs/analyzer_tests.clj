@@ -482,6 +482,17 @@
              (println x)))))
     (is (.startsWith (first @ws) "js/foo is shadowed by a local"))))
 
+(deftest test-cljs-2005
+  (let [ws (atom [])]
+    (try
+      (a/with-warning-handlers [(collecting-warning-handler ws)]
+        (a/analyze (a/empty-env)
+          '(defn myfun
+             ([x] x)
+             ([x] x))))
+      (catch Exception _))
+    (is (.startsWith (first @ws) "myfun: Can't have 2 overloads with same arity"))))
+
 (deftest test-canonicalize-specs
   (is (= (a/canonicalize-specs '((quote [clojure.set :as set])))
          '([clojure.set :as set])))
