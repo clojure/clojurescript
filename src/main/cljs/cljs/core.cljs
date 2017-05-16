@@ -3352,7 +3352,7 @@ reduces them without incurring seq initialization"
     (aset buf end o)
     (set! end (inc end)))
 
-  (chunk [_ o]
+  (chunk [_]
     (let [ret (ArrayChunk. buf 0 end)]
       (set! buf nil)
       ret))
