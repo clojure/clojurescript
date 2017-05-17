@@ -951,7 +951,9 @@
         goog? (when ns
                 (or (= ns 'goog)
                     (when-let [ns-str (str ns)]
-                      (= (get (string/split ns-str #"\.") 0 nil) "goog"))))
+                      (= (get (string/split ns-str #"\.") 0 nil) "goog"))
+                    (not (contains? (::ana/namespaces @env/*compiler*) ns))))
+
         keyword? (and (= (-> f :op) :constant)
                       (keyword? (-> f :form)))
         [f variadic-invoke]

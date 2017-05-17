@@ -10,9 +10,12 @@
   (:use clojure.test)
   (:require [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
+            [cljs.compiler.api :as comp-api]
             [cljs.env :as env]
             [cljs.util :as util]
-            [cljs.tagged-literals :as tags])
+            [cljs.tagged-literals :as tags]
+            [clojure.java.io :as io]
+            [clojure.string :as str])
   (:import [java.io File]))
 
 (def aenv (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
@@ -214,6 +217,28 @@
                         (comp/with-core-cljs
                           opts
                           (fn [] (ana/analyze aenv specify-test-code nil opts))))))))))))
+
+
+(deftest test-optimized-invoke-emit
+  (let [out-file
+        (io/file "target/invoke_test.js")]
+    (comp-api/with-core-cljs
+      (comp-api/compile-file
+        (io/file "src/test/cljs/cljs/invoke_test.cljs")
+        out-file
+        {:static-fns true}))
+
+    (let [content (slurp out-file)]
+      ;; test for fn( not fn.call(, omitting arguments in test because they are not relevant
+      ;; should emit variadic invokes
+      (is (str/includes? content "cljs.invoke_test.variadic_fn.cljs$core$IFn$_invoke$arity$variadic("))
+      ;; should emit optimized invokes
+      (is (str/includes? content "cljs.invoke_test.multi_fn.cljs$core$IFn$_invoke$arity$1("))
+      ;; closure js code must never use .call(
+      (is (str/includes? content "goog.string.urlEncode("))
+      ;; js/goog.string.urlDecode should not use .call
+      (is (str/includes? content "goog.string.urlDecode(")))
+    ))
 
 ;; CLJS-1225
 
