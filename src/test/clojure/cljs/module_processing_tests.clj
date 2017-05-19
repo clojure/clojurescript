@@ -60,7 +60,7 @@
                                                               :module-type :commonjs}]})
             compile (fn [form] (with-out-str
                                  (comp/emit (ana/analyze (ana/empty-env) form))))
-            output "module$src$test$cljs$calculator.add.call(null,(3),(4));\n"]
+            output "module$src$test$cljs$calculator.add((3),(4));\n"]
         (swap! cenv
                #(assoc % :js-dependency-index (deps/js-dependency-index opts)))
         (binding [ana/*cljs-ns* 'cljs.user]
@@ -70,4 +70,4 @@
           (is (= (compile '(calculator/add 3 4)) output))
           (is (= (compile '(add 3 4)) output))
           (is (= (compile '(sub 5 4))
-                 "module$src$test$cljs$calculator.subtract.call(null,(5),(4));\n")))))))
+                 "module$src$test$cljs$calculator.subtract((5),(4));\n")))))))
