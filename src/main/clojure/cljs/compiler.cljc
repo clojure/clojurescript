@@ -1027,8 +1027,9 @@
        (let [mfa (:max-fixed-arity variadic-invoke)]
         (emits f "(" (comma-sep (take mfa args))
                (when-not (zero? mfa) ",")
-               "cljs.core.array_seq([" (comma-sep (drop mfa args)) "], 0))"))
-       
+               "cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2(["
+               (comma-sep (drop mfa args)) "], 0))"))
+
        (or fn? js? goog?)
        (emits f "(" (comma-sep args)  ")")
        
