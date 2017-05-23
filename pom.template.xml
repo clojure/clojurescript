@@ -30,7 +30,7 @@
         <dependency>
             <groupId>com.google.javascript</groupId>
             <artifactId>closure-compiler-unshaded</artifactId>
-            <version>v20170423</version>
+            <version>v20170521</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>

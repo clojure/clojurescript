@@ -193,6 +193,8 @@
   (case key
     :no-transpile                     CompilerOptions$LanguageMode/NO_TRANSPILE
     (:ecmascript6 :es6)               CompilerOptions$LanguageMode/ECMASCRIPT6
+    (:ecmascript-2017 :es-2017)       CompilerOptions$LanguageMode/ECMASCRIPT_2017
+    (:ecmascript-next :es-next)       CompilerOptions$LanguageMode/ECMASCRIPT_NEXT
     (:ecmascript6-strict :es6-strict) CompilerOptions$LanguageMode/ECMASCRIPT6_STRICT
     (:ecmascript6-typed :es6-typed)   CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
     (:ecmascript5 :es5)               CompilerOptions$LanguageMode/ECMASCRIPT5
