@@ -132,9 +132,8 @@
         v (s/coll-of keyword? :kind vector?)
         coll (s/coll-of keyword?)
         lrange (s/int-in 7 42)
-        ;drange (s/double-in :infinite? false :NaN? false :min 3.1 :max 3.2)
-        irange (s/inst-in #inst "1939" #inst "1946")
-        ]
+        drange (s/double-in :infinite? false :NaN? false :min 3.1 :max 3.2)
+        irange (s/inst-in #inst "1939" #inst "1946")]
     (are [spec x conformed ed]
       (let [co (s/conform spec x)
             e  (::s/problems (s/explain-data spec x))]
@@ -145,15 +144,15 @@
 
       lrange 7 7 nil
       lrange 8 8 nil
-      lrange 42 ::s/invalid [{:pred '(int-in-range? 7 42 %), :val 42}]
+      lrange 42 ::s/invalid [{:pred '(cljs.core/fn [%] (cljs.spec.alpha/int-in-range? 7 42 %)), :val 42}]
 
-      irange #inst "1938" ::s/invalid [{:pred '(inst-in-range? #inst "1939-01-01T00:00:00.000-00:00" #inst "1946-01-01T00:00:00.000-00:00" %), :val #inst "1938"}]
+      irange #inst "1938" ::s/invalid [{:pred '(cljs.core/fn [%] (cljs.spec.alpha/inst-in-range? #inst "1939-01-01T00:00:00.000-00:00" #inst "1946-01-01T00:00:00.000-00:00" %)), :val #inst "1938"}]
       irange #inst "1942" #inst "1942" nil
-      irange #inst "1946" ::s/invalid [{:pred '(inst-in-range? #inst "1939-01-01T00:00:00.000-00:00" #inst "1946-01-01T00:00:00.000-00:00" %), :val #inst "1946"}]
+      irange #inst "1946" ::s/invalid [{:pred '(cljs.core/fn [%] (cljs.spec.alpha/inst-in-range? #inst "1939-01-01T00:00:00.000-00:00" #inst "1946-01-01T00:00:00.000-00:00" %)), :val #inst "1946"}]
 
-      ;drange 3.0 ::s/invalid [{:pred '(<= 3.1 %), :val 3.0}]
-      ;drange 3.1 3.1 nil
-      ;drange 3.2 3.2 nil
+      drange 3.0 ::s/invalid [{:pred '(cljs.core/fn [%] (cljs.core/<= 3.1 %)), :val 3.0}]
+      drange 3.1 3.1 nil
+      drange 3.2 3.2 nil
       ;drange Double/POSITIVE_INFINITY ::s/invalid [{:pred '(not (isInfinite %)), :val Double/POSITIVE_INFINITY}]
       ;; can't use equality-based test for Double/NaN
       ;; drange Double/NaN ::s/invalid {[] {:pred '(not (isNaN %)), :val Double/NaN}}
@@ -163,77 +162,77 @@
       keyword? "abc" ::s/invalid [{:pred ::s/unknown :val "abc"}]
 
       a 6 6 nil
-      a 3 ::s/invalid '[{:pred (> % 5), :val 3}]
-      a 20 ::s/invalid '[{:pred (< % 10), :val 20}]
+      a 3 ::s/invalid '[{:pred (cljs.core/fn [%] (cljs.core/> % 5)), :val 3}]
+      a 20 ::s/invalid '[{:pred (cljs.core/fn [%] (cljs.core/< % 10)), :val 20}]
       ;a nil "java.lang.NullPointerException" "java.lang.NullPointerException"
       ;a :k "java.lang.ClassCastException" "java.lang.ClassCastException"
 
       o "a" [:s "a"] nil
       o :a [:k :a] nil
-      o 'a ::s/invalid '[{:pred string?, :val a, :path [:s]} {:pred keyword?, :val a :path [:k]}]
+      o 'a ::s/invalid '[{:pred cljs.core/string?, :val a, :path [:s]} {:pred cljs.core/keyword?, :val a :path [:k]}]
 
-      c nil ::s/invalid '[{:reason "Insufficient input", :pred string?, :val (), :path [:a]}]
-      c [] ::s/invalid '[{:reason "Insufficient input", :pred string?, :val (), :path [:a]}]
-      c [:a] ::s/invalid '[{:pred string?, :val :a, :path [:a], :in [0]}]
-      c ["a"] ::s/invalid '[{:reason "Insufficient input", :pred keyword?, :val (), :path [:b]}]
+      c nil ::s/invalid '[{:reason "Insufficient input", :pred cljs.core/string?, :val (), :path [:a]}]
+      c [] ::s/invalid '[{:reason "Insufficient input", :pred cljs.core/string?, :val (), :path [:a]}]
+      c [:a] ::s/invalid '[{:pred cljs.core/string?, :val :a, :path [:a], :in [0]}]
+      c ["a"] ::s/invalid '[{:reason "Insufficient input", :pred cljs.core/keyword?, :val (), :path [:b]}]
       c ["s" :k] '{:a "s" :b :k} nil
-      c ["s" :k 5] ::s/invalid '[{:reason "Extra input", :pred (cat :a string? :b keyword?), :val (5)}]
+      c ["s" :k 5] ::s/invalid '[{:reason "Extra input", :pred (cljs.spec.alpha/cat :a cljs.core/string? :b cljs.core/keyword?), :val (5)}]
 
       (s/cat) nil {} nil
-      (s/cat) [5] ::s/invalid '[{:reason "Extra input", :pred (cat), :val (5), :in [0]}]
+      (s/cat) [5] ::s/invalid '[{:reason "Extra input", :pred (cljs.spec.alpha/cat), :val (5), :in [0]}]
 
-      either nil ::s/invalid '[{:reason "Insufficient input", :pred (alt :a string? :b keyword?), :val () :via []}]
-      either [] ::s/invalid '[{:reason "Insufficient input", :pred (alt :a string? :b keyword?), :val () :via []}]
+      either nil ::s/invalid '[{:reason "Insufficient input", :pred (cljs.spec.alpha/alt :a cljs.core/string? :b cljs.core/keyword?), :val () :via []}]
+      either [] ::s/invalid '[{:reason "Insufficient input", :pred (cljs.spec.alpha/alt :a cljs.core/string? :b cljs.core/keyword?), :val () :via []}]
       either [:k] [:b :k] nil
       either ["s"] [:a "s"] nil
-      either [:b "s"] ::s/invalid '[{:reason "Extra input", :pred (alt :a string? :b keyword?), :val ("s") :via []}]
+      either [:b "s"] ::s/invalid '[{:reason "Extra input", :pred (cljs.spec.alpha/alt :a cljs.core/string? :b cljs.core/keyword?), :val ("s") :via []}]
 
       star nil [] nil
       star [] [] nil
       star [:k] [:k] nil
       star [:k1 :k2] [:k1 :k2] nil
-      star [:k1 :k2 "x"] ::s/invalid '[{:pred keyword?, :val "x" :via []}]
-      star ["a"] ::s/invalid '[{:pred keyword?, :val "a" :via []}]
+      star [:k1 :k2 "x"] ::s/invalid '[{:pred cljs.core/keyword?, :val "x" :via []}]
+      star ["a"] ::s/invalid '[{:pred cljs.core/keyword?, :val "a" :via []}]
 
-      plus nil ::s/invalid '[{:reason "Insufficient input", :pred keyword?, :val () :via []}]
-      plus [] ::s/invalid '[{:reason "Insufficient input", :pred keyword?, :val () :via []}]
+      plus nil ::s/invalid '[{:reason "Insufficient input", :pred cljs.core/keyword?, :val () :via []}]
+      plus [] ::s/invalid '[{:reason "Insufficient input", :pred cljs.core/keyword?, :val () :via []}]
       plus [:k] [:k] nil
       plus [:k1 :k2] [:k1 :k2] nil
-      plus [:k1 :k2 "x"] ::s/invalid '[{:pred keyword?, :val "x", :in [2]}]
-      plus ["a"] ::s/invalid '[{:pred keyword?, :val "a" :via []}]
+      plus [:k1 :k2 "x"] ::s/invalid '[{:pred cljs.core/keyword?, :val "x", :in [2]}]
+      plus ["a"] ::s/invalid '[{:pred cljs.core/keyword?, :val "a" :via []}]
 
       opt nil nil nil
       opt [] nil nil
-      opt :k ::s/invalid '[{:pred (? keyword?), :val :k}]
+      opt :k ::s/invalid '[{:pred (cljs.spec.alpha/? cljs.core/keyword?), :val :k}]
       opt [:k] :k nil
-      opt [:k1 :k2] ::s/invalid '[{:reason "Extra input", :pred (? keyword?), :val (:k2)}]
-      opt [:k1 :k2 "x"] ::s/invalid '[{:reason "Extra input", :pred (? keyword?), :val (:k2 "x")}]
-      opt ["a"] ::s/invalid '[{:pred keyword?, :val "a"}]
+      opt [:k1 :k2] ::s/invalid '[{:reason "Extra input", :pred (cljs.spec.alpha/? cljs.core/keyword?), :val (:k2)}]
+      opt [:k1 :k2 "x"] ::s/invalid '[{:reason "Extra input", :pred (cljs.spec.alpha/? cljs.core/keyword?), :val (:k2 "x")}]
+      opt ["a"] ::s/invalid '[{:pred cljs.core/keyword?, :val "a"}]
 
       andre nil nil nil
       andre [] nil nil
-      andre :k ::s/invalid '[{:pred (& (* keyword?) even-count?), :val :k}]
-      andre [:k] ::s/invalid '[{:pred even-count?, :val [:k]}]
+      andre :k ::s/invalid '[{:pred (clojure.spec.alpha/& (cljs.spec.alpha/* cljs.core/keyword?) cljs.spec-test/even-count?), :val :k}]
+      andre [:k] ::s/invalid '[{:pred cljs.spec-test/even-count?, :val [:k]}]
       andre [:j :k] [:j :k] nil
 
-      m nil ::s/invalid '[{:pred map?, :val nil}]
+      m nil ::s/invalid '[{:pred cljs.core/map?, :val nil}]
       m {} {} nil
       m {:a "b"} {:a "b"} nil
 
-      mkeys nil ::s/invalid '[{:pred map?, :val nil}]
+      mkeys nil ::s/invalid '[{:pred cljs.core/map?, :val nil}]
       mkeys {} {} nil
       mkeys {:a 1 :b 2} {:a 1 :b 2} nil
 
-      mkeys2 nil ::s/invalid '[{:pred map?, :val nil}]
+      mkeys2 nil ::s/invalid '[{:pred cljs.core/map?, :val nil}]
       mkeys2 {} {} nil
       mkeys2 {:a 1 :b 2} {"a" 1 "b" 2} nil
 
       s '([:a 1] [:b "2"]) '({:tag :a :val 1} {:tag :b :val "2"}) nil
 
       v [:a :b] [:a :b] nil
-      v '(:a :b) ::s/invalid '[{:pred vector? :val (:a :b)}]
+      v '(:a :b) ::s/invalid '[{:pred cljs.core/vector? :val (:a :b)}]
 
-      coll nil ::s/invalid '[{:path [], :pred coll?, :val nil, :via [], :in []}]
+      coll nil ::s/invalid '[{:path [], :pred cljs.core/coll?, :val nil, :via [], :in []}]
       coll [] [] nil
       coll [:a] [:a] nil
       coll [:a :b] [:a :b] nil
@@ -264,6 +263,34 @@
 
     (s/coll-of int? :gen #(gen/return [1 2]))
     '(cljs.spec.alpha/coll-of cljs.core/int? :gen (fn* [] (gen/return [1 2])))))
+
+(defn check-conform-unform [spec vals expected-conforms]
+  (let [actual-conforms (map #(s/conform spec %) vals)
+        unforms (map #(s/unform spec %) actual-conforms)]
+    (is (= actual-conforms expected-conforms))
+    (is (= vals unforms))))
+
+(deftest coll-conform-unform
+  (check-conform-unform
+    (s/coll-of (s/or :i int? :s string?))
+    [[1 "x"]]
+    [[[:i 1] [:s "x"]]])
+  (check-conform-unform
+    (s/every (s/or :i int? :s string?))
+    [[1 "x"]]
+    [[1 "x"]])
+  (check-conform-unform
+    (s/map-of int? (s/or :i int? :s string?))
+    [{10 10 20 "x"}]
+    [{10 [:i 10] 20 [:s "x"]}])
+  (check-conform-unform
+    (s/map-of (s/or :i int? :s string?) int? :conform-keys true)
+    [{10 10 "x" 20}]
+    [{[:i 10] 10 [:s "x"] 20}])
+  (check-conform-unform
+    (s/every-kv int? (s/or :i int? :s string?))
+    [{10 10 20 "x"}]
+    [{10 10 20 "x"}]))
 
 (comment
 

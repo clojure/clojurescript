@@ -200,7 +200,9 @@
 (defn explain-data* [spec path via in x]
   (when-let [probs (explain* (specize spec) path via in x)]
     (when-not (empty? probs)
-      {::problems probs})))
+      {::problems probs
+       ::spec spec
+       ::value x})))
 
 (defn explain-data
   "Given a spec and a value x which ought to conform, returns nil if x
@@ -215,32 +217,33 @@
   "Default printer for explain-data. nil indicates a successful validation."
   [ed]
   (if ed
-    (print
-      (with-out-str
-        ;;(prn {:ed ed})
-        (doseq [{:keys [path pred val reason via in] :as prob} (::problems ed)]
-          (when-not (empty? in)
-            (print "In:" (pr-str in) ""))
-          (print "val: ")
-          (pr val)
-          (print " fails")
-          (when-not (empty? via)
-            (print " spec:" (pr-str (last via))))
-          (when-not (empty? path)
-            (print " at:" (pr-str path)))
-          (print " predicate: ")
-          (pr (abbrev pred))
-          (when reason (print ", " reason))
-          (doseq [[k v] prob]
-            (when-not (#{:path :pred :val :reason :via :in} k)
-              (print "\n\t" (pr-str k) " ")
-              (pr v)))
-          (newline))
-        (doseq [[k v] ed]
-          (when-not (#{::problems} k)
-            (print (pr-str k) " ")
-            (pr v)
-            (newline)))))
+    (let [problems (sort-by #(- (count (:path %))) (::problems ed))]
+      (print
+        (with-out-str
+          ;;(prn {:ed ed})
+          (doseq [{:keys [path pred val reason via in] :as prob} problems]
+            (when-not (empty? in)
+              (print "In:" (pr-str in) ""))
+            (print "val: ")
+            (pr val)
+            (print " fails")
+            (when-not (empty? via)
+              (print " spec:" (pr-str (last via))))
+            (when-not (empty? path)
+              (print " at:" (pr-str path)))
+            (print " predicate: ")
+            (pr (abbrev pred))
+            (when reason (print ", " reason))
+            (doseq [[k v] prob]
+              (when-not (#{:path :pred :val :reason :via :in} k)
+                (print "\n\t" (pr-str k) " ")
+                (pr v)))
+            (newline))
+          (doseq [[k v] ed]
+            (when-not (#{::problems} k)
+              (print (pr-str k) " ")
+              (pr v)
+              (newline))))))
     (println "Success!")))
 
 (def ^:dynamic *explain-out* explain-printer)
@@ -371,7 +374,7 @@
   (let [pred (maybe-spec pred)]
     (if (spec? pred)
       (explain* pred path (if-let [name (spec-name pred)] (conj via name) via) in v)
-      [{:path path :pred (abbrev form) :val v :via via :in in}])))
+      [{:path path :pred form :val v :via via :in in}])))
 
 (defn ^:skip-wiki map-spec-impl
   "Do not call this directly, use 'spec' with a map argument"
@@ -417,7 +420,7 @@
           [{:path path :pred 'map? :val x :via via :in in}]
           (let [reg (registry)]
             (apply concat
-                   (when-let [probs (->> (map (fn [pred form] (when-not (pred x) (abbrev form)))
+                   (when-let [probs (->> (map (fn [pred form] (when-not (pred x) form))
                                               pred-exprs pred-forms)
                                          (keep identity)
                                          seq)]
@@ -482,7 +485,7 @@
                         x))
        (explain* [_ path via in x]
          (when (invalid? (dt pred x form cpred?))
-           [{:path path :pred (abbrev form) :val x :via via :in in}]))
+           [{:path path :pred form :val x :via via :in in}]))
        (gen* [_ _ _ _] (if gfn
                          (gfn)
                          (gen/gen-for-pred pred)))
@@ -518,7 +521,7 @@
                path (conj path dv)]
            (if-let [pred (predx x)]
              (explain-1 form pred path via in x)
-             [{:path path :pred (abbrev form) :val x :reason "no method" :via via :in in}])))
+             [{:path path :pred form :val x :reason "no method" :via via :in in}])))
        (gen* [_ overrides path rmap]
          (if gfn
            (gfn)
@@ -863,7 +866,15 @@
                      (c/or (nil? vseq) (= i limit)) x
                      (valid? spec v) (recur (inc i) vs)
                      :else ::invalid)))))))
-       (unform* [_ x] x)
+       (unform* [_ x]
+         (if conform-all
+           (let [spec @spec
+                 [init add complete] (cfns x)]
+             (loop [ret (init x), i 0, [v & vs :as vseq] (seq x)]
+               (if (>= i (c/count x))
+                 (complete ret)
+                 (recur (add ret i v (unform* spec v)) (inc i) vs))))
+           x))
        (explain* [_ path via in x]
          (c/or (coll-prob x kind kind-form distinct count min-count max-count
                           path via in)
@@ -1089,7 +1100,7 @@
       (case op
         ::accept nil
         nil p
-        ::amp (list* 'clojure.spec/& (op-describe p1) forms)
+        ::amp (list* 'clojure.spec.alpha/& (op-describe p1) forms)
         ::pcat (if rep+
                  (list `+ rep+)
                  (cons `cat (mapcat vector (c/or (seq ks) (repeat :_)) forms)))
@@ -1106,7 +1117,7 @@
         insufficient (fn [path form]
                        [{:path path
                          :reason "Insufficient input"
-                         :pred (abbrev form)
+                         :pred form
                          :val ()
                          :via via
                          :in in}])]
@@ -1218,14 +1229,14 @@
             (op-explain (op-describe p) p path via (conj in i) (seq data))
             [{:path path
               :reason "Extra input"
-              :pred (abbrev (op-describe re))
+              :pred (op-describe re)
               :val data
               :via via
               :in (conj in i)}])
           (c/or (op-explain (op-describe p) p path via (conj in i) (seq data))
                 [{:path path
                   :reason "Extra input"
-                  :pred (abbrev (op-describe p))
+                  :pred (op-describe p)
                   :val data
                   :via via
                   :in (conj in i)}]))))))
@@ -1247,7 +1258,7 @@
     (explain* [_ path via in x]
       (if (c/or (nil? x) (coll? x))
         (re-explain path via in re (seq x))
-        [{:path path :pred (abbrev (op-describe re)) :val x :via via :in in}]))
+        [{:path path :pred (op-describe re) :val x :via via :in in}]))
     (gen* [_ overrides path rmap]
       (if gfn
         (gfn)
@@ -1389,7 +1400,8 @@
            (c/and (<= (inst-ms start) t) (< t (inst-ms end))))))
 
 (defn int-in-range?
-  "Return true if start <= val and val < end"
+  "Return true if start <= val, val < end and val is a fixed
+  precision integer."
   [start end val]
   (cond
     (integer? val) (c/and (<= start val) (< val end))
