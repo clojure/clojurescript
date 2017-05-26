@@ -386,7 +386,7 @@
 
   Optionally takes :gen generator-fn, which must be a fn of no args
   that returns a test.check generator."
-  [& {:keys [args ret fn gen] :or {ret `any?}}]
+  [& {:keys [args ret fn gen] :or {ret `cljs.core/any?}}]
   (let [env &env]
     `(fspec-impl (spec ~args) '~(res env args)
                            (spec ~ret) '~(res env ret)
