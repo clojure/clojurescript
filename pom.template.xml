@@ -35,7 +35,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>google-closure-library</artifactId>
-            <version>0.0-20160609-f42b4a24</version>
+            <version>0.0-20170519-fa0499ef</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
@@ -67,7 +67,7 @@
         <dependency>
             <groupId>com.cognitect</groupId>
             <artifactId>transit-clj</artifactId>
-            <version>0.8.285</version>
+            <version>0.8.300</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
