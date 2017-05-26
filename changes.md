@@ -1,3 +1,30 @@
+## 1.9.562
+
+### Enhancements
+* CLJS-2027: Add language-in for ECMA 2017 and ECMA Next
+* CLJS-2026: Add Compiler option for rewrite polyfills
+
+### Changes
+* CLJS-2021: subvec throws when passed non-vector
+* CLJS-1884: Give a chance to MetaFn to be removed by closure under :advanced 
+  optimization Replace with-meta calls by -with-meta calls where possible
+* CLJS-2052: Port new spec.alpha enhancements
+* Update Google Closure Compiler dependency
+* Update Google Closure Library dependency
+ 
+### Fixes
+* CLJS-2053: Regression: cljs.spec.alpha/any for fdef
+* CLJS-2039: remove extraneous argument from ChunkBuffer.chunk
+* Fix assumption that all closure-compliant JS is goog.*
+* CLJS-2035: Self-host: Add map-entry-test to self-parity
+* CLJS-2033: set-validator! should check current state
+* CLJS-2008: Self-host: backport fixes to threading macros
+* CLJS-2005: Bad error message with duplicate arity function definitions
+* CLJS-2032: Case macro expansion evaluates expression twice when no matching clause
+* CLJS-2023: User supplied type hints stopped working on js/goog.DEBUG
+* CLJS-2020: defmulti "miss" performance poor
+* CLJS-2034: Sequence and Eduction produce infinite loop in transducer that appends to the reduction
+
 ## 1.9.542
 
 ### Enhancements
