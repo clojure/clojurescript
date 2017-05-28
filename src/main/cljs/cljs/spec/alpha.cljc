@@ -30,7 +30,7 @@
              (symbol? (first expr))
              (= "fn*" (name (first expr))))
     (let [[[s] & form] (rest expr)]
-      (conj (walk/postwalk-replace {s '%} form) '[%] 'fn))
+      (conj (walk/postwalk-replace {s '%} form) '[%] 'cljs.core/fn))
     expr))
 
 (defn- res [env form]
