@@ -190,16 +190,18 @@
         {}))))
 
 (defn ^CompilerOptions$LanguageMode lang-key->lang-mode [key]
-  (case key
-    :no-transpile                     CompilerOptions$LanguageMode/NO_TRANSPILE
-    (:ecmascript6 :es6)               CompilerOptions$LanguageMode/ECMASCRIPT6
-    (:ecmascript-2017 :es-2017)       CompilerOptions$LanguageMode/ECMASCRIPT_2017
-    (:ecmascript-next :es-next)       CompilerOptions$LanguageMode/ECMASCRIPT_NEXT
-    (:ecmascript6-strict :es6-strict) CompilerOptions$LanguageMode/ECMASCRIPT6_STRICT
-    (:ecmascript6-typed :es6-typed)   CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
-    (:ecmascript5 :es5)               CompilerOptions$LanguageMode/ECMASCRIPT5
-    (:ecmascript5-strict :es5-strict) CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT
-    (:ecmascript3 :es3)               CompilerOptions$LanguageMode/ECMASCRIPT3))
+  (case (keyword (string/replace (name key) #"^es" "ecmascript"))
+    :no-transpile          CompilerOptions$LanguageMode/NO_TRANSPILE ;; same mode as input (for language-out only)
+    :ecmascript3           CompilerOptions$LanguageMode/ECMASCRIPT3
+    :ecmascript5           CompilerOptions$LanguageMode/ECMASCRIPT5
+    :ecmascript5-strict    CompilerOptions$LanguageMode/ECMASCRIPT5_STRICT
+    :ecmascript6           CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
+    :ecmascript6-strict    CompilerOptions$LanguageMode/ECMASCRIPT_2015 ;; (deprecated and remapped)
+    :ecmascript-2015       CompilerOptions$LanguageMode/ECMASCRIPT_2015
+    :ecmascript6-typed     CompilerOptions$LanguageMode/ECMASCRIPT6_TYPED
+    :ecmascript-2016       CompilerOptions$LanguageMode/ECMASCRIPT_2016
+    :ecmascript-2017       CompilerOptions$LanguageMode/ECMASCRIPT_2017
+    :ecmascript-next       CompilerOptions$LanguageMode/ECMASCRIPT_NEXT))
 
 (defn set-options
   "TODO: Add any other options that we would like to support."
@@ -1623,7 +1625,7 @@
   (let [^List externs '()
         ^List source-files (get-source-files js-modules)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
-                                   (.setLanguageIn CompilerOptions$LanguageMode/ECMASCRIPT6)
+                                   (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))]
