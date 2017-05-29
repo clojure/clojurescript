@@ -3224,7 +3224,7 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean qualified-ident?
   "Return true if x is a symbol or keyword with a namespace"
-  [x] (and (ident? x) (namespace x) true))
+  [x] (boolean (and (ident? x) (namespace x) true)))
 
 (defn ^boolean simple-symbol?
   "Return true if x is a symbol without a namespace"
@@ -3232,7 +3232,7 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean qualified-symbol?
   "Return true if x is a symbol with a namespace"
-  [x] (and (symbol? x) (namespace x) true))
+  [x] (boolean (and (symbol? x) (namespace x) true)))
 
 (defn ^boolean simple-keyword?
   "Return true if x is a keyword without a namespace"
@@ -3240,7 +3240,7 @@ reduces them without incurring seq initialization"
 
 (defn ^boolean qualified-keyword?
   "Return true if x is a keyword with a namespace"
-  [x] (and (keyword? x) (namespace x) true))
+  [x] (boolean (and (keyword? x) (namespace x) true)))
 
 (defn keyword
   "Returns a Keyword with the given namespace and name.  Do not use :
