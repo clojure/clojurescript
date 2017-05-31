@@ -43,18 +43,33 @@
 
 (def cljs-reserved-file-names #{"deps.cljs"})
 
-(defn ns-first-segments []
-  (letfn [(get-first-ns-segment [ns] (first (string/split (str ns) #"\.")))]
-    (map get-first-ns-segment (keys (::ana/namespaces @env/*compiler*)))))
+(defn get-first-ns-segment
+  "Gets the part up to the first `.` of a namespace.
+   Returns the empty string for nil.
+   Returns the entire string if no `.` in namespace"
+  [ns]
+  (let [ns (str ns)
+        idx (.indexOf ns ".")]
+    (if (== -1 idx)
+      ns
+      (subs ns 0 idx))))
+
+(defn find-ns-starts-with [needle]
+  (reduce-kv
+    (fn [xs ns _]
+      (when (= needle (get-first-ns-segment ns))
+        (reduced needle)))
+    nil
+    (::ana/namespaces @env/*compiler*)))
 
 ; Helper fn
 (defn shadow-depth [s]
   (let [{:keys [name info]} s]
     (loop [d 0, {:keys [shadow]} info]
       (cond
-       shadow (recur (inc d) shadow)
-       (some #{(str name)} (ns-first-segments)) (inc d)
-       :else d))))
+        shadow (recur (inc d) shadow)
+        (find-ns-starts-with (str name)) (inc d)
+        :else d))))
 
 (defn hash-scope [s]
   #?(:clj (System/identityHashCode s)
