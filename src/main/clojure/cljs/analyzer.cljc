@@ -1450,7 +1450,7 @@
   (binding [*recur-frames* recur-frames]
     (analyze env form)))
 
-(defn- analyze-fn-method [env locals form type]
+(defn- analyze-fn-method [env locals form type analyze-body?]
   (let [param-names     (first form)
         variadic        (boolean (some '#{&} param-names))
         param-names     (vec (remove '#{&} param-names))
@@ -1466,7 +1466,8 @@
         recur-frames    (cons recur-frame *recur-frames*)
         body-env        (assoc env :context :return :locals locals)
         body-form       `(do ~@body)
-        expr            (analyze-fn-method-body body-env body-form recur-frames)
+        expr            (when analyze-body?
+                          (analyze-fn-method-body body-env body-form recur-frames))
         recurs          @(:flag recur-frame)]
     {:env env
      :variadic variadic
@@ -1497,7 +1498,7 @@
       (merge name-var ret-tag))))
 
 (defn analyze-fn-methods-pass2* [menv locals type meths]
-  (doall (map #(analyze-fn-method menv locals % type) meths)))
+  (doall (map #(analyze-fn-method menv locals % type true) meths)))
 
 (defn analyze-fn-methods-pass2 [menv locals type meths]
   (no-warn (analyze-fn-methods-pass2* menv locals type meths)))
@@ -1531,7 +1532,7 @@
         menv         (merge menv
                        {:protocol-impl proto-impl
                         :protocol-inline proto-inline})
-        methods      (map #(disallowing-ns* (analyze-fn-method menv locals % type)) meths)
+        methods      (map #(disallowing-ns* (analyze-fn-method menv locals % type (nil? name))) meths)
         mfa          (apply max (map :max-fixed-arity methods))
         variadic     (boolean (some :variadic methods))
         locals       (if named-fn?
