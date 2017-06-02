@@ -17,5 +17,5 @@ then
   echo 'Usage: cljsc <file-or-dir>'
   echo '       cljsc <file-or-dir> "{:optimizations :advanced}"'
 else
-  java -server -Xms1g -Xmx2g -cp "$CLJSC_CP" clojure.main "$CLOJURESCRIPT_HOME/bin/cljsc.clj" "$@"
+  java -server -Xms2g -Xmx4g -cp "$CLJSC_CP" clojure.main "$CLOJURESCRIPT_HOME/bin/cljsc.clj" "$@"
 fi
