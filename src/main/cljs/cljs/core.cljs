@@ -6644,7 +6644,7 @@ reduces them without incurring seq initialization"
                            (.kv-reduce node f init)
                            init))))]
           (if (reduced? init)
-            @init
+            init
             (recur (+ i 2) init)))
         init))))
 
@@ -7015,7 +7015,7 @@ reduces them without incurring seq initialization"
             (if-not (nil? node)
               (let [init (.kv-reduce node f init)]
                 (if (reduced? init)
-                  @init
+                  init
                   (recur (inc i) init)))
               (recur (inc i) init)))
           init))))
@@ -7426,7 +7426,7 @@ reduces them without incurring seq initialization"
     (let [init (if has-nil? (f init nil nil-val) init)]
       (cond
         (reduced? init)          @init
-        (not (nil? root)) (.kv-reduce root f init)
+        (not (nil? root)) (unreduced (.kv-reduce root f init))
         :else                    init)))
 
   IFn

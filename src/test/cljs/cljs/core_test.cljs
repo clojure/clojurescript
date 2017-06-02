@@ -620,6 +620,13 @@
   (is (= (str (ex-info "abc" {:x 1} "def")) "#error {:message \"abc\", :data {:x 1}, :cause \"def\"}"))
   (is (not (instance? cljs.core.ExceptionInfo (js/Error.)))))
 
+(deftest test-2067
+  (is (= 0 (reduce-kv
+             (fn [x k _]
+               (when (zero? k)
+                 (reduced k)))
+             nil (zipmap (range 17) (repeat 0))))))
+
 (deftest test-435
   (is (= (assoc {} 154618822656 1 261993005056 1)
             {154618822656 1 261993005056 1})))
