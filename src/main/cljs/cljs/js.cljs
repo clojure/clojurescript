@@ -362,7 +362,7 @@
          (require bound-vars dep reload opts'
            (fn [res]
              (when (:verbose opts)
-               (debug-prn "Loading result: " res))
+               (debug-prn "Loading result:" res))
              (if-not (:error res)
                (load-deps bound-vars ana-env lib (next deps) nil opts cb)
                (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
@@ -428,16 +428,29 @@
           k    (or (reload k)
                    (get-in reloads [k nsym])
                    (and (= nsym name) (:*reload-macros* bound-vars) :reload)
-                   nil)]
-      (require bound-vars nsym k
-        (-> opts
-          (assoc :macros-ns true)
-          (dissoc :context)
-          (dissoc :ns))
+                   nil)
+          opts' (-> opts
+                  (assoc :macros-ns true)
+                  (dissoc :context)
+                  (dissoc :ns))]
+      (require bound-vars nsym k opts'
         (fn [res]
           (if-not (:error res)
             (load-macros bound-vars k (next macros) reload reloads opts cb)
-            (cb res)))))
+            (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns nsym)]
+                                (get {nsym nil} cljs-ns cljs-ns))]
+              (require bound-vars cljs-dep k opts'
+                (fn [res]
+                  (if (:error res)
+                    (cb res)
+                    (do
+                      (patch-alias-map (:*compiler* bound-vars) lib nsym cljs-dep)
+                      (load-macros bound-vars k (next macros) reload reloads opts
+                        (fn [res]
+                          (if (:error res)
+                            (cb res)
+                            (cb (update res :aliased-loads assoc nsym cljs-dep)))))))))
+              (cb res))))))
     (cb {:value nil})))
 
 (defn- rewrite-ns-ast
@@ -453,7 +466,9 @@
                               {} m)))]
     (-> ast
       (update :uses #(walk/postwalk-replace smap %))
+      (update :use-macros #(walk/postwalk-replace smap %))
       (update :requires #(merge smap (walk/postwalk-replace smap %)))
+      (update :require-macros #(merge smap (walk/postwalk-replace smap %)))
       (update :renames rewrite-renames)
       (update :rename-macros rewrite-renames))))
 
@@ -479,7 +494,7 @@
    (if (#{:ns :ns*} op)
      (letfn [(check-uses-and-load-macros [res rewritten-ast]
                (let [env (:*compiler* bound-vars)
-                     {:keys [uses requires require-macros use-macros reload reloads]} rewritten-ast]
+                     {:keys [uses require-macros use-macros reload reloads]} rewritten-ast]
                  (if (:error res)
                    (cb res)
                    (if (:*load-macros* bound-vars)
@@ -489,23 +504,26 @@
                          (fn [res]
                            (if (:error res)
                              (cb res)
-                             (do
+                             (let [{:keys [require-macros] :as rewritten-ast} (rewrite-ns-ast rewritten-ast (:aliased-loads res))]
                                (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
                                (load-macros bound-vars :require-macros require-macros reload reloads opts
-                                 (fn [res]
-                                   (if (:error res)
-                                     (cb res)
-                                     (let [res (try
-                                                 (when (seq use-macros)
-                                                   (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
-                                                   (ana/check-use-macros use-macros env))
-                                                 {:value nil}
-                                                 (catch :default cause
-                                                   (wrap-error
-                                                     (ana/error ana-env
-                                                       (str "Could not parse ns form " (:name ast)) cause))))]
-                                       (if (:error res)
-                                         (cb res)
+                                 (fn [res']
+                                   (if (:error res')
+                                     (cb res')
+                                     (let [{:keys [require-macros use-macros] :as rewritten-ast} (rewrite-ns-ast rewritten-ast (:aliased-loads res))
+                                           res' (try
+                                                  (when (seq use-macros)
+                                                    (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
+                                                    (binding [ana/*analyze-deps* (:*analyze-deps* bound-vars)
+                                                              env/*compiler* (:*compiler* bound-vars)]
+                                                      (ana/check-use-macros use-macros env)))
+                                                  {:value nil}
+                                                  (catch :default cause
+                                                    (wrap-error
+                                                      (ana/error ana-env
+                                                        (str "Could not parse ns form " (:name ast)) cause))))]
+                                       (if (:error res')
+                                         (cb res')
                                          (try
                                            (binding [ana/*analyze-deps* (:*analyze-deps* bound-vars)
                                                      env/*compiler* (:*compiler* bound-vars)]
