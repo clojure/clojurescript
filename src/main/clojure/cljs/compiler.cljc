@@ -203,7 +203,8 @@
 
 (defn emitln [& xs]
   (apply emits xs)
-  (println)
+  (binding [*flush-on-newline* false]
+    (println))
   (when *source-map-data*
     (swap! *source-map-data*
       (fn [{:keys [gen-line] :as m}]
