@@ -148,9 +148,9 @@ case."
                              ;; avoid overwriting a CLJS dep with a CLJC dep of
                              ;; the same namespace - António Monteiro
                              (let [file (when-let [f (or (:source-file dep) (:file dep))]
-                                          (.toString f))
+                                          (str f))
                                    ext (when file
-                                         (.substring file (inc (.lastIndexOf file "."))))]
+                                         (subs file (inc (string/last-index-of file "."))))]
                                (update-in index' [provide]
                                  (fn [d]
                                    (if (and (= ext "cljc") (some? d))
