@@ -1276,6 +1276,11 @@
     (is (= :fail (check-if-throws #(subvec '(:foo) 0 1))))
     (is (= :fail (check-if-throws #(subvec #{:foo} 0 1))))))
 
+(deftest test-cljs-2075
+  (testing "PersistentTreeMap kv-reduce should honor reduced"
+    (let [sm (sorted-map 1 1, 2 2, 3 3, 4 4, 5 5, 6 6, 7 7)]
+      (is (= [1 2 3 4] (reduce-kv (fn [m k v] (if (= 5 k) (reduced m) (conj m k))) [] sm))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

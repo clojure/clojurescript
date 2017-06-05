@@ -7742,16 +7742,13 @@ reduces them without incurring seq initialization"
                (tree-map-kv-reduce (.-left node) f init)
                init)]
     (if (reduced? init)
-      @init
+      init
       (let [init (f init (.-key node) (.-val node))]
         (if (reduced? init)
-          @init
-          (let [init (if-not (nil? (.-right node))
-                       (tree-map-kv-reduce (.-right node) f init)
-                       init)]
-            (if (reduced? init)
-              @init
-              init)))))))
+          init
+          (if-not (nil? (.-right node))
+            (tree-map-kv-reduce (.-right node) f init)
+            init))))))
 
 (deftype BlackNode [key val left right ^:mutable __hash]
   Object
@@ -8210,7 +8207,7 @@ reduces them without incurring seq initialization"
   IKVReduce
   (-kv-reduce [coll f init]
     (if-not (nil? tree)
-      (tree-map-kv-reduce tree f init)
+      (unreduced (tree-map-kv-reduce tree f init))
       init))
 
   IFn
