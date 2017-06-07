@@ -17,7 +17,8 @@
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
             [cljs.repl.server :as server]
-            [cljs.stacktrace :as st])
+            [cljs.stacktrace :as st]
+            [cljs.analyzer :as ana])
   (:import [java.util.regex Pattern]
            [java.util.concurrent Executors]))
 
@@ -140,13 +141,16 @@
 (defmethod handle-post :ready [_ conn _]
   (send-via es ordering (fn [_] {:expecting nil :fns {}}))
   (send-for-eval conn
-    (cljsc/-compile
-      '[(set! *print-fn* clojure.browser.repl/repl-print)
-        (set! *print-err-fn* clojure.browser.repl/repl-print)
-        (set! *print-newline* true)
-        (when (pos? (count clojure.browser.repl/print-queue))
-          (clojure.browser.repl/flush-print-queue!
-            @clojure.browser.repl/xpc-connection))] {})
+    (binding [ana/*cljs-warnings*
+              (assoc ana/*cljs-warnings*
+                :undeclared-var false)]
+      (cljsc/-compile
+       '[(set! *print-fn* clojure.browser.repl/repl-print)
+         (set! *print-err-fn* clojure.browser.repl/repl-print)
+         (set! *print-newline* true)
+         (when (pos? (count clojure.browser.repl/print-queue))
+           (clojure.browser.repl/flush-print-queue!
+             @clojure.browser.repl/xpc-connection))] {}))
     identity))
 
 (defn add-in-order [{:keys [expecting fns]} order f]
