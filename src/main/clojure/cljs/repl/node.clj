@@ -96,6 +96,18 @@
               (.printStackTrace e *err*))))
         (recur buf)))))
 
+(defn- build-process
+  [opts repl-env input-src]
+  (let [xs   (cond-> [(get opts :node-command "node")]
+               (:debug-port repl-env) (conj (str "--debug=" (:debug-port repl-env))))
+        proc (-> (ProcessBuilder. (into-array xs)) (.redirectInput input-src))]
+    (when-let [path-fs (:path repl-env)]
+      (.put (.environment proc)
+            "NODE_PATH"
+            (string/join File/pathSeparator
+                         (map #(.getAbsolutePath (io/as-file %)) path-fs))))
+    proc))
+
 (defn setup
   ([repl-env] (setup repl-env nil))
   ([repl-env opts]
@@ -106,11 +118,7 @@
                          (string/replace (slurp (io/resource "cljs/repl/node_repl.js"))
                            "var PORT = 5001;"
                            (str "var PORT = " (:port repl-env) ";")))
-          xs           (cond-> [(get opts :node-command "node")]
-                         (:debug-port repl-env) (conj (str "--debug=" (:debug-port repl-env))))
-          proc         (-> (ProcessBuilder. (into-array xs))
-                         (.redirectInput of)
-                         .start)
+          proc         (.start (build-process opts repl-env of))
           _            (do (.start (Thread. (bound-fn [] (pipe proc (.getInputStream proc) *out*))))
                            (.start (Thread. (bound-fn [] (pipe proc (.getErrorStream proc) *err*)))))
           env          (ana/empty-env)
@@ -189,7 +197,7 @@
                  (js/CLOSURE_IMPORT_SCRIPT
                    (aget (.. js/goog -dependencies_ -nameToPath) name))))))))))
 
-(defrecord NodeEnv [host port socket proc]
+(defrecord NodeEnv [host port path socket proc]
   repl/IReplEnvOptions
   (-repl-options [this]
     {:output-dir ".cljs_node_repl"
@@ -209,16 +217,17 @@
     (close-socket @socket)))
 
 (defn repl-env* [options]
-  (let [{:keys [host port debug-port]}
+  (let [{:keys [host port path debug-port]}
         (merge
           {:host "localhost"
            :port (+ 49000 (rand-int 10000))}
           options)]
-    (assoc (NodeEnv. host port (atom nil) (atom nil))
+    (assoc (NodeEnv. host port path (atom nil) (atom nil))
       :debug-port debug-port)))
 
 (defn repl-env
-  "Construct a Node.js evalution environment. Can supply :host and :port."
+  "Construct a Node.js evalution environment. Can supply :host, :port
+  and :path (a vector used as the NODE_PATH)."
   [& {:as options}]
   (repl-env* options))
 
