@@ -35,6 +35,23 @@ Latest stable release: 1.9.562
 * Try a [tutorial](http://clojurescript.org/guides).
 * [Companies using ClojureScript](http://clojurescript.org/community/companies)
 
+### Getting Up and Running with Leiningen
+
+The simplest way to try ClojureScript is using the [Leiningen](http://leiningen.org/) [mies emplate](https://github.com/swannodette/mies).
+
+Create a new project:
+
+```
+lein new mies hello-world
+cd hello-world
+```
+
+Start ClojureScript compiler in the development mode:
+
+```
+lein cljsbuild auto
+```
+
 ## Questions, Feedback? ##
 
 Please point all of your questions and feedback to the
