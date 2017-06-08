@@ -1,0 +1,46 @@
+#! /bin/bash
+
+function upcase() {
+    echo "$1" | tr 'a-z' 'A-Z'
+}
+
+DEPS=$(sed -e '
+/^[ \i]*:dependencies *\[/!d
+/^[ \i]*:dependencies *\[/ {
+s///
+: continue
+s/^[ \i]*//
+n
+/\]\]/s//]/
+t finish
+b continue
+: finish
+s/^[ \i]*//
+q
+}
+')
+
+DEPS=$(echo "$DEPS" | \
+sed -e '
+/\[[^/]*\/\([^ ]*\)  *\("[^"]*"\).*\]/ {
+s//\1_VER=\2/
+: dots
+s/\.\(.*=\)/_\1/
+t dots
+: hyphens
+s/-\(.*=\)/_\1/
+t hyphens
+}
+')
+
+DEPS=$(echo "$DEPS" | \
+while read line
+do
+    var=$(expr "$line" : '\(.*\)=')
+    val=$(expr "$line" : '.*\(=.*\)')
+    uvar=$(upcase "$var")
+    echo "$uvar$val"
+done
+)
+
+echo "$DEPS"
