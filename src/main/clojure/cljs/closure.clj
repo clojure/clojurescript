@@ -471,10 +471,10 @@
   (let [path (.getPath (.toURL ^File (:file m)))
         js (if (:provides m)
              (map->javascript-file m)
-             (if-let [js (get-in @env/*compiler* [::compiled-cljs path])]
+             (if-let [js (get-in @env/*compiler* [::comp/compiled-cljs path])]
                js
                (read-js (:file m))))]
-    (swap! env/*compiler* update-in [::compiled-cljs] assoc path js)
+    (swap! env/*compiler* update-in [::comp/compiled-cljs] assoc path js)
     js))
 
 (defn compile
