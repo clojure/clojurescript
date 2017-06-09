@@ -1086,6 +1086,16 @@
         :depends-on #{:core}}}))
   )
 
+(defn find-entries [sources entry]
+  #{(some
+      (fn [source]
+        (let [matcher
+              (into #{}
+                [(name entry) (name (comp/munge entry))])]
+          (when (some matcher (:provides source))
+            source)))
+      sources)})
+
 (defn build-modules
   "Given a list of IJavaScript sources in dependency order and compiler options
    return a dependency sorted list of module name / description tuples. The
@@ -1094,16 +1104,7 @@
    a :foreign-deps vector containing foreign IJavaScript sources in dependency
    order."
   [sources opts]
-  (let [find-entry (fn [sources entry]
-                     (some
-                       (fn [source]
-                         (let [matcher
-                               (into #{}
-                                 [(name entry) (name (comp/munge entry))])]
-                           (when (some matcher (:provides source))
-                             source)))
-                       sources))
-        used (atom {})
+  (let [used (atom {})
         [sources' modules]
         (reduce
           (fn [[sources ret] [name {:keys [entries output-to depends-on] :as module-desc}]]
@@ -1117,10 +1118,10 @@
                   ;; as well as sources difference
                   (reduce
                     (fn [[sources ret] entry-sym]
-                      (if-let [entry (find-entry sources entry-sym)]
+                      (if-let [entries (find-entries sources entry-sym)]
                         (do
                           (swap! used assoc entry-sym name)
-                          [(remove #{entry} sources) (conj ret entry)])
+                          [(remove entries sources) (into ret entries)])
                         (if (contains? @used entry-sym)
                           (throw
                             (IllegalArgumentException.
