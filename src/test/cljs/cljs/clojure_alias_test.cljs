@@ -10,7 +10,7 @@
   "Tests requiring via `clojure.*` instead of `cljs.*`"
   (:refer-clojure :exclude [use-macros])
   (:require-macros clojure.spec.gen.alpha)
-  (:use-macros [clojure.analyzer.macros :only [no-warn]])
+  ;(:use-macros [clojure.analyzer.macros :only [no-warn]])
   (:require [clojure.test :refer [deftest is] :rename {is is?}]
             [clojure.spec.alpha :as s :refer [spec? spec] :rename {spec foo}]))
 
