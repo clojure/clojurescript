@@ -5833,7 +5833,7 @@ reduces them without incurring seq initialization"
   false."
   [x y]
   (boolean
-    (when (map? y)
+    (when (and (map? y) (not (record? y)))
       ; assume all maps are counted
       (when (== (count x) (count y))
         (every? (fn [xkv] (= (get y (first xkv) never-equiv)
@@ -6338,7 +6338,7 @@ reduces them without incurring seq initialization"
 
   IEquiv
   (-equiv [coll other]
-    (if (implements? IMap other)
+    (if (and (implements? IMap other) (not (record? other)))
       (let [alen (alength arr)
             ^not-native other other]
         (if (== cnt (-count other))

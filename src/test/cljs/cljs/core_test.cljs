@@ -1281,6 +1281,25 @@
     (let [sm (sorted-map 1 1, 2 2, 3 3, 4 4, 5 5, 6 6, 7 7)]
       (is (= [1 2 3 4] (reduce-kv (fn [m k v] (if (= 5 k) (reduced m) (conj m k))) [] sm))))))
 
+(defrecord CLJS2079 [a b])
+
+(deftest test-cljs-2079
+  (testing "Records and maps should not be equal"
+    (let [am (array-map :a 1 :b 2)
+          hm (hash-map :a 1 :b 2)
+          sm (sorted-map :a 1 :b 2)
+          r (->CLJS2079 1 2)]
+      (is (= am hm sm))
+
+      (is (not= r am))
+      (is (not= am r))
+
+      (is (not= r hm))
+      (is (not= hm r))
+
+      (is (not= r sm))
+      (is (not= sm r)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

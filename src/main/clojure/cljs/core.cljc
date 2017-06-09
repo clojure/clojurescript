@@ -1748,13 +1748,17 @@
                         'IHash
                         `(~'-hash [this#] (caching-hash this# ~'hash-imap ~'__hash))
                         'IEquiv
-                        `(~'-equiv [this# other#]
-                           (if (and other#
-                                 (identical? (.-constructor this#)
-                                   (.-constructor other#))
-                                 (equiv-map this# other#))
-                             true
-                             false))
+                        (let [this (gensym 'this) other (gensym 'other)]
+                          `(~'-equiv [~this ~other]
+                             (and (some? ~other)
+                                  (identical? (.-constructor ~this)
+                                              (.-constructor ~other))
+                                  ~@(map (fn [field]
+                                           `(= (.. ~this ~(to-property field))
+                                               (.. ~other ~(to-property field))))
+                                         base-fields)
+                                  (= (.-__extmap ~this)
+                                     (.-__extmap ~other)))))
                         'IMeta
                         `(~'-meta [this#] ~'__meta)
                         'IWithMeta
@@ -1821,7 +1825,7 @@
              ks (map keyword fields)
              getters (map (core/fn [k] `(~k ~ms)) ks)]
     `(defn ~fn-name [~ms]
-       (new ~rname ~@getters nil (dissoc ~ms ~@ks) nil))))
+       (new ~rname ~@getters nil (not-empty (dissoc ~ms ~@ks)) nil))))
 
 (core/defmacro defrecord
   "(defrecord name [fields*]  options* specs*)
