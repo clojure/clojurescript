@@ -37,7 +37,7 @@
                             require use refer-clojure
 
                             if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
-                            some?
+                            some? resolve
                             #?@(:cljs [alias coercive-not coercive-not= coercive-= coercive-boolean
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
                                        unsafe-bit-and bit-shift-right-zero-fill mask bitpos caching-hash
@@ -3144,3 +3144,16 @@
 
 #?(:clj  (. (var defmacro) (setMacro))
    :cljs (set! (. defmacro -cljs$lang$macro) true))
+
+(core/defmacro resolve
+  "Returns the var to which a symbol will be resolved in the namespace else nil."
+  [[_ sym]]
+  (core/let [env &env
+             [var meta] (try
+                          (core/let [var (ana/resolve-var env sym (ana/confirm-var-exists-throw)) ]
+                            [var (ana/var-meta var)])
+                          (catch #?@(:clj [Throwable t] :cljs [:default e])
+                            [(ana/resolve-var env sym) nil]))
+             resolved (vary-meta (:name var) assoc ::ana/no-resolve true)]
+    `(when (exists? ~resolved)
+       (cljs.core/Var. ~resolved '~resolved ~meta))))

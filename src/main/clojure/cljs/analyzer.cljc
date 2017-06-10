@@ -1134,7 +1134,32 @@
 
 (defmulti parse (fn [op & rest] op))
 
-(defn- var-ast
+(defn var-meta
+  ([var]
+    (var-meta var nil))
+  ([var expr-env]
+   (let [sym (:name var)
+         ks [:ns :doc :file :line :column]
+         m (merge
+             (let [user-meta (:meta var)
+                   uks (keys user-meta)]
+               (zipmap uks
+                 (map #(list 'quote (get user-meta %)) uks)))
+             (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
+               :name `(quote ~(symbol (name (:name var))))
+               :test `(when ~sym (.-cljs$lang$test ~sym))
+               :arglists (let [arglists (:arglists var)
+                               arglists' (if (= 'quote (first arglists))
+                                           (second arglists)
+                                           arglists)]
+                           (list 'quote
+                             (doall (map with-meta arglists'
+                                      (:arglists-meta var)))))))]
+     (if expr-env
+       (analyze expr-env m)
+       m))))
+
+(defn var-ast
   [env sym]
   ;; we need to dissoc locals for the `(let [x 1] (def x x))` case, because we
   ;; want the var's AST and `resolve-var` will check locals first. - António Monteiro
@@ -1144,23 +1169,7 @@
     (when-some [var-ns (:ns var)]
       {:var (analyze expr-env sym)
        :sym (analyze expr-env `(quote ~(symbol (name var-ns) (name (:name var)))))
-       :meta (let [ks [:ns :doc :file :line :column]
-                   m (merge
-                       (let [user-meta (:meta var)
-                             uks (keys user-meta)]
-                         (zipmap uks
-                           (map #(list 'quote (get user-meta %)) uks)))
-                       (assoc (zipmap ks (map #(list 'quote (get var %)) ks))
-                         :name `(quote ~(symbol (name (:name var))))
-                         :test `(when ~sym (.-cljs$lang$test ~sym))
-                         :arglists (let [arglists (:arglists var)
-                                         arglists' (if (= 'quote (first arglists))
-                                                     (second arglists)
-                                                     arglists)]
-                                    (list 'quote
-                                      (doall (map with-meta arglists'
-                                               (:arglists-meta var)))))))]
-              (analyze expr-env m))})))
+       :meta (var-meta var expr-env)})))
 
 (defmethod parse 'var
   [op env [_ sym :as form] _ _]
