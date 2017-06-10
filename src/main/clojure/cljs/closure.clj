@@ -1087,14 +1087,24 @@
   )
 
 (defn find-entries [sources entry]
-  #{(some
-      (fn [source]
-        (let [matcher
-              (into #{}
-                [(name entry) (name (comp/munge entry))])]
-          (when (some matcher (:provides source))
-            source)))
-      sources)})
+  (let [m  (name (comp/munge entry))
+        xs (string/split m #"\.")]
+    (if (= "_STAR_" (last xs))
+      (let [matcher (str (string/join "." (butlast xs)) ".")]
+        (into #{}
+          (filter
+           (fn [source]
+             (when (some #(.startsWith ^String % matcher) (:provides source))
+               source)))
+          sources))
+      #{(some
+         (fn [source]
+           (let [matcher
+                 (into #{}
+                   [(name entry) (name (comp/munge entry))])]
+             (when (some matcher (:provides source))
+               source)))
+         sources)})))
 
 (defn build-modules
   "Given a list of IJavaScript sources in dependency order and compiler options
