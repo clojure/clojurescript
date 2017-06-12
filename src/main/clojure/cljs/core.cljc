@@ -1746,7 +1746,13 @@
                         'ICloneable
                         `(~'-clone [this#] (new ~tagname ~@fields))
                         'IHash
-                        `(~'-hash [this#] (caching-hash this# ~'hash-imap ~'__hash))
+                        `(~'-hash [this#]
+                           (caching-hash this#
+                             (fn [coll#]
+                               (bit-xor
+                                 ~(hash (core/-> rname comp/munge core/str))
+                                 (hash-unordered-coll coll#)))
+                             ~'__hash))
                         'IEquiv
                         (core/let [this (gensym 'this) other (gensym 'other)]
                           `(~'-equiv [~this ~other]
