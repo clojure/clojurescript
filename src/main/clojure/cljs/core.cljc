@@ -1753,7 +1753,7 @@
                              (and (some? ~other)
                                   (identical? (.-constructor ~this)
                                               (.-constructor ~other))
-                                  ~@(map (fn [field]
+                                  ~@(map (core/fn [field]
                                            `(= (.. ~this ~(to-property field))
                                                (.. ~other ~(to-property field))))
                                          base-fields)
