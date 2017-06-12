@@ -1748,7 +1748,7 @@
                         'IHash
                         `(~'-hash [this#] (caching-hash this# ~'hash-imap ~'__hash))
                         'IEquiv
-                        (let [this (gensym 'this) other (gensym 'other)]
+                        (core/let [this (gensym 'this) other (gensym 'other)]
                           `(~'-equiv [~this ~other]
                              (and (some? ~other)
                                   (identical? (.-constructor ~this)
