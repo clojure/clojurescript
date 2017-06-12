@@ -5836,9 +5836,16 @@ reduces them without incurring seq initialization"
     (when (and (map? y) (not (record? y)))
       ; assume all maps are counted
       (when (== (count x) (count y))
-        (every? (fn [xkv] (= (get y (first xkv) never-equiv)
-                             (second xkv)))
-                x)))))
+        (if (satisfies? IKVReduce x)
+          (reduce-kv (fn [_ k v]
+                       (if (= (get y k never-equiv) v)
+                         true
+                         (reduced false)))
+                     true
+                     x)
+          (every? (fn [xkv] (= (get y (first xkv) never-equiv)
+                               (second v)))
+                  x))))))
 
 
 (defn- scan-array [incr k array]
