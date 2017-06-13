@@ -1308,6 +1308,18 @@
       (is (not= r sm))
       (is (not= sm r)))))
 
+(deftype MapWithNoIKVReduce [backing-map]
+  IMap
+  (-dissoc [_ _] nil)
+
+  ISeqable
+  (-seq [_] (seq backing-map)))
+
+(deftest test-cljs-2083
+  (testing "maps which do not implement IKVReduce can be compared"
+    (is (true?  (equiv-map (MapWithNoIKVReduce. {:a 1 :b 2 :c 3}) {:a 1 :b 2 :c 3})))
+    (is (false? (equiv-map (MapWithNoIKVReduce. {:a 1 :b 2 :c 3}) {:a 1 :b 2 :c 4})))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
