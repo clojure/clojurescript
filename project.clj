@@ -10,7 +10,7 @@
   :test-paths ["src/test/clojure" "src/test/cljs" "src/test/self"]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/data.json "0.2.6"]
-                 [org.clojure/tools.reader "1.0.0-beta3"]
+                 [org.clojure/tools.reader "1.0.0"]
                  [org.clojure/test.check "0.10.0-alpha1" :scope "test"]
                  [com.cognitect/transit-clj "0.8.300"]
                  [org.clojure/google-closure-library "0.0-20170519-fa0499ef"]
