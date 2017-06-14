@@ -8662,8 +8662,10 @@ reduces them without incurring seq initialization"
     (and
      (set? other)
      (== (count coll) (count other))
-     (every? #(contains? coll %)
-             other)))
+     ^boolean
+     (reduce-kv
+       #(or (contains? other %2) (reduced false))
+       true hash-map)))
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
@@ -8811,8 +8813,10 @@ reduces them without incurring seq initialization"
     (and
      (set? other)
      (== (count coll) (count other))
-     (every? #(contains? coll %)
-             other)))
+     ^boolean
+     (reduce-kv
+       #(or (contains? other %2) (reduced false))
+       true tree-map)))
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
