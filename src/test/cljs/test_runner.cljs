@@ -41,7 +41,8 @@
             [cljs.predicates-test]
             [cljs.tagged-literals-test]
             [cljs.test-test]
-            [static.core-test]))
+            [static.core-test]
+            [cljs.recur-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -80,4 +81,5 @@
   'cljs.syntax-quote-test
   'cljs.tagged-literals-test
   'cljs.test-test
-  'static.core-test)
+  'static.core-test
+  'cljs.recur-test)

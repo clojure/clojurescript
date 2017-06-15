@@ -137,6 +137,7 @@
    :protocol-duped-method true
    :protocol-multiple-impls true
    :protocol-with-variadic-method true
+   :protocol-impl-recur-with-target true
    :single-segment-namespace true
    :munged-namespace true
    :ns-var-clash true
@@ -357,6 +358,10 @@
   [warning-type info]
   (str "Protocol " (:protocol info) " declares method "
        (:name info) " with variadic signature (&)"))
+
+(defmethod error-message :protocol-impl-recur-with-target
+  [warning-type info]
+  (str "Ignoring target object \"" (:form info) "\" passed in recur to protocol method head"))
 
 (defmethod error-message :multiple-variadic-overloads
   [warning-type info]
@@ -1471,7 +1476,9 @@
                           (butlast params)
                           params)
         fixed-arity     (count params')
-        recur-frame     {:params params :flag (atom nil)}
+        recur-frame     {:protocol-impl (:protocol-impl env)
+                         :params        params
+                         :flag          (atom nil)}
         recur-frames    (cons recur-frame *recur-frames*)
         body-env        (assoc env :context :return :locals locals)
         body-form       `(do ~@body)
@@ -1758,11 +1765,18 @@
   [op env [_ & exprs :as form] _ _]
   (let [context (:context env)
         frame (first *recur-frames*)
+        ;; Add dummy implicit target object if recuring to proto impl method head
+        add-implicit-target-object? (and (:protocol-impl frame)
+                                         (= (count exprs) (dec (count (:params frame)))))
+        exprs (cond->> exprs add-implicit-target-object? (cons nil))
         exprs (disallowing-recur (vec (map #(analyze (assoc env :context :expr) %) exprs)))]
     (when-not frame
       (throw (error env "Can't recur here")))
     (when-not (= (count exprs) (count (:params frame)))
       (throw (error env "recur argument count mismatch")))
+    (when (and (:protocol-impl frame)
+               (not add-implicit-target-object?))
+      (warning :protocol-impl-recur-with-target env {:form (:form (first exprs))}))
     (reset! (:flag frame) true)
     (assoc {:env env :op :recur :form form}
       :frame frame
