@@ -10886,14 +10886,14 @@ reduces them without incurring seq initialization"
   [ns]
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
-  (let [the-ns (get @NS_CACHE ns)]
+  (let [ns-str (str ns)
+        ns (if (not ^boolean (gstring/contains ns-str "$macros"))
+             (symbol (str ns-str "$macros"))
+             ns)
+        the-ns (get @NS_CACHE ns)]
     (if-not (nil? the-ns)
       the-ns
-      (let [ns-str (str ns)
-           ns (if (not ^boolean (gstring/contains ns-str "$macros"))
-                (symbol (str ns-str "$macros"))
-                ns)
-           ns-obj (find-ns-obj ns)]
+      (let [ns-obj (find-ns-obj ns)]
        (when-not (nil? ns-obj)
          (let [new-ns (create-ns ns ns-obj)]
            (swap! NS_CACHE assoc ns new-ns)
