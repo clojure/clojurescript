@@ -1121,7 +1121,7 @@
       (emitln "this." fld " = " fld ";"))
     (doseq [[pno pmask] pmasks]
       (emitln "this.cljs$lang$protocol_mask$partition" pno "$ = " pmask ";"))
-    (emitln "})")
+    (emitln "});")
     (emit body)))
 
 (defmethod emit* :defrecord*
@@ -1138,7 +1138,7 @@
       (emitln "this." fld " = " fld ";"))
     (doseq [[pno pmask] pmasks]
       (emitln "this.cljs$lang$protocol_mask$partition" pno "$ = " pmask ";"))
-    (emitln "})")
+    (emitln "});")
     (emit body)))
 
 (defmethod emit* :dot
