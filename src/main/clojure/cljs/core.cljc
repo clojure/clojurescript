@@ -1284,8 +1284,8 @@
 
   (seq (let [f \"foo\"]
        (reify ISeqable
-         (-seq [this] (-seq f)))))
-  == (\\f \\o \\o))
+         (-seq [this] (seq f)))))
+  == (\"f\" \"o\" \"o\"))
 
   reify always implements IMeta and IWithMeta and transfers meta
   data of the form to the created object.
