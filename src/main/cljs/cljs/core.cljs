@@ -5516,9 +5516,10 @@ reduces them without incurring seq initialization"
   the resulting vector shares structure with the original and no
   trimming is done."
   ([v start]
-     (subvec v start (count v)))
+   (subvec v start (count v)))
   ([v start end]
-     (build-subvec nil v start end nil)))
+   (assert (and (not (nil? start)) (not (nil? end))))
+   (build-subvec nil v start end nil)))
 
 (defn- tv-ensure-editable [edit node]
   (if (identical? edit (.-edit node))

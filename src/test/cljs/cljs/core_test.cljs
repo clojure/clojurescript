@@ -1320,6 +1320,13 @@
     (is (true?  (equiv-map (MapWithNoIKVReduce. {:a 1 :b 2 :c 3}) {:a 1 :b 2 :c 3})))
     (is (false? (equiv-map (MapWithNoIKVReduce. {:a 1 :b 2 :c 3}) {:a 1 :b 2 :c 4})))))
 
+(deftest test-cljs-1685
+  (testing "nil start or end param throws error"
+    (is (= :fail (try (subvec nil nil)
+                      (catch js/Error e :fail))))
+    (is (= :fail (try (subvec nil 1 nil)
+                      (catch js/Error e :fail))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
