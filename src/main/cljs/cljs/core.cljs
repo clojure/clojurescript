@@ -6367,7 +6367,7 @@ reduces them without incurring seq initialization"
 
   IEquiv
   (-equiv [coll other]
-    (if (and (implements? IMap other) (not (record? other)))
+    (if (and (map? other) (not (record? other)))
       (let [alen (alength arr)
             ^not-native other other]
         (if (== cnt (-count other))
@@ -6381,7 +6381,7 @@ reduces them without incurring seq initialization"
                   false))
               true))
           false))
-      (equiv-map coll other)))
+      false))
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
