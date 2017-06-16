@@ -361,7 +361,7 @@
 
 (defmethod error-message :protocol-impl-recur-with-target
   [warning-type info]
-  (str "Ignoring target object \"" (:form info) "\" passed in recur to protocol method head"))
+  (str "Ignoring target object \"" (pr-str (:form info)) "\" passed in recur to protocol method head"))
 
 (defmethod error-message :multiple-variadic-overloads
   [warning-type info]
