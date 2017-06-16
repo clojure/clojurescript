@@ -10579,6 +10579,7 @@ reduces them without incurring seq initialization"
     (garray/defaultCompare uuid (.-uuid other))))
 
 (defn uuid [s]
+  (assert (string? s))
   (UUID. s nil))
 
 (defn random-uuid []
