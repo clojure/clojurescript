@@ -1291,6 +1291,8 @@
 
 (defmethod parse 'def
   [op env form _ _]
+  (when (> (count form) 4)
+    (throw (error env "Too many arguments to def")))
   (let [pfn (fn
               ([_ sym] {:sym sym})
               ([_ sym init] {:sym sym :init init})
