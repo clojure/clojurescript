@@ -237,8 +237,27 @@
       ;; closure js code must never use .call(
       (is (str/includes? content "goog.string.urlEncode("))
       ;; js/goog.string.urlDecode should not use .call
-      (is (str/includes? content "goog.string.urlDecode(")))
-    ))
+      (is (str/includes? content "goog.string.urlDecode("))
+      ;; We should NOT emit a let binding for simple (:dont-bind-this js/x)
+      (is (str/includes? content
+                         (str "new cljs.core.Keyword(null,\"dont-bind-this\",\"dont-bind-this\","
+                              "-140451389).cljs$core$IFn$_invoke$arity$1(x);")))
+      ;; CLJS-2046: Emit bindings for expressions like: (@m a0) or ((:x m) a0)
+      ;; The test: ((complement funexpr0) normal-arg)
+      (is (re-find #"(?m)^.*var fexpr.*=.*cljs.core.complement\(funexpr0\);$"
+                   content))
+      ;; CLJS-855: Emit binding for expressions like:
+      ;; (hofinvoke (inv-arg0))
+      (is (re-find #"(?m)^.*var .*=.*inv_arg0.cljs.core.IFn._invoke.arity.0 \?.*$"
+                   content))
+
+      ;; Now test both (855,2046) together:
+      ;; ((complement funexpr1) (inv-arg1))
+      (is (re-find #"(?m)^.*var fexpr.*=.*cljs.core.complement\(funexpr1\);$"
+                   content))
+      (is (re-find #"(?m)^.*var .*=.*inv_arg1.cljs.core.IFn._invoke.arity.0 \?.*$"
+                   content)))))
+#_(test-vars [#'test-optimized-invoke-emit])
 
 ;; CLJS-1225
 

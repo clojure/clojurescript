@@ -2859,7 +2859,18 @@
         argc    (count args)
         fn-var? (-> fexpr :info :fn-var)
         kw?     (= 'cljs.core/Keyword (:tag fexpr))
-        cur-ns  (-> env :ns :name)]
+        cur-ns  (-> env :ns :name)
+        HO-invoke? (and (boolean *cljs-static-fns*)
+                        (not fn-var?)
+                        (not kw?)
+                        (not (analyzed? f)))
+        ;; function expressions, eg: ((deref m) x) or ((:x m) :a)
+        bind-f-expr? (and HO-invoke?
+                          (not (symbol? f)))
+        ;; Higher order invokes with (some) argument expressions. Bind the arguments
+        ;; to avoid exponential complexity that is created by the IFn arity check branch.
+        bind-args? (and HO-invoke?
+                        (not (all-values? args)))]
     (when ^boolean fn-var?
       (let [{:keys [^boolean variadic max-fixed-arity method-params name ns macro]} (:info fexpr)]
         ;; don't warn about invalid arity when when compiling a macros namespace
@@ -2881,19 +2892,20 @@
         (warning :fn-deprecated env {:fexpr fexpr})))
     (when (some? (-> fexpr :info :type))
       (warning :invoke-ctor env {:fexpr fexpr}))
-    (if (or (not (boolean *cljs-static-fns*))
-            (not (symbol? f))
-            fn-var?
-            (analyzed? f)
-            (all-values? args))
+    (if (or bind-args? bind-f-expr?)
+      (let [arg-syms (when bind-args? (take argc (repeatedly gensym)))
+            f-sym (when bind-f-expr? (gensym "fexpr__"))
+            bindings (cond-> []
+                       bind-args? (into (interleave arg-syms args))
+                       bind-f-expr? (conj f-sym f))]
+        (analyze env
+                 `(let [~@bindings]
+                    (~(vary-meta (if bind-f-expr? f-sym f) assoc ::analyzed true)
+                      ~@(if bind-args? arg-syms args)))))
       (let [ana-expr #(analyze enve %)
             argexprs (map ana-expr args)]
         {:env env :op :invoke :form form :f fexpr :args (vec argexprs)
-         :children (into [fexpr] argexprs)})
-      (let [arg-syms (take argc (repeatedly gensym))]
-        (analyze env
-                 `(let [~@(vec (interleave arg-syms args))]
-                    (~(vary-meta f assoc ::analyzed true) ~@arg-syms)))))))
+         :children (into [fexpr] argexprs)}))))
 
 (defn parse-invoke
   [env form]
