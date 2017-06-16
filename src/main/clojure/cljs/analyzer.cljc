@@ -1299,6 +1299,7 @@
               ([_ sym doc init] {:sym sym :doc doc :init init}))
         args (apply pfn form)
         sym (:sym args)
+        const? (-> sym meta :const)
         sym-meta (meta sym)
         tag (-> sym meta :tag)
         protocol (-> sym meta :protocol valid-proto)
@@ -1381,6 +1382,8 @@
                          "cljs/core.cljs"
                          f))))}
           (when doc {:doc doc})
+          (when const?
+            {:const-init (:init args)})
           (when (true? dynamic) {:dynamic true})
           (source-info var-name env)
           ;; the protocol a protocol fn belongs to
@@ -2914,7 +2917,10 @@
                          (resolve-existing-var env sym)
                          (resolve-var env sym))]
           (if-not (true? (:def-var env))
-            (assoc ret :op :var :info info)
+            (merge
+              (assoc ret :op :var :info info)
+              (when-let [const-init (:const-init info)]
+                {:const-expr (analyze env const-init)}))
             (let [info (resolve-var env sym)]
               (assoc ret :op :var :info info))))))))
 
