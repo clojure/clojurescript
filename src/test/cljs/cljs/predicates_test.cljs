@@ -11,7 +11,7 @@
   (:import [goog.math Long Integer]))
 
 (def pred-val-table
-  (let [uuid (uuid nil)]
+  (let [uuid (uuid "00000000-0000-0000-0000-000000000000")]
     [[identity    boolean? indexed? seqable?  ident?  uuid?    inst?  simple-ident? qualified-ident? simple-symbol? qualified-symbol? simple-keyword? qualified-keyword?]
      [0             false    false    false    false  false    false  false         false            false          false             false           false]
      [1             false    false    false    false  false    false  false         false            false          false             false           false]
