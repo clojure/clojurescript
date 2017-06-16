@@ -10580,7 +10580,7 @@ reduces them without incurring seq initialization"
 
 (defn uuid [s]
   (assert (string? s))
-  (UUID. s nil))
+  (UUID. (.toLowerCase s) nil))
 
 (defn random-uuid []
   (letfn [(hex [] (.toString (rand-int 16) 16))]
