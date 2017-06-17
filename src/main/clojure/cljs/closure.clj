@@ -166,7 +166,8 @@
     :pretty-print :print-input-delimiter :pseudo-names :recompile-dependents :source-map
     :source-map-inline :source-map-timestamp :static-fns :target :verbose :warnings
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
-    :browser-repl :cache-analysis-format :infer-externs :closure-generate-exports :npm-deps})
+    :browser-repl :cache-analysis-format :infer-externs :closure-generate-exports :npm-deps
+    :fn-invoke-direct})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -2245,6 +2246,10 @@
        ;; we want to warn about NPM dep conflicts before installing the modules
        (check-npm-deps opts)
        (let [compiler-stats (:compiler-stats opts)
+             static-fns? (or (and (= (:optimizations opts) :advanced)
+                                  (not (false? (:static-fns opts))))
+                             (:static-fns opts)
+                             ana/*cljs-static-fns*)
              all-opts (-> opts
                           maybe-install-node-deps!
                           add-implicit-options
@@ -2266,11 +2271,10 @@
              (assoc :sources (-find-sources source all-opts))))
          (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))
                                        (atom #{}))
-                   ana/*cljs-static-fns*
-                   (or (and (= (:optimizations opts) :advanced)
-                            (not (false? (:static-fns opts))))
-                       (:static-fns opts)
-                       ana/*cljs-static-fns*)
+                   ana/*cljs-static-fns* static-fns?
+                   ana/*fn-invoke-direct* (or (and static-fns?
+                                                   (:fn-invoke-direct opts))
+                                              ana/*fn-invoke-direct*)
                    *assert* (not= (:elide-asserts opts) true)
                    ana/*load-tests* (not= (:load-tests opts) false)
                    ana/*cljs-warnings*

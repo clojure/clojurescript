@@ -45,6 +45,7 @@
 (def ^:dynamic *cljs-file* nil)
 #?(:clj (def ^:dynamic *unchecked-if* false))
 (def ^:dynamic *cljs-static-fns* false)
+(def ^:dynamic *fn-invoke-direct* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
 (def ^:dynamic *cljs-macros-is-classpath* true)
 (def ^:dynamic *cljs-dep-set* (with-meta #{} {:dep-path []}))
