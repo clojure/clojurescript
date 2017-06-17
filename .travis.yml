@@ -1,0 +1,22 @@
+dist: trusty
+
+language: node_js
+
+node_js:
+  - "8"
+
+before_install:
+  - wget https://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central/jsshell-linux-x86_64.zip
+  - unzip jsshell-linux-x86_64.zip -d spidermoney
+  - sudo apt-get install -y libjavascriptcoregtk-3.0-bin
+
+before_script:
+  - script/bootstrap
+  - mkdir -p builds/out-adv
+  - bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\"}" > builds/out-adv/core-advanced-test.js
+
+script:
+  - jsc builds/out-adv/core-advanced-test.js | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
+  - ./spidermoney/js -f builds/out-adv/core-advanced-test.js | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
+  - script/test-self-host | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
+  - script/test-self-parity | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
