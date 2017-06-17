@@ -709,6 +709,18 @@
   (let [form (with-meta 'js/goog.DEBUG {:tag 'boolean})]
     (is (= (-> (ana-api/analyze (a/empty-env) form) :tag) 'boolean))))
 
+(deftest test-cljs-1992 ;; declare after def should have no effect
+  (let [test-cenv (e/default-compiler-env)]
+    (e/with-compiler-env test-cenv
+      (a/analyze-form-seq
+        '[(ns test.cljs-1992)
+          (defn test-fn [a b c] :foo)
+          (declare test-fn)]
+        ))
+
+    (let [def (get-in @test-cenv [::a/namespaces 'test.cljs-1992 :defs 'test-fn])]
+      (is (:fn-var def)))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn

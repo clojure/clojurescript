@@ -1346,8 +1346,6 @@
                  *file-defs*
                  (get @*file-defs* sym))
         (warning :redef-in-file env {:sym sym :line (:line v)})))
-    (when *file-defs*
-      (swap! *file-defs* conj sym))
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (some? (get-in @env/*compiler* [::namespaces ns-name :uses sym])))
@@ -1380,55 +1378,62 @@
         (when (and (not (-> sym meta :declared))
                    (and (true? (:fn-var v)) (not fn-var?)))
           (warning :fn-var env {:ns-name ns-name :sym sym})))
-      (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
-        (merge
-          {:name var-name}
-          ;; remove actual test metadata, as it includes non-valid EDN and
-          ;; cannot be present in analysis cached to disk - David
-          (cond-> sym-meta
-            (:test sym-meta) (assoc :test true))
-          {:meta (-> sym-meta
-                   (dissoc :test)
-                   (update-in [:file]
-                     (fn [f]
-                       (if (= (-> env :ns :name) 'cljs.core)
-                         "cljs/core.cljs"
-                         f))))}
-          (when doc {:doc doc})
-          (when const?
-            (let [const-expr
-                  (binding [*passes* (conj *passes* (replace-env-pass {:context :expr}))]
-                    (analyze env (:init args)))]
-              (when (constant-value? const-expr)
-                {:const-expr const-expr})))
-          (when (true? dynamic) {:dynamic true})
-          (source-info var-name env)
-          ;; the protocol a protocol fn belongs to
-          (when protocol
-            {:protocol protocol})
-          ;; symbol for reified protocol
-          (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
-            {:protocol-symbol protocol-symbol
-             :info (-> protocol-symbol meta :protocol-info)
-             :impls #{}})
-          (when fn-var?
-            (let [params (map #(vec (map :name (:params %))) (:methods init-expr))]
-              (merge
-                {:fn-var (not (:macro sym-meta))
-                 ;; protocol implementation context
-                 :protocol-impl (:protocol-impl init-expr)
-                 ;; inline protocol implementation context
-                 :protocol-inline (:protocol-inline init-expr)}
-                (if-some [top-fn-meta (:top-fn sym-meta)]
-                  top-fn-meta
-                  {:variadic (:variadic init-expr)
-                   :max-fixed-arity (:max-fixed-arity init-expr)
-                   :method-params params
-                   :arglists (:arglists sym-meta)
-                   :arglists-meta (doall (map meta (:arglists sym-meta)))}))))
-          (if (and fn-var? (some? tag))
-            {:ret-tag tag}
-            (when tag {:tag tag}))))
+
+      ;; declare must not replace any analyzer data of an already def'd sym
+      (when (or (nil? (get-in @env/*compiler* [::namespaces ns-name :defs sym]))
+                (not (:declared sym-meta)))
+        (when *file-defs*
+          (swap! *file-defs* conj sym))
+
+        (swap! env/*compiler* assoc-in [::namespaces ns-name :defs sym]
+          (merge
+            {:name var-name}
+            ;; remove actual test metadata, as it includes non-valid EDN and
+            ;; cannot be present in analysis cached to disk - David
+            (cond-> sym-meta
+              (:test sym-meta) (assoc :test true))
+            {:meta (-> sym-meta
+                       (dissoc :test)
+                       (update-in [:file]
+                         (fn [f]
+                           (if (= (-> env :ns :name) 'cljs.core)
+                             "cljs/core.cljs"
+                             f))))}
+            (when doc {:doc doc})
+            (when const?
+              (let [const-expr
+                    (binding [*passes* (conj *passes* (replace-env-pass {:context :expr}))]
+                      (analyze env (:init args)))]
+                (when (constant-value? const-expr)
+                  {:const-expr const-expr})))
+            (when (true? dynamic) {:dynamic true})
+            (source-info var-name env)
+            ;; the protocol a protocol fn belongs to
+            (when protocol
+              {:protocol protocol})
+            ;; symbol for reified protocol
+            (when-let [protocol-symbol (-> sym meta :protocol-symbol)]
+              {:protocol-symbol protocol-symbol
+               :info (-> protocol-symbol meta :protocol-info)
+               :impls #{}})
+            (when fn-var?
+              (let [params (map #(vec (map :name (:params %))) (:methods init-expr))]
+                (merge
+                  {:fn-var (not (:macro sym-meta))
+                   ;; protocol implementation context
+                   :protocol-impl (:protocol-impl init-expr)
+                   ;; inline protocol implementation context
+                   :protocol-inline (:protocol-inline init-expr)}
+                  (if-some [top-fn-meta (:top-fn sym-meta)]
+                    top-fn-meta
+                    {:variadic (:variadic init-expr)
+                     :max-fixed-arity (:max-fixed-arity init-expr)
+                     :method-params params
+                     :arglists (:arglists sym-meta)
+                     :arglists-meta (doall (map meta (:arglists sym-meta)))}))))
+            (if (and fn-var? (some? tag))
+              {:ret-tag tag}
+              (when tag {:tag tag})))))
       (merge
         {:env env
          :op :def
