@@ -53,7 +53,7 @@
 (def ^:dynamic *load-macros* true)
 (def ^:dynamic *reload-macros* false)
 (def ^:dynamic *macro-infer* true)
-
+(def ^:dynamic *passes* nil)
 (def ^:dynamic *file-defs* nil)
 
 (def constants-ns-sym
@@ -1289,6 +1289,15 @@
 (defn valid-proto [x]
   (when (symbol? x) x))
 
+(defn elide-env [env ast opts]
+  (dissoc ast :env))
+
+(defn constant-value?
+  [{:keys [op] :as ast}]
+  (or (= :constant op)
+      (and (#{:map :set :vector :list} op)
+           (every? constant-value? (:children ast)))))
+
 (defmethod parse 'def
   [op env form _ _]
   (when (> (count form) 4)
@@ -1383,7 +1392,11 @@
                          f))))}
           (when doc {:doc doc})
           (when const?
-            {:const-init (:init args)})
+            (let [const-expr
+                  (binding [*passes* (conj *passes* elide-env)]
+                    (analyze env (:init args)))]
+              (when (constant-value? const-expr)
+                {:const-expr const-expr})))
           (when (true? dynamic) {:dynamic true})
           (source-info var-name env)
           ;; the protocol a protocol fn belongs to
@@ -2919,8 +2932,8 @@
           (if-not (true? (:def-var env))
             (merge
               (assoc ret :op :var :info info)
-              (when-let [const-init (:const-init info)]
-                {:const-expr (analyze env const-init)}))
+              (when-let [const-expr (:const-expr info)]
+                {:const-expr const-expr}))
             (let [info (resolve-var env sym)]
               (assoc ret :op :var :info info))))))))
 
@@ -3201,8 +3214,6 @@
                env)
              ast)))
        ast)))
-
-(def ^:dynamic *passes* nil)
 
 #?(:clj
    (defn analyze-form [env form name opts]
