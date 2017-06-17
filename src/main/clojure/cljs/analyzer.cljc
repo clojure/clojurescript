@@ -1292,6 +1292,10 @@
 (defn elide-env [env ast opts]
   (dissoc ast :env))
 
+(defn replace-env-pass [new-env]
+  (fn [env ast opts]
+    (assoc ast :env new-env)))
+
 (defn constant-value?
   [{:keys [op] :as ast}]
   (or (= :constant op)
@@ -1393,7 +1397,7 @@
           (when doc {:doc doc})
           (when const?
             (let [const-expr
-                  (binding [*passes* (conj *passes* elide-env)]
+                  (binding [*passes* (conj *passes* (replace-env-pass {:context :expr}))]
                     (analyze env (:init args)))]
               (when (constant-value? const-expr)
                 {:const-expr const-expr})))
