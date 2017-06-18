@@ -44,7 +44,7 @@
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
                                        specify copy-arguments goog-define js-comment js-inline-comment
-                                       unsafe-cast require-macros use-macros])])
+                                       unsafe-cast require-macros use-macros gen-apply-to-simple])])
   #?(:cljs (:require-macros [cljs.core :as core]
                             [cljs.support :refer [assert-args]]))
   (:require clojure.walk
@@ -2668,17 +2668,13 @@
 (core/defn- gen-apply-to-helper
   ([] (gen-apply-to-helper 1))
   ([n]
-   (core/let [prop (symbol (core/str "-cljs$core$IFn$_invoke$arity$" n))
-              f (symbol (core/str "cljs$core$IFn$_invoke$arity$" n))]
-     (if (core/<= n 20)
-       `(let [~(cs (core/dec n)) (-first ~'args)
-              ~'args (-rest ~'args)]
-          (if (== ~'argc ~n)
-            (if (. ~'f ~prop)
-              (. ~'f (~f ~@(take n cs)))
-              (~'f ~@(take n cs)))
-            ~(gen-apply-to-helper (core/inc n))))
-       `(throw (js/Error. "Only up to 20 arguments supported on functions"))))))
+   (if (core/<= n 20)
+     `(let [~(cs (core/dec n)) (-first ~'args)
+            ~'args (-rest ~'args)]
+        (if (== ~'argc ~n)
+          (~'f ~@(take n cs))
+          ~(gen-apply-to-helper (core/inc n))))
+     `(throw (js/Error. "Only up to 20 arguments supported on functions")))))
 
 (core/defmacro gen-apply-to []
   `(do
@@ -2689,6 +2685,34 @@
            (~'f)
            ~(gen-apply-to-helper))))
      (set! ~'*unchecked-if* false)))
+
+(core/defn- gen-apply-to-simple-helper
+  [f num-args args]
+  (core/let [new-arg-sym (symbol (core/str "a" num-args))
+             proto-name (core/str "cljs$core$IFn$_invoke$arity$" (core/inc num-args))
+             proto-prop (symbol (core/str ".-" proto-name))
+             proto-inv (symbol (core/str "." proto-name))
+             next-sym (symbol (core/str "next_" num-args))
+             all-args (mapv #(symbol (core/str "a" %)) (range (core/inc num-args)))]
+    `(let [~new-arg-sym (cljs.core/-first ~args)
+           ~next-sym (cljs.core/next ~args)]
+       (if (nil? ~next-sym)
+         (if (~proto-prop ~f)
+           (~proto-inv ~f ~@all-args)
+           (.call ~f ~f ~@all-args))
+         ~(if (core/<= 19 num-args)
+            ;; We've exhausted all protocols, fallback to .apply:
+            `(let [arr# (cljs.core/array ~@all-args)]
+               (loop [s# ~next-sym]
+                 (when s#
+                   (do (.push arr# (cljs.core/-first s#))
+                       (recur (cljs.core/next s#)))))
+               (.apply ~f ~f arr#))
+            (gen-apply-to-simple-helper f (core/inc num-args) next-sym))))))
+
+(core/defmacro gen-apply-to-simple
+  [f num-args args]
+  (gen-apply-to-simple-helper f num-args args))
 
 (core/defmacro with-out-str
   "Evaluates exprs in a context in which *print-fn* is bound to .append
