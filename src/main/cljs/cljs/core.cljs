@@ -3495,8 +3495,8 @@ reduces them without incurring seq initialization"
   "Naive impl of to-array as a start."
   [s]
   (let [ary (array)]
-    (loop [s s]
-      (if (seq s)
+    (loop [s (seq s)]
+      (if-not (nil? s)
         (do (. ary push (first s))
             (recur (next s)))
         ary))))
@@ -3507,7 +3507,7 @@ reduces them without incurring seq initialization"
   [coll]
     (let [ret (make-array (count coll))]
       (loop [i 0 xs (seq coll)]
-        (when xs
+        (when-not (nil? xs)
           (aset ret i (to-array (first xs)))
           (recur (inc i) (next xs))))
       ret))
