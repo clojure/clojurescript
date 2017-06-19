@@ -1327,6 +1327,16 @@
     (is (= :fail (try (subvec nil 1 nil)
                       (catch js/Error e :fail))))))
 
+(def ^:const cljs-2104 "cljs-2104")
+
+(deftest test-const-emission
+  (testing "const exprs emission context, not definition context (CLJS-2104)"
+    (is (= cljs-2104 "cljs-2104"))
+    (is (= (if-some [x true]
+             cljs-2104
+             "unreachable")
+          "cljs-2104"))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

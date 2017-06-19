@@ -332,7 +332,7 @@
 (defmethod emit* :var
   [{:keys [info env form] :as ast}]
   (if-let [const-expr (:const-expr ast)]
-    (emit const-expr)
+    (emit (assoc const-expr :env env))
     (let [var-name (:name info)
           info (if (= (namespace var-name) "js")
                  (let [js-module-name (get-in @env/*compiler* [:js-module-index (name var-name)])]
