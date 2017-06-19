@@ -1070,16 +1070,18 @@ Usage: *hello*
 | {:a is-a} |  1 |
 |         5 |  7 |
 "
-  ;;This test is changed a bit due to the way JS prints large numbers. The number
-  ;; was changed (54.7e17 to 54.7e20) to make sure JS prints it in E notation (5.47E21)
+  ;; This test is changed a bit due to the way JS prints large numbers, as well as the
+  ;; way Nashorn formats floating point output using Java. The number was changed
+  ;; (54.7e17 to 54.7e21) to make sure JS prints it in E notation (5.47E22) and Nashorn
+  ;; truncates at the desired precision.
   (with-out-str
     (print-table [:a :e :d :c]
-                 [{:a 54.7e20 :b {:a 'is-a} :c ["hi" "there"]}
+                 [{:a 54.7e21 :b {:a 'is-a} :c ["hi" "there"]}
                   {:b 5 :a -23 :c "dog" :d 'panda}]))
   "
 |       :a | :e |    :d |             :c |
 |----------+----+-------+----------------|
-| 5.47e+21 |    |       | [\"hi\" \"there\"] |
+| 5.47e+22 |    |       | [\"hi\" \"there\"] |
 |      -23 |    | panda |            dog |
 "
   )

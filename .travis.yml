@@ -18,5 +18,6 @@ before_script:
 script:
   - jsc builds/out-adv/core-advanced-test.js | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
   - ./spidermoney/js -f builds/out-adv/core-advanced-test.js | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
+  - jjs builds/out-adv/core-advanced-test.js | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
   - script/test-self-host | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
   - script/test-self-parity | grep -o '[[:digit:]]*' | tail -n 2 | python script/check.py
