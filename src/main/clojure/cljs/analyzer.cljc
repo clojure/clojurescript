@@ -1666,7 +1666,7 @@
      :children (conj (vec (map :init bes)) expr)}))
 
 (defn analyze-do-statements* [env exprs]
-  (seq (map #(analyze (assoc env :context :statement) %) (butlast exprs))))
+  (seq (doall (map #(analyze (assoc env :context :statement) %) (butlast exprs)))))
 
 (defn analyze-do-statements [env exprs]
   (disallowing-recur (analyze-do-statements* env exprs)))

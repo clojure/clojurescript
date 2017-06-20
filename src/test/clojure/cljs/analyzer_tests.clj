@@ -721,6 +721,18 @@
     (let [def (get-in @test-cenv [::a/namespaces 'test.cljs-1992 :defs 'test-fn])]
       (is (:fn-var def)))))
 
+(deftest test-cljs-2101
+  (let [test-cenv (e/default-compiler-env)]
+    (e/with-compiler-env test-cenv
+      (a/analyze-form-seq
+        ['(ns test.cljs-2101)
+         `(do
+            ;; Splice in 32 forms in order to consume first chunk in chunked sequence
+            ~@(range 32)
+            (def ~'x32 1)
+            ;; The previous def must be analyzed for subsequent var special to succeed
+            (def ~'x33 (var ~'x32)))]))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn
