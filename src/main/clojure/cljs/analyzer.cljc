@@ -70,8 +70,8 @@
                read-handler-map @(ns-resolve ns 'read-handler-map)]
            {:handlers
              (read-handler-map
-               {"cljs/js"    (read-handler (fn [_ v] (JSValue. v)))
-                "cljs/regex" (read-handler (fn [_ v] (Pattern/compile v)))})}))
+               {"cljs/js"    (read-handler (fn [v] (JSValue. v)))
+                "cljs/regex" (read-handler (fn [v] (Pattern/compile v)))})}))
        (catch Throwable t
          nil))))
 
@@ -86,12 +86,12 @@
              (write-handler-map
                {JSValue
                 (write-handler
-                  (fn [_ _] "cljs/js")
-                  (fn [_ js] (.val ^JSValue js)))
+                  (fn [_] "cljs/js")
+                  (fn [js] (.val ^JSValue js)))
                 Pattern
                 (write-handler
-                  (fn [_ _] "cljs/regex")
-                  (fn [_ pat] (.pattern ^Pattern pat)))})}))
+                  (fn [_] "cljs/regex")
+                  (fn [pat] (.pattern ^Pattern pat)))})}))
        (catch Throwable t
          nil))))
 
