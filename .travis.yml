@@ -16,6 +16,7 @@ before_script:
   - bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\"}" > builds/out-adv/core-advanced-test.js
 
 script:
+  - lein test
   - jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
   - grep -o '[[:digit:]]*' test-out.txt | tail -n 2 | python script/check.py
   - ./spidermoney/js -f builds/out-adv/core-advanced-test.js | tee test-out.txt
