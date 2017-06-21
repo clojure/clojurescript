@@ -9,10 +9,6 @@
 (ns cljs.core-test
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is]]
-            [clojure.test.check :as tc]
-            [clojure.test.check.clojure-test :refer-macros [defspec]]
-            [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop :include-macros true]
             [clojure.string :as s]
             [clojure.set :as set]))
 
@@ -547,10 +543,6 @@
   (is (nil? (loop [x nil] (some->> x recur))))
   (is (= 0 (loop [x 0] (cond-> x false recur))))
   (is (= 0 (loop [x 0] (cond->> x false recur)))))
-
-(defspec boolean-test 10
-  (prop/for-all [b gen/boolean]
-    (boolean? b)))
 
 ;; =============================================================================
 ;; Tickets
