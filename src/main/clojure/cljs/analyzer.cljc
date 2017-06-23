@@ -3556,16 +3556,44 @@
             (util/changed? src cache)))))))
 
 #?(:clj
+   (defn- get-speced-vars
+     []
+     (when-let [spec-ns (find-ns 'cljs.spec.alpha)]
+       (ns-resolve spec-ns '_speced_vars)))
+   :cljs
+   ;; Here, we look up the symbol '-speced-vars because ns-interns*
+   ;; is implemented by invoking demunge on the result of js-keys.
+   (let [cached-var (delay (get (ns-interns* 'cljs.spec.alpha$macros) '-speced-vars))]
+     (defn- get-speced-vars []
+       (when (some? (find-ns-obj 'cljs.spec.alpha$macros))
+         @cached-var))))
+
+(defn dump-speced-vars-to-env
+  "Dumps registered speced vars for a given namespace into the compiler
+  environment."
+  [ns]
+  (when-let [speced-vars (get-speced-vars)]
+    (let [ns-str (str ns)]
+      (swap! env/*compiler* update-in [::namespaces ns :cljs.spec/speced-vars]
+        (fnil into #{}) (filter #(= ns-str (namespace %))) @@speced-vars))))
+
+(defn register-cached-speced-vars
+  "Registers speced vars found in a namespace analysis cache."
+  [cached-ns]
+  (when-let [vars (seq (:cljs.spec/speced-vars cached-ns))]
+    #?(:clj (try
+              (require 'cljs.spec.alpha)
+              (catch Throwable t)))
+    (when-let [speced-vars (get-speced-vars)]
+      (swap! @speced-vars into vars))))
+
+#?(:clj
    (defn write-analysis-cache
      ([ns cache-file]
        (write-analysis-cache ns cache-file nil))
      ([ns ^File cache-file src]
       (util/mkdirs cache-file)
-      (when-let [spec-ns (find-ns 'cljs.spec.alpha)]
-        (when-let [speced-vars (ns-resolve spec-ns '_speced_vars)]
-          (let [ns-str (str ns)]
-            (swap! env/*compiler* update-in [::namespaces ns :cljs.spec/speced-vars]
-              (fnil into #{}) (filter #(= ns-str (namespace %))) @@speced-vars))))
+      (dump-speced-vars-to-env ns)
       (let [ext (util/ext cache-file)
             analysis (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros)]
         (case ext
@@ -3604,13 +3632,7 @@
         (swap! env/*compiler*
           (fn [cenv]
             (do
-              (when-let [vars (seq (:cljs.spec/speced-vars cached-ns))]
-                (try
-                  (require 'cljs.spec.alpha)
-                  (catch Throwable t))
-                (when-let [spec-ns (find-ns 'cljs.spec.alpha)]
-                  (when-let [speced-vars (ns-resolve spec-ns '_speced_vars)]
-                    (swap! @speced-vars into vars))))
+              (register-cached-speced-vars cached-ns)
               (doseq [x (get-in cached-ns [::constants :order])]
                 (register-constant! x))
               (-> cenv

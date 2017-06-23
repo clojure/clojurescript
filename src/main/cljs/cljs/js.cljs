@@ -13,6 +13,7 @@
   (:require [clojure.string :as string]
             [clojure.walk :as walk]
             [cljs.env :as env]
+            [cljs.spec.alpha]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.tools.reader :as r]
@@ -288,7 +289,8 @@
                                                  ((:*eval-fn* bound-vars) resource)
                                                  (when cache
                                                    (load-analysis-cache!
-                                                     (:*compiler* bound-vars) aname cache))
+                                                     (:*compiler* bound-vars) aname cache)
+                                                   (ana/register-cached-speced-vars cache))
                                                  (when source-map
                                                    (load-source-map!
                                                      (:*compiler* bound-vars) aname source-map))
@@ -922,6 +924,7 @@
                    (when (:source-map opts)
                      (append-source-map env/*compiler*
                        aname source sb @comp/*source-map-data* opts))
+                   (ana/dump-speced-vars-to-env aname)
                    (let [js-source (.toString sb)
                          evalm     {:lang   :clj
                                     :name   name
