@@ -2379,7 +2379,7 @@ reduces them without incurring seq initialization"
      (if (.hasNext iter)
        (let [init (.next iter)]
          (loop [acc init]
-           (if (.hasNext iter)
+           (if ^boolean (.hasNext iter)
              (let [nacc (f acc (.next iter))]
                (if (reduced? nacc)
                  @nacc
@@ -2389,7 +2389,7 @@ reduces them without incurring seq initialization"
   ([coll f init]
    (let [iter (-iterator coll)]
      (loop [acc init]
-       (if (.hasNext iter)
+       (if ^boolean (.hasNext iter)
          (let [nacc (f acc (.next iter))]
            (if (reduced? nacc)
              @nacc
