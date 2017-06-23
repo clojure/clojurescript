@@ -42,9 +42,10 @@
 
 (defn- drop-macros-suffix
   [ns-name]
-  (if (string/ends-with? ns-name "$macros")
-    (subs ns-name 0 (- (count ns-name) 7))
-    ns-name))
+  (when ns-name
+    (if (string/ends-with? ns-name "$macros")
+      (subs ns-name 0 (- (count ns-name) 7))
+      ns-name)))
 
 (defn- elide-macros-suffix
   [sym]
