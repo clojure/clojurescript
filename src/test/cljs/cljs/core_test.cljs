@@ -1335,6 +1335,10 @@
   (is (= ::not-found (nth (range 2) -2 ::not-found)))
   (is (= ::not-found (nth (range 2 1 0) -2 ::not-found))))
 
+(deftest test-cljs-2109
+  (testing "Syntax quoted dotted symbol without namespace should resolve to itself"
+    (is (= 'clojure.core `clojure.core))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

@@ -842,6 +842,13 @@
          (or (js-tag (next pre) tag-type externs' top)
              (js-tag (into '[prototype] (next pre)) tag-type (get top tag) top)))))))
 
+(defn dotted-symbol? [sym]
+  (let [s (str sym)]
+    #?(:clj  (and (.contains s ".")
+                  (not (.contains s "..")))
+       :cljs (and ^boolean (goog.string/contains s ".")
+                  (not ^boolean (goog.string/contains s ".."))))))
+
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
@@ -887,10 +894,7 @@
                {:name (symbol (str full-ns) (str (name sym)))
                 :ns full-ns}))
 
-           #?(:clj  (and (.contains s ".")
-                         (not (.contains s "..")))
-              :cljs (and ^boolean (goog.string/contains s ".")
-                         (not ^boolean (goog.string/contains s ".."))))
+           (dotted-symbol? sym)
            (let [idx    (.indexOf s ".")
                  prefix (symbol (subs s 0 idx))
                  suffix (subs s (inc idx))]
@@ -3318,8 +3322,11 @@
        (instance? File x) (.getAbsolutePath ^File x)
        :default (str x))))
 
-(defn resolve-symbol [s]
-  (:name (resolve-var (assoc @env/*compiler* :ns (get-namespace *cljs-ns*)) s)))
+(defn resolve-symbol [sym]
+  (if (and (not (namespace sym))
+           (dotted-symbol? sym))
+    sym
+    (:name (resolve-var (assoc @env/*compiler* :ns (get-namespace *cljs-ns*)) sym))))
 
 #?(:clj
    (defn forms-seq*
