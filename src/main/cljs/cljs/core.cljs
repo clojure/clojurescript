@@ -9174,15 +9174,15 @@ reduces them without incurring seq initialization"
 
   IIndexed
   (-nth [rng n]
-    (if (< n (-count rng))
+    (if (and (<= 0 n) (< n (-count rng)))
       (+ start (* n step))
-      (if (and (> start end) (zero? step))
+      (if (and (<= 0 n) (> start end) (zero? step))
         start
         (throw (js/Error. "Index out of bounds")))))
   (-nth [rng n not-found]
-    (if (< n (-count rng))
+    (if (and (<= 0 n) (< n (-count rng)))
       (+ start (* n step))
-      (if (and (> start end) (zero? step))
+      (if (and (<= 0 n) (> start end) (zero? step))
         start
         not-found)))
 

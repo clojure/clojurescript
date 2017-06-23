@@ -1337,6 +1337,12 @@
              "unreachable")
           "cljs-2104"))))
 
+(deftest test-cljs-2113
+  (is (thrown? js/Error (nth (range 2) -2)))
+  (is (thrown? js/Error (nth (range 2 1 0) -2)))
+  (is (= ::not-found (nth (range 2) -2 ::not-found)))
+  (is (= ::not-found (nth (range 2 1 0) -2 ::not-found))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
