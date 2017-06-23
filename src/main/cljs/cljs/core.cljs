@@ -5534,9 +5534,13 @@ reduces them without incurring seq initialization"
 
   IReduce
   (-reduce [coll f]
-    (pv-reduce v f start end))
+    (if (implements? APersistentVector v)
+      (pv-reduce v f start end)
+      (ci-reduce coll f)))
   (-reduce [coll f init]
-    (pv-reduce v f init start end))
+    (if (implements? APersistentVector v)
+      (pv-reduce v f init start end)
+      (ci-reduce coll f init)))
 
   IKVReduce
   (-kv-reduce [coll f init]

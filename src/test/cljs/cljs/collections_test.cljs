@@ -660,3 +660,26 @@
       (is (= metadata (meta k'))))
     (let [map (sorted-map nil :foo)]
       (is (= (find map nil) [nil :foo])))))
+
+(deftype CustomVectorThing [v]
+  IVector
+  (-assoc-n [coll i val] (assoc-n v i val))
+
+  IIndexed
+  (-nth [coll i] (nth v i))
+  (-nth [coll i not-found] (nth v i not-found))
+
+  ICounted
+  (-count [coll] (count v)))
+
+(deftest test-cljs-2128
+  (testing "Subvec iteration"
+    (testing "Subvec over PersistentVector uses RangedIterator"
+      (is (instance? RangedIterator (-iterator (subvec [0 1 2 3] 1 3)))))
+    (testing "Subvec over other vectors uses naive SeqIter"
+      (is (instance? SeqIter (-iterator (subvec (->CustomVectorThing [0 1 2 3]) 1 3))))))
+  (testing "Subvec reduce"
+    (testing "Subvec over PersistentVector reduces as expected"
+      (is (= [1 2] (reduce conj [] (subvec [0 1 2 3] 1 3)))))
+    (testing "Subvec over other vectors reduces as expected"
+      (is (= [1 2] (reduce conj [] (subvec (->CustomVectorThing [0 1 2 3]) 1 3)))))))
