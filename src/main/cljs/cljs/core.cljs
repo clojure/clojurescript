@@ -1813,7 +1813,7 @@ reduces them without incurring seq initialization"
       (linear-traversal-nth coll n not-found)
 
       (native-satisfies? IIndexed coll)
-      (-nth coll n)
+      (-nth coll n not-found)
 
       :else
       (throw (js/Error. (str "nth not supported on this type "
