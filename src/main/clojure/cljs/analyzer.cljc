@@ -3561,6 +3561,11 @@
        (write-analysis-cache ns cache-file nil))
      ([ns ^File cache-file src]
       (util/mkdirs cache-file)
+      (when-let [spec-ns (find-ns 'cljs.spec.alpha)]
+        (when-let [speced-vars (ns-resolve spec-ns '_speced_vars)]
+          (let [ns-str (str ns)]
+            (swap! env/*compiler* update-in [::namespaces ns :cljs.spec/speced-vars]
+              (fnil into #{}) (filter #(= ns-str (namespace %))) @@speced-vars))))
       (let [ext (util/ext cache-file)
             analysis (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros)]
         (case ext
@@ -3575,6 +3580,41 @@
                      analysis))))
       (when src
         (.setLastModified ^File cache-file (util/last-modified src))))))
+
+#?(:clj
+   (defn read-analysis-cache
+     ([cache-file src]
+      (read-analysis-cache cache-file src nil))
+     ([^File cache-file src opts]
+       ;; we want want to keep dependency analysis information
+       ;; don't revert the environment - David
+      (let [{:keys [ns]} (parse-ns src
+                           (merge opts
+                             {:restore false
+                              :analyze-deps true
+                              :load-macros true}))
+            ext          (util/ext cache-file)
+            cached-ns    (case ext
+                           "edn"  (edn/read-string (slurp cache-file))
+                           "json" (let [{:keys [reader read]} @transit]
+                                    (with-open [is (io/input-stream cache-file)]
+                                      (read (reader is :json transit-read-opts)))))]
+        (when (or *verbose* (:verbose opts))
+          (util/debug-prn "Reading analysis cache for" (str src)))
+        (swap! env/*compiler*
+          (fn [cenv]
+            (do
+              (when-let [vars (seq (:cljs.spec/speced-vars cached-ns))]
+                (try
+                  (require 'cljs.spec.alpha)
+                  (catch Throwable t))
+                (when-let [spec-ns (find-ns 'cljs.spec.alpha)]
+                  (when-let [speced-vars (ns-resolve spec-ns '_speced_vars)]
+                    (swap! @speced-vars into vars))))
+              (doseq [x (get-in cached-ns [::constants :order])]
+                (register-constant! x))
+              (-> cenv
+                (assoc-in [::namespaces ns] cached-ns)))))))))
 
 (defn analyze-form-seq
   ([forms]
@@ -3659,27 +3699,6 @@
                       (when (and cache (true? (:cache-analysis opts)))
                         (write-analysis-cache ns cache res))))
                   (try
-                    ;; we want want to keep dependency analysis information
-                    ;; don't revert the environment - David
-                    (let [{:keys [ns]} (parse-ns res
-                                         (merge opts
-                                           {:restore false
-                                            :analyze-deps true
-                                            :load-macros true}))
-                          ext          (util/ext cache)
-                          cached-ns    (case ext
-                                         "edn"  (edn/read-string (slurp cache))
-                                         "json" (let [{:keys [reader read]} @transit]
-                                                  (with-open [is (io/input-stream cache)]
-                                                    (read (reader is :json transit-read-opts)))))]
-                     (when (or *verbose* (:verbose opts))
-                       (util/debug-prn "Reading analysis cache for" (str res)))
-                     (swap! env/*compiler*
-                       (fn [cenv]
-                         (let []
-                           (doseq [x (get-in cached-ns [::constants :order])]
-                             (register-constant! x))
-                           (-> cenv
-                             (assoc-in [::namespaces ns] cached-ns))))))
+                    (read-analysis-cache cache res opts)
                     (catch Throwable e
                       (analyze-file f true opts))))))))))))
