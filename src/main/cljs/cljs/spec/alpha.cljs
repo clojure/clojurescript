@@ -1100,7 +1100,7 @@
       (case op
         ::accept nil
         nil p
-        ::amp (list* 'clojure.spec.alpha/& (op-describe p1) forms)
+        ::amp (list* 'cljs.spec.alpha/& (op-describe p1) forms)
         ::pcat (if rep+
                  (list `+ rep+)
                  (cons `cat (mapcat vector (c/or (seq ks) (repeat :_)) forms)))

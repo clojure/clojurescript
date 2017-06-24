@@ -211,7 +211,7 @@
 
       andre nil nil nil
       andre [] nil nil
-      andre :k ::s/invalid '[{:pred (clojure.spec.alpha/& (cljs.spec.alpha/* cljs.core/keyword?) cljs.spec-test/even-count?), :val :k}]
+      andre :k ::s/invalid '[{:pred (cljs.spec.alpha/& (cljs.spec.alpha/* cljs.core/keyword?) cljs.spec-test/even-count?), :val :k}]
       andre [:k] ::s/invalid '[{:pred cljs.spec-test/even-count?, :val [:k]}]
       andre [:j :k] [:j :k] nil
 
