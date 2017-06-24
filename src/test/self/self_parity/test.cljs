@@ -18,7 +18,7 @@
   (:require [clojure.string :as string]
             [cljs.nodejs :as nodejs]
             [cljs.js :as cljs]
-            [cljs.reader :as reader]
+            [cljs.tools.reader :as reader]
             [cljs.stacktrace :as st]))
 
 (def out-dir "builds/out-self-parity")
