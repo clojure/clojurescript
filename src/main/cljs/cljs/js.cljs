@@ -290,7 +290,7 @@
                                                  (when cache
                                                    (load-analysis-cache!
                                                      (:*compiler* bound-vars) aname cache)
-                                                   (ana/register-cached-speced-vars cache))
+                                                   (ana/register-specs cache))
                                                  (when source-map
                                                    (load-source-map!
                                                      (:*compiler* bound-vars) aname source-map))
@@ -924,7 +924,7 @@
                    (when (:source-map opts)
                      (append-source-map env/*compiler*
                        aname source sb @comp/*source-map-data* opts))
-                   (ana/dump-speced-vars-to-env aname)
+                   (ana/dump-specs aname)
                    (let [js-source (.toString sb)
                          evalm     {:lang   :clj
                                     :name   name

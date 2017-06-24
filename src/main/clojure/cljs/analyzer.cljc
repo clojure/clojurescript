@@ -3568,7 +3568,7 @@
        (when (some? (find-ns-obj 'cljs.spec.alpha$macros))
          @cached-var))))
 
-(defn dump-speced-vars-to-env
+(defn dump-specs
   "Dumps registered speced vars for a given namespace into the compiler
   environment."
   [ns]
@@ -3577,7 +3577,7 @@
       (swap! env/*compiler* update-in [::namespaces ns :cljs.spec/speced-vars]
         (fnil into #{}) (filter #(= ns-str (namespace %))) @@speced-vars))))
 
-(defn register-cached-speced-vars
+(defn register-specs
   "Registers speced vars found in a namespace analysis cache."
   [cached-ns]
   (when-let [vars (seq (:cljs.spec/speced-vars cached-ns))]
@@ -3593,7 +3593,7 @@
        (write-analysis-cache ns cache-file nil))
      ([ns ^File cache-file src]
       (util/mkdirs cache-file)
-      (dump-speced-vars-to-env ns)
+      (dump-specs ns)
       (let [ext (util/ext cache-file)
             analysis (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros)]
         (case ext
@@ -3632,7 +3632,7 @@
         (swap! env/*compiler*
           (fn [cenv]
             (do
-              (register-cached-speced-vars cached-ns)
+              (register-specs cached-ns)
               (doseq [x (get-in cached-ns [::constants :order])]
                 (register-constant! x))
               (-> cenv
