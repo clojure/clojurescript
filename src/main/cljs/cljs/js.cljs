@@ -623,7 +623,7 @@
    source (string)
      the ClojureScript source
 
-   name (symbol)
+   name (symbol or string)
      optional, the name of the source
 
    opts (map)
@@ -817,7 +817,7 @@
    source (string)
      the ClojureScript source
 
-   name (symbol)
+   name (symbol or string)
      optional, the name of the source
 
    opts (map)
@@ -957,7 +957,7 @@
   source (string)
     the ClojureScript source
 
-  name (symbol)
+  name (symbol or string)
     optional, the name of the source
 
   opts (map)
