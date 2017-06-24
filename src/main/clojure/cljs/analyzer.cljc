@@ -767,6 +767,17 @@
              false))
        (not (contains? (-> env :ns :excludes) sym))))
 
+(defn public-name?
+  "Is sym public?"
+  #?(:cljs {:tag boolean})
+  [ns sym]
+  (let [var-ast (or (gets @env/*compiler* ::namespaces ns :defs sym)
+                    #?(:clj  (gets @env/*compiler* ::namespaces ns :macros sym)
+                       :cljs (gets @env/*compiler* ::namespaces (symbol (str (name ns) "$macros")) :defs sym)))]
+    (and (some? var-ast)
+         (not (or (:private var-ast)
+                  (:anonymous var-ast))))))
+
 (defn js-tag? [x]
   (and (symbol? x)
        (or (= 'js x)
@@ -1354,9 +1365,10 @@
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (some? (get-in @env/*compiler* [::namespaces ns-name :uses sym])))
-                (let [ev (resolve-existing-var (dissoc env :locals) sym)
+                (let [ev (resolve-existing-var (dissoc env :locals) (with-meta sym {::no-resolve true}))
                       conj-to-set (fnil conj #{})]
-                  (warning :redef env {:sym sym :ns (:ns ev) :ns-name ns-name})
+                  (when (public-name? (:ns ev) sym)
+                    (warning :redef env {:sym sym :ns (:ns ev) :ns-name ns-name}))
                   (swap! env/*compiler* update-in [::namespaces ns-name :excludes]
                      conj-to-set sym)
                   (update-in env [:ns :excludes] conj-to-set sym))
