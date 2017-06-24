@@ -18,12 +18,12 @@ before_script:
 script:
   - lein test
   - jsc builds/out-adv/core-advanced-test.js | tee test-out.txt
-  - grep -o '[[:digit:]]*' test-out.txt | tail -n 2 | python script/check.py
+  - grep '0 failures, 0 errors.' test-out.txt
   - ./spidermoney/js -f builds/out-adv/core-advanced-test.js | tee test-out.txt
-  - grep -o '[[:digit:]]*' test-out.txt | tail -n 2 | python script/check.py
+  - grep '0 failures, 0 errors.' test-out.txt
   - jjs builds/out-adv/core-advanced-test.js | tee test-out.txt
-  - grep -o '[[:digit:]]*' test-out.txt | tail -n 2 | python script/check.py
+  - grep '0 failures, 0 errors.' test-out.txt
   - script/test-self-host | tee test-out.txt
-  - grep -o '[[:digit:]]*' test-out.txt | tail -n 2 | python script/check.py
+  - grep '0 failures, 0 errors.' test-out.txt
   - script/test-self-parity | tee test-out.txt
-  - grep -o '[[:digit:]]*' test-out.txt | tail -n 2 | python script/check.py
+  - grep '0 failures, 0 errors.' test-out.txt
