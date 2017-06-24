@@ -891,6 +891,31 @@
           (is (nil? error))
           (inc! l))))))
 
+(deftest test-cljs-2122
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 2 done)]
+      (cljs/eval-str
+        st
+        "1"
+        nil
+        {:context :expr
+         :eval node-eval}
+        (fn [{:keys [error] :as m}]
+          (is (nil? error))
+          (is (every? symbol? (keys (get-in @st [:cljs.analyzer/namespaces]))))
+          (inc! l)))
+      (cljs/eval-str
+        st
+        "1"
+        "A string name"
+        {:context :expr
+         :eval node-eval}
+        (fn [{:keys [error] :as m}]
+          (is (nil? error))
+          (is (every? symbol? (keys (get-in @st [:cljs.analyzer/namespaces]))))
+          (inc! l))))))
+
 (defn -main [& args]
   (run-tests))
 

@@ -924,7 +924,8 @@
                    (when (:source-map opts)
                      (append-source-map env/*compiler*
                        aname source sb @comp/*source-map-data* opts))
-                   (ana/dump-specs aname)
+                   (when (symbol? aname)
+                     (ana/dump-specs aname))
                    (let [js-source (.toString sb)
                          evalm     {:lang   :clj
                                     :name   name
