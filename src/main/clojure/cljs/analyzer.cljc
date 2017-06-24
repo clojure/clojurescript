@@ -3556,36 +3556,47 @@
             (util/changed? src cache)))))))
 
 #?(:clj
-   (defn- get-speced-vars
+   (defn- get-spec-vars
      []
      (when-let [spec-ns (find-ns 'cljs.spec.alpha)]
-       (ns-resolve spec-ns '_speced_vars)))
+       {:registry-ref (ns-resolve spec-ns 'registry-ref)
+        :speced-vars  (ns-resolve spec-ns '_speced_vars)}))
    :cljs
-   ;; Here, we look up the symbol '-speced-vars because ns-interns*
-   ;; is implemented by invoking demunge on the result of js-keys.
-   (let [cached-var (delay (get (ns-interns* 'cljs.spec.alpha$macros) '-speced-vars))]
-     (defn- get-speced-vars []
+   (let [registry-ref (delay (get (ns-interns* 'cljs.spec.alpha$macros) 'registry-ref))
+         ;; Here, we look up the symbol '-speced-vars because ns-interns*
+         ;; is implemented by invoking demunge on the result of js-keys.
+         speced-vars  (delay (get (ns-interns* 'cljs.spec.alpha$macros) '-speced-vars))]
+     (defn- get-spec-vars []
        (when (some? (find-ns-obj 'cljs.spec.alpha$macros))
-         @cached-var))))
+         {:registry-ref @registry-ref
+          :speced-vars  @speced-vars}))))
 
 (defn dump-specs
   "Dumps registered speced vars for a given namespace into the compiler
   environment."
   [ns]
-  (when-let [speced-vars (get-speced-vars)]
-    (let [ns-str (str ns)]
-      (swap! env/*compiler* update-in [::namespaces ns :cljs.spec/speced-vars]
-        (fnil into #{}) (filter #(= ns-str (namespace %))) @@speced-vars))))
+  (let [spec-vars (get-spec-vars)
+        ns-str (str ns)]
+    (swap! env/*compiler* update-in [::namespaces ns]
+      merge
+      (when-let [registry-ref (:registry-ref spec-vars)]
+        {:cljs.spec/registry-ref (into [] (filter (fn [[k _]] (= ns-str (namespace k)))) @@registry-ref)})
+      (when-let [speced-vars (:speced-vars spec-vars)]
+        {:cljs.spec/speced-vars  (into [] (filter #(= ns-str (namespace %))) @@speced-vars)}))))
 
 (defn register-specs
   "Registers speced vars found in a namespace analysis cache."
   [cached-ns]
-  (when-let [vars (seq (:cljs.spec/speced-vars cached-ns))]
-    #?(:clj (try
-              (require 'cljs.spec.alpha)
-              (catch Throwable t)))
-    (when-let [speced-vars (get-speced-vars)]
-      (swap! @speced-vars into vars))))
+  #?(:clj (try
+            (require 'cljs.spec.alpha)
+            (catch Throwable t)))
+  (let [{:keys [registry-ref speced-vars]} (get-spec-vars)]
+    (when-let [registry (seq (:cljs.spec/registry-ref cached-ns))]
+      (when registry-ref
+        (swap! @registry-ref merge registry)))
+    (when-let [vars (seq (:cljs.spec/speced-vars cached-ns))]
+      (when speced-vars
+        (swap! @speced-vars into vars)))))
 
 #?(:clj
    (defn write-analysis-cache
