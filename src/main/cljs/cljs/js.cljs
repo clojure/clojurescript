@@ -575,6 +575,7 @@
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  ana/*cljs-ns*          ns
                  ana/*cljs-static-fns*  (:static-fns opts)
+                 ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
                  ana/*passes*           (:*passes* bound-vars)
                  r/*alias-map*          (current-alias-map)
@@ -678,6 +679,7 @@
               *eval-fn*              (:*eval-fn* bound-vars)
               ana/*cljs-ns*          (:*cljs-ns* bound-vars)
               ana/*cljs-static-fns*  (:static-fns opts)
+              ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
               *ns*                   (create-ns (:*cljs-ns* bound-vars))
               r/*alias-map*          (current-alias-map)
               r/*data-readers*       (:*data-readers* bound-vars)
@@ -767,6 +769,7 @@
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
                  ana/*cljs-static-fns*  (:static-fns opts)
+                 ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
                  r/*alias-map*          (current-alias-map)
                  r/*data-readers*       (:*data-readers* bound-vars)
@@ -879,6 +882,7 @@
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
                  ana/*cljs-static-fns*  (:static-fns opts)
+                 ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
                  r/*alias-map*          (current-alias-map)
                  r/*data-readers*       (:*data-readers* bound-vars)
