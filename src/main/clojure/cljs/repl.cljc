@@ -762,7 +762,9 @@
       (println (str "WARNING: Unknown option '" unknown-opt "'. Did you mean '" suggested-opt "'?"))))
   (let [repl-opts (-repl-options repl-env)
         repl-requires (into repl-requires (:repl-requires repl-opts))
-        {:keys [analyze-path repl-verbose warn-on-undeclared special-fns static-fns] :as opts
+        {:keys [analyze-path repl-verbose warn-on-undeclared special-fns
+                static-fns fn-invoke-direct]
+         :as opts
          :or   {warn-on-undeclared true}}
         (merge
           {:cache-analysis true :source-map true :def-emits-var true}
@@ -806,6 +808,7 @@
                                warn-on-undeclared)))
                    {:infer-warning false}))
                ana/*cljs-static-fns* static-fns
+               ana/*fn-invoke-direct* (and static-fns fn-invoke-direct)
                *repl-opts* opts]
        (let [env {:context :expr :locals {}}
              special-fns (merge default-special-fns special-fns)
