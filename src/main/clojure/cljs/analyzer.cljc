@@ -2847,10 +2847,14 @@
        :js-op js-op
        :numeric numeric})))
 
+(defn analyzed
+  [x]
+  (vary-meta x assoc ::analyzed true))
+
 (defn- analyzed?
   #?(:cljs {:tag boolean})
-  [f]
-  (contains? (meta f) ::analyzed))
+  [x]
+  (boolean (::analyzed (meta x))))
 
 (defn- all-values?
   #?(:cljs {:tag boolean})
@@ -2907,11 +2911,11 @@
             f-sym (when bind-f-expr? (gensym "fexpr__"))
             bindings (cond-> []
                        bind-args? (into (interleave arg-syms args))
-                       bind-f-expr? (conj f-sym f))]
+                       bind-f-expr? (conj f-sym (analyzed f)))]
         (analyze env
-                 `(let [~@bindings]
-                    (~(vary-meta (if bind-f-expr? f-sym f) assoc ::analyzed true)
-                      ~@(if bind-args? arg-syms args)))))
+          `(let [~@bindings]
+             (~(analyzed (if bind-f-expr? f-sym f))
+               ~@(if bind-args? arg-syms args)))))
       (let [ana-expr #(analyze enve %)
             argexprs (map ana-expr args)]
         {:env env :op :invoke :form form :f fexpr :args (vec argexprs)
@@ -3296,6 +3300,11 @@
         ast    (analyze-form env form name opts)]
     (reduce (fn [ast pass] (pass env ast opts)) ast passes)))
 
+(defn- warnings-for [form]
+  (if (analyzed? form)
+    (zipmap (keys *cljs-warnings*) (repeat false))
+    *cljs-warnings*))
+
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
   (one of :statement, :expr, :return), :ns (a symbol naming the
@@ -3311,7 +3320,8 @@
   ([env form name opts]
    (ensure
      (wrapping-errors env
-       (binding [reader/*alias-map* (or reader/*alias-map* {})]
+       (binding [*cljs-warnings* (warnings-for form)
+                 reader/*alias-map* (or reader/*alias-map* {})]
          (analyze* env form name opts))))))
 
 #?(:clj
