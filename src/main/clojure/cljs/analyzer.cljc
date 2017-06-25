@@ -1365,7 +1365,10 @@
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (some? (get-in @env/*compiler* [::namespaces ns-name :uses sym])))
-                (let [ev (resolve-existing-var (dissoc env :locals) (with-meta sym {::no-resolve true}))
+                (let [ev (resolve-existing-var (dissoc env :locals)
+                           ;; ::no-resolve true is to suppress "can't take value
+                           ;; of macro warning" when sym resolves to a macro
+                           (with-meta sym {::no-resolve true}))
                       conj-to-set (fnil conj #{})]
                   (when (public-name? (:ns ev) sym)
                     (warning :redef env {:sym sym :ns (:ns ev) :ns-name ns-name}))
