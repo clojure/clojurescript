@@ -5556,7 +5556,7 @@ reduces them without incurring seq initialization"
 
   IIterable
   (-iterator [coll]
-    (if (implements? APersistentVector coll)
+    (if (implements? APersistentVector v)
       (ranged-iterator v start end)
       (seq-iter coll))))
 
