@@ -630,21 +630,24 @@
    opts (map)
      compilation options.
 
-      :eval          - eval function to invoke, see *eval-fn*
-      :load          - library resolution function, see *load-fn*
-      :source-map    - set to true to generate inline source map information
-      :def-emits-var - sets whether def (and derived) forms return either a Var
-                       (if set to true) or the def init value (if false). Default
-                       is false.
-      :static-fns    - employ static dispatch to specific function arities in
-                       emitted JavaScript, as opposed to making use of the
-                       `call` construct. Default is false.
-      :ns            - optional, the namespace in which to evaluate the source.
-      :verbose       - optional, emit details from compiler activity. Defaults to
-                       false.
-      :context       - optional, sets the context for the source. Possible values
-                       are `:expr`, `:statement` and `:return`. Defaults to
-                       `:expr`.
+      :eval             - eval function to invoke, see *eval-fn*
+      :load             - library resolution function, see *load-fn*
+      :source-map       - set to true to generate inline source map information
+      :def-emits-var    - sets whether def (and derived) forms return either a Var
+                          (if set to true) or the def init value (if false).
+                          Defaults to false.
+      :static-fns       - employ static dispatch to specific function arities in
+                          emitted JavaScript, as opposed to making use of the
+                          `call` construct. Defaults to false.
+      :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
+                          unknown functions, but instead direct invokes via
+                          `f(a0,a1...)`. Defaults to `false`.
+      :ns               - optional, the namespace in which to evaluate the source.
+      :verbose          - optional, emit details from compiler activity. Defaults to
+                          false.
+      :context          - optional, sets the context for the source. Possible values
+                          are `:expr`, `:statement` and `:return`. Defaults to
+                          `:expr`.
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
@@ -720,21 +723,24 @@
    opts (map)
      compilation options.
 
-      :eval          - eval function to invoke, see *eval-fn*
-      :load          - library resolution function, see *load-fn*
-      :source-map    - set to true to generate inline source map information
-      :def-emits-var - sets whether def (and derived) forms return either a Var
-                       (if set to true) or the def init value (if false). Default
-                       is false.
-      :static-fns    - employ static dispatch to specific function arities in
-                       emitted JavaScript, as opposed to making use of the
-                       `call` construct. Default is false.
-      :ns            - optional, the namespace in which to evaluate the source.
-      :verbose       - optional, emit details from compiler activity. Defaults to
-                       false.
-      :context       - optional, sets the context for the source. Possible values
-                       are `:expr`, `:statement` and `:return`. Defaults to
-                       `:expr`.
+      :eval             - eval function to invoke, see *eval-fn*
+      :load             - library resolution function, see *load-fn*
+      :source-map       - set to true to generate inline source map information
+      :def-emits-var    - sets whether def (and derived) forms return either a Var
+                          (if set to true) or the def init value (if false). Default
+                          is false.
+      :static-fns       - employ static dispatch to specific function arities in
+                          emitted JavaScript, as opposed to making use of the
+                          `call` construct. Defaults to false.
+      :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
+                          unknown functions, but instead direct invokes via
+                          `f(a0,a1...)`. Defaults to `false`.
+      :ns               - optional, the namespace in which to evaluate the source.
+      :verbose          - optional, emit details from compiler activity. Defaults to
+                          false.
+      :context          - optional, sets the context for the source. Possible values
+                          are `:expr`, `:statement` and `:return`. Defaults to
+                          `:expr`.
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
@@ -826,21 +832,24 @@
    opts (map)
      compilation options.
 
-      :eval          - eval function to invoke, see *eval-fn*
-      :load          - library resolution function, see *load-fn*
-      :source-map    - set to true to generate inline source map information
-      :def-emits-var - sets whether def (and derived) forms return either a Var
-                       (if set to true) or the def init value (if false). Default
-                       is false.
-      :static-fns    - employ static dispatch to specific function arities in
-                       emitted JavaScript, as opposed to making use of the
-                       `call` construct. Default is false.
-      :ns            - optional, the namespace in which to evaluate the source.
-      :verbose       - optional, emit details from compiler activity. Defaults to
-                       false.
-      :context       - optional, sets the context for the source. Possible values
-                       are `:expr`, `:statement` and `:return`. Defaults to
-                       `:expr`.
+      :eval             - eval function to invoke, see *eval-fn*
+      :load             - library resolution function, see *load-fn*
+      :source-map       - set to true to generate inline source map information
+      :def-emits-var    - sets whether def (and derived) forms return either a Var
+                          (if set to true) or the def init value (if false). Default
+                          is false.
+      :static-fns       - employ static dispatch to specific function arities in
+                          emitted JavaScript, as opposed to making use of the
+                          `call` construct. Defaults to false.
+      :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
+                          unknown functions, but instead direct invokes via
+                          `f(a0,a1...)`. Defaults to `false`.
+      :ns               - optional, the namespace in which to evaluate the source.
+      :verbose          - optional, emit details from compiler activity. Defaults to
+                          false.
+      :context          - optional, sets the context for the source. Possible values
+                          are `:expr`, `:statement` and `:return`. Defaults to
+                          `:expr`.
 
    cb (function)
      callback, will be invoked with a map. If successful the map will contain
@@ -967,25 +976,28 @@
   opts (map)
     compilation options.
 
-    :eval          - eval function to invoke, see *eval-fn*
-    :load          - library resolution function, see *load-fn*
-    :source-map    - set to true to generate inline source map information
-    :cache-source  - optional, a function to run side-effects with the
-                     compilation result prior to actual evalution. This function
-                     takes two arguments, the first is the eval map, the source
-                     will be under :source. The second argument is a callback of
-                     one argument. If an error occurs an :error key should be
-                     supplied.
-    :def-emits-var - sets whether def (and derived) forms return either a Var
-                     (if set to true) or the def init value (if false). Default
-                     is false.
-    :static-fns    - employ static dispatch to specific function arities in
-                     emitted JavaScript, as opposed to making use of the
-                     `call` construct. Default is false.
-    :ns            - optional, the namespace in which to evaluate the source.
-    :verbose       - optional, emit details from compiler activity. Defaults to
-                     false.
-    :context       - optional, sets the context for the source. Possible values
+    :eval             - eval function to invoke, see *eval-fn*
+    :load             - library resolution function, see *load-fn*
+    :source-map       - set to true to generate inline source map information
+    :cache-source     - optional, a function to run side-effects with the
+                        compilation result prior to actual evalution. This function
+                        takes two arguments, the first is the eval map, the source
+                        will be under :source. The second argument is a callback of
+                        one argument. If an error occurs an :error key should be
+                        supplied.
+    :def-emits-var    - sets whether def (and derived) forms return either a Var
+                        (if set to true) or the def init value (if false). Default
+                        is false.
+    :static-fns       - employ static dispatch to specific function arities in
+                        emitted JavaScript, as opposed to making use of the
+                        `call` construct. Defaults to false.
+    :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
+                        unknown functions, but instead direct invokes via
+                        `f(a0,a1...)`. Defaults to `false`.
+    :ns               - optional, the namespace in which to evaluate the source.
+    :verbose          - optional, emit details from compiler activity. Defaults to
+                        false.
+    :context          - optional, sets the context for the source. Possible values
                      are `:expr`, `:statement` and `:return`. Defaults to
                       `:expr`.
 
