@@ -1047,9 +1047,7 @@
                     f "(" (comma-sep args) "))")
              (emits "(" f fprop " ? " f fprop "(" (comma-sep args) ") : "
                     f ".call(" (comma-sep (cons "null" args)) "))")))
-         (if ana/*fn-invoke-direct*
-           (emits f "(" (comma-sep args) ")")
-           (emits f ".call(" (comma-sep (cons "null" args)) ")")))))))
+         (emits f ".call(" (comma-sep (cons "null" args)) ")"))))))
 
 (defmethod emit* :new
   [{:keys [ctor args env]}]
