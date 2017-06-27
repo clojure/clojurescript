@@ -744,6 +744,8 @@
           mname (munge name)
           delegate-name (str mname "__delegate")]
       (emitln "(function() { ")
+      (when type
+        (emitln "var self__ = this;"))
       (emits "var " delegate-name " = function (")
       (doseq [param params]
         (emit param)
@@ -760,8 +762,6 @@
                                              (if variadic
                                                (concat (butlast params) ['var_args])
                                                params)) "){")
-      (when type
-        (emitln "var self__ = this;"))
       (when variadic
         (emits "var ")
         (emit (last params))
