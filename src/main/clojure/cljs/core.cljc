@@ -1572,7 +1572,7 @@
     (-count [c] ...)
     Foo
     (bar [x y] ...)
-    (baz ([x] ...) ([x y & zs] ...))"
+    (baz ([x] ...) ([x y] ...) ...)"
   [type-sym & impls]
   (core/let [env &env
              _ (validate-impls env impls)
