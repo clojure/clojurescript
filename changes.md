@@ -1,3 +1,11 @@
+## 1.9.660
+
+### Changes
+* CLJS-2134: Warn on variadic signatures in protocol method implementation
+
+### Fixes
+* CLJS-2133: Invalid variadic IFn implementations now fail
+
 ## 1.9.655
 
 ### Enhancements
