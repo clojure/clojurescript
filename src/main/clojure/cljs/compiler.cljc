@@ -974,8 +974,9 @@
                       (= (get (string/split ns-str #"\.") 0 nil) "goog"))
                     (not (contains? (::ana/namespaces @env/*compiler*) ns))))
 
-        keyword? (and (= (-> f :op) :constant)
-                      (keyword? (-> f :form)))
+        keyword? (or (= 'cljs.core/Keyword (ana/infer-tag env f))
+                     (and (= (-> f :op) :constant)
+                          (keyword? (-> f :form))))
         [f variadic-invoke]
         (if fn?
           (let [arity (count args)
