@@ -1339,6 +1339,16 @@
   (testing "Syntax quoted dotted symbol without namespace should resolve to itself"
     (is (= 'clojure.core `clojure.core))))
 
+(deftype Partial [f args]
+  IFn
+  (-invoke [_ & a]
+    (apply (apply partial f args) a)))
+
+(deftest test-cljs-2133
+  (testing "Invalid variadic IFn implementation should work"
+    (let [p (Partial. + [1])]
+      (p 2))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
