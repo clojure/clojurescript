@@ -1,3 +1,79 @@
+## 1.9.655
+
+### Enhancements
+* CLJS-2108: faster set equivalence
+* CLJS-2099: Optimize apply by avoiding .apply
+* CLJS-2046: Optimize expression in call position
+* CLJS-1876: Faster reduce for PV, Subvec and ChunkedSeq
+* CLJS-2080: Faster equiv-map
+* CLJS-2066: Avoid analyzing named fn literal bodies twice
+* CLJS-2065: Improve analyzer munge performance
+
+### Changes
+* CLJS-2130: Self-host: Add `:fn-invoke-direct` to public API docstrings
+* CLJS-2112: Iterator based reduce path
+* CLJS-2100: to-array calls seq too often
+* CLJS-2041: Compiler flag to drop Function.prototype.call invokes
+* CLJS-2093: inline ^:const var values
+* CLJS-2042: Variadic invoke calls array_seq inefficiently
+* CLJS-2003 remove redundant calls to `str` in munge/demunge
+* CLJS-1907: Improve error message from cljs.reader/read-string
+* CLJS-1724: Include IIterable in fast-path-protocols
+* CLJS-924: Better error message for mistaken use of 'def'
+* CLJS-1599: UUIDs are not equal for upper/lower case strings
+* NodeJS REPL accepts a :path opt to set NODE_PATH
+* CLJS-1886: RangedIterator should only be created from cljs.core.PersistentVector instances
+* CLJS-2068: MapEntry, RedNode and BlackNode are IComparable
+* CLJS-2073: Don't flush for every emitted line
+* CLJS-2089: Warn message wrong for recur to protocol with nil
+* CLJS-2085: defrecord recur method head target object
+* CLJS-1977: defrecord should use murmur hashing like Clojure
+* CLJS-2076: modules should support wildcard namespaces
+* CLJS-2078: add resolve macro
+
+### Fixes
+* CLJS-2128: Fix regression in CLJS-1886
+* CLJS-2126: Add new compiler option :fn-invoke-direct to build-affecting options
+* CLJS-2054: Private core names still result in "already declared" warnings
+* CLJS-2125: Duplicate HOF invoke warnings if :static-fns true
+* CLJS-2119: s/form for s/& is qualified with `clojure.spec.alpha`
+* CLJS-2121: Self-host: Document string as valid name arg
+* CLJS-2124: Self-host: Tests failing wth Could not find tag parser for :cljs.spec.alpha
+* CLJS-2122: Self-host: Non-symbol ns names dumped into env
+* CLJS-2117: Self-host: Port CLJS-1989 to self-hosted
+* CLJS-1989: s/fdef expansion side effect fails when load cached source
+* CLJS-2116: Need to handle un-namespaced symbol when evaluating `foo.core
+* CLJS-2109: incorrect syntax-quote symbol resolution (resolve-symbol 'clojure.core) -> 'clojure/core
+* CLJS-2113: nth function produces different results from clojure when using a negative index on a sequence
+* CLJS-2115: Pass not-found in the native-satisfies? branch of nth
+* CLJS-2111: Transit analysis caching broken for JSValue or regex
+* CLJS-2101: Undeclared var in do chain of defs
+* CLJS-2104: Const-replaced exprs do not emit js "return"
+* CLJS-1992: declare after def should have no effect
+* CLJS-1251: Missing semicolons when emitting deftype and defrecord mistaken use of 'def'
+* CLJS-1685: Incorrectly lazy subvec when start param is nil
+* CLJS-1641: Multi-arity defn copies arguments unnecessarily for all cases
+* CLJS-2092: Redundant call to equiv-map in PAM.-equiv
+* Check for compilation success, and lib folder
+* CLJS-2030: Case with grouped keyword test emit result-expr multiple times
+* CLJS-2094: Predicates unit tests constructs a uuid with nil
+* CLJS-1891: UUID.toString can return non-string
+* CLJS-2072: Eliminate reflection in cljs.js-deps/build-index
+* CLJS-2012: Find on PHM with nil entry always returns nil entry
+* CLJS-2057: fix language-in options (es6 deprecated and add missing es2016)
+* CLJS-2060: Backport CLJ-2141 Return only true/false from qualified-* predicates
+* CLJS-2091: reify docstring ISeqable example needs correction
+* CLJS-2088: fix caching collision between macros ns and regular ns in boostrap
+* CLJS-2036: Relative path exception thrown when :preloads requires a :foreign-lib
+* CLJS-2083: Test equiv-map for maps which do not impl IKVReduce
+* CLJS-2081: Self-host: Regression with CLJS-2079
+* CLJS-2079: Records and maps are not equal
+* CLJS-2075: PersistentTreeMap.reduce-kv does not honor reduced?
+* Browser REPL regression
+* CLJS-2069: Self-host: automatic `clojure` -> `cljs` aliasing doesn't work when loading macro namespaces
+* CLJS-2067: reduce-kv / inode-kv-reduce fails to honor reduced?
+* CLJS-2056: Self-host: test-self-parity failing wrt cljs.core/fn symbol
+
 ## 1.9.562
 
 ### Enhancements
