@@ -138,6 +138,7 @@
    :protocol-duped-method true
    :protocol-multiple-impls true
    :protocol-with-variadic-method true
+   :protocol-impl-with-variadic-method true
    :protocol-impl-recur-with-target true
    :single-segment-namespace true
    :munged-namespace true
@@ -359,6 +360,11 @@
   [warning-type info]
   (str "Protocol " (:protocol info) " declares method "
        (:name info) " with variadic signature (&)"))
+
+(defmethod error-message :protocol-impl-with-variadic-method
+  [warning-type info]
+  (str "Protocol " (:protocol info) " implements method "
+    (:name info) " with variadic signature (&)"))
 
 (defmethod error-message :protocol-impl-recur-with-target
   [warning-type info]

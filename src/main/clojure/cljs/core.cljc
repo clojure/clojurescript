@@ -1498,6 +1498,8 @@
                      c   (count sig)]
             (core/when (contains? seen c)
               (ana/warning :protocol-duped-method env {:protocol p :fname fname}))
+            (core/when (some '#{&} sig)
+              (ana/warning :protocol-impl-with-variadic-method env {:protocol p :name fname}))
             (core/when (core/and (not= decmeths ::not-found) (not (some #{c} (map count decmeths))))
               (ana/warning :protocol-invalid-method env {:protocol p :fname fname :invalid-arity c}))
             (recur (next sigs) (conj seen c))))))))
