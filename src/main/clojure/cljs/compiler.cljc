@@ -1105,7 +1105,9 @@
 (defmethod emit* :ns*
   [{:keys [name requires uses require-macros reloads env deps]}]
   (load-libs requires nil (:require reloads) deps)
-  (load-libs uses requires (:use reloads) deps))
+  (load-libs uses requires (:use reloads) deps)
+  (when (:repl-env env)
+    (emitln "null;")))
 
 (defmethod emit* :ns
   [{:keys [name requires uses require-macros reloads env deps]}]
