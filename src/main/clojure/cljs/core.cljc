@@ -3191,4 +3191,4 @@
                             [(ana/resolve-var env sym) nil]))
              resolved (vary-meta (:name var) assoc ::ana/no-resolve true)]
     `(when (exists? ~resolved)
-       (cljs.core/Var. ~resolved '~resolved ~meta))))
+       (cljs.core/Var. (fn [] ~resolved) '~resolved ~meta))))

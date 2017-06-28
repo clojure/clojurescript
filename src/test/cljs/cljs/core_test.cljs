@@ -1349,6 +1349,10 @@
     (let [p (Partial. + [1])]
       (p 2))))
 
+(deftest test-resolve
+  (testing "Resolve should return valid var"
+    (is (= 1 ((resolve 'first) [1 2 3])))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
