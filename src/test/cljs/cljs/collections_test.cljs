@@ -39,7 +39,6 @@
     (is (= (find [1 2 3] 0) [0 1]))
     (is (= (find [1 2 3] -1) nil))
     (is (= (find [1 2 3] js/NaN) nil))
-    (is (= (find [1 2 3] 1.2) nil))
     (is (= (find [1 2 3] :a) nil))
     (is (= (find [1 2 3] 10) nil)))
   )
@@ -99,7 +98,14 @@
             sv2 (subvec [0 1 2 3] 1 1)]
         (testing "rseq equality"
           (is (= (rseq sv1) '(1)))
-          (is (nil? (rseq sv2))))))
+          (is (nil? (rseq sv2)))))
+      (let [s (subvec [0 1 2 3] 0 2)]
+        (testing "IFind"
+          (is (= (find s 0) [0 0]))
+          (is (= (find s 1) [1 1]))
+          (is (= (find s 2) nil))
+          (is (= (find s -1) nil))))
+      )
     ))
 
 (deftest test-sets

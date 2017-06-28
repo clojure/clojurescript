@@ -5524,7 +5524,8 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [coll n]
-    (when (<= end (+ start n))
+    (when (and (not (neg? n))
+               (< (+ start n) end))
       (-find v (+ start n))))
 
   IVector
