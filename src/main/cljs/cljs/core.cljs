@@ -5232,7 +5232,7 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [coll n]
-    (when (and (== n (bit-or n 0)) (<= 0 n) (< n cnt))
+    (when (and (<= 0 n) (< n cnt))
       [n (aget (unchecked-array-for coll n) (bit-and n 0x01f))]))
 
   APersistentVector
