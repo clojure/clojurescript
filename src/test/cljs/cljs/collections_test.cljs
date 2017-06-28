@@ -36,7 +36,12 @@
     (is (= (find {} nil) nil))
     (is (= (find {:a 1} nil) nil))
     (is (= (find {:a 1 :b 2} nil) nil))
-    (is (= (find [1 2 3] 0) [0 1])))
+    (is (= (find [1 2 3] 0) [0 1]))
+    (is (= (find [1 2 3] -1) nil))
+    (is (= (find [1 2 3] js/NaN) nil))
+    (is (= (find [1 2 3] 1.2) nil))
+    (is (= (find [1 2 3] :a) nil))
+    (is (= (find [1 2 3] 10) nil)))
   )
 
 (deftest test-vectors

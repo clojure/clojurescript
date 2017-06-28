@@ -548,7 +548,7 @@
 
 (defprotocol IFind
   "Protocol for implementing entry finding in collections."
-  (-find [coll k]))
+  (-find [coll k] "Returns the map entry for key, or nil if key not present."))
 
 (defprotocol IMap
   "Protocol for adding mapping functionality to collections."
@@ -2242,11 +2242,11 @@ reduces them without incurring seq initialization"
 (defn find
   "Returns the map entry for key, or nil if key not present."
   [coll k]
-  (when (and (not (nil? coll))
-             (associative? coll)
-             (contains? coll k))
-    (if (ifind? coll)
-      (-find coll k)
+  (if (ifind? coll)
+    (-find coll k)
+    (when (and (not (nil? coll))
+            (associative? coll)
+            (contains? coll k))
       [k (get coll k)])))
 
 (defn ^boolean distinct?
@@ -5231,8 +5231,9 @@ reduces them without incurring seq initialization"
       false))
 
   IFind
-  (-find [coll k]
-    [k (get coll k)])
+  (-find [coll n]
+    (when (and (== n (bit-or n 0)) (<= 0 n) (< n cnt))
+      [n (aget (unchecked-array-for coll n) (bit-and n 0x01f))]))
 
   APersistentVector
   IVector
@@ -5522,8 +5523,9 @@ reduces them without incurring seq initialization"
       (throw (js/Error. "Subvec's key for assoc must be a number."))))
 
   IFind
-  (-find [coll key]
-    [key (get coll key)])
+  (-find [coll n]
+    (when (<= end (+ start n))
+      (-find v (+ start n))))
 
   IVector
   (-assoc-n [coll n val]
@@ -6060,7 +6062,9 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [coll k]
-    [k (get coll k)])
+    (when (and ^boolean (goog/isString k)
+            (not (nil? (scan-array 1 k keys))))
+      [k (aget strobj k)]))
 
   IKVReduce
   (-kv-reduce [coll f init]
@@ -6289,10 +6293,10 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [node k]
-    (cond
-      (== k 0) [0 key]
-      (== k 1) [1 val]
-      :else nil))
+    (case k
+      0 [0 key]
+      1 [1 val]
+      nil))
 
   IVector
   (-assoc-n [node n v]
@@ -6505,7 +6509,8 @@ reduces them without incurring seq initialization"
   IFind
   (-find [coll k]
     (let [idx (array-map-index-of coll k)]
-      [(aget arr idx) (get coll k)]))
+      (when-not (== idx -1)
+        [(aget arr idx) (aget arr (inc idx))])))
 
   IMap
   (-dissoc [coll k]
@@ -7949,10 +7954,10 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [node k]
-    (cond
-      (== k 0) [0 key]
-      (== k 1) [1 val]
-      :else nil))
+    (case k
+      0 [0 key]
+      1 [1 val]
+      nil))
 
   IVector
   (-assoc-n [node n v]
@@ -8110,10 +8115,10 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [node k]
-    (cond
-      (== k 0) [0 key]
-      (== k 1) [1 val]
-      :else nil))
+    (case k
+      0 [0 key]
+      1 [1 val]
+      nil))
 
   IVector
   (-assoc-n [node n v]

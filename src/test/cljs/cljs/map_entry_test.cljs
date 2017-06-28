@@ -113,13 +113,8 @@
         (are [x y] (= x y)
           [0 :key] (-find e 0)
           [1 :val] (-find e 1)
-          ;; Commented out as unsure about contract of -find 
-          ;; in the case where key is not present.
-          ;nil (-find e 2)
-          ;nil (-find e -1)
-          ;; So testing `find` in this case instead as contract is clear.
-          nil (find e 2)
-          nil (find e -1))))
+          nil (-find e 2)
+          nil (-find e -1))))
 
     (testing "IFn"
       (testing "-invoke 2-arity"
