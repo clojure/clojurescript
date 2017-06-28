@@ -3205,9 +3205,12 @@
 (defn elide-reader-meta [m]
   (dissoc m :file :line :column :end-column :end-line :source))
 
+(defn elide-analyzer-meta [m]
+  (dissoc m ::analyzed))
+
 (defn analyze-wrap-meta [expr]
   (let [form (:form expr)
-        m    (elide-reader-meta (meta form))]
+        m    (-> (meta form) elide-reader-meta elide-analyzer-meta)]
     (if (some? (seq m))
       (let [env (:env expr) ; take on expr's context ourselves
             expr (assoc-in expr [:env :context] :expr) ; change expr to :expr
