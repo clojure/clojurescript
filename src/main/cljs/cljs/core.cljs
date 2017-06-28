@@ -5524,9 +5524,10 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [coll n]
-    (when (and (not (neg? n))
-               (< (+ start n) end))
-      (-find v (+ start n))))
+    (when-not (neg? n)
+      (let [idx (+ start n)]
+        (when (< idx end)
+          [n (-lookup v idx)]))))
 
   IVector
   (-assoc-n [coll n val]

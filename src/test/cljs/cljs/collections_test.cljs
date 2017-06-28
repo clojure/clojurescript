@@ -99,12 +99,17 @@
         (testing "rseq equality"
           (is (= (rseq sv1) '(1)))
           (is (nil? (rseq sv2)))))
-      (let [s (subvec [0 1 2 3] 0 2)]
+      (let [sv1 (subvec [0 1 2 3] 0 2)
+            sv2 (subvec [0 1 2 3] 1 3)]
         (testing "IFind"
-          (is (= (find s 0) [0 0]))
-          (is (= (find s 1) [1 1]))
-          (is (= (find s 2) nil))
-          (is (= (find s -1) nil))))
+          (is (= (find sv1 0) [0 0]))
+          (is (= (find sv1 1) [1 1]))
+          (is (= (find sv1 2) nil))
+          (is (= (find sv1 -1) nil))
+          (is (= (find sv2 0) [0 1]))
+          (is (= (find sv2 1) [1 2]))
+          (is (= (find sv2 2) nil))
+          (is (= (find sv2 -1) nil))))
       )
     ))
 
