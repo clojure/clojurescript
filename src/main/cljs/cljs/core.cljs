@@ -5829,6 +5829,13 @@ reduces them without incurring seq initialization"
         (-empty coll)
         (PersistentQueueSeq. meta rear nil nil))))
 
+  INext
+  (-next [coll]
+    (if-let [f1 (next front)]
+      (PersistentQueueSeq. meta f1 rear nil)
+      (when (some? rear)
+        (PersistentQueueSeq. meta rear nil nil))))
+
   ICollection
   (-conj [coll o] (cons o coll))
 
@@ -7301,6 +7308,12 @@ reduces them without incurring seq initialization"
                 (create-inode-seq nodes i (next s)))]
       (if-not (nil? ret) ret ())))
 
+  INext
+  (-next [coll]
+    (if (nil? s)
+      (create-inode-seq nodes (+ i 2) nil)
+      (create-inode-seq nodes i (next s))))
+
   ISeqable
   (-seq [this] this)
 
@@ -7366,6 +7379,10 @@ reduces them without incurring seq initialization"
   (-rest  [coll]
     (let [ret (create-array-node-seq nil nodes i (next s))]
       (if-not (nil? ret) ret ())))
+
+  INext
+  (-next [coll]
+    (create-array-node-seq nil nodes i (next s)))
 
   ISeqable
   (-seq [this] this)
@@ -7724,6 +7741,14 @@ reduces them without incurring seq initialization"
       (if-not (nil? next-stack)
         (PersistentTreeMapSeq. nil next-stack ascending? (dec cnt) nil)
         ())))
+  INext
+  (-next [this]
+    (let [t (first stack)
+          next-stack (tree-map-seq-push (if ascending? (.-right t) (.-left t))
+                                        (next stack)
+                                        ascending?)]
+      (when-not (nil? next-stack)
+        (PersistentTreeMapSeq. nil next-stack ascending? (dec cnt) nil))))
 
   ICounted
   (-count [coll]

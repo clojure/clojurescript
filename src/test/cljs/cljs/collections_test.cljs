@@ -678,8 +678,10 @@
       (is (= (find map nil) [nil :foo])))))
 
 (deftype CustomVectorThing [v]
+  ;; Subvec expects its argument to implement IVector.
+  ;; Note, that this method is never actually called.
   IVector
-  (-assoc-n [coll i val] (assoc-n v i val))
+  (-assoc-n [coll i val] nil)
 
   IIndexed
   (-nth [coll i] (nth v i))
