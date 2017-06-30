@@ -1570,7 +1570,7 @@
   (doall (map #(analyze-fn-method menv locals % type true) meths)))
 
 (defn analyze-fn-methods-pass2 [menv locals type meths]
-  (no-warn (analyze-fn-methods-pass2* menv locals type meths)))
+  (analyze-fn-methods-pass2* menv locals type meths))
 
 (defmethod parse 'fn*
   [op env [_ & args :as form] name _]

@@ -733,6 +733,15 @@
             ;; The previous def must be analyzed for subsequent var special to succeed
             (def ~'x33 (var ~'x32)))]))))
 
+(deftest test-cljs-2139
+  (let [ws (atom [])]
+    (try
+      (a/with-warning-handlers [(collecting-warning-handler ws)]
+        (a/analyze (a/empty-env)
+          '(defn foo [] x)))
+      (catch Exception _))
+    (is (= ["Use of undeclared Var cljs.user/x"] @ws))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn
