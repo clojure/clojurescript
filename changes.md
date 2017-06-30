@@ -1,3 +1,14 @@
+## 1.9.671
+
+### Fixes
+* CLJS-2139: Undeclared var regression in fn bodies
+* CLJS-2137: Missing INext on some sequences 
+* CLJS-2136: Clarify IFind contract to avoid double-lookups
+* need to elide :c.a/analyzed in c.a/analyze-wrap-meta to avoid dumping unintended
+  with-meta expressions
+* resolve returns improperly constructed Var
+* fix :fn-invoke-direct edgecase around keywords
+
 ## 1.9.660
 
 ### Changes
