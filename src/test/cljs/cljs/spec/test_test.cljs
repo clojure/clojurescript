@@ -15,3 +15,11 @@
   ; Calling h-cljs-1812 with an argument of the wrong type shouldn't throw,
   ; because the function should not have been instrumented by stest/check.
   (h-cljs-1812 "foo"))
+
+;; Setup for CLJS-2142
+(def ^:const pi 3.14159)
+(defn area [r] (* pi r r))
+(s/fdef area :args (s/cat :r number?))
+
+(deftest test-cljs-2142
+  (is (= `[area] (stest/instrument `[pi area]))))
