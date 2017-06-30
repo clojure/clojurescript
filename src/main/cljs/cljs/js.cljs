@@ -425,7 +425,7 @@
                        (str "Could not analyze dep " dep) cause))))))
          (cb {:value nil}))))))
 
-(defn- load-macros [bound-vars k macros reload reloads opts cb]
+(defn- load-macros [bound-vars k macros lib reload reloads opts cb]
   (if (seq macros)
     (let [nsym (first (vals macros))
           k    (or (reload k)
@@ -439,7 +439,7 @@
       (require bound-vars nsym k opts'
         (fn [res]
           (if-not (:error res)
-            (load-macros bound-vars k (next macros) reload reloads opts cb)
+            (load-macros bound-vars k (next macros) lib reload reloads opts cb)
             (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns nsym)]
                                 (get {nsym nil} cljs-ns cljs-ns))]
               (require bound-vars cljs-dep k opts'
@@ -448,7 +448,7 @@
                     (cb res)
                     (do
                       (patch-alias-map (:*compiler* bound-vars) lib nsym cljs-dep)
-                      (load-macros bound-vars k (next macros) reload reloads opts
+                      (load-macros bound-vars k (next macros) lib reload reloads opts
                         (fn [res]
                           (if (:error res)
                             (cb res)
@@ -497,19 +497,19 @@
    (if (#{:ns :ns*} op)
      (letfn [(check-uses-and-load-macros [res rewritten-ast]
                (let [env (:*compiler* bound-vars)
-                     {:keys [uses require-macros use-macros reload reloads]} rewritten-ast]
+                     {:keys [uses require-macros use-macros reload reloads name]} rewritten-ast]
                  (if (:error res)
                    (cb res)
                    (if (:*load-macros* bound-vars)
                      (do
-                       (when (:verbose opts) (debug-prn "Processing :use-macros for" (:name ast)))
-                       (load-macros bound-vars :use-macros use-macros reload reloads opts
+                       (when (:verbose opts) (debug-prn "Processing :use-macros for" name))
+                       (load-macros bound-vars :use-macros use-macros name reload reloads opts
                          (fn [res]
                            (if (:error res)
                              (cb res)
                              (let [{:keys [require-macros] :as rewritten-ast} (rewrite-ns-ast rewritten-ast (:aliased-loads res))]
                                (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
-                               (load-macros bound-vars :require-macros require-macros reload reloads opts
+                               (load-macros bound-vars :require-macros require-macros name reload reloads opts
                                  (fn [res']
                                    (if (:error res')
                                      (cb res')
