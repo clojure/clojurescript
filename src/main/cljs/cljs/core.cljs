@@ -2098,7 +2098,7 @@ reduces them without incurring seq initialization"
     (satisfies? ISet x)))
 
 (defn ^boolean associative?
- "Returns true if coll implements Associative"
+ "Returns true if coll implements IAssociative"
   [x] (satisfies? IAssociative x))
 
 (defn ^boolean ifind?
