@@ -701,3 +701,11 @@
       (is (= [1 2] (reduce conj [] (subvec [0 1 2 3] 1 3)))))
     (testing "Subvec over other vectors reduces as expected"
       (is (= [1 2] (reduce conj [] (subvec (->CustomVectorThing [0 1 2 3]) 1 3)))))))
+
+(deftest test-cljs-2145
+  (testing "PersistentHashMap -find implementation"
+    (is (= (find (hash-map) :a) nil))
+    (is (= (find (hash-map :a 1) :a) [:a 1]))
+    (is (= (find (hash-map :a false) :a) [:a false]))
+    (is (= (find (zipmap (range 1000) (repeat :foo)) 999) [999 :foo]))
+    (is (= (find (zipmap (range 1000) (repeat :foo)) 1000) nil))))

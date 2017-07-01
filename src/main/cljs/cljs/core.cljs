@@ -7530,10 +7530,10 @@ reduces them without incurring seq initialization"
 
   IFind
   (-find [coll k]
-    (if (nil? k)
-      (when has-nil?
-        [nil nil-val])
-      (.inode-find root 0 (hash k) k nil)))
+    (cond
+      (nil? k) (when has-nil? [nil nil-val])
+      (nil? root) nil
+      :else (.inode-find root 0 (hash k) k nil)))
 
   IMap
   (-dissoc [coll k]
