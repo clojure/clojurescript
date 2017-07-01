@@ -8,6 +8,7 @@
 
 (ns test-runner
   (:require [cljs.test :refer-macros [run-tests]]
+            [cljs.apply-test]
             [cljs.primitives-test]
             [cljs.destructuring-test]
             [cljs.new-new-test]
@@ -51,6 +52,7 @@
 (set-print-fn! js/print)
 
 (run-tests
+  'cljs.apply-test
   'cljs.primitives-test
   'cljs.destructuring-test
   'cljs.new-new-test
