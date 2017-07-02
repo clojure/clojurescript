@@ -415,7 +415,7 @@
   (merge
     (javascript-file
       (:foreign m)
-      (when-let [f (:file m)]
+      (when-let [f (or (:file m) (:url m))]
         (deps/to-url f))
       (when-let [sf (:source-file m)]
         (deps/to-url sf))
@@ -1289,7 +1289,14 @@
         sources (if (= :whitespace (:optimizations opts))
                   (cons "var CLOSURE_NO_DEPS = true;" sources)
                   sources)
-        ^List inputs (map #(js-source-file (javascript-name %) %) sources)
+        ^List inputs (doall
+                       (map
+                         (fn [source]
+                           (let [source (cond-> source
+                                          (and (not (record? source)) (map? source))
+                                          map->javascript-file)]
+                             (js-source-file (javascript-name source) source)))
+                         sources))
         ^Result result (util/measure (:compiler-stats opts)
                          "Optimizing with Google Closure Compiler"
                          (.compile closure-compiler externs inputs compiler-options))]
