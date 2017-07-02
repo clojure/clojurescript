@@ -134,6 +134,8 @@
    :extending-base-js-type true
    :invoke-ctor true
    :invalid-arithmetic true
+   :invalid-aget false
+   :invalid-aset false
    :protocol-invalid-method true
    :protocol-duped-method true
    :protocol-multiple-impls true
@@ -390,6 +392,24 @@
 (defmethod error-message :invalid-arithmetic
   [warning-type info]
   (str (:js-op info) ", all arguments must be numbers, got " (:types info) " instead."))
+
+(defmethod error-message :invalid-aget
+  [warning-type info]
+  (str (:js-op info) ", arguments must be an array followed by numeric indices, got " (:types info) " instead"
+    (when (or (= 'object (first (:types info)))
+              (every? #{'string} (rest (:types info))))
+      (str " (consider "
+        (if (== 2 (count (:types info)))
+          "goog.object/get"
+          "goog.object/getValueByKeys")
+        " for object access)"))))
+
+(defmethod error-message :invalid-aset
+  [warning-type info]
+  (str (:js-op info) ", arguments must be an array, followed by numeric indices, followed by a value, got " (:types info) " instead"
+    (when (or (= 'object (first (:types info)))
+              (every? #{'string} (butlast (rest (:types info)))))
+      " (consider goog.object/set for object access)")))
 
 (defmethod error-message :invoke-ctor
   [warning-type info]
@@ -2822,6 +2842,23 @@
             (contains? t 'any)
             (contains? t 'js))))))
 
+(defn array-type?
+  #?(:cljs {:tag boolean})
+  [t]
+  ;; TODO same inference caveats as the numeric-type? fn above
+  (cond
+    (nil? t) true
+    (= 'clj-nil t) true
+    (js-tag? t) true ;; TODO: revisit
+    :else
+    (if (and (symbol? t) (some? (get '#{any array} t)))
+      true
+      (when #?(:clj  (set? t)
+               :cljs (cljs-set? t))
+        (or (contains? t 'array)
+            (contains? t 'any)
+            (contains? t 'js))))))
+
 (defn analyze-js-star* [env jsform args form]
   (let [enve      (assoc env :context :expr)
         argexprs  (vec (map #(analyze enve %) args))
@@ -2829,13 +2866,24 @@
         segs      (js-star-seg jsform)
         tag       (get-js-tag form)
         js-op     (:js-op form-meta)
-        numeric   (:numeric form-meta)]
+        numeric   (:numeric form-meta)
+        validate  (fn [warning-type valid-types?]
+                    (let [types (map #(infer-tag env %) argexprs)]
+                      (when-not (valid-types? types)
+                        (warning warning-type env
+                          {:js-op js-op
+                           :types (into [] types)}))))
+        op-match? (fn [sym]
+                    #?(:clj  (= sym (:js-op form-meta))
+                       :cljs (symbol-identical? sym (:js-op form-meta))))]
     (when (true? numeric)
-      (let [types (map #(infer-tag env %) argexprs)]
-        (when-not (every? numeric-type? types)
-          (warning :invalid-arithmetic env
-            {:js-op js-op
-             :types (into [] types)}))))
+      (validate :invalid-arithmetic #(every? numeric-type? %)))
+    (when (op-match? 'cljs.core/aget)
+      (validate :invalid-aget #(and (array-type? (first %))
+                                    (every? numeric-type? (rest %)))))
+    (when (op-match? 'cljs.core/aset)
+      (validate :invalid-aset #(and (array-type? (first %))
+                                    (every? numeric-type? (butlast (rest %))))))
     {:op :js
      :env env
      :segs segs
