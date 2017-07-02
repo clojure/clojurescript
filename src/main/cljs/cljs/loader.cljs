@@ -25,14 +25,13 @@
 (defn create-module-manager []
   (let [mm (ModuleManager.)
         ml (ModuleLoader.)]
-    ;(.setSourceUrlInjection ml true)
-    ;(.setBatchModeEnabled mm true)
     (.setLoader mm ml)
-    (.setAllModuleInfo mm (to-js module-infos))
-    (.setModuleUris mm (to-js module-uris))
     mm))
 
-(def ^:dynamic *module-manager* (create-module-manager))
+(defonce ^:dynamic *module-manager* (create-module-manager))
+
+(.setAllModuleInfo *module-manager* (to-js module-infos))
+(.setModuleUris *module-manager* (to-js module-uris))
 
 (defn load
   "Load a module. module-name should be a keyword matching a :modules module
