@@ -3351,6 +3351,21 @@
                  reader/*alias-map* (or reader/*alias-map* {})]
          (analyze* env form name opts))))))
 
+(defn add-consts
+  "Given a compiler state and a map from fully qualified symbols to constant
+  EDN values, update the compiler state marking these vars as const to support
+  direct substitution of these vars in source."
+  [compiler-state constants-map]
+  (reduce-kv
+    (fn [compiler-state sym value]
+      (let [ns (symbol (namespace sym))]
+        (update-in compiler-state
+          [::namespaces ns :defs (symbol (name sym))] merge
+          {:const-expr
+           (binding [*passes* (conj *passes* (replace-env-pass {:context :expr}))]
+             (analyze (empty-env) value))})))
+    compiler-state constants-map))
+
 #?(:clj
    (defn- source-path
      "Returns a path suitable for providing to tools.reader as a 'filename'."

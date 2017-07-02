@@ -22,6 +22,9 @@
 
 (defonce PROTOCOL_SENTINEL #js {})
 
+(def MODULE_URIS nil) ;; set by compiler
+(def MODULE_INFOS nil) ;; set by compiler
+
 (goog-define
   ^{:dynamic true
     :doc "Var bound to the name value of the compiler build :target option.

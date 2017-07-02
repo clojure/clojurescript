@@ -118,20 +118,20 @@
   (.getName f))
 
 (defn ^String path [x]
-  {:pre [(or (file? x) (url? x) (string? x))]}
   (cond
     (file? x) (.getAbsolutePath ^File x)
     (url? x) (.getPath ^URL x)
-    (string? x) x))
+    (string? x) x
+    :else (throw (Exception. (str "Expected file, url, or string. Got " (pr-str x))))))
 
 (defn ^String ext
   "Given a file, url or string return the file extension."
   [x]
-  {:pre [(or (file? x) (url? x) (string? x))]}
   (let [s (cond
             (file? x) (filename x)
             (url? x) (path x)
-            (string? x) x)]
+            (string? x) x
+            :else (throw (Exception. (str "Expected file, url, or string. Got " (pr-str x)))))]
     (last (string/split s #"\."))))
 
 (defn ^String get-name

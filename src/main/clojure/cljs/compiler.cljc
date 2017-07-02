@@ -300,15 +300,15 @@
     (emits ")")))
 
 (defmethod emit-constant #?(:clj clojure.lang.Keyword :cljs Keyword) [x]
-  (if (-> @env/*compiler* :options :emit-constants)
-    (let [value (-> @env/*compiler* ::ana/constant-table x)]
-      (emits "cljs.core." value))
+  (if-let [value (and (-> @env/*compiler* :options :emit-constants)
+                      (-> @env/*compiler* ::ana/constant-table x))]
+    (emits "cljs.core." value)
     (emits-keyword x)))
 
 (defmethod emit-constant #?(:clj clojure.lang.Symbol :cljs Symbol) [x]
-  (if (-> @env/*compiler* :options :emit-constants)
-    (let [value (-> @env/*compiler* ::ana/constant-table x)]
-      (emits "cljs.core." value))
+  (if-let [value (and (-> @env/*compiler* :options :emit-constants)
+                      (-> @env/*compiler* ::ana/constant-table x))]
+    (emits "cljs.core." value)
     (emits-symbol x)))
 
 ;; tagged literal support
@@ -1210,7 +1210,9 @@
      (.getPath (.toURL (.toURI f)))))
 
 (defn- build-affecting-options [opts]
-  (select-keys opts [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target]))
+  (select-keys opts
+    [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target
+     :cache-key]))
 
 #?(:clj
    (defn compiled-by-string
@@ -1253,7 +1255,9 @@
              (json/read-str (slurp (io/resource "cljs/core.aot.js.map")))
              "file"
              (str (io/file (util/output-directory opts) "cljs" "core.js"))))))
-     (ana/parse-ns src dest nil)))
+     (merge
+       (ana/parse-ns src dest nil)
+       {:out-file dest})))
 
 #?(:clj
    (defn emit-source-map [src dest sm-data opts]
@@ -1344,6 +1348,7 @@
                                                   (get-in @env/*compiler* [:options :emit-constants])
                                                   (conj ana/constants-ns-sym)))
                                   :file        dest
+                                  :out-file    dest
                                   :source-file src}
                                  (when sm-data
                                    {:source-map (:source-map sm-data)}))]
@@ -1391,22 +1396,24 @@
           (:options @env/*compiler*))))
      ([^File src ^File dest opts]
       (let [{:keys [ns requires]} (ana/parse-ns src)]
-        (ensure
-          (or (not (.exists dest))
-              (util/changed? src dest)
-              (let [version' (util/compiled-by-version dest)
-                    version (util/clojurescript-version)]
-                (and version (not= version version')))
-              (and opts
-                   (not (and (io/resource "cljs/core.aot.js") (= 'cljs.core ns)))
-                   (not= (build-affecting-options opts)
-                         (build-affecting-options (util/build-options dest))))
-              (and opts (:source-map opts)
-                (if (= (:optimizations opts) :none)
-                  (not (.exists (io/file (str (.getPath dest) ".map"))))
-                  (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))
-              (when-let [recompiled' (and *recompiled* @*recompiled*)]
-                (some requires recompiled'))))))))
+        (if (and (= 'cljs.loader ns) (not (contains? opts :cache-key)))
+          false
+          (ensure
+           (or (not (.exists dest))
+               (util/changed? src dest)
+               (let [version' (util/compiled-by-version dest)
+                     version (util/clojurescript-version)]
+                 (and version (not= version version')))
+               (and opts
+                    (not (and (io/resource "cljs/core.aot.js") (= 'cljs.core ns)))
+                    (not= (build-affecting-options opts)
+                          (build-affecting-options (util/build-options dest))))
+               (and opts (:source-map opts)
+                 (if (= (:optimizations opts) :none)
+                   (not (.exists (io/file (str (.getPath dest) ".map"))))
+                   (not (get-in @env/*compiler* [::compiled-cljs (.getAbsolutePath dest)]))))
+               (when-let [recompiled' (and *recompiled* @*recompiled*)]
+                 (some requires recompiled')))))))))
 
 #?(:clj
    (defn compile-file
@@ -1463,10 +1470,12 @@
                   (do
                     ;; populate compilation environment with analysis information
                     ;; when constants are optimized
-                    (when (and (true? (:optimize-constants opts))
-                               (nil? (get-in nses [ns :defs])))
+                    (when (or (and (= ns 'cljs.loader)
+                                   (not (contains? opts :cache-key)))
+                              (and (true? (:optimize-constants opts))
+                                   (nil? (get-in nses [ns :defs]))))
                       (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
-                    ns-info)))
+                    (assoc ns-info :out-file dest-file))))
               (catch Exception e
                 (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
             (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))))

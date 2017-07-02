@@ -46,7 +46,8 @@
             [clojure.string :as string]
             [clojure.data.json :as json]
             [clojure.tools.reader :as reader]
-            [clojure.tools.reader.reader-types :as readers])
+            [clojure.tools.reader.reader-types :as readers]
+            [cljs.module-graph :as module-graph])
   (:import [java.lang ProcessBuilder]
            [java.io File BufferedInputStream BufferedReader
             Writer InputStreamReader IOException StringWriter]
@@ -60,7 +61,7 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule JSModuleGraph SourceMap ProcessCommonJSModules
+              JSModule SourceMap ProcessCommonJSModules
               AbstractCompiler TransformAMDToCJSModule
               ProcessEs6Modules CompilerInput]
            [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
@@ -422,8 +423,14 @@
       (:requires m)
       (:lines m)
       (:source-map m))
+    (when-let [source-file (:source-file m)]
+      {:source-file source-file})
+    (when-let [out-file (:out-file m)]
+      {:out-file out-file})
     (when (:closure-lib m)
       {:closure-lib true})
+    (when-let [ns (:ns m)]
+      {:ns ns})
     (when (:macros-ns m)
       {:macros-ns true})))
 
@@ -1032,27 +1039,23 @@
   (when-let [url (deps/-url js)]
     (js-source-file (javascript-name url) (io/input-stream url))))
 
-(defn add-cljs-base-module
+(defn ensure-cljs-base-module
+  "Ensure that compiler :modules map has :cljs-base module with defined
+  :output-to. If :output-to not provided will default to :output-dir location
+  and the name of the file will be \"cljs_base.js.\""
   ([modules]
-   (add-cljs-base-module modules
+   (ensure-cljs-base-module modules
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([modules opts]
-   (reduce
-     (fn [modules module-name]
-       (if-not (= module-name :cljs-base)
-         (update-in modules [module-name :depends-on]
-           (fnil identity #{:cljs-base}))
-         modules))
-     (update-in modules [:cljs-base :output-to]
-       (fnil io/file
-         (io/file
-           (util/output-directory opts)
-           "cljs_base.js")))
-     (keys modules))))
+   (update-in modules [:cljs-base :output-to]
+     (fnil io/file
+       (io/file
+         (util/output-directory opts)
+         "cljs_base.js")))))
 
 (comment
-  (add-cljs-base-module
+  (ensure-cljs-base-module
     {:cljs-base
      {:output-to "out/modules/base.js"}
      :core
@@ -1064,50 +1067,28 @@
       :depends-on #{:core}}})
   )
 
-(defn sort-modules [modules-with-base]
-  (letfn [(get-deps [module]
-            (reduce
-              (fn [ret [name {:keys [depends-on] :as module-desc}]]
-                (cond-> ret
-                  (contains? depends-on module) (conj name)))
-              [] modules-with-base))]
-    (vec (map (fn [module-name]
-                [module-name (module-name modules-with-base)])
-           (into [:cljs-base] (util/topo-sort :cljs-base get-deps))))))
-
-(comment
-  (sort-modules
-    (add-cljs-base-module
-      {:cljs-base
-       {:output-to "out/module/base.js"}
-       :core
-       {:output-to "out/modules/core.js"
-        :entries   '#{cljs.core}}
-       :landing
-       {:output-to  "out/modules/reader.js"
-        :entries    '#{cljs.reader}
-        :depends-on #{:core}}}))
-  )
-
-(defn find-entries [sources entry]
-  (let [m  (name (comp/munge entry))
-        xs (string/split m #"\.")]
-    (if (= "_STAR_" (last xs))
-      (let [matcher (str (string/join "." (butlast xs)) ".")]
-        (into #{}
-          (filter
-           (fn [source]
-             (when (some #(.startsWith ^String % matcher) (:provides source))
-               source)))
-          sources))
-      #{(some
-         (fn [source]
-           (let [matcher
-                 (into #{}
-                   [(name entry) (name (comp/munge entry))])]
-             (when (some matcher (:provides source))
-               source)))
-         sources)})))
+(defn compile-loader
+  "Special compilation pass for cljs.loader namespace. cljs.loader must be
+  compiled last after all inputs. This is because all inputs must be known and
+  they must already be sorted in dependency order."
+  [inputs {:keys [modules] :as opts}]
+  (when-let [loader (->> inputs
+                      (filter
+                        (fn [input]
+                          (some '#{"cljs.loader" cljs.loader}
+                            (:provides input))))
+                      first)]
+    (let [module-uris  (module-graph/modules->module-uris modules inputs opts)
+          module-infos (module-graph/modules->module-infos modules)]
+      (env/with-compiler-env
+        (ana/add-consts @env/*compiler*
+          {'cljs.core/MODULE_URIS  module-uris
+           'cljs.core/MODULE_INFOS module-infos})
+        (-compile (:source-file loader)
+          (merge opts
+            {:cache-key   (util/content-sha (pr-str module-uris))
+             :output-file (comp/rename-to-js (util/ns->relpath (:ns loader)))})))))
+  inputs)
 
 (defn build-modules
   "Given a list of IJavaScript sources in dependency order and compiler options
@@ -1117,33 +1098,26 @@
    a :foreign-deps vector containing foreign IJavaScript sources in dependency
    order."
   [sources opts]
-  (let [used (atom {})
-        [sources' modules]
+  (let [used (atom #{}) ;; track used inputs to avoid dupes
+        modules
         (reduce
-          (fn [[sources ret] [name {:keys [entries output-to depends-on] :as module-desc}]]
+          (fn [ret [name {:keys [entries depends-on] :as module-desc}]]
             (assert (or (= name :cljs-base) (not (empty? entries)))
               (str "Module " name " does not define any :entries"))
             (when (:verbose opts)
               (util/debug-prn "Building module" name))
             (let [js-module (JSModule. (clojure.core/name name))
-                  [sources' module-sources]
-                  ;; compute inputs for a closure module
-                  ;; as well as sources difference
+                  module-sources
                   (reduce
-                    (fn [[sources ret] entry-sym]
-                      (if-let [entries (find-entries sources entry-sym)]
-                        (do
-                          (swap! used assoc entry-sym name)
-                          [(remove entries sources) (into ret entries)])
-                        (if (contains? @used entry-sym)
-                          (throw
-                            (IllegalArgumentException.
-                              (str "Already used namespace " entry-sym " "
-                                   "in module " (get @used entry-sym))))
-                          (throw
-                            (IllegalArgumentException.
-                             (str "Could not find namespace " entry-sym))))))
-                    [sources []] entries)
+                    (fn [ret entry-sym]
+                      (if-let [entries (module-graph/find-sources-for-module-entry entry-sym sources)]
+                        (let [unused (set/difference entries @used)]
+                          (swap! used into entries)
+                          (into ret unused))
+                        (throw
+                          (IllegalArgumentException.
+                            (str "Could not find matching namespace for " entry-sym)))))
+                    [] entries)
                   foreign-deps (atom [])]
               ;; add inputs to module
               (doseq [ijs module-sources]
@@ -1163,24 +1137,14 @@
                     (.addDependency js-module ^JSModule parent-module))
                   (throw (IllegalArgumentException.
                            (str "Parent module " dep " does not exist")))))
-              [sources'
-               (conj ret
-                 [name (assoc module-desc
-                         :closure-module js-module
-                         :foreign-deps @foreign-deps)])]))
-          [sources []] (sort-modules (add-cljs-base-module (:modules opts) opts)))
-        cljs-base-closure-module (get-in (into {} modules) [:cljs-base :closure-module])
+              (conj ret
+                [name (assoc module-desc
+                        :closure-module js-module
+                        :foreign-deps @foreign-deps)])))
+          [] (module-graph/sort-modules
+               (ensure-cljs-base-module
+                 (module-graph/expand-modules (:modules opts) sources) opts)))
         foreign-deps (atom [])]
-    (when (:verbose opts)
-      (util/debug-prn "Adding remaining namespaces to" :cljs-base))
-    ;; add anything left to :cljs-base module
-    (doseq [source sources']
-      (when (:verbose opts)
-        (util/debug-prn "  adding entry" (:provides source)))
-      (if-not (deps/-foreign? source)
-        (.add ^JSModule cljs-base-closure-module
-          (js-source-file (javascript-name source) source))
-        (swap! foreign-deps conj source)))
     (assoc-in modules [0 1 :foreign-deps] @foreign-deps)))
 
 (comment
@@ -1442,7 +1406,8 @@
   (cond
     (nil? output-to) js
 
-    (string? output-to)
+    (or (string? output-to)
+        (util/file? output-to))
     (let [f (io/file output-to)]
       (util/mkdirs f)
       (spit f js))
@@ -1481,15 +1446,25 @@
                "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
                "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                (apply str (preloads (:preloads opts)))
-               "goog.require(\"" (comp/munge (:main opts)) "\");\n"
-               "goog.require(\"cljs.nodejscli\");\n")))
+               (apply str
+                 (map (fn [entry]
+                        (str "goog.require(\"" (comp/munge entry) "\");\n"))
+                   (if-let [entries (:entries opts)]
+                     entries
+                     [(:main opts)])))
+            "goog.require(\"cljs.nodejscli\");\n")))
       (output-one-file opts
         (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
              "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
              "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
              "document.write('<script>if (typeof goog == \"undefined\") console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\");</script>');\n"
              (apply str (preloads (:preloads opts) :browser))
-             "document.write('<script>goog.require(\"" (comp/munge (:main opts))"\");</script>');\n")))))
+          (apply str
+            (map (fn [entry]
+                   (str "document.write('<script>goog.require(\"" (comp/munge entry)"\");</script>');\n"))
+              (if-let [entries (:entries opts)]
+                entries
+                [(:main opts)]))))))))
 
 (defn output-modules
   "Given compiler options, original IJavaScript sources and a sequence of
@@ -1550,9 +1525,8 @@
         (subs path (+ (.lastIndexOf path lib-path) (.length lib-path)))))))
 
 (defn ^String rel-output-path
-  "Given an IJavaScript which is either in memory, in a jar file,
-  or is a foreign lib, return the path relative to the output
-  directory."
+  "Given a IJavaScript which points to a .js file either in memory, in a jar file,
+  or is a foreign lib, return the path relative to the output directory."
   ([js]
    (rel-output-path js
      (when env/*compiler*
@@ -1683,11 +1657,14 @@
   "Returns true if IJavaScript instance needs to be written/copied to output
   directory. True when in memory, in a JAR, or if foreign library."
   [js]
-  (let [url ^URL (deps/-url js)]
-    (or (not url)
-        (= (.getProtocol url) "jar")
-        (deps/-closure-lib? js)
-        (deps/-foreign? js))))
+  (try
+    (let [url ^URL (deps/-url js)]
+      (or (not url)
+          (= (.getProtocol url) "jar")
+          (deps/-closure-lib? js)
+          (deps/-foreign? js)))
+    (catch Throwable t
+      (throw (Exception. (str "Could not write JavaScript " (pr-str js)))))))
 
 (defn source-on-disk
   "Ensure that the given IJavaScript exists on disk in the output directory.
@@ -1704,12 +1681,13 @@
                        (util/ns->relpath ns (util/ext (:source-url js)))))
           source-url (:source-url js)]
       (when (and out-file source-url
-                 (or (not (.exists ^File out-file))
-                     (util/changed? (io/file source-url) out-file)))
-        (when (or ana/*verbose* (:verbose opts))
-          (util/debug-prn "Copying" (str source-url) "to" (str out-file)))
-        (spit out-file (slurp source-url))
-        (.setLastModified ^File out-file (util/last-modified source-url)))
+               (or (not (.exists ^File out-file))
+                   (util/changed? (io/file source-url) out-file)))
+        (do
+          (when (or ana/*verbose* (:verbose opts))
+            (util/debug-prn "Copying" (str source-url) "to" (str out-file)))
+          (spit out-file (slurp source-url))
+          (.setLastModified ^File out-file (util/last-modified source-url))))
       js)))
 
 (comment
@@ -1730,23 +1708,38 @@
 
    The deps file for the current project will include third-party
    libraries."
-  [opts & sources]
-  (let [disk-sources (remove #(= (:group %) :goog)
-                       (map #(source-on-disk opts %) sources))
-        goog-deps    (io/file (util/output-directory opts)
-                       "goog" "deps.js")
-        main         (:main opts)]
+  [{:keys [modules] :as opts} & sources]
+  ;; this source-on-disk call is currently necessary for REPLs - David
+  (let [disk-sources (doall
+                       (remove #(= (:group %) :goog)
+                         (map #(source-on-disk opts %) sources)))
+        goog-deps    (io/file (util/output-directory opts) "goog" "deps.js")
+        main         (:main opts)
+        output-deps  #(output-deps-file
+                        (assoc opts :output-to
+                          (str (util/output-directory opts)
+                            File/separator "cljs_deps.js"))
+                        disk-sources)]
     (util/mkdirs goog-deps)
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
-    (if main
+    (cond
+      modules
       (do
-        (output-deps-file
-          (assoc opts :output-to
-            (str (util/output-directory opts)
-                 File/separator "cljs_deps.js"))
-          disk-sources)
+        (output-deps)
+        (doall
+          (map
+            (fn [[module-name {:keys [output-to entries]}]]
+              (output-main-file
+                (merge opts
+                  {:output-to output-to :entries entries})))
+            modules)))
+
+      main
+      (do
+        (output-deps)
         (output-main-file opts))
-      (output-deps-file opts disk-sources))))
+
+      :else (output-deps-file opts disk-sources))))
 
 (comment
 
@@ -1972,6 +1965,10 @@
                         v))))
        {} ups-npm-deps))))
 
+(defn ensure-module-opts [opts]
+  (update opts :modules
+    #(ensure-cljs-base-module % opts)))
+
 (defn add-implicit-options
   [{:keys [optimizations output-dir npm-deps]
     :or {optimizations :none
@@ -2027,7 +2024,10 @@
       (assoc-in [:closure-warnings :check-variables] :off)
 
       (nil? (:closure-module-roots opts))
-      (assoc :closure-module-roots []))))
+      (assoc :closure-module-roots [])
+
+      (contains? opts :modules)
+      (ensure-module-opts))))
 
 (defn- alive? [proc]
   (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
@@ -2311,7 +2311,9 @@
                                 deps/dependency-order
                                 (add-preloads all-opts)
                                 add-goog-base
-                                (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)])))
+                                (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
+                                (->> (map #(source-on-disk all-opts %)) doall)
+                                (compile-loader all-opts))
                  _ (when (:emit-constants all-opts)
                      (comp/emit-constants-table-to-file
                       (::ana/constant-table @env/*compiler*)
@@ -2328,8 +2330,7 @@
                          (when-let [fname (:source-map all-opts)]
                            (assert (or (nil? (:output-to all-opts)) (:modules opts) (string? fname))
                              (str ":source-map must name a file when using :whitespace, "
-                                  ":simple, or :advanced optimizations with :output-to"))
-                           (doall (map #(source-on-disk all-opts %) js-sources)))
+                                  ":simple, or :advanced optimizations with :output-to")))
                          (if (:modules all-opts)
                            (->>
                              (apply optimize-modules all-opts js-sources)

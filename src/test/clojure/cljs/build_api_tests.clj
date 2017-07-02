@@ -170,3 +170,27 @@
       (is false)
       (catch Throwable e
         (is true)))))
+
+(defn loader-test-project [output-dir]
+  {:inputs (str (io/file "src" "test" "cljs_build" "loader_test"))
+   :opts
+   {:output-dir output-dir
+    :optimizations :none
+    :verbose true
+    :modules
+    {:foo
+     {:output-to (str (io/file output-dir "foo.js"))
+      :entries #{'loader-test.foo}}
+     :bar
+     {:output-to (str (io/file output-dir "bar.js"))
+      :entries #{'loader-test.bar}}}}})
+
+(comment
+
+  (deftest cljs-2077-test-loader
+    (let [out     "out"
+          project (loader-test-project (str out))
+          modules (-> project :opts :modules)]
+      (build (inputs (:inputs project)) (:opts project))))
+
+  )
