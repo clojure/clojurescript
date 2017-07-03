@@ -60,6 +60,19 @@
       (fn [old]
         (update-in old [method] #(conj (vec %) m))))))
 
+(defn parse-file-parts [file]
+  ;; This is a port of java.net.URL.Parts, which is package private.
+  (let [ref-idx (str/index-of file "#")
+        [file ref] (if ref-idx
+                     [(subs file 0 ref-idx) (subs file (inc ref-idx))]
+                     [file nil])
+        q-idx (str/last-index-of file \?)]
+    (merge {:ref ref}
+           (if q-idx
+             {:path (subs file 0 q-idx)
+              :query-str (subs file (inc q-idx))}
+             {:path file}))))
+
 ;;; assumes first line already consumed
 (defn parse-headers
   "Parse the headers of an HTTP POST request."
@@ -80,21 +93,27 @@
         (conj header-lines next-line)))))
 
 (defn read-post [line rdr]
-  (let [[_ path _] (str/split line #" ")
+  (let [[_ file _] (str/split line #" ")
+        {:keys [path ref query-str]} (parse-file-parts file)
         headers (parse-headers (read-headers rdr))
         content-length (Integer/parseInt (:content-length headers))
         content (char-array content-length)]
     (io! (.read rdr content 0 content-length)
       {:method :post
        :path path
+       :ref ref
+       :query-str query-str
        :headers headers
        :content (String. content)})))
 
 (defn read-get [line rdr]
-  (let [[_ path _] (str/split line #" ")
+  (let [[_ file _] (str/split line #" ")
+        {:keys [path ref query-str]} (parse-file-parts file)
         headers (parse-headers (read-headers rdr))]
     {:method :get
      :path path
+     :ref ref
+     :query-str query-str
      :headers headers}))
 
 (defn read-request [rdr]
