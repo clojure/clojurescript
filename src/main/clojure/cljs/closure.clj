@@ -1255,6 +1255,8 @@
         ^List inputs (map (comp :closure-module second) modules)
         _ (doseq [^JSModule input inputs]
             (.sortInputsByDeps input closure-compiler))
+        _ (when (or ana/*verbose* (:verbose opts))
+            (util/debug-prn "Applying optimizations" (:optimizations opts) "to" (count sources) "sources"))
         ^Result result (.compileModules closure-compiler externs inputs compiler-options)
         ^SourceMap source-map (when (:source-map opts)
                                 (.getSourceMap closure-compiler))]
@@ -2340,7 +2342,9 @@
                                   ":simple, or :advanced optimizations with :output-to")))
                          (if (:modules all-opts)
                            (->>
-                             (apply optimize-modules all-opts js-sources)
+                             (util/measure compiler-stats
+                               (str "Optimizing " (count js-sources) " sources")
+                               (apply optimize-modules all-opts js-sources))
                              (output-modules all-opts js-sources))
                            (let [fdeps-str (foreign-deps-str all-opts
                                              (filter foreign-source? js-sources))
