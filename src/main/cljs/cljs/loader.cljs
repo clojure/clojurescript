@@ -59,3 +59,27 @@
     (doseq [x xs]
       (.setLoaded *module-manager* (munge-kw x)))
     (.setLoaded *module-manager* (munge-kw module-name))))
+
+(defn loaded?
+  "Return true if modules is loaded. module-name should be a keyword matching
+   a :modules module definition."
+  [module-name]
+  (assert (contains? module-infos module-name)
+          (str "Module " module-name " does not exist"))
+  (let [mname (-> module-name name munge)
+        module (.getModuleInfo *module-manager* mname)]
+    (when (some? module)
+      (.isLoaded module))))
+
+(defn prefetch
+  "Prefetch a module. module-name should be a keyword matching a :modules
+  module definition. Will download the module but not evaluate it. To
+  complete module load, one must also call cljs.loader/load after prefetching
+  the module. Does nothing if the module is loading or has been loaded."
+  [module-name]
+  (assert (contains? module-infos module-name)
+          (str "Module " module-name " does not exist"))
+  (when-not (loaded? module-name)
+    (let [mname (-> module-name name munge)]
+      (when-not (.isModuleLoading *module-manager* mname)
+        (.prefetchModule *module-manager* mname)))))
