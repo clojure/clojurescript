@@ -1473,7 +1473,8 @@
                    (str "document.write('<script>goog.require(\"" (comp/munge entry)"\");</script>');\n"))
               (if-let [entries (:entries opts)]
                 entries
-                [(:main opts)]))))))))
+                (when-let [main (:main opts)]
+                  [main])))))))))
 
 (defn output-modules
   "Given compiler options, original IJavaScript sources and a sequence of
