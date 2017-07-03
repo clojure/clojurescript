@@ -61,9 +61,7 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule SourceMap ProcessCommonJSModules
-              AbstractCompiler TransformAMDToCJSModule
-              Es6RewriteModules CompilerInput]
+              JSModule SourceMap]
            [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
