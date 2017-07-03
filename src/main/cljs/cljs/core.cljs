@@ -255,8 +255,8 @@
   [p x]
   (let [x (if (nil? x) nil x)]
     (cond
-     (aget p (goog/typeOf x)) true
-     (aget p "_") true
+     (unsafe-get p (goog/typeOf x)) true
+     (unsafe-get p "_") true
      :else false)))
 (set! *unchecked-if* false)
 
@@ -887,7 +887,7 @@
 
 (defn add-to-string-hash-cache [k]
   (let [h (hash-string* k)]
-    (aset string-hash-cache k h)
+    (gobject/set string-hash-cache k h)
     (set! string-hash-cache-count (inc string-hash-cache-count))
     h))
 
@@ -897,7 +897,7 @@
     (set! string-hash-cache-count 0))
   (if (nil? k)
     0
-    (let [h (aget string-hash-cache k)]
+    (let [h (unsafe-get string-hash-cache k)]
       (if (number? h)
         h
         (add-to-string-hash-cache k)))))
@@ -2927,7 +2927,7 @@ reduces them without incurring seq initialization"
   [obj fn-map]
   (doseq [[key-name f] fn-map]
     (let [str-name (name key-name)]
-      (aset obj str-name f)))
+      (gobject/set obj str-name f)))
   obj)
 
 ;;;;;;;;;;;;;;;; cons ;;;;;;;;;;;;;;;;
@@ -5998,7 +5998,7 @@ reduces them without incurring seq initialization"
     (loop [i 0]
       (when (< i l)
         (let [k (aget ks i)]
-          (aset new-obj k (aget obj k))
+          (gobject/set new-obj k (gobject/get obj k))
           (recur (inc i)))))
     new-obj))
 
@@ -8458,7 +8458,7 @@ reduces them without incurring seq initialization"
     (loop [kvs (seq keyvals)]
       (if kvs
         (do (.push ks (first kvs))
-            (aset obj (first kvs) (second kvs))
+            (gobject/set obj (first kvs) (second kvs))
             (recur (nnext kvs)))
         (.fromObject ObjMap ks obj)))))
 
@@ -9532,7 +9532,7 @@ reduces them without incurring seq initialization"
   [s]
   (str \"
        (.replace s (js/RegExp "[\\\\\"\b\f\n\r\t]" "g")
-         (fn [match] (aget char-escapes match)))
+         (fn [match] (unsafe-get char-escapes match)))
        \"))
 
 (declare print-map)
@@ -10151,7 +10151,7 @@ reduces them without incurring seq initialization"
          (symbol? x) (str x)
          (map? x) (let [m (js-obj)]
                     (doseq [[k v] x]
-                      (aset m (key->js k) (clj->js v)))
+                      (gobject/set m (key->js k) (clj->js v)))
                     m)
          (coll? x) (let [arr (array)]
                      (doseq [x (map clj->js x)]

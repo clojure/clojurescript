@@ -993,6 +993,12 @@
               astr (apply core/str (repeat n "[~{}]"))]
      `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~a ~idx ~idx2 ~@idxv))))
 
+(core/defmacro unsafe-get
+  "Efficient alternative to goog.object/get which lacks opt_val and emits
+  unchecked property access."
+  [obj key]
+  (core/list 'js* "(~{}[~{}])" obj key))
+
 (core/defmacro ^::ana/numeric +
   ([] 0)
   ([x] x)
@@ -1376,9 +1382,9 @@
   (core/let [psym       (resolve p)
              pfn-prefix (subs (core/str psym) 0
                           (clojure.core/inc (.indexOf (core/str psym) "/")))]
-    (cons `(aset ~psym ~type true)
+    (cons `(goog.object/set ~psym ~type true)
       (map (core/fn [[f & meths :as form]]
-             `(aset ~(symbol (core/str pfn-prefix f))
+             `(goog.object/set ~(symbol (core/str pfn-prefix f))
                 ~type ~(with-meta `(fn ~@meths) (meta form))))
         sigs))))
 
@@ -1977,10 +1983,10 @@
                                     (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
                                 (. ~(first sig) ~slot ~@sig)
                                 (let [x# (if (nil? ~(first sig)) nil ~(first sig))
-                                      m# (aget ~(fqn fname) (goog/typeOf x#))]
+                                      m# (unsafe-get ~(fqn fname) (goog/typeOf x#))]
                                   (if-not (nil? m#)
                                     (m# ~@sig)
-                                    (let [m# (aget ~(fqn fname) "_")]
+                                    (let [m# (unsafe-get ~(fqn fname) "_")]
                                       (if-not (nil? m#)
                                         (m# ~@sig)
                                         (throw
@@ -2740,7 +2746,7 @@
   (core/list 'js* "''+~{}" s))
 
 (core/defmacro es6-iterable [ty]
-  `(aset (.-prototype ~ty) cljs.core/ITER_SYMBOL
+  `(goog.object/set (.-prototype ~ty) cljs.core/ITER_SYMBOL
      (fn []
        (this-as this#
          (cljs.core/es6-iterator this#)))))

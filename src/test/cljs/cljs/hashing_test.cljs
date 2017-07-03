@@ -10,10 +10,11 @@
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is]]
             [clojure.string :as s]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [goog.object :as gobject]))
 
 (deftest test-hash-null
-  (is (zero? (hash (aget (js-obj) "foo")))))
+  (is (zero? (hash (gobject/get (js-obj) "foo")))))
 
 ;; hashing bug in many JS runtimes CLJ-118
 (deftest test-clj-118
