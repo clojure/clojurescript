@@ -39,6 +39,8 @@
   ([module-name]
     (load module-name nil))
   ([module-name cb]
+   (assert (contains? module-infos module-name)
+     (str "Module " module-name " does not exist"))
    (let [mname (-> module-name name munge)]
      (if-not (nil? cb)
        (.execOnLoad *module-manager* mname cb)
@@ -47,8 +49,12 @@
 (defn set-loaded!
   "Set a module as being loaded. module-name should be a keyword matching a
   :modules module definition. Will mark all parent modules as also being
-  loaded."
+  loaded. Note that calls to this function will be automatically generated
+  as the final expression for known :modules entry points that require the
+  cljs.loader namespace."
   [module-name]
+  (assert (contains? module-infos module-name)
+    (str "Module " module-name " does not exist"))
   (let [xs (deps-for module-name module-infos)]
     (doseq [x xs]
       (.setLoaded *module-manager* (munge-kw x)))
