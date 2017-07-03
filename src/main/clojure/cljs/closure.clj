@@ -63,7 +63,7 @@
               CommandLineRunner AnonymousFunctionNamingPolicy
               JSModule SourceMap ProcessCommonJSModules
               AbstractCompiler TransformAMDToCJSModule
-              ProcessEs6Modules CompilerInput]
+              Es6RewriteModules CompilerInput]
            [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
