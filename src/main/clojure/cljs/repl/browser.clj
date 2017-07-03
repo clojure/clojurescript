@@ -250,8 +250,10 @@
         (assoc old :client-js
           (create-client-js-file
             repl-env (io/file working-dir "client.js")))))
-    (repl/err-out (println "Waiting for browser to connect ..."))
     opts
+    (repl/err-out
+      (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
+      (println "Listening for browser REPL connect ..."))
     (server/start repl-env)))
 
 (defrecord BrowserEnv []
