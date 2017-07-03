@@ -1393,9 +1393,9 @@
          "\", ["
          (ns-list (deps/-provides input))
          "], ["
-         ;; under Node.js runtime require is possible
-         (when-not (= :nodejs (:target opts))
-           (ns-list (deps/-requires input)))
+         ;; even under Node.js where runtime require is possible
+         ;; this is necessary - see CLJS-2151
+         (ns-list (deps/-requires input))
          "]);\n")))
 
 (defn deps-file
