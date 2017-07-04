@@ -44,7 +44,7 @@
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
                                        specify copy-arguments goog-define js-comment js-inline-comment
-                                       unsafe-cast require-macros use-macros gen-apply-to-simple])])
+                                       unsafe-cast require-macros use-macros gen-apply-to-simple unsafe-get])])
   #?(:cljs (:require-macros [cljs.core :as core]
                             [cljs.support :refer [assert-args]]))
   (:require clojure.walk
