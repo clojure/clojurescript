@@ -8,7 +8,8 @@
 
 (ns cljs.reader
   (:require-macros [cljs.reader :refer [add-data-readers]])
-  (:require [goog.string :as gstring])
+  (:require [goog.object :as gobject]
+            [goog.string :as gstring])
   (:import goog.string.StringBuffer))
 
 (defprotocol PushbackReader
@@ -580,7 +581,7 @@ nil if the end of stream has been reached")
     (map? form)
     (let [obj (js-obj)]
       (doseq [[k v] form]
-        (aset obj (name k) v))
+        (gobject/set obj (name k) v))
       obj)
 
     :else

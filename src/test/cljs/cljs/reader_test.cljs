@@ -167,10 +167,10 @@
     (is (= (alength (reader/read-string "#js [1 2 3]")) 3))
     (is (= (seq (reader/read-string "#js [1 2 3]")) (seq [1 2 3])))
     (is (= (set (js-keys (reader/read-string "#js {:foo \"bar\" :baz \"woz\"}"))) #{"foo" "baz"}))
-    (is (= (aget (reader/read-string "#js {:foo \"bar\"}") "foo") "bar"))
-    (is (= (aget (reader/read-string "#js {\"foo\" \"bar\"}") "foo") "bar"))
-    (is (array? (aget (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")))
-    (is (= (seq (aget (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")) '(1 2 3)))))
+    (is (= (o/get (reader/read-string "#js {:foo \"bar\"}") "foo") "bar"))
+    (is (= (o/get (reader/read-string "#js {\"foo\" \"bar\"}") "foo") "bar"))
+    (is (array? (o/get (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")))
+    (is (= (seq (o/get (reader/read-string "#js {\"foo\" #js [1 2 3]}") "foo")) '(1 2 3)))))
 
 (deftest test-787
   (testing "Testing reading, CLS-787"

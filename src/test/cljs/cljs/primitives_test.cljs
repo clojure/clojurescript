@@ -10,7 +10,8 @@
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is]]
             [clojure.string :as s]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [goog.object :as gobject]))
 
 (deftest test-js-primitives
   ;; js primitives
@@ -939,17 +940,17 @@
     (is (= (alength #js [1 2 3]) 3))
     (is (= (seq #js [1 2 3]) (seq [1 2 3])))
     (is (= (set (js-keys #js {:foo "bar" :baz "woz"})) #{"foo" "baz"}))
-    (is (= (aget #js {:foo "bar"} "foo") "bar"))
-    (is (= (aget #js {"foo" "bar"} "foo") "bar"))
-    (is (array? (aget #js {"foo" #js [1 2 3]} "foo")))
-    (is (= (seq (aget #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))))
+    (is (= (gobject/get #js {:foo "bar"} "foo") "bar"))
+    (is (= (gobject/get #js {"foo" "bar"} "foo") "bar"))
+    (is (array? (gobject/get #js {"foo" #js [1 2 3]} "foo")))
+    (is (= (seq (gobject/get #js {"foo" #js [1 2 3]} "foo")) '(1 2 3)))))
 
 (deftest test-1556
   (testing "Testing CLJS-1556, JS object literal code emission, beginning of statement"
     ;; Really testing that this evaluates properly
     (is (= 1 (do #js {:a 1}
                  1)))
-    (is (= 1 (aget #js {:a 1} "a")))
+    (is (= 1 (gobject/get #js {:a 1} "a")))
     (is (= 1 (.-a #js {:a 1})))))
 
 (deftest test-char?

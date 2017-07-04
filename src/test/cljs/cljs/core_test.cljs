@@ -10,7 +10,8 @@
   (:refer-clojure :exclude [iter])
   (:require [cljs.test :refer-macros [deftest testing is]]
             [clojure.string :as s]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [goog.object :as gobject]))
 
 (deftest test-metadata
   (testing "Testing metadata"
@@ -143,11 +144,11 @@
       (is (goog/isArray (clj->js #{})))
       (is (goog/isArray (clj->js '())))
       (is (goog/isObject (clj->js {})))
-      (is (= (aget (clj->js {:a 1}) "a") 1))
+      (is (= (gobject/get (clj->js {:a 1}) "a") 1))
       (is (= (-> (clj->js {:a {:b {{:k :ey} :d}}})
-                   (aget "a")
-                   (aget "b")
-                   (aget "{:k :ey}"))
+                   (gobject/get "a")
+                   (gobject/get "b")
+                   (gobject/get "{:k :ey}"))
                 "d")))))
 
 (deftest test-delay
@@ -543,6 +544,11 @@
   (is (nil? (loop [x nil] (some->> x recur))))
   (is (= 0 (loop [x 0] (cond-> x false recur))))
   (is (= 0 (loop [x 0] (cond->> x false recur)))))
+
+(deftest unsafe-get-test
+  (is (= 1 (unsafe-get #js {:a 1} "a")))
+  (is (nil? (unsafe-get #js {:a 1} "b")))
+  (is (nil? (unsafe-get #js {:a 1} nil))))
 
 ;; =============================================================================
 ;; Tickets

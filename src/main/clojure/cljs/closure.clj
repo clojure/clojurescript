@@ -61,9 +61,7 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule SourceMap ProcessCommonJSModules
-              AbstractCompiler TransformAMDToCJSModule
-              ProcessEs6Modules CompilerInput]
+              JSModule SourceMap]
            [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
@@ -1473,7 +1471,8 @@
                    (str "document.write('<script>goog.require(\"" (comp/munge entry)"\");</script>');\n"))
               (if-let [entries (:entries opts)]
                 entries
-                [(:main opts)]))))))))
+                (when-let [main (:main opts)]
+                  [main])))))))))
 
 (defn output-modules
   "Given compiler options, original IJavaScript sources and a sequence of
