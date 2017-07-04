@@ -766,6 +766,18 @@
         (catch Exception _))
       (is (= ["cljs.core/aset, arguments must be an array, followed by numeric indices, followed by a value, got [object string number] instead (consider goog.object/set for object access)"] @ws)))))
 
+(deftest cljs-2061
+  (let [test-cenv (atom
+                    (merge @(e/default-compiler-env)
+                      {:js-module-index {"react" "module$src$test$cljs$react"}}))
+        ast (e/with-compiler-env test-cenv
+              (a/parse-ns
+                '[(ns test.cljs-2061
+                    (:require ["react" :as react]
+                              ["react-dom/server" :refer [renderToString]]))]))]
+    (is (= (:missing-js-modules ast) #{"react-dom/server"}))
+    (is (= (:requires ast) '#{cljs.core module$src$test$cljs$react "react-dom/server"}))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn

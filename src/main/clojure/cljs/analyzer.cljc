@@ -2106,13 +2106,13 @@
   (str msg "; offending spec: " (pr-str spec)))
 
 (defn basic-validate-ns-spec [env macros? spec]
-  (when-not (or (symbol? spec) (sequential? spec))
+  (when-not (or (symbol? spec) (string? spec) (sequential? spec))
     (throw
       (error env
         (parse-ns-error-msg spec
           "Only [lib.ns & options] and lib.ns specs supported in :require / :require-macros"))))
   (when (sequential? spec)
-    (when-not (symbol? (first spec))
+    (when-not (or (symbol? (first spec)) (string? (first spec)))
       (throw
         (error env
           (parse-ns-error-msg spec
@@ -2210,7 +2210,7 @@
               (recur fs ret true)))))
 
 (defn parse-require-spec [env macros? deps aliases spec]
-  (if (symbol? spec)
+  (if (or (symbol? spec) (string? spec))
     (recur env macros? deps aliases [spec])
     (do
       (basic-validate-ns-spec env macros? spec)
@@ -2222,7 +2222,11 @@
             [lib js-module-provides] (if-some [js-module-name (get-in @env/*compiler* [:js-module-index (str lib)])]
                                        [(symbol js-module-name) lib]
                                        [lib nil])
-            {alias :as referred :refer renamed :rename :or {alias lib}} (apply hash-map opts)
+            {alias :as referred :refer renamed :rename
+             :or {alias (if (string? lib)
+                          (symbol (munge lib))
+                          lib)}}
+            (apply hash-map opts)
             referred-without-renamed (seq (remove (set (keys renamed)) referred))
             [rk uk renk] (if macros? [:require-macros :use-macros :rename-macros] [:require :use :rename])]
         (when-not (or (symbol? alias) (nil? alias))
@@ -3565,7 +3569,14 @@
                                                    (= "cljc" (util/ext src)))
                                             'cljs.core$macros
                                             ns-name)
-                                  deps (merge (:uses ast) (:requires ast))]
+                                  deps (merge (:uses ast) (:requires ast))
+                                  missing-js-modules (into #{}
+                                                       (comp
+                                                         (filter (fn [[k v]]
+                                                                   (and (or (string? k) (string? v))
+                                                                     (not (js-module-exists? k)))))
+                                                         (map val))
+                                                       deps)]
                               (merge
                                 {:ns           (or ns-name 'cljs.user)
                                  :provides     [ns-name]
@@ -3574,6 +3585,7 @@
                                                  (cond-> (conj (set (vals deps)) 'cljs.core)
                                                    (get-in @env/*compiler* [:options :emit-constants])
                                                    (conj constants-ns-sym)))
+                                 :missing-js-modules missing-js-modules
                                  :file         dest
                                  :source-file  (when rdr src)
                                  :source-forms (when-not rdr src)

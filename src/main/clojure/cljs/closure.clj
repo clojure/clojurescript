@@ -1977,13 +1977,14 @@
     #(ensure-cljs-base-module % opts)))
 
 (defn add-implicit-options
-  [{:keys [optimizations output-dir npm-deps]
+  [{:keys [optimizations output-dir npm-deps missing-js-modules]
     :or {optimizations :none
          output-dir "out"}
     :as opts}]
   (let [opts (cond-> (update opts :foreign-libs
                        (fn [libs]
-                         (into (index-node-modules npm-deps opts)
+                         (into (index-node-modules
+                                 (into missing-js-modules (keys npm-deps)) opts)
                            (expand-libs libs))))
                (:closure-defines opts)
                (assoc :closure-defines
@@ -2003,7 +2004,7 @@
           :optimizations optimizations
           :output-dir output-dir
           :ups-libs libs
-          :ups-foreign-libs (into (index-node-modules (compute-upstream-npm-deps opts) opts)
+          :ups-foreign-libs (into (index-node-modules (keys (compute-upstream-npm-deps opts)) opts)
                               (expand-libs foreign-libs))
           :ups-externs externs
           :emit-constants emit-constants
@@ -2134,15 +2135,15 @@
    (into [] (distinct (mapcat #(node-module-deps % opts) entries)))))
 
 (defn index-node-modules
-  ([npm-deps]
+  ([modules]
    (index-node-modules
-     npm-deps
+     modules
      (when env/*compiler*
        (:options @env/*compiler*))))
-  ([npm-deps opts]
+  ([modules opts]
    (let [node-modules (io/file "node_modules")]
-     (if (and (not (empty? npm-deps)) (.exists node-modules) (.isDirectory node-modules))
-       (let [modules (map name (keys npm-deps))
+     (if (and (not (empty? modules)) (.exists node-modules) (.isDirectory node-modules))
+       (let [modules (into #{} (map name) modules)
              deps-file (io/file (str (util/output-directory opts) File/separator
                                   "cljs$node_modules.js"))]
          (util/mkdirs deps-file)
@@ -2252,15 +2253,21 @@
      (env/with-compiler-env compiler-env
        ;; we want to warn about NPM dep conflicts before installing the modules
        (check-npm-deps opts)
+       (maybe-install-node-deps! opts)
        (let [compiler-stats (:compiler-stats opts)
              static-fns? (or (and (= (:optimizations opts) :advanced)
-                                  (not (false? (:static-fns opts))))
-                             (:static-fns opts)
-                             ana/*cljs-static-fns*)
-             all-opts (-> opts
-                          maybe-install-node-deps!
-                          add-implicit-options
-                          process-js-modules)]
+                               (not (false? (:static-fns opts))))
+                           (:static-fns opts)
+                           ana/*cljs-static-fns*)
+             sources (-find-sources source opts)
+             missing-js-modules (into #{}
+                                  (comp
+                                    (map :missing-js-modules)
+                                    cat)
+                                  sources)
+             all-opts (-> (assoc opts :missing-js-modules missing-js-modules)
+                        add-implicit-options
+                        process-js-modules)]
          (check-output-to opts)
          (check-output-dir opts)
          (check-source-map opts)
@@ -2275,7 +2282,7 @@
              (assoc :target (:target opts))
              (assoc :js-dependency-index (deps/js-dependency-index all-opts))
              ;; Save list of sources for cljs.analyzer/locate-src - Juho Teperi
-             (assoc :sources (-find-sources source all-opts))))
+             (assoc :sources sources)))
          (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))
                                        (atom #{}))
                    ana/*cljs-static-fns* static-fns?

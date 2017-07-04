@@ -30,7 +30,7 @@ md.on('package', function (pkg) {
     };
 
     if (pkg.name != null) {
-      pkgJson.provided = [ pkg.name ];
+      pkgJson.provides = [ pkg.name ];
     }
 
     if (pkg.main != null) {
@@ -49,8 +49,8 @@ md.on('end', function() {
   for (var i = 0; i < pkgJsons.length; i++) {
     var pkgJson = pkgJsons[i];
 
-    if (deps_files[pkgJson.main] != null && pkgJson.provided != null) {
-      deps_files[pkgJson.main].provides = pkgJson.provided;
+    if (deps_files[pkgJson.main] != null && pkgJson.provides != null) {
+      deps_files[pkgJson.main].provides = pkgJson.provides;
     }
 
     deps_files[pkgJson.file] = { file: pkgJson.file };
@@ -58,7 +58,17 @@ md.on('end', function() {
 
   var values = [];
   for (var key in deps_files) {
-    values.push(deps_files[key]);
+    var dep = deps_files[key];
+
+    if (dep.provides == null && !/node_modules\/[^/]*?\/package.json$/.test(dep.file)) {
+      var match = dep.file.match(/node_modules\/(.*)\.js(on)*$/)
+
+      if (match != null){
+        dep.provides = [ match[1] ];
+      }
+    }
+
+    values.push(dep);
   }
 
   process.stdout.write(JSON.stringify(values));
