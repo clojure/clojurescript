@@ -171,7 +171,7 @@
           (set! (.-cljsReloadAll_ js/goog) true))
         (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
           (when reload?
-            (let [path (aget js/goog.dependencies_.nameToPath src)]
+            (let [path (gobj/get js/goog.dependencies_.nameToPath src)]
               (gobj/remove js/goog.dependencies_.visited path)
               (gobj/remove js/goog.dependencies_.written path)
               (gobj/remove js/goog.dependencies_.written

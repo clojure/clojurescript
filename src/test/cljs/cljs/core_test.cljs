@@ -570,6 +570,10 @@
   (is (nil? (unsafe-get #js {:a 1} "b")))
   (is (nil? (unsafe-get #js {:a 1} nil))))
 
+(deftest js-invoke-test
+  (let [o (doto (js-obj) (gobject/set "my sum" (fn [a b] (+ a b))))]
+    (is (= 5 (js-invoke o "my sum" 2 3)))))
+
 ;; =============================================================================
 ;; Tickets
 

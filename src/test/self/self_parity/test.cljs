@@ -19,7 +19,8 @@
             [cljs.nodejs :as nodejs]
             [cljs.js :as cljs]
             [cljs.tools.reader :as reader]
-            [cljs.stacktrace :as st]))
+            [cljs.stacktrace :as st]
+            [goog.object :as gobj]))
 
 (def out-dir "builds/out-self-parity")
 
@@ -40,7 +41,7 @@
   (set! (.-require js/goog)
     (fn [name]
       (js/CLOSURE_IMPORT_SCRIPT
-        (aget (.. js/goog -dependencies_ -nameToPath) name))))
+        (gobj/get (.. js/goog -dependencies_ -nameToPath) name))))
   ;; setup printing
   (nodejs/enable-util-print!)
   ;; redef goog.require to track loaded libs
@@ -50,7 +51,7 @@
       (when (or (not (contains? *loaded-libs* name)) reload)
         (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
         (js/CLOSURE_IMPORT_SCRIPT
-          (aget (.. js/goog -dependencies_ -nameToPath) name))))))
+          (gobj/get (.. js/goog -dependencies_ -nameToPath) name))))))
 
 ;; Node file reading fns
 

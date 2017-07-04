@@ -11,7 +11,8 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
       :author "Bobby Calderwood and Alex Redington"}
   clojure.browser.net
   (:require [clojure.browser.event :as event]
-            [goog.json :as gjson])
+            [goog.json :as gjson]
+            [goog.object :as gobj])
   (:import [goog.net XhrIo EventType WebSocket]
            [goog.net.xpc CfgFields CrossPageChannel]
            [goog Uri]))
@@ -132,7 +133,7 @@ Includes a common API over XhrIo, CrossPageChannel, and Websockets."
      (CrossPageChannel.
       (reduce (fn [sum [k v]]
                 (if-let [field (get xpc-config-fields k)]
-                  (doto sum (aset field v))
+                  (doto sum (gobj/set field v))
                   sum))
               (js-obj)
               config))))

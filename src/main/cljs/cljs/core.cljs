@@ -446,7 +446,7 @@
   "Invoke JavaScript object method via string. Needed when the
   string is not a valid unquoted property name."
   [obj s & args]
-  (.apply (aget obj s) obj (into-array args)))
+  (.apply (unsafe-get obj s) obj (into-array args)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; core protocols ;;;;;;;;;;;;;
 
@@ -5988,7 +5988,7 @@ reduces them without incurring seq initialization"
            out (transient (.-EMPTY PersistentHashMap))]
       (if (< i len)
         (let [k (aget ks i)]
-          (recur (inc i) (assoc! out k (aget so k))))
+          (recur (inc i) (assoc! out k (gobject/get so k))))
         (-with-meta (persistent! (assoc! out k v)) mm)))))
 
 ;;; ObjMap - DEPRECATED
@@ -6036,7 +6036,7 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [coll]
     (when (pos? (alength keys))
-      (map #(vector % (aget strobj %))
+      (map #(vector % (unsafe-get strobj %))
            (.sort keys obj-map-compare-keys))))
 
   ICounted
@@ -6047,7 +6047,7 @@ reduces them without incurring seq initialization"
   (-lookup [coll k not-found]
     (if (and ^boolean (goog/isString k)
              (not (nil? (scan-array 1 k keys))))
-      (aget strobj k)
+      (unsafe-get strobj k)
       not-found))
 
   IAssociative
@@ -6058,11 +6058,11 @@ reduces them without incurring seq initialization"
           (obj-map->hash-map coll k v)
           (if-not (nil? (scan-array 1 k keys))
             (let [new-strobj (obj-clone strobj keys)]
-              (aset new-strobj k v)
+              (gobject/set new-strobj k v)
               (ObjMap. meta keys new-strobj (inc update-count) nil)) ; overwrite
             (let [new-strobj (obj-clone strobj keys) ; append
                   new-keys (aclone keys)]
-              (aset new-strobj k v)
+              (gobject/set new-strobj k v)
               (.push new-keys k)
               (ObjMap. meta new-keys new-strobj (inc update-count) nil))))
         ;; non-string key. game over.
@@ -6077,7 +6077,7 @@ reduces them without incurring seq initialization"
   (-find [coll k]
     (when (and ^boolean (goog/isString k)
             (not (nil? (scan-array 1 k keys))))
-      [k (aget strobj k)]))
+      [k (unsafe-get strobj k)]))
 
   IKVReduce
   (-kv-reduce [coll f init]
@@ -6086,7 +6086,7 @@ reduces them without incurring seq initialization"
              init init]
         (if (seq keys)
           (let [k (first keys)
-                init (f init k (aget strobj k))]
+                init (f init k (unsafe-get strobj k))]
             (if (reduced? init)
               @init
               (recur (rest keys) init)))
@@ -9569,7 +9569,7 @@ reduces them without incurring seq initialization"
         (do
           (-write writer "#js ")
           (print-map
-            (map (fn [k] [(keyword k) (aget obj k)]) (js-keys obj))
+            (map (fn [k] [(keyword k) (unsafe-get obj k)]) (js-keys obj))
             pr-writer writer opts))
 
         (array? obj)
@@ -10191,7 +10191,7 @@ reduces them without incurring seq initialization"
 
                 (identical? (type x) js/Object)
                 (into {} (for [k (js-keys x)]
-                           [(keyfn k) (thisfn (aget x k))]))
+                           [(keyfn k) (thisfn (unsafe-get x k))]))
 
                 :else x))]
       (f x))))

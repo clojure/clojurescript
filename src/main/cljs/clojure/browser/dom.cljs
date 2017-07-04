@@ -49,7 +49,7 @@
                                      (log "v = " v)
                                      (when (or (keyword? k)
                                                (string? k))
-                                       (doto o (aset (name k) v)))))
+                                       (doto o (gobject/set (name k) v)))))
                                  (js-obj)
                                  attrs)
                          nil)]

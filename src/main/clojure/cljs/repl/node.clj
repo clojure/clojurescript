@@ -179,7 +179,7 @@
         '(set! (.-require js/goog)
            (fn [name]
              (js/CLOSURE_IMPORT_SCRIPT
-               (aget (.. js/goog -dependencies_ -nameToPath) name)))))
+               (unsafe-get (.. js/goog -dependencies_ -nameToPath) name)))))
       ;; load cljs.core, setup printing
       (repl/evaluate-form repl-env env "<cljs repl>"
         '(do
@@ -195,7 +195,7 @@
                (when (or (not (contains? *loaded-libs* name)) reload)
                  (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
                  (js/CLOSURE_IMPORT_SCRIPT
-                   (aget (.. js/goog -dependencies_ -nameToPath) name))))))))))
+                   (unsafe-get (.. js/goog -dependencies_ -nameToPath) name))))))))))
 
 (defrecord NodeEnv [host port path socket proc]
   repl/IReplEnvOptions
