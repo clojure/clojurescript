@@ -1141,9 +1141,8 @@
                         :foreign-deps @foreign-deps)])))
           [] (module-graph/sort-modules
                (ensure-cljs-base-module
-                 (module-graph/expand-modules (:modules opts) sources) opts)))
-        foreign-deps (atom [])]
-    (assoc-in modules [0 1 :foreign-deps] @foreign-deps)))
+                 (module-graph/expand-modules (:modules opts) sources) opts)))]
+    modules))
 
 (comment
   (build "samples/hello/src"
