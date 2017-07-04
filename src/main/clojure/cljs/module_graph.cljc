@@ -103,7 +103,7 @@
       (into ret (map #(vector (-> % munge str) input)) provides))
     {} inputs))
 
-(defn deps-for
+(defn ^:dynamic deps-for
   "Return all dependencies for x in a graph using deps-key."
   [x graph deps-key]
   (let [requires (get-in graph [x deps-key])]
@@ -183,8 +183,10 @@
                              (update ret entry (fnil conj #{}) module-name))
                            ret (canon (f entries')))))
                      {} modules))
-        e->ms    (assigns identity)
-        d->ms    (assigns #(distinct (mapcat deps %)))
+        e->ms    (binding [deps-for (memoize deps-for)]
+                   (assigns identity))
+        d->ms    (binding [deps-for (memoize deps-for)]
+                   (assigns #(distinct (mapcat deps %))))
         assigned (merge
                    (into {} (map assign1) d->ms)
                    (into {} (map assign1) e->ms))
