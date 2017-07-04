@@ -1359,6 +1359,10 @@
   (testing "Resolve should return valid var"
     (is (= 1 ((resolve 'first) [1 2 3])))))
 
+(deftest test-cljs-1998
+  (testing "printing an Object with a null constructor"
+    (is (= "#object[Object]" (pr-str (.create js/Object nil))))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

@@ -9606,15 +9606,17 @@ reduces them without incurring seq initialization"
         (regexp? obj) (write-all writer "#\"" (.-source obj) "\"")
 
         :else
-        (if (.. obj -constructor -cljs$lang$ctorStr)
+        (if (some-> obj .-constructor .-cljs$lang$ctorStr)
           (write-all writer
             "#object[" (.replace (.. obj -constructor -cljs$lang$ctorStr)
                          (js/RegExp. "/" "g") ".") "]")
-          (let [name (.. obj -constructor -name)
-               name (if (or (nil? name) (gstring/isEmpty name))
-                      "Object"
-                      name)]
-           (write-all writer "#object[" name " " (str obj) "]")))))))
+          (let [name (some-> obj .-constructor .-name)
+                name (if (or (nil? name) (gstring/isEmpty name))
+                       "Object"
+                       name)]
+            (if (nil? (. obj -constructor))
+              (write-all writer "#object[" name "]")
+              (write-all writer "#object[" name " " (str obj) "]"))))))))
 
 (defn- pr-writer
   "Prefer this to pr-seq, because it makes the printing function
