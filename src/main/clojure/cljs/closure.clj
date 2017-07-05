@@ -61,7 +61,7 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule SourceMap]
+              JSModule SourceMap Es6RewriteModules]
            [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
@@ -1648,8 +1648,11 @@
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
         closure-compiler (doto (make-closure-compiler)
-                           (.init externs source-files options))]
-    (.parse closure-compiler)
+                           (.init externs source-files options))
+        _ (.parse closure-compiler)
+        root (.getRoot closure-compiler)]
+    (.process (Es6RewriteModules. closure-compiler)
+      (.getFirstChild root) (.getSecondChild root))
     (report-failure (.getResult closure-compiler))
     (map (partial add-converted-source
            closure-compiler (get-closure-sources closure-compiler) opts)
