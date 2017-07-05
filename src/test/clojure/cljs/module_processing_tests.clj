@@ -49,6 +49,32 @@
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))
 
+(deftest es6-module-processing
+  (test/delete-out-files)
+  (let [cenv (env/default-compiler-env)]
+
+    ;; Reset load-library cache so that changes to processed files are noticed in REPL
+    (with-redefs [cljs.js-deps/load-library  (memoize cljs.js-deps/load-library*)]
+
+      (is (= {:foreign-libs []
+              :ups-foreign-libs []
+              :libs ["out/src/test/cljs/es6_hello.js"]
+              :closure-warnings {:non-standard-jsdoc :off}}
+             (env/with-compiler-env cenv
+               (closure/process-js-modules
+                 {:foreign-libs [{:file        "src/test/cljs/es6_hello.js"
+                                  :provides    ["es6-hello"]
+                                  :module-type :es6}]
+                  :closure-warnings {:non-standard-jsdoc :off}})))
+          "processed modules are added to :libs")
+
+      (is (= {"es6-hello" "module$src$test$cljs$es6-hello"}
+             (:js-module-index @cenv))
+          "Processed modules are added to :js-module-index")
+
+      (is (= "goog.provide(\"module$src$test$cljs$es6_hello\");var sayHello$$module$src$test$cljs$es6_hello=function(){console.log(\"Hello, world!\")};module$src$test$cljs$es6_hello.sayHello=sayHello$$module$src$test$cljs$es6_hello"
+             (slurp "out/src/test/cljs/es6_hello.js"))))))
+
 (deftest test-module-name-substitution
   (test/delete-out-files)
   (let [cenv (env/default-compiler-env)]
