@@ -2097,7 +2097,8 @@
                 (string/replace "JS_FILE" file)
                 (string/replace "CLJS_TARGET" (str "" (when target (name target)))))
          proc (-> (ProcessBuilder.
-                    ["node" "--eval" code])
+                    (cond->> ["node" "--eval" code]
+                      util/windows? (into ["cmd" "/c"])))
                 .start)
          is   (.getInputStream proc)
          iw   (StringWriter. (* 16 1024 1024))
@@ -2145,8 +2146,7 @@
    (let [node-modules (io/file "node_modules")]
      (if (and (not (empty? modules)) (.exists node-modules) (.isDirectory node-modules))
        (let [modules (into #{} (map name) modules)
-             deps-file (io/file (str (util/output-directory opts) File/separator
-                                  "cljs$node_modules.js"))]
+             deps-file (io/file (util/output-directory opts) "cljs$node_modules.js")]
          (util/mkdirs deps-file)
          (with-open [w (io/writer deps-file)]
            (run! #(.write w (str "require('" % "');\n")) modules))
