@@ -994,7 +994,7 @@
      `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~a ~idx ~idx2 ~@idxv))))
 
 (core/defmacro unsafe-get
-  "INTERNAL. Compiles to JavScript property access using bracket notation. Does
+  "INTERNAL. Compiles to JavaScript property access using bracket notation. Does
   not distinguish between object and array types and not subject to compiler
   static analysis."
   [obj key]
