@@ -281,7 +281,7 @@
       (. compiler-options (setExtraAnnotationNames (map name extra-annotations))))
     (when (:source-map opts)
       (if (:modules opts)
-        ;; name is not actually used by Closur in :modules case,
+        ;; name is not actually used by Closure in :modules case,
         ;; but we need to provide _something_ for Closure to not
         ;; complain
         (set! (.sourceMapOutputPath compiler-options)
@@ -779,7 +779,7 @@
   "Returns the constants table as a JavaScriptFile."
   [opts]
   (let [url (deps/to-url (constants-filename opts))]
-    (javascript-file nil url url [(str ana/constants-ns-sym)] ["cljs.core"] nil nil)))
+    (javascript-file nil url [(str ana/constants-ns-sym)] ["cljs.core"])))
 
 (defn add-dependencies
   "Given one or more IJavaScript objects in dependency order, produce
@@ -1681,15 +1681,15 @@
     (write-javascript opts js)
     ;; always copy original ClojureScript sources to the output directory
     ;; when source maps enabled
-    (let [out-file (when-let [ns (and (:source-map opts)
-                                      (:source-url js)
-                                      (first (:provides js)))]
+    (let [source-url  (:source-url js)
+          out-file (when-let [ns (and (:source-map opts)
+                                   source-url
+                                   (first (:provides js)))]
                      (io/file (io/file (util/output-directory opts))
-                       (util/ns->relpath ns (util/ext (:source-url js)))))
-          source-url (:source-url js)]
+                       (util/ns->relpath ns (util/ext source-url))))]
       (when (and out-file source-url
-               (or (not (.exists ^File out-file))
-                   (util/changed? (io/file source-url) out-file)))
+              (or (not (.exists ^File out-file))
+                (util/changed? (io/file source-url) out-file)))
         (do
           (when (or ana/*verbose* (:verbose opts))
             (util/debug-prn "Copying" (str source-url) "to" (str out-file)))

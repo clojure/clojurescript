@@ -8,19 +8,18 @@
 
 (ns cljs.build-api-tests
   (:refer-clojure :exclude [compile])
-  (:use cljs.build.api)
   (:use clojure.test)
   (:import java.io.File)
   (:require [clojure.java.io :as io]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.test-util :as test]
-            [cljs.build.api :as build]))
+            [cljs.build.api :as build :refer [build]]))
 
 (deftest test-target-file-for-cljs-ns
-  (is (= (.getPath (target-file-for-cljs-ns 'example.core-lib nil))
+  (is (= (.getPath (build/target-file-for-cljs-ns 'example.core-lib nil))
          "out/example/core_lib.js"))
-  (is (= (.getPath (target-file-for-cljs-ns 'example.core-lib "output"))
+  (is (= (.getPath (build/target-file-for-cljs-ns 'example.core-lib "output"))
          "output/example/core_lib.js")))
 
 (deftest test-cljs-dependents-for-macro-namespaces
@@ -41,13 +40,13 @@
                                  'example.fun
                                  {:require-macros nil
                                   :name 'example.fun }})
-    (is (= (set (cljs-dependents-for-macro-namespaces ['example.macros]))
+    (is (= (set (build/cljs-dependents-for-macro-namespaces ['example.macros]))
            #{'example.core 'example.util}))
-    (is (= (set (cljs-dependents-for-macro-namespaces ['example.macros-again]))
+    (is (= (set (build/cljs-dependents-for-macro-namespaces ['example.macros-again]))
            #{'example.helpers}))
-    (is (= (set (cljs-dependents-for-macro-namespaces ['example.macros 'example.macros-again]))
+    (is (= (set (build/cljs-dependents-for-macro-namespaces ['example.macros 'example.macros-again]))
            #{'example.core 'example.util 'example.helpers}))
-    (is (= (set (cljs-dependents-for-macro-namespaces ['example.not-macros]))
+    (is (= (set (build/cljs-dependents-for-macro-namespaces ['example.not-macros]))
            #{}))))
 
 (def test-cenv (atom {}))
@@ -136,7 +135,7 @@
         project (test/project-with-modules (str out))
         modules (-> project :opts :modules)]
     (test/delete-out-files out)
-    (build (inputs (:inputs project)) (:opts project))
+    (build (build/inputs (:inputs project)) (:opts project))
     (is (re-find #"Loading modules A and B" (slurp (-> modules :cljs-base :output-to))))
     (is (re-find #"Module A loaded" (slurp (-> modules :module-a :output-to))))
     (is (re-find #"Module B loaded" (slurp (-> modules :module-b :output-to))))))
@@ -150,7 +149,7 @@
               :output-dir (str out)
               :target :nodejs}]
     (test/delete-out-files out)
-    (build (inputs (io/file root "foreign_libs") (io/file root "thirdparty")) opts)
+    (build (build/inputs (io/file root "foreign_libs") (io/file root "thirdparty")) opts)
     (let [foreign-lib-file (io/file out (-> opts :foreign-libs first :file))]
       (is (.exists foreign-lib-file))
       (is (= (->> (slurp (io/file out "foreign_libs" "core.js"))
@@ -162,7 +161,7 @@
   (let [out-file (io/file "out/main.js")]
     (.delete out-file)
     (try
-      (build (inputs "src/test/cljs_build")
+      (build (build/inputs "src/test/cljs_build")
         {:main 'circular-deps.a
          :optimizations :none
          :verbose true
@@ -185,12 +184,14 @@
      {:output-to (str (io/file output-dir "bar.js"))
       :entries #{'loader-test.bar}}}}})
 
-(comment
-
-  (deftest cljs-2077-test-loader
-    (let [out     "out"
-          project (loader-test-project (str out))
-          modules (-> project :opts :modules)]
-      (build (inputs (:inputs project)) (:opts project))))
-
-  )
+(deftest cljs-2077-test-loader
+  (let [out     "out"
+        project (merge-with merge (loader-test-project (str out)))
+        modules (-> project :opts :modules)]
+    (build (build/inputs (:inputs project)) (:opts project)))
+  (let [out     "out"
+        project (merge-with merge (loader-test-project (str out))
+                  {:opts {:optimizations :advanced
+                          :source-map true}})
+        modules (-> project :opts :modules)]
+    (build (build/inputs (:inputs project)) (:opts project))))
