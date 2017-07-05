@@ -2195,6 +2195,39 @@
          (node-inputs [{:file (.getAbsolutePath deps-file)}] opts))
        []))))
 
+(defn preprocess-js
+  "Given js-module map, apply preprocessing defined by :preprocess value in the map."
+  [{:keys [preprocess] :as js-module} opts]
+  (cond
+    (keyword? preprocess)
+    (js-transforms js-module opts)
+
+    (symbol? preprocess)
+    (let [preprocess-ns (symbol (namespace preprocess))]
+
+      (when (not (find-ns preprocess-ns))
+        (try
+          (locking ana/load-mutex
+            (require preprocess-ns))
+          (catch Throwable t
+            (throw (ex-info (str "Cannot require namespace referred by :preprocess value " preprocess)
+                            {:file (:file js-module)
+                             :preprocess preprocess}
+                            t)))))
+
+      (try
+        ((find-var preprocess) js-module opts)
+        (catch Throwable t
+          (throw (ex-info (str "Error running preprocessing function " preprocess)
+                          {:file (:file js-module)
+                           :preprocess preprocess}
+                          t)))))
+
+    :else
+    (do
+      (ana/warning :unsupported-preprocess-value @env/*compiler* js-module)
+      js-module)))
+
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
   Closure modules and writes them to disk. Adds mapping from original module
@@ -2215,7 +2248,7 @@
                               js-modules)
               js-modules (map (fn [js]
                                 (if (:preprocess js)
-                                  (js-transforms js opts)
+                                  (preprocess-js js opts)
                                   js))
                               js-modules)
               ;; Conversion is done per module-type, because Compiler needs to process e.g. all CommonJS
