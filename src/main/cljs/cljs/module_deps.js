@@ -60,8 +60,8 @@ md.on('end', function() {
   for (var key in deps_files) {
     var dep = deps_files[key];
 
-    if (dep.provides == null && !/node_modules\/[^/]*?\/package.json$/.test(dep.file)) {
-      var match = dep.file.match(/node_modules\/(.*)\.js(on)*$/)
+    if (dep.provides == null && !/node_modules[/\\][^/\\]*?[/\\]package.json$/.test(dep.file)) {
+      var match = dep.file.match(/node_modules[/\\](.*)\.js(on)*$/)
 
       if (match != null){
         dep.provides = [ match[1] ];
