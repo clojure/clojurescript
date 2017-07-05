@@ -2530,6 +2530,22 @@
             (update-in [:requires]
               (fn [m] (with-meta m {(@reload :require) true})))))))))
 
+(defn- check-duplicate-aliases
+  [env old new]
+  (let [ns-name (:name old)]
+    (doseq [k [:requires :require-macros]]
+      (let [old-aliases (get old k)
+            new-aliases (get new k)]
+        (when-some [alias (some (set (keys new-aliases))
+                            (->> old-aliases
+                              (remove (fn [[k v :as entry]]
+                                        (or (= k v)
+                                            (= entry (find new-aliases k)))))
+                              keys))]
+          (throw (error env
+                   (str "Alias " alias " already exists in namespace " ns-name
+                     ", aliasing " (get old-aliases alias)))))))))
+
 (defmethod parse 'ns*
   [_ env [_ quoted-specs :as form] _ opts]
   (when-let [not-quoted (->> (remove keyword? quoted-specs)
@@ -2599,6 +2615,7 @@
               (let [merge-keys
                     [:use-macros :require-macros :rename-macros
                      :uses :requires :renames :imports]]
+                (check-duplicate-aliases env ns-info' require-info)
                 (merge
                   ns-info'
                   {:excludes excludes}

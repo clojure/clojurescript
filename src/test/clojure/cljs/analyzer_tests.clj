@@ -778,6 +778,23 @@
     (is (= (:missing-js-modules ast) #{"react-dom/server"}))
     (is (= (:requires ast) '#{cljs.core module$src$test$cljs$react "react-dom/server"}))))
 
+(deftest test-cljs-2037
+  (let [test-env (assoc-in (a/empty-env) [:ns :name] 'cljs.user)]
+    (binding [a/*cljs-ns* a/*cljs-ns*
+              a/*analyze-deps* false]
+      (is (thrown-with-msg? Exception #"Alias str already exists in namespace cljs.user, aliasing clojure.string"
+            (a/analyze test-env '(do
+                                   (require '[clojure.string :as str])
+                                   (require '[clojure.set :as str])))))
+      (is (thrown-with-msg? Exception #"Alias str already exists in namespace cljs.user, aliasing clojure.string"
+            (a/analyze test-env '(do
+                                   (require-macros '[clojure.string :as str])
+                                   (require-macros '[clojure.set :as str])))))
+      (is (a/analyze test-env '(do
+                                 (require '[clojure.string :as str])
+                                 (require '[clojure.string :as str])
+                                 (require 'clojure.string)))))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn
