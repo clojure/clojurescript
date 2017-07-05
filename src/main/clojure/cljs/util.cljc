@@ -306,3 +306,6 @@
       1 (first xs)
       2 (str (first xs) " and " (second xs))
       (str (string/join ", " (pop xs)) " and " (peek xs)))))
+
+(def windows?
+  (.startsWith (.toLowerCase (System/getProperty "os.name")) "windows"))

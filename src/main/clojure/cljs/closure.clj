@@ -2063,7 +2063,8 @@
         (when (or ana/*verbose* verbose)
           (util/debug-prn "Installing Node.js dependencies"))
         (let [proc (-> (ProcessBuilder.
-                         (into ["npm" "install" "module-deps"]
+                         (into (cond->> ["npm" "install" "module-deps"]
+                                 util/windows? (into ["cmd" "/c"]))
                            (map (fn [[dep version]] (str (name dep) "@" version)))
                            npm-deps))
                      .start)
