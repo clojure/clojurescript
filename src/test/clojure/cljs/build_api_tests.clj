@@ -185,13 +185,14 @@
       :entries #{'loader-test.bar}}}}})
 
 (deftest cljs-2077-test-loader
-  (let [out     "out"
-        project (merge-with merge (loader-test-project (str out)))
-        modules (-> project :opts :modules)]
-    (build (build/inputs (:inputs project)) (:opts project)))
-  (let [out     "out"
-        project (merge-with merge (loader-test-project (str out))
+  (test/delete-out-files)
+  (let [project (merge-with merge (loader-test-project "out"))
+        loader (io/file "out" "cljs" "loader.js")]
+    (build (build/inputs (:inputs project)) (:opts project))
+    (is (.exists loader))
+    (is (not (nil? (re-find #"/loader_test/foo\.js" (slurp loader))))))
+  (test/delete-out-files)
+  (let [project (merge-with merge (loader-test-project "out")
                   {:opts {:optimizations :advanced
-                          :source-map true}})
-        modules (-> project :opts :modules)]
-    (build (build/inputs (:inputs project)) (:opts project))))
+                          :source-map true}})]
+      (build (build/inputs (:inputs project)) (:opts project))))
