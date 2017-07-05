@@ -1650,10 +1650,10 @@
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))
         _ (.parse closure-compiler)
+        _ (report-failure (.getResult closure-compiler))
         root (.getRoot closure-compiler)]
     (.process (Es6RewriteModules. closure-compiler)
       (.getFirstChild root) (.getSecondChild root))
-    (report-failure (.getResult closure-compiler))
     (map (partial add-converted-source
            closure-compiler (get-closure-sources closure-compiler) opts)
       js-modules)))
