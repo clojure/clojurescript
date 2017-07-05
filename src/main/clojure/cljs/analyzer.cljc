@@ -3700,7 +3700,8 @@
   "Registers speced vars found in a namespace analysis cache."
   [cached-ns]
   #?(:clj (try
-            (require 'cljs.spec.alpha)
+            (locking load-mutex
+              (clojure.core/require 'cljs.spec.alpha))
             (catch Throwable t)))
   (let [{:keys [registry-ref speced-vars]} (get-spec-vars)]
     (when-let [registry (seq (:cljs.spec/registry-ref cached-ns))]
