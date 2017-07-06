@@ -2754,23 +2754,29 @@
 
 (core/defmacro ns-interns
   "Returns a map of the intern mappings for the namespace."
-  [[quote ns]]
-  (core/assert (core/and (= quote 'quote) (core/symbol? ns))
+  [quoted-ns]
+  (core/assert (core/and (seq? quoted-ns)
+                 (= (first quoted-ns) 'quote)
+                 (core/symbol? (second quoted-ns)))
     "Argument to ns-interns must be a quoted symbol")
-  `(into {}
-     [~@(map
-          (core/fn [[sym _]]
-            `[(symbol ~(name sym)) (var ~(symbol (name ns) (name sym)))])
-          (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs]))]))
+  (core/let [ns (second quoted-ns)]
+    `(into {}
+       [~@(map
+            (core/fn [[sym _]]
+              `[(symbol ~(name sym)) (var ~(symbol (name ns) (name sym)))])
+            (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs]))])))
 
 (core/defmacro ns-unmap
   "Removes the mappings for the symbol from the namespace."
-  [[quote0 ns] [quote1 sym]]
-  (core/assert (core/and (= quote0 'quote) (core/symbol? ns)
-                         (= quote1 'quote) (core/symbol? sym))
+  [quoted-ns quoted-sym]
+  (core/assert
+    (core/and (seq? quoted-ns) (= (first quoted-ns) 'quote) (core/symbol? (second quoted-ns))
+              (seq? quoted-sym) (= (first quoted-sym) 'quote) (core/symbol? (second quoted-sym)))
     "Arguments to ns-unmap must be quoted symbols")
-  (swap! env/*compiler* update-in [::ana/namespaces ns :defs] dissoc sym)
-  `(js-delete ~(comp/munge ns) ~(comp/munge (core/str sym))))
+  (core/let [ns (second quoted-ns)
+             sym (second quoted-sym)]
+    (swap! env/*compiler* update-in [::ana/namespaces ns :defs] dissoc sym)
+    `(js-delete ~(comp/munge ns) ~(comp/munge (core/str sym)))))
 
 (core/defmacro vswap!
   "Non-atomically swaps the value of the volatile as if:
