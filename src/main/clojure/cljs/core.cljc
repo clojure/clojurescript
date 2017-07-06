@@ -3189,13 +3189,16 @@
 
 (core/defmacro resolve
   "Returns the var to which a symbol will be resolved in the namespace else nil."
-  [[_ sym]]
-  (core/let [env &env
+  [quoted-sym]
+  (core/assert (core/and (seq? quoted-sym) (= (first quoted-sym 'quote)))
+    "Argument to resolve must be a quoted symbol")
+  (core/let [sym (second quoted-sym)
+             env &env
              [var meta] (try
                           (core/let [var (ana/resolve-var env sym (ana/confirm-var-exists-throw)) ]
                             [var (ana/var-meta var)])
                           (catch #?@(:clj [Throwable t] :cljs [:default e])
-                            [(ana/resolve-var env sym) nil]))
+                              [(ana/resolve-var env sym) nil]))
              resolved (vary-meta (:name var) assoc ::ana/no-resolve true)]
     `(when (exists? ~resolved)
        (cljs.core/Var. (fn [] ~resolved) '~resolved ~meta))))

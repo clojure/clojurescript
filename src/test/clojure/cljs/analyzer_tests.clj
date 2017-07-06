@@ -795,6 +795,13 @@
                                  (require '[clojure.string :as str])
                                  (require 'clojure.string)))))))
 
+(deftest test-cljs-2182
+  (let [cenv (atom @test-cenv)]
+    (is (thrown-with-msg? Exception
+          #"Argument to resolve must be a quoted symbol"
+          (e/with-compiler-env test-cenv
+            (a/analyze test-env '(resolve foo.core)))))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn
