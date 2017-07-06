@@ -64,7 +64,7 @@ md.on('end', function() {
       var match = dep.file.match(/node_modules[/\\](.*)\.js(on)*$/)
 
       if (match != null){
-        dep.provides = [ match[1] ];
+        dep.provides = [ match[1].replace('\\', '/') ];
       }
     }
 

@@ -1623,7 +1623,8 @@
   (let [processed-file (if-let [min (and (#{:advanced :simple} (:optimizations opts))
                                          file-min)]
                          min
-                         file)]
+                         file)
+        processed-file (string/replace processed-file "\\" "/")]
     (assoc ijs :source
       (.toSource closure-compiler ^Node (get result-nodes processed-file)))))
 
@@ -2137,11 +2138,9 @@
        (:options @env/*compiler*))))
   ([{:keys [file]} {:keys [target] :as opts}]
    (let [code (-> (slurp (io/resource "cljs/module_deps.js"))
-                (string/replace "JS_FILE" file)
+                (string/replace "JS_FILE" (string/replace file "\\" "\\\\"))
                 (string/replace "CLJS_TARGET" (str "" (when target (name target)))))
-         proc (-> (ProcessBuilder.
-                    (cond->> ["node" "--eval" code]
-                      util/windows? (into ["cmd" "/c"])))
+         proc (-> (ProcessBuilder. ["node" "--eval" code])
                 .start)
          is   (.getInputStream proc)
          iw   (StringWriter. (* 16 1024 1024))

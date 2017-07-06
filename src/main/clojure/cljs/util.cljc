@@ -13,7 +13,7 @@
             [clojure.set :as set]
             [clojure.edn :as edn])
   (:import [java.io File]
-           [java.net URL]
+           [java.net URL URLDecoder]
            [java.security MessageDigest]
            [javax.xml.bind DatatypeConverter]))
 
@@ -153,7 +153,7 @@
               (string/replace s user-path "")))]
     (if (file? x)
       (strip-user-dir (.getAbsolutePath x))
-      (let [f (.getFile x)]
+      (let [f (URLDecoder/decode (.getFile x))]
         (if (string/includes? f ".jar!/")
           (last (string/split f #"\.jar!/"))
           (strip-user-dir f))))))
