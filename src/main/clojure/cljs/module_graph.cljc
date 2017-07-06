@@ -269,7 +269,7 @@
    all inputs by leveraging expand-modules."
   [modules inputs {:keys [optimizations asset-path output-dir] :as opts}]
   (assert optimizations "Must supply :optimizations in opts map")
-  (assert (#{:advanced :simple :none} optimizations) "Must supply valid :optimizations in opts map")
+  (assert (#{:advanced :simple :none :whitespace} optimizations) "Must supply valid :optimizations in opts map")
   (assert output-dir "Must supply :output-dir in opts map")
   (letfn [(get-uri [rel-path]
             (cond->> rel-path
@@ -297,7 +297,7 @@
                    (distinct))
                  entries)]))
           (expand-modules modules inputs))
-        (:advanced :simple)
+        (:advanced :simple :whitespace)
         (reduce-kv
           (fn [ret k {:keys [output-to]}]
             (assoc ret k [(-> output-to get-rel-path get-uri)]))
