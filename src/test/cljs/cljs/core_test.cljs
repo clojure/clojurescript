@@ -1383,6 +1383,17 @@
   (testing "printing an Object with a null constructor"
     (is (= "#object[Object]" (pr-str (.create js/Object nil))))))
 
+(deftest test-cljs-2184
+  (testing "ns-publics"
+    (is (contains? (ns-publics 'clojure.string) 'join))
+    (is (not (contains? (ns-publics 'clojure.string) 'replace-all)))
+    (is (= (find (ns-publics 'clojure.string) 'join)
+          ['join #'clojure.string/join])))
+  (testing "ns-imports"
+    (is (contains? (ns-imports 'clojure.string) 'StringBuffer))
+    (is (= (find (ns-imports 'clojure.string) 'StringBuffer)
+          ['StringBuffer goog.string.StringBuffer]))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

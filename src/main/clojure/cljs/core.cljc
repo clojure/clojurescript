@@ -36,7 +36,8 @@
 
                             require use refer-clojure
 
-                            if-some when-some test ns-interns ns-unmap var vswap! macroexpand-1 macroexpand
+                            if-some when-some test ns-publics ns-imports ns-interns
+                            ns-unmap var vswap! macroexpand-1 macroexpand
                             some? resolve
                             #?@(:cljs [alias coercive-not coercive-not= coercive-= coercive-boolean
                                        truth_ js-arguments js-delete js-in js-debugger exists? divide js-mod
@@ -2751,6 +2752,36 @@
      (fn []
        (this-as this#
          (cljs.core/es6-iterator this#)))))
+
+(core/defmacro ns-publics
+  "Returns a map of the public intern mappings for the namespace."
+  [quoted-ns]
+  (core/assert (core/and (seq? quoted-ns)
+                         (= (first quoted-ns) 'quote)
+                         (core/symbol? (second quoted-ns)))
+    "Argument to ns-publics must be a quoted symbol")
+  (core/let [ns (second quoted-ns)]
+    `(into {}
+       [~@(map
+            (core/fn [[sym _]]
+              `[(symbol ~(name sym)) (var ~(symbol (name ns) (name sym)))])
+            (filter (core/fn [[_ info]]
+                      (not (core/-> info :meta :private)))
+              (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :defs])))])))
+
+(core/defmacro ns-imports
+  "Returns a map of the import mappings for the namespace."
+  [quoted-ns]
+  (core/assert (core/and (seq? quoted-ns)
+                         (= (first quoted-ns) 'quote)
+                         (core/symbol? (second quoted-ns)))
+    "Argument to ns-imports must be a quoted symbol")
+  (core/let [ns (second quoted-ns)]
+    `(into {}
+       [~@(map
+            (core/fn [[ctor qualified-ctor]]
+              `[(symbol ~(name ctor)) ~(symbol qualified-ctor)])
+            (get-in @env/*compiler* [:cljs.analyzer/namespaces ns :imports]))])))
 
 (core/defmacro ns-interns
   "Returns a map of the intern mappings for the namespace."
