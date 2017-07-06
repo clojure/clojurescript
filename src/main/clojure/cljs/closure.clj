@@ -2203,8 +2203,13 @@
     (js-transforms js-module opts)
 
     (symbol? preprocess)
-    (let [preprocess-ns (symbol (namespace preprocess))]
-
+    (let [ns (namespace preprocess)
+          _ (when (nil? ns)
+              (throw
+                (ex-info (str "Preprocess symbol " preprocess " is not fully qualified")
+                  {:file (:file js-module)
+                   :preprocess preprocess})))
+          preprocess-ns (symbol ns)]
       (when (not (find-ns preprocess-ns))
         (try
           (locking ana/load-mutex
