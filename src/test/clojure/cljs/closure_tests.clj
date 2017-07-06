@@ -11,6 +11,8 @@
   (:use cljs.closure clojure.test)
   (:require [cljs.build.api :as build]
             [cljs.closure :as closure]
+            [cljs.js-deps :as deps]
+            [cljs.util :as util]
             [cljs.test-util :as test]
             [clojure.java.io :as io]
             [clojure.string :as string])
@@ -68,3 +70,6 @@
              ["cljs/core.js"
               "cljs/core/constants.js"
               "module_test/modules/a.js"])))))
+
+(deftest test-string-provides
+  (is (= ["CB0BFFB"] (deps/-provides "var x = 42;"))))

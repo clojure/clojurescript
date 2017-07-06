@@ -373,7 +373,11 @@
   (-relative-path
     ([this] nil)
     ([this _] nil))
-  (-provides [this] (:provides (deps/parse-js-ns (string/split-lines this))))
+  (-provides [this]
+    (let [{:keys [provides]} (deps/parse-js-ns (string/split-lines this))]
+      (cond-> provides
+        (empty? provides)
+        (conj (util/content-sha this 7)))))
   (-requires [this] (:requires (deps/parse-js-ns (string/split-lines this))))
   (-source
     ([this] this)
@@ -1052,7 +1056,9 @@
 (defmethod javascript-name String [s]
   (if-let [name (first (deps/-provides s))] name "cljs/user.js"))
 
-(defmethod javascript-name JavaScriptFile [js] (javascript-name (deps/-url js)))
+(defmethod javascript-name JavaScriptFile [js]
+  (when-let [url (deps/-url js)]
+    (javascript-name url)))
 
 (defn build-provides
   "Given a vector of provides, builds required goog.provide statements"
@@ -1060,8 +1066,10 @@
   (apply str (map #(str "goog.provide('" % "');\n") provides)))
 
 (defmethod js-source-file JavaScriptFile [_ js]
-  (when-let [url (deps/-url js)]
-    (js-source-file (javascript-name url) (io/input-stream url))))
+  (if-let [url (deps/-url js)]
+    (js-source-file (javascript-name url) (io/input-stream url))
+    (when-let [source (:source js)]
+      (js-source-file (javascript-name source) source))))
 
 (defn ensure-cljs-base-module
   "Ensure that compiler :modules map has :cljs-base module with defined
@@ -1122,7 +1130,15 @@
    a :foreign-deps vector containing foreign IJavaScript sources in dependency
    order."
   [sources opts]
-  (let [used (atom #{}) ;; track used inputs to avoid dupes
+  (let [sources (map
+                  (fn [js]
+                    (if (string? js)
+                      (merge
+                        (map->javascript-file {:provides (deps/-provides js)})
+                        {:source js})
+                      js))
+                  sources)
+        used (atom #{}) ;; track used inputs to avoid dupes
         modules
         (reduce
           (fn [ret [name {:keys [entries depends-on] :as module-desc}]]
@@ -1575,11 +1591,7 @@
          :else (path-from-jarfile url))
 
        (string? js)
-       (str
-         (->> (util/content-sha js)
-           (take 7)
-           (apply str))
-         ".js")
+       (str (util/content-sha js 7) ".js")
 
        :else (str (random-string 5) ".js")))))
 

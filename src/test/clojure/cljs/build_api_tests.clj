@@ -195,7 +195,12 @@
   (let [project (merge-with merge (loader-test-project "out")
                   {:opts {:optimizations :advanced
                           :source-map true}})]
-      (build/build (build/inputs (:inputs project)) (:opts project))))
+    (build (build/inputs (:inputs project)) (:opts project)))
+  (testing "string inputs in modules"
+    (test/delete-out-files)
+    (let [project (merge-with merge (loader-test-project "out")
+                    {:opts {:optimizations :whitespace}})]
+      (build (build/inputs (:inputs project)) (:opts project)))))
 
 (deftest test-npm-deps
   (spit (io/file "package.json") "{}")

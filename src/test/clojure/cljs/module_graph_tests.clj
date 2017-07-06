@@ -8,6 +8,8 @@
 
 (ns cljs.module-graph-tests
   (:require [clojure.test :refer [deftest is testing]]
+            [cljs.closure :as closure]
+            [cljs.util :as util]
             [cljs.module-graph :as module-graph]))
 
 (def opts {:output-dir "out"})

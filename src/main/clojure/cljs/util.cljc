@@ -280,11 +280,17 @@
                     xs seen)))]
      (step coll #{}))))
 
-(defn content-sha [^String s]
-  (let [digest (MessageDigest/getInstance "SHA-1")]
-    (.reset digest)
-    (.update digest (.getBytes s "utf8"))
-    (DatatypeConverter/printHexBinary (.digest digest))))
+(defn content-sha
+  ([^String s]
+   (content-sha s nil))
+  ([^String s ^Long n]
+   (let [digest (MessageDigest/getInstance "SHA-1")
+         _ (.reset digest)
+         _ (.update digest (.getBytes s "utf8"))
+         sha (DatatypeConverter/printHexBinary (.digest digest))]
+     (if-not (nil? n)
+       (apply str (take n sha))
+       sha))))
 
 (defn map-merge [a b]
   (if (and (map? a) (map? b))

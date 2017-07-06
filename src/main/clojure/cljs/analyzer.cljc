@@ -3517,9 +3517,7 @@
                   (inc (.lastIndexOf full-name "/"))
                   (.lastIndexOf full-name "."))]
        (symbol
-         (apply str
-           "cljs.user." name
-           (take 7 (util/content-sha full-name)))))))
+         (str "cljs.user." name (util/content-sha full-name 7))))))
 
 #?(:clj
    (defn parse-ns
