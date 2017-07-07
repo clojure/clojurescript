@@ -979,19 +979,19 @@
   (bool-expr `(instance? Keyword ~x)))
 
 (core/defmacro aget
-  ([a i]
-   (core/list 'js* "(~{}[~{}])" a i))
-  ([a i & idxs]
+  ([array idx]
+   (core/list 'js* "(~{}[~{}])" array idx))
+  ([array idx & idxs]
    (core/let [astr (apply core/str (repeat (count idxs) "[~{}]"))]
-     `(~'js* ~(core/str "(~{}[~{}]" astr ")") ~a ~i ~@idxs))))
+     `(~'js* ~(core/str "(~{}[~{}]" astr ")") ~array ~idx ~@idxs))))
 
 (core/defmacro aset
-  ([a i v]
-   (core/list 'js* "(~{}[~{}] = ~{})" a i v))
-  ([a idx idx2 & idxv]
+  ([array idx val]
+   (core/list 'js* "(~{}[~{}] = ~{})" array idx val))
+  ([array idx idx2 & idxv]
    (core/let [n    (core/dec (count idxv))
               astr (apply core/str (repeat n "[~{}]"))]
-     `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~a ~idx ~idx2 ~@idxv))))
+     `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~array ~idx ~idx2 ~@idxv))))
 
 (core/defmacro unsafe-get
   "INTERNAL. Compiles to JavaScript property access using bracket notation. Does

@@ -545,6 +545,26 @@
   (is (= 0 (loop [x 0] (cond-> x false recur))))
   (is (= 0 (loop [x 0] (cond->> x false recur)))))
 
+(deftest aget-test
+  (is (= 11 (aget #js [10 11 12] 1)))
+  (is (= 11 (apply aget [#js [10 11 12] 1])))
+  (is (= 3 (aget #js [1 2 #js [3 4]] 2 0)))
+  (is (= 3 (apply aget [#js [1 2 #js [3 4]] 2 0]))))
+
+(deftest aset-test
+  (let [array #js [10 11 12]]
+    (is (= 13 (aset array 1 13)))
+    (is (= 13 (aget array 1))))
+  (let [array #js [10 11 12]]
+    (is (= 13 (apply aset [array 1 13])))
+    (is (= 13 (aget array 1))))
+  (let [array #js [1 2 #js [3 4]]]
+    (is (= 13 (aset array 2 0 13)))
+    (is (= 13 (aget array 2 0))))
+  (let [array #js [1 2 #js [3 4]]]
+    (is (= 13 (apply aset [array 2 0 13])))
+    (is (= 13 (aget array 2 0)))))
+
 (deftest unsafe-get-test
   (is (= 1 (unsafe-get #js {:a 1} "a")))
   (is (nil? (unsafe-get #js {:a 1} "b")))

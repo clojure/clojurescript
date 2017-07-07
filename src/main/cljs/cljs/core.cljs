@@ -413,16 +413,17 @@
         a))))
 
 (defn aget
-  "Returns the value at the index."
-  ([array i]
-     (cljs.core/aget array i))
-  ([array i & idxs]
-     (apply aget (aget array i) idxs)))
+  "Returns the value at the index/indices. Works on JavaScript arrays."
+  ([array idx]
+     (cljs.core/aget array idx))
+  ([array idx & idxs]
+     (apply aget (aget array idx) idxs)))
 
 (defn aset
-  "Sets the value at the index."
-  ([array i val]
-    (cljs.core/aset array i val))
+  "Sets the value at the index/indices. Works on JavaScript arrays.
+  Returns val."
+  ([array idx val]
+    (cljs.core/aset array idx val))
   ([array idx idx2 & idxv]
     (apply aset (aget array idx) idx2 idxv)))
 
