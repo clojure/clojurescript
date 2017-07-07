@@ -29,12 +29,12 @@
     (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)]
       (is (= {:foreign-libs []
               :ups-foreign-libs []
-              :libs ["out/src/test/cljs/react.js"
+              :libs ["out/src/test/cljs/reactJS.js"
                      "out/src/test/cljs/Circle.js"]
               :closure-warnings {:non-standard-jsdoc :off}}
             (env/with-compiler-env cenv
               (closure/process-js-modules
-                {:foreign-libs [{:file        "src/test/cljs/react.js"
+                {:foreign-libs [{:file        "src/test/cljs/reactJS.js"
                                  :provides    ["React"]
                                  :module-type :commonjs}
                                 {:file        "src/test/cljs/Circle.js"
@@ -44,7 +44,7 @@
                  :closure-warnings {:non-standard-jsdoc :off}})))
         "processed modules are added to :libs"))
 
-    (is (= {"React" "module$src$test$cljs$react"
+    (is (= {"React" "module$src$test$cljs$reactJS"
             "Circle" "module$src$test$cljs$Circle"}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))
@@ -110,7 +110,7 @@
             (env/with-compiler-env cenv
               (closure/process-js-modules
                 {:optimizations :simple
-                 :foreign-libs [{:file        "src/test/cljs/react.js"
+                 :foreign-libs [{:file        "src/test/cljs/reactJS.js"
                                  :file-min    "src/test/cljs/react-min.js"
                                  :provides    ["React"]
                                  :module-type :commonjs}

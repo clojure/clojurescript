@@ -1,4 +1,4 @@
-var React = require('./react');
+var React = require('./reactJS');
 
 var Circle = React.createClass({
   render: function() {

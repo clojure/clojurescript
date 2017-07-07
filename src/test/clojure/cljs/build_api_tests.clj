@@ -8,13 +8,13 @@
 
 (ns cljs.build-api-tests
   (:refer-clojure :exclude [compile])
-  (:use clojure.test)
   (:import java.io.File)
-  (:require [clojure.java.io :as io]
+  (:require [clojure.test :refer [deftest is testing]]
+            [clojure.java.io :as io]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.test-util :as test]
-            [cljs.build.api :as build :refer [build]]))
+            [cljs.build.api :as build]))
 
 (deftest test-target-file-for-cljs-ns
   (is (= (.getPath (build/target-file-for-cljs-ns 'example.core-lib nil))
@@ -126,7 +126,7 @@
     (.deleteOnExit app-tmp)
     (is (every? #(zero? (.length %)) [common-tmp app-tmp])
       "The initial files are empty")
-    (build srcs opts)
+    (build/build srcs opts)
     (is (not (every? #(zero? (.length %)) [common-tmp app-tmp]))
       "The files are not empty after compilation")))
 
@@ -135,7 +135,7 @@
         project (test/project-with-modules (str out))
         modules (-> project :opts :modules)]
     (test/delete-out-files out)
-    (build (build/inputs (:inputs project)) (:opts project))
+    (build/build (build/inputs (:inputs project)) (:opts project))
     (is (re-find #"Loading modules A and B" (slurp (-> modules :cljs-base :output-to))))
     (is (re-find #"Module A loaded" (slurp (-> modules :module-a :output-to))))
     (is (re-find #"Module B loaded" (slurp (-> modules :module-b :output-to))))))
@@ -149,7 +149,7 @@
               :output-dir (str out)
               :target :nodejs}]
     (test/delete-out-files out)
-    (build (build/inputs (io/file root "foreign_libs") (io/file root "thirdparty")) opts)
+    (build/build (build/inputs (io/file root "foreign_libs") (io/file root "thirdparty")) opts)
     (let [foreign-lib-file (io/file out (-> opts :foreign-libs first :file))]
       (is (.exists foreign-lib-file))
       (is (= (->> (slurp (io/file out "foreign_libs" "core.js"))
@@ -161,7 +161,7 @@
   (let [out-file (io/file "out/main.js")]
     (.delete out-file)
     (try
-      (build (build/inputs "src/test/cljs_build")
+      (build/build (build/inputs "src/test/cljs_build")
         {:main 'circular-deps.a
          :optimizations :none
          :verbose true
@@ -188,11 +188,43 @@
   (test/delete-out-files)
   (let [project (merge-with merge (loader-test-project "out"))
         loader (io/file "out" "cljs" "loader.js")]
-    (build (build/inputs (:inputs project)) (:opts project))
+    (build/build (build/inputs (:inputs project)) (:opts project))
     (is (.exists loader))
     (is (not (nil? (re-find #"/loader_test/foo\.js" (slurp loader))))))
   (test/delete-out-files)
   (let [project (merge-with merge (loader-test-project "out")
                   {:opts {:optimizations :advanced
                           :source-map true}})]
-      (build (build/inputs (:inputs project)) (:opts project))))
+      (build/build (build/inputs (:inputs project)) (:opts project))))
+
+(deftest test-npm-deps
+  (testing "simplest case, require"
+    (let [out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts {:main 'npm-deps-test.core
+                                        :output-dir out
+                                        :optimizations :none
+                                        :npm-deps {:left-pad "1.1.3"}
+                                        :closure-warnings {:check-types :off}}}
+          cenv (env/default-compiler-env)]
+      (test/delete-out-files out)
+      (build/build (build/inputs (io/file inputs "npm_deps_test/core.cljs")) opts cenv)
+      (is (.exists (io/file out "node_modules/left-pad/index.js")))
+      (is (contains? (:js-module-index @cenv) "left-pad"))))
+  (testing "mix of symbol & string-based requires"
+    (let [out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts {:main 'npm-deps-test.string-requires
+                                        :output-dir out
+                                        :optimizations :none
+                                        :npm-deps {:react "15.6.1"
+                                                   :react-dom "15.6.1"}
+                                        :closure-warnings {:check-types :off
+                                                           :non-standard-jsdoc :off}}}
+          cenv (env/default-compiler-env)]
+      (test/delete-out-files out)
+      (test/delete-out-files "node_modules")
+      (build/build (build/inputs (io/file inputs "npm_deps_test/string_requires.cljs")) opts cenv)
+      (is (.exists (io/file out "node_modules/react/react.js")))
+      (is (contains? (:js-module-index @cenv) "react"))
+      (is (contains? (:js-module-index @cenv) "react-dom/server")))))
