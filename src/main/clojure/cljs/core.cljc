@@ -3190,7 +3190,9 @@
 (core/defmacro resolve
   "Returns the var to which a symbol will be resolved in the namespace else nil."
   [quoted-sym]
-  (core/assert (core/and (seq? quoted-sym) (= (first quoted-sym 'quote)))
+  (core/assert
+    (core/and (seq? quoted-sym)
+              (= 'quote (first quoted-sym)))
     "Argument to resolve must be a quoted symbol")
   (core/let [sym (second quoted-sym)
              env &env
