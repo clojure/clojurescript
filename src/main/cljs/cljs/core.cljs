@@ -10576,7 +10576,7 @@ reduces them without incurring seq initialization"
       (when-not target-fn
         (throw-no-method-error name dispatch-val))
       (apply target-fn a b c d e f g h i j k l m n o p q r s t rest)))
-    
+
   IMultiFn
   (-reset [mf]
     (swap! method-table (fn [mf] {}))
@@ -11005,7 +11005,8 @@ reduces them without incurring seq initialization"
       (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
 
 (defn ns-interns*
-  "Bootstrap only."
+  "Returns a map of the intern mappings for the namespace.
+  Bootstrap only."
   [sym]
   (let [ns-obj (find-ns-obj sym)
         ns     (Namespace. ns-obj sym)]
@@ -11017,14 +11018,15 @@ reduces them without incurring seq initialization"
       (reduce step {} (js-keys ns-obj)))))
 
 (defn create-ns
-  "Bootstrap only."
+  "Create a new namespace named by the symbol. Bootstrap only."
   ([sym]
    (create-ns sym (find-ns-obj sym)))
   ([sym ns-obj]
    (Namespace. ns-obj sym)))
 
 (defn find-ns
-  "Bootstrap only."
+  "Returns the namespace named by the symbol or nil if it doesn't exist.
+  Bootstrap only."
   [ns]
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
@@ -11038,7 +11040,8 @@ reduces them without incurring seq initialization"
             new-ns))))))
 
 (defn find-macros-ns
-  "Bootstrap only."
+  "Returns the macros namespace named by the symbol or nil if it doesn't exist.
+  Bootstrap only."
   [ns]
   (when (nil? NS_CACHE)
     (set! NS_CACHE (atom {})))
@@ -11056,6 +11059,7 @@ reduces them without incurring seq initialization"
            new-ns))))))
 
 (defn ns-name
-  "Bootstrap only."
+  "Returns the name of the namespace, a Namespace object.
+  Bootstrap only."
   [ns-obj]
   (.-name ns-obj))
