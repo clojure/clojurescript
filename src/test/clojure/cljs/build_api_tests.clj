@@ -235,3 +235,20 @@
       (is (contains? (:js-module-index @cenv) "react"))
       (is (contains? (:js-module-index @cenv) "react-dom/server"))))
   (.delete (io/file "package.json")))
+
+(deftest test-preloads
+  (let [out (.getPath (io/file (test/tmp-dir) "preloads-test-out"))
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs"))
+                               :opts {:main 'preloads-test.core
+                                      :preloads '[preloads-test.preload]
+                                      :output-dir out
+                                      :optimizations :none
+                                      :npm-deps {:left-pad "1.1.3"}
+                                      :closure-warnings {:check-types :off}}}
+        cenv (env/default-compiler-env)]
+    (test/delete-out-files out)
+    (build/build (build/inputs
+                   (io/file inputs "preloads_test/core.cljs"))
+                 opts cenv)
+    (is (.exists (io/file out "preloads_test/preload.cljs")))
+    (is (contains? (get-in @cenv [::ana/namespaces 'preloads-test.preload :defs]) 'preload-var))))
