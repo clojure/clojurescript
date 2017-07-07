@@ -198,6 +198,7 @@
       (build/build (build/inputs (:inputs project)) (:opts project))))
 
 (deftest test-npm-deps
+  (spit (io/file "package.json") "{}")
   (testing "simplest case, require"
     (let [out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
           {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
@@ -227,4 +228,5 @@
       (build/build (build/inputs (io/file inputs "npm_deps_test/string_requires.cljs")) opts cenv)
       (is (.exists (io/file out "node_modules/react/react.js")))
       (is (contains? (:js-module-index @cenv) "react"))
-      (is (contains? (:js-module-index @cenv) "react-dom/server")))))
+      (is (contains? (:js-module-index @cenv) "react-dom/server"))))
+  (.delete (io/file "package.json")))
