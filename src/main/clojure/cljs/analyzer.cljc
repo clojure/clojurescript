@@ -134,8 +134,7 @@
    :extending-base-js-type true
    :invoke-ctor true
    :invalid-arithmetic true
-   :invalid-aget false
-   :invalid-aset false
+   :invalid-array-access false
    :protocol-invalid-method true
    :protocol-duped-method true
    :protocol-multiple-impls true
@@ -393,23 +392,24 @@
   [warning-type info]
   (str (:js-op info) ", all arguments must be numbers, got " (:types info) " instead."))
 
-(defmethod error-message :invalid-aget
-  [warning-type info]
-  (str (:js-op info) ", arguments must be an array followed by numeric indices, got " (:types info) " instead"
-    (when (or (= 'object (first (:types info)))
-              (every? #{'string} (rest (:types info))))
-      (str " (consider "
-        (if (== 2 (count (:types info)))
-          "goog.object/get"
-          "goog.object/getValueByKeys")
-        " for object access)"))))
+(defmethod error-message :invalid-array-access
+  [warning-type {:keys [js-op types]}]
+  (case js-op
+    cljs.core/aget
+    (str js-op ", arguments must be an array followed by numeric indices, got " types " instead"
+      (when (or (= 'object (first types))
+                (every? #{'string} (rest types)))
+        (str " (consider "
+          (if (== 2 (count types))
+            "goog.object/get"
+            "goog.object/getValueByKeys")
+          " for object access)")))
 
-(defmethod error-message :invalid-aset
-  [warning-type info]
-  (str (:js-op info) ", arguments must be an array, followed by numeric indices, followed by a value, got " (:types info) " instead"
-    (when (or (= 'object (first (:types info)))
-              (every? #{'string} (butlast (rest (:types info)))))
-      " (consider goog.object/set for object access)")))
+    cljs.core/aset
+    (str js-op ", arguments must be an array, followed by numeric indices, followed by a value, got " types " instead"
+      (when (or (= 'object (first types))
+                (every? #{'string} (butlast (rest types))))
+        " (consider goog.object/set for object access)"))))
 
 (defmethod error-message :invoke-ctor
   [warning-type info]
@@ -2900,11 +2900,11 @@
     (when (true? numeric)
       (validate :invalid-arithmetic #(every? numeric-type? %)))
     (when (op-match? 'cljs.core/aget)
-      (validate :invalid-aget #(and (array-type? (first %))
-                                    (every? numeric-type? (rest %)))))
+      (validate :invalid-array-access #(and (array-type? (first %))
+                                            (every? numeric-type? (rest %)))))
     (when (op-match? 'cljs.core/aset)
-      (validate :invalid-aset #(and (array-type? (first %))
-                                    (every? numeric-type? (butlast (rest %))))))
+      (validate :invalid-array-access #(and (array-type? (first %))
+                                            (every? numeric-type? (butlast (rest %))))))
     {:op :js
      :env env
      :segs segs

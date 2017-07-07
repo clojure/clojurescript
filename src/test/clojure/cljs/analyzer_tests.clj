@@ -743,7 +743,7 @@
     (is (= ["Use of undeclared Var cljs.user/x"] @ws))))
 
 (deftest test-cljs-2148
-  (binding [a/*cljs-warnings* (assoc a/*cljs-warnings* :invalid-aget true :invalid-aset true)]
+  (binding [a/*cljs-warnings* (assoc a/*cljs-warnings* :invalid-array-access true)]
     (let [ws (atom [])]
       (try
         (a/with-warning-handlers [(collecting-warning-handler ws)]
