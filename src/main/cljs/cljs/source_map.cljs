@@ -56,11 +56,11 @@
   [seg source-map]
   (let [[gcol source line col name] seg]
    {:gcol   gcol
-    :source (unsafe-get (gobj/get source-map "sources") source)
+    :source (aget (gobj/get source-map "sources") source)
     :line   line
     :col    col
     :name   (when-let [name (-> seg meta :name)]
-              (unsafe-get (gobj/get source-map "names") name))}))
+              (aget (gobj/get source-map "names") name))}))
 
 (defn seg-combine
   "Combine a source map segment vector and a relative
