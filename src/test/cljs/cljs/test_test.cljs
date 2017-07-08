@@ -27,3 +27,6 @@
   (let [[line column] (ct/js-line-and-column "foo")]
     (is (nan? line))
     (is (nan? column))))
+
+(deftest test-js-filename
+  (is (= "core-advanced-test.js" (ct/js-filename "nW@builds/out-adv/core-advanced-test.js:1191:77"))))

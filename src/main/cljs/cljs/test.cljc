@@ -56,6 +56,10 @@
           :expected '~form, :actual value#}))
      value#))
 
+(defmacro ^:private cljs-output-dir []
+  (let [{:keys [output-dir]} (ana-api/get-options)]
+    (or output-dir "out")))
+
 ;; =============================================================================
 ;; Assertion Methods
 
