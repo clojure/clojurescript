@@ -73,3 +73,13 @@
 
 (deftest test-string-provides
   (is (= ["CB0BFFB"] (deps/-provides "var x = 42;"))))
+
+(deftest test-lib-rel-path-cljs-2152
+  (let [ijs {:provides ["tabby"]
+             :url (io/as-url (io/file "src/test/cljs/js_libs/tabby.js"))
+             :lib-path "src/test/cljs/js_libs"}]
+    (is (= (closure/lib-rel-path ijs) "tabby.js")))
+  (let [ijs {:provides ["tabby"]
+             :url (io/as-url (io/file "src/test/cljs/js_libs/tabby.js"))
+             :lib-path (.getAbsolutePath (io/file "src/test/cljs/js_libs/tabby.js"))}]
+    (is (= (closure/lib-rel-path ijs) "tabby.js"))))

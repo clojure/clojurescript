@@ -1571,7 +1571,7 @@
     (if (.endsWith lib-path ".js")
       (util/get-name url)
       (let [path (util/path url)]
-        (subs path (+ (.lastIndexOf path lib-path) (.length lib-path)))))))
+        (subs path (+ (inc (.lastIndexOf path lib-path)) (.length lib-path)))))))
 
 (defn ^String rel-output-path
   "Given a IJavaScript which points to a .js file either in memory, in a jar file,

@@ -253,3 +253,20 @@
                  opts cenv)
     (is (.exists (io/file out "preloads_test/preload.cljs")))
     (is (contains? (get-in @cenv [::ana/namespaces 'preloads-test.preload :defs]) 'preload-var))))
+
+(deftest test-libs-cljs-2152
+  (let [out (.getPath (io/file (test/tmp-dir) "libs-test-out"))
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                               :opts {:main 'libs-test.core
+                                      :output-dir out
+                                      :libs ["src/test/cljs/js_libs"]
+                                      :optimizations :none
+                                      :closure-warnings {:check-types :off}}}
+        cenv (env/default-compiler-env)]
+    (test/delete-out-files out)
+    (build/build (build/inputs
+                   (io/file "src/test/cljs_build/libs_test/core.cljs") (io/file "src/test/cljs/js_libs")
+                   (io/file inputs "libs_test/core.cljs")
+                   (io/file "src/test/cljs/js_libs"))
+      opts cenv)
+    (is (.exists (io/file out "tabby.js")))))
