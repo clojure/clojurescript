@@ -148,8 +148,11 @@
   [x]
   {:pre [(or (file? x) (url? x))]}
   (letfn [(strip-user-dir [s]
-            (let [user-dir (str (System/getProperty "user.dir") File/separator)
-                  user-path (.getFile (.toURL (io/file user-dir)))]
+            (let [user-dir (System/getProperty "user.dir")
+                  user-path (.getFile (.toURL (io/file user-dir)))
+                  user-path (cond-> user-path
+                              (not (.endsWith user-path File/separator))
+                              (str File/separator))]
               (string/replace s user-path "")))]
     (if (file? x)
       (strip-user-dir (.getAbsolutePath x))

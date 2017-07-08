@@ -7,7 +7,8 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.util-tests
-  (:require [cljs.util :as util])
+  (:require [cljs.util :as util]
+            [clojure.java.io :as io])
   (:use clojure.test))
 
 (deftest test-levenshtein-distance
@@ -26,3 +27,10 @@
     (is (= [[:bogus nil]
             [:optimisations :optimizations]]
           (sort (util/unknown-opts #{:optimisations :bogus} #{:optimizations :static-fns}))))))
+
+(deftest test-relative-name
+  (let [initial (System/getProperty "user.dir")]
+    (System/setProperty "user.dir" "/Users/user/clojurescript")
+    (is (= (util/relative-name (io/file "/Users/user/clojurescript/out/index.js")) "out/index.js"))
+    (is (= (util/relative-name (io/as-url (io/file "/Users/user/clojurescript/out/index.js"))) "out/index.js"))
+    (System/setProperty "user.dir" initial)))
