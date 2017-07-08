@@ -211,7 +211,8 @@
                                         :output-dir out
                                         :optimizations :none
                                         :npm-deps {:left-pad "1.1.3"}
-                                        :closure-warnings {:check-types :off}}}
+                                        :closure-warnings {:check-types :off
+                                                           :non-standard-jsdoc :off}}}
           cenv (env/default-compiler-env)]
       (test/delete-out-files out)
       (build/build (build/inputs (io/file inputs "npm_deps_test/core.cljs")) opts cenv)
