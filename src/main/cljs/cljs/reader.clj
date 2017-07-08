@@ -13,6 +13,6 @@
   (let [data-readers
         (->> (get @env/*compiler* :cljs.analyzer/data-readers)
           (map (fn [[k v]]
-                 [(str k) `(fn [x#] (~(vary-meta v assoc :cljs.analyzer/no-resolve true) x#))]))
+                 `['~k (fn [x#] (~(vary-meta v assoc :cljs.analyzer/no-resolve true) x#))]))
           (into {}))]
     `(do (merge ~default-readers ~data-readers))))

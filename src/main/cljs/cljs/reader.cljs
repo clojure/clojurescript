@@ -133,10 +133,11 @@
 
 (def ^:dynamic *tag-table*
   (atom
-    {'inst  read-date
-     'uuid  read-uuid
-     'queue read-queue
-     'js    read-js}))
+    (add-data-readers
+      {'inst  read-date
+       'uuid  read-uuid
+       'queue read-queue
+       'js    read-js})))
 
 (defn read
   "Reads the first object from an cljs.tools.reader.reader-types/IPushbackReader.

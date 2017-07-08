@@ -102,27 +102,28 @@ Usage: *hello*
   #_"(add-to-buffer\n  this\n  (make-buffer-blob (str (char c)) nil))"
   )
 
-(simple-tests pprint-reader-macro-test
-  ;;I'm not sure this will work without significant work on cljs. Short story, cljs
-  ;;reader only takes valid EDN, so #(* % %) won't work.
-  ;;see http://stackoverflow.com/a/25712675/546321 for more details
-  #_(with-pprint-dispatch code-dispatch
-    (write (reader/read-string "(map #(first %) [[1 2 3] [4 5 6] [7]])")
-           :stream nil))
-  #_"(map #(first %) [[1 2 3] [4 5 6] [7]])"
-
-  ;;TODO Not sure what to do about this test due to the reader handling of `@`
-  (with-pprint-dispatch code-dispatch
-    (write (reader/read-string "@@(ref (ref 1))")
-           :stream nil))
-  "(deref (deref (ref (ref 1))))"
-  #_"@@(ref (ref 1))"
-
-  (with-pprint-dispatch code-dispatch
-    (write (reader/read-string "'foo")
-           :stream nil))
-  "'foo"
-  )
+;; Not a valid test now that we use tools.reader - David
+;(simple-tests pprint-reader-macro-test
+;  ;;I'm not sure this will work without significant work on cljs. Short story, cljs
+;  ;;reader only takes valid EDN, so #(* % %) won't work.
+;  ;;see http://stackoverflow.com/a/25712675/546321 for more details
+;  #_(with-pprint-dispatch code-dispatch
+;    (write (reader/read-string "(map #(first %) [[1 2 3] [4 5 6] [7]])")
+;           :stream nil))
+;  #_"(map #(first %) [[1 2 3] [4 5 6] [7]])"
+;
+;  ;;TODO Not sure what to do about this test due to the reader handling of `@`
+;  (with-pprint-dispatch code-dispatch
+;    (write (reader/read-string "@@(ref (ref 1))")
+;           :stream nil))
+;  "(deref (deref (ref (ref 1))))"
+;  #_"@@(ref (ref 1))"
+;
+;  (with-pprint-dispatch code-dispatch
+;    (write (reader/read-string "'foo")
+;           :stream nil))
+;  "'foo"
+;  )
 
 (simple-tests xp-miser-test
   (binding [*print-pprint-dispatch* simple-dispatch
