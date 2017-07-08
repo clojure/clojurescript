@@ -5,7 +5,7 @@ rm -rf out
 rm -rf target
 mkdir -p builds/out-adv
 
-possible=4
+possible=5
 ran=0
 
 if ! bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\"}" > builds/out-adv/core-advanced-test.js; then
@@ -42,6 +42,14 @@ if [ "$NASHORN_HOME" = "" ]; then
 else
   echo "Testing with Nashorn"
   "${NASHORN_HOME}/jjs" builds/out-adv/core-advanced-test.js
+  ran=$((ran+1))
+fi
+
+if [ "$CHAKRACORE_HOME" = "" ]; then
+  echo "CHAKRACORE_HOME not set, skipping ChakraCore tests"
+else
+  echo "Testing with ChakraCore"
+  "${CHAKRACORE_HOME}/ch" builds/out-adv/core-advanced-test.js
   ran=$((ran+1))
 fi
 

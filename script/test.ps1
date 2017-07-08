@@ -7,7 +7,8 @@ $targets =
     @{ env="V8_HOME"; name="V8"; cmd={ & "$env:V8_HOME\d8" $testjs } },
     @{ env="SPIDERMONKEY_HOME"; name="SpiderMonkey"; cmd={ & "$env:SPIDERMONKEY_HOME\js" -f $testjs } },
     @{ env="JSC_HOME"; name="JavaScriptCore"; cmd={ & "$env:JSC_HOME\jsc" -f $testjs } },
-    @{ env="NASHORN_HOME"; name="Nashorn"; cmd={ & "$env:NASHORN_HOME\jjs" $testjs } }
+    @{ env="NASHORN_HOME"; name="Nashorn"; cmd={ & "$env:NASHORN_HOME\jjs" $testjs } },
+    @{ env="CHAKRACORE_HOME"; name="ChakraCore"; cmd={ & "$env:CHAKRACORE_HOME\ch" $testjs } }
 $ran = 0
 
 $opts = '{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :output-dir \"builds\\out-adv\"}'

@@ -9,6 +9,8 @@ before_install:
   - wget https://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central/jsshell-linux-x86_64.zip
   - unzip jsshell-linux-x86_64.zip -d spidermoney
   - sudo apt-get install -y libjavascriptcoregtk-3.0-bin
+  - wget https://aka.ms/chakracore/cc_linux_x64_1_5_2 -O chakra-core.tar.gz
+  - tar xvzf chakra-core.tar.gz
 
 before_script:
   - script/bootstrap
@@ -22,6 +24,8 @@ script:
   - ./spidermoney/js -f builds/out-adv/core-advanced-test.js | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - jjs builds/out-adv/core-advanced-test.js | tee test-out.txt
+  - grep '0 failures, 0 errors.' test-out.txt
+  - ./ChakraCoreFiles/bin/ch builds/out-adv/core-advanced-test.js | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - script/test-self-host | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt

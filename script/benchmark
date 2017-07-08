@@ -32,3 +32,10 @@ else
   echo "Benchmarking with Nashorn"
   "${NASHORN_HOME}/jjs" builds/out-adv-bench/core-advanced-benchmark.js
 fi
+
+if [ "$CHAKRACORE_HOME" = "" ]; then
+  echo "CHAKRACORE_HOME not set, skipping ChakraCore benchmarks"
+else
+  echo "Benchmarking with ChakraCore"
+  "${CHAKRACORE_HOME}/ch" builds/out-adv-bench/core-advanced-benchmark.js
+fi
