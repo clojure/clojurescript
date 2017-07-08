@@ -270,6 +270,11 @@
   argv as arguments"}
   *main-cli-fn* nil)
 
+(def
+  ^{:doc "A sequence of the supplied command line arguments, or nil if
+  none were supplied"}
+  *command-line-args* nil)
+
 (defn type
   "Return x's constructor."
   [x]
