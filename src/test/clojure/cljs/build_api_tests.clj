@@ -158,13 +158,15 @@
              (str foreign-lib-file))))))
 
 (deftest cljs-1537-circular-deps
-  (let [out-file (io/file "out/main.js")]
+  (let [out-file (io/file "out/main.js")
+        root "src/test/cljs_build"]
     (.delete out-file)
     (try
-      (build/build (build/inputs "src/test/cljs_build")
+      (build/build (build/inputs
+                     (io/file (str root "a.cljs"))
+                     (io/file (str root "b.cljs")))
         {:main 'circular-deps.a
          :optimizations :none
-         :verbose true
          :output-to "out"})
       (is false)
       (catch Throwable e
@@ -186,9 +188,9 @@
 
 (deftest cljs-2077-test-loader
   (test/delete-out-files)
-  (let [project (merge-with merge (loader-test-project "out"))
+  (let [{:keys [inputs opts]} (merge-with merge (loader-test-project "out"))
         loader (io/file "out" "cljs" "loader.js")]
-    (build/build (build/inputs (:inputs project)) (:opts project))
+    (build/build (build/inputs (io/file inputs "bar.cljs") (io/file inputs "foo.cljs")) opts)
     (is (.exists loader))
     (is (not (nil? (re-find #"/loader_test/foo\.js" (slurp loader))))))
   (test/delete-out-files)
@@ -202,7 +204,12 @@
                     {:opts {:optimizations :whitespace}})]
       (build/build (build/inputs (:inputs project)) (:opts project)))))
 
+(defn delete-node-modules []
+  (doseq [f (file-seq (io/file "node_modules"))]
+    (.delete f)))
+
 (deftest test-npm-deps
+  (delete-node-modules)
   (spit (io/file "package.json") "{}")
   (testing "simplest case, require"
     (let [out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
@@ -211,8 +218,7 @@
                                         :output-dir out
                                         :optimizations :none
                                         :npm-deps {:left-pad "1.1.3"}
-                                        :closure-warnings {:check-types :off
-                                                           :non-standard-jsdoc :off}}}
+                                        :closure-warnings {:check-types :off}}}
           cenv (env/default-compiler-env)]
       (test/delete-out-files out)
       (build/build (build/inputs (io/file inputs "npm_deps_test/core.cljs")) opts cenv)
@@ -230,12 +236,13 @@
                                                            :non-standard-jsdoc :off}}}
           cenv (env/default-compiler-env)]
       (test/delete-out-files out)
-      (test/delete-out-files "node_modules")
+      (delete-node-modules)
       (build/build (build/inputs (io/file inputs "npm_deps_test/string_requires.cljs")) opts cenv)
       (is (.exists (io/file out "node_modules/react/react.js")))
       (is (contains? (:js-module-index @cenv) "react"))
       (is (contains? (:js-module-index @cenv) "react-dom/server"))))
-  (.delete (io/file "package.json")))
+  (.delete (io/file "package.json"))
+  (delete-node-modules))
 
 (deftest test-preloads
   (let [out (.getPath (io/file (test/tmp-dir) "preloads-test-out"))
