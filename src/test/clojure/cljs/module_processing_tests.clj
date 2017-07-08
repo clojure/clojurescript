@@ -9,7 +9,7 @@
             [cljs.test-util :as test]))
 
 ;; Hard coded JSX transform for the test case
-(defmethod closure/js-transforms :jsx [ijs _]
+(defn preprocess-jsx [ijs _]
   (assoc ijs :source (clojure.string/replace
                        (:source ijs)
                        (re-pattern (str "\\(\n"
@@ -21,6 +21,9 @@
                        (str " React.createElement(\"svg\", {width:\"200px\", height:\"200px\", className:\"center\"}, "
                             "React.createElement(\"circle\", {cx:\"100px\", cy:\"100px\", r:\"100px\", fill:this.props.color})"
                             ")"))))
+
+(defmethod closure/js-transforms :jsx [ijs opts]
+  (preprocess-jsx ijs opts))
 
 (deftest commonjs-module-processing
   (test/delete-out-files)
@@ -123,5 +126,32 @@
         "processed modules are added to :libs"))
     (is (= {"React" "module$src$test$cljs$react-min"
             "Circle" "module$src$test$cljs$Circle-min"}
+           (:js-module-index @cenv))
+        "Processed modules are added to :js-module-index")))
+
+(deftest commonjs-module-processing-preprocess-symbol
+  (test/delete-out-files)
+  (let [cenv (env/default-compiler-env)]
+    ;; Reset load-library cache so that changes to processed files are noticed
+    (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)]
+      (is (= {:foreign-libs []
+              :ups-foreign-libs []
+              :libs ["out/src/test/cljs/reactJS.js"
+                     "out/src/test/cljs/Circle.js"]
+              :closure-warnings {:non-standard-jsdoc :off}}
+            (env/with-compiler-env cenv
+              (closure/process-js-modules
+                {:foreign-libs [{:file        "src/test/cljs/reactJS.js"
+                                 :provides    ["React"]
+                                 :module-type :commonjs}
+                                {:file        "src/test/cljs/Circle.js"
+                                 :provides    ["Circle"]
+                                 :module-type :commonjs
+                                 :preprocess  'cljs.module-processing-tests/preprocess-jsx}]
+                 :closure-warnings {:non-standard-jsdoc :off}})))
+        "processed modules are added to :libs"))
+
+    (is (= {"React" "module$src$test$cljs$reactJS"
+            "Circle" "module$src$test$cljs$Circle"}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))
