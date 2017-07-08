@@ -8,4 +8,5 @@
 
 {cljs/tag clojure.core/identity
  cljs/inc clojure.core/inc
- cljs/union clojure.set/union}
+ cljs/union clojure.set/union
+ test/custom-identity data-readers-test.core/custom-identity}

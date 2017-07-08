@@ -252,7 +252,6 @@
                                       :preloads '[preloads-test.preload]
                                       :output-dir out
                                       :optimizations :none
-                                      :npm-deps {:left-pad "1.1.3"}
                                       :closure-warnings {:check-types :off}}}
         cenv (env/default-compiler-env)]
     (test/delete-out-files out)
@@ -363,3 +362,15 @@
       (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$react_dom\$server\.renderToString"
                             (slurp (io/file out "emit_global_requires_test/core.js"))))))
       (is (empty? @ws)))))
+
+(deftest test-data-readers
+  (let [out (.getPath (io/file (test/tmp-dir) "data-readers-test-out"))
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs"))
+                               :opts {:main 'data-readers-test.core
+                                      :output-dir out
+                                      :optimizations :none
+                                      :closure-warnings {:check-types :off}}}
+        cenv (env/default-compiler-env)]
+    (test/delete-out-files out)
+    (build/build (build/inputs (io/file inputs "data_readers_test")) opts cenv)
+    (is (contains? (-> @cenv ::ana/data-readers) 'test/custom-identity))))

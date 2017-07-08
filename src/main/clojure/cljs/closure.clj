@@ -1752,6 +1752,7 @@
         (do
           (when (or ana/*verbose* (:verbose opts))
             (util/debug-prn "Copying" (str source-url) "to" (str out-file)))
+          (util/mkdirs out-file)
           (spit out-file (slurp source-url))
           (.setLastModified ^File out-file (util/last-modified source-url))))
       js)))
@@ -2367,7 +2368,14 @@
 (def get-data-readers (memoize get-data-readers*))
 
 (defn load-data-readers! [compiler]
-  (swap! compiler update-in [:cljs.analyzer/data-readers] merge (get-data-readers)))
+  (let [data-readers (get-data-readers)
+        nses (map (comp symbol namespace) (vals data-readers))]
+    (swap! compiler update-in [:cljs.analyzer/data-readers] merge (get-data-readers))
+    (doseq [ns nses]
+      (try
+        (locking ana/load-mutex
+          (require ns))
+        (catch Throwable _)))))
 
 (defn add-externs-sources [opts]
   (cond-> opts
