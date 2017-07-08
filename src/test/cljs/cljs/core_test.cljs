@@ -1393,6 +1393,11 @@
     (is (contains? (ns-imports 'clojure.string) 'StringBuffer))
     (is (= (find (ns-imports 'clojure.string) 'StringBuffer)
           ['StringBuffer goog.string.StringBuffer]))))
+(deftest test-cljs-2190
+  (binding [*print-namespace-maps* true]
+    (testing "printing a javascript map with a slash on keyword"
+      (is (= "#js {:foo/bar 33}" (pr-str (doto (js-obj) (gobject/set "foo/bar" 33)))))
+      (is (= "#js {:foo/bar #:var{:quux 66}}" (pr-str (doto (js-obj) (gobject/set "foo/bar" {:var/quux 66}))))))))
 
 (comment
   ;; ObjMap

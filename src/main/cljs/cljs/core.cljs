@@ -9754,7 +9754,8 @@ reduces them without incurring seq initialization"
     opts (seq m)))
 
 (defn print-map [m print-one writer opts]
-  (let [[ns lift-map] (lift-ns m)]
+  (let [[ns lift-map] (when (map? m)
+                        (lift-ns m))]
     (if ns
       (print-prefix-map (str "#:" ns) lift-map print-one writer opts)
       (print-prefix-map nil m print-one writer opts))))
