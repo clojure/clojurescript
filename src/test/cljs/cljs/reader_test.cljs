@@ -204,31 +204,35 @@
       (is (= (reader/read-string (pr-str x)) x)))))
 
 ;; This need to be enforced elsewhere not during reading - David
-;(deftest testing-cljs-1823
-;      (let [;; PersistentArrayMap
-;            a (try
-;                (reader/read-string "{:a 1 :b 2 :c 3 :a 1}")
-;                :failed-to-throw
-;                (catch js/Error e (ex-message e)))
-;            ;; PersistentHashMap
-;            b (try
-;                (reader/read-string "{:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :h 7 :i 8 :a 1}")
-;                :failed-to-throw
-;                (catch js/Error e (ex-message e)))
-;            ;; PersistentArrayMap backed PHS
-;            c (try
-;                (reader/read-string "#{:a :b :c :d :a}")
-;                :failed-to-throw
-;                (catch js/Error e (ex-message e)))
-;            ;; PersistentHashMap backed PHS
-;            d (try
-;                (reader/read-string "#{:a :b :c :d :e :f :g :h :i :a}")
-;                :failed-to-throw
-;                (catch js/Error e (ex-message e)))]
-;        (is (= "Duplicate key: :a" a))
-;        (is (= "Duplicate key: :a" b))
-;        (is (= "Duplicate key: :a" c))
-;        (is (= "Duplicate key: :a" d))))
+(deftest testing-cljs-1823
+  (let [;; PersistentArrayMap
+        a (try
+            (reader/read-string "{:a 1 :b 2 :c 3 :a 1}")
+            :failed-to-throw
+            (catch js/Error e (ex-message e)))
+        ;; PersistentHashMap
+        b (try
+            (reader/read-string "{:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :h 7 :i 8 :a 1}")
+            :failed-to-throw
+            (catch js/Error e (ex-message e)))
+        ;; Waiting on tools.reader fixes
+        ;;; PersistentArrayMap backed PHS
+        ;c (try
+        ;    (reader/read-string "#{:a :b :c :d :a}")
+        ;    :failed-to-throw
+        ;    (catch js/Error e (ex-message e)))
+        ;;; PersistentHashMap backed PHS
+        ;d (try
+        ;    (reader/read-string "#{:a :b :c :d :e :f :g :h :i :a}")
+        ;    :failed-to-throw
+        ;    (catch js/Error e (ex-message e)))
+        ]
+    (is (= "Map literal contains duplicate key: :a" a))
+    (is (= "Map literal contains duplicate key: :a" b))
+    ;; Waiting on tools.reader fixes - David
+    ;(is (= "Duplicate key: :a" c))
+    ;(is (= "Duplicate key: :a" d))
+    ))
 
 ;; Not relevant now that we rely on tools.reader and it duplicates Clojure's behavior - David
 ;(deftest test-error-messages
