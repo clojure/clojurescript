@@ -421,7 +421,7 @@
   by calling get-spec with the var or full-qualified symbol.
 
   Once registered, function specs are included in doc, checked by
-  instrument, tested by the runner clojure.spec.test.alpha/run-tests, and (if
+  instrument, tested by the runner cljs.spec.test.alpha/run-tests, and (if
   a macro) used to explain errors during macroexpansion.
 
   Note that :fn specs require the presence of :args and :ret specs to
@@ -432,7 +432,7 @@
 
   For example, to register function specs for the symbol function:
 
-  (s/fdef clojure.core/symbol
+  (s/fdef cljs.core/symbol
     :args (s/alt :separate (s/cat :ns string? :n string?)
                  :str string?
                  :sym symbol?)

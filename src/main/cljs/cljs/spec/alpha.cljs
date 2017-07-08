@@ -78,7 +78,7 @@
     x))
 
 (defn regex?
-  "returns x if x is a (clojure.spec) regex op, else logical false"
+  "returns x if x is a (cljs.spec.alpha) regex op, else logical false"
   [x]
   (c/and (::op x) x))
 
@@ -147,8 +147,8 @@
   (keyword-identical? ::invalid ret))
 
 (defn conform
-  "Given a spec and a value, returns :clojure.spec/invalid if value does not match spec,
-  else the (possibly destructured) value."
+  "Given a spec and a value, returns :cljs.spec.alpha/invalid if value does
+  not match spec, else the (possibly destructured) value."
   [spec x]
   (conform* (specize spec) x))
 
