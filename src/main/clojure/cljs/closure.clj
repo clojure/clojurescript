@@ -2352,12 +2352,9 @@
                                (not (false? (:static-fns opts))))
                            (:static-fns opts)
                            ana/*cljs-static-fns*)
-             sources (-find-sources source opts)
-             missing-js-modules (into #{}
-                                  (comp
-                                    (map :missing-js-modules)
-                                    cat)
-                                  sources)
+             sources (env/with-compiler-env (dissoc @compiler-env :js-module-index)
+                       (-find-sources source opts))
+             missing-js-modules (into #{} (comp (map :missing-js-modules) cat) sources)
              all-opts (-> (assoc opts :missing-js-modules missing-js-modules)
                         add-implicit-options
                         process-js-modules)]
