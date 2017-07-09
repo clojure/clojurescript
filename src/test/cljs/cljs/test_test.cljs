@@ -29,4 +29,4 @@
     (is (nan? column))))
 
 (deftest test-js-filename
-  (is (= "core-advanced-test.js" (ct/js-filename "nW@builds/out-adv/core-advanced-test.js:1191:77"))))
+  (is (= "core-advanced-test.js" (ct/js-filename (str "nW@" (ct/cljs-output-dir) "/core-advanced-test.js:1191:77")))))
