@@ -793,7 +793,7 @@
                ana/*cljs-ns* ana/*cljs-ns*
                *cljs-verbose* repl-verbose
                ana/*cljs-warnings*
-               (let [warnings (opts :warnings true)]
+               (let [warnings (opts :warnings)]
                  (merge
                    ana/*cljs-warnings*
                    (if (or (true? warnings)
