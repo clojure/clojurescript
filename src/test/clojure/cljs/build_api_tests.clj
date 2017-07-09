@@ -231,7 +231,8 @@
                                       :output-dir out
                                       :optimizations :none
                                       :npm-deps {:react "15.6.1"
-                                                 :react-dom "15.6.1"}
+                                                 :react-dom "15.6.1"
+                                                 :lodash "4.17.4"}
                                       :closure-warnings {:check-types :off
                                                          :non-standard-jsdoc :off}}}]
     (testing "mix of symbol & string-based requires"

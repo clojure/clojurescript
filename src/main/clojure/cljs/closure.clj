@@ -2033,15 +2033,11 @@
     #(ensure-cljs-base-module % opts)))
 
 (defn add-implicit-options
-  [{:keys [optimizations output-dir npm-deps missing-js-modules]
+  [{:keys [optimizations output-dir]
     :or {optimizations :none
          output-dir "out"}
     :as opts}]
-  (let [opts (cond-> (update opts :foreign-libs
-                       (fn [libs]
-                         (into (index-node-modules
-                                 (into missing-js-modules (keys npm-deps)) opts)
-                           (expand-libs libs))))
+  (let [opts (cond-> opts
                (:closure-defines opts)
                (assoc :closure-defines
                  (into {}
@@ -2334,6 +2330,29 @@
     (:infer-externs opts)
     (assoc :externs-sources (load-externs (dissoc opts :infer-externs)))))
 
+(defn handle-js-modules
+  "Given all Cljs sources (build inputs and dependencies in classpath)
+
+  - find the missing js modules defined using string require
+  - index all the node node modules
+  - process the JS modules (preprocess + convert to Closure JS)o
+  - save js-dependency-index for compilation"
+  [{:keys [npm-deps] :as opts} js-sources compiler-env]
+  (let [missing-js-modules (into #{}
+                                 (comp
+                                   (map :missing-js-modules)
+                                   cat)
+                                 js-sources)
+        opts (-> opts
+                 (update :foreign-libs
+                         (fn [libs]
+                           (into (index-node-modules
+                                   (into missing-js-modules (keys npm-deps)) opts)
+                                 (expand-libs libs))))
+                 process-js-modules)]
+    (swap! compiler-env assoc :js-dependency-index (deps/js-dependency-index opts))
+    opts))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
@@ -2352,12 +2371,8 @@
                                (not (false? (:static-fns opts))))
                            (:static-fns opts)
                            ana/*cljs-static-fns*)
-             sources (env/with-compiler-env (dissoc @compiler-env :js-module-index)
-                       (-find-sources source opts))
-             missing-js-modules (into #{} (comp (map :missing-js-modules) cat) sources)
-             all-opts (-> (assoc opts :missing-js-modules missing-js-modules)
-                        add-implicit-options
-                        process-js-modules)]
+             sources (-find-sources source opts)
+             all-opts (add-implicit-options opts)]
          (check-output-to opts)
          (check-output-dir opts)
          (check-source-map opts)
@@ -2370,7 +2385,6 @@
            #(-> %
              (update-in [:options] merge all-opts)
              (assoc :target (:target opts))
-             (assoc :js-dependency-index (deps/js-dependency-index all-opts))
              ;; Save list of sources for cljs.analyzer/locate-src - Juho Teperi
              (assoc :sources sources)))
          (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))
@@ -2405,8 +2419,13 @@
                                 (assoc all-opts :output-file (:output-to all-opts))
                                 all-opts)
                  _ (load-data-readers! compiler-env)
-                 js-sources (-> (-find-sources source all-opts)
-                                (add-dependency-sources compile-opts)
+                 ;; reset :js-module-index so that ana/parse-ns called by -find-sources
+                 ;; can find the missing JS modules
+                 js-sources (env/with-compiler-env (dissoc @compiler-env :js-module-index)
+                              (-> (-find-sources source all-opts)
+                                  (add-dependency-sources compile-opts)))
+                 all-opts   (handle-js-modules all-opts js-sources compiler-env)
+                 js-sources (-> js-sources
                                 deps/dependency-order
                                 (compile-sources compiler-stats compile-opts)
                                 (#(map add-core-macros-if-cljs-js %))
