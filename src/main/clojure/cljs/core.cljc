@@ -377,18 +377,16 @@
                       (map #(cons `fn %) fnspecs)))
         ~@body)))
 
-#?(:cljs
-   (core/defmacro memfn
-     "Expands into code that creates a fn that expects to be passed an
-     object and any args and calls the named instance method on the
-     object passing the args. Use when you want to treat a Java method as
-     a first-class fn. name may be type-hinted with the method receiver's
-     type in order to avoid reflective calls."
-     [name & args]
-     (core/let [t (with-meta (gensym "target")
-               (meta name))]
-       `(fn [~t ~@args]
-          (. ~t (~name ~@args))))))
+(core/defmacro memfn
+  "Expands into code that creates a fn that expects to be passed an
+  object and any args and calls the named instance method on the
+  object passing the args. Use when you want to treat a JavaScript
+  method as a first-class fn."
+  [name & args]
+  (core/let [t (with-meta (gensym "target")
+                 (meta name))]
+    `(fn [~t ~@args]
+       (. ~t (~name ~@args)))))
 
 #?(:cljs
    (core/defmacro when

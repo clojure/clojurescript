@@ -574,6 +574,12 @@
   (let [o (doto (js-obj) (gobject/set "my sum" (fn [a b] (+ a b))))]
     (is (= 5 (js-invoke o "my sum" 2 3)))))
 
+(deftest memfn-test
+  (let [substr (memfn substr start length)]
+    (is (= "cde" (substr "abcdefg" 2 3))))
+  (let [trim (memfn trim)]
+    (is (= ["abc" "def"] (map trim ["   abc   " "  def   "])))))
+
 ;; =============================================================================
 ;; Tickets
 
