@@ -188,12 +188,13 @@
                ns)
          ;; TODO: add pre-condition to source-on-disk, the
          ;; source must supply at least :url - David
-         sources (cljsc/add-dependencies
-                   (merge (env->opts repl-env) opts)
-                   {:requires [(name ns)]
-                    :type :seed
-                    :url (:uri (cljsc/source-for-namespace
-                                 ns env/*compiler*))})
+         sources (binding [ana/*analyze-deps* false]
+                   (cljsc/add-dependencies
+                     (merge (env->opts repl-env) opts)
+                     {:requires [(name ns)]
+                      :type :seed
+                      :url (:uri (cljsc/source-for-namespace
+                                   ns env/*compiler*))}))
          deps (->> sources
                 (remove (comp #{["goog"]} :provides))
                 (remove (comp #{:seed} :type))
@@ -455,8 +456,9 @@
                                      :source-form form}
                   :repl-env repl-env})
            def-emits-var (:def-emits-var opts)
-           ast (ana/analyze (assoc env :def-emits-var def-emits-var)
-                 (wrap form) nil opts)
+           ast (binding [ana/*analyze-deps* false]
+                 (ana/analyze (assoc env :def-emits-var def-emits-var)
+                   (wrap form) nil opts))
            wrap-js
            ;; TODO: check opts as well - David
            (if (:source-map repl-env)
