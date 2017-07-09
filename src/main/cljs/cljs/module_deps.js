@@ -61,10 +61,14 @@ md.on('end', function() {
     var dep = deps_files[key];
 
     if (dep.provides == null && !/node_modules[/\\][^/\\]*?[/\\]package.json$/.test(dep.file)) {
-      var match = dep.file.match(/node_modules[/\\](.*)\.js(on)*$/)
+      var match = dep.file.match(/node_modules[/\\](.*)\.js(on)?$/)
 
       if (match != null){
-        dep.provides = [ match[1].replace('\\', '/') ];
+        var providedModule = match[1].replace('\\', '/');
+
+        dep.provides = providedModule.endsWith('/index') ?
+          [ providedModule, providedModule.replace(/\/index$/,'')] :
+          [ providedModule ];
       }
     }
 
