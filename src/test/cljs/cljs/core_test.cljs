@@ -565,10 +565,10 @@
     (is (= 13 (apply aset [array 2 0 13])))
     (is (= 13 (aget array 2 0)))))
 
-(deftest unsafe-get-test
-  (is (= 1 (unsafe-get #js {:a 1} "a")))
-  (is (nil? (unsafe-get #js {:a 1} "b")))
-  (is (nil? (unsafe-get #js {:a 1} nil))))
+(deftest unchecked-get-test
+  (is (= 1 (unchecked-get #js {:a 1} "a")))
+  (is (nil? (unchecked-get #js {:a 1} "b")))
+  (is (nil? (unchecked-get #js {:a 1} nil))))
 
 (deftest js-invoke-test
   (let [o (doto (js-obj) (gobject/set "my sum" (fn [a b] (+ a b))))]

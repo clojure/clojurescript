@@ -765,7 +765,7 @@
   (let [repl-opts (-repl-options repl-env)
         repl-requires (into repl-requires (:repl-requires repl-opts))
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns
-                static-fns fn-invoke-direct]
+                checked-arrays static-fns fn-invoke-direct]
          :as opts
          :or   {warn-on-undeclared true}}
         (merge
@@ -788,6 +788,7 @@
      (when (:source-map opts)
        (.start (Thread. (bound-fn [] (read-source-map "cljs/core.aot.js")))))
      (binding [ana/*unchecked-if* false
+               ana/*unchecked-arrays* false
                *err* (if bind-err
                        (cond-> *out*
                          (not (instance? PrintWriter *out*)) (PrintWriter.))
@@ -809,6 +810,7 @@
                                false
                                warn-on-undeclared)))
                    {:infer-warning false}))
+               ana/*checked-arrays* checked-arrays
                ana/*cljs-static-fns* static-fns
                ana/*fn-invoke-direct* (and static-fns fn-invoke-direct)
                *repl-opts* opts]

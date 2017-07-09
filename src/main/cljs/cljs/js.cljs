@@ -234,6 +234,15 @@
     (dissoc opts :macros-ns)
     cb))
 
+(defn post-file-side-effects
+  [file opts]
+  (when (:verbose opts)
+    (debug-prn "Post-file side-effects" file))
+  ;; Note, we don't (set! *unchecked-arrays* false) here, as that would interpreted
+  ;; an intrinsic affecting the compilation of this file, emitting a no-op. We bypass this
+  ;; and emit our own runtime assignment code.
+  (js* "cljs.core._STAR_unchecked_arrays_STAR_ = false;"))
+
 (defn require
   ([name cb]
     (require name nil cb))
@@ -272,6 +281,7 @@
                    (condp = lang
                      :clj (eval-str* bound-vars source name (assoc opts :cljs-file file)
                             (fn [res]
+                              (post-file-side-effects file opts)
                               (if (:error res)
                                 (cb res)
                                 (do
@@ -408,6 +418,7 @@
                     (condp = lang
                       :clj (analyze-str* bound-vars source name (assoc opts :cljs-file file)
                              (fn [res]
+                               (post-file-side-effects file opts)
                                (if-not (:error res)
                                  (analyze-deps bound-vars ana-env lib (next deps) opts cb)
                                  (cb res))))
@@ -574,6 +585,7 @@
     ((fn analyze-loop [last-ast ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  ana/*cljs-ns*          ns
+                 ana/*checked-arrays*   (:checked-arrays opts)
                  ana/*cljs-static-fns*  (:static-fns opts)
                  ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
@@ -636,6 +648,9 @@
       :def-emits-var    - sets whether def (and derived) forms return either a Var
                           (if set to true) or the def init value (if false).
                           Defaults to false.
+      :checked-arrays   - if :warn or :error, checks inferred types and values passed
+                          to aget/aset. Logs for incorrect values if :warn, throws if
+                          :error. Defaults to false.
       :static-fns       - employ static dispatch to specific function arities in
                           emitted JavaScript, as opposed to making use of the
                           `call` construct. Defaults to false.
@@ -681,6 +696,7 @@
     (binding [env/*compiler*         (:*compiler* bound-vars)
               *eval-fn*              (:*eval-fn* bound-vars)
               ana/*cljs-ns*          (:*cljs-ns* bound-vars)
+              ana/*checked-arrays*   (:checked-arrays opts)
               ana/*cljs-static-fns*  (:static-fns opts)
               ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
               *ns*                   (create-ns (:*cljs-ns* bound-vars))
@@ -729,6 +745,9 @@
       :def-emits-var    - sets whether def (and derived) forms return either a Var
                           (if set to true) or the def init value (if false). Default
                           is false.
+      :checked-arrays   - if :warn or :error, checks inferred types and values passed
+                          to aget/aset. Logs for incorrect values if :warn, throws if
+                          :error. Defaults to false.
       :static-fns       - employ static dispatch to specific function arities in
                           emitted JavaScript, as opposed to making use of the
                           `call` construct. Defaults to false.
@@ -774,6 +793,7 @@
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
+                 ana/*checked-arrays*   (:checked-arrays opts)
                  ana/*cljs-static-fns*  (:static-fns opts)
                  ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
@@ -838,6 +858,9 @@
       :def-emits-var    - sets whether def (and derived) forms return either a Var
                           (if set to true) or the def init value (if false). Default
                           is false.
+      :checked-arrays   - if :warn or :error, checks inferred types and values passed
+                          to aget/aset. Logs for incorrect values if :warn, throws if
+                          :error. Defaults to false.
       :static-fns       - employ static dispatch to specific function arities in
                           emitted JavaScript, as opposed to making use of the
                           `call` construct. Defaults to false.
@@ -890,6 +913,7 @@
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
+                 ana/*checked-arrays*   (:checked-arrays opts)
                  ana/*cljs-static-fns*  (:static-fns opts)
                  ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
@@ -988,6 +1012,9 @@
     :def-emits-var    - sets whether def (and derived) forms return either a Var
                         (if set to true) or the def init value (if false). Default
                         is false.
+    :checked-arrays   - if :warn or :error, checks inferred types and values passed
+                        to aget/aset. Logs for incorrect values if :warn, throws if
+                        :error. Defaults to false.
     :static-fns       - employ static dispatch to specific function arities in
                         emitted JavaScript, as opposed to making use of the
                         `call` construct. Defaults to false.

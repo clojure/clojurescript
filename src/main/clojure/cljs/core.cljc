@@ -45,7 +45,7 @@
                                        defcurried rfn specify! js-this this-as implements? array js-obj
                                        simple-benchmark gen-apply-to js-str es6-iterable load-file* undefined?
                                        specify copy-arguments goog-define js-comment js-inline-comment
-                                       unsafe-cast require-macros use-macros gen-apply-to-simple unsafe-get])])
+                                       unsafe-cast require-macros use-macros gen-apply-to-simple unchecked-get unchecked-set])])
   #?(:cljs (:require-macros [cljs.core :as core]
                             [cljs.support :refer [assert-args]]))
   (:require clojure.walk
@@ -979,25 +979,44 @@
 
 (core/defmacro aget
   ([array idx]
-   (core/list 'js* "(~{}[~{}])" array idx))
+   (core/case (ana/checked-arrays)
+     :warn `(checked-aget ~array ~idx)
+     :error `(checked-aget' ~array ~idx)
+     (core/list 'js* "(~{}[~{}])" array idx)))
   ([array idx & idxs]
-   (core/let [astr (apply core/str (repeat (count idxs) "[~{}]"))]
-     `(~'js* ~(core/str "(~{}[~{}]" astr ")") ~array ~idx ~@idxs))))
+   (core/case (ana/checked-arrays)
+     :warn `(checked-aget ~array ~idx ~@idxs)
+     :error `(checked-aget' ~array ~idx ~@idxs)
+     (core/let [astr (apply core/str (repeat (count idxs) "[~{}]"))]
+       `(~'js* ~(core/str "(~{}[~{}]" astr ")") ~array ~idx ~@idxs)))))
 
 (core/defmacro aset
   ([array idx val]
-   (core/list 'js* "(~{}[~{}] = ~{})" array idx val))
+   (core/case (ana/checked-arrays)
+     :warn `(checked-aset ~array ~idx ~val)
+     :error `(checked-aset' ~array ~idx ~val)
+     (core/list 'js* "(~{}[~{}] = ~{})" array idx val)))
   ([array idx idx2 & idxv]
-   (core/let [n    (core/dec (count idxv))
-              astr (apply core/str (repeat n "[~{}]"))]
-     `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~array ~idx ~idx2 ~@idxv))))
+   (core/case (ana/checked-arrays)
+     :warn `(checked-aset ~array ~idx ~idx2 ~@idxv)
+     :error `(checked-aset' ~array ~idx ~idx2 ~@idxv)
+     (core/let [n    (core/dec (count idxv))
+                astr (apply core/str (repeat n "[~{}]"))]
+       `(~'js* ~(core/str "(~{}[~{}][~{}]" astr " = ~{})") ~array ~idx ~idx2 ~@idxv)))))
 
-(core/defmacro unsafe-get
+(core/defmacro unchecked-get
   "INTERNAL. Compiles to JavaScript property access using bracket notation. Does
   not distinguish between object and array types and not subject to compiler
   static analysis."
   [obj key]
   (core/list 'js* "(~{}[~{}])" obj key))
+
+(core/defmacro unchecked-set
+  "INTERNAL. Compiles to JavaScript property access using bracket notation. Does
+  not distinguish between object and array types and not subject to compiler
+  static analysis."
+  [obj key val]
+  (core/list 'js* "(~{}[~{}] = ~{})" obj key val))
 
 (core/defmacro ^::ana/numeric +
   ([] 0)
@@ -1983,10 +2002,10 @@
                                     (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
                                 (. ~(first sig) ~slot ~@sig)
                                 (let [x# (if (nil? ~(first sig)) nil ~(first sig))
-                                      m# (unsafe-get ~(fqn fname) (goog/typeOf x#))]
+                                      m# (unchecked-get ~(fqn fname) (goog/typeOf x#))]
                                   (if-not (nil? m#)
                                     (m# ~@sig)
-                                    (let [m# (unsafe-get ~(fqn fname) "_")]
+                                    (let [m# (unchecked-get ~(fqn fname) "_")]
                                       (if-not (nil? m#)
                                         (m# ~@sig)
                                         (throw
@@ -2992,12 +3011,12 @@
   `(let [len# (alength (js-arguments))]
      (loop [i# 0]
        (when (< i# len#)
-         (.push ~dest (aget (js-arguments) i#))
+         (.push ~dest (unchecked-get (js-arguments) i#))
          (recur (inc i#))))))
 
 (core/defn- variadic-fn [name meta [[arglist & body :as method] :as fdecl] emit-var?]
   (core/letfn [(dest-args [c]
-                 (map (core/fn [n] `(aget (js-arguments) ~n))
+                 (map (core/fn [n] `(unchecked-get (js-arguments) ~n))
                    (range c)))]
     (core/let [rname (symbol (core/str ana/*cljs-ns*) (core/str name))
                sig   (remove '#{&} arglist)
@@ -3032,7 +3051,7 @@
 
 (core/defn- multi-arity-fn [name meta fdecl emit-var?]
   (core/letfn [(dest-args [c]
-                 (map (core/fn [n] `(aget (js-arguments) ~n))
+                 (map (core/fn [n] `(unchecked-get (js-arguments) ~n))
                    (range c)))
                (fixed-arity [rname sig]
                  (core/let [c (count sig)]

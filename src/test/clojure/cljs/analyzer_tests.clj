@@ -14,7 +14,8 @@
             [cljs.analyzer :as a]
             [cljs.analyzer.api :as ana-api]
             [cljs.closure :as closure]
-            [cljs.externs :as externs])
+            [cljs.externs :as externs]
+            [cljs.analyzer :as ana])
   (:use clojure.test))
 
 (defn collecting-warning-handler [state]
@@ -743,26 +744,29 @@
     (is (= ["Use of undeclared Var cljs.user/x"] @ws))))
 
 (deftest test-cljs-2148
-  (binding [a/*cljs-warnings* (assoc a/*cljs-warnings* :invalid-array-access true)]
-    (let [ws (atom [])]
+  (binding [ana/*checked-arrays* :warn]
+    (let [ws   (atom [])]
       (try
         (a/with-warning-handlers [(collecting-warning-handler ws)]
-          (a/analyze (a/empty-env)
-            '(aget (js-obj) "a")))
+          (e/with-compiler-env test-cenv
+            (a/analyze (a/empty-env)
+              '(aget (js-obj) "a"))))
         (catch Exception _))
       (is (= ["cljs.core/aget, arguments must be an array followed by numeric indices, got [object string] instead (consider goog.object/get for object access)"] @ws)))
-    (let [ws (atom [])]
+    (let [ws   (atom [])]
       (try
         (a/with-warning-handlers [(collecting-warning-handler ws)]
-          (a/analyze (a/empty-env)
-            '(aget (js-obj) "foo" "bar")))
+          (e/with-compiler-env test-cenv
+            (a/analyze (a/empty-env)
+              '(aget (js-obj) "foo" "bar"))))
         (catch Exception _))
       (is (= ["cljs.core/aget, arguments must be an array followed by numeric indices, got [object string string] instead (consider goog.object/getValueByKeys for object access)"] @ws)))
-    (let [ws (atom [])]
+    (let [ws   (atom [])]
       (try
         (a/with-warning-handlers [(collecting-warning-handler ws)]
-          (a/analyze (a/empty-env)
-            '(aset (js-obj) "a" 2)))
+          (e/with-compiler-env test-cenv
+            (a/analyze (a/empty-env)
+              '(aset (js-obj) "a" 2))))
         (catch Exception _))
       (is (= ["cljs.core/aset, arguments must be an array, followed by numeric indices, followed by a value, got [object string number] instead (consider goog.object/set for object access)"] @ws)))))
 

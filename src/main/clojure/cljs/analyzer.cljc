@@ -44,6 +44,8 @@
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
 #?(:clj (def ^:dynamic *unchecked-if* false))
+#?(:clj (def ^:dynamic *unchecked-arrays* false))
+(def ^:dynamic *checked-arrays* false)
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *fn-invoke-direct* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
@@ -134,7 +136,7 @@
    :extending-base-js-type true
    :invoke-ctor true
    :invalid-arithmetic true
-   :invalid-array-access false
+   :invalid-array-access true
    :protocol-invalid-method true
    :protocol-duped-method true
    :protocol-multiple-impls true
@@ -149,6 +151,17 @@
    :unsupported-preprocess-value true
    :js-shadowed-by-local true
    :infer-warning false})
+
+(defn unchecked-arrays? []
+  *unchecked-arrays*)
+
+(defn checked-arrays
+  "Returns false-y, :warn, or :error based on configuration and the
+   current value of *unchecked-arrays*."
+  []
+  (when (and (not (-> @env/*compiler* :options :advanced))
+             (not *unchecked-arrays*))
+    *checked-arrays*))
 
 (def js-reserved
   #{"arguments" "abstract" "await" "boolean" "break" "byte" "case"
@@ -393,10 +406,10 @@
   (str (:js-op info) ", all arguments must be numbers, got " (:types info) " instead."))
 
 (defmethod error-message :invalid-array-access
-  [warning-type {:keys [js-op types]}]
-  (case js-op
-    cljs.core/aget
-    (str js-op ", arguments must be an array followed by numeric indices, got " types " instead"
+  [warning-type {:keys [name types]}]
+  (case name
+    (cljs.core/checked-aget cljs.core/checked-aget')
+    (str "cljs.core/aget, arguments must be an array followed by numeric indices, got " types " instead"
       (when (or (= 'object (first types))
                 (every? #{'string} (rest types)))
         (str " (consider "
@@ -405,8 +418,8 @@
             "goog.object/getValueByKeys")
           " for object access)")))
 
-    cljs.core/aset
-    (str js-op ", arguments must be an array, followed by numeric indices, followed by a value, got " types " instead"
+    (cljs.core/checked-aset cljs.core/checked-aset')
+    (str "cljs.core/aset, arguments must be an array, followed by numeric indices, followed by a value, got " types " instead"
       (when (or (= 'object (first types))
                 (every? #{'string} (butlast (rest types))))
         " (consider goog.object/set for object access)"))))
@@ -904,6 +917,21 @@
 (defn munge-global-export [name]
   (str "global$module$" (munge (string/replace (str name) #"[.\/]" "\\$"))))
 
+(defn resolve-alias
+  "Takes a namespace and an unqualified symbol and potentially returns a new
+  symbol to be used in lieu of the original."
+  [ns sym]
+  ;; Conditionally alias aget/aset fns to checked variants
+  (if (and (= 'cljs.core ns)
+           ('#{aget aset} sym)
+           (checked-arrays))
+    (get-in '{:warn  {aget checked-aget
+                      aset checked-aset}
+              :error {aget checked-aget'
+                      aset checked-aset'}}
+      [(checked-arrays) sym])
+    sym))
+
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
@@ -1041,7 +1069,8 @@
            (let [full-ns (cond
                            (some? (gets @env/*compiler* ::namespaces current-ns :defs sym)) current-ns
                            (core-name? env sym) 'cljs.core
-                           :else current-ns)]
+                           :else current-ns)
+                 sym (resolve-alias full-ns sym)]
              (when (some? confirm)
                (confirm env full-ns sym))
              (merge (gets @env/*compiler* ::namespaces full-ns :defs sym)
@@ -1962,6 +1991,12 @@
                          (set! *unchecked-if* val)
                          ::set-unchecked-if)
 
+                       (and (= target '*unchecked-arrays*) ;; TODO: proper resolve
+                            (or (true? val) (false? val)))
+                       (do
+                         (set! *unchecked-arrays* val)
+                         ::set-unchecked-arrays)
+
                        (= target '*warn-on-infer*)
                        (do
                          (set! *cljs-warnings* (assoc *cljs-warnings* :infer-warning true))
@@ -1989,7 +2024,7 @@
        (when-not targetexpr
          (throw (error env "set! target must be a field or a symbol naming a var")))
        (cond
-        (some? (#{::set-unchecked-if ::set-warn-on-infer} targetexpr))
+        (some? (#{::set-unchecked-if ::set-unchecked-arrays ::set-warn-on-infer} targetexpr))
         {:env env :op :no-op}
 
         :else
@@ -2964,12 +2999,6 @@
                        :cljs (symbol-identical? sym (:js-op form-meta))))]
     (when (true? numeric)
       (validate :invalid-arithmetic #(every? numeric-type? %)))
-    (when (op-match? 'cljs.core/aget)
-      (validate :invalid-array-access #(and (array-type? (first %))
-                                            (every? numeric-type? (rest %)))))
-    (when (op-match? 'cljs.core/aset)
-      (validate :invalid-array-access #(and (array-type? (first %))
-                                            (every? numeric-type? (butlast (rest %))))))
     {:op :js
      :env env
      :segs segs
@@ -3407,6 +3436,33 @@
              ast)))
        ast)))
 
+;; A set of validators that can be used to do static type
+;; checking of runtime fns based on inferred argument types.
+(def invoke-arg-type-validators
+  (let [aget-validator {:valid?       #(and (array-type? (first %))
+                                            (every? numeric-type? (rest %)))
+                        :warning-type :invalid-array-access}
+        aset-validator {:valid?       #(and (array-type? (first %))
+                                            (every? numeric-type? (butlast (rest %))))
+                        :warning-type :invalid-array-access}]
+    {'cljs.core/checked-aget  aget-validator
+     'cljs.core/checked-aset  aset-validator
+     'cljs.core/checked-aget' aget-validator
+     'cljs.core/checked-aset' aset-validator}))
+
+(defn check-invoke-arg-types
+  [env {:keys [op] :as ast} opts]
+  (when (and (not (analyzed? ast))
+             #?(:clj  (= :invoke op)
+                :cljs (keyword-identical? :invoke op)))
+    (when-some [[name {:keys [valid? warning-type]}] (find invoke-arg-type-validators (-> ast :f :info :name))]
+      (let [types (mapv :tag (:args ast))]
+        (when-not (valid? types)
+          (warning warning-type env
+            {:name  name
+             :types types})))))
+  (analyzed ast))
+
 #?(:clj
    (defn analyze-form [env form name opts]
      (load-core)
@@ -3453,8 +3509,8 @@
 (defn analyze* [env form name opts]
   (let [passes *passes*
         passes (if (nil? passes)
-                 #?(:clj  [infer-type ns-side-effects]
-                    :cljs [infer-type])
+                 #?(:clj  [infer-type check-invoke-arg-types ns-side-effects]
+                    :cljs [infer-type check-invoke-arg-types])
                  passes)
         form   (if (instance? LazySeq form)
                  (if (seq form) form ())
@@ -3843,7 +3899,8 @@
   ([forms opts]
    (let [env (assoc (empty-env) :build-options opts)]
      (binding [*file-defs* nil
-               #?@(:clj [*unchecked-if* false])
+               #?@(:clj [*unchecked-if* false
+                         *unchecked-arrays* false])
                *cljs-ns* 'cljs.user
                *cljs-file* nil
                reader/*alias-map* (or reader/*alias-map* {})]
@@ -3874,9 +3931,10 @@
      ([f opts]
       (analyze-file f false opts))
      ([f skip-cache opts]
-      (binding [*file-defs*     (atom #{})
-                *unchecked-if*  false
-                *cljs-warnings* *cljs-warnings*]
+      (binding [*file-defs*        (atom #{})
+                *unchecked-if*     false
+                *unchecked-arrays* false
+                *cljs-warnings*    *cljs-warnings*]
         (let [output-dir (util/output-directory opts)
               res        (cond
                            (instance? File f) f

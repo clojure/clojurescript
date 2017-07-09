@@ -2420,6 +2420,8 @@
        (check-npm-deps opts)
        (maybe-install-node-deps! opts)
        (let [compiler-stats (:compiler-stats opts)
+             checked-arrays (or (:checked-arrays opts)
+                                ana/*checked-arrays*)
              static-fns? (or (and (= (:optimizations opts) :advanced)
                                (not (false? (:static-fns opts))))
                            (:static-fns opts)
@@ -2442,6 +2444,7 @@
              (assoc :sources sources)))
          (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))
                                        (atom #{}))
+                   ana/*checked-arrays* checked-arrays
                    ana/*cljs-static-fns* static-fns?
                    ana/*fn-invoke-direct* (or (and static-fns?
                                                    (:fn-invoke-direct opts))

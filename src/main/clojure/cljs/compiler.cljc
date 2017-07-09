@@ -1230,7 +1230,7 @@
 (defn- build-affecting-options [opts]
   (select-keys opts
     [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target
-     :cache-key]))
+     :cache-key :checked-arrays]))
 
 #?(:clj
    (defn compiled-by-string
@@ -1320,6 +1320,7 @@
                  ana/*cljs-ns*         'cljs.user
                  ana/*cljs-file*       (.getPath ^File src)
                  reader/*alias-map*    (or reader/*alias-map* {})
+                 ana/*checked-arrays*  (or ana/*checked-arrays* (:checked-arrays opts))
                  ana/*cljs-static-fns* (or ana/*cljs-static-fns* (:static-fns opts))
                  *source-map-data*     (when (:source-map opts)
                                          (atom
@@ -1472,9 +1473,10 @@
           (:options @env/*compiler*))))
      ([src dest opts]
       {:post [map?]}
-      (binding [ana/*file-defs*     (atom #{})
-                ana/*unchecked-if*  false
-                ana/*cljs-warnings* ana/*cljs-warnings*]
+      (binding [ana/*file-defs*        (atom #{})
+                ana/*unchecked-if*     false
+                ana/*unchecked-arrays* false
+                ana/*cljs-warnings*    ana/*cljs-warnings*]
         (let [nses      (get @env/*compiler* ::ana/namespaces)
               src-file  (io/file src)
               dest-file (io/file dest)
@@ -1483,9 +1485,10 @@
             (try
               (let [{ns :ns :as ns-info} (ana/parse-ns src-file dest-file opts)
                     opts (if (and (not= (util/ext src) "clj") ;; skip cljs.core macro-ns
-                                  (= ns 'cljs.core)
-                                  (not (false? (:static-fns opts))))
-                           (assoc opts :static-fns true)
+                                  (= ns 'cljs.core))
+                           (cond-> opts
+                             (not (false? (:static-fns opts))) (assoc :static-fns true)
+                             true (dissoc :checked-arrays))
                            opts)]
                 (if (or (requires-compilation? src-file dest-file opts)
                         (:force opts))

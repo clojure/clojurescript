@@ -298,7 +298,8 @@
                    [cljs.predicates-test]
                    [cljs.test-test]
                    [static.core-test]
-                   [cljs.recur-test]))
+                   [cljs.recur-test]
+                   [cljs.array-access-test]))
       (fn [{:keys [value error]}]
         (if error
           (handle-error error (:source-maps @st))
@@ -337,7 +338,8 @@
                'cljs.predicates-test
                'cljs.test-test
                'static.core-test
-               'cljs.recur-test)
+               'cljs.recur-test
+               'cljs.array-access-test)
             (fn [{:keys [value error]}]
               (when error
                 (handle-error error (:source-maps @st))))))))))
