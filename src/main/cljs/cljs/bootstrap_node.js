@@ -49,7 +49,7 @@ var CLJS_ROOT = ".";
  * The goog namespace in the global scope.
  */
 global.goog = {};
-global.require = require;
+
 
 /**
  * Imports a script using Node's require() API.
@@ -58,37 +58,33 @@ global.require = require;
  * @return {boolean} True if the script was imported, false otherwise.
  */
 global.CLOSURE_IMPORT_SCRIPT = function(src) {
-  // if CLJS_ROOT has been rewritten (by REPLs) need to compute require path
-  // so we can delete the old entry from the Node.js require cache
-  if(CLJS_ROOT !== ".") {
-    var cached = null;
-    if(src.substring(0, 2) == "..") {
-      cached = path.join(CLJS_ROOT, src.substring(3));
-    } else {
-      cached = path.join(CLJS_ROOT, "goog", src);
+    // if CLJS_ROOT has been rewritten (by REPLs) need to compute require path
+    // so we can delete the old entry from the Node.js require cache
+    if(CLJS_ROOT !== ".") {
+        var cached = null;
+        if(src.substring(0, 2) == "..") {
+            cached = path.join(CLJS_ROOT, src.substring(3));
+        } else {
+            cached = path.join(CLJS_ROOT, "goog", src);
+        }
+        if(require.cache[cached]) delete require.cache[cached];
     }
-    if(require.cache[cached]) delete require.cache[cached];
-  }
 
-  // Sources are always expressed relative to closure's base.js, but
-  // require() is always relative to the current source.
-  nodeGlobalRequire(path.resolve(__dirname, '..', src));
-  return true;
+    // Sources are always expressed relative to closure's base.js, but
+    // require() is always relative to the current source.
+    require(path.join(".", "..", src));
+    return true;
 };
 
 
 // Declared here so it can be used to require base.js
 function nodeGlobalRequire(file) {
-  var _module = global.module, _exports = global.exports;
-  global.module = undefined;
-  global.exports = undefined;
-  global.__dirname = file.substring(0, file.lastIndexOf('/'));
-  global.__filename = file;
-  vm.runInThisContext(fs.readFileSync(file), file);
-  global.__dirname = undefined;
-  global.__filename = undefined;
-  global.exports = _exports;
-  global.module = _module;
+    var _module = global.module, _exports = global.exports;
+    global.module = undefined;
+    global.exports = undefined;
+    vm.runInThisContext(fs.readFileSync(file), file);
+    global.exports = _exports;
+    global.module = _module;
 }
 
 
