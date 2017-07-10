@@ -66,7 +66,7 @@ md.on('end', function() {
       if (match != null){
         var providedModule = match[1].replace('\\', '/');
 
-        dep.provides = providedModule.endsWith('/index') ?
+        dep.provides = /\/index$/.test(providedModule) ?
           [ providedModule, providedModule.replace(/\/index$/,'')] :
           [ providedModule ];
       }
