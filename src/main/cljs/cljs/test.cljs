@@ -378,7 +378,7 @@
 (defn js-filename [stack-element]
   (let [output-dir (cljs.test/cljs-output-dir)
         output-dir (cond-> output-dir
-                     (not (.endsWith output-dir "/"))
+                     (not (string/ends-with? output-dir "/"))
                      (str "/"))]
     (-> (.split stack-element output-dir)
       last
