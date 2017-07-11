@@ -3584,14 +3584,7 @@
                                                    (= "cljc" (util/ext src)))
                                             'cljs.core$macros
                                             ns-name)
-                                  deps (merge (:uses ast) (:requires ast))
-                                  missing-js-modules (into #{}
-                                                       (comp
-                                                         (filter (fn [[k v]]
-                                                                   (and (or (string? k) (string? v))
-                                                                     (not (js-module-exists? k)))))
-                                                         (map val))
-                                                       deps)]
+                                  deps (merge (:uses ast) (:requires ast))]
                               (merge
                                 {:ns           (or ns-name 'cljs.user)
                                  :provides     [ns-name]
@@ -3600,7 +3593,6 @@
                                                  (cond-> (conj (set (vals deps)) 'cljs.core)
                                                    (get-in @env/*compiler* [:options :emit-constants])
                                                    (conj constants-ns-sym)))
-                                 :missing-js-modules missing-js-modules
                                  :file         dest
                                  :source-file  (when rdr src)
                                  :source-forms (when-not rdr src)

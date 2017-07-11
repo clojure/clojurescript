@@ -2056,8 +2056,7 @@
           :optimizations optimizations
           :output-dir output-dir
           :ups-libs libs
-          :ups-foreign-libs (into (index-node-modules (keys (compute-upstream-npm-deps opts)) opts)
-                              (expand-libs foreign-libs))
+          :ups-foreign-libs (expand-libs foreign-libs)
           :ups-externs externs
           :emit-constants emit-constants
           :cache-analysis-format (:cache-analysis-format opts :transit))
@@ -2375,21 +2374,26 @@
 (defn handle-js-modules
   "Given all Cljs sources (build inputs and dependencies in classpath)
 
-  - find the missing js modules defined using string require
   - index all the node node modules
   - process the JS modules (preprocess + convert to Closure JS)o
   - save js-dependency-index for compilation"
   [{:keys [npm-deps] :as opts} js-sources compiler-env]
-  (let [missing-js-modules (into #{}
-                                 (comp
-                                   (map :missing-js-modules)
-                                   cat)
-                                 js-sources)
+  (let [;; Find all the top-level Node packages and their files
+        top-level-modules (reduce (fn [acc m]
+                                    (reduce (fn [acc p]
+                                              (assoc acc p m))
+                                            acc
+                                            (:provides m)))
+                                  {}
+                                  (index-node-modules-dir))
+        requires (set (mapcat deps/-requires js-sources))
+        ;; Select Node files that are required by Cljs code,
+        ;; and create list of all their dependencies
+        required-node-modules (set/intersection (set (keys top-level-modules)) requires)
         opts (-> opts
                  (update :foreign-libs
                          (fn [libs]
-                           (into (index-node-modules
-                                   (into missing-js-modules (keys npm-deps)) opts)
+                           (into (index-node-modules required-node-modules)
                                  (expand-libs libs))))
                  process-js-modules)]
     (swap! compiler-env assoc :js-dependency-index (deps/js-dependency-index opts))
