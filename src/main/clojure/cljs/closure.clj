@@ -2203,6 +2203,48 @@
          (node-inputs [{:file (.getAbsolutePath deps-file)}] opts))
        []))))
 
+(defn index-node-modules-dir
+  ([]
+   (index-node-modules-dir
+     (when env/*compiler*
+       (:options @env/*compiler*))))
+  ([{:keys [verbose target]}]
+   (letfn [(package-json? [path]
+             (boolean (re-find #"node_modules[/\\][^/\\]+?[/\\]package.json$" path)))]
+     (let [module-fseq (util/module-file-seq)
+           pkg-jsons (into {}
+                       (comp
+                         (map #(.getAbsolutePath %))
+                         (filter package-json?)
+                         (map (fn [path]
+                                [path (json/read-str (slurp path))])))
+                       module-fseq)]
+       (into []
+         (comp
+           (map #(.getAbsolutePath %))
+           (map (fn [path]
+                  (merge
+                    {:file path
+                     :module-type :commonjs}
+                    (when-not (package-json? path)
+                      (let [pkg-json-main (some
+                                            (fn [[pkg-json-path {:strs [main name]}]]
+                                              (when-not (nil? main)
+                                                (let [main-path (str (string/replace pkg-json-path #"package\.json$" "")
+                                                                  main)]
+                                                  (when (= main-path path)
+                                                    name))))
+                                            pkg-jsons)]
+                        {:provides (if (some? pkg-json-main)
+                                     [pkg-json-main]
+                                     (let [module-rel-name (string/replace
+                                                             (subs path (.lastIndexOf path "node_modules"))
+                                                             #"node_modules[\\\/]" "")]
+                                       (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
+                                         (boolean (re-find #"[\\\/]index\.js(on)?$" module-rel-name))
+                                         (conj (string/replace module-rel-name #"[\\\/]index\.js(on)?$" "")))))}))))))
+         module-fseq)))))
+
 (defn preprocess-js
   "Given js-module map, apply preprocessing defined by :preprocess value in the map."
   [{:keys [preprocess] :as js-module} opts]

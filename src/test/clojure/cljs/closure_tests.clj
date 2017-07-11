@@ -83,3 +83,44 @@
              :url (io/as-url (io/file "src/test/cljs/js_libs/tabby.js"))
              :lib-path (.getAbsolutePath (io/file "src/test/cljs/js_libs/tabby.js"))}]
     (is (= (closure/lib-rel-path ijs) "tabby.js"))))
+
+(deftest test-index-node-modules
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (closure/maybe-install-node-deps! {:npm-deps {:left-pad "1.1.3"}})
+  (let [modules (closure/index-node-modules-dir)]
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/left-pad/index.js"))
+                                  :provides ["left-pad"]})) modules))))
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (closure/maybe-install-node-deps! {:npm-deps {:react "15.6.1"
+                                                :react-dom "15.6.1"}})
+  (let [modules (closure/index-node-modules-dir)]
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/react/react.js"))
+                                  :provides ["react"]}))
+                 modules)))
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/react/lib/React.js"))
+                                  :provides ["react/lib/React.js" "react/lib/React"]}))
+                 modules)))
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
+                                  :provides ["react-dom/server.js" "react-dom/server"]}))
+                 modules))))
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (closure/maybe-install-node-deps! {:npm-deps {:node-fetch "1.7.1"}})
+  (let [modules (closure/index-node-modules-dir)]
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/node-fetch/lib/index.js"))
+                                  :provides ["node-fetch/lib/index.js" "node-fetch/lib/index" "node-fetch/lib"]}))
+                 modules))))
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))

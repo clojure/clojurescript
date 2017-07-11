@@ -204,12 +204,8 @@
                     {:opts {:optimizations :whitespace}})]
       (build/build (build/inputs (:inputs project)) (:opts project)))))
 
-(defn delete-node-modules []
-  (doseq [f (file-seq (io/file "node_modules"))]
-    (.delete f)))
-
 (deftest test-npm-deps
-  (delete-node-modules)
+  (test/delete-node-modules)
   (spit (io/file "package.json") "{}")
   (testing "simplest case, require"
     (let [out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
@@ -237,7 +233,7 @@
                                                          :non-standard-jsdoc :off}}}]
     (testing "mix of symbol & string-based requires"
       (test/delete-out-files out)
-      (delete-node-modules)
+      (test/delete-node-modules)
       (build/build (build/inputs (io/file inputs "npm_deps_test/string_requires.cljs")) opts cenv)
       (is (.exists (io/file out "node_modules/react/react.js")))
       (is (contains? (:js-module-index @cenv) "react"))
@@ -247,7 +243,7 @@
       (is (not (nil? (re-find #"\.\./node_modules/react-dom/server\.js" (slurp (io/file out "cljs_deps.js"))))))
       (test/delete-out-files out)))
   (.delete (io/file "package.json"))
-  (delete-node-modules))
+  (test/delete-node-modules))
 
 (deftest test-preloads
   (let [out (.getPath (io/file (test/tmp-dir) "preloads-test-out"))

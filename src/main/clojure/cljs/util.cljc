@@ -318,3 +318,21 @@
 
 (def windows?
   (.startsWith (.toLowerCase (System/getProperty "os.name")) "windows"))
+
+(defn module-file-seq
+  ([] (module-file-seq (io/file "node_modules")))
+  ([dir]
+   (let [fseq (tree-seq
+                (fn [^File f]
+                  (and (. f (isDirectory))
+                    (not (boolean
+                           (re-find #"node_modules[\\\/].*[\\\/]node_modules"
+                             (.getPath f))))))
+                (fn [^File d]
+                  (seq (. d (listFiles))))
+                dir)]
+     (filter (fn [f]
+               (let [path (.getPath f)]
+                 (or (.endsWith path ".json")
+                   (.endsWith path ".js"))))
+       fseq))))
