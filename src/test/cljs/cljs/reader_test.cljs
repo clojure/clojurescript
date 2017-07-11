@@ -187,11 +187,11 @@
 ;      (is (= m " \u00a1")))))
 
 (deftest testing-map-type
-  (let [a  (reader/read-string "{:a 1 :b 2 :c 3}")
-        b  (reader/read-string "{:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7 :h 8 :i 9}")]
+  (let [a (reader/read-string "{:a 1 :b 2 :c 3}")
+        b (reader/read-string "{:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7 :h 8 :i 9}")]
     (is (= a {:a 1 :b 2 :c 3}))
     ;; Needs fix to cljs.tools.reader.edn - David
-    ;;(is (instance? PersistentArrayMap a))
+    (is (instance? PersistentArrayMap a))
     (is (= b {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7 :h 8 :i 9}))
     (is (instance? PersistentHashMap b))))
 
@@ -203,7 +203,6 @@
       (is (= x (reader/read-string (pr-str x))))
       (is (= (reader/read-string (pr-str x)) x)))))
 
-;; This need to be enforced elsewhere not during reading - David
 (deftest testing-cljs-1823
   (let [;; PersistentArrayMap
         a (try
@@ -215,23 +214,22 @@
             (reader/read-string "{:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :h 7 :i 8 :a 1}")
             :failed-to-throw
             (catch js/Error e (ex-message e)))
-        ;; Waiting on tools.reader fixes
-        ;;; PersistentArrayMap backed PHS
-        ;c (try
-        ;    (reader/read-string "#{:a :b :c :d :a}")
-        ;    :failed-to-throw
-        ;    (catch js/Error e (ex-message e)))
-        ;;; PersistentHashMap backed PHS
-        ;d (try
-        ;    (reader/read-string "#{:a :b :c :d :e :f :g :h :i :a}")
-        ;    :failed-to-throw
-        ;    (catch js/Error e (ex-message e)))
+        ;; PersistentArrayMap backed PHS
+        c (try
+            (reader/read-string "#{:a :b :c :d :a}")
+            :failed-to-throw
+            (catch js/Error e (ex-message e)))
+        ;; PersistentHashMap backed PHS
+        d (try
+            (reader/read-string "#{:a :b :c :d :e :f :g :h :i :a}")
+            :failed-to-throw
+            (catch js/Error e (ex-message e)))
         ]
     (is (= "Map literal contains duplicate key: :a" a))
     (is (= "Map literal contains duplicate key: :a" b))
     ;; Waiting on tools.reader fixes - David
-    ;(is (= "Duplicate key: :a" c))
-    ;(is (= "Duplicate key: :a" d))
+    (is (= "Set literal contains duplicate key: :a" c))
+    (is (= "Set literal contains duplicate key: :a" d))
     ))
 
 ;; Not relevant now that we rely on tools.reader and it duplicates Clojure's behavior - David
