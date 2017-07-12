@@ -143,6 +143,12 @@
     :jsdoc ["@type {null|number}"]}
   *print-level* nil)
 
+(def
+  ^{:dynamic true
+    :doc "*print-fns-bodies* controls whether functions print their source or
+    only their names."}
+  *print-fn-bodies* false)
+
 (defonce
   ^{:dynamic true
     :jsdoc ["@type {*}"]}
@@ -9590,7 +9596,11 @@ reduces them without incurring seq initialization"
               name (if (or (nil? name) (gstring/isEmpty name))
                      "Function"
                      name)]
-          (write-all writer "#object[" name " \"" (str obj) "\"]"))
+          (write-all writer "#object[" name
+            (if *print-fn-bodies*
+              (str " \"" (str obj) "\"")
+              "")
+            "]"))
 
         (instance? js/Date obj)
         (let [normalize (fn [n len]
