@@ -1005,6 +1005,7 @@
            (some? (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym))
            (recur env (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym) confirm)
 
+           ;; The following three cases support for invoking JS modules that export themselves as function -David
            (or (js-module-exists? s)
                (js-module-exists? (resolve-ns-alias env s)))
            (let [module (or (gets @env/*compiler* :js-module-index s)
