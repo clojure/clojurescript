@@ -733,6 +733,12 @@
     (get-in @env/*compiler* [:node-module-index])
     (str module)))
 
+(defn dep-has-global-exports?
+  [module]
+  (contains?
+    (get-in @env/*compiler* [:js-dependency-index (str module) :global-exports])
+    (symbol module)))
+
 (defn confirm-var-exists
   ([env prefix suffix]
    (let [warn (confirm-var-exist-warning env prefix suffix)]
@@ -895,6 +901,9 @@
 (defn munge-node-lib [name]
   (str "node$module$" (munge (string/replace (str name) #"[.\/]" "\\$"))))
 
+(defn munge-global-export [name]
+  (str "global$module$" (munge (string/replace (str name) #"[.\/]" "\\$"))))
+
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
@@ -936,10 +945,16 @@
                (when (not= (-> env :ns :name) full-ns)
                  (confirm-ns env full-ns))
                (confirm env full-ns (symbol (name sym))))
-             (if (node-module-dep? full-ns)
+             (cond
+               (node-module-dep? full-ns)
                {:name (symbol (str (-> env :ns :name))
                         (str (munge-node-lib full-ns) "." (name sym)))
                 :ns (-> env :ns :name)}
+               (dep-has-global-exports? full-ns)
+               {:name (symbol (str (-> env :ns :name))
+                        (str (munge-global-export full-ns) "." (name sym)))
+                :ns (-> env :ns :name)}
+               :else
                (merge (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
                  {:name (symbol (str full-ns) (str (name sym)))
                   :ns full-ns})))
@@ -965,9 +980,14 @@
 
            (some? (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym))
            (let [full-ns (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)]
-             (if (node-module-dep? full-ns)
+             (cond
+               (node-module-dep? full-ns)
                {:name (symbol (str (-> env :ns :name)) (str (munge-node-lib full-ns) "." sym))
                 :ns (-> env :ns :name)}
+               (dep-has-global-exports? full-ns)
+               {:name (symbol (str (-> env :ns :name)) (str (munge-global-export full-ns) "." sym))
+                :ns (-> env :ns :name)}
+               :else
                (merge
                  (gets @env/*compiler* ::namespaces full-ns :defs sym)
                  {:name (symbol (str full-ns) (str sym))
@@ -996,6 +1016,12 @@
                (node-module-dep? (resolve-ns-alias env s)))
            (let [module (resolve-ns-alias env s)]
              {:name (symbol (str (-> env :ns :name)) (munge-node-lib module))
+              :ns (-> env :ns :name)})
+
+           (or (dep-has-global-exports? s)
+               (dep-has-global-exports? (resolve-ns-alias env s)))
+           (let [module (resolve-ns-alias env s)]
+             {:name (symbol (str (-> env :ns :name)) (munge-global-export module))
               :ns (-> env :ns :name)})
 
            :else
@@ -2026,7 +2052,8 @@
     (and (= (get-in cenv [::namespaces lib :defs sym] ::not-found) ::not-found)
          (not (= (get js-lib :group) :goog))
          (not (get js-lib :closure-lib))
-         (not (node-module-dep? lib)))))
+         (not (node-module-dep? lib))
+         (not (dep-has-global-exports? lib)))))
 
 (defn missing-rename? [sym cenv]
   (let [lib (symbol (namespace sym))

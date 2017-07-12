@@ -1069,7 +1069,8 @@
                                    (if (= :nodejs target)
                                      (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? libs)]
                                        [node-libs libs-to-load])
-                                     [nil libs]))]
+                                     [nil libs]))
+        {global-exports-libs true, libs-to-load false} (group-by ana/dep-has-global-exports? libs-to-load)]
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
@@ -1108,6 +1109,12 @@
       (emitln (munge ns-name) "."
         (ana/munge-node-lib lib)
         " = require('" lib "');"))
+    (doseq [lib global-exports-libs]
+      (let [{:keys [js-dependency-index options]} @env/*compiler*
+            ijs (get js-dependency-index (name lib))]
+        (emitln (munge ns-name) "."
+          (ana/munge-global-export lib)
+          " = goog.global." (get (:global-exports ijs) (symbol lib)) ";")))
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 

@@ -309,6 +309,39 @@
       (is (.exists (io/file out "emit_node_requires_test/core.js")))
       (is (true? (boolean (re-find #"emit_node_requires_test\.core\.node\$module\$react_dom\$server = require\('react-dom/server'\);"
                             (slurp (io/file out "emit_node_requires_test/core.js"))))))
+      (is (true? (boolean (re-find #"emit_node_requires_test\.core\.node\$module\$react_dom\$server\.renderToString"
+                            (slurp (io/file out "emit_node_requires_test/core.js"))))))
       (is (empty? @ws))))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
+
+(deftest test-emit-global-requires-cljs-2214
+  (testing "simplest case, require"
+    (let [ws (atom [])
+          out (.getPath (io/file (test/tmp-dir) "emit-global-requires-test-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts {:main 'emit-node-requires-test.core
+                                        :output-dir out
+                                        :optimizations :none
+                                        ;; Doesn't matter what :file is used here, as long at it exists
+                                        :foreign-libs [{:file "src/test/cljs_build/thirdparty/add.js"
+                                                        :provides ["react"]
+                                                        :global-exports '{react React}}
+                                                       {:file "src/test/cljs_build/thirdparty/add.js"
+                                                        :provides ["react-dom"]
+                                                        :requires ["react"]
+                                                        :global-exports '{react-dom ReactDOM}}
+                                                       {:file "src/test/cljs_build/thirdparty/add.js"
+                                                        :provides ["react-dom/server"]
+                                                        :requires ["react-dom"]
+                                                        :global-exports '{react-dom/server ReactDOMServer}}]}}
+          cenv (env/default-compiler-env)]
+      (test/delete-out-files out)
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+        (build/build (build/inputs (io/file inputs "emit_global_requires_test/core.cljs")) opts cenv))
+      (is (.exists (io/file out "emit_global_requires_test/core.js")))
+      (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$react_dom\$server = goog\.global\.ReactDOMServer;"
+                            (slurp (io/file out "emit_global_requires_test/core.js"))))))
+      (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$react_dom\$server\.renderToString"
+                            (slurp (io/file out "emit_global_requires_test/core.js"))))))
+      (is (empty? @ws)))))
