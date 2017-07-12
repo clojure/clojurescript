@@ -9,7 +9,7 @@
 (ns ^{:doc "A namespace that exists solely to provide a place for \"compiler\"
 state that is accessed/maintained by many different components."}
   cljs.env
-  #?(:clj (:require [cljs.js-deps :refer (js-dependency-index)]
+  #?(:clj (:require [cljs.js-deps :as deps]
                     [cljs.externs :as externs]))
   (:refer-clojure :exclude [ensure]))
 
@@ -55,7 +55,9 @@ state that is accessed/maintained by many different components."}
                                           (externs/externs-map (:externs-sources options)))
                                   :cljs nil)
         :options options}
-       #?(:clj {:js-dependency-index (js-dependency-index options)})))))
+       (when (= (:target options) :nodejs)
+         {:node-module-index deps/native-node-modules})
+       #?(:clj {:js-dependency-index (deps/js-dependency-index options)})))))
 
 #?(:clj
    (defmacro with-compiler-env

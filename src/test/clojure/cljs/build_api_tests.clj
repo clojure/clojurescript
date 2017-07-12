@@ -300,7 +300,7 @@
                                                    :react-dom "15.6.1"}
                                         :closure-warnings {:check-types :off
                                                            :non-standard-jsdoc :off}}}
-          cenv (env/default-compiler-env)]
+          cenv (env/default-compiler-env opts)]
       (test/delete-out-files out)
       (ana/with-warning-handlers [(collecting-warning-handler ws)]
         (build/build (build/inputs (io/file inputs "emit_node_requires_test/core.cljs")) opts cenv))
@@ -311,6 +311,24 @@
                             (slurp (io/file out "emit_node_requires_test/core.js"))))))
       (is (true? (boolean (re-find #"emit_node_requires_test\.core\.node\$module\$react_dom\$server\.renderToString"
                             (slurp (io/file out "emit_node_requires_test/core.js"))))))
+      (is (empty? @ws))))
+  (testing "Node native modules, CLJS-2218"
+    (let [ws (atom [])
+          out (.getPath (io/file (test/tmp-dir) "emit-node-requires-test-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts {:main 'emit-node-requires-test.native-modules
+                                        :output-dir out
+                                        :optimizations :none
+                                        :target :nodejs
+                                        :closure-warnings {:check-types :off}}}
+          cenv (env/default-compiler-env opts)]
+      (test/delete-out-files out)
+      (test/delete-node-modules)
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+        (build/build (build/inputs (io/file inputs "emit_node_requires_test/native_modules.cljs")) opts cenv))
+      (is (.exists (io/file out "emit_node_requires_test/native_modules.js")))
+      (is (true? (boolean (re-find #"emit_node_requires_test\.native_modules\.node\$module\$path\.isAbsolute"
+                            (slurp (io/file out "emit_node_requires_test/native_modules.js"))))))
       (is (empty? @ws))))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
