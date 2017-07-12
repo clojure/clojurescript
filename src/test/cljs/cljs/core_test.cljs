@@ -153,7 +153,13 @@
                    (gobject/get "a")
                    (gobject/get "b")
                    (gobject/get "{:k :ey}"))
-                "d")))))
+                "d")))
+    (is (= (-> (clj->js {:foo/bar "a"})
+               (gobject/get "bar"))
+           "a"))
+    (is (= (-> (clj->js {:foo/bar "a"} :keyword-fn namespace)
+               (gobject/get "foo"))
+           "a"))))
 
 (deftest test-delay
   (let [a (atom 0)

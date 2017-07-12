@@ -10243,36 +10243,40 @@ reduces them without incurring seq initialization"
 
 (declare clj->js)
 
-(defn key->js [k]
-  (if (satisfies? IEncodeJS k)
-    (-clj->js k)
-    (if (or (string? k)
-            (number? k)
-            (keyword? k)
-            (symbol? k))
-      (clj->js k)
-      (pr-str k))))
+(defn key->js
+  ([k] (key->js k clj->js))
+  ([k primitive-fn]
+   (cond
+     (satisfies? IEncodeJS k) (-clj->js k)
+     (or (string? k)
+         (number? k)
+         (keyword? k)
+         (symbol? k)) (primitive-fn k)
+     :default (pr-str k))))
 
 (defn clj->js
   "Recursively transforms ClojureScript values to JavaScript.
   sets/vectors/lists become Arrays, Keywords and Symbol become Strings,
   Maps become Objects. Arbitrary keys are encoded to by key->js."
-   [x]
-   (when-not (nil? x)
-     (if (satisfies? IEncodeJS x)
-       (-clj->js x)
-       (cond
-         (keyword? x) (name x)
-         (symbol? x) (str x)
-         (map? x) (let [m (js-obj)]
-                    (doseq [[k v] x]
-                      (gobject/set m (key->js k) (clj->js v)))
-                    m)
-         (coll? x) (let [arr (array)]
-                     (doseq [x (map clj->js x)]
-                       (.push arr x))
-                     arr)
-         :else x))))
+  [x & {:keys [keyword-fn]
+        :or   {keyword-fn name}}]
+  (letfn [(keyfn [k] (key->js k thisfn))
+          (thisfn [x] (cond
+                        (nil? x) nil
+                        (satisfies? IEncodeJS x) (-clj->js x)
+                        (keyword? x) (keyword-fn x)
+                        (symbol? x) (str x)
+                        (map? x) (let [m (js-obj)]
+                                   (doseq [[k v] x]
+                                     (gobject/set m (keyfn k) (thisfn v)))
+                                   m)
+                        (coll? x) (let [arr (array)]
+                                    (doseq [x (map thisfn x)]
+                                      (.push arr x))
+                                    arr)
+                        :else x))]
+    (thisfn x)))
+
 
 (defprotocol IEncodeClojure
   (-js->clj [x options] "Transforms JavaScript values to Clojure"))
