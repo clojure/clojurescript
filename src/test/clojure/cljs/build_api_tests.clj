@@ -278,3 +278,37 @@
                    (io/file "src/test/cljs/js_libs"))
       opts cenv)
     (is (.exists (io/file out "tabby.js")))))
+
+(defn collecting-warning-handler [state]
+  (fn [warning-type env extra]
+    (when (warning-type ana/*cljs-warnings*)
+      (when-let [s (ana/error-message warning-type extra)]
+        (swap! state conj s)))))
+
+(deftest test-emit-node-requires-cljs-2213
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (testing "simplest case, require"
+    (let [ws (atom [])
+          out (.getPath (io/file (test/tmp-dir) "emit-node-requires-test-out"))
+          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                                 :opts {:main 'emit-node-requires-test.core
+                                        :output-dir out
+                                        :optimizations :none
+                                        :target :nodejs
+                                        :npm-deps {:react "15.6.1"
+                                                   :react-dom "15.6.1"}
+                                        :closure-warnings {:check-types :off
+                                                           :non-standard-jsdoc :off}}}
+          cenv (env/default-compiler-env)]
+      (test/delete-out-files out)
+      (ana/with-warning-handlers [(collecting-warning-handler ws)]
+        (build/build (build/inputs (io/file inputs "emit_node_requires_test/core.cljs")) opts cenv))
+      ;; wasn't processed by Closure
+      (is (not (.exists (io/file out "node_modules/react/react.js"))))
+      (is (.exists (io/file out "emit_node_requires_test/core.js")))
+      (is (true? (boolean (re-find #"emit_node_requires_test\.core\.react_dom\$server = require\('react-dom/server'\);"
+                            (slurp (io/file out "emit_node_requires_test/core.js"))))))
+      (is (empty? @ws))))
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))

@@ -1436,7 +1436,10 @@
          "], ["
          ;; even under Node.js where runtime require is possible
          ;; this is necessary - see CLJS-2151
-         (ns-list (deps/-requires input))
+         (ns-list (cond->> (deps/-requires input)
+                    ;; under Node.js we emit native `require`s for these
+                    (= :nodejs (:target opts))
+                    (filter (complement ana/node-module-dep?))))
          "]);\n")))
 
 (defn deps-file
@@ -2377,7 +2380,7 @@
   - index all the node node modules
   - process the JS modules (preprocess + convert to Closure JS)o
   - save js-dependency-index for compilation"
-  [{:keys [npm-deps] :as opts} js-sources compiler-env]
+  [{:keys [npm-deps target] :as opts} js-sources compiler-env]
   (let [;; Find all the top-level Node packages and their files
         top-level-modules (reduce (fn [acc m]
                                     (reduce (fn [acc p]
@@ -2389,15 +2392,19 @@
         requires (set (mapcat deps/-requires js-sources))
         ;; Select Node files that are required by Cljs code,
         ;; and create list of all their dependencies
-        required-node-modules (set/intersection (set (keys top-level-modules)) requires)
-        opts (-> opts
-                 (update :foreign-libs
-                         (fn [libs]
-                           (into (index-node-modules required-node-modules)
-                                 (expand-libs libs))))
-                 process-js-modules)]
-    (swap! compiler-env assoc :js-dependency-index (deps/js-dependency-index opts))
-    opts))
+        required-node-modules (set/intersection (set (keys top-level-modules)) requires)]
+    (if-not (= target :nodejs)
+      (let [opts (-> opts
+                   (update :foreign-libs
+                     (fn [libs]
+                       (into (index-node-modules required-node-modules)
+                         (expand-libs libs))))
+                   process-js-modules)]
+        (swap! compiler-env assoc :js-dependency-index (deps/js-dependency-index opts))
+        opts)
+      (do
+        (swap! compiler-env update-in [:node-module-index] (fnil into #{}) (map str required-node-modules))
+        opts))))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."

@@ -727,6 +727,12 @@
     (into #{} (mapcat identity) (get-in @env/*compiler* [:js-module-index]))
     (str module)))
 
+(defn node-module-dep?
+  [module]
+  (contains?
+    (get-in @env/*compiler* [:node-module-index])
+    (str module)))
+
 (defn confirm-var-exists
   ([env prefix suffix]
    (let [warn (confirm-var-exist-warning env prefix suffix)]
@@ -886,6 +892,9 @@
        :cljs (and ^boolean (goog.string/contains s ".")
                   (not ^boolean (goog.string/contains s ".."))))))
 
+(defn munge-node-lib [name]
+  (munge (string/replace (str name) #"[.\/]" "\\$")))
+
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
    warnings about unresolved vars."
@@ -927,9 +936,13 @@
                (when (not= (-> env :ns :name) full-ns)
                  (confirm-ns env full-ns))
                (confirm env full-ns (symbol (name sym))))
-             (merge (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
-               {:name (symbol (str full-ns) (str (name sym)))
-                :ns full-ns}))
+             (if (node-module-dep? full-ns)
+               {:name (symbol (str (-> env :ns :name))
+                        (str (munge-node-lib full-ns) "." (name sym)))
+                :ns (-> env :ns :name)}
+               (merge (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
+                 {:name (symbol (str full-ns) (str (name sym)))
+                  :ns full-ns})))
 
            (dotted-symbol? sym)
            (let [idx    (.indexOf s ".")
@@ -952,10 +965,13 @@
 
            (some? (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym))
            (let [full-ns (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)]
-             (merge
-               (gets @env/*compiler* ::namespaces full-ns :defs sym)
-               {:name (symbol (str full-ns) (str sym))
-                :ns full-ns}))
+             (if (node-module-dep? full-ns)
+               {:name (symbol (str (-> env :ns :name)) (str (munge-node-lib full-ns) "." sym))
+                :ns (-> env :ns :name)}
+               (merge
+                 (gets @env/*compiler* ::namespaces full-ns :defs sym)
+                 {:name (symbol (str full-ns) (str sym))
+                  :ns full-ns})))
 
            (some? (gets @env/*compiler* ::namespaces (-> env :ns :name) :renames sym))
            (let [qualified-symbol (gets @env/*compiler* ::namespaces (-> env :ns :name) :renames sym)
@@ -975,6 +991,12 @@
                             (resolve-ns-alias env s))]
              {:name (symbol module)
               :ns   'js})
+
+           (or (node-module-dep? s)
+               (node-module-dep? (resolve-ns-alias env s)))
+           (let [module (resolve-ns-alias env s)]
+             {:name (symbol (str (-> env :ns :name)) (munge-node-lib module))
+              :ns (-> env :ns :name)})
 
            :else
            (let [cur-ns (-> env :ns :name)
@@ -1988,6 +2010,7 @@
        (doseq [dep deps]
          (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                        (contains? (:js-dependency-index compiler) (name dep))
+                       (contains? (:node-module-index compiler) (name dep))
                        #?(:clj (deps/find-classpath-lib dep)))
            #?(:clj (if-some [src (locate-src dep)]
                      (analyze-file src opts)
@@ -2002,7 +2025,8 @@
   (let [js-lib (get-in cenv [:js-dependency-index (name lib)])]
     (and (= (get-in cenv [::namespaces lib :defs sym] ::not-found) ::not-found)
          (not (= (get js-lib :group) :goog))
-         (not (get js-lib :closure-lib)))))
+         (not (get js-lib :closure-lib))
+         (not (node-module-dep? lib)))))
 
 (defn missing-rename? [sym cenv]
   (let [lib (symbol (namespace sym))
@@ -2010,8 +2034,10 @@
     (missing-use? lib sym cenv)))
 
 (defn missing-use-macro? [lib sym]
-  (let [the-ns #?(:clj (find-ns lib) :cljs (find-macros-ns lib))]
-    (or (nil? the-ns) (nil? (.findInternedVar ^clojure.lang.Namespace the-ns sym)))))
+  ;; guard against string requires
+  (when (symbol? lib)
+    (let [the-ns #?(:clj (find-ns lib) :cljs (find-macros-ns lib))]
+      (or (nil? the-ns) (nil? (.findInternedVar ^clojure.lang.Namespace the-ns sym))))))
 
 (defn missing-rename-macro? [sym]
   (let [lib (symbol (namespace sym))
@@ -3105,11 +3131,12 @@
             #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym))
 
         :else
-          (if-some [nsym (gets env :ns :use-macros sym)]
+        (let [nsym (gets env :ns :use-macros sym)]
+          (if (and (some? nsym) (symbol? nsym))
             (.findInternedVar ^clojure.lang.Namespace
-            #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
+              #?(:clj (find-ns nsym) :cljs (find-macros-ns nsym)) sym)
             (.findInternedVar ^clojure.lang.Namespace
-            #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns CLJS_CORE_MACROS_SYM)) sym))))))
+              #?(:clj (find-ns 'cljs.core) :cljs (find-macros-ns CLJS_CORE_MACROS_SYM)) sym)))))))
 
 (defn get-expander
   "Given a sym, a symbol identifying a macro, and env, an analysis environment

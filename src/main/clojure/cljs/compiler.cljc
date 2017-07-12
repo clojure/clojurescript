@@ -1061,28 +1061,33 @@
   (emit-wrap env (emits target " = " val)))
 
 (defn load-libs
-  [libs seen reloads deps]
-  (let [loaded-libs (munge 'cljs.core.*loaded-libs*)
-        loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))]
+  [libs seen reloads deps ns-name]
+  (let [{:keys [target optimizations]} (get @env/*compiler* :options)
+        loaded-libs (munge 'cljs.core.*loaded-libs*)
+        loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))
+        [node-libs libs-to-load] (let [libs (remove (set (vals seen)) (filter (set (vals libs)) deps))]
+                                   (if (= :nodejs target)
+                                     (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? libs)]
+                                       [node-libs libs-to-load])
+                                     [nil libs]))]
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
-    (doseq [lib (remove (set (vals seen)) (filter (set (vals libs)) deps))]
+    (doseq [lib libs-to-load]
       (cond
         #?@(:clj
             [(ana/foreign-dep? lib)
-             (let [{:keys [target optimizations]} (get @env/*compiler* :options)]
-               ;; we only load foreign libraries under optimizations :none
-               (when (= :none optimizations)
-                 (if (= :nodejs target)
-                   ;; under node.js we load foreign libs globally
-                   (let [{:keys [js-dependency-index options]} @env/*compiler*
-                         ijs (get js-dependency-index (name lib))]
-                     (emitln "cljs.core.load_file(\""
-                       (str (io/file (util/output-directory options) (or (deps/-relative-path ijs)
-                                                                         (util/relative-name (:url ijs)))))
-                       "\");"))
-                   (emitln "goog.require('" (munge lib) "');"))))]
+             ;; we only load foreign libraries under optimizations :none
+             (when (= :none optimizations)
+               (if (= :nodejs target)
+                 ;; under node.js we load foreign libs globally
+                 (let [{:keys [js-dependency-index options]} @env/*compiler*
+                       ijs (get js-dependency-index (name lib))]
+                   (emitln "cljs.core.load_file(\""
+                     (str (io/file (util/output-directory options) (or (deps/-relative-path ijs)
+                                                                     (util/relative-name (:url ijs)))))
+                     "\");"))
+                 (emitln "goog.require('" (munge lib) "');")))]
             :cljs
             [(and (ana/foreign-dep? lib)
                   (when-let [{:keys [optimizations]} (get @env/*compiler* :options)]
@@ -1099,13 +1104,17 @@
 
         :else
         (emitln "goog.require('" (munge lib) "');")))
+    (doseq [lib node-libs]
+      (emitln (munge ns-name) "."
+        (ana/munge-node-lib lib)
+        " = require('" lib "');"))
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
 (defmethod emit* :ns*
   [{:keys [name requires uses require-macros reloads env deps]}]
-  (load-libs requires nil (:require reloads) deps)
-  (load-libs uses requires (:use reloads) deps)
+  (load-libs requires nil (:require reloads) deps name)
+  (load-libs uses requires (:use reloads) deps name)
   (when (:repl-env env)
     (emitln "null;")))
 
@@ -1116,8 +1125,8 @@
     (emitln "goog.require('cljs.core');")
     (when (-> @env/*compiler* :options :emit-constants)
       (emitln "goog.require('" (munge ana/constants-ns-sym) "');")))
-  (load-libs requires nil (:require reloads) deps)
-  (load-libs uses requires (:use reloads) deps))
+  (load-libs requires nil (:require reloads) deps name)
+  (load-libs uses requires (:use reloads) deps name))
 
 (defmethod emit* :deftype*
   [{:keys [t fields pmasks body protocols]}]
