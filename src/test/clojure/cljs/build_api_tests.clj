@@ -307,7 +307,7 @@
       ;; wasn't processed by Closure
       (is (not (.exists (io/file out "node_modules/react/react.js"))))
       (is (.exists (io/file out "emit_node_requires_test/core.js")))
-      (is (true? (boolean (re-find #"emit_node_requires_test\.core\.react_dom\$server = require\('react-dom/server'\);"
+      (is (true? (boolean (re-find #"emit_node_requires_test\.core\.node\$module\$react_dom\$server = require\('react-dom/server'\);"
                             (slurp (io/file out "emit_node_requires_test/core.js"))))))
       (is (empty? @ws))))
   (.delete (io/file "package.json"))

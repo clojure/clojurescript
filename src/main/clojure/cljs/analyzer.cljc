@@ -893,7 +893,7 @@
                   (not ^boolean (goog.string/contains s ".."))))))
 
 (defn munge-node-lib [name]
-  (munge (string/replace (str name) #"[.\/]" "\\$")))
+  (str "node$module$" (munge (string/replace (str name) #"[.\/]" "\\$"))))
 
 (defn resolve-var
   "Resolve a var. Accepts a side-effecting confirm fn for producing
