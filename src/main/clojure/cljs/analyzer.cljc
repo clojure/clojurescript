@@ -2998,14 +2998,15 @@
     (nil? t) true
     (= 'clj-nil t) true
     (js-tag? t) true ;; TODO: revisit
+    (= 'any t) true
+    (contains? array-types t) true
     :else
-    (if (and (symbol? t) (contains? array-types t))
-      true
+    (boolean
       (when #?(:clj  (set? t)
                :cljs (cljs-set? t))
         (or (contains? t 'any)
             (contains? t 'js)
-            (boolean (some array-types t)))))))
+            (some array-types t))))))
 
 (defn analyze-js-star* [env jsform args form]
   (let [enve      (assoc env :context :expr)
