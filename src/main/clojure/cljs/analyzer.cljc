@@ -927,7 +927,8 @@
                {:js-fn-var true
                 :ret-tag ret-tag}))))
        (let [s  (str sym)
-             lb (get locals sym)]
+             lb (get locals sym)
+             current-ns (-> env :ns :name)]
          (cond
            (some? lb) lb
 
@@ -942,18 +943,18 @@
                                     (get-in @env/*compiler* [:js-module-index ns]))
                              (symbol ns)))]
              (when (some? confirm)
-               (when (not= (-> env :ns :name) full-ns)
+               (when (not= current-ns full-ns)
                  (confirm-ns env full-ns))
                (confirm env full-ns (symbol (name sym))))
              (cond
                (node-module-dep? full-ns)
-               {:name (symbol (str (-> env :ns :name))
+               {:name (symbol (str current-ns)
                         (str (munge-node-lib full-ns) "." (name sym)))
-                :ns (-> env :ns :name)}
+                :ns current-ns}
                (dep-has-global-exports? full-ns)
-               {:name (symbol (str (-> env :ns :name))
+               {:name (symbol (str current-ns)
                         (str (munge-global-export full-ns) "." (name sym)))
-                :ns (-> env :ns :name)}
+                :ns current-ns}
                :else
                (merge (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
                  {:name (symbol (str full-ns) (str (name sym)))
@@ -965,45 +966,56 @@
                  suffix (subs s (inc idx))]
              (if-some [lb (get locals prefix)]
                {:name (symbol (str (:name lb)) suffix)}
-               (let [cur-ns  (-> env :ns :name)]
-                 (if-some [full-ns (gets @env/*compiler* ::namespaces cur-ns :imports prefix)]
-                   {:name (symbol (str full-ns) suffix)}
+               (if-some [full-ns (gets @env/*compiler* ::namespaces current-ns :imports prefix)]
+                 {:name (symbol (str full-ns) suffix)}
 
-                   ;else
-                     (if-some [info (gets @env/*compiler* ::namespaces cur-ns :defs prefix)]
-                       (merge info
-                         {:name (symbol (str cur-ns) (str sym))
-                          :ns cur-ns})
-                       (merge (gets @env/*compiler* ::namespaces prefix :defs (symbol suffix))
-                         {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
-                          :ns prefix}))))))
+                                        ;else
+                 (if-some [info (gets @env/*compiler* ::namespaces current-ns :defs prefix)]
+                   (merge info
+                     {:name (symbol (str current-ns) (str sym))
+                      :ns current-ns})
+                   (merge (gets @env/*compiler* ::namespaces prefix :defs (symbol suffix))
+                     {:name (if (= "" prefix) (symbol suffix) (symbol (str prefix) suffix))
+                      :ns prefix})))))
 
-           (some? (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym))
-           (let [full-ns (gets @env/*compiler* ::namespaces (-> env :ns :name) :uses sym)]
+           (some? (gets @env/*compiler* ::namespaces current-ns :uses sym))
+           (let [full-ns (gets @env/*compiler* ::namespaces current-ns :uses sym)]
              (cond
                (node-module-dep? full-ns)
-               {:name (symbol (str (-> env :ns :name)) (str (munge-node-lib full-ns) "." sym))
-                :ns (-> env :ns :name)}
+               {:name (symbol (str current-ns) (str (munge-node-lib full-ns) "." sym))
+                :ns current-ns}
+
                (dep-has-global-exports? full-ns)
-               {:name (symbol (str (-> env :ns :name)) (str (munge-global-export full-ns) "." sym))
-                :ns (-> env :ns :name)}
+               {:name (symbol (str current-ns) (str (munge-global-export full-ns) "." sym))
+                :ns current-ns}
+
                :else
                (merge
                  (gets @env/*compiler* ::namespaces full-ns :defs sym)
                  {:name (symbol (str full-ns) (str sym))
                   :ns full-ns})))
 
-           (some? (gets @env/*compiler* ::namespaces (-> env :ns :name) :renames sym))
-           (let [qualified-symbol (gets @env/*compiler* ::namespaces (-> env :ns :name) :renames sym)
+           (some? (gets @env/*compiler* ::namespaces current-ns :renames sym))
+           (let [qualified-symbol (gets @env/*compiler* ::namespaces current-ns :renames sym)
                  full-ns (symbol (namespace qualified-symbol))
                  sym     (symbol (name qualified-symbol))]
-             (merge
-               (gets @env/*compiler* ::namespaces full-ns :defs sym)
-               {:name qualified-symbol
-                :ns full-ns}))
+             (cond
+               (node-module-dep? full-ns)
+               {:name (symbol (str current-ns) (str (munge-node-lib full-ns) "." sym))
+                :ns current-ns}
 
-           (some? (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym))
-           (recur env (gets @env/*compiler* ::namespaces (-> env :ns :name) :imports sym) confirm)
+               (dep-has-global-exports? full-ns)
+               {:name (symbol (str current-ns) (str (munge-global-export full-ns) "." sym))
+                :ns current-ns}
+
+               :else
+               (merge
+                 (gets @env/*compiler* ::namespaces full-ns :defs sym)
+                 {:name qualified-symbol
+                  :ns full-ns})))
+
+           (some? (gets @env/*compiler* ::namespaces current-ns :imports sym))
+           (recur env (gets @env/*compiler* ::namespaces current-ns :imports sym) confirm)
 
            ;; The following three cases support for invoking JS modules that export themselves as function -David
            (or (js-module-exists? s)
@@ -1016,21 +1028,20 @@
            (or (node-module-dep? s)
                (node-module-dep? (resolve-ns-alias env s)))
            (let [module (resolve-ns-alias env s)]
-             {:name (symbol (str (-> env :ns :name)) (munge-node-lib module))
-              :ns (-> env :ns :name)})
+             {:name (symbol (str current-ns) (munge-node-lib module))
+              :ns current-ns})
 
            (or (dep-has-global-exports? s)
                (dep-has-global-exports? (resolve-ns-alias env s)))
            (let [module (resolve-ns-alias env s)]
-             {:name (symbol (str (-> env :ns :name)) (munge-global-export module))
-              :ns (-> env :ns :name)})
+             {:name (symbol (str current-ns) (munge-global-export module))
+              :ns current-ns})
 
            :else
-           (let [cur-ns (-> env :ns :name)
-                 full-ns (cond
-                           (some? (gets @env/*compiler* ::namespaces cur-ns :defs sym)) cur-ns
+           (let [full-ns (cond
+                           (some? (gets @env/*compiler* ::namespaces current-ns :defs sym)) current-ns
                            (core-name? env sym) 'cljs.core
-                           :else cur-ns)]
+                           :else current-ns)]
              (when (some? confirm)
                (confirm env full-ns sym))
              (merge (gets @env/*compiler* ::namespaces full-ns :defs sym)
