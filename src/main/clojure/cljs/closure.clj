@@ -2212,7 +2212,7 @@
        (:options @env/*compiler*))))
   ([{:keys [verbose target]}]
    (letfn [(package-json? [path]
-             (boolean (re-find #"node_modules[/\\][^/\\]+?[/\\]package.json$" path)))]
+             (boolean (re-find #"node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$" path)))]
      (let [module-fseq (util/module-file-seq)
            pkg-jsons (into {}
                        (comp

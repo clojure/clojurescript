@@ -122,5 +122,15 @@
                                   :file (.getAbsolutePath (io/file "node_modules/node-fetch/lib/index.js"))
                                   :provides ["node-fetch/lib/index.js" "node-fetch/lib/index" "node-fetch/lib"]}))
                  modules))))
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (closure/maybe-install-node-deps! {:npm-deps {"@comandeer/css-filter" "1.0.1"}})
+  (let [modules (closure/index-node-modules-dir)]
+    (is (true? (some (fn [module]
+                       (= module
+                          {:file (.getAbsolutePath (io/file "node_modules/@comandeer/css-filter/dist/css-filter.umd.js"))
+                           :module-type :commonjs
+                           :provides ["@comandeer/css-filter"]}))
+                 modules))))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
