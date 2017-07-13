@@ -1,5 +1,14 @@
+;; Copyright (c) Rich Hickey. All rights reserved.
+;; The use and distribution terms for this software are covered by the
+;; Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;; which can be found in the file epl-v10.html at the root of this distribution.
+;; By using this software in any fashion, you are agreeing to be bound by
+;; the terms of this license.
+;; You must not remove this notice, or any other, from this software.
+
 (ns cljs.array-access-test
-  (:require [cljs.test :refer [deftest is]]
+  (:require-macros [cljs.array-access-test :refer [suppress-errs]])
+  (:require [cljs.test :as test :refer [deftest is]]
             [cljs.array-access.alpha :as alpha]))
 
 (deftest unchecked-arrays-file-scope-test
@@ -74,82 +83,98 @@
     (unchecked-set v "foo" "x")
     (is (= "x" (aget v "foo")))))
 
+;; to suppress compile time warnings
+(defn checked-aget-alias [& args]
+  (apply checked-aget args))
+
+(defn checked-aset-alias [& args]
+  (apply checked-aset args))
+
 (deftest checked-aget-test
-  (is (thrown? js/Error (checked-aget nil 1)))
-  (is (nil? (checked-aget #js {} 1)))
-  (is (nil? (checked-aget #js [] 0)))
-  (is (nil? (checked-aget #js [1] -1)))
-  (is (nil? (checked-aget #js [1] 1)))
-  (is (== 1 (checked-aget #js [1] "0")))
-  (is (nil? (checked-aget [1] 0)))
-  (is (== 1 (checked-aget #js [1] 0)))
-  (is (== 1 (checked-aget #js {:foo 1} "foo")))
-  (is (nil? (checked-aget #js [#js {}] 0 0)))
-  (is (nil? (checked-aget #js [#js []] 0 0)))
-  (is (nil? (checked-aget #js [#js [1]] 0 -1)))
-  (is (nil? (checked-aget #js [#js [1]] 0 1)))
-  (is (== 1 (checked-aget #js [#js [1]] 0 "0")))
-  (is (== 1 (checked-aget #js [#js [1]] 0 0))))
+  (suppress-errs
+    (is (thrown? js/Error (checked-aget-alias nil 1)))
+    (is (nil? (checked-aget-alias #js {} 1)))
+    (is (nil? (checked-aget-alias #js [] 0)))
+    (is (nil? (checked-aget-alias #js [1] -1)))
+    (is (nil? (checked-aget-alias #js [1] 1)))
+    (is (== 1 (checked-aget-alias #js [1] "0")))
+    (is (nil? (checked-aget-alias [1] 0)))
+    (is (== 1 (checked-aget-alias #js [1] 0)))
+    (is (== 1 (checked-aget-alias #js {:foo 1} "foo")))
+    (is (nil? (checked-aget-alias #js [#js {}] 0 0)))
+    (is (nil? (checked-aget-alias #js [#js []] 0 0)))
+    (is (nil? (checked-aget-alias #js [#js [1]] 0 -1)))
+    (is (nil? (checked-aget-alias #js [#js [1]] 0 1)))
+    (is (== 1 (checked-aget-alias #js [#js [1]] 0 "0")))
+    (is (== 1 (checked-aget-alias #js [#js [1]] 0 0)))))
 
 (deftest checked-aset-test
-  (is (thrown? js/Error (checked-aset nil 1 "x")))
-  (is (= "x" (checked-aset #js {} 1 "x")))
-  (is (= "x" (checked-aset #js [] 0 "x")))
-  (is (= "x" (checked-aset #js [1] -1 "x")))
-  (is (= "x" (checked-aset #js [1] 1 "x")))
-  (is (= "x" (checked-aset #js [1] "0" "x")))
-  (is (= "x" (checked-aset [1] 0 "x")))
-  (is (= "x" (checked-aset #js [1] 0 "x")))
-  (let [v #js [1]]
-    (checked-aset v 0 "x")
-    (is (= "x" (aget v 0))))
-  (let [v #js {:foo 1}]
-    (checked-aset v "foo" "x")
-    (is (= "x" (aget v "foo"))))
-  (is (= "x" (checked-aset #js [#js {}] 0 0 "x")))
-  (is (= "x" (checked-aset #js [#js []] 0 0 "x")))
-  (is (= "x" (checked-aset #js [#js [1]] 0 -1 "x")))
-  (is (= "x" (checked-aset #js [#js [1]] 0 1 "x")))
-  (is (= "x" (checked-aset #js [#js [1]] 0 "0" "x")))
-  (is (= "x" (checked-aset #js [#js [1]] 0 0 "x")))
-  (let [v #js [#js [1]]]
-    (checked-aset v 0 0 "x")
-    (is (= "x" (aget v 0 0)))))
+  (suppress-errs
+    (is (thrown? js/Error (checked-aset-alias nil 1 "x")))
+    (is (= "x" (checked-aset-alias #js {} 1 "x")))
+    (is (= "x" (checked-aset-alias #js [] 0 "x")))
+    (is (= "x" (checked-aset-alias #js [1] -1 "x")))
+    (is (= "x" (checked-aset-alias #js [1] 1 "x")))
+    (is (= "x" (checked-aset-alias #js [1] "0" "x")))
+    (is (= "x" (checked-aset-alias [1] 0 "x")))
+    (is (= "x" (checked-aset-alias #js [1] 0 "x")))
+    (let [v #js [1]]
+      (checked-aset-alias v 0 "x")
+      (is (= "x" (aget v 0))))
+    (let [v #js {:foo 1}]
+      (checked-aset-alias v "foo" "x")
+      (is (= "x" (aget v "foo"))))
+    (is (= "x" (checked-aset-alias #js [#js {}] 0 0 "x")))
+    (is (= "x" (checked-aset-alias #js [#js []] 0 0 "x")))
+    (is (= "x" (checked-aset-alias #js [#js [1]] 0 -1 "x")))
+    (is (= "x" (checked-aset-alias #js [#js [1]] 0 1 "x")))
+    (is (= "x" (checked-aset-alias #js [#js [1]] 0 "0" "x")))
+    (is (= "x" (checked-aset-alias #js [#js [1]] 0 0 "x")))
+    (let [v #js [#js [1]]]
+      (checked-aset-alias v 0 0 "x")
+      (is (= "x" (aget v 0 0))))))
+
+;; to suppress compile time warnings
+(defn checked-aget'-alias [& args]
+  (apply checked-aget' args))
+
+(defn checked-aset'-alias [& args]
+  (apply checked-aset' args))
 
 (deftest checked-aget'-test
-  (is (thrown? js/Error (checked-aget' nil 1)))
-  (is (thrown? js/Error (checked-aget' #js {} 1)))
-  (is (thrown? js/Error (checked-aget' #js [] 0)))
-  (is (thrown? js/Error (checked-aget' #js [1] -1)))
-  (is (thrown? js/Error (checked-aget' #js [1] 1)))
-  (is (thrown? js/Error (checked-aget' #js [1] "0")))
-  (is (thrown? js/Error (checked-aget' [1] 0)))
-  (is (== 1 (checked-aget' #js [1] 0)))
-  (is (thrown? js/Error (checked-aget' #js [#js {}] 0 0)))
-  (is (thrown? js/Error (checked-aget' #js [#js []] 0 0)))
-  (is (thrown? js/Error (checked-aget' #js [#js [1]] 0 -1)))
-  (is (thrown? js/Error (checked-aget' #js [#js [1]] 0 1)))
-  (is (thrown? js/Error (checked-aget' #js [#js [1]] 0 "0")))
-  (is (== 1 (checked-aget' #js [#js [1]] 0 0))))
+  (is (thrown? js/Error (checked-aget'-alias nil 1)))
+  (is (thrown? js/Error (checked-aget'-alias #js {} 1)))
+  (is (thrown? js/Error (checked-aget'-alias #js [] 0)))
+  (is (thrown? js/Error (checked-aget'-alias #js [1] -1)))
+  (is (thrown? js/Error (checked-aget'-alias #js [1] 1)))
+  (is (thrown? js/Error (checked-aget'-alias #js [1] "0")))
+  (is (thrown? js/Error (checked-aget'-alias [1] 0)))
+  (is (== 1 (checked-aget'-alias #js [1] 0)))
+  (is (thrown? js/Error (checked-aget'-alias #js [#js {}] 0 0)))
+  (is (thrown? js/Error (checked-aget'-alias #js [#js []] 0 0)))
+  (is (thrown? js/Error (checked-aget'-alias #js [#js [1]] 0 -1)))
+  (is (thrown? js/Error (checked-aget'-alias #js [#js [1]] 0 1)))
+  (is (thrown? js/Error (checked-aget'-alias #js [#js [1]] 0 "0")))
+  (is (== 1 (checked-aget'-alias #js [#js [1]] 0 0))))
 
 (deftest checked-aset'-test
-  (is (thrown? js/Error (checked-aset' nil 1 "x")))
-  (is (thrown? js/Error (checked-aset' #js {} 1 "x")))
-  (is (thrown? js/Error (checked-aset' #js [] 0 "x")))
-  (is (thrown? js/Error (checked-aset' #js [1] -1 "x")))
-  (is (thrown? js/Error (checked-aset' #js [1] 1 "x")))
-  (is (thrown? js/Error (checked-aset' #js [1] "0" "x")))
-  (is (thrown? js/Error (checked-aset' [1] 0 "x")))
-  (is (= "x" (checked-aset' #js [1] 0 "x")))
+  (is (thrown? js/Error (checked-aset'-alias nil 1 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js {} 1 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [] 0 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [1] -1 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [1] 1 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [1] "0" "x")))
+  (is (thrown? js/Error (checked-aset'-alias [1] 0 "x")))
+  (is (= "x" (checked-aset'-alias #js [1] 0 "x")))
   (let [v #js [1]]
-    (checked-aset' v 0 "x")
+    (checked-aset'-alias v 0 "x")
     (is (= "x" (aget v 0))))
-  (is (thrown? js/Error (checked-aset' #js [#js {}] 0 0 "x")))
-  (is (thrown? js/Error (checked-aset' #js [#js []] 0 0 "x")))
-  (is (thrown? js/Error (checked-aset' #js [#js [1]] 0 -1 "x")))
-  (is (thrown? js/Error (checked-aset' #js [#js [1]] 0 1 "x")))
-  (is (thrown? js/Error (checked-aset' #js [#js [1]] 0 "0" "x")))
-  (is (= "x" (checked-aset' #js [#js [1]] 0 0 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [#js {}] 0 0 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [#js []] 0 0 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [#js [1]] 0 -1 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [#js [1]] 0 1 "x")))
+  (is (thrown? js/Error (checked-aset'-alias #js [#js [1]] 0 "0" "x")))
+  (is (= "x" (checked-aset'-alias #js [#js [1]] 0 0 "x")))
   (let [v #js [#js [1]]]
-    (checked-aset' v 0 0 "x")
+    (checked-aset'-alias v 0 0 "x")
     (is (= "x" (aget v 0 0)))))

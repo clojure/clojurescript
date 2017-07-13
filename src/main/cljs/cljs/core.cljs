@@ -438,9 +438,8 @@
 
 (defn- maybe-warn
   [e]
-  (when (and (exists? js/console)
-             (exists? js/console.warn))
-    (js/console.warn e)))
+  (when *print-err-fn*
+    (*print-err-fn* e)))
 
 (defn- checked-aget
   ([array idx]
