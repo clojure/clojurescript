@@ -3,12 +3,16 @@
 rm -rf builds/out-adv
 rm -rf out
 rm -rf target
+rm -rf package.json
+rm -rf package-lock.json
+
+echo {} > package.json
 mkdir -p builds/out-adv
 
 possible=5
 ran=0
 
-if ! bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\"}" > builds/out-adv/core-advanced-test.js; then
+if ! bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\" :npm-deps {:lodash \"4.17.4\"} :closure-warnings {:non-standard-jsdoc :off :global-this :off}}" > builds/out-adv/core-advanced-test.js; then
   >&2 echo ClojureScript compilation failed
   exit 1
 fi;

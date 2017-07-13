@@ -2,13 +2,17 @@
 
 # stop blowing compiled stuff
 rm -rf builds/out-simp
+rm -rf package.json
+rm -rf package-lock.json
+
+echo {} > package.json
 mkdir -p builds/out-simp
 
 possible=5
 ran=0
 
 #bin/cljsc test >out/core-test.js
-if ! bin/cljsc src/test/cljs  "{:optimizations :simple :static-fns true :output-dir \"builds/out-simp\" :cache-analysis true :output-wrapper true :compiler-stats true}" > builds/out-simp/core-simple-test.js; then
+if ! bin/cljsc src/test/cljs  "{:optimizations :simple :static-fns true :output-dir \"builds/out-simp\" :cache-analysis true :output-wrapper true :verbose true :compiler-stats true :npm-deps {:lodash \"4.17.4\"} :closure-warnings {:non-standard-jsdoc :off :global-this :off}}" > builds/out-simp/core-simple-test.js; then
   >&2 echo ClojureScript compilation failed
   exit 1
 fi;
