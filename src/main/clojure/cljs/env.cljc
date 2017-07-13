@@ -55,9 +55,9 @@ state that is accessed/maintained by many different components."}
                                           (externs/externs-map (:externs-sources options)))
                                   :cljs nil)
         :options options}
-       (when (= (:target options) :nodejs)
-         {:node-module-index deps/native-node-modules})
-       #?(:clj {:js-dependency-index (deps/js-dependency-index options)})))))
+       #?@(:clj [(when (= (:target options) :nodejs)
+                   {:node-module-index deps/native-node-modules})
+                 {:js-dependency-index (deps/js-dependency-index options)}])))))
 
 #?(:clj
    (defmacro with-compiler-env
