@@ -768,7 +768,16 @@
             (a/analyze (a/empty-env)
               '(aset (js-obj) "a" 2))))
         (catch Exception _))
-      (is (= ["cljs.core/aset, arguments must be an array, followed by numeric indices, followed by a value, got [object string number] instead (consider goog.object/set for object access)"] @ws)))))
+      (is (= ["cljs.core/aset, arguments must be an array, followed by numeric indices, followed by a value, got [object string number] instead (consider goog.object/set for object access)"] @ws)))
+    (let [ws   (atom [])]
+      (try
+        (a/with-warning-handlers [(collecting-warning-handler ws)]
+          (e/with-compiler-env test-cenv
+            (a/analyze (a/empty-env)
+              '(let [^objects arr (into-array [1 2 3])]
+                 (aget arr 0)))))
+        (catch Exception _))
+      (is (empty? @ws)))))
 
 (deftest test-cljs-2037
   (let [test-env (assoc-in (a/empty-env) [:ns :name] 'cljs.user)]
