@@ -1048,37 +1048,58 @@
            (some? (gets @env/*compiler* ::namespaces current-ns :imports sym))
            (recur env (gets @env/*compiler* ::namespaces current-ns :imports sym) confirm)
 
+           (some? (gets @env/*compiler* ::namespaces current-ns :defs sym))
+           (do
+             (when (some? confirm)
+               (confirm env current-ns sym))
+             (merge (gets @env/*compiler* ::namespaces current-ns :defs sym)
+               {:name (symbol (str current-ns) (str sym))
+                :ns current-ns}))
+
+           (core-name? env sym)
+           (do
+             (when (some? confirm)
+               (confirm env 'cljs.core sym))
+             (merge (gets @env/*compiler* ::namespaces 'cljs.core :defs sym)
+               {:name (symbol "cljs.core" (str sym))
+                :ns 'cljs.core}))
+
            ;; The following three cases support for invoking JS modules that export themselves as function -David
-           (or (js-module-exists? s)
-               (js-module-exists? (resolve-ns-alias env s)))
+           (and (or (js-module-exists? s)
+                    (js-module-exists? (resolve-ns-alias env s)))
+             (let [full-ns (resolve-ns-alias env s)]
+               (or (contains? (set (vals (gets env :ns :requires))) full-ns)
+                 (contains? (set (vals (gets env :ns :uses))) full-ns))))
            (let [module (or (gets @env/*compiler* :js-module-index s)
-                            (resolve-ns-alias env s))]
+                          (resolve-ns-alias env s))]
              {:name (symbol module)
               :ns   'js})
 
-           (or (node-module-dep? s)
-               (node-module-dep? (resolve-ns-alias env s)))
+           (and (or (node-module-dep? s)
+                  (node-module-dep? (resolve-ns-alias env s)))
+             (let [full-ns (resolve-ns-alias env s)]
+               (or (contains? (set (vals (gets env :ns :requires))) full-ns)
+                 (contains? (set (vals (gets env :ns :uses))) full-ns))))
            (let [module (resolve-ns-alias env s)]
              {:name (symbol (str current-ns) (munge-node-lib module))
               :ns current-ns})
 
-           (or (dep-has-global-exports? s)
-               (dep-has-global-exports? (resolve-ns-alias env s)))
+           (and (or (dep-has-global-exports? s)
+                  (dep-has-global-exports? (resolve-ns-alias env s)))
+             (let [full-ns (resolve-ns-alias env s)]
+               (or (contains? (set (vals (gets env :ns :requires))) full-ns)
+                 (contains? (set (vals (gets env :ns :uses))) full-ns))))
            (let [module (resolve-ns-alias env s)]
              {:name (symbol (str current-ns) (munge-global-export module))
               :ns current-ns})
 
            :else
-           (let [full-ns (cond
-                           (some? (gets @env/*compiler* ::namespaces current-ns :defs sym)) current-ns
-                           (core-name? env sym) 'cljs.core
-                           :else current-ns)
-                 sym (resolve-alias full-ns sym)]
+           (do
              (when (some? confirm)
-               (confirm env full-ns sym))
-             (merge (gets @env/*compiler* ::namespaces full-ns :defs sym)
-               {:name (symbol (str full-ns) (str sym))
-                :ns full-ns}))))))))
+               (confirm env current-ns sym))
+             (merge (gets @env/*compiler* ::namespaces current-ns :defs sym)
+               {:name (symbol (str current-ns) (str sym))
+                :ns current-ns}))))))))
 
 (defn resolve-existing-var
   "Given env, an analysis environment, and sym, a symbol, resolve an existing var.
