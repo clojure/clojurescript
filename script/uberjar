@@ -3,7 +3,11 @@
 # This script must be run within the ClojureScript top-level project
 # directory.
 
-set -ex
+set -e
+
+if [[ -z "$CLJS_SCRIPT_QUIET" ]]; then
+  set -x
+fi
 
 # The command `git describe --match v0.0` will return a string like
 #

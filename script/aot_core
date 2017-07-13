@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
+
+if [[ -z "$CLJS_SCRIPT_QUIET" ]]; then
+  set -x
+fi
 
 FILE_SEP='/'
 PATH_SEP=':'
