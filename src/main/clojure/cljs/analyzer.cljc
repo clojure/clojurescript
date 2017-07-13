@@ -41,10 +41,13 @@
 
 #?(:clj (set! *warn-on-reflection* true))
 
-(def ^:dynamic *cljs-ns* 'cljs.user)
-(def ^:dynamic *cljs-file* nil)
+;; User file-local compiler flags
 #?(:clj (def ^:dynamic *unchecked-if* false))
 #?(:clj (def ^:dynamic *unchecked-arrays* false))
+
+;; Compiler dynamic vars
+(def ^:dynamic *cljs-ns* 'cljs.user)
+(def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *checked-arrays* false)
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *fn-invoke-direct* false)
@@ -3030,6 +3033,9 @@
        :tag tag
        :js-op js-op
        :numeric numeric})))
+
+;; TODO: analyzed analyzed? should take pass name as qualified keyword arg
+;; then compiler passes can mark/check individually - David
 
 (defn analyzed
   "Mark a form as being analyzed. Assumes x satisfies IMeta. Useful to suppress
