@@ -33,14 +33,13 @@ else
   ran=$[ran+1]
 fi
 
-# commented out because of memory issue in JSC w/ nested fn calls - David
-#if ! hash jsc 2>/dev/null; then
-#  echo "jsc not on path, skipping JavaScriptCore tests"
-#else
-#  echo "Testing with JavaScriptCore"
-#  jsc -f builds/out-simp/core-simple-test.js
-#  ran=$[ran+1]
-#fi
+if ! hash jsc 2>/dev/null; then
+ echo "jsc not on path, skipping JavaScriptCore tests"
+else
+ echo "Testing with JavaScriptCore"
+ jsc -f builds/out-simp/core-simple-test.js
+ ran=$[ran+1]
+fi
 
 if [ "$NASHORN_HOME" = "" ]; then
   echo "NASHORN_HOME not set, skipping Nashorn tests"
