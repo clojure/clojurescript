@@ -842,7 +842,7 @@
   ([x & next]
    (core/let [forms (concat [x] next)]
      (if (every? #(simple-test-expr? &env %)
-           (map #(cljs.analyzer/analyze &env %) forms))
+           (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
        (core/let [and-str (core/->> (repeat (count forms) "(~{})")
                             (interpose " && ")
                             (apply core/str))]
@@ -860,7 +860,7 @@
   ([x & next]
    (core/let [forms (concat [x] next)]
      (if (every? #(simple-test-expr? &env %)
-           (map #(cljs.analyzer/analyze &env %) forms))
+           (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) forms))
        (core/let [or-str (core/->> (repeat (count forms) "(~{})")
                            (interpose " || ")
                            (apply core/str))]
@@ -2477,7 +2477,7 @@
   ([]
    '(.-EMPTY cljs.core/List))
   ([x & xs]
-   (if (= :constant (:op (cljs.analyzer/analyze &env x)))
+   (if (= :constant (:op (cljs.analyzer/no-warn (cljs.analyzer/analyze &env x))))
      `(-conj (list ~@xs) ~x)
      `(let [x# ~x]
         (-conj (list ~@xs) x#)))))
@@ -2498,7 +2498,7 @@
   ([& kvs]
    (core/let [keys (map first (partition 2 kvs))]
      (if (core/and (every? #(= (:op %) :constant)
-                     (map #(cljs.analyzer/analyze &env %) keys))
+                     (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) keys))
            (= (count (into #{} keys)) (count keys)))
        `(cljs.core/PersistentArrayMap. nil ~(clojure.core// (count kvs) 2) (array ~@kvs) nil)
        `(.createAsIfByAssoc cljs.core/PersistentArrayMap (array ~@kvs))))))
@@ -2518,7 +2518,7 @@
   ([& xs]
     (if (core/and (core/<= (count xs) 8)
                   (every? #(= (:op %) :constant)
-                    (map #(cljs.analyzer/analyze &env %) xs))
+                    (map #(cljs.analyzer/no-warn (cljs.analyzer/analyze &env %)) xs))
                   (= (count (into #{} xs)) (count xs)))
       `(cljs.core/PersistentHashSet. nil
          (cljs.core/PersistentArrayMap. nil ~(count xs) (array ~@(interleave xs (repeat nil))) nil)
