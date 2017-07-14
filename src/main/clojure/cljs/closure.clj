@@ -2406,7 +2406,9 @@
        (let [opts (-> opts
                     (update :foreign-libs
                       (fn [libs]
-                        (into (index-node-modules node-required)
+                        (into (if-not (empty? npm-deps)
+                                (index-node-modules node-required)
+                                [])
                           (expand-libs libs))))
                     process-js-modules)]
          (swap! compiler-env assoc :js-dependency-index
