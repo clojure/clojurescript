@@ -811,6 +811,8 @@
   (let [url (deps/to-url (constants-filename opts))]
     (javascript-file nil url [(str ana/constants-ns-sym)] ["cljs.core"])))
 
+;; Internally only REPLs use this. We do expose it in cljs.build.api - David
+
 (defn add-dependencies
   "Given one or more IJavaScript objects in dependency order, produce
   a new sequence of IJavaScript objects which includes the input list
@@ -820,21 +822,20 @@
         requires      (set (mapcat deps/-requires inputs))
         required-cljs (clojure.set/difference (cljs-dependencies opts requires) inputs)
         required-js   (js-dependencies opts
-                        (into (set (mapcat deps/-requires required-cljs)) requires))
-        provided      (set (mapcat deps/-provides (clojure.set/union inputs required-cljs required-js)))
-        unprovided    (clojure.set/difference requires provided)]
-    (when (seq unprovided)
-      (ana/warning :unprovided @env/*compiler* {:unprovided (sort unprovided)}))
+                        (into (set (mapcat deps/-requires required-cljs)) requires))]
     (cons
       (javascript-file nil (io/resource "goog/base.js") ["goog"] nil)
       (deps/dependency-order
         (concat
           (map
-            (fn [{:keys [foreign url file provides requires] :as js-map}]
-              (let [url (or url (io/resource file))]
-                (merge
-                  (javascript-file foreign url provides requires)
-                  js-map)))
+            (fn [{:keys [type foreign url file provides requires] :as js-map}]
+              ;; ignore :seed inputs, only for REPL - David
+              (if (not= :seed type)
+                (let [url (or url (io/resource file))]
+                 (merge
+                   (javascript-file foreign url provides requires)
+                   js-map))
+                js-map))
             required-js)
           (when (-> @env/*compiler* :options :emit-constants)
             [(constants-javascript-file opts)])

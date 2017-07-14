@@ -191,14 +191,12 @@
          sources (binding [ana/*analyze-deps* false]
                    (cljsc/add-dependencies
                      (merge (env->opts repl-env) opts)
-                     {:requires [(name ns)]
-                      :type :seed
-                      :url (:uri (cljsc/source-for-namespace ns env/*compiler*))}))
-         opts' (cljsc/handle-js-modules opts sources env/*compiler* false)
+                     {:requires [(name ns)] :type :seed}))
          deps (->> sources
                 (remove (comp #{["goog"]} :provides))
                 (remove (comp #{:seed} :type))
                 (map #(select-keys % [:provides :url])))]
+     (cljsc/handle-js-modules opts sources env/*compiler* false)
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
