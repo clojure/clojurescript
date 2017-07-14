@@ -49,6 +49,7 @@
 (def ^:dynamic *cljs-ns* 'cljs.user)
 (def ^:dynamic *cljs-file* nil)
 (def ^:dynamic *checked-arrays* false)
+(def ^:dynamic *check-alias-dupes* true)
 (def ^:dynamic *cljs-static-fns* false)
 (def ^:dynamic *fn-invoke-direct* false)
 (def ^:dynamic *cljs-macros-path* "/cljs/core")
@@ -2733,7 +2734,8 @@
               (let [merge-keys
                     [:use-macros :require-macros :rename-macros
                      :uses :requires :renames :imports]]
-                (check-duplicate-aliases env ns-info' require-info)
+                (when *check-alias-dupes*
+                  (check-duplicate-aliases env ns-info' require-info))
                 (merge
                   ns-info'
                   {:excludes excludes}
