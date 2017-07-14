@@ -677,6 +677,8 @@
       :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
                           unknown functions, but instead direct invokes via
                           `f(a0,a1...)`. Defaults to `false`.
+      :target           - use `:nodejs` if targeting Node.js. Takes no other options
+                          at the moment.
       :ns               - optional, the namespace in which to evaluate the source.
       :verbose          - optional, emit details from compiler activity. Defaults to
                           false.
@@ -786,6 +788,8 @@
       :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
                           unknown functions, but instead direct invokes via
                           `f(a0,a1...)`. Defaults to `false`.
+      :target           - use `:nodejs` if targeting Node.js. Takes no other options
+                          at the moment.
       :ns               - optional, the namespace in which to evaluate the source.
       :verbose          - optional, emit details from compiler activity. Defaults to
                           false.
@@ -909,6 +913,8 @@
       :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
                           unknown functions, but instead direct invokes via
                           `f(a0,a1...)`. Defaults to `false`.
+      :target           - use `:nodejs` if targeting Node.js. Takes no other options
+                          at the moment.
       :ns               - optional, the namespace in which to evaluate the source.
       :verbose          - optional, emit details from compiler activity. Defaults to
                           false.
@@ -1073,6 +1079,8 @@
     :fn-invoke-direct - if `true`, does not generate `.call(null...)` calls for
                         unknown functions, but instead direct invokes via
                         `f(a0,a1...)`. Defaults to `false`.
+    :target           - use `:nodejs` if targeting Node.js. Takes no other options
+                        at the moment.
     :ns               - optional, the namespace in which to evaluate the source.
     :verbose          - optional, emit details from compiler activity. Defaults to
                         false.
