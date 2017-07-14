@@ -3657,13 +3657,15 @@
           (forms-seq*))))))
 
 #?(:clj
-   (defn gen-user-ns [src]
-     (let [full-name (str src)
-           name (.substring full-name
-                  (inc (.lastIndexOf full-name "/"))
-                  (.lastIndexOf full-name "."))]
-       (symbol
-         (str "cljs.user." name (util/content-sha full-name 7))))))
+   (defn gen-user-ns
+     [src]
+     (if (sequential? src)
+       (symbol (str "cljs.user.source$form$" (util/content-sha (pr-str src) 7)))
+       (let [full-name (str src)
+             name (.substring full-name
+                    (inc (.lastIndexOf full-name "/"))
+                    (.lastIndexOf full-name "."))]
+         (symbol (str "cljs.user." name (util/content-sha full-name 7)))))))
 
 #?(:clj
    (defn parse-ns
