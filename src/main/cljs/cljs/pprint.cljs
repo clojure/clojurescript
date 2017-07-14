@@ -806,7 +806,7 @@ The following keyword arguments can be passed with values:
             (binding [*out* base-writer]
               (pr object)))
           (if (true? optval)
-            (*print-fn* (str sb)))
+            (string-print (str sb)))
           (if (nil? optval)
             (str sb)))))))
 
@@ -815,7 +815,7 @@ The following keyword arguments can be passed with values:
    (let [sb (StringBuffer.)]
      (binding [*out* (StringBufferWriter. sb)]
        (pprint object *out*)
-       (*print-fn* (str sb)))))
+       (string-print (str sb)))))
   ([object writer]
    (with-pretty-writer writer
                        (binding [*print-pretty* true]
@@ -2736,7 +2736,7 @@ column number or pretty printing"
              (-flush wrapped-stream))))
        (cond
          (not stream) (str sb)
-         (true? stream) (*print-fn* (str sb))
+         (true? stream) (string-print (str sb))
          :else nil))))
   ([format args]
    (map-passing-context

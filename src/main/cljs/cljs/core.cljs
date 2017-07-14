@@ -65,17 +65,13 @@
   ^{:doc "Each runtime environment provides a different way to print output.
   Whatever function *print-fn* is bound to will be passed any
   Strings which should be printed." :dynamic true}
-  *print-fn*
-  (fn [_]
-    (throw (js/Error. "No *print-fn* fn set for evaluation environment"))))
+  *print-fn* nil)
 
 (defonce
   ^{:doc "Each runtime environment provides a different way to print error output.
   Whatever function *print-err-fn* is bound to will be passed any
   Strings which should be printed." :dynamic true}
-  *print-err-fn*
-  (fn [_]
-    (throw (js/Error. "No *print-err-fn* fn set for evaluation environment"))))
+  *print-err-fn* nil)
 
 (defn set-print-fn!
   "Set *print-fn* to f."
@@ -9584,6 +9580,8 @@ reduces them without incurring seq initialization"
     (-write writer s)))
 
 (defn string-print [x]
+  (when (nil? *print-fn*)
+    (throw (js/Error. "No *print-fn* fn set for evaluation environment")))
   (*print-fn* x)
   nil)
 
