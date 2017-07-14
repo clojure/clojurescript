@@ -464,7 +464,7 @@
                  (let [ijs (ana/parse-ns [form])] ;; if ns form need to check for js modules - David
                    (cljsc/handle-js-modules opts [ijs] env/*compiler*)
                    (binding [ana/*check-alias-dupes* false]
-                     (ana/no-warn (->ast form)))))
+                     (ana/no-warn (->ast form))))) ;; need new AST after we know what the modules are - David
            wrap-js
            ;; TODO: check opts as well - David
            (if (:source-map repl-env)
@@ -493,11 +493,9 @@
        ;; NOTE: means macros which expand to ns aren't supported for now
        ;; when eval'ing individual forms at the REPL - David
        (when (#{:ns :ns*} (:op ast))
-         (let [ast (ana/no-warn (ana/analyze env form nil opts))]
-           (load-dependencies repl-env
-             (into (vals (:requires ast))
-               (distinct (vals (:uses ast))))
-             opts)))
+         (load-dependencies repl-env
+           (into (vals (:requires ast)) (distinct (vals (:uses ast))))
+           opts))
        (when *cljs-verbose*
          (err-out (println wrap-js)))
        (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
