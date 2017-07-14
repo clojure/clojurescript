@@ -305,7 +305,7 @@
   (str "No such namespace: " ns-sym
        ", could not locate " (ns->relpath ns-sym :cljs)
        ", " (ns->relpath ns-sym :cljc)
-       ", or Closure namespace \"" js-provide "\""))
+       ", or JavaScript providing \"" js-provide "\""))
 
 (defmethod error-message :undeclared-macros-ns
   [warning-type {:keys [ns-sym js-provide] :as info}]
