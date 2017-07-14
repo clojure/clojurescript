@@ -916,6 +916,66 @@
           (is (every? symbol? (keys (get-in @st [:cljs.analyzer/namespaces]))))
           (inc! l))))))
 
+(deftest test-string-requires-cljs-2232
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 4 done)]
+      (cljs/compile-str
+        (atom @st)
+        "(ns foo.core (:require [path]))"
+        nil
+        {:context :expr
+         :target :nodejs
+         :eval node-eval}
+        (fn [{:keys [error value] :as m}]
+          (is (nil? error))
+          (is (some? (re-find #"foo\.core\.node\$module\$path = require\('path'\);" value)))
+          (inc! l)))
+      (cljs/eval-str
+        (atom @st)
+        "(ns foo.core (:require [path])) (path/basename \"/foo/bar\")"
+        nil
+        {:context :expr
+         :target :nodejs
+         :eval node-eval}
+        (fn [{:keys [error value] :as m}]
+          (is (nil? error))
+          (is (= value "bar"))
+          (inc! l)))
+      (cljs/analyze-str
+        (atom @st)
+        "(ns foo.core (:require [path]))"
+        nil
+        {:context :expr
+         :target :nodejs
+         :load (fn [_ cb]
+                 (cb {:lang   :js
+                      :source ""}))}
+        (fn [{:keys [error value] :as m}]
+          (is (nil? error))
+          (is (= (:deps value) '[path]))
+          (inc! l)))
+      (let [st (cljs/empty-state)]
+        (cljs/eval
+          st
+          '(ns foo.core (:require [path]))
+          {:context :expr
+           :target :nodejs
+           :eval node-eval}
+          (fn [{:keys [error value] :as m}]
+            (is (nil? error))
+            (cljs/eval
+              st
+              '(path/basename "/foo/bar")
+              {:context :expr
+               :ns 'foo.core
+               :target :nodejs
+               :eval node-eval}
+              (fn [{:keys [error value]}]
+                (is (nil? error))
+                (is (= value "bar"))
+                (inc! l)))))))))
+
 (defn -main [& args]
   (run-tests))
 

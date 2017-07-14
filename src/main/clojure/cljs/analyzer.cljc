@@ -744,10 +744,16 @@
     (str module)))
 
 (defn node-module-dep?
+  #?(:cljs {:tag boolean})
   [module]
-  (contains?
-    (get-in @env/*compiler* [:node-module-index])
-    (str module)))
+  #?(:clj (contains?
+            (get-in @env/*compiler* [:node-module-index])
+            (str module))
+     :cljs (try
+             (and (= *target* "nodejs")
+                  (boolean (js/require.resolve (str module))))
+             (catch :default _
+               false))))
 
 (defn dep-has-global-exports?
   [module]

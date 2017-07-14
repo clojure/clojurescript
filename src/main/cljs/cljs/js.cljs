@@ -575,6 +575,15 @@
          (check-uses-and-load-macros {:value nil} ast)))
      (cb {:value ast}))))
 
+(defn- node-side-effects
+  [bound-vars sb deps ns-name]
+  (doseq [dep deps]
+    (.append sb
+      (with-out-str
+        (comp/emitln (munge ns-name) "."
+          (ana/munge-node-lib dep)
+          " = require('" dep "');")))))
+
 (defn- analyze-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
         eof        (js-obj)
@@ -716,14 +725,22 @@
                          (str "Could not eval " form) cause))))]
         (if (:error res)
           (cb res)
-          (let [ast (:value res)]
+          (let [ast (:value res)
+                [node-deps ast] (if (keyword-identical? (:target opts) :nodejs)
+                                  (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? (:deps ast))]
+                                    [node-libs (assoc ast :deps libs-to-load)])
+                                  [nil ast])]
             (if (#{:ns :ns*} (:op ast))
               (ns-side-effects true bound-vars aenv ast opts
                 (fn [res]
                   (if (:error res)
                     (cb res)
-                    (let [src (str "goog.provide(\"" (comp/munge (:name ast)) "\")")]
-                      (cb {:value (*eval-fn* {:source src})})))))
+                    (let [sb (StringBuffer.)]
+                      (.append sb
+                        (with-out-str (comp/emitln (str "goog.provide(\"" (comp/munge (:name ast)) "\");"))))
+                      (when-not (nil? node-deps)
+                        (node-side-effects bound-vars sb node-deps (:name ast)))
+                      (cb {:value (*eval-fn* {:source (.toString sb)})})))))
               (let [src (with-out-str (comp/emit ast))]
                 (cb {:value (*eval-fn* {:source src})})))))))))
 
@@ -822,14 +839,21 @@
                                     (str "Could not compile " name) cause))))]
                    (if (:error res)
                      (cb res)
-                     (let [ast (:value res)]
+                     (let [ast (:value res)
+                           [node-deps ast] (if (keyword-identical? (:target opts) :nodejs)
+                                             (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? (:deps ast))]
+                                               [node-libs (assoc ast :deps libs-to-load)])
+                                             [nil ast])]
                        (.append sb (with-out-str (comp/emit ast)))
                        (if (#{:ns :ns*} (:op ast))
                          (ns-side-effects bound-vars aenv ast opts
                            (fn [res]
                              (if (:error res)
                                (cb res)
-                               (compile-loop (:name ast)))))
+                               (do
+                                 (when-not (nil? node-deps)
+                                   (node-side-effects bound-vars sb node-deps (:name ast)))
+                                 (compile-loop (:name ast))))))
                          (recur ns)))))
                  (do
                    (when (:source-map opts)
@@ -944,7 +968,11 @@
                    (if (:error res)
                      (cb res)
                      (let [ast (:value res)
-                           ns' ana/*cljs-ns*]
+                           ns' ana/*cljs-ns*
+                           [node-deps ast] (if (keyword-identical? (:target opts) :nodejs)
+                                             (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? (:deps ast))]
+                                               [node-libs (assoc ast :deps libs-to-load)])
+                                             [nil ast])]
                       (if (#{:ns :ns*} (:op ast))
                         (do
                           (.append sb
@@ -953,7 +981,10 @@
                             (fn [res]
                               (if (:error res)
                                 (cb res)
-                                (compile-loop ns')))))
+                                (do
+                                  (when-not (nil? node-deps)
+                                    (node-side-effects bound-vars sb node-deps (:name ast)))
+                                  (compile-loop ns'))))))
                         (do
                           (.append sb (with-out-str (comp/emit ast)))
                           (recur ns'))))))
