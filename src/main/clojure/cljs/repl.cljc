@@ -196,7 +196,7 @@
                 (remove (comp #{["goog"]} :provides))
                 (remove (comp #{:seed} :type))
                 (map #(select-keys % [:provides :url])))]
-     (cljsc/handle-js-modules opts sources env/*compiler* false)
+     (cljsc/handle-js-modules opts sources env/*compiler*)
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
@@ -454,9 +454,17 @@
                                      :source-form form}
                   :repl-env repl-env})
            def-emits-var (:def-emits-var opts)
-           ast (binding [ana/*analyze-deps* false]
-                 (ana/analyze (assoc env :def-emits-var def-emits-var)
-                   (wrap form) nil opts))
+           ->ast (fn [form]
+                   (binding [ana/*analyze-deps* false]
+                     (ana/analyze (assoc env :def-emits-var def-emits-var)
+                       (wrap form) nil opts)))
+           ast (->ast form)
+           ast (if-not (#{:ns :ns*} (:op ast))
+                 ast
+                 (let [ijs (ana/parse-ns [form])] ;; if ns form need to check for js modules - David
+                   (cljsc/handle-js-modules opts [ijs] env/*compiler*)
+                   (binding [ana/*check-alias-dupes* false]
+                     (ana/no-warn (->ast form)))))
            wrap-js
            ;; TODO: check opts as well - David
            (if (:source-map repl-env)
@@ -857,7 +865,6 @@
                      (let [value (eval repl-env env input opts)]
                        (print value))))))]
          (cljsc/maybe-install-node-deps! opts)
-         (cljsc/handle-js-modules opts '() env/*compiler* false)
          (comp/with-core-cljs opts
            (fn []
              (binding [*repl-opts* opts]
