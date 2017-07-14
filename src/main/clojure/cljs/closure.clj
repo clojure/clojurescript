@@ -2115,9 +2115,11 @@
   [{:keys [npm-deps verbose] :as opts}]
   (let [npm-deps (merge npm-deps (compute-upstream-npm-deps opts))]
     (if-not (empty? npm-deps)
-      (do
+      (let [pkg-json (io/file "package.json")]
         (when (or ana/*verbose* verbose)
           (util/debug-prn "Installing Node.js dependencies"))
+        (when-not (.exists pkg-json)
+          (spit pkg-json "{}"))
         (let [proc (-> (ProcessBuilder.
                          (into (cond->> ["npm" "install" "module-deps" "resolve" "browser-resolve"]
                                  util/windows? (into ["cmd" "/c"]))
