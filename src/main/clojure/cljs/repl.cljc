@@ -193,8 +193,8 @@
                      (merge (env->opts repl-env) opts)
                      {:requires [(name ns)]
                       :type :seed
-                      :url (:uri (cljsc/source-for-namespace
-                                   ns env/*compiler*))}))
+                      :url (:uri (cljsc/source-for-namespace ns env/*compiler*))}))
+         opts' (cljsc/handle-js-modules opts sources env/*compiler* false)
          deps (->> sources
                 (remove (comp #{["goog"]} :provides))
                 (remove (comp #{:seed} :type))
@@ -828,13 +828,6 @@
                         (catch Throwable e
                           (caught e repl-env opts)
                           opts))))
-             ;; TODO: consider alternative ways to deal with JS module processing at REPL
-             opts' opts ;; need to save opts prior to JS module processing for watch
-             opts (if (or (:libs opts) (:foreign-libs opts))
-                    (let [opts (cljsc/process-js-modules opts)]
-                      (swap! env/*compiler* assoc :js-dependency-index (deps/js-dependency-index opts))
-                      opts)
-                    opts)
              init (do
                     (evaluate-form repl-env env "<cljs repl>"
                       `(~'set! ~'cljs.core/*print-namespace-maps* true)
@@ -865,6 +858,8 @@
                        (print nil))
                      (let [value (eval repl-env env input opts)]
                        (print value))))))]
+         (cljsc/maybe-install-node-deps! opts)
+         (cljsc/handle-js-modules opts '() env/*compiler* false)
          (comp/with-core-cljs opts
            (fn []
              (binding [*repl-opts* opts]
@@ -876,23 +871,21 @@
                  (init)
                  (catch Throwable e
                    (caught e repl-env opts)))
-               ;; TODO: consider alternative ways to deal with JS module processing at REPL
-               (let [opts opts'] ;; use opts prior to JS module processing
-                 (when-let [src (:watch opts)]
-                   (.start
-                     (Thread.
-                       ((ns-resolve 'clojure.core 'binding-conveyor-fn)
-                         (fn []
-                           (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                             (err-out (println "Watch compilation log available at:" (str log-file)))
-                             (try
-                               (let [log-out (FileWriter. log-file)]
-                                 (binding [*err* log-out
-                                           *out* log-out]
-                                   (cljsc/watch src (dissoc opts :watch)
-                                     env/*compiler* done?)))
-                               (catch Throwable e
-                                 (caught e repl-env opts))))))))))
+               (when-let [src (:watch opts)]
+                 (.start
+                   (Thread.
+                     ((ns-resolve 'clojure.core 'binding-conveyor-fn)
+                       (fn []
+                         (let [log-file (io/file (util/output-directory opts) "watch.log")]
+                           (err-out (println "Watch compilation log available at:" (str log-file)))
+                           (try
+                             (let [log-out (FileWriter. log-file)]
+                               (binding [*err* log-out
+                                         *out* log-out]
+                                 (cljsc/watch src (dissoc opts :watch)
+                                   env/*compiler* done?)))
+                             (catch Throwable e
+                               (caught e repl-env opts)))))))))
                ;; let any setup async messages flush
                (Thread/sleep 50)
                (binding [*in* (if (true? (:source-map-inline opts))
