@@ -2386,33 +2386,36 @@
   "Given all Cljs sources (build inputs and dependencies in classpath)
 
   - index all the node node modules
-  - process the JS modules (preprocess + convert to Closure JS)o
+  - process the JS modules (preprocess + convert to Closure JS)
   - save js-dependency-index for compilation"
-  [{:keys [npm-deps target] :as opts} js-sources compiler-env]
-  (let [;; Find all the top-level Node packages and their files
-        top-level-modules (reduce (fn [acc m]
-                                    (reduce (fn [acc p]
-                                              (assoc acc p m))
-                                            acc
-                                            (:provides m)))
-                                  {}
-                                  (index-node-modules-dir))
-        requires (set (mapcat deps/-requires js-sources))
-        ;; Select Node files that are required by Cljs code,
-        ;; and create list of all their dependencies
-        required-node-modules (set/intersection (set (keys top-level-modules)) requires)]
-    (if-not (= target :nodejs)
-      (let [opts (-> opts
-                   (update :foreign-libs
-                     (fn [libs]
-                       (into (index-node-modules required-node-modules)
-                         (expand-libs libs))))
-                   process-js-modules)]
-        (swap! compiler-env assoc :js-dependency-index (deps/js-dependency-index opts))
-        opts)
-      (do
-        (swap! compiler-env update-in [:node-module-index] (fnil into #{}) (map str required-node-modules))
-        opts))))
+  ([opts js-sources compiler-env]
+    (handle-js-modules opts js-sources compiler-env true))
+  ([{:keys [npm-deps target] :as opts} js-sources compiler-env only-required?]
+   (let [;; Find all the top-level Node packages and their files
+         top-level (reduce
+                     (fn [acc m]
+                       (reduce (fn [acc p] (assoc acc p m)) acc (:provides m)))
+                     {} (index-node-modules-dir))
+         requires  (set (mapcat deps/-requires js-sources))
+         ;; Select Node files that are required by Cljs code,
+         ;; and create list of all their dependencies
+         node-required (if only-required?
+                         (set/intersection (set (keys top-level)) requires)
+                         (keys top-level))]
+     (if-not (= target :nodejs)
+       (let [opts (-> opts
+                    (update :foreign-libs
+                      (fn [libs]
+                        (into (index-node-modules node-required)
+                          (expand-libs libs))))
+                    process-js-modules)]
+         (swap! compiler-env assoc :js-dependency-index
+           (deps/js-dependency-index opts))
+         opts)
+       (do
+         (swap! compiler-env update-in [:node-module-index]
+           (fnil into #{}) (map str node-required))
+         opts)))))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
