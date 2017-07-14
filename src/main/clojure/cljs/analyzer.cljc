@@ -2075,7 +2075,7 @@
   #?(:cljs {:tag boolean})
   [dep]
   (assert (symbol? dep)
-    (str "cljs.analyzer/foreign-dep? expected symbol got " dep))
+    (str "cljs.analyzer/foreign-dep? expected symbol got " (pr-str dep)))
   (let [js-index (:js-dependency-index @env/*compiler*)]
     (if-some [[_ {:keys [foreign]}] (find js-index (name dep))]
       foreign
