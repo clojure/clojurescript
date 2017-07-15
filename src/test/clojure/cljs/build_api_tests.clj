@@ -377,27 +377,27 @@
     (build/build (build/inputs (io/file inputs "data_readers_test")) opts cenv)
     (is (contains? (-> @cenv ::ana/data-readers) 'test/custom-identity))))
 
-(deftest test-node-modules-cljs-2246
-  (test/delete-node-modules)
-  (spit (io/file "package.json") (json/json-str {:dependencies {:left-pad "1.1.3"}
-                                                 :devDependencies {:module-deps "*"
-                                                                   :resolve "*"
-                                                                   :browser-resolve "*"}}))
-  (sh/sh "yarn" "install")
-  (let [ws (atom [])
-        out (.getPath (io/file (test/tmp-dir) "node-modules-opt-test-out"))
-        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
-                               :opts {:main 'node-modules-opt-test.core
-                                      :output-dir out
-                                      :optimizations :none
-                                      :closure-warnings {:check-types :off}}}
-        cenv (env/default-compiler-env opts)]
-    (test/delete-out-files out)
-    (ana/with-warning-handlers [(collecting-warning-handler ws)]
-      (build/build (build/inputs (io/file inputs "node_modules_opt_test/core.cljs")) opts cenv))
-    (is (.exists (io/file out "node_modules/left-pad/index.js")))
-    (is (contains? (:js-module-index @cenv) "left-pad"))
-    (is (empty? @ws)))
-  (.delete (io/file "package.json"))
-  (.delete (io/file "yarn.lock"))
-  (test/delete-node-modules))
+;(deftest test-node-modules-cljs-2246
+;  (test/delete-node-modules)
+;  (spit (io/file "package.json") (json/json-str {:dependencies {:left-pad "1.1.3"}
+;                                                 :devDependencies {:module-deps "*"
+;                                                                   :resolve "*"
+;                                                                   :browser-resolve "*"}}))
+;  (sh/sh "yarn" "install")
+;  (let [ws (atom [])
+;        out (.getPath (io/file (test/tmp-dir) "node-modules-opt-test-out"))
+;        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+;                               :opts {:main 'node-modules-opt-test.core
+;                                      :output-dir out
+;                                      :optimizations :none
+;                                      :closure-warnings {:check-types :off}}}
+;        cenv (env/default-compiler-env opts)]
+;    (test/delete-out-files out)
+;    (ana/with-warning-handlers [(collecting-warning-handler ws)]
+;      (build/build (build/inputs (io/file inputs "node_modules_opt_test/core.cljs")) opts cenv))
+;    (is (.exists (io/file out "node_modules/left-pad/index.js")))
+;    (is (contains? (:js-module-index @cenv) "left-pad"))
+;    (is (empty? @ws)))
+;  (.delete (io/file "package.json"))
+;  (.delete (io/file "yarn.lock"))
+;  (test/delete-node-modules))
