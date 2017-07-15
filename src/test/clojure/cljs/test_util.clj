@@ -20,8 +20,10 @@
      (.delete f))))
 
 (defn delete-node-modules []
-  (doseq [f (file-seq (io/file "node_modules"))]
-    (.delete f)))
+  (let [nm (io/file "node_modules")]
+    (while (.exists nm)
+      (doseq [f (file-seq nm)]
+        (.delete f)))))
 
 (defn project-with-modules
   "Returns the build config for a project that uses Google Closure modules."
