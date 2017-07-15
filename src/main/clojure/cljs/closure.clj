@@ -2397,7 +2397,7 @@
   - index all the node node modules
   - process the JS modules (preprocess + convert to Closure JS)
   - save js-dependency-index for compilation"
-  [{:keys [npm-deps target] :as opts} js-sources compiler-env]
+  [{:keys [npm-deps node-modules target] :as opts} js-sources compiler-env]
   (let [;; Find all the top-level Node packages and their files
         top-level (reduce
                     (fn [acc m]
@@ -2411,7 +2411,7 @@
       (let [opts (-> opts
                    (update :foreign-libs
                      (fn [libs]
-                       (into (if-not (empty? npm-deps)
+                       (into (if (or (not (empty? npm-deps)) (true? node-modules))
                                (index-node-modules node-required)
                                [])
                          (expand-libs libs))))
