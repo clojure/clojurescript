@@ -206,7 +206,17 @@
                           (map #(cljsc/source-on-disk opts %)))]
            (when (:repl-verbose opts)
              (println "Loading:" (:provides source)))
-           (.append sb (cljsc/add-dep-string opts source)))
+           ;; Need to get :requires and :provides from compiled source
+           ;; not from our own compilation, this issue oddly doesn't seem to
+           ;; affect compiled ClojureScript, should be cleaned up so we
+           ;; don't need this step here - David
+           (with-open [rdr (io/reader (:url source))]
+             (.append sb
+               (cljsc/add-dep-string opts
+                 (merge source
+                   (deps/parse-js-ns (line-seq rdr)))))))
+         (when (:repl-verbose opts)
+           (println (.toString sb)))
          (-evaluate repl-env "<cljs repl>" 1 (.toString sb)))
        ;; REPLs that stream must manually load each dep - David
        (doseq [{:keys [url provides]} deps]
