@@ -493,9 +493,11 @@
        ;; NOTE: means macros which expand to ns aren't supported for now
        ;; when eval'ing individual forms at the REPL - David
        (when (#{:ns :ns*} (:op ast))
-         (load-dependencies repl-env
-           (into (vals (:requires ast)) (distinct (vals (:uses ast))))
-           opts))
+         (let [ast (ana/no-warn (ana/analyze env form nil opts))]
+           (load-dependencies repl-env
+             (into (vals (:requires ast))
+               (distinct (vals (:uses ast))))
+             opts)))
        (when *cljs-verbose*
          (err-out (println wrap-js)))
        (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
