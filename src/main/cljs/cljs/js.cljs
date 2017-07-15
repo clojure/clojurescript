@@ -584,6 +584,17 @@
           (ana/munge-node-lib dep)
           " = require('" dep "');")))))
 
+(defn- global-exports-side-effects
+  [bound-vars sb deps ns-name]
+  (let [{:keys [js-dependency-index]} @(:*compiler* bound-vars)]
+    (doseq [dep deps]
+      (let [{:keys [global-exports]} (get js-dependency-index (name dep))]
+        (.append sb
+          (with-out-str
+            (comp/emitln (munge ns-name) "."
+              (ana/munge-global-export dep)
+              " = goog.global." (get global-exports (symbol dep)) ";")))))))
+
 (defn- analyze-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
         eof        (js-obj)
@@ -735,11 +746,15 @@
                 (fn [res]
                   (if (:error res)
                     (cb res)
-                    (let [sb (StringBuffer.)]
+                    (let [ns-name (:name ast)
+                          sb (StringBuffer.)]
                       (.append sb
-                        (with-out-str (comp/emitln (str "goog.provide(\"" (comp/munge (:name ast)) "\");"))))
+                        (with-out-str (comp/emitln (str "goog.provide(\"" (comp/munge ns-name) "\");"))))
                       (when-not (nil? node-deps)
-                        (node-side-effects bound-vars sb node-deps (:name ast)))
+                        (node-side-effects bound-vars sb node-deps ns-name))
+                      (global-exports-side-effects bound-vars sb
+                        (filter ana/dep-has-global-exports? (:deps ast))
+                        ns-name)
                       (cb {:value (*eval-fn* {:source (.toString sb)})})))))
               (let [src (with-out-str (comp/emit ast))]
                 (cb {:value (*eval-fn* {:source src})})))))))))
@@ -850,9 +865,12 @@
                            (fn [res]
                              (if (:error res)
                                (cb res)
-                               (do
+                               (let [ns-name (:name ast)]
                                  (when-not (nil? node-deps)
-                                   (node-side-effects bound-vars sb node-deps (:name ast)))
+                                   (node-side-effects bound-vars sb node-deps ns-name))
+                                 (global-exports-side-effects bound-vars sb
+                                   (filter ana/dep-has-global-exports? (:deps ast))
+                                   ns-name)
                                  (compile-loop (:name ast))))))
                          (recur ns)))))
                  (do
@@ -981,9 +999,12 @@
                             (fn [res]
                               (if (:error res)
                                 (cb res)
-                                (do
+                                (let [ns-name (:name ast)]
                                   (when-not (nil? node-deps)
-                                    (node-side-effects bound-vars sb node-deps (:name ast)))
+                                    (node-side-effects bound-vars sb node-deps ns-name))
+                                  (global-exports-side-effects bound-vars sb
+                                    (filter ana/dep-has-global-exports? (:deps ast))
+                                    ns-name)
                                   (compile-loop ns'))))))
                         (do
                           (.append sb (with-out-str (comp/emit ast)))

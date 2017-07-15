@@ -976,6 +976,73 @@
                 (is (= value "bar"))
                 (inc! l)))))))))
 
+(deftest test-global-exports-cljs-2243
+  (async done
+    (let [calculator-load (fn [_ cb]
+                            (cb {:lang   :js
+                                 :source "global.Calculator = {
+    add: function (a, b) {
+        return a + b;
+    },
+    subtract: function (a, b) {
+        return a - b;
+    }
+};"}))
+          st (cljs/empty-state)
+          l (latch 4 done)]
+      (swap! st assoc :js-dependency-index {"calculator" {:global-exports '{calculator Calculator}}})
+      (cljs/compile-str
+        (atom @st)
+        "(ns foo.core (:require [calculator]))"
+        nil
+        {:context :expr
+         :load calculator-load
+         :eval node-eval}
+        (fn [{:keys [error value] :as m}]
+          (is (nil? error))
+          (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global.Calculator;" value)))
+          (inc! l)))
+      (cljs/eval-str
+        (atom @st)
+        "(ns foo.core (:require [calculator])) (calculator/add 1 2)"
+        nil
+        {:context :expr
+         :load calculator-load
+         :eval node-eval}
+        (fn [{:keys [error value] :as m}]
+          (is (nil? error))
+          (is (= value 3))
+          (inc! l)))
+      (cljs/analyze-str
+        (atom @st)
+        "(ns foo.core (:require [calculator]))"
+        nil
+        {:context :expr
+         :load calculator-load}
+        (fn [{:keys [error value] :as m}]
+          (is (nil? error))
+          (is (= (:deps value) '[calculator]))
+          (inc! l)))
+      (let [st (atom @st)]
+        (cljs/eval
+          st
+          '(ns foo.core (:require [calculator]))
+          {:context :expr
+           :load calculator-load
+           :eval node-eval}
+          (fn [{:keys [error value] :as m}]
+            (is (nil? error))
+            (cljs/eval
+              st
+              '(calculator/add 1 2)
+              {:context :expr
+               :ns 'foo.core
+               :eval node-eval}
+              (fn [{:keys [error value]}]
+                (is (nil? error))
+                (is (= value 3))
+                (inc! l)))))))))
+
 (defn -main [& args]
   (run-tests))
 

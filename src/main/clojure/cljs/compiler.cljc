@@ -1062,7 +1062,8 @@
 
 (defn load-libs
   [libs seen reloads deps ns-name]
-  (let [{:keys [target optimizations]} (get @env/*compiler* :options)
+  (let [{:keys [options js-dependency-index]} @env/*compiler*
+        {:keys [target optimizations]} options
         loaded-libs (munge 'cljs.core.*loaded-libs*)
         loaded-libs-temp (munge (gensym 'cljs.core.*loaded-libs*))
         [node-libs libs-to-load] (let [libs (remove (set (vals seen)) (filter (set (vals libs)) deps))]
@@ -1070,7 +1071,7 @@
                                      (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? libs)]
                                        [node-libs libs-to-load])
                                      [nil libs]))
-        {global-exports-libs true, libs-to-load false} (group-by ana/dep-has-global-exports? libs-to-load)]
+        {global-exports-libs true libs-to-load false} (group-by ana/dep-has-global-exports? libs-to-load)]
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
@@ -1082,8 +1083,7 @@
              (when (= :none optimizations)
                (if (= :nodejs target)
                  ;; under node.js we load foreign libs globally
-                 (let [{:keys [js-dependency-index options]} @env/*compiler*
-                       ijs (get js-dependency-index (name lib))]
+                 (let [ijs (get js-dependency-index (name lib))]
                    (emitln "cljs.core.load_file(\""
                      (str (io/file (util/output-directory options) (or (deps/-relative-path ijs)
                                                                      (util/relative-name (:url ijs)))))
@@ -1091,8 +1091,7 @@
                  (emitln "goog.require('" (munge lib) "');")))]
             :cljs
             [(and (ana/foreign-dep? lib)
-                  (when-let [{:keys [optimizations]} (get @env/*compiler* :options)]
-                    (not (keyword-identical? optimizations :none))))
+                  (not (keyword-identical? optimizations :none)))
              nil])
 
         (or (-> libs meta :reload)
@@ -1110,11 +1109,10 @@
         (ana/munge-node-lib lib)
         " = require('" lib "');"))
     (doseq [lib global-exports-libs]
-      (let [{:keys [js-dependency-index options]} @env/*compiler*
-            ijs (get js-dependency-index (name lib))]
+      (let [{:keys [global-exports]} (get js-dependency-index (name lib))]
         (emitln (munge ns-name) "."
           (ana/munge-global-export lib)
-          " = goog.global." (get (:global-exports ijs) (symbol lib)) ";")))
+          " = goog.global." (get global-exports (symbol lib)) ";")))
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
