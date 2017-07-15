@@ -263,6 +263,23 @@
         add-cljs-base add-cljs-base-dep)))
   )
 
+(defn parent? [f0 f1]
+  (.startsWith
+    (.getAbsolutePath (io/file f0))
+    (.getAbsolutePath (io/file f1))))
+
+;; JS modules become Closure libs that exist in the output directory. However in
+;; the current indexing pipeline, these will not have an :out-file. Correct these
+;; entries for module->module-uris - David
+
+(defn maybe-add-out-file
+  [{:keys [lib-path] :as ijs} {:keys [output-dir] :as opts}]
+  (if-not lib-path
+    ijs
+    (if (parent? lib-path output-dir)
+      (assoc ijs :out-file lib-path)
+      ijs)))
+
 (defn modules->module-uris
   "Given a :modules map, a dependency sorted list of compiler inputs, and
    compiler options return a Closure module uris map. This map will include
@@ -293,7 +310,8 @@
                        (fn [{:keys [out-file] :as ijs}]
                          (if-not out-file
                            (throw (Exception. (str "No :out-file for IJavaScript " (pr-str ijs))))
-                           out-file))))
+                           out-file))
+                       #(maybe-add-out-file % opts)))
                    (distinct))
                  entries)]))
           (expand-modules modules inputs))
