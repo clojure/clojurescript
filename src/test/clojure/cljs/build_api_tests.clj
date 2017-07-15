@@ -377,7 +377,7 @@
     (build/build (build/inputs (io/file inputs "data_readers_test")) opts cenv)
     (is (contains? (-> @cenv ::ana/data-readers) 'test/custom-identity))))
 
-(deftest test-node-modules-cljs-2245
+(deftest test-node-modules-cljs-2246
   (test/delete-node-modules)
   (spit (io/file "package.json") (json/json-str {:dependencies {:left-pad "1.1.3"}
                                                  :devDependencies {:module-deps "*"
@@ -390,7 +390,6 @@
                                :opts {:main 'node-modules-opt-test.core
                                       :output-dir out
                                       :optimizations :none
-                                      :node-modules true
                                       :closure-warnings {:check-types :off}}}
         cenv (env/default-compiler-env opts)]
     (test/delete-out-files out)
