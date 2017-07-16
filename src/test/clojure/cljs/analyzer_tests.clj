@@ -1875,6 +1875,18 @@
                :with-core? true})]
     (is (zero? (count @ws)))))
 
+(deftest test-cljs-2247
+  (let [ws (atom [])]
+    (try
+      (a/with-warning-handlers [(collecting-warning-handler ws)]
+        (e/with-compiler-env (assoc @test-cenv :repl-env {})
+          (a/analyze (ana/empty-env)
+            '(defn -foo []))
+          (a/analyze (ana/empty-env)
+            '(defprotocol IAlpha (-foo [this])))))
+      (catch Exception _))
+    (is (= ["Protocol IAlpha is overwriting function -foo"] @ws))))
+
 (deftest test-cljs-2385-infer-priority
   (let [ws  (atom [])
         res (infer-test-helper

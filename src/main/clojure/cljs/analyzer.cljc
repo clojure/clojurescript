@@ -148,6 +148,7 @@
    :protocol-duped-method true
    :protocol-multiple-impls true
    :protocol-with-variadic-method true
+   :protocol-with-overwriting-method true
    :protocol-impl-with-variadic-method true
    :protocol-impl-recur-with-target true
    :single-segment-namespace true
@@ -397,6 +398,14 @@
   [warning-type info]
   (str "Protocol " (:protocol info) " declares method "
        (:name info) " with variadic signature (&)"))
+
+(defmethod error-message :protocol-with-overwriting-method
+  [warning-type info]
+  (let [overwritten-protocol (-> info :existing :protocol)]
+    (str "Protocol " (:protocol info) " is overwriting "
+      (if overwritten-protocol "method" "function")
+      " " (:name info)
+      (when overwritten-protocol (str " of protocol " (name overwritten-protocol))))))
 
 (defmethod error-message :protocol-impl-with-variadic-method
   [warning-type info]

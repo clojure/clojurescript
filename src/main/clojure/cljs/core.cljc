@@ -2121,6 +2121,11 @@
                                        (cljs.analyzer/warning
                                         :protocol-with-variadic-method
                                         &env {:protocol psym :name fname}))
+                                 _ (core/when-some [existing (core/get (-> &env :ns :defs) fname)]
+                                     (core/when-not (= p (:protocol existing))
+                                       (cljs.analyzer/warning
+                                         :protocol-with-overwriting-method
+                                         {} {:protocol psym :name fname :existing existing})))
                                  slot (symbol (core/str prefix (munge (name fname))))
                                  fname (vary-meta fname assoc
                                          :protocol p
