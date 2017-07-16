@@ -2459,6 +2459,9 @@
            #(-> %
              (update-in [:options] merge all-opts)
              (assoc :target (:target opts))
+             ;; Save the current js-dependency index once we have computed all-opts
+             ;; or the analyzer won't be able to find upstream dependencies - Antonio
+             (assoc :js-dependency-index (deps/js-dependency-index all-opts))
              ;; Save list of sources for cljs.analyzer/locate-src - Juho Teperi
              (assoc :sources sources)))
          (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))

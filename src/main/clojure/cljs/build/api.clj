@@ -193,8 +193,7 @@
      (if-not (nil? env/*compiler*)
        env/*compiler*
        (env/default-compiler-env
-         (closure/add-externs-sources
-           (closure/add-implicit-options opts))))))
+         (closure/add-externs-sources opts)))))
   ([source opts compiler-env]
    (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) closure/known-opts)]
      (when suggested-opt

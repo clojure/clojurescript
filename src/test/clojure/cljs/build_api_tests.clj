@@ -16,7 +16,8 @@
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.test-util :as test]
-            [cljs.build.api :as build]))
+            [cljs.build.api :as build]
+            [cljs.closure :as closure]))
 
 (deftest test-target-file-for-cljs-ns
   (is (= (.getPath (build/target-file-for-cljs-ns 'example.core-lib nil))
@@ -409,4 +410,7 @@
               :target :nodejs}]
     (test/delete-out-files out)
     (build/build (build/inputs (io/file root "foreign_libs_cljs_2249")) opts)
+    (is (.exists (io/file out "calculator_global.js")))
+    (test/delete-out-files out)
+    (closure/build (build/inputs (io/file root "foreign_libs_cljs_2249")) opts)
     (is (.exists (io/file out "calculator_global.js")))))
