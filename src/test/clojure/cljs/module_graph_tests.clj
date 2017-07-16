@@ -86,12 +86,31 @@
     (is (= "events" (module-graph/canonical-name "event.types" ins)))))
 
 (deftest test-inputs->assigned-modules
-  (let [modules' (-> (modules opts)
+  (let [modules  (modules opts)
+        modules' (-> modules
                    module-graph/add-cljs-base
                    module-graph/add-cljs-base-dep
                    module-graph/annotate-depths)
-        inputs' (inputs opts)]
-    (module-graph/inputs->assigned-modules inputs' modules')))
+        inputs'  (inputs opts)
+        indexed  (module-graph/index-inputs inputs')
+        assigns  (module-graph/inputs->assigned-modules inputs' modules')
+        assigns' (reduce-kv
+                   (fn [ret module-name {:keys [entries]}]
+                     (merge ret
+                       (zipmap
+                         (map #(module-graph/canonical-name % indexed)
+                           entries)
+                         (repeat module-name))))
+                   {} modules)]
+    ;; every input assigned, including orphans
+    (is (every? #(contains? assigns %)
+          (map #(module-graph/canonical-name % indexed)
+            (mapcat :provides inputs'))))
+    ;; every user specified assignment should be respected
+    (is (every?
+          (fn [[e m]]
+            (= m (get assigns e)))
+          assigns'))))
 
 (def bad-modules
   {:page1 {:entries '[page1.a page1.b events]
