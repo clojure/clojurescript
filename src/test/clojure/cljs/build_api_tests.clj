@@ -401,3 +401,12 @@
 ;  (.delete (io/file "package.json"))
 ;  (.delete (io/file "yarn.lock"))
 ;  (test/delete-node-modules))
+
+(deftest test-cljs-2249
+  (let [out (io/file (test/tmp-dir) "cljs-2249-out")
+        root (io/file "src" "test" "cljs_build")
+        opts {:output-dir (str out)
+              :target :nodejs}]
+    (test/delete-out-files out)
+    (build/build (build/inputs (io/file root "foreign_libs_cljs_2249")) opts)
+    (is (.exists (io/file out "calculator_global.js")))))
