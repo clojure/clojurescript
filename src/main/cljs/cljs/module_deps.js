@@ -60,15 +60,23 @@ md.on('end', function() {
   for (var key in deps_files) {
     var dep = deps_files[key];
 
-    if (dep.provides == null && !/node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$/.test(dep.file)) {
-      var match = dep.file.match(/node_modules[/\\](.*)\.js(on)?$/)
+    // add provides to files that are not `package.json`s
+    if (!/node_modules[/\\](@[^/\\]+?[/\\])?[^/\\]+?[/\\]package\.json$/.test(dep.file)) {
+      if (dep.file.indexOf('node_modules') !== -1) {
+        var providedModule = dep.file
+            .substring(dep.file.lastIndexOf('node_modules'))
+            .replace('\\', '/')
+            .replace('node_modules/', '');
 
-      if (match != null){
-        var providedModule = match[1].replace('\\', '/');
+        dep.provides = dep.provides || [];
+        dep.provides.push(providedModule, providedModule.replace(/\.js(on)?$/, ''));
 
-        dep.provides = /\/index$/.test(providedModule) ?
-          [ providedModule, providedModule.replace(/\/index$/,'')] :
-          [ providedModule ];
+        var indexReplaced = providedModule.replace(/\/index\.js(on)?$/,'');
+
+        if (/\/index\.js(on)?$/.test(providedModule) &&
+            dep.provides.indexOf(indexReplaced) === -1) {
+          dep.provides.push(indexReplaced);
+        }
       }
     }
 

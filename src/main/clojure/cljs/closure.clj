@@ -2236,14 +2236,17 @@
                                                  (when (= main-path path)
                                                    name))))
                                            pkg-jsons)]
-                       {:provides (if (some? pkg-json-main)
-                                    [pkg-json-main]
-                                    (let [module-rel-name (string/replace
-                                                            (subs path (.lastIndexOf path "node_modules"))
-                                                            #"node_modules[\\\/]" "")]
-                                      (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
-                                        (boolean (re-find #"[\\\/]index\.js(on)?$" module-rel-name))
-                                        (conj (string/replace module-rel-name #"[\\\/]index\.js(on)?$" "")))))}))))))
+                       {:provides (let [module-rel-name (string/replace
+                                                          (subs path (.lastIndexOf path "node_modules"))
+                                                          #"node_modules[\\\/]" "")
+                                        provides (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
+                                                   (some? pkg-json-main)
+                                                   (conj pkg-json-main))
+                                        index-replaced (string/replace module-rel-name #"[\\\/]index\.js(on)?$" "")]
+                                    (cond-> provides
+                                      (and (boolean (re-find #"[\\\/]index\.js(on)?$" module-rel-name))
+                                           (not (some #{index-replaced} provides)))
+                                      (conj index-replaced)))}))))))
         module-fseq))))
 
 (def node-file-seq->libs-spec (memoize node-file-seq->libs-spec*))
