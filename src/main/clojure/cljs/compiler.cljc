@@ -1279,7 +1279,7 @@
    (defn emit-source-map [src dest sm-data opts]
      (let [sm-file (io/file (str (.getPath ^File dest) ".map"))]
        (if-let [smap (:source-map-asset-path opts)]
-         (emits "\n//# sourceMappingURL=" smap
+         (emitln "\n//# sourceMappingURL=" smap
            (string/replace (util/path sm-file)
              (str (util/path (io/file (:output-dir opts))))
              "")
@@ -1288,7 +1288,7 @@
                (if-not (string/index-of smap "?") "?" "&")
                "rel=" (System/currentTimeMillis))
              ""))
-         (emits "\n//# sourceMappingURL="
+         (emitln "\n//# sourceMappingURL="
            (or (:source-map-url opts) (.getName sm-file))
            (if (true? (:source-map-timestamp opts))
              (str "?rel=" (System/currentTimeMillis))
