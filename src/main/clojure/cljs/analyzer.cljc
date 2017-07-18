@@ -1209,7 +1209,7 @@
 (defn analyze-keyword
   [env sym]
   (register-constant! env sym)
-  {:op :const :env env :form sym :tag 'cljs.core/Keyword})
+  {:op :const :val sym :env env :form sym :tag 'cljs.core/Keyword})
 
 (defn get-tag [e]
   (if-some [tag (-> e :form meta :tag)]
@@ -3199,7 +3199,7 @@
   (if ^boolean (:quoted? env)
     (do
       (register-constant! env sym)
-      (analyze-wrap-meta {:op :const :env env :form sym :tag 'cljs.core/Symbol}))
+      (analyze-wrap-meta {:op :const :val sym :env env :form sym :tag 'cljs.core/Symbol}))
     (let [{:keys [line column]} (meta sym)
           env  (if-not (nil? line)
                  (assoc env :line line)
@@ -3591,7 +3591,7 @@
                    (instance? Character form) 'string
                    (true? form) 'boolean
                    (false? form) 'boolean)]
-         (cond-> {:op :const :env env :form form}
+         (cond-> {:op :const :val form :env env :form form}
            tag (assoc :tag tag))))))
 
 #?(:cljs
@@ -3613,7 +3613,7 @@
                    (string? form) STRING_SYM
                    (true? form) BOOLEAN_SYM
                    (false? form) BOOLEAN_SYM)]
-         (cond-> {:op :const :env env :form form}
+         (cond-> {:op :const :val form :env env :form form}
            tag (assoc :tag tag))))))
 
 (defn analyze* [env form name opts]
