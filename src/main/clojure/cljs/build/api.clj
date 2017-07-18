@@ -215,12 +215,33 @@
    (binding [ana/*cljs-warning-handlers* (:warning-handlers opts ana/*cljs-warning-handlers*)]
      (closure/watch source opts compiler-env stop))))
 
-(defn node-module-deps
-  "EXPERIMENTAL: return the foreign libs entries as computed by running
-   the module-deps package on the supplied JavaScript entry point. Assumes
-   that the module-deps NPM package is either locally or globally installed."
-  [entry]
-  (closure/node-module-deps entry))
+;; =============================================================================
+;; Node.js / NPM dependencies
+
+(defn install-node-deps!
+  "EXPERIMENTAL: Install the supplied dependencies via NPM. dependencies must be
+   a map of name to version."
+  ([dependencies]
+   (install-node-deps! dependencies
+     (when-not (nil? env/*compiler*)
+       (:options @env/*compiler*))))
+  ([dependencies opts]
+   {:pre [(map? dependencies)]}
+   (closure/maybe-install-node-deps! (merge opts {:npm-deps dependencies}))))
+
+(defn get-node-deps
+  "EXPERIMENTAL: Get the Node.js dependency graph of the supplied dependencies.
+   Dependencies must be a sequence of strings or symbols naming packages or paths
+   within packages (e.g. [react \"react-dom/server\"]. Assumes dependencies have
+   been been previously installed, either by `cljs.build.api/install-node-deps!`
+   or by an NPM client, and reside in the `node_modules` directory."
+  ([dependencies]
+   (get-node-deps dependencies
+     (when-not (nil? env/*compiler*)
+       (:options @env/*compiler*))))
+  ([dependencies opts]
+   {:pre [(sequential? dependencies)]}
+   (closure/index-node-modules dependencies opts)))
 
 (comment
   (node-module-deps

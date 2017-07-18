@@ -415,3 +415,33 @@
   (.delete (io/file "package.json"))
   (.delete (io/file "package-lock.json"))
   (test/delete-node-modules))
+
+(deftest test-deps-api-cljs-2255
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (build/install-node-deps! {:left-pad "1.1.3"})
+  (is (.exists (io/file "node_modules/left-pad/package.json")))
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (build/install-node-deps! {:react "15.6.1"
+                             :react-dom "15.6.1"})
+  (let [modules (build/get-node-deps '[react "react-dom/server"])]
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/react/react.js"))
+                                  :provides ["react"
+                                             "react/react.js"
+                                             "react/react"]}))
+                 modules)))
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/react/lib/React.js"))
+                                  :provides ["react/lib/React.js" "react/lib/React"]}))
+                 modules)))
+    (is (true? (some (fn [module]
+                       (= module {:module-type :commonjs
+                                  :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
+                                  :provides ["react-dom/server.js" "react-dom/server"]}))
+                 modules))))
+  (test/delete-node-modules)
+  (.delete (io/file "package.json")))
