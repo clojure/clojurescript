@@ -364,7 +364,9 @@
                  ([] (rf))
                  ([result] (rf result :foo))
                  ([result input] (rf result input))))]
-      (is (= (sequence xf [1 2 3]) [1 2 3 :foo])))))
+      (is (= (sequence xf [1 2 3]) [1 2 3 :foo]))))
+  (testing "CLJS-2258"
+    (is (= ["1"] (sequence (map str) (eduction [1]))))))
 
 (deftest test-obj-equiv
   (testing "Object equiv method"

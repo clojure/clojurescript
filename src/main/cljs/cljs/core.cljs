@@ -3999,10 +3999,10 @@ reduces them without incurring seq initialization"
 
 (defn iter [coll]
   (cond
+    (iterable? coll) (-iterator coll)
     (nil? coll) (nil-iter)
     (string? coll) (string-iter coll)
     (array? coll) (array-iter coll)
-    (iterable? coll) (-iterator coll)
     (seqable? coll) (seq-iter coll)
     :else (throw (js/Error. (str "Cannot create iterator from " coll)))))
 
@@ -4131,15 +4131,12 @@ reduces them without incurring seq initialization"
     iterator))
 
 (set! (.-create TransformerIterator)
-  (fn [xform coll]
-    (transformer-iterator xform (iter coll) false)))
+  (fn [xform source]
+    (transformer-iterator xform source false)))
 
 (set! (.-createMulti TransformerIterator)
-  (fn [xform colls]
-    (let [iters (array)]
-      (doseq [coll colls]
-        (.push iters (iter coll)))
-      (transformer-iterator xform (MultiIterator. iters) true))))
+  (fn [xform sources]
+    (transformer-iterator xform (MultiIterator. (to-array sources)) true)))
 
 (defn sequence
   "Coerces coll to a (possibly empty) sequence, if it is not already
@@ -4156,11 +4153,11 @@ reduces them without incurring seq initialization"
        (or (seq coll) ())))
   ([xform coll]
    (or (chunkIteratorSeq
-         (.create TransformerIterator xform coll))
+         (.create TransformerIterator xform (iter coll)))
        ()))
   ([xform coll & colls]
    (or (chunkIteratorSeq
-         (.createMulti TransformerIterator xform (to-array (cons coll colls))))
+         (.createMulti TransformerIterator xform (map iter (cons coll colls))))
        ())))
 
 (defn ^boolean every?
@@ -10166,8 +10163,8 @@ reduces them without incurring seq initialization"
   ISequential
 
   IIterable
-  (-iterator [coll]
-    (.create TransformerIterator xform coll))
+  (-iterator [_]
+    (.create TransformerIterator xform (iter coll)))
 
   ISeqable
   (-seq [_] (seq (sequence xform coll)))
