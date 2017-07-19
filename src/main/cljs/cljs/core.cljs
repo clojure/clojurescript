@@ -27,8 +27,8 @@
 ;; effect is to set same-named analyzer dynamic Var, which is unset via binding
 ;; scopes. In self-hosted it is cleared via cljs.js/post-file-side-effects.
 (def *unchecked-arrays* false)
-;; The scope of *warn-on-infer* is global. Its side effect is to affect
-;; cljs.analyzer/*cljs-warnings*.
+;; The scope of *warn-on-infer* is file-scope: Its side effect is to set the
+;; cljs.analyzer/*cljs-warnings* dynamic Var, which is unset via binding scopes.
 (def *warn-on-infer* false)
 
 (set! *unchecked-arrays* true)
