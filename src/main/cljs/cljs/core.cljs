@@ -2255,7 +2255,7 @@ reduces them without incurring seq initialization"
     :else false))
 
 (defn ^boolean neg-int?
-  "Return true if x satisfies int? and is positive."
+  "Return true if x satisfies int? and is negative."
   [x]
   (cond
     (integer? x) (neg? x)
