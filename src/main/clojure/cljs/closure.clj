@@ -892,15 +892,13 @@
         (if (every? #(not (contains? input-set' %)) requires)
           (do
             (try
-              (util/measure (and compiler-stats verbose)
-                (str "Compile " (:ns ns-info))
-                (swap! compiled conj
-                  (-compile (or (:source-file ns-info)
-                                (:source-forms ns-info))
-                                    ; - ns-info -> ns -> cljs file relpath -> js relpath
-                    (merge opts
-                      {:output-file (comp/rename-to-js
-                                      (util/ns->relpath (:ns ns-info)))}))))
+              (swap! compiled conj
+                (-compile (or (:source-file ns-info)
+                              (:source-forms ns-info))
+                  ; - ns-info -> ns -> cljs file relpath -> js relpath
+                  (merge opts
+                    {:output-file (comp/rename-to-js
+                                    (util/ns->relpath (:ns ns-info)))})))
               (catch Throwable e
                 (reset! failed e)))
             (when-not @failed
@@ -945,12 +943,10 @@
            (for [ns-info inputs]
              ; TODO: compile-file calls parse-ns unnecessarily to get ns-info
              ; TODO: we could mark dependent namespaces for recompile here
-             (util/measure (and compiler-stats (:verbose opts))
-               (str "Compile " (:ns ns-info))
-               (-compile (or (:source-file ns-info)
-                             (:source-forms ns-info))
-                                        ; - ns-info -> ns -> cljs file relpath -> js relpath
-                 (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))}))))))))))
+             (-compile (or (:source-file ns-info)
+                           (:source-forms ns-info))
+               ; - ns-info -> ns -> cljs file relpath -> js relpath
+               (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))})))))))))
 
 (defn add-goog-base
   [inputs]

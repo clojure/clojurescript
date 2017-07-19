@@ -1405,18 +1405,22 @@
       (ensure
         (with-core-cljs opts
           (fn []
-            (when (or ana/*verbose* (:verbose opts))
+            (when (and (or ana/*verbose* (:verbose opts))
+                       (not (:compiler-stats opts)))
               (util/debug-prn "Compiling" (str src)))
-            (let [ext (util/ext src)
-                  {:keys [ns] :as ns-info} (ana/parse-ns src)]
-              (if-let [cached (cached-core ns ext opts)]
-                (emit-cached-core src dest cached opts)
-                (let [opts (if (macro-ns? ns ext opts)
-                             (assoc opts :macros-ns true)
-                             opts)
-                      ret  (emit-source src dest ext opts)]
-                  (.setLastModified ^File dest (util/last-modified src))
-                  ret)))))))))
+            (util/measure (and (or ana/*verbose* (:verbose opts))
+                               (:compiler-stats opts))
+              (str "Compiling " src)
+              (let [ext (util/ext src)
+                   {:keys [ns] :as ns-info} (ana/parse-ns src)]
+               (if-let [cached (cached-core ns ext opts)]
+                 (emit-cached-core src dest cached opts)
+                 (let [opts (if (macro-ns? ns ext opts)
+                              (assoc opts :macros-ns true)
+                              opts)
+                       ret (emit-source src dest ext opts)]
+                   (.setLastModified ^File dest (util/last-modified src))
+                   ret))))))))))
 
 #?(:clj
    (defn requires-compilation?
