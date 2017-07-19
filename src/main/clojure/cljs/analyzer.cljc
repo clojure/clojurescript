@@ -975,10 +975,10 @@
    might be invokeable as a function."
   [ns env]
   (let [ns (resolve-ns-alias env ns)]
-    (and (or (js-module-exists? ns)
+    (and (required? ns env)
+         (or (js-module-exists? ns)
              (node-module-dep? ns)
-             (dep-has-global-exports? ns))
-         (required? ns env))))
+             (dep-has-global-exports? ns)))))
 
 (defn resolve-invokeable-ns [ns current-ns env]
   (let [ns (resolve-ns-alias env ns)
