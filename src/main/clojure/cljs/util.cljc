@@ -331,8 +331,8 @@
                 (fn [^File d]
                   (seq (. d (listFiles))))
                 dir)]
-     (filter (fn [f]
+     (filter (fn [f ^File]
                (let [path (.getPath f)]
                  (or (.endsWith path ".json")
-                   (.endsWith path ".js"))))
+                     (.endsWith path ".js"))))
        fseq))))
