@@ -1411,6 +1411,23 @@
       (is (= "#js {:foo/bar 33}" (pr-str (doto (js-obj) (gobject/set "foo/bar" 33)))))
       (is (= "#js {:foo/bar #:var{:quux 66}}" (pr-str (doto (js-obj) (gobject/set "foo/bar" {:var/quux 66}))))))))
 
+(def ^:const true-2267 true)
+(def ^:const false-2267 false)
+(def ^:const nil-2267 nil)
+(def ^:const empty-string-2267 "")
+(def ^:const non-empty-string-2267 "x")
+(def ^:const zero-2267 0)
+(def ^:const non-zero-2267 1)
+
+(deftest test-cljs-2267
+  (is (= :then (if true-2267 :then :else)))
+  (is (= :else (if false-2267 :then :else)))
+  (is (= :else (if nil-2267 :then :else)))
+  (is (= :then (if empty-string-2267 :then :else)))
+  (is (= :then (if non-empty-string-2267 :then :else)))
+  (is (= :then (if zero-2267 :then :else)))
+  (is (= :then (if non-zero-2267 :then :else))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

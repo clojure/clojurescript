@@ -447,15 +447,19 @@
   (when-not (= :statement (:context env))
     (emit-wrap env (emit-constant form))))
 
-(defn truthy-constant? [{:keys [op form]}]
-  (and (= op :constant)
-       form
-       (not (or (and (string? form) (= form ""))
-                (and (number? form) (zero? form))))))
+(defn truthy-constant? [{:keys [op form const-expr]}]
+  (or (and (= op :constant)
+           form
+           (not (or (and (string? form) (= form ""))
+                    (and (number? form) (zero? form)))))
+      (and (some? const-expr)
+           (truthy-constant? const-expr))))
 
-(defn falsey-constant? [{:keys [op form]}]
-  (and (= op :constant)
-       (or (false? form) (nil? form))))
+(defn falsey-constant? [{:keys [op form const-expr]}]
+  (or (and (= op :constant)
+           (or (false? form) (nil? form)))
+      (and (some? const-expr)
+           (falsey-constant? const-expr))))
 
 (defn safe-test? [env e]
   (let [tag (ana/infer-tag env e)]
