@@ -874,7 +874,9 @@
                        (print nil))
                      (let [value (eval repl-env env input opts)]
                        (print value))))))]
-         (cljsc/maybe-install-node-deps! opts)
+         (when (:install-deps opts)
+           (cljsc/check-npm-deps opts)
+           (cljsc/maybe-install-node-deps! opts))
          (comp/with-core-cljs opts
            (fn []
              (binding [*repl-opts* opts]
