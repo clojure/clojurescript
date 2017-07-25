@@ -216,6 +216,7 @@
                                  :opts {:main 'npm-deps-test.core
                                         :output-dir out
                                         :optimizations :none
+                                        :install-deps true
                                         :npm-deps {:left-pad "1.1.3"}
                                         :closure-warnings {:check-types :off}}}
           cenv (env/default-compiler-env)]
@@ -229,6 +230,7 @@
                                :opts {:main 'npm-deps-test.string-requires
                                       :output-dir out
                                       :optimizations :none
+                                      :install-deps true
                                       :npm-deps {:react "15.6.1"
                                                  :react-dom "15.6.1"
                                                  :lodash "4.17.4"}
@@ -298,6 +300,7 @@
                                         :output-dir out
                                         :optimizations :none
                                         :target :nodejs
+                                        :install-deps true
                                         :npm-deps {:react "15.6.1"
                                                    :react-dom "15.6.1"}
                                         :closure-warnings {:check-types :off

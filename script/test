@@ -12,7 +12,7 @@ mkdir -p builds/out-adv
 possible=5
 ran=0
 
-if ! bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\" :npm-deps {:lodash \"4.17.4\"} :closure-warnings {:non-standard-jsdoc :off :global-this :off} :foreign-libs [{:file \"src/test/cljs/calculator_global.js\" :provides [\"calculator\"] :global-exports {calculator Calculator}}]}" > builds/out-adv/core-advanced-test.js; then
+if ! bin/cljsc src/test/cljs "{:optimizations :advanced :output-wrapper true :verbose true :compiler-stats true :parallel-build true :output-dir \"builds/out-adv\" :npm-deps {:lodash \"4.17.4\"} :closure-warnings {:non-standard-jsdoc :off :global-this :off} :install-deps true :foreign-libs [{:file \"src/test/cljs/calculator_global.js\" :provides [\"calculator\"] :global-exports {calculator Calculator}}]}" > builds/out-adv/core-advanced-test.js; then
   >&2 echo ClojureScript compilation failed
   exit 1
 fi;
