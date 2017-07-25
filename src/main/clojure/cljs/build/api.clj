@@ -227,6 +227,7 @@
        (:options @env/*compiler*))))
   ([dependencies opts]
    {:pre [(map? dependencies)]}
+   (closure/check-npm-deps opts)
    (closure/maybe-install-node-deps! (merge opts {:npm-deps dependencies}))))
 
 (defn get-node-deps
