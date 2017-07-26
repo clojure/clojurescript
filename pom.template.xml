@@ -50,12 +50,12 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>tools.reader</artifactId>
-            <version>1.0.2</version>
+            <version>1.0.3</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>test.check</artifactId>
-            <version>0.9.0</version>
+            <version>0.10.0-alpha2</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
