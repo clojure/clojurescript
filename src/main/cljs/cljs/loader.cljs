@@ -1,4 +1,13 @@
+;   Copyright (c) Rich Hickey. All rights reserved.
+;   The use and distribution terms for this software are covered by the
+;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;   which can be found in the file epl-v10.html at the root of this distribution.
+;   By using this software in any fashion, you are agreeing to be bound by
+;   the terms of this license.
+;   You must not remove this notice, or any other, from this software
+
 (ns cljs.loader
+  (:require-macros cljs.loader)
   (:require [goog.object :as gobj])
   (:import [goog.module ModuleLoader]
            [goog.module ModuleManager]))
@@ -33,14 +42,30 @@
 (.setAllModuleInfo *module-manager* (to-js module-infos))
 (.setModuleUris *module-manager* (to-js module-uris))
 
-(defn load
+(defn loaded?
+  "Return true if modules is loaded. module-name should be a keyword matching
+   a :modules module definition."
+  [module-name]
+  (assert (contains? module-infos module-name)
+    (str "Module " module-name " does not exist"))
+  (let [mname (-> module-name name munge)
+        module (.getModuleInfo *module-manager* mname)]
+    (when (some? module)
+      (.isLoaded module))))
+
+(defn load*
   "Load a module. module-name should be a keyword matching a :modules module
    definition."
   ([module-name]
-    (load module-name nil))
-  ([module-name cb]
+    (throw (js/Error. "Invalid load call, must provide loader argument")))
+  ([module-name loader]
+    (load* module-name loader nil))
+  ([module-name loader cb]
    (assert (contains? module-infos module-name)
      (str "Module " module-name " does not exist"))
+   (assert (loaded? loader)
+     (str "Module " loader " not fully loaded, but attempted to "
+          "load module " module-name))
    (let [mname (-> module-name name munge)]
      (if-not (nil? cb)
        (.execOnLoad *module-manager* mname cb)
@@ -59,17 +84,6 @@
     (doseq [x xs]
       (.setLoaded *module-manager* (munge-kw x)))
     (.setLoaded *module-manager* (munge-kw module-name))))
-
-(defn loaded?
-  "Return true if modules is loaded. module-name should be a keyword matching
-   a :modules module definition."
-  [module-name]
-  (assert (contains? module-infos module-name)
-          (str "Module " module-name " does not exist"))
-  (let [mname (-> module-name name munge)
-        module (.getModuleInfo *module-manager* mname)]
-    (when (some? module)
-      (.isLoaded module))))
 
 (defn prefetch
   "Prefetch a module. module-name should be a keyword matching a :modules
