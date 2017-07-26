@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.module-graph-tests
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :as test :refer [deftest is testing]]
             [cljs.closure :as closure]
             [cljs.util :as util]
             [cljs.module-graph :as module-graph]))
@@ -146,3 +146,7 @@
          :shared ["/asset/js/shared.js"]
          :page1 ["/asset/js/page1.js"]
          :page2 ["/asset/js/page2.js"]})))
+
+(deftest test-module-for
+  (is (= :page1 (module-graph/module-for 'page1.a (modules opts))))
+  (is (= :page1 (module-graph/module-for "page1.a" (modules opts)))))

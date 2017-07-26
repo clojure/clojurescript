@@ -333,3 +333,15 @@
       (fn [ret module-name {:keys [depends-on] :or {depends-on []} :as module}]
         (assoc ret module-name depends-on))
       {} modules)))
+
+(defn module-for
+  "Given an entry find the module it belongs to."
+  [entry modules]
+  (let [modules' (normalize modules)
+        entry'   (str (munge entry))]
+    (->> modules'
+      (some
+        (fn [[module-name {:keys [entries]} :as me]]
+          (when (some #{entry'} entries)
+            me)))
+      first)))
