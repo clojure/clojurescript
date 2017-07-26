@@ -16,8 +16,7 @@
   ([env module-name]
    (load-expr env module-name nil))
   ([env module-name cb]
-   (let [sinfo  (ana/srce-info env)
-         loader (mg/module-for (-> env :ns :name)
+   (let [loader (mg/module-for (-> env :ns :name)
                   (:modules (ana-api/get-options)))]
      `(cljs.loader/load* ~module-name ~loader ~cb))))
 
