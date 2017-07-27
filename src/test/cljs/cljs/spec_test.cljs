@@ -8,6 +8,7 @@
 
 (ns cljs.spec-test
   (:require [cljs.spec.alpha :as s]
+            [cljs.spec.test.alpha :as st]
             [cljs.test :as test :refer-macros [deftest is are run-tests]]
             [cljs.spec.gen.alpha :as gen]
             [clojure.test.check.generators]))
@@ -34,7 +35,7 @@
   :args (s/cat :a integer? :b (s/? integer?))
   :ret integer?)
 
-;;(s/instrument #'adder)
+;;(st/instrument `adder)
 
 (deftest test-multi-arity-instrument
   (is (= 1 (adder 1)))
@@ -48,7 +49,7 @@
 
 (s/fdef testmm :args (s/cat :m map?) :ret string?)
 
-;;(s/instrument #'testmm)
+;;(st/instrument `testmm)
 
 (deftest test-multifn-instrument
   (is (= "good" (testmm {:type :good})))
@@ -291,6 +292,10 @@
     (s/every-kv int? (s/or :i int? :s string?))
     [{10 10 20 "x"}]
     [{10 10 20 "x"}]))
+
+(s/fdef foo.bar/cljs-2275
+  :args (s/cat :k keyword?)
+  :ret  string?)
 
 (comment
 
