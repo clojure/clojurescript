@@ -234,7 +234,17 @@
     (dissoc opts :macros-ns)
     cb))
 
-(defn post-file-side-effects
+(defn- pre-file-side-effects
+  [st name file opts]
+  (when (:verbose opts)
+    (debug-prn "Pre-file side-effects" file))
+  ;; In case any constants are defined in the namespace, flush any analysis metadata
+  ;; so that the constants can be defined wihtout triggering re-defined errors.
+  (when (and (get-in @st [::ana/namespaces name :defs])
+             (not ('#{cljs.core cljs.core$macros} name)))
+    (swap! st update ::ana/namespaces dissoc name)))
+
+(defn- post-file-side-effects
   [file opts]
   (when (:verbose opts)
     (debug-prn "Post-file side-effects" file))
@@ -279,14 +289,16 @@
                (if resource
                  (let [{:keys [lang source cache source-map file]} resource]
                    (condp = lang
-                     :clj (eval-str* bound-vars source name (assoc opts :cljs-file file)
-                            (fn [res]
-                              (post-file-side-effects file opts)
-                              (if (:error res)
-                                (cb res)
-                                (do
-                                  (swap! *loaded* conj aname)
-                                  (cb {:value true})))))
+                     :clj (do
+                            (pre-file-side-effects (:*compiler* bound-vars) aname file opts)
+                            (eval-str* bound-vars source name (assoc opts :cljs-file file)
+                              (fn [res]
+                                (post-file-side-effects file opts)
+                                (if (:error res)
+                                  (cb res)
+                                  (do
+                                    (swap! *loaded* conj aname)
+                                    (cb {:value true}))))))
                      :js (process-macros-deps bound-vars cache opts
                            (fn [res]
                              (if (:error res)
@@ -416,12 +428,14 @@
                 (if resource
                   (let [{:keys [name lang source file]} resource]
                     (condp = lang
-                      :clj (analyze-str* bound-vars source name (assoc opts :cljs-file file)
-                             (fn [res]
-                               (post-file-side-effects file opts)
-                               (if-not (:error res)
-                                 (analyze-deps bound-vars ana-env lib (next deps) opts cb)
-                                 (cb res))))
+                      :clj (do
+                             (pre-file-side-effects (:*compiler* bound-vars) name file opts)
+                             (analyze-str* bound-vars source name (assoc opts :cljs-file file)
+                               (fn [res]
+                                 (post-file-side-effects file opts)
+                                 (if-not (:error res)
+                                   (analyze-deps bound-vars ana-env lib (next deps) opts cb)
+                                   (cb res)))))
                       :js (analyze-deps bound-vars ana-env lib (next deps) opts cb)
                       (wrap-error
                         (ana/error ana-env

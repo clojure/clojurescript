@@ -850,6 +850,54 @@
           (fn [{:keys [value error]}]
             (is (= value [6 6]))))))))
 
+(deftest test-cljs-1854
+  (let [st (cljs/empty-state)]
+    (cljs/eval st
+      '(require 'foo.core1854)
+      {:eval    node-eval
+       :context :expr
+       :load    (fn [_ cb] (cb {:lang :clj :source "(ns foo.core1854) (def ^:const x 1)"}))}
+      (fn [{:keys [value error]}]
+        (is (nil? error))
+        (cljs/eval st
+          'foo.core1854/x
+          {:eval node-eval
+           :context :expr}
+          (fn [{:keys [value error]}]
+            (is (nil? error))
+            (is (= value 1))))
+        (cljs/eval st
+          '(require 'foo.core1854 :reload)
+          {:eval    node-eval
+           :context :expr
+           :load    (fn [_ cb] (cb {:lang :clj :source "(ns foo.core1854) (def ^:const x 2)"}))}
+          (fn [{:keys [value error]}]
+            (is (nil? error))
+            (cljs/eval st
+              'foo.core1854/x
+              {:eval node-eval
+               :context :expr}
+              (fn [{:keys [value error]}]
+                (is (nil? error))
+                (is (= value 2))))
+            (cljs/eval st
+              '(require 'bar.core1854 :reload-all)
+              {:eval    node-eval
+               :context :expr
+               :load    (fn [{:keys [name]} cb]
+                          (case name
+                            bar.core1854 (cb {:lang :clj :source "(ns bar.core1854 (:require [foo.core1854]))"})
+                            foo.core1854 (cb {:lang :clj :source "(ns foo.core1854) (def ^:const x 3)"})))}
+              (fn [{:keys [value error]}]
+                (is (nil? error))
+                (cljs/eval st
+                  'foo.core1854/x
+                  {:eval node-eval
+                   :context :expr}
+                  (fn [{:keys [value error]}]
+                    (is (nil? error))
+                    (is (= value 3))))))))))))
+
 (deftest test-cljs-1874
   (async done
     (let [st (cljs/empty-state)
