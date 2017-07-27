@@ -144,9 +144,8 @@
       ;; for bootstrap to load, use new closure/compile as it can handle
       ;; resources in JARs
       (let [core-js (closure/compile core
-                      (assoc opts
-                        :output-file
-                        (closure/src-file->target-file core)))
+                      (assoc (dissoc opts :output-dir)
+                        :output-file (closure/src-file->target-file core)))
             deps    (closure/add-dependencies opts core-js)]
         ;; output unoptimized code and the deps file
         ;; for all compiled namespaces
