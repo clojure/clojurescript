@@ -224,10 +224,10 @@ case."
   ([lib-spec] (load-foreign-library* lib-spec false))
   ([lib-spec cp-only?]
     (let [find-func (if cp-only? io/resource find-url)]
-      (cond->
-        (merge lib-spec
-          {:foreign true
-           :url     (find-func (:file lib-spec))})
+      (cond-> (assoc lib-spec :foreign true)
+        (:file lib-spec)
+        (assoc :url (find-func (:file lib-spec)))
+
         (:file-min lib-spec)
         (assoc :url-min (find-func (:file-min lib-spec)))))))
 
