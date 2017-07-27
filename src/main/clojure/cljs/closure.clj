@@ -2432,7 +2432,10 @@
       (if-not (nil? env/*compiler*)
         env/*compiler*
         (env/default-compiler-env
-          (add-externs-sources opts)))))
+          ;; need to dissoc :foreign-libs since we won't know what overriding
+          ;; foreign libspecs are referring to until after add-implicit-options
+          ;; - David
+          (add-externs-sources (dissoc opts :foreign-libs))))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        ;; we want to warn about NPM dep conflicts before installing the modules

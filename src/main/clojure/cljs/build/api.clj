@@ -193,7 +193,10 @@
      (if-not (nil? env/*compiler*)
        env/*compiler*
        (env/default-compiler-env
-         (closure/add-externs-sources opts)))))
+         ;; need to dissoc :foreign-libs since we won't know what overriding
+         ;; foreign libspecs are referring to until after add-implicit-options
+         ;; - David
+         (closure/add-externs-sources (dissoc opts :foreign-libs))))))
   ([source opts compiler-env]
    (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) closure/known-opts)]
      (when suggested-opt

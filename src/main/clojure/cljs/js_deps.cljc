@@ -130,6 +130,11 @@ case."
   (-requires [this] "A list of namespaces that this JavaScript requires.")
   (-source [this] [this opts] "The JavaScript source string."))
 
+(defn get-file [libspec index]
+  (or (:file libspec)
+      (some (fn [provide] (get-in index [provide :file]))
+        (:provides libspec))))
+
 (defn build-index
   "Index a list of dependencies by namespace and file name. There can
   be zero or more namespaces provided per file. Upstream foreign libraies
@@ -159,7 +164,11 @@ case."
                          index provides)
                        index)]
         (if (:foreign dep)
-          (update-in index' [(:file dep)] merge dep)
+          (if-let [file (get-file dep index)]
+            (update-in index' [file] merge dep)
+            (throw
+              (Exception.
+                (str "No :file provided for foreign libspec " (pr-str dep)))))
           (assoc index' (:file dep) dep))))
     {} deps))
 
