@@ -221,13 +221,24 @@
 ;; =============================================================================
 ;; Node.js / NPM dependencies
 
+(defn compiler-opts? [m]
+  (and (map? m)
+       (or (contains? m :output-to)
+           (contains? m :modules)
+           (contains? m :npm-deps)
+           (contains? m :main)
+           (contains? m :optimizations)
+           (contains? m :foreign-libs))))
+
 (defn install-node-deps!
   "EXPERIMENTAL: Install the supplied dependencies via NPM. dependencies must be
-   a map of name to version."
+   a map of name to version or a valid compiler options map."
   ([dependencies]
-   (install-node-deps! dependencies
-     (when-not (nil? env/*compiler*)
-       (:options @env/*compiler*))))
+   (if (compiler-opts? dependencies)
+     (install-node-deps! (:npm-deps dependencies) dependencies)
+     (install-node-deps! dependencies
+       (when-not (nil? env/*compiler*)
+         (:options @env/*compiler*)))))
   ([dependencies opts]
    {:pre [(map? dependencies)]}
    (closure/check-npm-deps opts)
@@ -237,13 +248,16 @@
 (defn get-node-deps
   "EXPERIMENTAL: Get the Node.js dependency graph of the supplied dependencies.
    Dependencies must be a sequence of strings or symbols naming packages or paths
-   within packages (e.g. [react \"react-dom/server\"]. Assumes dependencies have
-   been been previously installed, either by `cljs.build.api/install-node-deps!`
-   or by an NPM client, and reside in the `node_modules` directory."
+   within packages (e.g. [react \"react-dom/server\"] or a valid compiler options
+   map. Assumes dependencies have been been previously installed, either by
+   `cljs.build.api/install-node-deps!` or by an NPM client, and reside in the
+   `node_modules` directory."
   ([dependencies]
-   (get-node-deps dependencies
-     (when-not (nil? env/*compiler*)
-       (:options @env/*compiler*))))
+   (if (compiler-opts? dependencies)
+     (get-node-deps (keys (:npm-deps dependencies)) dependencies)
+     (get-node-deps
+       (when-not (nil? env/*compiler*)
+         (:options @env/*compiler*)))))
   ([dependencies opts]
    {:pre [(sequential? dependencies)]}
    (closure/index-node-modules
