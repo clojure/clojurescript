@@ -255,7 +255,7 @@
   ([dependencies]
    (if (compiler-opts? dependencies)
      (get-node-deps (keys (:npm-deps dependencies)) dependencies)
-     (get-node-deps
+     (get-node-deps dependencies
        (when-not (nil? env/*compiler*)
          (:options @env/*compiler*)))))
   ([dependencies opts]
