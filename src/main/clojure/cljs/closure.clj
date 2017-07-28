@@ -167,7 +167,7 @@
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
     :browser-repl :cache-analysis-format :infer-externs :closure-generate-exports :npm-deps
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
-    :watch-error-fn :watch-fn :install-deps})
+    :watch :watch-error-fn :watch-fn :install-deps})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1620,6 +1620,7 @@
     (select-keys
       [:closure-warnings :closure-extra-annotations :pretty-print
        :language-in :language-out :closure-module-roots :rewrite-polyfills])
+    (assoc-in [:closure-warnings :non-standard-jsdoc] :off)
     (set-options (CompilerOptions.))))
 
 (defn get-js-root [closure-compiler]
