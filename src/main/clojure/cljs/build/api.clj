@@ -231,7 +231,8 @@
   ([dependencies opts]
    {:pre [(map? dependencies)]}
    (closure/check-npm-deps opts)
-   (closure/maybe-install-node-deps! (merge opts {:npm-deps dependencies}))))
+   (closure/maybe-install-node-deps!
+     (update-in opts [:npm-deps] merge dependencies))))
 
 (defn get-node-deps
   "EXPERIMENTAL: Get the Node.js dependency graph of the supplied dependencies.
@@ -245,7 +246,9 @@
        (:options @env/*compiler*))))
   ([dependencies opts]
    {:pre [(sequential? dependencies)]}
-   (closure/index-node-modules dependencies opts)))
+   (closure/index-node-modules
+     (distinct (concat (keys (:npm-deps opts)) (map str dependencies)))
+     opts)))
 
 (comment
   (node-module-deps
