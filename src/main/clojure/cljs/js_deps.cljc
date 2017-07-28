@@ -164,7 +164,7 @@ case."
                          index provides)
                        index)]
         (if (:foreign dep)
-          (if-let [file (get-file dep index)]
+          (if-let [file (get-file dep index')]
             (update-in index' [file] merge dep)
             (throw
               (Exception.

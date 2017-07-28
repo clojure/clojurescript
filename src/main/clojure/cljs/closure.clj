@@ -1996,7 +1996,7 @@
                 (conj (string/replace p' "_" "-")))))
           (expand-lib* [{:keys [file] :as lib}]
             (if-not file
-              [] ;; foreign-lib override case - David
+              [lib] ;; foreign-lib override case - David
               (let [root (.getAbsolutePath (io/file file))
                     dir (io/file file)]
                 (if (.isDirectory dir)
