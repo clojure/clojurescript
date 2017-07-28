@@ -130,6 +130,16 @@ case."
   (-requires [this] "A list of namespaces that this JavaScript requires.")
   (-source [this] [this opts] "The JavaScript source string."))
 
+(defn get-file [lib-spec index]
+  (or (:file lib-spec)
+      (some (fn [provide] (get-in index [provide :file]))
+        (:provides lib-spec))))
+
+(defn lib-spec-merge [a b]
+  (merge a
+    (cond-> b
+      (contains? a :provides) (dissoc :provides))))
+
 (defn build-index
   "Index a list of dependencies by namespace and file name. There can
   be zero or more namespaces provided per file. Upstream foreign libraies
@@ -143,7 +153,7 @@ case."
                        (reduce
                          (fn [index' provide]
                            (if (:foreign dep)
-                             (update-in index' [provide] merge dep)
+                             (update-in index' [provide] lib-spec-merge dep)
                              ;; when building the dependency index, we need to
                              ;; avoid overwriting a CLJS dep with a CLJC dep of
                              ;; the same namespace - António Monteiro
@@ -159,7 +169,11 @@ case."
                          index provides)
                        index)]
         (if (:foreign dep)
-          (update-in index' [(:file dep)] merge dep)
+          (if-let [file (get-file dep index')]
+            (update-in index' [file] lib-spec-merge dep)
+            (throw
+              (Exception.
+                (str "No :file provided for :foreign-libs spec " (pr-str dep)))))
           (assoc index' (:file dep) dep))))
     {} deps))
 

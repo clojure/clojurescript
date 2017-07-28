@@ -1995,21 +1995,23 @@
                 (string/includes? p' "_")
                 (conj (string/replace p' "_" "-")))))
           (expand-lib* [{:keys [file] :as lib}]
-            (let [root (.getAbsolutePath (io/file file))
-                  dir  (io/file file)]
-              (if (.isDirectory dir)
-                (into []
-                  (comp
-                    (filter #(.endsWith (.getName ^File %) ".js"))
-                    (filter #(not (.isHidden ^File %)))
-                    (map
-                      (fn [^File f]
-                        (let [p  (.getPath f)
-                              ap (.getAbsolutePath f)]
-                          (merge lib
-                            {:file p :provides (path->provides (prep-path ap root))})))))
-                  (file-seq dir))
-                [lib])))]
+            (if-not file
+              [lib] ;; foreign-lib override case - David
+              (let [root (.getAbsolutePath (io/file file))
+                    dir (io/file file)]
+                (if (.isDirectory dir)
+                  (into []
+                    (comp
+                      (filter #(.endsWith (.getName ^File %) ".js"))
+                      (filter #(not (.isHidden ^File %)))
+                      (map
+                        (fn [^File f]
+                          (let [p (.getPath f)
+                                ap (.getAbsolutePath f)]
+                            (merge lib
+                              {:file p :provides (path->provides (prep-path ap root))})))))
+                    (file-seq dir))
+                  [lib]))))]
     (into [] (mapcat expand-lib* libs))))
 
 (declare index-node-modules)
@@ -2432,7 +2434,10 @@
       (if-not (nil? env/*compiler*)
         env/*compiler*
         (env/default-compiler-env
-          (add-externs-sources opts)))))
+          ;; need to dissoc :foreign-libs since we won't know what overriding
+          ;; foreign libspecs are referring to until after add-implicit-options
+          ;; - David
+          (add-externs-sources (dissoc opts :foreign-libs))))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
        ;; we want to warn about NPM dep conflicts before installing the modules
