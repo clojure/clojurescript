@@ -167,7 +167,7 @@
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
     :browser-repl :cache-analysis-format :infer-externs :closure-generate-exports :npm-deps
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
-    :watch :watch-error-fn :watch-fn :install-deps})
+    :watch :watch-error-fn :watch-fn :install-deps :process-shim})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1955,7 +1955,9 @@
     (format ":nodejs target with :none optimizations requires a :main entry")))
 
 (defn check-preloads [{:keys [preloads optimizations] :as opts}]
-  (when (and (some? preloads) (not= optimizations :none))
+  (when (and (some? preloads)
+             (not= preloads '[process.env])
+             (not= optimizations :none))
     (binding [*out* *err*]
       (println "WARNING: :preloads should only be specified with :none optimizations"))))
 
@@ -2038,18 +2040,28 @@
   (update opts :modules
     #(ensure-cljs-base-module % opts)))
 
+(defn shim-process? [opts]
+  (not (false? (:process-shim opts))))
+
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
     :or {optimizations :none
          output-dir "out"}
     :as opts}]
   (let [opts (cond-> opts
-               (:closure-defines opts)
-               (assoc :closure-defines
-                 (into {}
-                   (map (fn [[k v]]
-                          [(if (symbol? k) (str (comp/munge k)) k) v])
-                     (:closure-defines opts))))
+               (shim-process? opts)
+               (-> (update-in [:preloads] (fnil conj []) 'process.env)
+                 (cond->
+                   (not= :none optimizations)
+                   (update-in [:closure-defines 'process.env/NODE_ENV] (fnil str "production"))))
+
+               (or (:closure-defines opts) (shim-process? opts))
+               (update :closure-defines
+                 (fn [defines]
+                   (into {}
+                     (map (fn [[k v]]
+                            [(if (symbol? k) (str (comp/munge k)) k) v])
+                       defines))))
                (:browser-repl opts)
                (update-in [:preloads] (fnil conj []) 'clojure.browser.repl.preload))
         {:keys [libs foreign-libs externs]} (get-upstream-deps)
