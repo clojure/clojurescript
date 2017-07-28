@@ -1,3 +1,125 @@
+## 1.9.854
+
+### Enhancements
+* CLJS-2280: Provide process.env :preload and auto-configure
+* CLJS-2279: Infer `:module-type ` for provided `node_modules`
+* CLJS-2250: Support :foreign-libs overrides via :provides
+* CLJS-2243: Self-host: Add support for :global-exports
+* CLJS-2232: Self-host: Add support for string-based requires
+* add *print-fn-bodies* knob, set to false
+* CLJS-2198: Safe array operations
+* CLJS-2217: Support `:rename` for JS modules
+* CLJS-2214: Support :global-exports for foreign libraries
+* CLJS-1428: Add a cljs.core/*command-line-args* var
+* CLJS-2061: Support ns :require for JS libs, allow strings along with symbol
+* CLJS-2148: Add warnings for invalid use of aget and aset
+* CLJS-2143: Add support for symbol preprocess values
+
+### Changes
+* CLJS-2273: Bump tools.reader to 1.0.3 and development dependencies
+* CLJS-2235: Allow passing extra maven opts to build scripts
+* CLJS-2267: Allow ^:const inlined vars to affect if emission
+* CLJS-2245: Add support for using a local `node_modules` installation through a new `:node-modules` compiler flag
+* CLJS-2002: Don't throw when no *print-fn* is set
+* support Clojure primitive array type hints, core.async no longer
+  gives warnings
+* CLJS-2213: Node.js target should use node_modules index to emit platform specific require
+* CLJS-2200: bump to tools.reader 1.0.2
+* CLJS-2135: require macro prints last result of loaded-libs
+* CLJS-2192: Add ChakraCore testing facilities
+* CLJS-1800: Defer to tools.reader for cljs.reader functionality
+* CLJS-2163: Clean up uses of aget / aset on objects
+* CLJS-2184: Add `ns-publics` and `ns-imports`
+* CLJS-2183: Assert arguments are quoted symbols in some core macros
+* CLJS-2182: Assert argument to resolve is a quoted symbol
+* CLJS-2186: Update docstrings for aget/aset to be consistent with Clojure
+* CLJS-2180: Allow compiling `:modules` with whitespace optimizations
+* CLJS-1822: Use `:file-min` when processing JS modules with advanced optimizations
+* CLJS-2169: Error when compiling with :source-map and advanced optimizations
+* CLJS-2037: Throw if overwriting alias in current namespace
+* CLJS-2160: Add loaded? and prefetch functions to cljs.loader
+* CLJS-2148: Add unsafe-get and use goog.object
+* CLJS-2161: Bump Closure Compiler to June 2017 release
+
+### Fixes
+* CLJS-1854: Self-host: Reload ns with const
+* CLJS-2278: JavaScript object literals are printed wth keys that cannot be read
+* CLJS-2276: Self-host: Need test.check dep for CLJS-2275
+* CLJS-2275: cljs.spec.alpha/fdef resolves eagerly
+* CLJS-2259: Extra .cljs_node_repl directory containing cljs.core output
+* CLJS-2274: Update CI script to install deps
+* CLJS-2269: Warn on top level code split loads
+* CLJS-2272: Tests that depended on default install deps behavior failing
+* CLJS-2255: Clean up :npm-deps
+* CLJS-2263: Docstring for neg-int? backwards
+* CLJS-2262: Correct comment that *warn-on-infer* is file-scope
+* CLJS-2258: Stack overflow regression for sequence xform applied to eduction
+* CLJS-2256: Generated code doesn't add newline after sourceMappingURL comment
+* CLJS-2254: Module Indexing: Provide relative paths for a package's main module
+* CLJS-2248: Build API tests rely on Yarn
+* CLJS-2239: Self-host: Add `:target :nodejs` to the docstrings in cljs.js
+* CLJS-2251: Follow-up fix to CLJS-2249 and related commit
+* CLJS-2249: Provide a test for d4b871cce73
+* CLJS-2246: Revert CLJS-2245 and CLJS-2240 and fix `lein test`
+* CLJS-2244: Orphaned processed JS modules breaks :modules
+* CLJS-2242: Lots of undeclared Var warns in cljs.spec.gen.alpha
+* CLJS-2241: Multiple requires of Node.js modules in non :nodejs target are not idempotent at the REPL
+* CLJS-2229: Ensure that new modules work works correctly with REPLs
+* CLJS-2238: Perf regression with node module indexing
+* CLJS-2240: don't shell out to module_deps.js if `:npm-deps` not specified
+* CLJS-2230: Double checked arrays
+* CLJS-2227: Squelch some of the array access tests
+* CLJS-2228: Port CLJS-2226 to module_deps.js
+* CLJS-1955: data_readers.cljc can't reference handlers in user code
+* CLJS-2225: Need to add :checked-arrays to known compiler opts
+* CLJS-2226: :npm-deps can't index scoped packages
+* CLJS-2224: Resolve-var is wrong wrt. module resolution
+* CLJS-2223: Self-host: Undeclared Var deps/native-node-modules
+* CLJS-2222: CI failing after CLJS-2217
+* CLJS-2219: Enable JSC under test-simple
+* CLJS-2218: Make ClojureScript aware of native node modules
+* CLJS-2220: Add runtime :npm-deps tests
+* CLJS-2212: Replace missing-js-modules with new index-node-modules-dir
+* CLJS-2211: Add function to index a top-level node_modules installation
+* CLJS-2208: module_deps.js is not compatible with older JS implementations
+* CLJS-2207: cljs.test/js-filename is using non-portable .endsWith
+* CLJS-1764: Double warning for undeclared Var (REPL only)
+* CLJS-2204: Tests failing with respect to lodash/array namespace
+* CLJS-2205: NPM deps: Correctly compute `:provides` if file ends in `index.js`
+* CLJS-2203: REPL is turning on all warnings by default (including :invalid-array-access)
+* CLJS-2201: Self-host: test-js-filename failing
+* CLJS-2202: String requires should work from Cljs files in classpath
+* CLJS-2199: String requires broken after recompile
+* CLJS-2172: memfn docstring refers to Java and reflection
+* CLJS-1959: under :nodejs target we should provide __dirname and __filename constants
+* CLJS-1966: cljs.test assumes the output directory is '/out/' when determining the filename for a failed or errored test result.
+* CLJS-2191: Clean up doc references to clojure.spec.* in favor of cljs.spec.*
+* CLJS-2194: cljs.util/relative-name bug
+* CLJS-2195: npm-deps tests are not idempotent
+* CLJS-2179: Add test for preprocess JS module as symbol
+* CLJS-2152: "is not a relative path" exception thrown when `:libs` directory is provided.
+* CLJS-2193: :npm-deps dependencies are implicit
+* CLJS-1797: Update aot_core to support build with MINGW on Windows
+* CLJS-2189: Add test for :preloads
+* CLJS-2188: Use :invalid-array-access instead of :invalid-aget / :invalid-aset
+* CLJS-2181: Can't compile string sources with modules
+* CLJS-2185: Self-host: Docstrings for bootstrap helpers
+* CLJS-2178: Add tests for `:npm-deps`
+* CLJS-2177: NPM deps & JS modules fixes for Windows
+* CLJS-2175: ES6 Module processing broken with Closure v20170626
+* CLJS-2175: Add test to check ES6 module processing works
+* CLJS-2176: module_deps.js: fix regexes for Windows paths
+* CLJS-2173: Fix `npm install` when `:npm-deps` in Windows
+* CLJS-2164: Require cljs.js results in warning about new unsafe-get macro
+* CLJS-1998: Printing an Object with a null prototype throws an error
+* CLJS-2158: cljs_base module generates empty goog.require
+* CLJS-2157: Automatically generate cljs.loader/set-loaded! call
+* CLJS-2154: Provide compiler info & timing when compiling modules
+* CLJS-2151: Rollback removal of dependency information for node targeted compilation
+* CLJS-2141: Self-host: cljs.js is using undeclared symbol lib
+* CLJS-2145: inode_find issue with hash-map
+* CLJS-2142: Can't instrument a namespace containing constants
+
 ## 1.9.671
 
 ### Fixes
