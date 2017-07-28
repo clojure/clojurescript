@@ -1660,6 +1660,7 @@
   (let [^List externs '()
         ^List source-files (get-source-files js-modules opts)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
+                                   (.setProcessCommonJSModules true)
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
         closure-compiler (doto (make-closure-compiler)
@@ -2172,7 +2173,7 @@
          (map (fn [{:strs [file provides]}] file
                 (merge
                   {:file file
-                   :module-type :commonjs}
+                   :module-type :es6}
                   (when provides
                     {:provides provides}))))
          (next (json/read-str (str iw))))
@@ -2226,7 +2227,7 @@
           (map (fn [path]
                  (merge
                    {:file path
-                    :module-type :commonjs}
+                    :module-type :es6}
                    (when-not (package-json? path)
                      (let [pkg-json-main (some
                                            (fn [[pkg-json-path {:strs [main name]}]]

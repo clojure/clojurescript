@@ -90,7 +90,7 @@
   (closure/maybe-install-node-deps! {:npm-deps {:left-pad "1.1.3"}})
   (let [modules (closure/index-node-modules-dir)]
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/left-pad/index.js"))
                                   :provides ["left-pad/index.js"
                                              "left-pad/index"
@@ -102,19 +102,19 @@
                                                 :react-dom "15.6.1"}})
   (let [modules (closure/index-node-modules-dir)]
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/react/react.js"))
                                   :provides ["react/react.js"
                                              "react/react"
                                              "react"]}))
                  modules)))
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/react/lib/React.js"))
                                   :provides ["react/lib/React.js" "react/lib/React"]}))
                  modules)))
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
                                   :provides ["react-dom/server.js" "react-dom/server"]}))
                  modules))))
@@ -123,7 +123,7 @@
   (closure/maybe-install-node-deps! {:npm-deps {:node-fetch "1.7.1"}})
   (let [modules (closure/index-node-modules-dir)]
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/node-fetch/lib/index.js"))
                                   :provides ["node-fetch/lib/index.js"
                                              "node-fetch/lib/index"
@@ -136,7 +136,7 @@
     (is (true? (some (fn [module]
                        (= module
                           {:file (.getAbsolutePath (io/file "node_modules/@comandeer/css-filter/dist/css-filter.umd.js"))
-                           :module-type :commonjs
+                           :module-type :es6
                            :provides ["@comandeer/css-filter/dist/css-filter.umd.js"
                                       "@comandeer/css-filter/dist/css-filter.umd"
                                       "@comandeer/css-filter"]}))
@@ -152,7 +152,7 @@
     (test/delete-out-files out)
     (closure/maybe-install-node-deps! opts)
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/left-pad/index.js"))
                                   :provides ["left-pad"
                                              "left-pad/index.js"
@@ -166,19 +166,19 @@
           _ (closure/maybe-install-node-deps! opts)
           modules (closure/index-node-modules ["react" "react-dom" "react-dom/server"] opts)]
       (is (true? (some (fn [module]
-                         (= module {:module-type :commonjs
+                         (= module {:module-type :es6
                                     :file (.getAbsolutePath (io/file "node_modules/react/react.js"))
                                     :provides ["react"
                                                "react/react.js"
                                                "react/react"]}))
                    modules)))
       (is (true? (some (fn [module]
-                         (= module {:module-type :commonjs
+                         (= module {:module-type :es6
                                     :file (.getAbsolutePath (io/file "node_modules/react/lib/React.js"))
                                     :provides ["react/lib/React.js" "react/lib/React"]}))
                    modules)))
       (is (true? (some (fn [module]
-                         (= module {:module-type :commonjs
+                         (= module {:module-type :es6
                                     :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
                                     :provides ["react-dom/server.js" "react-dom/server"]}))
                    modules))))
@@ -188,7 +188,7 @@
     (let [opts {:npm-deps {:node-fetch "1.7.1"}}]
       (closure/maybe-install-node-deps! opts)
       (is (true? (some (fn [module]
-                         (= module {:module-type :commonjs
+                         (= module {:module-type :es6
                                     :file (.getAbsolutePath (io/file "node_modules/node-fetch/lib/index.js"))
                                     :provides ["node-fetch/lib/index.js"
                                                "node-fetch/lib/index"
@@ -202,7 +202,7 @@
       (is (true? (some (fn [module]
                          (= module
                            {:file (.getAbsolutePath (io/file "node_modules/@comandeer/css-filter/dist/css-filter.umd.js"))
-                            :module-type :commonjs
+                            :module-type :es6
                             :provides ["@comandeer/css-filter"
                                        "@comandeer/css-filter/dist/css-filter.umd.js"
                                        "@comandeer/css-filter/dist/css-filter.umd"]}))

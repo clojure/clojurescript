@@ -430,19 +430,19 @@
                              :react-dom "15.6.1"})
   (let [modules (build/get-node-deps '[react "react-dom/server"])]
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/react/react.js"))
                                   :provides ["react"
                                              "react/react.js"
                                              "react/react"]}))
                  modules)))
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/react/lib/React.js"))
                                   :provides ["react/lib/React.js" "react/lib/React"]}))
                  modules)))
     (is (true? (some (fn [module]
-                       (= module {:module-type :commonjs
+                       (= module {:module-type :es6
                                   :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
                                   :provides ["react-dom/server.js" "react-dom/server"]}))
                  modules))))
