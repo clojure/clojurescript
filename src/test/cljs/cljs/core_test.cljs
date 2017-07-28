@@ -1413,11 +1413,12 @@
     (is (contains? (ns-imports 'clojure.string) 'StringBuffer))
     (is (= (find (ns-imports 'clojure.string) 'StringBuffer)
           ['StringBuffer goog.string.StringBuffer]))))
+
 (deftest test-cljs-2190
   (binding [*print-namespace-maps* true]
     (testing "printing a javascript map with a slash on keyword"
-      (is (= "#js {:foo/bar 33}" (pr-str (doto (js-obj) (gobject/set "foo/bar" 33)))))
-      (is (= "#js {:foo/bar #:var{:quux 66}}" (pr-str (doto (js-obj) (gobject/set "foo/bar" {:var/quux 66}))))))))
+      (is (= "#js {\"foo/bar\" 33}" (pr-str (doto (js-obj) (gobject/set "foo/bar" 33)))))
+      (is (= "#js {\"foo/bar\" #:var{:quux 66}}" (pr-str (doto (js-obj) (gobject/set "foo/bar" {:var/quux 66}))))))))
 
 (def ^:const true-2267 true)
 (def ^:const false-2267 false)
@@ -1435,6 +1436,13 @@
   (is (= :then (if non-empty-string-2267 :then :else)))
   (is (= :then (if zero-2267 :then :else)))
   (is (= :then (if non-zero-2267 :then :else))))
+
+(deftest test-cljs-2278
+  (is (= "#js {:alpha 1, \"beta gamma\" 2, \"delta/epsilon\" 3}" (pr-str #js {"alpha" 1 "beta gamma" 2 "delta/epsilon" 3})))
+  (is (= "#js {\":abc\" 1}" (pr-str #js {":abc" 1})))
+  (is (= "#js {\"0abc\" 1}" (pr-str #js {"0abc" 1})))
+  (is (= "#js {:abc-def 1}" (pr-str #js {"abc-def" 1})))
+  (is (= "#js {:x*+?!-' 1}" (pr-str #js {"x*+?!-'" 1}))))
 
 (comment
   ;; ObjMap
