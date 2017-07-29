@@ -275,7 +275,8 @@
 (defn node-inputs
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry points. Assumes
-   that the module-deps NPM packages is either locally or globally installed."
+   that the `@cljs-oss/module-deps` and `konan` NPM packages are either
+   locally or globally installed."
   [entries]
   (closure/node-inputs entries))
 

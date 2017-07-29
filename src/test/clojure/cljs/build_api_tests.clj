@@ -402,7 +402,8 @@
   (test/delete-node-modules)
   (.delete (io/file "package-lock.json"))
   (spit (io/file "package.json") (json/json-str {:dependencies {:left-pad "1.1.3"}
-                                                 :devDependencies {:module-deps "*"
+                                                 :devDependencies {"@cljs-oss/module-deps" "*"
+                                                                   :konan "*"
                                                                    :resolve "*"
                                                                    :browser-resolve "*"}}))
   (sh/sh "npm" "install")

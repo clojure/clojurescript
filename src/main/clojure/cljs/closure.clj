@@ -2134,7 +2134,8 @@
         (when-not (.exists pkg-json)
           (spit pkg-json "{}"))
         (let [proc (-> (ProcessBuilder.
-                         (into (cond->> ["npm" "install" "module-deps" "resolve" "browser-resolve"]
+                         (into (cond->> ["npm" "install" "@cljs-oss/module-deps"
+                                         "resolve" "browser-resolve" "konan"]
                                  util/windows? (into ["cmd" "/c"]))
                            (map (fn [[dep version]] (str (name dep) "@" version)))
                            npm-deps))
@@ -2158,7 +2159,8 @@
 (defn node-module-deps
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry point. Assumes
-   that the module-deps NPM package is either locally or globally installed."
+   that the `@cljs-oss/module-deps` and `konan` NPM packages are either
+   locally or globally installed."
   ([entry]
    (node-module-deps entry
      (when env/*compiler*
@@ -2197,7 +2199,8 @@
 (defn node-inputs
   "EXPERIMENTAL: return the foreign libs entries as computed by running
    the module-deps package on the supplied JavaScript entry points. Assumes
-   that the module-deps NPM packages is either locally or globally installed."
+   that the `@cljs-oss/module-deps` and `konan` NPM packages are either
+    locally or globally installed."
   ([entries]
    (node-inputs entries
      (when env/*compiler*
