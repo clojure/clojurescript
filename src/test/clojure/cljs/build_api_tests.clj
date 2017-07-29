@@ -117,14 +117,17 @@
                      [graph.bar.core :as bar]))))))
 
 (deftest cljs-1469
-  (let [srcs "samples/hello/src"
+  (let [out (.getPath (io/file (test/tmp-dir) "loader-test-out"))
+        srcs "samples/hello/src"
         [common-tmp app-tmp] (mapv #(File/createTempFile  % ".js")
-                                   ["common" "app"])
+                               ["common" "app"])
         opts {:optimizations :simple
+              :output-dir out
               :modules {:common {:entries #{"hello.foo.bar"}
                                  :output-to (.getAbsolutePath common-tmp)}
                         :app {:entries #{"hello.core"}
                               :output-to (.getAbsolutePath app-tmp)}}}]
+    (test/delete-out-files out)
     (.deleteOnExit common-tmp)
     (.deleteOnExit app-tmp)
     (is (every? #(zero? (.length %)) [common-tmp app-tmp])
@@ -161,16 +164,17 @@
              (str foreign-lib-file))))))
 
 (deftest cljs-1537-circular-deps
-  (let [out-file (io/file "out/main.js")
+  (let [out (.getPath (io/file (test/tmp-dir) "cljs-1537-test-out"))
+        out-file (io/file out "main.js")
         root "src/test/cljs_build"]
-    (.delete out-file)
+    (test/delete-out-files out)
     (try
       (build/build (build/inputs
                      (io/file (str root "a.cljs"))
                      (io/file (str root "b.cljs")))
         {:main 'circular-deps.a
          :optimizations :none
-         :output-to "out"})
+         :output-to out})
       (is false)
       (catch Throwable e
         (is true)))))
@@ -190,22 +194,23 @@
       :entries #{'loader-test.bar}}}}})
 
 (deftest cljs-2077-test-loader
-  (test/delete-out-files)
-  (let [{:keys [inputs opts]} (merge-with merge (loader-test-project "out"))
-        loader (io/file "out" "cljs" "loader.js")]
-    (build/build (build/inputs (io/file inputs "bar.cljs") (io/file inputs "foo.cljs")) opts)
-    (is (.exists loader))
-    (is (not (nil? (re-find #"/loader_test/foo\.js" (slurp loader))))))
-  (test/delete-out-files)
-  (let [project (merge-with merge (loader-test-project "out")
-                  {:opts {:optimizations :advanced
-                          :source-map true}})]
-    (build/build (build/inputs (:inputs project)) (:opts project)))
-  (testing "string inputs in modules"
-    (test/delete-out-files)
-    (let [project (merge-with merge (loader-test-project "out")
-                    {:opts {:optimizations :whitespace}})]
-      (build/build (build/inputs (:inputs project)) (:opts project)))))
+  (let [out (.getPath (io/file (test/tmp-dir) "loader-test-out"))]
+    (test/delete-out-files out)
+    (let [{:keys [inputs opts]} (merge-with merge (loader-test-project out))
+          loader (io/file out "cljs" "loader.js")]
+      (build/build (build/inputs (io/file inputs "bar.cljs") (io/file inputs "foo.cljs")) opts)
+      (is (.exists loader))
+      (is (not (nil? (re-find #"/loader_test/foo\.js" (slurp loader))))))
+    (test/delete-out-files out)
+    (let [project (merge-with merge (loader-test-project out)
+                    {:opts {:optimizations :advanced
+                            :source-map true}})]
+      (build/build (build/inputs (:inputs project)) (:opts project)))
+    (testing "string inputs in modules"
+      (test/delete-out-files out)
+      (let [project (merge-with merge (loader-test-project out)
+                      {:opts {:optimizations :whitespace}})]
+        (build/build (build/inputs (:inputs project)) (:opts project))))))
 
 (deftest test-npm-deps
   (test/delete-node-modules)
@@ -420,31 +425,37 @@
   (test/delete-node-modules))
 
 (deftest test-deps-api-cljs-2255
-  (test/delete-node-modules)
-  (spit (io/file "package.json") "{}")
-  (build/install-node-deps! {:left-pad "1.1.3"})
-  (is (.exists (io/file "node_modules/left-pad/package.json")))
-  (test/delete-node-modules)
-  (spit (io/file "package.json") "{}")
-  (build/install-node-deps! {:react "15.6.1"
-                             :react-dom "15.6.1"})
-  (let [modules (build/get-node-deps '[react "react-dom/server"])]
-    (is (true? (some (fn [module]
-                       (= module {:module-type :es6
-                                  :file (.getAbsolutePath (io/file "node_modules/react/react.js"))
-                                  :provides ["react"
-                                             "react/react.js"
-                                             "react/react"]}))
-                 modules)))
-    (is (true? (some (fn [module]
-                       (= module {:module-type :es6
-                                  :file (.getAbsolutePath (io/file "node_modules/react/lib/React.js"))
-                                  :provides ["react/lib/React.js" "react/lib/React"]}))
-                 modules)))
-    (is (true? (some (fn [module]
-                       (= module {:module-type :es6
-                                  :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
-                                  :provides ["react-dom/server.js" "react-dom/server"]}))
-                 modules))))
-  (test/delete-node-modules)
-  (.delete (io/file "package.json")))
+  (let [out (.getPath (io/file (test/tmp-dir) "cljs-2255-test-out"))]
+    (test/delete-out-files out)
+    (test/delete-node-modules)
+    (spit (io/file "package.json") "{}")
+    (build/install-node-deps! {:left-pad "1.1.3"} {:output-dir out})
+    (is (.exists (io/file "node_modules/left-pad/package.json")))
+    (test/delete-out-files out)
+    (test/delete-node-modules)
+    (spit (io/file "package.json") "{}")
+    (build/install-node-deps!
+      {:react "15.6.1"
+       :react-dom "15.6.1"}
+      {:output-dir out})
+    (let [modules (build/get-node-deps '[react "react-dom/server"] {:output-dir out})]
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/react/react.js"))
+                                    :provides ["react"
+                                               "react/react.js"
+                                               "react/react"]}))
+                   modules)))
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/react/lib/React.js"))
+                                    :provides ["react/lib/React.js" "react/lib/React"]}))
+                   modules)))
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
+                                    :provides ["react-dom/server.js" "react-dom/server"]}))
+                   modules))))
+    (test/delete-out-files out)
+    (test/delete-node-modules)
+    (.delete (io/file "package.json"))))
