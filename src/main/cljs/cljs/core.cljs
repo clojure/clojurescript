@@ -9636,7 +9636,7 @@ reduces them without incurring seq initialization"
           (-write writer "#js ")
           (print-map
             (map (fn [k]
-                   [(cond-> k (some? (re-matches #"[A-Za-z][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k)])
+                   [(cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k)])
               (js-keys obj))
             pr-writer writer opts))
 

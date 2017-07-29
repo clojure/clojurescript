@@ -1444,6 +1444,10 @@
   (is (= "#js {:abc-def 1}" (pr-str #js {"abc-def" 1})))
   (is (= "#js {:x*+?!-' 1}" (pr-str #js {"x*+?!-'" 1}))))
 
+(deftest test-cljs-2282
+  (is (= "#js {:_abc 1}" (pr-str #js {"_abc" 1})))
+  (is (= "#js {:*compiler* 1}" (pr-str #js {"*compiler*" 1}))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
