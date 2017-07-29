@@ -22,7 +22,7 @@ Latest stable release: 1.9.854
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>clojurescript</artifactId>
-  <version>1.9.670</version>
+  <version>1.9.854</version>
 </dependency>
 ```
 
