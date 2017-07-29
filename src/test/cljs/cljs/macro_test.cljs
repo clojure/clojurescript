@@ -19,3 +19,6 @@
   (is (= '(if true (do 1)) (macroexpand-1 '(when true 1))))
   (is (= 1 (macroexpand '1)))
   (is (= '(if true (do 1)) (macroexpand '(when true 1)))))
+
+(deftest test-cljs-2283
+  (is (= ":a" (first (js-keys (js-obj :a 1))))))
