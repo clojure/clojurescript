@@ -1605,16 +1605,6 @@
            (js-source-file file (deps/-source lib))))
     js-modules))
 
-(defmulti convert-js-modules
-  "Takes a list JavaScript modules as an IJavaScript and rewrites them into a Google
-  Closure-compatible form. Returns list IJavaScript with the converted module
-  code set as source."
-  (fn [module-type js-modules opts]
-    (if (= module-type :amd)
-      ;; AMD modules are converted via CommonJS modules
-      :commonjs
-      module-type)))
-
 (defn make-convert-js-module-options [opts]
   (-> opts
     (select-keys
@@ -1642,25 +1632,18 @@
     (assoc ijs :source
       (.toSource closure-compiler ^Node (get result-nodes processed-file)))))
 
-(defmethod convert-js-modules :commonjs [module-type js-modules opts]
+(defn convert-js-modules
+  "Takes a list JavaScript modules as an IJavaScript and rewrites them into a Google
+  Closure-compatible form. Returns list IJavaScript with the converted module
+  code set as source."
+  [js-modules opts]
   (let [^List externs '()
         ^List source-files (get-source-files js-modules opts)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                    (.setProcessCommonJSModules true)
-                                   (.setTransformAMDToCJSModules (= module-type :amd)))
-        closure-compiler (doto (make-closure-compiler)
-                           (.init externs source-files options))]
-    (.parse closure-compiler)
-    (report-failure (.getResult closure-compiler))
-    (map (partial add-converted-source
-           closure-compiler (get-closure-sources closure-compiler) opts)
-      js-modules)))
-
-(defmethod convert-js-modules :es6 [module-type js-modules opts]
-  (let [^List externs '()
-        ^List source-files (get-source-files js-modules opts)
-        ^CompilerOptions options (doto (make-convert-js-module-options opts)
-                                   (.setProcessCommonJSModules true)
+                                   (.setTransformAMDToCJSModules
+                                     (boolean (some (fn [{:keys [module-type]}]
+                                                      (= module-type :amd)) js-modules)))
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
         closure-compiler (doto (make-closure-compiler)
@@ -1673,10 +1656,6 @@
     (map (partial add-converted-source
            closure-compiler (get-closure-sources closure-compiler) opts)
       js-modules)))
-
-(defmethod convert-js-modules :default [module-type js-modules opts]
-  (ana/warning :unsupported-js-module-type @env/*compiler* (first js-modules))
-  js-modules)
 
 (defmulti js-transforms
   "Takes an IJavaScript with the source code set as source, transforms the
@@ -2327,7 +2306,10 @@
     (if (seq js-modules)
       (util/measure (:compiler-stats opts)
         "Process JS modules"
-        (let [;; Load all modules - add :source so preprocessing and conversion can access it
+        (let [_ (when-let [unsupported (first (filter (complement #{:es6 :commonjs :amd})
+                                                      (map :module-type js-modules)))]
+                  (ana/warning :unsupported-js-module-type @env/*compiler* unsupported))
+              ;; Load all modules - add :source so preprocessing and conversion can access it
               js-modules (map (fn [lib]
                                 (let [js (deps/load-foreign-library lib)]
                                   (assoc js :source (deps/-source js opts))))
@@ -2337,15 +2319,7 @@
                                   (preprocess-js js opts)
                                   js))
                               js-modules)
-              ;; Conversion is done per module-type, because Compiler needs to process e.g. all CommonJS
-              ;; modules on one go, so it can handle the dependencies between modules.
-              ;; Amdjs modules are converted separate from CommonJS modules so they can't
-              ;; depend on each other.
-              modules-per-type (group-by :module-type js-modules)
-              js-modules (mapcat (fn [[module-type js-modules]]
-                                   (convert-js-modules module-type js-modules opts))
-                                 modules-per-type)]
-
+              js-modules (convert-js-modules js-modules opts)]
           ;; Write modules to disk, update compiler state and build new options
           (reduce (fn [new-opts {:keys [file] :as ijs}]
                     (let [ijs (write-javascript opts ijs)

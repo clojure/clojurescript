@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [array vector])
   (:require [cljs.test :refer [deftest is]]
             ["lodash/array" :as array :refer [slice] :rename {slice slc}]
-            [calculator :as vector :refer [add] :rename {add plus}]))
+            [calculator :as vector :refer [add] :rename {add plus}]
+            [es6_calc]))
 
 (def array #js [1 2 3])
 
@@ -21,3 +22,6 @@
   (is (= (array-seq array) [1 2 3]))
   ;; same should happen with global-exports
   (is (= vector [1])))
+
+(deftest test-cljs-2286
+  (is (= 3 (es6_calc/calculator.add 1 2))))
