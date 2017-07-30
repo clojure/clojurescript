@@ -2321,17 +2321,18 @@
                               js-modules)
               js-modules (convert-js-modules js-modules opts)]
           ;; Write modules to disk, update compiler state and build new options
-          (reduce (fn [new-opts {:keys [file] :as ijs}]
+          (reduce (fn [new-opts {:keys [file module-type] :as ijs}]
                     (let [ijs (write-javascript opts ijs)
                           module-name (-> (deps/load-library (:out-file ijs)) first :provides first)]
                       (doseq [provide (:provides ijs)]
                         (swap! env/*compiler*
-                               #(update-in % [:js-module-index] assoc provide module-name)))
+                          #(update-in % [:js-module-index] assoc provide {:name module-name
+                                                                          :module-type module-type})))
                       (-> new-opts
-                          (update-in [:libs] (comp vec conj) (:out-file ijs))
-                          ;; js-module might be defined in either, so update both
-                          (update-in [:foreign-libs] (comp vec (fn [libs] (remove #(= (:file %) file) libs))))
-                          (update-in [:ups-foreign-libs] (comp vec (fn [libs] (remove #(= (:file %) file) libs)))))))
+                        (update-in [:libs] (comp vec conj) (:out-file ijs))
+                        ;; js-module might be defined in either, so update both
+                        (update-in [:foreign-libs] (comp vec (fn [libs] (remove #(= (:file %) file) libs))))
+                        (update-in [:ups-foreign-libs] (comp vec (fn [libs] (remove #(= (:file %) file) libs)))))))
                   opts js-modules)))
       opts)))
 

@@ -182,6 +182,9 @@
     "volatile" "while" "with" "yield" "methods"
     "null" "constructor"})
 
+(def es5-allowed
+  #{"default"})
+
 #?(:clj (def SENTINEL (Object.))
    :cljs (def SENTINEL (js-obj)))
 
@@ -741,7 +744,10 @@
   ;; we need to check both keys and values of the JS module index, because
   ;; macroexpansion will be looking for the provided name - António Monteiro
   (contains?
-    (into #{} (mapcat identity) (get-in @env/*compiler* [:js-module-index]))
+    (into #{}
+      (mapcat (fn [[k v]]
+                [k (:name v)]))
+      (get-in @env/*compiler* [:js-module-index]))
     (str module)))
 
 (defn node-module-dep?
@@ -791,16 +797,16 @@
 (defn resolve-ns-alias
   ([env name]
    (resolve-ns-alias env name (symbol name)))
-  ([env name default]
+  ([env name not-found]
    (let [sym (symbol name)]
-     (get (:requires (:ns env)) sym default))))
+     (get (:requires (:ns env)) sym not-found))))
 
 (defn resolve-macro-ns-alias
   ([env name]
    (resolve-macro-ns-alias env name (symbol name)))
-  ([env name default]
+  ([env name not-found]
    (let [sym (symbol name)]
-     (get (:require-macros (:ns env)) sym default))))
+     (get (:require-macros (:ns env)) sym not-found))))
 
 (defn confirm-ns
   "Given env, an analysis environment, and ns-sym, a symbol identifying a
@@ -950,6 +956,11 @@
 
 (defmulti resolve* (fn [sym full-ns current-ns] (ns->module-type full-ns)))
 
+(defmethod resolve* :js
+  [sym full-ns current-ns]
+  {:name (symbol (str full-ns) (str (name sym)))
+   :ns full-ns})
+
 (defmethod resolve* :node
   [sym full-ns current-ns]
   {:name (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
@@ -985,7 +996,7 @@
         module-type (ns->module-type ns)]
     (case module-type
       :js     {:name (symbol
-                       (or (gets @env/*compiler* :js-module-index ns)
+                       (or (gets @env/*compiler* :js-module-index ns :name)
                            (resolve-ns-alias env ns)))
                :ns 'js}
       :node   {:name (symbol (str current-ns)
@@ -1031,7 +1042,7 @@
                            ns)
                  full-ns (resolve-ns-alias env ns
                            (or (and (js-module-exists? ns)
-                                    (get-in @env/*compiler* [:js-module-index ns]))
+                                    (gets @env/*compiler* :js-module-index ns :name))
                              (symbol ns)))]
              (when (some? confirm)
                (when (not= current-ns full-ns)
@@ -1348,14 +1359,14 @@
      :children [test-expr then-expr else-expr]}))
 
 (defmethod parse 'case*
-  [op env [_ sym tests thens default :as form] name _]
+  [op env [_ sym tests thens default-clause :as form] name _]
   (assert (symbol? sym) "case* must switch on symbol")
   (assert (every? vector? tests) "case* tests must be grouped in vectors")
   (let [expr-env (assoc env :context :expr)
         v        (disallowing-recur (analyze expr-env sym))
         tests    (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
         thens    (mapv #(analyze env %) thens)
-        default  (analyze env default)]
+        default-clause  (analyze env default-clause)]
     (assert (every? (fn [t]
                       (or
                         (-> t :info :const)
@@ -1364,8 +1375,8 @@
               (apply concat tests))
       "case* tests must be numbers, strings, or constants")
     {:env env :op :case* :form form
-     :v v :tests tests :thens thens :default default
-     :children (vec (concat [v] tests thens (if default [default])))}))
+     :v v :tests tests :thens thens :default default-clause
+     :children (vec (concat [v] tests thens (if default-clause [default-clause])))}))
 
 (defmethod parse 'throw
   [op env [_ throw :as form] name _]
@@ -1404,9 +1415,9 @@
         finally (when (seq fblock)
                   (analyze (assoc env :context :statement) `(do ~@(rest fblock))))
         e (when (or (seq cblocks) dblock) (gensym "e"))
-        default (if-let [[_ _ name & cb] dblock]
-                  `(cljs.core/let [~name ~e] ~@cb)
-                  `(throw ~e))
+        default-block (if-let [[_ _ name & cb] dblock]
+                        `(cljs.core/let [~name ~e] ~@cb)
+                        `(throw ~e))
         cblock (if (seq cblocks)
                  `(cljs.core/cond
                    ~@(mapcat
@@ -1415,8 +1426,8 @@
                         `[(cljs.core/instance? ~type ~e)
                           (cljs.core/let [~name ~e] ~@cb)])
                       cblocks)
-                   :else ~default)
-                 default)
+                   :else ~default-block)
+                 default-block)
         locals (:locals catchenv)
         locals (if e
                  (assoc locals e
@@ -2339,7 +2350,7 @@
             ;; Google Closure compiler, e.g. module$resources$libs$calculator.
             ;; This means that we need to create an alias from the module name
             ;; given with :provides to the new name.
-            [lib js-module-provides] (if-some [js-module-name (get-in @env/*compiler* [:js-module-index (str lib)])]
+            [lib js-module-provides] (if-some [js-module-name (gets @env/*compiler* :js-module-index (str lib) :name)]
                                        [(symbol js-module-name) lib]
                                        [lib nil])
             {alias :as referred :refer renamed :rename

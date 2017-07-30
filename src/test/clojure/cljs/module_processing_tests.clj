@@ -47,8 +47,10 @@
                  :closure-warnings {:non-standard-jsdoc :off}})))
         "processed modules are added to :libs"))
 
-    (is (= {"React" "module$src$test$cljs$reactJS"
-            "Circle" "module$src$test$cljs$Circle"}
+    (is (= {"React" {:name "module$src$test$cljs$reactJS"
+                     :module-type :commonjs}
+            "Circle" {:name "module$src$test$cljs$Circle"
+                      :module-type :commonjs}}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))
 
@@ -71,7 +73,8 @@
                   :closure-warnings {:non-standard-jsdoc :off}})))
           "processed modules are added to :libs")
 
-      (is (= {"es6-hello" "module$src$test$cljs$es6-hello"}
+      (is (= {"es6-hello" {:name "module$src$test$cljs$es6-hello"
+                           :module-type :es6}}
              (:js-module-index @cenv))
           "Processed modules are added to :js-module-index")
 
@@ -124,8 +127,10 @@
                                  :preprocess  :jsx}]
                  :closure-warnings {:non-standard-jsdoc :off}})))
         "processed modules are added to :libs"))
-    (is (= {"React" "module$src$test$cljs$react-min"
-            "Circle" "module$src$test$cljs$Circle-min"}
+    (is (= {"React" {:name "module$src$test$cljs$react-min"
+                     :module-type :commonjs}
+            "Circle" {:name "module$src$test$cljs$Circle-min"
+                      :module-type :commonjs}}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))
 
@@ -151,7 +156,9 @@
                  :closure-warnings {:non-standard-jsdoc :off}})))
         "processed modules are added to :libs"))
 
-    (is (= {"React" "module$src$test$cljs$reactJS"
-            "Circle" "module$src$test$cljs$Circle"}
+    (is (= {"React" {:name "module$src$test$cljs$reactJS"
+                     :module-type :commonjs}
+            "Circle" {:name "module$src$test$cljs$Circle"
+                      :module-type :commonjs}}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))

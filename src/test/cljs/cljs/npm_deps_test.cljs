@@ -3,7 +3,8 @@
   (:require [cljs.test :refer [deftest is]]
             ["lodash/array" :as array :refer [slice] :rename {slice slc}]
             [calculator :as vector :refer [add] :rename {add plus}]
-            [es6_calc]))
+            [es6_calc]
+            [es6_default_hello :as es6hello]))
 
 (def array #js [1 2 3])
 
@@ -25,3 +26,6 @@
 
 (deftest test-cljs-2286
   (is (= 3 (es6_calc/calculator.add 1 2))))
+
+(deftest test-cljs-1620
+  (is (= "Hello, world!" (es6hello/default))))

@@ -386,7 +386,7 @@
       first)))
 
 (defn mapped-line-and-column [filename line column]
-  (let [default [filename line column]]
+  (let [default-ret [filename line column]]
     (if-let [source-map (:source-map (get-current-env))]
       ;; source maps are 0 indexed for lines
       (if-let [columns (get-in source-map [filename (dec line)])]
@@ -400,8 +400,8 @@
                 mapping
                 (second (first columns))))
             [:source :line :col]))
-        default)
-      default)))
+        default-ret)
+      default-ret)))
 
 (defn file-and-line [exception depth]
   ;; TODO: flesh out

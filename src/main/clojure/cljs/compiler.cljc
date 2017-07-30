@@ -36,6 +36,15 @@
 
 (def js-reserved ana/js-reserved)
 
+(def ^:private es5>=
+  (into #{}
+    (comp
+      (mapcat (fn [lang]
+                [lang (keyword (string/replace (name lang) #"^ecmascript" "es"))])))
+    [:ecmascript5 :ecmascript5-strict :ecmascript6 :ecmascript6-strict
+     :ecmascript-2015 :ecmascript6-typed :ecmascript-2016 :ecmascript-2017
+     :ecmascript-next]))
+
 (def ^:dynamic *recompiled* nil)
 (def ^:dynamic *inputs* nil)
 (def ^:dynamic *source-map-data* nil)
@@ -333,9 +342,10 @@
   [{:keys [info env form] :as ast}]
   (if-let [const-expr (:const-expr ast)]
     (emit (assoc const-expr :env env))
-    (let [var-name (:name info)
+    (let [{:keys [options] :as cenv} @env/*compiler*
+          var-name (:name info)
           info (if (= (namespace var-name) "js")
-                 (let [js-module-name (get-in @env/*compiler* [:js-module-index (name var-name)])]
+                 (let [js-module-name (get-in cenv [:js-module-index (name var-name) :name])]
                    (or js-module-name (name var-name)))
                  info)]
       ; We need a way to write bindings out to source maps and javascript
@@ -346,10 +356,13 @@
         ; (prevents duplicate fn-param-names)
         (emits (munge ast))
         (when-not (= :statement (:context env))
-          (emit-wrap env
-            (emits
-              (cond-> info
-                (not= form 'js/-Infinity) munge))))))))
+          (let [reserved (cond-> js-reserved
+                           (es5>= (:language-out options))
+                           (set/difference ana/es5-allowed))]
+            (emit-wrap env
+              (emits
+                (cond-> info
+                  (not= form 'js/-Infinity) (munge reserved))))))))))
 
 (defmethod emit* :var-special
   [{:keys [env var sym meta] :as arg}]
