@@ -1091,6 +1091,44 @@
                 (is (= value 3))
                 (inc! l)))))))))
 
+(deftest test-cljs-2287
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 1 done)]
+      (cljs/eval-str
+        (atom @st)
+        "(ns foo.core (:require [path]))"
+        nil
+        {:context :expr
+         :target :nodejs
+         :def-emits-var true
+         :eval identity}
+        (fn [{{:keys [source]} :value}]
+          (is (some? (re-find #"foo\.core\.node\$module\$path = require\('path'\);\snull;" source)))
+          (inc! l)))
+      (let [calculator-load (fn [_ cb]
+                              (cb {:lang   :js
+                                   :source "global.Calculator = {
+    add: function (a, b) {
+        return a + b;
+    },
+    subtract: function (a, b) {
+        return a - b;
+    }
+};"}))]
+        (swap! st assoc :js-dependency-index {"calculator" {:global-exports '{calculator Calculator}}})
+        (cljs/eval-str
+          (atom @st)
+          "(ns foo.core (:require [calculator])) (calculator/add 1 2)"
+          nil
+          {:context :expr
+           :def-emits-var true
+           :load calculator-load
+           :eval identity}
+          (fn [{{:keys [source]} :value}]
+            (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global.Calculator;\snull;" source)))
+            (inc! l)))))))
+
 (defn -main [& args]
   (run-tests))
 
