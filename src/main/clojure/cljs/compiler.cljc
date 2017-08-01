@@ -1077,8 +1077,8 @@
                                      [nil libs]))
         {global-exports-libs true libs-to-load false} (group-by ana/dep-has-global-exports? libs-to-load)]
     (when (-> libs meta :reload-all)
-      (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set();")
-      (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set();"))
+      (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set([\"cljs.core\"]);")
+      (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set([\"cljs.core\"]);"))
     (doseq [lib libs-to-load]
       (cond
         #?@(:clj
