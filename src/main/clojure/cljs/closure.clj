@@ -2232,14 +2232,15 @@
                                                             (.startsWith main "./")
                                                             (subs 2))
                                                      main-path (-> pkg-json-path
+                                                                 (string/replace #"\\" "/")
                                                                  (string/replace #"package\.json$" "")
                                                                  (str main))]
-                                                 (when (= main-path path)
+                                                 (when (= main-path (string/replace path #"\\" "/"))
                                                    name))))
                                            pkg-jsons)]
-                       {:provides (let [module-rel-name (string/replace
-                                                          (subs path (.lastIndexOf path "node_modules"))
-                                                          #"node_modules[\\\/]" "")
+                       {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
+                                                            (string/replace #"\\" "/")
+                                                            (string/replace #"node_modules[\\\/]" ""))
                                         provides (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
                                                    (some? pkg-json-main)
                                                    (conj pkg-json-main))

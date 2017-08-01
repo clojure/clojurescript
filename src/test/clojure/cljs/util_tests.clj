@@ -29,8 +29,15 @@
           (sort (util/unknown-opts #{:optimisations :bogus} #{:optimizations :static-fns}))))))
 
 (deftest test-relative-name
-  (let [initial (System/getProperty "user.dir")]
-    (System/setProperty "user.dir" "/Users/user/clojurescript")
-    (is (= (util/relative-name (io/file "/Users/user/clojurescript/out/index.js")) "out/index.js"))
-    (is (= (util/relative-name (io/as-url (io/file "/Users/user/clojurescript/out/index.js"))) "out/index.js"))
-    (System/setProperty "user.dir" initial)))
+  (if util/windows?
+    (let [initial (System/getProperty "user.dir")]
+      (System/setProperty "user.dir" "C:\\Users\\anmonteiro\\Downloads\\clojurescript-master")
+      (is (= (util/relative-name (io/file "C:\\Users\\anmonteiro\\Downloads\\clojurescript-master\\out\\index.js")) "out\\index.js"))
+      (is (= (util/relative-name (io/as-url (io/file "C:\\Users\\anmonteiro\\Downloads\\clojurescript-master\\node_modules\\lodash\\array.js"))) "node_modules\\lodash\\array.js"))
+      (System/setProperty "user.dir" initial))
+    ;; Non-windows
+    (let [initial (System/getProperty "user.dir")]
+      (System/setProperty "user.dir" "/Users/user/clojurescript")
+      (is (= (util/relative-name (io/file "/Users/user/clojurescript/out/index.js")) "out/index.js"))
+      (is (= (util/relative-name (io/as-url (io/file "/Users/user/clojurescript/out/index.js"))) "out/index.js"))
+      (System/setProperty "user.dir" initial))))

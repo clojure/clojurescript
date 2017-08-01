@@ -1,0 +1,44 @@
+environment:
+  nodejs_version: "6"
+
+platform:
+  - x64
+
+configuration:
+  - Release
+
+matrix:
+  allow_failures:
+    - platform: x64
+      configuration: Release
+
+cache:
+  - '%UserProfile%\.m2'
+
+install:
+  # these need to have a line in between because of Windows line endings
+  - ps: >-
+      New-Item c:\scripts -type directory
+
+      $env:Path += ";C:\scripts"
+
+      Invoke-WebRequest -Uri https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein.bat -OutFile "C:\scripts\lein.bat"
+
+      lein self-install
+
+      lein version
+  - ps: Install-Product node $env:nodejs_version x64
+  - ps: wget 'http://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central/jsshell-win64.zip' -OutFile "$pwd\jsshell.zip"
+  - ps: 7z x "-o$pwd\jsshell" jsshell.zip -r
+  - ps: .\script\bootstrap.ps1
+  - ps: "[Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8"
+  - ps: $env:SPIDERMONKEY_HOME = "$pwd/jsshell"
+  - ps: $SPIDERMONKEY_HOME = "$pwd/jsshell"
+
+test_script:
+  - cmd: lein test
+  # surprisingly this is the only way to have the output shown in Appveyor
+  - cmd: powershell -noninteractive -noprofile -command .\script\test.ps1
+
+# Don't actually build (MSBuild).
+build: off

@@ -77,7 +77,7 @@ md.on('end', function() {
       if (dep.file.indexOf('node_modules') !== -1) {
         var providedModule = dep.file
           .substring(dep.file.lastIndexOf('node_modules'))
-          .replace('\\', '/')
+          .replace(/\\/g, '/')
           .replace('node_modules/', '');
 
         dep.provides = dep.provides || [];

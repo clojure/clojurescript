@@ -15,15 +15,16 @@
             [clojure.java.shell :as sh]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
+            [cljs.util :as util]
             [cljs.test-util :as test]
             [cljs.build.api :as build]
             [cljs.closure :as closure]))
 
 (deftest test-target-file-for-cljs-ns
   (is (= (.getPath (build/target-file-for-cljs-ns 'example.core-lib nil))
-         "out/example/core_lib.js"))
+        (test/platform-path "out/example/core_lib.js")))
   (is (= (.getPath (build/target-file-for-cljs-ns 'example.core-lib "output"))
-         "output/example/core_lib.js")))
+        (test/platform-path "output/example/core_lib.js"))))
 
 (deftest test-cljs-dependents-for-macro-namespaces
   (env/with-compiler-env (env/default-compiler-env)
@@ -200,7 +201,7 @@
           loader (io/file out "cljs" "loader.js")]
       (build/build (build/inputs (io/file inputs "bar.cljs") (io/file inputs "foo.cljs")) opts)
       (is (.exists loader))
-      (is (not (nil? (re-find #"/loader_test/foo\.js" (slurp loader))))))
+      (is (not (nil? (re-find #"[\\/]loader_test[\\/]foo\.js" (slurp loader))))))
     (test/delete-out-files out)
     (let [project (merge-with merge (loader-test-project out)
                     {:opts {:optimizations :advanced
@@ -250,7 +251,7 @@
       (is (contains? (:js-module-index @cenv) "react-dom/server")))
     (testing "builds with string requires are idempotent"
       (build/build (build/inputs (io/file inputs "npm_deps_test/string_requires.cljs")) opts cenv)
-      (is (not (nil? (re-find #"\.\./node_modules/react-dom/server\.js" (slurp (io/file out "cljs_deps.js"))))))
+      (is (not (nil? (re-find #"\.\.[\\/]node_modules[\\/]react-dom[\\/]server\.js" (slurp (io/file out "cljs_deps.js"))))))
       (test/delete-out-files out)))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
@@ -406,7 +407,8 @@
                                                                    :konan "*"
                                                                    :resolve "*"
                                                                    :browser-resolve "*"}}))
-  (sh/sh "npm" "install")
+  (apply sh/sh (cond->> ["npm" "install"]
+                 util/windows? (into ["cmd" "/c"])))
   (let [ws (atom [])
         out (.getPath (io/file (test/tmp-dir) "node-modules-opt-test-out"))
         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))

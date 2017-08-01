@@ -7,7 +7,9 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.test-util
-  (:require [clojure.java.io :as io]))
+  (:require [clojure.java.io :as io]
+            [clojure.string :as string])
+  (:import [java.io File]))
 
 (defn delete-out-files
   "Processed files are only copied/written if input has changed. In test case it
@@ -49,3 +51,6 @@
   "Returns the temporary directory of the system."
   []
   (System/getProperty "java.io.tmpdir"))
+
+(defn platform-path [path]
+  (.replace path \/ (.charAt (str File/separator) 0)))

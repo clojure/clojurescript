@@ -142,6 +142,9 @@
     (filename x)
     (last (string/split (path x) #"\/"))))
 
+(def windows?
+  (.startsWith (.toLowerCase (System/getProperty "os.name")) "windows"))
+
 (defn ^String relative-name
   "Given a file return a path relative to the working directory. Given a
    URL return the JAR relative path of the resource."
@@ -149,9 +152,14 @@
   {:pre [(or (file? x) (url? x))]}
   (letfn [(strip-user-dir [s]
             (let [user-dir (System/getProperty "user.dir")
-                  user-path (.getFile (.toURL (io/file user-dir)))
-                  user-path (cond-> user-path
-                              (not (.endsWith user-path File/separator))
+                  ;; on Windows, URLs end up having forward slashes like
+                  ;; /C:/Users/... - Antonio
+                  s (-> (cond-> s
+                          windows? (string/replace #"^[\\/]" ""))
+                      (string/replace "\\" File/separator)
+                      (string/replace "/" File/separator))
+                  user-path (cond-> user-dir
+                              (not (.endsWith user-dir File/separator))
                               (str File/separator))]
               (string/replace s user-path "")))]
     (if (file? x)
@@ -315,9 +323,6 @@
       1 (first xs)
       2 (str (first xs) " and " (second xs))
       (str (string/join ", " (pop xs)) " and " (peek xs)))))
-
-(def windows?
-  (.startsWith (.toLowerCase (System/getProperty "os.name")) "windows"))
 
 (defn module-file-seq
   ([] (module-file-seq (io/file "node_modules")))

@@ -6,6 +6,7 @@
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.js-deps :as deps]
+            [cljs.util :as util]
             [cljs.test-util :as test]))
 
 ;; Hard coded JSX transform for the test case
@@ -32,8 +33,8 @@
     (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)]
       (is (= {:foreign-libs []
               :ups-foreign-libs []
-              :libs ["out/src/test/cljs/reactJS.js"
-                     "out/src/test/cljs/Circle.js"]
+              :libs [(test/platform-path "out/src/test/cljs/reactJS.js")
+                     (test/platform-path "out/src/test/cljs/Circle.js")]
               :closure-warnings {:non-standard-jsdoc :off}}
             (env/with-compiler-env cenv
               (closure/process-js-modules
@@ -63,7 +64,7 @@
 
       (is (= {:foreign-libs []
               :ups-foreign-libs []
-              :libs ["out/src/test/cljs/es6_hello.js"]
+              :libs [(test/platform-path "out/src/test/cljs/es6_hello.js")]
               :closure-warnings {:non-standard-jsdoc :off}}
              (env/with-compiler-env cenv
                (closure/process-js-modules
@@ -88,19 +89,23 @@
       (let [opts (closure/process-js-modules {:foreign-libs [{:file "src/test/cljs/calculator.js"
                                                               :provides ["calculator"]
                                                               :module-type :commonjs}]})
-            compile (fn [form] (with-out-str
-                                 (comp/emit (ana/analyze (ana/empty-env) form))))
-            output "module$src$test$cljs$calculator.add((3),(4));\n"]
+            compile (fn [form]
+                      (with-out-str
+                        (comp/emit (ana/analyze (ana/empty-env) form))))
+            crlf (if util/windows? "\r\n" "\n")
+            output (str "module$src$test$cljs$calculator.add((3),(4));" crlf)]
         (swap! cenv
                #(assoc % :js-dependency-index (deps/js-dependency-index opts)))
         (binding [ana/*cljs-ns* 'cljs.user]
           (is (= (compile '(ns my-calculator.core (:require [calculator :as calc :refer [subtract add] :rename {subtract sub}])))
-                 "goog.provide('my_calculator.core');\ngoog.require('cljs.core');\ngoog.require('module$src$test$cljs$calculator');\n"))
+                (str "goog.provide('my_calculator.core');" crlf
+                     "goog.require('cljs.core');" crlf
+                     "goog.require('module$src$test$cljs$calculator');" crlf)))
           (is (= (compile '(calc/add 3 4)) output))
           (is (= (compile '(calculator/add 3 4)) output))
           (is (= (compile '(add 3 4)) output))
           (is (= (compile '(sub 5 4))
-                 "module$src$test$cljs$calculator.subtract((5),(4));\n")))))))
+                (str "module$src$test$cljs$calculator.subtract((5),(4));" crlf))))))))
 
 (deftest test-cljs-1822
   (test/delete-out-files)
@@ -110,8 +115,8 @@
       (is (= {:optimizations :simple
               :foreign-libs []
               :ups-foreign-libs []
-              :libs ["out/src/test/cljs/react-min.js"
-                     "out/src/test/cljs/Circle-min.js"]
+              :libs [(test/platform-path "out/src/test/cljs/react-min.js")
+                     (test/platform-path "out/src/test/cljs/Circle-min.js")]
               :closure-warnings {:non-standard-jsdoc :off}}
             (env/with-compiler-env cenv
               (closure/process-js-modules
@@ -141,8 +146,8 @@
     (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)]
       (is (= {:foreign-libs []
               :ups-foreign-libs []
-              :libs ["out/src/test/cljs/reactJS.js"
-                     "out/src/test/cljs/Circle.js"]
+              :libs [(test/platform-path "out/src/test/cljs/reactJS.js")
+                     (test/platform-path "out/src/test/cljs/Circle.js")]
               :closure-warnings {:non-standard-jsdoc :off}}
             (env/with-compiler-env cenv
               (closure/process-js-modules
