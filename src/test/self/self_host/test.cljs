@@ -1129,6 +1129,53 @@
             (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global.Calculator;\snull;" source)))
             (inc! l)))))))
 
+(deftest test-cljs-2261
+  (async done
+    (let [st (cljs/empty-state)
+          l  (latch 2 done)]
+      (cljs/eval st '(ns bar.core2261a
+                       (:require [foo.core2261a :refer-macros [cake]]))
+        {:ns      'cljs.user
+         :eval    node-eval
+         :context :expr
+         :load    (fn [{:keys [macros]} cb]
+                    (if macros
+                      (cb {:lang   :clj
+                           :source "(ns foo.core2261a) (defmacro cake [] `(->X))"})
+                      (cb {:lang   :clj
+                           :source "(ns foo.core2261a) (defrecord X [])"})))}
+        (fn [{:keys [error]}]
+          (is (nil? error))
+          (cljs/eval-str st "(pr-str (cake))" nil
+            {:ns      'bar.core2261a
+             :eval    node-eval
+             :context :expr}
+            (fn [{:keys [error value]}]
+              (is (nil? error))
+              (is (= "#foo.core2261a.X{}" value))
+              (inc! l)))))
+      (cljs/eval st '(ns bar.core2261b
+                       (:require [foo.core2261b :refer-macros [cake]]))
+        {:ns      'cljs.user
+         :eval    node-eval
+         :context :expr
+         :load    (fn [{:keys [macros]} cb]
+                    (if macros
+                      (cb {:lang   :clj
+                           :source "(ns foo.core2261b) (defmacro cake [] `(X.))"})
+                      (cb {:lang   :clj
+                           :source "(ns foo.core2261b) (defrecord X [])"})))}
+        (fn [{:keys [error]}]
+          (is (nil? error))
+          (cljs/eval-str st "(pr-str (cake))" nil
+            {:ns      'bar.core2261b
+             :eval    node-eval
+             :context :expr}
+            (fn [{:keys [error value]}]
+              (is (nil? error))
+              (is (= "#foo.core2261b.X{}" value))
+              (inc! l))))))))
+
 (defn -main [& args]
   (run-tests))
 
