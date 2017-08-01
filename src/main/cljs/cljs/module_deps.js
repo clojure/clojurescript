@@ -18,7 +18,7 @@ var md = mdeps({
     resolver(id, parent, cb);
   },
   filter: function(id) {
-    return !nodeResolve.isCore(id);
+    return !(target === 'nodejs' && nodeResolve.isCore(id));
   },
   detect: function(src) {
     var deps = konan(src);

@@ -185,7 +185,8 @@
     (test/delete-node-modules)
     (spit (io/file "package.json") "{}")
     (test/delete-out-files out)
-    (let [opts {:npm-deps {:node-fetch "1.7.1"}}]
+    (let [opts {:npm-deps {:node-fetch "1.7.1"}
+                :target :nodejs}]
       (closure/maybe-install-node-deps! opts)
       (is (true? (some (fn [module]
                          (= module {:module-type :es6
