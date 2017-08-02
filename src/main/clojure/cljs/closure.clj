@@ -2517,37 +2517,38 @@
           (add-externs-sources (dissoc opts :foreign-libs))))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
-       ;; we want to warn about NPM dep conflicts before installing the modules
-       (when (:install-deps opts)
-         (check-npm-deps opts)
-         (swap! compiler-env update-in [:npm-deps-installed?]
-           (fn [installed?]
-             (when-not installed?
-               (maybe-install-node-deps! opts)))))
-       (let [compiler-stats (:compiler-stats opts)
+       (let [opts (add-implicit-options opts)
+             ;; we want to warn about NPM dep conflicts before installing the modules
+             _ (when (:install-deps opts)
+                 (check-npm-deps opts)
+                 (swap! compiler-env update-in [:npm-deps-installed?]
+                        (fn [installed?]
+                          (when-not installed?
+                            (maybe-install-node-deps! opts)))))
+
+             compiler-stats (:compiler-stats opts)
              checked-arrays (or (:checked-arrays opts)
                                 ana/*checked-arrays*)
              static-fns? (or (and (= (:optimizations opts) :advanced)
                                (not (false? (:static-fns opts))))
                            (:static-fns opts)
                            ana/*cljs-static-fns*)
-             sources (-find-sources source opts)
-             all-opts (add-implicit-options opts)]
+             sources (-find-sources source opts)]
          (check-output-to opts)
          (check-output-dir opts)
          (check-source-map opts)
          (check-source-map-path opts)
          (check-output-wrapper opts)
          (check-node-target opts)
-         (check-preloads all-opts)
+         (check-preloads opts)
          (check-cache-analysis-format opts)
          (swap! compiler-env
            #(-> %
-             (update-in [:options] merge all-opts)
+             (update-in [:options] merge opts)
              (assoc :target (:target opts))
-             ;; Save the current js-dependency index once we have computed all-opts
+             ;; Save the current js-dependency index once we have computed opts
              ;; or the analyzer won't be able to find upstream dependencies - Antonio
-             (assoc :js-dependency-index (deps/js-dependency-index all-opts))
+             (assoc :js-dependency-index (deps/js-dependency-index opts))
              ;; Save list of sources for cljs.analyzer/locate-src - Juho Teperi
              (assoc :sources sources)))
          (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))
@@ -2571,76 +2572,76 @@
                            (repeat warnings))
                          warnings)))
                    ana/*verbose* (:verbose opts)]
-           (let [one-file? (and (:main all-opts)
-                                (#{:advanced :simple :whitespace} (:optimizations all-opts)))
+           (let [one-file? (and (:main opts)
+                                (#{:advanced :simple :whitespace} (:optimizations opts)))
                  source (if one-file?
-                          (let [main (:main all-opts)
+                          (let [main (:main opts)
                                 uri  (:uri (cljs-source-for-namespace main))]
                             (assert uri (str "No file for namespace " main " exists"))
                             uri)
                           source)
                  compile-opts (if one-file?
-                                (assoc all-opts :output-file (:output-to all-opts))
-                                all-opts)
+                                (assoc opts :output-file (:output-to opts))
+                                opts)
                  _ (load-data-readers! compiler-env)
                  ;; reset :js-module-index so that ana/parse-ns called by -find-sources
                  ;; can find the missing JS modules
                  js-sources (env/with-compiler-env (dissoc @compiler-env :js-module-index)
-                              (-> (-find-sources source all-opts)
+                              (-> (-find-sources source opts)
                                   (add-dependency-sources compile-opts)))
-                 all-opts   (handle-js-modules all-opts js-sources compiler-env)
-                 _ (swap! env/*compiler* update-in [:options] merge all-opts)
+                 opts       (handle-js-modules opts js-sources compiler-env)
+                 _ (swap! env/*compiler* update-in [:options] merge opts)
                  js-sources (-> js-sources
                                 deps/dependency-order
                                 (compile-sources compiler-stats compile-opts)
                                 (#(map add-core-macros-if-cljs-js %))
-                                (add-js-sources all-opts)
-                                (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") all-opts)]))
+                                (add-js-sources opts)
+                                (cond-> (= :nodejs (:target opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") opts)]))
                                 deps/dependency-order
-                                (add-preloads all-opts)
+                                (add-preloads opts)
                                 add-goog-base
-                                (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
-                                (->> (map #(source-on-disk all-opts %)) doall)
-                                (compile-loader all-opts))
-                 _ (when (:emit-constants all-opts)
+                                (cond-> (= :nodejs (:target opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") opts)]))
+                                (->> (map #(source-on-disk opts %)) doall)
+                                (compile-loader opts))
+                 _ (when (:emit-constants opts)
                      (comp/emit-constants-table-to-file
                       (::ana/constant-table @env/*compiler*)
-                      (constants-filename all-opts)))
-                 _ (when (:infer-externs all-opts)
+                      (constants-filename opts)))
+                 _ (when (:infer-externs opts)
                      (comp/emit-inferred-externs-to-file
                        (reduce util/map-merge {}
                          (map (comp :externs second)
                            (get @compiler-env ::ana/namespaces)))
-                       (str (util/output-directory all-opts) "/inferred_externs.js")))
-                 optim (:optimizations all-opts)
+                       (str (util/output-directory opts) "/inferred_externs.js")))
+                 optim (:optimizations opts)
                  ret (if (and optim (not= optim :none))
                        (do
-                         (when-let [fname (:source-map all-opts)]
-                           (assert (or (nil? (:output-to all-opts)) (:modules opts) (string? fname))
+                         (when-let [fname (:source-map opts)]
+                           (assert (or (nil? (:output-to opts)) (:modules opts) (string? fname))
                              (str ":source-map must name a file when using :whitespace, "
                                   ":simple, or :advanced optimizations with :output-to")))
-                         (if (:modules all-opts)
+                         (if (:modules opts)
                            (->>
                              (util/measure compiler-stats
                                (str "Optimizing " (count js-sources) " sources")
-                               (apply optimize-modules all-opts js-sources))
-                             (output-modules all-opts js-sources))
-                           (let [fdeps-str (foreign-deps-str all-opts
+                               (apply optimize-modules opts js-sources))
+                             (output-modules opts js-sources))
+                           (let [fdeps-str (foreign-deps-str opts
                                              (filter foreign-source? js-sources))
-                                 all-opts  (assoc all-opts
+                                 opts      (assoc opts
                                              :foreign-deps-line-count
                                              (- (count (.split #"\r?\n" fdeps-str -1)) 1))]
                              (->>
                                (util/measure compiler-stats
                                  (str "Optimizing " (count js-sources) " sources")
-                                 (apply optimize all-opts
+                                 (apply optimize opts
                                    (remove foreign-source? js-sources)))
-                               (add-wrapper all-opts)
-                               (add-source-map-link all-opts)
+                               (add-wrapper opts)
+                               (add-source-map-link opts)
                                (str fdeps-str)
-                               (add-header all-opts)
-                               (output-one-file all-opts)))))
-                       (apply output-unoptimized all-opts js-sources))]
+                               (add-header opts)
+                               (output-one-file opts)))))
+                       (apply output-unoptimized opts js-sources))]
              ;; emit Node.js bootstrap script for :none & :whitespace optimizations
              (when (and (= (:target opts) :nodejs)
                         (not= (:optimizations opts) :whitespace))

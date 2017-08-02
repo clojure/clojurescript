@@ -154,6 +154,7 @@
               [{:file (str (io/file root "thirdparty" "add.js"))
                 :provides  ["thirdparty.add"]}]
               :output-dir (str out)
+              :main 'foreign-libs.core
               :target :nodejs}]
     (test/delete-out-files out)
     (build/build (build/inputs (io/file root "foreign_libs") (io/file root "thirdparty")) opts)
@@ -416,6 +417,7 @@
   (let [out (io/file (test/tmp-dir) "cljs-2249-out")
         root (io/file "src" "test" "cljs_build")
         opts {:output-dir (str out)
+              :main 'foreign-libs-cljs-2249.core
               :target :nodejs}]
     (test/delete-out-files out)
     (build/build (build/inputs (io/file root "foreign_libs_cljs_2249")) opts)
