@@ -24,6 +24,7 @@
                     [cljs.js-deps :as deps])
      :cljs (:require [goog.string :as gstring]
                      [clojure.string :as string]
+                     [clojure.set :as set]
                      [cljs.tools.reader :as reader]
                      [cljs.env :as env]
                      [cljs.analyzer :as ana]
