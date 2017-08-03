@@ -141,6 +141,19 @@
                                       "@comandeer/css-filter/dist/css-filter.umd"
                                       "@comandeer/css-filter"]}))
                  modules))))
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (closure/maybe-install-node-deps! {:npm-deps {"jss-extend" "5.0.0"}})
+  (let [modules (closure/index-node-modules-dir)]
+    (is (true? (some (fn [module]
+                       (= module
+                         {:file (.getAbsolutePath (io/file "node_modules/jss-extend/lib/index.js"))
+                          :module-type :es6
+                          :provides ["jss-extend/lib/index.js"
+                                     "jss-extend/lib/index"
+                                     "jss-extend"
+                                     "jss-extend/lib"]}))
+                 modules))))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
 
@@ -208,6 +221,20 @@
                                        "@comandeer/css-filter/dist/css-filter.umd.js"
                                        "@comandeer/css-filter/dist/css-filter.umd"]}))
                    (closure/index-node-modules ["@comandeer/css-filter"] opts)))))
+    (test/delete-node-modules)
+    (spit (io/file "package.json") "{}")
+    (test/delete-out-files out)
+    (let [opts {:npm-deps {"jss-extend" "5.0.0"}}]
+      (closure/maybe-install-node-deps! opts)
+      (is (true? (some (fn [module]
+                         (= module
+                           {:file (.getAbsolutePath (io/file "node_modules/jss-extend/lib/index.js"))
+                            :module-type :es6
+                            :provides ["jss-extend"
+                                       "jss-extend/lib/index.js"
+                                       "jss-extend/lib/index"
+                                       "jss-extend/lib"]}))
+                   (closure/index-node-modules ["jss-extend"] opts)))))
     (.delete (io/file "package.json"))
     (test/delete-node-modules)
     (test/delete-out-files out)))

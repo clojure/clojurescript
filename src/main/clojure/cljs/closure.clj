@@ -2226,8 +2226,14 @@
                      (let [pkg-json-main (some
                                            (fn [[pkg-json-path {:strs [main name]}]]
                                              (when-not (nil? main)
-                                               (let [main-path (str (string/replace pkg-json-path #"package\.json$" "")
-                                                                 main)]
+                                               ;; should be the only edge case in
+                                               ;; the package.json main field - Antonio
+                                               (let [main (cond-> main
+                                                            (.startsWith main "./")
+                                                            (subs 2))
+                                                     main-path (-> pkg-json-path
+                                                                 (string/replace #"package\.json$" "")
+                                                                 (str main))]
                                                  (when (= main-path path)
                                                    name))))
                                            pkg-jsons)]
