@@ -2408,23 +2408,24 @@
         ;; Select Node files that are required by Cljs code,
         ;; and create list of all their dependencies
         node-required (set/intersection (set (keys top-level)) requires)]
-    (if-not (= target :nodejs)
-      (let [opts (-> opts
-                   (update :foreign-libs
-                     (fn [libs]
-                       (into (index-node-modules node-required)
-                         (expand-libs libs))))
-                   process-js-modules)]
-        (swap! compiler-env merge
-          ;; we need to also track the whole top level - this is to support
-          ;; cljs.analyze/analyze-deps, particularly in REPL contexts - David
-          {:js-dependency-index (deps/js-dependency-index opts)
-           :node-module-index (into #{} (map str (keys top-level)))})
-        opts)
-      (do
-        (swap! compiler-env update-in [:node-module-index]
-          (fnil into #{}) (map str node-required))
-        opts))))
+    (let [opts (-> opts
+                 (update :foreign-libs
+                   (fn [libs]
+                     (into (if (= target :nodejs)
+                             []
+                             (index-node-modules node-required))
+                       (expand-libs libs))))
+                 process-js-modules)]
+      (swap! compiler-env (fn [cenv]
+                            (-> cenv
+                              ;; we need to also track the whole top level - this is to support
+                              ;; cljs.analyze/analyze-deps, particularly in REPL contexts - David
+                              (merge {:js-dependency-index (deps/js-dependency-index opts)})
+                              (update-in [:node-module-index] (fnil into #{})
+                                (if (= target :nodejs)
+                                  (map str node-required)
+                                  (map str (keys top-level)))))))
+      opts)))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."

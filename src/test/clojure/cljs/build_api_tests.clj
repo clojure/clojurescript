@@ -462,3 +462,19 @@
     (test/delete-out-files out)
     (test/delete-node-modules)
     (.delete (io/file "package.json"))))
+
+(deftest test-cljs-2296
+  (let [out (.getPath (io/file (test/tmp-dir) "cljs-2296-test-out"))
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                               :opts {:main 'foreign_libs_dir_test.core
+                                      :output-dir out
+                                      :optimizations :none
+                                      :target :nodejs
+                                      ;; :file is a directory
+                                      :foreign-libs [{:file "src/test/cljs_build/foreign-libs-dir"
+                                                      :module-type :commonjs}]}}]
+    (test/delete-out-files out)
+    (build/build (build/inputs (io/file inputs "foreign_libs_dir_test/core.cljs")) opts)
+    (is (.exists (io/file out "src/test/cljs_build/foreign-libs-dir/vendor/lib.js")))
+    (is (true? (boolean (re-find #"goog\.provide\(\"module\$src\$test\$cljs_build\$foreign_libs_dir\$vendor\$lib\"\)"
+                          (slurp (io/file out "src/test/cljs_build/foreign-libs-dir/vendor/lib.js"))))))))
