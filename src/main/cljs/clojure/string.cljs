@@ -101,10 +101,7 @@
   "Converts first character of the string to upper-case, all other
   characters to lower-case."
   [s]
-  (if (< (count s) 2)
-    (upper-case s)
-    (str (upper-case (subs s 0 1))
-         (lower-case (subs s 1)))))
+  (gstring/capitalize s))
 
 ;; The JavaScript split function takes a limit argument but the return
 ;; value is not the same as the Java split function.

@@ -9,6 +9,10 @@
 (ns clojure.string-test
   (:require [cljs.test :as test
              :refer-macros [deftest is testing]]
+            [clojure.test.check :as tc]
+            [clojure.test.check.clojure-test :refer-macros [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop :include-macros true]
             [clojure.string :as s]))
 
 (deftest test-api
@@ -148,6 +152,22 @@
     (let [sb "Clojure Applied Book"]
       (is (s/includes? sb "Applied"))
       (is (not (s/includes? sb "Living"))))))
+
+(defspec test-cljs-2300
+  ;; The reference implementation is the implementation prior to the change.
+  ;; Since some JavaScript implementations fail to properly change case for
+  ;; some characters (for example, the upper case of  "ß" is "SS"), we limit
+  ;; this test to strings comprising only printable ASCII characters.
+  (let [ref-impl           (fn [s]
+                             (if (< (count s) 2)
+                               (s/upper-case s)
+                               (str (s/upper-case (subs s 0 1))
+                                 (s/lower-case (subs s 1)))))
+        char-codes->string (fn [xs]
+                             (apply (.-fromCharCode js/String) xs))]
+    (prop/for-all [s (gen/fmap char-codes->string
+                       (gen/not-empty (gen/vector (gen/choose 0x20 0x7E))))]
+      (= (ref-impl s) (s/capitalize s)))))
 
 (comment
 
