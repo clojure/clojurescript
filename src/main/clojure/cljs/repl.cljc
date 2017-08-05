@@ -464,6 +464,7 @@
                                      :source-form form}
                   :repl-env repl-env})
            def-emits-var (:def-emits-var opts)
+           backup-comp @env/*compiler*
            ->ast (fn [form]
                    (binding [ana/*analyze-deps* false]
                      (ana/analyze (assoc env :def-emits-var def-emits-var)
@@ -503,7 +504,11 @@
        ;; NOTE: means macros which expand to ns aren't supported for now
        ;; when eval'ing individual forms at the REPL - David
        (when (#{:ns :ns*} (:op ast))
-         (let [ast (ana/no-warn (ana/analyze env form nil opts))]
+         (let [ast (try
+                     (ana/no-warn (ana/analyze env form nil opts))
+                     (catch #?(:clj Exception :cljs js/Error) e
+                         (reset! env/*compiler* backup-comp)
+                       (throw e)))]
            (load-dependencies repl-env
              (into (vals (:requires ast))
                (distinct (vals (:uses ast))))
