@@ -2020,8 +2020,10 @@
   (update opts :modules
     #(ensure-cljs-base-module % opts)))
 
-(defn shim-process? [opts]
-  (not (false? (:process-shim opts))))
+(defn shim-process? [{:keys [target process-shim]}]
+  (if (= target :nodejs)
+    (true? (:process-shim opts))
+    (not (false? (:process-shim opts)))))
 
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
