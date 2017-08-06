@@ -1176,6 +1176,21 @@
               (is (= "#foo.core2261b.X{}" value))
               (inc! l))))))))
 
+(deftest test-cljs-2266
+  (async done
+    (let [st (cljs/empty-state)
+          l  (latch 1 done)]
+      (cljs.js/eval-str st "(require 'clojure.x)" nil
+        {:eval node-eval
+         :load (fn [{:keys [name macros]} cb]
+                 (cb (when (and (= name 'cljs.x)
+                             (not macros))
+                       {:lang   :clj
+                        :source "(ns cljs.x)"})))}
+        (fn [{:keys [error]}]
+          (is (nil? error))
+          (inc! l))))))
+
 (defn -main [& args]
   (run-tests))
 

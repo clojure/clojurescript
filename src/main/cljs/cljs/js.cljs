@@ -340,8 +340,6 @@
                      (str "Could not require " name) cause))))))
        (cb {:value true})))))
 
-(declare ns-side-effects analyze-deps)
-
 (defn- patch-alias-map
   [compiler in from to]
   (let [patch (fn [k add-if-present?]
@@ -482,23 +480,25 @@
     (cb {:value nil})))
 
 (defn- rewrite-ns-ast
-  [ast smap]
-  (let [rewrite-renames (fn [m]
-                          (when m
-                            (reduce (fn [acc [renamed qualified-sym :as entry]]
-                                      (let [from (symbol (namespace qualified-sym))
-                                            to   (get smap from)]
-                                        (if (some? to)
-                                          (assoc acc renamed (symbol (str to) (name qualified-sym)))
-                                          (merge acc entry))))
-                              {} m)))]
-    (-> ast
-      (update :uses #(walk/postwalk-replace smap %))
-      (update :use-macros #(walk/postwalk-replace smap %))
-      (update :requires #(merge smap (walk/postwalk-replace smap %)))
-      (update :require-macros #(merge smap (walk/postwalk-replace smap %)))
-      (update :renames rewrite-renames)
-      (update :rename-macros rewrite-renames))))
+  ([ast smap]
+   (rewrite-ns-ast ast smap false))
+  ([ast smap macros?]
+   (let [[uk rk renk] (if macros?
+                        [:use-macros :require-macros :rename-macros]
+                        [:uses :requires :renames])
+         rewrite-renames (fn [m]
+                           (when m
+                             (reduce (fn [acc [renamed qualified-sym :as entry]]
+                                       (let [from (symbol (namespace qualified-sym))
+                                             to   (get smap from)]
+                                         (if (some? to)
+                                           (assoc acc renamed (symbol (str to) (name qualified-sym)))
+                                           (merge acc entry))))
+                               {} m)))]
+     (-> ast
+       (update uk #(walk/postwalk-replace smap %))
+       (update rk #(merge smap (walk/postwalk-replace smap %)))
+       (update renk rewrite-renames)))))
 
 (defn- check-macro-autoload-inferring-missing
   [{:keys [requires name] :as ast} cenv]
@@ -522,7 +522,7 @@
    (if (#{:ns :ns*} op)
      (letfn [(check-uses-and-load-macros [res rewritten-ast]
                (let [env (:*compiler* bound-vars)
-                     {:keys [uses require-macros use-macros reload reloads name]} rewritten-ast]
+                     {:keys [uses use-macros reload reloads name]} rewritten-ast]
                  (if (:error res)
                    (cb res)
                    (if (:*load-macros* bound-vars)
@@ -532,13 +532,13 @@
                          (fn [res]
                            (if (:error res)
                              (cb res)
-                             (let [{:keys [require-macros] :as rewritten-ast} (rewrite-ns-ast rewritten-ast (:aliased-loads res))]
+                             (let [{:keys [require-macros] :as rewritten-ast} (rewrite-ns-ast rewritten-ast (:aliased-loads res) true)]
                                (when (:verbose opts) (debug-prn "Processing :require-macros for" (:name ast)))
                                (load-macros bound-vars :require-macros require-macros name reload reloads opts
                                  (fn [res']
                                    (if (:error res')
                                      (cb res')
-                                     (let [{:keys [require-macros use-macros] :as rewritten-ast} (rewrite-ns-ast rewritten-ast (:aliased-loads res))
+                                     (let [{:keys [use-macros] :as rewritten-ast} (rewrite-ns-ast rewritten-ast (:aliased-loads res) true)
                                            res' (try
                                                   (when (seq use-macros)
                                                     (when (:verbose opts) (debug-prn "Checking :use-macros for" (:name ast)))
