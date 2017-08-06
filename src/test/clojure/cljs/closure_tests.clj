@@ -66,7 +66,9 @@
         (.add module (closure/js-source-file nil (io/file out file))))
       (.sortInputsByDeps module compiler)
       (is (= (->> (.getInputs module)
-                  (map #(string/replace (.getName %) (str out File/separator) "")))
+                  (map #(string/replace
+                          (.getName %)
+                          (str (string/replace out #"[\\\/]" "/") "/") "")))
              ["cljs/core.js"
               "cljs/core/constants.js"
               "module_test/modules/a.js"])))))

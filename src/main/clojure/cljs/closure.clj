@@ -1571,7 +1571,8 @@
     (util/ns->relpath (first provides) "js")
     (if (.endsWith lib-path ".js")
       (util/get-name url)
-      (let [path (util/path url)]
+      (let [path (util/path url)
+            lib-path (util/normalize-path lib-path)]
         (subs path (+ (inc (.lastIndexOf path lib-path)) (.length lib-path)))))))
 
 (defn ^String rel-output-path

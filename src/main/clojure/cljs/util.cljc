@@ -108,6 +108,9 @@
    {:pre [(or (nil? opts) (map? opts))]}
    (or (:output-dir opts) default)))
 
+(def windows?
+  (.startsWith (.toLowerCase (System/getProperty "os.name")) "windows"))
+
 (defn file? [f]
   (instance? File f))
 
@@ -117,10 +120,21 @@
 (defn ^String filename [^File f]
   (.getName f))
 
+;; on Windows, URLs end up having forward slashes like
+;; /C:/Users/... - Antonio
+(defn ^String normalize-path [^String x]
+  (-> (cond-> x
+        windows? (string/replace #"^[\\/]" ""))
+    (string/replace "\\" File/separator)
+    (string/replace "/" File/separator)))
+
 (defn ^String path [x]
   (cond
     (file? x) (.getAbsolutePath ^File x)
-    (url? x) (.getPath ^URL x)
+    (url? x) (if windows?
+               (let [f (URLDecoder/decode (.getFile x))]
+                 (normalize-path f))
+               (.getPath ^URL x))
     (string? x) x
     :else (throw (Exception. (str "Expected file, url, or string. Got " (pr-str x))))))
 
@@ -140,10 +154,7 @@
   {:pre [(or (file? x) (url? x))]}
   (if (file? x)
     (filename x)
-    (last (string/split (path x) #"\/"))))
-
-(def windows?
-  (.startsWith (.toLowerCase (System/getProperty "os.name")) "windows"))
+    (last (string/split (path x) #"[\\\/]"))))
 
 (defn ^String relative-name
   "Given a file return a path relative to the working directory. Given a
@@ -152,12 +163,7 @@
   {:pre [(or (file? x) (url? x))]}
   (letfn [(strip-user-dir [s]
             (let [user-dir (System/getProperty "user.dir")
-                  ;; on Windows, URLs end up having forward slashes like
-                  ;; /C:/Users/... - Antonio
-                  s (-> (cond-> s
-                          windows? (string/replace #"^[\\/]" ""))
-                      (string/replace "\\" File/separator)
-                      (string/replace "/" File/separator))
+                  s (normalize-path s)
                   user-path (cond-> user-dir
                               (not (.endsWith user-dir File/separator))
                               (str File/separator))]

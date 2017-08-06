@@ -292,7 +292,9 @@
             (cond->> rel-path
               asset-path (str asset-path)))
           (get-rel-path* [output-dir file]
-            (string/replace (.. (io/file file) getAbsoluteFile getPath) output-dir ""))]
+            (-> (.. (io/file file) getAbsoluteFile getPath)
+                (string/replace output-dir "")
+                (string/replace #"[\\/]" "/")))]
     (let [get-rel-path (partial get-rel-path*
                          (.. (io/file output-dir)
                            getAbsoluteFile getPath))]

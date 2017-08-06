@@ -197,21 +197,21 @@
 (deftest cljs-2077-test-loader
   (let [out (.getPath (io/file (test/tmp-dir) "loader-test-out"))]
     (test/delete-out-files out)
-    (let [{:keys [inputs opts]} (merge-with merge (loader-test-project out))
+    (let [{:keys [inputs opts]} (loader-test-project out)
           loader (io/file out "cljs" "loader.js")]
-      (build/build (build/inputs (io/file inputs "bar.cljs") (io/file inputs "foo.cljs")) opts)
+      (build/build (build/inputs inputs) opts)
       (is (.exists loader))
       (is (not (nil? (re-find #"[\\/]loader_test[\\/]foo\.js" (slurp loader))))))
     (test/delete-out-files out)
-    (let [project (merge-with merge (loader-test-project out)
-                    {:opts {:optimizations :advanced
-                            :source-map true}})]
-      (build/build (build/inputs (:inputs project)) (:opts project)))
+    (let [{:keys [inputs opts]} (merge-with merge (loader-test-project out)
+                                  {:opts {:optimizations :advanced
+                                          :source-map true}})]
+      (build/build (build/inputs inputs) opts))
     (testing "string inputs in modules"
       (test/delete-out-files out)
-      (let [project (merge-with merge (loader-test-project out)
-                      {:opts {:optimizations :whitespace}})]
-        (build/build (build/inputs (:inputs project)) (:opts project))))))
+      (let [{:keys [inputs opts]} (merge-with merge (loader-test-project out)
+                                    {:opts {:optimizations :whitespace}})]
+        (build/build (build/inputs inputs) opts)))))
 
 (deftest test-npm-deps
   (test/delete-node-modules)

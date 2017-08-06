@@ -41,3 +41,7 @@
       (is (= (util/relative-name (io/file "/Users/user/clojurescript/out/index.js")) "out/index.js"))
       (is (= (util/relative-name (io/as-url (io/file "/Users/user/clojurescript/out/index.js"))) "out/index.js"))
       (System/setProperty "user.dir" initial))))
+
+(deftest test-path
+  (is (= (.getAbsolutePath (io/file "src/main/clojure/cljs/closure.clj"))
+         (util/path (io/as-url (io/file "src/main/clojure/cljs/closure.clj"))))))
