@@ -1191,6 +1191,27 @@
           (is (nil? error))
           (inc! l))))))
 
+(deftest test-cljs-2303
+  (async done
+    (let [st (cljs/empty-state)
+          load (fn [{:keys [name macros]} cb]
+                 (cb (when (and (= name 'cljs.x)
+                             (not macros))
+                       {:lang   :clj
+                        :source "(ns cljs.x)"})))
+          l  (latch 1 done)]
+      (cljs.js/eval-str st "(require 'clojure.x)" nil
+        {:eval node-eval
+         :load load}
+        (fn [{:keys [error]}]
+          (is (nil? error))
+          (cljs.js/eval-str st "(require 'clojure.x)" nil
+            {:eval node-eval
+             :load load}
+            (fn [{:keys [error]}]
+              (is (nil? error))
+              (inc! l))))))))
+
 (defn -main [& args]
   (run-tests))
 

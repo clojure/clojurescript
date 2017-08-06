@@ -2746,8 +2746,9 @@
               (let [merge-keys
                     [:use-macros :require-macros :rename-macros
                      :uses :requires :renames :imports]]
-                (when *check-alias-dupes*
-                  (check-duplicate-aliases env ns-info' require-info))
+                #?(:clj
+                   (when *check-alias-dupes*
+                     (check-duplicate-aliases env ns-info' require-info)))
                 (merge
                   ns-info'
                   {:excludes excludes}
