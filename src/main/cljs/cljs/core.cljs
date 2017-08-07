@@ -439,26 +439,28 @@
 
 (defn- checked-aget
   ([array idx]
-   (try
-     (assert (or (array? array) (js/goog.isArrayLike array)))
-     (assert (number? idx))
-     (assert (not (neg? idx)))
-     (assert (< idx (alength array)))
-     (catch :default e
-       (maybe-warn e)))
+   (when-assert
+     (try
+       (assert (or (array? array) (js/goog.isArrayLike array)))
+       (assert (number? idx))
+       (assert (not (neg? idx)))
+       (assert (< idx (alength array)))
+       (catch :default e
+         (maybe-warn e))))
    (unchecked-get array idx))
   ([array idx & idxs]
    (apply checked-aget (checked-aget array idx) idxs)))
 
 (defn- checked-aset
   ([array idx val]
-   (try
-     (assert (or (array? array) (js/goog.isArrayLike array)))
-     (assert (number? idx))
-     (assert (not (neg? idx)))
-     (assert (< idx (alength array)))
-     (catch :default e
-       (maybe-warn e)))
+   (when-assert
+     (try
+       (assert (or (array? array) (js/goog.isArrayLike array)))
+       (assert (number? idx))
+       (assert (not (neg? idx)))
+       (assert (< idx (alength array)))
+       (catch :default e
+         (maybe-warn e))))
    (unchecked-set array idx val))
   ([array idx idx2 & idxv]
    (apply checked-aset (checked-aget array idx) idx2 idxv)))

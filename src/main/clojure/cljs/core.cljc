@@ -2290,6 +2290,9 @@
            ~@(mapcat (core/fn [[m c]] `((cljs.core/= ~m ~esym) ~c)) pairs)
            :else ~default)))))
 
+(core/defmacro ^:private when-assert [x]
+  (core/when *assert* x))
+
 (core/defmacro assert
   "Evaluates expr and throws an exception if it does not evaluate to
   logical true."
