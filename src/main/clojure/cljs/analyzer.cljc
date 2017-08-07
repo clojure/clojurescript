@@ -821,7 +821,7 @@
              ;; confirm that the library at least exists
              #?(:clj (nil? (util/ns->source ns-sym)))
              (not (js-module-exists? ns-sym)))
-    (warning :undeclared-ns env {:ns-sym ns-sym})))
+    (warning :undeclared-ns env {:ns-sym ns-sym :js-provide ns-sym})))
 
 (defn core-name?
   "Is sym visible from core in the current compilation namespace?"
