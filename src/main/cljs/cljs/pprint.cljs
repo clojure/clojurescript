@@ -2537,7 +2537,7 @@ of parameters as well."
 
   (merge                                ; create the result map
     (into (array-map) ; start with the default values, make sure the order is right
-          (reverse (for [[name [default-def]] (:params def)] [name [default-def offset]])))
+          (reverse (for [[name [default]] (:params def)] [name [default offset]])))
     (reduce #(apply assoc %1 %2) {} (filter #(first (nth % 1)) (zipmap (keys (:params def)) params))) ; add the specified parameters, filtering out nils
     flags)); and finally add the flags
 

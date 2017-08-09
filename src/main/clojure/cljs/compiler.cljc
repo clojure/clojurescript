@@ -349,16 +349,20 @@
                  (let [js-module-name (get-in cenv [:js-module-index (name var-name) :name])]
                    (or js-module-name (name var-name)))
                  info)]
-      ; We need a way to write bindings out to source maps and javascript
-      ; without getting wrapped in an emit-wrap calls, otherwise we get
-      ; e.g. (function greet(return x, return y) {}).
+      ;; We need a way to write bindings out to source maps and javascript
+      ;; without getting wrapped in an emit-wrap calls, otherwise we get
+      ;; e.g. (function greet(return x, return y) {}).
       (if (:binding-form? ast)
-        ; Emit the arg map so shadowing is properly handled when munging
-        ; (prevents duplicate fn-param-names)
+        ;; Emit the arg map so shadowing is properly handled when munging
+        ;; (prevents duplicate fn-param-names)
         (emits (munge ast))
         (when-not (= :statement (:context env))
           (let [reserved (cond-> js-reserved
-                           (es5>= (:language-out options))
+                           (and (es5>= (:language-out options))
+                                ;; we can skip munging things like `my.ns.default`
+                                ;; but not standalone `default` variable names
+                                ;; as they're not valid ES5 - Antonio
+                                (some? (namespace var-name)))
                            (set/difference ana/es5-allowed))]
             (emit-wrap env
               (emits
@@ -1045,7 +1049,7 @@
 
        keyword?
        (emits f ".cljs$core$IFn$_invoke$arity$" (count args) "(" (comma-sep args) ")")
-       
+
        variadic-invoke
        (let [mfa (:max-fixed-arity variadic-invoke)]
         (emits f "(" (comma-sep (take mfa args))

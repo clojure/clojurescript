@@ -386,7 +386,7 @@
       first)))
 
 (defn mapped-line-and-column [filename line column]
-  (let [default-ret [filename line column]]
+  (let [default [filename line column]]
     (if-let [source-map (:source-map (get-current-env))]
       ;; source maps are 0 indexed for lines
       (if-let [columns (get-in source-map [filename (dec line)])]
@@ -400,8 +400,8 @@
                 mapping
                 (second (first columns))))
             [:source :line :col]))
-        default-ret)
-      default-ret)))
+        default)
+      default)))
 
 (defn file-and-line [exception depth]
   ;; TODO: flesh out
@@ -439,7 +439,7 @@
 (defn run-block
   "Invoke all functions in fns with no arguments. A fn can optionally
   return
-  
+
   an async test - is invoked with a continuation running left fns
 
   a seq of fns tagged per block - are invoked immediately after fn"

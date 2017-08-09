@@ -576,11 +576,11 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
                      (second (first columns)))))
            (adjust [mapped]
              (vec (map #(%1 %2) [inc inc identity] mapped)))]
-     (let [default-ret [line column nil]]
+     (let [default [line column nil]]
        ;; source maps are 0 indexed for lines
        (if-let [columns (get source-map (dec line))]
          (adjust (map (get-best-column columns column) [:line :col :name]))
-         default-ret)))))
+         default)))))
 
 (defn mapped-frame
   "Given opts and a canonicalized JavaScript stacktrace frame, return the

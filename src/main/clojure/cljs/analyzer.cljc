@@ -1359,14 +1359,14 @@
      :children [test-expr then-expr else-expr]}))
 
 (defmethod parse 'case*
-  [op env [_ sym tests thens default-clause :as form] name _]
+  [op env [_ sym tests thens default :as form] name _]
   (assert (symbol? sym) "case* must switch on symbol")
   (assert (every? vector? tests) "case* tests must be grouped in vectors")
   (let [expr-env (assoc env :context :expr)
         v        (disallowing-recur (analyze expr-env sym))
         tests    (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
         thens    (mapv #(analyze env %) thens)
-        default-clause  (analyze env default-clause)]
+        default  (analyze env default)]
     (assert (every? (fn [t]
                       (or
                         (-> t :info :const)
@@ -1375,8 +1375,8 @@
               (apply concat tests))
       "case* tests must be numbers, strings, or constants")
     {:env env :op :case* :form form
-     :v v :tests tests :thens thens :default default-clause
-     :children (vec (concat [v] tests thens (if default-clause [default-clause])))}))
+     :v v :tests tests :thens thens :default default
+     :children (vec (concat [v] tests thens (if default [default])))}))
 
 (defmethod parse 'throw
   [op env [_ throw :as form] name _]
@@ -1415,9 +1415,9 @@
         finally (when (seq fblock)
                   (analyze (assoc env :context :statement) `(do ~@(rest fblock))))
         e (when (or (seq cblocks) dblock) (gensym "e"))
-        default-block (if-let [[_ _ name & cb] dblock]
-                        `(cljs.core/let [~name ~e] ~@cb)
-                        `(throw ~e))
+        default (if-let [[_ _ name & cb] dblock]
+                  `(cljs.core/let [~name ~e] ~@cb)
+                  `(throw ~e))
         cblock (if (seq cblocks)
                  `(cljs.core/cond
                    ~@(mapcat
@@ -1426,8 +1426,8 @@
                         `[(cljs.core/instance? ~type ~e)
                           (cljs.core/let [~name ~e] ~@cb)])
                       cblocks)
-                   :else ~default-block)
-                 default-block)
+                   :else ~default)
+                 default)
         locals (:locals catchenv)
         locals (if e
                  (assoc locals e
