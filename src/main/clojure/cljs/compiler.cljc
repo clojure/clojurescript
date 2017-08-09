@@ -1246,7 +1246,7 @@
 (defn- build-affecting-options [opts]
   (select-keys opts
     [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target
-     :cache-key :checked-arrays]))
+     :cache-key :checked-arrays :language-out]))
 
 #?(:clj
    (defn compiled-by-string
