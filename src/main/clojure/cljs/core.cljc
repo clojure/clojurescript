@@ -819,7 +819,12 @@
       (core/inc (core/quot c 32)))))
 
 (core/defmacro str [& xs]
-  (core/let [strs (core/->> (repeat (count xs) "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})")
+  (core/let [interpolate (core/fn [x]
+                           (if (core/string? x)
+                             "~{}"
+                             "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
+             strs (core/->> xs
+                    (map interpolate)
                     (interpose ",")
                     (apply core/str))]
     (list* 'js* (core/str "[" strs "].join('')") xs)))
