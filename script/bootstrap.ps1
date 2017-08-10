@@ -128,12 +128,10 @@ Get-WebResource `
 
 Write-Host "Fetching Google Closure compiler..."
 Get-WebResource `
-    https://dl.google.com/closure-compiler/compiler-$CLOSURE_RELEASE.zip `
-    $root\compiler-$CLOSURE_RELEASE.zip
-Get-ChildItem $root\closure\compiler\* | Delete-File
-Expand-ZipFile $root\compiler-$CLOSURE_RELEASE.zip $root\closure\compiler
-Copy-File $root\closure\compiler\closure-compiler-v$CLOSURE_RELEASE.jar $root\lib\compiler.jar
-Delete-File $root\compiler-$CLOSURE_RELEASE.zip
+    http://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar `
+    $root\closure-compiler-v$CLOSURE_RELEASE.jar
+Copy-File $root\closure-compiler-v$CLOSURE_RELEASE.jar $root\lib\compiler.jar
+Delete-File $root\closure-compiler-v$CLOSURE_RELEASE.jar
 
 Write-Host "Fetching Rhino..."
 Get-WebResource `

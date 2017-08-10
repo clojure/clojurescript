@@ -5,7 +5,7 @@ set -e
 CLOJURE_RELEASE="1.9.0-alpha17"
 SPEC_ALPHA_RELEASE="0.1.123"
 CORE_SPECS_ALPHA_RELEASE="0.1.10"
-CLOSURE_RELEASE="20170626"
+CLOSURE_RELEASE="20170806"
 DJSON_RELEASE="0.2.6"
 TRANSIT_RELEASE="0.8.300"
 GCLOSURE_LIB_RELEASE="0.0-20170809-b9c14c6b"
@@ -55,7 +55,7 @@ echo "Fetching transit-clj..."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/com/cognitect/transit-clj/$TRANSIT_RELEASE/transit-clj-$TRANSIT_RELEASE.jar || { echo "Download failed."; exit 1; }
 echo "Copying transit-clj-$TRANSIT_RELEASE.jar to lib/transit-clj-$TRANSIT_RELEASE.jar..."
 cp transit-clj-$TRANSIT_RELEASE.jar lib/transit-clj-$TRANSIT_RELEASE.jar
-echo "Cleaning up data.json..."
+echo "Cleaning up transit-clj..."
 rm transit-clj-$TRANSIT_RELEASE.jar
 
 echo "Fetching Google Closure library..."
@@ -86,16 +86,13 @@ else
     cp google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar ../../lib/google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
     rm google-closure-library-third-party-$GCLOSURE_LIB_RELEASE.jar
 fi
-cd ..
+cd ../..
 
 echo "Fetching Google Closure compiler..."
-mkdir -p compiler
-cd compiler
-curl --retry 3 -O -s https://dl.google.com/closure-compiler/compiler-$CLOSURE_RELEASE.zip || { echo "Download failed."; exit 1; }
-unzip -qu compiler-$CLOSURE_RELEASE.zip
-echo "Cleaning up Google Closure compiler archive..."
-rm compiler-$CLOSURE_RELEASE.zip
-cd ../..
+curl --retry 3 -O -s http://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar || { echo "Download failed."; exit 1; }
+cp closure-compiler-v$CLOSURE_RELEASE.jar lib/closure-compiler-v$CLOSURE_RELEASE.jar
+echo "Cleaning up closure-compiler.jar..."
+rm closure-compiler-v$CLOSURE_RELEASE.jar
 
 if [ "$1" = "--closure-library-head" ] ; then
     echo "Building lib/goog.jar..."
@@ -112,9 +109,6 @@ echo "Cleaning up Rhino directory..."
 rm -rf rhino$RHINO_RELEASE/
 echo "Cleaning up Rhino archive..."
 rm rhino$RHINO_RELEASE.zip
-
-echo "Copying closure/compiler/compiler.jar to lib/compiler.jar"
-cp closure/compiler/closure-compiler-v$CLOSURE_RELEASE.jar lib
 
 echo "Fetching tools.reader $TREADER_RELEASE ..."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/tools.reader/$TREADER_RELEASE/tools.reader-$TREADER_RELEASE.jar || { echo "Download failed."; exit 1; }
