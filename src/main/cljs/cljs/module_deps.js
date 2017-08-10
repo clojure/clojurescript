@@ -9,13 +9,14 @@ var filename = path.resolve(__dirname, 'JS_FILE');
 var resolver = target === 'nodejs' ? nodeResolve : browserResolve;
 
 var md = mdeps({
-  resolve: function(id, parent, cb) {
+  resolve: function(id, parentOpts, cb) {
     // set the basedir properly so we don't try to resolve requires in the Closure
     // Compiler processed `node_modules` folder.
-    parent.basedir =
-      parent.filename === filename ? __dirname : path.dirname(parent.filename);
+    parentOpts.basedir =
+      parentOpts.filename === filename ? __dirname : path.dirname(parentOpts.filename);
+    parentOpts.extensions = ['.js', '.json'];
 
-    resolver(id, parent, cb);
+    resolver(id, parentOpts, cb);
   },
   filter: function(id) {
     return !(target === 'nodejs' && nodeResolve.isCore(id));

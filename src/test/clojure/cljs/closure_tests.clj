@@ -10,6 +10,8 @@
   (:refer-clojure :exclude [compile])
   (:use cljs.closure clojure.test)
   (:require [cljs.build.api :as build]
+            [clojure.data.json :as json]
+            [clojure.java.shell :as sh]
             [cljs.closure :as closure]
             [cljs.js-deps :as deps]
             [cljs.util :as util]
@@ -240,3 +242,21 @@
     (.delete (io/file "package.json"))
     (test/delete-node-modules)
     (test/delete-out-files out)))
+
+(deftest test-cljs-2315
+  (spit (io/file "package.json") (json/json-str {:devDependencies {"@cljs-oss/module-deps" "*"
+                                                                   :konan "*"
+                                                                   :resolve "*"
+                                                                   :browser-resolve "*"}}))
+  (apply sh/sh (cond->> ["npm" "install"]
+                 util/windows? (into ["cmd" "/c"])))
+  (let [file (io/file (test/tmp-dir) "cljs-2315-inputs.js")
+        _ (spit file "require('./src/test/cljs_build/json_modules_test/a.js');")
+        node-inputs (closure/node-inputs [{:file (str file)}])]
+    (is (= node-inputs
+          [{:file (.getAbsolutePath (io/file "src/test/cljs_build/json_modules_test/a.js"))
+            :module-type :es6}
+           {:file (.getAbsolutePath (io/file "src/test/cljs_build/json_modules_test/b.json"))
+            :module-type :es6}])))
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))
