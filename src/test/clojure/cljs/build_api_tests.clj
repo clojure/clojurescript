@@ -186,6 +186,8 @@
    {:output-dir output-dir
     :optimizations :none
     :verbose true
+    :foreign-libs [{:file "loader_test/foreign.js"
+                    :provides ["my.foreign"]}]
     :modules
     {:foo
      {:output-to (str (io/file output-dir "foo.js"))
