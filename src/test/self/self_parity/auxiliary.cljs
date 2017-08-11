@@ -88,7 +88,6 @@
     goog.iter.Iterator
     goog.json
     goog.json.EvalJsonProcessor
-    goog.json.HybridJsonProcessor
     goog.json.NativeJsonProcessor
     goog.json.Replacer
     goog.json.Reviver
@@ -152,5 +151,4 @@
     goog.structs.StringSet
     goog.structs.TreeNode
     goog.structs.Trie
-    goog.structs.weak
     goog.text.LoremIpsum))

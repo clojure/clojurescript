@@ -57,7 +57,7 @@ global.goog = {};
  * @param {string} src The script source.
  * @return {boolean} True if the script was imported, false otherwise.
  */
-global.CLOSURE_IMPORT_SCRIPT = function(src) {
+global.CLOSURE_IMPORT_SCRIPT = function(src, opt_sourceText) {
     // if CLJS_ROOT has been rewritten (by REPLs) need to compute require path
     // so we can delete the old entry from the Node.js require cache
     if(CLJS_ROOT !== ".") {
@@ -72,8 +72,24 @@ global.CLOSURE_IMPORT_SCRIPT = function(src) {
 
     // Sources are always expressed relative to closure's base.js, but
     // require() is always relative to the current source.
-    require(path.join(".", "..", src));
+    if (opt_sourceText === undefined) {
+        require(path.join(".", "..", src));
+    } else {
+        eval(opt_sourceText);
+    }
     return true;
+};
+
+
+/**
+ * Loads a file when using Closure's goog.require() API with goog.modules.
+ *
+ * @param {string} src The file source.
+ * @return {string} The file contents.
+ */
+global.CLOSURE_LOAD_FILE_SYNC = function(src) {
+    return fs.readFileSync(
+      path.resolve(__dirname, '..', src), {encoding: 'utf-8'});
 };
 
 
@@ -82,7 +98,7 @@ function nodeGlobalRequire(file) {
     var _module = global.module, _exports = global.exports;
     global.module = undefined;
     global.exports = undefined;
-    vm.runInThisContext(fs.readFileSync(file), file);
+    vm.runInThisContext.call(global, fs.readFileSync(file), file);
     global.exports = _exports;
     global.module = _module;
 }

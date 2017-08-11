@@ -13,7 +13,7 @@
                  [org.clojure/tools.reader "1.0.5"]
                  [org.clojure/test.check "0.10.0-alpha2" :scope "test"]
                  [com.cognitect/transit-clj "0.8.300"]
-                 [org.clojure/google-closure-library "0.0-20170519-fa0499ef"]
+                 [org.clojure/google-closure-library "0.0-20170809-b9c14c6b"]
                  [com.google.javascript/closure-compiler-unshaded "v20170626"]
                  [org.mozilla/rhino "1.7R5"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
