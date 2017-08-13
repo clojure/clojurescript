@@ -247,7 +247,7 @@
   (spit (io/file "package.json") (json/json-str {:devDependencies {"@cljs-oss/module-deps" "*"
                                                                    :konan "*"
                                                                    :resolve "*"
-                                                                   :browser-resolve "*"}}))
+                                                                   :enhanced-resolve "*"}}))
   (apply sh/sh (cond->> ["npm" "install"]
                  util/windows? (into ["cmd" "/c"])))
   (let [file (io/file (test/tmp-dir) "cljs-2315-inputs.js")
@@ -260,3 +260,23 @@
             :module-type :es6}])))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
+
+(deftest test-cljs-2318
+  (spit (io/file "package.json") "{}")
+  (let [opts {:npm-deps {:react     "15.6.1"
+                         :react-dom "15.6.1"
+                         :react-addons-css-transition-group "15.5.1"
+                         "@blueprintjs/core" "1.24.0"}}
+        out (util/output-directory opts)]
+    (test/delete-node-modules)
+    (test/delete-out-files out)
+    (closure/maybe-install-node-deps! opts)
+    (is (true? (some (fn [module]
+                       (= module {:module-type :es6
+                                  :file (.getAbsolutePath (io/file "node_modules/tslib/tslib.es6.js"))
+                                  :provides ["tslib"
+                                             "tslib/tslib.es6.js"
+                                             "tslib/tslib.es6"]}))
+                 (closure/index-node-modules ["tslib"] opts))))
+    (test/delete-node-modules)
+    (test/delete-out-files out)))

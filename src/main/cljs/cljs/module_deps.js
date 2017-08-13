@@ -1,22 +1,35 @@
+var fs = require('fs');
 var path = require('path');
 var mdeps = require('@cljs-oss/module-deps');
 var nodeResolve = require('resolve');
-var browserResolve = require('browser-resolve');
 var konan = require('konan');
+var enhancedResolve = require('enhanced-resolve');
 
 var target = 'CLJS_TARGET';
-var filename = path.resolve(__dirname, 'JS_FILE');
-var resolver = target === 'nodejs' ? nodeResolve : browserResolve;
+var filename = fs.realpathSync(path.resolve(__dirname, 'JS_FILE'));
+var mainFields =
+  target === 'nodejs' ? ['module', 'main'] : ['module', 'browser', 'main'];
+
+var resolver = enhancedResolve.create({
+  fileSystem: new enhancedResolve.CachedInputFileSystem(
+    new enhancedResolve.NodeJsInputFileSystem(),
+    4000
+  ),
+  extensions: ['.js', '.json'],
+  mainFields: mainFields,
+  moduleExtensions: ['.js', '.json'],
+});
 
 var md = mdeps({
   resolve: function(id, parentOpts, cb) {
     // set the basedir properly so we don't try to resolve requires in the Closure
     // Compiler processed `node_modules` folder.
     parentOpts.basedir =
-      parentOpts.filename === filename ? __dirname : path.dirname(parentOpts.filename);
-    parentOpts.extensions = ['.js', '.json'];
+      parentOpts.filename === filename
+        ? path.resolve(__dirname)
+        : path.dirname(parentOpts.filename);
 
-    resolver(id, parentOpts, cb);
+    resolver(parentOpts.basedir, id, cb);
   },
   filter: function(id) {
     return !(target === 'nodejs' && nodeResolve.isCore(id));
@@ -27,6 +40,17 @@ var md = mdeps({
     return deps.strings;
   },
 });
+
+function getPackageJsonMainEntry(pkgJson) {
+  for (var i = 0; i < mainFields.length; i++) {
+    var entry = mainFields[i];
+
+    if (pkgJson[entry] != null) {
+      return pkgJson[entry];
+    }
+  }
+  return null;
+}
 
 var pkgJsons = [];
 var deps_files = {};
@@ -42,8 +66,9 @@ md.on('package', function(pkg) {
       pkgJson.provides = [pkg.name];
     }
 
-    if (pkg.main != null) {
-      pkgJson.main = path.join(pkg.__dirname, pkg.main);
+    var pkgJsonMainEntry = getPackageJsonMainEntry(pkg);
+    if (pkgJsonMainEntry != null) {
+      pkgJson.mainEntry = path.join(pkg.__dirname, pkgJsonMainEntry);
     }
 
     pkgJsons.push(pkgJson);
@@ -58,8 +83,8 @@ md.on('end', function() {
   for (var i = 0; i < pkgJsons.length; i++) {
     var pkgJson = pkgJsons[i];
 
-    if (deps_files[pkgJson.main] != null && pkgJson.provides != null) {
-      deps_files[pkgJson.main].provides = pkgJson.provides;
+    if (deps_files[pkgJson.mainEntry] != null && pkgJson.provides != null) {
+      deps_files[pkgJson.mainEntry].provides = pkgJson.provides;
     }
 
     deps_files[pkgJson.file] = { file: pkgJson.file };

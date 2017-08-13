@@ -405,8 +405,7 @@
   (spit (io/file "package.json") (json/json-str {:dependencies {:left-pad "1.1.3"}
                                                  :devDependencies {"@cljs-oss/module-deps" "*"
                                                                    :konan "*"
-                                                                   :resolve "*"
-                                                                   :browser-resolve "*"}}))
+                                                                   :enhanced-resolve "*"}}))
   (apply sh/sh (cond->> ["npm" "install"]
                  util/windows? (into ["cmd" "/c"])))
   (let [ws (atom [])
