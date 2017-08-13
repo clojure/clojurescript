@@ -1102,7 +1102,10 @@
         #?@(:clj
             [(ana/foreign-dep? lib)
              ;; we only load foreign libraries under optimizations :none
-             (when (= :none optimizations)
+             ;; under :modules we also elide loads, as the module loader will
+             ;; have handled it - David
+             (when (and (= :none optimizations)
+                        (not (contains? options :modules)))
                (if (= :nodejs target)
                  ;; under node.js we load foreign libs globally
                  (let [ijs (get js-dependency-index (name lib))]
