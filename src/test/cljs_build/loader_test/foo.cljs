@@ -2,7 +2,8 @@
   (:require [goog.dom :as gdom]
             [goog.events :as events]
             [cljs.loader :as loader]
-            [my.foreign])
+            ;[my.foreign]
+            )
   (:import [goog.events EventType]))
 
 (enable-console-print!)
