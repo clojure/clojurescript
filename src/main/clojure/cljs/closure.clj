@@ -1520,13 +1520,16 @@
             {:output-to (:output-to module)}))
         (str (when (or (not module) (= :cljs-base (:module-name opts)))
                (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                    "var CLOSURE_NO_DEPS = true;\n"
                     "if(typeof goog == \"undefined\") document.write('<script src=\"" asset-path "/goog/base.js\"></script>');\n"
+                    "document.write('<script src=\"" asset-path "/goog/deps.js\"></script>');\n"
                     "document.write('<script src=\"" asset-path "/cljs_deps.js\"></script>');\n"
                     "document.write('<script>if (typeof goog == \"undefined\") console.warn(\"ClojureScript could not load :main, did you forget to specify :asset-path?\");</script>');\n"
                  (apply str (preloads (:preloads opts) :browser))))
           (apply str
             (map (fn [entry]
-                   (str "document.write('<script>goog.require(\"" (comp/munge entry)"\");</script>');\n"))
+                   (when-not (= "goog" entry)
+                     (str "document.write('<script>goog.require(\"" (comp/munge entry) "\");</script>');\n")))
               (if-let [entries (when module (:entries module))]
                 entries
                 (when-let [main (:main opts)]
