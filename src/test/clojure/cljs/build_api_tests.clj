@@ -186,8 +186,11 @@
    {:output-dir output-dir
     :optimizations :none
     :verbose true
-    ;:foreign-libs [{:file "loader_test/foreign.js"
-    ;                :provides ["my.foreign"]}]
+    :foreign-libs [{:file "src/test/cljs_build/loader_test/foreignA.js"
+                    :provides ["foreign.a"]}
+                   {:file "src/test/cljs_build/loader_test/foreignB.js"
+                    :provides ["foreign.b"]
+                    :requires ["foreign.a"]}]
     :modules
     {:foo
      {:output-to (str (io/file output-dir "foo.js"))
@@ -213,7 +216,13 @@
       (test/delete-out-files out)
       (let [{:keys [inputs opts]} (merge-with merge (loader-test-project out)
                                     {:opts {:optimizations :whitespace}})]
-        (build/build (build/inputs inputs) opts)))))
+        (build/build (build/inputs inputs) opts)))
+    (testing "CLJS-2309 foreign libs order preserved"
+      (test/delete-out-files out)
+      (let [{:keys [inputs opts]} (merge-with merge (loader-test-project out)
+                                    {:opts {:optimizations :advanced}})]
+        (build/build (build/inputs inputs) opts)
+        (is (not (nil? (re-find #"foreignA[\s\S]+foreignB" (slurp (io/file out "foo.js"))))))))))
 
 (deftest test-npm-deps
   (test/delete-node-modules)
