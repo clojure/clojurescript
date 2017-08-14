@@ -1786,6 +1786,9 @@
                         disk-sources)]
     (util/mkdirs goog-deps)
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
+    (when (:debug-inputs opts)
+      (util/debug-prn "DEBUG: all compiler inputs")
+      (util/debug-prn (pr-str sources)))
     (cond
       modules
       (do
