@@ -1479,8 +1479,7 @@
 
 (defn output-main-file
   "Output an entry point. In the non-modules case, opts is simply compiler
-  options. When emitting a module entry point opts must contain :module-name,
-  fully expanded :modules and :inputs (all compiler IJavaScript input sources)."
+  options. When emitting a module entry point, opts must contain :module-name."
   [opts]
   (assert (or (not (contains? opts :module-name))
               (get (:modules opts) (:module-name opts)))
@@ -1789,16 +1788,14 @@
     (spit goog-deps (slurp (io/resource "goog/deps.js")))
     (cond
       modules
-      (let [modules' (module-graph/expand-modules modules sources)]
+      (do
         (output-deps)
         (doall
           (map
             (fn [[module-name _]]
               (output-main-file
                 (merge opts
-                  {:module-name module-name
-                   :modules     modules'
-                   :inputs      sources})))
+                  {:module-name module-name})))
             modules)))
 
       main
