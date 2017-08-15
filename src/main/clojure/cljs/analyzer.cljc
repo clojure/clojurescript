@@ -3423,7 +3423,7 @@
      :form x
      :items items
      :children [items]
-     :tag name}))
+     :tag (symbol (str ns) (str name))}))
 
 (defn elide-reader-meta [m]
   (dissoc m :file :line :column :end-column :end-line :source))
