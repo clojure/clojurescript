@@ -100,7 +100,15 @@
   [inputs]
   (reduce
     (fn [ret {:keys [provides] :as input}]
-      (into ret (map #(vector (-> % munge str) input)) provides))
+      (into ret
+        (map
+          (fn [provide]
+            (vector
+              (-> provide munge str)
+              (-> input
+                (update :provides #(into [] (map (comp str munge)) %))
+                (update :requires #(into [] (map (comp str munge)) %))))))
+        provides))
     {} inputs))
 
 (defn ^:dynamic deps-for
