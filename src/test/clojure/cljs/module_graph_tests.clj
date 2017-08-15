@@ -76,7 +76,8 @@
 (deftest test-entry-deps
   (let [inputs (module-graph/index-inputs (inputs opts))]
     (is (= (module-graph/deps-for-entry "page2.a" inputs)
-           ["cljs.core" "events" "shared.a"]))))
+           ["cljs.core" "events" "shared.a"]))
+    (is (some #{"shared.a"} (module-graph/deps-for-entry "page1.a" inputs)))))
 
 (deftest test-canonical-name
   (let [ins (module-graph/index-inputs (inputs opts))]
