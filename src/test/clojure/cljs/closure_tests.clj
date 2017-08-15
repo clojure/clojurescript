@@ -244,10 +244,7 @@
     (test/delete-out-files out)))
 
 (deftest test-cljs-2315
-  (spit (io/file "package.json") (json/json-str {:devDependencies {"@cljs-oss/module-deps" "*"
-                                                                   :konan "*"
-                                                                   :resolve "*"
-                                                                   :enhanced-resolve "*"}}))
+  (spit (io/file "package.json") (json/json-str {:devDependencies {"@cljs-oss/module-deps" "*"}}))
   (apply sh/sh (cond->> ["npm" "install"]
                  util/windows? (into ["cmd" "/c"])))
   (let [file (io/file (test/tmp-dir) "cljs-2315-inputs.js")
