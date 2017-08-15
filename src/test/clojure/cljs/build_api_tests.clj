@@ -398,6 +398,17 @@
     (build/build (build/inputs (io/file inputs "data_readers_test")) opts cenv)
     (is (contains? (-> @cenv ::ana/data-readers) 'test/custom-identity))))
 
+(comment
+  (let [out "out"
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs"))
+                               :opts {:main 'data-readers-test.records
+                                      :output-dir out
+                                      :optimizations :none
+                                      :closure-warnings {:check-types :off}}}
+        cenv (env/default-compiler-env)]
+    (build/build (build/inputs (io/file inputs "data_readers_test")) opts cenv))
+  )
+
 (deftest test-cljs-2249
   (let [out (io/file (test/tmp-dir) "cljs-2249-out")
         root (io/file "src" "test" "cljs_build")

@@ -3406,6 +3406,25 @@
      :children items
      :tag (if (map? val) 'object 'array)}))
 
+(defn analyze-record
+  [env x]
+  (let [items     (disallowing-recur
+                    (analyze (assoc env :context :expr) (into {} x)))
+        [ns name] (map symbol
+                    #?(:clj
+                       ((juxt (comp #(string/join "." %) butlast) last)
+                         (string/split (.getName ^Class (type x)) #"\."))
+                       :cljs
+                       (string/split (pr-str (type x)) #"/")))]
+    {:op :record-value
+     :ns ns
+     :name name
+     :env env
+     :form x
+     :items items
+     :children [items]
+     :tag name}))
+
 (defn elide-reader-meta [m]
   (dissoc m :file :line :column :end-column :end-line :source))
 
@@ -3509,6 +3528,7 @@
      (cond
        (symbol? form) (analyze-symbol env form)
        (and (seq? form) (seq form)) (analyze-seq env form name opts)
+       (record? form) (analyze-record env form)
        (map? form) (analyze-map env form)
        (vector? form) (analyze-vector env form)
        (set? form) (analyze-set env form)
@@ -3530,6 +3550,7 @@
      (cond
        (symbol? form) (analyze-symbol env form)
        (and (cljs-seq? form) (some? (seq form))) (analyze-seq env form name opts)
+       (record? form) (analyze-record env form)
        (cljs-map? form) (analyze-map env form)
        (cljs-vector? form) (analyze-vector env form)
        (cljs-set? form) (analyze-set env form)

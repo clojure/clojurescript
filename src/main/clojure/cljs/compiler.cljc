@@ -460,6 +460,11 @@
         (emits "})"))
       (emits "[" (comma-sep items) "]"))))
 
+(defmethod emit* :record-value
+  [{:keys [items ns name items env]}]
+  (emit-wrap env
+    (emits ns ".map__GT_" name "(" items ")")))
+
 (defmethod emit* :constant
   [{:keys [form env]}]
   (when-not (= :statement (:context env))
