@@ -35,23 +35,23 @@
    {:provides '[events "event.types"]
     :requires ["cljs.core"]
     :out-file (str output-dir "/events.js")}
-   {:provides ["shared.a"]
+   {:provides '[shared.a]
     :requires ["cljs.core"]
     :out-file (str output-dir "/shared/a.js")}
-   {:provides ["shared.b"]
-    :requires ["cljs.core"]
+   {:provides '[shared.b]
+    :requires '[cljs.core]
     :out-file (str output-dir "/shared/b.js")}
    {:provides ["page1.a"]
-    :requires ["cljs.core" "cljs.reader" "events" "shared.a"]
+    :requires ["cljs.core" "cljs.reader" "events" 'shared.a]
     :out-file (str output-dir "/page1/a.js")}
    {:provides ["page1.b"]
     :requires '[cljs.core shared.b]
     :out-file (str output-dir "/page1/b.js")}
    {:provides ["page2.a"]
-    :requires ["cljs.core" "events" "shared.a"]
+    :requires ["cljs.core" "events" 'shared.a]
     :out-file (str output-dir "/page2/a.js")}
    {:provides ["page2.b"]
-    :requires ["cljs.core" "shared.b"]
+    :requires ['cljs.core 'shared.b]
     :out-file (str output-dir "/page2/b.js")}])
 
 (deftest test-add-cljs-base
@@ -150,3 +150,34 @@
 (deftest test-module-for
   (is (= :page1 (module-graph/module-for 'page1.a (modules opts))))
   (is (= :page1 (module-graph/module-for "page1.a" (modules opts)))))
+
+(comment
+  (require '[clojure.java.io :as io]
+           '[clojure.edn :as edn]
+           '[clojure.pprint :refer [pprint]]
+           '[clojure.set :as set])
+
+  (def modules
+    {:entry-point {:output-to "resources/public/js/demos/demos.js"
+                   :entries   '#{cards.card-ui}}
+     :main        {:output-to "resources/public/js/demos/main-ui.js"
+                   :entries   '#{recipes.dynamic-ui-main}}})
+
+  (def inputs
+    (edn/read-string
+      {:readers {'object (fn [x] nil)
+                 'cljs.closure.JavaScriptFile (fn [x] x)}}
+      (slurp (io/file "inputs.edn"))))
+
+  (module-graph/expand-modules modules inputs)
+
+  (pprint
+    (binding [module-graph/deps-for (memoize module-graph/deps-for)]
+      (module-graph/deps-for-entry "cards.card_ui"
+        (module-graph/index-inputs inputs))))
+
+  (get (module-graph/index-inputs inputs) "cards.card_ui")
+
+  (get (module-graph/index-inputs inputs) "cards.dynamic_routing_cards")
+  (get (module-graph/index-inputs inputs) "fulcro.client.routing")
+  )
