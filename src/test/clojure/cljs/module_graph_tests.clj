@@ -151,34 +151,3 @@
 (deftest test-module-for
   (is (= :page1 (module-graph/module-for 'page1.a (modules opts))))
   (is (= :page1 (module-graph/module-for "page1.a" (modules opts)))))
-
-(comment
-  (require '[clojure.java.io :as io]
-           '[clojure.edn :as edn]
-           '[clojure.pprint :refer [pprint]]
-           '[clojure.set :as set])
-
-  (def modules
-    {:entry-point {:output-to "resources/public/js/demos/demos.js"
-                   :entries   '#{cards.card-ui}}
-     :main        {:output-to "resources/public/js/demos/main-ui.js"
-                   :entries   '#{recipes.dynamic-ui-main}}})
-
-  (def inputs
-    (edn/read-string
-      {:readers {'object (fn [x] nil)
-                 'cljs.closure.JavaScriptFile (fn [x] x)}}
-      (slurp (io/file "inputs.edn"))))
-
-  (module-graph/expand-modules modules inputs)
-
-  (pprint
-    (binding [module-graph/deps-for (memoize module-graph/deps-for)]
-      (module-graph/deps-for-entry "cards.card_ui"
-        (module-graph/index-inputs inputs))))
-
-  (get (module-graph/index-inputs inputs) "cards.card_ui")
-
-  (get (module-graph/index-inputs inputs) "cards.dynamic_routing_cards")
-  (get (module-graph/index-inputs inputs) "fulcro.client.routing")
-  )
