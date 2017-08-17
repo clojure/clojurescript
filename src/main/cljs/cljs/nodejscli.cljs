@@ -10,7 +10,8 @@
 ; job is to make sure cljs.nodejs is loaded and that the *main-cli-fn*
 ; is called with the script's command-line arguments.
 (ns cljs.nodejscli
-  (:require [cljs.nodejs :as nodejs]))
+  (:require [cljs.nodejs :as nodejs]
+            [goog.object :as gobj]))
 
 ;; need to set js/goog.global if COMPILED
 (when ^boolean js/COMPILED
@@ -18,4 +19,4 @@
 
 ;; Call the user's main function
 (when (fn? cljs.core/*main-cli-fn*)
-  (apply cljs.core/*main-cli-fn* (drop 2 (.-argv js/process))))
+  (apply cljs.core/*main-cli-fn* (drop 2 (gobj/get js/process "argv"))))
