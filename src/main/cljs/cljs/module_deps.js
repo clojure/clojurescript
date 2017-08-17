@@ -55,68 +55,68 @@ let getDeps = function (src, {dynamicImport = true, parse = {sourceType: 'module
 };
 
 let resolver = enhancedResolve.create({
-  fileSystem: new enhancedResolve.CachedInputFileSystem(
-    new enhancedResolve.NodeJsInputFileSystem(),
-    4000
-  ),
-  extensions: ['.js', '.json'],
-  mainFields: mainFields,
-  moduleExtensions: ['.js', '.json'],
+    fileSystem: new enhancedResolve.CachedInputFileSystem(
+        new enhancedResolve.NodeJsInputFileSystem(),
+        4000
+    ),
+    extensions: ['.js', '.json'],
+    mainFields: mainFields,
+    moduleExtensions: ['.js', '.json'],
 });
 
 let md = mdeps({
-  resolve: function(id, parentOpts, cb) {
-    // set the basedir properly so we don't try to resolve requires in the Closure
-    // Compiler processed `node_modules` folder.
-    parentOpts.basedir =
-      parentOpts.filename === filename
-        ? path.resolve(__dirname)
-        : path.dirname(parentOpts.filename);
+    resolve: function (id, parentOpts, cb) {
+        // set the basedir properly so we don't try to resolve requires in the Closure
+        // Compiler processed `node_modules` folder.
+        parentOpts.basedir =
+            parentOpts.filename === filename
+                ? path.resolve(__dirname)
+                : path.dirname(parentOpts.filename);
 
-    resolver(parentOpts.basedir, id, cb);
-  },
-  filter: function(id) {
-    return !(target === 'nodejs' && nodeResolve.isCore(id));
-  },
-  detect: function(src) {
-    let deps = getDeps(src);
+        resolver(parentOpts.basedir, id, cb);
+    },
+    filter: function (id) {
+        return !(target === 'nodejs' && nodeResolve.isCore(id));
+    },
+    detect: function (src) {
+        let deps = getDeps(src);
 
-    return deps.strings;
-  }
+        return deps.strings;
+    }
 });
 
 function getPackageJsonMainEntry(pkgJson) {
-  for (let i = 0; i < mainFields.length; i++) {
-    let entry = mainFields[i];
+    for (let i = 0; i < mainFields.length; i++) {
+        let entry = mainFields[i];
 
-    if (pkgJson[entry] != null) {
-      return pkgJson[entry];
+        if (pkgJson[entry] != null) {
+            return pkgJson[entry];
+        }
     }
-  }
-  return null;
+    return null;
 }
 
 let pkgJsons = [];
 let deps_files = {};
 
-md.on('package', function(pkg) {
-  // we don't want to include the package.json for users' projects
-  if (/node_modules/.test(pkg.__dirname)) {
-    let pkgJson = {
-      file: path.join(pkg.__dirname, 'package.json'),
-    };
+md.on('package', function (pkg) {
+    // we don't want to include the package.json for users' projects
+    if (/node_modules/.test(pkg.__dirname)) {
+        let pkgJson = {
+            file: path.join(pkg.__dirname, 'package.json'),
+        };
 
-    if (pkg.name != null) {
-      pkgJson.provides = [pkg.name];
+        if (pkg.name != null) {
+            pkgJson.provides = [pkg.name];
+        }
+
+        let pkgJsonMainEntry = getPackageJsonMainEntry(pkg);
+        if (pkgJsonMainEntry != null) {
+            pkgJson.mainEntry = path.join(pkg.__dirname, pkgJsonMainEntry);
+        }
+
+        pkgJsons.push(pkgJson);
     }
-
-    let pkgJsonMainEntry = getPackageJsonMainEntry(pkg);
-    if (pkgJsonMainEntry != null) {
-      pkgJson.mainEntry = path.join(pkg.__dirname, pkgJsonMainEntry);
-    }
-
-    pkgJsons.push(pkgJson);
-  }
 });
 
 md.on('file', function (file) {
