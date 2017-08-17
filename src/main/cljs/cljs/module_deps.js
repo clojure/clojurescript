@@ -8,8 +8,8 @@ let enhancedResolve = require('enhanced-resolve');
 
 let target = 'CLJS_TARGET';
 let filename = fs.realpathSync(path.resolve(__dirname, 'JS_FILE'));
-let mainFields =
-    target === 'nodejs' ? ['module', 'main'] : ['module', 'browser', 'main'];
+let mainFields = ['module', 'main'];
+let aliasFields = target === 'nodejs' ? [] : ['browser'];
 
 // https://github.com/egoist/konan
 let getDeps = function (src, {dynamicImport = true, parse = {sourceType: 'module', plugins: '*'}} = {}) {
@@ -61,7 +61,8 @@ let resolver = enhancedResolve.create({
     ),
     extensions: ['.js', '.json'],
     mainFields: mainFields,
-    moduleExtensions: ['.js', '.json'],
+    aliasFields: aliasFields,
+    moduleExtensions: ['.js', '.json']
 });
 
 let md = mdeps({
