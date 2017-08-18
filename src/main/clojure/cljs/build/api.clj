@@ -277,8 +277,12 @@
    the module-deps package on the supplied JavaScript entry points. Assumes
    that the `@cljs-oss/module-deps` NPM package is either locally or globally
    installed."
-  [entries]
-  (closure/node-inputs entries))
+  ([entries]
+   (node-inputs entries
+     (when-not (nil? env/*compiler*)
+       (:options @env/*compiler*))))
+  ([entries opts]
+   (closure/node-inputs entries opts)))
 
 (comment
   (node-inputs

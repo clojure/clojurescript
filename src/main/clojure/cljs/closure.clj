@@ -1665,6 +1665,8 @@
                                                       (= module-type :amd)) js-modules)))
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
+        _ (when (= (:target opts) :nodejs)
+            (.setPackageJsonEntryNames options ^List '("module", "main")))
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))
         _ (.parse closure-compiler)
