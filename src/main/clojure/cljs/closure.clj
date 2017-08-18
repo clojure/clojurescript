@@ -999,7 +999,8 @@
           (-> (add-dependency-sources preloads opts)
             deps/dependency-order
             (compile-sources opts)
-            (add-js-sources opts))
+            (add-js-sources opts)
+            deps/dependency-order)
           (next post))))))
 
 (comment
@@ -2540,7 +2541,6 @@
                                 (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") all-opts)]))
                                 deps/dependency-order
                                 (add-preloads all-opts)
-                                deps/dependency-order
                                 add-goog-base
                                 (cond-> (= :nodejs (:target all-opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") all-opts)]))
                                 (->> (map #(source-on-disk all-opts %)) doall)
