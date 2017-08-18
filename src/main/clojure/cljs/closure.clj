@@ -2281,7 +2281,7 @@
    (index-node-modules-dir
      (when env/*compiler*
        (:options @env/*compiler*))))
-  ([{:keys [verbose target]}]
+  ([opts]
    (let [module-fseq (util/module-file-seq)]
      (node-file-seq->libs-spec module-fseq))))
 

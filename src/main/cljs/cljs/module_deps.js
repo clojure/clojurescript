@@ -8,7 +8,9 @@ let enhancedResolve = require('enhanced-resolve');
 
 let target = 'CLJS_TARGET';
 let filename = fs.realpathSync(path.resolve(__dirname, 'JS_FILE'));
-let mainFields = ['module', 'main'];
+let mainFields = target === 'nodejs'
+      ? ['module', 'main']
+      : ['browser', 'module', 'main'];
 let aliasFields = target === 'nodejs' ? [] : ['browser'];
 
 // https://github.com/egoist/konan
@@ -61,7 +63,7 @@ let resolver = enhancedResolve.create({
     ),
     extensions: ['.js', '.json'],
     mainFields: mainFields,
-    aliasFields: aliasFields,
+    aliasFields: target === 'nodejs' ? [] : ['browser'],
     moduleExtensions: ['.js', '.json']
 });
 
@@ -89,12 +91,49 @@ let md = mdeps({
 function getPackageJsonMainEntry(pkgJson) {
     for (let i = 0; i < mainFields.length; i++) {
         let entry = mainFields[i];
+        const entryVal = pkgJson[entry];
 
-        if (pkgJson[entry] != null) {
-            return pkgJson[entry];
+        if (entryVal != null) {
+          if (typeof entryVal === 'string') {
+            return entryVal;
+          } else if (typeof entryVal === 'object') {
+            for (let j = i; j < mainFields.length; j++) {
+              let otherEntry = mainFields[j];
+              const otherEntryVal = pkgJson[entry];
+
+              if (entryVal[otherEntryVal] != null) {
+                return entryVal[otherEntryVal]
+              }
+            }
+          }
         }
     }
     return null;
+}
+
+function depProvides(provides, file) {
+  const result = provides != null ? provides.slice(0) : [];
+
+  let providedModule = file
+      .substring(file.lastIndexOf('node_modules'))
+      .replace(/\\/g, '/')
+      .replace('node_modules/', '');
+
+  result.push(
+    providedModule,
+    providedModule.replace(/\.js(on)?$/, '')
+  );
+
+  let indexReplaced = providedModule.replace(/\/index\.js(on)?$/, '');
+
+  if (
+      /\/index\.js(on)?$/.test(providedModule) &&
+      result.indexOf(indexReplaced) === -1
+  ) {
+    result.push(indexReplaced);
+  }
+
+  return result;
 }
 
 let pkgJsons = [];
@@ -104,6 +143,7 @@ md.on('package', function (pkg) {
     // we don't want to include the package.json for users' projects
     if (/node_modules/.test(pkg.__dirname)) {
         let pkgJson = {
+            basedir: pkg.__dirname,
             file: path.join(pkg.__dirname, 'package.json'),
         };
 
@@ -114,6 +154,14 @@ md.on('package', function (pkg) {
         let pkgJsonMainEntry = getPackageJsonMainEntry(pkg);
         if (pkgJsonMainEntry != null) {
             pkgJson.mainEntry = path.join(pkg.__dirname, pkgJsonMainEntry);
+        }
+
+        // we'll need these later
+        for (let i = 0; i < aliasFields.length; i++) {
+          const field = aliasFields[i];
+          if (pkg[field] != null) {
+            pkgJson[field] = pkg[field];
+          }
         }
 
         pkgJsons.push(pkgJson);
@@ -132,6 +180,22 @@ md.on('end', function () {
             deps_files[pkgJson.mainEntry].provides = pkgJson.provides;
         }
 
+        for (let j = 0; j < aliasFields.length; j++) {
+          const field = aliasFields[j];
+          const fieldValue = pkgJson[field];
+
+          if (fieldValue != null && typeof fieldValue === 'object') {
+            for (let key in fieldValue) {
+              const replacement = path.resolve(pkgJson.basedir, fieldValue[key]);
+
+              if (deps_files[replacement] != null) {
+                deps_files[replacement].provides = depProvides(deps_files[replacement].provides, path.resolve(pkgJson.basedir, key));
+              }
+            }
+          }
+        }
+
+
         deps_files[pkgJson.file] = {file: pkgJson.file};
     }
 
@@ -146,25 +210,7 @@ md.on('end', function () {
             )
         ) {
             if (dep.file.indexOf('node_modules') !== -1) {
-                let providedModule = dep.file
-                    .substring(dep.file.lastIndexOf('node_modules'))
-                    .replace(/\\/g, '/')
-                    .replace('node_modules/', '');
-
-                dep.provides = dep.provides || [];
-                dep.provides.push(
-                    providedModule,
-                    providedModule.replace(/\.js(on)?$/, '')
-                );
-
-                let indexReplaced = providedModule.replace(/\/index\.js(on)?$/, '');
-
-                if (
-                    /\/index\.js(on)?$/.test(providedModule) &&
-                    dep.provides.indexOf(indexReplaced) === -1
-                ) {
-                    dep.provides.push(indexReplaced);
-                }
+              dep.provides = depProvides(dep.provides, dep.file);
             }
         }
 

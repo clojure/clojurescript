@@ -277,3 +277,65 @@
                  (closure/index-node-modules ["tslib"] opts))))
     (test/delete-node-modules)
     (test/delete-out-files out)))
+
+(deftest test-cljs-2327
+  (spit (io/file "package.json") "{}")
+  (let [opts {:npm-deps {:react "16.0.0-beta.5"
+                         :react-dom "16.0.0-beta.5"}}
+        out (util/output-directory opts)]
+    (test/delete-node-modules)
+    (test/delete-out-files out)
+    (closure/maybe-install-node-deps! opts)
+    (let [modules (closure/index-node-modules ["react" "react-dom" "react-dom/server"] opts)]
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/react/index.js"))
+                                    :provides ["react"
+                                               "react/index.js"
+                                               "react/index"]}))
+                   modules)))
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/react-dom/index.js"))
+                                    :provides ["react-dom"
+                                               "react-dom/index.js"
+                                               "react-dom/index"]}))
+                   modules)))
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/react-dom/server.browser.js"))
+                                    :provides ["react-dom/server.js"
+                                               "react-dom/server"
+                                               "react-dom/server.browser.js"
+                                               "react-dom/server.browser"]}))
+                   modules))))
+    (test/delete-node-modules)
+    (test/delete-out-files out)
+    (spit (io/file "package.json") "{}")
+    (let [opts {:npm-deps {:warning "3.0.0"}}
+          _ (closure/maybe-install-node-deps! opts)
+          modules (closure/index-node-modules ["warning"] opts)]
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/warning/browser.js"))
+                                    :provides ["warning"
+                                               "warning/browser.js"
+                                               "warning/browser"]}))
+                   modules))))
+    (test/delete-node-modules)
+    (test/delete-out-files out)
+    (spit (io/file "package.json") "{}")
+    (let [opts {:npm-deps {:react-dom "16.0.0-beta.5"
+                           :react "16.0.0-beta.5"}
+                :target :nodejs}
+          _ (closure/maybe-install-node-deps! opts)
+          modules (closure/index-node-modules ["react-dom/server"] opts)]
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/react-dom/server.js"))
+                                    :provides ["react-dom/server.js"
+                                               "react-dom/server"]}))
+                   modules))))
+    (.delete (io/file "package.json"))
+    (test/delete-node-modules)
+    (test/delete-out-files out)))
