@@ -2259,8 +2259,12 @@
                                                                  (string/replace #"\\" "/")
                                                                  (string/replace #"package\.json$" "")
                                                                  (str main))]
-                                                 (when (= main-path (string/replace path #"\\" "/"))
-                                                   name))))
+                                                 (some (fn [candidate]
+                                                         (when (= candidate (string/replace path #"\\" "/"))
+                                                           name))
+                                                   (cond-> [main-path]
+                                                     (nil? (re-find #"\.js(on)?$" main-path))
+                                                     (into [(str main-path ".js") (str main-path ".json")]))))))
                                            pkg-jsons)]
                        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
                                                             (string/replace #"\\" "/")

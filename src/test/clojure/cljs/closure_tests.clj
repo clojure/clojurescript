@@ -275,6 +275,7 @@
                                              "tslib/tslib.es6.js"
                                              "tslib/tslib.es6"]}))
                  (closure/index-node-modules ["tslib"] opts))))
+    (.delete (io/file "package.json"))
     (test/delete-node-modules)
     (test/delete-out-files out)))
 
@@ -339,3 +340,32 @@
     (.delete (io/file "package.json"))
     (test/delete-node-modules)
     (test/delete-out-files out)))
+
+(deftest test-cljs-2326
+  (spit (io/file "package.json") "{}")
+  (let [opts {:npm-deps {:bootstrap "4.0.0-beta"}}
+        out (util/output-directory opts)]
+    (test/delete-node-modules)
+    (test/delete-out-files out)
+    (closure/maybe-install-node-deps! opts)
+    (is (true? (some (fn [module]
+                       (= module {:module-type :es6
+                                  :file (.getAbsolutePath (io/file "node_modules/bootstrap/dist/js/bootstrap.js"))
+                                  :provides ["bootstrap"
+                                             "bootstrap/dist/js/bootstrap.js"
+                                             "bootstrap/dist/js/bootstrap"]}))
+                 (closure/index-node-modules ["bootstrap"] opts))))
+    (test/delete-node-modules)
+    (spit (io/file "package.json") "{}")
+    (test/delete-out-files out))
+  (closure/maybe-install-node-deps! {:npm-deps {:bootstrap "4.0.0-beta"}})
+  (let [modules (closure/index-node-modules-dir)]
+    (is (true? (some (fn [module]
+                       (= module {:module-type :es6
+                                  :file (.getAbsolutePath (io/file "node_modules/bootstrap/dist/js/bootstrap.js"))
+                                  :provides ["bootstrap/dist/js/bootstrap.js"
+                                             "bootstrap/dist/js/bootstrap"
+                                             "bootstrap"]}))
+                 modules))))
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))

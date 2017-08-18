@@ -175,9 +175,16 @@ md.on('file', function (file) {
 md.on('end', function () {
     for (let i = 0; i < pkgJsons.length; i++) {
         let pkgJson = pkgJsons[i];
+        const candidates = /\.js(on)?$/.test(pkgJson.mainEntry)
+            ? [pkgJson.mainEntry]
+            : [pkgJson.mainEntry, pkgJson.mainEntry + '.js', pkgJson.mainEntry + '.json'];
 
-        if (deps_files[pkgJson.mainEntry] != null && pkgJson.provides != null) {
-            deps_files[pkgJson.mainEntry].provides = pkgJson.provides;
+        for (let j = 0; j < candidates.length; j++) {
+          const candidate = candidates[j];
+
+          if (deps_files[candidate] != null && pkgJson.provides != null) {
+            deps_files[candidate].provides = pkgJson.provides;
+          }
         }
 
         for (let j = 0; j < aliasFields.length; j++) {
