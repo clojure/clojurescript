@@ -369,3 +369,21 @@
                  modules))))
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
+
+(deftest test-cljs-2332
+  (spit (io/file "package.json") "{}")
+  (let [opts {:npm-deps {"@material/drawer" "0.5.4"}}
+        out (util/output-directory opts)]
+    (test/delete-node-modules)
+    (test/delete-out-files out)
+    (closure/maybe-install-node-deps! opts)
+    (let [modules (closure/index-node-modules ["@material/drawer"] opts)]
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/@material/drawer/slidable/constants.js"))
+                                    :provides ["@material/drawer/slidable/constants.js"
+                                               "@material/drawer/slidable/constants"]}))
+                   modules))))
+    (.delete (io/file "package.json"))
+    (test/delete-node-modules)
+    (test/delete-out-files out)))

@@ -20,7 +20,7 @@ let getDeps = function (src, {dynamicImport = true, parse = {sourceType: 'module
     let ast;
 
     if (typeof src === 'string') {
-        const moduleRe = /\b(require|import)\b/;
+        const moduleRe = /\b(require|import|export)\b/;
 
         if (!moduleRe.test(src)) {
             return modules;
@@ -44,11 +44,14 @@ let getDeps = function (src, {dynamicImport = true, parse = {sourceType: 'module
                         modules.expressions.push(src.slice(arg.start, arg.end));
                     }
                 }
-            } else if (path.node.type === 'ImportDeclaration') {
-                modules.strings.push(path.node.source.value);
-            } else if (path.node.type === 'ExportNamedDeclaration' && path.node.source) {
-                // this branch handles `export ... from` - David
-                modules.strings.push(path.node.source.value);
+            } else if (path.node.type === 'ImportDeclaration' ||
+                       path.node.type === 'ExportNamedDeclaration' ||
+                       path.node.type === 'ExportAllDeclaration') {
+                const source = path.node.source;
+
+                if (source != null) {
+                    modules.strings.push(path.node.source.value);
+                }
             }
         }
     });
