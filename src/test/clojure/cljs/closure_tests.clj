@@ -387,3 +387,26 @@
     (.delete (io/file "package.json"))
     (test/delete-node-modules)
     (test/delete-out-files out)))
+
+(deftest test-cljs-2333
+  (spit (io/file "package.json") "{}")
+  (let [opts {:npm-deps {"asap" "2.0.6"}}
+        out (util/output-directory opts)]
+    (test/delete-node-modules)
+    (test/delete-out-files out)
+    (closure/maybe-install-node-deps! opts)
+    (let [modules (closure/index-node-modules ["asap"] opts)]
+      (is (true? (some (fn [module]
+                         (= module {:module-type :es6
+                                    :file (.getAbsolutePath (io/file "node_modules/asap/browser-asap.js"))
+                                    :provides ["asap/asap",
+                                               "asap/asap",
+                                               "asap/asap.js",
+                                               "asap/asap",
+                                               "asap",
+                                               "asap/browser-asap.js",
+                                               "asap/browser-asap"]}))
+                   modules))))
+    (.delete (io/file "package.json"))
+    (test/delete-node-modules)
+    (test/delete-out-files out)))

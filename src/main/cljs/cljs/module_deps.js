@@ -199,7 +199,12 @@ md.on('end', function () {
               const replacement = path.resolve(pkgJson.basedir, fieldValue[key]);
 
               if (deps_files[replacement] != null) {
-                deps_files[replacement].provides = depProvides(deps_files[replacement].provides, path.resolve(pkgJson.basedir, key));
+                const file = path.resolve(pkgJson.basedir, key);
+                deps_files[replacement].provides = depProvides(deps_files[replacement].provides, file);
+
+                if (file === pkgJson.mainEntry) {
+                  Array.prototype.push.apply(deps_files[replacement].provides, pkgJson.provides);
+                }
               }
             }
           }
