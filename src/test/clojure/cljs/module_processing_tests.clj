@@ -1,13 +1,15 @@
 (ns cljs.module-processing-tests
   (:require [clojure.java.io :as io]
             [cljs.closure :as closure]
-            [clojure.test :refer :all]
+            [clojure.string :as string]
+            [clojure.test :refer [deftest is]]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.js-deps :as deps]
             [cljs.util :as util]
-            [cljs.test-util :as test]))
+            [cljs.test-util :as test])
+  (:import [java.io File]))
 
 ;; Hard coded JSX transform for the test case
 (defn preprocess-jsx [ijs _]
@@ -22,6 +24,24 @@
                        (str " React.createElement(\"svg\", {width:\"200px\", height:\"200px\", className:\"center\"}, "
                             "React.createElement(\"circle\", {cx:\"100px\", cy:\"100px\", r:\"100px\", fill:this.props.color})"
                             ")"))))
+
+(defn absolute-module-path
+  ([relpath]
+   (absolute-module-path relpath false))
+  ([relpath code?]
+   (let [filename (as-> (subs relpath (inc (.lastIndexOf relpath "/"))) $
+                    (string/replace $ "_" "-")
+                    (subs $ 0 (.lastIndexOf $ ".")))
+         dirname (as-> (io/file relpath) $
+                   (.getAbsolutePath $)
+                   (subs $ 0 (.lastIndexOf $ (str File/separator)))
+                   (string/replace $ "/" "$")
+                   ;; Windows
+                   (string/replace $ "\\" "$")
+                   (if code?
+                     (string/replace $ ":" "_")
+                     (string/replace $ ":" "-")))]
+     (str "module" (when-not (.startsWith dirname "$") "$") dirname "$" filename))))
 
 (defmethod closure/js-transforms :jsx [ijs opts]
   (preprocess-jsx ijs opts))
@@ -47,10 +67,9 @@
                                  :preprocess  :jsx}]
                  :closure-warnings {:non-standard-jsdoc :off}})))
         "processed modules are added to :libs"))
-
-    (is (= {"React" {:name "module$src$test$cljs$reactJS"
+    (is (= {"React" {:name (absolute-module-path "src/test/cljs/reactJS.js")
                      :module-type :commonjs}
-            "Circle" {:name "module$src$test$cljs$Circle"
+            "Circle" {:name (absolute-module-path "src/test/cljs/Circle.js")
                       :module-type :commonjs}}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))
@@ -74,13 +93,14 @@
                   :closure-warnings {:non-standard-jsdoc :off}})))
           "processed modules are added to :libs")
 
-      (is (= {"es6-hello" {:name "module$src$test$cljs$es6-hello"
+      (is (= {"es6-hello" {:name (absolute-module-path "src/test/cljs/es6_hello.js")
                            :module-type :es6}}
              (:js-module-index @cenv))
           "Processed modules are added to :js-module-index")
 
-      (is (= "goog.provide(\"module$src$test$cljs$es6_hello\");var sayHello$$module$src$test$cljs$es6_hello=function(){console.log(\"Hello, world!\")};module$src$test$cljs$es6_hello.sayHello=sayHello$$module$src$test$cljs$es6_hello"
-             (slurp "out/src/test/cljs/es6_hello.js"))))))
+      (is (re-find
+            #"goog.provide\(\"module\$[a-zA-Z0-9$_]+?src\$test\$cljs\$es6_hello\"\);"
+            (slurp "out/src/test/cljs/es6_hello.js"))))))
 
 (deftest test-module-name-substitution
   (test/delete-out-files)
@@ -93,19 +113,21 @@
                       (with-out-str
                         (comp/emit (ana/analyze (ana/empty-env) form))))
             crlf (if util/windows? "\r\n" "\n")
-            output (str "module$src$test$cljs$calculator.add((3),(4));" crlf)]
+            output (str (absolute-module-path "src/test/cljs/calculator.js" true) ".add((3),(4));" crlf)]
         (swap! cenv
                #(assoc % :js-dependency-index (deps/js-dependency-index opts)))
         (binding [ana/*cljs-ns* 'cljs.user]
           (is (= (compile '(ns my-calculator.core (:require [calculator :as calc :refer [subtract add] :rename {subtract sub}])))
                 (str "goog.provide('my_calculator.core');" crlf
                      "goog.require('cljs.core');" crlf
-                     "goog.require('module$src$test$cljs$calculator');" crlf)))
+                     "goog.require('" (absolute-module-path "src/test/cljs/calculator.js" true) "');"
+                     crlf)))
           (is (= (compile '(calc/add 3 4)) output))
           (is (= (compile '(calculator/add 3 4)) output))
           (is (= (compile '(add 3 4)) output))
           (is (= (compile '(sub 5 4))
-                (str "module$src$test$cljs$calculator.subtract((5),(4));" crlf))))))))
+                (str (absolute-module-path "src/test/cljs/calculator.js" true)
+                     ".subtract((5),(4));" crlf))))))))
 
 (deftest test-cljs-1822
   (test/delete-out-files)
@@ -132,9 +154,9 @@
                                  :preprocess  :jsx}]
                  :closure-warnings {:non-standard-jsdoc :off}})))
         "processed modules are added to :libs"))
-    (is (= {"React" {:name "module$src$test$cljs$react-min"
+    (is (= {"React" {:name (absolute-module-path "src/test/cljs/react-min.js")
                      :module-type :commonjs}
-            "Circle" {:name "module$src$test$cljs$Circle-min"
+            "Circle" {:name (absolute-module-path "src/test/cljs/Circle-min.js")
                       :module-type :commonjs}}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))
@@ -161,9 +183,9 @@
                  :closure-warnings {:non-standard-jsdoc :off}})))
         "processed modules are added to :libs"))
 
-    (is (= {"React" {:name "module$src$test$cljs$reactJS"
+    (is (= {"React" {:name (absolute-module-path "src/test/cljs/reactJS.js")
                      :module-type :commonjs}
-            "Circle" {:name "module$src$test$cljs$Circle"
+            "Circle" {:name (absolute-module-path "src/test/cljs/Circle.js")
                       :module-type :commonjs}}
            (:js-module-index @cenv))
         "Processed modules are added to :js-module-index")))

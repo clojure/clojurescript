@@ -497,5 +497,29 @@
     (test/delete-out-files out)
     (build/build (build/inputs (io/file inputs "foreign_libs_dir_test/core.cljs")) opts)
     (is (.exists (io/file out "src/test/cljs_build/foreign-libs-dir/vendor/lib.js")))
-    (is (true? (boolean (re-find #"goog\.provide\(\"module\$src\$test\$cljs_build\$foreign_libs_dir\$vendor\$lib\"\)"
+    (is (true? (boolean (re-find #"goog\.provide\(\"module\$[A-Za-z0-9$_]+?src\$test\$cljs_build\$foreign_libs_dir\$vendor\$lib\"\)"
                           (slurp (io/file out "src/test/cljs_build/foreign-libs-dir/vendor/lib.js"))))))))
+
+(deftest cljs-1883-test-foreign-libs-use-relative-path
+  (test/delete-node-modules)
+  (let [out "cljs-2334-out"
+        root (io/file "src" "test" "cljs_build")
+        opts {:foreign-libs
+              [{:file (str (io/file root "foreign_libs_cljs_2334" "lib.js"))
+                :module-type :es6
+                :provides  ["mylib"]}]
+              :npm-deps {:left-pad "1.1.3"}
+              :install-deps true
+              :output-dir (str out)}]
+    (test/delete-out-files out)
+    (build/build (build/inputs (io/file root "foreign_libs_cljs_2334")) opts)
+    (let [foreign-lib-file (io/file out (-> opts :foreign-libs first :file))]
+      (is (.exists foreign-lib-file))
+      ;; assert Closure finds and processes the left-pad dep in node_modules
+      ;; if it can't be found the require will be issued to module$left_pad
+      ;; so we assert it's of the form module$path$to$node_modules$left_pad$index
+      (is (some? (re-find
+                   #"(?s).*?goog\.require\(\"[A-Za-z0-9$_]+?node_modules\$left_pad\$index\"\);.*"
+                   (slurp foreign-lib-file)))))
+    (test/delete-out-files out)
+    (test/delete-node-modules)))

@@ -2198,7 +2198,8 @@
          (next (json/read-str (str iw))))
        (do
          (when-not (.isAlive proc)
-           (println (str ew)))
+           (binding [*out* *err*]
+             (println (str ew))))
          [])))))
 
 (defn node-inputs
@@ -2330,6 +2331,9 @@
       (ana/warning :unsupported-preprocess-value @env/*compiler* js-module)
       js-module)))
 
+(defn- to-absolute-path [^String file-str]
+  (.getAbsolutePath (io/file file-str)))
+
 (defn process-js-modules
   "Given the current compiler options, converts JavaScript modules to Google
   Closure modules and writes them to disk. Adds mapping from original module
@@ -2347,15 +2351,20 @@
                                                       (map :module-type js-modules)))]
                   (ana/warning :unsupported-js-module-type @env/*compiler* unsupported))
               ;; Load all modules - add :source so preprocessing and conversion can access it
-              js-modules (map (fn [lib]
-                                (let [js (deps/load-foreign-library lib)]
-                                  (assoc js :source (deps/-source js opts))))
-                              js-modules)
-              js-modules (map (fn [js]
-                                (if (:preprocess js)
-                                  (preprocess-js js opts)
-                                  js))
-                              js-modules)
+              js-modules (into []
+                           (comp
+                             (map (fn [lib]
+                                    (let [js (deps/load-foreign-library lib)]
+                                      (assoc js :source (deps/-source js opts)))))
+                             (map (fn [js]
+                                    (if (:preprocess js)
+                                      (preprocess-js js opts)
+                                      js)))
+                             (map (fn [js]
+                                    (cond-> (update-in js [:file] to-absolute-path)
+                                      (some? (:file-min js))
+                                      (update-in [:file-min] to-absolute-path)))))
+                           js-modules)
               js-modules (convert-js-modules js-modules opts)]
           ;; Write modules to disk, update compiler state and build new options
           (reduce (fn [new-opts {:keys [file module-type] :as ijs}]
@@ -2368,9 +2377,17 @@
                       (-> new-opts
                         (update-in [:libs] (comp vec conj) (:out-file ijs))
                         ;; js-module might be defined in either, so update both
-                        (update-in [:foreign-libs] (comp vec (fn [libs] (remove #(= (:file %) file) libs))))
-                        (update-in [:ups-foreign-libs] (comp vec (fn [libs] (remove #(= (:file %) file) libs)))))))
-                  opts js-modules)))
+                        (update-in [:foreign-libs]
+                          (fn [libs]
+                            (into []
+                              (remove #(= (to-absolute-path (:file %)) file))
+                              libs)))
+                        (update-in [:ups-foreign-libs]
+                          (fn [libs]
+                            (into []
+                              (remove #(= (to-absolute-path (:file %)) (to-absolute-path file)))
+                              libs))))))
+            opts js-modules)))
       opts)))
 
 (defn- load-data-reader-file [mappings ^java.net.URL url]
@@ -2437,25 +2454,30 @@
         requires (set (mapcat deps/-requires js-sources))
         ;; Select Node files that are required by Cljs code,
         ;; and create list of all their dependencies
-        node-required (set/intersection (set (keys top-level)) requires)]
-    (let [opts (-> opts
+        node-required (set/intersection (set (keys top-level)) requires)
+        expanded-libs (expand-libs (:foreign-libs opts))
+        opts (-> opts
                  (update :foreign-libs
                    (fn [libs]
                      (into (if (= target :nodejs)
                              []
                              (index-node-modules node-required))
-                       (expand-libs libs))))
+                       (into expanded-libs
+                         (node-inputs (filter (fn [{:keys [module-type]}]
+                                                (and (some? module-type)
+                                                  (not= module-type :amd)))
+                                        expanded-libs))))))
                  process-js-modules)]
-      (swap! compiler-env (fn [cenv]
-                            (-> cenv
-                              ;; we need to also track the whole top level - this is to support
-                              ;; cljs.analyze/analyze-deps, particularly in REPL contexts - David
-                              (merge {:js-dependency-index (deps/js-dependency-index opts)})
-                              (update-in [:node-module-index] (fnil into #{})
-                                (if (= target :nodejs)
-                                  (map str node-required)
-                                  (map str (keys top-level)))))))
-      opts)))
+    (swap! compiler-env (fn [cenv]
+                          (-> cenv
+                            ;; we need to also track the whole top level - this is to support
+                            ;; cljs.analyze/analyze-deps, particularly in REPL contexts - David
+                            (merge {:js-dependency-index (deps/js-dependency-index opts)})
+                            (update-in [:node-module-index] (fnil into #{})
+                              (if (= target :nodejs)
+                                (map str node-required)
+                                (map str (keys top-level)))))))
+    opts))
 
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
