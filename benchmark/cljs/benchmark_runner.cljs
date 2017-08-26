@@ -24,6 +24,13 @@
 (simple-benchmark [coll arr] (array-reduce coll + 0) 1)
 (simple-benchmark [coll arr] (array-reduce coll sum 0) 1)
 
+(println ";; areduce")
+(def x (atom 0))
+(simple-benchmark [arr (to-array (range 1000000))] (reset! x (areduce arr i ret 0 (+ ret (aget arr i)))) 1)
+
+(println ";; amap")
+(simple-benchmark [arr (to-array (range 1000000))] (amap arr i ret (* 10 (aget arr i))) 1)
+
 (println ";;; instance?")
 ;; WARNING: will get compiled away under advanced
 (simple-benchmark [coll []] (instance? PersistentVector coll) 1000000)
