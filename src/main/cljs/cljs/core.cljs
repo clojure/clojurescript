@@ -923,17 +923,17 @@
 
 (defn ^number m3-hash-unencoded-chars [in]
   (let [h1 (loop [i 1 h1 m3-seed]
-             (if (< i (alength in))
+             (if (< i (.-length in))
                (recur (+ i 2)
                  (m3-mix-H1 h1
                    (m3-mix-K1
                      (bit-or (.charCodeAt in (dec i))
                        (bit-shift-left (.charCodeAt in i) 16)))))
                h1))
-        h1 (if (== (bit-and (alength in) 1) 1)
-             (bit-xor h1 (m3-mix-K1 (.charCodeAt in (dec (alength in)))))
+        h1 (if (== (bit-and (.-length in) 1) 1)
+             (bit-xor h1 (m3-mix-K1 (.charCodeAt in (dec (.-length in)))))
              h1)]
-    (m3-fmix h1 (imul 2 (alength in)))))
+    (m3-fmix h1 (imul 2 (.-length in)))))
 
 ;;;;;;;;;;;;;;;;;;; symbols ;;;;;;;;;;;;;;;
 
@@ -946,7 +946,7 @@
 ;;http://hg.openjdk.java.net/jdk7u/jdk7u6/jdk/file/8c2c5d63a17e/src/share/classes/java/lang/String.java
 (defn hash-string* [s]
   (if-not (nil? s)
-    (let [len (alength s)]
+    (let [len (.-length s)]
       (if (pos? len)
         (loop [i 0 hash 0]
           (if (< i len)
@@ -1798,7 +1798,7 @@ reduces them without incurring seq initialization"
       (alength coll)
     
       (string? coll)
-      (alength coll)
+      (.-length coll)
 
       (implements? ISeqable coll)
       (accumulating-seq-count coll)
@@ -3953,7 +3953,7 @@ reduces them without incurring seq initialization"
 
 (deftype StringIter [s ^:mutable i]
   Object
-  (hasNext [_] (< i (alength s)))
+  (hasNext [_] (< i (.-length s)))
   (next [_]
     (let [ret (.charAt s i)]
       (set! i (inc i))
