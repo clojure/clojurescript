@@ -2150,9 +2150,7 @@ reduces them without incurring seq initialization"
 (defn js-keys
   "Return the JavaScript keys for an object."
   [obj]
-  (let [keys (array)]
-    (gobject/forEach obj (fn [val key obj] (.push keys key)))
-    keys))
+  (gobject/getKeys obj))
 
 (defn js-delete
   "Delete a property from a JavaScript object."

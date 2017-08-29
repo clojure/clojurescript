@@ -31,6 +31,10 @@
 (println ";; amap")
 (simple-benchmark [arr (to-array (range 1000000))] (amap arr i ret (* 10 (aget arr i))) 1)
 
+(println ";; js-keys")
+(simple-benchmark [obj (js-obj "a" 1 "b" 2) f js-keys] (f obj) 400000)
+(simple-benchmark [obj (js-obj "a" 1 "b" 2 "c" 3 "d" 4 "e" 5 "f" 6) f js-keys] (f obj) 400000)
+
 (println ";;; instance?")
 ;; WARNING: will get compiled away under advanced
 (simple-benchmark [coll []] (instance? PersistentVector coll) 1000000)
