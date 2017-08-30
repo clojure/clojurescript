@@ -166,7 +166,7 @@
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
     :browser-repl :cache-analysis-format :infer-externs :closure-generate-exports :npm-deps
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
-    :watch :watch-error-fn :watch-fn :install-deps :process-shim})
+    :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -253,6 +253,14 @@
   (when (contains? opts :rewrite-polyfills)
     (. compiler-options
       (setRewritePolyfills (:rewrite-polyfills opts))))
+
+  (when (contains? opts :rename-prefix)
+    (. compiler-options
+       (setRenamePrefix (:rename-prefix opts))))
+
+  (when (contains? opts :rename-prefix-namespace)
+    (. compiler-options
+       (setRenamePrefixNamespace (:rename-prefix-namespace opts))))
 
   (. compiler-options
     (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
