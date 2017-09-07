@@ -4423,27 +4423,57 @@ reduces them without incurring seq initialization"
         new-value))
     (-reset! a new-value)))
 
+(defn reset-vals!
+  "Sets the value of atom to newval. Returns [old new], the value of the
+   atom before and after the reset."
+  {:added "1.9"}
+  [a new-value]
+  (let [validate (.-validator a)]
+    (when-not (nil? validate)
+      (when-not (validate new-value)
+        (throw (js/Error. "Validator rejected reference state"))))
+    (let [old-value (.-state a)]
+      (set! (.-state a) new-value)
+      (when-not (nil? (.-watches a))
+        (-notify-watches a old-value new-value))
+      [old-value new-value])))
+
 (defn swap!
   "Atomically swaps the value of atom to be:
   (apply f current-value-of-atom args). Note that f may be called
   multiple times, and thus should be free of side effects.  Returns
   the value that was swapped in."
   ([a f]
-     (if (instance? Atom a)
-       (reset! a (f (.-state a)))
-       (-swap! a f)))
+   (if (instance? Atom a)
+     (reset! a (f (.-state a)))
+     (-swap! a f)))
   ([a f x]
-     (if (instance? Atom a)
-       (reset! a (f (.-state a) x))
-       (-swap! a f x)))
+   (if (instance? Atom a)
+     (reset! a (f (.-state a) x))
+     (-swap! a f x)))
   ([a f x y]
-     (if (instance? Atom a)
-       (reset! a (f (.-state a) x y))
-       (-swap! a f x y)))
+   (if (instance? Atom a)
+     (reset! a (f (.-state a) x y))
+     (-swap! a f x y)))
   ([a f x y & more]
-     (if (instance? Atom a)
-       (reset! a (apply f (.-state a) x y more))
-       (-swap! a f x y more))))
+   (if (instance? Atom a)
+     (reset! a (apply f (.-state a) x y more))
+     (-swap! a f x y more))))
+
+(defn swap-vals!
+  "Atomically swaps the value of atom to be:
+  (apply f current-value-of-atom args). Note that f may be called
+  multiple times, and thus should be free of side effects.
+  Returns [old new], the value of the atom before and after the swap."
+  {:added "1.9"}
+  ([a f]
+   (reset-vals! a (f (.-state a))))
+  ([a f x]
+   (reset-vals! a (f (.-state a) x)))
+  ([a f x y]
+   (reset-vals! a (f (.-state a) x y)))
+  ([a f x y & more]
+   (reset-vals! a (apply f (.-state a) x y more))))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
