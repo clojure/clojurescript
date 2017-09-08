@@ -171,14 +171,15 @@
     (test/delete-out-files out)
     (try
       (build/build (build/inputs
-                     (io/file (str root "a.cljs"))
-                     (io/file (str root "b.cljs")))
+                     (io/file root "circular_deps" "a.cljs")
+                     (io/file root "circular_deps" "b.cljs"))
         {:main 'circular-deps.a
          :optimizations :none
          :output-to out})
       (is false)
       (catch Throwable e
-        (is true)))))
+        (is (re-find  #"Circular dependency detected, circular-deps.a -> circular-deps.b -> circular-deps.a"
+              (.getMessage (.getCause e))))))))
 
 (defn loader-test-project [output-dir]
   {:inputs (str (io/file "src" "test" "cljs_build" "loader_test"))
