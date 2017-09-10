@@ -423,7 +423,20 @@
               (fn [resource]
                 (assert (or (map? resource) (nil? resource))
                   "*load-fn* may only return a map or nil")
-                (if resource
+                (if-not resource
+                  (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
+                                      (get {dep nil} cljs-ns cljs-ns))]
+                    (do
+                      (patch-alias-map (:*compiler* bound-vars) lib dep cljs-dep)
+                      (analyze-deps bound-vars ana-env lib (cons cljs-dep (next deps)) opts
+                        (fn [res]
+                          (if (:error res)
+                            (cb res)
+                            (cb (update res :aliased-loads assoc dep cljs-dep))))))
+                    (cb (wrap-error
+                          (ana/error ana-env
+                            (ana/error-message :undeclared-ns
+                              {:ns-sym dep :js-provide (name dep)})))))
                   (let [{:keys [name lang source file]} resource]
                     (condp = lang
                       :clj (do
@@ -437,11 +450,7 @@
                       :js (analyze-deps bound-vars ana-env lib (next deps) opts cb)
                       (wrap-error
                         (ana/error ana-env
-                          (str "Invalid :lang specified " lang ", only :clj or :js allowed")))))
-                  (cb (wrap-error
-                        (ana/error ana-env
-                          (ana/error-message :undeclared-ns
-                            {:ns-sym dep :js-provide (name dep)})))))))
+                          (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))))
              (catch :default cause
                (cb (wrap-error
                      (ana/error ana-env
@@ -494,11 +503,19 @@
                                          (if (some? to)
                                            (assoc acc renamed (symbol (str to) (name qualified-sym)))
                                            (merge acc entry))))
-                               {} m)))]
+                               {} m)))
+         rewrite-deps (fn [deps]
+                        (into []
+                          (map (fn [dep]
+                                 (if-let [new-dep (get smap dep)]
+                                   new-dep
+                                   dep)))
+                          deps))]
      (-> ast
        (update uk #(walk/postwalk-replace smap %))
        (update rk #(merge smap (walk/postwalk-replace smap %)))
-       (update renk rewrite-renames)))))
+       (update renk rewrite-renames)
+       (update :deps rewrite-deps)))))
 
 (defn- check-macro-autoload-inferring-missing
   [{:keys [requires name] :as ast} cenv]
@@ -583,7 +600,7 @@
 
          (and (not load) (:*analyze-deps* bound-vars) (seq (:deps ast)))
          (analyze-deps bound-vars ana-env (:name ast) (:deps ast) (dissoc opts :macros-ns)
-           #(check-uses-and-load-macros % ast))
+           #(check-uses-and-load-macros % (rewrite-ns-ast ast (:aliased-loads %))))
 
          :else
          (check-uses-and-load-macros {:value nil} ast)))
@@ -882,17 +899,19 @@
                                              (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? (:deps ast))]
                                                [node-libs (assoc ast :deps libs-to-load)])
                                              [nil ast])]
-                       (.append sb (with-out-str (comp/emit ast)))
                        (if (#{:ns :ns*} (:op ast))
                          (ns-side-effects bound-vars aenv ast opts
                            (fn [res]
                              (if (:error res)
                                (cb res)
                                (let [ns-name (:name ast)]
+                                 (.append sb (with-out-str (comp/emit (:value res))))
                                  (when-not (nil? node-deps)
                                    (node-side-effects bound-vars sb node-deps ns-name (:def-emits-var opts)))
                                  (compile-loop (:name ast))))))
-                         (recur ns)))))
+                         (do
+                           (.append sb (with-out-str (comp/emit ast)))
+                           (recur ns))))))
                  (do
                    (when (:source-map opts)
                      (append-source-map env/*compiler*

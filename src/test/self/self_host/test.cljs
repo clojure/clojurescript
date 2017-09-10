@@ -1094,7 +1094,7 @@
 (deftest test-cljs-2287
   (async done
     (let [st (cljs/empty-state)
-          l (latch 1 done)]
+          l (latch 2 done)]
       (cljs/eval-str
         (atom @st)
         "(ns foo.core (:require [path]))"
@@ -1211,6 +1211,22 @@
             (fn [{:keys [error]}]
               (is (nil? error))
               (inc! l))))))))
+
+(deftest test-cljs-2354
+  (async done
+    (let [st (cljs/empty-state)
+          load (fn [{:keys [name macros]} cb]
+                 (cb (when (and (= name 'cljs.x)
+                             (not macros))
+                       {:lang   :clj
+                        :source "(ns cljs.x)"})))
+          l  (latch 1 done)]
+      (cljs.js/compile-str st "(require 'clojure.x)" nil
+        {:load load}
+        (fn [{:keys [error value] :as m}]
+          (is (nil? error))
+          (is (re-find #"goog\.require\('cljs.x'\)" value))
+          (inc! l))))))
 
 (defn -main [& args]
   (run-tests))
