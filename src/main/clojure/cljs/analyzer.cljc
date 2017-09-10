@@ -2113,7 +2113,7 @@
        (doseq [dep deps]
          (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
                        (contains? (:js-dependency-index compiler) (name dep))
-                       (contains? (:node-module-index compiler) (name dep))
+                       (node-module-dep? dep)
                        (js-module-exists? (name dep))
                        #?(:clj (deps/find-classpath-lib dep)))
            #?(:clj (if-some [src (locate-src dep)]
