@@ -1455,13 +1455,12 @@
     (is (= 2 @a))))
 
 (deftest deref-swap-arities
-  (binding [*warn-on-reflection* true]
-    (let [a (atom 0)]
-      (is (= [0 1] (swap-vals! a + 1)))
-      (is (= [1 3] (swap-vals! a + 1 1)))
-      (is (= [3 6] (swap-vals! a + 1 1 1)))
-      (is (= [6 10] (swap-vals! a + 1 1 1 1)))
-      (is (= 10 @a)))))
+  (let [a (atom 0)]
+    (is (= [0 1] (swap-vals! a + 1)))
+    (is (= [1 3] (swap-vals! a + 1 1)))
+    (is (= [3 6] (swap-vals! a + 1 1 1)))
+    (is (= [6 10] (swap-vals! a + 1 1 1 1)))
+    (is (= 10 @a))))
 
 (deftest deref-reset-returns-old-value
   (let [a (atom 0)]
