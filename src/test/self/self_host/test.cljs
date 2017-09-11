@@ -1228,6 +1228,37 @@
           (is (re-find #"goog\.require\('cljs.x'\)" value))
           (inc! l))))))
 
+(deftest test-cljs-2356
+  (async done
+    (let [st (cljs/empty-state)
+          load (fn [{:keys [name macros]} cb]
+                 (cb (cond
+                       (= name 'circular.a)
+                       {:lang   :clj
+                        :source "(ns circular.a (:require circular.b))"}
+
+                       (= name 'circular.b)
+                       {:lang   :clj
+                        :source "(ns circular.b (:require circular.a))"})))
+          l  (latch 2 done)]
+      (binding [ana/*cljs-dep-set* (with-meta #{} {:dep-path []})]
+        (cljs.js/compile-str st "(ns circular.a (:require circular.b))" nil
+          {:load load}
+          (fn [{:keys [error value] :as m}]
+            (is (some? error))
+            (is (= "Circular dependency detected circular.a -> circular.b -> circular.a"
+                   (.-message error)))
+            (inc! l))))
+      (binding [ana/*cljs-dep-set* (with-meta #{} {:dep-path []})]
+        (cljs.js/eval-str st "(ns circular.a (:require circular.b))" nil
+          {:load load
+           :eval node-eval}
+          (fn [{:keys [error value] :as m}]
+            (is (some? error))
+            (is (= "Circular dependency detected circular.a -> circular.b -> circular.a"
+                   (.-message error)))
+            (inc! l)))))))
+
 (defn -main [& args]
   (run-tests))
 

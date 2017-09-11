@@ -288,7 +288,7 @@
                  "*load-fn* may only return a map or nil")
                (if resource
                  (let [{:keys [lang source cache source-map file]} resource]
-                   (condp = lang
+                   (condp keyword-identical? lang
                      :clj (do
                             (pre-file-side-effects (:*compiler* bound-vars) aname file opts)
                             (eval-str* bound-vars source name (assoc opts :cljs-file file)
@@ -374,35 +374,41 @@
      (debug-prn "Loading dependencies for" lib))
    (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
                                   update-in [:dep-path] conj lib)]
-     (assert (every? #(not (contains? (:*cljs-dep-set* bound-vars) %)) deps)
-       (str "Circular dependency detected "
-         (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
-     (if (seq deps)
-       (let [dep (first deps)
-             opts' (-> opts
-                     (dissoc :context)
-                     (dissoc :ns))]
-         (require bound-vars dep reload opts'
-           (fn [res]
-             (when (:verbose opts)
-               (debug-prn "Loading result:" res))
-             (if-not (:error res)
-               (load-deps bound-vars ana-env lib (next deps) nil opts cb)
-               (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
-                                   (get {dep nil} cljs-ns cljs-ns))]
-                 (require bound-vars cljs-dep opts'
-                   (fn [res]
-                     (if (:error res)
-                       (cb res)
-                       (do
-                         (patch-alias-map (:*compiler* bound-vars) lib dep cljs-dep)
-                         (load-deps bound-vars ana-env lib (next deps) nil opts
-                           (fn [res]
-                             (if (:error res)
-                               (cb res)
-                               (cb (update res :aliased-loads assoc dep cljs-dep)))))))))
-                 (cb res))))))
-       (cb {:value nil})))))
+     (let [bound-vars (assoc bound-vars :*cljs-dep-set* ana/*cljs-dep-set*)]
+       (if-not (every? #(not (contains? ana/*cljs-dep-set* %)) deps)
+         (cb (wrap-error
+               (ana/error ana-env
+                 (str "Circular dependency detected "
+                   (apply str
+                     (interpose " -> "
+                       (conj (-> ana/*cljs-dep-set* meta :dep-path)
+                         (some ana/*cljs-dep-set* deps))))))))
+         (if (seq deps)
+           (let [dep (first deps)
+                 opts' (-> opts
+                         (dissoc :context)
+                         (dissoc :ns))]
+             (require bound-vars dep reload opts'
+               (fn [res]
+                 (when (:verbose opts)
+                   (debug-prn "Loading result:" res))
+                 (if-not (:error res)
+                   (load-deps bound-vars ana-env lib (next deps) nil opts cb)
+                   (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
+                                       (get {dep nil} cljs-ns cljs-ns))]
+                     (require bound-vars cljs-dep opts'
+                       (fn [res]
+                         (if (:error res)
+                           (cb res)
+                           (do
+                             (patch-alias-map (:*compiler* bound-vars) lib dep cljs-dep)
+                             (load-deps bound-vars ana-env lib (next deps) nil opts
+                               (fn [res]
+                                 (if (:error res)
+                                   (cb res)
+                                   (cb (update res :aliased-loads assoc dep cljs-dep)))))))))
+                     (cb res))))))
+           (cb {:value nil})))))))
 
 (declare analyze-str*)
 
@@ -410,52 +416,58 @@
   ([bound-vars ana-env lib deps cb]
    (analyze-deps bound-vars ana-env lib deps nil cb))
   ([bound-vars ana-env lib deps opts cb]
-   (let [compiler @(:*compiler* bound-vars)]
-     (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
-                                    update-in [:dep-path] conj lib)]
-       (assert (every? #(not (contains? (:*cljs-dep-set* bound-vars) %)) deps)
-         (str "Circular dependency detected "
-           (-> (:*cljs-dep-set* bound-vars) meta :dep-path)))
-       (if (seq deps)
-         (let [dep (first deps)]
-           (try
-             ((:*load-fn* bound-vars) {:name dep :path (ns->relpath dep)}
-              (fn [resource]
-                (assert (or (map? resource) (nil? resource))
-                  "*load-fn* may only return a map or nil")
-                (if-not resource
-                  (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
-                                      (get {dep nil} cljs-ns cljs-ns))]
-                    (do
-                      (patch-alias-map (:*compiler* bound-vars) lib dep cljs-dep)
-                      (analyze-deps bound-vars ana-env lib (cons cljs-dep (next deps)) opts
-                        (fn [res]
-                          (if (:error res)
-                            (cb res)
-                            (cb (update res :aliased-loads assoc dep cljs-dep))))))
-                    (cb (wrap-error
+   (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
+                                  update-in [:dep-path] conj lib)]
+     (let [compiler @(:*compiler* bound-vars)
+           bound-vars (assoc bound-vars :*cljs-dep-set* ana/*cljs-dep-set*)]
+       (if-not (every? #(not (contains? ana/*cljs-dep-set* %)) deps)
+         (cb (wrap-error
+               (ana/error ana-env
+                 (str "Circular dependency detected "
+                   (apply str
+                     (interpose " -> "
+                       (conj (-> ana/*cljs-dep-set* meta :dep-path)
+                         (some ana/*cljs-dep-set* deps))))))))
+         (if (seq deps)
+           (let [dep (first deps)]
+             (try
+               ((:*load-fn* bound-vars) {:name dep :path (ns->relpath dep)}
+                (fn [resource]
+                  (assert (or (map? resource) (nil? resource))
+                    "*load-fn* may only return a map or nil")
+                  (if-not resource
+                    (if-let [cljs-dep (let [cljs-ns (ana/clj-ns->cljs-ns dep)]
+                                        (get {dep nil} cljs-ns cljs-ns))]
+                      (do
+                        (patch-alias-map (:*compiler* bound-vars) lib dep cljs-dep)
+                        (analyze-deps bound-vars ana-env lib (cons cljs-dep (next deps)) opts
+                          (fn [res]
+                            (if (:error res)
+                              (cb res)
+                              (cb (update res :aliased-loads assoc dep cljs-dep))))))
+                      (cb (wrap-error
+                            (ana/error ana-env
+                              (ana/error-message :undeclared-ns
+                                {:ns-sym dep :js-provide (name dep)})))))
+                    (let [{:keys [name lang source file]} resource]
+                      (condp keyword-identical? lang
+                        :clj (do
+                               (pre-file-side-effects (:*compiler* bound-vars) name file opts)
+                               (analyze-str* bound-vars source name (assoc opts :cljs-file file)
+                                 (fn [res]
+                                   (post-file-side-effects file opts)
+                                   (if-not (:error res)
+                                     (analyze-deps bound-vars ana-env lib (next deps) opts cb)
+                                     (cb res)))))
+                        :js (analyze-deps bound-vars ana-env lib (next deps) opts cb)
+                        (wrap-error
                           (ana/error ana-env
-                            (ana/error-message :undeclared-ns
-                              {:ns-sym dep :js-provide (name dep)})))))
-                  (let [{:keys [name lang source file]} resource]
-                    (condp = lang
-                      :clj (do
-                             (pre-file-side-effects (:*compiler* bound-vars) name file opts)
-                             (analyze-str* bound-vars source name (assoc opts :cljs-file file)
-                               (fn [res]
-                                 (post-file-side-effects file opts)
-                                 (if-not (:error res)
-                                   (analyze-deps bound-vars ana-env lib (next deps) opts cb)
-                                   (cb res)))))
-                      :js (analyze-deps bound-vars ana-env lib (next deps) opts cb)
-                      (wrap-error
-                        (ana/error ana-env
-                          (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))))
-             (catch :default cause
-               (cb (wrap-error
-                     (ana/error ana-env
-                       (str "Could not analyze dep " dep) cause))))))
-         (cb {:value nil}))))))
+                            (str "Invalid :lang specified " lang ", only :clj or :js allowed"))))))))
+               (catch :default cause
+                 (cb (wrap-error
+                       (ana/error ana-env
+                         (str "Could not analyze dep " dep) cause))))))
+           (cb {:value nil})))))))
 
 (defn- load-macros [bound-vars k macros lib reload reloads opts cb]
   (if (seq macros)
@@ -738,6 +750,7 @@
       :*data-readers* tags/*cljs-data-readers*
       :*passes*       (or (:passes opts) ana/*passes*)
       :*analyze-deps* (:analyze-deps opts true)
+      :*cljs-dep-set* ana/*cljs-dep-set*
       :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
@@ -845,6 +858,7 @@
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (:analyze-deps opts true)
+      :*cljs-dep-set* ana/*cljs-dep-set*
       :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
@@ -972,6 +986,7 @@
    (compile-str*
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
+      :*cljs-dep-set* ana/*cljs-dep-set*
       :*analyze-deps* (:analyze-deps opts true)
       :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
@@ -1140,6 +1155,7 @@
      {:*compiler*     state
       :*data-readers* tags/*cljs-data-readers*
       :*analyze-deps* (:analyze-deps opts true)
+      :*cljs-dep-set* ana/*cljs-dep-set*
       :*load-macros*  (:load-macros opts true)
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
