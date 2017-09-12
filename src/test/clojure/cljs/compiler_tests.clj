@@ -65,6 +65,16 @@
              (ana/analyze (assoc aenv :context :expr) 'js/-Infinity)))
           "-Infinity")))
 
+(deftest test-cljs-2352
+  (are [form result]
+      (= (with-out-str
+           (comp/emit
+             (ana/analyze (assoc aenv :context :expr) form)))
+         result)
+    Double/NaN "##NaN"
+    Double/POSITIVE_INFINITY "##Inf"
+    Double/NEGATIVE_INFINITY "##-Inf"))
+
 (deftest test-munge-dotdot
   (is (= 'cljs.core._DOT__DOT_ (comp/munge 'cljs.core/..)))
   (is (= "cljs.core._DOT__DOT_" (comp/munge "cljs.core/..")))

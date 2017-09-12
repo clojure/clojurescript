@@ -248,9 +248,24 @@
    (defmethod emit-constant Integer [x] (emits x))) ; reader puts Integers in metadata
 
 #?(:clj
-   (defmethod emit-constant Double [x] (emits x))
+   (defmethod emit-constant Double [x]
+     (let [x (double x)]
+       (cond (Double/isNaN x)
+             (emits "NaN")
+
+             (Double/isInfinite x)
+             (emits (if (pos? x) "Infinity" "-Infinity"))
+
+             :else (emits x))))
    :cljs
-   (defmethod emit-constant js/Number [x] (emits "(" x ")")))
+   (defmethod emit-constant js/Number [x]
+     (cond (js/isNaN x)
+           (emits "NaN")
+
+           (not (js/isFinite x))
+           (emits (if (pos? x) "Infinity" "-Infinity"))
+
+           :else (emits "(" x ")"))))
 
 #?(:clj
    (defmethod emit-constant BigDecimal [x] (emits (.doubleValue ^BigDecimal x))))
