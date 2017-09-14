@@ -1298,6 +1298,27 @@
                    (.-message error)))
             (inc! l)))))))
 
+(deftest test-self-host-self-require
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 1 done)
+          load (fn [{:keys [name macros]} cb]
+                 (cb {:lang :clj
+                      :source "(ns foo.core)"}))]
+      (binding [ana/*cljs-dep-set* (with-meta #{} {:dep-path []})]
+        (cljs.js/eval-str st "(ns foo.core)" nil
+          {:eval node-eval}
+          (fn [{:keys [error value] :as m}]
+            (is (nil? error))
+            (cljs.js/eval-str st "(require 'foo.core :reload)" nil
+              {:load load
+               :eval node-eval
+               :def-emits-var true
+               :ns 'foo.core}
+              (fn [{:keys [error value] :as m}]
+                (is (nil? error))
+                (inc! l)))))))))
+
 (defn -main [& args]
   (run-tests))
 

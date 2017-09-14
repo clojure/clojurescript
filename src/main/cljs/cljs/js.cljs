@@ -366,14 +366,20 @@
     (patch-renames :renames)
     (patch-renames :rename-macros)))
 
+(defn- self-require? [deps opts]
+  (and (true? (:def-emits-var opts)) (some #{ana/*cljs-ns*} deps)))
+
 (defn- load-deps
   ([bound-vars ana-env lib deps cb]
    (load-deps bound-vars ana-env lib deps nil nil cb))
   ([bound-vars ana-env lib deps reload opts cb]
    (when (:verbose opts)
      (debug-prn "Loading dependencies for" lib))
-   (binding [ana/*cljs-dep-set* (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
-                                  update-in [:dep-path] conj lib)]
+   (binding [ana/*cljs-dep-set* (let [lib (if (self-require? deps opts)
+                                            'cljs.user
+                                            lib)]
+                                  (vary-meta (conj (:*cljs-dep-set* bound-vars) lib)
+                                    update-in [:dep-path] conj lib))]
      (let [bound-vars (assoc bound-vars :*cljs-dep-set* ana/*cljs-dep-set*)]
        (if-not (every? #(not (contains? ana/*cljs-dep-set* %)) deps)
          (cb (wrap-error
