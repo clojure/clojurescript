@@ -739,16 +739,22 @@
       (or (some? (get (:requires ns) prefix))
           (some? (get (:imports ns) prefix))))))
 
-(defn js-module-exists?
-  [module]
+(defn- internal-js-module-exists?
+  [js-module-index module]
   ;; we need to check both keys and values of the JS module index, because
   ;; macroexpansion will be looking for the provided name - António Monteiro
   (contains?
     (into #{}
       (mapcat (fn [[k v]]
                 [k (:name v)]))
-      (get-in @env/*compiler* [:js-module-index]))
+      js-module-index)
     (str module)))
+
+(def js-module-exists?* (memoize internal-js-module-exists?))
+
+(defn js-module-exists?
+  [module]
+  (js-module-exists?* (get-in @env/*compiler* [:js-module-index]) module))
 
 (defn node-module-dep?
   #?(:cljs {:tag boolean})

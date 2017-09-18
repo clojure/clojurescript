@@ -881,7 +881,10 @@
                        (print value))))))]
          (when (:install-deps opts)
            (cljsc/check-npm-deps opts)
-           (cljsc/maybe-install-node-deps! opts))
+           (swap! env/*compiler* update-in [:npm-deps-installed?]
+             (fn [installed?]
+               (when-not installed?
+                 (cljsc/maybe-install-node-deps! opts)))))
          (comp/with-core-cljs opts
            (fn []
              (binding [*repl-opts* opts]

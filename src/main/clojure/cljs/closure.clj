@@ -2141,7 +2141,7 @@
 (defn maybe-install-node-deps!
   [{:keys [npm-deps verbose] :as opts}]
   (let [npm-deps (merge npm-deps (compute-upstream-npm-deps opts))]
-    (if-not (empty? npm-deps)
+    (when-not (empty? npm-deps)
       (let [pkg-json (io/file "package.json")]
         (when (or ana/*verbose* verbose)
           (util/debug-prn "Installing Node.js dependencies"))
@@ -2165,9 +2165,8 @@
                            (bound-fn [] (pipe proc es ew)))))
               err  (.waitFor proc)]
           (when (and (not (zero? err)) (not (.isAlive proc)))
-            (println (str ew)))
-          opts))
-      opts)))
+            (println (str ew)))))
+      true)))
 
 (defn node-module-deps
   "EXPERIMENTAL: return the foreign libs entries as computed by running
@@ -2232,11 +2231,23 @@
    (let [node-modules (io/file "node_modules")]
      (if (and (not (empty? modules)) (.exists node-modules) (.isDirectory node-modules))
        (let [modules (into #{} (map name) modules)
-             deps-file (io/file (util/output-directory opts) "cljs$node_modules.js")]
+             deps-file (io/file (util/output-directory opts) "cljs$node_modules.js")
+             old-contents (when (.exists deps-file)
+                            (slurp deps-file))
+             new-contents (let [sb (StringBuffer.)]
+                            (run! #(.append sb (str "require('" % "');\n")) modules)
+                            (str sb))]
          (util/mkdirs deps-file)
-         (with-open [w (io/writer deps-file)]
-           (run! #(.write w (str "require('" % "');\n")) modules))
-         (node-inputs [{:file (.getAbsolutePath deps-file)}] opts))
+         (if-not (= old-contents new-contents)
+           (do
+             (spit deps-file new-contents)
+             (let [transitive-js (node-inputs [{:file (.getAbsolutePath deps-file)}] opts)]
+               (when-not (nil? env/*compiler*)
+                 (swap! env/*compiler* update-in [::transitive-dep-set]
+                   assoc modules transitive-js))
+               transitive-js))
+           (when-not (nil? env/*compiler*)
+             (get-in @env/*compiler* [::transitive-dep-set modules]))))
        []))))
 
 (defn- node-file-seq->libs-spec*
@@ -2454,8 +2465,8 @@
   - process the JS modules (preprocess + convert to Closure JS)
   - save js-dependency-index for compilation"
   [{:keys [npm-deps target] :as opts} js-sources compiler-env]
-  (let [;; Find all the top-level Node packages and their files
-        top-level (reduce
+  ;; Find all the top-level Node packages and their files
+  (let [top-level (reduce
                     (fn [acc m]
                       (reduce (fn [acc p] (assoc acc p m)) acc (:provides m)))
                     {} (index-node-modules-dir))
@@ -2464,18 +2475,24 @@
         ;; and create list of all their dependencies
         node-required (set/intersection (set (keys top-level)) requires)
         expanded-libs (expand-libs (:foreign-libs opts))
-        opts (-> opts
-                 (update :foreign-libs
-                   (fn [libs]
-                     (into (if (= target :nodejs)
-                             []
-                             (index-node-modules node-required))
-                       (into expanded-libs
-                         (node-inputs (filter (fn [{:keys [module-type]}]
-                                                (and (some? module-type)
-                                                  (not= module-type :amd)))
-                                        expanded-libs))))))
-                 process-js-modules)]
+        output-dir (util/output-directory opts)
+        opts (update opts :foreign-libs
+               (fn [libs]
+                 (into (if (= target :nodejs)
+                         []
+                         (index-node-modules node-required))
+                   (into expanded-libs
+                     (node-inputs (filter (fn [{:keys [module-type]}]
+                                            (and (some? module-type)
+                                              (not= module-type :amd)))
+                                    expanded-libs))))))
+        opts (if (some
+                   (fn [ijs]
+                     (let [dest (io/file output-dir (rel-output-path (assoc ijs :foreign true) opts))]
+                       (util/changed? (deps/-url ijs opts) dest)))
+                   (:foreign-libs opts))
+               (process-js-modules opts)
+               (:options @compiler-env))]
     (swap! compiler-env (fn [cenv]
                           (-> cenv
                             ;; we need to also track the whole top level - this is to support
@@ -2503,7 +2520,10 @@
        ;; we want to warn about NPM dep conflicts before installing the modules
        (when (:install-deps opts)
          (check-npm-deps opts)
-         (maybe-install-node-deps! opts))
+         (swap! compiler-env update-in [:npm-deps-installed?]
+           (fn [installed?]
+             (when-not installed?
+               (maybe-install-node-deps! opts)))))
        (let [compiler-stats (:compiler-stats opts)
              checked-arrays (or (:checked-arrays opts)
                                 ana/*checked-arrays*)
@@ -2569,6 +2589,7 @@
                               (-> (-find-sources source all-opts)
                                   (add-dependency-sources compile-opts)))
                  all-opts   (handle-js-modules all-opts js-sources compiler-env)
+                 _ (swap! env/*compiler* update-in [:options] merge all-opts)
                  js-sources (-> js-sources
                                 deps/dependency-order
                                 (compile-sources compiler-stats compile-opts)
