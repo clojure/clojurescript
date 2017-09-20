@@ -393,6 +393,7 @@
            (let [dep (first deps)
                  opts' (-> opts
                          (dissoc :context)
+                         (dissoc :def-emits-var)
                          (dissoc :ns))]
              (require bound-vars dep reload opts'
                (fn [res]
@@ -485,6 +486,7 @@
           opts' (-> opts
                   (assoc :macros-ns true)
                   (dissoc :context)
+                  (dissoc :def-emits-var)
                   (dissoc :ns))]
       (require bound-vars nsym k opts'
         (fn [res]

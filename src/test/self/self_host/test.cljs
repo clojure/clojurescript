@@ -1319,6 +1319,47 @@
                 (is (nil? error))
                 (inc! l)))))))))
 
+(deftest test-cljs-2367
+  (async done
+    (let [st (cljs/empty-state)
+          l  (latch 2 done)]
+      (cljs.js/eval st
+        '(require (quote foo-2367.core))
+        {:context       :expr
+         :def-emits-var true
+         :eval          node-eval
+         :load          (fn [_ cb]
+                          (cb {:lang   :clj
+                               :source "(ns foo-2367.core) (def b (def a 3))"}))}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (cljs.js/eval st
+            'foo-2367.core/b
+            {:context :expr
+             :eval    node-eval}
+            (fn [{:keys [error value]}]
+              (is (nil? error))
+              (is (= 3 value))
+              (inc! l)))))
+      (cljs.js/eval st
+        '(require-macros (quote bar-2367.core))
+        {:context       :expr
+         :def-emits-var true
+         :eval          node-eval
+         :load          (fn [_ cb]
+                          (cb {:lang   :clj
+                               :source "(ns bar-2367.core) (def b (def a 4)) (defmacro c [] b)"}))}
+        (fn [{:keys [error value]}]
+          (is (nil? error))
+          (cljs.js/eval st
+            '(bar-2367.core/c)
+            {:context :expr
+             :eval    node-eval}
+            (fn [{:keys [error value]}]
+              (is (nil? error))
+              (is (= 4 value))
+              (inc! l))))))))
+
 (defn -main [& args]
   (run-tests))
 
