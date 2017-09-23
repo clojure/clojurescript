@@ -224,7 +224,9 @@
   [bound-vars cache opts cb]
   (process-deps bound-vars
     (distinct (vals (:require-macros cache)))
-    (assoc opts :macros-ns true)
+    (-> opts
+      (assoc :macros-ns true)
+      (dissoc :emit-constants :optimize-constants))
     cb))
 
 (defn- process-libs-deps
@@ -487,7 +489,8 @@
                   (assoc :macros-ns true)
                   (dissoc :context)
                   (dissoc :def-emits-var)
-                  (dissoc :ns))]
+                  (dissoc :ns)
+                  (dissoc :emit-constants :optimize-constants))]
       (require bound-vars nsym k opts'
         (fn [res]
           (if-not (:error res)
@@ -1072,7 +1075,8 @@
                                     (:def-emits-var opts))
                                   (compile-loop ns'))))))
                         (do
-                          (.append sb (with-out-str (comp/emit ast)))
+                          (env/with-compiler-env (assoc @(:*compiler* bound-vars) :options opts)
+                            (.append sb (with-out-str (comp/emit ast))))
                           (recur ns'))))))
                  (do
                    (when (:source-map opts)
