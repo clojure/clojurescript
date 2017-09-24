@@ -71,9 +71,9 @@
            (comp/emit
              (ana/analyze (assoc aenv :context :expr) form)))
          result)
-    Double/NaN "##NaN"
-    Double/POSITIVE_INFINITY "##Inf"
-    Double/NEGATIVE_INFINITY "##-Inf"))
+    Double/NaN "NaN"
+    Double/POSITIVE_INFINITY "Infinity"
+    Double/NEGATIVE_INFINITY "-Infinity"))
 
 (deftest test-munge-dotdot
   (is (= 'cljs.core._DOT__DOT_ (comp/munge 'cljs.core/..)))
