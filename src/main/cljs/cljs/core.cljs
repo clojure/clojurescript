@@ -985,9 +985,9 @@
     (if (js/isFinite o)
       (js-mod (Math/floor o) 2147483647)
       (case o
-        Infinity
+        ##Inf
         2146435072
-        -Infinity
+        ##-Inf
         -1048576
         2146959360))
 
