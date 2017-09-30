@@ -1472,6 +1472,11 @@
   (let [a (atom :usual-value)]
     (is (= :usual-value (reset! a (first (reset-vals! a :almost-never-seen-value)))))))
 
+(deftest test-cljs-2374
+  (is (= "##NaN" (pr-str js/NaN)))
+  (is (= "##Inf" (pr-str js/Infinity)))
+  (is (= "##-Inf" (pr-str js/-Infinity))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

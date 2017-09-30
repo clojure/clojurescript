@@ -407,4 +407,12 @@
 (simple-benchmark [] (str "1") 1000000)
 (simple-benchmark [] (str "1" "2") 1000000)
 (simple-benchmark [] (str "1" "2" "3") 1000000)
+
+(println ";; printing of numbers and handling of ##Nan, ##Inf, ##-Inf")
+(simple-benchmark [x true] (pr-str x) 1000000)
+(simple-benchmark [x 10] (pr-str x) 1000000)
+(simple-benchmark [x js/NaN] (pr-str x) 1000000)
+(simple-benchmark [x js/Infinity] (pr-str x) 1000000)
+(simple-benchmark [x js/-Infinity] (pr-str x) 1000000)
+(simple-benchmark [x (js-obj)] (pr-str x) 1000000)
 (println)

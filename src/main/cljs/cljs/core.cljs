@@ -9659,8 +9659,16 @@ reduces them without incurring seq initialization"
         (implements? IPrintWithWriter obj)
         (-pr-writer ^not-native obj writer opts)
 
-        (or (true? obj) (false? obj) (number? obj))
+        (or (true? obj) (false? obj))
         (-write writer (str obj))
+
+        (number? obj)
+        (-write writer
+          (cond
+            ^boolean (js/isNaN obj) "##NaN"
+            (identical? obj js/Number.POSITIVE_INFINITY) "##Inf"
+            (identical? obj js/Number.NEGATIVE_INFINITY) "##-Inf"
+            :else (str obj)))
 
         (object? obj)
         (do
