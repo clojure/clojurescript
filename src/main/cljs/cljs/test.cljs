@@ -373,7 +373,7 @@
     (if (> cnt 1)
       [(js/parseInt (nth parts (- cnt 2)) 10)
        (js/parseInt (nth parts (dec cnt)) 10)]
-      [NaN NaN])))
+      [##NaN ##NaN])))
 
 (defn js-filename [stack-element]
   (let [output-dir (cljs.test/cljs-output-dir)
