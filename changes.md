@@ -1,3 +1,38 @@
+## 1.9.946
+
+### Changes
+* CLJS-2300: Delegate clojure.string/capitalize to goog.string/capitalize
+* CLJS-2374: Print js/Infinity, js/-Infinity, js/NaN using new reader literals
+* bump tools.reader (1.1.0)
+* CLJS-2372: update hash to use the new infinity literals
+* CLJS-2364: Bump Closure Compiler to the Sep 2017 version
+* CLJS-2340: Have js-keys delegate directly to good.object/getKeys
+* CLJS-2338: Support renamePrefix{Namespace} closure compiler option
+
+### Fixes
+* CLJS-1576: fix source-map string encoding by applying encodeURIComponent and fixing string/replace call
+* CLJS-2294: Always use opts with implicit opts added
+* CLJS-2166: Add uri? predicate
+* CLJS-2368: Self-host: Never compile macro namespaces with `:optimize-constants true
+* CLJS-2367: Self-host: :def-emits-var leaks into loaded namespace processing
+* CLJS-2352: Emit valid JS for NaN etc. even when used w/ CLJ >= 1.9.0-alpha20
+* CLJS-2339: Significant code reload slowdown with :npm-deps
+* CLJS-2361: Self-host: circular dependency detection doesn't handle REPL self-require
+* CLJS-2356: Self-host: circular dependency detection is not correct
+* CLJS-2354: Self-host: `compile-str` doesn't handle `clojure` -> `cljs` aliasing
+* CLJS-2353: use portable `node-module-dep?` function in analyze-deps
+* CLJS-2345: escape paths emitted as args to cljs.core.load_file
+* CLJS-2349: Port reset-vals! and swap-vals! over from Clojure
+* CLJS-2336: Call alength once in areduce and amap
+* CLJS-2335: Avoid alength on strings
+* CLJS-2334: Also gather dependencies from foreign-libs that are modules
+* CLJS-2333: module-deps.js doesn't correctly compute `main` if aliased in browser field
+* CLJS-2332: module_deps.js doesn't process `export from` correctly
+* CLJS-2330: Don't set `"browser"` field for Closure if target is :nodejs
+* CLJS-2326: Indexing node_modules can't find `main` when it doesn't have an extension
+* CLJS-2328: Args are not provided to *main-cli-fn* with optimizations advanced
+* CLJS-2327: module_deps.js doesn't know about browser field advanced usage
+
 ## 1.9.908
 
 ### Enhancements
