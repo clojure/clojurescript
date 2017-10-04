@@ -2154,7 +2154,8 @@ reduces them without incurring seq initialization"
   (gobject/getKeys obj))
 
 (defn js-delete
-  "Delete a property from a JavaScript object."
+  "Delete a property from a JavaScript object.
+  Returns true upon success, false otherwise."
   [obj key]
   (cljs.core/js-delete obj key))
 
