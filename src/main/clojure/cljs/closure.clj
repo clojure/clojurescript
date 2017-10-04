@@ -2523,8 +2523,9 @@
                  (check-npm-deps opts)
                  (swap! compiler-env update-in [:npm-deps-installed?]
                         (fn [installed?]
-                          (when-not installed?
-                            (maybe-install-node-deps! opts)))))
+                          (if-not installed?
+                            (maybe-install-node-deps! opts)
+                            installed?))))
 
              compiler-stats (:compiler-stats opts)
              checked-arrays (or (:checked-arrays opts)
