@@ -1181,11 +1181,11 @@
            [:foo]))))
 
 (deftest test-cljs-1594
-  (is  (not (js/isNaN (hash Infinity))))
-  (is  (not (js/isNaN (hash -Infinity))))
-  (is  (not (js/isNaN (hash NaN))))
-  (is  (=  (hash-set Infinity -Infinity 0 1 2 3 4 5 6 7 8)
-          (set  (keys  (zipmap  [Infinity -Infinity 0 1 2 3 4 5 6 7 8]  (repeat nil)))))))
+  (is  (not (js/isNaN (hash js/Infinity))))
+  (is  (not (js/isNaN (hash js/-Infinity))))
+  (is  (not (js/isNaN (hash js/NaN))))
+  (is  (=  (hash-set js/Infinity js/-Infinity 0 1 2 3 4 5 6 7 8)
+          (set  (keys  (zipmap  [js/Infinity js/-Infinity 0 1 2 3 4 5 6 7 8]  (repeat nil)))))))
 
 (deftest test-cljs-1590
   (is (= [""] (s/split "" #"\n")))
