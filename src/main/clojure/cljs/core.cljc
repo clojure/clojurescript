@@ -752,7 +752,12 @@
                        (core/number? default) "number"
                        (core/or (core/true? default) (core/false? default)) "boolean")]
     `(do
-       (declare ~(symbol sym))
+       (declare ~(core/vary-meta sym
+                   (fn [m]
+                     (core/cond-> m
+                       (core/not (core/contains? m :tag))
+                       (core/assoc :tag (core/symbol type))
+                       ))))
        (~'js* ~(core/str "/** @define {" type "} */"))
        (goog/define ~defname ~default))))
 
