@@ -37,7 +37,7 @@
   (when-let [v (ana-api/resolve &env s)]
     (when (nil? (:const v))
       (swap! instrumented-vars conj (:name v))
-      `(let [checked# (instrument-1* ~s (var ~s) ~opts)]
+      `(let [checked# (instrument-1* '~s (var ~s) ~opts)]
          (when checked# (set! ~s checked#))
          '~(:name v)))))
 
