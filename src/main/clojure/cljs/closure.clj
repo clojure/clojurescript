@@ -2238,7 +2238,9 @@
                             (run! #(.append sb (str "require('" % "');\n")) modules)
                             (str sb))]
          (util/mkdirs deps-file)
-         (if-not (= old-contents new-contents)
+         (if (or (not= old-contents new-contents)
+                 (nil? env/*compiler*)
+                 (nil? (::transitive-dep-set @env/*compiler*)))
            (do
              (spit deps-file new-contents)
              (let [transitive-js (node-inputs [{:file (.getAbsolutePath deps-file)}] opts)]
