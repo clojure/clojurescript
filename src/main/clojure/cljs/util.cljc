@@ -161,12 +161,12 @@
   [x]
   {:pre [(or (file? x) (url? x))]}
   (letfn [(strip-user-dir [s]
-            (let [user-dir (System/getProperty "user.dir")
-                  s (normalize-path s)
-                  user-path (cond-> user-dir
-                              (not (.endsWith user-dir File/separator))
-                              (str File/separator))]
-              (string/replace s user-path "")))]
+            (let [user-path (.toPath (io/file (System/getProperty "user.dir")))
+                  base-count (.getNameCount user-path)
+                  file-path (.toPath (io/file s))]
+              (if (.startsWith file-path user-path)
+                (str (.subpath file-path base-count (.getNameCount file-path)))
+                s)))]
     (if (file? x)
       (strip-user-dir (.getAbsolutePath x))
       (let [f (URLDecoder/decode (.getFile x))]
