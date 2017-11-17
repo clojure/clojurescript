@@ -28,7 +28,7 @@
             [cljs.source-map :as sm])
   (:import [java.io File PushbackReader FileWriter PrintWriter]
            [java.net URL]
-           [javax.xml.bind DatatypeConverter]
+           [java.util Base64]
            [clojure.lang IExceptionInfo]
            [java.util.regex Pattern]
            [com.google.common.base Throwables]))
@@ -449,6 +449,11 @@
              (println st)))
          (println st))))))
 
+(defn- bytes-to-base64-str
+  "Convert a byte array into a base-64 encoded string."
+  [^bytes bytes]
+  (.encodeToString (Base64/getEncoder) bytes))
+
 (defn evaluate-form
   "Evaluate a ClojureScript form in the JavaScript environment. Returns a
   string which is the ClojureScript return value. This string may or may
@@ -488,7 +493,7 @@
                  (str js
                    "\n//# sourceURL=repl-" t ".js"
                    "\n//# sourceMappingURL=data:application/json;base64,"
-                   (DatatypeConverter/printBase64Binary
+                   (bytes-to-base64-str
                      (.getBytes
                        (sm/encode
                          {(str "repl-" t ".cljs")

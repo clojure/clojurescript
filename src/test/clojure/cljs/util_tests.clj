@@ -45,3 +45,10 @@
 (deftest test-path
   (is (= (.getAbsolutePath (io/file "src/main/clojure/cljs/closure.clj"))
          (util/path (io/as-url (io/file "src/main/clojure/cljs/closure.clj"))))))
+
+(deftest test-bytes-to-hex-str
+  (is (= "09616263" (#'util/bytes-to-hex-str (.getBytes "\u0009abc")))))
+
+(deftest test-content-sha
+  (is (= "40BD001563085FC35165329EA1FF5C5ECBDBBEEF" (util/content-sha "123")))
+  (is (= "40BD0" (util/content-sha "123" 5))))

@@ -41,3 +41,6 @@
       (is file)
       (and file
            (is (io/resource file))))))
+
+(deftest test-bytes-to-base64-str
+  (is (= "YWJj" (#'repl/bytes-to-base64-str (.getBytes "abc")))))
