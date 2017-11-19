@@ -9357,14 +9357,18 @@ reduces them without incurring seq initialization"
         (persistent! map))))
 
 (defn max-key
-  "Returns the x for which (k x), a number, is greatest."
+  "Returns the x for which (k x), a number, is greatest.
+  
+  If there are multiple such xs, the last one is returned."
   ([k x] x)
   ([k x y] (if (> (k x) (k y)) x y))
   ([k x y & more]
    (reduce #(max-key k %1 %2) (max-key k x y) more)))
 
 (defn min-key
-  "Returns the x for which (k x), a number, is least."
+  "Returns the x for which (k x), a number, is least.
+
+  If there are multiple such xs, the last one is returned."
   ([k x] x)
   ([k x y] (if (< (k x) (k y)) x y))
   ([k x y & more]

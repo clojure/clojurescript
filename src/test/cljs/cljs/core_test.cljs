@@ -8,7 +8,7 @@
 
 (ns cljs.core-test
   (:refer-clojure :exclude [iter])
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing is are]]
             [clojure.test.check :as tc]
             [clojure.test.check.clojure-test :refer-macros [defspec]]
             [clojure.test.check.generators :as gen]
@@ -1453,6 +1453,11 @@
 (deftest test-cljs-2282
   (is (= "#js {:_abc 1}" (pr-str #js {"_abc" 1})))
   (is (= "#js {:*compiler* 1}" (pr-str #js {"*compiler*" 1}))))
+
+(deftest test-cljs-2403
+  (are [f k coll expected] (= expected (apply f k coll))
+    min-key :x [{:x 1000} {:x 1001} {:x 1002} {:x 1000 :second true}] {:x 1000 :second true}
+    max-key :x [{:x 1000} {:x 999} {:x 998} {:x 1000 :second true}] {:x 1000 :second true}))
 
 (deftest swap-vals-returns-old-value
   (let [a (atom 0)]
