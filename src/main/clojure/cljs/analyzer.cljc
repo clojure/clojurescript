@@ -3905,7 +3905,7 @@
   (let [{:keys [registry-ref speced-vars]} (get-spec-vars)]
     (when-let [registry (seq (:cljs.spec/registry-ref cached-ns))]
       (when registry-ref
-        (swap! @registry-ref merge registry)))
+        (swap! @registry-ref into registry)))
     (when-let [vars (seq (:cljs.spec/speced-vars cached-ns))]
       (when speced-vars
         (swap! @speced-vars into vars)))))
