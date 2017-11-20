@@ -811,6 +811,12 @@
           (e/with-compiler-env test-cenv
             (a/analyze test-env '(resolve foo.core)))))))
 
+(deftest test-cljs-2387
+  (a/no-warn
+    (e/with-compiler-env test-cenv
+      (a/analyze-file (io/file "src/test/cljs_build/analyzer_test/no_defs.cljs"))))
+  (is (= {} (get-in @test-cenv [::a/namespaces 'analyzer-test.no-defs :defs]))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn

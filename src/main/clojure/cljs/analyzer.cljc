@@ -2118,7 +2118,7 @@
                (conj (-> *cljs-dep-set* meta :dep-path)
                  (some *cljs-dep-set* deps))))))
        (doseq [dep deps]
-         (when-not (or (not-empty (get-in compiler [::namespaces dep :defs]))
+         (when-not (or (some? (get-in compiler [::namespaces dep :defs]))
                        (contains? (:js-dependency-index compiler) (name dep))
                        (node-module-dep? dep)
                        (js-module-exists? (name dep))
@@ -3984,6 +3984,12 @@
                (recur ns (next forms))))
            ns))))))
 
+(defn ensure-defs
+  "Ensures that a non-nil defs map exists in the compiler state for a given
+  ns. (A non-nil defs map signifies that the namespace has been analyzed.)"
+  [ns]
+  (swap! env/*compiler* update-in [::namespaces ns :defs] #(or % {})))
+
 #?(:clj
    (defn analyze-file
      "Given a java.io.File, java.net.URL or a string identifying a resource on the
@@ -4043,6 +4049,7 @@
                                         :else
                                         (recur ns (next forms))))
                                     ns)))]
+                      (ensure-defs ns)
                       (when (and cache (true? (:cache-analysis opts)))
                         (write-analysis-cache ns cache res))))
                   (try
