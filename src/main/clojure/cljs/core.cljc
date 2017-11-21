@@ -1676,8 +1676,10 @@
   [rsym rname fields]
   (core/let [fn-name (with-meta (symbol (core/str '-> rsym))
                        (assoc (meta rsym) :factory :positional))
+             docstring (core/str "Positional factory function for " rname ".")
         field-values (if (core/-> rsym meta :internal-ctor) (conj fields nil nil nil) fields)]
     `(defn ~fn-name
+       ~docstring
        [~@fields]
        (new ~rname ~@field-values))))
 
@@ -1859,10 +1861,11 @@
 (core/defn- build-map-factory [rsym rname fields]
   (core/let [fn-name (with-meta (symbol (core/str 'map-> rsym))
                        (assoc (meta rsym) :factory :map))
+             docstring (core/str "Factory function for " rname ", taking a map of keywords to field values.")
              ms (gensym)
              ks (map keyword fields)
              getters (map (core/fn [k] `(~k ~ms)) ks)]
-    `(defn ~fn-name [~ms]
+    `(defn ~fn-name ~docstring [~ms]
        (new ~rname ~@getters nil (not-empty (dissoc ~ms ~@ks)) nil))))
 
 (core/defmacro defrecord

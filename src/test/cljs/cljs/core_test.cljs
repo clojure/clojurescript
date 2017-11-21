@@ -1483,6 +1483,14 @@
   (is (= "##Inf" (pr-str js/Infinity)))
   (is (= "##-Inf" (pr-str js/-Infinity))))
 
+(deftype Foo2407 [x y])
+(defrecord Bar2407 [x y])
+
+(deftest test-cljs-2407
+  (is (= "Positional factory function for cljs.core-test/Foo2407." (:doc (meta #'->Foo2407))))
+  (is (= "Positional factory function for cljs.core-test/Bar2407." (:doc (meta #'->Bar2407))))
+  (is (= "Factory function for cljs.core-test/Bar2407, taking a map of keywords to field values." (:doc (meta #'map->Bar2407)))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
