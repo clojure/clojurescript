@@ -11117,7 +11117,7 @@ reduces them without incurring seq initialization"
                       (catch js/ReferenceError e
                         nil))
                     (next segs))
-                  (find-ns-obj* js/global segs))
+                  (find-ns-obj* goog/global segs))
       "default" (find-ns-obj* goog/global segs)
       (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
 
