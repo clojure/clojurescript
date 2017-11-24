@@ -3136,7 +3136,8 @@
     to the var metadata. prepost-map defines a map with optional keys
     :pre and :post that contain collections of pre or post conditions."
     :arglists '([name doc-string? attr-map? [params*] prepost-map? body]
-                 [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])}
+                 [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])
+    :macro true}
   defn (core/fn defn [&form &env name & fdecl]
          ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
          (if (core/instance? #?(:clj clojure.lang.Symbol :cljs Symbol) name)
