@@ -35,7 +35,8 @@
 (defmacro instrument-1
   [[quote s] opts]
   (when-let [v (ana-api/resolve &env s)]
-    (when (nil? (:const v))
+    (when (and (nil? (:const v))
+               #?(:cljs (nil? (:macro v))))
       (swap! instrumented-vars conj (:name v))
       `(let [checked# (instrument-1* '~s (var ~s) ~opts)]
          (when checked# (set! ~s checked#))

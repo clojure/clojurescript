@@ -1,4 +1,5 @@
 (ns cljs.spec.test-test
+  (:require-macros [cljs.spec.test.test-macros])
   (:require [cljs.test :as test :refer-macros [deftest is are run-tests]]
             [cljs.spec.alpha :as s]
             [cljs.spec.test.alpha :as stest]))
@@ -37,3 +38,6 @@
 (deftest test-cljs-2391-c
   (stest/unstrument `f-2391)
   (is (= 1 (f-2391))))
+
+(deftest test-cljs-2414
+  (is (empty? (stest/instrument 'cljs.spec.test.test-macros$macros/add))))
