@@ -3270,21 +3270,28 @@
        (when (some? (find-ns-obj 'cljs.spec.alpha))
          @cached-var))))
 
+(defn- do-macroexpand-check
+  [form mac-var]
+  (let [mchk #?(:clj (some-> (find-ns 'clojure.spec.alpha)
+                       (ns-resolve 'macroexpand-check))
+                :cljs (get-macroexpand-check-var))]
+    (when (some? mchk)
+      (mchk mac-var (next form)))))
+
 (defn macroexpand-1*
   [env form]
   (let [op (first form)]
     (if (contains? specials op)
-      form
+      (do
+        (when (= 'ns op)
+          (do-macroexpand-check form (get-expander 'cljs.core/ns-special-form env)))
+        form)
       ;else
         (if-some [mac-var (when (symbol? op) (get-expander op env))]
           (#?@(:clj [binding [*ns* (create-ns *cljs-ns*)]]
                :cljs [do])
-            (let [mchk  #?(:clj  (some-> (find-ns 'clojure.spec.alpha)
-                                   (ns-resolve 'macroexpand-check))
-                           :cljs (get-macroexpand-check-var))
-                  _     (when (some? mchk)
-                          (mchk mac-var (next form)))
-                  form' (try
+            (do-macroexpand-check form mac-var)
+            (let [form' (try
                           (apply @mac-var form env (rest form))
                           #?(:clj (catch ArityException e
                                     (throw (ArityException. (- (.actual e) 2) (.name e))))))]

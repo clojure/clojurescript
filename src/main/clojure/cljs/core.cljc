@@ -2855,6 +2855,9 @@
   [x & forms]
   `(do ~@forms))
 
+;; An internal-use Var for defining specs on the ns special form
+(core/defmacro ^:private ns-special-form [])
+
 (core/defmacro require
   "Loads libs, skipping any that are already loaded. Each argument is
   either a libspec that identifies a lib or a flag that modifies how all the identified

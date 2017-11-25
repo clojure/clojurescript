@@ -198,7 +198,7 @@
          :attr-map (s/? map?)
          :clauses ::ns-clauses))
 
-#_(s/fdef clojure.core/ns
+(s/fdef core/ns-special-form
   :args ::ns-form)
 
 (defmacro ^:private quotable
