@@ -1269,10 +1269,18 @@ str-or-pattern."
                   (filter matches? (named-publics-vars ns)))))
             (ana-api/all-ns))))))
 
+(defn- resolve-ns
+  "Resolves a namespace symbol to a namespace by first checking to see if it
+  is a namespace alias."
+  [ns-sym]
+  (or (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :requires ns-sym])
+      (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :require-macros ns-sym])
+      ns-sym))
+
 (defmacro dir
   "Prints a sorted directory of public vars in a namespace"
   [ns]
-  `(doseq [sym# (quote ~(sort (named-publics-vars ns)))]
+  `(doseq [sym# (quote ~(sort (named-publics-vars (resolve-ns ns))))]
      (println sym#)))
 
 (defmacro pst
