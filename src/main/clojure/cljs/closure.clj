@@ -1869,8 +1869,11 @@
 
 (defn add-wrapper [{:keys [output-wrapper] :as opts} js]
   (if output-wrapper
-   (str ";(function(){\n" js "\n})();\n")
-   js))
+    (cond
+      (fn? output-wrapper)     (output-wrapper js)
+      (string? output-wrapper) (format output-wrapper js)
+      :else                    (str ";(function(){\n" js "\n})();\n"))
+    js))
 
 (defn add-source-map-link [{:keys [source-map output-to] :as opts} js]
   (if source-map
