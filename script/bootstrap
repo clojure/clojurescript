@@ -20,15 +20,11 @@ unzip -v >/dev/null || { echo "The 'unzip' utility is missing, or not on your sy
 mkdir -p lib
 
 echo "Fetching Clojure..."
-curl -O -s https://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.zip || { echo "Download failed."; exit 1; }
-unzip -qu clojure-$CLOJURE_RELEASE.zip
+curl -O -s https://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar || { echo "Download failed."; exit 1; }
 echo "Copying clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar to lib/clojure.jar..."
 cp clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar lib/clojure.jar
-
-echo "Cleaning up Clojure directory..."
-rm -rf clojure-$CLOJURE_RELEASE/
-echo "Cleaning up Clojure archive..."
-rm clojure-$CLOJURE_RELEASE.zip
+echo "Cleaning up Clojure jar..."
+rm clojure-$CLOJURE_RELEASE.jar
 
 echo "Fetching specs.alpha...."
 curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/spec.alpha/$SPEC_ALPHA_RELEASE/spec.alpha-$SPEC_ALPHA_RELEASE.jar || { echo "Download failed."; exit 1; }

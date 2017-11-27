@@ -90,12 +90,8 @@ Make-Dir $root\closure\compiler
 
 Write-Host "Fetching Clojure..."
 Get-WebResource  `
-    https://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.zip `
-    $root\clojure-$CLOJURE_RELEASE.zip
-Delete-File $root\lib\clojure-$CLOJURE_RELEASE.jar
-Expand-ZipFile $root\clojure-$CLOJURE_RELEASE.zip $root\lib clojure-$CLOJURE_RELEASE\clojure-$CLOJURE_RELEASE.jar
-Move-File $root\lib\clojure-$CLOJURE_RELEASE.jar $root\lib\clojure.jar
-Delete-File $root\clojure-$CLOJURE_RELEASE.zip
+    https://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar `
+    $root\lib\clojure-$CLOJURE_RELEASE.jar
 
 Write-Host "Fetching specs.alpha...."
 Get-WebResource  `
