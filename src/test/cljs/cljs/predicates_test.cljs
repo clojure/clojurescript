@@ -40,6 +40,7 @@
 (def int-val-table
   (let [posint 10e10
         negint -10e10
+        neg0   (/ ##-Inf)
         natl   (Long.getZero)
         posl   (Long.fromNumber posint)
         negl   (Long.fromNumber negint)
@@ -48,6 +49,7 @@
         negi   (Integer.fromNumber negint)]
     [[identity  neg?  pos?   integer? int?   neg-int?  pos-int?  nat-int?]
      [0         false false  true     true   false     false     true    ]
+     [neg0      false false  true     true   false     false     true    ]
      [1         false true   true     true   false     true      true    ]
      [-1        true  false  true     true   true      false     false   ]
      [1.0       false true   true     true   false     true      true    ]

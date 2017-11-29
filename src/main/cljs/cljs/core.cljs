@@ -2274,13 +2274,13 @@ reduces them without incurring seq initialization"
   [x]
   (cond
     (integer? x)
-    (or (not (neg? x)) (zero? x))
+    (not (neg? x))
 
     (instance? goog.math.Integer x)
-    (or (not (.isNegative x)) (.isZero x))
+    (not (.isNegative x))
 
     (instance? goog.math.Long x)
-    (or (not (.isNegative x)) (.isZero x))
+    (not (.isNegative x))
 
     :else false))
 
