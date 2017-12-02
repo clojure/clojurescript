@@ -21,8 +21,8 @@ mkdir -p lib
 
 echo "Fetching Clojure..."
 curl -O -s https://repo1.maven.org/maven2/org/clojure/clojure/$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar || { echo "Download failed."; exit 1; }
-echo "Copying clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar to lib/clojure.jar..."
-cp clojure-$CLOJURE_RELEASE/clojure-$CLOJURE_RELEASE.jar lib/clojure.jar
+echo "Copying clojure-$CLOJURE_RELEASE.jar to lib/clojure.jar..."
+cp clojure-$CLOJURE_RELEASE.jar lib/clojure.jar
 echo "Cleaning up Clojure jar..."
 rm clojure-$CLOJURE_RELEASE.jar
 
