@@ -1221,7 +1221,8 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
           (with-open [pbr (PushbackReader. (io/reader f))]
             (let [rdr (readers/source-logging-push-back-reader pbr)]
               (dotimes [_ (dec (:line v))] (readers/read-line rdr))
-              (binding [reader/*data-readers* tags/*cljs-data-readers*]
+              (binding [reader/*alias-map*    identity
+                        reader/*data-readers* tags/*cljs-data-readers*]
                 (-> (reader/read {:read-cond :allow :features #{:cljs}} rdr)
                   meta :source)))))))))
 
