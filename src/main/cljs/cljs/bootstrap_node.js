@@ -73,7 +73,12 @@ global.CLOSURE_IMPORT_SCRIPT = function(src, opt_sourceText) {
     // Sources are always expressed relative to closure's base.js, but
     // require() is always relative to the current source.
     if (opt_sourceText === undefined) {
-        require(path.join(".", "..", src));
+        var flags = goog.dependencies_.loadFlags[src];
+        if (flags && flags["foreign-lib"]) {
+            nodeGlobalRequire(path.resolve(__dirname, "..", src));
+        } else {
+            require(path.join(".", "..", src));
+        }
     } else {
         eval(opt_sourceText);
     }

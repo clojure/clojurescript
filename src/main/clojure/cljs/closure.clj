@@ -1446,7 +1446,9 @@
                     ;; under Node.js we emit native `require`s for these
                     (= :nodejs (:target opts))
                     (filter (complement ana/node-module-dep?))))
-         "]);\n")))
+         "]"
+         (if (deps/-foreign? input) ", {'foreign-lib': true}")
+         ");\n")))
 
 (defn deps-file
   "Return a deps file string for a sequence of inputs."
