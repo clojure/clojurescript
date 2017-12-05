@@ -4199,7 +4199,7 @@ reduces them without incurring seq initialization"
   "Returns true if n is odd, throws an exception if n is not an integer"
   [n] (not (even? n)))
 
-(defn ^boolean complement
+(defn complement
   "Takes a fn f and returns a fn that takes the same arguments as f,
   has the same effects, if any, and returns the opposite truth value."
   [f]
