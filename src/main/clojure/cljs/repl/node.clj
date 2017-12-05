@@ -99,7 +99,7 @@
 (defn- build-process
   [opts repl-env input-src]
   (let [xs   (cond-> [(get opts :node-command "node")]
-               (:debug-port repl-env) (conj (str "--debug=" (:debug-port repl-env))))
+               (:debug-port repl-env) (conj (str "--inspect=" (:debug-port repl-env))))
         proc (-> (ProcessBuilder. (into-array xs)) (.redirectInput input-src))]
     (when-let [path-fs (:path repl-env)]
       (.put (.environment proc)
