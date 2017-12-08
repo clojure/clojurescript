@@ -43,10 +43,24 @@
 
 (defn replace
   "Replaces all instance of match with replacement in s.
+
    match/replacement can be:
 
    string / string
-   pattern / (string or function of match)."
+   pattern / (string or function of match).
+
+   See also replace-first.
+
+   The replacement is literal (i.e. none of its characters are treated
+   specially) for all cases above except pattern / string.
+
+   For pattern / string, $1, $2, etc. in the replacement string are
+   substituted with the string that matched the corresponding
+   parenthesized group in the pattern.
+
+   Example:
+   (clojure.string/replace \"Almost Pig Latin\" #\"\\b(\\w)(\\w+)\\b\" \"$2$1ay\")
+   -> \"lmostAay igPay atinLay\""
   [s match replacement]
   (cond
     (string? match)
@@ -61,10 +75,25 @@
 
 (defn replace-first
   "Replaces the first instance of match with replacement in s.
+
    match/replacement can be:
 
    string / string
-   pattern / (string or function of match)."
+   pattern / (string or function of match).
+
+   See also replace.
+
+   The replacement is literal (i.e. none of its characters are treated
+   specially) for all cases above except pattern / string.
+
+   For pattern / string, $1, $2, etc. in the replacement string are
+   substituted with the string that matched the corresponding
+   parenthesized group in the pattern.
+
+   Example:
+   (clojure.string/replace-first \"swap first two words\"
+                                 #\"(\\w+)(\\s+)(\\w+)\" \"$3$2$1\")
+   -> \"first swap two words\""
   [s match replacement]
   (.replace s match replacement))
 
