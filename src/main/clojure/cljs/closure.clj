@@ -2641,6 +2641,8 @@
                            (repeat warnings))
                          warnings)))
                    ana/*verbose* (:verbose opts)]
+           (when ana/*verbose*
+             (util/debug-prn "Options passed to ClojureScript compiler:" (pr-str opts)))
            (let [one-file? (and (:main opts)
                                 (#{:advanced :simple :whitespace} (:optimizations opts)))
                  source (if one-file?
