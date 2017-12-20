@@ -2438,8 +2438,11 @@
               js-modules (into []
                            (comp
                              (map (fn [lib]
-                                    (let [js (deps/load-foreign-library lib)]
-                                      (assoc js :source (deps/-source js opts)))))
+                                    (let [js (deps/load-foreign-library lib)
+                                          url (str (deps/-url js opts))]
+                                      (if (and url (not (or (.endsWith url ".js") (.endsWith url ".json"))))
+                                        (assoc js :source "")
+                                        (assoc js :source (deps/-source js opts))))))
                              (map (fn [js]
                                     (if (:preprocess js)
                                       (preprocess-js js opts)
