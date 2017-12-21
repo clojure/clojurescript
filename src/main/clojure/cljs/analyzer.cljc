@@ -1167,8 +1167,9 @@
 
 (declare analyze analyze-symbol analyze-seq)
 
-;; If adding new specials, be sure to update cljs.core/special-symbol?
-(def specials '#{if def fn* do let* loop* letfn* throw try catch finally recur new set!
+;; Note: This is the set of parse multimethod dispatch values,
+;; along with '&, and differs from cljs.core/special-symbol?
+(def specials '#{if def fn* do let* loop* letfn* throw try recur new set!
                  ns deftype* defrecord* . js* & quote case* var ns*})
 
 (def ^:dynamic *recur-frames* nil)

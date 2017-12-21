@@ -10908,7 +10908,6 @@ reduces them without incurring seq initialization"
 (defn ^boolean special-symbol?
   "Returns true if x names a special form"
   [x]
-  ;; If adding new special symbols, be sure to update cljs.analyzer/specials
   (contains?
     '#{if def fn* do let* loop* letfn* throw try catch finally
        recur new set! ns deftype* defrecord* . js* & quote case* var ns*}

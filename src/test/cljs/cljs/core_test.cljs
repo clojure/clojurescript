@@ -1483,6 +1483,10 @@
   (is (= "##Inf" (pr-str js/Infinity)))
   (is (= "##-Inf" (pr-str js/-Infinity))))
 
+(deftest test-cljs-2449
+  (is (= 1 (let [catch identity] (catch 1))))
+  (is (= 1 (let [finally identity] (finally 1)))))
+
 (deftype Foo2407 [x y])
 (defrecord Bar2407 [x y])
 
