@@ -2417,7 +2417,7 @@
   (core/let [err (core/fn [& msg] (throw (ex-info (apply core/str msg) {})))
              step (core/fn step [recform exprs]
                     (core/if-not exprs
-                      [true `(do ~@body)]
+                      [true `(do ~@body nil)]
                       (core/let [k (first exprs)
                                  v (second exprs)
 
