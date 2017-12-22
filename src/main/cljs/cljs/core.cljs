@@ -1897,7 +1897,7 @@ reduces them without incurring seq initialization"
   "Returns the nth rest of coll, coll when n is 0."
   [coll n]
     (loop [n n xs coll]
-      (if (and (pos? n) (seq xs))
+      (if-let [xs (and (pos? n) (seq xs))]
         (recur (dec n) (rest xs))
         xs)))
 
@@ -4775,21 +4775,175 @@ reduces them without incurring seq initialization"
                       s)))]
        (lazy-seq (step pred coll)))))
 
+(deftype Cycle [meta all prev ^:mutable current ^:mutable _next]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (currentval [coll]
+    (when-not ^seq current
+      (if-let [c (next prev)]
+        (set! current c)
+        (set! current all)))
+    current)
+
+  IPending
+  (-realized? [coll]
+    (some? current))
+
+  IWithMeta
+  (-with-meta [coll meta] (Cycle. meta all prev current _next))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll]
+    (first (.currentval coll)))
+  (-rest [coll]
+    (when (nil? _next)
+      (set! _next (Cycle. nil all (.currentval coll) nil nil)))
+    _next)
+
+  INext
+  (-next [coll]
+    (-rest coll))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+
+  ISequential
+  ISeqable
+  (-seq [coll] coll)
+
+  IReduce
+  (-reduce [coll f]
+    (loop [s (.currentval coll) ret (first s)]
+      (let [s   (or (next s) all)
+            ret (f ret (first s))]
+        (if (reduced? ret)
+          @ret
+          (recur s ret)))))
+  (-reduce [coll f start]
+    (loop [s (.currentval coll) ret start]
+      (let [ret (f ret (first s))]
+        (if (reduced? ret)
+          @ret
+          (recur (or (next s) all) ret))))))
+
 (defn cycle
   "Returns a lazy (infinite!) sequence of repetitions of the items in coll."
-  [coll] (lazy-seq
-          (when-let [s (seq coll)]
-            (concat s (cycle s)))))
+  [coll] (if-let [vals (seq coll)]
+           (Cycle. nil vals nil vals nil)
+           (.-EMPTY List)))
 
 (defn split-at
   "Returns a vector of [(take n coll) (drop n coll)]"
   [n coll]
   [(take n coll) (drop n coll)])
 
+(deftype Repeat [meta count val ^:mutable next ^:mutable __hash]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+  (equiv [this other]
+    (-equiv this other))
+  (indexOf [coll x]
+    (-indexOf coll x 0))
+  (indexOf [coll x start]
+    (-indexOf coll x start))
+  (lastIndexOf [coll x]
+    (-lastIndexOf coll x count))
+  (lastIndexOf [coll x start]
+    (-lastIndexOf coll x start))
+
+  IPending
+  (-realized? [coll] false)
+  
+  IWithMeta
+  (-with-meta [coll meta] (Repeat. meta count val next nil))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll]
+    val)
+  (-rest [coll]
+    (if (nil? next)
+      (if (> count 1)
+        (do
+          (set! next (Repeat. nil (dec count) val nil nil))
+          next)
+        (if (== -1 count)
+          coll
+          ()))
+      next))
+
+  INext
+  (-next [coll]
+    (if (nil? next)
+      (if (> count 1)
+        (do
+          (set! next (Repeat. nil (dec count) val nil nil))
+          next)
+        (if (== -1 count)
+          coll
+          nil))
+      next))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+
+  IHash
+  (-hash [coll] (caching-hash coll hash-ordered-coll __hash))
+
+  ISequential
+  ISeqable
+  (-seq [coll] coll)
+  
+  IEquiv
+  (-equiv [coll other] (equiv-sequential coll other))
+
+  IReduce
+  (-reduce [coll f]
+    (if (== count -1)
+      (loop [ret (f val val)]
+        (if (reduced? ret)
+          @ret
+          (recur (f ret val))))
+      (loop [i 1 ret val]
+        (if (< i count)
+          (let [ret (f ret val)]
+            (if (reduced? ret)
+              @ret
+              (recur (inc i) ret)))
+          ret))))
+  (-reduce [coll f start]
+    (if (== count -1)
+      (loop [ret (f start val)]
+        (if (reduced? ret)
+          @ret
+          (recur (f ret val))))
+      (loop [i 0 ret start]
+        (if (< i count)
+          (let [ret (f ret val)]
+            (if (reduced? ret)
+              @ret
+              (recur (inc i) ret)))
+          ret)))))
+
 (defn repeat
   "Returns a lazy (infinite!, or length n if supplied) sequence of xs."
-  ([x] (lazy-seq (cons x (repeat x))))
-  ([n x] (take n (repeat x))))
+  ([x] (Repeat. nil -1 x nil nil))
+  ([n x] (if (pos? n)
+           (Repeat. nil n x nil nil)
+           (.-EMPTY List))))
 
 (defn replicate
   "DEPRECATED: Use 'repeat' instead.
@@ -4803,10 +4957,68 @@ reduces them without incurring seq initialization"
   ([f] (lazy-seq (cons (f) (repeatedly f))))
   ([n f] (take n (repeatedly f))))
 
+(def ^:private UNREALIZED-SEED #js {})
+
+(deftype Iterate [meta f prev-seed ^:mutable seed ^:mutable next]
+  Object
+  (toString [coll]
+    (pr-str* coll))
+
+  IPending
+  (-realized? [coll]
+    (not (identical? seed UNREALIZED-SEED)))
+
+  IWithMeta
+  (-with-meta [coll meta] (Iterate. meta f prev-seed seed next))
+
+  IMeta
+  (-meta [coll] meta)
+
+  ISeq
+  (-first [coll]
+    (when (identical? UNREALIZED-SEED seed)
+      (set! seed (f prev-seed)))
+    seed)
+  (-rest [coll]
+    (when (nil? next)
+      (set! next (Iterate. nil f (-first coll) UNREALIZED-SEED nil)))
+    next)
+
+  INext
+  (-next [coll]
+    (-rest coll))
+
+  ICollection
+  (-conj [coll o] (cons o coll))
+
+  IEmptyableCollection
+  (-empty [coll] (-with-meta (.-EMPTY List) meta))
+
+  ISequential
+  ISeqable
+  (-seq [coll] coll)
+
+  IReduce
+  (-reduce [coll rf]
+    (let [first (-first coll)
+          v     (f first)]
+      (loop [ret (rf first v) v v]
+        (if (reduced? ret)
+          @ret
+          (let [v (f v)]
+            (recur (rf ret v) v))))))
+  (-reduce [coll rf start]
+    (let [v (-first coll)]
+      (loop [ret (rf start v) v v]
+        (if (reduced? ret)
+          @ret
+          (let [v (f v)]
+            (recur (rf ret v) v)))))))
+
 (defn iterate
   "Returns a lazy sequence of x, (f x), (f (f x)) etc. f must be free of side-effects"
   {:added "1.0"}
-  [f x] (cons x (lazy-seq (iterate f (f x)))))
+  [f x] (Iterate. nil f nil x nil))
 
 (defn interleave
   "Returns a lazy seq of the first item in each coll, then the second etc."
@@ -9507,8 +9719,8 @@ reduces them without incurring seq initialization"
   be used to force any effects. Walks through the successive nexts of
   the seq, does not retain the head and returns nil."
   ([coll]
-   (when (seq coll)
-     (recur (next coll))))
+   (when-let [s (seq coll)]
+     (recur (next s))))
   ([n coll]
    (when (and (seq coll) (pos? n))
      (recur (dec n) (next coll)))))
@@ -9958,6 +10170,15 @@ reduces them without incurring seq initialization"
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "#{" " " "}" opts coll))
 
   Range
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+
+  Cycle
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+
+  Repeat
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
+
+  Iterate
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "(" " " ")" opts coll))
 
   ES6IteratorSeq

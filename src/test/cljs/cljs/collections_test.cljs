@@ -8,7 +8,7 @@
 
 (ns cljs.collections-test
   (:refer-clojure :exclude [iter])
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing is are]]
             [clojure.string :as s]
             [clojure.set :as set]))
 
@@ -164,6 +164,227 @@
     (is (= (take 3 (range 1 0 0)) (list 1 1 1)))
     (is (= (take 3 (range 3 1 0)) (list 3 3 3)))
     ))
+
+(deftest test-cycle
+  (testing "Testing Cycle"
+
+    (is (= "(1 2 3 1 2 ...)" (binding [*print-length* 5] (pr-str (cycle [1 2 3])))))
+
+    (are [x y] (= x y)
+      (cycle []) ()
+      (cycle nil) ()
+
+      (take 3 (cycle [1])) '(1 1 1)
+      (take 5 (cycle [1 2 3])) '(1 2 3 1 2)
+
+      (take 3 (cycle [nil])) '(nil nil nil)
+
+      (transduce (take 5) + (cycle [1])) 5
+      (transduce (take 5) + 2 (cycle [1])) 7
+      (transduce (take 5) + (cycle [3 7])) 23
+      (transduce (take 5) + 2 (cycle [3 7])) 25
+
+      (take 2 (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)
+      (first (cycle [1 2 3])) 1
+      (first (rest (cycle [1 2 3]))) 2
+      (first (next (cycle [1 2 3]))) 2
+      (first (conj (cycle [1 2 3]) :hi)) :hi
+      (empty (cycle [1 2 3])) ()
+      (first (next (cycle (map #(/ 42 %) '(2 1 0))))) 42
+      (into [] (take 2) (cycle (map #(/ 42 %) '(2 1 0)))) '(21 42)
+
+      (first (seq (cycle [1 2 3]))) 1)
+
+    ; indexOf fns work on the finite cycle
+    (is (= -1 (.indexOf (cycle []) 19)))
+    (is (= -1 (.indexOf (cycle []) 19 2)))
+    (is (= -1 (.lastIndexOf (cycle []) 19)))
+    (is (= -1 (.lastIndexOf (cycle []) 19 2)))
+
+    (is (= {:a 1} (meta (with-meta (cycle [1 2 3]) {:a 1}))))
+    (is (= {:a 1} (meta (empty (with-meta (cycle [1 2 3]) {:a 1})))))
+    (is (= (take 7 (with-meta (cycle [1 2 3]) {:a 1})) (take 7 (cycle [1 2 3]))))
+
+    (is (realized? (cycle [1 2 3])))
+
+    (are [x y] (= (transduce (take x) conj (cycle [1 2 3])) y)
+      0 []
+      1 [1]
+      2 [1 2]
+      3 [1 2 3]
+      4 [1 2 3 1]
+      5 [1 2 3 1 2]
+      6 [1 2 3 1 2 3]
+      7 [1 2 3 1 2 3 1])
+
+    (are [x y] (= (transduce (take x) conj [:x] (cycle [1 2 3])) y)
+      0 [:x]
+      1 [:x 1]
+      2 [:x 1 2]
+      3 [:x 1 2 3]
+      4 [:x 1 2 3 1]
+      5 [:x 1 2 3 1 2]
+      6 [:x 1 2 3 1 2 3]
+      7 [:x 1 2 3 1 2 3 1])))
+
+(deftest test-repeat
+  (testing "Testing Repeat"
+    (is (= (repeat 5 :x) (repeat 5 :x)))
+    (is (= (repeat 5 :x) '(:x :x :x :x :x)))
+    (is (= (hash (repeat 5 :x)) (hash '(:x :x :x :x :x))))
+    (is (= (assoc (array-map (repeat 1 :x) :y) '(:x) :z) {'(:x) :z}))
+    (is (= (assoc (hash-map (repeat 1 :x) :y) '(:x) :z) {'(:x) :z}))
+
+    (is (= "(7 7 7 ...)" (binding [*print-length* 3] (pr-str (repeat 7)))))
+    (is (= "(7 7 7)" (pr-str (repeat 3 7))))
+
+    (are [x y] (= x y)
+      (take 0 (repeat 7)) ()
+      (take 1 (repeat 7)) '(7)
+      (take 2 (repeat 7)) '(7 7)
+      (take 5 (repeat 7)) '(7 7 7 7 7))
+
+    ; limited sequence
+    (are [x y] (= x y)
+      (repeat 0 7) ()
+      (repeat 1 7) '(7)
+      (repeat 2 7) '(7 7)
+      (repeat 5 7) '(7 7 7 7 7)
+
+      (repeat -1 7) ()
+      (repeat -3 7) ())
+
+    ;; counts
+    (are [x y] (= (count x) y)
+      (repeat 0 7) 0
+      (repeat 1 7) 1
+      (repeat 2 7) 2
+      (repeat 5 7) 5
+
+      (repeat -1 7) 0
+      (repeat -3 7) 0)
+
+    ; test different data types
+    (are [x] (= (repeat 3 x) (list x x x))
+      nil
+      false true
+      0 42
+      0.0 3.14
+      0M 1M
+      \c
+      "" "abc"
+      'sym
+      :kw
+      () '(1 2)
+      [] [1 2]
+      {} {:a 1 :b 2}
+      #{} #{1 2})
+
+    ; indexOf / lastIndexOf work on finite repeats
+    (is (= -1 (.indexOf (repeat 7 5) 19)))
+    (is (= -1 (.indexOf (repeat 7 5) 19 2)))
+    (is (= -1 (.lastIndexOf (repeat 7 5) 19)))
+    (is (= -1 (.lastIndexOf (repeat 7 5) 19 2)))
+    (is (= 0 (.indexOf (repeat 7 5) 5)))
+    (is (= 6 (.lastIndexOf (repeat 7 5) 5)))
+    (is (= 3 (.indexOf (repeat 7 5) 5 3)))
+    (is (= 3 (.lastIndexOf (repeat 7 5) 5 3)))
+
+    (is (= {:a 1} (meta (with-meta (repeat 5 7) {:a 1}))))
+    (is (= {:a 1} (meta (empty (with-meta (repeat 5 7) {:a 1})))))
+    (is (= (with-meta (repeat 5 7) {:a 1}) (repeat 5 7)))
+
+    (is (not (realized? (repeat 5 7))))
+
+    (is (= [1 1] (into [] (drop 98) (repeat 100 1))))
+
+    (is (= () (empty (repeat 100 1))))
+    (is (= () (empty (repeat 7))))
+
+    (are [x y] (= (transduce (take x) conj (repeat 1)) y)
+      0 []
+      1 [1]
+      2 [1 1]
+      3 [1 1 1])
+
+    (are [x y] (= (transduce (take x) conj [:x] (repeat 1)) y)
+      0 [:x]
+      1 [:x 1]
+      2 [:x 1 1]
+      3 [:x 1 1 1])
+
+    (are [x y] (= (transduce (take x) conj (repeat 2 1)) y)
+      0 []
+      1 [1]
+      2 [1 1]
+      3 [1 1])
+
+    (are [x y] (= (transduce (take x) conj [:x] (repeat 2 1)) y)
+      0 [:x]
+      1 [:x 1]
+      2 [:x 1 1]
+      3 [:x 1 1])))
+
+(deftest test-iterate
+  (testing "Testing Iterate"
+    (are [x y] (= x y)
+      (take 0 (iterate inc 0)) ()
+      (take 1 (iterate inc 0)) '(0)
+      (take 2 (iterate inc 0)) '(0 1)
+      (take 5 (iterate inc 0)) '(0 1 2 3 4))
+
+    (is (= "(0 1 2 ...)" (binding [*print-length* 3] (pr-str (iterate inc 0)))))
+
+    (is (not (realized? (rest (iterate inc 0)))))
+
+    (is (= {:a 1} (meta (with-meta (iterate inc 0) {:a 1}))))
+    (is (= {:a 1} (meta (empty (with-meta (iterate inc 0) {:a 1})))))
+    (is (= (take 20 (with-meta (iterate inc 0) {:a 1})) (take 20 (iterate inc 0))))
+
+    (is (= [:first 0 1] (take 3 (conj (iterate inc 0) :first))))
+
+    (is (= () (empty (iterate inc 0))))
+
+    (let [v (iterate inc 0)]
+      (is (identical? v (seq v))))
+
+    (is (= 0 (first (iterate inc 0))))
+    (is (= 1 (first (rest (iterate inc 0)))))
+    (is (= 1 (first (next (iterate inc 0)))))
+
+    ;; test other fns
+    (is (= '(:foo 42 :foo 42) (take 4 (iterate #(if (= % :foo) 42 :foo) :foo))))
+    (is (= '(1 false true true) (take 4 (iterate boolean? 1))))
+    (is (= '(256 128 64 32 16 8 4 2 1 0) (take 10 (iterate #(quot % 2) 256))))
+
+    ;; reduce via transduce
+    (is (= (transduce (take 5) + (iterate #(* 2 %) 2)) 62))
+    (is (= (transduce (take 5) + 1 (iterate #(* 2 %) 2)) 63))
+
+    (are [x y] (= (transduce (take x) conj (iterate inc 0)) y)
+      0 []
+      1 [0]
+      2 [0 1]
+      3 [0 1 2])
+
+    (are [x y] (= (transduce (take x) conj [:x] (iterate inc 0)) y)
+      0 [:x]
+      1 [:x 0]
+      2 [:x 0 1]
+      3 [:x 0 1 2])))
+
+(deftest test-split-at
+  (is (vector? (split-at 2 [])))
+  (is (vector? (split-at 2 [1 2 3])))
+
+  (are [x y] (= x y)
+    (split-at 2 []) [() ()]
+    (split-at 2 [1 2 3 4 5]) [(list 1 2) (list 3 4 5)]
+
+    (split-at 5 [1 2 3]) [(list 1 2 3) ()]
+    (split-at 0 [1 2 3]) [() (list 1 2 3)]
+    (split-at -1 [1 2 3]) [() (list 1 2 3)]
+    (split-at -5 [1 2 3]) [() (list 1 2 3)] ))
 
 (deftest test-rseq
   (testing "Testing RSeq"
