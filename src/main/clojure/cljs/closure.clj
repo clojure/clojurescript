@@ -49,8 +49,9 @@
             [clojure.tools.reader.reader-types :as readers]
             [cljs.module-graph :as module-graph])
   (:import [java.lang ProcessBuilder]
-           [java.io File BufferedInputStream BufferedReader
-            Writer InputStreamReader IOException StringWriter]
+           [java.io
+            File BufferedInputStream BufferedReader
+            Writer InputStreamReader IOException StringWriter ByteArrayInputStream]
            [java.net URL]
            [java.util.logging Level]
            [java.util List Random]
@@ -61,7 +62,7 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule SourceMap Es6RewriteModules]
+              JSModule SourceMap Es6RewriteModules VariableMap]
            [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
@@ -166,7 +167,9 @@
     :emit-constants :ups-externs :ups-foreign-libs :ups-libs :warning-handlers :preloads
     :browser-repl :cache-analysis-format :infer-externs :closure-generate-exports :npm-deps
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
-    :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace})
+    :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
+    :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
+    :stable-names})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -261,6 +264,18 @@
   (when (contains? opts :rename-prefix-namespace)
     (. compiler-options
        (setRenamePrefixNamespace (:rename-prefix-namespace opts))))
+
+  (when (contains? opts :closure-variable-map-in)
+    (let [var-in (io/file (:closure-variable-map-in opts))]
+      (when (.exists var-in)
+        (.setInputVariableMap compiler-options
+          (VariableMap/load (.getAbsolutePath var-in))))))
+
+  (when (contains? opts :closure-property-map-in)
+    (let [prop-in (io/file (:closure-property-map-in opts))]
+      (when (.exists prop-in)
+        (.setInputPropertyMap compiler-options
+          (VariableMap/load (.getAbsolutePath prop-in))))))
 
   (. compiler-options
     (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
@@ -1276,6 +1291,16 @@
              :source-map-pretty-print (:source-map-pretty-print opts)
              :relpaths relpaths}))))))
 
+(defn write-variable-maps [^Result result opts]
+  (let [var-out (:closure-variable-map-out opts)]
+    (when-let [var-map (and var-out (.-variableMap result))]
+      (io/copy (ByteArrayInputStream. (.toBytes var-map))
+        (io/file var-out))))
+  (let [prop-out (:closure-variable-map-out opts)]
+    (when-let [prop-map (and prop-out (.-propertyMap result))]
+      (io/copy (ByteArrayInputStream. (.toBytes prop-map))
+        (io/file prop-out)))))
+
 (defn optimize-modules
   "Use the Closure Compiler to optimize one or more Closure JSModules. Returns
    a dependency sorted list of module name and description tuples."
@@ -1308,21 +1333,23 @@
     (assert (or (nil? (:source-map opts)) source-map)
       "Could not create source maps for modules")
     (if (.success result)
-      (vec
-        (for [[name {:keys [output-to closure-module] :as module}] modules]
-          [name
-           (merge
-             (assoc module
-               :source
-               (do
-                 (when source-map (.reset source-map))
-                 (.toSource closure-compiler ^JSModule closure-module)))
-             (when source-map
-               (let [sw (StringWriter.)
-                     source-map-name (str output-to ".map.closure")]
-                 (.appendTo source-map sw source-map-name)
-                 {:source-map-json (.toString sw)
-                  :source-map-name source-map-name})))]))
+      (do
+        (write-variable-maps result opts)
+        (vec
+          (for [[name {:keys [output-to closure-module] :as module}] modules]
+            [name
+             (merge
+               (assoc module
+                 :source
+                 (do
+                   (when source-map (.reset source-map))
+                   (.toSource closure-compiler ^JSModule closure-module)))
+               (when source-map
+                 (let [sw (StringWriter.)
+                       source-map-name (str output-to ".map.closure")]
+                   (.appendTo source-map sw source-map-name)
+                   {:source-map-json (.toString sw)
+                    :source-map-name source-map-name})))])))
       (report-failure result))))
 
 (defn optimize
@@ -1349,23 +1376,25 @@
                          (.compile closure-compiler externs inputs compiler-options))]
     (if (.success result)
       ;; compiler.getSourceMap().reset()
-      (let [source (.toSource closure-compiler)]
-        (when-let [name (:source-map opts)]
-          (let [name' (str name ".closure")
-                sw (StringWriter.)
-                sm-json-str (do
-                              (.appendTo (.getSourceMap closure-compiler) sw name')
-                              (.toString sw))]
-            (when (true? (:closure-source-map opts))
-              (spit (io/file name') sm-json-str))
-            (emit-optimized-source-map
-              (json/read-str sm-json-str :key-fn keyword)
-              sources name
-              (assoc opts
-                :preamble-line-count
-                (+ (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
-                   (if (:output-wrapper opts) 1 0))))))
-        source)
+      (do
+        (write-variable-maps result opts)
+        (let [source (.toSource closure-compiler)]
+         (when-let [name (:source-map opts)]
+           (let [name' (str name ".closure")
+                 sw (StringWriter.)
+                 sm-json-str (do
+                               (.appendTo (.getSourceMap closure-compiler) sw name')
+                               (.toString sw))]
+             (when (true? (:closure-source-map opts))
+               (spit (io/file name') sm-json-str))
+             (emit-optimized-source-map
+               (json/read-str sm-json-str :key-fn keyword)
+               sources name
+               (assoc opts
+                 :preamble-line-count
+                 (+ (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
+                    (if (:output-wrapper opts) 1 0))))))
+         source))
       (report-failure result))))
 
 (comment
@@ -2123,7 +2152,14 @@
       (assoc :closure-module-roots [])
 
       (contains? opts :modules)
-      (ensure-module-opts))))
+      (ensure-module-opts)
+
+      (contains? opts :stable-names)
+      (->> (merge
+             {:closure-variable-map-in  (io/file output-dir "closure_var.map")
+              :closure-variable-map-out (io/file output-dir "closure_var.map")
+              :closure-property-map-in  (io/file output-dir "closure_prop.map")
+              :closure-property-map-out (io/file output-dir "closure_prop.map")})))))
 
 (defn- alive? [proc]
   (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
