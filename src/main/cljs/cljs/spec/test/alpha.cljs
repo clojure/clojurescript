@@ -104,16 +104,20 @@
                                   (str "Call to " v " did not conform to spec:\n" (with-out-str (s/explain-out ed)))
                                   ed)))
                        conformed)))]
-    (doto
-      (fn
-        [& args]
-        (if *instrument-enabled*
-          (with-instrument-disabled
-            (when (:args fn-spec) (conform! v :args (:args fn-spec) args args))
-            (binding [*instrument-enabled* true]
+    (doto (fn [& args]
+            (if *instrument-enabled*
+              (with-instrument-disabled
+                (when (:args fn-spec) (conform! v :args (:args fn-spec) args args))
+                (binding [*instrument-enabled* true]
+                  (apply f args)))
               (apply f args)))
-          (apply f args)))
-      (gobj/extend f))))
+      (gobj/extend (MetaFn. (fn [& args]
+                              (if *instrument-enabled*
+                                (with-instrument-disabled
+                                  (when (:args fn-spec) (conform! v :args (:args fn-spec) args args))
+                                  (binding [*instrument-enabled* true]
+                                    (apply f args)))
+                                (apply f args))) nil)))))
 
 (defn- no-fspec
   [v spec]

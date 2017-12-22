@@ -4,6 +4,12 @@
             [cljs.spec.alpha :as s]
             [cljs.spec.test.alpha :as stest]))
 
+(s/fdef clojure.core/symbol
+  :args (s/alt :separate (s/cat :ns string? :n string?)
+          :str string?
+          :sym symbol?)
+  :ret symbol?)
+
 (defn h-cljs-1812 [x] true)
 (s/fdef h-cljs-1812 :args (s/cat :x int?) :ret true?)
 
@@ -41,3 +47,29 @@
 
 (deftest test-cljs-2414
   (is (empty? (stest/instrument 'cljs.spec.test.test-macros$macros/add))))
+
+(deftest test-cljs-2197
+  (stest/instrument `symbol)
+  (is (thrown? js/Error (symbol 3)))
+  (is (thrown? js/Error (#'symbol 3)))
+  (is (thrown? js/Error (apply symbol [3])))
+  (stest/unstrument `symbol))
+
+(defn arities
+  ([a]
+   (inc a))
+  ([a b]
+   (+ a b))
+  ([a b c] 0))
+
+(s/fdef arities
+  :args (s/or :arity-1 (s/cat :a number?)
+              :arity-2 (s/cat :a number? :b number?)
+              :arity-3 (s/cat :a string? :b boolean? :c map?))
+  :ret number?)
+
+(deftest test-2397
+  (stest/instrument `arities)
+  (is (arities 1))
+  (is (thrown? js/Error (arities "bad")))
+  (stest/unstrument `arities))
