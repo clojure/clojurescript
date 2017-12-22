@@ -1552,7 +1552,29 @@
                   entries
                   [(:main opts)])))
             "goog.require(\"cljs.nodejscli\");\n")))
+
+      :webworker
       (output-one-file
+       (merge opts
+              (when module
+                {:output-to (:output-to module)}))
+       (str (when (or (not module) (= :cljs-base (:module-name opts)))
+              (str "var CLOSURE_BASE_PATH = \"" asset-path  "/goog/\";\n"
+                   "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                   "var CLOSURE_IMPORT_SCRIPT = (function(global) { return function(src) {global['importScripts'](src); return true;};})(this);\n"
+                   "if(typeof goog == 'undefined') importScripts(\"" asset-path "/goog/base.js\");\n"
+                   "importScripts(\"" asset-path "/cljs_deps.js\");\n"
+                   (apply str (preloads (:preloads opts)))))
+            (apply str
+                   (map (fn [entry]
+                           (when-not (= "goog" entry)
+                             (str "goog.require(\"" (comp/munge entry) "\");\n")))
+                         (if-let [entries (when module (:entries module))]
+                           entries
+                           (when-let [main (:main opts)]
+                             [main]))))))
+
+       (output-one-file
         (merge opts
           (when module
             {:output-to (:output-to module)}))

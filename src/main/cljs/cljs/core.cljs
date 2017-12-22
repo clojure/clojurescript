@@ -11342,7 +11342,7 @@ reduces them without incurring seq initialization"
                         nil))
                     (next segs))
                   (find-ns-obj* goog/global segs))
-      "default" (find-ns-obj* goog/global segs)
+      ("default" "webworker") (find-ns-obj* goog/global segs)
       (throw (js/Error. (str "find-ns-obj not supported for target " *target*))))))
 
 (defn ns-interns*
