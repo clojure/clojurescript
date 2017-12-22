@@ -753,7 +753,7 @@
                        (core/or (core/true? default) (core/false? default)) "boolean")]
     `(do
        (declare ~(core/vary-meta sym
-                   (fn [m]
+                   (core/fn [m]
                      (core/cond-> m
                        (core/not (core/contains? m :tag))
                        (core/assoc :tag (core/symbol type))
