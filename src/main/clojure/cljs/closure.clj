@@ -2176,7 +2176,7 @@
       (contains? opts :modules)
       (ensure-module-opts)
 
-      (contains? opts :stable-names)
+      (:stable-names opts)
       (->> (merge
              {:closure-variable-map-in  (io/file output-dir "closure_var.map")
               :closure-variable-map-out (io/file output-dir "closure_var.map")
