@@ -1294,10 +1294,12 @@
 (defn write-variable-maps [^Result result opts]
   (let [var-out (:closure-variable-map-out opts)]
     (when-let [var-map (and var-out (.-variableMap result))]
+      (util/mkdirs var-out)
       (io/copy (ByteArrayInputStream. (.toBytes var-map))
         (io/file var-out))))
   (let [prop-out (:closure-variable-map-out opts)]
     (when-let [prop-map (and prop-out (.-propertyMap result))]
+      (util/mkdirs prop-out)
       (io/copy (ByteArrayInputStream. (.toBytes prop-map))
         (io/file prop-out)))))
 
