@@ -169,7 +169,7 @@
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
-    :stable-names})
+    :stable-names :ignore-js-module-exts})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -2183,7 +2183,10 @@
              {:closure-variable-map-in  (io/file output-dir "closure_var.map")
               :closure-variable-map-out (io/file output-dir "closure_var.map")
               :closure-property-map-in  (io/file output-dir "closure_prop.map")
-              :closure-property-map-out (io/file output-dir "closure_prop.map")})))))
+              :closure-property-map-out (io/file output-dir "closure_prop.map")}))
+
+      (nil? (:ignore-js-module-exts opts))
+      (assoc :ignore-js-module-exts [".css"]))))
 
 (defn- alive? [proc]
   (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
@@ -2442,8 +2445,13 @@
                              (map (fn [lib]
                                     (let [js (deps/load-foreign-library lib)
                                           url (str (deps/-url js opts))]
-                                      (if (and url (not (or (.endsWith url ".js") (.endsWith url ".json"))))
-                                        (assoc js :source "")
+                                      (if (and url (some (fn [ext]
+                                                           (.endsWith url ext))
+                                                         (:ignore-js-module-exts opts)))
+                                        (do
+                                          (when (or ana/*verbose* (:verbose opts))
+                                            (util/debug-prn "Ignoring JS module" url "based on the file extension"))
+                                          (assoc js :source ""))
                                         (assoc js :source (deps/-source js opts))))))
                              (map (fn [js]
                                     (if (:preprocess js)
