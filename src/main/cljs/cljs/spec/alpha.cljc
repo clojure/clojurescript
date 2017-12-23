@@ -436,7 +436,9 @@
                  :sym symbol?)
     :ret symbol?)"
   [fn-sym & specs]
-  (swap! _speced_vars conj (ns-qualify &env fn-sym))
+  (swap! _speced_vars conj
+    (vary-meta (ns-qualify &env fn-sym)
+      assoc :fdef-ns (-> &env :ns :name)))
   `(cljs.spec.alpha/def ~fn-sym (fspec ~@specs)))
 
 (defmacro keys*

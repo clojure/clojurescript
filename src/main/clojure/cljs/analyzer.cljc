@@ -3895,13 +3895,22 @@
   environment."
   [ns]
   (let [spec-vars (get-spec-vars)
-        ns-str (str ns)]
+        ns-str    (str ns)]
     (swap! env/*compiler* update-in [::namespaces ns]
       merge
       (when-let [registry-ref (:registry-ref spec-vars)]
-        {:cljs.spec/registry-ref (into [] (filter (fn [[k _]] (= ns-str (namespace k)))) @@registry-ref)})
+        {:cljs.spec/registry-ref
+         (into []
+           (filter (fn [[k _]] (= ns-str (namespace k))))
+           @@registry-ref)})
       (when-let [speced-vars (:speced-vars spec-vars)]
-        {:cljs.spec/speced-vars  (into [] (filter #(= ns-str (namespace %))) @@speced-vars)}))))
+        {:cljs.spec/speced-vars
+         (into []
+           (filter
+             (fn [v]
+               (or (= ns-str (namespace v))
+                   (= ns (-> v meta :fdef-ns)))))
+           @@speced-vars)}))))
 
 (defn register-specs
   "Registers speced vars found in a namespace analysis cache."
