@@ -1297,7 +1297,7 @@
       (util/mkdirs var-out)
       (io/copy (ByteArrayInputStream. (.toBytes var-map))
         (io/file var-out))))
-  (let [prop-out (:closure-variable-map-out opts)]
+  (let [prop-out (:closure-property-map-out opts)]
     (when-let [prop-map (and prop-out (.-propertyMap result))]
       (util/mkdirs prop-out)
       (io/copy (ByteArrayInputStream. (.toBytes prop-map))
@@ -2179,11 +2179,16 @@
       (ensure-module-opts)
 
       (:stable-names opts)
-      (->> (merge
-             {:closure-variable-map-in  (io/file output-dir "closure_var.map")
-              :closure-variable-map-out (io/file output-dir "closure_var.map")
-              :closure-property-map-in  (io/file output-dir "closure_prop.map")
-              :closure-property-map-out (io/file output-dir "closure_prop.map")}))
+      (as-> opts
+        (let [out-dir (if (true? (:stable-names opts))
+                        output-dir
+                        (:stable-names opts))]
+          (merge
+            {:closure-variable-map-in  (io/file out-dir "closure_var.map")
+             :closure-variable-map-out (io/file out-dir "closure_var.map")
+             :closure-property-map-in  (io/file out-dir "closure_prop.map")
+             :closure-property-map-out (io/file out-dir "closure_prop.map")}
+            opts)))
 
       (nil? (:ignore-js-module-exts opts))
       (assoc :ignore-js-module-exts [".css"]))))
