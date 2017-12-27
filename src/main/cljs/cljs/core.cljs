@@ -5611,7 +5611,8 @@ reduces them without incurring seq initialization"
   IReversible
   (-rseq [coll]
     (if (pos? cnt)
-      (RSeq. coll (dec cnt) nil)))
+      (RSeq. coll (dec cnt) nil)
+      ()))
 
   IIterable
   (-iterator [this]

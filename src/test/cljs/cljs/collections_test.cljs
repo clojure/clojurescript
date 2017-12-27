@@ -52,7 +52,6 @@
         (is (= (nth pv 96) 96))
         (is (= (nth pv 97 nil) nil))
         (is (= (pv 96) 96))
-        (is (nil? (rseq [])))
         (is (= (reverse pv) (rseq pv)))))
     (let [pv (vec (range 33))]
       (testing "pop"
@@ -930,3 +929,6 @@
     (is (= (find (hash-map :a false) :a) [:a false]))
     (is (= (find (zipmap (range 1000) (repeat :foo)) 999) [999 :foo]))
     (is (= (find (zipmap (range 1000) (repeat :foo)) 1000) nil))))
+
+(deftest test-cljs-2452
+  (is (= (reverse []) ())))
