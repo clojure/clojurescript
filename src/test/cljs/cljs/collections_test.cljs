@@ -52,7 +52,8 @@
         (is (= (nth pv 96) 96))
         (is (= (nth pv 97 nil) nil))
         (is (= (pv 96) 96))
-        (is (= (reverse pv) (rseq pv)))))
+        (is (= (reverse pv) (rseq pv)))
+        (is (nil? (rseq [])))))
     (let [pv (vec (range 33))]
       (testing "pop"
         (is (= pv (-> pv pop pop (conj 31) (conj 32))))))
