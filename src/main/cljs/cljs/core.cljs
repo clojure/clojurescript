@@ -3157,7 +3157,9 @@ reduces them without incurring seq initialization"
 (defn reverse
   "Returns a seq of the items in coll in reverse order. Not lazy."
   [coll]
-  (reduce conj () coll))
+  (if (reversible? coll)
+    (or (rseq coll) ())
+    (reduce conj () coll)))
 
 (defn list
   "Creates a new list containing the items."
