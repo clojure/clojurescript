@@ -7001,7 +7001,13 @@ reduces them without incurring seq initialization"
           (doto arr .pop .pop)
           (set! len (- len 2)))
         tcoll)
-      (throw (js/Error. "dissoc! after persistent!")))))
+      (throw (js/Error. "dissoc! after persistent!"))))
+  
+  IFn
+  (-invoke [tcoll key]
+    (-lookup tcoll key nil))
+  (-invoke [tcoll key not-found]
+    (-lookup tcoll key not-found)))
 
 (declare TransientHashMap)
 
@@ -8013,7 +8019,13 @@ reduces them without incurring seq initialization"
   (-assoc! [tcoll key val] (.assoc! tcoll key val))
 
   ITransientMap
-  (-dissoc! [tcoll key] (.without! tcoll key)))
+  (-dissoc! [tcoll key] (.without! tcoll key))
+
+  IFn
+  (-invoke [tcoll key]
+    (-lookup tcoll key))
+  (-invoke [tcoll key not-found]
+    (-lookup tcoll key not-found)))
 
 ;;; PersistentTreeMap
 

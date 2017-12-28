@@ -933,3 +933,17 @@
 
 (deftest test-cljs-2452
   (is (= (reverse []) ())))
+
+(deftest test-cljs-1743
+  (testing "TransientArrayMap as an invokable function"
+    (let [tam (transient (array-map :a 1 :b 2))]
+      (is (= (tam :a) 1))
+      (is (= (tam :a :not-found) 1))
+      (is (= (tam :x) nil))
+      (is (= (tam :x :not-found) :not-found))))
+  (testing "TransientHashMap as an invokable function"
+    (let [thm (transient (hash-map :a 1 :b 2))]
+      (is (= (thm :a) 1))
+      (is (= (thm :a :not-found) 1))
+      (is (= (thm :x) nil))
+      (is (= (thm :x :not-found) :not-found)))))
