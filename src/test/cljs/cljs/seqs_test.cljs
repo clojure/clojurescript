@@ -203,3 +203,10 @@
       (is (= :not-found (nth (seq (array 0 1 2 3 4 5)) 6 :not-found)))
       (is (thrown? js/Error (nth (seq (array 0 1 2 3 4 5)) -1)))
       (is (= :not-found (nth (seq (array 0 1 2 3 4 5)) -1 :not-found))))))
+
+(deftest test-cljs-2131
+  (testing "calling empty on a ChunkedSeq returns an empty list"
+    (let [small-vec [1 2 3]
+          big-vec   (into [] (range 1000))]
+      (is (identical? (empty (seq small-vec)) ()))
+      (is (identical? (empty (seq big-vec))   ())))))

@@ -5712,7 +5712,7 @@ reduces them without incurring seq initialization"
 
   IEmptyableCollection
   (-empty [coll]
-    (-with-meta (.-EMPTY PersistentVector) meta))
+    ())
 
   IChunkedSeq
   (-chunked-first [coll]
