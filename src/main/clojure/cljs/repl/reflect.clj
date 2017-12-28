@@ -37,8 +37,9 @@
           (update-in [:name] str)
           (update-in [:method-params] #(str (vec %)))))))
 
-(defn macroexpand [form]
+(defn macroexpand
   "Fully expands a cljs macro form."
+  [form]
   (let [mform (analyzer/macroexpand-1 {} form)]
     (if (identical? form mform)
       mform

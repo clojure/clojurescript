@@ -1943,13 +1943,15 @@
 (defn absolute-parent [path]
   (.getParent (.getAbsoluteFile (io/file path))))
 
-(defn in-same-dir? [path-1 path-2]
+(defn in-same-dir?
   "Checks that path-1 and path-2 are siblings in the same logical directory."
+  [path-1 path-2]
   (= (absolute-parent path-1)
      (absolute-parent path-2)))
 
-(defn same-or-subdirectory-of? [dir path]
+(defn same-or-subdirectory-of?
   "Checks that path names a file or directory that is the dir or a subdirectory there of."
+  [dir path]
   (let [dir-path  (.getAbsolutePath (io/file dir))
         path-path (.getAbsolutePath (io/file path))]
     (.startsWith path-path dir-path)))
@@ -1969,8 +1971,9 @@
                     (pr-str output-dir))))
   true)
 
-(defn check-source-map [{:keys [output-to source-map output-dir optimizations] :as opts}]
+(defn check-source-map
   "When :source-map is specified in opts, "
+  [{:keys [output-to source-map output-dir optimizations] :as opts}]
   (when (and (contains? opts :source-map)
              (:source-map opts)
              (not (= optimizations :none)))
