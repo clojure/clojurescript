@@ -1503,6 +1503,19 @@
 (deftest test-cljs-2283
   (is (nil? (doseq []))))
 
+(deftest test-cljs-2453
+  (is (= (re-seq #"[Bc]?" "aBcD") '("" "B" "c" "" "")))
+  (is (= (re-seq #"[BcD]?$" "aBcD") '("D" "")))
+  (is (= (map first (re-seq #"(\d+)" "ClojureScript 1.9.222")) '("1" "9" "222")))
+  (is (= (re-seq #"\d+" "a1b2c3d") '("1" "2" "3")))
+  (is (= (re-seq #"\d?" "a1b2c3d") '("" "1" "" "2" "" "3" "" "")))
+  (is (= (re-seq #"\d*" "a1b2c3d") '("" "1" "" "2" "" "3" "" "")))
+  (is (= (re-seq #"\d+" "a1b22c333d") '("1" "22" "333")))
+  (is (= (re-seq #"\d?" "a1b22c333d") '("" "1" "" "2" "2" "" "3" "3" "3" "" "")))
+  (is (= (re-seq #"\d*" "a1b22c333d") '("" "1" "" "22" "" "333" "" "")))
+  (is (= (re-seq #"\w+" "once upon a time") '("once" "upon" "a" "time")))
+  (is (nil? (re-seq #"\w+" ""))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
