@@ -1516,6 +1516,10 @@
   (is (= (re-seq #"\w+" "once upon a time") '("once" "upon" "a" "time")))
   (is (nil? (re-seq #"\w+" ""))))
 
+(deftest test-cljs-2001
+  (is (map-entry? (MapEntry. :key :val)))
+  (is (not (map-entry? [:key :val]))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))

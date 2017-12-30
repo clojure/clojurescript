@@ -6637,6 +6637,11 @@ reduces them without incurring seq initialization"
   (-invoke [node k not-found]
     (-nth node k not-found)))
 
+(defn ^boolean map-entry?
+  "Returns true if x is a map entry"
+  [x]
+  (instance? MapEntry x))
+
 (deftype PersistentArrayMapSeq [arr i _meta]
   Object
   (toString [coll]
