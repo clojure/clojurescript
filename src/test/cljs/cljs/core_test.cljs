@@ -1499,6 +1499,17 @@
   (is (map-entry? (MapEntry. :key :val 0)))
   (is (not (map-entry? [:key :val]))))
 
+(deftype Foo2455 []
+  ISequential)
+
+(deftest test-cljs-2455
+  (is (= :x (nth (eduction [:x]) 0)))
+  (is (thrown-with-msg? js/Error #"Index out of bounds" (nth (eduction [:x]) 1)))
+  (is (= :x (nth (eduction [:x]) 0 :not-found)))
+  (is (= :not-found (nth (eduction [:x]) 1 :not-found)))
+  ;; Calling nth on a type satisfying ISequential should attempt coercion
+  (is (thrown-with-msg? js/Error #".* is not ISeqable" (nth (->Foo2455) 0))))
+
 (deftest test-cljs-2457
   (is (thrown-with-msg? js/Error #".* is not ISeqable" (seq #js {:a 1 :b 2}))))
 

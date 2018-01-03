@@ -1853,7 +1853,8 @@ reduces them without incurring seq initialization"
         (.charAt coll n)
         (throw (js/Error. "Index out of bounds")))
 
-      (implements? ISeq coll)
+      (or (implements? ISeq coll)
+          (implements? ISequential coll))
       (linear-traversal-nth coll n)
 
       (native-satisfies? IIndexed coll)
@@ -1883,7 +1884,8 @@ reduces them without incurring seq initialization"
         (.charAt coll n)
         not-found)
 
-      (implements? ISeq coll)
+      (or (implements? ISeq coll)
+          (implements? ISequential coll))
       (linear-traversal-nth coll n not-found)
 
       (native-satisfies? IIndexed coll)
