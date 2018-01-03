@@ -728,27 +728,6 @@
 (deftest test-518
   (is (nil? (:test "test"))))
 
-;; r1798 core fn protocol regression
-(extend-type object
-  ISeqable
-  (-seq [coll]
-    (map #(vector % (aget coll %)) (js-keys coll)))
-
-  ILookup
-  (-lookup
-    ([coll k]
-     (-lookup coll k nil))
-    ([coll k not-found]
-     (if-let [v (aget coll k)]
-       v
-       not-found))))
-
-(deftest test-extend-to-object
-  (is (= (seq (js-obj "foo" 1 "bar" 2)) '(["foo" 1] ["bar" 2])))
-  (is (= (get (js-obj "foo" 1) "foo") 1))
-  (is (= (get (js-obj "foo" 1) "bar" ::not-found) ::not-found))
-  (is (= (reduce (fn [s [k v]] (+ s v)) 0 (js-obj "foo" 1 "bar" 2)) 3)))
-
 (deftest test-541
   (letfn [(f! [x] (print \f) x)
           (g! [x] (print \g) x)]
@@ -1519,6 +1498,9 @@
 (deftest test-cljs-2001
   (is (map-entry? (MapEntry. :key :val)))
   (is (not (map-entry? [:key :val]))))
+
+(deftest test-cljs-2457
+  (is (thrown-with-msg? js/Error #".* is not ISeqable" (seq #js {:a 1 :b 2}))))
 
 (comment
   ;; ObjMap

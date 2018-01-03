@@ -44,7 +44,8 @@
             [cljs.test-test]
             [static.core-test]
             [cljs.recur-test]
-            [cljs.array-access-test]))
+            [cljs.array-access-test]
+            [cljs.extend-to-object-test]))
 
 (set! *print-newline* false)
 (set-print-fn! js/print)
@@ -86,4 +87,5 @@
   'cljs.test-test
   'static.core-test
   'cljs.recur-test
-  'cljs.array-access-test)
+  'cljs.array-access-test
+  'cljs.extend-to-object-test)
