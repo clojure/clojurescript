@@ -947,3 +947,23 @@
       (is (= (thm :a :not-found) 1))
       (is (= (thm :x) nil))
       (is (= (thm :x :not-found) :not-found)))))
+
+(deftest test-cljs-2456
+  (testing "Maps"
+    (testing "PersistentArrayMap"
+      (let [pam (array-map :a 1 :b 2 :c 3)]
+        (is (map-entry? (first pam)))
+        (is (every? map-entry? pam))
+        (is (map-entry? (find pam :a)))
+        (is (map-entry? (.next (-iterator pam))))))
+    (testing "PersistentHashMap"
+      (let [phm (hash-map :a 1 :b 2 :c 3)]
+        (is (map-entry? (first phm)))
+        (is (every? map-entry? phm))
+        (is (map-entry? (find phm :a)))
+        (is (map-entry? (.next (-iterator phm)))))))
+  (testing "Vectors"
+    (testing "PersistentVector"
+      (is (map-entry? (find [0 1 2] 0))))
+    (testing "MapEntry"
+      (is (map-entry? (find (MapEntry. :key :val nil) 0))))))

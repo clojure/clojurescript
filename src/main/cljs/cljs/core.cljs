@@ -1945,7 +1945,7 @@ reduces them without incurring seq initialization"
         :else not-found)
       not-found)))
 
-(declare PersistentHashMap PersistentArrayMap)
+(declare PersistentHashMap PersistentArrayMap MapEntry)
 
 (defn assoc
   "assoc[iate]. When applied to a map, returns a new map of the
@@ -2322,7 +2322,7 @@ reduces them without incurring seq initialization"
     (when (and (not (nil? coll))
             (associative? coll)
             (contains? coll k))
-      [k (get coll k)])))
+      (MapEntry. k (get coll k) nil))))
 
 (defn ^boolean distinct?
   "Returns true if no two of the arguments are ="
@@ -5547,7 +5547,7 @@ reduces them without incurring seq initialization"
   IFind
   (-find [coll n]
     (when (and (<= 0 n) (< n cnt))
-      [n (aget (unchecked-array-for coll n) (bit-and n 0x01f))]))
+      (MapEntry. n (aget (unchecked-array-for coll n) (bit-and n 0x01f)) nil)))
 
   APersistentVector
   IVector
@@ -5841,7 +5841,7 @@ reduces them without incurring seq initialization"
     (when-not (neg? n)
       (let [idx (+ start n)]
         (when (< idx end)
-          [n (-lookup v idx)]))))
+          (MapEntry. n (-lookup v idx) nil)))))
 
   IVector
   (-assoc-n [coll n val]
@@ -6387,7 +6387,7 @@ reduces them without incurring seq initialization"
   (-find [coll k]
     (when (and ^boolean (goog/isString k)
             (not (nil? (scan-array 1 k keys))))
-      [k (unchecked-get strobj k)]))
+      (MapEntry. k (unchecked-get strobj k) nil)))
 
   IKVReduce
   (-kv-reduce [coll f init]
@@ -6617,8 +6617,8 @@ reduces them without incurring seq initialization"
   IFind
   (-find [node k]
     (case k
-      0 [0 key]
-      1 [1 val]
+      0 (MapEntry. 0 key nil)
+      1 (MapEntry. 1 val nil)
       nil))
 
   IVector
@@ -6689,7 +6689,7 @@ reduces them without incurring seq initialization"
 
   ISeq
   (-first [coll]
-    [(aget arr i) (aget arr (inc i))])
+    (MapEntry. (aget arr i) (aget arr (inc i)) nil))
 
   (-rest [coll]
     (if (< i (- (alength arr) 2))
@@ -6718,7 +6718,7 @@ reduces them without incurring seq initialization"
   (hasNext [_]
     (< i cnt))
   (next [_]
-    (let [ret [(aget arr i) (aget arr (inc i))]]
+    (let [ret (MapEntry. (aget arr i) (aget arr (inc i)) nil)]
       (set! i (+ i 2))
       ret)))
 
@@ -6838,7 +6838,7 @@ reduces them without incurring seq initialization"
   (-find [coll k]
     (let [idx (array-map-index-of coll k)]
       (when-not (== idx -1)
-        [(aget arr idx) (aget arr (inc idx))])))
+        (MapEntry. (aget arr idx) (aget arr (inc idx)) nil))))
 
   IMap
   (-dissoc [coll k]
@@ -7100,7 +7100,7 @@ reduces them without incurring seq initialization"
                 node-or-val (aget arr (inc i))
                 ^boolean found
                 (cond (some? key)
-                      (set! next-entry [key node-or-val])
+                      (set! next-entry (MapEntry. key node-or-val nil))
                       (some? node-or-val)
                       (let [new-iter (-iterator node-or-val)]
                         (if ^boolean (.hasNext new-iter)
@@ -7212,7 +7212,7 @@ reduces them without incurring seq initialization"
               key-or-nil  (aget arr (* 2 idx))
               val-or-node (aget arr (inc (* 2 idx)))]
           (cond (nil? key-or-nil) (.inode-find val-or-node (+ shift 5) hash key not-found)
-                (key-test key key-or-nil)          [key-or-nil val-or-node]
+                (key-test key key-or-nil)          (MapEntry. key-or-nil val-or-node nil)
                 :else not-found)))))
 
   (inode-seq [inode]
@@ -7510,7 +7510,7 @@ reduces them without incurring seq initialization"
   (inode-find [inode shift hash key not-found]
     (let [idx (hash-collision-node-find-index arr cnt key)]
       (cond (< idx 0)              not-found
-            (key-test key (aget arr idx)) [(aget arr idx) (aget arr (inc idx))]
+            (key-test key (aget arr idx)) (MapEntry. (aget arr idx) (aget arr (inc idx)) nil)
             :else                  not-found)))
 
   (inode-seq [inode]
@@ -7624,7 +7624,7 @@ reduces them without incurring seq initialization"
   ISeq
   (-first [coll]
     (if (nil? s)
-      [(aget nodes i) (aget nodes (inc i))]
+      (MapEntry. (aget nodes i) (aget nodes (inc i)) nil)
       (first s)))
 
   (-rest [coll]
@@ -7856,7 +7856,7 @@ reduces them without incurring seq initialization"
   IFind
   (-find [coll k]
     (cond
-      (nil? k) (when has-nil? [nil nil-val])
+      (nil? k) (when has-nil? (MapEntry. nil nil-val nil))
       (nil? root) nil
       :else (.inode-find root 0 (hash k) k nil)))
 
@@ -8313,8 +8313,8 @@ reduces them without incurring seq initialization"
   IFind
   (-find [node k]
     (case k
-      0 [0 key]
-      1 [1 val]
+      0 (MapEntry. 0 key nil)
+      1 (MapEntry. 1 val nil)
       nil))
 
   IVector
@@ -8474,8 +8474,8 @@ reduces them without incurring seq initialization"
   IFind
   (-find [node k]
     (case k
-      0 [0 key]
-      1 [1 val]
+      0 (MapEntry. 0 key nil)
+      1 (MapEntry. 1 val nil)
       nil))
 
   IVector
@@ -9009,7 +9009,7 @@ reduces them without incurring seq initialization"
     (.hasNext iter))
   (next [_]
     (if ^boolean (.hasNext iter)
-      (aget (.-tail (.next iter)) 0)
+      (.-key (.next iter))
       (throw (js/Error. "No such element"))))
   (remove [_] (js/Error. "Unsupported operation")))
 
