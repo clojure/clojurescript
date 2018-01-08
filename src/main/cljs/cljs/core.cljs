@@ -10169,6 +10169,9 @@ reduces them without incurring seq initialization"
   RedNode
   (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
 
+  MapEntry
+  (-pr-writer [coll writer opts] (pr-sequential-writer writer pr-writer "[" " " "]" opts coll))
+
   ObjMap
   (-pr-writer [coll writer opts]
     (print-map coll pr-writer writer opts))

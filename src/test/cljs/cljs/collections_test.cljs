@@ -898,6 +898,11 @@
     (let [map (sorted-map nil :foo)]
       (is (= (find map nil) [nil :foo])))))
 
+(deftest cljs-2460
+  (is (= "[:a 1]" (pr-str (->MapEntry :a 1 nil))))
+  (binding [*print-length* 1]
+    (is (= "[:a ...]" (pr-str (->MapEntry :a 1 nil))))))
+
 (deftype CustomVectorThing [v]
   ;; Subvec expects its argument to implement IVector.
   ;; Note, that this method is never actually called.
