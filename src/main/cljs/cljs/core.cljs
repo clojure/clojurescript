@@ -5902,7 +5902,7 @@ reduces them without incurring seq initialization"
    (subvec v start (count v)))
   ([v start end]
    (assert (and (not (nil? start)) (not (nil? end))))
-   (build-subvec nil v start end nil)))
+   (build-subvec nil v (int start) (int end) nil)))
 
 (defn- tv-ensure-editable [edit node]
   (if (identical? edit (.-edit node))

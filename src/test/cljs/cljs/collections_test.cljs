@@ -939,6 +939,10 @@
 (deftest test-cljs-2452
   (is (= (reverse []) ())))
 
+(deftest test-cljs-2462
+  (is (= 1 (count (subvec [1 2] 0 1.5))))
+  (is (= [1 2 3] (subvec [0 1 2 3 4 5] 1.2 4.7))))
+
 (deftest test-cljs-2478
   (is (not (map-entry? [:a 1])))
   (is (= {:a 1 :b 2 :c 3} (into (hash-map :a 1) [[:b 2] [:c 3]])))
