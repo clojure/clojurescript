@@ -3555,6 +3555,7 @@
                    (nil? form) 'clj-nil
                    (number? form) 'number
                    (string? form) 'string
+                   (instance? Character form) 'string
                    (true? form) 'boolean
                    (false? form) 'boolean)]
          (cond-> {:op :constant :env env :form form}

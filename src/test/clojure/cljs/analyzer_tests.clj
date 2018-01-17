@@ -189,6 +189,9 @@
            (:tag (a/analyze test-env '"foo")))
          'string))
   (is (= (e/with-compiler-env test-cenv
+           (:tag (a/analyze test-env '\a)))
+        'string))
+  (is (= (e/with-compiler-env test-cenv
            (:tag (a/analyze test-env '(make-array 10))))
          'array))
   (is (= (e/with-compiler-env test-cenv
