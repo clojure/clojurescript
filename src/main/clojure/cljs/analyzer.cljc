@@ -3879,8 +3879,9 @@
    (defn- get-spec-vars
      []
      (when-let [spec-ns (find-ns 'cljs.spec.alpha)]
-       {:registry-ref (ns-resolve spec-ns 'registry-ref)
-        :speced-vars  (ns-resolve spec-ns '_speced_vars)}))
+       (locking load-mutex
+         {:registry-ref (ns-resolve spec-ns 'registry-ref)
+          :speced-vars  (ns-resolve spec-ns '_speced_vars)})))
    :cljs
    (let [registry-ref (delay (get (ns-interns* 'cljs.spec.alpha$macros) 'registry-ref))
          ;; Here, we look up the symbol '-speced-vars because ns-interns*
