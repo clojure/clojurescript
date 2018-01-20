@@ -3397,7 +3397,7 @@ reduces them without incurring seq initialization"
     (not fn))
 
   IWithMeta
-  (-with-meta [coll meta] (LazySeq. meta fn s __hash))
+  (-with-meta [coll meta] (LazySeq. meta #(-seq coll) nil __hash))
 
   IMeta
   (-meta [coll] meta)

@@ -981,3 +981,16 @@
       (is (map-entry? (find [0 1 2] 0))))
     (testing "MapEntry"
       (is (map-entry? (find (MapEntry. :key :val nil) 0))))))
+
+(deftest test-cljs-2474
+  (let [rand-seq (fn rand-seq [] (lazy-seq (cons (rand) (rand-seq))))
+        xs (rand-seq)
+        ys (with-meta xs {:foo 1})]
+    (is (not (realized? xs)))
+    (is (not (realized? ys)))
+    (is (= (take 3 xs) (take 3 ys))))
+  (let [xs (lazy-seq)
+        ys (with-meta xs {:foo 1})]
+    (is (not (realized? xs)))
+    (is (not (realized? ys)))
+    (is (= () xs ys))))
