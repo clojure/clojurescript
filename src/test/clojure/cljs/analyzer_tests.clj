@@ -820,6 +820,15 @@
       (a/analyze-file (io/file "src/test/cljs_build/analyzer_test/no_defs.cljs"))))
   (is (= {} (get-in @test-cenv [::a/namespaces 'analyzer-test.no-defs :defs]))))
 
+(deftest test-cljs-2476
+  (doseq [invalid-try-recur-form '[(loop [] (try (recur)))
+                                   (loop [] (try (catch js/Error t (recur))))
+                                   (loop [] (try (catch :default t (recur))))
+                                   (loop [] (try (finally (recur))))]]
+    (is (thrown-with-msg? Exception
+          #"Can't recur here"
+          (a/analyze test-env invalid-try-recur-form)))))
+
 (comment
   (binding [a/*cljs-ns* a/*cljs-ns*]
     (a/no-warn

@@ -1421,7 +1421,7 @@
             parser))
 
         finally (when (seq fblock)
-                  (analyze (assoc env :context :statement) `(do ~@(rest fblock))))
+                  (disallowing-recur (analyze (assoc env :context :statement) `(do ~@(rest fblock)))))
         e (when (or (seq cblocks) dblock) (gensym "e"))
         default (if-let [[_ _ name & cb] dblock]
                   `(cljs.core/let [~name ~e] ~@cb)
@@ -1444,8 +1444,8 @@
                          :column (get-col e env)})
                  locals)
         catch (when cblock
-                (analyze (assoc catchenv :locals locals) cblock))
-        try (analyze (if (or e finally) catchenv env) `(do ~@body))]
+                (disallowing-recur (analyze (assoc catchenv :locals locals) cblock)))
+        try (disallowing-recur (analyze (if (or e finally) catchenv env) `(do ~@body)))]
 
     {:env env :op :try :form form
      :try try

@@ -656,14 +656,23 @@
     (when (and (seq deps) emit-nil-result?)
       (.append sb "null;"))))
 
+(defn- trampoline-safe
+  "Returns a new function that calls f but discards any return value,
+  returning nil instead, thus avoiding any inadvertent trampoline continuation
+  if a function happens to be returned."
+  [f]
+  (comp (constantly nil) f))
+
 (defn- analyze-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
+        cb         (trampoline-safe cb)
         eof        (js-obj)
         aenv       (ana/empty-env)
         the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
-    ((fn analyze-loop [last-ast ns]
+    (trampoline
+     (fn analyze-loop [last-ast ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  ana/*cljs-ns*          ns
                  ana/*checked-arrays*   (:checked-arrays opts)
@@ -699,12 +708,12 @@
                      (cb res)
                      (let [ast (:value res)]
                        (if (#{:ns :ns*} (:op ast))
-                         (ns-side-effects bound-vars aenv ast opts
+                         ((trampoline-safe ns-side-effects) bound-vars aenv ast opts
                            (fn [res]
                              (if (:error res)
                                (cb res)
-                               (analyze-loop ast (:name ast)))))
-                         (recur ast ns)))))
+                               (trampoline analyze-loop ast (:name ast)))))
+                         #(analyze-loop ast ns)))))
                  (cb {:value last-ast}))))))) nil the-ns)))
 
 (defn analyze-str
@@ -883,13 +892,15 @@
 
 (defn- compile-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
+        cb         (trampoline-safe cb)
         eof        (js-obj)
         aenv       (ana/empty-env)
         sb         (StringBuffer.)
         the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
-    ((fn compile-loop [ns]
+    (trampoline
+     (fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
@@ -928,7 +939,7 @@
                                                [node-libs (assoc ast :deps libs-to-load)])
                                              [nil ast])]
                        (if (#{:ns :ns*} (:op ast))
-                         (ns-side-effects bound-vars aenv ast opts
+                         ((trampoline-safe ns-side-effects) bound-vars aenv ast opts
                            (fn [res]
                              (if (:error res)
                                (cb res)
@@ -936,10 +947,10 @@
                                  (.append sb (with-out-str (comp/emit (:value res))))
                                  (when-not (nil? node-deps)
                                    (node-side-effects bound-vars sb node-deps ns-name (:def-emits-var opts)))
-                                 (compile-loop (:name ast))))))
+                                 (trampoline compile-loop (:name ast))))))
                          (do
                            (.append sb (with-out-str (comp/emit ast)))
-                           (recur ns))))))
+                           #(compile-loop ns))))))
                  (do
                    (when (:source-map opts)
                      (append-source-map env/*compiler*
@@ -1013,6 +1024,7 @@
 
 (defn- eval-str* [bound-vars source name opts cb]
   (let [rdr        (rt/indexing-push-back-reader source 1 name)
+        cb         (trampoline-safe cb)
         eof        (js-obj)
         aenv       (ana/empty-env)
         sb         (StringBuffer.)
@@ -1021,7 +1033,8 @@
                      (:source-map opts) (assoc :*sm-data* (sm-data)))
         aname      (cond-> name (:macros-ns opts) ana/macro-ns-name)]
     (when (:verbose opts) (debug-prn "Evaluating" name))
-    ((fn compile-loop [ns]
+    (trampoline
+     (fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
                  *eval-fn*              (:*eval-fn* bound-vars)
                  ana/*cljs-ns*          ns
@@ -1065,7 +1078,7 @@
                         (do
                           (.append sb
                             (with-out-str (comp/emitln (str "goog.provide(\"" (comp/munge (:name ast)) "\");"))))
-                          (ns-side-effects true bound-vars aenv ast opts
+                          ((trampoline-safe ns-side-effects) true bound-vars aenv ast opts
                             (fn [res]
                               (if (:error res)
                                 (cb res)
@@ -1076,11 +1089,11 @@
                                     (filter ana/dep-has-global-exports? (:deps ast))
                                     ns-name
                                     (:def-emits-var opts))
-                                  (compile-loop ns'))))))
+                                  (trampoline compile-loop ns'))))))
                         (do
                           (env/with-compiler-env (assoc @(:*compiler* bound-vars) :options opts)
                             (.append sb (with-out-str (comp/emit ast))))
-                          (recur ns'))))))
+                          #(compile-loop ns'))))))
                  (do
                    (when (:source-map opts)
                      (append-source-map env/*compiler*
@@ -1105,7 +1118,7 @@
                                                        (wrap-error (ana/error aenv "ERROR" cause))))]
                                            (cb res)))))]
                      (if-let [f (:cache-source opts)]
-                       (f evalm complete)
+                       ((trampoline-safe f) evalm complete)
                        (complete {:value nil}))))))))))
       (:*cljs-ns* bound-vars))))
 
