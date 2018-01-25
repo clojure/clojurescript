@@ -210,3 +210,9 @@
           big-vec   (into [] (range 1000))]
       (is (identical? (empty (seq small-vec)) ()))
       (is (identical? (empty (seq big-vec))   ())))))
+
+(defrecord Foo [a b])
+
+(deftest test-cljs-2482
+  (testing "seq on defrecord returns map entries"
+    (is (every? map-entry? (seq (->Foo 1 2))))))

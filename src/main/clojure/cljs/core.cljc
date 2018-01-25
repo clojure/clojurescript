@@ -1837,7 +1837,7 @@
                                                    (not-empty (dissoc ~'__extmap k#))
                                                    nil)))
                         'ISeqable
-                        `(~'-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
+                        `(~'-seq [this#] (seq (concat [~@(map #(core/list `MapEntry. (keyword %) % nil) base-fields)]
                                                 ~'__extmap)))
 
                         'IIterable
