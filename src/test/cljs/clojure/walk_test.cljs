@@ -35,3 +35,6 @@
     (is (= (-> (w/postwalk identity [1 (with-meta [1 2] {:foo 3})])
              (nth 1) meta)
           {:foo 3}))))
+
+(deftest test-map-entry
+  (is (= [:a 2] (clojure.walk/postwalk #(cond-> % (number? %) inc) (->MapEntry :a 1 nil)))))

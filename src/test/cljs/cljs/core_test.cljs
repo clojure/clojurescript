@@ -136,7 +136,9 @@
                 (js->clj (js* "[[{\"a\":1,\"b\":2}, {\"a\":1,\"b\":2}]]") :keywordize-keys true)))
       (is (= [[{:a 1, :b 2} {:a 1, :b 2}]]
                 (js->clj [[{:a 1, :b 2} {:a 1, :b 2}]])))
-      (is (= (js->clj nil) nil)))
+      (is (= (js->clj nil) nil))
+      (let [map-entry (->MapEntry #js {:foo 1} #js [1 2] nil)]
+        (is (= (->MapEntry {"foo" 1} [1 2] nil) (js->clj map-entry)))))
     (testing "clj->js"
       (is (= (clj->js 'a) "a"))
       (is (= (clj->js :a) "a"))

@@ -6584,7 +6584,7 @@ reduces them without incurring seq initialization"
   (-conj [node o] [key val o])
 
   IEmptyableCollection
-  (-empty [node] [])
+  (-empty [node] nil)
 
   ISequential
   ISeqable
@@ -8280,7 +8280,7 @@ reduces them without incurring seq initialization"
   (-conj [node o] [key val o])
 
   IEmptyableCollection
-  (-empty [node] [])
+  (-empty [node] nil)
 
   ISequential
   ISeqable
@@ -8441,7 +8441,7 @@ reduces them without incurring seq initialization"
   (-conj [node o] [key val o])
 
   IEmptyableCollection
-  (-empty [node] [])
+  (-empty [node] nil)
 
   ISequential
   ISeqable
@@ -10538,6 +10538,9 @@ reduces them without incurring seq initialization"
 
                 (seq? x)
                 (doall (map thisfn x))
+
+                (map-entry? x)
+                (MapEntry. (thisfn (key x)) (thisfn (val x)) nil)
 
                 (coll? x)
                 (into (empty x) (map thisfn x))
