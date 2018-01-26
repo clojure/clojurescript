@@ -604,11 +604,8 @@
        (with-gen* [_ gfn] (tuple-impl forms preds gfn))
        (describe* [_] `(tuple ~@forms))))))
 
-(defn- tagged-ret [v]
-  (specify! v
-    IMapEntry
-    (-key [_] (-nth v 0))
-    (-val [_] (-nth v 1))))
+(defn- tagged-ret [tag ret]
+  (MapEntry. tag ret nil))
 
 (defn ^:skip-wiki or-spec-impl
   "Do not call this directly, use 'or'"
@@ -624,8 +621,8 @@
                         (let [ret (conform* (specs 1) x)]
                           (if (invalid? ret)
                             ::invalid
-                            (tagged-ret [(keys 1) ret])))
-                        (tagged-ret [(keys 0) ret]))))
+                            (tagged-ret (keys 1) ret)))
+                        (tagged-ret (keys 0) ret))))
                 3 (fn [x]
                     (let [specs @specs
                           ret (conform* (specs 0) x)]
@@ -635,9 +632,9 @@
                             (let [ret (conform* (specs 2) x)]
                               (if (invalid? ret)
                                 ::invalid
-                                (tagged-ret [(keys 2) ret])))
-                            (tagged-ret [(keys 1) ret])))
-                        (tagged-ret [(keys 0) ret]))))
+                                (tagged-ret (keys 2) ret)))
+                            (tagged-ret (keys 1) ret)))
+                        (tagged-ret (keys 0) ret))))
                 (fn [x]
                   (let [specs @specs]
                     (loop [i 0]
@@ -646,7 +643,7 @@
                           (let [ret (conform* spec x)]
                             (if (invalid? ret)
                               (recur (inc i))
-                              (tagged-ret [(keys i) ret]))))
+                              (tagged-ret (keys i) ret))))
                         ::invalid)))))]
     (reify
       Specize
@@ -985,7 +982,7 @@
         (if (nil? pr)
           (if k1
             (if (accept? p1)
-              (accept (tagged-ret [k1 (:ret p1)]))
+              (accept (tagged-ret k1 (:ret p1)))
               ret)
             p1)
           ret)))))
@@ -1037,7 +1034,7 @@
       ::pcat (add-ret p0 ret k)
       ::alt (let [[[p0] [k0]] (filter-alt ps ks forms accept-nil?)
                   r (if (nil? p0) ::nil (preturn p0))]
-              (if k0 (tagged-ret [k0 r]) r)))))
+              (if k0 (tagged-ret k0 r) r)))))
 
 (defn- op-unform [p x]
   ;;(prn {:p p :x x})
