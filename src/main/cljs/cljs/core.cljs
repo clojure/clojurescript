@@ -5528,12 +5528,6 @@ reduces them without incurring seq initialization"
                                 (-nth coll k not-found)
                                 not-found))
 
-  IMapEntry
-  (-key [coll]
-    (-nth coll 0))
-  (-val [coll]
-    (-nth coll 1))
-
   IAssociative
   (-assoc [coll k v]
     (if (number? k)
@@ -6640,9 +6634,9 @@ reduces them without incurring seq initialization"
     (-nth node k not-found)))
 
 (defn ^boolean map-entry?
-  "Returns true if x is a map entry"
+  "Returns true if x satisfies IMapEntry"
   [x]
-  (instance? MapEntry x))
+  (implements? IMapEntry x))
 
 (deftype PersistentArrayMapSeq [arr i _meta]
   Object
@@ -6966,8 +6960,14 @@ reduces them without incurring seq initialization"
   ITransientCollection
   (-conj! [tcoll o]
     (if editable?
-      (if (satisfies? IMapEntry o)
+      (cond
+        (map-entry? o)
         (-assoc! tcoll (key o) (val o))
+
+        (vector? o)
+        (-assoc! tcoll (o 0) (o 1))
+
+        :else
         (loop [es (seq o) tcoll tcoll]
           (if-let [e (first es)]
             (recur (next es)
@@ -7933,8 +7933,14 @@ reduces them without incurring seq initialization"
   Object
   (conj! [tcoll o]
     (if edit
-      (if (satisfies? IMapEntry o)
+      (cond
+        (map-entry? o)
         (.assoc! tcoll (key o) (val o))
+
+        (vector? o)
+        (.assoc! tcoll (o 0) (o 1))
+
+        :else
         (loop [es (seq o) tcoll tcoll]
           (if-let [e (first es)]
             (recur (next es)
@@ -9912,7 +9918,7 @@ reduces them without incurring seq initialization"
           (-write writer "#js ")
           (print-map
             (map (fn [k]
-                   [(cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k)])
+                   (MapEntry. (cond-> k (some? (re-matches #"[A-Za-z_\*\+\?!\-'][\w\*\+\?!\-']*" k)) keyword) (unchecked-get obj k) nil))
               (js-keys obj))
             pr-writer writer opts))
 

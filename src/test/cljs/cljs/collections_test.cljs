@@ -934,6 +934,15 @@
 (deftest test-cljs-2452
   (is (= (reverse []) ())))
 
+(deftest test-cljs-2478
+  (is (not (map-entry? [:a 1])))
+  (is (= {:a 1 :b 2 :c 3} (into (hash-map :a 1) [[:b 2] [:c 3]])))
+  (is (= {:a 1 :b 2 :c 3} (into (hash-map :a 1) {:b 2 :c 3})))
+  (is (= {:a 1 :b 2 :c 3} (into (hash-map :a 1) (seq {:b 2 :c 3}))))
+  (is (= {:a 1 :b 2 :c 3} (into (array-map :a 1) [[:b 2] [:c 3]])))
+  (is (= {:a 1 :b 2 :c 3} (into (array-map :a 1) {:b 2 :c 3})))
+  (is (= {:a 1 :b 2 :c 3} (into (array-map :a 1) (seq {:b 2 :c 3})))))
+
 (deftest test-cljs-1743
   (testing "TransientArrayMap as an invokable function"
     (let [tam (transient (array-map :a 1 :b 2))]

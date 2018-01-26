@@ -139,7 +139,5 @@
     (map-entry-interface-tests (BlackNode. :key :val nil nil nil)))
   (testing "RedNode"
     (map-entry-interface-tests (RedNode. :key :val nil nil nil)))
-  (testing "Vector"
-    (map-entry-interface-tests [:key :val]))
   (testing "MapEntry"
     (map-entry-interface-tests (MapEntry. :key :val nil))))
