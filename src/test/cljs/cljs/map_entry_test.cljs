@@ -64,6 +64,10 @@
       (testing "-seq"
         (is (= (list :key :val) (-seq e)))))
 
+    (testing "IReversible"
+      (testing "-rseq"
+        (is (= (list :val :key) (-rseq e)))))
+
     (testing "ICounted"
       (testing "-count"
         (is (= 2 (-count e)))))

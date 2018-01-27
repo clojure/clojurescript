@@ -6584,6 +6584,9 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [node] (list key val))
 
+  IReversible
+  (-rseq [node] (list val key))
+
   ICounted
   (-count [node] 2)
 
@@ -8292,6 +8295,9 @@ reduces them without incurring seq initialization"
   ISeqable
   (-seq [node] (list key val))
 
+  IReversible
+  (-rseq [node] (list val key))
+
   ICounted
   (-count [node] 2)
 
@@ -8452,6 +8458,9 @@ reduces them without incurring seq initialization"
   ISequential
   ISeqable
   (-seq [node] (list key val))
+
+  IReversible
+  (-rseq [node] (list val key))
 
   ICounted
   (-count [node] 2)
