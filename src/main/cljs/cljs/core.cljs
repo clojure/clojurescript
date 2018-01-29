@@ -6582,10 +6582,10 @@ reduces them without incurring seq initialization"
 
   ISequential
   ISeqable
-  (-seq [node] (list key val))
+  (-seq [node] (IndexedSeq. #js [key val] 0 nil))
 
   IReversible
-  (-rseq [node] (list val key))
+  (-rseq [node] (IndexedSeq. #js [val key] 0 nil))
 
   ICounted
   (-count [node] 2)
@@ -8293,10 +8293,10 @@ reduces them without incurring seq initialization"
 
   ISequential
   ISeqable
-  (-seq [node] (list key val))
+  (-seq [node] (IndexedSeq. #js [key val] 0 nil))
 
   IReversible
-  (-rseq [node] (list val key))
+  (-rseq [node] (IndexedSeq. #js [val key] 0 nil))
 
   ICounted
   (-count [node] 2)
@@ -8457,10 +8457,10 @@ reduces them without incurring seq initialization"
 
   ISequential
   ISeqable
-  (-seq [node] (list key val))
+  (-seq [node] (IndexedSeq. #js [key val] 0 nil))
 
   IReversible
-  (-rseq [node] (list val key))
+  (-rseq [node] (IndexedSeq. #js [val key] 0 nil))
 
   ICounted
   (-count [node] 2)
