@@ -2491,11 +2491,11 @@
 (core/defmacro list
   ([]
    '(.-EMPTY cljs.core/List))
+  ([x]
+   `(cljs.core/List. nil ~x nil 1 nil))
   ([x & xs]
-   (if (= :constant (:op (cljs.analyzer/no-warn (cljs.analyzer/analyze &env x))))
-     `(-conj (list ~@xs) ~x)
-     `(let [x# ~x]
-        (-conj (list ~@xs) x#)))))
+   (core/let [cnt (core/inc (count xs))]
+     `(cljs.core/List. nil ~x (list ~@xs) ~cnt nil))))
 
 (core/defmacro vector
   ([] '(.-EMPTY cljs.core/PersistentVector))
