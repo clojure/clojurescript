@@ -13,24 +13,31 @@
             [cljs.env :as env])
   (:import [java.io StringReader]))
 
+(def ^:dynamic *cli-opts* nil)
+
 (defn repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] inits]
-  (repl/repl (repl-env)))
+  (repl/repl* (repl-env) *cli-opts*))
 
 (defn- eval-opt
   "Evals expressions in str, prints each non-nil result using prn"
   [repl-env str]
   ;; TODO: use forms-seq instead of read-string
   (env/ensure
-    (let [renv  (repl-env)
-          forms (ana-api/forms-seq (StringReader. str))]
-      (repl/-setup renv (repl/-repl-options renv))
-      (doseq [form forms]
-        (println
-          (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
-      (repl/-tear-down renv))))
+    (binding [repl/*repl-opts* *cli-opts*]
+      (let [renv  (repl-env)
+            forms (ana-api/forms-seq (StringReader. str))]
+        (repl/-setup renv (merge (repl/-repl-options renv) repl/*repl-opts*))
+        (doseq [form forms]
+          (println
+            (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
+        (repl/-tear-down renv)))))
+
+(defn output-dir-opt
+  [repl-env output-dir]
+  (set! *cli-opts* (merge *cli-opts* {:output-dir output-dir})))
 
 (defn main-opt
   "Call the -main function from a namespace with string arguments from
@@ -43,8 +50,10 @@ present"
   "Returns the handler associated with an init opt"
   [repl-env opt]
   ;; NOT YET IMPLEMENTED
-  ({"-e"     (partial eval-opt repl-env)
-    "--eval" (partial eval-opt repl-env)} opt))
+  ({"-e" (partial eval-opt repl-env)
+    "--eval" (partial eval-opt repl-env)
+    "-o" (partial output-dir-opt repl-env)
+    "--output-dir" (partial output-dir-opt repl-env)} opt))
 
 (defn- initialize
   "Common initialize routine for repl, script, and null opts"
@@ -71,12 +80,13 @@ present"
     } opt))
 
 (defn main [repl-env & args]
-  (try
-    (if args
-      (loop [[opt arg & more :as args] args inits []]
-        (if (init-dispatch repl-env opt)
-          (recur more (conj inits [opt arg]))
-          ((main-dispatch repl-env opt) args inits)))
-      (repl-opt repl-env nil nil))
-    (finally
-      (flush))))
+  (binding [*cli-opts* {}]
+    (try
+      (if args
+        (loop [[opt arg & more :as args] args inits []]
+          (if (init-dispatch repl-env opt)
+            (recur more (conj inits [opt arg]))
+            ((main-dispatch repl-env opt) args inits)))
+        (repl-opt repl-env nil nil))
+      (finally
+        (flush)))))
