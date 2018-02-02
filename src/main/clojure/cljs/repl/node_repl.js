@@ -79,5 +79,3 @@ net.createServer(function (socket) {
     });
 
 }).listen(PORT);
-
-console.log("ClojureScript Node.js REPL server listening on", PORT);

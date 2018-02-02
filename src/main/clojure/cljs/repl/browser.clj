@@ -16,6 +16,7 @@
             [cljs.env :as env]
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
+            [cljs.cli :as cli]
             [cljs.repl.server :as server]
             [cljs.stacktrace :as st]
             [cljs.analyzer :as ana])
@@ -333,8 +334,8 @@
   [& {:as opts}]
   (repl-env* opts))
 
-(defn -main []
-  (repl/repl (repl-env)))
+(defn -main [& args]
+  (apply cli/main repl-env args))
 
 (comment
 

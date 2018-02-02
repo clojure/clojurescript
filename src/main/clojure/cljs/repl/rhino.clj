@@ -14,6 +14,7 @@
             [cljs.closure :as closure]
             [cljs.analyzer :as ana]
             [cljs.repl :as repl]
+            [cljs.cli :as cli]
             [cljs.util :as util]
             [cljs.stacktrace :as st])
   (:import [java.io File Reader]
@@ -220,8 +221,8 @@
   [& {:as opts}]
   (repl-env* opts))
 
-(defn -main []
-  (repl/repl (repl-env)))
+(defn -main [& args]
+  (apply cli/main repl-env args))
 
 (comment
 

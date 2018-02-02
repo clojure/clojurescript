@@ -14,12 +14,11 @@
             [cljs.env :as env]
             [cljs.util :as util]
             [cljs.repl :as repl]
+            [cljs.cli :as cli]
             [cljs.compiler :as comp]
             [cljs.closure :as closure]
             [cljs.stacktrace :as st])
-  (:import [java.io File]
-           [javax.script ScriptEngine ScriptEngineManager ScriptException ScriptEngineFactory]
-           [com.google.common.base Throwables]))
+  (:import [javax.script ScriptEngine ScriptEngineManager ScriptException ScriptEngineFactory]))
 
 (util/compile-if (Class/forName "jdk.nashorn.api.scripting.NashornException")
   (do
@@ -180,8 +179,12 @@
       [& {:as opts}]
       (repl-env* opts))
 
-    (defn -main []
-      (repl/repl (repl-env))))
+    ;; -------------------------------------------------------------------------
+    ;; Command Line Support
+
+    (defn -main [& args]
+      (apply cli/main repl-env args)))
+
   (do
     (defn repl-env* [{:keys [debug] :as opts}]
       (throw (ex-info "Nashorn not supported" {:type :repl-error})))

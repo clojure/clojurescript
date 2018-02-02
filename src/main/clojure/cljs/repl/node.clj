@@ -13,6 +13,7 @@
             [cljs.analyzer :as ana]
             [cljs.compiler :as comp]
             [cljs.repl :as repl]
+            [cljs.cli :as cli]
             [cljs.closure :as closure]
             [clojure.data.json :as json])
   (:import java.net.Socket
@@ -140,6 +141,7 @@
           (if @(:socket repl-env)
             (recur (read-response (:in @(:socket repl-env))))
             (recur nil))))
+      (println "ClojureScript Node.js REPL server listening on" (:port repl-env))
       ;; compile cljs.core & its dependencies, goog/base.js must be available
       ;; for bootstrap to load, use new closure/compile as it can handle
       ;; resources in JARs
@@ -230,5 +232,5 @@
   [& {:as options}]
   (repl-env* options))
 
-(defn -main []
-  (repl/repl (repl-env)))
+(defn -main [& args]
+  (apply cli/main repl-env args))
