@@ -91,6 +91,7 @@
             (assoc opts :output-to (.getPath (io/file output-dir deps-file)))
             deps)
           ;; load the deps file so we can goog.require cljs.core etc.
+          (eval-resource engine "cljs/bootstrap_nashorn.js" false)
           (load-js-file engine deps-file))))
 
     (defn load-ns [engine ns]
