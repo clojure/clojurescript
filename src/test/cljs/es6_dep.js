@@ -1,3 +1,3 @@
-import * as calc from './calculator_amd';
+import {default as calc} from './calculator';
 
 export var calculator = calc;

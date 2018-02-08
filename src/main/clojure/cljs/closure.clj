@@ -1723,9 +1723,6 @@
         ^List source-files (get-source-files js-modules opts)
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                    (.setProcessCommonJSModules true)
-                                   (.setTransformAMDToCJSModules
-                                     (boolean (some (fn [{:keys [module-type]}]
-                                                      (= module-type :amd)) js-modules)))
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
         _ (when (= (:target opts) :nodejs)
@@ -2444,7 +2441,7 @@
     (if (seq js-modules)
       (util/measure (:compiler-stats opts)
         "Process JS modules"
-        (let [_ (when-let [unsupported (first (filter (complement #{:es6 :commonjs :amd})
+        (let [_ (when-let [unsupported (first (filter (complement #{:es6 :commonjs})
                                                       (map :module-type js-modules)))]
                   (ana/warning :unsupported-js-module-type @env/*compiler* unsupported))
               ;; Load all modules - add :source so preprocessing and conversion can access it
@@ -2569,8 +2566,7 @@
                          (index-node-modules node-required))
                    (into expanded-libs
                      (node-inputs (filter (fn [{:keys [module-type]}]
-                                            (and (some? module-type)
-                                              (not= module-type :amd)))
+                                            (some? module-type))
                                     expanded-libs))))))
         opts (if (some
                    (fn [ijs]
