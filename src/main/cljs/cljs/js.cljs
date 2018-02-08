@@ -155,16 +155,18 @@
   (str pre s))
 
 (defn- append-source-map
-  [state name source sb sm-data {:keys [output-dir asset-path] :as opts}]
+  [state name source sb sm-data {:keys [output-dir asset-path source-map-timestamp] :as opts}]
    (let [t    (.valueOf (js/Date.))
          smn  (if name
                 (string/replace (munge (str name)) "." "/")
                 (str "cljs-" t))
          ts   (.valueOf (js/Date.))
          out  (or output-dir asset-path)
-         src  (cond-> (str smn ".cljs?rel=" ts)
+         src  (cond-> (str smn ".cljs")
+                (true? source-map-timestamp) (str "?rel=" ts)
                 out (prefix (str out "/")))
-         file (cond-> (str smn ".js?rel=" ts)
+         file (cond-> (str smn ".js")
+                (true? source-map-timestamp) (str "?rel=" ts)
                 out (prefix (str out "/")))
          json (sm/encode {src (:source-map sm-data)}
                 {:lines (+ (:gen-line sm-data) 3)
