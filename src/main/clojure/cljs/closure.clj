@@ -2580,7 +2580,10 @@
   (let [top-level (reduce
                     (fn [acc m]
                       (reduce (fn [acc p] (assoc acc p m)) acc (:provides m)))
-                    {} (index-node-modules-dir))
+                    {}
+                    ;; if :npm-deps option is false, node_modules/ dir shouldn't be indexed
+                    (if (not (false? npm-deps))
+                      (index-node-modules-dir)))
         requires (set (mapcat deps/-requires js-sources))
         ;; Select Node files that are required by Cljs code,
         ;; and create list of all their dependencies
