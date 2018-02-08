@@ -378,11 +378,25 @@
                                 ;; but not standalone `default` variable names
                                 ;; as they're not valid ES5 - Antonio
                                 (some? (namespace var-name)))
-                           (set/difference ana/es5-allowed))]
+                           (set/difference ana/es5-allowed))
+                js-module (get-in cenv [:js-namespaces (or (namespace var-name) (name var-name))])
+                info (cond-> info
+                       (not= form 'js/-Infinity) (munge reserved))]
             (emit-wrap env
-              (emits
-                (cond-> info
-                  (not= form 'js/-Infinity) (munge reserved))))))))))
+              (case (:module-type js-module)
+                ;; Closure exports CJS exports through default property
+                :commonjs
+                (if (namespace var-name)
+                  (emits (munge (namespace var-name) reserved) "[\"default\"]." (munge (name var-name) reserved))
+                  (emits (munge (name var-name) reserved) "[\"default\"]"))
+
+                ;; Emit bracket notation for default prop access instead of dot notation
+                :es6
+                (if (and (namespace var-name) (= "default" (name var-name)))
+                  (emits (munge (namespace var-name) reserved) "[\"default\"]")
+                  (emits info))
+
+                (emits info)))))))))
 
 (defmethod emit* :var-special
   [{:keys [env var sym meta] :as arg}]

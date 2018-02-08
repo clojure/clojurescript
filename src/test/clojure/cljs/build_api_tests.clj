@@ -226,23 +226,35 @@
         (build/build (build/inputs inputs) opts)
         (is (not (nil? (re-find #"foreignA[\s\S]+foreignB" (slurp (io/file out "foo.js"))))))))))
 
+(deftest test-npm-deps-simple
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (let [out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
+        {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
+                               :opts {:main 'npm-deps-test.core
+                                      :output-dir out
+                                      :optimizations :none
+                                      :install-deps true
+                                      :npm-deps {:left-pad "1.1.3"}
+                                      :foreign-libs [{:module-type :es6
+                                                      :file "src/test/cljs/es6_dep.js"
+                                                      :provides ["es6_calc"]}
+                                                     {:module-type :es6
+                                                      :file "src/test/cljs/es6_default_hello.js"
+                                                      :provides ["es6_default_hello"]}]
+                                      :closure-warnings {:check-types :off}}}
+        cenv (env/default-compiler-env)]
+    (test/delete-out-files out)
+    (build/build (build/inputs (io/file inputs "npm_deps_test/core.cljs")) opts cenv)
+    (is (.exists (io/file out "node_modules/left-pad/index.js")))
+    (is (contains? (:js-module-index @cenv) "left-pad")))
+
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))
+
 (deftest test-npm-deps
   (test/delete-node-modules)
   (spit (io/file "package.json") "{}")
-  (testing "simplest case, require"
-    (let [out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
-          {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
-                                 :opts {:main 'npm-deps-test.core
-                                        :output-dir out
-                                        :optimizations :none
-                                        :install-deps true
-                                        :npm-deps {:left-pad "1.1.3"}
-                                        :closure-warnings {:check-types :off}}}
-          cenv (env/default-compiler-env)]
-      (test/delete-out-files out)
-      (build/build (build/inputs (io/file inputs "npm_deps_test/core.cljs")) opts cenv)
-      (is (.exists (io/file out "node_modules/left-pad/index.js")))
-      (is (contains? (:js-module-index @cenv) "left-pad"))))
   (let [cenv (env/default-compiler-env)
         out (.getPath (io/file (test/tmp-dir) "npm-deps-test-out"))
         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
@@ -252,20 +264,21 @@
                                       :install-deps true
                                       :npm-deps {:react "15.6.1"
                                                  :react-dom "15.6.1"
+                                                 :lodash-es "4.17.4"
                                                  :lodash "4.17.4"}
                                       :closure-warnings {:check-types :off
                                                          :non-standard-jsdoc :off}}}]
+    (test/delete-out-files out)
     (testing "mix of symbol & string-based requires"
-      (test/delete-out-files out)
-      (test/delete-node-modules)
       (build/build (build/inputs (io/file inputs "npm_deps_test/string_requires.cljs")) opts cenv)
       (is (.exists (io/file out "node_modules/react/react.js")))
       (is (contains? (:js-module-index @cenv) "react"))
       (is (contains? (:js-module-index @cenv) "react-dom/server")))
+
     (testing "builds with string requires are idempotent"
       (build/build (build/inputs (io/file inputs "npm_deps_test/string_requires.cljs")) opts cenv)
-      (is (not (nil? (re-find #"\.\.[\\/]node_modules[\\/]react-dom[\\/]server\.js" (slurp (io/file out "cljs_deps.js"))))))
-      (test/delete-out-files out)))
+      (is (not (nil? (re-find #"\.\.[\\/]node_modules[\\/]react-dom[\\/]server\.js" (slurp (io/file out "cljs_deps.js"))))))))
+
   (.delete (io/file "package.json"))
   (test/delete-node-modules))
 
@@ -500,8 +513,8 @@
     (test/delete-out-files out)
     (build/build (build/inputs (io/file inputs "foreign_libs_dir_test/core.cljs")) opts)
     (is (.exists (io/file out "src/test/cljs_build/foreign-libs-dir/vendor/lib.js")))
-    (is (true? (boolean (re-find #"goog\.provide\(\"module\$[A-Za-z0-9$_]+?src\$test\$cljs_build\$foreign_libs_dir\$vendor\$lib\"\)"
-                          (slurp (io/file out "src/test/cljs_build/foreign-libs-dir/vendor/lib.js"))))))))
+    (is (re-find #"goog\.provide\(\"module\$[A-Za-z0-9$_]+?src\$test\$cljs_build\$foreign_libs_dir\$vendor\$lib\"\)"
+                 (slurp (io/file out "src/test/cljs_build/foreign-libs-dir/vendor/lib.js"))))))
 
 (deftest cljs-1883-test-foreign-libs-use-relative-path
   (test/delete-node-modules)
@@ -516,13 +529,14 @@
               :output-dir (str out)}]
     (test/delete-out-files out)
     (build/build (build/inputs (io/file root "foreign_libs_cljs_2334")) opts)
-    (let [foreign-lib-file (io/file out (-> opts :foreign-libs first :file))]
+    (let [foreign-lib-file (io/file out (-> opts :foreign-libs first :file))
+          index-js (slurp (io/file "cljs-2334-out" "node_modules" "left-pad" "index.js"))]
       (is (.exists foreign-lib-file))
+      (is (re-find #"module\$.*\$node_modules\$left_pad\$index=" index-js))
+      (is (not (re-find #"module\.exports" index-js)))
       ;; assert Closure finds and processes the left-pad dep in node_modules
       ;; if it can't be found the require will be issued to module$left_pad
       ;; so we assert it's of the form module$path$to$node_modules$left_pad$index
-      (is (some? (re-find
-                   #"(?s).*?goog\.require\(\"[A-Za-z0-9$_]+?node_modules\$left_pad\$index\"\);.*"
-                   (slurp foreign-lib-file)))))
+      (is (re-find #"module\$.*\$node_modules\$left_pad\$index\[\"default\"\]\(42,5,0\)" (slurp foreign-lib-file))))
     (test/delete-out-files out)
     (test/delete-node-modules)))

@@ -58,12 +58,14 @@
            [java.util.concurrent
             TimeUnit LinkedBlockingDeque Executors CountDownLatch]
            [com.google.javascript.jscomp CompilerOptions CompilationLevel
+              CompilerInput CompilerInput$ModuleType DependencyOptions
               CompilerOptions$LanguageMode SourceMap$Format
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule SourceMap Es6RewriteModules VariableMap]
-           [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode]
+              JSModule SourceMap Es6RewriteModules VariableMap
+              ProcessCommonJSModules Es6RewriteScriptsToModules]
+           [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode ModuleNames]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
                           WatchEvent FileVisitor FileVisitResult]
@@ -108,7 +110,6 @@
    :check-useless-code DiagnosticGroups/CHECK_USELESS_CODE
    :check-variables DiagnosticGroups/CHECK_VARIABLES
    :closure-dep-method-usage-checks DiagnosticGroups/CLOSURE_DEP_METHOD_USAGE_CHECKS
-   :common-js-module-load DiagnosticGroups/COMMON_JS_MODULE_LOAD
    :conformance-violations DiagnosticGroups/CONFORMANCE_VIOLATIONS
    :const DiagnosticGroups/CONST
    :constant-property DiagnosticGroups/CONSTANT_PROPERTY
@@ -226,7 +227,7 @@
           :mapped AnonymousFunctionNamingPolicy/MAPPED
           (throw (IllegalArgumentException. (str "Invalid :anon-fn-naming-policy value " policy " - only :off, :unmapped, :mapped permitted")))))))
 
-  (when-let [lang-key (:language-in opts)]
+  (when-let [lang-key (:language-in opts :ecmascript5)]
     (.setLanguageIn compiler-options (lang-key->lang-mode lang-key)))
 
   (when-let [lang-key (:language-out opts)]
@@ -1695,24 +1696,39 @@
     (assoc-in [:closure-warnings :non-standard-jsdoc] :off)
     (set-options (CompilerOptions.))))
 
-(defn get-js-root [closure-compiler]
-  (.getSecondChild (.getRoot closure-compiler)))
-
-(defn get-closure-sources
-  "Gets map of source file name -> Node, for files in Closure Compiler js root."
-  [closure-compiler]
-  (let [source-nodes (.children (get-js-root closure-compiler))]
-    (into {} (map (juxt #(.getSourceFileName ^Node %) identity) source-nodes))))
+(defn module-type->keyword [^CompilerInput$ModuleType module-type]
+  (case (.name module-type)
+    "NONE" :none
+    "GOOG" :goog
+    "ES6" :es6
+    "COMMONJS" :commonjs
+    "JSON" :json
+    "IMPORTED_SCRIPT" :imported-script))
 
 (defn add-converted-source
-  [closure-compiler result-nodes opts {:keys [file-min file] :as ijs}]
+  [closure-compiler inputs-by-name opts {:keys [file-min file requires] :as ijs}]
   (let [processed-file (if-let [min (and (#{:advanced :simple} (:optimizations opts))
                                          file-min)]
                          min
                          file)
-        processed-file (string/replace processed-file "\\" "/")]
-    (assoc ijs :source
-      (.toSource closure-compiler ^Node (get result-nodes processed-file)))))
+        processed-file (string/replace processed-file "\\" "/")
+        ^CompilerInput input (get inputs-by-name processed-file)
+        ^Node ast-root (.getAstRoot input closure-compiler)
+        module-name (ModuleNames/fileToModuleName processed-file)
+        ;; getJsModuleType returns NONE for ES6 files, but getLoadsFlags module returns es6 for those
+        module-type (or (some-> (.get (.getLoadFlags input) "module") keyword)
+                        (module-type->keyword (.getJsModuleType input)))]
+    (assoc ijs
+      :module-type module-type
+      :source
+      ;; Add goog.provide/require calls ourselves, not emited by Closure since
+      ;; https://github.com/google/closure-compiler/pull/2641
+      (str
+        "goog.provide(\"" module-name "\");\n"
+        (apply str (map (fn [n]
+                          (str "goog.require(\"" n "\");\n"))
+                        (.getRequires input)))
+        (.toSource closure-compiler ast-root)))))
 
 (defn convert-js-modules
   "Takes a list JavaScript modules as an IJavaScript and rewrites them into a Google
@@ -1724,18 +1740,26 @@
         ^CompilerOptions options (doto (make-convert-js-module-options opts)
                                    (.setProcessCommonJSModules true)
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
-                                   (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3))))
+                                   (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3)))
+                                   (.setDependencyOptions (doto (DependencyOptions.)
+                                                            (.setDependencySorting true))))
         _ (when (= (:target opts) :nodejs)
             (.setPackageJsonEntryNames options ^List '("module", "main")))
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))
         _ (.parse closure-compiler)
         _ (report-failure (.getResult closure-compiler))
-        root (.getRoot closure-compiler)]
-    (.process (Es6RewriteModules. closure-compiler)
-      (.getFirstChild root) (.getSecondChild root))
+        ^Node extern-and-js-root (.getRoot closure-compiler)
+        ^Node extern-root (.getFirstChild extern-and-js-root)
+        ^Node js-root (.getSecondChild extern-and-js-root)
+        inputs-by-name (into {} (map (juxt #(.getName %) identity) (vals (.getInputsById closure-compiler))))]
+
+    (.process (Es6RewriteScriptsToModules. closure-compiler) extern-root js-root)
+    (.process (Es6RewriteModules. closure-compiler) extern-root js-root)
+    (.process (ProcessCommonJSModules. closure-compiler) extern-root js-root)
+
     (map (partial add-converted-source
-           closure-compiler (get-closure-sources closure-compiler) opts)
+           closure-compiler inputs-by-name opts)
       js-modules)))
 
 (defmulti js-transforms
@@ -2272,6 +2296,8 @@
          (map (fn [{:strs [file provides]}] file
                 (merge
                   {:file file
+                   ;; Just tag everything es6 here, add-converted-source will
+                   ;; ask the real type, CJS/ES6, from Closure.
                    :module-type :es6}
                   (when provides
                     {:provides provides}))))
@@ -2472,6 +2498,8 @@
           (reduce (fn [new-opts {:keys [file module-type] :as ijs}]
                     (let [ijs (write-javascript opts ijs)
                           module-name (-> (deps/load-library (:out-file ijs)) first :provides first)]
+                      (swap! env/*compiler*
+                             #(assoc-in % [:js-namespaces module-name] {:module-type module-type}))
                       (doseq [provide (:provides ijs)]
                         (swap! env/*compiler*
                           #(update-in % [:js-module-index] assoc provide {:name module-name

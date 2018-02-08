@@ -16,10 +16,12 @@
                  [org.clojure/test.check "0.10.0-alpha2" :scope "test"]
                  [com.cognitect/transit-clj "0.8.300"]
                  [org.clojure/google-closure-library "0.0-20170809-b9c14c6b"]
-                 [com.google.javascript/closure-compiler-unshaded "v20170910"]
+                 [com.google.javascript/closure-compiler-unshaded "v20180204"]
                  [org.mozilla/rhino "1.7R5"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
-             :uberjar {:aot :all :main clojure.main}}
+             :uberjar {:aot :all :main clojure.main}
+             :closure-snapshot {:dependencies [[com.google.javascript/closure-compiler-unshaded "1.0-SNAPSHOT"]]}}
   :aliases {"test-all" ["with-profile" "test,1.5:test,1.6" "test"]
             "check-all" ["with-profile" "1.5:1.6" "check"]}
-  :min-lein-version "2.0.0")
+  :min-lein-version "2.0.0"
+  :repositories {"sonatype-snapshot" {:url "https://oss.sonatype.org/content/repositories/snapshots"}})

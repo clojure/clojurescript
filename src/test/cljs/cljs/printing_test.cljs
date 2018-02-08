@@ -110,9 +110,9 @@
     (is (= (pr-str (rest (conj cljs.core.PersistentQueue.EMPTY 1 2 3))) "(2 3)"))
     (is (= "\"asdf\" \"asdf\"" (pr-str "asdf" "asdf")))
     ;; Different hash map order on self-host
-    (is (#{"[1 true {:a 2, :b #\"x\\\"y\"} #js [3 4]]"
-           "[1 true {:b #\"x\\\"y\", :a 2} #js [3 4]]"}
-          (pr-str [1 true {:a 2 :b #"x\"y"} (array 3 4)]))))
+    (is (#{"[1 true {:a 2, :b \"x\\\"y\"} #js [3 4]]"
+           "[1 true {:b \"x\\\"y\", :a 2} #js [3 4]]"}
+          (pr-str [1 true {:a 2 :b "x\"y"} (array 3 4)]))))
   (testing "Testing print-str"
     (is (= (print-str "asdf") "asdf")))
   (testing "Testing println-str"

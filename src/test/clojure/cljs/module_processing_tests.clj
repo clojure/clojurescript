@@ -105,33 +105,37 @@
 (deftest test-module-name-substitution
   (test/delete-out-files)
   (let [cenv (env/default-compiler-env)]
-    (env/with-compiler-env cenv
-      (let [opts (closure/process-js-modules {:foreign-libs [{:file "src/test/cljs/calculator.js"
-                                                              :provides ["calculator"]
-                                                              :module-type :commonjs}]})
-            compile (fn [form]
-                      (with-out-str
-                        (comp/emit (ana/analyze (ana/empty-env) form))))
-            crlf (if util/windows? "\r\n" "\n")
-            output (str (absolute-module-path "src/test/cljs/calculator.js" true) ".add((3),(4));" crlf)]
-        (swap! cenv
-               #(assoc % :js-dependency-index (deps/js-dependency-index opts)))
-        (binding [ana/*cljs-ns* 'cljs.user]
-          (is (= (compile '(ns my-calculator.core (:require [calculator :as calc :refer [subtract add] :rename {subtract sub}])))
-                (str "goog.provide('my_calculator.core');" crlf
-                     "goog.require('cljs.core');" crlf
-                     "goog.require('" (absolute-module-path "src/test/cljs/calculator.js" true) "');"
-                     crlf)))
-          (is (= (compile '(calc/add 3 4)) output))
-          (is (= (compile '(calculator/add 3 4)) output))
-          (is (= (compile '(add 3 4)) output))
-          (is (= (compile '(sub 5 4))
-                (str (absolute-module-path "src/test/cljs/calculator.js" true)
-                     ".subtract((5),(4));" crlf))))))))
+    ;; Make sure load-library is not cached when developing on REPL
+    (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)
+                  cljs.js-deps/load-foreign-library (memoize cljs.js-deps/load-foreign-library*)]
+      (env/with-compiler-env cenv
+        (let [opts (closure/process-js-modules {:foreign-libs [{:file "src/test/cljs/calculator.js"
+                                                                :provides ["calculator"]
+                                                                :module-type :commonjs}]})
+              compile (fn [form]
+                        (with-out-str
+                          (comp/emit (ana/analyze (ana/empty-env) form))))
+              crlf (if util/windows? "\r\n" "\n")
+              output (str (absolute-module-path "src/test/cljs/calculator.js" true) "[\"default\"].add((3),(4));" crlf)]
+          (swap! cenv
+                 #(assoc % :js-dependency-index (deps/js-dependency-index opts)))
+          (binding [ana/*cljs-ns* 'cljs.user]
+            (is (= (str "goog.provide('my_calculator.core');" crlf
+                        "goog.require('cljs.core');" crlf
+                        "goog.require('" (absolute-module-path "src/test/cljs/calculator.js" true) "');"
+                        crlf)
+                   (compile '(ns my-calculator.core (:require [calculator :as calc :refer [subtract add] :rename {subtract sub}])))))
+            (is (= output (compile '(calc/add 3 4))))
+            (is (= output (compile '(calculator/add 3 4))))
+            (is (= output (compile '(add 3 4))))
+            (is (= (str (absolute-module-path "src/test/cljs/calculator.js" true)
+                        "[\"default\"].subtract((5),(4));" crlf)
+                   (compile '(sub 5 4))))))))))
 
 (deftest test-cljs-1822
   (test/delete-out-files)
   (let [cenv (env/default-compiler-env)]
+    ;; Make sure load-library is not cached when developing on REPL
     (with-redefs [cljs.js-deps/load-library (memoize cljs.js-deps/load-library*)
                   cljs.js-deps/load-foreign-library (memoize cljs.js-deps/load-foreign-library*)]
       (is (= {:optimizations :simple
