@@ -375,7 +375,9 @@
       (doseq [next (seq errors)]
         (println "ERROR:" (.toString ^JSError next)))
       (doseq [next (seq warnings)]
-        (println "WARNING:" (.toString ^JSError next))))))
+        (println "WARNING:" (.toString ^JSError next)))
+      (when (seq errors)
+        (throw (Exception. "Closure compilation failed"))))))
 
 ;; Protocols for IJavaScript and Compilable
 ;; ========================================
