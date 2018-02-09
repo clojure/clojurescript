@@ -2603,7 +2603,8 @@
           (add-externs-sources (dissoc opts :foreign-libs))))))
   ([source opts compiler-env]
      (env/with-compiler-env compiler-env
-       (let [opts (add-implicit-options opts)
+       (let [orig-opts opts
+             opts (add-implicit-options opts)
              ;; we want to warn about NPM dep conflicts before installing the modules
              _ (when (:install-deps opts)
                  (check-npm-deps opts)
@@ -2702,6 +2703,7 @@
                          (map (comp :externs second)
                            (get @compiler-env ::ana/namespaces)))
                        (str (util/output-directory opts) "/inferred_externs.js")))
+                 _ (spit (io/file (util/output-directory opts) ".cljsc_opts") (pr-str orig-opts))
                  optim (:optimizations opts)
                  ret (if (and optim (not= optim :none))
                        (do
