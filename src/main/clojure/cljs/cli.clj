@@ -11,6 +11,7 @@
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
+            [cljs.compiler :as comp]
             [cljs.repl :as repl]
             [cljs.build.api :as build])
   (:import [java.io StringReader]))
@@ -61,18 +62,20 @@ present"
     (initialize repl-env inits)
     (let [renv (repl-env)]
       (binding [repl/*repl-opts*
-               (build/add-implicit-options
-                 (merge (repl/-repl-options renv) *cli-opts*))
-               ana/*verbose* (:verbose repl/*repl-opts*)]
-        (repl/-setup renv (merge (repl/-repl-options renv) repl/*repl-opts*))
-        (doseq [form (:eval-forms repl/*repl-opts*)]
-          (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
-        (when main-ns
-          (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
-            `(do
-               (set! *command-line-args* (list ~@args))
-               (~(symbol (name main-ns) "-main") ~@args))))
-        (repl/-tear-down renv)))))
+                (build/add-implicit-options
+                  (merge (repl/-repl-options renv) *cli-opts*))
+                ana/*verbose* (:verbose repl/*repl-opts*)]
+        (comp/with-core-cljs repl/*repl-opts*
+          (fn []
+            (repl/-setup renv (merge (repl/-repl-options renv) repl/*repl-opts*))
+            (doseq [form (:eval-forms repl/*repl-opts*)]
+              (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
+            (when main-ns
+              (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
+                `(do
+                   (set! *command-line-args* (list ~@args))
+                   (~(symbol (name main-ns) "-main") ~@args))))
+            (repl/-tear-down renv)))))))
 
 (defn- null-opt
   "No repl or script opt present, just bind args and run inits"
@@ -95,7 +98,7 @@ present"
 (defn adapt-args [args]
   (cond-> args
     (and (some #{"-e" "--eval"} args)
-        (not (some #{"-m" "--main"} args)))
+         (not (some #{"-m" "--main"} args)))
     (concat ["-m"])))
 
 (defn main [repl-env & args]
