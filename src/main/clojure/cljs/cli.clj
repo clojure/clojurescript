@@ -30,15 +30,24 @@
   [repl-env value]
   (set! *cli-opts* (merge *cli-opts* {:verbose (or (= value "true") false)})))
 
+(defn- init-opt
+  [repl-env file]
+  (set! *cli-opts* (merge *cli-opts* {:init-script file})))
+
 (defn- eval-opt
   [repl-env form-str]
   (set! *cli-opts*
     (merge *cli-opts* {:eval-forms (ana-api/forms-seq (StringReader. form-str))})))
 
+;; TODO: need support for feature that init options like -e and -i can appear
+;; multiple times interleaved - David
+
 (defn init-dispatch
   "Returns the handler associated with an init opt"
   [repl-env opt]
-  ({"-e"           (partial eval-opt repl-env)
+  ({"-i"           (partial init-opt repl-env)
+    "--init"       (partial init-opt repl-env)
+    "-e"           (partial eval-opt repl-env)
     "--eval"       (partial eval-opt repl-env)
     "-v"           (partial verbose-opt repl-env)
     "--verbose"    (partial verbose-opt repl-env)
@@ -92,6 +101,8 @@ present"
                   (repl/-evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
             (doseq [form (:eval-forms repl/*repl-opts*)]
               (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
+            (when-let [init-script (:init-script opts)]
+              (repl/load-file renv init-script))
             (when main-ns
               (ana-api/analyze-file (build/ns->source main-ns) opts)
               (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
@@ -107,7 +118,7 @@ present"
   (initialize repl-env inits))
 
 (defn- help-opt
-  [_ _]
+  [_ _ _]
   (println (:doc (meta (var main)))))
 
 (defn main-dispatch
@@ -118,10 +129,11 @@ present"
     "-m"     (partial main-opt repl-env)
     "--main" (partial main-opt repl-env)
     nil      (partial null-opt repl-env)
-    "-h" help-opt
-    "--help" help-opt
-    "-?" help-opt
-    } opt))
+    "-h"     (partial help-opt repl-env)
+    "--help" (partial help-opt repl-env)
+    "-?"     (partial help-opt repl-env)} opt
+    ;script-opt
+    ))
 
 (defn adapt-args [args]
   (cond-> args
