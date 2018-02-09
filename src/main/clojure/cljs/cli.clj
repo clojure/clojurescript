@@ -18,6 +18,8 @@
             [clojure.edn :as edn])
   (:import [java.io StringReader]))
 
+(declare main)
+
 (def ^:dynamic *cli-opts* nil)
 
 (defn output-dir-opt
@@ -104,6 +106,10 @@ present"
   [repl-env args inits]
   (initialize repl-env inits))
 
+(defn- help-opt
+  [_ _]
+  (println (:doc (meta (var main)))))
+
 (defn main-dispatch
   "Returns the handler associated with a main option"
   [repl-env opt]
@@ -112,9 +118,9 @@ present"
     "-m"     (partial main-opt repl-env)
     "--main" (partial main-opt repl-env)
     nil      (partial null-opt repl-env)
-    ;"-h" help-opt
-    ;"--help" help-opt
-    ;"-?" help-opt
+    "-h" help-opt
+    "--help" help-opt
+    "-?" help-opt
     } opt))
 
 (defn adapt-args [args]
@@ -124,7 +130,45 @@ present"
     (concat ["-m"])))
 
 ;; TODO: validate arg order to produce better error message - David
-(defn main [repl-env & args]
+(defn main
+  "Usage: java -cp cljs.jar clojure.main -m REPL-NS [init-opt*] [main-opt] [arg*]
+
+  REPL-NS is any Clojure namespace that supplies a -main that builds a
+  ClojureScript REPL. Note that cljs.repl.node, cljs.repl.browser, cljs.repl.rhino
+  and cljs.repl.nashorn ship with ClojureScript.
+
+  With no options or args, runs an interactive Read-Eval-Print Loop
+
+  init options:
+    -i, --init path        Load a file or resource
+    -e, --eval string      Evaluate expressions in string; print non-nil values
+    -v, --verbose bool     if true, will enable ClojureScriptt verbose logging
+    -o, --output-dir path  Set the output directory to use. If supplied, .cljsc_opts
+                           in that direction will be used to set ClojureScript
+                           compiler options.
+
+  main options:
+    -m, --main ns-name     Call the -main function from a namespace with args
+    -r, --repl             Run a repl
+    path                   Run a script from a file or resource
+    -                      Run a script from standard input
+    -h, -?, --help         Print this help message and exit
+
+  operation:
+
+    - Enters the user namespace
+    - Binds *command-line-args* to a seq of strings containing command line
+      args that appear after any main option
+    - Runs all init options in order
+    - Calls a -main function or runs a repl or script if requested
+
+  The init options may be repeated and mixed freely, but must appear before
+  any main option. The appearance of any eval option before running a repl
+  suppresses the usual repl greeting message: \"Clojure ~(clojure-version)\".
+
+  Paths may be absolute or relative in the filesystem or relative to
+  classpath. Classpath-relative paths have prefix of @ or @/"
+  [repl-env & args]
   (binding [*cli-opts* {}]
     (try
       (if args
