@@ -7,13 +7,15 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.cli
-  (:require [cljs.util :as util]
+  (:require [clojure.java.io :as io]
+            [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
             [cljs.compiler :as comp]
             [cljs.repl :as repl]
-            [cljs.build.api :as build])
+            [cljs.build.api :as build]
+            [clojure.edn :as edn])
   (:import [java.io StringReader]))
 
 (def ^:dynamic *cli-opts* nil)
@@ -60,20 +62,39 @@ present"
   [repl-env [_ main-ns & args] inits]
   (env/ensure
     (initialize repl-env inits)
-    (let [renv (repl-env)]
+    (let [renv   (repl-env)
+          opts   *cli-opts*
+          coptsf (when-let [od (:output-dir opts)]
+                   (io/file od ".cljsc_opts"))]
       (binding [repl/*repl-opts*
-                (build/add-implicit-options
-                  (merge (repl/-repl-options renv) *cli-opts*))
+                (as->
+                  (build/add-implicit-options
+                    (merge (repl/-repl-options renv) opts)) opts
+                  (let [copts (when (and coptsf (.exists coptsf))
+                                (-> (edn/read-string (slurp coptsf))
+                                  ;; need to remove the entry point bits,
+                                  ;; user is trying load some arbitrary ns
+                                  (dissoc :main)
+                                  (dissoc :output-to)))]
+                    (merge copts opts)))
                 ana/*verbose* (:verbose repl/*repl-opts*)]
+        (when ana/*verbose*
+          (util/debug-prn "Compiler options:" repl/*repl-opts*))
         (comp/with-core-cljs repl/*repl-opts*
           (fn []
             (repl/-setup renv (merge (repl/-repl-options renv) repl/*repl-opts*))
+            ;; REPLs don't normally load cljs_deps.js
+            (when (and coptsf (.exists coptsf))
+              (let [depsf (io/file (:output-dir opts) "cljs_deps.js")]
+                (when (.exists depsf)
+                  (repl/-evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
             (doseq [form (:eval-forms repl/*repl-opts*)]
               (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
             (when main-ns
               (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
                 `(do
                    (set! *command-line-args* (list ~@args))
+                   (.require js/goog ~(-> main-ns munge str))
                    (~(symbol (name main-ns) "-main") ~@args))))
             (repl/-tear-down renv)))))))
 
@@ -101,6 +122,7 @@ present"
          (not (some #{"-m" "--main"} args)))
     (concat ["-m"])))
 
+;; TODO: validate arg order to produce better error message - David
 (defn main [repl-env & args]
   (binding [*cli-opts* {}]
     (try
