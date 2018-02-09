@@ -7749,7 +7749,7 @@ reduces them without incurring seq initialization"
     (if-not ^boolean seen
       (do
         (set! seen true)
-        [nil nil-val])
+        (MapEntry. nil nil-val nil))
       (.next root-iter)))
   (remove [_] (js/Error. "Unsupported operation")))
 
@@ -7818,7 +7818,7 @@ reduces them without incurring seq initialization"
     (when (pos? cnt)
       (let [s (if-not (nil? root) (.inode-seq root))]
         (if has-nil?
-          (cons [nil nil-val] s)
+          (cons (MapEntry. nil nil-val nil) s)
           s))))
 
   ICounted

@@ -85,3 +85,15 @@
                    (assoc (hash-map bad-date-1 nil) bad-date-2 nil)
                    :ok
                    (catch :default _ :error)))))))
+
+
+(deftest test-cljs-2496
+  (testing "A seq or iterator over a PAM/PHM should be composed of instances of IMapEntry"
+    (testing "PersistentHashMap"
+      (let [m (hash-map nil nil 1 1 2 2)]
+        (is (every? map-entry? m))
+        (is (every? map-entry? (iter->set (-iterator m))))))
+    (testing "PersistentArrayMap"
+      (let [m (array-map nil nil 1 1 2 2)]
+        (is (every? map-entry? m))
+        (is (every? map-entry? (iter->set (-iterator m))))))))
