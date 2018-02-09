@@ -91,6 +91,7 @@ present"
             (doseq [form (:eval-forms repl/*repl-opts*)]
               (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
             (when main-ns
+              (ana-api/analyze-file (build/ns->source main-ns) opts)
               (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
                 `(do
                    (set! *command-line-args* (list ~@args))
