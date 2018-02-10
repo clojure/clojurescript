@@ -101,6 +101,10 @@ present"
               (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
             (when-let [init-script (:init-script opts)]
               (repl/load-file renv init-script))
+            (when script
+              (if (= "-" script)
+                (repl/load-stream renv "<cljs repl>" *in*)
+                (repl/load-file renv script)))
             (when main
               (ana-api/analyze-file (build/ns->source main) opts)
               (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
@@ -129,9 +133,9 @@ present"
   (println (:doc (meta (var main)))))
 
 (defn script-opt
-  [repl-env [_ script & args] inits]
+  [repl-env [path & args] inits]
   (main-opt* repl-env
-    {:script script
+    {:script path
      :args   args
      :inits  inits}))
 
@@ -146,7 +150,7 @@ present"
     "-h"     (partial help-opt repl-env)
     "--help" (partial help-opt repl-env)
     "-?"     (partial help-opt repl-env)} opt
-    script-opt))
+    (partial script-opt repl-env)))
 
 (defn adapt-args [args]
   (cond-> args
@@ -187,8 +191,7 @@ present"
     - Calls a -main function or runs a repl or script if requested
 
   The init options may be repeated and mixed freely, but must appear before
-  any main option. The appearance of any eval option before running a repl
-  suppresses the usual repl greeting message: \"Clojure ~(clojure-version)\".
+  any main option.
 
   Paths may be absolute or relative in the filesystem or relative to
   classpath. Classpath-relative paths have prefix of @ or @/"
