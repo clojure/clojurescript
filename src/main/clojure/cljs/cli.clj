@@ -64,13 +64,11 @@
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] inits]
-  ;; TODO: handle eval forms
+  ;; TODO: handle -e and -i args
   (repl/repl* (repl-env) (build/add-implicit-options *cli-opts*)))
 
-(defn main-opt
-  "Call the -main function from a namespace with string arguments from
-  the command line."
-  [repl-env [_ main-ns & args] inits]
+(defn main-opt*
+  [repl-env {:keys [main script args inits]}]
   (env/ensure
     (initialize repl-env inits)
     (let [renv   (repl-env)
@@ -103,14 +101,23 @@ present"
               (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
             (when-let [init-script (:init-script opts)]
               (repl/load-file renv init-script))
-            (when main-ns
-              (ana-api/analyze-file (build/ns->source main-ns) opts)
+            (when main
+              (ana-api/analyze-file (build/ns->source main) opts)
               (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
                 `(do
                    (set! *command-line-args* (list ~@args))
-                   (.require js/goog ~(-> main-ns munge str))
-                   (~(symbol (name main-ns) "-main") ~@args))))
+                   (.require js/goog ~(-> main))
+                   (~(symbol (name main) "-main") ~@args))))
             (repl/-tear-down renv)))))))
+
+(defn main-opt
+  "Call the -main function from a namespace with string arguments from
+  the command line."
+  [repl-env [_ main-ns & args] inits]
+  (main-opt* repl-env
+    {:main  main-ns
+     :args  args
+     :inits inits}))
 
 (defn- null-opt
   "No repl or script opt present, just bind args and run inits"
@@ -120,6 +127,13 @@ present"
 (defn- help-opt
   [_ _ _]
   (println (:doc (meta (var main)))))
+
+(defn script-opt
+  [repl-env [_ script & args] inits]
+  (main-opt* repl-env
+    {:script script
+     :args   args
+     :inits  inits}))
 
 (defn main-dispatch
   "Returns the handler associated with a main option"
@@ -132,8 +146,7 @@ present"
     "-h"     (partial help-opt repl-env)
     "--help" (partial help-opt repl-env)
     "-?"     (partial help-opt repl-env)} opt
-    ;script-opt
-    ))
+    script-opt))
 
 (defn adapt-args [args]
   (cond-> args
