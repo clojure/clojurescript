@@ -165,15 +165,15 @@ present"
   With no options or args, runs an interactive Read-Eval-Print Loop
 
   init options:
-    -js, --js-eval engine   The JavaScript engine to use. Built-in supported
-                            engines: nashorn, node, browser, rhino. Defaults to
-                            nashorn
-    -i,  --init path        Load a file or resource
-    -e,  --eval string      Evaluate expressions in string; print non-nil values
-    -v,  --verbose bool     if true, will enable ClojureScriptt verbose logging
-    -o,  --output-dir path  Set the output directory to use. If supplied, .cljsc_opts
-                            in that directory will be used to set ClojureScript
-                            compiler options.
+    -js, --js-engine engine  The JavaScript engine to use. Built-in supported
+                             engines: nashorn, node, browser, rhino. Defaults to
+                             nashorn
+    -i,  --init path         Load a file or resource
+    -e,  --eval string       Evaluate expressions in string; print non-nil values
+    -v,  --verbose bool      if true, will enable ClojureScriptt verbose logging
+    -o,  --output-dir path   Set the output directory to use. If supplied, .cljsc_opts
+                             in that directory will be used to set ClojureScript
+                             compiler options.
 
   main options:
     -m, --main ns-name     Call the -main function from a namespace with args

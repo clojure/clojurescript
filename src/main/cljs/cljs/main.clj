@@ -32,7 +32,7 @@
     nashorn/repl-env))
 
 (defn -main [& args]
-  (let [pred (complement #{"-js" "--js-eval"})
+  (let [pred (complement #{"-js" "--js-engine"})
         [pre post]
         ((juxt #(take-while pred %)
                #(drop-while pred %))
