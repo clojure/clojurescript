@@ -143,21 +143,20 @@ present"
 
 ;; TODO: validate arg order to produce better error message - David
 (defn main
-  "Usage: java -cp cljs.jar clojure.main -m REPL-NS [init-opt*] [main-opt] [arg*]
-
-  REPL-NS is any Clojure namespace that supplies a -main that builds a
-  ClojureScript REPL. Note that cljs.repl.node, cljs.repl.browser, cljs.repl.rhino
-  and cljs.repl.nashorn ship with ClojureScript.
+  "Usage: java -cp cljs.jar cljs.main [init-opt*] [main-opt] [arg*]
 
   With no options or args, runs an interactive Read-Eval-Print Loop
 
   init options:
-    -i, --init path        Load a file or resource
-    -e, --eval string      Evaluate expressions in string; print non-nil values
-    -v, --verbose bool     if true, will enable ClojureScriptt verbose logging
-    -o, --output-dir path  Set the output directory to use. If supplied, .cljsc_opts
-                           in that direction will be used to set ClojureScript
-                           compiler options.
+    -js, --js-eval engine   The JavaScript engine to use. Built-in supported
+                            engines: nashorn, node, browser, rhino. Defaults to
+                            nashorn
+    -i,  --init path        Load a file or resource
+    -e,  --eval string      Evaluate expressions in string; print non-nil values
+    -v,  --verbose bool     if true, will enable ClojureScriptt verbose logging
+    -o,  --output-dir path  Set the output directory to use. If supplied, .cljsc_opts
+                            in that directory will be used to set ClojureScript
+                            compiler options.
 
   main options:
     -m, --main ns-name     Call the -main function from a namespace with args
