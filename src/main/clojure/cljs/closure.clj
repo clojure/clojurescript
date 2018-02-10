@@ -2601,11 +2601,15 @@
                      (node-inputs (filter (fn [{:keys [module-type]}]
                                             (some? module-type))
                                     expanded-libs))))))
-        opts (if (some
-                   (fn [ijs]
-                     (let [dest (io/file output-dir (rel-output-path (assoc ijs :foreign true) opts))]
-                       (util/changed? (deps/-url ijs opts) dest)))
-                   (:foreign-libs opts))
+        ;; If compiler-env doesn't contain JS module info we need to process
+        ;; modules even if files haven't changed since last compile.
+        opts (if (or (nil? (:js-namespaces @compiler-env))
+                     (nil? (:js-module-index @compiler-env))
+                     (some
+                       (fn [ijs]
+                         (let [dest (io/file output-dir (rel-output-path (assoc ijs :foreign true) opts))]
+                           (util/changed? (deps/-url ijs opts) dest)))
+                       (:foreign-libs opts)))
                (process-js-modules opts)
                (:options @compiler-env))]
     (swap! compiler-env (fn [cenv]
