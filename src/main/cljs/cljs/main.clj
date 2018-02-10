@@ -7,4 +7,36 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.main
-  (:require [cljs.cli :as cli]))
+  (:require [cljs.repl.nashorn :as nashorn]
+            [cljs.cli :as cli])
+  (:gen-class))
+
+(defn get-js-opt [args]
+  (if (= 2 (count args))
+    (let [repl-ns (symbol
+                    (str "cljs.repl."
+                      (if (= 1 (count args))
+                        "nashorn"
+                        (nth args 1))))]
+      (try
+        (require repl-ns)
+        (if-let [repl-env (ns-resolve repl-ns 'repl-env)]
+          repl-env
+          (throw
+            (ex-info (str "REPL namespace " repl-ns " does not define repl-env var")
+              {:repl-ns repl-ns})))
+        (catch Throwable _
+          (throw
+            (ex-info (str "REPL namespace " repl-ns " does not exist")
+              {:repl-ns repl-ns})))))
+    nashorn/repl-env))
+
+(defn -main [& args]
+  (let [pred (complement #{"-js" "--js-eval"})
+        [pre post]
+        ((juxt #(take-while pred %)
+               #(drop-while pred %))
+          args)
+        [js-args args] ((juxt #(take 2 %) #(drop 2 %)) post)
+        repl-opt (get-js-opt js-args)]
+    (apply cli/main repl-opt (concat pre args))))

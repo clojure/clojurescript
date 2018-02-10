@@ -19,7 +19,7 @@
                  [com.google.javascript/closure-compiler-unshaded "v20180204"]
                  [org.mozilla/rhino "1.7R5"]]
   :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
-             :uberjar {:aot :all :main clojure.main}
+             :uberjar {:aot :all :main cljs.main}
              :closure-snapshot {:dependencies [[com.google.javascript/closure-compiler-unshaded "1.0-SNAPSHOT"]]}}
   :aliases {"test-all" ["with-profile" "test,1.5:test,1.6" "test"]
             "check-all" ["with-profile" "1.5:1.6" "check"]}
