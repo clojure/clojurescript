@@ -102,7 +102,7 @@ present"
           (util/debug-prn "Compiler options:" repl/*repl-opts*))
         (comp/with-core-cljs repl/*repl-opts*
           (fn []
-            (repl/-setup renv (merge (repl/-repl-options renv) repl/*repl-opts*))
+            (repl/-setup renv repl/*repl-opts*)
             ;; REPLs don't normally load cljs_deps.js
             (when (and coptsf (.exists coptsf))
               (let [depsf (io/file (:output-dir options) "cljs_deps.js")]

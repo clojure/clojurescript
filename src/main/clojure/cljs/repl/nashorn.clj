@@ -10,6 +10,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.stacktrace]
+            [clojure.data.json :as json]
             [cljs.analyzer :as ana]
             [cljs.env :as env]
             [cljs.util :as util]
@@ -51,12 +52,15 @@
         (eval-str engine (slurp r))
         (when debug (println "loaded: " path))))
 
-    (defn init-engine [engine output-dir debug]
+    (defn init-engine [engine {:keys [output-dir] :as opts} debug]
       (eval-str engine (format "var CLJS_DEBUG = %s;" (boolean debug)))
       (eval-str engine (format "var CLJS_OUTPUT_DIR = \"%s\";" output-dir))
       (eval-resource engine "goog/base.js" debug)
       (eval-resource engine "goog/deps.js" debug)
       (eval-resource engine "cljs/bootstrap_nashorn.js" debug)
+      (eval-str engine
+        (format "goog.global.CLOSURE_UNCOMPILED_DEFINES = %s;"
+          (json/write-str (:closure-defines opts))))
       engine)
 
     (defn load-js-file [engine file]
@@ -96,20 +100,17 @@
     (defrecord NashornEnv [engine debug]
       repl/IReplEnvOptions
       (-repl-options [this]
-        {:output-dir ".cljs_nashorn_repl"})
+        {:output-dir ".cljs_nashorn_repl"
+         :target :nashorn})
       repl/IJavaScriptEnv
       (-setup [this {:keys [output-dir bootstrap output-to] :as opts}]
-        (init-engine engine output-dir debug)
+        (init-engine engine opts debug)
         (let [env (ana/empty-env)]
           (if output-to
             (load-js-file engine output-to)
             (bootstrap-repl engine output-dir opts))
           (repl/evaluate-form this env repl-filename
-            '(do
-               (.require js/goog "cljs.core")
-               (set! *print-newline* false)
-               (set! *print-fn* js/print)
-               (set! *print-err-fn* js/print)))
+            '(.require js/goog "cljs.core"))
           ;; monkey-patch goog.isProvided_ to suppress useless errors
           (repl/evaluate-form this env repl-filename
             '(set! js/goog.isProvided_ (fn [ns] false)))

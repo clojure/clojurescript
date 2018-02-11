@@ -11447,3 +11447,20 @@ reduces them without incurring seq initialization"
   {:added "1.9"}
   [x]
   (instance? goog.Uri x))
+
+(defn maybe-enable-print! []
+  (cond
+    (exists? js/console)
+    (enable-console-print!)
+
+    (identical? *target* "nashorn")
+    (let [system (.type js/Java "java.lang.System")]
+      (set! *print-newline* false)
+      (set! *print-fn*
+        (fn [& args]
+          (.println (.-out system) (.join (into-array args) ""))))
+      (set! *print-err-fn*
+        (fn [& args]
+          (.println (.-error system) (.join (into-array args) "")))))))
+
+(maybe-enable-print!)
