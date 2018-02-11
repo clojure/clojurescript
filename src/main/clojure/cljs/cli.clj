@@ -26,7 +26,7 @@
 
 (defn verbose-opt
   [inits-map value]
-  (assoc-in inits-map [:options :verbose] (or (= value "true") false)))
+  (assoc-in inits-map [:options :verbose] (= value "true")))
 
 (defn init-opt
   [inits-map file]
