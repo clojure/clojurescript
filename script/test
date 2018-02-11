@@ -13,6 +13,7 @@ possible=5
 ran=0
 
 if ! bin/cljsc src/test/cljs "{:optimizations :advanced
+                               :main test-runner
                                :output-wrapper true
                                :verbose true
                                :compiler-stats true

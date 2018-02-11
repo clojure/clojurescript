@@ -3819,7 +3819,11 @@
                     (finally
                       (when rdr
                         (.close ^Reader rdr))))))]
-          ijs)))))
+          (cond-> ijs
+            (not (contains? ijs :ns))
+            (merge
+              {:ns (gen-user-ns src)
+               :provides [(gen-user-ns src)]})))))))
 
 #?(:clj
    (defn- cache-analysis-ext

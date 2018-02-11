@@ -1457,10 +1457,10 @@
           (fn []
             (when (and (or ana/*verbose* (:verbose opts))
                        (not (:compiler-stats opts)))
-              (util/debug-prn "Compiling" (str src)))
+              (util/debug-prn "Compiling" (str src) "to" (str dest)))
             (util/measure (and (or ana/*verbose* (:verbose opts))
                                (:compiler-stats opts))
-              (str "Compiling " src)
+              (str "Compiling " (str src) " to " (str dest))
               (let [ext (util/ext src)
                    {:keys [ns] :as ns-info} (ana/parse-ns src)]
                (if-let [cached (cached-core ns ext opts)]
