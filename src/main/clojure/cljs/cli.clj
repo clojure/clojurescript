@@ -75,7 +75,7 @@ present"
         (build/add-implicit-options options)
         :inits
         (into
-          [{:type :eval-forms
+          [{:type :init-forms
             :forms [`(set! *command-line-args* (list ~@args))]}]
           inits)))))
 
@@ -163,12 +163,6 @@ present"
     "-?"     (partial help-opt repl-env)} opt
     (partial script-opt repl-env)))
 
-(defn adapt-args [args]
-  (cond-> args
-    (and (some #{"-e" "--eval"} args)
-         (not (some #{"-m" "--main"} args)))
-    (concat ["-m"])))
-
 ;; TODO: validate arg order to produce better error message - David
 (defn main
   "Usage: java -cp cljs.jar cljs.main [init-opt*] [main-opt] [arg*]
@@ -209,11 +203,10 @@ present"
   [repl-env & args]
   (try
     (if args
-      (let [args' (adapt-args args)]
-        (loop [[opt arg & more :as args] args' inits []]
-          (if (init-dispatch opt)
-            (recur more (conj inits [opt arg]))
-            ((main-dispatch repl-env opt) args inits))))
+      (loop [[opt arg & more :as args] args inits []]
+        (if (init-dispatch opt)
+          (recur more (conj inits [opt arg]))
+          ((main-dispatch repl-env opt) args inits)))
       (repl-opt repl-env nil nil))
     (finally
       (flush))))

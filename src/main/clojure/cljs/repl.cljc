@@ -765,6 +765,9 @@
 (defn run-inits [renv inits]
   (doseq [{:keys [type] :as init} inits]
     (case type
+      :init-forms
+      (doseq [form (:forms init)]
+        (evaluate-form renv (ana/empty-env) "<cljs repl>" form))
       :eval-forms
       (doseq [form (:forms init)]
         (println (evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
