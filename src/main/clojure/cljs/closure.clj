@@ -1534,6 +1534,27 @@
                        (util/output-directory opts))
         closure-defines (json/write-str (:closure-defines opts))]
     (case (:target opts)
+      :nashorn
+      (output-one-file
+        (merge opts
+          (when module
+            {:output-to (:output-to module)}))
+        (add-header opts
+          (str (when (or (not module) (= :cljs-base (:module-name opts)))
+                 (str "var CLJS_OUTPUT_DIR = \"" asset-path "\";\n"
+                      "load((new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"), \"base.js\")).getPath());\n"
+                      "load((new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"), \"deps.js\")).getPath());\n"
+                      "load((new java.io.File(new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"),\"bootstrap\"),\"nashorn.js\")).getPath());\n"
+                      "load((new java.io.File(\"" asset-path "\",\"cljs_deps.js\")).getPath());\n"
+                      "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                   (apply str (preloads (:preloads opts)))))
+            (apply str
+              (map (fn [entry]
+                     (str "goog.require(\"" (comp/munge entry) "\");\n"))
+                (if-let [entries (when module (:entries module))]
+                  entries
+                  [(:main opts)]))))))
+
       :nodejs
       (output-one-file
         (merge opts
@@ -1560,24 +1581,24 @@
 
       :webworker
       (output-one-file
-       (merge opts
-              (when module
-                {:output-to (:output-to module)}))
-       (str (when (or (not module) (= :cljs-base (:module-name opts)))
-              (str "var CLOSURE_BASE_PATH = \"" asset-path  "/goog/\";\n"
-                   "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-                   "var CLOSURE_IMPORT_SCRIPT = (function(global) { return function(src) {global['importScripts'](src); return true;};})(this);\n"
-                   "if(typeof goog == 'undefined') importScripts(\"" asset-path "/goog/base.js\");\n"
-                   "importScripts(\"" asset-path "/cljs_deps.js\");\n"
-                   (apply str (preloads (:preloads opts)))))
-            (apply str
-                   (map (fn [entry]
-                           (when-not (= "goog" entry)
-                             (str "goog.require(\"" (comp/munge entry) "\");\n")))
-                         (if-let [entries (when module (:entries module))]
-                           entries
-                           (when-let [main (:main opts)]
-                             [main]))))))
+        (merge opts
+          (when module
+            {:output-to (:output-to module)}))
+        (str (when (or (not module) (= :cljs-base (:module-name opts)))
+               (str "var CLOSURE_BASE_PATH = \"" asset-path  "/goog/\";\n"
+                    "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                    "var CLOSURE_IMPORT_SCRIPT = (function(global) { return function(src) {global['importScripts'](src); return true;};})(this);\n"
+                    "if(typeof goog == 'undefined') importScripts(\"" asset-path "/goog/base.js\");\n"
+                    "importScripts(\"" asset-path "/cljs_deps.js\");\n"
+                 (apply str (preloads (:preloads opts)))))
+          (apply str
+            (map (fn [entry]
+                   (when-not (= "goog" entry)
+                     (str "goog.require(\"" (comp/munge entry) "\");\n")))
+              (if-let [entries (when module (:entries module))]
+                entries
+                (when-let [main (:main opts)]
+                  [main]))))))
 
        (output-one-file
         (merge opts
@@ -2623,6 +2644,15 @@
                                 (map str (keys top-level)))))))
     opts))
 
+(defn output-bootstrap [{:keys [target] :as opts}]
+  (when (and (#{:nodejs :nashorn} target)
+             (not= (:optimizations opts) :whitespace))
+    (let [target-str (name target)
+          outfile    (io/file (util/output-directory opts)
+                       "goog" "bootstrap" (str target-str ".js"))]
+      (util/mkdirs outfile)
+      (spit outfile (slurp (io/resource (str "cljs/bootstrap_" target-str ".js")))))))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
@@ -2766,13 +2796,7 @@
                                (add-header opts)
                                (output-one-file opts)))))
                        (apply output-unoptimized opts js-sources))]
-             ;; emit Node.js bootstrap script for :none & :whitespace optimizations
-             (when (and (= (:target opts) :nodejs)
-                        (not= (:optimizations opts) :whitespace))
-               (let [outfile (io/file (util/output-directory opts)
-                               "goog" "bootstrap" "nodejs.js")]
-                 (util/mkdirs outfile)
-                 (spit outfile (slurp (io/resource "cljs/bootstrap_node.js")))))
+             (output-bootstrap opts)
              ret))))))
 
 (comment

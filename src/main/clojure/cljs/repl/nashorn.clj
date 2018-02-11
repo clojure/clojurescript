@@ -52,23 +52,11 @@
         (when debug (println "loaded: " path))))
 
     (defn init-engine [engine output-dir debug]
+      (eval-str engine (format "var CLJS_DEBUG = %s;" (boolean debug)))
+      (eval-str engine (format "var CLJS_OUTPUT_DIR = \"%s\";" output-dir))
       (eval-resource engine "goog/base.js" debug)
       (eval-resource engine "goog/deps.js" debug)
-      (eval-str engine "var global = this") ; required by React
-      (eval-str engine
-        (format
-          (str "var nashorn_load = function(path) {"
-            "  var outputPath = \"%s\" + \"/\" + path;"
-            (when debug "  print(\"loading: \" + outputPath) ; ")
-            "  load(outputPath);"
-            "};")
-          output-dir))
-      (eval-str engine
-        (str "goog.global.CLOSURE_IMPORT_SCRIPT = function(path) {"
-          " nashorn_load(\"goog/\" + path);"
-          " return true;"
-          "};"))
-      (eval-str engine "goog.global.isProvided_ = function(name) { return false; };")
+      (eval-resource engine "cljs/bootstrap_nashorn.js" debug)
       engine)
 
     (defn load-js-file [engine file]
@@ -90,7 +78,6 @@
             (assoc opts :output-to (.getPath (io/file output-dir deps-file)))
             deps)
           ;; load the deps file so we can goog.require cljs.core etc.
-          (eval-resource engine "cljs/bootstrap_nashorn.js" false)
           (load-js-file engine deps-file))))
 
     (defn load-ns [engine ns]

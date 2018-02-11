@@ -1,17 +1,33 @@
+var global = this; // required by React
+
+var nashorn_load = function(path) {
+    var outputPath = (typeof CLJS_OUTPUT_DIR != "undefined" ? CLJS_OUTPUT_DIR : ".") + java.io.File.separator + path;
+    if (typeof CLJS_DEBUG != "undefined" && CLJS_DEBUG) print("loading:" + outputPath);
+    load(outputPath);
+};
+
+goog.global.CLOSURE_IMPORT_SCRIPT = function(path) {
+    nashorn_load("goog/" + path);
+    return true;
+};
+
+goog.global.isProvided_ = function(name) { return false; };
+
 // https://blogs.oracle.com/nashorn/setinterval-and-settimeout-javascript-functions
 
-var Platform = Java.type("javafx.application.Platform");
-var JFXPanel = Java.type("javafx.embed.swing.JFXPanel");
-var Timer    = Java.type("java.util.Timer");
-var init     = new JFXPanel(); // need to invoke to init JFX so Platform.runLater works
+var __Platform = Java.type("javafx.application.Platform");
+var __JFXPanel = Java.type("javafx.embed.swing.JFXPanel");
+var __Timer    = Java.type("java.util.Timer");
+
+new __JFXPanel(); // need to invoke to init JFX so Platform.runLater works
 
 function setTimerRequest(handler, delay, interval, args) {
     handler = handler || function() {};
     delay = delay || 0;
     interval = interval || 0;
     var applyHandler = function() { handler.apply(this, args); }
-    var runLater = function() { Platform.runLater(applyHandler); }
-    var timer = new Timer("setTimerRequest", true);
+    var runLater = function() { __Platform.runLater(applyHandler); }
+    var timer = new __Timer("setTimerRequest", true);
     if (interval > 0) {
         timer.schedule(runLater, delay, interval);
     } else {
