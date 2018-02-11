@@ -1972,7 +1972,8 @@
     (when-not frame
       (throw (error env "Can't recur here")))
     (when-not (= (count exprs) (count (:params frame)))
-      (throw (error env "recur argument count mismatch")))
+      (throw (error env (str "recur argument count mismatch, expected: "
+                          (count (:params frame)) " args, got: " (count exprs)))))
     (when (and (:protocol-impl frame)
                (not add-implicit-target-object?))
       (warning :protocol-impl-recur-with-target env {:form (:form (first exprs))}))

@@ -820,6 +820,10 @@
       (a/analyze-file (io/file "src/test/cljs_build/analyzer_test/no_defs.cljs"))))
   (is (= {} (get-in @test-cenv [::a/namespaces 'analyzer-test.no-defs :defs]))))
 
+(deftest test-cljs-2475
+  (is (thrown-with-msg? Exception #"recur argument count mismatch, expected: 2 args, got: 1"
+        (a/analyze test-env '(loop [x 1 y 2] (recur 3))))))
+
 (deftest test-cljs-2476
   (doseq [invalid-try-recur-form '[(loop [] (try (recur)))
                                    (loop [] (try (catch js/Error t (recur))))
