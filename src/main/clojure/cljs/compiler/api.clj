@@ -12,7 +12,8 @@
   (:require [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
-            [cljs.compiler :as comp]))
+            [cljs.compiler :as comp]
+            [cljs.closure :as closure]))
 
 ;; =============================================================================
 ;; Main API
@@ -75,8 +76,10 @@
 
    Returns a map containing {:ns .. :provides .. :requires .. :file ..}.
    If the file was not compiled returns only {:file ...}"
-  ([src] (compile-file src))
-  ([src dest] (compile-file src dest))
+  ([src]
+   (compile-file src (closure/src-file->target-file src)))
+  ([src dest]
+   (compile-file src dest nil))
   ([src dest opts]
    (compile-file
      (if-not (nil? env/*compiler*)
