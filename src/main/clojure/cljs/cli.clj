@@ -20,65 +20,76 @@
 
 (declare main)
 
-(def ^:dynamic *cli-opts* nil)
-
 (defn output-dir-opt
-  [repl-env output-dir]
-  (set! *cli-opts* (merge *cli-opts* {:output-dir output-dir})))
+  [inits-map output-dir]
+  (assoc-in inits-map [:options :output-dir] output-dir))
 
 (defn verbose-opt
-  [repl-env value]
-  (set! *cli-opts* (merge *cli-opts* {:verbose (or (= value "true") false)})))
+  [inits-map value]
+  (assoc-in inits-map [:options :verbose] (or (= value "true") false)))
 
-(defn- init-opt
-  [repl-env file]
-  (set! *cli-opts* (merge *cli-opts* {:init-script file})))
+(defn init-opt
+  [inits-map file]
+  (update-in inits-map [:inits]
+    (fnil conj [])
+    {:type :init-script
+     :script file}))
 
-(defn- eval-opt
-  [repl-env form-str]
-  (set! *cli-opts*
-    (merge *cli-opts* {:eval-forms (ana-api/forms-seq (StringReader. form-str))})))
+(defn eval-opt
+  [inits-map form-str]
+  (update-in inits-map [:inits]
+    (fnil conj [])
+    {:type :eval-forms
+     :forms (ana-api/forms-seq (StringReader. form-str))}))
 
 ;; TODO: need support for feature that init options like -e and -i can appear
 ;; multiple times interleaved - David
 
 (defn init-dispatch
   "Returns the handler associated with an init opt"
-  [repl-env opt]
-  ({"-i"           (partial init-opt repl-env)
-    "--init"       (partial init-opt repl-env)
-    "-e"           (partial eval-opt repl-env)
-    "--eval"       (partial eval-opt repl-env)
-    "-v"           (partial verbose-opt repl-env)
-    "--verbose"    (partial verbose-opt repl-env)
-    "-o"           (partial output-dir-opt repl-env)
-    "--output-dir" (partial output-dir-opt repl-env)} opt))
+  [opt]
+  ({"-i"           init-opt
+    "--init"       init-opt
+    "-e"           eval-opt
+    "--eval"       eval-opt
+    "-v"           verbose-opt
+    "--verbose"    verbose-opt
+    "-o"           output-dir-opt
+    "--output-dir" output-dir-opt} opt))
 
 (defn- initialize
   "Common initialize routine for repl, script, and null opts"
-  [repl-env inits]
-  (doseq [[opt arg] inits]
-    ((init-dispatch repl-env opt) arg)))
+  [inits]
+  (reduce
+    (fn [ret [opt arg]]
+      ((init-dispatch opt) ret arg))
+    {} inits))
 
 (defn repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] inits]
-  ;; TODO: handle -e and -i args
-  (repl/repl* (repl-env) (build/add-implicit-options *cli-opts*)))
+  (let [{:keys [options inits]} (initialize inits)]
+    (repl/repl* (repl-env)
+      (assoc
+        (build/add-implicit-options options)
+        :inits
+        (into
+          [{:type :eval-forms
+            :forms [`(set! *command-line-args* (list ~@args))]}]
+          inits)))))
 
 (defn main-opt*
   [repl-env {:keys [main script args inits]}]
   (env/ensure
-    (initialize repl-env inits)
-    (let [renv   (repl-env)
-          opts   *cli-opts*
-          coptsf (when-let [od (:output-dir opts)]
+    (let [{:keys [options inits]} (initialize inits)
+          renv   (repl-env)
+          coptsf (when-let [od (:output-dir options)]
                    (io/file od ".cljsc_opts"))]
       (binding [repl/*repl-opts*
                 (as->
                   (build/add-implicit-options
-                    (merge (repl/-repl-options renv) opts)) opts
+                    (merge (repl/-repl-options renv) options)) opts
                   (let [copts (when (and coptsf (.exists coptsf))
                                 (-> (edn/read-string (slurp coptsf))
                                   ;; need to remove the entry point bits,
@@ -94,22 +105,20 @@ present"
             (repl/-setup renv (merge (repl/-repl-options renv) repl/*repl-opts*))
             ;; REPLs don't normally load cljs_deps.js
             (when (and coptsf (.exists coptsf))
-              (let [depsf (io/file (:output-dir opts) "cljs_deps.js")]
+              (let [depsf (io/file (:output-dir options) "cljs_deps.js")]
                 (when (.exists depsf)
                   (repl/-evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
-            (doseq [form (:eval-forms repl/*repl-opts*)]
-              (println (repl/evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
-            (when-let [init-script (:init-script opts)]
-              (repl/load-file renv init-script))
+            (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
+              `(set! *command-line-args* (list ~@args)))
+            (repl/run-inits renv inits)
             (when script
               (if (= "-" script)
                 (repl/load-stream renv "<cljs repl>" *in*)
                 (repl/load-file renv script)))
             (when main
-              (ana-api/analyze-file (build/ns->source main) opts)
+              (ana-api/analyze-file (build/ns->source main) options)
               (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
                 `(do
-                   (set! *command-line-args* (list ~@args))
                    (.require js/goog ~(-> main))
                    (~(symbol (name main) "-main") ~@args))))
             (repl/-tear-down renv)))))))
@@ -126,7 +135,9 @@ present"
 (defn- null-opt
   "No repl or script opt present, just bind args and run inits"
   [repl-env args inits]
-  (initialize repl-env inits))
+  (main-opt* repl-env
+    {:args args
+     :inits inits}))
 
 (defn- help-opt
   [_ _ _]
@@ -196,14 +207,13 @@ present"
   Paths may be absolute or relative in the filesystem or relative to
   classpath. Classpath-relative paths have prefix of @ or @/"
   [repl-env & args]
-  (binding [*cli-opts* {}]
-    (try
-      (if args
-        (let [args' (adapt-args args)]
-          (loop [[opt arg & more :as args] args' inits []]
-            (if (init-dispatch repl-env opt)
-              (recur more (conj inits [opt arg]))
-              ((main-dispatch repl-env opt) args inits))))
-        (repl-opt repl-env nil nil))
-      (finally
-        (flush)))))
+  (try
+    (if args
+      (let [args' (adapt-args args)]
+        (loop [[opt arg & more :as args] args' inits []]
+          (if (init-dispatch opt)
+            (recur more (conj inits [opt arg]))
+            ((main-dispatch repl-env opt) args inits))))
+      (repl-opt repl-env nil nil))
+    (finally
+      (flush))))

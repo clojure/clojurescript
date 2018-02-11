@@ -39,7 +39,7 @@
 (def known-repl-opts
   "Set of all known REPL options."
   #{:analyze-path :bind-err :caught :compiler-env :def-emits-var :eval :flush
-    :init :need-prompt :print :print-no-newline :prompt :quit-prompt :read
+    :init :inits :need-prompt :print :print-no-newline :prompt :quit-prompt :read
     :reader :repl-requires :repl-verbose :source-map-inline :watch :watch-fn
     :wrap})
 
@@ -762,8 +762,17 @@
           opts)))
     (.printStackTrace e *err*)))
 
+(defn run-inits [renv inits]
+  (doseq [{:keys [type] :as init} inits]
+    (case type
+      :eval-forms
+      (doseq [form (:forms init)]
+        (println (evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
+      :init-script
+      (load-file renv (:script init)))))
+
 (defn repl*
-  [repl-env {:keys [init need-prompt quit-prompt prompt flush read eval print caught reader
+  [repl-env {:keys [init inits need-prompt quit-prompt prompt flush read eval print caught reader
                     print-no-newline source-map-inline wrap repl-requires
                     compiler-env bind-err]
              :or {need-prompt #(if (readers/indexing-reader? *in*)
@@ -900,6 +909,7 @@
                      (run! #(analyze-source % opts) analyze-path)
                      (analyze-source analyze-path opts)))
                  (init)
+                 (run-inits repl-env inits)
                  (catch Throwable e
                    (caught e repl-env opts)))
                (when-let [src (:watch opts)]
