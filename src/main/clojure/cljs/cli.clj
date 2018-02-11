@@ -116,11 +116,9 @@ present"
                 (repl/load-stream renv "<cljs repl>" *in*)
                 (repl/load-file renv script)))
             (when main
-              (ana-api/analyze-file (build/ns->source main) options)
+              (repl/load-file renv (build/ns->source main))
               (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
-                `(do
-                   (.require js/goog ~(-> main))
-                   (~(symbol (name main) "-main") ~@args))))
+                `(~(symbol (name main) "-main") ~@args)))
             (repl/-tear-down renv)))))))
 
 (defn main-opt
