@@ -770,7 +770,7 @@
         (evaluate-form renv (ana/empty-env) "<cljs repl>" form))
       :eval-forms
       (doseq [form (:forms init)]
-        (prn (evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
+        (println (evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
       :init-script
       (load-file renv (:script init)))))
 
