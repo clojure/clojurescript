@@ -772,10 +772,11 @@
       (doseq [form (:forms init)]
         (eval-cljs renv (ana/empty-env) form))
       :eval-forms
-      (doseq [form (:forms init)]
-        (let [value (eval-cljs renv (ana/empty-env) form)]
-          (when-not (repl-nil? value)
-            (println value))))
+      (binding [*repl-opts* (merge *repl-opts* {:def-emits-var true})]
+        (doseq [form (:forms init)]
+          (let [value (eval-cljs renv (ana/empty-env) form)]
+            (when-not (repl-nil? value)
+              (println value)))))
       :init-script
       (load-file renv (:script init)))))
 

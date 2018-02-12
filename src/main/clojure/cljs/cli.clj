@@ -83,7 +83,8 @@ present"
           renv   (repl-env)
           coptsf (when-let [od (:output-dir options)]
                    (io/file od ".cljsc_opts"))]
-      (binding [repl/*repl-opts*
+      (binding [ana/*cljs-ns* 'cljs.user
+                repl/*repl-opts*
                 (as->
                   (build/add-implicit-options
                     (merge (repl/-repl-options renv) options)) opts
@@ -107,6 +108,8 @@ present"
                   (repl/-evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
             (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
               `(set! *command-line-args* (list ~@args)))
+            (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
+              `(~'ns ~'cljs.user))
             (repl/run-inits renv inits)
             (when script
               (if (= "-" script)
