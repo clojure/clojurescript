@@ -66,10 +66,12 @@
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] inits]
-  (let [{:keys [options inits]} (initialize inits)]
-    (repl/repl* (repl-env)
-      (assoc
-        (build/add-implicit-options options)
+  (let [{:keys [options inits]} (initialize inits)
+        renv (repl-env)
+        opts (build/add-implicit-options
+               (merge (repl/-repl-options renv) options))]
+    (repl/repl* renv
+      (assoc opts
         :inits
         (into
           [{:type :init-forms
@@ -82,20 +84,20 @@ present"
     (let [{:keys [options inits]} (initialize inits)
           renv   (repl-env)
           coptsf (when-let [od (:output-dir options)]
-                   (io/file od ".cljsc_opts"))]
-      (binding [ana/*cljs-ns* 'cljs.user
-                repl/*repl-opts*
-                (as->
-                  (build/add-implicit-options
-                    (merge (repl/-repl-options renv) options)) opts
-                  (let [copts (when (and coptsf (.exists coptsf))
-                                (-> (edn/read-string (slurp coptsf))
-                                  ;; need to remove the entry point bits,
-                                  ;; user is trying load some arbitrary ns
-                                  (dissoc :main)
-                                  (dissoc :output-to)))]
-                    (merge copts opts)))
-                ana/*verbose* (:verbose repl/*repl-opts*)]
+                   (io/file od ".cljsc_opts"))
+          opts   (as->
+                   (build/add-implicit-options
+                     (merge (repl/-repl-options renv) options)) opts
+                   (let [copts (when (and coptsf (.exists coptsf))
+                                 (-> (edn/read-string (slurp coptsf))
+                                   ;; need to remove the entry point bits,
+                                   ;; user is trying load some arbitrary ns
+                                   (dissoc :main)
+                                   (dissoc :output-to)))]
+                     (merge copts opts)))]
+      (binding [ana/*cljs-ns*    'cljs.user
+                repl/*repl-opts* opts
+                ana/*verbose*    (:verbose opts)]
         (when ana/*verbose*
           (util/debug-prn "Compiler options:" repl/*repl-opts*))
         (comp/with-core-cljs repl/*repl-opts*
