@@ -158,7 +158,7 @@
       ;; bootstrap, replace __dirname as __dirname won't be set
       ;; properly due to how we are running it - David
       (node-eval repl-env
-        (-> (slurp (io/resource "cljs/bootstrap_node.js"))
+        (-> (slurp (io/resource "cljs/bootstrap_nodejs.js"))
           (string/replace "path.resolve(__dirname, '..', 'base.js')"
             (platform-path (conj rewrite-path "bootstrap" ".." "base.js")))
           (string/replace
