@@ -42,9 +42,6 @@
     {:type :eval-forms
      :forms (ana-api/forms-seq (StringReader. form-str))}))
 
-;; TODO: need support for feature that init options like -e and -i can appear
-;; multiple times interleaved - David
-
 (defn init-dispatch
   "Returns the handler associated with an init opt"
   [opt]
