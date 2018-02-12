@@ -75,7 +75,8 @@ present"
         :inits
         (into
           [{:type :init-forms
-            :forms [`(set! *command-line-args* (list ~@args))]}]
+            :forms (when-not (empty? args)
+                     [`(set! *command-line-args* (list ~@args))])}]
           inits)))))
 
 (defn main-opt*
@@ -109,7 +110,8 @@ present"
                 (when (.exists depsf)
                   (repl/-evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
             (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
-              `(set! *command-line-args* (list ~@args)))
+              (when-not (empty? args)
+                `(set! *command-line-args* (list ~@args))))
             (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
               `(~'ns ~'cljs.user))
             (repl/run-inits renv inits)
