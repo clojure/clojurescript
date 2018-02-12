@@ -170,7 +170,7 @@ present"
                              nashorn
     -i,  --init path         Load a file or resource
     -e,  --eval string       Evaluate expressions in string; print non-nil values
-    -v,  --verbose bool      if true, will enable ClojureScriptt verbose logging
+    -v,  --verbose bool      if true, will enable ClojureScript verbose logging
     -o,  --output-dir path   Set the output directory to use. If supplied, .cljsc_opts
                              in that directory will be used to set ClojureScript
                              compiler options.
