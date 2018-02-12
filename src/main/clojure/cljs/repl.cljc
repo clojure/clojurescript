@@ -767,10 +767,10 @@
     (case type
       :init-forms
       (doseq [form (:forms init)]
-        (evaluate-form renv (ana/empty-env) "<cljs repl>" form))
+        (eval-cljs renv (ana/empty-env) form))
       :eval-forms
       (doseq [form (:forms init)]
-        (println (evaluate-form renv (ana/empty-env) "<cljs repl>" form)))
+        (println (eval-cljs renv (ana/empty-env) form)))
       :init-script
       (load-file renv (:script init)))))
 
