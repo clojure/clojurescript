@@ -165,6 +165,32 @@ present"
     "-?"     (partial help-opt repl-env)} opt
     (partial script-opt repl-env)))
 
+(def main-opts
+  #{"-r" "--repl"
+    "-m" "--main"
+    nil})
+
+(def valid-opts
+  (into main-opts
+    #{"-i" "--init"
+      "-e" "--eval"
+      "-v" "--verbose"
+      "-o" "--output-dir"
+      "-h" "--help" "-?"}))
+
+(defn normalize [args]
+  (when (seq args)
+    (let [pred (complement #{"-v" "--verbose"})
+          [pre post] ((juxt #(take-while pred %)
+                            #(drop-while pred %))
+                       args)]
+      (concat pre
+        (if (contains? valid-opts (fnext post))
+          (concat pre [(first post) "true"]
+            (normalize (next post)))
+          (concat pre [(first post) (fnext post)]
+            (normalize (nnext post))))))))
+
 ;; TODO: validate arg order to produce better error message - David
 (defn main
   "Usage: java -cp cljs.jar cljs.main [init-opt*] [main-opt] [arg*]
