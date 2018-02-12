@@ -762,6 +762,9 @@
           opts)))
     (.printStackTrace e *err*)))
 
+(defn repl-nil? [x]
+  (boolean (= "nil" x)))
+
 (defn run-inits [renv inits]
   (doseq [{:keys [type] :as init} inits]
     (case type
@@ -770,7 +773,9 @@
         (eval-cljs renv (ana/empty-env) form))
       :eval-forms
       (doseq [form (:forms init)]
-        (println (eval-cljs renv (ana/empty-env) form)))
+        (let [value (eval-cljs renv (ana/empty-env) form)]
+          (when-not (repl-nil? value)
+            (println value))))
       :init-script
       (load-file renv (:script init)))))
 
