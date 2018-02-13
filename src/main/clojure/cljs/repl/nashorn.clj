@@ -63,6 +63,9 @@
           (json/write-str (:closure-defines opts))))
       engine)
 
+    (defn tear-down-engine [engine]
+      (eval-str engine "nashorn_tear_down();"))
+
     (defn load-js-file [engine file]
       (eval-str engine (format "nashorn_load(\"%s\");" file)))
 
@@ -145,7 +148,8 @@
                      (.getStackTrace root-cause))))}))))
       (-load [{engine :engine :as this} ns url]
         (load-ns engine ns))
-      (-tear-down [this])
+      (-tear-down [this]
+        (tear-down-engine engine))
       repl/IParseStacktrace
       (-parse-stacktrace [this frames-str ret opts]
         (st/parse-stacktrace this frames-str

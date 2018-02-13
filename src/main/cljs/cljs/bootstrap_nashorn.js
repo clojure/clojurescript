@@ -21,6 +21,10 @@ var __Timer    = Java.type("java.util.Timer");
 
 new __JFXPanel(); // need to invoke to init JFX so Platform.runLater works
 
+var nashorn_tear_down = function() {
+    __Platform.exit();
+}
+
 function setTimerRequest(handler, delay, interval, args) {
     handler = handler || function() {};
     delay = delay || 0;
