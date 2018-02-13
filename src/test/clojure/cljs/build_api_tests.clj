@@ -540,3 +540,36 @@
       (is (re-find #"module\$.*\$node_modules\$left_pad\$index\[\"default\"\]\(42,5,0\)" (slurp foreign-lib-file))))
     (test/delete-out-files out)
     (test/delete-node-modules)))
+
+(deftest cljs-2519-test-cljs-base-entries
+  (let [dir (io/file "src" "test" "cljs_build" "code-split")
+        out (io/file (test/tmp-dir) "cljs-base-entries")
+        opts {:output-dir (str out)
+              :asset-path "/out"
+              :optimizations :none
+              :modules {:a {:entries '#{code.split.a}
+                            :output-to (io/file out "a.js")}
+                        :b {:entries '#{code.split.b}
+                            :output-to (io/file out "b.js")}
+                        :c {:entries '#{code.split.c}
+                            :output-to (io/file out "c.js")}}}]
+    (test/delete-out-files out)
+    (build/build (build/inputs dir) opts)
+    (testing "Module :cljs-base"
+      (let [content (slurp (io/file out "cljs_base.js"))]
+        (testing "requires code.split.d (used in :b and :c)"
+          (is (test/document-write? content 'code.split.d)))))
+    (testing "Module :a"
+      (let [content (slurp (-> opts :modules :a :output-to))]
+        (testing "requires code.split.a"
+          (is (test/document-write? content 'code.split.a)))
+        (testing "requires cljs.pprint (only used in :a)"
+          (is (test/document-write? content 'cljs.pprint)))))
+    (testing "Module :b"
+      (let [content (slurp (-> opts :modules :b :output-to))]
+        (testing "requires code.split.b"
+          (is (test/document-write? content 'code.split.b)))))
+    (testing "Module :c"
+      (let [content (slurp (-> opts :modules :c :output-to))]
+        (testing "requires code.split.c"
+          (is (test/document-write? content 'code.split.c)))))))

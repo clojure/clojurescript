@@ -1883,8 +1883,12 @@
    The deps file for the current project will include third-party
    libraries."
   [{:keys [modules] :as opts} & sources]
-  ;; this source-on-disk call is currently necessary for REPLs - David
-  (let [disk-sources (doall
+  (let [{:keys [modules] :as opts}
+        (assoc opts :modules
+          (ensure-cljs-base-module
+           (module-graph/expand-modules modules sources) opts))
+        ;; this source-on-disk call is currently necessary for REPLs - David
+        disk-sources (doall
                        (remove #(= (:group %) :goog)
                          (map #(source-on-disk opts %) sources)))
         goog-deps    (io/file (util/output-directory opts) "goog" "deps.js")

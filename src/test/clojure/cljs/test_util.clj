@@ -27,6 +27,14 @@
       (doseq [f (file-seq nm)]
         (.delete f)))))
 
+(defn document-write?
+  "Returns true if the string `s` contains a document.write statement to
+  load the namespace `ns`, otherwise false."
+  [s ns]
+  (->> (format "document.write('<script>goog.require(\"%s\");</script>');" ns)
+       (string/index-of s)
+       (some?)))
+
 (defn project-with-modules
   "Returns the build config for a project that uses Google Closure modules."
   [output-dir]
