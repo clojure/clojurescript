@@ -28,6 +28,18 @@
   [inits-map value]
   (assoc-in inits-map [:options :verbose] (= value "true")))
 
+(defn watch-opt
+  [inits-map path]
+  (assoc-in inits-map [:options :watch] path))
+
+(defn optimize-opt
+  [inits-map level]
+  (assoc-in inits-map [:options :optimizations] (keyword level)))
+
+(defn output-to-opt
+  [inits-map path]
+  (assoc-in inits-map [:options :output-to] path))
+
 (defn init-opt
   [inits-map file]
   (update-in inits-map [:inits]
@@ -51,8 +63,14 @@
     "--eval"       eval-opt
     "-v"           verbose-opt
     "--verbose"    verbose-opt
-    "-o"           output-dir-opt
-    "--output-dir" output-dir-opt} opt))
+    "-d"           output-dir-opt
+    "--output-dir" output-dir-opt
+    "-o"           output-to-opt
+    "--output-to"  output-to-opt
+    "-l"           optimize-opt
+    "-level"       optimize-opt
+    "-w"           watch-opt
+    "--watch"      watch-opt} opt))
 
 (defn- initialize
   "Common initialize routine for repl, script, and null opts"
@@ -152,22 +170,40 @@ present"
      :args   args
      :inits  inits}))
 
+(defn compile-opt
+  [repl-env [_ ns-name & args] inits]
+  (let [{:keys [options]} (initialize inits)
+        env-opts (repl/-repl-options (repl-env))
+        main-ns  (symbol ns-name)
+        opts     (merge options
+                   {:main main-ns}
+                   (when-let [target (:target env-opts)]
+                     {:target target}))
+        source   (when (= :none (:optimizations opts))
+                   (:uri (build/ns->location main-ns)))]
+    (if-let [path (:watch opts)]
+      (build/watch path opts)
+      (build/build source opts))))
+
 (defn main-dispatch
   "Returns the handler associated with a main option"
   [repl-env opt]
-  ({"-r"     (partial repl-opt repl-env)
-    "--repl" (partial repl-opt repl-env)
-    "-m"     (partial main-opt repl-env)
-    "--main" (partial main-opt repl-env)
-    nil      (partial null-opt repl-env)
-    "-h"     (partial help-opt repl-env)
-    "--help" (partial help-opt repl-env)
-    "-?"     (partial help-opt repl-env)} opt
+  ({"-r"        (partial repl-opt repl-env)
+    "--repl"    (partial repl-opt repl-env)
+    "-m"        (partial main-opt repl-env)
+    "--main"    (partial main-opt repl-env)
+    "-c"        (partial compile-opt repl-env)
+    "--compile" (partial compile-opt repl-env)
+    nil         (partial null-opt repl-env)
+    "-h"        (partial help-opt repl-env)
+    "--help"    (partial help-opt repl-env)
+    "-?"        (partial help-opt repl-env)} opt
     (partial script-opt repl-env)))
 
 (def main-opts
-  #{"-r" "--repl"
-    "-m" "--main"
+  #{"-m" "--main"
+    "-r" "--repl"
+    "-c" "--compile"
     nil})
 
 (def valid-opts
@@ -175,8 +211,11 @@ present"
     #{"-i" "--init"
       "-e" "--eval"
       "-v" "--verbose"
-      "-o" "--output-dir"
-      "-h" "--help" "-?"}))
+      "-d" "--output-dir"
+      "-o" "--output-to"
+      "-h" "--help" "-?"
+      "-l" "--level"
+      "-w" "--watch"}))
 
 (defn normalize [args]
   (if (not (contains? main-opts (first args)))
@@ -202,25 +241,33 @@ present"
 
   With no options or args, runs an interactive Read-Eval-Print Loop
 
-  init options:
+  init options for --main and --repl:
     -js, --js-engine engine  The JavaScript engine to use. Built-in supported
                              engines: nashorn, node, browser, rhino. Defaults to
                              nashorn
     -i,  --init path         Load a file or resource
     -e,  --eval string       Evaluate expressions in string; print non-nil values
     -v,  --verbose bool      if true, will enable ClojureScript verbose logging
-    -o,  --output-dir path   Set the output directory to use. If supplied, .cljsc_opts
+    -d,  --output-dir path   Set the output directory to use. If supplied, .cljsc_opts
                              in that directory will be used to set ClojureScript
-                             compiler options.
+                             compiler options
+
+  init options for --compile:
+    -o,  --output-to         Set the output compiled file
+    -l,  --level level       Set optimization level, only effective with -c main
+                             option. Valid values are: none, whitespace, simple,
+                             advanced
+    -w,  --watch path        Continuously build, only effect with -c main option
 
   main options:
     -m, --main ns-name     Call the -main function from a namespace with args
     -r, --repl             Run a repl
+    -c, --compile ns-name  Compile a namespace
     path                   Run a script from a file or resource
     -                      Run a script from standard input
     -h, -?, --help         Print this help message and exit
 
-  operation:
+  For --main and --repl:
 
     - Enters the user namespace
     - Binds *command-line-args* to a seq of strings containing command line

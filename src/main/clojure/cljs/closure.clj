@@ -2684,7 +2684,8 @@
                                (not (false? (:static-fns opts))))
                            (:static-fns opts)
                            ana/*cljs-static-fns*)
-             sources (-find-sources source opts)]
+             sources (when source
+                       (-find-sources source opts))]
          (check-output-to opts)
          (check-output-dir opts)
          (check-source-map opts)
