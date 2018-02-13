@@ -234,6 +234,9 @@ present"
   Paths may be absolute or relative in the filesystem or relative to
   classpath. Classpath-relative paths have prefix of @ or @/"
   [repl-env & args]
+  ;; On OS X suppress the Dock icon
+  (System/setProperty "apple.awt.UIElement" "true")
+  (java.awt.Toolkit/getDefaultToolkit)
   (try
     (if args
       (loop [[opt arg & more :as args] (normalize args) inits []]
