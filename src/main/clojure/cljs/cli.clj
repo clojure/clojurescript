@@ -179,17 +179,16 @@ present"
       "-h" "--help" "-?"}))
 
 (defn normalize [args]
-  (when (seq args)
+  (when (not (contains? main-opts (first args)))
     (let [pred (complement #{"-v" "--verbose"})
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
                        args)]
-      (concat pre
-        (if (contains? valid-opts (fnext post))
-          (concat pre [(first post) "true"]
-            (normalize (next post)))
-          (concat pre [(first post) (fnext post)]
-            (normalize (nnext post))))))))
+      (if (contains? valid-opts (fnext post))
+        (concat pre [(first post) "true"]
+          (normalize (next post)))
+        (concat pre [(first post) (fnext post)]
+          (normalize (nnext post)))))))
 
 ;; TODO: validate arg order to produce better error message - David
 (defn main
@@ -231,7 +230,7 @@ present"
   [repl-env & args]
   (try
     (if args
-      (loop [[opt arg & more :as args] args inits []]
+      (loop [[opt arg & more :as args] (normalize args) inits []]
         (if (init-dispatch opt)
           (recur more (conj inits [opt arg]))
           ((main-dispatch repl-env opt) args inits)))
