@@ -275,7 +275,8 @@
     (.shutdown (:es this)))
   repl/IReplEnvOptions
   (-repl-options [this]
-    {:repl-requires
+    {:browser-repl true
+     :repl-requires
      '[[clojure.browser.repl]]})
   repl/IParseStacktrace
   (-parse-stacktrace [this st err opts]
