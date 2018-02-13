@@ -31,12 +31,30 @@
               {:repl-ns repl-ns})))))
     nashorn/repl-env))
 
+(defn normalize* [args]
+  (if (not (contains? cli/main-opts (first args)))
+    (let [pred (complement #{"-js" "--js-engine"})
+          [pre post] ((juxt #(take-while pred %)
+                            #(drop-while pred %))
+                       args)]
+      (if (= pre args)
+        [nil pre]
+        (let [[js-opt post'] (normalize* (nnext post))]
+          (if js-opt
+            [js-opt (concat pre post')]
+            [[(first post) (fnext post)] (concat pre post')]))))
+    [nil args]))
+
+(defn normalize [args]
+  (let [[js-opt args] (normalize* args)]
+    (concat js-opt args)))
+
 (defn -main [& args]
-  (let [pred (complement #{"-js" "--js-engine"})
-        [pre post]
-        ((juxt #(take-while pred %)
-               #(drop-while pred %))
-          args)
+  (let [args (normalize (cli/normalize args))
+        pred (complement #{"-js" "--js-engine"})
+        [pre post] ((juxt #(take-while pred %)
+                          #(drop-while pred %))
+                     args)
         [js-args args] ((juxt #(take 2 %) #(drop 2 %)) post)
         repl-opt (get-js-opt js-args)]
     (apply cli/main repl-opt (concat pre args))))

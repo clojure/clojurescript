@@ -179,16 +179,22 @@ present"
       "-h" "--help" "-?"}))
 
 (defn normalize [args]
-  (when (not (contains? main-opts (first args)))
+  (if (not (contains? main-opts (first args)))
     (let [pred (complement #{"-v" "--verbose"})
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
                        args)]
-      (if (contains? valid-opts (fnext post))
+      (cond
+        (= pre args) pre
+
+        (contains? valid-opts (fnext post))
         (concat pre [(first post) "true"]
           (normalize (next post)))
+
+        :else
         (concat pre [(first post) (fnext post)]
-          (normalize (nnext post)))))))
+          (normalize (nnext post)))))
+    args))
 
 ;; TODO: validate arg order to produce better error message - David
 (defn main
