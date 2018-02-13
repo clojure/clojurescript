@@ -141,7 +141,6 @@
           (if @(:socket repl-env)
             (recur (read-response (:in @(:socket repl-env))))
             (recur nil))))
-      (println "ClojureScript Node.js REPL server listening on" (:port repl-env))
       ;; compile cljs.core & its dependencies, goog/base.js must be available
       ;; for bootstrap to load, use new closure/compile as it can handle
       ;; resources in JARs
