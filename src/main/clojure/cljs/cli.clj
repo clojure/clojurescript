@@ -179,7 +179,7 @@ present"
                    {:main main-ns}
                    (when-let [target (:target env-opts)]
                      {:target target}))
-        source   (when (= :none (:optimizations opts))
+        source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))]
     (if-let [path (:watch opts)]
       (build/watch path opts)
