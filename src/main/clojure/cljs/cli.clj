@@ -253,8 +253,8 @@ present"
                              nashorn, webworker
 
   init options only for --main and --repl:
-    -js, --js-engine engine  The JavaScript engine to use. Built-in supported
-                             engines: nashorn, node, browser, rhino. Defaults to
+    -re, --repl-env          The REPL environment to use. Built-in supported
+                             values: nashorn, node, browser, rhino. Defaults to
                              nashorn
     -i,  --init path         Load a file or resource
     -e,  --eval string       Evaluate expressions in string; print non-nil values

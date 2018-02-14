@@ -33,7 +33,7 @@
 
 (defn normalize* [args]
   (if (not (contains? cli/main-opts (first args)))
-    (let [pred (complement #{"-js" "--js-engine"})
+    (let [pred (complement #{"-re" "--repl-env"})
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
                        args)]
@@ -51,7 +51,7 @@
 
 (defn -main [& args]
   (let [args (normalize (cli/normalize args))
-        pred (complement #{"-js" "--js-engine"})
+        pred (complement #{"-re" "--repl-env"})
         [pre post] ((juxt #(take-while pred %)
                           #(drop-while pred %))
                      args)
