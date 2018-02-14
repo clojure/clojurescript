@@ -1156,11 +1156,16 @@
   [sources opts]
   (let [sources (map
                   (fn [js]
-                    (if (string? js)
+                    (cond
+                      (instance? JavaScriptFile js)
+                      js
+                      (map? js)
+                      (map->JavaScriptFile js)
+                      (string? js)
                       (merge
                         (map->javascript-file {:provides (deps/-provides js)})
                         {:source js})
-                      js))
+                      :else js))
                   sources)
         used (atom #{}) ;; track used inputs to avoid dupes
         modules
