@@ -32,7 +32,7 @@
     nashorn/repl-env))
 
 (defn normalize* [args]
-  (if (not (contains? @cli/main-dispatch (first args)))
+  (if (not (cli/dispatch? :main (first args)))
     (let [pred (complement #{"-re" "--repl-env"})
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
