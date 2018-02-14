@@ -248,7 +248,11 @@ present"
 
   With no options or args, runs an interactive Read-Eval-Print Loop
 
-  init options for --main and --repl:
+  init options:
+    -t, --target name        The JavaScript target. Supported values: nodejs,
+                             nashorn, webworker
+
+  init options only for --main and --repl:
     -js, --js-engine engine  The JavaScript engine to use. Built-in supported
                              engines: nashorn, node, browser, rhino. Defaults to
                              nashorn
@@ -259,7 +263,7 @@ present"
                              cljsc_opts.edn in that directory will be used to
                              set ClojureScript compiler options
 
-  init options for --compile:
+  init options only for --compile:
     -o,  --output-to         Set the output compiled file
     -O,  --optimizations     Set optimization level, only effective with -c main
                              option. Valid values are: none, whitespace, simple,
@@ -267,12 +271,12 @@ present"
     -w,  --watch path        Continuously build, only effect with -c main option
 
   main options:
-    -m, --main ns-name     Call the -main function from a namespace with args
-    -r, --repl             Run a repl
-    -c, --compile ns-name  Compile a namespace
-    path                   Run a script from a file or resource
-    -                      Run a script from standard input
-    -h, -?, --help         Print this help message and exit
+    -m, --main ns-name       Call the -main function from a namespace with args
+    -r, --repl               Run a repl
+    -c, --compile ns-name    Compile a namespace
+    path                     Run a script from a file or resource
+    -                        Run a script from standard input
+    -h, -?, --help           Print this help message and exit
 
   For --main and --repl:
 
