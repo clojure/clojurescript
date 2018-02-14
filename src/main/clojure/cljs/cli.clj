@@ -103,7 +103,7 @@ present"
     (let [{:keys [options inits]} (initialize inits)
           renv   (repl-env)
           coptsf (when-let [od (:output-dir options)]
-                   (io/file od ".cljsc_opts"))
+                   (io/file od "cljsc_opts.edn"))
           opts   (as->
                    (build/add-implicit-options
                      (merge (repl/-repl-options renv) options)) opts
@@ -247,9 +247,9 @@ present"
     -i,  --init path         Load a file or resource
     -e,  --eval string       Evaluate expressions in string; print non-nil values
     -v,  --verbose bool      if true, will enable ClojureScript verbose logging
-    -d,  --output-dir path   Set the output directory to use. If supplied, .cljsc_opts
-                             in that directory will be used to set ClojureScript
-                             compiler options
+    -d,  --output-dir path   Set the output directory to use. If supplied,
+                             cljsc_opts.edn in that directory will be used to
+                             set ClojureScript compiler options
 
   init options for --compile:
     -o,  --output-to         Set the output compiled file

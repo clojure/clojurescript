@@ -2768,7 +2768,7 @@
                          (map (comp :externs second)
                            (get @compiler-env ::ana/namespaces)))
                        (str (util/output-directory opts) "/inferred_externs.js")))
-                 _ (spit (io/file (util/output-directory opts) ".cljsc_opts") (pr-str orig-opts))
+                 _ (spit (io/file (util/output-directory opts) "cljsc_opts.edn") (pr-str orig-opts))
                  optim (:optimizations opts)
                  ret (if (and optim (not= optim :none))
                        (do
