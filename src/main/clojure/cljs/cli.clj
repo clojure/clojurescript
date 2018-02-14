@@ -40,6 +40,10 @@
   [inits-map path]
   (assoc-in inits-map [:options :output-to] path))
 
+(defn target-opt
+  [inits-map target]
+  (assoc-in inits-map [:options :target] (keyword target)))
+
 (defn init-opt
   [inits-map file]
   (update-in inits-map [:inits]
@@ -67,6 +71,8 @@
     "--output-dir"    output-dir-opt
     "-o"              output-to-opt
     "--output-to"     output-to-opt
+    "-t"              target-opt
+    "--target"        target-opt
     "-O"              optimize-opt
     "--optimizations" optimize-opt
     "-w"              watch-opt
@@ -175,9 +181,10 @@ present"
   (let [{:keys [options]} (initialize inits)
         env-opts (repl/-repl-options (repl-env))
         main-ns  (symbol ns-name)
-        opts     (merge options
-                   {:main main-ns}
-                   (select-keys env-opts [:target :browser-repl]))
+        opts     (merge
+                   (select-keys env-opts [:target :browser-repl])
+                   options
+                   {:main main-ns})
         source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))]
     (if-let [path (:watch opts)]
@@ -212,6 +219,7 @@ present"
       "-v" "--verbose"
       "-d" "--output-dir"
       "-o" "--output-to"
+      "-t" "--target"
       "-h" "--help" "-?"
       "-O" "--optimizations"
       "-w" "--watch"}))
