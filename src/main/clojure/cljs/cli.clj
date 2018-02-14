@@ -57,20 +57,20 @@
 (defn init-dispatch
   "Returns the handler associated with an init opt"
   [opt]
-  ({"-i"           init-opt
-    "--init"       init-opt
-    "-e"           eval-opt
-    "--eval"       eval-opt
-    "-v"           verbose-opt
-    "--verbose"    verbose-opt
-    "-d"           output-dir-opt
-    "--output-dir" output-dir-opt
-    "-o"           output-to-opt
-    "--output-to"  output-to-opt
-    "-l"           optimize-opt
-    "-level"       optimize-opt
-    "-w"           watch-opt
-    "--watch"      watch-opt} opt))
+  ({"-i"              init-opt
+    "--init"          init-opt
+    "-e"              eval-opt
+    "--eval"          eval-opt
+    "-v"              verbose-opt
+    "--verbose"       verbose-opt
+    "-d"              output-dir-opt
+    "--output-dir"    output-dir-opt
+    "-o"              output-to-opt
+    "--output-to"     output-to-opt
+    "-O"              optimize-opt
+    "--optimizations" optimize-opt
+    "-w"              watch-opt
+    "--watch"         watch-opt} opt))
 
 (defn- initialize
   "Common initialize routine for repl, script, and null opts"
@@ -213,7 +213,7 @@ present"
       "-d" "--output-dir"
       "-o" "--output-to"
       "-h" "--help" "-?"
-      "-l" "--level"
+      "-O" "--optimizations"
       "-w" "--watch"}))
 
 (defn normalize [args]
@@ -253,7 +253,7 @@ present"
 
   init options for --compile:
     -o,  --output-to         Set the output compiled file
-    -l,  --level level       Set optimization level, only effective with -c main
+    -O,  --optimizations     Set optimization level, only effective with -c main
                              option. Valid values are: none, whitespace, simple,
                              advanced
     -w,  --watch path        Continuously build, only effect with -c main option
