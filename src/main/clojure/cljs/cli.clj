@@ -21,77 +21,75 @@
 (declare main)
 
 (defn output-dir-opt
-  [inits-map output-dir]
-  (assoc-in inits-map [:options :output-dir] output-dir))
+  [cfg output-dir]
+  (assoc-in cfg [:options :output-dir] output-dir))
 
 (defn verbose-opt
-  [inits-map value]
-  (assoc-in inits-map [:options :verbose] (= value "true")))
+  [cfg value]
+  (assoc-in cfg [:options :verbose] (= value "true")))
 
 (defn watch-opt
-  [inits-map path]
-  (assoc-in inits-map [:options :watch] path))
+  [cfg path]
+  (assoc-in cfg [:options :watch] path))
 
 (defn optimize-opt
-  [inits-map level]
-  (assoc-in inits-map [:options :optimizations] (keyword level)))
+  [cfg level]
+  (assoc-in cfg [:options :optimizations] (keyword level)))
 
 (defn output-to-opt
-  [inits-map path]
-  (assoc-in inits-map [:options :output-to] path))
+  [cfg path]
+  (assoc-in cfg [:options :output-to] path))
 
 (defn target-opt
-  [inits-map target]
-  (assoc-in inits-map [:options :target] (keyword target)))
+  [cfg target]
+  (assoc-in cfg [:options :target] (keyword target)))
 
 (defn init-opt
-  [inits-map file]
-  (update-in inits-map [:inits]
+  [cfg file]
+  (update-in cfg [:inits]
     (fnil conj [])
     {:type :init-script
      :script file}))
 
 (defn eval-opt
-  [inits-map form-str]
-  (update-in inits-map [:inits]
+  [cfg form-str]
+  (update-in cfg [:inits]
     (fnil conj [])
     {:type :eval-forms
      :forms (ana-api/forms-seq (StringReader. form-str))}))
 
-(defn init-dispatch
-  "Returns the handler associated with an init opt"
-  [opt]
-  ({"-i"              init-opt
-    "--init"          init-opt
-    "-e"              eval-opt
-    "--eval"          eval-opt
-    "-v"              verbose-opt
-    "--verbose"       verbose-opt
-    "-d"              output-dir-opt
-    "--output-dir"    output-dir-opt
-    "-o"              output-to-opt
-    "--output-to"     output-to-opt
-    "-t"              target-opt
-    "--target"        target-opt
-    "-O"              optimize-opt
-    "--optimizations" optimize-opt
-    "-w"              watch-opt
-    "--watch"         watch-opt} opt))
+(def init-dispatch
+  (atom
+    {"-i"              {:fn init-opt}
+     "--init"          {:fn init-opt}
+     "-e"              {:fn eval-opt}
+     "--eval"          {:fn eval-opt}
+     "-v"              {:fn verbose-opt}
+     "--verbose"       {:fn verbose-opt}
+     "-d"              {:fn output-dir-opt}
+     "--output-dir"    {:fn output-dir-opt}
+     "-o"              {:fn output-to-opt}
+     "--output-to"     {:fn output-to-opt}
+     "-t"              {:fn target-opt}
+     "--target"        {:fn target-opt}
+     "-O"              {:fn optimize-opt}
+     "--optimizations" {:fn optimize-opt}
+     "-w"              {:fn watch-opt}
+     "--watch"         {:fn watch-opt}}))
 
 (defn- initialize
   "Common initialize routine for repl, script, and null opts"
   [inits]
   (reduce
     (fn [ret [opt arg]]
-      ((init-dispatch opt) ret arg))
+      ((:fn (@init-dispatch opt)) ret arg))
     {} inits))
 
 (defn repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
-  [repl-env [_ & args] inits]
-  (let [{:keys [options inits]} (initialize inits)
-        renv (repl-env)
+  [repl-env [_ & args] {:keys [options inits] :as cfg}]
+  (let [renv (repl-env)
         opts (build/add-implicit-options
                (merge (repl/-repl-options renv) options))]
     (repl/repl* renv
@@ -104,10 +102,9 @@ present"
           inits)))))
 
 (defn main-opt*
-  [repl-env {:keys [main script args inits]}]
+  [repl-env {:keys [main script args options inits] :as cfg}]
   (env/ensure
-    (let [{:keys [options inits]} (initialize inits)
-          renv   (repl-env)
+    (let [renv   (repl-env)
           coptsf (when-let [od (:output-dir options)]
                    (io/file od "cljsc_opts.edn"))
           opts   (as->
@@ -152,35 +149,29 @@ present"
 (defn main-opt
   "Call the -main function from a namespace with string arguments from
   the command line."
-  [repl-env [_ main-ns & args] inits]
-  (main-opt* repl-env
-    {:main  main-ns
-     :args  args
-     :inits inits}))
+  [repl-env [_ ns & args] cfg]
+  ((::main (repl/-repl-options (repl-env)) main-opt*)
+    repl-env (merge cfg {:main ns :args args})))
 
 (defn- null-opt
   "No repl or script opt present, just bind args and run inits"
-  [repl-env args inits]
-  (main-opt* repl-env
-    {:args args
-     :inits inits}))
+  [repl-env args cfg]
+  ((::main (repl/-repl-options (repl-env)) main-opt*)
+    repl-env (merge cfg {:args args})))
 
 (defn- help-opt
   [_ _ _]
   (println (:doc (meta (var main)))))
 
 (defn script-opt
-  [repl-env [path & args] inits]
-  (main-opt* repl-env
-    {:script path
-     :args   args
-     :inits  inits}))
+  [repl-env [path & args] cfg]
+  ((::main (repl/-repl-options (repl-env)) main-opt*)
+    repl-env (merge cfg {:script path :args args})))
 
-(defn compile-opt
-  [repl-env [_ ns-name & args] inits]
-  (let [{:keys [options]} (initialize inits)
-        env-opts (repl/-repl-options (repl-env))
-        main-ns  (symbol ns-name)
+(defn compile-opt*
+  [repl-env {:keys [ns args options] :as cfg}]
+  (let [env-opts (repl/-repl-options (repl-env))
+        main-ns  (symbol ns)
         opts     (merge
                    (select-keys env-opts [:target :browser-repl])
                    options
@@ -191,41 +182,26 @@ present"
       (build/watch path opts)
       (build/build source opts))))
 
-(defn main-dispatch
-  "Returns the handler associated with a main option"
-  [repl-env opt]
-  ({"-r"        (partial repl-opt repl-env)
-    "--repl"    (partial repl-opt repl-env)
-    "-m"        (partial main-opt repl-env)
-    "--main"    (partial main-opt repl-env)
-    "-c"        (partial compile-opt repl-env)
-    "--compile" (partial compile-opt repl-env)
-    nil         (partial null-opt repl-env)
-    "-h"        (partial help-opt repl-env)
-    "--help"    (partial help-opt repl-env)
-    "-?"        (partial help-opt repl-env)} opt
-    (partial script-opt repl-env)))
+(defn compile-opt
+  [repl-env [_ ns & args] cfg]
+  ((::compile (repl/-repl-options (repl-env)) compile-opt*)
+    repl-env (merge cfg {:args args :ns ns})))
 
-(def main-opts
-  #{"-m" "--main"
-    "-r" "--repl"
-    "-c" "--compile"
-    nil})
-
-(def valid-opts
-  (into main-opts
-    #{"-i" "--init"
-      "-e" "--eval"
-      "-v" "--verbose"
-      "-d" "--output-dir"
-      "-o" "--output-to"
-      "-t" "--target"
-      "-h" "--help" "-?"
-      "-O" "--optimizations"
-      "-w" "--watch"}))
+(def main-dispatch
+  (atom
+    {"-r"        {:fn repl-opt}
+     "--repl"    {:fn repl-opt}
+     "-m"        {:fn main-opt}
+     "--main"    {:fn main-opt}
+     "-c"        {:fn compile-opt}
+     "--compile" {:fn compile-opt}
+     nil         {:fn null-opt}
+     "-h"        {:fn help-opt}
+     "--help"    {:fn help-opt}
+     "-?"        {:fn help-opt}}))
 
 (defn normalize [args]
-  (if (not (contains? main-opts (first args)))
+  (if (not (contains? (set (keys @main-dispatch)) (first args)))
     (let [pred (complement #{"-v" "--verbose"})
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
@@ -233,7 +209,9 @@ present"
       (cond
         (= pre args) pre
 
-        (contains? valid-opts (fnext post))
+        (contains?
+          (into (set (keys @main-dispatch))
+                     (keys @init-dispatch)) (fnext post))
         (concat pre [(first post) "true"]
           (normalize (next post)))
 
@@ -298,9 +276,10 @@ present"
   (try
     (if args
       (loop [[opt arg & more :as args] (normalize args) inits []]
-        (if (init-dispatch opt)
+        (if (contains? @init-dispatch opt)
           (recur more (conj inits [opt arg]))
-          ((main-dispatch repl-env opt) args inits)))
+          ((:fn (@main-dispatch opt script-opt)) repl-env args
+            (initialize inits))))
       (repl-opt repl-env nil nil))
     (finally
       (flush))))
