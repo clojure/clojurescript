@@ -177,8 +177,7 @@ present"
         main-ns  (symbol ns-name)
         opts     (merge options
                    {:main main-ns}
-                   (when-let [target (:target env-opts)]
-                     {:target target}))
+                   (select-keys env-opts [:target :browser-repl]))
         source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))]
     (if-let [path (:watch opts)]
