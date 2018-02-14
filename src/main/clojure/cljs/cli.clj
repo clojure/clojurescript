@@ -23,9 +23,121 @@
 
 (declare main)
 
+;; -----------------------------------------------------------------------------
+;; Registry
+
 (defonce _cli_registry
   (atom {:main-dispatch nil
          :init-dispatch nil}))
+
+;; -----------------------------------------------------------------------------
+;; Help String formatting
+
+(def help-template
+  "Usage: java -cp cljs.jar cljs.main [init-opt*] [main-opt] [arg*]
+
+With no options or args, runs an interactive Read-Eval-Print Loop
+
+%s
+For --main and --repl:
+
+  - Enters the user namespace
+  - Binds *command-line-args* to a seq of strings containing command line
+    args that appear after any main option
+  - Runs all init options in order
+  - Calls a -main function or runs a repl or script if requested
+
+The init options may be repeated and mixed freely, but must appear before
+any main option.
+
+Paths may be absolute or relative in the filesystem or relative to
+classpath. Classpath-relative paths have prefix of @ or @/")
+
+(defn auto-fill
+  ([ws]
+   (auto-fill ws 50))
+  ([^String ws max-len]
+   (let [b (BreakIterator/getLineInstance Locale/ENGLISH)]
+     (.setText b ws)
+     (loop [s (.first b) e (.next b) line-len 0 line "" ret []]
+       (if (not= e BreakIterator/DONE)
+         (let [w (.substring ws s e)
+               word-len (.length w)
+               line-len (+ line-len word-len)]
+           (if (> line-len max-len)
+             (recur e (.next b) word-len w (conj ret line))
+             (recur e (.next b) line-len (str line w) ret)))
+         (conj ret (str line (.substring ws s (.length ws)))))))))
+
+(defn opt->str [cs {:keys [arg doc]}]
+  (letfn [(desc-string [filled]
+            (string/join "\n"
+              (map #(apply str (concat (repeat 6 "     ") [%]))
+                filled)))]
+    (let [[f & r] cs
+
+          fstr (cond-> (if (= 1 (count cs))
+                         (str "   " f)
+                         (format "%1$5s" f))
+                 (not (empty? r)) (str ", " (string/join ", " r))
+                 arg (str " " arg))
+          filled (auto-fill doc)]
+      (if (< (.length fstr) 30)
+        (cond-> (str (format "%1$-30s" fstr) (first filled) "\n")
+          (seq (rest filled)) (str (desc-string (rest filled)) "\n"))
+        (str
+          fstr "\n"
+          (desc-string fstr) "\n")))))
+
+(defn group->str [options group]
+  (let [{:keys [desc pseudos]} (get-in options [:groups group])]
+    (apply str
+      desc ":\n"
+      (->> (:init options)
+        (filter (fn [[k v]] (= (:group v) group)))
+        (concat pseudos)
+        (sort-by ffirst)
+        (map (fn [[k v]] (opt->str k v)))))))
+
+(defn primary-groups-str [options]
+  (str
+    (group->str options ::main&compile) "\n"
+    (group->str options ::main) "\n"
+    (group->str options ::compile) "\n"))
+
+(defn all-groups-str [{:keys [groups] :as options}]
+  (let [custom-groups
+        (disj (set (keys groups))
+          ::main&compile ::main ::compile)]
+    (apply str
+      (primary-groups-str options)
+      (map
+        (fn [group]
+          (str (group->str options group) "\n"))
+        custom-groups))))
+
+(defn main-str [options]
+  (let [pseudos {["path"] {:doc "Run a script from a file or resource"}
+                 ["-"] {:doc "Run a script from standard input"}}]
+    (apply str
+      "main options:\n"
+      (->> (:main options)
+        (concat pseudos)
+        (sort-by ffirst)
+        (remove (fn [[k v]] (nil? (ffirst k))))
+        (map (fn [[k v]] (opt->str k v)))))))
+
+(defn options-str [options]
+  (str
+    (all-groups-str options)
+    (main-str options)))
+
+(defn help-str []
+  (format help-template
+    (options-str @_cli_registry)))
+
+;; -----------------------------------------------------------------------------
+;; Main
 
 (defn output-dir-opt
   [cfg output-dir]
@@ -157,7 +269,7 @@ present"
 
 (defn- help-opt
   [_ _ _]
-  (println (:doc (meta (var main)))))
+  (println (help-str)))
 
 (defn script-opt
   [repl-env [path & args] cfg]
@@ -183,108 +295,60 @@ present"
   ((::compile (repl/-repl-options (repl-env)) compile-opt*)
     repl-env (merge cfg {:args args :ns ns})))
 
-(def help-template
-  "Usage: java -cp cljs.jar cljs.main [init-opt*] [main-opt] [arg*]
-
-  With no options or args, runs an interactive Read-Eval-Print Loop
-
-  %s
-
-  For --main and --repl:
-
-    - Enters the user namespace
-    - Binds *command-line-args* to a seq of strings containing command line
-      args that appear after any main option
-    - Runs all init options in order
-    - Calls a -main function or runs a repl or script if requested
-
-  The init options may be repeated and mixed freely, but must appear before
-  any main option.
-
-  Paths may be absolute or relative in the filesystem or relative to
-  classpath. Classpath-relative paths have prefix of @ or @/")
-
-(defn auto-fill
-  ([ws]
-    (auto-fill ws 40))
-  ([^String ws max-len]
-   (let [b (BreakIterator/getLineInstance Locale/ENGLISH)]
-     (.setText b ws)
-     (loop [s (.first b) e (.next b) line-len 0 line "" ret []]
-       (if (not= e BreakIterator/DONE)
-         (let [w (.substring ws s e)
-               word-len (.length w)
-               line-len (+ line-len word-len)]
-           (if (> line-len max-len)
-             (recur e (.next b) word-len w (conj ret line))
-             (recur e (.next b) line-len (str line w) ret)))
-         (conj ret (str line (.substring ws s (.length ws)))))))))
-
-(defn opt->str [[cs {:keys [arg doc]}]]
-  (let [[f & r] cs
-        fstr   (cond-> (format "%1$5s" f)
-                 (not (empty? r)) (str ", " (string/join ", " r))
-                 arg (str " " arg))
-        filled (auto-fill doc)]
-    (if (< (.length fstr) 30)
-      (str
-        (str (format "%1$-30s" fstr) " " (first filled)) "\n"
-        (string/join "\n"
-          (map #(apply str (concat (repeat 6 "     ") [%]))
-            (rest filled)))))))
-
 (def cli-options
-  {:groups [{::main&compile.init {:desc "init option"}
-             ::main.init {:desc "init options only for --main and --repl"
-                          :pseudos {"path" "Run a script from a file or resource"
-                                    "-" "Run a script from standard input"}}
-             ::compile.init {:desc "init options only for --compile"}
-             ::main {:desc "main options"}}]
+  {:groups {::main&compile {:desc "init option"
+                            :pseudos
+                            {["-re" "--repl-env"]
+                             {:doc (str "The REPL environment to use. Built-in "
+                                        "supported values: nashorn, node, browser, "
+                                        "rhino. Defaults to nashorn")}}}
+            ::main {:desc "init options only for --main and --repl"}
+            ::compile {:desc "init options only for --compile"}}
    :init
-   {["-i" "--init"]          {:group ::main.init :fn init-opt
+   {["-i" "--init"]          {:group ::main :fn init-opt
                               :arg "path"
                               :doc "Load a file or resource"}
-    ["-e" "--eval"]          {:group ::main.init :fn eval-opt
+    ["-e" "--eval"]          {:group ::main :fn eval-opt
                               :arg "string"
                               :doc "Evaluate expressions in string; print non-nil values"}
-    ["-v" "--verbose"]       {:group ::main.init :fn verbose-opt
+    ["-v" "--verbose"]       {:group ::main :fn verbose-opt
                               :arg "bool"
                               :doc "If true, will enable ClojureScript verbose logging"}
-    ["-d" "--output-dir"]    {:group ::main.init :fn output-dir-opt
+    ["-d" "--output-dir"]    {:group ::main :fn output-dir-opt
                               :arg "path"
                               :doc (str "Set the output directory to use. If "
                                         "supplied, cljsc_opts.edn in that directory "
                                         "will be used to set ClojureScript compiler "
                                         "options") }
-    ["-w" "--watch"]         {:group ::main.init :fn watch-opt
+    ["-w" "--watch"]         {:group ::compile :fn watch-opt
                               :arg "path"
                               :doc "Continuously build, only effective with -c main option"}
-    ["-o" "--output-to"]     {:group ::compile.init :fn output-to-opt
+    ["-o" "--output-to"]     {:group ::compile :fn output-to-opt
                               :arg "file"
                               :doc "Set the output compiled file"}
-    ["-O" "--optimizations"] {:group ::compile.init :fn optimize-opt
+    ["-O" "--optimizations"] {:group ::compile :fn optimize-opt
                               :arg "level"
                               :doc
                               (str "Set optimization level, only effective with "
                                    "-c main option. Valid values are: none, "
                                    "whitespace, simple, advanced")}
 
-    ["-t" "--target"]        {:group ::main&compile.init :fn target-opt
+    ["-t" "--target"]        {:group ::main&compile :fn target-opt
                               :arg "name"
                               :doc
                               (str "The JavaScript target. Supported values: "
                                    "nodejs, nashorn, webworker") }}
    :main
-   {["-r" "--repl"]          {:group ::main :fn repl-opt
+   {["-r" "--repl"]          {:fn repl-opt
                               :doc "Run a repl"}
-    ["-m" "--main"]          {:group ::main :fn main-opt
+    ["-m" "--main"]          {:fn main-opt
                               :arg "ns"
                               :doc "Call the -main function from a namespace with args"}
-    ["-c" "--compile"]       {:group ::main :fn compile-opt
+    ["-c" "--compile"]       {:fn compile-opt
                               :arg "ns"
                               :doc "Compile a namespace"}
-    [nil]                    {:group ::main :fn null-opt}
-    ["-h" "--help" "-?"]     {:group ::main :fn help-opt
+    [nil]                    {:fn null-opt}
+    ["-h" "--help" "-?"]     {:fn help-opt
                               :doc "Print this help message and exit"}}})
 
 (defn get-options [k]
@@ -308,6 +372,9 @@ present"
     (swap! _cli_registry
       (fn [st]
         (-> st
+          (update-in [:groups] merge groups)
+          (update-in [:main] merge main)
+          (update-in [:init] merge init)
           (merge-dispatch :init-dispatch init)
           (merge-dispatch :main-dispatch main))))))
 
@@ -331,55 +398,10 @@ present"
           (normalize (nnext post)))))
     args))
 
-;; TODO: validate arg order to produce better error message - David
 (defn main
-  "Usage: java -cp cljs.jar cljs.main [init-opt*] [main-opt] [arg*]
-
-  With no options or args, runs an interactive Read-Eval-Print Loop
-
-  init options:
-    -t, --target name        The JavaScript target. Supported values: nodejs,
-                             nashorn, webworker
-
-  init options only for --main and --repl:
-    -re, --repl-env          The REPL environment to use. Built-in supported
-                             values: nashorn, node, browser, rhino. Defaults to
-                             nashorn
-    -i,  --init path         Load a file or resource
-    -e,  --eval string       Evaluate expressions in string; print non-nil values
-    -v,  --verbose bool      if true, will enable ClojureScript verbose logging
-    -d,  --output-dir path   Set the output directory to use. If supplied,
-                             cljsc_opts.edn in that directory will be used to
-                             set ClojureScript compiler options
-
-  init options only for --compile:
-    -o,  --output-to         Set the output compiled file
-    -O,  --optimizations     Set optimization level, only effective with -c main
-                             option. Valid values are: none, whitespace, simple,
-                             advanced
-    -w,  --watch path        Continuously build, only effective with -c main option
-
-  main options:
-    -m, --main ns-name       Call the -main function from a namespace with args
-    -r, --repl               Run a repl
-    -c, --compile ns-name    Compile a namespace
-    path                     Run a script from a file or resource
-    -                        Run a script from standard input
-    -h, -?, --help           Print this help message and exit
-
-  For --main and --repl:
-
-    - Enters the user namespace
-    - Binds *command-line-args* to a seq of strings containing command line
-      args that appear after any main option
-    - Runs all init options in order
-    - Calls a -main function or runs a repl or script if requested
-
-  The init options may be repeated and mixed freely, but must appear before
-  any main option.
-
-  Paths may be absolute or relative in the filesystem or relative to
-  classpath. Classpath-relative paths have prefix of @ or @/"
+  "A generic runner for ClojureScript. repl-env must satisfy
+  cljs.repl/IReplEnvOptions and cljs.repl/IJavaScriptEnv protocols. args is a
+  sequence of command line flags."
   [repl-env & args]
   ;; On OS X suppress the Dock icon
   (System/setProperty "apple.awt.UIElement" "true")
