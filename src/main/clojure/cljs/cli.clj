@@ -314,7 +314,7 @@ present"
     ["-v" "--verbose"]       {:group ::main :fn verbose-opt
                               :arg "bool"
                               :doc "If true, will enable ClojureScript verbose logging"}
-    ["-d" "--output-dir"]    {:group ::main :fn output-dir-opt
+    ["-d" "--output-dir"]    {:group ::main&compile :fn output-dir-opt
                               :arg "path"
                               :doc (str "Set the output directory to use. If "
                                         "supplied, cljsc_opts.edn in that directory "
