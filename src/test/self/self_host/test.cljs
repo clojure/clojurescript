@@ -12,6 +12,7 @@
             [cljs.js :as cljs]
             [cljs.analyzer :as ana]
             [clojure.string :as string]
+            [cljs.stacktrace :as st]
             [cljs.nodejs :as nodejs]))
 
 (set! (.-user js/cljs) #js {})
@@ -1359,6 +1360,90 @@
               (is (nil? error))
               (is (= 4 value))
               (inc! l))))))))
+
+(deftest test-mapping-stacktrace
+  (async done
+    (let [l (latch 1 done)]
+      (testing "it should correctly map from canonical representation (smoke test)."
+        (let [st (cljs/empty-state)]
+          (cljs/eval-str st
+            "(ns cljs.user (:require foo.bar :reload))"
+            'cljs.user
+            {:source-map true
+             :ns 'cljs.user
+             :target :nodejs
+             :eval node-eval
+             :load (fn [{:keys [name]} cb]
+                     (cb (when (= name 'foo.bar)
+                           {:lang :clj
+                            :source "(ns foo.bar)\n(defn broken-first [] (ffirst 0))"
+                            :file "foo/bar.cljs"})))}
+            (fn [{:keys [ns value error file]}]
+              (let [sms (:source-maps @st)]
+                (is (= [{:function "broken-first"
+                         :file "foo/bar.cljs"
+                         :line 2
+                         :column 7}]
+                       (st/mapped-stacktrace
+                        [{:file "foo/bar.js"
+                          :function "broken-first"
+                          :line 2
+                          :column 0}]
+                        sms)))))))))))
+
+(deftest test-mapping-stacktrace-with-underscore
+  (async done
+    (let [l (latch 1 done)]
+      (testing "it should correctly map when file names contain underscore"
+        (let [st (cljs/empty-state)]
+          (cljs/eval-str st
+            "(ns cljs.user (:require foo.with-underscore :reload))"
+            'cljs.user
+            {:source-map true
+             :ns 'cljs.user
+             :target :nodejs
+             :eval node-eval
+             :load (fn [{:keys [name]} cb]
+                     (cb (when (= name 'foo.with-underscore)
+                           {:lang :clj
+                            :source "(ns foo.with-underscore)\n(defn broken-first [] (ffirst 0))"
+                            :file "foo/with_underscore.cljs"})))}
+            (fn [{:keys [ns value error file]}]
+              (let [sms (:source-maps @st)]
+                (is (= [{:function "broken-first"
+                         :file "foo/with_underscore.cljs"
+                         :line 2
+                         :column 7}]
+                       (st/mapped-stacktrace
+                        [{:file "foo/with_underscore.js"
+                          :function "broken-first"
+                          :line 2
+                          :column 0}]
+                        sms)))))))))))
+
+(deftest test-append-source-map-with-nil-name
+  (async done
+    (let [
+          l (latch 1 done)]
+      (testing "it should correctly use cljs-{js/Date as number} when name to cljs.js/eval-str is nil"
+        (let [st (cljs/empty-state)]
+          (cljs/eval-str st
+            "(ns cljs.user (:require foo.bar :reload))"
+            nil
+            {:source-map true
+             :ns 'cljs.user
+             :target :nodejs
+             :eval node-eval
+             :load (fn [{:keys [name]} cb]
+                     (cb (when (= name 'foo.bar)
+                           {:lang :clj
+                            :source "(ns foo.bar)"
+                            :file "foo/bar.cljs"})))}
+            (fn [{:keys [ns value error file]}]
+              (let [cljs-timestamp? #(let [[c t] (string/split % "-")]
+                                       (and (= "cljs" c) (not (js/isNaN (js/parseInt t)))))
+                    sms (:source-maps @st)]
+                (is (some cljs-timestamp? (keys sms)))))))))))
 
 (defn -main [& args]
   (run-tests))

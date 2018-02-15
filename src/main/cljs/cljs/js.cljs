@@ -157,9 +157,11 @@
 (defn- append-source-map
   [state name source sb sm-data {:keys [output-dir asset-path source-map-timestamp] :as opts}]
    (let [t    (.valueOf (js/Date.))
-         smn  (if name
-                (string/replace (munge (str name)) "." "/")
+         mn   (if name
+                (munge (str name))
                 (str "cljs-" t))
+         smn  (cond-> mn
+                name (string/replace "." "/"))
          ts   (.valueOf (js/Date.))
          out  (or output-dir asset-path)
          src  (cond-> (str smn ".cljs")
@@ -173,7 +175,7 @@
                  :file  file :sources-content [source]})]
      (when (:verbose opts) (debug-prn json))
      (swap! state assoc-in
-       [:source-maps name] (sm/invert-reverse-map (:source-map sm-data)))
+       [:source-maps (symbol mn)] (sm/invert-reverse-map (:source-map sm-data)))
      (.append sb
        (str "\n//# sourceURL=" file
             "\n//# sourceMappingURL=data:application/json;base64,"
@@ -969,7 +971,7 @@
      the ClojureScript source
 
    name (symbol or string)
-     optional, the name of the source
+     optional, the name of the source - used as key in :source-maps
 
    opts (map)
      compilation options.
@@ -1134,7 +1136,7 @@
     the ClojureScript source
 
   name (symbol or string)
-    optional, the name of the source
+    optional, the name of the source - used as key in :source-maps
 
   opts (map)
     compilation options.
