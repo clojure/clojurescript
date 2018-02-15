@@ -11,7 +11,7 @@
             [cljs.cli :as cli])
   (:gen-class))
 
-(defn get-js-opt [args]
+(defn- get-js-opt [args]
   (if (= 2 (count args))
     (let [repl-ns (symbol
                     (str "cljs.repl."
@@ -31,7 +31,7 @@
               {:repl-ns repl-ns})))))
     nashorn/repl-env))
 
-(defn normalize* [args]
+(defn- normalize* [args]
   (if (not (cli/dispatch? :main (first args)))
     (let [pred (complement #{"-re" "--repl-env"})
           [pre post] ((juxt #(take-while pred %)

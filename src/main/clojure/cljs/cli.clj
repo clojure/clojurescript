@@ -26,14 +26,14 @@
 ;; -----------------------------------------------------------------------------
 ;; Registry
 
-(defonce _cli_registry
+(defonce ^{:private true} _cli_registry
   (atom {:main-dispatch nil
          :init-dispatch nil}))
 
 ;; -----------------------------------------------------------------------------
 ;; Help String formatting
 
-(def help-template
+(def ^{:private true} help-template
   "Usage: java -cp cljs.jar cljs.main [init-opt*] [main-opt] [arg*]
 
 With no options or args, runs an interactive Read-Eval-Print Loop
@@ -53,7 +53,7 @@ any main option.
 Paths may be absolute or relative in the filesystem or relative to
 classpath. Classpath-relative paths have prefix of @ or @/")
 
-(defn auto-fill
+(defn- auto-fill
   ([ws]
    (auto-fill ws 50))
   ([^String ws max-len]
@@ -69,7 +69,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
              (recur e (.next b) line-len (str line w) ret)))
          (conj ret (str line (.substring ws s (.length ws)))))))))
 
-(defn opt->str [cs {:keys [arg doc]}]
+(defn- opt->str [cs {:keys [arg doc]}]
   (letfn [(desc-string [filled]
             (string/join "\n"
               (map #(apply str (concat (repeat 6 "     ") [%]))
@@ -89,7 +89,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
           fstr "\n"
           (desc-string fstr) "\n")))))
 
-(defn group->str [options group]
+(defn- group->str [options group]
   (let [{:keys [desc pseudos]} (get-in options [:groups group])]
     (apply str
       desc ":\n"
@@ -99,13 +99,13 @@ classpath. Classpath-relative paths have prefix of @ or @/")
         (sort-by ffirst)
         (map (fn [[k v]] (opt->str k v)))))))
 
-(defn primary-groups-str [options]
+(defn- primary-groups-str [options]
   (str
     (group->str options ::main&compile) "\n"
     (group->str options ::main) "\n"
     (group->str options ::compile) "\n"))
 
-(defn all-groups-str [{:keys [groups] :as options}]
+(defn- all-groups-str [{:keys [groups] :as options}]
   (let [custom-groups
         (disj (set (keys groups))
           ::main&compile ::main ::compile)]
@@ -116,7 +116,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
           (str (group->str options group) "\n"))
         custom-groups))))
 
-(defn main-str [options]
+(defn- main-str [options]
   (let [pseudos {["path"] {:doc "Run a script from a file or resource"}
                  ["-"] {:doc "Run a script from standard input"}}]
     (apply str
@@ -127,7 +127,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
         (remove (fn [[k v]] (nil? (ffirst k))))
         (map (fn [[k v]] (opt->str k v)))))))
 
-(defn options-str [options]
+(defn- options-str [options]
   (str
     (all-groups-str options)
     (main-str options)))
@@ -139,39 +139,39 @@ classpath. Classpath-relative paths have prefix of @ or @/")
 ;; -----------------------------------------------------------------------------
 ;; Main
 
-(defn output-dir-opt
+(defn- output-dir-opt
   [cfg output-dir]
   (assoc-in cfg [:options :output-dir] output-dir))
 
-(defn verbose-opt
+(defn- verbose-opt
   [cfg value]
   (assoc-in cfg [:options :verbose] (= value "true")))
 
-(defn watch-opt
+(defn- watch-opt
   [cfg path]
   (assoc-in cfg [:options :watch] path))
 
-(defn optimize-opt
+(defn- optimize-opt
   [cfg level]
   (assoc-in cfg [:options :optimizations] (keyword level)))
 
-(defn output-to-opt
+(defn- output-to-opt
   [cfg path]
   (assoc-in cfg [:options :output-to] path))
 
-(defn target-opt
+(defn- target-opt
   [cfg target]
   (let [target (if (= "node" target) "nodejs" target)]
     (assoc-in cfg [:options :target] (keyword target))))
 
-(defn init-opt
+(defn- init-opt
   [cfg file]
   (update-in cfg [:inits]
     (fnil conj [])
     {:type :init-script
      :script file}))
 
-(defn eval-opt
+(defn- eval-opt
   [cfg form-str]
   (update-in cfg [:inits]
     (fnil conj [])
@@ -185,7 +185,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
    (let [k' (keyword (str (name k) "-dispatch"))]
      (or (get-in @_cli_registry [k' opt]) default))))
 
-(defn- initialize
+(defn initialize
   "Common initialize routine for repl, script, and null opts"
   [inits]
   (reduce
@@ -193,7 +193,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
       ((get-dispatch :init opt) ret arg))
     {} inits))
 
-(defn repl-opt
+(defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] {:keys [options inits] :as cfg}]
@@ -209,7 +209,7 @@ present"
                      [`(set! *command-line-args* (list ~@args))])}]
           inits)))))
 
-(defn main-opt*
+(defn default-main
   [repl-env {:keys [main script args options inits] :as cfg}]
   (env/ensure
     (let [renv   (repl-env)
@@ -254,29 +254,29 @@ present"
                 `(~(symbol (name main) "-main") ~@args)))
             (repl/-tear-down renv)))))))
 
-(defn main-opt
+(defn- main-opt
   "Call the -main function from a namespace with string arguments from
   the command line."
   [repl-env [_ ns & args] cfg]
-  ((::main (repl/-repl-options (repl-env)) main-opt*)
+  ((::main (repl/-repl-options (repl-env)) default-main)
     repl-env (merge cfg {:main ns :args args})))
 
 (defn- null-opt
   "No repl or script opt present, just bind args and run inits"
   [repl-env args cfg]
-  ((::main (repl/-repl-options (repl-env)) main-opt*)
+  ((::main (repl/-repl-options (repl-env)) default-main)
     repl-env (merge cfg {:args args})))
 
 (defn- help-opt
   [_ _ _]
   (println (help-str)))
 
-(defn script-opt
+(defn- script-opt
   [repl-env [path & args] cfg]
-  ((::main (repl/-repl-options (repl-env)) main-opt*)
+  ((::main (repl/-repl-options (repl-env)) default-main)
     repl-env (merge cfg {:script path :args args})))
 
-(defn compile-opt*
+(defn default-compile
   [repl-env {:keys [ns args options] :as cfg}]
   (let [env-opts (repl/-repl-options (repl-env))
         main-ns  (symbol ns)
@@ -290,9 +290,9 @@ present"
       (build/watch path opts)
       (build/build source opts))))
 
-(defn compile-opt
+(defn- compile-opt
   [repl-env [_ ns & args] cfg]
-  ((::compile (repl/-repl-options (repl-env)) compile-opt*)
+  ((::compile (repl/-repl-options (repl-env)) default-compile)
     repl-env (merge cfg {:args args :ns ns})))
 
 (def cli-options
