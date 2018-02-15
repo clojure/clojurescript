@@ -13,16 +13,11 @@ goog.global.CLOSURE_IMPORT_SCRIPT = function(path) {
 
 goog.global.isProvided_ = function(name) { return false; };
 
-// https://blogs.oracle.com/nashorn/setinterval-and-settimeout-javascript-functions
-
-var __Platform = Java.type("javafx.application.Platform");
-var __PImpl    = Java.type("com.sun.javafx.application.PlatformImpl");
-var __Timer    = Java.type("java.util.Timer");
-
-__PImpl.startup(function(){}); // init JavaFX
+var __executorService = Java.type("java.util.concurrent.Executors").newScheduledThreadPool(1);
+var __millis = Java.type("java.util.concurrent.TimeUnit").valueOf("MILLISECONDS");
 
 var nashorn_tear_down = function() {
-    __Platform.exit();
+    __executorService.shutdownNow();
 }
 
 function setTimerRequest(handler, delay, interval, args) {
@@ -30,18 +25,15 @@ function setTimerRequest(handler, delay, interval, args) {
     delay = delay || 0;
     interval = interval || 0;
     var applyHandler = function() { handler.apply(this, args); }
-    var runLater = function() { __Platform.runLater(applyHandler); }
-    var timer = new __Timer("setTimerRequest", true);
     if (interval > 0) {
-        timer.schedule(runLater, delay, interval);
+        return __executorService.scheduleWithFixedDelay(applyHandler, delay, interval, __millis);
     } else {
-        timer.schedule(runLater, delay);
-    }
-    return timer;
+        return __executorService["schedule(java.lang.Runnable, long, java.util.concurrent.TimeUnit)"](applyHandler, delay, __millis);
+    };
 }
 
-function clearTimerRequest(timer) {
-    timer.cancel();
+function clearTimerRequest(future) {
+    future.cancel(false);
 }
 
 function setInterval() {
@@ -51,8 +43,8 @@ function setInterval() {
     return setTimerRequest(handler, ms, ms, args);
 }
 
-function clearInterval(timer) {
-    clearTimerRequest(timer);
+function clearInterval(future) {
+    clearTimerRequest(future);
 }
 
 function setTimeout() {
@@ -63,8 +55,8 @@ function setTimeout() {
     return setTimerRequest(handler, ms, 0, args);
 }
 
-function clearTimeout(timer) {
-    clearTimerRequest(timer);
+function clearTimeout(future) {
+    clearTimerRequest(future);
 }
 
 function setImmediate() {
@@ -74,6 +66,6 @@ function setImmediate() {
     return setTimerRequest(handler, 0, 0, args);
 }
 
-function clearImmediate(timer) {
-    clearTimerRequest(timer);
+function clearImmediate(future) {
+    clearTimerRequest(future);
 }
