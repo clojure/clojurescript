@@ -17,7 +17,7 @@ var __executorService = Java.type("java.util.concurrent.Executors").newScheduled
 var __millis = Java.type("java.util.concurrent.TimeUnit").valueOf("MILLISECONDS");
 
 var nashorn_tear_down = function() {
-    __executorService.shutdownNow();
+    __executorService.shutdown();
 }
 
 function setTimerRequest(handler, delay, interval, args) {
