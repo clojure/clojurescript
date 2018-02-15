@@ -16,10 +16,10 @@ goog.global.isProvided_ = function(name) { return false; };
 // https://blogs.oracle.com/nashorn/setinterval-and-settimeout-javascript-functions
 
 var __Platform = Java.type("javafx.application.Platform");
-var __JFXPanel = Java.type("javafx.embed.swing.JFXPanel");
+var __PImpl    = Java.type("com.sun.javafx.application.PlatformImpl");
 var __Timer    = Java.type("java.util.Timer");
 
-new __JFXPanel(); // need to invoke to init JFX so Platform.runLater works
+__PImpl.startup(function(){}); // init JavaFX
 
 var nashorn_tear_down = function() {
     __Platform.exit();
