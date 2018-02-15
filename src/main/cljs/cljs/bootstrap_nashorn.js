@@ -13,7 +13,8 @@ goog.global.CLOSURE_IMPORT_SCRIPT = function(path) {
 
 goog.global.isProvided_ = function(name) { return false; };
 
-var __executorService = Java.type("java.util.concurrent.Executors").newScheduledThreadPool(1);
+var __executorService = Java.type("java.util.concurrent.Executors").newScheduledThreadPool(0);
+__executorService.setMaximumPoolSize(1);
 var __millis = Java.type("java.util.concurrent.TimeUnit").valueOf("MILLISECONDS");
 
 var nashorn_tear_down = function() {
