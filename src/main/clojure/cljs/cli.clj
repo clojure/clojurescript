@@ -9,14 +9,14 @@
 (ns cljs.cli
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
+            [clojure.edn :as edn]
             [cljs.util :as util]
             [cljs.env :as env]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
-            [cljs.compiler :as comp]
-            [cljs.repl :as repl]
+            [cljs.compiler.api :as comp]
             [cljs.build.api :as build]
-            [clojure.edn :as edn])
+            [cljs.repl :as repl])
   (:import [java.io StringReader]
            [java.text BreakIterator]
            [java.util Locale]))
@@ -199,7 +199,7 @@ present"
   [repl-env [_ & args] {:keys [options inits] :as cfg}]
   (let [renv (repl-env)
         opts (build/add-implicit-options
-               (merge (repl/-repl-options renv) options))]
+               (merge (repl/repl-options renv) options))]
     (repl/repl* renv
       (assoc opts
         :inits
@@ -217,7 +217,7 @@ present"
                    (io/file od "cljsc_opts.edn"))
           opts   (as->
                    (build/add-implicit-options
-                     (merge (repl/-repl-options renv) options)) opts
+                     (merge (repl/repl-options renv) options)) opts
                    (let [copts (when (and coptsf (.exists coptsf))
                                  (-> (edn/read-string (slurp coptsf))
                                    ;; need to remove the entry point bits,
@@ -232,16 +232,16 @@ present"
           (util/debug-prn "Compiler options:" repl/*repl-opts*))
         (comp/with-core-cljs repl/*repl-opts*
           (fn []
-            (repl/-setup renv repl/*repl-opts*)
+            (repl/setup renv repl/*repl-opts*)
             ;; REPLs don't normally load cljs_deps.js
             (when (and coptsf (.exists coptsf))
               (let [depsf (io/file (:output-dir options) "cljs_deps.js")]
                 (when (.exists depsf)
-                  (repl/-evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
-            (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
+                  (repl/evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
+            (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
               (when-not (empty? args)
                 `(set! *command-line-args* (list ~@args))))
-            (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
+            (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
               `(~'ns ~'cljs.user))
             (repl/run-inits renv inits)
             (when script
@@ -250,21 +250,21 @@ present"
                 (repl/load-file renv script)))
             (when main
               (repl/load-file renv (build/ns->source main))
-              (repl/evaluate-form renv (ana/empty-env) "<cljs repl>"
+              (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
                 `(~(symbol (name main) "-main") ~@args)))
-            (repl/-tear-down renv)))))))
+            (repl/tear-down renv)))))))
 
 (defn- main-opt
   "Call the -main function from a namespace with string arguments from
   the command line."
   [repl-env [_ ns & args] cfg]
-  ((::main (repl/-repl-options (repl-env)) default-main)
+  ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:main ns :args args})))
 
 (defn- null-opt
   "No repl or script opt present, just bind args and run inits"
   [repl-env args cfg]
-  ((::main (repl/-repl-options (repl-env)) default-main)
+  ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:args args})))
 
 (defn- help-opt
@@ -273,12 +273,12 @@ present"
 
 (defn- script-opt
   [repl-env [path & args] cfg]
-  ((::main (repl/-repl-options (repl-env)) default-main)
+  ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:script path :args args})))
 
 (defn default-compile
   [repl-env {:keys [ns args options] :as cfg}]
-  (let [env-opts (repl/-repl-options (repl-env))
+  (let [env-opts (repl/repl-options (repl-env))
         main-ns  (symbol ns)
         opts     (merge
                    (select-keys env-opts [:target :browser-repl])

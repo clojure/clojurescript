@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.repl
-  (:refer-clojure :exclude [load-file])
+  (:refer-clojure :exclude [load load-file])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.set :as set]
@@ -116,11 +116,26 @@
 (defprotocol IReplEnvOptions
   (-repl-options [repl-env] "Return default REPL options for a REPL Env"))
 
+(defn repl-options [repl-env]
+  (-repl-options repl-env))
+
 (defprotocol IJavaScriptEnv
   (-setup [repl-env opts] "initialize the environment")
   (-evaluate [repl-env filename line js] "evaluate a javascript string")
   (-load [repl-env provides url] "load code at url into the environment")
   (-tear-down [repl-env] "dispose of the environment"))
+
+(defn setup [repl-env opts]
+  (-setup repl-env opts))
+
+(defn evaluate [repl-env filename line js]
+  (-evaluate repl-env filename line js))
+
+(defn load [repl-env provides url]
+  (-load repl-env provides url))
+
+(defn tear-down [repl-env]
+  (-tear-down repl-env))
 
 (extend-type
   Object
