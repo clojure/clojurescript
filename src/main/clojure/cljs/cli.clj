@@ -280,10 +280,15 @@ present"
   [repl-env {:keys [ns args options] :as cfg}]
   (let [env-opts (repl/repl-options (repl-env))
         main-ns  (symbol ns)
-        opts     (merge
-                   (select-keys env-opts [:target :browser-repl])
-                   options
-                   {:main main-ns})
+        opts     (as->
+                   (merge
+                     (select-keys env-opts [:target :browser-repl])
+                     options
+                     {:main main-ns}) opts
+                   (cond-> opts
+                     (not (:output-to opts))
+                     (assoc :output-to
+                       (.getPath (io/file (:output-dir opts "out") "main.js")))))
         source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))]
     (if-let [path (:watch opts)]
