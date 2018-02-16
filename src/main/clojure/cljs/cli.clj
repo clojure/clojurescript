@@ -288,7 +288,10 @@ present"
                    (:uri (build/ns->location main-ns)))]
     (if-let [path (:watch opts)]
       (build/watch path opts)
-      (build/build source opts))))
+      (do
+        (build/build source opts)
+        (when (#{"-r" "--repl"} (first args))
+          (repl-opt repl-env args cfg))))))
 
 (defn- compile-opt
   [repl-env [_ ns & args] cfg]
@@ -346,7 +349,8 @@ present"
                               :doc "Call the -main function from a namespace with args"}
     ["-c" "--compile"]       {:fn compile-opt
                               :arg "ns"
-                              :doc "Compile a namespace"}
+                              :doc (str "Compile a namespace. If -r / --repl present after "
+                                        "namespace will launch a REPL after the compile completes")}
     [nil]                    {:fn null-opt}
     ["-h" "--help" "-?"]     {:fn help-opt
                               :doc "Print this help message and exit"}}})
