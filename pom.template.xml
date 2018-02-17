@@ -310,6 +310,8 @@
                                 <namespace>cljs.repl.reflect</namespace>
                                 <namespace>cljs.repl.rhino</namespace>
                                 <namespace>cljs.repl.server</namespace>
+                                <namespace>cljs.main</namespace>
+                                <namespace>cljs.cli</namespace>
                             </namespaces>
                         </configuration>
                     </execution>
