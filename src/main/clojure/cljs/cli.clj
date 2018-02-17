@@ -24,13 +24,6 @@
 (declare main)
 
 ;; -----------------------------------------------------------------------------
-;; Registry
-
-(defonce ^{:private true} _cli_registry
-  (atom {:main-dispatch nil
-         :init-dispatch nil}))
-
-;; -----------------------------------------------------------------------------
 ;; Help String formatting
 
 (def ^{:private true} help-template
@@ -132,9 +125,11 @@ classpath. Classpath-relative paths have prefix of @ or @/")
     (all-groups-str options)
     (main-str options)))
 
-(defn help-str []
+(declare merged-commands)
+
+(defn help-str [repl-env]
   (format help-template
-    (options-str @_cli_registry)))
+    (options-str (merged-commands repl-env))))
 
 ;; -----------------------------------------------------------------------------
 ;; Main
@@ -179,18 +174,18 @@ classpath. Classpath-relative paths have prefix of @ or @/")
      :forms (ana-api/forms-seq (StringReader. form-str))}))
 
 (defn get-dispatch
-  ([k opt]
-    (get-dispatch k opt nil))
-  ([k opt default]
+  ([commands k opt]
+    (get-dispatch commands k opt nil))
+  ([commands k opt default]
    (let [k' (keyword (str (name k) "-dispatch"))]
-     (or (get-in @_cli_registry [k' opt]) default))))
+     (or (get-in commands [k' opt]) default))))
 
 (defn initialize
   "Common initialize routine for repl, script, and null opts"
-  [inits]
+  [inits commands]
   (reduce
     (fn [ret [opt arg]]
-      ((get-dispatch :init opt) ret arg))
+      ((get-dispatch commands :init opt) ret arg))
     {} inits))
 
 (defn- repl-opt
@@ -268,8 +263,8 @@ present"
     repl-env (merge cfg {:args args})))
 
 (defn- help-opt
-  [_ _ _]
-  (println (help-str)))
+  [repl-env _ _]
+  (println (help-str repl-env)))
 
 (defn- script-opt
   [repl-env [path & args] cfg]
@@ -303,94 +298,94 @@ present"
   ((::compile (repl/-repl-options (repl-env)) default-compile)
     repl-env (merge cfg {:args args :ns ns})))
 
-(def cli-options
-  {:groups {::main&compile {:desc "init option"
-                            :pseudos
-                            {["-re" "--repl-env"]
-                             {:doc (str "The REPL environment to use. Built-in "
-                                        "supported values: nashorn, node, browser, "
-                                        "rhino. Defaults to nashorn")}}}
-            ::main {:desc "init options only for --main and --repl"}
-            ::compile {:desc "init options only for --compile"}}
-   :init
-   {["-i" "--init"]          {:group ::main :fn init-opt
-                              :arg "path"
-                              :doc "Load a file or resource"}
-    ["-e" "--eval"]          {:group ::main :fn eval-opt
-                              :arg "string"
-                              :doc "Evaluate expressions in string; print non-nil values"}
-    ["-v" "--verbose"]       {:group ::main :fn verbose-opt
-                              :arg "bool"
-                              :doc "If true, will enable ClojureScript verbose logging"}
-    ["-d" "--output-dir"]    {:group ::main&compile :fn output-dir-opt
-                              :arg "path"
-                              :doc (str "Set the output directory to use. If "
-                                        "supplied, cljsc_opts.edn in that directory "
-                                        "will be used to set ClojureScript compiler "
-                                        "options") }
-    ["-w" "--watch"]         {:group ::compile :fn watch-opt
-                              :arg "path"
-                              :doc "Continuously build, only effective with -c main option"}
-    ["-o" "--output-to"]     {:group ::compile :fn output-to-opt
-                              :arg "file"
-                              :doc "Set the output compiled file"}
-    ["-O" "--optimizations"] {:group ::compile :fn optimize-opt
-                              :arg "level"
-                              :doc
-                              (str "Set optimization level, only effective with "
-                                   "-c main option. Valid values are: none, "
-                                   "whitespace, simple, advanced")}
-
-    ["-t" "--target"]        {:group ::main&compile :fn target-opt
-                              :arg "name"
-                              :doc
-                              (str "The JavaScript target. Supported values: "
-                                   "nodejs, nashorn, webworker") }}
-   :main
-   {["-r" "--repl"]          {:fn repl-opt
-                              :doc "Run a repl"}
-    ["-m" "--main"]          {:fn main-opt
-                              :arg "ns"
-                              :doc "Call the -main function from a namespace with args"}
-    ["-c" "--compile"]       {:fn compile-opt
-                              :arg "ns"
-                              :doc (str "Compile a namespace. If -r / --repl present after "
-                                        "namespace will launch a REPL after the compile completes")}
-    [nil]                    {:fn null-opt}
-    ["-h" "--help" "-?"]     {:fn help-opt
-                              :doc "Print this help message and exit"}}})
-
-(defn get-options [k]
+(defn get-options [commands k]
   (if (= :all k)
-    (into (get-options :main) (get-options :init))
-    (-> (get @_cli_registry (keyword (str (name k) "-dispatch")))
+    (into (get-options commands :main) (get-options commands :init))
+    (-> (get commands (keyword (str (name k) "-dispatch")))
       keys set)))
 
-(defn dispatch? [k opt]
-  (contains? (get-options k) opt))
+(defn dispatch? [commands k opt]
+  (contains? (get-options commands k) opt))
 
-(defn register-options! [{:keys [groups main init]}]
-  (letfn [(merge-dispatch [st k options]
-            (update-in st [k]
-              (fn [m]
-                (reduce
-                  (fn [ret [cs csm]]
-                    (merge ret
-                      (zipmap cs (repeat (:fn csm)))))
-                  m options))))]
-    (swap! _cli_registry
-      (fn [st]
-        (-> st
-          (update-in [:groups] merge groups)
-          (update-in [:main] merge main)
-          (update-in [:init] merge init)
-          (merge-dispatch :init-dispatch init)
-          (merge-dispatch :main-dispatch main))))))
+(defn add-commands
+  ([commands]
+    (add-commands {:main-dispatch nil :init-dispatch nil} commands))
+  ([commands {:keys [groups main init]}]
+   (letfn [(merge-dispatch [st k options]
+             (update-in st [k]
+               (fn [m]
+                 (reduce
+                   (fn [ret [cs csm]]
+                     (merge ret
+                       (zipmap cs (repeat (:fn csm)))))
+                   m options))))]
+     (-> commands
+       (update-in [:groups] merge groups)
+       (update-in [:main] merge main)
+       (update-in [:init] merge init)
+       (merge-dispatch :init-dispatch init)
+       (merge-dispatch :main-dispatch main)))))
 
-(register-options! cli-options)
+(def default-commands
+  (add-commands
+    {:groups {::main&compile {:desc "init option"
+                              :pseudos
+                              {["-re" "--repl-env"]
+                               {:doc (str "The REPL environment to use. Built-in "
+                                       "supported values: nashorn, node, browser, "
+                                       "rhino. Defaults to nashorn")}}}
+              ::main {:desc "init options only for --main and --repl"}
+              ::compile {:desc "init options only for --compile"}}
+     :init
+     {["-i" "--init"]          {:group ::main :fn init-opt
+                                :arg "path"
+                                :doc "Load a file or resource"}
+      ["-e" "--eval"]          {:group ::main :fn eval-opt
+                                :arg "string"
+                                :doc "Evaluate expressions in string; print non-nil values"}
+      ["-v" "--verbose"]       {:group ::main :fn verbose-opt
+                                :arg "bool"
+                                :doc "If true, will enable ClojureScript verbose logging"}
+      ["-d" "--output-dir"]    {:group ::main&compile :fn output-dir-opt
+                                :arg "path"
+                                :doc (str "Set the output directory to use. If "
+                                       "supplied, cljsc_opts.edn in that directory "
+                                       "will be used to set ClojureScript compiler "
+                                       "options") }
+      ["-w" "--watch"]         {:group ::compile :fn watch-opt
+                                :arg "path"
+                                :doc "Continuously build, only effective with -c main option"}
+      ["-o" "--output-to"]     {:group ::compile :fn output-to-opt
+                                :arg "file"
+                                :doc "Set the output compiled file"}
+      ["-O" "--optimizations"] {:group ::compile :fn optimize-opt
+                                :arg "level"
+                                :doc
+                                (str "Set optimization level, only effective with "
+                                  "-c main option. Valid values are: none, "
+                                  "whitespace, simple, advanced")}
 
-(defn normalize [args]
-  (if (not (contains? (get-options :main) (first args)))
+      ["-t" "--target"]        {:group ::main&compile :fn target-opt
+                                :arg "name"
+                                :doc
+                                (str "The JavaScript target. Supported values: "
+                                  "nodejs, nashorn, webworker") }}
+     :main
+     {["-r" "--repl"]          {:fn repl-opt
+                                :doc "Run a repl"}
+      ["-m" "--main"]          {:fn main-opt
+                                :arg "ns"
+                                :doc "Call the -main function from a namespace with args"}
+      ["-c" "--compile"]       {:fn compile-opt
+                                :arg "ns"
+                                :doc (str "Compile a namespace. If -r / --repl present after "
+                                       "namespace will launch a REPL after the compile completes")}
+      [nil]                    {:fn null-opt}
+      ["-h" "--help" "-?"]     {:fn help-opt
+                                :doc "Print this help message and exit"}}}))
+
+(defn normalize [commands args]
+  (if (not (contains? (get-options commands :main) (first args)))
     (let [pred (complement #{"-v" "--verbose"})
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
@@ -398,14 +393,18 @@ present"
       (cond
         (= pre args) pre
 
-        (contains? (get-options :all) (fnext post))
+        (contains? (get-options commands :all) (fnext post))
         (concat pre [(first post) "true"]
-          (normalize (next post)))
+          (normalize commands (next post)))
 
         :else
         (concat pre [(first post) (fnext post)]
-          (normalize (nnext post)))))
+          (normalize commands (nnext post)))))
     args))
+
+(defn merged-commands [repl-env]
+  (add-commands default-commands
+    (::commands (repl/repl-options (repl-env)))))
 
 (defn main
   "A generic runner for ClojureScript. repl-env must satisfy
@@ -416,12 +415,13 @@ present"
   (System/setProperty "apple.awt.UIElement" "true")
   (java.awt.Toolkit/getDefaultToolkit)
   (try
-    (if args
-      (loop [[opt arg & more :as args] (normalize args) inits []]
-        (if (dispatch? :init opt)
-          (recur more (conj inits [opt arg]))
-          ((get-dispatch :main opt script-opt)
-            repl-env args (initialize inits))))
-      (repl-opt repl-env nil nil))
+    (let [commands (merged-commands repl-env)]
+      (if args
+        (loop [[opt arg & more :as args] (normalize commands args) inits []]
+          (if (dispatch? commands :init opt)
+            (recur more (conj inits [opt arg]))
+            ((get-dispatch commands :main opt script-opt)
+              repl-env args (initialize inits commands))))
+        (repl-opt repl-env nil nil)))
     (finally
       (flush))))

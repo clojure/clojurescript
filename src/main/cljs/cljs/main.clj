@@ -32,7 +32,7 @@
     nashorn/repl-env))
 
 (defn- normalize* [args]
-  (if (not (cli/dispatch? :main (first args)))
+  (if (not (cli/dispatch? cli/default-commands :main (first args)))
     (let [pred (complement #{"-re" "--repl-env"})
           [pre post] ((juxt #(take-while pred %)
                             #(drop-while pred %))
@@ -50,7 +50,7 @@
     (concat js-opt args)))
 
 (defn -main [& args]
-  (let [args (normalize (cli/normalize args))
+  (let [args (normalize (cli/normalize cli/default-commands args))
         pred (complement #{"-re" "--repl-env"})
         [pre post] ((juxt #(take-while pred %)
                           #(drop-while pred %))
