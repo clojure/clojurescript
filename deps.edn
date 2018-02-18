@@ -1,11 +1,11 @@
 {:paths ["src/main/clojure" "src/main/cljs"]
  :deps
  {org.clojure/clojure {:mvn/version "1.9.0"}
-  org.clojure/tools.reader {:mvn/version "1.2.2" :classifier "aot"}
+  org.clojure/tools.reader {:mvn/version "1.2.2"}
   org.clojure/test.check {:mvn/version "0.10.0-alpha2"}
   org.clojure/spec.alpha {:mvn/version "0.1.143"}
   org.clojure/core.specs.alpha {:mvn/version "0.1.24"}
-  org.clojure/data.json {:mvn/version "0.2.6" :classifier "aot"}
+  org.clojure/data.json {:mvn/version "0.2.6"}
   com.google.javascript/closure-compiler-unshaded {:mvn/version "v20180204"}
   org.clojure/google-closure-library {:mvn/version "0.0-20170809-b9c14c6b"}
   org.mozilla/rhino {:mvn/version "1.7R5"}}

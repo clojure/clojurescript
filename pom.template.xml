@@ -25,7 +25,7 @@
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
-            <version>1.8.0</version>
+            <version>1.9.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.javascript</groupId>
@@ -41,7 +41,6 @@
             <groupId>org.clojure</groupId>
             <artifactId>data.json</artifactId>
             <version>0.2.6</version>
-            <classifier>aot</classifier>
         </dependency>
         <dependency>
             <groupId>org.mozilla</groupId>
@@ -52,7 +51,6 @@
             <groupId>org.clojure</groupId>
             <artifactId>tools.reader</artifactId>
             <version>1.2.2</version>
-            <classifier>aot</classifier>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
