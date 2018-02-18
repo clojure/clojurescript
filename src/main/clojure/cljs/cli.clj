@@ -275,8 +275,12 @@ present"
   [repl-env {:keys [ns args options] :as cfg}]
   (let [env-opts (repl/repl-options (repl-env))
         main-ns  (symbol ns)
+        coptsf   (when-let [od (:output-dir options)]
+                   (io/file od "cljsc_opts.edn"))
         opts     (as->
                    (merge
+                     (when (and coptsf (.exists coptsf))
+                       (edn/read-string (slurp coptsf)))
                      (select-keys env-opts [:target :browser-repl])
                      options
                      {:main main-ns}) opts
@@ -286,6 +290,7 @@ present"
                        (.getPath (io/file (:output-dir opts "out") "main.js")))
                      (= :advanced (:optimizations opts))
                      (dissoc :browser-repl)))
+        cfg      (update cfg :options merge (select-keys opts repl/known-repl-opts))
         source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))]
     (if-let [path (:watch opts)]
