@@ -8,11 +8,14 @@
         <fileSet>
             <directory>target/classes</directory>
             <outputDirectory>/</outputDirectory>
+            <!-- Excluding these breaks AOT, needs more investigating -->
+            <!--
             <excludes>
                 <exclude>clojure/data/**</exclude>
                 <exclude>clojure/tools/**</exclude>
                 <exclude>cognitect/**</exclude>
             </excludes>
+            -->
         </fileSet>
     </fileSets>
 </assembly>
