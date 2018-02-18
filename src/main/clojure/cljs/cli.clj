@@ -413,9 +413,6 @@ present"
   cljs.repl/IReplEnvOptions and cljs.repl/IJavaScriptEnv protocols. args is a
   sequence of command line flags."
   [repl-env & args]
-  ;; On OS X suppress the Dock icon
-  (System/setProperty "apple.awt.UIElement" "true")
-  (java.awt.Toolkit/getDefaultToolkit)
   (try
     (let [commands (merged-commands repl-env)]
       (if args
