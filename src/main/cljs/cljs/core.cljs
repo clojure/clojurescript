@@ -6432,7 +6432,7 @@ reduces them without incurring seq initialization"
     (if (< i base-count)
       (let [k (nth fields i)]
         (set! i (inc i))
-        [k (-lookup record k)])
+        (MapEntry. k (-lookup record k) nil))
       (.next ext-map-iter)))
   (remove [_] (js/Error. "Unsupported operation")))
 
