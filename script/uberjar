@@ -20,11 +20,12 @@ MAJOR="1"
 MINOR="10"
 REVISION=`git --no-replace-objects describe --match v$MAJOR.$MINOR`
 
-# Extract the version number from the string. Do this in two steps so
-# it is a little easier to understand.
-REVISION=${REVISION:5} # drop the first 5 characters
-REVISION=${REVISION:0:${#REVISION}-9} # drop the last 9 characters
-REVISION=${REVISION/\-/}
+# Extract the version number from the string.
+REVISION_REGEX="v[0-9]*\.[0-9]*-([0-9]*)-.*"
+if [[ $REVISION =~ $REVISION_REGEX ]]
+then
+  REVISION="${BASH_REMATCH[1]}"
+fi
 
 COMP_FILE=`mktemp /tmp/compiler.clj.XXXXXXXXXXX`
 sed -e 's/^.def ^:dynamic \*clojurescript-version\*.*$/(def ^:dynamic *clojurescript-version* {:major '"$MAJOR"', :minor '"$MINOR"', :qualifier '"$REVISION"'})/' src/main/clojure/cljs/util.cljc > $COMP_FILE
