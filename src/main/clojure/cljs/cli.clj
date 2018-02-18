@@ -283,7 +283,9 @@ present"
                    (cond-> opts
                      (not (:output-to opts))
                      (assoc :output-to
-                       (.getPath (io/file (:output-dir opts "out") "main.js")))))
+                       (.getPath (io/file (:output-dir opts "out") "main.js")))
+                     (= :advanced (:optimizations opts))
+                     (dissoc :browser-repl)))
         source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))]
     (if-let [path (:watch opts)]
@@ -369,7 +371,7 @@ present"
                                 :arg "name"
                                 :doc
                                 (str "The JavaScript target. Supported values: "
-                                  "nodejs, nashorn, webworker") }}
+                                     "nodejs, nashorn, webworker") }}
      :main
      {["-r" "--repl"]          {:fn repl-opt
                                 :doc "Run a repl"}
