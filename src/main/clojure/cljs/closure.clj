@@ -1917,7 +1917,7 @@
                    :modules modules'})))
             modules)))
 
-      main
+      (and main (not= :none (:target opts)))
       (do
         (output-deps)
         (output-main-file opts))
