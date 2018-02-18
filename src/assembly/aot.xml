@@ -6,13 +6,13 @@
     <includeBaseDirectory>false</includeBaseDirectory>
     <fileSets>
         <fileSet>
-            <directory>src/resources</directory>
-            <outputDirectory>/</outputDirectory>
-            <filtered>true</filtered>
-        </fileSet>
-        <fileSet>
             <directory>target/classes</directory>
             <outputDirectory>/</outputDirectory>
+            <excludes>
+                <exclude>clojure/data/**</exclude>
+                <exclude>clojure/tools/**</exclude>
+                <exclude>cognitect/**</exclude>
+            </excludes>
         </fileSet>
     </fileSets>
 </assembly>
