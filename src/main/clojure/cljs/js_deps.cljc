@@ -14,19 +14,27 @@
            [java.net URL URLClassLoader]
            [java.util.zip ZipFile ZipEntry]))
 
-; taken from pomegranate/dynapath
-; https://github.com/tobias/dynapath/blob/master/src/dynapath/util.clj
-(defn- all-classpath-urls
-  "Walks up the parentage chain for a ClassLoader, concatenating any URLs it retrieves.
-If no ClassLoader is provided, RT/baseLoader is assumed."
-  ([] (all-classpath-urls (clojure.lang.RT/baseLoader)))
-  ([cl]
-     (->> (iterate #(.getParent ^ClassLoader %) cl)
-       (take-while identity)
-       reverse
-       (filter (partial instance? URLClassLoader))
-       (mapcat #(.getURLs ^URLClassLoader %))
-       distinct)))
+(def ^:private java-8? (-> (System/getProperty "java.version") (string/starts-with? "1.8.")))
+
+(defn- classpath-files
+  "Returns a list of classpath files. Under Java 8, walks up the parentage
+  chain of RT/baseLoader, concatenating any URLs it retrieves. Under Java 9 and
+  later, builds file list from the java.class.path system property."
+  []
+  (->>
+    (if java-8?
+      ; taken from pomegranate/dynapath
+      ; https://github.com/tobias/dynapath/blob/master/src/dynapath/util.clj
+      (->> (clojure.lang.RT/baseLoader)
+        (iterate #(.getParent ^ClassLoader %))
+        (take-while identity)
+        reverse
+        (filter (partial instance? URLClassLoader))
+        (mapcat #(.getURLs ^URLClassLoader %)))
+      (-> (System/getProperty "java.class.path")
+        (string/split (re-pattern File/pathSeparator))))
+    distinct
+    (map io/file)))
 
 (defn ^ZipFile zip-file [jar-path]
   (try
@@ -70,8 +78,7 @@ If no ClassLoader is provided, RT/baseLoader is assumed."
 (defn find-js-classpath
   "Returns a seq of URLs of all JavaScript files on the classpath."
   [path]
-  (->> (all-classpath-urls)
-    (map io/file)
+  (->> (classpath-files)
     (reduce
       (fn [files jar-or-dir]
         (let [name (.toLowerCase (.getName ^File jar-or-dir))
