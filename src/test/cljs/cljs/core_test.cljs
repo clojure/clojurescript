@@ -1537,6 +1537,14 @@
 (deftest test-cljs-2457
   (is (thrown-with-msg? js/Error #".* is not ISeqable" (seq #js {:a 1 :b 2}))))
 
+(deftest test-cljs-2537
+  (is (true?  (contains? (to-array [7 13 41]) -0.5)))
+  (is (== 7 (get (to-array [7 13 41]) -0.5)))
+  (is (== 7 (get (to-array [7 13 41]) -0.5 :not-found)))
+  (is (true? (contains? "ab" -0.5)))
+  (is (= \a (get "ab" -0.5)))
+  (is (= \a (get "ab" -0.5 :not-found))))
+
 (deftest test-cljs-2549
   (let [tap (fn [_])]
     (add-tap tap)

@@ -1952,12 +1952,12 @@ reduces them without incurring seq initialization"
         (-lookup o k not-found)
 
         (array? o)
-        (if (and (some? k) (>= k 0) (< k (.-length o)))
+        (if (and (some? k) (< -1 k (.-length o)))
           (aget o (int k))
           not-found)
 
         (string? o)
-        (if (and (some? k) (>= k 0) (< k (.-length o)))
+        (if (and (some? k) (< -1 k (.-length o)))
           (.charAt o (int k))
           not-found)
 
