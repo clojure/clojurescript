@@ -1389,7 +1389,8 @@
                           :function "broken-first"
                           :line 2
                           :column 0}]
-                        sms)))))))))))
+                        sms)))
+                (inc! l)))))))))
 
 (deftest test-mapping-stacktrace-with-underscore
   (async done
@@ -1419,7 +1420,8 @@
                           :function "broken-first"
                           :line 2
                           :column 0}]
-                        sms)))))))))))
+                        sms)))
+                (inc! l)))))))))
 
 (deftest test-append-source-map-with-nil-name
   (async done
@@ -1443,7 +1445,8 @@
               (let [cljs-timestamp? #(let [[c t] (string/split % "-")]
                                        (and (= "cljs" c) (not (js/isNaN (js/parseInt t)))))
                     sms (:source-maps @st)]
-                (is (some cljs-timestamp? (keys sms)))))))))))
+                (is (some cljs-timestamp? (keys sms)))
+                (inc! l)))))))))
 
 (defn -main [& args]
   (run-tests))
