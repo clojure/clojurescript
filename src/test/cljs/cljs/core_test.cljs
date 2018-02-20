@@ -1545,6 +1545,38 @@
   (is (= \a (get "ab" -0.5)))
   (is (= \a (get "ab" -0.5 :not-found))))
 
+(deftest test-cljs-2538
+  (testing "fractional indices in nth on arrays"
+    (is (thrown-with-msg? js/Error #"Index out of bounds" (nth (to-array [1 2]) -1)))
+    (is (= :not-found (nth (to-array [1 2]) -1 :not-found)))
+    (is (== 1 (nth (to-array [1 2]) -0.5)))
+    (is (== 1 (nth (to-array [1 2]) -0.5 :not-found)))
+    (is (== 1 (nth (to-array [1 2]) 0)))
+    (is (== 1 (nth (to-array [1 2]) 0 :not-found)))
+    (is (== 1 (nth (to-array [1 2]) 0.5)))
+    (is (== 1 (nth (to-array [1 2]) 0.5 :not-found)))
+    (is (== 2 (nth (to-array [1 2]) 1)))
+    (is (== 2 (nth (to-array [1 2]) 1 :not-found)))
+    (is (== 2 (nth (to-array [1 2]) 1.5)))
+    (is (== 2 (nth (to-array [1 2]) 1.5 :not-found)))
+    (is (thrown-with-msg? js/Error #"Index out of bounds" (nth (to-array [1 2]) 2)))
+    (is (= :not-found (nth (to-array [1 2]) 2 :not-found))))
+  (testing "fractional indices in nth on strings"
+    (is (thrown-with-msg? js/Error #"Index out of bounds" (nth "ab" -1)))
+    (is (= :not-found (nth "ab" -1 :not-found)))
+    (is (== \a (nth "ab" -0.5)))
+    (is (== \a (nth "ab" -0.5 :not-found)))
+    (is (== \a (nth "ab" 0)))
+    (is (== \a (nth "ab" 0 :not-found)))
+    (is (== \a (nth "ab" 0.5)))
+    (is (== \a (nth "ab" 0.5 :not-found)))
+    (is (== \b (nth "ab" 1)))
+    (is (== \b (nth "ab" 1 :not-found)))
+    (is (== \b (nth "ab" 1.5)))
+    (is (== \b (nth "ab" 1.5 :not-found)))
+    (is (thrown-with-msg? js/Error #"Index out of bounds" (nth "ab" 2)))
+    (is (= :not-found (nth "ab" 2 :not-found)))))
+
 (deftest test-cljs-2549
   (let [tap (fn [_])]
     (add-tap tap)
