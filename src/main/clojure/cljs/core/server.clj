@@ -77,10 +77,11 @@
       (comp/with-core-cljs opts
         (fn []
           (with-bindings
-            (let [opts (:merge-opts (repl/setup repl-env opts))]
+            (let [opts (merge opts (:merge-opts (repl/setup repl-env opts)))]
               (repl/evaluate-form repl-env env "<cljs repl>"
                 (with-meta `(~'ns ~'cljs.user) {:line 1 :column 1}) identity opts)
-              (binding [*in* (or stdin in-reader)
+              (binding [repl/*repl-opts* opts
+                        *in* (or stdin in-reader)
                         *out* (PrintWriter-on #(out-fn {:tag :out :val %1}) nil)
                         *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)]
                 (try
@@ -150,5 +151,8 @@
 
   (cljs.core.server/clj-eval
     (cljs.analyzer.api/ns-resolve 'cljs.core 'first))
+
+  (require '[clojure.string :as string])
+  (string/includes? "foo" "o")
 
   )
