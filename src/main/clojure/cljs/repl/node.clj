@@ -214,8 +214,11 @@
   (-load [this provides url]
     (load-javascript this provides url))
   (-tear-down [this]
-    (.destroy ^Process @proc)
-    (close-socket @socket)))
+    (let [{:keys [out]} @socket]
+      (write out ":cljs/quit")
+      (while (alive? @proc)
+        (Thread/sleep 50))
+      (close-socket @socket))))
 
 (defn repl-env* [options]
   (let [{:keys [host port path debug-port]}

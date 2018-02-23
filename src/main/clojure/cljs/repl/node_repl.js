@@ -19,7 +19,7 @@ try {
 } catch(err) {
 }
 
-net.createServer(function (socket) {
+var server = net.createServer(function (socket) {
     var buffer = "",
         ret    = null,
         err    = null;
@@ -45,12 +45,19 @@ net.createServer(function (socket) {
             if(data) {
                 // not sure how \0's are getting through - David
                 data = data.replace(/\0/g, "");
-                try {
-                    dom.run(function() {
-                        ret = vm.runInThisContext(data, "repl");
-                    });
-                } catch (e) {
-                    err = e;
+
+                if(":cljs/quit" == data) {
+                    server.close();
+                    socket.destroy();
+                    return;
+                } else {
+                    try {
+                        dom.run(function () {
+                            ret = vm.runInThisContext(data, "repl");
+                        });
+                    } catch (e) {
+                        err = e;
+                    }
                 }
             }
 
