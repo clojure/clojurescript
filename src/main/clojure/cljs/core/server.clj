@@ -8,8 +8,7 @@
 
 (ns cljs.core.server
   (:refer-clojure :exclude [with-bindings resolve-fn prepl io-prepl])
-  (:require [cljs.util :as util]
-            [cljs.env :as env]
+  (:require [cljs.env :as env]
             [cljs.closure :as closure]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
