@@ -3112,6 +3112,7 @@
         cur-ns  (-> env :ns :name)
         HO-invoke? (and (boolean *cljs-static-fns*)
                         (not fn-var?)
+                        (not (js-tag? f))
                         (not kw?)
                         (not (analyzed? f)))
         ;; function expressions, eg: ((deref m) x) or ((:x m) :a)
