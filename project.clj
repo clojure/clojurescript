@@ -8,7 +8,7 @@
   :source-paths ["src/main/clojure" "src/main/cljs"]
   :resource-paths ["src/main/cljs"]
   :test-paths ["src/test/clojure" "src/test/cljs" "src/test/self" "src/test/cljs_cp"]
-  :dependencies [[org.clojure/clojure "1.9.0"]
+  :dependencies [[org.clojure/clojure "1.10.0-alpha4"]
                  [org.clojure/spec.alpha "0.1.143"]
                  [org.clojure/core.specs.alpha "0.1.24"]
                  [org.clojure/data.json "0.2.6"]
