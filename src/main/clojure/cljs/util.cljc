@@ -255,6 +255,10 @@
      `(do ~then)
      `(do ~else))))
 
+(defmacro compile-when
+  [exp then]
+  `(compile-if ~exp ~then nil))
+
 (defn boolean? [x]
   (or (true? x) (false? x)))
 
