@@ -108,9 +108,9 @@
         core    (io/resource "cljs/core.cljs")
         base-js (io/resource "goog/base.js")
         core-js (closure/compile core
-                  (assoc opts
-                    :output-file
-                    (closure/src-file->target-file core)))
+                  (assoc opts :output-file
+                    (closure/src-file->target-file
+                      core (dissoc opts :output-dir))))
         deps    (closure/add-dependencies opts core-js)
         output-dir (util/output-directory opts)
         repl-deps (io/file output-dir "rhino_repl_deps.js")]

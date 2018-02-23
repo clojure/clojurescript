@@ -193,8 +193,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
 present"
   [repl-env [_ & args] {:keys [options inits] :as cfg}]
   (let [renv (repl-env)
-        opts (build/add-implicit-options
-               (merge (repl/repl-options renv) options))]
+        opts (merge (repl/repl-options renv) options)]
     (repl/repl* renv
       (assoc opts
         :inits

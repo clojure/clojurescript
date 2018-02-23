@@ -76,8 +76,9 @@
         (let [deps-file ".nashorn_repl_deps.js"
               core (io/resource "cljs/core.cljs")
               core-js (closure/compile core
-                        (assoc opts
-                          :output-file (closure/src-file->target-file core)))
+                        (assoc opts :output-file
+                          (closure/src-file->target-file
+                            core (dissoc opts :output-dir))))
               deps (closure/add-dependencies opts core-js)]
           ;; output unoptimized code and the deps file
           ;; for all compiled namespaces
