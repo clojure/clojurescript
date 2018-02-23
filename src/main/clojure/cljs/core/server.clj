@@ -35,8 +35,6 @@
   (#{":repl/quit" ":cljs/quit"} v))
 
 ;; TODO:
-;; - create user ns
-;; - special fns
 ;; - npm deps
 
 (defn prepl
@@ -63,21 +61,25 @@
   tap output can happen at any time (i.e. between evals)
   If during eval an attempt is made to read *in* it will read from in-reader unless :stdin is supplied
 "
-  [repl-env opts in-reader out-fn & {:keys [stdin]}]
+  [repl-env {:keys [special-fns] :as opts} in-reader out-fn & {:keys [stdin]}]
   (let [repl-opts (repl/repl-options repl-env)
-        opts      (merge
-                    {:def-emits-var true}
-                    (closure/add-implicit-options
-                      (merge-with (fn [a b] (if (nil? b) a b))
-                        repl-opts opts)))
-        EOF       (Object.)
-        tapfn     #(out-fn {:tag :tap :val %1})
-        env       (ana-api/empty-env)]
+        opts (merge
+               {:def-emits-var true}
+               (closure/add-implicit-options
+                 (merge-with (fn [a b] (if (nil? b) a b))
+                   repl-opts opts)))
+        EOF (Object.)
+        tapfn #(out-fn {:tag :tap :val %1})
+        env (ana-api/empty-env)
+        special-fns (merge repl/default-special-fns special-fns)
+        is-special-fn? (set (keys special-fns))]
     (env/ensure
       (comp/with-core-cljs opts
         (fn []
           (with-bindings
             (let [opts (:merge-opts (repl/setup repl-env opts))]
+              (repl/evaluate-form repl-env env "<cljs repl>"
+                (with-meta `(~'ns ~'cljs.user) {:line 1 :column 1}) identity opts)
               (binding [*in* (or stdin in-reader)
                         *out* (PrintWriter-on #(out-fn {:tag :out :val %1}) nil)
                         *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)]
@@ -89,7 +91,11 @@
                               (try
                                 (when-not (identical? form EOF)
                                   (let [start (System/nanoTime)
-                                        ret (repl/eval-cljs repl-env env form opts)
+                                        ret (if (and (seq? form) (is-special-fn? (first form)))
+                                              (do
+                                                ((get special-fns (first form)) repl-env env form opts)
+                                                "nil")
+                                              (repl/eval-cljs repl-env env form opts))
                                         ms (quot (- (System/nanoTime) start) 1000000)]
                                     (when-not (repl-quit? ret)
                                       (out-fn {:tag :ret
