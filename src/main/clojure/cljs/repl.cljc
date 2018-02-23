@@ -635,7 +635,7 @@
            (set! *e e#)
            (throw e#))))))
 
-(defn- eval-cljs
+(defn eval-cljs
   "Given a REPL evaluation environment, an analysis environment, and a
    form, evaluate the form and return the result. The result is always the value
    represented as a string."
