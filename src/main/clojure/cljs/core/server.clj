@@ -123,3 +123,21 @@
            (prn (cond-> %1
                   (#{:ret :tap} (:tag %1))
                   (assoc :val (valf (:val %1))))))))))
+
+(comment
+
+  ;; eval in order
+
+  (defmacro clj-eval [form]
+    `(quote ~(eval form)))
+
+  (require '[cljs.repl.node :as node])
+
+  (io-prepl :repl-env (node/repl-env))
+
+  ;; wait a moment for Node REPL to be ready, then eval the following
+
+  (cljs.core.server/clj-eval
+    (cljs.analyzer.api/ns-resolve 'cljs.core 'first))
+
+  )
