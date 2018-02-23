@@ -13,7 +13,8 @@
             [cljs.closure :as closure]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
-            [cljs.repl :as repl]))
+            [cljs.repl :as repl]
+            [cljs.compiler :as comp]))
 
 (defmacro with-bindings [& body]
   `(binding [ana/*cljs-ns* ana/*cljs-ns*
@@ -29,6 +30,9 @@
         (resolve valf))
       (throw (Exception. (str "can't resolve: " valf))))
     valf))
+
+(defn repl-quit? [v]
+  (#{":repl/quit" ":cljs/quit"} v))
 
 (defn prepl
   "a REPL with structured output (for programs)
@@ -64,43 +68,45 @@
         EOF       (Object.)
         tapfn     #(out-fn {:tag :tap :val %1})
         env       (ana-api/empty-env)]
-    (with-bindings
-      (env/ensure
-        (let [opts (:merge-opts (repl/setup repl-env opts))]
-          (binding [*in* (or stdin in-reader)
-                    *out* (PrintWriter-on #(out-fn {:tag :out :val %1}) nil)
-                    *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)]
-            (try
-              (add-tap tapfn)
-              (loop []
-                (when (try
-                        (let [[form s] (read+string in-reader false EOF)]
-                          (try
-                            (when-not (identical? form EOF)
-                              (let [start (System/nanoTime)
-                                    ret (repl/eval-cljs repl-env env form opts)
-                                    ms (quot (- (System/nanoTime) start) 1000000)]
-                                (when-not (= :repl/quit ret)
-                                  (out-fn {:tag :ret
-                                           :val (if (instance? Throwable ret)
-                                                  (Throwable->map ret)
-                                                  ret)
-                                           :ns (str (.name *ns*))
-                                           :ms ms
-                                           :form s})
+    (env/ensure
+      (comp/with-core-cljs opts
+        (fn []
+          (with-bindings
+            (let [opts (:merge-opts (repl/setup repl-env opts))]
+              (binding [*in* (or stdin in-reader)
+                        *out* (PrintWriter-on #(out-fn {:tag :out :val %1}) nil)
+                        *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)]
+                (try
+                  (add-tap tapfn)
+                  (loop []
+                    (when (try
+                            (let [[form s] (read+string in-reader false EOF)]
+                              (try
+                                (when-not (identical? form EOF)
+                                  (let [start (System/nanoTime)
+                                        ret (repl/eval-cljs repl-env env form opts)
+                                        ms (quot (- (System/nanoTime) start) 1000000)]
+                                    (when-not (repl-quit? ret)
+                                      (out-fn {:tag :ret
+                                               :val (if (instance? Throwable ret)
+                                                      (Throwable->map ret)
+                                                      ret)
+                                               :ns (str (.name *ns*))
+                                               :ms ms
+                                               :form s})
+                                      true)))
+                                (catch Throwable ex
+                                  (out-fn {:tag :ret :val (Throwable->map ex)
+                                           :ns (str (name ana/*cljs-ns*)) :form s})
                                   true)))
                             (catch Throwable ex
                               (out-fn {:tag :ret :val (Throwable->map ex)
-                                       :ns (str (name ana/*cljs-ns*)) :form s})
-                              true)))
-                        (catch Throwable ex
-                          (out-fn {:tag :ret :val (Throwable->map ex)
-                                   :ns (str (name ana/*cljs-ns*))})
-                          true))
-                  (recur)))
-              (finally
-                (remove-tap tapfn)
-                (repl/tear-down repl-env)))))))))
+                                       :ns (str (name ana/*cljs-ns*))})
+                              true))
+                      (recur)))
+                  (finally
+                    (remove-tap tapfn)
+                    (repl/tear-down repl-env)))))))))))
 
 (defn io-prepl
   "prepl bound to *in* and *out*, suitable for use with e.g. server/repl (socket-repl).
