@@ -37,14 +37,14 @@
 ;; - npm deps
 
 (defn prepl
-  "a REPL with structured output (for programs)
+  "A REPL with structured output (for programs)
   reads forms to eval from in-reader (a LineNumberingPushbackReader)
   Closing the input or passing the form :cljs/quit or :repl/quit will cause it
   to return
 
   Calls out-fn with data, one of:
   {:tag :ret
-   :val val ;;eval result
+   :val string ;;eval result
    :ns ns-name-string
    :ms long ;;eval time in milliseconds
    :form string ;;iff successfully read
@@ -54,7 +54,7 @@
   {:tag :err
    :val string} ;chars from during-eval *err*
   {:tag :tap
-   :val val} ;values from tap>
+   :val string} ;values from tap>
 
   You might get more than one :out or :err per eval, but exactly one :ret
   tap output can happen at any time (i.e. between evals)
@@ -122,7 +122,7 @@
 (defn io-prepl
   "prepl bound to *in* and *out*, suitable for use with e.g. server/repl (socket-repl).
   :ret and :tap vals will be processed by valf, a fn of one argument
-  or a symbol naming same (default pr-str)"
+  or a symbol naming same (default identity)"
   [& {:keys [valf repl-env opts] :or {valf identity}}]
   (let [valf (resolve-fn valf)
         out *out*
