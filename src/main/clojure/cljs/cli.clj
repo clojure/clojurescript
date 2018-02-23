@@ -374,8 +374,9 @@ present"
       ["-t" "--target"]        {:group ::main&compile :fn target-opt
                                 :arg "name"
                                 :doc
-                                (str "The JavaScript target. Supported values: "
-                                     "nodejs, nashorn, webworker") }}
+                                (str "The JavaScript target. Configures environment bootstrap and "
+                                     "defaults to browser. Supported values: nodejs, nashorn, "
+                                     "webworker, none") }}
      :main
      {["-r" "--repl"]          {:fn repl-opt
                                 :doc "Run a repl"}
