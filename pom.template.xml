@@ -305,7 +305,6 @@
                                 <namespace>cljs.spec.gen.alpha</namespace>
                                 <namespace>cljs.repl</namespace>
                                 <namespace>cljs.repl.browser</namespace>
-                                <namespace>cljs.repl.nashorn</namespace>
                                 <namespace>cljs.repl.node</namespace>
                                 <namespace>cljs.repl.reflect</namespace>
                                 <namespace>cljs.repl.rhino</namespace>
