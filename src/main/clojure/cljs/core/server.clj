@@ -91,17 +91,17 @@
                                                :val (if (instance? Throwable ret)
                                                       (Throwable->map ret)
                                                       ret)
-                                               :ns (str (.name *ns*))
+                                               :ns (name ana/*cljs-ns*)
                                                :ms ms
                                                :form s})
                                       true)))
                                 (catch Throwable ex
                                   (out-fn {:tag :ret :val (Throwable->map ex)
-                                           :ns (str (name ana/*cljs-ns*)) :form s})
+                                           :ns (name ana/*cljs-ns*) :form s})
                                   true)))
                             (catch Throwable ex
                               (out-fn {:tag :ret :val (Throwable->map ex)
-                                       :ns (str (name ana/*cljs-ns*))})
+                                       :ns (name ana/*cljs-ns*)})
                               true))
                       (recur)))
                   (finally
