@@ -34,6 +34,10 @@
 (defn repl-quit? [v]
   (#{":repl/quit" ":cljs/quit"} v))
 
+;; TODO:
+;; - create user ns
+;; - special fns
+
 (defn prepl
   "a REPL with structured output (for programs)
   reads forms to eval from in-reader (a LineNumberingPushbackReader)
