@@ -37,6 +37,7 @@
 ;; TODO:
 ;; - create user ns
 ;; - special fns
+;; - npm deps
 
 (defn prepl
   "a REPL with structured output (for programs)
