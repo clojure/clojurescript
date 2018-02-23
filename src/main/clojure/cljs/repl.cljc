@@ -828,7 +828,7 @@
          :as opts
          :or   {warn-on-undeclared true}}
         (merge
-          {:cache-analysis true :source-map true :def-emits-var true}
+          {:def-emits-var true}
           (cljsc/add-implicit-options
             (merge-with (fn [a b] (if (nil? b) a b))
               repl-opts
