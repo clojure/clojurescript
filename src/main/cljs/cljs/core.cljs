@@ -68,6 +68,11 @@
   Strings which should be printed." :dynamic true}
   *print-fn* nil)
 
+(defn ^{:dynamic true}
+  *exec-tap-fn*
+  [f]
+  (js/setTimeout f 0))
+
 (defonce
   ^{:doc "Each runtime environment provides a different way to print error output.
   Whatever function *print-err-fn* is bound to will be passed any
@@ -11317,6 +11322,39 @@ reduces them without incurring seq initialization"
       (if (identical? name' "_DOT__DOT_")
         ".."
         (demunge-str name')))))
+
+(defonce ^{:jsdoc ["@type {*}"] :private true}
+  tapset nil)
+
+(defn maybe-init-tapset []
+  (when (nil? tapset)
+    (set! tapset (atom {}))))
+
+(defn add-tap
+  "Adds f, a fn of one argument, to the tap set. This function will be called with
+  anything sent via tap>. Remember f in order to remove-tap"
+  [f]
+  (maybe-init-tapset)
+  (swap! tapset conj f)
+  nil)
+
+(defn remove-tap
+  "Remove f from the tap set the tap set."
+  [f]
+  (maybe-init-tapset)
+  (swap! tapset disj f)
+  nil)
+
+(defn tap>
+  "Sends x to any taps."
+  [x]
+  (maybe-init-tapset)
+  (*exec-tap-fn*
+    (fn []
+      (doseq [tap @tapset]
+        (try
+          (tap x)
+          (catch js/Error ex))))))
 
 ;; -----------------------------------------------------------------------------
 ;; Bootstrap helpers - incompatible with advanced compilation
