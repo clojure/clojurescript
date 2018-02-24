@@ -795,6 +795,15 @@
       :init-script
       (load-file renv (:script init)))))
 
+(defn maybe-install-npm-deps [opts]
+  (when (:install-deps opts)
+    (cljsc/check-npm-deps opts)
+    (swap! env/*compiler* update-in [:npm-deps-installed?]
+      (fn [installed?]
+        (if-not installed?
+          (cljsc/maybe-install-node-deps! opts)
+          installed?)))))
+
 (defn repl*
   [repl-env {:keys [init inits need-prompt quit-prompt prompt flush read eval print caught reader
                     print-no-newline source-map-inline wrap repl-requires
@@ -917,13 +926,7 @@
                        (print nil))
                      (let [value (eval repl-env env input opts)]
                        (print value))))))]
-         (when (:install-deps opts)
-           (cljsc/check-npm-deps opts)
-           (swap! env/*compiler* update-in [:npm-deps-installed?]
-             (fn [installed?]
-               (if-not installed?
-                 (cljsc/maybe-install-node-deps! opts)
-                 installed?))))
+         (maybe-install-npm-deps opts)
          (comp/with-core-cljs opts
            (fn []
              (binding [*repl-opts* opts]

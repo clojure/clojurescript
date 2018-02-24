@@ -73,6 +73,7 @@
         special-fns (merge repl/default-special-fns special-fns)
         is-special-fn? (set (keys special-fns))]
     (env/ensure
+      (repl/maybe-install-npm-deps opts)
       (comp/with-core-cljs opts
         (fn []
           (with-bindings
