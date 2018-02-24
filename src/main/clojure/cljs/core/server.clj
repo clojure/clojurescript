@@ -33,9 +33,6 @@
 (defn repl-quit? [v]
   (#{":repl/quit" ":cljs/quit"} v))
 
-;; TODO:
-;; - npm deps
-
 (defn prepl
   "A REPL with structured output (for programs)
   reads forms to eval from in-reader (a LineNumberingPushbackReader)
