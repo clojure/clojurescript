@@ -9,7 +9,7 @@ before_install:
   - wget https://ftp.mozilla.org/pub/firefox/nightly/latest-mozilla-central/jsshell-linux-x86_64.zip
   - unzip jsshell-linux-x86_64.zip -d spidermoney
   - sudo apt-get install -y libjavascriptcoregtk-3.0-bin
-  - wget https://aka.ms/chakracore/cc_linux_x64_1_5_2 -O chakra-core.tar.gz
+  - wget https://aka.ms/chakracore/cc_linux_x64_1_8_1 -O chakra-core.tar.gz
   - tar xvzf chakra-core.tar.gz
 
 before_script:
