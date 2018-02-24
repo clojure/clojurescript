@@ -74,48 +74,48 @@
       (comp/with-core-cljs opts
         (fn []
           (with-bindings
-            (let [opts (merge opts (:merge-opts (repl/setup repl-env opts)))]
-              (repl/evaluate-form repl-env env "<cljs repl>"
-                (with-meta `(~'ns ~'cljs.user) {:line 1 :column 1}) identity opts)
-              (binding [repl/*repl-opts* opts
-                        *in* (or stdin in-reader)
-                        *out* (PrintWriter-on #(out-fn {:tag :out :val %1}) nil)
-                        *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)]
-                (try
-                  (add-tap tapfn)
-                  (loop []
-                    (when (try
-                            (let [[form s] (read+string in-reader false EOF)]
-                              (try
-                                (when-not (identical? form EOF)
-                                  (let [start (System/nanoTime)
-                                        ret (if (and (seq? form) (is-special-fn? (first form)))
-                                              (do
-                                                ((get special-fns (first form)) repl-env env form opts)
-                                                "nil")
-                                              (repl/eval-cljs repl-env env form opts))
-                                        ms (quot (- (System/nanoTime) start) 1000000)]
-                                    (when-not (repl-quit? ret)
-                                      (out-fn {:tag :ret
-                                               :val (if (instance? Throwable ret)
-                                                      (Throwable->map ret)
-                                                      ret)
-                                               :ns (name ana/*cljs-ns*)
-                                               :ms ms
-                                               :form s})
-                                      true)))
-                                (catch Throwable ex
-                                  (out-fn {:tag :ret :val (Throwable->map ex)
-                                           :ns (name ana/*cljs-ns*) :form s})
-                                  true)))
-                            (catch Throwable ex
-                              (out-fn {:tag :ret :val (Throwable->map ex)
-                                       :ns (name ana/*cljs-ns*)})
-                              true))
-                      (recur)))
-                  (finally
-                    (remove-tap tapfn)
-                    (repl/tear-down repl-env)))))))))))
+            (binding [*in*  (or stdin in-reader)
+                      *out* (PrintWriter-on #(out-fn {:tag :out :val %1}) nil)
+                      *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)]
+              (let [opts (merge opts (:merge-opts (repl/setup repl-env opts)))]
+                (binding [repl/*repl-opts* opts]
+                  (repl/evaluate-form repl-env env "<cljs repl>"
+                    (with-meta `(~'ns ~'cljs.user) {:line 1 :column 1}) identity opts)
+                  (try
+                    (add-tap tapfn)
+                    (loop []
+                      (when (try
+                              (let [[form s] (read+string in-reader false EOF)]
+                                (try
+                                  (when-not (identical? form EOF)
+                                    (let [start (System/nanoTime)
+                                          ret (if (and (seq? form) (is-special-fn? (first form)))
+                                                (do
+                                                  ((get special-fns (first form)) repl-env env form opts)
+                                                  "nil")
+                                                (repl/eval-cljs repl-env env form opts))
+                                          ms (quot (- (System/nanoTime) start) 1000000)]
+                                      (when-not (repl-quit? ret)
+                                        (out-fn {:tag :ret
+                                                 :val (if (instance? Throwable ret)
+                                                        (Throwable->map ret)
+                                                        ret)
+                                                 :ns (name ana/*cljs-ns*)
+                                                 :ms ms
+                                                 :form s})
+                                        true)))
+                                  (catch Throwable ex
+                                    (out-fn {:tag :ret :val (Throwable->map ex)
+                                             :ns (name ana/*cljs-ns*) :form s})
+                                    true)))
+                              (catch Throwable ex
+                                (out-fn {:tag :ret :val (Throwable->map ex)
+                                         :ns (name ana/*cljs-ns*)})
+                                true))
+                        (recur)))
+                    (finally
+                      (remove-tap tapfn)
+                      (repl/tear-down repl-env))))))))))))
 
 (defn io-prepl
   "prepl bound to *in* and *out*, suitable for use with e.g. server/repl (socket-repl).
