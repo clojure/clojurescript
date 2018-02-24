@@ -11328,7 +11328,7 @@ reduces them without incurring seq initialization"
 
 (defn maybe-init-tapset []
   (when (nil? tapset)
-    (set! tapset (atom {}))))
+    (set! tapset (atom #{}))))
 
 (defn add-tap
   "Adds f, a fn of one argument, to the tap set. This function will be called with
