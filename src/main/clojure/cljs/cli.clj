@@ -17,7 +17,7 @@
             [cljs.compiler.api :as comp]
             [cljs.build.api :as build]
             [cljs.repl :as repl])
-  (:import [java.io StringReader]
+  (:import [java.io StringReader FileWriter]
            [java.text BreakIterator]
            [java.util Locale]))
 
@@ -270,6 +270,15 @@ present"
   ((::main (repl/repl-options (repl-env)) default-main)
     repl-env (merge cfg {:script path :args args})))
 
+(defn watch-proc [cenv path opts]
+  (let [log-file (io/file (util/output-directory opts) "watch.log")]
+    (util/mkdirs log-file)
+    (repl/err-out (println "Watch compilation log available at:" (str log-file)))
+    (let [log-out (FileWriter. log-file)]
+      (binding [*err* log-out
+                *out* log-out]
+        (build/watch path (dissoc opts :watch) cenv)))))
+
 (defn default-compile
   [repl-env {:keys [ns args options] :as cfg}]
   (let [env-opts (repl/repl-options (repl-env))
@@ -288,16 +297,22 @@ present"
                      (assoc :output-to
                        (.getPath (io/file (:output-dir opts "out") "main.js")))
                      (= :advanced (:optimizations opts))
-                     (dissoc :browser-repl)))
+                     (dissoc :browser-repl)
+                     (not (:output-dir opts))
+                     (assoc :output-dir "out")))
         cfg      (update cfg :options merge (select-keys opts repl/known-repl-opts))
         source   (when (= :none (:optimizations opts :none))
-                   (:uri (build/ns->location main-ns)))]
+                   (:uri (build/ns->location main-ns)))
+        repl?    (boolean (#{"-r" "--repl"} (first args)))
+        cenv     (env/default-compiler-env)]
     (if-let [path (:watch opts)]
-      (build/watch path opts)
-      (do
-        (build/build source opts)
-        (when (#{"-r" "--repl"} (first args))
-          (repl-opt repl-env args cfg))))))
+      (if repl?
+        (.start (Thread. #(watch-proc cenv path opts)))
+        (build/watch path opts cenv))
+      (build/build source opts cenv))
+    (when repl?
+      (repl-opt repl-env args
+        (assoc-in cfg [:options :compiler-env] cenv)))))
 
 (defn- compile-opt
   [repl-env [_ ns & args] cfg]
