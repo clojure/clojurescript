@@ -11326,7 +11326,7 @@ reduces them without incurring seq initialization"
 (defonce ^{:jsdoc ["@type {*}"] :private true}
   tapset nil)
 
-(defn maybe-init-tapset []
+(defn- maybe-init-tapset []
   (when (nil? tapset)
     (set! tapset (atom #{}))))
 
@@ -11486,7 +11486,7 @@ reduces them without incurring seq initialization"
   [x]
   (instance? goog.Uri x))
 
-(defn maybe-enable-print! []
+(defn- maybe-enable-print! []
   (cond
     (exists? js/console)
     (enable-console-print!)
