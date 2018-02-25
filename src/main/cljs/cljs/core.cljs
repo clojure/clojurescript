@@ -68,10 +68,14 @@
   Strings which should be printed." :dynamic true}
   *print-fn* nil)
 
-(defn ^{:dynamic true}
+(defn ^{:doc "Arranges to have tap functions executed via the supplied f, a
+  function of no arguments. Returns true if successful, false otherwise." :dynamic true}
   *exec-tap-fn*
   [f]
-  (js/setTimeout f 0))
+  (and
+   (exists? js/setTimeout)
+   (js/setTimeout f 0)
+   true))
 
 (defonce
   ^{:doc "Each runtime environment provides a different way to print error output.
@@ -11345,8 +11349,8 @@ reduces them without incurring seq initialization"
   (swap! tapset disj f)
   nil)
 
-(defn tap>
-  "Sends x to any taps."
+(defn ^boolean tap>
+  "Sends x to any taps. Returns the result of *exec-tap-fn*, a Boolean value."
   [x]
   (maybe-init-tapset)
   (*exec-tap-fn*

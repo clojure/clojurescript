@@ -1522,6 +1522,9 @@
     (is (contains? @tapset tap))
     (remove-tap tap)))
 
+(deftest test-cljs-2552
+  (is (boolean? (tap> nil))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
