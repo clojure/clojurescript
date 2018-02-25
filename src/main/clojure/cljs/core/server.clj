@@ -8,12 +8,15 @@
 
 (ns cljs.core.server
   (:refer-clojure :exclude [with-bindings resolve-fn prepl io-prepl])
-  (:require [cljs.env :as env]
+  (:require [clojure.tools.reader.reader-types :as readers]
+            [clojure.tools.reader :as reader]
+            [cljs.env :as env]
             [cljs.closure :as closure]
             [cljs.analyzer :as ana]
             [cljs.analyzer.api :as ana-api]
             [cljs.repl :as repl]
-            [cljs.compiler :as comp]))
+            [cljs.compiler :as comp]
+            [cljs.tagged-literals :as tags]))
 
 (defmacro with-bindings [& body]
   `(binding [ana/*cljs-ns* ana/*cljs-ns*
@@ -85,7 +88,15 @@
                     (add-tap tapfn)
                     (loop []
                       (when (try
-                              (let [[form s] (read+string in-reader false EOF)]
+                              (let [[form s] (binding [*ns* (create-ns ana/*cljs-ns*)
+                                                       reader/resolve-symbol ana/resolve-symbol
+                                                       reader/*data-readers* tags/*cljs-data-readers*
+                                                       reader/*alias-map*
+                                                       (apply merge
+                                                         ((juxt :requires :require-macros)
+                                                           (ana/get-namespace ana/*cljs-ns*)))]
+                                               (reader/read+string in-reader
+                                                 {:eof EOF :read-cond :allow :features #{:cljs}}))]
                                 (try
                                   (when-not (identical? form EOF)
                                     (let [start (System/nanoTime)
@@ -125,7 +136,8 @@
   (let [valf (resolve-fn valf)
         out *out*
         lock (Object.)]
-    (prepl repl-env opts *in*
+    (prepl repl-env opts
+      (readers/source-logging-push-back-reader *in* 1 "NO_SOURCE_FILE")
       #(binding [*out* out, ;*flush-on-newline* true, *print-readably* true
                  ]
          (locking lock
