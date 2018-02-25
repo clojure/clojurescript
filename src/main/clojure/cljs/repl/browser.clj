@@ -111,7 +111,8 @@
               (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
               :else nil)
             local-path)]
-      (if local-path
+      (cond
+        local-path
         (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
           (let [mime-type (ext->mime-type ext "text/plain")
                 encoding (mime-type->encoding mime-type "UTF-8")]
@@ -122,7 +123,20 @@
               mime-type
               encoding))
           (server/send-and-close conn 200 (slurp local-path) "text/plain"))
-        (server/send-404 conn path)))
+        ;; "/index.html" doesn't exist, provide our own
+        (and (= path "/index.html")
+             env/*compiler*
+             (some->> @env/*compiler* :options ((juxt :main :output-to)) (every? some?)))
+        (let [{:keys [output-to]} (:options @env/*compiler*)]
+          (server/send-and-close
+           conn
+           200
+           (str "<!DOCTYPE html><head><meta charset=\"UTF-8\"></head><body>"
+                "<script src=\"" output-to "\"></script>"
+                "</body></html>")
+           "text/html"
+           "UTF-8"))
+        :else (server/send-404 conn path)))
     (server/send-404 conn path)))
 
 (server/dispatch-on :get
