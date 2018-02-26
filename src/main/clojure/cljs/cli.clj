@@ -159,6 +159,15 @@ classpath. Classpath-relative paths have prefix of @ or @/")
   (let [target (if (= "node" target) "nodejs" target)]
     (assoc-in cfg [:options :target] (keyword target))))
 
+(defn- repl-env-opts-opt
+  [cfg ropts]
+  (update cfg :repl-env-options merge (edn/read-string ropts)))
+
+(defn- compile-opts-opt
+  [cfg copts]
+  (update cfg :options merge (edn/read-string copts)))
+
+
 (defn- init-opt
   [cfg file]
   (update-in cfg [:inits]
@@ -385,13 +394,18 @@ present"
                                 (str "Set optimization level, only effective with "
                                   "-c main option. Valid values are: none, "
                                   "whitespace, simple, advanced")}
-
       ["-t" "--target"]        {:group ::main&compile :fn target-opt
                                 :arg "name"
                                 :doc
                                 (str "The JavaScript target. Configures environment bootstrap and "
                                      "defaults to browser. Supported values: nodejs, nashorn, "
-                                     "webworker, none") }}
+                                     "webworker, none") }
+      ["-rf" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
+                                :arg "edn"
+                                :doc (str "Options to configure the repl-env")}
+      ["-cf" "--compile-opts"] {:group ::main&compile :fn compile-opts-opt
+                                :arg "edn"
+                                :doc (str "Options to configure the build")}}
      :main
      {["-r" "--repl"]          {:fn repl-opt
                                 :doc "Run a repl"}
