@@ -10525,9 +10525,13 @@ reduces them without incurring seq initialization"
 (defn clj->js
   "Recursively transforms ClojureScript values to JavaScript.
   sets/vectors/lists become Arrays, Keywords and Symbol become Strings,
-  Maps become Objects. Arbitrary keys are encoded to by key->js."
+  Maps become Objects. Arbitrary keys are encoded to by `key->js`.
+  Options is a key-value pair, where the only valid key is
+  :keyword-fn, which should point to a single-argument function to be
+  called on keyword keys. Default to `name`."
   [x & {:keys [keyword-fn]
-        :or   {keyword-fn name}}]
+        :or   {keyword-fn name}
+        :as options}]
   (letfn [(keyfn [k] (key->js k thisfn))
           (thisfn [x] (cond
                         (nil? x) nil
