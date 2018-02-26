@@ -144,6 +144,17 @@ classpath. Classpath-relative paths have prefix of @ or @/")
 
 (defn- watch-opt
   [cfg path]
+  (when-not (.exists (io/file path))
+    (if (or (string/starts-with? path "-")
+            (string/blank? path))
+      (throw
+        (ex-info
+          (str "Missing watch path")
+          {:cljs.main/error :invalid-arg}))
+      (throw
+        (ex-info
+          (str "Watch path " path " does not exist")
+          {:cljs.main/error :invalid-arg}))))
   (assoc-in cfg [:options :watch] path))
 
 (defn- optimize-opt
