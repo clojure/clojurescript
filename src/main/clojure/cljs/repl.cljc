@@ -882,99 +882,97 @@
                ana/*cljs-static-fns* static-fns
                ana/*fn-invoke-direct* (and static-fns fn-invoke-direct)
                *repl-opts* opts]
-       (let [env {:context :expr :locals {}}
-             special-fns (merge default-special-fns special-fns)
-             is-special-fn? (set (keys special-fns))
-             request-prompt (Object.)
-             request-exit (Object.)
-             opts (comp/with-core-cljs opts
-                    (fn []
-                      (try
+       (try
+         (let [env {:context :expr :locals {}}
+               special-fns (merge default-special-fns special-fns)
+               is-special-fn? (set (keys special-fns))
+               request-prompt (Object.)
+               request-exit (Object.)
+               opts (comp/with-core-cljs opts
+                      (fn []
                         (if-let [merge-opts (:merge-opts (-setup repl-env opts))]
                           (merge opts merge-opts)
-                          opts)
-                        (catch Throwable e
-                          (caught e repl-env opts)
-                          opts))))
-             init (do
-                    (evaluate-form repl-env env "<cljs repl>"
-                      `(~'set! ~'cljs.core/*print-namespace-maps* true)
-                      identity opts)
-                    (or init
+                          opts)))
+               init (do
+                      (evaluate-form repl-env env "<cljs repl>"
+                        `(~'set! ~'cljs.core/*print-namespace-maps* true)
+                        identity opts)
+                      (or init
                         #(evaluate-form repl-env env "<cljs repl>"
                            (with-meta
                              `(~'ns ~'cljs.user
                                 (:require ~@repl-requires))
                              {:line 1 :column 1})
                            identity opts)))
-             read-eval-print
+               read-eval-print
+               (fn []
+                 (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
+                                       reader/resolve-symbol ana/resolve-symbol
+                                       reader/*data-readers* tags/*cljs-data-readers*
+                                       reader/*alias-map*
+                                       (apply merge
+                                         ((juxt :requires :require-macros)
+                                           (ana/get-namespace ana/*cljs-ns*)))]
+                               (read request-prompt request-exit))]
+                   (or ({request-exit request-exit
+                         :cljs/quit request-exit
+                         request-prompt request-prompt} input)
+                     (if (and (seq? input) (is-special-fn? (first input)))
+                       (do
+                         ((get special-fns (first input)) repl-env env input opts)
+                         (print nil))
+                       (let [value (eval repl-env env input opts)]
+                         (print value))))))]
+           (maybe-install-npm-deps opts)
+           (comp/with-core-cljs opts
              (fn []
-               (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
-                                     reader/resolve-symbol ana/resolve-symbol
-                                     reader/*data-readers* tags/*cljs-data-readers*
-                                     reader/*alias-map*
-                                     (apply merge
-                                       ((juxt :requires :require-macros)
-                                         (ana/get-namespace ana/*cljs-ns*)))]
-                             (read request-prompt request-exit))]
-                 (or ({request-exit request-exit
-                       :cljs/quit request-exit
-                       request-prompt request-prompt} input)
-                   (if (and (seq? input) (is-special-fn? (first input)))
-                     (do
-                       ((get special-fns (first input)) repl-env env input opts)
-                       (print nil))
-                     (let [value (eval repl-env env input opts)]
-                       (print value))))))]
-         (maybe-install-npm-deps opts)
-         (comp/with-core-cljs opts
-           (fn []
-             (binding [*repl-opts* opts]
-               (try
-                 (when analyze-path
-                   (if (vector? analyze-path)
-                     (run! #(analyze-source % opts) analyze-path)
-                     (analyze-source analyze-path opts)))
-                 (init)
-                 (run-inits repl-env inits)
-                 (catch Throwable e
-                   (caught e repl-env opts)))
-               (when-let [src (:watch opts)]
-                 (.start
-                   (Thread.
-                     ((ns-resolve 'clojure.core 'binding-conveyor-fn)
-                       (fn []
-                         (let [log-file (io/file (util/output-directory opts) "watch.log")]
-                           (err-out (println "Watch compilation log available at:" (str log-file)))
-                           (try
-                             (let [log-out (FileWriter. log-file)]
-                               (binding [*err* log-out
-                                         *out* log-out]
-                                 (cljsc/watch src (dissoc opts :watch)
-                                   env/*compiler* done?)))
-                             (catch Throwable e
-                               (caught e repl-env opts)))))))))
-               ;; let any setup async messages flush
-               (Thread/sleep 50)
-               (binding [*in* (if (true? (:source-map-inline opts))
-                                *in*
-                                (reader))]
-                 (quit-prompt)
-                 (prompt)
-                 (flush)
-                 (loop []
-                   (when-not
-                     (try
-                       (identical? (read-eval-print) request-exit)
-                       (catch Throwable e
-                         (caught e repl-env opts)
-                         nil))
-                     (when (need-prompt)
-                       (prompt)
-                       (flush))
-                     (recur))))))))
-       (reset! done? true)
-       (-tear-down repl-env)))))
+               (binding [*repl-opts* opts]
+                 (try
+                   (when analyze-path
+                     (if (vector? analyze-path)
+                       (run! #(analyze-source % opts) analyze-path)
+                       (analyze-source analyze-path opts)))
+                   (init)
+                   (run-inits repl-env inits)
+                   (catch Throwable e
+                     (caught e repl-env opts)))
+                 (when-let [src (:watch opts)]
+                   (.start
+                     (Thread.
+                       ((ns-resolve 'clojure.core 'binding-conveyor-fn)
+                         (fn []
+                           (let [log-file (io/file (util/output-directory opts) "watch.log")]
+                             (err-out (println "Watch compilation log available at:" (str log-file)))
+                             (try
+                               (let [log-out (FileWriter. log-file)]
+                                 (binding [*err* log-out
+                                           *out* log-out]
+                                   (cljsc/watch src (dissoc opts :watch)
+                                     env/*compiler* done?)))
+                               (catch Throwable e
+                                 (caught e repl-env opts)))))))))
+                 ;; let any setup async messages flush
+                 (Thread/sleep 50)
+                 (binding [*in* (if (true? (:source-map-inline opts))
+                                  *in*
+                                  (reader))]
+                   (quit-prompt)
+                   (prompt)
+                   (flush)
+                   (loop []
+                     (when-not
+                       (try
+                         (identical? (read-eval-print) request-exit)
+                         (catch Throwable e
+                           (caught e repl-env opts)
+                           nil))
+                       (when (need-prompt)
+                         (prompt)
+                         (flush))
+                       (recur))))))))
+         (finally
+           (reset! done? true)
+           (-tear-down repl-env)))))))
 
 (defn repl
   "Generic, reusable, read-eval-print loop. By default, reads from *in* using

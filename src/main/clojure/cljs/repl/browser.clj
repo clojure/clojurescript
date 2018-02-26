@@ -313,7 +313,7 @@
   (-tear-down [this]
     (binding [server/state (:server-state this)]
       (server/stop))
-    (.shutdown (:es this)))
+    (.shutdownNow (:es this)))
   repl/IReplEnvOptions
   (-repl-options [this]
     {:browser-repl true

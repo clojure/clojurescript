@@ -205,4 +205,5 @@
     (swap! state (fn [old] (assoc old :socket ss :port (:port opts))))))
 
 (defn stop []
-  (.close (:socket @state)))
+  (when-let [sock (:socket @state)]
+    (.close sock)))
