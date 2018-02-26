@@ -146,7 +146,7 @@
             (cond
               (re-find #".jar" path)
               (io/resource (second (string/split path #".jar!/")))
-              (re-find (Pattern/compile (System/getProperty "user.dir")) path)
+              (string/includes? path (System/getProperty "user.dir"))
               (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
               (#{"/cljs-logo-icon-32.png" "/cljs-logo.svg"} path)
               (io/resource (subs path 1))
