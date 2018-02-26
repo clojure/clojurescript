@@ -248,13 +248,50 @@ present"
               `(~'ns ~'cljs.user))
             (repl/run-inits renv inits)
             (when script
-              (if (= "-" script)
+              (cond
+                (= "-" script)
                 (repl/load-stream renv "<cljs repl>" *in*)
-                (repl/load-file renv script)))
+
+                (.exists (io/file script))
+                (repl/load-file renv script)
+
+                (string/starts-with? script "@")
+                (if-let [rsrc (io/resource (subs script 1))]
+                  (repl/load-file renv rsrc)
+                  (throw
+                    (ex-info
+                      (str "Resource script " (subs script 1) " does not exist")
+                      {:cljs.main/error :invalid-arg})))
+
+                (string/starts-with? script "@/")
+                (if-let [rsrc (io/resource (subs script 2))]
+                  (repl/load-file renv rsrc)
+                  (throw
+                    (ex-info
+                      (str "Resource script " (subs script 2) " does not exist")
+                      {:cljs.main/error :invalid-arg})))
+
+                (string/starts-with? script "-")
+                (throw
+                  (ex-info
+                    (str "Expected script or -, got flag " script " instead")
+                    {:cljs.main/error :invalid-arg}))
+
+                :else
+                (throw
+                  (ex-info
+                    (str "Script " script " does not exist")
+                    {:cljs.main/error :invalid-arg}))))
             (when main
-              (repl/load-file renv (build/ns->source main))
-              (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
-                `(~(symbol (name main) "-main") ~@args)))
+              (let [src (build/ns->source main)]
+                (when-not (io/resource src)
+                  (throw
+                    (ex-info
+                      (str "Namespace " main " does not exist")
+                      {:cljs.main/error :invalid-arg})))
+                (repl/load-file renv src)
+                (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
+                  `(~(symbol (name main) "-main") ~@args))))
             (repl/tear-down renv)))))))
 
 (defn- main-opt
