@@ -314,7 +314,18 @@
   (-repl-options [this]
     {:browser-repl true
      :repl-requires
-     '[[clojure.browser.repl]]})
+     '[[clojure.browser.repl]]
+     :cljs.cli/commands
+     {:groups {::repl {:desc "browser REPL options"}}
+      :init
+      {["-H" "--host"]
+       {:group ::repl :fn #(assoc-in %1 [:repl-env-options ::host] %2)
+        :arg "address"
+        :doc "Address to bind"}
+       ["-p" "--port"]
+       {:group ::repl :fn #(assoc-in %1 [:repl-env-options ::port] (Integer/parseInt %2))
+        :arg "number"
+        :doc "Port to bind"}}}})
   repl/IParseStacktrace
   (-parse-stacktrace [this st err opts]
     (st/parse-stacktrace this st err opts))
@@ -329,16 +340,15 @@
               :stacktrace (.-stack ~e)}))))))
 
 (defn repl-env*
-  [{:keys [output-dir] :as opts}]
+  [{:keys [output-dir ::host ::port] :or {host "localhost" port 9000} :as opts}]
   (merge (BrowserEnv.)
-    {:host "localhost"
-     :port 9000
+    {:host host
+     :port port
      :working-dir (->> [".repl" (util/clojurescript-version)]
                        (remove empty?) (string/join "-"))
      :serve-static true
      :static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
      :preloaded-libs []
-     :optimizations :simple
      :src "src/"
      :browser-state (atom {:return-value-fn nil
                           :client-js nil})
@@ -364,8 +374,6 @@
                   Defaults to true.
   static-dir:     List of directories to search for static content. Defaults to
                   [\".\" \"out/\"].
-  optimizations:  The level of optimization to use when compiling the client
-                  end of the REPL. Defaults to :simple.
   src:            The source directory containing user-defined cljs files. Used to
                   support reflection. Defaults to \"src/\".
   "
