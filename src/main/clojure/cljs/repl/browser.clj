@@ -18,7 +18,8 @@
             [cljs.cli :as cli]
             [cljs.repl.server :as server]
             [cljs.stacktrace :as st]
-            [cljs.analyzer :as ana])
+            [cljs.analyzer :as ana]
+            [cljs.build.api :as build])
   (:import [java.util.regex Pattern]
            [java.util.concurrent Executors]))
 
@@ -124,14 +125,29 @@
               encoding))
           (server/send-and-close conn 200 (slurp local-path) "text/plain"))
         ;; "/index.html" doesn't exist, provide our own
-        (and (= path "/index.html") (:output-to copts))
-        (let [{:keys [output-to]} copts]
+        (= path "/index.html")
+        (let [{:keys [output-to] :or {output-to "out/main.js"}} copts]
           (server/send-and-close conn 200
             (str "<!DOCTYPE html><head><meta charset=\"UTF-8\"></head><body>"
                  "<div id=\"app\"></div>"
                  "<script src=\"" output-to "\"></script>"
                  "</body></html>")
             "text/html"
+            "UTF-8"))
+        (= path "/out/main.js")
+        (do
+          ;; TODO: this could be cleaner if compiling forms resulted in a
+          ;; :output-to file with the result of compiling those forms - David
+          (env/with-compiler-env (env/default-compiler-env)
+            (build/build
+              '[(require '[clojure.browser.repl.preload])]
+              {:output-to "out/cljs_deps.js"}))
+          (server/send-and-close conn 200
+            (str "document.write('<script src=\"out/goog/base.js\"></script>');\n"
+                 "document.write('<script src=\"out/goog/deps.js\"></script>');\n"
+                 "document.write('<script src=\"out/cljs_deps.js\"></script>');\n"
+                 "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
+            "text/javascript"
             "UTF-8"))
         :else (server/send-404 conn path)))
     (server/send-404 conn path)))
