@@ -6,7 +6,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true" "-Xmx512m" "-server"]
   :source-paths ["src/main/clojure" "src/main/cljs"]
-  :resource-paths ["src/main/cljs"]
+  :resource-paths ["src/main/cljs" "resources"]
   :test-paths ["src/test/clojure" "src/test/cljs" "src/test/self" "src/test/cljs_cp"]
   :dependencies [[org.clojure/clojure "1.10.0-alpha4"]
                  [org.clojure/spec.alpha "0.1.143"]

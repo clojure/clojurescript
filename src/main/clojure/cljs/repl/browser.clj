@@ -274,32 +274,8 @@
   [repl-env provides url]
   (browser-eval (slurp url)))
 
-
 ;; =============================================================================
 ;; BrowserEnv
-
-(defn compile-client-js [opts]
-  (let [copts {:optimizations (:optimizations opts)
-               :output-dir (:working-dir opts)}]
-    ;; we're inside the REPL process where cljs.env/*compiler* is already
-    ;; established, need to construct a new one to avoid mutating the one
-    ;; the REPL uses
-    (cljsc/build
-      '[(ns clojure.browser.repl.client
-          (:require [goog.events :as event]
-                    [clojure.browser.repl :as repl]))
-        (defn start [url]
-          (event/listen js/window
-            "load"
-            (fn []
-              (repl/start-evaluator url))))]
-      copts (env/default-compiler-env copts))))
-
-(defn create-client-js-file [opts file-path]
-  (let [file (io/file file-path)]
-    (when (not (.exists file))
-      (spit file (compile-client-js opts)))
-    file))
 
 (defn setup [{:keys [working-dir] :as repl-env} opts]
   (binding [browser-state (:browser-state repl-env)
@@ -310,8 +286,8 @@
     (swap! browser-state
       (fn [old]
         (assoc old :client-js
-          (create-client-js-file
-            repl-env (io/file working-dir "client.js")))))
+          (cljsc/create-client-js-file
+            repl-env (io/file working-dir "brepl_client.js")))))
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))

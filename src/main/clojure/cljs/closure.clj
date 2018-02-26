@@ -2994,6 +2994,35 @@
           goog-ns
           (str goog-ns))))))
 
+;; Browser REPL client stuff
+
+(defn compile-client-js [opts]
+  (let [copts {:optimizations (:optimizations opts)
+               :output-dir (:working-dir opts)}]
+    ;; we're inside the REPL process where cljs.env/*compiler* is already
+    ;; established, need to construct a new one to avoid mutating the one
+    ;; the REPL uses
+    (build
+      '[(ns clojure.browser.repl.client
+          (:require [goog.events :as event]
+                    [clojure.browser.repl :as repl]))
+        (defn start [url]
+          (event/listen js/window
+            "load"
+            (fn []
+              (repl/start-evaluator url))))]
+      copts (env/default-compiler-env copts))))
+
+(defn create-client-js-file [opts file-path]
+  (if-let [cached (io/resource "brepl_client.js")]
+    cached
+    (let [file (io/file file-path)]
+      (when (not (.exists file))
+        (spit file (compile-client-js opts)))
+      file)))
+
+;; AOTed resources
+
 (defn aot-cache-core []
   (let [base-path (io/file "src" "main" "cljs" "cljs")
         src       (io/file base-path "core.cljs")
@@ -3007,7 +3036,14 @@
          :source-map-url "core.js.map"
          :output-dir (str "src" File/separator "main" File/separator "cljs")})
       (ana/write-analysis-cache 'cljs.core cache src)
-      (ana/write-analysis-cache 'cljs.core tcache src))))
+      (ana/write-analysis-cache 'cljs.core tcache src))
+    (create-client-js-file
+      {:optimizations :whitespace
+       :working-dir "aot_out"}
+      (io/file "resources" "brepl_client.js"))
+    (doseq [f (file-seq (io/file "aot_out"))
+            :when (.isFile f)]
+      (.delete f))))
 
 (comment
   (time
