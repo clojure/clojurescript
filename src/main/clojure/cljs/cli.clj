@@ -34,7 +34,7 @@ With no options or args, runs an interactive Read-Eval-Print Loop
 %s
 For --main and --repl:
 
-  - Enters the user namespace
+  - Enters the cljs.user namespace
   - Binds *command-line-args* to a seq of strings containing command line
     args that appear after any main option
   - Runs all init options in order
