@@ -128,6 +128,7 @@
         (let [{:keys [output-to]} copts]
           (server/send-and-close conn 200
             (str "<!DOCTYPE html><head><meta charset=\"UTF-8\"></head><body>"
+                 "<div id=\"app\"></div>"
                  "<script src=\"" output-to "\"></script>"
                  "</body></html>")
             "text/html"
