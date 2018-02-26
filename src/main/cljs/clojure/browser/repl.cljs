@@ -27,6 +27,9 @@
             ;; with clojure.browser.repl:
             [cljs.repl]))
 
+(goog-define HOST "localhost")
+(goog-define PORT 9000)
+
 (def xpc-connection (atom nil))
 (def print-queue (array))
 

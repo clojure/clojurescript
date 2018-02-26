@@ -10,6 +10,6 @@
   (:require [clojure.browser.repl :as repl]))
 
 (defonce conn
-  (repl/connect "http://localhost:9000/repl"))
+  (repl/connect (str "http://" repl/HOST ":" repl/PORT "/repl")))
 
 (enable-console-print!)

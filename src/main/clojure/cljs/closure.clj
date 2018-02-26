@@ -2168,6 +2168,12 @@
     (true? process-shim)
     (not (false? process-shim))))
 
+(defn normalize-closure-defines [defines]
+  (into {}
+    (map (fn [[k v]]
+           [(if (symbol? k) (str (comp/munge k)) k) v])
+      defines)))
+
 (defn add-implicit-options
   [{:keys [optimizations output-dir]
     :or {optimizations :none
@@ -2181,12 +2187,7 @@
                    (update-in [:closure-defines 'process.env/NODE_ENV] (fnil str "production"))))
 
                (or (:closure-defines opts) (shim-process? opts))
-               (update :closure-defines
-                 (fn [defines]
-                   (into {}
-                     (map (fn [[k v]]
-                            [(if (symbol? k) (str (comp/munge k)) k) v])
-                       defines))))
+               (update :closure-defines normalize-closure-defines)
                (:browser-repl opts)
                (update-in [:preloads] (fnil conj []) 'clojure.browser.repl.preload))
         {:keys [libs foreign-libs externs]} (get-upstream-deps)
@@ -2997,8 +2998,7 @@
 ;; Browser REPL client stuff
 
 (defn compile-client-js [opts]
-  (let [copts {:optimizations (:optimizations opts)
-               :output-dir (:working-dir opts)}]
+  (let [copts (select-keys opts [:optimizations :output-dir])]
     ;; we're inside the REPL process where cljs.env/*compiler* is already
     ;; established, need to construct a new one to avoid mutating the one
     ;; the REPL uses
@@ -3038,8 +3038,8 @@
       (ana/write-analysis-cache 'cljs.core cache src)
       (ana/write-analysis-cache 'cljs.core tcache src))
     (create-client-js-file
-      {:optimizations :whitespace
-       :working-dir "aot_out"}
+      {:optimizations :simple
+       :output-dir "aot_out"}
       (io/file "resources" "brepl_client.js"))
     (doseq [f (file-seq (io/file "aot_out"))
             :when (.isFile f)]

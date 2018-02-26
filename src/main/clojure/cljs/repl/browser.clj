@@ -12,6 +12,7 @@
             [clojure.java.browse :as browse]
             [clojure.string :as string]
             [clojure.edn :as edn]
+            [clojure.data.json :as json]
             [cljs.util :as util]
             [cljs.env :as env]
             [cljs.closure :as cljsc]
@@ -21,8 +22,7 @@
             [cljs.stacktrace :as st]
             [cljs.analyzer :as ana]
             [cljs.build.api :as build])
-  (:import [java.util.regex Pattern]
-           [java.util.concurrent Executors]))
+  (:import [java.util.concurrent Executors]))
 
 (def ^:dynamic browser-state nil)
 (def ^:dynamic ordering nil)
@@ -130,14 +130,12 @@
     "<script src=\"" output-to "\"></script>"
     "</body></html>"))
 
-(defn send-static [{path :path :as request} conn opts]
-  (if (and (:static-dir opts)
-           (not= "/favicon.ico" path))
-    (let [path   (if (= "/" path) "/index.html" path)
-          st-dir (:static-dir opts)
+(defn send-static [{path :path :as request} conn {:keys [static-dir host port] :as opts}]
+  (if (and static-dir (not= "/favicon.ico" path))
+    (let [path (if (= "/" path) "/index.html" path)
           local-path
           (cond->
-            (seq (for [x (if (string? st-dir) [st-dir] st-dir)
+            (seq (for [x (if (string? static-dir) [static-dir] static-dir)
                        :when (.exists (io/file (str x path)))]
                    (str x path)))
             (complement nil?) first)
@@ -170,15 +168,19 @@
         (let [{:keys [output-to] :or {output-to "out/main.js"}} copts]
           (server/send-and-close conn 200 (default-index output-to) "text/html" "UTF-8"))
         (= path "/out/main.js")
-        (do
+        (let [closure-defines (-> `{clojure.browser.repl/HOST ~host
+                                    clojure.browser.repl/PORT ~port}
+                                cljsc/normalize-closure-defines
+                                json/write-str)]
           ;; TODO: this could be cleaner if compiling forms resulted in a
           ;; :output-to file with the result of compiling those forms - David
-          (env/with-compiler-env (env/default-compiler-env)
+          (spit (io/file "out/cljs_deps.js")
             (build/build
-              '[(require '[clojure.browser.repl.preload])]
-              {:output-to "out/cljs_deps.js"}))
+             '[(require '[clojure.browser.repl.preload])] {:optimizations :none}))
           (server/send-and-close conn 200
-            (str "document.write('<script src=\"out/goog/base.js\"></script>');\n"
+            (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                 "var CLOSURE_NO_DEPS = true;\n"
+                 "document.write('<script src=\"out/goog/base.js\"></script>');\n"
                  "document.write('<script src=\"out/goog/deps.js\"></script>');\n"
                  "document.write('<script src=\"out/cljs_deps.js\"></script>');\n"
                  "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
@@ -287,7 +289,9 @@
       (fn [old]
         (assoc old :client-js
           (cljsc/create-client-js-file
-            repl-env (io/file working-dir "brepl_client.js")))))
+            {:optimizations :simple
+             :output-dir working-dir}
+            (io/file working-dir "brepl_client.js")))))
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))
@@ -319,11 +323,11 @@
      {:groups {::repl {:desc "browser REPL options"}}
       :init
       {["-H" "--host"]
-       {:group ::repl :fn #(assoc-in %1 [:repl-env-options ::host] %2)
+       {:group ::repl :fn #(assoc-in %1 [:repl-env-options :host] %2)
         :arg "address"
         :doc "Address to bind"}
        ["-p" "--port"]
-       {:group ::repl :fn #(assoc-in %1 [:repl-env-options ::port] (Integer/parseInt %2))
+       {:group ::repl :fn #(assoc-in %1 [:repl-env-options :port] (Integer/parseInt %2))
         :arg "number"
         :doc "Port to bind"}}}})
   repl/IParseStacktrace
@@ -340,7 +344,7 @@
               :stacktrace (.-stack ~e)}))))))
 
 (defn repl-env*
-  [{:keys [output-dir ::host ::port] :or {host "localhost" port 9000} :as opts}]
+  [{:keys [output-dir host port] :or {host "localhost" port 9000} :as opts}]
   (merge (BrowserEnv.)
     {:host host
      :port port
