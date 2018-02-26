@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.main
-  (:require [cljs.repl.nashorn :as nashorn]
+  (:require [cljs.repl.browser :as browser]
             [cljs.cli :as cli])
   (:gen-class))
 
@@ -29,7 +29,7 @@
           (throw
             (ex-info (str "REPL namespace " repl-ns " does not exist")
               {:repl-ns repl-ns})))))
-    nashorn/repl-env))
+    browser/repl-env))
 
 (defn- normalize* [args]
   (if (not (cli/dispatch? cli/default-commands :main (first args)))
