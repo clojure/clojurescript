@@ -11,7 +11,6 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.edn :as edn]
-            [cljs.compiler :as comp]
             [cljs.util :as util]
             [cljs.env :as env]
             [cljs.closure :as cljsc]
@@ -110,7 +109,8 @@
               (re-find (Pattern/compile (System/getProperty "user.dir")) path)
               (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
               :else nil)
-            local-path)]
+            local-path)
+          copts (when env/*compiler* (get @env/*compiler* :options))]
       (cond
         local-path
         (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
@@ -124,18 +124,14 @@
               encoding))
           (server/send-and-close conn 200 (slurp local-path) "text/plain"))
         ;; "/index.html" doesn't exist, provide our own
-        (and (= path "/index.html")
-             env/*compiler*
-             (some->> @env/*compiler* :options ((juxt :main :output-to)) (every? some?)))
-        (let [{:keys [output-to]} (:options @env/*compiler*)]
-          (server/send-and-close
-           conn
-           200
-           (str "<!DOCTYPE html><head><meta charset=\"UTF-8\"></head><body>"
-                "<script src=\"" output-to "\"></script>"
-                "</body></html>")
-           "text/html"
-           "UTF-8"))
+        (and (= path "/index.html") (:output-to copts))
+        (let [{:keys [output-to]} copts]
+          (server/send-and-close conn 200
+            (str "<!DOCTYPE html><head><meta charset=\"UTF-8\"></head><body>"
+                 "<script src=\"" output-to "\"></script>"
+                 "</body></html>")
+            "text/html"
+            "UTF-8"))
         :else (server/send-404 conn path)))
     (server/send-404 conn path)))
 
@@ -265,7 +261,6 @@
         (assoc old :client-js
           (create-client-js-file
             repl-env (io/file working-dir "client.js")))))
-    opts
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))
