@@ -57,4 +57,5 @@
                      args)
         [js-args args] ((juxt #(take 2 %) #(drop 2 %)) post)
         repl-opt (get-js-opt js-args)]
-    (apply cli/main repl-opt (concat pre args))))
+    (apply cli/main repl-opt (concat pre args))
+    (shutdown-agents)))
