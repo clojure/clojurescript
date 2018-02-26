@@ -232,6 +232,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <clojure.source.dir>src/main/clojure</clojure.source.dir>
         <cljs.source.dir>src/main/cljs</cljs.source.dir>
+        <cljs.source.dir>src/main/cljs</cljs.source.dir>
+        <resources.dir>resources</resources.dir>
         <directlinking>true</directlinking>
     </properties>
 
@@ -261,6 +263,9 @@
                                 </resource>
                                 <resource>
                                     <directory>${cljs.source.dir}</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${resources.dir}</directory>
                                 </resource>
                             </resources>
                         </configuration>
@@ -341,6 +346,8 @@
                                 <include>**/*.js</include>
                                 <include>**/*.map</include>
                                 <include>**/*.edn</include>
+                                <include>**/*.svg</include>
+                                <include>**/*.png</include>
                             </includes>
                         </configuration>
                     </execution>

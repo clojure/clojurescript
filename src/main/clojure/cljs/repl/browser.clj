@@ -94,6 +94,32 @@
          "</body></html>")
     "text/html"))
 
+(defn default-index [output-to]
+  (str "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
+    "<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"cljs-logo-icon-32.png\"/></head>"
+    "<body><div id=\"app\">"
+    "<p>Welcome to the default <code>index.html</code> provided by the ClojureScript Browser REPL.</p>"
+    "<p>This page provides the evaluation environment for your Browser REPL and application.</p>"
+    "<p>You can quickly validate the connection by typing <code>(js/alert&nbsp;\"Hello CLJS!\")</code> into the "
+    "ClojureScript REPL that launched this page.</p><p>You can easily use your own HTML file to host your application "
+    "and REPL by providing your own <code>index.html</code> in the directory that you launched this REPL from.</p>"
+    "<p>Start with this template:</p>"
+    "<pre>"
+    "&lt;!DOCTYPE html&gt;\n"
+    "&lt;html&gt;\n"
+    "  &lt;head&gt;\n"
+    "    &lt;meta charset=\"UTF-8\"&gt;\n"
+    "  &lt;/head&gt;\n"
+    "  &lt;body&gt;\n"
+    "    &lt;script src=\"" output-to "\" type=\"text/javascript\"&gt;&lt;/script&gt;\n"
+    "  &lt;/body&gt;\n"
+    "&lt;/html&gt;\n"
+    "</pre>"
+    "<center><img src=\"cljs-logo.svg\" style=\"width: 350px; height: 350px;\"/></center>"
+    "</div></div>"
+    "<script src=\"" output-to "\"></script>"
+    "</body></html>"))
+
 (defn send-static [{path :path :as request} conn opts]
   (if (and (:static-dir opts)
            (not= "/favicon.ico" path))
@@ -112,6 +138,8 @@
               (io/resource (second (string/split path #".jar!/")))
               (re-find (Pattern/compile (System/getProperty "user.dir")) path)
               (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
+              (#{"/cljs-logo-icon-32.png" "/cljs-logo.svg"} path)
+              (io/resource (subs path 1))
               :else nil)
             local-path)
           copts (when env/*compiler* (get @env/*compiler* :options))]
@@ -129,39 +157,8 @@
           (server/send-and-close conn 200 (slurp local-path) "text/plain"))
         ;; "/index.html" doesn't exist, provide our own
         (= path "/index.html")
-        (let [{:keys [output-dir output-to] :or {output-dir "out" output-to "out/main.js"}} copts]
-          (let [maybe-copy-resource (fn [name] (let [f (io/file output-dir name)]
-                                           (when-not (.exists f)
-                                             (spit f (slurp (io/resource name))))))]
-            (maybe-copy-resource "cljs-logo-icon-32.png")
-            (maybe-copy-resource "cljs-logo.svg"))
-          (server/send-and-close conn 200
-            (str "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
-                 "<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"" output-dir "/cljs-logo-icon-32.png\"/></head>"
-                 "<body><div id=\"app\">"
-                 "<p>Welcome to the default <code>index.html</code> provided by the ClojureScript Browser REPL.</p>"
-                 "<p>This page provides the evaluation environment for your Browser REPL and application.</p>"
-                 "<p>You can quickly validate the connection by typing <code>(js/alert&nbsp;\"Hello CLJS!\")</code> into the "
-                 "ClojureScript REPL that launched this page.</p><p>You can easily use your own HTML file to host your application "
-                 "and REPL by providing your own <code>index.html</code> in the directory that you launched this REPL from.</p>"
-                 "<p>Start with this template:</p>"
-                 "<pre>"
-                 "&lt;!DOCTYPE html&gt;\n"
-                 "&lt;html&gt;\n"
-                 "  &lt;head&gt;\n"
-                 "    &lt;meta charset=\"UTF-8\"&gt;\n"
-                 "  &lt;/head&gt;\n"
-                 "  &lt;body&gt;\n"
-                 "    &lt;script src=\"" output-to "\" type=\"text/javascript\"&gt;&lt;/script&gt;\n"
-                 "  &lt;/body&gt;\n"
-                 "&lt;/html&gt;\n"
-                 "</pre>"
-                 "<center><img src=\"" output-dir "/cljs-logo.svg\" style=\"width: 350px; height: 350px;\"/></center>"
-                 "</div></div>"
-                 "<script src=\"" output-to "\"></script>"
-                 "</body></html>")
-            "text/html"
-            "UTF-8"))
+        (let [{:keys [output-to] :or {output-to "out/main.js"}} copts]
+          (server/send-and-close conn 200 (default-index output-to) "text/html" "UTF-8"))
         (= path "/out/main.js")
         (do
           ;; TODO: this could be cleaner if compiling forms resulted in a
@@ -175,8 +172,7 @@
                  "document.write('<script src=\"out/goog/deps.js\"></script>');\n"
                  "document.write('<script src=\"out/cljs_deps.js\"></script>');\n"
                  "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
-            "text/javascript"
-            "UTF-8"))
+            "text/javascript" "UTF-8"))
         :else (server/send-404 conn path)))
     (server/send-404 conn path)))
 
