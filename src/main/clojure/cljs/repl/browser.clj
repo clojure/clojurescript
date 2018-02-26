@@ -9,6 +9,7 @@
 (ns cljs.repl.browser
   (:refer-clojure :exclude [loaded-libs])
   (:require [clojure.java.io :as io]
+            [clojure.java.browse :as browse]
             [clojure.string :as string]
             [clojure.edn :as edn]
             [cljs.util :as util]
@@ -19,8 +20,7 @@
             [cljs.repl.server :as server]
             [cljs.stacktrace :as st]
             [cljs.analyzer :as ana]
-            [cljs.build.api :as build]
-            [clojure.java.shell :as shell])
+            [cljs.build.api :as build])
   (:import [java.util.regex Pattern]
            [java.util.concurrent Executors]))
 
@@ -282,10 +282,8 @@
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))
-    (try
-      (shell/sh "open" (str "http://" (:host repl-env) ":" (:port repl-env)))
-      (catch Throwable t))
-    (server/start repl-env)))
+    (server/start repl-env)
+    (browse/browse-url (str "http://" (:host repl-env) ":" (:port repl-env)))))
 
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
