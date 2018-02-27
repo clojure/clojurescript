@@ -172,13 +172,6 @@
                                     clojure.browser.repl/PORT ~port}
                                 cljsc/normalize-closure-defines
                                 json/write-str)]
-          ;; TODO: this could be cleaner if compiling forms resulted in a
-          ;; :output-to file with the result of compiling those forms - David
-          (let [f (io/file "out/cljs_deps.js")]
-            (when-not (.exists f)
-              (spit f
-                (build/build
-                  '[(require '[clojure.browser.repl.preload])] {:optimizations :none}))))
           (server/send-and-close conn 200
             (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                  "var CLOSURE_NO_DEPS = true;\n"
@@ -281,7 +274,7 @@
 ;; =============================================================================
 ;; BrowserEnv
 
-(defn setup [{:keys [working-dir] :as repl-env} opts]
+(defn setup [{:keys [working-dir] :as repl-env} {:keys [output-dir] :as opts}]
   (binding [browser-state (:browser-state repl-env)
             ordering (:ordering repl-env)
             es (:es repl-env)
@@ -294,6 +287,12 @@
             {:optimizations :simple
              :output-dir working-dir}
             (io/file working-dir "brepl_client.js")))))
+    ;; TODO: this could be cleaner if compiling forms resulted in a
+    ;; :output-to file with the result of compiling those forms - David
+    (when (and output-dir (not (.exists (io/file output-dir))))
+      (spit (io/file "out/cljs_deps.js")
+        (build/build
+          '[(require '[clojure.browser.repl.preload])] {:optimizations :none})))
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))
