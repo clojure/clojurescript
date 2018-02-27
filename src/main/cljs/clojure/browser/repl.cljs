@@ -97,7 +97,31 @@
   "Start the REPL server connection."
   [url]
   (if-let [repl-connection (net/xpc-connection)]
-    (let [connection (net/xhr-connection)]
+    (let [connection (net/xhr-connection)
+          repl-connected? (atom false)
+          try-handshake (fn try-handshake []
+                          (when-not @repl-connected?
+                            (net/transmit repl-connection
+                                          :start-handshake
+                                          nil)
+                            ;; In case we miss, try again. Parent will only
+                            ;; ack once.
+                            (js/setTimeout try-handshake
+                                           10)))]
+      (net/connect repl-connection
+                   try-handshake)
+
+      (net/register-service repl-connection
+        :ack-handshake
+        (fn [_]
+          (when-not @repl-connected?
+            (reset! repl-connected? true)
+            ;; Now that we're connected to the parent, we can start talking to
+            ;; the server.
+            (send-result connection
+                         url
+                         (wrap-message :ready "ready")))))
+
       (event/listen connection
         :success
         (fn [e]
@@ -115,12 +139,7 @@
       (net/register-service repl-connection
         :print
         (fn [data]
-          (send-print url (wrap-message :print data))))
-
-      (net/connect repl-connection
-        (constantly nil))
-
-      (js/setTimeout #(send-result connection url (wrap-message :ready "ready")) 1000))
+          (send-print url (wrap-message :print data)))))
     (js/alert "No 'xpc' param provided to child iframe.")))
 
 (def load-queue nil)
@@ -189,10 +208,21 @@
   connection is made, the REPL will evaluate forms in the context of
   the document that called this function."
   [repl-server-url]
-  (let [repl-connection
+  (let [connected? (atom false)
+        repl-connection
         (net/xpc-connection
           {:peer_uri repl-server-url})]
     (swap! xpc-connection (constantly repl-connection))
+    (net/register-service repl-connection
+      :start-handshake
+      (fn [_]
+        ;; Child will keep retrying, but we only want
+        ;; to ack once.
+        (when-not @connected?
+          (reset! connected? true)
+          (net/transmit repl-connection
+                        :ack-handshake
+                        nil))))
     (net/register-service repl-connection
       :evaluate-javascript
       (fn [js]

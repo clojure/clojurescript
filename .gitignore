@@ -13,6 +13,7 @@ closure
 *out
 .lein*
 /pom.xml
+*.iml
 .repl*
 *.swp
 *.zip
