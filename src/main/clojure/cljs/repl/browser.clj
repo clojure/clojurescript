@@ -321,7 +321,7 @@
   (-repl-options [this]
     {:browser-repl true
      :repl-requires
-     '[[clojure.browser.repl]]
+     '[[clojure.browser.repl] [clojure.browser.repl.preload]]
      :cljs.cli/commands
      {:groups {::repl {:desc "browser REPL options"}}
       :init
