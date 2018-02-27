@@ -265,7 +265,7 @@ present"
                 repl/*repl-opts* opts
                 ana/*verbose*    (:verbose opts)]
         (when ana/*verbose*
-          (util/debug-prn "Compiler options:" repl/*repl-opts*))
+          (util/debug-prn "Compiler options:" (pr-str repl/*repl-opts*)))
         (comp/with-core-cljs repl/*repl-opts*
           (fn []
             (repl/setup renv repl/*repl-opts*)

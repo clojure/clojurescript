@@ -177,7 +177,9 @@
                  "var CLOSURE_NO_DEPS = true;\n"
                  "document.write('<script src=\"out/goog/base.js\"></script>');\n"
                  "document.write('<script src=\"out/goog/deps.js\"></script>');\n"
-                 "document.write('<script src=\"out/cljs_deps.js\"></script>');\n"
+                 (when (.exists (io/file "out" "cljs_deps.js"))
+                   "document.write('<script src=\"out/cljs_deps.js\"></script>');\n")
+                 "document.write('<script src=\"out/brepl_deps.js\"></script>');\n"
                  "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
             "text/javascript" "UTF-8"))
         :else (server/send-404 conn path)))
@@ -289,8 +291,8 @@
             (io/file working-dir "brepl_client.js")))))
     ;; TODO: this could be cleaner if compiling forms resulted in a
     ;; :output-to file with the result of compiling those forms - David
-    (when (and output-dir (not (.exists (io/file output-dir))))
-      (spit (io/file "out/cljs_deps.js")
+    (when (and output-dir (not (.exists (io/file output-dir "clojure" "browser" "repl" "preload.js"))))
+      (spit (io/file "out/brepl_deps.js")
         (build/build
           '[(require '[clojure.browser.repl.preload])] {:optimizations :none})))
     (repl/err-out
