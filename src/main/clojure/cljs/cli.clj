@@ -472,10 +472,10 @@ present"
                                 (str "The JavaScript target. Configures environment bootstrap and "
                                      "defaults to browser. Supported values: nodejs, nashorn, "
                                      "webworker, none") }
-      ["-rf" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
+      ["-ro" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
                                 :arg "edn"
                                 :doc (str "Options to configure the repl-env")}
-      ["-cf" "--compile-opts"] {:group ::main&compile :fn compile-opts-opt
+      ["-co" "--compile-opts"] {:group ::main&compile :fn compile-opts-opt
                                 :arg "edn"
                                 :doc (str "Options to configure the build")}}
      :main
