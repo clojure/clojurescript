@@ -409,9 +409,10 @@ present"
     {:groups {::main&compile {:desc "init option"
                               :pseudos
                               {["-re" "--repl-env"]
-                               {:doc (str "The REPL environment to use. Built-in "
-                                       "supported values: nashorn, node, browser, "
-                                       "rhino. Defaults to nashorn")}}}
+                               {:arg "env"
+                                :doc (str "The REPL environment to use. Built-in "
+                                          "supported values: nashorn, node, browser, "
+                                          "rhino. Defaults to browser")}}}
               ::main {:desc "init options only for --main and --repl"}
               ::compile {:desc "init options only for --compile"}}
      :init
