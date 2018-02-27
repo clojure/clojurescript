@@ -174,9 +174,11 @@
                                 json/write-str)]
           ;; TODO: this could be cleaner if compiling forms resulted in a
           ;; :output-to file with the result of compiling those forms - David
-          (spit (io/file "out/cljs_deps.js")
-            (build/build
-             '[(require '[clojure.browser.repl.preload])] {:optimizations :none}))
+          (let [f (io/file "out/cljs_deps.js")]
+            (when-not (.exists f)
+              (spit f
+                (build/build
+                  '[(require '[clojure.browser.repl.preload])] {:optimizations :none}))))
           (server/send-and-close conn 200
             (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                  "var CLOSURE_NO_DEPS = true;\n"
