@@ -793,7 +793,8 @@
             (when-not (repl-nil? value)
               (println value)))))
       :init-script
-      (load-file renv (:script init)))))
+      (let [script (:script init)]
+        (load-stream renv (util/get-name script) script)))))
 
 (defn maybe-install-npm-deps [opts]
   (when (:install-deps opts)

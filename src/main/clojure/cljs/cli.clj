@@ -181,10 +181,32 @@ classpath. Classpath-relative paths have prefix of @ or @/")
 
 (defn- init-opt
   [cfg file]
-  (update-in cfg [:inits]
-    (fnil conj [])
-    {:type :init-script
-     :script file}))
+  (let [file' (cond
+                (string/starts-with? file "@/")
+                (io/resource (subs file 2))
+                (string/starts-with? file "@")
+                (io/resource (subs file 1))
+                :else
+                (let [f (io/file file)]
+                  (if (.exists f)
+                    f
+                    (throw
+                      (ex-info
+                        (str "File " file " does not exist")
+                        {:cljs.main/error :invalid-arg})))))]
+    (when-not file'
+      (throw
+        (ex-info
+          (str "Resource "
+               (if (string/starts-with? file "@/")
+                 (subs file 2)
+                 (subs file 1))
+               " does not exist")
+          {:cljs.main/error :invalid-arg})))
+    (update-in cfg [:inits]
+      (fnil conj [])
+      {:type :init-script
+       :script file'})))
 
 (defn- eval-opt
   [cfg form-str]
@@ -266,20 +288,20 @@ present"
                 (.exists (io/file script))
                 (repl/load-file renv script)
 
-                (string/starts-with? script "@")
-                (if-let [rsrc (io/resource (subs script 1))]
-                  (repl/load-file renv rsrc)
-                  (throw
-                    (ex-info
-                      (str "Resource script " (subs script 1) " does not exist")
-                      {:cljs.main/error :invalid-arg})))
-
                 (string/starts-with? script "@/")
                 (if-let [rsrc (io/resource (subs script 2))]
-                  (repl/load-file renv rsrc)
+                  (repl/load-stream renv (util/get-name rsrc) rsrc)
                   (throw
                     (ex-info
                       (str "Resource script " (subs script 2) " does not exist")
+                      {:cljs.main/error :invalid-arg})))
+
+                (string/starts-with? script "@")
+                (if-let [rsrc (io/resource (subs script 1))]
+                  (repl/load-stream renv (util/get-name rsrc) rsrc)
+                  (throw
+                    (ex-info
+                      (str "Resource script " (subs script 1) " does not exist")
                       {:cljs.main/error :invalid-arg})))
 
                 (string/starts-with? script "-")
@@ -300,7 +322,7 @@ present"
                     (ex-info
                       (str "Namespace " main " does not exist")
                       {:cljs.main/error :invalid-arg})))
-                (repl/load-file renv src)
+                (repl/load-stream renv (util/get-name src) src)
                 (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
                   `(~(symbol (name main) "-main") ~@args))))
             (repl/tear-down renv)))))))
