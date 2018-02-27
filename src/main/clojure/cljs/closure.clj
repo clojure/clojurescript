@@ -2417,7 +2417,7 @@
                                                            name))
                                                    (cond-> [main-path]
                                                      (nil? (re-find #"\.js(on)?$" main-path))
-                                                     (into [(str main-path ".js") (str main-path ".json")]))))))
+                                                     (into [(str main-path ".js") (str main-path "/index.js") (str main-path ".json")]))))))
                                            pkg-jsons)]
                        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
                                                             (string/replace #"\\" "/")
