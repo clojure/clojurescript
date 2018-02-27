@@ -120,7 +120,7 @@
       (net/connect repl-connection
         (constantly nil))
 
-      (js/setTimeout #(send-result connection url (wrap-message :ready "ready")) 50))
+      (js/setTimeout #(send-result connection url (wrap-message :ready "ready")) 1000))
     (js/alert "No 'xpc' param provided to child iframe.")))
 
 (def load-queue nil)
