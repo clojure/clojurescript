@@ -1525,6 +1525,18 @@
 (deftest test-cljs-2552
   (is (boolean? (tap> nil))))
 
+;; Delete a bogus property from the beta? fn
+;; Without the fix this js-delete form code-gens to code that deletes the alpha? fn:
+;;   delete (cljs.core_test.alpha_2585_QMARK_) && (cljs.core_test.beta_2585_QMARK_)["bogus-property"]
+(defn ^boolean alpha-2585? [] true)
+(defn ^boolean beta-2585? [] true)
+(js-delete (and alpha-2585? beta-2585?) "bogus-property")
+
+(deftest test-cljs-2585
+  (is (= true ((or int? string?) 1)))
+  ;; Make sure we didn't delete the alpha? fn
+  (is (some? alpha-2585?)))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
