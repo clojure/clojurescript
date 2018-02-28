@@ -170,7 +170,7 @@
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
-    :stable-names :ignore-js-module-exts})
+    :stable-names :ignore-js-module-exts :opts-cache})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -2229,6 +2229,9 @@
       (nil? (:closure-module-roots opts))
       (assoc :closure-module-roots [])
 
+      (nil? (:opts-cache opts))
+      (assoc :opts-cache "cljsc_opts.edn")
+
       (contains? opts :modules)
       (ensure-module-opts)
 
@@ -2774,7 +2777,7 @@
                          (map (comp :externs second)
                            (get @compiler-env ::ana/namespaces)))
                        (str (util/output-directory opts) "/inferred_externs.js")))
-                 _ (spit (io/file (util/output-directory opts) "cljsc_opts.edn") (pr-str orig-opts))
+                 _ (spit (io/file (util/output-directory opts) (:opts-cache opts)) (pr-str orig-opts))
                  optim (:optimizations opts)
                  ret (if (and optim (not= optim :none))
                        (do

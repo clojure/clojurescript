@@ -296,7 +296,9 @@
     (when (and output-dir (not (.exists (io/file output-dir "clojure" "browser" "repl" "preload.js"))))
       (spit (io/file "out/brepl_deps.js")
         (build/build
-          '[(require '[clojure.browser.repl.preload])] {:optimizations :none})))
+          '[(require '[clojure.browser.repl.preload])]
+          {:optimizations :none
+           :opts-cache "brepl_opts.edn"})))
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))
