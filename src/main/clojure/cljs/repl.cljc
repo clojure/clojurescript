@@ -636,6 +636,18 @@
            (set! *e e#)
            (throw e#))))))
 
+(defn- init-wrap-fn [form]
+  (cond
+    (and (seq? form)
+      (#{'ns 'require 'require-macros
+         'use 'use-macros 'import 'refer-clojure} (first form)))
+    identity
+
+    ('#{*1 *2 *3 *e} form) (fn [x] `(cljs.core.pr-str ~x))
+    :else
+    (fn [x]
+      `(cljs.core.pr-str ~x))))
+
 (defn eval-cljs
   "Given a REPL evaluation environment, an analysis environment, and a
    form, evaluate the form and return the result. The result is always the value
@@ -788,9 +800,9 @@
       (doseq [form (:forms init)]
         (eval-cljs renv (ana/empty-env) form))
       :eval-forms
-      (binding [*repl-opts* (merge *repl-opts* {:def-emits-var true})]
+      (binding [*repl-opts* (merge *repl-opts* {:def-emits-var true :wrap init-wrap-fn})]
         (doseq [form (:forms init)]
-          (let [value (eval-cljs renv (ana/empty-env) form)]
+          (let [value (eval-cljs renv (ana/empty-env) form *repl-opts*)]
             (when-not (repl-nil? value)
               (println value)))))
       :init-script

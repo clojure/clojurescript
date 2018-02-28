@@ -328,7 +328,6 @@ present"
                   (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
                     `(~(symbol (name main) "-main") ~@args))))
               (finally
-                (util/debug-prn "Tearing down")
                 (repl/tear-down renv)))))))))
 
 (defn- main-opt
