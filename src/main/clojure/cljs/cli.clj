@@ -234,10 +234,9 @@ classpath. Classpath-relative paths have prefix of @ or @/")
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] {:keys [repl-env-options options inits] :as cfg}]
-  (let [renv (apply repl-env (mapcat identity repl-env-options))
-        opts (merge (repl/repl-options renv) options)]
+  (let [renv (apply repl-env (mapcat identity repl-env-options))]
     (repl/repl* renv
-      (assoc opts
+      (assoc options
         :inits
         (into
           [{:type :init-forms
