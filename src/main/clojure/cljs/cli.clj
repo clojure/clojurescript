@@ -263,7 +263,8 @@ present"
                      (merge copts opts)))]
       (binding [ana/*cljs-ns*    'cljs.user
                 repl/*repl-opts* opts
-                ana/*verbose*    (:verbose opts)]
+                ana/*verbose*    (:verbose opts)
+                repl/*repl-env* renv]
         (when ana/*verbose*
           (util/debug-prn "Compiler options:" (pr-str repl/*repl-opts*)))
         (comp/with-core-cljs repl/*repl-opts*

@@ -35,6 +35,7 @@
 
 (def ^:dynamic *cljs-verbose* false)
 (def ^:dynamic *repl-opts* nil)
+(def ^:dynamic *repl-env* nil)
 
 (def known-repl-opts
   "Set of all known REPL options."
@@ -856,7 +857,8 @@
     (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
      (when (:source-map opts)
        (.start (Thread. (bound-fn [] (read-source-map "cljs/core.aot.js")))))
-     (binding [ana/*unchecked-if* false
+     (binding [*repl-env* repl-env
+               ana/*unchecked-if* false
                ana/*unchecked-arrays* false
                *err* (if bind-err
                        (cond-> *out*

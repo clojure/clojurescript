@@ -79,7 +79,8 @@
           (with-bindings
             (binding [*in*  (or stdin in-reader)
                       *out* (PrintWriter-on #(out-fn {:tag :out :val %1}) nil)
-                      *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)]
+                      *err* (PrintWriter-on #(out-fn {:tag :err :val %1}) nil)
+                      repl/*repl-env* repl-env]
               (let [opts (merge opts (:merge-opts (repl/setup repl-env opts)))]
                 (binding [repl/*repl-opts* opts]
                   (repl/evaluate-form repl-env env "<cljs repl>"
