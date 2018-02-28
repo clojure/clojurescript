@@ -269,64 +269,67 @@ present"
           (util/debug-prn "Compiler options:" (pr-str repl/*repl-opts*)))
         (comp/with-core-cljs repl/*repl-opts*
           (fn []
-            (repl/setup renv repl/*repl-opts*)
-            ;; REPLs don't normally load cljs_deps.js
-            (when (and coptsf (.exists coptsf))
-              (let [depsf (io/file (:output-dir options) "cljs_deps.js")]
-                (when (.exists depsf)
-                  (repl/evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
-            (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
-              (when-not (empty? args)
-                `(set! *command-line-args* (list ~@args))))
-            (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
-              `(~'ns ~'cljs.user))
-            (repl/run-inits renv inits)
-            (when script
-              (cond
-                (= "-" script)
-                (repl/load-stream renv "<cljs repl>" *in*)
+            (try
+              (repl/setup renv repl/*repl-opts*)
+              ;; REPLs don't normally load cljs_deps.js
+              (when (and coptsf (.exists coptsf))
+                (let [depsf (io/file (:output-dir options) "cljs_deps.js")]
+                  (when (.exists depsf)
+                    (repl/evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
+              (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
+                (when-not (empty? args)
+                  `(set! *command-line-args* (list ~@args))))
+              (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
+                `(~'ns ~'cljs.user))
+              (repl/run-inits renv inits)
+              (when script
+                (cond
+                  (= "-" script)
+                  (repl/load-stream renv "<cljs repl>" *in*)
 
-                (.exists (io/file script))
-                (repl/load-file renv script)
+                  (.exists (io/file script))
+                  (repl/load-file renv script)
 
-                (string/starts-with? script "@/")
-                (if-let [rsrc (io/resource (subs script 2))]
-                  (repl/load-stream renv (util/get-name rsrc) rsrc)
+                  (string/starts-with? script "@/")
+                  (if-let [rsrc (io/resource (subs script 2))]
+                    (repl/load-stream renv (util/get-name rsrc) rsrc)
+                    (throw
+                      (ex-info
+                        (str "Resource script " (subs script 2) " does not exist")
+                        {:cljs.main/error :invalid-arg})))
+
+                  (string/starts-with? script "@")
+                  (if-let [rsrc (io/resource (subs script 1))]
+                    (repl/load-stream renv (util/get-name rsrc) rsrc)
+                    (throw
+                      (ex-info
+                        (str "Resource script " (subs script 1) " does not exist")
+                        {:cljs.main/error :invalid-arg})))
+
+                  (string/starts-with? script "-")
                   (throw
                     (ex-info
-                      (str "Resource script " (subs script 2) " does not exist")
-                      {:cljs.main/error :invalid-arg})))
+                      (str "Expected script or -, got flag " script " instead")
+                      {:cljs.main/error :invalid-arg}))
 
-                (string/starts-with? script "@")
-                (if-let [rsrc (io/resource (subs script 1))]
-                  (repl/load-stream renv (util/get-name rsrc) rsrc)
+                  :else
                   (throw
                     (ex-info
-                      (str "Resource script " (subs script 1) " does not exist")
-                      {:cljs.main/error :invalid-arg})))
-
-                (string/starts-with? script "-")
-                (throw
-                  (ex-info
-                    (str "Expected script or -, got flag " script " instead")
-                    {:cljs.main/error :invalid-arg}))
-
-                :else
-                (throw
-                  (ex-info
-                    (str "Script " script " does not exist")
-                    {:cljs.main/error :invalid-arg}))))
-            (when main
-              (let [src (build/ns->source main)]
-                (when-not (io/resource src)
-                  (throw
-                    (ex-info
-                      (str "Namespace " main " does not exist")
-                      {:cljs.main/error :invalid-arg})))
-                (repl/load-stream renv (util/get-name src) src)
-                (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
-                  `(~(symbol (name main) "-main") ~@args))))
-            (repl/tear-down renv)))))))
+                      (str "Script " script " does not exist")
+                      {:cljs.main/error :invalid-arg}))))
+              (when main
+                (let [src (build/ns->source main)]
+                  (when-not (io/resource src)
+                    (throw
+                      (ex-info
+                        (str "Namespace " main " does not exist")
+                        {:cljs.main/error :invalid-arg})))
+                  (repl/load-stream renv (util/get-name src) src)
+                  (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
+                    `(~(symbol (name main) "-main") ~@args))))
+              (finally
+                (util/debug-prn "Tearing down")
+                (repl/tear-down renv)))))))))
 
 (defn- main-opt
   "Call the -main function from a namespace with string arguments from
