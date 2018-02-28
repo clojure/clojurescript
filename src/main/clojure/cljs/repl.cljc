@@ -779,7 +779,7 @@
     (.printStackTrace e *err*)))
 
 (defn repl-nil? [x]
-  (boolean (= "nil" x)))
+  (boolean (#{"" "nil"} x)))
 
 (defn run-inits [renv inits]
   (doseq [{:keys [type] :as init} inits]
