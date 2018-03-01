@@ -318,7 +318,7 @@ present"
                       {:cljs.main/error :invalid-arg}))))
               (when main
                 (let [src (build/ns->source main)]
-                  (when-not (io/resource src)
+                  (when-not src
                     (throw
                       (ex-info
                         (str "Namespace " main " does not exist")
