@@ -370,7 +370,10 @@ present"
                    (merge
                      (when (and coptsf (.exists coptsf))
                        (edn/read-string (slurp coptsf)))
-                     (select-keys env-opts [:target :browser-repl])
+                     (select-keys env-opts
+                       (cond-> [:target]
+                         (not (:target options))
+                         (conj :browser-repl)))
                      options
                      {:main main-ns}) opts
                    (cond-> opts
