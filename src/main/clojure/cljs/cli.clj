@@ -386,14 +386,17 @@ present"
                    (:uri (build/ns->location main-ns)))
         repl?    (boolean (#{"-r" "--repl"} (first args)))
         cenv     (env/default-compiler-env)]
-    (if-let [path (:watch opts)]
-      (if repl?
-        (.start (Thread. #(watch-proc cenv path opts)))
-        (build/watch path opts cenv))
-      (build/build source opts cenv))
-    (when repl?
-      (repl-opt repl-env args
-        (assoc-in cfg [:options :compiler-env] cenv)))))
+    (binding [ana/*verbose* (:verbose opts)]
+      (when ana/*verbose*
+        (util/debug-prn "Compiler options:" (pr-str opts)))
+      (if-let [path (:watch opts)]
+        (if repl?
+          (.start (Thread. #(watch-proc cenv path opts)))
+          (build/watch path opts cenv))
+        (build/build source opts cenv))
+      (when repl?
+        (repl-opt repl-env args
+          (assoc-in cfg [:options :compiler-env] cenv))))))
 
 (defn- compile-opt
   [repl-env [_ ns & args] cfg]
