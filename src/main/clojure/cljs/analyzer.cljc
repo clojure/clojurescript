@@ -3723,7 +3723,7 @@
          (symbol (str "cljs.user." name (util/content-sha full-name 7)))))))
 
 #?(:clj
-   (defn parse-ns
+   (defn ^:dynamic parse-ns
      "Helper for parsing only the essential namespace information from a
       ClojureScript source file and returning a cljs.closure/IJavaScript compatible
       map _not_ a namespace AST node.

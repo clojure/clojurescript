@@ -569,6 +569,33 @@
     (map compiled-file
          (comp/compile-root src-dir out-dir opts))))
 
+(defn build-affecting-options-sha [opts]
+  (util/content-sha (pr-str (comp/build-affecting-options opts)) 7))
+
+(defn ^File cache-base-path
+  ([]
+   (cache-base-path nil))
+  ([opts]
+   (io/file (System/getProperty "user.home")
+     ".cljs" ".aot_cache" (util/clojurescript-version)
+     (build-affecting-options-sha opts))))
+
+(defn cacheable-files
+  ([ns ext]
+   (cacheable-files ns ext nil))
+  ([ns ext opts]
+   (let [path (cache-base-path opts)
+         name (util/ns->relpath ns nil)]
+     (into {}
+       (map
+         (fn [[k v]]
+           [k (io/file path (str name v))]))
+       {:source (str "." ext)
+        :output-file ".js"
+        :source-map ".js.map"
+        :analysis-cache-edn ".cljs.cache.edn"
+        :analysis-cache-json ".cljs.cache.json"}))))
+
 (defn ^String path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
   from the root of the jar."
@@ -592,50 +619,43 @@
      (.setLastModified ^File out-file (util/last-modified url))
      out-file)))
 
-(defn build-affecting-options-sha [opts]
-  (util/content-sha (pr-str (comp/build-affecting-options opts)) 7))
-
-(defn cache-base-path
-  ([]
-   (cache-base-path nil))
-  ([opts]
-   (io/file (System/getProperty "user.home")
-     ".cljs" ".aot_cache" (util/clojurescript-version)
-     (build-affecting-options-sha opts))))
-
-(defn cacheable-files
-  ([ns]
-   (cacheable-files ns nil))
-  ([ns opts]
-   (let [path (cache-base-path opts)
-         name (util/ns->relpath ns nil)]
-     (map #(io/file path (str name %))
-       [".js" ".cljs" ".cljs.cache.edn" ".cljs.cache.json" ".js.map"]))))
-
 ;; TODO: it would be nice if we could consolidate requires-compilation?
 ;; logic - David
 (defn compile-from-jar
   "Compile a file from a jar if necessary. Returns IJavaScript."
   [jar-file {:keys [output-file] :as opts}]
-  (let [out-file (when output-file
-                   (io/file (util/output-directory opts) output-file))]
-    (if (or (nil? out-file)
-            (not (.exists ^File out-file))
-            (not= (util/compiled-by-version out-file)
-                  (util/clojurescript-version))
-            (util/changed? jar-file out-file))
+  (let [{:keys [ns]} (ana/parse-ns jar-file)
+        out-file (when output-file
+                   (io/file (util/output-directory opts) output-file))
+        cacheable (cacheable-files ns (util/ext jar-file) opts)]
+    (when (or (nil? out-file)
+              (not (.exists ^File out-file))
+              (not= (util/compiled-by-version out-file)
+                    (util/clojurescript-version))
+              (util/changed? jar-file out-file))
       ;; actually compile from JAR
-      (let [file-on-disk (jar-file-to-disk jar-file (util/output-directory opts) opts)]
-        (-compile file-on-disk opts))
-      ;; have to call compile-file as it includes more IJavaScript
-      ;; information than ana/parse-ns
-      (compile-file
-        (io/file (util/output-directory opts)
-          (last (string/split (.getPath ^URL jar-file) #"\.jar!/")))
-        opts))))
+      (let [cache-path (cache-base-path opts)]
+        (when-not (.exists (:output-file cacheable))
+          (-compile (jar-file-to-disk jar-file cache-path opts) opts))
+        (doseq [[k ^File f] cacheable]
+          (when (.exists f)
+            (let [target (io/file (util/output-directory opts)
+                           (-> (.getAbsolutePath f)
+                             (string/replace (.getAbsolutePath cache-path) "")
+                             (subs 1)))]
+              (when (and ana/*verbose* (= :source k))
+                (util/debug-prn (str "Copying cached " f " to " target)))
+              (spit target (slurp f))
+              (.setLastModified target (util/last-modified jar-file)))))))
+    ;; have to call compile-file as it includes more IJavaScript
+    ;; information than ana/parse-ns for now
+    (compile-file
+      (io/file (util/output-directory opts)
+        (last (string/split (.getPath ^URL jar-file) #"\.jar!/")))
+      opts)))
 
 (defn find-jar-sources
-  [this opts]
+  [this opts] ()
   [(comp/find-source (jar-file-to-disk this (util/output-directory opts)))])
 
 (extend-protocol Compilable
@@ -2736,6 +2756,7 @@
          (binding [comp/*recompiled* (when-not (false? (:recompile-dependents opts))
                                        (atom #{}))
                    ana/*checked-arrays* checked-arrays
+                   ana/parse-ns (memoize ana/parse-ns)
                    ana/*cljs-static-fns* static-fns?
                    ana/*fn-invoke-direct* (or (and static-fns?
                                                    (:fn-invoke-direct opts))
