@@ -644,7 +644,7 @@
                            (-> (.getAbsolutePath f)
                              (string/replace (.getAbsolutePath cache-path) "")
                              (subs 1)))]
-              (when (and (or ana/*verbose* (:verbose opts)) (= :out-file k))
+              (when (and (or ana/*verbose* (:verbose opts)) (= :output-file k))
                 (util/debug-prn (str "Copying cached " f " to " target)))
               (util/mkdirs target)
               (spit target (slurp f))
