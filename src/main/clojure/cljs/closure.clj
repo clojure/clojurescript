@@ -282,8 +282,6 @@
     (setOutputCharset (to-charset (:closure-output-charset opts "UTF-8"))) ;; only works > 20160125 Closure Compiler
     )
 
-  (. compiler-options (setResolveSourceMapAnnotations false)) ;; Windows bug in Closure it seems
-
   compiler-options)
 
 (defn ^CompilerOptions make-options
