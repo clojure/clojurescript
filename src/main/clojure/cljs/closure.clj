@@ -592,6 +592,26 @@
      (.setLastModified ^File out-file (util/last-modified url))
      out-file)))
 
+(defn build-affecting-options-sha [opts]
+  (util/content-sha (pr-str (comp/build-affecting-options opts)) 7))
+
+(defn cache-base-path
+  ([]
+   (cache-base-path nil))
+  ([opts]
+   (io/file (System/getProperty "user.home")
+     ".cljs" ".aot_cache" (util/clojurescript-version)
+     (build-affecting-options-sha opts))))
+
+(defn cacheable-files
+  ([ns]
+   (cacheable-files ns nil))
+  ([ns opts]
+   (let [path (cache-base-path opts)
+         name (util/ns->relpath ns nil)]
+     (map #(io/file path (str name %))
+       [".js" ".cljs" ".cljs.cache.edn" ".cljs.cache.json" ".js.map"]))))
+
 ;; TODO: it would be nice if we could consolidate requires-compilation?
 ;; logic - David
 (defn compile-from-jar
