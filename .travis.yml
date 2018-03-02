@@ -1,5 +1,8 @@
 dist: trusty
 
+git:
+  depth: 500
+
 language: node_js
 
 node_js:
@@ -14,6 +17,7 @@ before_install:
 
 before_script:
   - script/bootstrap
+  - script/uberjar
   - mkdir -p builds/out-adv
   - bin/cljsc src/test/cljs "{:optimizations :advanced
                               :output-wrapper true
@@ -52,4 +56,10 @@ script:
   - script/test-self-host | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - script/test-self-parity | tee test-out.txt
+  - grep '0 failures, 0 errors.' test-out.txt
+  - script/test-cli node | tee test-out.txt
+  - grep '0 failures, 0 errors.' test-out.txt
+  - script/test-cli nashorn | tee test-out.txt
+  - grep '0 failures, 0 errors.' test-out.txt
+  - script/test-cli rhino | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt

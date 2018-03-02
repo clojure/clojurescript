@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ ! -f target/cljs.jar ]; then
+  echo "Run script/uberjar first"
+  exit 1
+fi
+
+java -cp target/cljs.jar:src/test/cljs_cli clojure.main -m cljs-cli.test-runner "$@"
