@@ -654,9 +654,8 @@
         (last (string/split (.getPath ^URL jar-file) #"\.jar!/")))
       opts)))
 
-(defn find-jar-sources
-  [this opts] ()
-  [(comp/find-source (jar-file-to-disk this (util/output-directory opts)))])
+(defn find-jar-sources [this opts]
+  [(comp/find-source this)])
 
 (extend-protocol Compilable
 
