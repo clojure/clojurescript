@@ -637,7 +637,7 @@
       (let [cache-path (cache-base-path opts)]
         (when-not (.exists (:output-file cacheable))
           (-compile (jar-file-to-disk jar-file cache-path opts)
-            (assoc opts :output-dir cache-path)))
+            (assoc opts :output-dir (util/path cache-path))))
         (doseq [[k ^File f] cacheable]
           (when (.exists f)
             (let [target (io/file (util/output-directory opts)
@@ -646,6 +646,7 @@
                              (subs 1)))]
               (when (and (or ana/*verbose* (:verbose opts)) (= :out-file k))
                 (util/debug-prn (str "Copying cached " f " to " target)))
+              (util/mkdirs target)
               (spit target (slurp f))
               (.setLastModified target (util/last-modified jar-file)))))))
     ;; have to call compile-file as it includes more IJavaScript
