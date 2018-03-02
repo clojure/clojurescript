@@ -636,7 +636,8 @@
       ;; actually compile from JAR
       (let [cache-path (cache-base-path opts)]
         (when-not (.exists (:output-file cacheable))
-          (-compile (jar-file-to-disk jar-file cache-path opts) opts))
+          (-compile (jar-file-to-disk jar-file cache-path opts)
+            (assoc opts :output-dir cache-path)))
         (doseq [[k ^File f] cacheable]
           (when (.exists f)
             (let [target (io/file (util/output-directory opts)
