@@ -364,8 +364,21 @@
                             <goal>single</goal>
                         </goals>
                         <configuration>
+                            <appendAssemblyId>false</appendAssemblyId>
                             <descriptors>
                                 <descriptor>src/assembly/aot.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>slim-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+			<configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/slim.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>
