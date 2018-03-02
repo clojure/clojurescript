@@ -278,7 +278,7 @@
 ;; =============================================================================
 ;; BrowserEnv
 
-(defn setup [{:keys [working-dir] :as repl-env} {:keys [output-dir] :as opts}]
+(defn setup [{:keys [working-dir launch-browser] :as repl-env} {:keys [output-dir] :as opts}]
   (binding [browser-state (:browser-state repl-env)
             ordering (:ordering repl-env)
             es (:es repl-env)
@@ -303,7 +303,8 @@
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))
     (server/start repl-env)
-    (browse/browse-url (str "http://" (:host repl-env) ":" (:port repl-env)))))
+    (when launch-browser
+      (browse/browse-url (str "http://" (:host repl-env) ":" (:port repl-env))))))
 
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
@@ -355,6 +356,7 @@
   (merge (BrowserEnv.)
     {:host host
      :port port
+     :launch-browser true
      :working-dir (->> [".repl" (util/clojurescript-version)]
                        (remove empty?) (string/join "-"))
      :serve-static true
@@ -378,6 +380,8 @@
   Options:
 
   port:           The port on which the REPL server will run. Defaults to 9000.
+  launch-browser: A Boolean indicating whether a browser should be automatically
+                  launched connecting back to the terminal REPL. Defaults to true.
   working-dir:    The directory where the compiled REPL client JavaScript will
                   be stored. Defaults to \".repl\" with a ClojureScript version
                   suffix, eg. \".repl-0.0-2138\".
