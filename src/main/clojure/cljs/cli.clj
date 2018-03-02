@@ -230,13 +230,19 @@ classpath. Classpath-relative paths have prefix of @ or @/")
       ((get-dispatch commands :init opt) ret arg))
     {} inits))
 
+(defn dissoc-entry-point-opts
+  "Dissoc the entry point options from the input. Necessary when the user
+is trying load some arbitrary ns."
+  [opts]
+  (dissoc opts :main :output-to))
+
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] {:keys [repl-env-options options inits] :as cfg}]
   (let [renv (apply repl-env (mapcat identity repl-env-options))]
     (repl/repl* renv
-      (assoc options
+      (assoc (dissoc-entry-point-opts options)
         :inits
         (into
           [{:type :init-forms
@@ -250,16 +256,11 @@ present"
     (let [renv   (repl-env)
           coptsf (when-let [od (:output-dir options)]
                    (io/file od "cljsc_opts.edn"))
-          opts   (as->
-                   (build/add-implicit-options
-                     (merge (repl/repl-options renv) options)) opts
-                   (let [copts (when (and coptsf (.exists coptsf))
-                                 (-> (edn/read-string (slurp coptsf))
-                                   ;; need to remove the entry point bits,
-                                   ;; user is trying load some arbitrary ns
-                                   (dissoc :main)
-                                   (dissoc :output-to)))]
-                     (merge copts opts)))]
+          copts  (when (and coptsf (.exists coptsf))
+                   (-> (edn/read-string (slurp coptsf))
+                       (dissoc-entry-point-opts)))
+          opts   (merge copts (build/add-implicit-options
+                               (merge (repl/repl-options renv) options)))]
       (binding [ana/*cljs-ns*    'cljs.user
                 repl/*repl-opts* opts
                 ana/*verbose*    (:verbose opts)
