@@ -643,7 +643,7 @@
                            (-> (.getAbsolutePath f)
                              (string/replace (.getAbsolutePath cache-path) "")
                              (subs 1)))]
-              (when (and ana/*verbose* (= :source k))
+              (when (and (or ana/*verbose* (:verbose opts)) (= :out-file k))
                 (util/debug-prn (str "Copying cached " f " to " target)))
               (spit target (slurp f))
               (.setLastModified target (util/last-modified jar-file)))))))
