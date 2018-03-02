@@ -1288,7 +1288,7 @@
    (defn url-path [^File f]
      (.getPath (.toURL (.toURI f)))))
 
-(defn- build-affecting-options [opts]
+(defn build-affecting-options [opts]
   (select-keys opts
     [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target
      :cache-key :checked-arrays :language-out]))
