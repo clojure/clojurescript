@@ -11,6 +11,8 @@
   (:require [clojure.string :as str])
   (:import java.io.BufferedReader
            java.io.InputStreamReader
+           java.io.ByteArrayOutputStream
+           java.util.zip.GZIPOutputStream
            java.net.ServerSocket))
 
 (def ^:dynamic state nil)
@@ -130,6 +132,18 @@
     404 "HTTP/1.1 404 Not Found"
     "HTTP/1.1 500 Error"))
 
+(defn ^bytes gzip [^bytes bytes]
+  (let [baos (ByteArrayOutputStream. (count bytes))]
+    (try
+      (let [gzos (GZIPOutputStream. baos)]
+        (try
+          (.write gzos bytes)
+          (finally
+            (.close gzos))))
+      (finally
+        (.close baos)))
+    (.toByteArray baos)))
+
 (defn send-and-close
   "Use the passed connection to send a form to the browser. Send a
   proper HTTP response."
@@ -138,16 +152,20 @@
   ([conn status form content-type]
     (send-and-close conn status form content-type "UTF-8"))
   ([conn status form content-type encoding]
-    (let [byte-form (.getBytes form encoding)
+    (send-and-close conn status form content-type encoding false))
+  ([conn status form content-type encoding gzip?]
+    (let [byte-form (cond-> (.getBytes form encoding) gzip? gzip)
           content-length (count byte-form)
           headers (map #(.getBytes (str % "\r\n"))
-                    [(status-line status)
-                     "Server: ClojureScript REPL"
-                     (str "Content-Type: "
-                       content-type
-                       "; charset=" encoding)
-                     (str "Content-Length: " content-length)
-                     ""])]
+                    (cond->
+                      [(status-line status)
+                       "Server: ClojureScript REPL"
+                       (str "Content-Type: "
+                         content-type
+                         "; charset=" encoding)
+                       (str "Content-Length: " content-length)]
+                      gzip? (conj "Content-Encoding: gzip")
+                      true (conj "")))]
       (with-open [os (.getOutputStream conn)]
         (doseq [header headers]
           (.write os header 0 (count header)))

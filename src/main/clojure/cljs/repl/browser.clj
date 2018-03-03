@@ -132,7 +132,7 @@
     "<script src=\"" output-to "\"></script>"
     "</body></html>"))
 
-(defn send-static [{path :path :as request} conn {:keys [static-dir host port] :as opts}]
+(defn send-static [{path :path :as request} conn {:keys [static-dir host port gzip?] :as opts}]
   (if (and static-dir (not= "/favicon.ico" path))
     (let [path (if (= "/" path) "/index.html" path)
           local-path
@@ -157,13 +157,9 @@
         local-path
         (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
           (let [mime-type (ext->mime-type ext "text/plain")
-                encoding (mime-type->encoding mime-type "UTF-8")]
-            (server/send-and-close
-              conn
-              200
-              (slurp local-path :encoding encoding)
-              mime-type
-              encoding))
+                encoding  (mime-type->encoding mime-type "UTF-8")]
+            (server/send-and-close conn 200 (slurp local-path :encoding encoding)
+              mime-type encoding (and gzip? (= "text/javascript" mime-type))))
           (server/send-and-close conn 200 (slurp local-path) "text/plain"))
         ;; "/index.html" doesn't exist, provide our own
         (= path "/index.html")
@@ -282,7 +278,8 @@
             server/state (atom {:socket nil :connection nil :promised-conn nil})]
     (server/start
       (merge opts
-        {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))}))))
+        {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
+         :gzip? true}))))
 
 ;; =============================================================================
 ;; BrowserEnv
