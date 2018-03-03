@@ -1,21 +1,31 @@
 <assembly>
-    <id>aot</id>
-    <formats>
-        <format>jar</format>
-    </formats>
-    <includeBaseDirectory>false</includeBaseDirectory>
-    <fileSets>
-        <fileSet>
-            <directory>target/classes</directory>
-            <outputDirectory>/</outputDirectory>
-            <!-- Excluding these breaks AOT, needs more investigating -->
-            <!--
-            <excludes>
-                <exclude>clojure/data/**</exclude>
-                <exclude>clojure/tools/**</exclude>
-                <exclude>cognitect/**</exclude>
-            </excludes>
-            -->
-        </fileSet>
-    </fileSets>
+  <id>aot</id>
+  <formats>
+    <format>jar</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <fileSets>
+    <fileSet>
+      <directory>target/classes</directory>
+        <outputDirectory>/</outputDirectory>
+          <!-- Excluding these breaks AOT, needs more investigating -->
+          <!--
+          <excludes>
+            <exclude>clojure/data/**</exclude>
+            <exclude>clojure/tools/**</exclude>
+            <exclude>cognitect/**</exclude>
+          </excludes>
+          -->
+    </fileSet>
+  </fileSets>
+  <files>
+    <file>
+      <source>pom.xml</source>
+      <outputDirectory>META-INF/maven/org.clojure/clojurescript</outputDirectory>
+    </file>
+    <file>
+      <source>target/maven-archiver/pom.properties</source>
+      <outputDirectory>META-INF/maven/org.clojure/clojurescript</outputDirectory>
+    </file>
+  </files>
 </assembly>

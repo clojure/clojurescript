@@ -18,4 +18,14 @@
       <outputDirectory>/</outputDirectory>
     </fileSet>
   </fileSets>
+  <files>
+    <file>
+      <source>pom.xml</source>
+      <outputDirectory>META-INF/maven/org.clojure/clojurescript</outputDirectory>
+    </file>
+    <file>
+      <source>target/maven-archiver/pom.properties</source>
+      <outputDirectory>META-INF/maven/org.clojure/clojurescript</outputDirectory>
+    </file>
+  </files>
 </assembly>
