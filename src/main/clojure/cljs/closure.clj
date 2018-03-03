@@ -595,8 +595,8 @@
        {:source (str "." ext)
         :output-file ".js"
         :source-map ".js.map"
-        :analysis-cache-edn ".cljs.cache.edn"
-        :analysis-cache-json ".cljs.cache.json"}))))
+        :analysis-cache-edn (str "." ext ".cache.edn")
+        :analysis-cache-json (str "." ext ".cache.json")}))))
 
 (defn ^String path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
