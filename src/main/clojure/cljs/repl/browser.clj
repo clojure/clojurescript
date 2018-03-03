@@ -304,7 +304,8 @@
       (println "Listening for browser REPL connect ..."))
     (server/start repl-env)
     (when launch-browser
-      (browse/browse-url (str "http://" (:host repl-env) ":" (:port repl-env))))))
+      (browse/browse-url
+        (str "http://" (:host repl-env) ":" (:port repl-env) "?rel=" (System/currentTimeMillis))))))
 
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
