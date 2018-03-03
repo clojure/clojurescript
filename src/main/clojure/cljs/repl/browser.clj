@@ -132,7 +132,9 @@
     "<script src=\"" output-to "\"></script>"
     "</body></html>"))
 
-(defn send-static [{path :path :as request} conn {:keys [static-dir host port gzip?] :as opts}]
+(defn send-static
+  [{path :path :as request} conn
+   {:keys [static-dir output-to output-dir host port gzip?] :or {output-dir "out"} :as opts}]
   (if (and static-dir (not= "/favicon.ico" path))
     (let [path (if (= "/" path) "/index.html" path)
           local-path
@@ -151,8 +153,7 @@
               (#{"/cljs-logo-icon-32.png" "/cljs-logo.svg"} path)
               (io/resource (subs path 1))
               :else nil)
-            local-path)
-          copts (when env/*compiler* (get @env/*compiler* :options))]
+            local-path)]
       (cond
         local-path
         (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
@@ -163,9 +164,9 @@
           (server/send-and-close conn 200 (slurp local-path) "text/plain"))
         ;; "/index.html" doesn't exist, provide our own
         (= path "/index.html")
-        (let [{:keys [output-to] :or {output-to "out/main.js"}} copts]
-          (server/send-and-close conn 200 (default-index output-to) "text/html" "UTF-8"))
-        (= path "/out/main.js")
+        (server/send-and-close conn 200
+          (default-index (or output-to (str output-dir "/main.js"))) "text/html" "UTF-8")
+        (= path (str "/" output-dir "/main.js") )
         (let [closure-defines (-> `{clojure.browser.repl/HOST ~host
                                     clojure.browser.repl/PORT ~port}
                                 cljsc/normalize-closure-defines
@@ -173,11 +174,11 @@
           (server/send-and-close conn 200
             (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                  "var CLOSURE_NO_DEPS = true;\n"
-                 "document.write('<script src=\"out/goog/base.js\"></script>');\n"
-                 "document.write('<script src=\"out/goog/deps.js\"></script>');\n"
-                 (when (.exists (io/file "out" "cljs_deps.js"))
-                   "document.write('<script src=\"out/cljs_deps.js\"></script>');\n")
-                 "document.write('<script src=\"out/brepl_deps.js\"></script>');\n"
+                 "document.write('<script src=\"" output-dir "/goog/base.js\"></script>');\n"
+                 "document.write('<script src=\"" output-dir "/goog/deps.js\"></script>');\n"
+                 (when (.exists (io/file output-dir "cljs_deps.js"))
+                   "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');\n")
+                 "document.write('<script src=\"" output-dir "/brepl_deps.js\"></script>');\n"
                  "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
             "text/javascript" "UTF-8"))
         :else (server/send-404 conn path)))
@@ -300,11 +301,14 @@
     ;; TODO: this could be cleaner if compiling forms resulted in a
     ;; :output-to file with the result of compiling those forms - David
     (when (and output-dir (not (.exists (io/file output-dir "clojure" "browser" "repl" "preload.js"))))
-      (spit (io/file "out/brepl_deps.js")
-        (build/build
-          '[(require '[clojure.browser.repl.preload])]
-          {:optimizations :none
-           :opts-cache "brepl_opts.edn"})))
+      (let [target (io/file output-dir "brepl_deps.js")]
+        (util/mkdirs target)
+        (spit target
+          (build/build
+            '[(require '[clojure.browser.repl.preload])]
+            {:optimizations :none
+             :output-dir output-dir
+             :opts-cache "brepl_opts.edn"}))))
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))

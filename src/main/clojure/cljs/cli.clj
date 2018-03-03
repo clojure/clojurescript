@@ -240,7 +240,11 @@ is trying load some arbitrary ns."
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] {:keys [repl-env-options options inits] :as cfg}]
-  (let [renv (apply repl-env (mapcat identity repl-env-options))]
+  (let [reopts (merge repl-env-options
+                 (select-keys options [:output-to :output-dir]))
+        _      (when (or ana/*verbose* (:verbose options))
+                 (util/debug-prn "REPL env options:" (pr-str reopts)))
+        renv   (apply repl-env (mapcat identity reopts))]
     (repl/repl* renv
       (assoc (dissoc-entry-point-opts options)
         :inits
@@ -251,20 +255,25 @@ present"
           inits)))))
 
 (defn default-main
-  [repl-env {:keys [main script args options inits] :as cfg}]
+  [repl-env {:keys [main script args repl-env-options options inits] :as cfg}]
   (env/ensure
-    (let [renv   (repl-env)
+    (let [reopts (merge repl-env-options
+                   (select-keys options [:output-to :output-dir]))
+          _      (when (or ana/*verbose* (:verbose options))
+                   (util/debug-prn "REPL env options:" (pr-str reopts)))
+          renv   (apply repl-env (mapcat identity reopts))
           coptsf (when-let [od (:output-dir options)]
                    (io/file od "cljsc_opts.edn"))
           copts  (when (and coptsf (.exists coptsf))
                    (-> (edn/read-string (slurp coptsf))
                        (dissoc-entry-point-opts)))
-          opts   (merge copts (build/add-implicit-options
-                               (merge (repl/repl-options renv) options)))]
+          opts   (merge copts
+                   (build/add-implicit-options
+                     (merge (repl/repl-options renv) options)))]
       (binding [ana/*cljs-ns*    'cljs.user
                 repl/*repl-opts* opts
                 ana/*verbose*    (:verbose opts)
-                repl/*repl-env* renv]
+                repl/*repl-env*  renv]
         (when ana/*verbose*
           (util/debug-prn "Compiler options:" (pr-str repl/*repl-opts*)))
         (comp/with-core-cljs repl/*repl-opts*
