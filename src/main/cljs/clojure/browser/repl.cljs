@@ -31,6 +31,7 @@
 (goog-define PORT 9000)
 
 (def xpc-connection (atom nil))
+(def parent-connected? (atom false))
 (def print-queue (array))
 
 (defn flush-print-queue! [conn]
@@ -40,8 +41,8 @@
 
 (defn repl-print [data]
   (.push print-queue (pr-str data))
-  (when-let [conn @xpc-connection]
-    (flush-print-queue! conn)))
+  (when @parent-connected?
+    (flush-print-queue! @xpc-connection)))
 
 (set! *print-newline* true)
 (set-print-fn! repl-print)
@@ -220,9 +221,11 @@
         ;; to ack once.
         (when-not @connected?
           (reset! connected? true)
+          (reset! parent-connected? true)
           (net/transmit repl-connection
                         :ack-handshake
-                        nil))))
+                        nil)
+          (flush-print-queue! repl-connection))))
     (net/register-service repl-connection
       :evaluate-javascript
       (fn [js]
