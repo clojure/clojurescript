@@ -11,5 +11,3 @@
 
 (defonce conn
   (repl/connect (str "http://" repl/HOST ":" repl/PORT "/repl")))
-
-(enable-console-print!)
