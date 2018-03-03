@@ -135,54 +135,56 @@
 (defn send-static
   [{path :path :as request} conn
    {:keys [static-dir output-to output-dir host port gzip?] :or {output-dir "out"} :as opts}]
-  (if (and static-dir (not= "/favicon.ico" path))
-    (let [path (if (= "/" path) "/index.html" path)
+  (let [output-dir (when-not (.isAbsolute (io/file output-dir)) output-dir)]
+    (if (and static-dir (not= "/favicon.ico" path))
+      (let [path (if (= "/" path) "/index.html" path)
+            local-path
+            (cond->
+              (seq (for [x (if (string? static-dir) [static-dir] static-dir)
+                         :when (.exists (io/file (str x path)))]
+                     (str x path)))
+              (complement nil?) first)
+            local-path
+            (if (nil? local-path)
+              (cond
+                (re-find #".jar" path)
+                (io/resource (second (string/split path #".jar!/")))
+                (string/includes? path (System/getProperty "user.dir"))
+                (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
+                (#{"/cljs-logo-icon-32.png" "/cljs-logo.svg"} path)
+                (io/resource (subs path 1))
+                :else nil)
+              local-path)]
+        (cond
           local-path
-          (cond->
-            (seq (for [x (if (string? static-dir) [static-dir] static-dir)
-                       :when (.exists (io/file (str x path)))]
-                   (str x path)))
-            (complement nil?) first)
-          local-path
-          (if (nil? local-path)
-            (cond
-              (re-find #".jar" path)
-              (io/resource (second (string/split path #".jar!/")))
-              (string/includes? path (System/getProperty "user.dir"))
-              (io/file (string/replace path (str (System/getProperty "user.dir") "/") ""))
-              (#{"/cljs-logo-icon-32.png" "/cljs-logo.svg"} path)
-              (io/resource (subs path 1))
-              :else nil)
-            local-path)]
-      (cond
-        local-path
-        (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
-          (let [mime-type (ext->mime-type ext "text/plain")
-                encoding  (mime-type->encoding mime-type "UTF-8")]
-            (server/send-and-close conn 200 (slurp local-path :encoding encoding)
-              mime-type encoding (and gzip? (= "text/javascript" mime-type))))
-          (server/send-and-close conn 200 (slurp local-path) "text/plain"))
-        ;; "/index.html" doesn't exist, provide our own
-        (= path "/index.html")
-        (server/send-and-close conn 200
-          (default-index (or output-to (str output-dir "/main.js"))) "text/html" "UTF-8")
-        (= path (str "/" output-dir "/main.js") )
-        (let [closure-defines (-> `{clojure.browser.repl/HOST ~host
-                                    clojure.browser.repl/PORT ~port}
-                                cljsc/normalize-closure-defines
-                                json/write-str)]
+          (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
+            (let [mime-type (ext->mime-type ext "text/plain")
+                  encoding (mime-type->encoding mime-type "UTF-8")]
+              (server/send-and-close conn 200 (slurp local-path :encoding encoding)
+                mime-type encoding (and gzip? (= "text/javascript" mime-type))))
+            (server/send-and-close conn 200 (slurp local-path) "text/plain"))
+          ;; "/index.html" doesn't exist, provide our own
+          (= path "/index.html")
           (server/send-and-close conn 200
-            (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
-                 "var CLOSURE_NO_DEPS = true;\n"
-                 "document.write('<script src=\"" output-dir "/goog/base.js\"></script>');\n"
-                 "document.write('<script src=\"" output-dir "/goog/deps.js\"></script>');\n"
-                 (when (.exists (io/file output-dir "cljs_deps.js"))
-                   "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');\n")
-                 "document.write('<script src=\"" output-dir "/brepl_deps.js\"></script>');\n"
-                 "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
-            "text/javascript" "UTF-8"))
-        :else (server/send-404 conn path)))
-    (server/send-404 conn path)))
+            (default-index (or output-to (str output-dir "/main.js")))
+            "text/html" "UTF-8")
+          (= path (cond->> "/main.js" output-dir (str "/" output-dir )))
+          (let [closure-defines (-> `{clojure.browser.repl/HOST ~host
+                                      clojure.browser.repl/PORT ~port}
+                                  cljsc/normalize-closure-defines
+                                  json/write-str)]
+            (server/send-and-close conn 200
+              (str "var CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
+                   "var CLOSURE_NO_DEPS = true;\n"
+                   "document.write('<script src=\"" output-dir "/goog/base.js\"></script>');\n"
+                   "document.write('<script src=\"" output-dir "/goog/deps.js\"></script>');\n"
+                   (when (.exists (io/file output-dir "cljs_deps.js"))
+                     "document.write('<script src=\"" output-dir "/cljs_deps.js\"></script>');\n")
+                   "document.write('<script src=\"" output-dir "/brepl_deps.js\"></script>');\n"
+                   "document.write('<script>goog.require(\"clojure.browser.repl.preload\");</script>');\n")
+              "text/javascript" "UTF-8"))
+          :else (server/send-404 conn path)))
+      (server/send-404 conn path))))
 
 (server/dispatch-on :get
   (fn [{:keys [path]} _ _]
