@@ -569,22 +569,24 @@
     (map compiled-file
          (comp/compile-root src-dir out-dir opts))))
 
-(defn build-affecting-options-sha [opts]
-  (util/content-sha (pr-str (comp/build-affecting-options opts)) 7))
+(defn build-affecting-options-sha [path opts]
+  (let [m (assoc (comp/build-affecting-options opts) :path path)]
+    (util/content-sha (pr-str m) 7)))
 
 (defn ^File cache-base-path
-  ([]
-   (cache-base-path nil))
-  ([opts]
+  ([path]
+   (cache-base-path path nil))
+  ([path opts]
    (io/file (System/getProperty "user.home")
      ".cljs" ".aot_cache" (util/clojurescript-version)
-     (build-affecting-options-sha opts))))
+     (build-affecting-options-sha path opts))))
 
 (defn cacheable-files
-  ([ns ext]
-   (cacheable-files ns ext nil))
-  ([ns ext opts]
-   (let [path (cache-base-path opts)
+  ([rsrc ext]
+   (cacheable-files rsrc ext nil))
+  ([rsrc ext opts]
+   (let [{:keys [ns]} (ana/parse-ns rsrc)
+         path (cache-base-path (util/path rsrc) opts)
          name (util/ns->relpath ns nil)]
      (into {}
        (map
@@ -624,17 +626,16 @@
 (defn compile-from-jar
   "Compile a file from a jar if necessary. Returns IJavaScript."
   [jar-file {:keys [output-file] :as opts}]
-  (let [{:keys [ns]} (ana/parse-ns jar-file)
-        out-file (when output-file
+  (let [out-file (when output-file
                    (io/file (util/output-directory opts) output-file))
-        cacheable (cacheable-files ns (util/ext jar-file) opts)]
+        cacheable (cacheable-files jar-file (util/ext jar-file) opts)]
     (when (or (nil? out-file)
               (not (.exists ^File out-file))
               (not= (util/compiled-by-version out-file)
                     (util/clojurescript-version))
               (util/changed? jar-file out-file))
       ;; actually compile from JAR
-      (let [cache-path (cache-base-path opts)]
+      (let [cache-path (cache-base-path (util/path jar-file) opts)]
         (when-not (.exists (:output-file cacheable))
           (-compile (jar-file-to-disk jar-file cache-path opts)
             (assoc opts :output-dir (util/path cache-path))))
