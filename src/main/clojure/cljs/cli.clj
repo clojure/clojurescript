@@ -404,6 +404,19 @@ present"
   ((::compile (repl/-repl-options (repl-env)) default-compile)
     repl-env (merge cfg {:args args :ns ns})))
 
+(defn- serve-opt
+  [_ [_ address-port & args] {:keys [options] :as cfg}]
+  (let [[host port] (if address-port
+                      (string/split address-port #":")
+                      ["localhost" 9000])]
+    (require 'cljs.repl.browser)
+    ((ns-resolve 'cljs.repl.browser 'serve)
+      {:host host
+       :port (if port
+               (cond-> port (string? port) Integer/parseInt)
+               9000)
+       :output-dir (:output-dir options "out")})))
+
 (defn get-options [commands k]
   (if (= :all k)
     (into (get-options commands :main) (get-options commands :init))
@@ -493,6 +506,9 @@ present"
                                 :arg "ns"
                                 :doc (str "Compile a namespace. If -r / --repl present after "
                                        "namespace will launch a REPL after the compile completes")}
+      ["-s" "--serve"]         {:fn serve-opt
+                                :arg "host:port"
+                                :doc (str "Start a simple web server to serve the current directory")}
       [nil]                    {:fn null-opt}
       ["-h" "--help" "-?"]     {:fn help-opt
                                 :doc "Print this help message and exit"}}}))

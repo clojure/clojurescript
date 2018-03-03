@@ -275,6 +275,15 @@
   [repl-env provides url]
   (browser-eval (slurp url)))
 
+(defn serve [{:keys [host port output-dir] :as opts}]
+  (println "Serving HTTP on" host "port" port)
+  (binding [ordering (agent {:expecting nil :fns {}})
+            es (Executors/newFixedThreadPool 16)
+            server/state (atom {:socket nil :connection nil :promised-conn nil})]
+    (server/start
+      (merge opts
+        {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))}))))
+
 ;; =============================================================================
 ;; BrowserEnv
 
@@ -360,12 +369,11 @@
      :launch-browser true
      :working-dir (->> [".repl" (util/clojurescript-version)]
                        (remove empty?) (string/join "-"))
-     :serve-static true
      :static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
      :preloaded-libs []
      :src "src/"
      :browser-state (atom {:return-value-fn nil
-                          :client-js nil})
+                           :client-js nil})
      :ordering (agent {:expecting nil :fns {}})
      :es (Executors/newFixedThreadPool 16)
      :server-state
@@ -386,8 +394,6 @@
   working-dir:    The directory where the compiled REPL client JavaScript will
                   be stored. Defaults to \".repl\" with a ClojureScript version
                   suffix, eg. \".repl-0.0-2138\".
-  serve-static:   Should the REPL server attempt to serve static content?
-                  Defaults to true.
   static-dir:     List of directories to search for static content. Defaults to
                   [\".\" \"out/\"].
   src:            The source directory containing user-defined cljs files. Used to
