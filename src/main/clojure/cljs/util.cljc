@@ -28,12 +28,17 @@
 (defn- file-hash [file]
   (if (.isDirectory file)
     0
-    (Math/abs (hash (slurp file)))))
+    (hash (slurp file))))
 
 (def ^:private synthethetic-version-prefix "0.0.")
 
 (def ^:private synthetic-clojurescript-version
-  (delay (str synthethetic-version-prefix (reduce + (map file-hash (file-seq (main-src-directory)))))))
+  (delay (let [qualifier (fn [n]
+                           (if (== n Integer/MIN_VALUE)
+                             0
+                             (Math/abs n)))]
+           (str synthethetic-version-prefix 
+                (qualifier (reduce unchecked-add-int (map file-hash (file-seq (main-src-directory)))))))))
 
 (defn ^String clojurescript-version
   "Returns clojurescript version as a printable string."
