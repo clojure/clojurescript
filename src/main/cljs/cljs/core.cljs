@@ -186,10 +186,10 @@
   "Set *print-fn* to console.log"
   []
   (set! *print-newline* false)
-  (set! *print-fn*
+  (set-print-fn!
     (fn [& args]
       (.apply (.-log js/console) js/console (into-array args))))
-  (set! *print-err-fn*
+  (set-print-err-fn!
     (fn [& args]
       (.apply (.-error js/console) js/console (into-array args))))
   nil)
@@ -11498,10 +11498,10 @@ reduces them without incurring seq initialization"
     (identical? *target* "nashorn")
     (let [system (.type js/Java "java.lang.System")]
       (set! *print-newline* false)
-      (set! *print-fn*
+      (set-print-fn!
         (fn [& args]
           (.println (.-out system) (.join (into-array args) ""))))
-      (set! *print-err-fn*
+      (set-print-err-fn!
         (fn [& args]
           (.println (.-error system) (.join (into-array args) "")))))))
 

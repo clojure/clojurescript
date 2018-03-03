@@ -43,9 +43,9 @@
   (when-let [conn @xpc-connection]
     (flush-print-queue! conn)))
 
-(set! *print-fn* repl-print)
-(set! *print-err-fn* repl-print)
 (set! *print-newline* true)
+(set-print-fn! repl-print)
+(set-print-err-fn! repl-print)
 
 (defn get-ua-product []
   (cond

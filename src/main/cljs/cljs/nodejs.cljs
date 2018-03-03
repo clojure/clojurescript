@@ -18,10 +18,10 @@
 
 (defn enable-util-print! []
   (set! *print-newline* false)
-  (set! *print-fn*
+  (set-print-fn!
     (fn [& args]
       (.apply (.-log js/console) js/console (into-array args))))
-  (set! *print-err-fn*
+  (set-print-err-fn!
     (fn [& args]
       (.apply (.-error js/console) js/console (into-array args))))
   nil)
