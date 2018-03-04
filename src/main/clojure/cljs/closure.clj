@@ -601,7 +601,8 @@
     (when (or (nil? out-file)
               (comp/requires-compilation? jar-file out-file opts))
       ;; actually compile from JAR
-      (if-not (:aot-cache opts)
+      (if (or (not (:aot-cache opts))
+              (not (.canWrite (io/file (System/getProperty "user.home")))))
         (-compile (jar-file-to-disk jar-file (util/output-directory opts) opts) opts)
         (let [cache-path (ana/cache-base-path (util/path jar-file) opts)]
           (when-not (.exists (:output-file cacheable))
