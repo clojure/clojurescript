@@ -308,9 +308,8 @@
         (spit target
           (build/build
             '[(require '[clojure.browser.repl.preload])]
-            {:optimizations :none
-             :output-dir output-dir
-             :opts-cache "brepl_opts.edn"}))))
+            (merge (select-keys opts cljsc/known-opts)
+              {:opts-cache "brepl_opts.edn"})))))
     (repl/err-out
       (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
       (println "Listening for browser REPL connect ..."))
