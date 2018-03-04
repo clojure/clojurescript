@@ -569,39 +569,6 @@
     (map compiled-file
          (comp/compile-root src-dir out-dir opts))))
 
-(defn build-affecting-options-sha [path opts]
-  (let [m (assoc (comp/build-affecting-options opts) :path path)]
-    (util/content-sha (pr-str m) 7)))
-
-(defn ^File cache-base-path
-  ([path]
-   (cache-base-path path nil))
-  ([path opts]
-   (io/file (System/getProperty "user.home")
-     ".cljs" ".aot_cache" (util/clojurescript-version)
-     (build-affecting-options-sha path opts))))
-
-(defn cacheable-files
-  ([rsrc ext]
-   (cacheable-files rsrc ext nil))
-  ([rsrc ext opts]
-   (let [{:keys [ns]} (ana/parse-ns rsrc)
-         path (cache-base-path (util/path rsrc) opts)
-         name (util/ns->relpath ns nil File/separatorChar)]
-     (into {}
-       (map
-         (fn [[k v]]
-           [k (io/file path
-                (if (and (= (str "cljs" File/separatorChar "core$macros") name)
-                         (= :source k))
-                  (str "cljs" File/separatorChar "core.cljc")
-                  (str name v)))]))
-       {:source (str "." ext)
-        :output-file ".js"
-        :source-map ".js.map"
-        :analysis-cache-edn (str "." ext ".cache.edn")
-        :analysis-cache-json (str "." ext ".cache.json")}))))
-
 (defn ^String path-from-jarfile
   "Given the URL of a file within a jar, return the path of the file
   from the root of the jar."
@@ -632,7 +599,7 @@
   [jar-file {:keys [output-file] :as opts}]
   (let [out-file (when output-file
                    (io/file (util/output-directory opts) output-file))
-        cacheable (cacheable-files jar-file (util/ext jar-file) opts)]
+        cacheable (ana/cacheable-files jar-file (util/ext jar-file) opts)]
     (when (or (nil? out-file)
               (not (.exists ^File out-file))
               (not= (util/compiled-by-version out-file)
@@ -641,7 +608,7 @@
       ;; actually compile from JAR
       (if-not (:aot-cache opts)
         (-compile (jar-file-to-disk jar-file (util/output-directory opts) opts) opts)
-        (let [cache-path (cache-base-path (util/path jar-file) opts)]
+        (let [cache-path (ana/cache-base-path (util/path jar-file) opts)]
           (when-not (.exists (:output-file cacheable))
             (-compile (jar-file-to-disk jar-file cache-path opts)
               (assoc opts :output-dir (util/path cache-path))))

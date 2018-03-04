@@ -1288,11 +1288,6 @@
    (defn url-path [^File f]
      (.getPath (.toURL (.toURI f)))))
 
-(defn build-affecting-options [opts]
-  (select-keys opts
-    [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target
-     :cache-key :checked-arrays :language-out]))
-
 #?(:clj
    (defn compiled-by-string
      ([]
@@ -1303,7 +1298,7 @@
       (str "// Compiled by ClojureScript "
         (util/clojurescript-version)
         (when opts
-          (str " " (pr-str (build-affecting-options opts))))))))
+          (str " " (pr-str (ana/build-affecting-options opts))))))))
 
 #?(:clj
    (defn cached-core [ns ext opts]
@@ -1491,8 +1486,8 @@
                  (and version (not= version version')))
                (and opts
                     (not (and (io/resource "cljs/core.aot.js") (= 'cljs.core ns)))
-                    (not= (build-affecting-options opts)
-                          (build-affecting-options (util/build-options dest))))
+                    (not= (ana/build-affecting-options opts)
+                          (ana/build-affecting-options (util/build-options dest))))
                (and opts (:source-map opts)
                  (if (= (:optimizations opts) :none)
                    (not (.exists (io/file (str (.getPath dest) ".map"))))

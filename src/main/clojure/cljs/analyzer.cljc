@@ -3834,14 +3834,58 @@
       (if (and (= format :transit) @transit) "json" "edn"))))
 
 #?(:clj
+   (defn build-affecting-options [opts]
+     (select-keys opts
+       [:static-fns :fn-invoke-direct :optimize-constants :elide-asserts :target
+        :cache-key :checked-arrays :language-out])))
+
+#?(:clj
+   (defn build-affecting-options-sha [path opts]
+     (let [m (assoc (build-affecting-options opts) :path path)]
+       (util/content-sha (pr-str m) 7))))
+
+#?(:clj
+   (defn ^File cache-base-path
+     ([path]
+      (cache-base-path path nil))
+     ([path opts]
+      (io/file (System/getProperty "user.home")
+        ".cljs" ".aot_cache" (util/clojurescript-version)
+        (build-affecting-options-sha path opts)))))
+
+#?(:clj
+   (defn cacheable-files
+     ([rsrc ext]
+      (cacheable-files rsrc ext nil))
+     ([rsrc ext opts]
+      (let [{:keys [ns]} (parse-ns rsrc)
+            path (cache-base-path (util/path rsrc) opts)
+            name (util/ns->relpath ns nil File/separatorChar)]
+        (into {}
+          (map
+            (fn [[k v]]
+              [k (io/file path
+                   (if (and (= (str "cljs" File/separatorChar "core$macros") name)
+                         (= :source k))
+                     (str "cljs" File/separatorChar "core.cljc")
+                     (str name v)))]))
+          {:source (str "." ext)
+           :output-file ".js"
+           :source-map ".js.map"
+           :analysis-cache-edn (str "." ext ".cache.edn")
+           :analysis-cache-json (str "." ext ".cache.json")})))))
+
+#?(:clj
    (defn cache-file
      "Given a ClojureScript source file returns the read/write path to the analysis
       cache file. Defaults to the read path which is usually also the write path."
      ([src] (cache-file src "out"))
      ([src output-dir] (cache-file src (parse-ns src) output-dir))
      ([src ns-info output-dir]
-      (cache-file src (parse-ns src) output-dir :read))
+      (cache-file src ns-info output-dir :read nil))
      ([src ns-info output-dir mode]
+      (cache-file src ns-info output-dir mode nil))
+     ([src ns-info output-dir mode opts]
       {:pre [(map? ns-info)]}
       (let [ext (cache-analysis-ext)]
         (if-let [core-cache
@@ -3849,9 +3893,15 @@
                       (= (:ns ns-info) 'cljs.core)
                       (io/resource (str "cljs/core.cljs.cache.aot." ext)))]
           core-cache
-          (let [target-file (util/to-target-file output-dir ns-info
-                              (util/ext (:source-file ns-info)))]
-            (io/file (str target-file ".cache." ext))))))))
+          (let [aot-cache-file
+                (when (util/url? src)
+                  ((keyword (str "analysis-cache-" ext))
+                    (cacheable-files src (util/ext src) opts)))]
+            (if (and aot-cache-file (.exists ^File aot-cache-file))
+              aot-cache-file
+              (let [target-file (util/to-target-file output-dir ns-info
+                                  (util/ext (:source-file ns-info)))]
+                (io/file (str target-file ".cache." ext))))))))))
 
 #?(:clj
    (defn requires-analysis?
@@ -3861,8 +3911,10 @@
      ([src] (requires-analysis? src "out"))
      ([src output-dir]
       (let [cache (cache-file src output-dir)]
-        (requires-analysis? src cache output-dir)))
+        (requires-analysis? src cache output-dir nil)))
      ([src cache output-dir]
+      (requires-analysis? src cache output-dir nil))
+     ([src cache output-dir opts]
       (cond
         (util/url? cache)
         (let [path (.getPath ^URL cache)]
@@ -3876,10 +3928,12 @@
         true
 
         :else
-        (let [out-src (util/to-target-file output-dir (parse-ns src))]
-          (if (not (.exists out-src))
+        (let [out-src   (util/to-target-file output-dir (parse-ns src))
+              cache-src (:output-file (cacheable-files src (util/ext src) opts))]
+          (if (and (not (.exists out-src))
+                   (not (.exists ^File cache-src)))
             true
-            (util/changed? src cache)))))))
+            (or (not cache) (util/changed? src cache))))))))
 
 #?(:clj
    (defn- get-spec-vars
@@ -4049,9 +4103,9 @@
                             (.getPath ^File res)
                             (.getPath ^URL res))
                   cache   (when (:cache-analysis opts)
-                            (cache-file res ns-info output-dir))]
+                            (cache-file res ns-info output-dir :read opts))]
               (when-not (get-in @env/*compiler* [::namespaces (:ns ns-info) :defs])
-                (if (or skip-cache (not cache) (requires-analysis? res output-dir))
+                (if (or skip-cache (not cache) (requires-analysis? res cache output-dir opts))
                   (binding [*cljs-ns* 'cljs.user
                             *cljs-file* path
                             reader/*alias-map* (or reader/*alias-map* {})]

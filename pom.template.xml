@@ -53,10 +53,9 @@
             <version>1.3.0-alpha3</version>
         </dependency>
         <dependency>
-            <groupId>org.clojure</groupId>
-            <artifactId>test.check</artifactId>
-            <version>0.10.0-alpha2</version>
-            <scope>test</scope>
+            <groupId>com.cognitect</groupId>
+            <artifactId>transit-clj</artifactId>
+            <version>0.8.300</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.clojure</groupId>
@@ -65,10 +64,10 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.cognitect</groupId>
-            <artifactId>transit-clj</artifactId>
-            <version>0.8.300</version>
-            <scope>provided</scope>
+            <groupId>org.clojure</groupId>
+            <artifactId>test.check</artifactId>
+            <version>0.10.0-alpha2</version>
+            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>org.clojure</groupId>
