@@ -170,7 +170,7 @@
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
-    :stable-names :ignore-js-module-exts :opts-cache})
+    :stable-names :ignore-js-module-exts :opts-cache :aot-cache})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -635,21 +635,23 @@
                     (util/clojurescript-version))
               (util/changed? jar-file out-file))
       ;; actually compile from JAR
-      (let [cache-path (cache-base-path (util/path jar-file) opts)]
-        (when-not (.exists (:output-file cacheable))
-          (-compile (jar-file-to-disk jar-file cache-path opts)
-            (assoc opts :output-dir (util/path cache-path))))
-        (doseq [[k ^File f] cacheable]
-          (when (.exists f)
-            (let [target (io/file (util/output-directory opts)
-                           (-> (.getAbsolutePath f)
-                             (string/replace (.getAbsolutePath cache-path) "")
-                             (subs 1)))]
-              (when (and (or ana/*verbose* (:verbose opts)) (= :output-file k))
-                (util/debug-prn (str "Copying cached " f " to " target)))
-              (util/mkdirs target)
-              (spit target (slurp f))
-              (.setLastModified target (util/last-modified jar-file)))))))
+      (if-not (:aot-cache opts)
+        (-compile (jar-file-to-disk jar-file (util/output-directory opts) opts) opts)
+        (let [cache-path (cache-base-path (util/path jar-file) opts)]
+          (when-not (.exists (:output-file cacheable))
+            (-compile (jar-file-to-disk jar-file cache-path opts)
+              (assoc opts :output-dir (util/path cache-path))))
+          (doseq [[k ^File f] cacheable]
+            (when (.exists f)
+              (let [target (io/file (util/output-directory opts)
+                             (-> (.getAbsolutePath f)
+                               (string/replace (.getAbsolutePath cache-path) "")
+                               (subs 1)))]
+                (when (and (or ana/*verbose* (:verbose opts)) (= :output-file k))
+                  (util/debug-prn (str "Copying cached " f " to " target)))
+                (util/mkdirs target)
+                (spit target (slurp f))
+                (.setLastModified target (util/last-modified jar-file))))))))
     ;; have to call compile-file as it includes more IJavaScript
     ;; information than ana/parse-ns for now
     (compile-file
@@ -2273,6 +2275,9 @@
 
       (nil? (:opts-cache opts))
       (assoc :opts-cache "cljsc_opts.edn")
+
+      (nil? (:aot-cache opts))
+      (assoc :aot-cache true)
 
       (contains? opts :modules)
       (ensure-module-opts)
