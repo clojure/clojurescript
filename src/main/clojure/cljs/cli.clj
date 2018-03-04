@@ -265,19 +265,22 @@ present"
 (defn default-main
   [repl-env {:keys [main script args repl-env-options options inits] :as cfg}]
   (env/ensure
-    (let [reopts (merge repl-env-options
-                   (select-keys options [:output-to :output-dir]))
-          _      (when (or ana/*verbose* (:verbose options))
+    (let [opts   (cond-> options
+                   (not (:output-dir options))
+                   (assoc :output-dir (temp-out-dir)))
+          reopts (merge repl-env-options
+                   (select-keys opts [:output-to :output-dir]))
+          _      (when (or ana/*verbose* (:verbose opts))
                    (util/debug-prn "REPL env options:" (pr-str reopts)))
           renv   (apply repl-env (mapcat identity reopts))
-          coptsf (when-let [od (:output-dir options)]
+          coptsf (when-let [od (:output-dir opts)]
                    (io/file od "cljsc_opts.edn"))
           copts  (when (and coptsf (.exists coptsf))
                    (-> (edn/read-string (slurp coptsf))
                        (dissoc-entry-point-opts)))
           opts   (merge copts
                    (build/add-implicit-options
-                     (merge (repl/repl-options renv) options)))]
+                     (merge (repl/repl-options renv) opts)))]
       (binding [ana/*cljs-ns*    'cljs.user
                 repl/*repl-opts* opts
                 ana/*verbose*    (:verbose opts)
@@ -290,7 +293,7 @@ present"
               (repl/setup renv repl/*repl-opts*)
               ;; REPLs don't normally load cljs_deps.js
               (when (and coptsf (.exists coptsf))
-                (let [depsf (io/file (:output-dir options) "cljs_deps.js")]
+                (let [depsf (io/file (:output-dir opts) "cljs_deps.js")]
                   (when (.exists depsf)
                     (repl/evaluate renv "cljs_deps.js" 1 (slurp depsf)))))
               (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
