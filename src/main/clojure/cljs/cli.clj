@@ -381,6 +381,19 @@ present"
                 *out* log-out]
         (build/watch path (dissoc opts :watch) cenv)))))
 
+(defn- serve-opt
+  [_ [_ address-port & args] {:keys [options] :as cfg}]
+  (let [[host port] (if address-port
+                      (string/split address-port #":")
+                      ["localhost" 9000])]
+    (require 'cljs.repl.browser)
+    ((ns-resolve 'cljs.repl.browser 'serve)
+      {:host host
+       :port (if port
+               (cond-> port (string? port) Integer/parseInt)
+               9000)
+       :output-dir (:output-dir options "out")})))
+
 (defn default-compile
   [repl-env {:keys [ns args options] :as cfg}]
   (let [env-opts (repl/repl-options (repl-env))
@@ -409,6 +422,7 @@ present"
         source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))
         repl?    (boolean (#{"-r" "--repl"} (first args)))
+        serve?   (boolean (#{"-s" "--serve"} (first args)))
         cenv     (env/default-compiler-env)]
     (if-let [path (:watch opts)]
       (if repl?
@@ -417,25 +431,14 @@ present"
       (build/build source opts cenv))
     (when repl?
       (repl-opt repl-env args
-        (assoc-in cfg [:options :compiler-env] cenv)))))
+        (assoc-in cfg [:options :compiler-env] cenv)))
+    (when serve?
+      (serve-opt repl-env args cfg))))
 
 (defn- compile-opt
   [repl-env [_ ns & args] cfg]
   ((::compile (repl/-repl-options (repl-env)) default-compile)
     repl-env (merge cfg {:args args :ns ns})))
-
-(defn- serve-opt
-  [_ [_ address-port & args] {:keys [options] :as cfg}]
-  (let [[host port] (if address-port
-                      (string/split address-port #":")
-                      ["localhost" 9000])]
-    (require 'cljs.repl.browser)
-    ((ns-resolve 'cljs.repl.browser 'serve)
-      {:host host
-       :port (if port
-               (cond-> port (string? port) Integer/parseInt)
-               9000)
-       :output-dir (:output-dir options "out")})))
 
 (defn get-options [commands k]
   (if (= :all k)
