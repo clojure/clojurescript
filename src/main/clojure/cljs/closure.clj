@@ -2244,7 +2244,7 @@
       (assoc :opts-cache "cljsc_opts.edn")
 
       (nil? (:aot-cache opts))
-      (assoc :aot-cache true)
+      (assoc :aot-cache (util/cljs-built-dep?))
 
       (contains? opts :modules)
       (ensure-module-opts)

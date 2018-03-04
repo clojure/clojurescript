@@ -30,8 +30,10 @@
     0
     (Math/abs (hash (slurp file)))))
 
+(def ^:private synthethetic-version-prefix "0.0.")
+
 (def ^:private synthetic-clojurescript-version
-  (delay (str "0.0." (reduce + (map file-hash (file-seq (main-src-directory)))))))
+  (delay (str synthethetic-version-prefix (reduce + (map file-hash (file-seq (main-src-directory)))))))
 
 (defn ^String clojurescript-version
   "Returns clojurescript version as a printable string."
@@ -48,6 +50,14 @@
      (when (:interim *clojurescript-version*)
        "-SNAPSHOT"))
     @synthetic-clojurescript-version))
+
+(defn- synthetic-version? []
+  (string/starts-with? (clojurescript-version) synthethetic-version-prefix))
+
+(defn cljs-built-dep?
+  "Returns true if ClojureScript itself is a built dep."
+  []
+  (not (synthetic-version?)))
 
 (defn ^String compiled-by-version [f]
   (with-open [reader (io/reader f)]
