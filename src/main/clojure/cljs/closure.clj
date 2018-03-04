@@ -581,22 +581,20 @@
      ".cljs" ".aot_cache" (util/clojurescript-version)
      (build-affecting-options-sha path opts))))
 
-;; TODO: we use a URL to get a bunch of file paths, the forward slashes probably
-;; aren't going to work for Windows
 (defn cacheable-files
   ([rsrc ext]
    (cacheable-files rsrc ext nil))
   ([rsrc ext opts]
    (let [{:keys [ns]} (ana/parse-ns rsrc)
          path (cache-base-path (util/path rsrc) opts)
-         name (util/ns->relpath ns nil)]
+         name (util/ns->relpath ns nil File/separatorChar)]
      (into {}
        (map
          (fn [[k v]]
            [k (io/file path
-                (if (and (= "cljs/core$macros" name)
+                (if (and (= (str "cljs" File/separatorChar "core$macros") name)
                          (= :source k))
-                  (str "cljs/core.cljc")
+                  (str "cljs" File/separatorChar "core.cljc")
                   (str name v)))]))
        {:source (str "." ext)
         :output-file ".js"

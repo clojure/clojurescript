@@ -69,7 +69,9 @@
   provide the file extension, defaults to :cljs."
   ([ns] (ns->relpath ns :cljs))
   ([ns ext]
-   (cond-> (string/replace (munge-path ns) \. \/)
+   (ns->relpath ns ext \/))
+  ([ns ext sep]
+   (cond-> (string/replace (munge-path ns) \. sep)
      ext (str "." (name ext)))))
 
 (defn ns->source
