@@ -11,8 +11,10 @@
             [cljs.repl.node :as node]
             [cljs.core.server :as server]))
 
-(defn repl []
-  (repl/repl (node/repl-env)))
+(defn repl [{:keys [opts env-opts]}]
+  (repl/repl* (node/repl-env* env-opts) opts))
 
-(defn prepl []
-  (server/io-prepl :repl-env (node/repl-env)))
+(defn prepl [{:keys [opts env-opts]}]
+  (apply server/io-prepl
+    (mapcat identity
+      (merge {:repl-env (node/repl-env* env-opts)} opts))))

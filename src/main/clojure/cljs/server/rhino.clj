@@ -11,8 +11,10 @@
             [cljs.repl.rhino :as rhino]
             [cljs.core.server :as server]))
 
-(defn repl []
-  (repl/repl (rhino/repl-env)))
+(defn repl [{:keys [opts env-opts]}]
+  (repl/repl* (rhino/repl-env* env-opts) opts))
 
-(defn prepl []
-  (server/io-prepl :repl-env (rhino/repl-env)))
+(defn prepl [{:keys [opts env-opts]}]
+  (apply server/io-prepl
+    (mapcat identity
+      (merge {:repl-env (rhino/repl-env* env-opts)} opts))))

@@ -11,8 +11,10 @@
             [cljs.repl.browser :as browser]
             [cljs.core.server :as server]))
 
-(defn repl []
-  (repl/repl (browser/repl-env)))
+(defn repl [{:keys [opts env-opts]}]
+  (repl/repl* (browser/repl-env* env-opts) opts))
 
-(defn prepl []
-  (server/io-prepl :repl-env (browser/repl-env)))
+(defn prepl [{:keys [opts env-opts]}]
+  (apply server/io-prepl
+    (mapcat identity
+      (merge {:repl-env (browser/repl-env* env-opts)} opts))))
