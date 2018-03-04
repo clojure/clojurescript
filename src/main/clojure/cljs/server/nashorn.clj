@@ -11,10 +11,16 @@
             [cljs.repl.nashorn :as nashorn]
             [cljs.core.server :as server]))
 
-(defn repl [{:keys [opts env-opts]}]
-  (repl/repl* (nashorn/repl-env* env-opts) opts))
+(defn repl
+  ([]
+   (repl nil))
+  ([{:keys [opts env-opts]}]
+   (repl/repl* (nashorn/repl-env* env-opts) opts)))
 
-(defn prepl [{:keys [opts env-opts]}]
-  (apply server/io-prepl
-    (mapcat identity
-      (merge {:repl-env (nashorn/repl-env* env-opts)} opts))))
+(defn prepl
+  ([]
+   (prepl nil))
+  ([{:keys [opts env-opts]}]
+   (apply server/io-prepl
+     (mapcat identity
+       (merge {:repl-env (nashorn/repl-env* env-opts)} opts)))))
