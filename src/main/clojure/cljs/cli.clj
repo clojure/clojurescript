@@ -499,7 +499,7 @@ present"
                                        "options") }
       ["-w" "--watch"]         {:group ::compile :fn watch-opt
                                 :arg "path"
-                                :doc "Continuously build, only effective with -c main option"}
+                                :doc "Continuously build, only effective with the --compile main option"}
       ["-o" "--output-to"]     {:group ::compile :fn output-to-opt
                                 :arg "file"
                                 :doc "Set the output compiled file"}
@@ -507,7 +507,7 @@ present"
                                 :arg "level"
                                 :doc
                                 (str "Set optimization level, only effective with "
-                                  "-c main option. Valid values are: none, "
+                                  "--compile main option. Valid values are: none, "
                                   "whitespace, simple, advanced")}
       ["-t" "--target"]        {:group ::main&compile :fn target-opt
                                 :arg "name"
@@ -529,7 +529,7 @@ present"
                                 :doc "Call the -main function from a namespace with args"}
       ["-c" "--compile"]       {:fn compile-opt
                                 :arg "ns"
-                                :doc (str "Compile a namespace. If -r / --repl present after "
+                                :doc (str "Compile a namespace. If --repl present after "
                                        "namespace will launch a REPL after the compile completes")}
       ["-s" "--serve"]         {:fn serve-opt
                                 :arg "host:port"
