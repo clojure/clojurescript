@@ -17,7 +17,7 @@
             [cljs.compiler.api :as comp]
             [cljs.build.api :as build]
             [cljs.repl :as repl])
-  (:import [java.io StringReader FileWriter]
+  (:import [java.io File StringReader FileWriter]
            [java.text BreakIterator]
            [java.util Locale]))
 
@@ -236,17 +236,25 @@ is trying load some arbitrary ns."
   [opts]
   (dissoc opts :main :output-to))
 
+(defn temp-out-dir []
+  (let [f (File/createTempFile "out" (Long/toString (System/nanoTime)))]
+    (.delete f)
+    (util/mkdirs f)
+    (util/path f)))
+
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
   [repl-env [_ & args] {:keys [repl-env-options options inits] :as cfg}]
-  (let [reopts (merge repl-env-options
-                 (select-keys options [:output-to :output-dir]))
-        _      (when (or ana/*verbose* (:verbose options))
+  (let [opts   (cond-> options
+                 (not (:output-dir options))
+                 (assoc :output-dir (temp-out-dir)))
+        reopts (merge repl-env-options (select-keys opts [:output-to :output-dir]))
+        _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
         renv   (apply repl-env (mapcat identity reopts))]
     (repl/repl* renv
-      (assoc (dissoc-entry-point-opts options)
+      (assoc (dissoc-entry-point-opts opts)
         :inits
         (into
           [{:type :init-forms
