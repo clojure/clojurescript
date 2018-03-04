@@ -275,7 +275,6 @@
   (browser-eval (slurp url)))
 
 (defn serve [{:keys [host port output-dir] :as opts}]
-  (println "Serving HTTP on" host "port" port)
   (binding [ordering (agent {:expecting nil :fns {}})
             es (Executors/newFixedThreadPool 16)
             server/state (atom {:socket nil :connection nil :promised-conn nil})]
@@ -292,7 +291,6 @@
             ordering (:ordering repl-env)
             es (:es repl-env)
             server/state (:server-state repl-env)]
-    (repl/err-out (println "Compiling client js ..."))
     (swap! browser-state
       (fn [old]
         (assoc old :client-js
@@ -310,9 +308,6 @@
             '[(require '[clojure.browser.repl.preload])]
             (merge (select-keys opts cljsc/known-opts)
               {:opts-cache "brepl_opts.edn"})))))
-    (repl/err-out
-      (println "Serving HTTP on" (:host repl-env) "port" (:port repl-env))
-      (println "Listening for browser REPL connect ..."))
     (server/start repl-env)
     (when launch-browser
       (browse/browse-url
