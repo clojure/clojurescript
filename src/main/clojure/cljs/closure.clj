@@ -592,8 +592,6 @@
      (.setLastModified ^File out-file (util/last-modified url))
      out-file)))
 
-;; TODO: it would be nice if we could consolidate requires-compilation?
-;; logic - David
 (defn compile-from-jar
   "Compile a file from a jar if necessary. Returns IJavaScript."
   [jar-file {:keys [output-file] :as opts}]
@@ -601,10 +599,7 @@
                    (io/file (util/output-directory opts) output-file))
         cacheable (ana/cacheable-files jar-file (util/ext jar-file) opts)]
     (when (or (nil? out-file)
-              (not (.exists ^File out-file))
-              (not= (util/compiled-by-version out-file)
-                    (util/clojurescript-version))
-              (util/changed? jar-file out-file))
+              (comp/requires-compilation? jar-file out-file opts))
       ;; actually compile from JAR
       (if-not (:aot-cache opts)
         (-compile (jar-file-to-disk jar-file (util/output-directory opts) opts) opts)
