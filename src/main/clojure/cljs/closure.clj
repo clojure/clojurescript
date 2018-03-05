@@ -605,7 +605,7 @@
               (not (.canWrite (io/file (System/getProperty "user.home")))))
         (-compile (jar-file-to-disk jar-file (util/output-directory opts) opts) opts)
         (let [cache-path (ana/cache-base-path (util/path jar-file) opts)]
-          (when-not (.exists (:output-file cacheable))
+          (when (comp/requires-compilation? jar-file (:output-file cacheable) opts)
             (-compile (jar-file-to-disk jar-file cache-path opts)
               (assoc opts :output-dir (util/path cache-path))))
           (doseq [[k ^File f] cacheable]
