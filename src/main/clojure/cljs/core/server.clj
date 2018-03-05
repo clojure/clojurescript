@@ -139,8 +139,7 @@
         lock (Object.)]
     (prepl repl-env opts
       (readers/source-logging-push-back-reader *in* 1 "NO_SOURCE_FILE")
-      #(binding [*out* out, ;*flush-on-newline* true, *print-readably* true
-                 ]
+      #(binding [*out* out, *flush-on-newline* true, *print-readably* true]
          (locking lock
            (prn (cond-> %1
                   (#{:ret :tap} (:tag %1))
