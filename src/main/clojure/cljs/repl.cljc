@@ -377,6 +377,13 @@
                               {})
                          mapped-frames)) [{}]))))))
 
+(defn file-display
+  [file {:keys [output-dir temp-output-dir?]}]
+  (if temp-output-dir?
+    (let [canonicalize (fn [file] (.getCanonicalPath (io/file file)))]
+      (subs (canonicalize file) (inc (count (canonicalize output-dir)))))
+    file))
+
 (defn print-mapped-stacktrace
   "Given a vector representing the canonicalized JavaScript stacktrace
    print the ClojureScript stacktrace. See mapped-stacktrace."
@@ -387,7 +394,7 @@
      (err-out
        (println "\t"
          (str (when function (str function " "))
-           "(" file (when line (str ":" line)) (when column (str ":" column)) ")"))))))
+           "(" (file-display file opts) (when line (str ":" line)) (when column (str ":" column)) ")"))))))
 
 (comment
   (def st (env/default-compiler-env))

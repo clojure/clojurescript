@@ -250,7 +250,7 @@ present"
   [repl-env [_ & args] {:keys [repl-env-options options inits] :as cfg}]
   (let [opts   (cond-> options
                  (not (:output-dir options))
-                 (assoc :output-dir (temp-out-dir)))
+                 (assoc :output-dir (temp-out-dir) :temp-output-dir? true))
         reopts (merge repl-env-options (select-keys opts [:output-to :output-dir]))
         _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
@@ -269,7 +269,7 @@ present"
   (env/ensure
     (let [opts   (cond-> options
                    (not (:output-dir options))
-                   (assoc :output-dir (temp-out-dir)))
+                   (assoc :output-dir (temp-out-dir) :temp-output-dir? true))
           reopts (merge repl-env-options
                    (select-keys opts [:output-to :output-dir]))
           _      (when (or ana/*verbose* (:verbose opts))
@@ -420,7 +420,8 @@ present"
                      (dissoc :browser-repl)
                      (not (:output-dir opts))
                      (assoc :output-dir "out")))
-        cfg      (update cfg :options merge (select-keys opts repl/known-repl-opts))
+        convey   (into [:output-dir] repl/known-repl-opts)
+        cfg      (update cfg :options merge (select-keys opts convey))
         source   (when (= :none (:optimizations opts :none))
                    (:uri (build/ns->location main-ns)))
         repl?    (boolean (#{"-r" "--repl"} (first args)))
