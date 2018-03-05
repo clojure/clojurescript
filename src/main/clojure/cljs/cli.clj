@@ -250,7 +250,7 @@ present"
   [repl-env [_ & args] {:keys [repl-env-options options inits] :as cfg}]
   (let [opts   (cond-> options
                  (not (:output-dir options))
-                 (assoc :output-dir (temp-out-dir)))
+                 (assoc :output-dir (temp-out-dir) :temp-output-dir? true))
         reopts (merge repl-env-options (select-keys opts [:output-to :output-dir]))
         _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
@@ -269,7 +269,7 @@ present"
   (env/ensure
     (let [opts   (cond-> options
                    (not (:output-dir options))
-                   (assoc :output-dir (temp-out-dir)))
+                   (assoc :output-dir (temp-out-dir) :temp-output-dir? true))
           reopts (merge repl-env-options
                    (select-keys opts [:output-to :output-dir]))
           _      (when (or ana/*verbose* (:verbose opts))
