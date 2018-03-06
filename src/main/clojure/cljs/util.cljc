@@ -51,7 +51,10 @@
        "-SNAPSHOT"))
     @synthetic-clojurescript-version))
 
-(defn- synthetic-version? []
+(defn synthetic-version?
+  "Returns true if clojurescript-version returns a synthetically-generated
+   version."
+  []
   (string/starts-with? (clojurescript-version) synthethetic-version-prefix))
 
 (defn cljs-built-dep?
