@@ -286,32 +286,37 @@
 ;; =============================================================================
 ;; BrowserEnv
 
-(defn setup [{:keys [working-dir launch-browser] :as repl-env} {:keys [output-dir] :as opts}]
-  (binding [browser-state (:browser-state repl-env)
-            ordering (:ordering repl-env)
-            es (:es repl-env)
-            server/state (:server-state repl-env)]
-    (swap! browser-state
-      (fn [old]
-        (assoc old :client-js
-          (cljsc/create-client-js-file
-            {:optimizations :simple
-             :output-dir working-dir}
-            (io/file working-dir "brepl_client.js")))))
-    ;; TODO: this could be cleaner if compiling forms resulted in a
-    ;; :output-to file with the result of compiling those forms - David
-    (when (and output-dir (not (.exists (io/file output-dir "clojure" "browser" "repl" "preload.js"))))
-      (let [target (io/file output-dir "brepl_deps.js")]
-        (util/mkdirs target)
-        (spit target
-          (build/build
-            '[(require '[clojure.browser.repl.preload])]
-            (merge (select-keys opts cljsc/known-opts)
-              {:opts-cache "brepl_opts.edn"})))))
-    (server/start repl-env)
-    (when launch-browser
-      (browse/browse-url
-        (str "http://" (:host repl-env) ":" (:port repl-env) "?rel=" (System/currentTimeMillis))))))
+(def lock (Object.))
+
+(defn setup [{:keys [working-dir launch-browser server-state] :as repl-env} {:keys [output-dir] :as opts}]
+  (locking lock
+    (when-not (:socket @server-state)
+      (binding [browser-state (:browser-state repl-env)
+                ordering (:ordering repl-env)
+                es (:es repl-env)
+                server/state (:server-state repl-env)]
+        (swap! browser-state
+          (fn [old]
+            (assoc old :client-js
+              (cljsc/create-client-js-file
+                {:optimizations :simple
+                 :output-dir working-dir}
+                (io/file working-dir "brepl_client.js")))))
+        ;; TODO: this could be cleaner if compiling forms resulted in a
+        ;; :output-to file with the result of compiling those forms - David
+        (when (and output-dir (not (.exists (io/file output-dir "clojure" "browser" "repl" "preload.js"))))
+          (let [target (io/file output-dir "brepl_deps.js")]
+            (util/mkdirs target)
+            (spit target
+              (build/build
+                '[(require '[clojure.browser.repl.preload])]
+                (merge (select-keys opts cljsc/known-opts)
+                  {:opts-cache "brepl_opts.edn"})))))
+        (server/start repl-env)
+        (when launch-browser
+          (browse/browse-url
+            (str "http://" (:host repl-env) ":" (:port repl-env) "?rel=" (System/currentTimeMillis)))))))
+  (swap! server-state update :listeners inc))
 
 (defrecord BrowserEnv []
   repl/IJavaScriptEnv
@@ -326,9 +331,11 @@
   (-load [this provides url]
     (load-javascript this provides url))
   (-tear-down [this]
-    (binding [server/state (:server-state this)]
-      (server/stop))
-    (.shutdownNow (:es this)))
+    (let [server-state (:server-state this)]
+      (when (zero? (:listeners (swap! server-state update :listeners dec)))
+        (binding [server/state server-state] (server/stop))
+        (when-not (.isShutdown (:es this))
+          (.shutdownNow (:es this))))))
   repl/IReplEnvOptions
   (-repl-options [this]
     {:browser-repl true
@@ -377,7 +384,8 @@
      (atom
        {:socket nil
         :connection nil
-        :promised-conn nil})}
+        :promised-conn nil
+        :listeners 0})}
     opts))
 
 (defn repl-env

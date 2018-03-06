@@ -7,20 +7,46 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.server.browser
-  (:require [cljs.repl :as repl]
+  (:require [cljs.env :as env]
+            [cljs.repl :as repl]
             [cljs.repl.browser :as browser]
-            [cljs.core.server :as server]))
+            [cljs.core.server :as server])
+  (:import [java.net ServerSocket]))
+
+(defonce envs (atom {}))
+
+(defn env-opts->key [{:keys [host port]}]
+  [host port])
+
+(defn stale? [{:keys [server-state] :as repl-env}]
+  (.isClosed ^ServerSocket (:socket @server-state)))
+
+(defn get-envs [env-opts]
+  (let [env-opts (merge {:host "localhost" :port 9000} env-opts)
+        k (env-opts->key env-opts)]
+    (swap! envs
+      #(cond-> %
+         (or (not (contains? % k))
+             (stale? (get-in % [k 0])))
+         (assoc k
+           [(browser/repl-env* env-opts)
+            (env/default-compiler-env)])))
+    (get @envs k)))
 
 (defn repl
   ([]
    (repl nil))
   ([{:keys [opts env-opts]}]
-   (repl/repl* (browser/repl-env* env-opts) opts)))
+   (let [[env cenv] (get-envs env-opts)]
+     (env/with-compiler-env cenv
+       (repl/repl* env opts)))))
 
 (defn prepl
   ([]
    (prepl nil))
   ([{:keys [opts env-opts]}]
-   (apply server/io-prepl
-     (mapcat identity
-       (merge {:repl-env (browser/repl-env* env-opts)} opts)))))
+   (let [[env cenv] (get-envs env-opts)]
+     (env/with-compiler-env cenv
+       (apply server/io-prepl
+         (mapcat identity
+           (merge {:repl-env env} opts)))))))

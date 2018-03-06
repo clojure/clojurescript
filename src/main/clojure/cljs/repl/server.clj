@@ -224,4 +224,5 @@
 
 (defn stop []
   (when-let [sock (:socket @state)]
-    (.close sock)))
+    (when-not (.isClosed sock)
+      (.close sock))))
