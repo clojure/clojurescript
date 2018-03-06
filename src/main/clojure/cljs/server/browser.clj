@@ -19,7 +19,9 @@
   [host port])
 
 (defn stale? [{:keys [server-state] :as repl-env}]
-  (.isClosed ^ServerSocket (:socket @server-state)))
+  (if-let [sock (:socket @server-state)]
+    (.isClosed ^ServerSocket sock)
+    false))
 
 (defn get-envs [env-opts]
   (let [env-opts (merge {:host "localhost" :port 9000} env-opts)
