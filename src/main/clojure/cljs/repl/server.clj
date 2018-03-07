@@ -13,38 +13,32 @@
            java.io.InputStreamReader
            java.io.ByteArrayOutputStream
            java.util.zip.GZIPOutputStream
-           java.net.ServerSocket))
+           java.net.ServerSocket
+           [java.util.concurrent ConcurrentLinkedQueue]))
 
 (def ^:dynamic state nil)
+(def connq (ConcurrentLinkedQueue.))
+(def promiseq (ConcurrentLinkedQueue.))
 
 (defn connection
-  "Promise to return a connection when one is available. If a
-  connection is not available, store the promise in server/state."
+  "Promise to return a connection when one is available. If no connection is
+   available put the promise into FIFO queue to get the next available
+   connection."
   []
-  (let [p    (promise)
-        conn (:connection @state)]
+  (let [p (promise)
+        conn (.poll connq)]
     (if (and conn (not (.isClosed conn)))
-      (do
-        (deliver p conn)
-        p)
-      (do
-        (swap! state (fn [old] (assoc old :promised-conn p)))
-        p))))
+      (deliver p conn)
+      (.offer promiseq p))
+    p))
 
 (defn set-connection
-  "Given a new available connection, either use it to deliver the
-  connection which was promised or store the connection for later
-  use."
+  "Given a new available connection, poll the promise queue for and deliver
+   the connection. Otherwise put the connection into a FIFO queue."
   [conn]
-  (if-let [promised-conn (:promised-conn @state)]
-    (do
-      (swap! state
-        (fn [old]
-          (-> old
-            (assoc :connection nil)
-            (assoc :promised-conn nil))))
-      (deliver promised-conn conn))
-    (swap! state (fn [old] (assoc old :connection conn)))))
+  (if-let [p (.poll promiseq)]
+    (deliver p conn)
+    (.offer connq conn)))
 
 (defonce handlers (atom {}))
 

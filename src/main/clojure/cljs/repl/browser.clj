@@ -277,7 +277,7 @@
 (defn serve [{:keys [host port output-dir] :as opts}]
   (binding [ordering (agent {:expecting nil :fns {}})
             es (Executors/newFixedThreadPool 16)
-            server/state (atom {:socket nil :connection nil :promised-conn nil})]
+            server/state (atom {:socket nil})]
     (server/start
       (merge opts
         {:static-dir (cond-> ["." "out/"] output-dir (conj output-dir))
@@ -383,8 +383,6 @@
      :server-state
      (atom
        {:socket nil
-        :connection nil
-        :promised-conn nil
         :listeners 0})}
     opts))
 
