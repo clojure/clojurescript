@@ -313,9 +313,10 @@
                 (merge (select-keys opts cljsc/known-opts)
                   {:opts-cache "brepl_opts.edn"})))))
         (server/start repl-env)
-        (when launch-browser
-          (browse/browse-url
-            (str "http://" (:host repl-env) ":" (:port repl-env) "?rel=" (System/currentTimeMillis)))))))
+        (let [base-url (str "http://" (:host repl-env) ":" (:port repl-env))]
+          (if launch-browser
+            (browse/browse-url (str base-url "?rel=" (System/currentTimeMillis)))
+            (println "Waiting for browser to connect to" base-url "..."))))))
   (swap! server-state update :listeners inc))
 
 (defrecord BrowserEnv []
