@@ -4000,9 +4000,8 @@
             analysis (dissoc (get-in @env/*compiler* [::namespaces ns]) :macros)]
         (case ext
           "edn"  (spit cache-file
-                   (str (when
-                     (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"))
-                       (pr-str analysis)))
+                   (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
+                     (pr-str analysis)))
           "json" (when-let [{:keys [writer write]} @transit]
                    (write
                      (writer (FileOutputStream. cache-file) :json
