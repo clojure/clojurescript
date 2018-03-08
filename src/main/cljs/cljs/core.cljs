@@ -11489,7 +11489,7 @@ reduces them without incurring seq initialization"
   (.-name ns-obj))
 
 (defn uri?
-  "Returns true X is a goog.Uri instance."
+  "Returns true x is a goog.Uri instance."
   {:added "1.9"}
   [x]
   (instance? goog.Uri x))
