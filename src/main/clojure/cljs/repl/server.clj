@@ -14,31 +14,34 @@
            java.io.ByteArrayOutputStream
            java.util.zip.GZIPOutputStream
            java.net.ServerSocket
-           [java.util.concurrent ConcurrentLinkedQueue]))
+           [java.util LinkedList]))
 
 (def ^:dynamic state nil)
-(def connq (ConcurrentLinkedQueue.))
-(def promiseq (ConcurrentLinkedQueue.))
+(def connq (LinkedList.))
+(def promiseq (LinkedList.))
+(def lock (Object.))
 
 (defn connection
   "Promise to return a connection when one is available. If no connection is
-   available put the promise into FIFO queue to get the next available
+   available put the promise into a FIFO queue to get the next available
    connection."
   []
-  (let [p (promise)
-        conn (.poll connq)]
-    (if (and conn (not (.isClosed conn)))
-      (deliver p conn)
-      (.offer promiseq p))
-    p))
+  (locking lock
+    (let [p (promise)
+          conn (.poll connq)]
+      (if (and conn (not (.isClosed conn)))
+        (deliver p conn)
+        (.offer promiseq p))
+      p)))
 
 (defn set-connection
   "Given a new available connection, poll the promise queue for and deliver
    the connection. Otherwise put the connection into a FIFO queue."
   [conn]
-  (if-let [p (.poll promiseq)]
-    (deliver p conn)
-    (.offer connq conn)))
+  (locking lock
+    (if-let [p (.poll promiseq)]
+      (deliver p conn)
+      (.offer connq conn))))
 
 (defonce handlers (atom {}))
 
