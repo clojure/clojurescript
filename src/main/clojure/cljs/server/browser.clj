@@ -51,4 +51,4 @@
      (env/with-compiler-env cenv
        (apply server/io-prepl
          (mapcat identity
-           (merge {:repl-env env} opts)))))))
+           {:repl-env env :opts opts}))))))

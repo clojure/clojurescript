@@ -23,4 +23,5 @@
   ([{:keys [opts env-opts]}]
    (apply server/io-prepl
      (mapcat identity
-       (merge {:repl-env (nashorn/repl-env* env-opts)} opts)))))
+       {:repl-env (nashorn/repl-env* env-opts)
+        :opts opts}))))
