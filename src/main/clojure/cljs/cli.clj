@@ -473,7 +473,7 @@ present"
 
 (def default-commands
   (add-commands
-    {:groups {::main&compile {:desc "init option"
+    {:groups {::main&compile {:desc "init options"
                               :pseudos
                               {["-re" "--repl-env"]
                                {:arg "env"
