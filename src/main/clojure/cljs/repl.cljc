@@ -877,7 +877,7 @@
                :print-no-newline print-no-newline
                :source-map-inline source-map-inline})))
         done? (atom false)]
-    (env/with-compiler-env (or compiler-env (env/default-compiler-env opts))
+    (env/with-compiler-env (or compiler-env env/*compiler* (env/default-compiler-env opts))
      (when (:source-map opts)
        (.start (Thread. (bound-fn [] (read-source-map "cljs/core.aot.js")))))
      (binding [*repl-env* repl-env
