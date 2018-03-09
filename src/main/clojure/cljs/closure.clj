@@ -2243,8 +2243,8 @@
       (nil? (:opts-cache opts))
       (assoc :opts-cache "cljsc_opts.edn")
 
-      (nil? (:aot-cache opts))
-      (assoc :aot-cache (util/cljs-built-dep?))
+      (not (contains? opts :aot-cache))
+      (assoc :aot-cache false)
 
       (contains? opts :modules)
       (ensure-module-opts)

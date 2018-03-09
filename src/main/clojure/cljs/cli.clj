@@ -250,7 +250,9 @@ present"
   [repl-env [_ & args] {:keys [repl-env-options options inits] :as cfg}]
   (let [opts   (cond-> options
                  (not (:output-dir options))
-                 (assoc :output-dir (temp-out-dir) :temp-output-dir? true))
+                 (assoc :output-dir (temp-out-dir) :temp-output-dir? true)
+                 (not (contains? options :aot-cache))
+                 (assoc :aot-cache true))
         reopts (merge repl-env-options (select-keys opts [:output-to :output-dir]))
         _      (when (or ana/*verbose* (:verbose opts))
                  (util/debug-prn "REPL env options:" (pr-str reopts)))
@@ -269,7 +271,9 @@ present"
   (env/ensure
     (let [opts   (cond-> options
                    (not (:output-dir options))
-                   (assoc :output-dir (temp-out-dir) :temp-output-dir? true))
+                   (assoc :output-dir (temp-out-dir) :temp-output-dir? true)
+                   (not (contains? options :aot-cache))
+                   (assoc :aot-cache true))
           reopts (merge repl-env-options
                    (select-keys opts [:output-to :output-dir]))
           _      (when (or ana/*verbose* (:verbose opts))
@@ -419,7 +423,9 @@ present"
                      (= :advanced (:optimizations opts))
                      (dissoc :browser-repl)
                      (not (:output-dir opts))
-                     (assoc :output-dir "out")))
+                     (assoc :output-dir "out")
+                     (not (contains? opts :aot-cache))
+                     (assoc :aot-cache true)))
         convey   (into [:output-dir] repl/known-repl-opts)
         cfg      (update cfg :options merge (select-keys opts convey))
         source   (when (= :none (:optimizations opts :none))
