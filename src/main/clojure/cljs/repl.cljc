@@ -15,8 +15,6 @@
             [clojure.tools.reader :as reader]
             [clojure.tools.reader.reader-types :as readers]
             [cljs.tagged-literals :as tags]
-            [clojure.stacktrace :as trace]
-            [clojure.repl :as cljrepl]
             [clojure.edn :as edn]
             [cljs.util :as util]
             [cljs.compiler :as comp]
