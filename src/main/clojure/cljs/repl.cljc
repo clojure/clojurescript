@@ -830,13 +830,13 @@
           installed?)))))
 
 (defn repl*
-  [repl-env {:keys [init inits need-prompt title quit-prompt prompt flush read eval print caught reader
+  [repl-env {:keys [init inits need-prompt quit-prompt prompt flush read eval print caught reader
                     print-no-newline source-map-inline wrap repl-requires
                     compiler-env bind-err]
              :or {need-prompt #(if (readers/indexing-reader? *in*)
                                 (== (readers/get-column-number *in*) 1)
                                 (identity true))
-                  title repl-title
+                  quit-prompt repl-title
                   prompt repl-prompt
                   flush flush
                   read repl-read
@@ -982,10 +982,7 @@
                  (binding [*in* (if (true? (:source-map-inline opts))
                                   *in*
                                   (reader))]
-                   (when title
-                     (title))
-                   (when quit-prompt
-                     (quit-prompt))
+                   (quit-prompt)
                    (prompt)
                    (flush)
                    (loop []
