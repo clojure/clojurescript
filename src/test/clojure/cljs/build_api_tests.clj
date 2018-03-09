@@ -573,3 +573,56 @@
       (let [content (slurp (-> opts :modules :c :output-to))]
         (testing "requires code.split.c"
           (is (test/document-write? content 'code.split.c)))))))
+
+(deftest test-cljs-2592
+  (test/delete-node-modules)
+  (spit (io/file "package.json") "{}")
+  (let [cenv (env/default-compiler-env)
+        dir (io/file "src" "test" "cljs_build" "package_json_resolution_test")
+        out (io/file (test/tmp-dir) "package_json_resolution_test")
+        opts {:main 'package-json-resolution-test.core
+              :output-dir (str out)
+              :output-to (str (io/file out "main.js"))
+              :optimizations :none
+              :install-deps true
+              :npm-deps {:iterall "1.2.2"
+                         :graphql "0.13.1"}
+              :package-json-resolution :nodejs
+              :closure-warnings {:check-types :off
+                                 :non-standard-jsdoc :off}}]
+    (test/delete-out-files out)
+    (build/build (build/inputs dir) opts cenv)
+    (testing "processes the iterall index.js"
+      (let [index-js (io/file out "node_modules/iterall/index.js")]
+        (is (.exists index-js))
+        (is (contains? (:js-module-index @cenv) "iterall"))
+        (is (re-find #"goog\.provide\(\"module\$.*\$node_modules\$iterall\$index\"\)" (slurp index-js)))))
+    (testing "processes the graphql index.js"
+      (let [index-js (io/file out "node_modules/graphql/index.js")
+            execution-index-js (io/file out "node_modules/graphql/execution/index.js")
+            ast-from-value-js (io/file out "node_modules/grapqhl/utilities/astFromValue.js")]
+        (is (.exists index-js))
+        (is (contains? (:js-module-index @cenv) "graphql"))
+        (is (re-find  #"goog\.provide\(\"module\$.*\$node_modules\$graphql\$index\"\)" (slurp index-js)))))
+    (testing "processes a nested index.js in graphql"
+      (let [nested-index-js (io/file out "node_modules/graphql/execution/index.js")]
+        (is (.exists nested-index-js))
+        (is (contains? (:js-module-index @cenv) "graphql/execution"))
+        (is (re-find  #"goog\.provide\(\"module\$.*\$node_modules\$graphql\$execution\$index\"\)" (slurp nested-index-js)))))
+    (testing "processes cross-package imports"
+      (let [ast-from-value-js (io/file out "node_modules/graphql/utilities/astFromValue.js")]
+        (is (.exists ast-from-value-js))
+        (is (re-find #"goog.require\(\"module\$.*\$node_modules\$iterall\$index\"\);" (slurp ast-from-value-js)))))
+    (testing "adds dependencies to cljs_deps.js"
+      (let [deps-js (io/file out "cljs_deps.js")]
+        (is (re-find #"goog\.addDependency\(\"..\/node_modules\/iterall\/index.js\"" (slurp deps-js)))
+        (is (re-find #"goog\.addDependency\(\"..\/node_modules\/graphql\/index.js\"" (slurp deps-js)))
+        (is (re-find #"goog\.addDependency\(\"..\/node_modules\/graphql\/execution/index.js\"" (slurp deps-js)))))
+    (testing "adds the right module names to the core.cljs build output"
+      (let [core-js (io/file out "package_json_resolution_test/core.js")]
+        (is (re-find #"goog\.require\('module\$.*\$node_modules\$iterall\$index'\);" (slurp core-js)))
+        (is (re-find #"module\$.+\$node_modules\$iterall\$index\[\"default\"\]\.isCollection" (slurp core-js)))
+        (is (re-find #"goog\.require\('module\$.*\$node_modules\$graphql\$index'\);" (slurp core-js)))
+        (is (re-find  #"module\$.+\$node_modules\$graphql\$index\[\"default\"\]" (slurp core-js))))))
+  (.delete (io/file "package.json"))
+  (test/delete-node-modules))

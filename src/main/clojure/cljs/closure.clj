@@ -1769,6 +1769,35 @@
                         (.getRequires input)))
         (.toSource closure-compiler ast-root)))))
 
+(defn- package-json-entries
+  "Takes options and returns a sequence with the desired order of package.json
+   entries for the given :package-json-resolution mode. If no mode is provided,
+   defaults to :webpack (if no target is set) and :nodejs (if the target is
+   :nodejs)."
+  [opts]
+  {:pre [(or (= (:package-json-resolution opts) :webpack)
+             (= (:package-json-resolution opts) :nodejs)
+             (and (sequential? (:package-json-resolution opts))
+                  (every? string? (:package-json-resolution opts)))
+             (not (contains? opts :package-json-resolution)))]}
+  (let [modes {:nodejs ["main"]
+               :webpack ["browser" "module" "main"]}]
+    (if-let [mode (:package-json-resolution opts)]
+      (if (sequential? mode) mode (get modes mode))
+      (case (:target opts)
+        :nodejs (:nodejs modes)
+        (:webpack modes)))))
+
+(comment
+  (= (package-json-entries {}) ["browser" "module" "main"])
+  (= (package-json-entries {:package-json-resolution :nodejs}) ["main"])
+  (= (package-json-entries {:package-json-resolution :webpack}) ["browser" "module" "main"])
+  (= (package-json-entries {:package-json-resolution ["foo" "bar" "baz"]}) ["foo" "bar" "baz"])
+  (= (package-json-entries {:target :nodejs}) ["main"])
+  (= (package-json-entries {:target :nodejs :package-json-resolution :nodejs}) ["main"])
+  (= (package-json-entries {:target :nodejs :package-json-resolution :webpack}) ["browser" "module" "main"])
+  (= (package-json-entries {:target :nodejs :package-json-resolution ["foo" "bar"]}) ["foo" "bar"]))
+
 (defn convert-js-modules
   "Takes a list JavaScript modules as an IJavaScript and rewrites them into a Google
   Closure-compatible form. Returns list IJavaScript with the converted module
@@ -1781,9 +1810,8 @@
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3)))
                                    (.setDependencyOptions (doto (DependencyOptions.)
-                                                            (.setDependencySorting true))))
-        _ (when (= (:target opts) :nodejs)
-            (.setPackageJsonEntryNames options ^List '("module", "main")))
+                                                            (.setDependencySorting true)))
+                                   (.setPackageJsonEntryNames ^List (package-json-entries opts)))
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))
         _ (.parse closure-compiler)
@@ -2322,9 +2350,13 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([{:keys [file]} {:keys [target] :as opts}]
-   (let [code (-> (slurp (io/resource "cljs/module_deps.js"))
+   (let [main-entries (str "[" (->> (package-json-entries opts)
+                                    (map #(str "\"" % "\""))
+                                    (string/join ",")) "]")
+         code (-> (slurp (io/resource "cljs/module_deps.js"))
                 (string/replace "JS_FILE" (string/replace file "\\" "\\\\"))
-                (string/replace "CLJS_TARGET" (str "" (when target (name target)))))
+                (string/replace "CLJS_TARGET" (str "" (when target (name target))))
+                (string/replace "MAIN_ENTRIES" main-entries))
          proc (-> (ProcessBuilder. ["node" "--eval" code])
                 .start)
          is   (.getInputStream proc)

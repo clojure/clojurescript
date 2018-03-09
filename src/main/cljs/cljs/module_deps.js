@@ -8,9 +8,7 @@ let enhancedResolve = require('enhanced-resolve');
 
 let target = 'CLJS_TARGET';
 let filename = fs.realpathSync(path.resolve(__dirname, 'JS_FILE'));
-let mainFields = target === 'nodejs'
-      ? ['module', 'main']
-      : ['browser', 'module', 'main'];
+let mainFields = MAIN_ENTRIES;
 let aliasFields = target === 'nodejs' ? [] : ['browser'];
 
 // https://github.com/egoist/konan
