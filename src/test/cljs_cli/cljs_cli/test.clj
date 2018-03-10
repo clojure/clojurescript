@@ -60,3 +60,11 @@
                                  (shell/sh "node" (str (io/file dir "out" "main.js"))))))
         (-> (cljs-main "-t" "node" "-o" "out/main.js" "-O" "advanced" "-c" "foo.core")
           (output-is))))))
+
+(deftest test-cljs-2645
+  (with-sources {"src/foo/core.cljs"
+                 "(ns foo.core) (goog-define configurable \"default-value\") (defn -main [& args] (println configurable))"}
+    (-> (cljs-main "-m" "foo.core")
+      (output-is "default-value"))
+    (-> (cljs-main "-co" "{:closure-defines {foo.core/configurable \"configured-value\"}}" "-m" "foo.core")
+      (output-is "configured-value"))))

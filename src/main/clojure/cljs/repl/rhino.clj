@@ -10,6 +10,7 @@
   (:refer-clojure :exclude [load-file])
   (:require [clojure.string :as string]
             [clojure.java.io :as io]
+            [clojure.data.json :as json]
             [cljs.compiler :as comp]
             [cljs.closure :as closure]
             [cljs.analyzer :as ana]
@@ -154,7 +155,12 @@
              (when (or (not (contains? *loaded-libs* name)) reload)
                (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
                (js/CLOSURE_IMPORT_SCRIPT
-                 (goog.object/get (.. js/goog -dependencies_ -nameToPath) name)))))))))
+                 (goog.object/get (.. js/goog -dependencies_ -nameToPath) name)))))))
+
+    ;; set closure-defines
+    (rhino-eval repl-env "CLOSURE_UNCOMPILED_DEFINES" 1
+      (str "goog.global.CLOSURE_UNCOMPILED_DEFINES = "
+        (json/write-str (:closure-defines opts)) ";"))))
 
 ;; Catching errors and rethrowing in Rhino swallows the original trace
 ;; https://groups.google.com/d/msg/mozilla.dev.tech.js-engine.rhino/inMyVKhPq6M/cY39hX20_z8J

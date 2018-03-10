@@ -196,7 +196,10 @@
                (when (or (not (contains? *loaded-libs* name)) reload)
                  (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
                  (js/CLOSURE_IMPORT_SCRIPT
-                   (unchecked-get (.. js/goog -dependencies_ -nameToPath) name))))))))))
+                   (unchecked-get (.. js/goog -dependencies_ -nameToPath) name)))))))
+      (node-eval repl-env
+        (str "goog.global.CLOSURE_UNCOMPILED_DEFINES = "
+          (json/write-str (:closure-defines opts)) ";")))))
 
 (defrecord NodeEnv [host port path socket proc]
   repl/IReplEnvOptions

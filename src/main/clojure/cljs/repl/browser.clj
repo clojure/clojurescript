@@ -171,6 +171,7 @@
           (= path (cond->> "/main.js" output-dir (str "/" output-dir )))
           (let [closure-defines (-> `{clojure.browser.repl/HOST ~host
                                       clojure.browser.repl/PORT ~port}
+                                  (merge (:closure-defines @browser-state))
                                   cljsc/normalize-closure-defines
                                   json/write-str)]
             (server/send-and-close conn 200
@@ -302,7 +303,8 @@
               (cljsc/create-client-js-file
                 {:optimizations :simple
                  :output-dir working-dir}
-                (io/file working-dir "brepl_client.js")))))
+                (io/file working-dir "brepl_client.js"))
+              :closure-defines (:closure-defines opts))))
         ;; TODO: this could be cleaner if compiling forms resulted in a
         ;; :output-to file with the result of compiling those forms - David
         (when (and output-dir (not (.exists (io/file output-dir "clojure" "browser" "repl" "preload.js"))))
