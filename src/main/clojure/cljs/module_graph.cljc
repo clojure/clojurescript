@@ -111,6 +111,28 @@
         provides))
     {} inputs))
 
+(defn validate-inputs*
+  [indexed path seen]
+  (let [ns (peek path)
+        {:keys [requires]} (get indexed ns)]
+    (doseq [ns' requires]
+      (if (contains? seen ns')
+        (throw
+          (ex-info
+            (str "Circular dependency detected "
+              (apply str (interpose " -> " (conj path ns'))))
+            {:cljs.closure/error :invalid-inputs}))
+        (validate-inputs* indexed (conj path ns') (conj seen ns'))))))
+
+(defn validate-inputs
+  "Throws on the presence of circular dependencies"
+  ([inputs]
+    (validate-inputs inputs [] #{}))
+  ([inputs path seen]
+   (let [indexed (index-inputs inputs)]
+     (doseq [[ns] (seq indexed)]
+       (validate-inputs* indexed (conj path ns) (conj seen ns))))))
+
 (defn ^:dynamic deps-for
   "Return all dependencies for x in a graph using deps-key."
   [x graph deps-key]

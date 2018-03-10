@@ -947,6 +947,7 @@
             (recur ns-info)))))))
 
 (defn parallel-compile-sources [inputs compiler-stats opts]
+  (module-graph/validate-inputs inputs)
   (let [deque     (LinkedBlockingDeque. inputs)
         input-set (atom (into #{} (comp (remove nil?) (map :ns)) inputs))
         cnt       (+ 2 (.. Runtime getRuntime availableProcessors))

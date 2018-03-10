@@ -10,7 +10,8 @@
   (:require [clojure.test :as test :refer [deftest is testing]]
             [cljs.closure :as closure]
             [cljs.util :as util]
-            [cljs.module-graph :as module-graph]))
+            [cljs.module-graph :as module-graph])
+  (:import [clojure.lang ExceptionInfo]))
 
 (def opts {:output-dir "out"})
 
@@ -24,35 +25,38 @@
            :depends-on [:shared]
            :output-to (str output-dir "/page2.js")}})
 
-(defn inputs [{:keys [output-dir] :as opts}]
-  [{:provides '[goog]
-    :out-file (str output-dir "/goog/base.js")}
-   {:provides '[cljs.core]
-    :out-file (str output-dir "/cljs/core.js")}
-   {:provides ["cljs.reader"]
-    :requires ["cljs.core"]
-    :out-file (str output-dir "/cljs/reader.js")}
-   {:provides '[events "event.types"]
-    :requires ["cljs.core"]
-    :out-file (str output-dir "/events.js")}
-   {:provides '[shared.a]
-    :requires ["cljs.core"]
-    :out-file (str output-dir "/shared/a.js")}
-   {:provides '[shared.b]
-    :requires '[cljs.core]
-    :out-file (str output-dir "/shared/b.js")}
-   {:provides ["page1.a"]
-    :requires ["cljs.core" "cljs.reader" "events" 'shared.a]
-    :out-file (str output-dir "/page1/a.js")}
-   {:provides ["page1.b"]
-    :requires '[cljs.core shared.b]
-    :out-file (str output-dir "/page1/b.js")}
-   {:provides ["page2.a"]
-    :requires ["cljs.core" "events" 'shared.a]
-    :out-file (str output-dir "/page2/a.js")}
-   {:provides ["page2.b"]
-    :requires ['cljs.core 'shared.b]
-    :out-file (str output-dir "/page2/b.js")}])
+(defn inputs
+  ([]
+   (inputs {:output-dir "out"}))
+  ([{:keys [output-dir] :as opts}]
+   [{:provides '[goog]
+     :out-file (str output-dir "/goog/base.js")}
+    {:provides '[cljs.core]
+     :out-file (str output-dir "/cljs/core.js")}
+    {:provides ["cljs.reader"]
+     :requires ["cljs.core"]
+     :out-file (str output-dir "/cljs/reader.js")}
+    {:provides '[events "event.types"]
+     :requires ["cljs.core"]
+     :out-file (str output-dir "/events.js")}
+    {:provides '[shared.a]
+     :requires ["cljs.core"]
+     :out-file (str output-dir "/shared/a.js")}
+    {:provides '[shared.b]
+     :requires '[cljs.core]
+     :out-file (str output-dir "/shared/b.js")}
+    {:provides ["page1.a"]
+     :requires ["cljs.core" "cljs.reader" "events" 'shared.a]
+     :out-file (str output-dir "/page1/a.js")}
+    {:provides ["page1.b"]
+     :requires '[cljs.core shared.b]
+     :out-file (str output-dir "/page1/b.js")}
+    {:provides ["page2.a"]
+     :requires ["cljs.core" "events" 'shared.a]
+     :out-file (str output-dir "/page2/a.js")}
+    {:provides ["page2.b"]
+     :requires ['cljs.core 'shared.b]
+     :out-file (str output-dir "/page2/b.js")}]))
 
 (deftest test-add-cljs-base
   (is (true? (contains? (module-graph/add-cljs-base (modules opts)) :cljs-base))))
@@ -151,3 +155,15 @@
 (deftest test-module-for
   (is (= :page1 (module-graph/module-for 'page1.a (modules opts))))
   (is (= :page1 (module-graph/module-for "page1.a" (modules opts)))))
+
+(def circular-inputs
+  [{:provides ["foo.core"]
+    :requires ["bar.core"]}
+   {:provides ["bar.core"]
+    :requires ["baz.core"]}
+   {:provides ["baz.core"]
+    :requires ["foo.core"]}])
+
+(deftest test-circular-deps
+  (is (nil? (module-graph/validate-inputs (inputs))))
+  (is (thrown? ExceptionInfo (module-graph/validate-inputs circular-inputs))))
