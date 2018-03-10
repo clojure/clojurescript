@@ -314,7 +314,8 @@ present"
                   (repl/load-stream renv "<cljs repl>" *in*)
 
                   (.exists (io/file script))
-                  (repl/load-file renv script)
+                  (with-open [stream (io/reader script)]
+                    (repl/load-stream renv script stream))
 
                   (string/starts-with? script "@/")
                   (if-let [rsrc (io/resource (subs script 2))]
