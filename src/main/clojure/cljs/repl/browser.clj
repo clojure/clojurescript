@@ -275,6 +275,7 @@
   (browser-eval (slurp url)))
 
 (defn serve [{:keys [host port output-dir] :as opts}]
+  (println "Serving HTTP on" host "port" port)
   (binding [ordering (agent {:expecting nil :fns {}})
             es (Executors/newFixedThreadPool 16)
             server/state (atom {:socket nil})]
