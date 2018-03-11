@@ -761,7 +761,7 @@ Usage: *hello*
       (doseq [row aseq]
         (doseq [col row]
           (cl-format *out* "~4D~7,vT" col column-width))
-        (prn)))
+        (#'prn)))
     (str sb)
     ;;TODO do we need to extend StringBufferWriter to allow access to underlying StringBuffer?
     #_(str (:base @@(:base @@stream)))))

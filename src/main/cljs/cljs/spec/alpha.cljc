@@ -551,7 +551,7 @@ value of 'cljs.spec.alpha/*runtime-asserts*', or false if not set. You can
 toggle check-asserts? with (check-asserts bool)."
   [spec x]
   `(if *compile-asserts*
-     (if *runtime-asserts*
+     (if @#'*runtime-asserts*
        (assert* ~spec ~x)
        ~x)
     ~x))

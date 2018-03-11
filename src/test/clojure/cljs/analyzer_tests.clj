@@ -473,6 +473,25 @@
             (a/analyze test-env '(def foo.core/foo 43))))
       (is (a/analyze test-env '(def cljs.user/foo 43))))))
 
+(deftest test-cljs-1702
+  (let [ws (atom [])]
+    (a/with-warning-handlers [(collecting-warning-handler ws)]
+      (e/with-compiler-env test-cenv
+        (a/analyze-form-seq
+          '[(ns test.cljs-1702-a)
+            (def ^:private a 3)
+            (def ^:private b 3)
+            (defn- test-fn-a [a] a)
+            (defn- test-fn-b [a] b)])
+        (a/analyze-form-seq
+          '[(ns test.cljs-1702-b)
+            (test.cljs-1702-a/test-fn-a 1)
+            (#'test.cljs-1702-a/test-fn-b 1)
+            test.cljs-1702-a/a
+            @#'test.cljs-1702-a/b]))
+      (is (= ["var: test.cljs-1702-a/test-fn-a is not public"
+              "var: test.cljs-1702-a/a is not public"] @ws)))))
+
 (deftest test-cljs-1763
   (let [parsed (a/parse-ns-excludes {} '())]
     (is (= parsed

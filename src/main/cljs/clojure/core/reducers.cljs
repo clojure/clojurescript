@@ -40,7 +40,7 @@
        (-kv-reduce coll f init)
        (cond
          (nil? coll) init
-         (array? coll) (array-reduce coll f init)
+         (array? coll) (#'array-reduce coll f init)
          :else (-reduce coll f init)))))
 
 (defprotocol CollFold

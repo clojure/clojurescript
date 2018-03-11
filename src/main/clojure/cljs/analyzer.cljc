@@ -62,6 +62,7 @@
 (def ^:dynamic *macro-infer* true)
 (def ^:dynamic *passes* nil)
 (def ^:dynamic *file-defs* nil)
+(def ^:dynamic *private-var-access-nowarn* false)
 
 (def constants-ns-sym
   "The namespace of the constants table as a symbol."
@@ -123,6 +124,7 @@
   {:preamble-missing true
    :unprovided true
    :undeclared-var true
+   :private-var-access true
    :undeclared-ns true
    :undeclared-ns-form true
    :redef true
@@ -304,6 +306,10 @@
          "Can't take value of macro "
          "Use of undeclared Var ")
     (:prefix info) "/" (:suffix info)))
+
+(defmethod error-message :private-var-access
+  [warning-type info]
+  (str "var: " (:sym info) " is not public"))
 
 (defmethod error-message :undeclared-ns
   [warning-type {:keys [ns-sym js-provide] :as info}]
@@ -969,20 +975,20 @@
     (node-module-dep? ns) :node
     (dep-has-global-exports? ns) :global))
 
-(defmulti resolve* (fn [sym full-ns current-ns] (ns->module-type full-ns)))
+(defmulti resolve* (fn [env sym full-ns current-ns] (ns->module-type full-ns)))
 
 (defmethod resolve* :js
-  [sym full-ns current-ns]
+  [env sym full-ns current-ns]
   {:name (symbol (str full-ns) (str (name sym)))
    :ns full-ns})
 
 (defmethod resolve* :node
-  [sym full-ns current-ns]
+  [env sym full-ns current-ns]
   {:name (symbol (str current-ns) (str (munge-node-lib full-ns) "." (name sym)))
    :ns current-ns})
 
 (defmethod resolve* :global
-  [sym full-ns current-ns]
+  [env sym full-ns current-ns]
   (let [pre (into '[Object] (->> (string/split (name sym) #"\.") (map symbol) vec))]
     (when-not (has-extern? pre)
       (swap! env/*compiler* update-in
@@ -991,11 +997,26 @@
      :ns current-ns
      :tag (with-meta 'js {:prefix pre})}))
 
+(def ^:private private-var-access-exceptions
+  "Specially-treated symbols for which we don't trigger :private-var-access warnings."
+  '#{cljs.core/checked-aget
+     cljs.core/checked-aset
+     cljs.core/checked-aget'
+     cljs.core/checked-aset'})
+
 (defmethod resolve* :default
-  [sym full-ns current-ns]
-  (merge (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
-    {:name (symbol (str full-ns) (str (name sym)))
-     :ns full-ns}))
+  [env sym full-ns current-ns]
+  (let [sym-ast (gets @env/*compiler* ::namespaces full-ns :defs (symbol (name sym)))
+        sym-name (symbol (str full-ns) (str (name sym)))]
+    (when (and (not= current-ns full-ns)
+               (:private sym-ast)
+               (not *private-var-access-nowarn*)
+               (not (contains? private-var-access-exceptions sym-name)))
+      (warning :private-var-access env
+        {:sym sym-name}))
+    (merge sym-ast
+      {:name sym-name
+       :ns   full-ns})))
 
 (defn required? [ns env]
   (or (contains? (set (vals (gets env :ns :requires))) ns)
@@ -1070,7 +1091,7 @@
                (when (not= current-ns full-ns)
                  (confirm-ns env full-ns))
                (confirm env full-ns (symbol (name sym))))
-             (resolve* sym full-ns current-ns))
+             (resolve* env sym full-ns current-ns))
 
            (dotted-symbol? sym)
            (let [idx    (.indexOf s ".")
@@ -1090,13 +1111,13 @@
 
            (some? (gets @env/*compiler* ::namespaces current-ns :uses sym))
            (let [full-ns (gets @env/*compiler* ::namespaces current-ns :uses sym)]
-             (resolve* sym full-ns current-ns))
+             (resolve* env sym full-ns current-ns))
 
            (some? (gets @env/*compiler* ::namespaces current-ns :renames sym))
            (let [qualified-symbol (gets @env/*compiler* ::namespaces current-ns :renames sym)
                  full-ns (symbol (namespace qualified-symbol))
                  sym     (symbol (name qualified-symbol))]
-             (resolve* sym full-ns current-ns))
+             (resolve* env sym full-ns current-ns))
 
            (some? (gets @env/*compiler* ::namespaces current-ns :imports sym))
            (recur env (gets @env/*compiler* ::namespaces current-ns :imports sym) confirm)
@@ -1352,13 +1373,14 @@
   [env sym]
   ;; we need to dissoc locals for the `(let [x 1] (def x x))` case, because we
   ;; want the var's AST and `resolve-var` will check locals first. - António Monteiro
-  (let [env (dissoc env :locals)
-        var (resolve-var env sym (confirm-var-exists-throw))
-        expr-env (assoc env :context :expr)]
-    (when-some [var-ns (:ns var)]
-      {:var (analyze expr-env sym)
-       :sym (analyze expr-env `(quote ~(symbol (name var-ns) (name (:name var)))))
-       :meta (var-meta var expr-env)})))
+  (binding [*private-var-access-nowarn* true]
+    (let [env      (dissoc env :locals)
+          var      (resolve-var env sym (confirm-var-exists-throw))
+          expr-env (assoc env :context :expr)]
+      (when-some [var-ns (:ns var)]
+        {:var  (analyze expr-env sym)
+         :sym  (analyze expr-env `(quote ~(symbol (name var-ns) (name (:name var)))))
+         :meta (var-meta var expr-env)}))))
 
 (defmethod parse 'var
   [op env [_ sym :as form] _ _]
@@ -2104,49 +2126,50 @@
                        [`(. ~target ~val) alt]
                        [target val])]
     (disallowing-recur
-      (let [enve  (assoc env :context :expr)
-            texpr (cond
-                    (symbol? target)
-                    (do
-                      (cond
-                        (and (= target '*unchecked-if*) ;; TODO: proper resolve
-                             (or (true? val) (false? val)))
-                        (set! *unchecked-if* val)
+      (binding [*private-var-access-nowarn* true]
+        (let [enve  (assoc env :context :expr)
+              texpr (cond
+                      (symbol? target)
+                      (do
+                        (cond
+                          (and (= target '*unchecked-if*)   ;; TODO: proper resolve
+                               (or (true? val) (false? val)))
+                          (set! *unchecked-if* val)
 
-                        (and (= target '*unchecked-arrays*) ;; TODO: proper resolve
-                             (or (true? val) (false? val)))
-                        (set! *unchecked-arrays* val)
+                          (and (= target '*unchecked-arrays*) ;; TODO: proper resolve
+                               (or (true? val) (false? val)))
+                          (set! *unchecked-arrays* val)
 
-                        (and (= target '*warn-on-infer*)
-                             (or (true? val) (false? val)))
-                        (set! *cljs-warnings* (assoc *cljs-warnings* :infer-warning val)))
-                      (when (some? (:const (resolve-var (dissoc env :locals) target)))
-                        (throw (error env "Can't set! a constant")))
-                      (let [local (-> env :locals target)]
-                        (when-not (or (nil? local)
-                                      (and (:field local)
-                                           (or (:mutable local)
-                                               (:unsynchronized-mutable local)
-                                               (:volatile-mutable local))))
-                          (throw (error env "Can't set! local var or non-mutable field"))))
-                      (analyze-symbol enve target))
+                          (and (= target '*warn-on-infer*)
+                               (or (true? val) (false? val)))
+                          (set! *cljs-warnings* (assoc *cljs-warnings* :infer-warning val)))
+                        (when (some? (:const (resolve-var (dissoc env :locals) target)))
+                          (throw (error env "Can't set! a constant")))
+                        (let [local (-> env :locals target)]
+                          (when-not (or (nil? local)
+                                        (and (:field local)
+                                             (or (:mutable local)
+                                                 (:unsynchronized-mutable local)
+                                                 (:volatile-mutable local))))
+                            (throw (error env "Can't set! local var or non-mutable field"))))
+                        (analyze-symbol enve target))
 
-                    :else
-                    (when (seq? target)
-                      (let [texpr (analyze-seq enve target nil)]
-                        (when (:field texpr)
-                          texpr))))
-            vexpr (analyze enve val)]
-        (when-not texpr
-          (throw (error env "set! target must be a field or a symbol naming a var")))
-        (cond
-          (and (not (:def-emits-var env)) ;; non-REPL context
-               (some? ('#{*unchecked-if* *unchecked-array* *warn-on-infer*} target)))
-          {:env env :op :no-op}
+                      :else
+                      (when (seq? target)
+                        (let [texpr (analyze-seq enve target nil)]
+                          (when (:field texpr)
+                            texpr))))
+              vexpr (analyze enve val)]
+          (when-not texpr
+            (throw (error env "set! target must be a field or a symbol naming a var")))
+          (cond
+            (and (not (:def-emits-var env))                 ;; non-REPL context
+                 (some? ('#{*unchecked-if* *unchecked-array* *warn-on-infer*} target)))
+            {:env env :op :no-op}
 
-          :else
-          {:env env :op :set! :form form :target texpr :val vexpr
-           :children [:target :val]})))))
+            :else
+            {:env env :op :set! :form form :target texpr :val vexpr
+             :children [:target :val]}))))))
 
 #?(:clj (declare analyze-file))
 
@@ -3734,7 +3757,9 @@
   (if (and (not (namespace sym))
            (dotted-symbol? sym))
     sym
-    (:name (resolve-var (assoc @env/*compiler* :ns (get-namespace *cljs-ns*)) sym))))
+    (:name (binding [*private-var-access-nowarn* true]
+             (resolve-var (assoc @env/*compiler* :ns (get-namespace *cljs-ns*))
+               sym)))))
 
 #?(:clj
    (defn forms-seq*

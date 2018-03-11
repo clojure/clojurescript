@@ -148,8 +148,9 @@
   [env sym]
   {:pre [(map? env) (symbol? sym)]}
   (try
-    (ana/resolve-var env sym
-      (ana/confirm-var-exists-throw))
+    (binding [ana/*private-var-access-nowarn* true]
+      (ana/resolve-var env sym
+        (ana/confirm-var-exists-throw)))
     (catch #?(:clj Exception :cljs :default) e
       (ana/resolve-macro-var env sym))))
 
