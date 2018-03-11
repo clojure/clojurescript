@@ -3016,10 +3016,16 @@
                         `(fn
                            ([~restarg]
                             (let [~@(mapcat param-bind params)]
-                              (. ~sym (~(get-delegate) ~@params ~restarg))))))
+                              (this-as self#
+                                (if (identical? js/Function (type self#))
+                                  (. self# (~(get-delegate) ~@params ~restarg))
+                                  (. ~sym (~(get-delegate) ~@params ~restarg))))))))
                       `(fn
                          ([~restarg]
-                          (. ~sym (~(get-delegate) (seq ~restarg)))))))]
+                          (this-as self#
+                            (if (identical? js/Function (type self#))
+                              (. self# (~(get-delegate) (seq ~restarg)))
+                              (. ~sym (~(get-delegate) (seq ~restarg)))))))))]
        `(do
           (set! (. ~sym ~(get-delegate-prop))
             (fn (~(vec sig) ~@body)))
@@ -3058,8 +3064,10 @@
                (let [argseq# (when (< ~c-1 (alength args#))
                                (new ^::ana/no-resolve cljs.core/IndexedSeq
                                  (.slice args# ~c-1) 0 nil))]
-                 (. ~rname
-                   (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#))))))
+                 (this-as self#
+                   (if (identical? js/Function (type self#))
+                     (. self# (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#))
+                     (. ~rname (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#))))))))
          ~(variadic-fn* rname method)
          ~(core/when emit-var? `(var ~name))))))
 

@@ -73,3 +73,12 @@
   (is (arities 1))
   (is (thrown? js/Error (arities "bad")))
   (stest/unstrument `arities))
+
+(defn foo [& args] args)
+(s/fdef foo :args (s/cat :args (s/* int?)))
+
+(deftest test-2641
+  (stest/instrument `foo)
+  (is (= [1 2 3] (foo 1 2 3)))
+  (is (thrown? js/Error (foo 1 :hello)))
+  (stest/unstrument `foo))
