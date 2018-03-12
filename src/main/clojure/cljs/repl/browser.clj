@@ -235,14 +235,14 @@
   (send-via es ordering add-in-order order f)
   (send-via es ordering run-in-order))
 
-(defmethod handle-post :print [{:keys [content order]} conn _ ]
+(defmethod handle-post :print [{:keys [content order]} conn _]
   (constrain-order order
     (fn []
       (print (read-string content))
       (.flush *out*)))
   (server/send-and-close conn 200 "ignore__"))
 
-(defmethod handle-post :result [{:keys [content order]} conn _ ]
+(defmethod handle-post :result [{:keys [content order]} conn _]
   (constrain-order order
     (fn []
       (return-value content)
