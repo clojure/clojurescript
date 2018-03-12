@@ -46,6 +46,26 @@
            [com.sun.nio.file SensitivityWatchEventModifier]
            [com.google.common.base Throwables]))
 
+;; Copied from clojure.tools.gitlibs
+
+(def ^:private GITLIBS-CACHE-DIR
+  (delay
+    (.getCanonicalPath
+      (let [env (System/getenv "GITLIBS")]
+        (if (string/blank? env)
+          (io/file (System/getProperty "user.home") ".gitlibs")
+          (io/file env))))))
+
+(defn- gitlibs-cache-dir
+  "Returns the gitlibs cache dir, a string."
+  []
+  @GITLIBS-CACHE-DIR)
+
+(defn- gitlibs-src?
+  "Returns true if the file comes from the gitlibs cache."
+  [file]
+  (string/starts-with? (util/path file) (gitlibs-cache-dir)))
+
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
 (defn random-char []
@@ -556,6 +576,29 @@
   [compilable opts]
   (-compile compilable opts))
 
+(def ^:private USER-HOME-WRITABLE
+  (delay (.canWrite (io/file (System/getProperty "user.home")))))
+
+(defn- aot-cache? [opts]
+  "Returns true if compilation artifacts shuold be placed in the
+  shared AOT cache."
+  (and (:aot-cache opts)
+       @USER-HOME-WRITABLE))
+
+(defn- copy-from-cache
+  [cache-path cacheable source-file opts]
+  (doseq [[k ^File f] cacheable]
+    (when (.exists f)
+      (let [target (io/file (util/output-directory opts)
+                     (-> (.getAbsolutePath f)
+                       (string/replace (.getAbsolutePath cache-path) "")
+                       (subs 1)))]
+        (when (and (or ana/*verbose* (:verbose opts)) (= :output-file k))
+          (util/debug-prn (str "Copying cached " f " to " target)))
+        (util/mkdirs target)
+        (spit target (slurp f))
+        (.setLastModified target (util/last-modified source-file))))))
+
 (defn find-sources
   "Given a Compilable, find sources and return a sequence of IJavaScript."
   [compilable opts]
@@ -569,8 +612,21 @@
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
     (if output-file
-      (let [out-file (.toString (io/file (util/output-directory opts) output-file))]
-        (compiled-file (comp/compile-file file out-file opts)))
+      (let [out-file (io/file (util/output-directory opts) output-file)]
+        (if (and (aot-cache? opts)
+                 (gitlibs-src? file))
+          (let [cacheable  (ana/cacheable-files file (util/ext file) opts)
+                cache-path (ana/cache-base-path (util/path file) opts)]
+            (if (not (.exists (:output-file cacheable)))
+              (let [ret (compiled-file (comp/compile-file file (:output-file cacheable)
+                                         (assoc opts :output-dir (util/path cache-path))))]
+                (copy-from-cache cache-path cacheable file opts)
+                ret)
+              (do
+                (when-not (.exists out-file)
+                  (copy-from-cache cache-path cacheable file opts))
+                (compiled-file (comp/compile-file file (.toString out-file) opts)))))
+          (compiled-file (comp/compile-file file (.toString out-file) opts))))
       (let [path (.getPath ^File file)]
         (binding [ana/*cljs-file* path]
           (with-open [rdr (io/reader file)]
@@ -616,24 +672,13 @@
     (when (or (nil? out-file)
               (comp/requires-compilation? jar-file out-file opts))
       ;; actually compile from JAR
-      (if (or (not (:aot-cache opts))
-              (not (.canWrite (io/file (System/getProperty "user.home")))))
+      (if (not (aot-cache? opts))
         (-compile (jar-file-to-disk jar-file (util/output-directory opts) opts) opts)
         (let [cache-path (ana/cache-base-path (util/path jar-file) opts)]
           (when (comp/requires-compilation? jar-file (:output-file cacheable) opts)
             (-compile (jar-file-to-disk jar-file cache-path opts)
               (assoc opts :output-dir (util/path cache-path))))
-          (doseq [[k ^File f] cacheable]
-            (when (.exists f)
-              (let [target (io/file (util/output-directory opts)
-                             (-> (.getAbsolutePath f)
-                               (string/replace (.getAbsolutePath cache-path) "")
-                               (subs 1)))]
-                (when (and (or ana/*verbose* (:verbose opts)) (= :output-file k))
-                  (util/debug-prn (str "Copying cached " f " to " target)))
-                (util/mkdirs target)
-                (spit target (slurp f))
-                (.setLastModified target (util/last-modified jar-file))))))))
+          (copy-from-cache cache-path cacheable jar-file opts))))
     ;; Files that don't require compilation (cljs.loader for example)
     ;; need to be copied from JAR to disk.
     (when-not (.exists out-file)
