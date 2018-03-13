@@ -111,7 +111,7 @@
         provides))
     {} inputs))
 
-(defn validate-inputs*
+(defn ^:dynamic validate-inputs*
   [indexed path seen]
   (let [ns (peek path)
         {:keys [requires]} (get indexed ns)]
@@ -130,8 +130,9 @@
     (validate-inputs inputs [] #{}))
   ([inputs path seen]
    (let [indexed (index-inputs inputs)]
-     (doseq [[ns] (seq indexed)]
-       (validate-inputs* indexed (conj path ns) (conj seen ns))))))
+     (binding [validate-inputs* (memoize validate-inputs*)]
+       (doseq [[ns] (seq indexed)]
+         (validate-inputs* indexed (conj path ns) (conj seen ns)))))))
 
 (defn ^:dynamic deps-for
   "Return all dependencies for x in a graph using deps-key."
