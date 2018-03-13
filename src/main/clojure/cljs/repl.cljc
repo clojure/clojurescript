@@ -336,7 +336,7 @@
       {:function name'
        :call     call
        :file     (if no-source-file?
-                   (str "NO_SOURCE_FILE"
+                   (str "<NO_SOURCE_FILE>"
                         (when file
                           (str " " file)))
                    (io/file file'))
@@ -378,8 +378,12 @@
 (defn file-display
   [file {:keys [output-dir temp-output-dir?]}]
   (if temp-output-dir?
-    (let [canonicalize (fn [file] (.getCanonicalPath (io/file file)))]
-      (subs (canonicalize file) (inc (count (canonicalize output-dir)))))
+    (let [canonicalize (fn [file] (.getCanonicalPath (io/file file)))
+          can-file (canonicalize file)
+          can-out (canonicalize output-dir)]
+      (if (.startsWith can-file can-out)
+        (subs can-file (inc (count can-out)))
+        (subs can-file (inc (.lastIndexOf can-file java.io.File/separator)))))
     file))
 
 (defn print-mapped-stacktrace
@@ -843,7 +847,7 @@
                   caught repl-caught
                   reader #(readers/source-logging-push-back-reader
                            *in*
-                           1 "NO_SOURCE_FILE")
+                           1 "<NO_SOURCE_FILE>")
                   print-no-newline print
                   source-map-inline true
                   repl-requires '[[cljs.repl :refer-macros [source doc find-doc apropos dir pst]]
