@@ -2255,6 +2255,9 @@
         :cache-analysis (:cache-analysis opts true)
         :source-map (:source-map opts true))
 
+      (:aot-cache opts)
+      (assoc :cache-analysis true)
+
       (= optimizations :advanced)
       (cond->
         (not (false? (:static-fns opts))) (assoc :static-fns true)
