@@ -65,7 +65,8 @@ let resolver = enhancedResolve.create({
     extensions: ['.js', '.json'],
     mainFields: mainFields,
     aliasFields: target === 'nodejs' ? [] : ['browser'],
-    moduleExtensions: ['.js', '.json']
+    moduleExtensions: ['.js', '.json'],
+    symlinks: false
 });
 
 let md = mdeps({
