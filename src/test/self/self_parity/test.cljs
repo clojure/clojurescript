@@ -258,73 +258,6 @@
         (print "caused by: ")
         (recur cause)))))
 
-;; The following volatiles and fns set up a scheme to
-;; emit function values into JavaScript as numeric
-;; references that are looked up. Needed to implement eval.
-
-(defonce ^:private fn-index (volatile! 0))
-(defonce ^:private fn-refs (volatile! {}))
-
-(defn- put-fn
-  "Saves a function, returning a numeric representation."
-  [f]
-  (let [n (vswap! fn-index inc)]
-    (vswap! fn-refs assoc n f)
-    n))
-
-(defn- get-fn
-  "Gets a function, given its numeric representation."
-  [n]
-  (get @fn-refs n))
-
-(defn- emit-fn [f]
-  (print "self_parity.test.get_fn(" (put-fn f) ")"))
-
-(defmethod comp/emit-constant js/Function
-  [f]
-  (emit-fn f))
-
-(defmethod comp/emit-constant cljs.core/Var
-  [f]
-  (emit-fn f))
-
-;; Inject an implementation of eval into needed macros namespaces
-
-(defn- eval
-  ([form]
-   (eval form (.-name *ns*)))
-  ([form ns]
-   (let [result (atom nil)]
-     (cljs/eval st form
-       {:ns            ns
-        :context       :expr
-        :def-emits-var true}
-       (fn [{:keys [value error]}]
-         (if error
-           (handle-error error (:source-maps @st))
-           (reset! result value))))
-     @result)))
-
-(defn- intern
-  ([ns name]
-   (when-let [the-ns (find-ns (cond-> ns (instance? Namespace ns) ns-name))]
-     (eval `(def ~name) (ns-name the-ns))))
-  ([ns name val]
-   (when-let [the-ns (find-ns (cond-> ns (instance? Namespace ns) ns-name))]
-     (eval `(def ~name ~val) (ns-name the-ns)))))
-
-(defn- inject-eval
-  [target-ns]
-  (intern target-ns 'eval eval))
-
-(defn- setup-eval []
-  (eval-form st 'cljs.user
-    '(require-macros 'cljs.spec.test.alpha)
-    (fn [{:keys [value error]}]
-      (if error
-        (handle-error error (:source-maps @st))
-        (inject-eval 'cljs.spec.test.alpha$macros)))))
-
 ;; Test suite runner
 
 (defn run-tests
@@ -336,6 +269,7 @@
   (eval-form st 'cljs.user
     '(ns parity.core
        (:require [cljs.test :refer-macros [run-tests]]
+                 [cljs.eval-test]
                  [cljs.primitives-test]
                  [cljs.destructuring-test]
                  [cljs.new-new-test]
@@ -377,6 +311,7 @@
         (handle-error error (:source-maps @st))
         (eval-form st 'parity.core
           '(run-tests
+             'cljs.eval-test
              'cljs.primitives-test
              'cljs.destructuring-test
              'cljs.new-new-test
@@ -419,7 +354,6 @@
 
 (defn -main [& args]
   (init-runtime)
-  (setup-eval)
   (run-tests))
 
 (set! *main-cli-fn* -main)

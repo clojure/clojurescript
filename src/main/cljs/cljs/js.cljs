@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.js
-  (:refer-clojure :exclude [require])
+  (:refer-clojure :exclude [require eval])
   (:require-macros [cljs.js :refer [dump-core]]
                    [cljs.env.macros :as env])
   (:require [clojure.string :as string]
@@ -786,10 +786,13 @@
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
+(declare clear-fns!)
+
 (defn- eval* [bound-vars form opts cb]
   (let [the-ns     (or (:ns opts) 'cljs.user)
         bound-vars (cond-> (merge bound-vars {:*cljs-ns* the-ns})
                      (:source-map opts) (assoc :*sm-data* (sm-data)))]
+    (clear-fns!)
     (binding [env/*compiler*         (:*compiler* bound-vars)
               *eval-fn*              (:*eval-fn* bound-vars)
               ana/*cljs-ns*          (:*cljs-ns* bound-vars)
@@ -1037,6 +1040,7 @@
                      (:source-map opts) (assoc :*sm-data* (sm-data)))
         aname      (cond-> name (:macros-ns opts) ana/macro-ns-name)]
     (when (:verbose opts) (debug-prn "Evaluating" name))
+    (clear-fns!)
     (trampoline
      (fn compile-loop [ns]
        (binding [env/*compiler*         (:*compiler* bound-vars)
@@ -1192,6 +1196,61 @@
       :*load-fn*      (or (:load opts) *load-fn*)
       :*eval-fn*      (or (:eval opts) *eval-fn*)}
      source name opts cb)))
+
+;;; Support for cljs.core/eval
+
+;; The following volatiles and fns set up a scheme to
+;; emit function values into JavaScript as numeric
+;; references that are looked up. Needed to implement eval.
+
+(defonce ^:private fn-index (volatile! 0))
+(defonce ^:private fn-refs (volatile! {}))
+
+(defn- clear-fns!
+  "Clears saved functions."
+  []
+  (vreset! fn-refs {}))
+
+(defn- put-fn
+  "Saves a function, returning a numeric representation."
+  [f]
+  (let [n (vswap! fn-index inc)]
+    (vswap! fn-refs assoc n f)
+    n))
+
+(defn- get-fn
+  "Gets a function, given its numeric representation."
+  [n]
+  (get @fn-refs n))
+
+(defn- emit-fn [f]
+  (print "cljs.js.get_fn(" (put-fn f) ")"))
+
+(defmethod comp/emit-constant js/Function
+  [f]
+  (emit-fn f))
+
+(defmethod comp/emit-constant cljs.core/Var
+  [f]
+  (emit-fn f))
+
+(defn- eval-impl
+  ([form]
+   (eval-impl form (.-name *ns*)))
+  ([form ns]
+   (let [result (atom nil)]
+     (let [st env/*compiler*]
+       (eval st form
+         {:ns            ns
+          :context       :expr
+          :def-emits-var true}
+         (fn [{:keys [value error]}]
+           (if error
+             (throw error)
+             (reset! result value)))))
+     @result)))
+
+(set! *eval* eval-impl)
 
 (comment
   (require '[cljs.js :as cljs]
