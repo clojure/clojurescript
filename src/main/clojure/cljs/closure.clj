@@ -546,6 +546,11 @@
   [compilable opts]
   (-compile compilable opts))
 
+(defn find-sources
+  "Given a Compilable, find sources and return a sequence of IJavaScript."
+  [compilable opts]
+  (-find-sources compilable opts))
+
 (defn compile-file
   "Compile a single cljs file. If no output-file is specified, returns
   a string of compiled JavaScript. With an output-file option, the
