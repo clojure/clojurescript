@@ -7,32 +7,6 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.closure
-  "Compile ClojureScript to JavaScript with optimizations from Google
-   Closure Compiler producing runnable JavaScript.
-
-   The Closure Compiler (compiler.jar) must be on the classpath.
-
-   Use the 'build' function for end-to-end compilation.
-
-   build = find-sources -> add-dependencies -> compile -> optimize -> output
-
-   Two protocols are defined: IJavaScript and Compilable. The
-   Compilable protocol is satisfied by something which can return one
-   or more IJavaScripts.
-
-   With IJavaScript objects in hand, calling add-dependencies will
-   produce a sequence of IJavaScript objects which includes all
-   required dependencies from the Closure library and ClojureScript,
-   in dependency order. This function replaces the closurebuilder
-   tool.
-
-   The optimize function converts one or more IJavaScripts into a
-   single string of JavaScript source code using the Closure Compiler
-   API.
-
-   The produced output is either a single string of optimized
-   JavaScript or a deps file for use during development.
-  "
   (:refer-clojure :exclude [compile])
   (:require [cljs.util :as util :refer [distinct-by]]
             [cljs.core :as cljsm]
@@ -861,10 +835,8 @@
   (let [url (deps/to-url (constants-filename opts))]
     (javascript-file nil url [(str ana/constants-ns-sym)] ["cljs.core"])))
 
-;; Internally only REPLs use this. We do expose it in cljs.build.api - David
-
 (defn add-dependencies
-  "Given one or more IJavaScript objects in dependency order, produce
+  "DEPRECATED: Given one or more IJavaScript objects in dependency order, produce
   a new sequence of IJavaScript objects which includes the input list
   plus all dependencies in dependency order."
   [opts & inputs]
@@ -1069,30 +1041,6 @@
   (str (when (and (= :nodejs target) (not (false? hashbang)))
          (str "#!" (or hashbang "/usr/bin/env node") "\n"))
        (when preamble (preamble-from-paths preamble))))
-
-(comment
-  ;; add dependencies to literal js
-  (add-dependencies {} "goog.provide('test.app');\ngoog.require('cljs.core');")
-  (add-dependencies {} "goog.provide('test.app');\ngoog.require('goog.array');")
-  (add-dependencies {} (str "goog.provide('test.app');\n"
-                            "goog.require('goog.array');\n"
-                            "goog.require('clojure.set');"))
-  ;; add dependencies with external lib
-  (add-dependencies {:libs ["closure/library/third_party/closure"]}
-                    (str "goog.provide('test.app');\n"
-                         "goog.require('goog.array');\n"
-                         "goog.require('goog.dom.query');"))
-  ;; add dependencies with foreign lib
-  (add-dependencies {:foreign-libs [{:file "samples/hello/src/hello/core.cljs"
-                                     :provides ["example.lib"]}]}
-                    (str "goog.provide('test.app');\n"
-                         "goog.require('example.lib');\n"))
-  ;; add dependencies to a JavaScriptFile record
-  (add-dependencies {} (javascript-file false
-                                        (deps/to-url "samples/hello/src/hello/core.cljs")
-                                        ["hello.core"]
-                                        ["goog.array"]))
-  )
 
 ;; Optimize
 ;; ========
@@ -1443,11 +1391,6 @@
 
   ;; optimize a ClojureScript form
   (optimize {:optimizations :simple} (-compile '(def x 3) {}))
-
-  ;; optimize a project
-  (println (->> (-compile "samples/hello/src" {})
-                (apply add-dependencies {})
-                (apply optimize {:optimizations :simple :pretty-print true})))
   )
 
 ;; Output
@@ -1976,24 +1919,6 @@
         (output-main-file opts))
 
       :else (output-deps-file opts disk-sources))))
-
-(comment
-
-  ;; output unoptimized alone
-  (output-unoptimized {} "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
-  ;; output unoptimized with all dependencies
-  (apply output-unoptimized {}
-         (add-dependencies {}
-                           "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n"))
-  ;; output unoptimized with external library
-  (apply output-unoptimized {}
-         (add-dependencies {:libs ["closure/library/third_party/closure"]}
-                           "goog.provide('test');\ngoog.require('cljs.core');\ngoog.require('goog.dom.query');\n"))
-  ;; output unoptimized and write deps file to 'out/test.js'
-  (output-unoptimized {:output-to "out/test.js"}
-                      "goog.provide('test');\ngoog.require('cljs.core');\nalert('hello');\n")
-  )
-
 
 (defn get-upstream-deps*
   "returns a merged map containing all upstream dependencies defined
