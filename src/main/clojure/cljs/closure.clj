@@ -661,6 +661,12 @@
   (-compile [this opts] (-compile (io/file this) opts))
   (-find-sources [this opts] (-find-sources (io/file this) opts))
 
+  clojure.lang.Symbol
+  (-compile [this opts]
+    (-compile (util/ns->source this) opts))
+  (-find-sources [this opts]
+    (-find-sources (util/ns->source this) opts))
+
   clojure.lang.PersistentVector
   (-compile [this opts] (compile-form-seq this))
   (-find-sources [this opts]
@@ -686,6 +692,8 @@
   (-compile '[(ns test.app (:require [goog.array :as array]))
               (defn plus-one [x] (inc x))]
             {})
+
+  (-find-sources 'cljs.core {})
   )
 
 (defn js-dependencies
