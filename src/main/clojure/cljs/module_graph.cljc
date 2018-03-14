@@ -93,6 +93,11 @@
         (assoc ret module-name module')))
     {} modules))
 
+(defn normalize-input [input]
+  (-> input
+    (update :provides #(into [] (map (comp str comp/munge)) %))
+    (update :requires #(into [] (map (comp str comp/munge)) %))))
+
 (defn index-inputs
   "Index compiler inputs by :provides. If an input has multiple entries
   in :provides will result in multiple entries in the map. The keys will be munged
@@ -105,14 +110,12 @@
           (fn [provide]
             (vector
               (-> provide comp/munge str)
-              (-> input
-                (update :provides #(into [] (map (comp str comp/munge)) %))
-                (update :requires #(into [] (map (comp str comp/munge)) %))))))
+              (-> input normalize-input))))
         provides))
     {} inputs))
 
-(defn ^:dynamic validate-inputs*
-  [indexed path seen]
+(defn validate-inputs*
+  [indexed path seen validated]
   (let [ns (peek path)
         {:keys [requires]} (get indexed ns)]
     (doseq [ns' requires]
@@ -122,17 +125,22 @@
             (str "Circular dependency detected "
               (apply str (interpose " -> " (conj path ns'))))
             {:cljs.closure/error :invalid-inputs}))
-        (validate-inputs* indexed (conj path ns') (conj seen ns'))))))
+        (when-not (contains? @validated ns)
+          (validate-inputs* indexed (conj path ns') (conj seen ns') validated))))
+    (swap! validated conj ns)))
 
 (defn validate-inputs
   "Throws on the presence of circular dependencies"
   ([inputs]
     (validate-inputs inputs [] #{}))
   ([inputs path seen]
-   (let [indexed (index-inputs inputs)]
-     (binding [validate-inputs* (memoize validate-inputs*)]
-       (doseq [[ns] (seq indexed)]
-         (validate-inputs* indexed (conj path ns) (conj seen ns)))))))
+   (let [indexed   (index-inputs inputs)
+         validated (atom #{})]
+     (binding []
+       (doseq [{:keys [provides]} (map normalize-input inputs)]
+         (let [ns (first provides)]
+           (validate-inputs* indexed (conj path ns) (conj seen ns) validated)
+           (swap! validated conj ns)))))))
 
 (defn ^:dynamic deps-for
   "Return all dependencies for x in a graph using deps-key."
