@@ -196,16 +196,14 @@
   only once."
   ([repl-env ns] (load-namespace repl-env ns nil))
   ([repl-env ns opts]
-   (let [ns (if (and (seq? ns) (= (first ns) 'quote)) (second ns)ns)
-         sources (-> (cljsc/-find-sources ns (merge (env->opts repl-env) opts))
-                   (cljsc/add-dependency-sources opts))
-         opts (cljsc/handle-js-modules opts sources env/*compiler*)
-         _ (swap! env/*compiler* update-in [:options] merge opts)
-         sources (-> sources deps/dependency-order
-                   (cljsc/compile-sources false opts)
-                   (#(map cljsc/add-core-macros-if-cljs-js %))
-                   (cljsc/add-js-sources opts) deps/dependency-order
-                   (->> (map #(cljsc/source-on-disk opts %)) doall))]
+   (let [ns (if (and (seq? ns) (= (first ns) 'quote)) (second ns) ns)
+         ;; We need to use a seed because many things (npm deps etc.) cannot be
+         ;; *directly* compiled, they must be a part of some ClojureScript ns
+         ;; form - thus we fabricate a seed
+         sources (->> (cljsc/compile-inputs
+                       [{:requires [(name ns)] :type :seed}]
+                       (merge (env->opts repl-env) opts))
+                   (remove (comp #{["goog"]} :provides)))]
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David

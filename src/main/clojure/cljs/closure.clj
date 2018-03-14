@@ -2656,6 +2656,26 @@
       (util/mkdirs outfile)
       (spit outfile (slurp (io/resource (str "cljs/bootstrap_" target-str ".js")))))))
 
+(defn compile-inputs
+  [inputs opts]
+  (env/ensure
+    (let [sources (-> inputs (add-dependency-sources opts))
+          opts    (handle-js-modules opts sources env/*compiler*)
+          sources (-> (remove (comp #{:seed} :type) sources)
+                    deps/dependency-order
+                    (compile-sources false opts)
+                    (#(map add-core-macros-if-cljs-js %))
+                    (add-js-sources opts) deps/dependency-order
+                    (->> (map #(source-on-disk opts %)) doall))]
+      ;; this is an optimization for handle-js-modules
+      (swap! env/*compiler* update-in [:options] merge opts)
+      sources)))
+
+(defn compile-ns
+  "Compiles a namespace and all of its transitive dependencies."
+  [ns opts]
+  (compile-inputs (find-sources ns opts) opts))
+
 (defn build
   "Given a source which can be compiled, produce runnable JavaScript."
   ([source opts]
