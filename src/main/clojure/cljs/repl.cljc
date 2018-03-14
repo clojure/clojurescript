@@ -196,28 +196,21 @@
   only once."
   ([repl-env ns] (load-namespace repl-env ns nil))
   ([repl-env ns opts]
-   (let [ns (if (and (seq? ns)
-                     (= (first ns) 'quote))
-               (second ns)
-               ns)
-         ;; TODO: add pre-condition to source-on-disk, the
-         ;; source must supply at least :url - David
-         sources (binding [ana/*analyze-deps* false]
-                   (cljsc/add-dependencies
-                     (merge (env->opts repl-env) opts)
-                     {:requires [(name ns)] :type :seed}))
-         deps (->> sources
-                (remove (comp #{["goog"]} :provides))
-                (remove (comp #{:seed} :type))
-                (map #(select-keys % [:provides :url])))]
-     (cljsc/handle-js-modules opts sources env/*compiler*)
+   (let [ns (if (and (seq? ns) (= (first ns) 'quote)) (second ns)ns)
+         sources (-> (cljsc/-find-sources ns (merge (env->opts repl-env) opts))
+                   (cljsc/add-dependency-sources opts))
+         opts (cljsc/handle-js-modules opts sources env/*compiler*)
+         _ (swap! env/*compiler* update-in [:options] merge opts)
+         sources (-> sources deps/dependency-order
+                   (cljsc/compile-sources false opts)
+                   (#(map cljsc/add-core-macros-if-cljs-js %))
+                   (cljsc/add-js-sources opts) deps/dependency-order
+                   (->> (map #(cljsc/source-on-disk opts %)) doall))]
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
        (let [sb (StringBuffer.)]
-         (doseq [source (->> sources
-                          (remove (comp #{:seed} :type))
-                          (map #(cljsc/source-on-disk opts %)))]
+         (doseq [source sources]
            (when (:repl-verbose opts)
              (println "Loading:" (:provides source)))
            ;; Need to get :requires and :provides from compiled source
@@ -233,7 +226,7 @@
            (println (.toString sb)))
          (-evaluate repl-env "<cljs repl>" 1 (.toString sb)))
        ;; REPLs that stream must manually load each dep - David
-       (doseq [{:keys [url provides]} deps]
+       (doseq [{:keys [url provides]} sources]
          (-load repl-env provides url))))))
 
 (defn- load-dependencies
