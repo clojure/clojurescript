@@ -729,7 +729,7 @@
   (js-dependencies {:libs ["closure/library/third_party/closure"]} ["goog.dom.query"])
   )
 
-(defn- add-core-macros-if-cljs-js
+(defn add-core-macros-if-cljs-js
   "If a compiled entity is the cljs.js namespace, explicitly
   add the cljs.core macros namespace dependency to it."
   [compiled]
