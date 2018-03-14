@@ -201,8 +201,8 @@
          ;; *directly* compiled, they must be a part of some ClojureScript ns
          ;; form - thus we fabricate a seed
          sources (->> (cljsc/compile-inputs
-                       [{:requires [(name ns)] :type :seed}]
-                       (merge (env->opts repl-env) opts))
+                        [{:requires [(name ns)] :type :seed}]
+                        (merge (env->opts repl-env) opts))
                    (remove (comp #{["goog"]} :provides)))]
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
