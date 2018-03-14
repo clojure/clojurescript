@@ -2228,8 +2228,13 @@
 
                (or (:closure-defines opts) (shim-process? opts))
                (update :closure-defines normalize-closure-defines)
+
                (:browser-repl opts)
-               (update-in [:preloads] (fnil conj []) 'clojure.browser.repl.preload))
+               (update-in [:preloads] (fnil conj []) 'clojure.browser.repl.preload)
+
+               (and (contains? opts :modules)
+                    (not (contains? opts :stable-names)))
+               (assoc :stable-names true))
         {:keys [libs foreign-libs externs]} (get-upstream-deps)
         emit-constants (or (and (= optimizations :advanced)
                                 (not (false? (:optimize-constants opts))))
