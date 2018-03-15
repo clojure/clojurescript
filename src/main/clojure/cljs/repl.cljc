@@ -493,8 +493,11 @@
            ast (->ast form)
            ast (if-not (#{:ns :ns*} (:op ast))
                  ast
-                 (let [ijs (ana/parse-ns [form])] ;; if ns form need to check for js modules - David
-                   (cljsc/handle-js-modules opts [ijs] env/*compiler*)
+                 (let [ijs (ana/parse-ns [form])]
+                   (cljsc/handle-js-modules opts
+                     (deps/dependency-order
+                       (cljsc/add-dependency-sources [ijs] opts))
+                     env/*compiler*)
                    (binding [ana/*check-alias-dupes* false]
                      (ana/no-warn (->ast form))))) ;; need new AST after we know what the modules are - David
            wrap-js
