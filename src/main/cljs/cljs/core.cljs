@@ -11521,6 +11521,7 @@ reduces them without incurring seq initialization"
 
 (defn eval
   "Evaluates the form data structure (not text!) and returns the result.
-  Delegates to cljs.core/*eval*."
+  Delegates to cljs.core/*eval*. Intended for use in self-hosted ClojureScript,
+  which sets up an implementation of cljs.core/*eval* for that environment."
   [form]
   (*eval* form))
