@@ -971,8 +971,7 @@
           (first @ws)
           "Adding extern to Object for property Component"))))
 
-(comment
-
+(deftest test-set-warn-on-infer
   (let [ws  (atom [])
         res (infer-test-helper
               {:forms '[(ns warn-on-infer-test.app)
@@ -982,6 +981,6 @@
                :externs ["src/test/externs/test.js"]
                :warnings ws
                :warn false})]
-    (println (pr-str res) @ws))
-
-  )
+    (is (string/blank? res))
+    (is (= 1 (count @ws)))
+    (is (string/starts-with? (first @ws) "Cannot infer target type"))))

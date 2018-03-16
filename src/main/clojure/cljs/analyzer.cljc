@@ -3595,11 +3595,6 @@
         ast    (analyze-form env form name opts)]
     (reduce (fn [ast pass] (pass env ast opts)) ast passes)))
 
-(defn- warnings-for [form]
-  (if (analyzed? form)
-    (zipmap (keys *cljs-warnings*) (repeat false))
-    *cljs-warnings*))
-
 (defn analyze
   "Given an environment, a map containing {:locals (mapping of names to bindings), :context
   (one of :statement, :expr, :return), :ns (a symbol naming the
@@ -3615,9 +3610,10 @@
   ([env form name opts]
    (ensure
      (wrapping-errors env
-       (binding [*cljs-warnings* (warnings-for form)
-                 reader/*alias-map* (or reader/*alias-map* {})]
-         (analyze* env form name opts))))))
+       (binding [reader/*alias-map* (or reader/*alias-map* {})]
+         (if (analyzed? form)
+           (no-warn (analyze* env form name opts))
+           (analyze* env form name opts)))))))
 
 (defn add-consts
   "Given a compiler state and a map from fully qualified symbols to constant
