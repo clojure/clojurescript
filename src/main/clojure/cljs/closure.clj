@@ -102,9 +102,11 @@
    :internet-explorer-checks DiagnosticGroups/INTERNET_EXPLORER_CHECKS
    :invalid-casts DiagnosticGroups/INVALID_CASTS
    :j2cl-checks DiagnosticGroups/J2CL_CHECKS
+   :jsdoc-missing-type DiagnosticGroups/JSDOC_MISSING_TYPE
    :late-provide DiagnosticGroups/LATE_PROVIDE
    :lint-checks DiagnosticGroups/LINT_CHECKS
    :message-descriptions DiagnosticGroups/MESSAGE_DESCRIPTIONS
+   :misplaced-msg-annotation DiagnosticGroups/MISPLACED_MSG_ANNOTATION
    :misplaced-type-annotation DiagnosticGroups/MISPLACED_TYPE_ANNOTATION
    :missing-getcssname DiagnosticGroups/MISSING_GETCSSNAME
    :missing-override DiagnosticGroups/MISSING_OVERRIDE
@@ -113,18 +115,24 @@
    :missing-provide DiagnosticGroups/MISSING_PROVIDE
    :missing-require DiagnosticGroups/MISSING_REQUIRE
    :missing-return DiagnosticGroups/MISSING_RETURN
+   :missing-sources-warnings DiagnosticGroups/MISSING_SOURCES_WARNINGS
+   :module-load DiagnosticGroups/MODULE_LOAD
+   :msg-conventions DiagnosticGroups/MSG_CONVENTIONS
    :non-standard-jsdoc DiagnosticGroups/NON_STANDARD_JSDOC
    :report-unknown-types DiagnosticGroups/REPORT_UNKNOWN_TYPES
+   :strict-missing-properties DiagnosticGroups/STRICT_MISSING_PROPERTIES
    :strict-missing-require DiagnosticGroups/STRICT_MISSING_REQUIRE
    :strict-module-dep-check DiagnosticGroups/STRICT_MODULE_DEP_CHECK
    :strict-requires DiagnosticGroups/STRICT_REQUIRES
    :suspicious-code DiagnosticGroups/SUSPICIOUS_CODE
+   :too-many-type-params DiagnosticGroups/TOO_MANY_TYPE_PARAMS
    :tweaks DiagnosticGroups/TWEAKS
    :type-invalidation DiagnosticGroups/TYPE_INVALIDATION
    :undefined-names DiagnosticGroups/UNDEFINED_NAMES
    :undefined-variables DiagnosticGroups/UNDEFINED_VARIABLES
    :underscore DiagnosticGroups/UNDERSCORE
    :unknown-defines DiagnosticGroups/UNKNOWN_DEFINES
+   :unnecessary-escape DiagnosticGroups/UNNECESSARY_ESCAPE
    :unused-local-variable DiagnosticGroups/UNUSED_LOCAL_VARIABLE
    :unused-private-property DiagnosticGroups/UNUSED_PRIVATE_PROPERTY
    :use-of-goog-base DiagnosticGroups/USE_OF_GOOG_BASE
