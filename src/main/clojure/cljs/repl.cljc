@@ -190,6 +190,26 @@
      (assoc :output-dir
             (or (:output-dir opts) (get repl-env :working-dir ".repl"))))))
 
+(defn add-url [ijs]
+  (cond-> ijs
+    (not (contains? ijs :url))
+    (assoc :url (io/resource (:file ijs)))))
+
+(defn ns->input [ns opts]
+  (if-let [input (some-> (util/ns->source ns) (ana/parse-ns opts))]
+    input
+    (if-let [input (some->
+                     (get-in @env/*compiler*
+                       [:js-dependency-index (str ns)])
+                     add-url)]
+      input
+      (throw
+        (ex-info (str ns " does not exist")
+          {::error :invalid-ns})))))
+
+(defn compilable? [input]
+  (contains? input :source-file))
+
 (defn load-namespace
   "Load a namespace and all of its dependencies into the evaluation environment.
   The environment is responsible for ensuring that each namespace is loaded once and
@@ -197,29 +217,23 @@
   ([repl-env ns] (load-namespace repl-env ns nil))
   ([repl-env ns opts]
    (let [ns (if (and (seq? ns) (= (first ns) 'quote)) (second ns) ns)
-         ;; We need to use a seed because many things (npm deps etc.) cannot be
-         ;; *directly* compiled, they must be a part of some ClojureScript ns
-         ;; form - thus we fabricate a seed
-         sources (->> (cljsc/compile-inputs
-                        [{:requires [(name ns)] :type :seed}]
-                        (merge (env->opts repl-env) opts))
-                   (remove (comp #{["goog"]} :provides)))]
+         input (ns->input ns opts)
+         sources (if (compilable? input)
+                   (->> (cljsc/compile-inputs [input]
+                          (merge (env->opts repl-env) opts))
+                     (remove (comp #{["goog"]} :provides)))
+                   (map #(cljsc/source-on-disk opts %)
+                     (cljsc/add-js-sources [input] opts)))]
+     (when (:repl-verbose opts)
+       (println (str "load-namespace " ns " , compiled:") (map :provides sources)))
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
        (let [sb (StringBuffer.)]
          (doseq [source sources]
-           (when (:repl-verbose opts)
-             (println "Loading:" (:provides source)))
-           ;; Need to get :requires and :provides from compiled source
-           ;; not from our own compilation, this issue oddly doesn't seem to
-           ;; affect compiled ClojureScript, should be cleaned up so we
-           ;; don't need this step here - David
            (with-open [rdr (io/reader (:url source))]
              (.append sb
-               (cljsc/add-dep-string opts
-                 (merge source
-                   (deps/parse-js-ns (line-seq rdr)))))))
+               (cljsc/add-dep-string opts source))))
          (when (:repl-verbose opts)
            (println (.toString sb)))
          (-evaluate repl-env "<cljs repl>" 1 (.toString sb)))

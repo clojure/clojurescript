@@ -1127,7 +1127,7 @@
                                      (let [{node-libs true libs-to-load false} (group-by ana/node-module-dep? libs)]
                                        [node-libs libs-to-load])
                                      [nil libs]))
-        {global-exports-libs true libs-to-load false} (group-by ana/dep-has-global-exports? libs-to-load)]
+        global-exports-libs (filter ana/dep-has-global-exports? libs-to-load)]
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs-temp " = " loaded-libs " || cljs.core.set([\"cljs.core\"]);")
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.set([\"cljs.core\"]);"))

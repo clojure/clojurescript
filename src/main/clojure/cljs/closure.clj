@@ -2665,7 +2665,7 @@
   (env/ensure
     (let [sources (-> inputs (add-dependency-sources opts))
           opts    (handle-js-modules opts sources env/*compiler*)
-          sources (-> (remove (comp #{:seed} :type) sources)
+          sources (-> sources
                     deps/dependency-order
                     (compile-sources false opts)
                     (#(map add-core-macros-if-cljs-js %))
