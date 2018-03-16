@@ -2659,6 +2659,8 @@
       (spit outfile (slurp (io/resource (str "cljs/bootstrap_" target-str ".js")))))))
 
 (defn compile-inputs
+  "Compile inputs and all of their transitive dependencies including JS modules,
+   libs, and foreign libs. Duplicates the pipeline of build."
   [inputs opts]
   (env/ensure
     (let [sources (-> inputs (add-dependency-sources opts))
@@ -2672,7 +2674,8 @@
       sources)))
 
 (defn compile-ns
-  "Compiles a namespace and all of its transitive dependencies."
+  "Compiles a namespace and all of its transitive dependencies.
+   See compile-inputs."
   [ns opts]
   (compile-inputs (find-sources ns opts) opts))
 
