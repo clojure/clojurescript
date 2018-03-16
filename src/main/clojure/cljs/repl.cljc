@@ -196,28 +196,19 @@
   only once."
   ([repl-env ns] (load-namespace repl-env ns nil))
   ([repl-env ns opts]
-   (let [ns (if (and (seq? ns)
-                     (= (first ns) 'quote))
-               (second ns)
-               ns)
-         ;; TODO: add pre-condition to source-on-disk, the
-         ;; source must supply at least :url - David
-         sources (binding [ana/*analyze-deps* false]
-                   (cljsc/add-dependencies
-                     (merge (env->opts repl-env) opts)
-                     {:requires [(name ns)] :type :seed}))
-         deps (->> sources
-                (remove (comp #{["goog"]} :provides))
-                (remove (comp #{:seed} :type))
-                (map #(select-keys % [:provides :url])))]
-     (cljsc/handle-js-modules opts sources env/*compiler*)
+   (let [ns (if (and (seq? ns) (= (first ns) 'quote)) (second ns) ns)
+         ;; We need to use a seed because many things (npm deps etc.) cannot be
+         ;; *directly* compiled, they must be a part of some ClojureScript ns
+         ;; form - thus we fabricate a seed
+         sources (->> (cljsc/compile-inputs
+                        [{:requires [(name ns)] :type :seed}]
+                        (merge (env->opts repl-env) opts))
+                   (remove (comp #{["goog"]} :provides)))]
      (if (:output-dir opts)
        ;; REPLs that read from :output-dir just need to add deps,
        ;; environment will handle actual loading - David
        (let [sb (StringBuffer.)]
-         (doseq [source (->> sources
-                          (remove (comp #{:seed} :type))
-                          (map #(cljsc/source-on-disk opts %)))]
+         (doseq [source sources]
            (when (:repl-verbose opts)
              (println "Loading:" (:provides source)))
            ;; Need to get :requires and :provides from compiled source
@@ -233,7 +224,7 @@
            (println (.toString sb)))
          (-evaluate repl-env "<cljs repl>" 1 (.toString sb)))
        ;; REPLs that stream must manually load each dep - David
-       (doseq [{:keys [url provides]} deps]
+       (doseq [{:keys [url provides]} sources]
          (-load repl-env provides url))))))
 
 (defn- load-dependencies
@@ -502,8 +493,11 @@
            ast (->ast form)
            ast (if-not (#{:ns :ns*} (:op ast))
                  ast
-                 (let [ijs (ana/parse-ns [form])] ;; if ns form need to check for js modules - David
-                   (cljsc/handle-js-modules opts [ijs] env/*compiler*)
+                 (let [ijs (ana/parse-ns [form])]
+                   (cljsc/handle-js-modules opts
+                     (deps/dependency-order
+                       (cljsc/add-dependency-sources [ijs] opts))
+                     env/*compiler*)
                    (binding [ana/*check-alias-dupes* false]
                      (ana/no-warn (->ast form))))) ;; need new AST after we know what the modules are - David
            wrap-js

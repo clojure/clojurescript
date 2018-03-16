@@ -132,7 +132,7 @@
    (closure/source-for-namespace ns compiler-env)))
 
 (defn add-dependencies
-  "Given one or more IJavaScript objects in dependency order, produce
+  "DEPRECATED: Given one or more IJavaScript objects in dependency order, produce
   a new sequence of IJavaScript objects which includes the input list
   plus all dependencies in dependency order."
   [opts & ijss]
