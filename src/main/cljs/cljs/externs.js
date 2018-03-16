@@ -19,3 +19,9 @@ Object.prototype.next = function() {};
  */
 function IEquiv() {};
 IEquiv.prototype.equiv = function() {};
+
+/**
+ * @constructor
+ */
+function Java() {};
+Java.prototype.type = function() {};
