@@ -2636,15 +2636,17 @@
                        (:foreign-libs opts)))
                (process-js-modules opts)
                (:options @compiler-env))]
-    (swap! compiler-env (fn [cenv]
-                          (-> cenv
-                            ;; we need to also track the whole top level - this is to support
-                            ;; cljs.analyze/analyze-deps, particularly in REPL contexts - David
-                            (merge {:js-dependency-index (deps/js-dependency-index opts)})
-                            (update-in [:node-module-index] (fnil into #{})
-                              (if (= target :nodejs)
-                                (map str node-required)
-                                (map str (keys top-level)))))))
+    (swap! compiler-env
+      (fn [cenv]
+        (-> cenv
+          ;; we need to also track the whole top level - this is to support
+          ;; cljs.analyze/analyze-deps, particularly in REPL contexts - David
+          (merge {:js-dependency-index (deps/js-dependency-index opts)})
+          (update-in [:options] merge opts)
+          (update-in [:node-module-index] (fnil into #{})
+            (if (= target :nodejs)
+              (map str node-required)
+              (map str (keys top-level)))))))
     opts))
 
 (defn output-bootstrap [{:keys [target] :as opts}]
@@ -2667,8 +2669,6 @@
                     (#(map add-core-macros-if-cljs-js %))
                     (add-js-sources opts) deps/dependency-order
                     (->> (map #(source-on-disk opts %)) doall))]
-      ;; this is an optimization for handle-js-modules
-      (swap! env/*compiler* update-in [:options] merge opts)
       sources)))
 
 (defn compile-ns
@@ -2768,7 +2768,6 @@
                               (-> (-find-sources source opts)
                                   (add-dependency-sources compile-opts)))
                  opts       (handle-js-modules opts js-sources compiler-env)
-                 _ (swap! env/*compiler* update-in [:options] merge opts)
                  js-sources (-> js-sources
                                 deps/dependency-order
                                 (compile-sources compiler-stats compile-opts)
