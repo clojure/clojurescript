@@ -434,16 +434,15 @@ present"
         repl?    (boolean (#{"-r" "--repl"} (first args)))
         serve?   (boolean (#{"-s" "--serve"} (first args)))
         cenv     (env/default-compiler-env)]
-    (if-let [path (:watch opts)]
-      (if repl?
-        (.start (Thread. #(watch-proc cenv path opts)))
-        (build/watch path opts cenv))
-      (build/build source opts cenv))
-    (when repl?
-      (repl-opt repl-env args
-        (assoc-in cfg [:options :compiler-env] cenv)))
-    (when serve?
-      (serve-opt repl-env args cfg))))
+    (env/with-compiler-env cenv
+      (if-let [path (:watch opts)]
+        (when-not repl?
+          (build/watch path opts cenv))
+        (build/build source opts cenv))
+      (when repl?
+        (repl-opt repl-env args cfg))
+      (when serve?
+        (serve-opt repl-env args cfg)))))
 
 (defn- compile-opt
   [repl-env [_ ns & args] cfg]
