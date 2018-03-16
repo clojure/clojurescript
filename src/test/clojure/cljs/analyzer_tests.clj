@@ -856,13 +856,14 @@
           ))))
   )
 
-(defn infer-test-helper [{:keys [forms externs warnings]}]
+(defn infer-test-helper [{:keys [forms externs warnings warn]}]
   (let [test-cenv (atom {::a/externs
                          (externs/externs-map
                            (closure/load-externs {:externs (or externs [])}))})]
     (a/with-warning-handlers [(collecting-warning-handler (or warnings (atom [])))]
       (binding [a/*cljs-ns* a/*cljs-ns*
-                a/*cljs-warnings* (assoc a/*cljs-warnings* :infer-warning true)]
+                a/*cljs-warnings* (assoc a/*cljs-warnings*
+                                    :infer-warning (if (nil? warn) true warn))]
         (e/with-compiler-env test-cenv
           (a/analyze-form-seq forms)
           (with-out-str
@@ -971,5 +972,16 @@
           "Adding extern to Object for property Component"))))
 
 (comment
+
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:forms '[(ns warn-on-infer-test.app)
+                        (set! *warn-on-infer* true)
+                        (defn wrap-baz [x]
+                          (.baz x))]
+               :externs ["src/test/externs/test.js"]
+               :warnings ws
+               :warn false})]
+    (println (pr-str res) @ws))
 
   )
