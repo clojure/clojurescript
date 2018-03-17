@@ -22,11 +22,12 @@
             [cljs.stacktrace :as st]
             [cljs.analyzer :as ana]
             [cljs.build.api :as build])
-  (:import [java.util.concurrent Executors]))
+  (:import [java.util.concurrent Executors ConcurrentHashMap]))
 
 (def ^:dynamic browser-state nil)
 (def ^:dynamic ordering nil)
 (def ^:dynamic es nil)
+(def outs (ConcurrentHashMap.))
 
 (def ext->mime-type
   {".html" "text/html"
@@ -239,11 +240,12 @@
   (send-via es ordering add-in-order order f)
   (send-via es ordering run-in-order))
 
-(defmethod handle-post :print [{:keys [content order]} conn _]
+(defmethod handle-post :print [{:keys [repl content order]} conn _]
   (constrain-order order
     (fn []
-      (print (read-string content))
-      (.flush *out*)))
+      (binding [*out* (.get outs repl)]
+        (print (read-string content))
+        (.flush *out*))))
   (server/send-and-close conn 200 "ignore__"))
 
 (defmethod handle-post :result [{:keys [content order]} conn _]
@@ -341,6 +343,7 @@
           (if launch-browser
             (maybe-browse-url base-url)
             (println (waiting-to-connect-message base-url)))))))
+  (.put outs (.getName (Thread/currentThread)) *out*)
   (swap! server-state update :listeners inc))
 
 (defrecord BrowserEnv []
@@ -356,6 +359,7 @@
   (-load [this provides url]
     (load-javascript this provides url))
   (-tear-down [this]
+    (.remove outs (.getName (Thread/currentThread)))
     (let [server-state (:server-state this)]
       (when (zero? (:listeners (swap! server-state update :listeners dec)))
         (binding [server/state server-state] (server/stop))
