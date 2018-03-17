@@ -38,7 +38,10 @@
 
 (defn flush-print-queue! [conn]
   (doseq [str print-queue]
-    (net/transmit conn :print str))
+    (net/transmit conn :print
+      (json/serialize
+        #js {"repl" *repl*
+             "str"  str})))
   (garray/clear print-queue))
 
 (defn repl-print [data]
@@ -137,14 +140,20 @@
 
       (net/register-service repl-connection
         :send-result
-        (fn [{:keys [repl result]}]
-          (send-result connection url
-            (wrap-message repl :result result))))
+        (fn [json]
+          (let [obj    (json/parse json)
+                repl   (gobj/get obj "repl")
+                result (gobj/get obj "result")]
+            (send-result connection url
+              (wrap-message repl :result result)))))
 
       (net/register-service repl-connection
         :print
-        (fn [data]
-          (send-print url (wrap-message nil :print data)))))
+        (fn [json]
+          (let [obj  (json/parse json)
+                repl (gobj/get obj "repl")
+                str  (gobj/get obj "str")]
+            (send-print url (wrap-message repl :print str))))))
     (js/alert "No 'xpc' param provided to child iframe.")))
 
 (def load-queue nil)
@@ -233,13 +242,17 @@
     (net/register-service repl-connection
       :evaluate-javascript
       (fn [json]
-        (let [obj (json/parse json)]
+        (let [obj  (json/parse json)
+              repl (gobj/get obj "repl")
+              form (gobj/get obj "form")]
           (net/transmit
             repl-connection
             :send-result
-            {:repl   (gobj/get obj "repl")
-             :result (evaluate-javascript repl-connection
-                       (gobj/get obj "form"))}))))
+            (json/serialize
+              #js {"repl" repl
+                   "result"
+                   (binding [*repl* repl]
+                     (evaluate-javascript repl-connection form))})))))
     (net/connect repl-connection
       (constantly nil)
       (fn [iframe]
