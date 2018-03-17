@@ -72,8 +72,8 @@
     (set-return-value-fn return-value-fn)
     (server/send-and-close conn 200
       (json/write-str
-        {"thread" (.getName (Thread/currentThread))
-         "form"   form})
+        {"repl" (.getName (Thread/currentThread))
+         "form" form})
       "application/json")))
 
 (defn- return-value
