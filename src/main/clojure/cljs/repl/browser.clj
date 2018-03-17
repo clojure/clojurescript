@@ -70,7 +70,11 @@
     (send-for-eval @(server/connection) form return-value-fn))
   ([conn form return-value-fn]
     (set-return-value-fn return-value-fn)
-    (server/send-and-close conn 200 form "text/javascript")))
+    (server/send-and-close conn 200
+      (json/write-str
+        {"thread" (.getName (Thread/currentThread))
+         "form"   form})
+      "application/json")))
 
 (defn- return-value
   "Called by the server when a return value is received."

@@ -18,6 +18,7 @@
   (:require [goog.dom :as gdom]
             [goog.object :as gobj]
             [goog.array :as garray]
+            [goog.json :as json]
             [goog.userAgent.product :as product]
             [clojure.browser.net :as net]
             [clojure.browser.event :as event]
@@ -228,11 +229,12 @@
           (flush-print-queue! repl-connection))))
     (net/register-service repl-connection
       :evaluate-javascript
-      (fn [js]
-        (net/transmit
-          repl-connection
-          :send-result
-          (evaluate-javascript repl-connection js))))
+      (fn [json]
+        (let [obj (json/parse json)]
+          (net/transmit
+            repl-connection
+            :send-result
+            (evaluate-javascript repl-connection (gobj/get obj "form"))))))
     (net/connect repl-connection
       (constantly nil)
       (fn [iframe]
