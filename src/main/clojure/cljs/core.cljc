@@ -3032,6 +3032,7 @@
           ~@(core/when solo
               `[(set! (. ~sym ~'-cljs$lang$maxFixedArity)
                   ~(core/dec (count sig)))])
+          (js-inline-comment " @this {Function} ")
           (set! (. ~sym ~'-cljs$lang$applyTo)
             ~(apply-to)))))))
 
