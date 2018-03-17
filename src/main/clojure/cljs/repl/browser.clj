@@ -243,7 +243,7 @@
 (defmethod handle-post :print [{:keys [repl content order]} conn _]
   (constrain-order order
     (fn []
-      (binding [*out* (.get outs repl)]
+      (binding [*out* (or (and repl (.get outs repl)) *out*)]
         (print (read-string content))
         (.flush *out*))))
   (server/send-and-close conn 200 "ignore__"))
