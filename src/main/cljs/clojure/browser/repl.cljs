@@ -31,6 +31,7 @@
 (goog-define HOST "localhost")
 (goog-define PORT 9000)
 
+(def ^:dynamic *repl* nil)
 (def xpc-connection (atom nil))
 (def parent-connected? (atom false))
 (def print-queue (array))
@@ -92,8 +93,12 @@
 
 (def order (atom 0))
 
-(defn wrap-message [t data]
-  (pr-str {:type t :content data :order (swap! order inc)}))
+(defn wrap-message [repl t data]
+  (pr-str
+    {:repl repl
+     :type t
+     :content data
+     :order (swap! order inc)}))
 
 (defn start-evaluator
   "Start the REPL server connection."
@@ -110,8 +115,7 @@
                             ;; ack once.
                             (js/setTimeout try-handshake
                                            10)))]
-      (net/connect repl-connection
-                   try-handshake)
+      (net/connect repl-connection try-handshake)
 
       (net/register-service repl-connection
         :ack-handshake
@@ -121,8 +125,7 @@
             ;; Now that we're connected to the parent, we can start talking to
             ;; the server.
             (send-result connection
-                         url
-                         (wrap-message :ready "ready")))))
+              url (wrap-message nil :ready "ready")))))
 
       (event/listen connection
         :success
@@ -130,18 +133,18 @@
           (net/transmit
             repl-connection
             :evaluate-javascript
-            (.getResponseText (.-currentTarget e)
-              ()))))
+            (.getResponseText (.-currentTarget e) ()))))
 
       (net/register-service repl-connection
         :send-result
-        (fn [data]
-          (send-result connection url (wrap-message :result data))))
+        (fn [{:keys [repl result]}]
+          (send-result connection url
+            (wrap-message repl :result result))))
 
       (net/register-service repl-connection
         :print
         (fn [data]
-          (send-print url (wrap-message :print data)))))
+          (send-print url (wrap-message nil :print data)))))
     (js/alert "No 'xpc' param provided to child iframe.")))
 
 (def load-queue nil)
@@ -234,7 +237,9 @@
           (net/transmit
             repl-connection
             :send-result
-            (evaluate-javascript repl-connection (gobj/get obj "form"))))))
+            {:repl   (gobj/get obj "repl")
+             :result (evaluate-javascript repl-connection
+                       (gobj/get obj "form"))}))))
     (net/connect repl-connection
       (constantly nil)
       (fn [iframe]
