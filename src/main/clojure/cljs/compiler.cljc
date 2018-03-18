@@ -1442,11 +1442,11 @@
 
 #?(:clj
    (defn compile-file*
-     ([src dest]
+     ([^File src ^File dest]
       (compile-file* src dest
         (when env/*compiler*
           (:options @env/*compiler*))))
-     ([src dest opts]
+     ([^File src ^File dest opts]
       (ensure
         (with-core-cljs opts
           (fn []
@@ -1459,11 +1459,12 @@
               (let [ext (util/ext src)
                    {:keys [ns] :as ns-info} (ana/parse-ns src)]
                (if-let [cached (cached-core ns ext opts)]
-                 (emit-cached-core src dest cached opts)
+                 [(emit-cached-core src dest cached opts) false]
                  (let [opts (if (macro-ns? ns ext opts)
                               (assoc opts :macros-ns true)
                               opts)
-                       ret (emit-source src dest ext opts)]
+                       dest-exists? (.exists dest)
+                       ret [(emit-source src dest ext opts) dest-exists?]]
                    (.setLastModified ^File dest (util/last-modified src))
                    ret))))))))))
 
@@ -1545,8 +1546,9 @@
                                (not= 'cljs.core ns)
                                (not= :interactive (:mode opts)))
                       (swap! env/*compiler* update-in [::ana/namespaces] dissoc ns))
-                    (let [ret (compile-file* src-file dest-file opts)]
-                      (when *recompiled*
+                    (let [[ret recompiled?] (compile-file* src-file dest-file opts)]
+                      (when (and *recompiled*
+                                 recompiled?)
                         (swap! *recompiled* conj ns))
                       ret))
                   (do
