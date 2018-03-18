@@ -1,8 +1,9 @@
 (ns cljs-cli.test
   (:require
-   [clojure.test :refer [deftest]]
+   [clojure.test :refer [deftest is]]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell :refer [with-sh-dir]]
+   [clojure.string :as str]
    [cljs-cli.util :refer [cljs-main output-is with-sources with-post-condition with-repl-env-filter]]))
 
 (deftest eval-test
@@ -68,3 +69,21 @@
       (output-is "default-value"))
     (-> (cljs-main "-co" "{:closure-defines {foo.core/configurable \"configured-value\"}}" "-m" "foo.core")
       (output-is "configured-value"))))
+
+(deftest test-cljs-2650-loader-does-not-exists
+  (doseq [optimizations [:none :advanced]]
+    (let [src (io/file "src" "test" "cljs_build" "hello-modules" "src")
+          opts {:output-dir "out"
+                :asset-path "/out"
+                :optimizations optimizations
+                :modules {:foo {:entries '#{foo.core}
+                                :output-to "out/foo.js"}
+                          :bar {:entries '#{bar.core}
+                                :output-to "out/bar.js"}}}]
+      (with-sources
+        {"src/foo/core.cljs" (slurp (io/file src "foo" "core.cljs"))
+         "src/bar/core.cljs" (slurp (io/file src "bar" "core.cljs"))}
+        (let [result (cljs-main "--compile-opts" (pr-str opts)
+                                "--compile" "foo.core")]
+          (is (zero? (:exit result)))
+          (is (str/blank? (:err result))))))))
