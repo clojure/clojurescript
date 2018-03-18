@@ -7,21 +7,48 @@
 ;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.server.node
-  (:require [cljs.repl :as repl]
+  (:require [cljs.env :as env]
+            [cljs.repl :as repl]
             [cljs.repl.node :as node]
-            [cljs.core.server :as server]))
+            [cljs.core.server :as server])
+  (:import [java.net Socket]))
+
+(defonce envs (atom {}))
+
+(defn env-opts->key [{:keys [host port]}]
+  [host port])
+
+(defn stale? [{:keys [socket] :as repl-env}]
+  (if-let [sock (:socket @socket)]
+    (.isClosed ^Socket sock)
+    false))
+
+(defn get-envs [env-opts]
+  (let [env-opts (merge {:host "localhost" :port 49001} env-opts)
+        k (env-opts->key env-opts)]
+    (swap! envs
+      #(cond-> %
+         (or (not (contains? % k))
+             (stale? (get-in % [k 0])))
+         (assoc k
+           [(node/repl-env* env-opts)
+            (env/default-compiler-env)])))
+    (get @envs k)))
 
 (defn repl
   ([]
    (repl nil))
   ([{:keys [opts env-opts]}]
-   (repl/repl* (node/repl-env* env-opts) opts)))
+   (let [[env cenv] (get-envs env-opts)]
+     (env/with-compiler-env cenv
+       (repl/repl* env opts)))))
 
 (defn prepl
   ([]
    (prepl nil))
   ([{:keys [opts env-opts]}]
-   (apply server/io-prepl
-     (mapcat identity
-       {:repl-env (node/repl-env* env-opts)
-        :opts opts}))))
+   (let [[env cenv] (get-envs env-opts)]
+     (env/with-compiler-env cenv
+       (apply server/io-prepl
+         (mapcat identity
+           {:repl-env env :opts opts}))))))
