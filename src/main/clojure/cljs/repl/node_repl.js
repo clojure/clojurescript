@@ -22,6 +22,7 @@ try {
 var server = net.createServer(function (socket) {
     var buffer = "",
         ret    = null,
+        repl   = null,
         err    = null;
 
     socket.write("ready");
@@ -53,7 +54,9 @@ var server = net.createServer(function (socket) {
                 } else {
                     try {
                         dom.run(function () {
-                            ret = vm.runInThisContext(data, "repl");
+                            var obj = JSON.parse(data);
+                            repl = obj.repl;
+                            ret = vm.runInThisContext(obj.form, "repl");
                         });
                     } catch (e) {
                         err = e;

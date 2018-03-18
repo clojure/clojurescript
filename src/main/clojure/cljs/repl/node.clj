@@ -59,7 +59,10 @@
   [repl-env js]
   (let [{:keys [in out]} @(:socket repl-env)]
     ;; escape backslash for Node.js under Windows
-    (write out js)
+    (write out
+      (json/write-str
+        {"repl" (.getName (Thread/currentThread))
+         "form" js}))
     (let [result (json/read-str
                    (read-response in) :key-fn keyword)]
       (condp = (:status result)
