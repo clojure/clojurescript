@@ -1,3 +1,69 @@
+## Next
+
+### Enhancements
+* cljs.main, simple command line access to Compiler & REPLs
+* cljs.server.* namespaces for integration with -Dclojure.server.repl
+* :aot-cache compiler to enable global AOT caching of dependencies in JARs
+* :stable-names compiler flag, to support vendorization when using :modules, 
+  defaults to true when using :modules.
+* Add :webworker & :nashorn target
+* pREPL implementation (usage requires Clojure 1.10.0-alpha)
+
+### Changes
+* * CLJS-2592: :npm-deps using ES6 modules with .mjs extensions are not detected correctly
+* AOTed ClojureScript artifact is now the default, for sources only use the
+  "slim" Maven classifier
+* Bump Closure Compiler
+* REPL now show uniform prompts
+* CLJS-2660: Add cljs.core/eval which, delegates to an overridable *eval*
+* CLJS-2375: Remove AMD Module Support
+* CLJS-2413: Port core.specs.alpha to ClojureScript
+* CLJS-2423: Allow custom :output-wrapper function
+* Map entries are no longer two element vectors, now MapEntry instances
+* *print-fn* automatically set
+* CLJS-2561: AOT compile browser REPL client js
+* CLJS-2581: Create a cljs.repl/*repl-env* dynamic var and bind it around cljs repl loops
+
+### Fixes
+* CLJS-2491: Inference warnings are not reported
+* CLJS-2653: REPL crash when mapping stacktrace in Chrome for js/blah
+* CLJS-2639: Compiler crash when using aot cache with parallel compile
+* CLJS-2520: Synthesize ClojureScript version if using non-built ClojureScript dep
+* CLJS-2522: Handle sources that are maps in build-modules
+* CLJS-2521: Only expand module graph when modules are actually used
+* CLJS-2519: Module loader doesn't load :cljs-base properly
+* CLJS-2493: Self host: respect :source-map-timestamp compiler option
+* CLJS-2500: Call process-js-modules after compiler restart
+* CLJS-2516 Build API fails targeting Node (QuickStart)
+* CLJS-2462: subvec on non-integral indexes fails
+* CLJS-2474: with-meta on lazy-seq causes separate realization
+* CLJS-2501: Fix crash in cljs.util/compiled-by-version and build-options
+* CLJS-2476: recur across try should fail compilation
+* CLJS-2495: Closure compilation errors should stop Cljs compilation
+* CLJS-2496 PHM seq and iter should return MapEntry on nil key case
+* CLJS-2473: Infer character literals to have string type
+* CLJS-2455: nth fails on eduction
+* CLJS-2001: Add map-entry? predicate
+* CLJS-2131: Calling empty on a ChunkedSeq should return empty list
+* CLJS-1743: Transient maps should support IFn
+* CLJS-2452: reverse empty vector returns nil
+* CLJS-2450: Allow configuring ignored JS module extensions
+* CLJS-2417: Inter-ns s/fdef expansion side effect fails when load cached source
+* CLJS-2447: Ignore css JS modules
+* CLJS-2397: Multi-arity function instrumentation fails with :static-fns true
+  CLJS-2197: Calling instrumented var fails to check conformance
+* CLJS-2443: doseq should return nil with no collections
+* CLJS-2430: Fix foreign-libs with Node target
+* CLJS-2414: Self-host: Macro specs are instrumented
+* CLJS-2387: CLJS Analyzer does not correctly detect cache hits for analyzed spec files
+* CLJS-2405: Register dumped specs fails
+* CLJS-2416: Self-host: defn macro Var doesn't have :macro true meta
+* CLJS-2425: Remove unnecessary zero? checks from nat-int?
+* CLJS-2377: The CLJS compiled uses deprecated modules on Java 9
+* Allow clj->js to preserve namespaces
+* CLJS-2391: Unable to :stub a function using stest/instrument
+* CLJS-2378: keep the :npm-deps-installed? to avoid to reinstall NPM deps
+
 ## 1.9.946
 
 ### Changes
