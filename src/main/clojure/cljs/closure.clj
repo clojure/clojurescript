@@ -658,6 +658,12 @@
   (-compile [this opts] (compile-form-seq this))
   (-find-sources [this opts]
     [(ana/parse-ns this opts)])
+
+  clojure.lang.IPersistentSet
+  (-compile [this opts]
+    (doall (map (comp #(-compile % opts) util/ns->source) this)))
+  (-find-sources [this opts]
+    (into [] (mapcat #(-find-sources % opts)) this))
   )
 
 (comment
@@ -2777,7 +2783,9 @@
                  ;; reset :js-module-index so that ana/parse-ns called by -find-sources
                  ;; can find the missing JS modules
                  js-sources (env/with-compiler-env (dissoc @compiler-env :js-module-index)
-                              (-> (-find-sources source opts)
+                              (-> (if source
+                                    (-find-sources source opts)
+                                    (-find-sources (reduce into #{} (map (comp :entries val) (:modules opts))) opts))
                                   (add-dependency-sources compile-opts)))
                  opts       (handle-js-modules opts js-sources compiler-env)
                  js-sources (-> js-sources
