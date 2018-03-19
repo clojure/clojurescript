@@ -75,7 +75,7 @@
                  "-re" *repl-env*
                  (when *repl-opts* "-ro") (when *repl-opts* *repl-opts*)]
             command-line-args))))
-    {:exit 0 :out "" :err ""}))
+    {:exit 0 :out "" :err "" :repl-env-filtered true}))
 
 (def ^:private expected-browser-err
   "Compiling client js ...\nServing HTTP on localhost port 9000\nListening for browser REPL connect ...\n")
@@ -89,5 +89,6 @@
 (defn output-is [result & expected-lines]
   (is (zero? (:exit result)))
   (maybe-print-result-err result)
-  (is (= (apply str (map print-str (interleave expected-lines (repeat "\n"))))
-        (:out result))))
+  (when-not (:repl-env-filtered result)
+    (is (= (apply str (map print-str (interleave expected-lines (repeat "\n"))))
+          (:out result)))))
