@@ -21,11 +21,15 @@
            [java.io File Reader BufferedReader BufferedWriter
            InputStreamReader IOException]
            [java.lang ProcessBuilder Process]
-           [java.util.concurrent ConcurrentHashMap]))
+           [java.util.concurrent ConcurrentHashMap LinkedBlockingQueue]))
 
 (def lock (Object.))
+(def results (ConcurrentHashMap.))
 (def outs (ConcurrentHashMap.))
 (def errs (ConcurrentHashMap.))
+
+(defn thread-name []
+  (.getName (Thread/currentThread)))
 
 (defn create-socket [^String host port]
   (let [socket (Socket. host (int port))
@@ -56,14 +60,10 @@
 (defn node-eval
   "Evaluate a JavaScript string in the Node REPL process."
   [repl-env js]
-  (let [{:keys [in out]} @(:socket repl-env)]
-    ;; escape backslash for Node.js under Windows
-    (write out
-      (json/write-str
-        {"repl" (.getName (Thread/currentThread))
-         "form" js}))
-    (let [result (json/read-str
-                   (read-response in) :key-fn keyword)]
+  (let [tname (thread-name)
+        {:keys [out]} @(:socket repl-env)]
+    (write out (json/write-str {:type "eval" :repl tname :form js}))
+    (let [result (.take ^LinkedBlockingQueue (.get results tname))]
       (condp = (:status result)
         "success"
         {:status :success
@@ -88,23 +88,26 @@
 (defn- alive? [proc]
   (try (.exitValue proc) false (catch IllegalThreadStateException _ true)))
 
-(defn- pipe [^Process proc in stream ios]
+(defn- event-loop [^Process proc in]
   ;; we really do want system-default encoding here
-  (with-open [^Reader in (-> in InputStreamReader. BufferedReader.)]
-    (while (alive? proc)
-      (try
-        (let [res (read-response in)]
-          (try
-            (let [{:keys [repl content]} (json/read-str res :key-fn keyword)
-                  stream (or (.get ios repl) stream)]
-              (.write stream content 0 (.length ^String content))
-              (.flush stream))
-            (catch Throwable _
-              (.write stream res 0 (.length res))
-              (.flush stream))))
-        (catch IOException e
-          (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
-            (.printStackTrace e *err*)))))))
+  (while (alive? proc)
+    (try
+      (let [res (read-response in)]
+        (try
+          (let [{:keys [type repl value] :or {repl "main"} :as event}
+                (json/read-str res :key-fn keyword)]
+            (case type
+              "result"
+              (.offer (.get results repl) event)
+              (when-let [stream (.get (if (= type "out") outs errs) repl)]
+                (.write stream value 0 (.length ^String value))
+                (.flush stream))))
+          (catch Throwable _
+            (.write *out* res 0 (.length res))
+            (.flush *out*))))
+      (catch IOException e
+        (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
+          (.printStackTrace e *err*))))))
 
 (defn- build-process
   [opts repl-env input-src]
@@ -122,13 +125,12 @@
   ([repl-env] (setup repl-env nil))
   ([{:keys [host port socket state] :as repl-env} opts]
    (let [tname (.getName (Thread/currentThread))]
+     (.put results tname (LinkedBlockingQueue.))
      (.put outs tname *out*)
      (.put errs tname *err*))
    (locking lock
      (when-not @socket
-       (let [out          *out*
-             err          *err*
-             output-dir   (io/file (util/output-directory opts))
+       (let [output-dir   (io/file (util/output-directory opts))
              _            (.mkdirs output-dir)
              of           (io/file output-dir "node_repl.js")
              _            (spit of
@@ -136,8 +138,6 @@
                               "var PORT = 5001;"
                               (str "var PORT = " (:port repl-env) ";")))
              proc         (.start (build-process opts repl-env of))
-             _            (do (.start (Thread. (bound-fn [] (pipe proc (.getInputStream proc) out outs))))
-                              (.start (Thread. (bound-fn [] (pipe proc (.getErrorStream proc) err errs)))))
              env          (ana/empty-env)
              core         (io/resource "cljs/core.cljs")
              ;; represent paths as vectors so we can emit JS arrays, this is to
@@ -157,6 +157,7 @@
              (if @socket
                (recur (read-response (:in @socket)))
                (recur nil))))
+         (.start (Thread. (bound-fn [] (event-loop proc (:in @socket)))))
          ;; compile cljs.core & its dependencies, goog/base.js must be available
          ;; for bootstrap to load, use new closure/compile as it can handle
          ;; resources in JARs
@@ -235,7 +236,8 @@
     (load-javascript this provides url))
   (-tear-down [this]
     (swap! state update :listeners dec)
-    (let [tname (Thread/currentThread)]
+    (let [tname (thread-name)]
+      (.remove results tname)
       (.remove outs tname)
       (.remove errs tname))
     (locking lock
