@@ -429,8 +429,14 @@ present"
 
 (defn default-compile
   [repl-env {:keys [ns args options] :as cfg}]
-  (let [env-opts (repl/repl-options (repl-env))
-        main-ns  (when ns (symbol ns))
+  (let [rfs      #{"-r" "--repl"}
+        sfs      #{"-s" "--serve"}
+        env-opts (repl/repl-options (repl-env))
+        repl?    (boolean (or (rfs ns) (rfs (first args))))
+        serve?   (boolean (or (sfs ns) (sfs (first args))))
+        main-ns  (if (and ns (not ((into rfs sfs) ns)))
+                   (symbol ns)
+                   (:main options))
         coptsf   (when-let [od (:output-dir options)]
                    (io/file od "cljsc_opts.edn"))
         opts     (as->
@@ -438,9 +444,7 @@ present"
                      (when (and coptsf (.exists coptsf))
                        (edn/read-string (slurp coptsf)))
                      (select-keys env-opts
-                       (cond-> [:target]
-                         (not (:target options))
-                         (conj :browser-repl)))
+                       (cond-> [:target] repl? (conj :browser-repl)))
                      options
                      (when main-ns
                        {:main main-ns})) opts
@@ -458,8 +462,6 @@ present"
         cfg      (update cfg :options merge (select-keys opts convey))
         source   (when (and (= :none (:optimizations opts :none)) main-ns)
                    (:uri (build/ns->location main-ns)))
-        repl?    (boolean (#{"-r" "--repl"} (first args)))
-        serve?   (boolean (#{"-s" "--serve"} (first args)))
         cenv     (env/default-compiler-env)]
     (env/with-compiler-env cenv
       (if-let [path (:watch opts)]
@@ -562,9 +564,12 @@ present"
                                 :arg "ns"
                                 :doc "Call the -main function from a namespace with args"}
       ["-c" "--compile"]       {:fn compile-opt
-                                :arg "ns"
-                                :doc (str "Compile a namespace. If --repl present after "
-                                       "namespace will launch a REPL after the compile completes")}
+                                :arg "[ns]"
+                                :doc (str "Run a compile. If optional namespace specified, use as "
+                                          "the main entry point. If --repl follows, "
+                                          "will launch a REPL after the compile completes. "
+                                          "If --server follows, will start a web server that serves "
+                                          "the current directory after the compile completes.")}
       ["-s" "--serve"]         {:fn serve-opt
                                 :arg "host:port"
                                 :doc (str "Start a simple web server to serve the current directory")}
