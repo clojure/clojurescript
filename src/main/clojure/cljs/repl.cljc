@@ -196,16 +196,11 @@
     (assoc :url (io/resource (:file ijs)))))
 
 (defn ns->input [ns opts]
-  (if-let [input (some-> (util/ns->source ns) (ana/parse-ns opts))]
-    input
-    (if-let [input (some->
-                     (get-in @env/*compiler*
-                       [:js-dependency-index (str ns)])
-                     add-url)]
-      input
+  (or (some-> (util/ns->source ns) (ana/parse-ns opts))
+      (some-> (get-in @env/*compiler* [:js-dependency-index (str ns)]) add-url)
       (throw
         (ex-info (str ns " does not exist")
-          {::error :invalid-ns})))))
+          {::error :invalid-ns}))))
 
 (defn compilable? [input]
   (contains? input :source-file))
@@ -216,14 +211,16 @@
   only once."
   ([repl-env ns] (load-namespace repl-env ns nil))
   ([repl-env ns opts]
-   (let [ns (if (and (seq? ns) (= (first ns) 'quote)) (second ns) ns)
-         input (ns->input ns opts)
-         sources (if (compilable? input)
-                   (->> (cljsc/compile-inputs [input]
-                          (merge (env->opts repl-env) opts))
-                     (remove (comp #{["goog"]} :provides)))
-                   (map #(cljsc/source-on-disk opts %)
-                     (cljsc/add-js-sources [input] opts)))]
+   (let [ns      (if (and (seq? ns) (= (first ns) 'quote)) (second ns) ns)
+         sources (seq
+                   (when-not (ana/node-module-dep? ns)
+                     (let [input (ns->input ns opts)]
+                       (if (compilable? input)
+                         (->> (cljsc/compile-inputs [input]
+                                (merge (env->opts repl-env) opts))
+                           (remove (comp #{["goog"]} :provides)))
+                         (map #(cljsc/source-on-disk opts %)
+                           (cljsc/add-js-sources [input] opts))))))]
      (when (:repl-verbose opts)
        (println (str "load-namespace " ns " , compiled:") (map :provides sources)))
      (if (:output-dir opts)
