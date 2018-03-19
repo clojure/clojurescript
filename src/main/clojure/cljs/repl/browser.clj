@@ -208,6 +208,9 @@
 
 (defmethod handle-post :ready [_ conn _]
   (send-via es ordering (fn [_] {:expecting nil :fns {}}))
+  ;; browser refresh, reset connq
+  (locking server/lock
+    (.clear server/connq))
   (send-for-eval conn
     (binding [ana/*cljs-warnings*
               (assoc ana/*cljs-warnings*
