@@ -211,7 +211,6 @@ classpath. Classpath-relative paths have prefix of @ or @/")
         edn   (if (string/starts-with? ropts "{")
                 (edn/read-string ropts)
                 (load-edn-opts ropts))]
-    (println edn)
     (update cfg :repl-env-options merge edn)))
 
 (defn- compile-opts-opt
@@ -220,7 +219,6 @@ classpath. Classpath-relative paths have prefix of @ or @/")
         edn   (if (string/starts-with? copts "{")
                 (edn/read-string copts)
                 (load-edn-opts copts))]
-    (println edn)
     (update cfg :options merge edn)))
 
 (defn- init-opt
