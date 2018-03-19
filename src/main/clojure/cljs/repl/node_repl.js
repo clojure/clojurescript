@@ -13,6 +13,7 @@ var net  = require("net");
 var vm   = require("vm");
 var dom  = require("domain").create();
 var PORT = 5001;
+var repl = null;
 
 try {
     require("source-map-support").install();
@@ -22,13 +23,29 @@ try {
 var server = net.createServer(function (socket) {
     var buffer = "",
         ret    = null,
-        repl   = null,
         err    = null;
 
     socket.write("ready");
     socket.write("\0");
 
     socket.setEncoding("utf8");
+
+    process.stdout.write = function(chunk, encoding, fd) {
+        var args = Array.prototype.slice.call(arguments, 0);
+        args[0] = JSON.stringify({type: "out", repl: repl, value: chunk});
+        socket.write.apply(socket, args);
+        socket.write("\0");
+    };
+
+    process.stderr.write = (function(write) {
+        return function(chunk, encoding, fd) {
+            var args = Array.prototype.slice.call(arguments, 0);
+            args[0] = JSON.stringify({type: "err", repl: repl, value: chunk});
+            socket.write.apply(socket, args);
+            socket.write("\0");
+        };
+    })(process.stderr.write);
+
 
     dom.on("error", function(ue) {
         console.error(ue.stack);
@@ -66,16 +83,22 @@ var server = net.createServer(function (socket) {
 
             if(err) {
                 socket.write(JSON.stringify({
+                    type: "result",
+                    repl: repl,
                     status: "exception",
                     value: err.stack
                 }));
             } else if(ret !== undefined && ret !== null) {
                 socket.write(JSON.stringify({
+                    type: "result",
+                    repl: repl,
                     status: "success",
                     value: ret.toString()
                 }));
             } else {
                 socket.write(JSON.stringify({
+                    type: "result",
+                    repl: repl,
                     status: "success",
                     value: null
                 }));
