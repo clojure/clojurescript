@@ -43,17 +43,15 @@
   (.write out (int 0)) ;; terminator
   (.flush out))
 
-(defn read-response [^BufferedReader in]
+(defn ^String read-response [^BufferedReader in]
   (let [sb (StringBuilder.)]
     (loop [sb sb c (.read in)]
-      (cond
-       (= c 1) (let [ret (str sb)]
-                 (print ret)
-                 (recur (StringBuilder.) (.read in)))
-       (= c 0) (str sb)
-       :else (do
-               (.append sb (char c))
-               (recur sb (.read in)))))))
+      (case c
+        -1 (throw (IOException. "Stream closed"))
+         0 (str sb)
+         (do
+           (.append sb (char c))
+           (recur sb (.read in)))))))
 
 (defn node-eval
   "Evaluate a JavaScript string in the Node REPL process."
@@ -93,23 +91,20 @@
 (defn- pipe [^Process proc in stream ios]
   ;; we really do want system-default encoding here
   (with-open [^Reader in (-> in InputStreamReader. BufferedReader.)]
-    (loop [buf (char-array (* 64 1024))]
-      (when (alive? proc)
-        (try
-          (let [len (.read in buf)]
-            (when-not (neg? len)
-              (try
-                (let [{:strs [repl data]} (json/read-str (String. buf))
-                      stream (or (.get ios repl) stream)]
-                  (.write stream data 0 (.length ^String data))
-                  (.flush stream))
-                (catch Throwable _
-                  (.write stream buf 0 len)
-                  (.flush stream)))))
-          (catch IOException e
-            (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
-              (.printStackTrace e *err*))))
-        (recur buf)))))
+    (while (alive? proc)
+      (try
+        (let [res (read-response in)]
+          (try
+            (let [{:keys [repl content]} (json/read-str res :key-fn keyword)
+                  stream (or (.get ios repl) stream)]
+              (.write stream content 0 (.length ^String content))
+              (.flush stream))
+            (catch Throwable _
+              (.write stream res 0 (.length res))
+              (.flush stream))))
+        (catch IOException e
+          (when (and (alive? proc) (not (.contains (.getMessage e) "Stream closed")))
+            (.printStackTrace e *err*)))))))
 
 (defn- build-process
   [opts repl-env input-src]

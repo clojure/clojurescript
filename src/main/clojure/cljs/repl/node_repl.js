@@ -18,16 +18,18 @@ var repl = null;
 process.stdout.write = (function(write) {
     return function(chunk, encoding, fd) {
         var args = Array.prototype.slice.call(arguments, 0);
-        args[0] = JSON.stringify({repl: repl, data: chunk});
+        args[0] = JSON.stringify({repl: repl, content: chunk});
         write.apply(process.stdout, args);
+        write.call(process.stdout, "\0");
     };
 })(process.stdout.write);
 
 process.stderr.write = (function(write) {
     return function(chunk, encoding, fd) {
         var args = Array.prototype.slice.call(arguments, 0);
-        args[0] = JSON.stringify({repl: repl, data: chunk});
+        args[0] = JSON.stringify({repl: repl, content: chunk});
         write.apply(process.stderr, args);
+        write.call(process.stderr, "\0");
     };
 })(process.stderr.write);
 
@@ -82,16 +84,19 @@ var server = net.createServer(function (socket) {
 
             if(err) {
                 socket.write(JSON.stringify({
+                    repl: repl,
                     status: "exception",
                     value: err.stack
                 }));
             } else if(ret !== undefined && ret !== null) {
                 socket.write(JSON.stringify({
+                    repl: repl,
                     status: "success",
                     value: ret.toString()
                 }));
             } else {
                 socket.write(JSON.stringify({
+                    repl: repl,
                     status: "success",
                     value: null
                 }));
