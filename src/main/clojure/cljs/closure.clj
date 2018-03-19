@@ -2671,12 +2671,13 @@
    libs, and foreign libs. Duplicates the pipeline of build."
   [inputs opts]
   (env/ensure
-    (let [sources (-> inputs (add-dependency-sources opts))
+    (let [sources (-> inputs
+                    (#(map add-core-macros-if-cljs-js %))
+                    (add-dependency-sources opts))
           opts    (handle-js-modules opts sources env/*compiler*)
           sources (-> sources
                     deps/dependency-order
                     (compile-sources false opts)
-                    (#(map add-core-macros-if-cljs-js %))
                     (add-js-sources opts) deps/dependency-order
                     (->> (map #(source-on-disk opts %)) doall))]
       sources)))

@@ -87,3 +87,12 @@
                                 "--compile" "foo.core")]
           (is (zero? (:exit result)))
           (is (str/blank? (:err result))))))))
+
+(deftest test-cljs-2673
+  (with-repl-env-filter #{"node"}
+    (-> (cljs-main
+          "-e" "(require 'cljs.js)"
+          "-e" "(cljs.js/eval-str (cljs.js/empty-state) \"(+ 1 2)\" nil {:eval cljs.js/js-eval :context :expr} prn)")
+      (output-is
+        nil
+        "{:ns cljs.user, :value 3}"))))
