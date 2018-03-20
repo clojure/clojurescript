@@ -2695,7 +2695,10 @@
   (compile-inputs (find-sources ns opts) opts))
 
 (defn build
-  "Given a source which can be compiled, produce runnable JavaScript."
+  "Given compiler options, produce runnable JavaScript. An optional source
+   parameter may be provided."
+  ([opts]
+   (build nil opts))
   ([source opts]
     (build source opts
       (if-not (nil? env/*compiler*)
