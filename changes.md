@@ -8,9 +8,13 @@
   defaults to true when using :modules.
 * Add :webworker & :nashorn target
 * pREPL implementation (usage requires Clojure 1.10.0-alpha)
+* Add :package-json-resolution build option, allowing to choose which
+  package.json entries are being used; defaults to :webpack (if no :target
+  is set) or :nodejs (if the :target is :nodejs); also supports a custom
+  vector of entries (e.g. ["browser", "main"]).
 
 ### Changes
-* * CLJS-2592: :npm-deps using ES6 modules with .mjs extensions are not detected correctly
+* CLJS-2592: :npm-deps using ES6 modules with .mjs extensions are not detected correctly
 * AOTed ClojureScript artifact is now the default, for sources only use the
   "slim" Maven classifier
 * Bump Closure Compiler
