@@ -1423,7 +1423,7 @@
                                               (get-in @env/*compiler* [:options :emit-constants])
                                               (conj ana/constants-ns-sym)))
                               :file        dest
-                              :out-file    (.toString dest)
+                              :out-file    (.toString ^File dest)
                               :source-file src}
                              (when sm-data
                                {:source-map (:source-map sm-data)}))]
