@@ -551,10 +551,14 @@ present"
                                      "webworker, none") }
       ["-ro" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
                                 :arg "edn"
-                                :doc (str "Options to configure the repl-env")}
+                                :doc (str "Options to configure the repl-env, can be an EDN string or "
+                                          "colon separated list of EDN files / classpath resources. Options "
+                                          "options will be merged left to right.")}
       ["-co" "--compile-opts"] {:group ::main&compile :fn compile-opts-opt
                                 :arg "edn"
-                                :doc (str "Options to configure the build")}}
+                                :doc (str "Options to configure the build, can be an EDN string or "
+                                          "colon separated list of EDN files / classpath resources. Options "
+                                          "will be merged left to right.")}}
      :main
      {["-r" "--repl"]          {:fn repl-opt
                                 :doc "Run a repl"}
