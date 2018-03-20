@@ -1423,7 +1423,7 @@
                                               (get-in @env/*compiler* [:options :emit-constants])
                                               (conj ana/constants-ns-sym)))
                               :file        dest
-                              :out-file    dest
+                              :out-file    (.toString dest)
                               :source-file src}
                              (when sm-data
                                {:source-map (:source-map sm-data)}))]
@@ -1557,7 +1557,7 @@
                               (and (true? (:optimize-constants opts))
                                    (nil? (get-in nses [ns :defs]))))
                       (with-core-cljs opts (fn [] (ana/analyze-file src-file opts))))
-                    (assoc ns-info :out-file dest-file))))
+                    (assoc ns-info :out-file (.toString dest-file)))))
               (catch Exception e
                 (throw (ex-info (str "failed compiling file:" src) {:file src} e))))
             (throw (java.io.FileNotFoundException. (str "The file " src " does not exist.")))))))))

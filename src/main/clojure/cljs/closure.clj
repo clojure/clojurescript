@@ -541,7 +541,7 @@
   IJavaScript."
   [^File file {:keys [output-file] :as opts}]
     (if output-file
-      (let [out-file (io/file (util/output-directory opts) output-file)]
+      (let [out-file (.toString (io/file (util/output-directory opts) output-file))]
         (compiled-file (comp/compile-file file out-file opts)))
       (let [path (.getPath ^File file)]
         (binding [ana/*cljs-file* path]

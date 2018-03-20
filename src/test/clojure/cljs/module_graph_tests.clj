@@ -115,7 +115,10 @@
     (is (every?
           (fn [[e m]]
             (= m (get assigns e)))
-          assigns'))))
+          assigns'))
+    ;; events should not have been moved to :cljs-base as an orphan even though
+    ;; it provides multiple nses
+    (is (= (get assigns "events") :shared))))
 
 (def bad-modules
   {:page1 {:entries '[page1.a page1.b events]
@@ -139,10 +142,10 @@
            {:output-dir (:output-dir opts)
             :asset-path "/asset/js"
             :optimizations :none})
-        {:shared ["/asset/js/shared/a.js" "/asset/js/shared/b.js"]
-         :page1 ["/asset/js/cljs/reader.js" "/asset/js/page1/a.js" "/asset/js/page1/b.js"]
-         :page2 ["/asset/js/page2/a.js" "/asset/js/page2/b.js"]
-         :cljs-base ["/asset/js/goog/base.js" "/asset/js/cljs/core.js" "/asset/js/events.js"]}))
+        {:shared ["/asset/js/events.js" "/asset/js/shared/a.js" "/asset/js/shared/b.js"],
+         :page1 ["/asset/js/cljs/reader.js" "/asset/js/page1/a.js" "/asset/js/page1/b.js"],
+         :page2 ["/asset/js/page2/a.js" "/asset/js/page2/b.js"],
+         :cljs-base ["/asset/js/goog/base.js" "/asset/js/cljs/core.js"]}))
   (is (= (module-graph/modules->module-uris (modules opts) (inputs opts)
            {:output-dir (:output-dir opts)
             :asset-path "/asset/js"

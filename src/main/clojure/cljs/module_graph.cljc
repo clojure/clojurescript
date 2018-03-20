@@ -231,7 +231,10 @@
                    (into {} (map assign1) e->ms))
         orphans  (zipmap
                    (map (comp str comp/munge first :provides)
-                     (-> (reduce-kv (fn [m k _] (dissoc m k)) index assigned)
+                     (-> (reduce-kv
+                           (fn [m k _]
+                             (reduce dissoc m (get-in m [k :provides])))
+                           index assigned)
                        vals set))
                    (repeat :cljs-base))]
     (merge assigned orphans)))
