@@ -229,12 +229,11 @@
         e&d->ms  (merge-with into e->ms d->ms)
         orphans  {:cljs-base
                   {:entries
-                   (map (comp str comp/munge first :provides)
-                     (-> (reduce-kv
-                           (fn [m k _]
-                             (reduce dissoc m (get-in m [k :provides])))
-                           index e&d->ms)
-                       vals set))}}
+                   (->> (reduce-kv
+                          (fn [m k _]
+                            (reduce dissoc m (get-in m [k :provides])))
+                          index e&d->ms)
+                     vals (map (comp str comp/munge first :provides)) set)}}
         o->ms    (assigns identity orphans)
         od->ms   (assigns #(distinct (mapcat deps %)) orphans)
         all->ms  (merge-with into e&d->ms o->ms od->ms)]
