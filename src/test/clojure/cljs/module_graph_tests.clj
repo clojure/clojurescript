@@ -142,10 +142,10 @@
            {:output-dir (:output-dir opts)
             :asset-path "/asset/js"
             :optimizations :none})
-        {:shared ["/asset/js/events.js" "/asset/js/shared/a.js" "/asset/js/shared/b.js"],
+        {:shared ["/asset/js/cljs/core.js" "/asset/js/events.js" "/asset/js/shared/a.js" "/asset/js/shared/b.js"],
          :page1 ["/asset/js/cljs/reader.js" "/asset/js/page1/a.js" "/asset/js/page1/b.js"],
          :page2 ["/asset/js/page2/a.js" "/asset/js/page2/b.js"],
-         :cljs-base ["/asset/js/goog/base.js" "/asset/js/cljs/core.js"]}))
+         :cljs-base ["/asset/js/goog/base.js"]}))
   (is (= (module-graph/modules->module-uris (modules opts) (inputs opts)
            {:output-dir (:output-dir opts)
             :asset-path "/asset/js"

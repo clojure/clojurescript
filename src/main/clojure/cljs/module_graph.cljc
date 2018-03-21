@@ -163,8 +163,9 @@
   "Given a set of modules and a compiler :modules graph, compute the deepest
   common parent module."
   [modules all-modules]
-  (let [common-parents (reduce set/intersection
-                         (map #(set (deps-for-module % all-modules)) modules))]
+  (let [common-parents
+        (reduce set/intersection
+          (map #(conj (set (deps-for-module % all-modules)) %) modules))]
     (apply max-key
       (fn [p] (get-in all-modules [p :depth]))
       common-parents)))
@@ -213,31 +214,31 @@
                       (first maybe-assigned)
                       (deepest-common-parent maybe-assigned modules))])
         canon    (fn [xs] (into #{} (map #(canonical-name % index)) xs))
-        assigns  (fn [f]
-                   (reduce-kv
-                     (fn [ret module-name {:keys [entries] :as module}]
-                       (let [entries' (canon entries)]
-                         (reduce
-                           (fn [ret entry]
-                             (update ret entry (fnil conj #{}) module-name))
-                           ret (canon (f entries')))))
-                     {} modules))
-        e->ms    (binding [deps-for (memoize deps-for)]
-                   (assigns identity))
-        d->ms    (binding [deps-for (memoize deps-for)]
-                   (assigns #(distinct (mapcat deps %))))
-        assigned (merge
-                   (into {} (map assign1) d->ms)
-                   (into {} (map assign1) e->ms))
-        orphans  (zipmap
+        assigns  (fn [f ms]
+                   (binding [deps-for (memoize deps-for)]
+                     (reduce-kv
+                      (fn [ret module-name {:keys [entries] :as module}]
+                        (let [entries' (canon entries)]
+                          (reduce
+                            (fn [ret entry]
+                              (update ret entry (fnil conj #{}) module-name))
+                            ret (canon (f entries')))))
+                      {} ms)))
+        e->ms    (assigns identity modules)
+        d->ms    (assigns #(distinct (mapcat deps %)) modules)
+        e&d->ms  (merge-with into e->ms d->ms)
+        orphans  {:cljs-base
+                  {:entries
                    (map (comp str comp/munge first :provides)
                      (-> (reduce-kv
                            (fn [m k _]
                              (reduce dissoc m (get-in m [k :provides])))
-                           index assigned)
-                       vals set))
-                   (repeat :cljs-base))]
-    (merge assigned orphans)))
+                           index e&d->ms)
+                       vals set))}}
+        o->ms    (assigns identity orphans)
+        od->ms   (assigns #(distinct (mapcat deps %)) orphans)
+        all->ms  (merge-with into e&d->ms o->ms od->ms)]
+    (into {} (map assign1) all->ms)))
 
 (defn expand-modules
   "Given compiler :modules and a dependency sorted list of compiler inputs return
