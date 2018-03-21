@@ -542,6 +542,22 @@
   (-compile [this opts] "Returns one or more IJavaScripts.")
   (-find-sources [this opts] "Returns one or more IJavascripts, without compiling them."))
 
+(defn compilable-input-paths
+  "Takes a coll of inputs as strings or files and returns a
+  single Inputs and Compilable object."
+  [paths]
+  (reify
+    cljs.closure/Inputs
+    (-paths [_]
+      (mapcat cljs.closure/-paths paths))
+    cljs.closure/Compilable
+    (-compile [_ opts]
+      (mapcat #(cljs.closure/-compile % opts)
+              paths))
+    (-find-sources [_ opts]
+      (mapcat #(cljs.closure/-find-sources % opts)
+              paths))))
+
 (defn compile-form-seq
   "Compile a sequence of forms to a JavaScript source string."
   ([forms]

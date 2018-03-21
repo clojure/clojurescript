@@ -145,20 +145,36 @@ classpath. Classpath-relative paths have prefix of @ or @/")
   [cfg value]
   (assoc-in cfg [:options :verbose] (= value "true")))
 
+(defn- validate-watch-paths [[path :as paths]]
+  (when (or (nil? path)
+            (and (not (.exists (io/file path)))
+                 (or (string/blank? path)
+                     (string/starts-with? path "-"))))
+    (throw
+      (ex-info
+        (str "Missing watch path(s)")
+        {:cljs.main/error :invalid-arg})))
+  (when-let [non-existent (seq (remove #(.exists (io/file %)) paths))]
+    (throw
+      (ex-info
+        (if (== 1 (count non-existent))
+          (str "Watch path "
+               (first non-existent)
+               " does not exist")
+          (str "Watch paths "
+               (string/join ", " (butlast non-existent))
+               " and "
+               (last non-existent)
+               " does not exist"))
+        {:cljs.main/error :invalid-arg}))))
+
 (defn- watch-opt
-  [cfg path]
-  (when-not (.exists (io/file path))
-    (if (or (string/starts-with? path "-")
-            (string/blank? path))
-      (throw
-        (ex-info
-          (str "Missing watch path")
-          {:cljs.main/error :invalid-arg}))
-      (throw
-        (ex-info
-          (str "Watch path " path " does not exist")
-          {:cljs.main/error :invalid-arg}))))
-  (assoc-in cfg [:options :watch] path))
+  [cfg paths]
+  (let [paths (util/split-paths paths)]
+    (validate-watch-paths paths)
+    (assoc-in cfg [:options :watch] (cond-> paths
+                                            (== 1 (count paths))
+                                            first))))
 
 (defn- optimize-opt
   [cfg level]
@@ -454,7 +470,9 @@ present"
                      (not (:output-dir opts))
                      (assoc :output-dir "out")
                      (not (contains? opts :aot-cache))
-                     (assoc :aot-cache true)))
+                     (assoc :aot-cache true)
+                     (sequential? (:watch opts))
+                     (update :watch cljs.closure/compilable-input-paths)))
         convey   (into [:output-dir] repl/known-repl-opts)
         cfg      (update cfg :options merge (select-keys opts convey))
         source   (when (and (= :none (:optimizations opts :none)) main-ns)
@@ -533,8 +551,10 @@ present"
                                        "will be used to set ClojureScript compiler "
                                        "options") }
       ["-w" "--watch"]         {:group ::compile :fn watch-opt
-                                :arg "path"
-                                :doc "Continuously build, only effective with the --compile main option"}
+                                :arg "paths"
+                                :doc (str "Continuously build, only effective with the "
+                                          "--compile main option. Specifies a system-dependent "
+                                          "path-separated list of directories to watch.")}
       ["-o" "--output-to"]     {:group ::compile :fn output-to-opt
                                 :arg "file"
                                 :doc "Set the output compiled file"}
