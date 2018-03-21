@@ -54,6 +54,35 @@
 (defn random-string [length]
   (apply str (take length (repeatedly random-char))))
 
+(defn- sym->var
+  "Converts a namespaced symbol to a var, loading the requisite namespace if
+  needed. For use with a function defined under a keyword in opts. The kw and
+  ex-data arguments are used to form exceptions."
+  [sym kw ex-data]
+  (let [ns     (namespace sym)
+        _      (when (nil? ns)
+                 (throw
+                   (ex-info (str kw " symbol " sym " is not fully qualified")
+                     (merge ex-data {kw sym}))))
+        var-ns (symbol ns)]
+    (when (not (find-ns var-ns))
+      (try
+        (locking ana/load-mutex
+          (require var-ns))
+        (catch Throwable t
+          (throw (ex-info (str "Cannot require namespace referred by " kw " value " sym)
+                   (merge ex-data {kw sym})
+                   t)))))
+
+    (find-var sym)))
+
+(defn- opts-fn
+  "Extracts a function from opts, by default expecting a function value, but
+  converting from a namespaced symbol if needed."
+  [kw opts]
+  (when-let [fn-or-sym (kw opts)]
+    (cond-> fn-or-sym (symbol? fn-or-sym) (sym->var kw {}))))
+
 ;; Closure API
 ;; ===========
 
@@ -2469,30 +2498,14 @@
     (js-transforms js-module opts)
 
     (symbol? preprocess)
-    (let [ns (namespace preprocess)
-          _ (when (nil? ns)
-              (throw
-                (ex-info (str "Preprocess symbol " preprocess " is not fully qualified")
-                  {:file (:file js-module)
-                   :preprocess preprocess})))
-          preprocess-ns (symbol ns)]
-      (when (not (find-ns preprocess-ns))
-        (try
-          (locking ana/load-mutex
-            (require preprocess-ns))
-          (catch Throwable t
-            (throw (ex-info (str "Cannot require namespace referred by :preprocess value " preprocess)
-                            {:file (:file js-module)
-                             :preprocess preprocess}
-                            t)))))
-
+    (let [preprocess-var (sym->var preprocess :preprocess {:file (:file js-module)})]
       (try
-        ((find-var preprocess) js-module opts)
+        (preprocess-var js-module opts)
         (catch Throwable t
           (throw (ex-info (str "Error running preprocessing function " preprocess)
-                          {:file (:file js-module)
-                           :preprocess preprocess}
-                          t)))))
+                   {:file       (:file js-module)
+                    :preprocess preprocess}
+                   t)))))
 
     :else
     (do
@@ -2895,8 +2908,13 @@
   "Given a source directory, produce runnable JavaScript. Watch the source
    directory for changes rebuilding when necessary. Takes the same arguments as
    cljs.closure/build in addition to some watch-specific options:
-    - :watch-fn, a function of no arguments to run after a successful build.
-    - :watch-error-fn, a function receiving the exception of a failed build."
+    - :watch-fn, a function of no arguments to run after a successful build. May
+                 be a function value or a namespaced symbol identifying a function,
+                 in which case the associated namespace willl be loaded and the
+                 symbol resolved.
+    - :watch-error-fn, a function receiving the exception of a failed build. May
+                       be a function value or a namespaced symbol, loaded as
+                       with :watch-fn."
   ([source opts]
     (watch source opts
       (if-not (nil? env/*compiler*)
@@ -2919,10 +2937,10 @@
                     (println "... done. Elapsed"
                       (/ (unchecked-subtract (System/nanoTime) start) 1e9) "seconds")
                     (flush))
-                  (when-let [f (:watch-fn opts)]
+                  (when-let [f (opts-fn :watch-fn opts)]
                     (f))
                   (catch Throwable e
-                    (if-let [f (:watch-error-fn opts)]
+                    (if-let [f (opts-fn :watch-error-fn opts)]
                       (f e)
                       (binding [*out* *err*]
                         (println (Throwables/getStackTraceAsString e)))))))

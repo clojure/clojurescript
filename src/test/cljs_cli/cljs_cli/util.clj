@@ -1,9 +1,11 @@
 (ns cljs-cli.util
+  (:refer-clojure :exclude [*in*])
   (:require
    [clojure.string :as string]
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
-   [clojure.test :refer [is]])
+   [clojure.test :refer [is]]
+   [cljs.repl :as repl])
   (:import
    (java.io File)
    (java.nio.file Files CopyOption)
@@ -13,11 +15,18 @@
 (def ^:dynamic *repl-env-filter* (constantly true))
 (def ^:dynamic *repl-opts* nil)
 (def ^:dynamic *sources* nil)
+(def ^:dynamic *in* nil)
 (def ^:dynamic *post-condition* nil)
 
 (defmacro with-sources
   [sources & body]
   `(binding [*sources* ~sources]
+     ~@body))
+
+
+(defmacro with-in
+  [in & body]
+  `(binding [*in* ~in]
      ~@body))
 
 (defmacro with-post-condition
@@ -54,7 +63,7 @@
       (copy-uberjar temp-dir)
       (let [result (shell/with-sh-dir temp-dir
                      #_(apply println "running:" args)
-                     (apply shell/sh args))]
+                     (apply shell/sh (if *in* (concat args [:in *in*]) args)))]
         (when *post-condition*
           (is (*post-condition* temp-dir)))
         result)
@@ -90,5 +99,8 @@
   (is (zero? (:exit result)))
   (maybe-print-result-err result)
   (when-not (:repl-env-filtered result)
-    (is (= (apply str (map print-str (interleave expected-lines (repeat "\n"))))
-          (:out result)))))
+    (is (= (string/trim (apply str (map print-str (interleave expected-lines (repeat "\n")))))
+          (string/trim (:out result))))))
+
+(defn repl-title []
+  (string/trim (with-out-str (repl/repl-title))))
