@@ -553,7 +553,7 @@ present"
                                 :arg "edn"
                                 :doc (str "Options to configure the repl-env, can be an EDN string or "
                                           "colon separated list of EDN files / classpath resources. Options "
-                                          "options will be merged left to right.")}
+                                          "will be merged left to right.")}
       ["-co" "--compile-opts"] {:group ::main&compile :fn compile-opts-opt
                                 :arg "edn"
                                 :doc (str "Options to configure the build, can be an EDN string or "
