@@ -634,6 +634,10 @@
                 (util/mkdirs target)
                 (spit target (slurp f))
                 (.setLastModified target (util/last-modified jar-file))))))))
+    ;; Files that don't require compilation (cljs.loader for example)
+    ;; need to be copied from JAR to disk.
+    (when-not (.exists out-file)
+      (jar-file-to-disk jar-file (util/output-directory opts) opts))
     ;; have to call compile-file as it includes more IJavaScript
     ;; information than ana/parse-ns for now
     (compile-file
@@ -1140,6 +1144,11 @@
       :depends-on #{:core}}})
   )
 
+(defn- const-expr-form
+  "Returns the :const-expr form for `sym` from `compiler-state`."
+  [compiler-state sym]
+  (get-in compiler-state [::ana/namespaces (symbol (namespace sym)) :defs (symbol (name sym)) :const-expr :form]))
+
 (defn compile-loader
   "Special compilation pass for cljs.loader namespace. cljs.loader must be
   compiled last after all inputs. This is because all inputs must be known and
@@ -1153,14 +1162,15 @@
                       first)]
     (let [module-uris  (module-graph/modules->module-uris modules inputs opts)
           module-infos (module-graph/modules->module-infos modules)]
-      (env/with-compiler-env
-        (ana/add-consts @env/*compiler*
-          {'cljs.core/MODULE_URIS  module-uris
-           'cljs.core/MODULE_INFOS module-infos})
-        (-compile (:source-file loader)
-          (merge opts
-            {:cache-key   (util/content-sha (pr-str module-uris))
-             :output-file (comp/rename-to-js (util/ns->relpath (:ns loader)))})))))
+      (swap! env/*compiler* ana/add-consts
+             {'cljs.core/MODULE_INFOS
+              (merge (const-expr-form @env/*compiler* 'cljs.core/MODULE_INFOS) module-infos)
+              'cljs.core/MODULE_URIS
+              (merge (const-expr-form @env/*compiler* 'cljs.core/MODULE_URIS) module-uris)})
+      (-compile (:source-file loader)
+        (merge opts
+          {:cache-key   (util/content-sha (pr-str module-uris))
+           :output-file (comp/rename-to-js (util/ns->relpath (:ns loader)))}))))
   inputs)
 
 (defn build-modules

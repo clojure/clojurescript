@@ -206,10 +206,34 @@
 (defn compilable? [input]
   (contains? input :source-file))
 
+(defn- load-sources
+  "Load the compiled `sources` into the REPL."
+  [repl-env sources opts]
+  (if (:output-dir opts)
+    ;; REPLs that read from :output-dir just need to add deps,
+    ;; environment will handle actual loading - David
+    (let [sb (StringBuffer.)]
+      (doseq [source sources]
+        (with-open [rdr (io/reader (:url source))]
+          (.append sb (cljsc/add-dep-string opts source))))
+      (when (:repl-verbose opts)
+        (println (.toString sb)))
+      (-evaluate repl-env "<cljs repl>" 1 (.toString sb)))
+    ;; REPLs that stream must manually load each dep - David
+    (doseq [{:keys [url provides]} sources]
+      (-load repl-env provides url))))
+
+(defn- load-cljs-loader
+  "Compile and load the cljs.loader namespace if it's present in `sources`."
+  [repl-env sources opts]
+  (when-let [source (first (filter #(= (:ns %) 'cljs.loader) sources))]
+    (cljsc/compile-loader sources opts)
+    (load-sources repl-env [source] opts)))
+
 (defn load-namespace
   "Load a namespace and all of its dependencies into the evaluation environment.
-  The environment is responsible for ensuring that each namespace is loaded once and
-  only once."
+  The environment is responsible for ensuring that each namespace is
+  loaded once and only once. Returns the compiled sources."
   ([repl-env ns] (load-namespace repl-env ns nil))
   ([repl-env ns opts]
    (let [ns      (if (and (seq? ns) (= (first ns) 'quote)) (second ns) ns)
@@ -221,29 +245,18 @@
                                 (merge (env->opts repl-env) opts))
                            (remove (comp #{["goog"]} :provides)))
                          (map #(cljsc/source-on-disk opts %)
-                           (cljsc/add-js-sources [input] opts))))))]
+                              (cljsc/add-js-sources [input] opts))))))]
      (when (:repl-verbose opts)
        (println (str "load-namespace " ns " , compiled:") (map :provides sources)))
-     (if (:output-dir opts)
-       ;; REPLs that read from :output-dir just need to add deps,
-       ;; environment will handle actual loading - David
-       (let [sb (StringBuffer.)]
-         (doseq [source sources]
-           (with-open [rdr (io/reader (:url source))]
-             (.append sb
-               (cljsc/add-dep-string opts source))))
-         (when (:repl-verbose opts)
-           (println (.toString sb)))
-         (-evaluate repl-env "<cljs repl>" 1 (.toString sb)))
-       ;; REPLs that stream must manually load each dep - David
-       (doseq [{:keys [url provides]} sources]
-         (-load repl-env provides url))))))
+     (load-sources repl-env sources opts)
+     sources)))
 
 (defn- load-dependencies
-  ([repl-env requires] (load-dependencies repl-env requires nil))
+  "Compile and load the given `requires` and return the compiled sources."
+  ([repl-env requires]
+   (load-dependencies repl-env requires nil))
   ([repl-env requires opts]
-   (doseq [ns (distinct requires)]
-     (load-namespace repl-env ns opts))))
+   (doall (mapcat #(load-namespace repl-env % opts) (distinct requires)))))
 
 (defn ^File js-src->cljs-src
   "Map a JavaScript output file back to the original ClojureScript source
@@ -544,11 +557,12 @@
                      (ana/no-warn (ana/analyze env form nil opts))
                      (catch #?(:clj Exception :cljs js/Error) e
                          (reset! env/*compiler* backup-comp)
-                       (throw e)))]
-           (load-dependencies repl-env
-             (into (vals (:requires ast))
-               (distinct (vals (:uses ast))))
-             opts)))
+                         (throw e)))
+               sources (load-dependencies repl-env
+                         (into (vals (:requires ast))
+                               (distinct (vals (:uses ast))))
+                         opts)]
+           (load-cljs-loader repl-env sources opts)))
        (when *cljs-verbose*
          (err-out (println wrap-js)))
        (let [ret (-evaluate repl-env filename (:line (meta form)) wrap-js)]
@@ -596,7 +610,8 @@
               (util/ns->relpath ns (util/ext (:source-url compiled))))
             (slurp src)))
         ;; need to load dependencies first
-        (load-dependencies repl-env (:requires compiled) opts)
+        (let [sources (load-dependencies repl-env (:requires compiled) opts)]
+          (load-cljs-loader repl-env (conj sources compiled) opts))
         (-evaluate repl-env f 1 (cljsc/add-dep-string opts compiled))
         (-evaluate repl-env f 1
           (cljsc/src-file->goog-require src
