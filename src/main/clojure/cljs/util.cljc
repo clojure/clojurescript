@@ -111,6 +111,10 @@
   ([parts sep]
     (apply str (interpose sep parts))))
 
+(defn split-paths
+  [paths-str]
+  (string/split paths-str (re-pattern File/pathSeparator)))
+
 (declare ext)
 
 (defn ^File to-target-file

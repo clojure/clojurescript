@@ -7,7 +7,7 @@
 ;; You must not remove this notice, or any other, from this software.
 
 (ns cljs.js-deps
-  (:require [cljs.util :refer [distinct-by]]
+  (:require [cljs.util :as util :refer [distinct-by]]
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import [java.io File]
@@ -32,7 +32,7 @@
         (filter (partial instance? URLClassLoader))
         (mapcat #(.getURLs ^URLClassLoader %)))
       (-> (System/getProperty "java.class.path")
-        (string/split (re-pattern File/pathSeparator))))
+        util/split-paths))
     distinct
     (map io/file)))
 
