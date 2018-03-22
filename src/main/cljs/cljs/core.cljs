@@ -11349,7 +11349,7 @@ reduces them without incurring seq initialization"
   nil)
 
 (defn remove-tap
-  "Remove f from the tap set the tap set."
+  "Remove f from the tap set."
   [f]
   (maybe-init-tapset)
   (swap! tapset disj f)
