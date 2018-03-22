@@ -213,22 +213,23 @@
 (s/fdef core/import
   :args ::quotable-import-list)
 
+(defn- quoted
+  "Returns a spec that accepts a (quote ...) form of the spec"
+  [spec]
+  (s/spec (s/cat :quote #{'quote} :spec spec)))
+
 (s/fdef core/require
-  :args (s/+ (s/spec (s/cat :quote #{'quote}
-                            :spec (s/alt :libspec ::libspec
-                                         :flag #{:reload :reload-all :verbose})))))
+  :args (s/+ (s/alt :libspec (quoted ::libspec)
+                    :flag #{:reload :reload-all :verbose})))
 
 (s/fdef core/require-macros
-  :args (s/+ (s/spec (s/cat :quote #{'quote}
-                            :spec (s/alt :libspec ::macros-libspec
-                                         :flag #{:reload :reload-all :verbose})))))
+  :args (s/+ (s/alt :libspec (quoted ::macros-libspec)
+                    :flag #{:reload :reload-all :verbose})))
 
 (s/fdef core/use
-  :args (s/+ (s/spec (s/cat :quote #{'quote}
-                            :spec (s/alt :libspec ::use-libspec
-                                         :flag #{:reload :reload-all :verbose})))))
+  :args (s/+ (s/alt :libspec (quoted ::use-libspec)
+                    :flag #{:reload :reload-all :verbose})))
 
 (s/fdef core/use-macros
-  :args (s/+ (s/spec (s/cat :quote #{'quote}
-                            :spec (s/alt :libspec ::use-macros-libspec
-                                         :flag #{:reload :reload-all :verbose})))))
+  :args (s/+ (s/alt :libspec (quoted ::use-macros-libspec)
+                    :flag #{:reload :reload-all :verbose})))
