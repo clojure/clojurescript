@@ -1735,9 +1735,13 @@
       ;; https://github.com/google/closure-compiler/pull/2641
       (str
         "goog.provide(\"" module-name "\");\n"
-        (apply str (map (fn [n]
-                          (str "goog.require(\"" n "\");\n"))
-                        (.getRequires input)))
+        (->> (.getRequires input)
+             ;; If CJS/ES6 module uses goog.require, goog is added to requires
+             ;; but this would cause problems with Cljs.
+             (remove #{"goog"})
+             (map (fn [n]
+                    (str "goog.require(\"" n "\");\n")))
+             (apply str))
         (.toSource closure-compiler ast-root)))))
 
 (defn- package-json-entries
