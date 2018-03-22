@@ -81,7 +81,8 @@ let md = mdeps({
         resolver(parentOpts.basedir, id, cb);
     },
     filter: function (id) {
-        return !(target === 'nodejs' && nodeResolve.isCore(id));
+        return !(target === 'nodejs' && nodeResolve.isCore(id)) &&
+            !id.startsWith("goog:");
     },
     detect: function (src) {
         let deps = getDeps(src);
