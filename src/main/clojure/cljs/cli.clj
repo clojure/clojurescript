@@ -459,7 +459,8 @@ present"
         cenv     (env/default-compiler-env)]
     (env/with-compiler-env cenv
       (if-let [path (:watch opts)]
-        (when-not repl?
+        (if repl?
+          (build/build source opts cenv)
           (build/watch path opts cenv))
         (build/build source opts cenv))
       (when repl?
