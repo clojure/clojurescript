@@ -201,22 +201,17 @@
 (s/fdef core/ns-special-form
   :args ::ns-form)
 
-(defmacro ^:private quotable
-  "Returns a spec that accepts both the spec and a (quote ...) form of the spec"
-  [spec]
-  `(s/or :spec ~spec :quoted-spec (s/cat :quote #{'quote} :spec ~spec)))
-
-(s/def ::quotable-import-list
-  (s/* (s/alt :class (quotable simple-symbol?)
-              :package-list (quotable ::package-list))))
-
-(s/fdef core/import
-  :args ::quotable-import-list)
-
 (defn- quoted
   "Returns a spec that accepts a (quote ...) form of the spec"
   [spec]
   (s/spec (s/cat :quote #{'quote} :spec spec)))
+
+(s/def ::quoted-import-list
+  (s/* (s/alt :class (quoted simple-symbol?)
+              :package-list (quoted ::package-list))))
+
+(s/fdef core/import
+  :args ::quoted-import-list)
 
 (s/fdef core/require
   :args (s/+ (s/alt :libspec (quoted ::libspec)
