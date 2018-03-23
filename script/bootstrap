@@ -62,17 +62,16 @@ cd closure/library
 if [ "$1" = "--closure-library-head" ] ; then
     echo "Building against HEAD of Google Closure library..."
 
-    # Check if svn present
-    type svn >/dev/null 2>&1 || { echo >&2 "Need svn command to checkout HEAD of Google Closure library. Aborting."; exit 1; }
-
     # Existing checkout?
-    if svn info --non-interactive >/dev/null 2>&1; then
+    if [ -d closure-library ] ; then
         echo "Updating Google Closure library from HEAD..."
-        svn update -q --non-interactive
+        cd closure-library
+        git pull
+        cd ..
     else
         echo "Checking out HEAD of Google Closure library..."
         rm -rf *
-        svn checkout -q --non-interactive https://closure-library.googlecode.com/svn/trunk/ ./
+        git clone https://github.com/google/closure-library
     fi
 else
     curl --retry 3 -O -s https://repo1.maven.org/maven2/org/clojure/google-closure-library/$GCLOSURE_LIB_RELEASE/google-closure-library-$GCLOSURE_LIB_RELEASE.jar || { echo "Download failed."; exit 1; }
@@ -94,8 +93,8 @@ rm closure-compiler-v$CLOSURE_RELEASE.jar
 
 if [ "$1" = "--closure-library-head" ] ; then
     echo "Building lib/goog.jar..."
-    echo "jar cf ./lib/goog.jar -C closure/library/closure/ goog"
-    jar cf ./lib/goog.jar -C closure/library/closure/ goog
+    echo "jar cf ./lib/goog.jar -C closure/library/closure-library/closure/ goog"
+    jar cf ./lib/goog.jar -C closure/library/closure-library/closure/ goog
 fi
 
 echo "Fetching Rhino..."
