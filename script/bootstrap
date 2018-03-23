@@ -86,10 +86,21 @@ fi
 cd ../..
 
 echo "Fetching Google Closure compiler..."
-curl --retry 3 -O -s http://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar || { echo "Download failed."; exit 1; }
-cp closure-compiler-v$CLOSURE_RELEASE.jar lib/closure-compiler-v$CLOSURE_RELEASE.jar
-echo "Cleaning up closure-compiler.jar..."
-rm closure-compiler-v$CLOSURE_RELEASE.jar
+if [ "$1" = "--closure-compiler-snapshot" ] ; then
+    curl --retry 3 -O -s https://oss.sonatype.org/content/repositories/snapshots/com/google/javascript/closure-compiler/1.0-SNAPSHOT/maven-metadata.xml || { echo "Download failed."; exit 1; }
+    CC_JAR_VERSION=`grep value maven-metadata.xml | head -1 | awk -F '[<>]' '/value/{print $3}'`
+    CC_JAR_NAME=closure-compiler-$CC_JAR_VERSION.jar
+    curl --retry 3 -O -s https://oss.sonatype.org/content/repositories/snapshots/com/google/javascript/closure-compiler/1.0-SNAPSHOT/$CC_JAR_NAME || { echo "Download failed."; exit 1; }
+    cp $CC_JAR_NAME lib/$CC_JAR_NAME
+    echo "Cleaning up closure-compiler.jar..."
+    rm $CC_JAR_NAME
+    rm maven-metadata.xml
+else
+    curl --retry 3 -O -s http://repo1.maven.org/maven2/com/google/javascript/closure-compiler/v$CLOSURE_RELEASE/closure-compiler-v$CLOSURE_RELEASE.jar || { echo "Download failed."; exit 1; }
+    cp closure-compiler-v$CLOSURE_RELEASE.jar lib/closure-compiler-v$CLOSURE_RELEASE.jar
+    echo "Cleaning up closure-compiler.jar..."
+    rm closure-compiler-v$CLOSURE_RELEASE.jar
+fi
 
 if [ "$1" = "--closure-library-head" ] ; then
     echo "Building lib/goog.jar..."
