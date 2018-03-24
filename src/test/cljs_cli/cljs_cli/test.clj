@@ -97,29 +97,3 @@
       (output-is
         nil
         "{:ns cljs.user, :value 3}"))))
-
-(deftest test-cljs-2680
-  (with-repl-env-filter (complement #{"node"})                    ; Exclude Node owing to CLJS-2684
-    (with-sources {"src/foo/core.cljs" "(ns foo.core)"
-                   "src/bar/core.clj"  "(ns bar.core) (defn watch [] (prn :watch-called))"}
-      (with-in ":cljs/quit\n"
-        (with-post-condition (fn [dir]
-                               (some #{":watch-called"}
-                                 (str/split-lines (slurp (io/file dir "out" "watch.log")))))
-          (-> (cljs-main "-co" "{:watch-fn bar.core/watch}" "--watch" "src" "-c" "foo.core" "-r")
-            (output-is
-              "Watch compilation log available at: out/watch.log"
-              (repl-title)
-              "cljs.user=>")))))
-    (with-sources {"src/foo/core.cljs" "(ns foo.core"
-                   "src/bar/core.clj"  "(ns bar.core) (defn watch-error [e] (prn :watch-error-called (.getMessage e)))"}
-      (with-in ":cljs/quit\n"
-        (with-post-condition (fn [dir]
-                               (let [log-contents (slurp (io/file dir "out" "watch.log"))]
-                                 (and (str/includes? log-contents ":watch-error-called")
-                                   (str/includes? log-contents "Unexpected EOF while reading"))))
-          (-> (cljs-main "-co" "{:watch-error-fn bar.core/watch-error}" "--watch" "src" "-c" "foo.core" "-r")
-            (output-is
-              "Watch compilation log available at: out/watch.log"
-              (repl-title)
-              "cljs.user=>")))))))
