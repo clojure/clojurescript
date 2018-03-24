@@ -37,8 +37,7 @@
               SourceMap$DetailLevel ClosureCodingConvention SourceFile
               Result JSError CheckLevel DiagnosticGroups
               CommandLineRunner AnonymousFunctionNamingPolicy
-              JSModule SourceMap Es6RewriteModules VariableMap
-              ProcessCommonJSModules Es6RewriteScriptsToModules]
+              JSModule SourceMap VariableMap]
            [com.google.javascript.jscomp.deps ModuleLoader$ResolutionMode ModuleNames]
            [com.google.javascript.rhino Node]
            [java.nio.file Path Paths Files StandardWatchEventKinds WatchKey
@@ -1736,6 +1735,12 @@
       (str
         "goog.provide(\"" module-name "\");\n"
         (->> (.getRequires input)
+             ;; v20180204 returns string
+             ;; next Closure returns DependencyInfo.Require object
+             (map (fn [i]
+                    (if (string? i)
+                      i
+                      (.getSymbol i))))
              ;; If CJS/ES6 module uses goog.require, goog is added to requires
              ;; but this would cause problems with Cljs.
              (remove #{"goog"})
@@ -1796,9 +1801,11 @@
         ^Node js-root (.getSecondChild extern-and-js-root)
         inputs-by-name (into {} (map (juxt #(.getName %) identity) (vals (.getInputsById closure-compiler))))]
 
-    (.process (Es6RewriteScriptsToModules. closure-compiler) extern-root js-root)
-    (.process (Es6RewriteModules. closure-compiler) extern-root js-root)
-    (.process (ProcessCommonJSModules. closure-compiler) extern-root js-root)
+    ;; This will rewrite CommonJS modules
+    (.whitespaceOnlyPasses closure-compiler)
+    ;; This will take care of converting ES6 to CJS
+    ;; Based on language-in setting, this could also handle ES7/8/TypeScript transpilation.
+    (.transpileAndDontCheck closure-compiler)
 
     (map (partial add-converted-source
            closure-compiler inputs-by-name opts)
