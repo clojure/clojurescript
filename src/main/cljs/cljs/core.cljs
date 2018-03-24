@@ -187,11 +187,13 @@
   []
   (set! *print-newline* false)
   (set-print-fn!
-    (fn [& args]
-      (.apply (.-log js/console) js/console (into-array args))))
+    (fn []
+      (let [xs (js-arguments)]
+        (.apply (.-log js/console) js/console (garray/clone xs)))))
   (set-print-err-fn!
-    (fn [& args]
-      (.apply (.-error js/console) js/console (into-array args))))
+    (fn []
+      (let [xs (js-arguments)]
+        (.apply (.-error js/console) js/console (garray/clone xs)))))
   nil)
 
 (def
@@ -11503,11 +11505,15 @@ reduces them without incurring seq initialization"
     (let [system (.type js/Java "java.lang.System")]
       (set! *print-newline* false)
       (set-print-fn!
-        (fn [& args]
-          (.println (.-out system) (.join (into-array args) ""))))
+        (fn []
+          (let [xs (js-arguments)
+                s  (.join (garray/clone xs) "")]
+            (.println (.-out system) s))))
       (set-print-err-fn!
-        (fn [& args]
-          (.println (.-error system) (.join (into-array args) "")))))))
+        (fn []
+          (let [xs (js-arguments)
+                s  (.join (garray/clone xs) "")]
+            (.println (.-error system) s)))))))
 
 (maybe-enable-print!)
 
@@ -11517,7 +11523,7 @@ reduces them without incurring seq initialization"
   should be evaluated." :dynamic true}
   *eval*
   (fn [_]
-    (throw (ex-info "cljs.core/*eval* not bound" {}))))
+    (throw (js/Error. "cljs.core/*eval* not bound"))))
 
 (defn eval
   "Evaluates the form data structure (not text!) and returns the result.
