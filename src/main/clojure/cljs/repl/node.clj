@@ -30,7 +30,7 @@
 
 (defn thread-name []
   (let [name (.getName (Thread/currentThread))]
-    (if (string/starts-with? name "nrepl") "main" name)))
+    (if (string/starts-with? name "nREPL") "main" name)))
 
 (defn create-socket [^String host port]
   (let [socket (Socket. host (int port))

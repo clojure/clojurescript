@@ -31,7 +31,7 @@
 
 (defn thread-name []
   (let [name (.getName (Thread/currentThread))]
-    (if (string/starts-with? name "nrepl") "main" name)))
+    (if (string/starts-with? name "nREPL") "main" name)))
 
 (def ext->mime-type
   {".html" "text/html"
