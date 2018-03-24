@@ -435,12 +435,8 @@ present"
         main-ns  (if (and ns (not ((into rfs sfs) ns)))
                    (symbol ns)
                    (:main options))
-        coptsf   (when-let [od (:output-dir options)]
-                   (io/file od "cljsc_opts.edn"))
         opts     (as->
                    (merge
-                     (when (and coptsf (.exists coptsf))
-                       (edn/read-string (slurp coptsf)))
                      (select-keys env-opts
                        (cond-> [:target] repl? (conj :browser-repl)))
                      options
