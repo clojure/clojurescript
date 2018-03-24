@@ -1796,9 +1796,6 @@
                            (.init externs source-files options))
         _ (.parse closure-compiler)
         _ (report-failure (.getResult closure-compiler))
-        ^Node extern-and-js-root (.getRoot closure-compiler)
-        ^Node extern-root (.getFirstChild extern-and-js-root)
-        ^Node js-root (.getSecondChild extern-and-js-root)
         inputs-by-name (into {} (map (juxt #(.getName %) identity) (vals (.getInputsById closure-compiler))))]
 
     ;; This will rewrite CommonJS modules
