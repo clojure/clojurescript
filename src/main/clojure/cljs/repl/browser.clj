@@ -29,6 +29,10 @@
 (def ^:dynamic es nil)
 (def outs (ConcurrentHashMap.))
 
+(defn thread-name []
+  (let [name (.getName (Thread/currentThread))]
+    (if (string/starts-with? name "nrepl") "main" name)))
+
 (def ext->mime-type
   {".html" "text/html"
    ".css" "text/css"
@@ -73,7 +77,7 @@
     (set-return-value-fn return-value-fn)
     (server/send-and-close conn 200
       (json/write-str
-        {"repl" (.getName (Thread/currentThread))
+        {"repl" (thread-name)
          "form" form})
       "application/json")))
 
@@ -346,7 +350,7 @@
           (if launch-browser
             (maybe-browse-url base-url)
             (println (waiting-to-connect-message base-url)))))))
-  (.put outs (.getName (Thread/currentThread)) *out*)
+  (.put outs (thread-name) *out*)
   (swap! server-state update :listeners inc))
 
 (defrecord BrowserEnv []
@@ -362,7 +366,7 @@
   (-load [this provides url]
     (load-javascript this provides url))
   (-tear-down [this]
-    (.remove outs (.getName (Thread/currentThread)))
+    (.remove outs (thread-name))
     (let [server-state (:server-state this)]
       (when (zero? (:listeners (swap! server-state update :listeners dec)))
         (binding [server/state server-state] (server/stop))

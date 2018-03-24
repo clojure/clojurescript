@@ -29,7 +29,8 @@
 (def errs (ConcurrentHashMap.))
 
 (defn thread-name []
-  (.getName (Thread/currentThread)))
+  (let [name (.getName (Thread/currentThread))]
+    (if (string/starts-with? name "nrepl") "main" name)))
 
 (defn create-socket [^String host port]
   (let [socket (Socket. host (int port))
@@ -124,7 +125,7 @@
 (defn setup
   ([repl-env] (setup repl-env nil))
   ([{:keys [host port socket state] :as repl-env} opts]
-   (let [tname (.getName (Thread/currentThread))]
+   (let [tname (thread-name)]
      (.put results tname (LinkedBlockingQueue.))
      (.put outs tname *out*)
      (.put errs tname *err*))
