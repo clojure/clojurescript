@@ -11,7 +11,7 @@ fi
 
 cd `dirname $0`/..
 rm -rf target
-rm resources/brepl_client.js
+rm -f resources/brepl_client.js
 
 POM_TEMPLATE="pom.template.xml"
 POM_FILE="pom.xml"
