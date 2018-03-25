@@ -1,4 +1,4 @@
-## Next
+## 1.10.238
 
 ### Enhancements
 * cljs.main, simple command line access to Compiler & REPLs
@@ -25,6 +25,18 @@
 * CLJS-2581: Create a cljs.repl/*repl-env* dynamic var and bind it around cljs repl loops
 
 ### Fixes
+* CLJS-2680: Passing :watch-fn via --compile-opts to cljs.main
+* CLJS-2692: cljs.core.specs.alpha: Import list needs to require quote
+* CLJS-2696: Large code size in Clojurescript 1.10.x for minimal code with optimizations advanced
+* CLJS-2699: Use higher-level Closure API for module-processing
+* CLJS-2691: goog.require in module-processed files shouldn't require goog.base
+* CLJS-2689: Don't try to use node resolve for goog: modules
+* CLJS-2676: Bad cljs.loader behavior for modules with multiple provides
+* CLJS-2673: Regression: Can't require cljs.js
+* CLJS-2650: Fix JAR compilation of cljs.loader
+* CLJS-2671: Double analysis warning for source in JAR with AOT cache
+* CLJS-2643: Socket REPL output can be directed to the wrong place
+* CLJS-2670: Update cljs.compiler/warning-types
 * CLJS-2491: Inference warnings are not reported
 * CLJS-2653: REPL crash when mapping stacktrace in Chrome for js/blah
 * CLJS-2639: Compiler crash when using aot cache with parallel compile
