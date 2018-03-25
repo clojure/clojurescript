@@ -14,7 +14,6 @@
             [clojure.edn :as edn]
             [clojure.data.json :as json]
             [cljs.util :as util]
-            [cljs.env :as env]
             [cljs.closure :as cljsc]
             [cljs.repl :as repl]
             [cljs.cli :as cli]

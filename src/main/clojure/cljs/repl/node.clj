@@ -18,8 +18,7 @@
             [clojure.data.json :as json])
   (:import [java.net Socket]
            [java.lang StringBuilder]
-           [java.io File Reader BufferedReader BufferedWriter
-           InputStreamReader IOException]
+           [java.io File BufferedReader BufferedWriter IOException]
            [java.lang ProcessBuilder Process]
            [java.util.concurrent ConcurrentHashMap LinkedBlockingQueue]))
 
