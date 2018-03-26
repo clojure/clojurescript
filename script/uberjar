@@ -9,7 +9,7 @@ if [[ -z "$CLJS_SCRIPT_QUIET" ]]; then
   set -x
 fi
 
-rm resources/brepl_client.js
+rm -f resources/brepl_client.js
 
 # The command `git describe --match v0.0` will return a string like
 #
