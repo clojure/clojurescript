@@ -309,7 +309,9 @@
   (str "No such namespace: " ns-sym
        ", could not locate " (ns->relpath ns-sym :cljs)
        ", " (ns->relpath ns-sym :cljc)
-       ", or JavaScript source providing \"" js-provide "\""))
+       ", or JavaScript source providing \"" js-provide "\""
+    (when (string/includes? (ns->relpath ns-sym) "_")
+      " (Please check that namespaces with dashes use underscores in the ClojureScript file name)")))
 
 (defmethod error-message :undeclared-macros-ns
   [warning-type {:keys [ns-sym js-provide] :as info}]

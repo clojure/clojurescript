@@ -805,7 +805,9 @@
                  {:relative-path relpath :uri js-res :ext :js}
                  (throw
                    (IllegalArgumentException.
-                     (str "Namespace " ns " does not exist"))))))))))))
+                     (str "Namespace " ns " does not exist."
+                          (when (string/includes? ns "-")
+                            " Please check that namespaces with dashes use underscores in the ClojureScript file name.")))))))))))))
 
 (defn cljs-dependencies
   "Given a list of all required namespaces, return a list of

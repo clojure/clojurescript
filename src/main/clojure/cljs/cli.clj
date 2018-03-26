@@ -373,7 +373,9 @@ present"
                   (when-not src
                     (throw
                       (ex-info
-                        (str "Namespace " main " does not exist")
+                        (str "Namespace " main " does not exist."
+                             (when (string/includes? main "-")
+                               " Please check that namespaces with dashes use underscores in the ClojureScript file name."))
                         {:cljs.main/error :invalid-arg})))
                   (repl/load-stream renv (util/get-name src) src)
                   (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
