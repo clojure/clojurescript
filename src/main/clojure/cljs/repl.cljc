@@ -198,6 +198,7 @@
 (defn ns->input [ns opts]
   (or (some-> (util/ns->source ns) (ana/parse-ns opts))
       (some-> (get-in @env/*compiler* [:js-dependency-index (str ns)]) add-url)
+      (some-> (deps/find-classpath-lib ns))
       (throw
         (ex-info (str ns " does not exist")
           {::error :invalid-ns}))))
