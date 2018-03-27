@@ -17,7 +17,8 @@
             [cljs.closure :as closure]
             [cljs.externs :as externs]
             [cljs.analyzer :as ana]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [cljs.test-util :refer [unsplit-lines]])
   (:use clojure.test))
 
 (defn collecting-warning-handler [state]
@@ -882,13 +883,13 @@
                           (.apply (.-log js/console) js/console (into-array args)))
                         (js/console.log js/Number.MAX_VALUE)
                         (js/console.log js/Symbol.iterator)]})]
-    (is (= "var React;\nReact.Component;\n" res))))
+    (is (= (unsplit-lines ["var React;" "React.Component;"]) res))))
 
 (deftest test-method-infer
   (let [res (infer-test-helper
               {:forms '[(defn foo [^js/React.Component c]
                           (.render c))]})]
-    (is (= "var React;\nReact.Component;\nReact.Component.prototype.render;\n"
+    (is (= (unsplit-lines ["var React;" "React.Component;" "React.Component.prototype.render;"])
            res))))
 
 (deftest test-minimal-infer
@@ -912,7 +913,7 @@
                             (.wozz z)))]
                :externs ["src/test/externs/test.js"]
                :warnings ws})]
-    (is (= "Foo.Boo.prototype.wozz;\n" res))
+    (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
     (is (string/starts-with?
           (first @ws)
@@ -926,7 +927,7 @@
                             (.-wozz z)))]
                :externs ["src/test/externs/test.js"]
                :warnings ws})]
-    (is (= "Foo.Boo.prototype.wozz;\n" res))
+    (is (= (unsplit-lines ["Foo.Boo.prototype.wozz;"]) res))
     (is (= 1 (count @ws)))
     (is (string/starts-with?
           (first @ws)
@@ -939,7 +940,7 @@
                            (.gozMethod a))]
                :externs ["src/test/externs/test.js"]
                :warnings ws})]
-    (is (= "Foo.prototype.gozMethod;\n" res))
+    (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
     (is (string/starts-with?
           (first @ws)
@@ -951,7 +952,7 @@
               {:forms '[(.gozMethod (js/baz))]
                :externs ["src/test/externs/test.js"]
                :warnings ws})]
-    (is (= "Foo.prototype.gozMethod;\n" res))
+    (is (= (unsplit-lines ["Foo.prototype.gozMethod;"]) res))
     (is (= 1 (count @ws)))
     (is (string/starts-with?
           (first @ws)
@@ -965,7 +966,7 @@
                         (.log js/console (.-Component React))]
                :externs ["src/test/externs/test.js"]
                :warnings ws})]
-    (is (= "var require;\nObject.Component;\n" res))
+    (is (= (unsplit-lines ["var require;" "Object.Component;"]) res))
     (is (= 1 (count @ws)))
     (is (string/starts-with?
           (first @ws)

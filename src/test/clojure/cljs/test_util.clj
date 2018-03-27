@@ -62,3 +62,10 @@
 
 (defn platform-path [path]
   (.replace path \/ (.charAt (str File/separator) 0)))
+
+(defn unsplit-lines
+  "Forms a string wherein each line is followed by a system-dependent newline.
+  Roughly an inverse of clojure.string/split-lines."
+  [lines]
+  (with-out-str
+    (run! println lines)))
