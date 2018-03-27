@@ -1,3 +1,8 @@
+// NOTE: This code should only employ single quotes for strings.
+// If double quotes are used, then when the contents of this file
+// are passed to node via --eval on Windows, the double quotes
+// will be elided, leading to syntactically incorrect JavaScript.
+
 let fs = require('fs');
 let path = require('path');
 let mdeps = require('@cljs-oss/module-deps');
@@ -82,7 +87,7 @@ let md = mdeps({
     },
     filter: function (id) {
         return !(target === 'nodejs' && nodeResolve.isCore(id)) &&
-            !id.startsWith("goog:");
+            !id.startsWith('goog:');
     },
     detect: function (src) {
         let deps = getDeps(src);

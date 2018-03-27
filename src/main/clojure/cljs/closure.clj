@@ -2348,8 +2348,12 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([{:keys [file]} {:keys [target] :as opts}]
+   ;; NOTE: The code value should only employ single quotes for strings.
+   ;; If double quotes are used, then when the contents of this file
+   ;; are passed to node via --eval on Windows, the double quotes
+   ;; will be elided, leading to syntactically incorrect JavaScript.
    (let [main-entries (str "[" (->> (package-json-entries opts)
-                                    (map #(str "\"" % "\""))
+                                    (map #(str "'" % "'"))
                                     (string/join ",")) "]")
          code (-> (slurp (io/resource "cljs/module_deps.js"))
                 (string/replace "JS_FILE" (string/replace file "\\" "\\\\"))
