@@ -413,8 +413,7 @@
 
 (deftest test-cljs-2580
   (spit (io/file "package.json") "{}")
-  (let [opts {:npm-deps {"pg" "7.4.1"
-                         "pg-native" "2.2.0"}
+  (let [opts {:npm-deps {"npm-package-with-main-entry-pointing-to-folder" "1.0.0"}
               :target :nodejs}
         out (util/output-directory opts)]
     (test/delete-node-modules)
@@ -423,21 +422,21 @@
     (let [modules (closure/index-node-modules-dir)]
       (is (true? (some (fn [module]
                          (= module
-                           {:file (.getAbsolutePath (io/file "node_modules/pg/lib/index.js"))
+                           {:file (.getAbsolutePath (io/file "node_modules/npm-package-with-main-entry-pointing-to-folder/folder/index.js"))
                             :module-type :es6
-                            :provides ["pg/lib/index.js"
-                                       "pg/lib/index"
-                                       "pg"
-                                       "pg/lib"]}))
+                            :provides ["npm-package-with-main-entry-pointing-to-folder/folder/index.js"
+                                       "npm-package-with-main-entry-pointing-to-folder/folder/index"
+                                       "npm-package-with-main-entry-pointing-to-folder"
+                                       "npm-package-with-main-entry-pointing-to-folder/folder"]}))
                    modules))))
-    (let [modules (closure/index-node-modules ["pg"] opts)]
+    (let [modules (closure/index-node-modules ["npm-package-with-main-entry-pointing-to-folder"] opts)]
       (is (true? (some (fn [module]
                          (= module {:module-type :es6
-                                    :file (.getAbsolutePath (io/file "node_modules/pg/lib/index.js"))
-                                    :provides ["pg"
-                                               "pg/lib/index.js"
-                                               "pg/lib/index"
-                                               "pg/lib"]}))
+                                    :file (.getAbsolutePath (io/file "node_modules/npm-package-with-main-entry-pointing-to-folder/folder/index.js"))
+                                    :provides ["npm-package-with-main-entry-pointing-to-folder"
+                                               "npm-package-with-main-entry-pointing-to-folder/folder/index.js"
+                                               "npm-package-with-main-entry-pointing-to-folder/folder/index"
+                                               "npm-package-with-main-entry-pointing-to-folder/folder"]}))
                    modules))))
     (.delete (io/file "package.json"))
     (test/delete-node-modules)
