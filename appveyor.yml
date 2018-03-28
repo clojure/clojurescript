@@ -39,8 +39,10 @@ install:
 
 test_script:
   - cmd: lein test
-  # surprisingly this is the only way to have the output shown in Appveyor
-  - cmd: powershell -noninteractive -noprofile -command .\script\test.ps1
+  - cmd: powershell -noninteractive -noprofile -command .\script\test.ps1 > test-out.txt
+  - cmd: type test-out.txt
+  # Since tests are currently only run in 1 JavaScript environment (SpiderMonkey), look for exactly one count of "0 failures, 0 errors."
+  - cmd: powershell -noninteractive -noprofile -command if (-not ((sls -Pattern '0 failures, 0 errors.' -SimpleMatch test-out.txt).count -eq 1)) { exit 1 }
 
 # Don't actually build (MSBuild).
 build: off
