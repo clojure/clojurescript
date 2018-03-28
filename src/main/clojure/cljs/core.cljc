@@ -726,6 +726,12 @@
              :cljs (new js/Error (core/str "Unsupported binding key: " (ffirst kwbs)))))
         (reduce process-entry [] bents)))))
 
+(core/defmacro ^:private return-first
+  [& body]
+  `(let [ret# ~(first body)]
+     ~@(rest body)
+     ret#))
+
 (core/defmacro goog-define
   "Defines a var using `goog.define`. Passed default value must be
   string, number or boolean.
@@ -751,7 +757,7 @@
                        (core/string? default) "string"
                        (core/number? default) "number"
                        (core/or (core/true? default) (core/false? default)) "boolean")]
-    `(do
+    `(~(if (:def-emits-var &env) `return-first `do)
        (declare ~(core/vary-meta sym
                    (core/fn [m]
                      (core/cond-> m
