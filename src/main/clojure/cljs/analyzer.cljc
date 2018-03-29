@@ -1198,11 +1198,11 @@
   {:op :constant :env env :form sym :tag 'cljs.core/Keyword})
 
 (defn get-tag [e]
-  (if-some [tag (-> e :tag)]
+  (if-some [tag (-> e :form meta :tag)]
+    tag
+    (if-some [tag (-> e :tag)]
       tag
-      (if-some [tag (-> e :info :tag)]
-          tag
-          (-> e :form meta :tag))))
+      (-> e :info :tag))))
 
 (defn find-matching-method [f params]
   ;; if local fn, need to look in :info

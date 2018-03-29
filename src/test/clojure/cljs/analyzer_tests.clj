@@ -1022,3 +1022,15 @@
                :warnings ws
                :with-core? true})]
     (is (zero? (count @ws)))))
+
+(deftest test-cljs-2385-infer-priority
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:forms '[(ns cjls-1918.core)
+                        (defn thing [{:as this}]
+                          (.componentDidUpdate ^js/Thing this))]
+               :externs ["src/test/externs/test.js"]
+               :warnings ws
+               :with-core? true})]
+    (is (string/includes? res "Thing.prototype.componentDidUpdate;"))
+    (is (zero? (count @ws)))))
