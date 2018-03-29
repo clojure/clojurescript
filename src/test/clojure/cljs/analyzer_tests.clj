@@ -862,10 +862,14 @@
    "goog.isArrayLike;" "Java.type;" "Object.out;" "Object.out.println;"
    "Object.error;" "Object.error.println;"])
 
-(defn infer-test-helper [{:keys [forms externs warnings warn with-core?]}]
-  (let [test-cenv (atom {::a/externs
-                         (externs/externs-map
-                           (closure/load-externs {:externs (or externs [])}))})
+(defn infer-test-helper [{:keys [forms externs warnings warn with-core? opts]}]
+  (let [test-cenv (if with-core?
+                    (env/default-compiler-env
+                      (closure/add-externs-sources (merge {:infer-externs true} opts)))
+                    (atom
+                      {::a/externs
+                       (externs/externs-map
+                         (closure/load-externs {:externs (or externs [])}))}))
         wrap      (if with-core?
                     #(comp/with-core-cljs nil %)
                     #(do (%)))]
@@ -875,7 +879,8 @@
         (e/with-compiler-env test-cenv
           (wrap
             (fn []
-              (binding [a/*cljs-warnings*
+              (binding [a/*analyze-deps* true
+                        a/*cljs-warnings*
                         (assoc a/*cljs-warnings*
                           :infer-warning (if (nil? warn) true warn))]
                 (a/analyze-form-seq forms))
@@ -1034,3 +1039,33 @@
                :with-core? true})]
     (is (string/includes? res "Thing.prototype.componentDidUpdate;"))
     (is (zero? (count @ws)))))
+
+(comment
+
+  ;; this includes compiled - don't want that
+  (deftest test-cljs-2392-broken-inferred-externs
+    (let [ws  (atom [])
+          res (infer-test-helper
+                {:forms '[(ns cjls-1918.core
+                            (:require [cljs.nodejscli]))]
+                 :warnings ws
+                 :with-core? true})]
+      (println res)
+      (is (zero? (count @ws)))))
+
+  (let [ws (atom [])
+        res (infer-test-helper
+              {:forms '[(ns cjls-1918.core
+                          (:require [cljs.nodejscli]))]
+               :warnings ws
+               :with-core? true
+               :opts {:target :nodejs}
+               })]
+    (println res))
+
+  (-> @(env/default-compiler-env
+         (closure/add-externs-sources {:infer-externs true}))
+    (get-in [::a/externs])
+    keys sort)
+
+  )
