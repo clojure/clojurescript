@@ -177,7 +177,8 @@
             (default-index (or output-to (str output-dir "/main.js")))
             "text/html" "UTF-8")
           (= path (cond->> "/main.js" output-dir (str "/" output-dir )))
-          (let [closure-defines (-> `{clojure.browser.repl/HOST ~host
+          (let [closure-defines (-> `{"goog.json.USE_NATIVE_JSON" true
+                                      clojure.browser.repl/HOST ~host
                                       clojure.browser.repl/PORT ~port}
                                   (merge (:closure-defines @browser-state))
                                   cljsc/normalize-closure-defines
