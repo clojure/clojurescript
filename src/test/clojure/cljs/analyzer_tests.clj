@@ -998,19 +998,14 @@
     (is (= 1 (count @ws)))
     (is (string/starts-with? (first @ws) "Cannot infer target type"))))
 
-(comment
-
-  (deftest test-cljs-1970-infer-with-cljs-literals
-    (let [ws  (atom [])
-          res (infer-test-helper
-                {:forms '[(ns cjls-1970.core)
-                          (set! *warn-on-infer* true)
-                          (defn foo [] (list))
-                          (defn bar [] (vector))]
-                 :externs ["src/test/externs/test.js"]
-                 :warnings ws
-                 :with-core? true})]
-      (println @ws)
-      (is (zero? (count @ws)))))
-
-  )
+(deftest test-cljs-1970-infer-with-cljs-literals
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:forms '[(ns cjls-1970.core)
+                        (set! *warn-on-infer* true)
+                        (defn foo [] (list))
+                        (defn bar [] (vector))]
+               :externs ["src/test/externs/test.js"]
+               :warnings ws
+               :with-core? true})]
+    (is (zero? (count @ws)))))

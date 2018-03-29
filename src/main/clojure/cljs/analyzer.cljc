@@ -2802,6 +2802,7 @@
            (fn [m]
              (let [m (assoc (or m {})
                        :name t
+                       :tag 'function
                        :type true
                        :num-fields (count fields)
                        :record (= :defrecord* op))]
@@ -2810,6 +2811,7 @@
                       {:protocols protocols}
                       (source-info tsym env)))))
     {:op op :env env :form form :t t :fields fields :pmasks pmasks
+     :tag 'function
      :protocols (disj protocols 'cljs.core/Object)
      :body (analyze (assoc env :locals locals) body)}))
 
