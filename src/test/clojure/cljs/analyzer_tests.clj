@@ -1009,3 +1009,16 @@
                :warnings ws
                :with-core? true})]
     (is (zero? (count @ws)))))
+
+(deftest test-cljs-1918-infer-with-case-keywords
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:forms '[(ns cjls-1918.core)
+                        (defn foo [x]
+                          (cljs.core/case x
+                            :foo 1
+                            nil))]
+               :externs ["src/test/externs/test.js"]
+               :warnings ws
+               :with-core? true})]
+    (is (zero? (count @ws)))))

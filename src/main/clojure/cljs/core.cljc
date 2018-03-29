@@ -2294,7 +2294,7 @@
                  tests (mapv #(if (seq? %) (mapv kw-str %) [(kw-str %)]) (take-nth 2 no-default))
                  thens (vec (take-nth 2 (drop 1 no-default)))]
         `(let [~esym ~e
-               ~esym (if (keyword? ~esym) (.-fqn ~esym) nil)]
+               ~esym (if (keyword? ~esym) (.-fqn ~(vary-meta esym assoc :tag 'cljs.core/Keyword)) nil)]
            (case* ~esym ~tests ~thens ~default)))
 
       ;; equality
