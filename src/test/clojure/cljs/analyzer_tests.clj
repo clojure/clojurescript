@@ -857,21 +857,33 @@
           ))))
   )
 
-(defn infer-test-helper [{:keys [forms externs warnings warn]}]
+(def core-inferred
+  ["var setTimeout;" "var process;" "process.hrtime;"
+   "goog.isArrayLike;" "Java.type;" "Object.out;" "Object.out.println;"
+   "Object.error;" "Object.error.println;"])
+
+(defn infer-test-helper [{:keys [forms externs warnings warn with-core?]}]
   (let [test-cenv (atom {::a/externs
                          (externs/externs-map
-                           (closure/load-externs {:externs (or externs [])}))})]
+                           (closure/load-externs {:externs (or externs [])}))})
+        wrap      (if with-core?
+                    #(comp/with-core-cljs nil %)
+                    #(do (%)))]
     (a/with-warning-handlers [(collecting-warning-handler (or warnings (atom [])))]
-      (binding [a/*cljs-ns* a/*cljs-ns*
-                a/*cljs-warnings* (assoc a/*cljs-warnings*
-                                    :infer-warning (if (nil? warn) true warn))]
+      (binding [a/*analyze-deps* false
+                a/*cljs-ns* a/*cljs-ns*]
         (e/with-compiler-env test-cenv
-          (a/analyze-form-seq forms)
-          (with-out-str
-            (comp/emit-externs
-              (reduce util/map-merge {}
-                (map (comp :externs second)
-                  (get @test-cenv ::a/namespaces))))))))))
+          (wrap
+            (fn []
+              (binding [a/*cljs-warnings*
+                        (assoc a/*cljs-warnings*
+                          :infer-warning (if (nil? warn) true warn))]
+                (a/analyze-form-seq forms))
+              (with-out-str
+                (comp/emit-externs
+                  (reduce util/map-merge {}
+                    (map (comp :externs second)
+                      (get @test-cenv ::a/namespaces))))))))))))
 
 (deftest test-basic-infer
   (let [res (infer-test-helper
@@ -985,3 +997,20 @@
     (is (string/blank? res))
     (is (= 1 (count @ws)))
     (is (string/starts-with? (first @ws) "Cannot infer target type"))))
+
+(comment
+
+  (deftest test-cljs-1970-infer-with-cljs-literals
+    (let [ws  (atom [])
+          res (infer-test-helper
+                {:forms '[(ns cjls-1970.core)
+                          (set! *warn-on-infer* true)
+                          (defn foo [] (list))
+                          (defn bar [] (vector))]
+                 :externs ["src/test/externs/test.js"]
+                 :warnings ws
+                 :with-core? true})]
+      (println @ws)
+      (is (zero? (count @ws)))))
+
+  )
