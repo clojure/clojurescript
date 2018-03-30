@@ -16,6 +16,7 @@
             [cljs.analyzer.api :as ana-api]
             [cljs.compiler.api :as comp]
             [cljs.build.api :as build]
+            [cljs.closure :as closure]
             [cljs.repl :as repl])
   (:import [java.io File StringReader FileWriter]
            [java.text BreakIterator]
@@ -458,7 +459,8 @@ present"
         cfg      (update cfg :options merge (select-keys opts convey))
         source   (when (and (= :none (:optimizations opts :none)) main-ns)
                    (:uri (build/ns->location main-ns)))
-        cenv     (env/default-compiler-env)]
+        cenv     (env/default-compiler-env
+                   (closure/add-externs-sources (dissoc opts :foreign-libs)))]
     (env/with-compiler-env cenv
       (if-let [path (:watch opts)]
         (if repl?
