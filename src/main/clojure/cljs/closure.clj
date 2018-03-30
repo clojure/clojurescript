@@ -3103,7 +3103,8 @@
     (util/mkdirs dest)
     (env/with-compiler-env (env/default-compiler-env {:infer-externs true})
       (comp/compile-file src dest
-        {:source-map true
+        {:static-fns true
+         :source-map true
          :source-map-url "core.js.map"
          :output-dir (str "src" File/separator "main" File/separator "cljs")})
       (ana/write-analysis-cache 'cljs.core cache src)
