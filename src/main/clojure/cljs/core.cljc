@@ -2961,7 +2961,7 @@
 
 ;; INTERNAL - do not use, only for Node.js
 (core/defmacro load-file* [f]
-  `(. js/goog (~'nodeGlobalRequire ~f)))
+  `(goog/nodeGlobalRequire ~f))
 
 (core/defmacro macroexpand-1
   "If form represents a macro form, returns its expansion,

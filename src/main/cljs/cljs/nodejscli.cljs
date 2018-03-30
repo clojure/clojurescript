@@ -13,9 +13,9 @@
   (:require [cljs.nodejs :as nodejs]
             [goog.object :as gobj]))
 
-;; need to set js/goog.global if COMPILED
+;; need to set goog.global if COMPILED
 (when ^boolean js/COMPILED
-  (set! js/goog.global js/global))
+  (set! goog/global js/global))
 
 ;; Call the user's main function
 (when (fn? cljs.core/*main-cli-fn*)

@@ -453,7 +453,7 @@
   ([array idx]
    (when-assert
      (try
-       (assert (or (array? array) (js/goog.isArrayLike array)))
+       (assert (or (array? array) (goog/isArrayLike array)))
        (assert (number? idx))
        (assert (not (neg? idx)))
        (assert (< idx (alength array)))
@@ -467,7 +467,7 @@
   ([array idx val]
    (when-assert
      (try
-       (assert (or (array? array) (js/goog.isArrayLike array)))
+       (assert (or (array? array) (goog/isArrayLike array)))
        (assert (number? idx))
        (assert (not (neg? idx)))
        (assert (< idx (alength array)))
@@ -479,7 +479,7 @@
 
 (defn- checked-aget'
   ([array idx]
-   {:pre [(or (array? array) (js/goog.isArrayLike array))
+   {:pre [(or (array? array) (goog/isArrayLike array))
           (number? idx) (not (neg? idx)) (< idx (alength array))]}
    (unchecked-get array idx))
   ([array idx & idxs]
@@ -487,7 +487,7 @@
 
 (defn- checked-aset'
   ([array idx val]
-   {:pre [(or (array? array) (js/goog.isArrayLike array))
+   {:pre [(or (array? array) (goog/isArrayLike array))
           (number? idx) (not (neg? idx)) (< idx (alength array))]}
    (unchecked-set array idx val))
   ([array idx idx2 & idxv]
