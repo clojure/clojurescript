@@ -2023,53 +2023,49 @@
                        [`(. ~target ~val) alt]
                        [target val])]
     (disallowing-recur
-     (let [enve (assoc env :context :expr)
-           targetexpr (cond
-                       (and (= target '*unchecked-if*) ;; TODO: proper resolve
-                            (or (true? val) (false? val)))
-                       (do
-                         (set! *unchecked-if* val)
-                         ::set-unchecked-if)
+      (let [enve  (assoc env :context :expr)
+            texpr (cond
+                    (symbol? target)
+                    (do
+                      (cond
+                        (and (= target '*unchecked-if*) ;; TODO: proper resolve
+                             (or (true? val) (false? val)))
+                        (set! *unchecked-if* val)
 
-                       (and (= target '*unchecked-arrays*) ;; TODO: proper resolve
-                            (or (true? val) (false? val)))
-                       (do
-                         (set! *unchecked-arrays* val)
-                         ::set-unchecked-arrays)
+                        (and (= target '*unchecked-arrays*) ;; TODO: proper resolve
+                             (or (true? val) (false? val)))
+                        (set! *unchecked-arrays* val)
 
-                       (= target '*warn-on-infer*)
-                       (do
-                         (set! *cljs-warnings* (assoc *cljs-warnings* :infer-warning true))
-                         ::set-warn-on-infer)
+                        (and (= target '*warn-on-infer*)
+                             (or (true? val) (false? val)))
+                        (set! *cljs-warnings* (assoc *cljs-warnings* :infer-warning val)))
+                      (when (some? (:const (resolve-var (dissoc env :locals) target)))
+                        (throw (error env "Can't set! a constant")))
+                      (let [local (-> env :locals target)]
+                        (when-not (or (nil? local)
+                                      (and (:field local)
+                                           (or (:mutable local)
+                                               (:unsynchronized-mutable local)
+                                               (:volatile-mutable local))))
+                          (throw (error env "Can't set! local var or non-mutable field"))))
+                      (analyze-symbol enve target))
 
-                       (symbol? target)
-                       (do
-                         (when (some? (:const (resolve-var (dissoc env :locals) target)))
-                           (throw (error env "Can't set! a constant")))
-                         (let [local (-> env :locals target)]
-                           (when-not (or (nil? local)
-                                         (and (:field local)
-                                              (or (:mutable local)
-                                                  (:unsynchronized-mutable local)
-                                                  (:volatile-mutable local))))
-                             (throw (error env "Can't set! local var or non-mutable field"))))
-                         (analyze-symbol enve target))
+                    :else
+                    (when (seq? target)
+                      (let [texpr (analyze-seq enve target nil)]
+                        (when (:field texpr)
+                          texpr))))
+            vexpr (analyze enve val)]
+        (when-not texpr
+          (throw (error env "set! target must be a field or a symbol naming a var")))
+        (cond
+          (and (not (:def-emits-var env)) ;; non-REPL context
+               (some? ('#{*unchecked-if* *unchecked-array* *warn-on-infer*} target)))
+          {:env env :op :no-op}
 
-                       :else
-                       (when (seq? target)
-                         (let [targetexpr (analyze-seq enve target nil)]
-                           (when (:field targetexpr)
-                             targetexpr))))
-           valexpr (analyze enve val)]
-       (when-not targetexpr
-         (throw (error env "set! target must be a field or a symbol naming a var")))
-       (cond
-        (some? (#{::set-unchecked-if ::set-unchecked-arrays ::set-warn-on-infer} targetexpr))
-        {:env env :op :no-op}
-
-        :else
-        {:env env :op :set! :form form :target targetexpr :val valexpr
-         :children [targetexpr valexpr]})))))
+          :else
+          {:env env :op :set! :form form :target texpr :val vexpr
+           :children [texpr vexpr]})))))
 
 #?(:clj (declare analyze-file))
 

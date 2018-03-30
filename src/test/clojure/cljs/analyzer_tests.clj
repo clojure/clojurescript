@@ -998,8 +998,8 @@
                           (.baz x))]
                :externs ["src/test/externs/test.js"]
                :warnings ws
-               :warn false})]
-    (is (string/blank? res))
+               :warn false
+               :with-core? true})]
     (is (= 1 (count @ws)))
     (is (string/starts-with? (first @ws) "Cannot infer target type"))))
 
