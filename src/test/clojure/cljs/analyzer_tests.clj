@@ -1040,32 +1040,15 @@
     (is (string/includes? res "Thing.prototype.componentDidUpdate;"))
     (is (zero? (count @ws)))))
 
-(comment
-
-  ;; this includes compiled - don't want that
-  (deftest test-cljs-2392-broken-inferred-externs
-    (let [ws  (atom [])
-          res (infer-test-helper
-                {:forms '[(ns cjls-1918.core
-                            (:require [cljs.nodejscli]))]
-                 :warnings ws
-                 :with-core? true})]
-      (println res)
-      (is (zero? (count @ws)))))
-
-  (let [ws (atom [])
+(deftest test-cljs-2392-broken-inferred-externs
+  (let [ws  (atom [])
         res (infer-test-helper
               {:forms '[(ns cjls-1918.core
-                          (:require [cljs.nodejscli]))]
+                          (:require [cljs.nodejs]
+                                    [cljs.nodejscli]))]
                :warnings ws
                :with-core? true
-               :opts {:target :nodejs}
-               })]
-    (println res))
-
-  (-> @(env/default-compiler-env
-         (closure/add-externs-sources {:infer-externs true}))
-    (get-in [::a/externs])
-    keys sort)
-
-  )
+               :opts {:target :nodejs}})]
+    (not (string/includes? res "COMPILED"))
+    (not (string/includes? res "goog"))
+    (is (zero? (count @ws)))))
