@@ -976,8 +976,13 @@
 
 (defmethod resolve* :global
   [sym full-ns current-ns]
-  {:name (symbol (str current-ns) (str (munge-global-export full-ns) "." (name sym)))
-   :ns current-ns})
+  (let [pre (into '[Object] (->> (string/split (name sym) #"\.") (map symbol) vec))]
+    (when-not (has-extern? pre)
+      (swap! env/*compiler* update-in
+        (into [::namespaces current-ns :externs] pre) merge {}))
+    {:name (symbol (str current-ns) (str (munge-global-export full-ns) "." (name sym)))
+     :ns current-ns
+     :tag (with-meta 'js {:prefix pre})}))
 
 (defmethod resolve* :default
   [sym full-ns current-ns]

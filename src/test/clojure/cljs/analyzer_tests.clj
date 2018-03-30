@@ -862,14 +862,17 @@
    "goog.isArrayLike;" "Java.type;" "Object.out;" "Object.out.println;"
    "Object.error;" "Object.error.println;"])
 
-(defn infer-test-helper [{:keys [forms externs warnings warn with-core? opts]}]
-  (let [test-cenv (if with-core?
-                    (env/default-compiler-env
-                      (closure/add-externs-sources (merge {:infer-externs true} opts)))
-                    (atom
-                      {::a/externs
-                       (externs/externs-map
-                         (closure/load-externs {:externs (or externs [])}))}))
+(defn infer-test-helper
+  [{:keys [forms externs warnings warn js-dependency-index with-core? opts]}]
+  (let [test-cenv (atom
+                    (cond->
+                      (if with-core?
+                        (env/default-compiler-env*
+                          (closure/add-externs-sources (merge {:infer-externs true} opts)))
+                        {::a/externs
+                         (externs/externs-map
+                           (closure/load-externs {:externs (or externs [])}))})
+                      js-dependency-index (assoc :js-dependency-index js-dependency-index)))
         wrap      (if with-core?
                     #(comp/with-core-cljs nil %)
                     #(do (%)))]
@@ -1052,3 +1055,14 @@
     (not (string/includes? res "COMPILED"))
     (not (string/includes? res "goog"))
     (is (zero? (count @ws)))))
+
+(deftest test-cljs-2678-global-exports-infer
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:js-dependency-index {"react" {:global-exports '{react React}}}
+               :forms '[(ns foo.core
+                          (:require [react :as react]))
+                        (.log js/console react/Component)]
+               :warnings ws
+               :warn false})]
+    (is (= "Object.Component;\n" res))))
