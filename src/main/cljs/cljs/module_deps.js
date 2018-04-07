@@ -185,7 +185,7 @@ md.on('end', function () {
         let pkgJson = pkgJsons[i];
         const candidates = /\.js(on)?$/.test(pkgJson.mainEntry)
             ? [pkgJson.mainEntry]
-            : [pkgJson.mainEntry, pkgJson.mainEntry + '.js', pkgJson.mainEntry + '/index.js', pkgJson.mainEntry + '.json'];
+            : [pkgJson.mainEntry, pkgJson.mainEntry + '.js', pkgJson.mainEntry + 'FILE_SEPARATOR' + 'index.js', pkgJson.mainEntry + '.json'];
 
         for (let j = 0; j < candidates.length; j++) {
           const candidate = candidates[j];
