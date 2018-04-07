@@ -1065,4 +1065,4 @@
                         (.log js/console react/Component)]
                :warnings ws
                :warn false})]
-    (is (= "Object.Component;\n" res))))
+    (is (= (unsplit-lines ["Object.Component;"]) res))))
