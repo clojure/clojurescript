@@ -42,7 +42,7 @@
     :reader :repl-requires :repl-verbose :source-map-inline :watch :watch-fn
     :wrap})
 
-(defmacro err-out [& body]
+(defmacro ^:private err-out [& body]
   `(binding [*out* *err*]
      ~@body))
 

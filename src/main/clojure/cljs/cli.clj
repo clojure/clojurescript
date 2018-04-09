@@ -409,7 +409,7 @@ present"
 (defn watch-proc [cenv path opts]
   (let [log-file (io/file (util/output-directory opts) "watch.log")]
     (util/mkdirs log-file)
-    (repl/err-out (println "Watch compilation log available at:" (str log-file)))
+    (#'repl/err-out (println "Watch compilation log available at:" (str log-file)))
     (let [log-out (FileWriter. log-file)]
       (binding [*err* log-out
                 *out* log-out]
