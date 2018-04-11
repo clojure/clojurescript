@@ -2638,6 +2638,7 @@
     :default    the default dispatch value, defaults to :default
     :hierarchy  the isa? hierarchy to use for dispatching
                 defaults to the global hierarchy"
+  {:arglists '([name docstring? attr-map? dispatch-fn & options])}
   [mm-name & options]
   (core/let [docstring   (if (core/string? (first options))
                            (first options)
