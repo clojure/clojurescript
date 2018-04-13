@@ -1584,8 +1584,8 @@
                       "    require(\"source-map-support\").install();\n"
                       "} catch(err) {\n"
                       "}\n"
-                      "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
-                      "require(path.join(path.resolve(\".\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
+                      "require(path.join(path.resolve(\"__dirname\"),\"" asset-path "\",\"goog\",\"bootstrap\",\"nodejs.js\"));\n"
+                      "require(path.join(path.resolve(\"__dirname\"),\"" asset-path "\",\"cljs_deps.js\"));\n"
                       "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                    (apply str (preloads (:preloads opts)))))
             (apply str
