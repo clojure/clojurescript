@@ -906,7 +906,10 @@
                 (emitln "return " n ".call(this" (if (zero? pcnt) nil
                                                      (list "," (comma-sep (take pcnt maxparams)))) ");"))))
           (emitln "}")
-          (emitln "throw(new Error('Invalid arity: ' + (arguments.length - 1)));")
+          (let [arg-count-js (if (= 'self__ (-> ms first val :params first :name))
+                               "(arguments.length - 1)"
+                               "arguments.length")]
+            (emitln "throw(new Error('Invalid arity: ' + " arg-count-js "));"))
           (emitln "};")
           (when variadic
             (emitln mname ".cljs$lang$maxFixedArity = " max-fixed-arity ";")

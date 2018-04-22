@@ -1537,6 +1537,17 @@
   ;; Make sure we didn't delete the alpha? fn
   (is (some? alpha-2585?)))
 
+(defn fn-2741* ([x]) ([x y]))
+(def fn-2741 fn-2741*)
+
+(deftest test-cljs-2741
+  (is (thrown-with-msg? js/Error #".*Invalid arity: 0" ((fn ([x]) ([x y])))))
+  (is (thrown-with-msg? js/Error #".*Invalid arity: 3" ((fn ([x]) ([x y])) 1 2 3)))
+  (is (thrown-with-msg? js/Error #".*Invalid arity: 0" (fn-2741)))
+  (is (thrown-with-msg? js/Error #".*Invalid arity: 3" (fn-2741 1 2 3)))
+  (is (thrown-with-msg? js/Error #".*Invalid arity: 0" ({})))
+  (is (thrown-with-msg? js/Error #".*Invalid arity: 3" ({} 1 2 3))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
