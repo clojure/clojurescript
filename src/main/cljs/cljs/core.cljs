@@ -2428,7 +2428,7 @@ reduces them without incurring seq initialization"
 (defn sort-by
   "Returns a sorted sequence of the items in coll, where the sort
    order is determined by comparing (keyfn item).  Comp can be
-   boolean-valued comparison funcion, or a -/0/+ valued comparator.
+   boolean-valued comparison function, or a -/0/+ valued comparator.
    Comp defaults to compare."
   ([keyfn coll]
    (sort-by keyfn compare coll))
