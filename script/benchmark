@@ -39,3 +39,10 @@ else
   echo "Benchmarking with ChakraCore"
   "${CHAKRACORE_HOME}/ch" builds/out-adv-bench/core-advanced-benchmark.js
 fi
+
+if [ "$GRAALVM_HOME" = "" ]; then
+  echo "GRAALVM_HOME not set, skipping GraalVM benchmarks"
+else
+  echo "Benchmarking with GraalVM"
+  "${GRAALVM_HOME}/js" builds/out-adv-bench/core-advanced-benchmark.js
+fi

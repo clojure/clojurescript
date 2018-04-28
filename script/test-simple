@@ -8,7 +8,7 @@ rm -rf package-lock.json
 echo {} > package.json
 mkdir -p builds/out-simp
 
-possible=5
+possible=6
 ran=0
 
 #bin/cljsc test >out/core-test.js
@@ -77,6 +77,14 @@ if [ "$CHAKRACORE_HOME" = "" ]; then
 else
   echo "Testing with ChakraCore"
   "${CHAKRACORE_HOME}/ch" builds/out-simp/core-simple-test.js
+  ran=$[ran+1]
+fi
+
+if [ "$GRAALVM_HOME" = "" ]; then
+  echo "GRAALVM_HOME not set, skipping GraalVM tests"
+else
+  echo "Testing with GraalVM"
+  "${GRAALVM_HOME}/js" builds/out-simp/core-simple-test.js
   ran=$[ran+1]
 fi
 
