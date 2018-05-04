@@ -9085,9 +9085,12 @@ reduces them without incurring seq initialization"
      (set? other)
      (== (count coll) (count other))
      ^boolean
-     (reduce-kv
-       #(or (contains? other %2) (reduced false))
-       true hash-map)))
+     (try
+       (reduce-kv
+         #(or (contains? other %2) (reduced false))
+         true hash-map)
+       (catch js/Error ex
+         false))))
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
@@ -9236,9 +9239,12 @@ reduces them without incurring seq initialization"
      (set? other)
      (== (count coll) (count other))
      ^boolean
-     (reduce-kv
-       #(or (contains? other %2) (reduced false))
-       true tree-map)))
+     (try
+       (reduce-kv
+         #(or (contains? other %2) (reduced false))
+         true tree-map)
+       (catch js/Error ex
+         false))))
 
   IHash
   (-hash [coll] (caching-hash coll hash-unordered-coll __hash))
