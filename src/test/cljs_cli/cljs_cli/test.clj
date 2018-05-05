@@ -97,3 +97,12 @@
       (output-is
         nil
         "{:ns cljs.user, :value 3}"))))
+
+(deftest test-cljs-2724
+  (with-repl-env-filter #{"node"}
+    (-> (cljs-main
+          "-e" "(require 'fs)"
+          "-e" "fs/R_OK")
+      (output-is
+        nil
+        4))))
