@@ -127,7 +127,9 @@
                    (when (or (not (contains? *loaded-libs* name)) reload)
                      (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
                      (js/CLOSURE_IMPORT_SCRIPT
-                       (goog.object/get (.. js/goog -dependencies_ -nameToPath) name)))))))))
+                       (if (some? goog/debugLoader_)
+                         (.getPathFromDeps_ goog/debugLoader_ name)
+                         (goog.object/get (.. js/goog -dependencies_ -nameToPath) name))))))))))
       (-evaluate [{engine :engine :as this} filename line js]
         (when debug (println "Evaluating: " js))
         (try

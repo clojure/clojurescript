@@ -187,6 +187,7 @@
    :opts
    {:output-dir output-dir
     :optimizations :none
+    :language-in :es6
     :verbose true
     :foreign-libs [{:file "src/test/cljs_build/loader_test/foreignA.js"
                     :provides ["foreign.a"]}

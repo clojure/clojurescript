@@ -29,6 +29,7 @@
        "        name = \"load-file\","
        "        loadFile = Packages.clojure.lang.RT[\"var\"](ns,name);\n"
        "    if(src) loadFile.invoke(___repl_env, __repl_opts, src);\n"
+       "    return true;\n"
        "};\n"))
 
 ;; =============================================================================
@@ -155,7 +156,9 @@
              (when (or (not (contains? *loaded-libs* name)) reload)
                (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
                (js/CLOSURE_IMPORT_SCRIPT
-                 (goog.object/get (.. js/goog -dependencies_ -nameToPath) name)))))))
+                 (if (some? goog/debugLoader_)
+                   (.getPathFromDeps_ goog/debugLoader_ name)
+                   (goog.object/get (.. js/goog -dependencies_ -nameToPath) name))))))))
 
     ;; set closure-defines
     (rhino-eval repl-env "CLOSURE_UNCOMPILED_DEFINES" 1

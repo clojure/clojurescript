@@ -197,7 +197,9 @@
            '(set! (.-require js/goog)
               (fn [name]
                 (js/CLOSURE_IMPORT_SCRIPT
-                  (unchecked-get (.. js/goog -dependencies_ -nameToPath) name)))))
+                  (if (some? goog/debugLoader_)
+                    (.getPathFromDeps_ goog/debugLoader_ name)
+                    (unchecked-get (.. js/goog -dependencies_ -nameToPath) name))))))
          ;; load cljs.core, setup printing
          (repl/evaluate-form repl-env env "<cljs repl>"
            '(do
@@ -213,7 +215,9 @@
                   (when (or (not (contains? *loaded-libs* name)) reload)
                     (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
                     (js/CLOSURE_IMPORT_SCRIPT
-                      (unchecked-get (.. js/goog -dependencies_ -nameToPath) name)))))))
+                      (if (some? goog/debugLoader_)
+                        (.getPathFromDeps_ goog/debugLoader_ name)
+                        (unchecked-get (.. js/goog -dependencies_ -nameToPath) name))))))))
          (node-eval repl-env
            (str "goog.global.CLOSURE_UNCOMPILED_DEFINES = "
              (json/write-str (:closure-defines opts)) ";")))))

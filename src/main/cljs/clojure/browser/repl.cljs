@@ -199,6 +199,12 @@
           (do
             (set! load-queue #js [])
             (js/goog.writeScriptTag__ src opt_sourceText)))))
+    ;; In the latest Closure library implementation, there is no goog.writeScriptTag_,
+    ;; to monkey-patch. The behavior of interest is instead in goog.Dependency.prototype.load,
+    ;; which first checks and uses CLOSURE_IMPORT_SCRIPT if defined. So we hook our desired
+    ;; behavior here.
+    (when goog/debugLoader_
+      (set! js/CLOSURE_IMPORT_SCRIPT (.-writeScriptTag_ js/goog)))
     ;; we must reuse Closure library dev time dependency management, under namespace
     ;; reload scenarios we simply delete entries from the correct private locations
     (set! (.-require js/goog)
@@ -207,11 +213,16 @@
           (set! (.-cljsReloadAll_ js/goog) true))
         (let [reload? (or reload (.-cljsReloadAll__ js/goog))]
           (when reload?
-            (let [path (gobj/get js/goog.dependencies_.nameToPath src)]
-              (gobj/remove js/goog.dependencies_.visited path)
-              (gobj/remove js/goog.dependencies_.written path)
-              (gobj/remove js/goog.dependencies_.written
-                (str js/goog.basePath path))))
+            (if (some? goog/debugLoader_)
+              (let [path (.getPathFromDeps_ goog/debugLoader_ name)]
+                (gobj/remove (.-written_ goog/debugLoader_) path)
+                (gobj/remove (.-written_ goog/debugLoader_)
+                  (str js/goog.basePath path)))
+              (let [path (gobj/get js/goog.dependencies_.nameToPath src)]
+                (gobj/remove js/goog.dependencies_.visited path)
+                (gobj/remove js/goog.dependencies_.written path)
+                (gobj/remove js/goog.dependencies_.written
+                  (str js/goog.basePath path)))))
           (let [ret (.require__ js/goog src)]
             (when (= reload "reload-all")
               (set! (.-cljsReloadAll_ js/goog) false))

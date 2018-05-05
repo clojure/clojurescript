@@ -42,7 +42,9 @@
   (set! (.-require js/goog)
     (fn [name]
       (js/CLOSURE_IMPORT_SCRIPT
-        (gobj/get (.. js/goog -dependencies_ -nameToPath) name))))
+        (if goog/debugLoader_
+          (.getPathFromDeps_ goog/debugLoader_ name)
+          (gobj/get (.. js/goog -dependencies_ -nameToPath) name)))))
   ;; setup printing
   (nodejs/enable-util-print!)
   ;; redef goog.require to track loaded libs
@@ -52,7 +54,9 @@
       (when (or (not (contains? *loaded-libs* name)) reload)
         (set! *loaded-libs* (conj (or *loaded-libs* #{}) name))
         (js/CLOSURE_IMPORT_SCRIPT
-          (gobj/get (.. js/goog -dependencies_ -nameToPath) name))))))
+          (if goog/debugLoader_
+            (.getPathFromDeps_ goog/debugLoader_ name)
+            (gobj/get (.. js/goog -dependencies_ -nameToPath) name)))))))
 
 ;; Node file reading fns
 
