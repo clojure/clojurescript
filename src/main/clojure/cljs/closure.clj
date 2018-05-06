@@ -2446,7 +2446,11 @@
                         (filter package-json?)
                         (map (fn [path]
                                [path (json/read-str (slurp path))])))
-                      module-fseq)]
+                      module-fseq)
+          trim-package-json (fn [s]
+                              (if (string/ends-with? s "package.json")
+                                (subs s 0 (- (count s) 12))
+                                s))]
       (into []
         (comp
           (map #(.getAbsolutePath %))
@@ -2461,21 +2465,22 @@
                                                ;; should be the only edge case in
                                                ;; the package.json main field - Antonio
                                                (let [main (cond-> main
-                                                            (.startsWith main "./")
+                                                            (string/starts-with? main "./")
                                                             (subs 2))
                                                      main-path (-> pkg-json-path
-                                                                 (string/replace #"\\" "/")
-                                                                 (string/replace #"package\.json$" "")
+                                                                 (string/replace \\ \/)
+                                                                 trim-package-json
                                                                  (str main))]
                                                  (some (fn [candidate]
-                                                         (when (= candidate (string/replace path #"\\" "/"))
+                                                         (when (= candidate (string/replace path \\ \/))
                                                            name))
                                                    (cond-> [main-path]
-                                                     (nil? (re-find #"\.js(on)?$" main-path))
+                                                     (not (or (string/ends-with? main-path ".js")
+                                                              (string/ends-with? main-path ".json")))
                                                      (into [(str main-path ".js") (str main-path "/index.js") (str main-path ".json")]))))))
                                            pkg-jsons)]
                        {:provides (let [module-rel-name (-> (subs path (.lastIndexOf path "node_modules"))
-                                                            (string/replace #"\\" "/")
+                                                            (string/replace \\ \/)
                                                             (string/replace #"node_modules[\\\/]" ""))
                                         provides (cond-> [module-rel-name (string/replace module-rel-name #"\.js(on)?$" "")]
                                                    (some? pkg-json-main)
