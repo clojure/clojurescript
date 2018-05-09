@@ -1830,7 +1830,7 @@
     "IMPORTED_SCRIPT" :imported-script))
 
 (defn add-converted-source
-  [closure-compiler inputs-by-name opts {:keys [file-min file requires] :as ijs}]
+  [closure-compiler inputs-by-name opts {:keys [file-min file provides requires] :as ijs}]
   (let [processed-file (if-let [min (and (#{:advanced :simple} (:optimizations opts))
                                          file-min)]
                          min
@@ -1838,7 +1838,8 @@
         processed-file (string/replace processed-file "\\" "/")
         ^CompilerInput input (get inputs-by-name processed-file)
         ^Node ast-root (.getAstRoot input closure-compiler)
-        module-name (ModuleNames/fileToModuleName processed-file)
+        provides (distinct (map #(ModuleNames/fileToModuleName %)
+                                (cons processed-file provides)))
         ;; getJsModuleType returns NONE for ES6 files, but getLoadsFlags module returns es6 for those
         module-type (or (some-> (.get (.getLoadFlags input) "module") keyword)
                         (module-type->keyword (.getJsModuleType input)))]
@@ -1848,7 +1849,9 @@
       ;; Add goog.provide/require calls ourselves, not emited by Closure since
       ;; https://github.com/google/closure-compiler/pull/2641
       (str
-        "goog.provide(\"" module-name "\");\n"
+        (apply str (map (fn [n]
+                          (str "goog.provide(\"" n "\");\n"))
+                        provides))
         (->> (.getRequires input)
              ;; v20180204 returns string
              ;; next Closure returns DependencyInfo.Require object
