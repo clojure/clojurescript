@@ -1454,7 +1454,7 @@
 (defn- ci-reduce
   "Accepts any collection which satisfies the ICount and IIndexed protocols and
 reduces them without incurring seq initialization"
-  ([cicoll f]
+  ([^not-native cicoll f]
      (let [cnt (-count cicoll)]
        (if (zero? cnt)
          (f)
@@ -1465,18 +1465,9 @@ reduces them without incurring seq initialization"
                  @nval
                  (recur nval (inc n))))
              val)))))
-  ([cicoll f val]
+  ([^not-native cicoll f val]
      (let [cnt (-count cicoll)]
        (loop [val val, n 0]
-         (if (< n cnt)
-           (let [nval (f val (-nth cicoll n))]
-             (if (reduced? nval)
-               @nval
-               (recur nval (inc n))))
-           val))))
-  ([cicoll f val idx]
-     (let [cnt (-count cicoll)]
-       (loop [val val, n idx]
          (if (< n cnt)
            (let [nval (f val (-nth cicoll n))]
              (if (reduced? nval)
