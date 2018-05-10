@@ -103,9 +103,19 @@ else
 fi
 
 if [ "$1" = "--closure-library-head" ] ; then
-    echo "Building lib/goog.jar..."
-    echo "jar cf ./lib/goog.jar -C closure/library/closure-library/closure/ goog"
-    jar cf ./lib/goog.jar -C closure/library/closure-library/closure/ goog
+    echo "Building lib/google-closure-library-HEAD.jar..."
+    # Set up the third-party deps paths to match what we would get when depending on a release
+    sed -e 's/..\/..\/third_party\/closure\/goog\///' closure/library/closure-library/closure/goog/deps.js > revised-deps.js
+    cp closure/library/closure-library/closure/goog/deps.js orig-deps.js
+    mv revised-deps.js closure/library/closure-library/closure/goog/deps.js
+    jar cf ./lib/google-closure-library-HEAD.jar -C closure/library/closure-library/closure/ goog
+    mv orig-deps.js closure/library/closure-library/closure/goog/deps.js
+    echo "Building lib/google-closure-library-third-party-HEAD.jar..."
+    mv closure/library/closure-library/third_party/closure/goog/deps.js orig-deps.js
+    mv closure/library/closure-library/third_party/closure/goog/base.js orig-base.js
+    jar cf ./lib/google-closure-library-third-party-HEAD.jar -C closure/library/closure-library/third_party/closure/ goog 
+    mv orig-base.js closure/library/closure-library/third_party/closure/goog/base.js
+    mv orig-deps.js closure/library/closure-library/third_party/closure/goog/deps.js
 fi
 
 echo "Fetching Rhino..."
