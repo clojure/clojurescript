@@ -12,7 +12,7 @@
   clojure.data
   (:require [clojure.set :as set]))
 
-(declare diff)
+(declare ^{:arglists '([a b])} diff)
 
 (defn- atom-diff
   "Internal helper for diff."

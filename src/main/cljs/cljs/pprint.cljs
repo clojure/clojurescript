@@ -221,7 +221,7 @@ beginning of aseq"
 ;; Forward declarations
 ;;======================================================================
 
-(declare get-miser-width)
+(declare ^{:arglists '([this])} get-miser-width)
 
 ;;======================================================================
 ;; The data structures used by pretty-writer
@@ -687,7 +687,7 @@ radix specifier is in the form #XXr where XX is the decimal value of *print-base
 ;; Support for the write function
 ;;======================================================================
 
-(declare format-simple-number)
+(declare ^{:arglists '([n])} format-simple-number)
 
 ;; This map causes var metadata to be included in the compiled output, even
 ;; in advanced compilation. See CLJS-1853 - António Monteiro
@@ -887,9 +887,9 @@ THIS FUNCTION IS NOT YET IMPLEMENTED."
 ;;======================================================================
 
 ;; Forward references
-(declare compile-format)
-(declare execute-format)
-(declare init-navigator)
+(declare ^{:arglists '([format-str])} compile-format)
+(declare ^{:arglists '([stream format args] [format args])} execute-format)
+(declare ^{:arglists '([s])} init-navigator)
 ;; End forward references
 
 (defn cl-format
@@ -1026,7 +1026,7 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
 ;; Common handling code for ~A and ~S
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare opt-base-str)
+(declare ^{:arglists '([base val])} opt-base-str)
 
 (def ^{:private true}
   special-radix-markers {2 "#b" 8 "#o" 16 "#x"})
@@ -1832,8 +1832,8 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
 ;; TODO: make it possible to make these decisions at compile-time.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare format-logical-block)
-(declare justify-clauses)
+(declare ^{:arglists '([params navigator offsets])} format-logical-block)
+(declare ^{:arglists '([params navigator offsets])} justify-clauses)
 
 (defn- logical-block-or-justify [params navigator offsets]
   (if (:colon (:right-params params))
@@ -2572,7 +2572,7 @@ of parameters as well."
   (and (:separator (:bracket-info (:def this)))
        (:colon (:params this))))
 
-(declare collect-clauses)
+(declare ^{:arglists '([bracket-info offset remainder])} collect-clauses)
 
 (defn- process-bracket [this remainder]
   (let [[subex remainder] (collect-clauses (:bracket-info (:def this))
@@ -2918,7 +2918,7 @@ type-map {"core$future_call" "Future",
 ;;; Dispatch for the code table
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare pprint-simple-code-list)
+(declare ^{:arglists '([alis])} pprint-simple-code-list)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Format the namespace ("ns") macro. This is quite complicated because of all the

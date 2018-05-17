@@ -131,6 +131,7 @@
    :fn-var true
    :fn-arity true
    :fn-deprecated true
+   :declared-arglists-mismatch true
    :protocol-deprecated true
    :undeclared-protocol-symbol true
    :invalid-protocol-symbol true
@@ -346,6 +347,12 @@
 (defmethod error-message :fn-deprecated
   [warning-type info]
   (str (-> info :fexpr :info :name) " is deprecated"))
+
+(defmethod error-message :declared-arglists-mismatch
+  [warning-type info]
+  (str (symbol (str (:ns-name info)) (str (:sym info)))
+    " declared arglists " (:declared info)
+    " mismatch defined arglists " (:defined info)))
 
 (defmethod error-message :undeclared-ns-form
   [warning-type info]
@@ -1527,7 +1534,13 @@
                  (not (:declared sym-meta))
                  *file-defs*
                  (get @*file-defs* sym))
-        (warning :redef-in-file env {:sym sym :line (:line v)})))
+        (warning :redef-in-file env {:sym sym :line (:line v)}))
+      (when (and (:declared v)
+                 (:arglists v)
+                 (not= (:arglists v) (:arglists sym-meta)))
+        (warning :declared-arglists-mismatch env {:ns-name  ns-name :sym sym
+                                                  :declared (second (:arglists v))
+                                                  :defined  (second (:arglists sym-meta))})))
     (let [env (if (or (and (not= ns-name 'cljs.core)
                            (core-name? env sym))
                       (some? (get-in @env/*compiler* [::namespaces ns-name :uses sym])))
@@ -1617,6 +1630,11 @@
                      :method-params params
                      :arglists (:arglists sym-meta)
                      :arglists-meta (doall (map meta (:arglists sym-meta)))}))))
+            (when (and (:declared sym-meta)
+                       (:arglists sym-meta))
+              {:declared true
+               :fn-var true
+               :method-params (second (:arglists sym-meta))})
             (if (and fn-var? (some? tag))
               {:ret-tag tag}
               (when tag {:tag tag})))))

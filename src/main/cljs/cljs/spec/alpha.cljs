@@ -99,8 +99,8 @@
    (implements? IMeta spec)
    (-> (meta spec) ::name)))
 
-(declare spec-impl)
-(declare regex-spec-impl)
+(declare ^{:arglists '([form pred gfn cpred?] [form pred gfn cpred? unc])} spec-impl)
+(declare ^{:arglists '([re gfn])} regex-spec-impl)
 
 (defn- maybe-spec
   "spec-or-k must be a spec, regex or resolvable kw/sym, else returns nil."
@@ -264,7 +264,7 @@
   [spec x]
   (with-out-str (explain spec x)))
 
-(declare valid?)
+(declare ^{:arglists '([spec x] [spec x form])} valid?)
 
 (defn- gensub
   [spec overrides path rmap form]
@@ -1004,7 +1004,7 @@
                (empty? pret))
         nil))
 
-(declare preturn)
+(declare ^{:arglists '([p])} preturn)
 
 (defn- accept-nil? [p]
   (let [{:keys [::op ps p1 p2 forms] :as p} (reg-resolve! p)]
@@ -1019,7 +1019,7 @@
       ::pcat (every? accept-nil? ps)
       ::alt (c/some accept-nil? ps))))
 
-(declare add-ret)
+(declare ^{:arglists '([p r k])} add-ret)
 
 (defn- preturn [p]
   (let [{[p0 & pr :as ps] :ps, [k :as ks] :ks, :keys [::op p1 ret forms] :as p} (reg-resolve! p)]

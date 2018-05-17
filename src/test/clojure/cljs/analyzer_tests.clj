@@ -712,6 +712,16 @@
                            z)))))
               :tag meta :prefix))))
 
+(deftest test-cljs-1871
+  (let [ws (atom [])]
+    (try
+      (a/with-warning-handlers [(collecting-warning-handler ws)]
+        (a/analyze (ana/empty-env)
+          '(do (declare ^{:arglists '([x y])} foo)
+               (defn foo [x]))))
+      (catch Exception _))
+    (is (string/includes? (first @ws) "declared arglists ([x y]) mismatch defined arglists ([x])"))))
+
 (deftest test-cljs-2023
   (let [form (with-meta 'js/goog.DEBUG {:tag 'boolean})]
     (is (= (-> (ana-api/analyze (a/empty-env) form) :tag) 'boolean))))

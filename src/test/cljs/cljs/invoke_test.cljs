@@ -30,3 +30,7 @@
 (gstr/urlEncode "foo")
 
 (js/goog.string.urlDecode "bar")
+
+(declare ^{:arglists '([a b])} declared-fn)
+
+(declared-fn 1 2)

@@ -266,7 +266,9 @@
       (is (re-find #"(?m)^.*var fexpr.*=.*cljs.core.complement\(funexpr1\);$"
                    content))
       (is (re-find #"(?m)^.*var .*=.*inv_arg1.cljs.core.IFn._invoke.arity.0 \?.*$"
-                   content)))))
+                   content))
+      ;; CLJS-1871: A declare hinted with :arglists meta should result in static dispatch
+      (is (str/includes? content "cljs.invoke_test.declared_fn(")))))
 #_(test-vars [#'test-optimized-invoke-emit])
 
 ;; CLJS-1225

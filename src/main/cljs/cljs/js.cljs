@@ -194,7 +194,7 @@
 ;; -----------------------------------------------------------------------------
 ;; Analyze
 
-(declare eval-str*)
+(declare ^{:arglists '([bound-vars source name opts cb])} eval-str*)
 
 (def *loaded* (atom #{}))
 
@@ -217,7 +217,10 @@
           (run-async! proc (rest coll) break? cb))))
     (cb nil)))
 
-(declare require)
+(declare ^{:arglists '([name cb]
+                       [name opts cb]
+                       [bound-vars name opts cb]
+                       [bound-vars name reload opts cb])} require)
 
 (defn- process-deps
   [bound-vars names opts cb]
@@ -426,7 +429,7 @@
                      (cb res))))))
            (cb {:value nil})))))))
 
-(declare analyze-str*)
+(declare ^{:arglists '([bound-vars source name opts cb])} analyze-str*)
 
 (defn- analyze-deps
   ([bound-vars ana-env lib deps cb]
@@ -786,7 +789,7 @@
 ;; -----------------------------------------------------------------------------
 ;; Eval
 
-(declare clear-fns!)
+(declare ^{:arglists '([])} clear-fns!)
 
 (defn- eval* [bound-vars form opts cb]
   (let [the-ns     (or (:ns opts) 'cljs.user)
