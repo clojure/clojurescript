@@ -1394,8 +1394,15 @@
      :children (vec (concat [v] tests thens (if default [default])))}))
 
 (defmethod parse 'throw
-  [op env [_ throw :as form] name _]
-  (let [throw-expr (disallowing-recur (analyze (assoc env :context :expr) throw))]
+  [op env [_ throw-form :as form] name _]
+  (cond
+    (= 1 (count form))
+    (throw
+      (error env "Too few arguments to throw, throw expects a single Error instance"))
+    (< 2 (count form))
+    (throw
+      (error env "Too many arguments to throw, throw expects a single Error instance")))
+  (let [throw-expr (disallowing-recur (analyze (assoc env :context :expr) throw-form))]
     {:env env :op :throw :form form
      :throw throw-expr
      :children [throw-expr]}))
