@@ -172,9 +172,7 @@ classpath. Classpath-relative paths have prefix of @ or @/")
   [cfg paths]
   (let [paths (util/split-paths paths)]
     (validate-watch-paths paths)
-    (assoc-in cfg [:options :watch] (cond-> paths
-                                            (== 1 (count paths))
-                                            first))))
+    (update-in cfg [:options :watch] (fnil into []) paths)))
 
 (defn- optimize-opt
   [cfg level]
