@@ -699,7 +699,8 @@
           (copy-from-cache cache-path cacheable jar-file opts))))
     ;; Files that don't require compilation (cljs.loader for example)
     ;; need to be copied from JAR to disk.
-    (when-not (.exists out-file)
+    (when (or (nil? out-file)
+              (not (.exists out-file)))
       (jar-file-to-disk jar-file (util/output-directory opts) opts))
     ;; have to call compile-file as it includes more IJavaScript
     ;; information than ana/parse-ns for now
