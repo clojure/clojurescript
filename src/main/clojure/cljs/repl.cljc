@@ -953,6 +953,9 @@
                                 (:require ~@repl-requires))
                              {:line 1 :column 1})
                            identity opts)))
+               maybe-load-user-file #(when-let [user-resource (util/ns->source 'user)]
+                                       (when (= "file" (.getProtocol ^URL user-resource))
+                                         (load-file repl-env (io/file user-resource) opts)))
                read-eval-print
                (fn []
                  (let [input (binding [*ns* (create-ns ana/*cljs-ns*)
@@ -983,6 +986,7 @@
                        (analyze-source analyze-path opts)))
                    (init)
                    (run-inits repl-env inits)
+                   (maybe-load-user-file)
                    (catch Throwable e
                      (caught e repl-env opts)))
                  (when-let [src (:watch opts)]
