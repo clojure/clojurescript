@@ -11,7 +11,8 @@
   (:require-macros [clojure.core :as lang :refer [when when-let] :rename {when always
                                                                           when-let always-let}]
                    [cljs.test :refer [deftest is]])
-  (:require [cljs.test]
+  (:require [goog :as goog-alias]
+            [cljs.test]
             [cljs.ns-test.foo :refer [baz]]
             [clojure.set :as s :refer [intersection] :rename {intersection itsc}]
             [cljs.analyzer :as ana])
@@ -36,3 +37,8 @@
   (is (= (always true 42) 42))
   (is (= (core-mapv inc [1 2]) [2 3]))
   (is (= (always-let [foo 42] foo) 42)))
+
+(deftest test-cljs-1677
+  (is (.isNumber js/goog 3))
+  (is (goog/isNumber 3))
+  (is (goog-alias/isNumber 3)))

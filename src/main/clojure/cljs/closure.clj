@@ -1080,6 +1080,10 @@
                ; - ns-info -> ns -> cljs file relpath -> js relpath
                (merge opts {:output-file (comp/rename-to-js (util/ns->relpath (:ns ns-info)))})))))))))
 
+(defn remove-goog-base
+  [inputs]
+  (remove #(= (:provides %) ["goog"]) inputs))
+
 (defn add-goog-base
   [inputs]
   (cons (javascript-file nil (io/resource "goog/base.js") ["goog"] nil)
@@ -2904,6 +2908,7 @@
                                 (cond-> (= :nodejs (:target opts)) (concat [(-compile (io/resource "cljs/nodejs.cljs") opts)]))
                                 deps/dependency-order
                                 (add-preloads opts)
+                                remove-goog-base
                                 add-goog-base
                                 (cond-> (= :nodejs (:target opts)) (concat [(-compile (io/resource "cljs/nodejscli.cljs") opts)]))
                                 (->> (map #(source-on-disk opts %)) doall)

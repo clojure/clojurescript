@@ -1169,7 +1169,8 @@
         (emitln "goog.require('" (munge lib) "', 'reload-all');")
 
         :else
-        (emitln "goog.require('" (munge lib) "');")))
+        (when-not (= lib 'goog)
+          (emitln "goog.require('" (munge lib) "');"))))
     (doseq [lib node-libs]
       (emitln (munge ns-name) "."
         (ana/munge-node-lib lib)
