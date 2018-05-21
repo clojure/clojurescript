@@ -6,8 +6,8 @@
 
 (s/fdef clojure.core/symbol
   :args (s/alt :separate (s/cat :ns string? :n string?)
-          :str string?
-          :sym symbol?)
+               :str string?
+               :sym symbol?)
   :ret symbol?)
 
 (defn h-cljs-1812 [x] true)
@@ -82,3 +82,6 @@
   (is (= [1 2 3] (foo 1 2 3)))
   (is (thrown? js/Error (foo 1 :hello)))
   (stest/unstrument `foo))
+
+(deftest test-2755
+  (is (uri? (ffirst (s/exercise uri? 1)))))

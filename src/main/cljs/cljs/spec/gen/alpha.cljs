@@ -11,7 +11,8 @@
                             char double int keyword symbol string uuid delay])
   (:require-macros [cljs.core :as c]
                    [cljs.spec.gen.alpha :as gen :refer [dynaload lazy-combinators lazy-prims]])
-  (:require [cljs.core :as c]))
+  (:require [cljs.core :as c])
+  (:import (goog Uri)))
 
 (deftype LazyVar [f ^:mutable cached]
   IDeref
@@ -107,6 +108,7 @@ gen-builtins
        simple-symbol? (symbol)
        qualified-symbol? (such-that qualified? (symbol-ns))
        uuid? (uuid)
+       uri? (fmap #(Uri. (str "http://" % ".com")) (uuid))
        inst? (fmap #(js/Date. %)
                     (large-integer))
        seqable? (one-of [(return nil)
