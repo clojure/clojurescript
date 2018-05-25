@@ -138,6 +138,7 @@
    :multiple-variadic-overloads true
    :variadic-max-arity true
    :overload-arity true
+   :arity-limit true
    :extending-base-js-type true
    :invoke-ctor true
    :invalid-arithmetic true
@@ -411,6 +412,10 @@
 (defmethod error-message :overload-arity
   [warning-type info]
   (str (:name info) ": Can't have 2 overloads with same arity"))
+
+(defmethod error-message :arity-limit
+  [warning-type info]
+  (str "More than 20 fixed arguments, found " (:fixed-arity info)))
 
 (defmethod error-message :extending-base-js-type
   [warning-type info]
@@ -1714,6 +1719,12 @@
         body-env        (assoc env :context :return :locals locals)
         body-form       `(do ~@body)
         expr            (when analyze-body?
+                          (when (< (if (or (:protocol-impl env)
+                                           (-> form meta :protocol-def-method))
+                                     22 20)
+                                   fixed-arity)
+                            (util/debug-prn "meta:" (meta form))
+                            (warning :arity-limit env {:fixed-arity fixed-arity}))
                           (analyze-fn-method-body body-env body-form recur-frames))
         recurs          @(:flag recur-frame)]
     {:env env

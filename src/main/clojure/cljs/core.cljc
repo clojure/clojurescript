@@ -2026,23 +2026,24 @@
                                                      (core/and (map? arg) (core/some? (:as arg))) (:as arg)
                                                      :else (gensym))) sig)
                                            sig)]
-                            `(~sig
-                              (if (and (not (nil? ~(first sig)))
-                                    (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
-                                (. ~(first sig) ~slot ~@sig)
-                                (let [x# (if (nil? ~(first sig)) nil ~(first sig))
-                                      m# (unchecked-get ~(fqn fname) (goog/typeOf x#))]
-                                  (if-not (nil? m#)
-                                    (m# ~@sig)
-                                    (let [m# (unchecked-get ~(fqn fname) "_")]
-                                      (if-not (nil? m#)
-                                        (m# ~@sig)
-                                        (throw
-                                          (missing-protocol
-                                            ~(core/str psym "." fname) ~(first sig)))))))))))
+                            (with-meta
+                              `(~sig
+                                 (if (and (not (nil? ~(first sig)))
+                                          (not (nil? (. ~(first sig) ~(symbol (core/str "-" slot)))))) ;; Property access needed here.
+                                   (. ~(first sig) ~slot ~@sig)
+                                   (let [x# (if (nil? ~(first sig)) nil ~(first sig))
+                                         m# (unchecked-get ~(fqn fname) (goog/typeOf x#))]
+                                     (if-not (nil? m#)
+                                       (m# ~@sig)
+                                       (let [m# (unchecked-get ~(fqn fname) "_")]
+                                         (if-not (nil? m#)
+                                           (m# ~@sig)
+                                           (throw
+                                             (missing-protocol
+                                               ~(core/str psym "." fname) ~(first sig)))))))))
+                              {:protocol-def-method true})))
              psym (core/-> psym
-                    (vary-meta update-in [:jsdoc] conj
-                      "@interface")
+                    (vary-meta update-in [:jsdoc] conj "@interface")
                     (vary-meta assoc-in [:protocol-info :methods]
                       (into {}
                         (map
