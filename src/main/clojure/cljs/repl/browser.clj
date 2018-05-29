@@ -20,7 +20,8 @@
             [cljs.repl.server :as server]
             [cljs.stacktrace :as st]
             [cljs.analyzer :as ana]
-            [cljs.build.api :as build])
+            [cljs.build.api :as build]
+            [clojure.string :as str])
   (:import [java.util.concurrent Executors ConcurrentHashMap]))
 
 (def ^:dynamic browser-state nil)
@@ -140,6 +141,15 @@
     "<script src=\"" output-to "\"></script>"
     "</body></html>"))
 
+(defn- path->mime-type [ext->mime-type path default]
+  (let [lc-path (str/lower-case path)
+        last-dot (.lastIndexOf path ".")]
+    (if (pos? last-dot)
+      (-> lc-path
+          (subs last-dot)
+          (ext->mime-type default))
+      default)))
+
 (defn send-static
   [{path :path :as request} conn
    {:keys [static-dir output-to output-dir host port gzip?] :or {output-dir "out"} :as opts}]
@@ -165,12 +175,10 @@
               local-path)]
         (cond
           local-path
-          (if-let [ext (some #(if (.endsWith path %) %) (keys ext->mime-type))]
-            (let [mime-type (ext->mime-type ext "text/plain")
-                  encoding (mime-type->encoding mime-type "UTF-8")]
-              (server/send-and-close conn 200 (slurp local-path :encoding encoding)
-                mime-type encoding (and gzip? (= "text/javascript" mime-type))))
-            (server/send-and-close conn 200 (slurp local-path) "text/plain"))
+          (let [mime-type (path->mime-type ext->mime-type path "text/plain")
+                encoding (mime-type->encoding mime-type "UTF-8")]
+            (server/send-and-close conn 200 (slurp local-path :encoding encoding)
+                                   mime-type encoding (and gzip? (= "text/javascript" mime-type))))
           ;; "/index.html" doesn't exist, provide our own
           (= path "/index.html")
           (server/send-and-close conn 200
@@ -203,7 +211,7 @@
 
 (server/dispatch-on :get
   (fn [{:keys [path]} _ _]
-    (or (= path "/") (some #(.endsWith path %) (keys ext->mime-type))))
+    (or (= path "/") (path->mime-type ext->mime-type path nil)))
   send-static)
 
 (defmulti handle-post (fn [m _ _ ] (:type m)))
