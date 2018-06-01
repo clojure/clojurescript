@@ -960,11 +960,12 @@
 (core/defmacro string? [x]
   (bool-expr (core/list 'js* "typeof ~{} === 'string'" x)))
 
-;; TODO: x must be a symbol, not an arbitrary expression
 (core/defmacro exists?
   "Return true if argument exists, analogous to usage of typeof operator
-   in JavaScript."
+   in JavaScript to check for undefined top-level var. x must be a symbol but
+   need not be top-level."
   [x]
+  (core/assert (core/symbol? x))
   (let [x     (cond-> (:name (cljs.analyzer/resolve-var &env x))
                 (= "js" (namespace x)) name)
         segs  (string/split (core/str (string/replace x #"\/" ".")) #"\.")
