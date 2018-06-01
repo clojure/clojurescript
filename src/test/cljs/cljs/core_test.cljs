@@ -731,7 +731,9 @@
   (testing "Testing CLJS-2764, exists? on multi-segment symbols"
     (is (false? (exists? this.ns.does.not.exist)))
     (is (true? (exists? cljs.core.first)))
-    (is (true? (exists? cljs.core/first)))))
+    (is (true? (exists? cljs.core/first)))
+    (is (true? (exists? (:foo {:foo 1}))))
+    (is (false? (exists? (:foo {}))))))
 
 (deftest test-518
   (is (nil? (:test "test"))))

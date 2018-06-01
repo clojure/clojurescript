@@ -962,20 +962,20 @@
 
 (core/defmacro exists?
   "Return true if argument exists, analogous to usage of typeof operator
-   in JavaScript to check for undefined top-level var. x must be a symbol but
-   need not be top-level."
+   in JavaScript."
   [x]
-  (core/assert (core/symbol? x))
-  (let [x     (cond-> (:name (cljs.analyzer/resolve-var &env x))
-                (= "js" (namespace x)) name)
-        segs  (string/split (core/str (string/replace x #"\/" ".")) #"\.")
-        n     (count segs)
-        syms  (map
-                #(vary-meta (symbol "js" (string/join "." %))
-                   assoc :cljs.analyzer/no-resolve true)
-                (reverse (take n (iterate butlast segs))))
-        js    (string/join " && " (repeat n "(typeof ~{} !== 'undefined')"))]
-    (bool-expr (concat (core/list 'js* js) syms))))
+  (if (core/symbol? x)
+    (let [x     (cond-> (:name (cljs.analyzer/resolve-var &env x))
+                  (= "js" (namespace x)) name)
+          segs  (string/split (core/str (string/replace x #"\/" ".")) #"\.")
+          n     (count segs)
+          syms  (map
+                  #(vary-meta (symbol "js" (string/join "." %))
+                     assoc :cljs.analyzer/no-resolve true)
+                  (reverse (take n (iterate butlast segs))))
+          js    (string/join " && " (repeat n "(typeof ~{} !== 'undefined')"))]
+      (bool-expr (concat (core/list 'js* js) syms)))
+    `(some? ~x)))
 
 (core/defmacro undefined?
   "Return true if argument is identical to the JavaScript undefined value."
