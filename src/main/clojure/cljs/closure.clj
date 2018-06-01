@@ -64,7 +64,9 @@
 (defn- gitlibs-src?
   "Returns true if the file comes from the gitlibs cache."
   [file]
-  (string/starts-with? (util/path file) (gitlibs-cache-dir)))
+  #_(string/starts-with? (util/path file) (gitlibs-cache-dir))
+  ;; NOTE: does not work on first build see CLJS-2765
+  false)
 
 (def name-chars (map char (concat (range 48 57) (range 65 90) (range 97 122))))
 
