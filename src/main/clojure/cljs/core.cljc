@@ -965,7 +965,8 @@
   "Return true if argument exists, analogous to usage of typeof operator
    in JavaScript."
   [x]
-  (let [x     (:name (cljs.analyzer/resolve-var &env x))
+  (let [x     (cond-> (:name (cljs.analyzer/resolve-var &env x))
+                (= "js" (namespace x)) name)
         segs  (string/split (core/str (string/replace x #"\/" ".")) #"\.")
         n     (count segs)
         syms  (map
