@@ -965,9 +965,15 @@
   "Return true if argument exists, analogous to usage of typeof operator
    in JavaScript."
   [x]
-  (bool-expr
-    (core/list 'js* "typeof ~{} !== 'undefined'"
-      (vary-meta x assoc :cljs.analyzer/no-resolve true))))
+  (let [x     (:name (cljs.analyzer/resolve-var &env x))
+        segs  (string/split (core/str (string/replace x #"\/" ".")) #"\.")
+        n     (count segs)
+        syms  (map
+                #(vary-meta (symbol "js" (string/join "." %))
+                   assoc :cljs.analyzer/no-resolve true)
+                (reverse (take n (iterate butlast segs))))
+        js    (string/join " && " (repeat n "(typeof ~{} !== 'undefined')"))]
+    (bool-expr (concat (core/list 'js* js) syms))))
 
 (core/defmacro undefined?
   "Return true if argument is identical to the JavaScript undefined value."
