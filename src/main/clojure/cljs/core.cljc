@@ -965,15 +965,15 @@
    in JavaScript."
   [x]
   (if (core/symbol? x)
-    (let [x     (cond-> (:name (cljs.analyzer/resolve-var &env x))
-                  (= "js" (namespace x)) name)
-          segs  (string/split (core/str (string/replace x #"\/" ".")) #"\.")
-          n     (count segs)
-          syms  (map
-                  #(vary-meta (symbol "js" (string/join "." %))
-                     assoc :cljs.analyzer/no-resolve true)
-                  (reverse (take n (iterate butlast segs))))
-          js    (string/join " && " (repeat n "(typeof ~{} !== 'undefined')"))]
+    (core/let [x     (core/cond-> (:name (cljs.analyzer/resolve-var &env x))
+                       (= "js" (namespace x)) name)
+               segs  (string/split (core/str (string/replace (core/str x) "/" ".")) #"\.")
+               n     (count segs)
+               syms  (map
+                       #(vary-meta (symbol "js" (string/join "." %))
+                          assoc :cljs.analyzer/no-resolve true)
+                       (reverse (take n (iterate butlast segs))))
+               js    (string/join " && " (repeat n "(typeof ~{} !== 'undefined')"))]
       (bool-expr (concat (core/list 'js* js) syms)))
     `(some? ~x)))
 
