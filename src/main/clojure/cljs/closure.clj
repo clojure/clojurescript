@@ -202,7 +202,7 @@
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
-    :stable-names :ignore-js-module-exts :opts-cache :aot-cache})
+    :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1589,17 +1589,25 @@
   (deps-file {} [{:url (deps/to-url "out/cljs/core.js") :requires ["goog.string"] :provides ["cljs.core"]}])
   )
 
+(defn elide-strict [js {:keys [elide-strict] :as opts}]
+  (cond-> js
+    (not (false? elide-strict))
+    (->
+      (string/replace "\"use strict\"" "            ")
+      (string/replace "'use strict'" "            "))))
+
 (defn output-one-file [{:keys [output-to] :as opts} js]
-  (cond
-    (nil? output-to) js
+  (let [js (elide-strict js opts)]
+    (cond
+      (nil? output-to) js
 
-    (or (string? output-to)
-        (util/file? output-to))
-    (let [f (io/file output-to)]
-      (util/mkdirs f)
-      (spit f js))
+      (or (string? output-to)
+          (util/file? output-to))
+      (let [f (io/file output-to)]
+        (util/mkdirs f)
+        (spit f js))
 
-    :else (println js)))
+      :else (println js))))
 
 (defn output-deps-file [opts sources]
   (output-one-file opts (deps-file opts sources)))
@@ -1733,7 +1741,7 @@
           out-file (io/file output-to)]
       (util/mkdirs out-file)
       (spit out-file
-        (as-> source source
+        (as-> (elide-strict source opts) source
           (if (= name :cljs-base)
             (add-header opts source)
             source)
