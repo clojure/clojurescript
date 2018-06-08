@@ -1741,13 +1741,14 @@
           out-file (io/file output-to)]
       (util/mkdirs out-file)
       (spit out-file
-        (as-> (elide-strict source opts) source
+        (as-> source source
           (if (= name :cljs-base)
             (add-header opts source)
             source)
           (if fdeps-str
             (str fdeps-str "\n" source)
             source)
+          (elide-strict source opts)
           (if sm-name
             (add-source-map-link
               (assoc opts
