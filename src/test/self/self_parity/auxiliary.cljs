@@ -131,7 +131,6 @@
     goog.string.newlines.Line
     goog.structs
     goog.structs.AvlTree
-    goog.structs.AvlTree.Node
     goog.structs.CircularBuffer
     goog.structs.Heap
     goog.structs.InversionMap
