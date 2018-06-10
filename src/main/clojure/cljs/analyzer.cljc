@@ -1708,10 +1708,13 @@
         step            (analyze-fn-method-param env)
         step-init       [locals []]
         [locals params] (reduce step step-init param-names)
-        params'         (if (true? variadic)
-                          (butlast params)
-                          params)
-        fixed-arity     (count params')
+        param-names'    (if (true? variadic)
+                          (butlast param-names)
+                          param-names)
+        fixed-arity     (cond-> (count param-names')
+                          ;; '& may have already been erased by defn macro
+                          ;; check for rest argument and adjust arity count
+                          (some #(-> % meta :rest-arg) param-names') dec)
         recur-frame     {:protocol-impl (:protocol-impl env)
                          :params        params
                          :flag          (atom nil)}
@@ -1719,11 +1722,11 @@
         body-env        (assoc env :context :return :locals locals)
         body-form       `(do ~@body)
         expr            (when analyze-body?
-                          (when (< (if (or (:protocol-impl env)
-                                           (-> form meta :protocol-def-method))
-                                     22 20)
+                          (when (< (cond
+                                     (or (:protocol-impl env)
+                                         (-> form meta :protocol-def-method)) 22
+                                     :else 20)
                                    fixed-arity)
-                            (util/debug-prn "meta:" (meta form))
                             (warning :arity-limit env {:fixed-arity fixed-arity}))
                           (analyze-fn-method-body body-env body-form recur-frames))
         recurs          @(:flag recur-frame)]

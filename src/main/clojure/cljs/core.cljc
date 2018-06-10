@@ -94,7 +94,7 @@
      [-> ->> .. assert comment cond
       declare defn-
       doto
-      extend-protocol fn for
+      extend-protocol for
       if-let if-not letfn
       memfn
       when when-first when-let when-not while
@@ -248,86 +248,94 @@
      [p & specs]
      (emit-extend-protocol p specs)))
 
-#?(:cljs
-   (core/defn ^{:private true}
-   maybe-destructured
-     [params body]
-     (if (every? core/symbol? params)
-       (cons params body)
-       (core/loop [params params
-                   new-params (with-meta [] (meta params))
-                   lets []]
-         (if params
-           (if (core/symbol? (first params))
-             (recur (next params) (conj new-params (first params)) lets)
-             (core/let [gparam (gensym "p__")]
-               (recur (next params) (conj new-params gparam)
-                 (core/-> lets (conj (first params)) (conj gparam)))))
-           `(~new-params
-              (let ~lets
-                ~@body)))))))
+(core/defn ^{:private true}
+maybe-destructured
+  [params body]
+  (if (every? core/symbol? params)
+    (cons params body)
+    (core/loop [params params
+                new-params (with-meta [] (meta params))
+                lets []]
+      (if params
+        (if (core/symbol? (first params))
+          (recur (next params) (conj new-params (first params)) lets)
+          (core/let [param  (first params)
+                     ;; copy meta from destructuring form to symbol
+                     ;; in particular :rest-arg tag
+                     gparam (with-meta (gensym "p__") (meta param))]
+            (recur (next params) (conj new-params gparam)
+              (core/-> lets (conj param) (conj gparam)))))
+        `(~new-params
+           (let ~lets
+             ~@body))))))
 
-#?(:cljs
-   (core/defmacro fn
-     "params => positional-params* , or positional-params* & next-param
-     positional-param => binding-form
-     next-param => binding-form
-     name => symbol
+(core/defmacro fn
+  "params => positional-params* , or positional-params* & next-param
+  positional-param => binding-form
+  next-param => binding-form
+  name => symbol
 
-     Defines a function"
-     {:forms '[(fn name? [params*] exprs*) (fn name? ([params*] exprs*) +)]}
-     [& sigs]
-     (core/let [name (if (core/symbol? (first sigs)) (first sigs) nil)
-                sigs (if name (next sigs) sigs)
-                sigs (if (vector? (first sigs))
-                       (core/list sigs)
-                       (if (seq? (first sigs))
-                         sigs
-                         ;; Assume single arity syntax
-                         (throw (js/Error.
-                                  (if (seq sigs)
-                                    (core/str "Parameter declaration "
-                                      (core/first sigs)
-                                      " should be a vector")
-                                    (core/str "Parameter declaration missing"))))))
-                psig (fn* [sig]
-                       ;; Ensure correct type before destructuring sig
-                       (core/when (not (seq? sig))
-                         (throw (js/Error.
-                                  (core/str "Invalid signature " sig
-                                    " should be a list"))))
-                       (core/let [[params & body] sig
-                                  _ (core/when (not (vector? params))
-                                      (throw (js/Error.
-                                               (if (seq? (first sigs))
-                                                 (core/str "Parameter declaration " params
-                                                   " should be a vector")
-                                                 (core/str "Invalid signature " sig
-                                                   " should be a list")))))
-                                  conds (core/when (core/and (next body) (map? (first body)))
-                                          (first body))
-                                  body (if conds (next body) body)
-                                  conds (core/or conds (meta params))
-                                  pre (:pre conds)
-                                  post (:post conds)
-                                  body (if post
-                                         `((let [~'% ~(if (core/< 1 (count body))
-                                                        `(do ~@body)
-                                                        (first body))]
-                                             ~@(map (fn* [c] `(assert ~c)) post)
-                                             ~'%))
-                                         body)
-                                  body (if pre
-                                         (concat (map (fn* [c] `(assert ~c)) pre)
-                                           body)
-                                         body)]
-                         (maybe-destructured params body)))
-                new-sigs (map psig sigs)]
-       (with-meta
-         (if name
-           (list* 'fn* name new-sigs)
-           (cons 'fn* new-sigs))
-         (meta &form)))))
+  Defines a function"
+  {:forms '[(fn name? [params*] exprs*) (fn name? ([params*] exprs*) +)]}
+  [& sigs]
+  (core/let [name (if (core/symbol? (first sigs)) (first sigs) nil)
+             sigs (if name (next sigs) sigs)
+             sigs (if (vector? (first sigs))
+                    (core/list sigs)
+                    (if (seq? (first sigs))
+                      sigs
+                      ;; Assume single arity syntax
+                      (throw
+                        (new #?(:clj IllegalArgumentException :cljs js/Error)
+                          (if (seq sigs)
+                            (core/str "Parameter declaration "
+                              (core/first sigs)
+                              " should be a vector")
+                            (core/str "Parameter declaration missing"))))))
+             psig (fn* [sig]
+                    ;; Ensure correct type before destructuring sig
+                    (core/when (not (seq? sig))
+                      (throw
+                        (new #?(:clj IllegalArgumentException :cljs js/Error)
+                          (core/str "Invalid signature " sig
+                            " should be a list"))))
+                    (core/let [[params & body] sig
+                               _ (core/when (not (vector? params))
+                                   (throw
+                                     (new #?(:clj IllegalArgumentException :cljs js/Error)
+                                       (if (seq? (first sigs))
+                                         (core/str "Parameter declaration " params
+                                           " should be a vector")
+                                         (core/str "Invalid signature " sig
+                                           " should be a list")))))
+                               conds (core/when (core/and (next body) (map? (first body)))
+                                       (first body))
+                               body (if conds (next body) body)
+                               conds (core/or conds (meta params))
+                               pre (:pre conds)
+                               post (:post conds)
+                               body (if post
+                                      `((let [~'% ~(if (core/< 1 (count body))
+                                                     `(do ~@body)
+                                                     (first body))]
+                                          ~@(map (fn* [c] `(assert ~c)) post)
+                                          ~'%))
+                                      body)
+                               body (if pre
+                                      (concat (map (fn* [c] `(assert ~c)) pre)
+                                        body)
+                                      body)]
+                      ;; preserve meta from the original method form
+                      ;; i.e. protocol-def-method
+                      (with-meta
+                        (maybe-destructured params body)
+                        (meta sig))))
+             new-sigs (map psig sigs)]
+    (with-meta
+      (if name
+        (list* 'fn* name new-sigs)
+        (cons 'fn* new-sigs))
+      (meta &form))))
 
 #?(:cljs
    (core/defmacro defn-
@@ -1352,8 +1360,7 @@
              meta-sym (gensym "meta")
              this-sym (gensym "_")
              locals   (keys (:locals &env))
-             ns       (core/-> &env :ns :name)
-             munge    comp/munge]
+             ns       (core/-> &env :ns :name)]
     `(do
        (when-not (exists? ~(symbol (core/str ns) (core/str t)))
          (deftype ~t [~@locals ~meta-sym]
@@ -1699,10 +1706,15 @@
                        (assoc (meta rsym) :factory :positional))
              docstring (core/str "Positional factory function for " rname ".")
         field-values (if (core/-> rsym meta :internal-ctor) (conj fields nil nil nil) fields)]
-    `(defn ~fn-name
-       ~docstring
-       [~@fields]
-       (new ~rname ~@field-values))))
+    (if (core/< 20 (count fields))
+      `(defn ~fn-name
+         ~docstring
+         [~@(take 20 fields) ~'& [~@(drop 20 fields)]]
+         (new ~rname ~@field-values))
+      `(defn ~fn-name
+         ~docstring
+         [~@fields]
+         (new ~rname ~@field-values)))))
 
 (core/defn- validate-fields
   [case name fields]
@@ -3018,6 +3030,11 @@
    (variadic-fn* sym method true))
   ([sym [arglist & body :as method] solo]
    (core/let [sig (remove '#{&} arglist)
+              ;; we remove '& but will still defer to 'fn,
+              ;; so need to communicate rest arg for accurate
+              ;; fixed arg count
+              sig (concat (butlast sig)
+                    [(vary-meta (last sig) assoc :rest-arg true)])
               restarg (gensym "seq")]
      (core/letfn [(get-delegate []
                     'cljs$core$IFn$_invoke$arity$variadic)
@@ -3123,7 +3140,6 @@
                            :method-params sigs
                            :arglists arglists
                            :arglists-meta (doall (map meta arglists))})
-               args-sym (gensym "args")
                param-counts (map count arglists)]
       (core/when (not= (distinct param-counts) param-counts)
         (ana/warning :overload-arity {} {:name name}))
