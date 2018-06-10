@@ -1591,10 +1591,7 @@
 
 (defn elide-strict [js {:keys [elide-strict] :as opts}]
   (cond-> js
-    (not (false? elide-strict))
-    (->
-      (string/replace "\"use strict\"" "            ")
-      (string/replace "'use strict'" "            "))))
+    (not (false? elide-strict)) (string/replace #"(?m)^['\"]use strict['\"]" "            ")))
 
 (defn output-one-file [{:keys [output-to] :as opts} js]
   (let [js (elide-strict js opts)]
