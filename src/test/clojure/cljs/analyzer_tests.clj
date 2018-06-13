@@ -1085,7 +1085,8 @@
                :externs ["src/test/externs/test.js"]
                :warnings ws
                :with-core? true})]
-    (is (empty? @ws)))
+    (is (empty? @ws))
+    (is (not (string/includes? res "cljs.core"))))
   (let [ws  (atom [])
         res (infer-test-helper
               {:forms '[(ns cjls-2767.core)
@@ -1093,4 +1094,5 @@
                :externs ["src/test/externs/test.js"]
                :warnings ws
                :with-core? true})]
-    (is (empty? @ws))))
+    (is (empty? @ws))
+    (is (not (string/includes? res "cljs.core")))))
