@@ -2191,6 +2191,13 @@
   (assert (not (and (= target :nodejs) (= optimizations :none) (not (contains? opts :main))))
     (format ":nodejs target with :none optimizations requires a :main entry")))
 
+(defn check-main [{:keys [main] :as opts}]
+  (when main
+    (assert (symbol? main)
+      (format ":main must be a symbol, got %s instead" main))
+    (assert (not (string/starts-with? (str main) "'"))
+      (format ":main must be an unquoted symbol, got %s instead" main))))
+
 (defn check-preloads [{:keys [preloads optimizations] :as opts}]
   (when (and (some? preloads)
              (not= preloads '[process.env])
@@ -2812,6 +2819,18 @@
   [ns opts]
   (compile-inputs (find-sources ns opts) opts))
 
+(defn validate-opts [opts]
+  (check-output-to opts)
+  (check-output-dir opts)
+  (check-source-map opts)
+  (check-source-map-path opts)
+  (check-output-wrapper opts)
+  (check-node-target opts)
+  (check-preloads opts)
+  (check-cache-analysis-format opts)
+  (check-main opts)
+  opts)
+
 (defn build
   "Given compiler options, produce runnable JavaScript. An optional source
    parameter may be provided."
@@ -2848,14 +2867,7 @@
                            ana/*cljs-static-fns*)
              sources (when source
                        (-find-sources source opts))]
-         (check-output-to opts)
-         (check-output-dir opts)
-         (check-source-map opts)
-         (check-source-map-path opts)
-         (check-output-wrapper opts)
-         (check-node-target opts)
-         (check-preloads opts)
-         (check-cache-analysis-format opts)
+         (validate-opts opts)
          (swap! compiler-env
            #(-> %
              (update-in [:options] merge opts)

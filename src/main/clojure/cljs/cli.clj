@@ -474,6 +474,7 @@ present"
         convey   (into [:output-dir] repl/known-repl-opts)
         cfg      (update cfg :options merge (select-keys opts convey))
         source   (when (and (= :none (:optimizations opts :none)) main-ns)
+                   (closure/check-main opts)
                    (:uri (build/ns->location main-ns)))
         cenv     (env/default-compiler-env
                    (closure/add-externs-sources (dissoc opts :foreign-libs)))]
