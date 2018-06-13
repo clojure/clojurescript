@@ -352,6 +352,7 @@ present"
                 `(set! *command-line-args* (list ~@args))))
             (repl/evaluate-form renv (ana-api/empty-env) "<cljs repl>"
               `(~'ns ~'cljs.user))
+            (repl/maybe-install-npm-deps opts)
             (repl/run-inits renv inits)
             (when script
               (cond

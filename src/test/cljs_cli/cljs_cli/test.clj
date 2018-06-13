@@ -106,3 +106,12 @@
       (output-is
         nil
         4))))
+
+(deftest test-cljs-2775
+  (with-repl-env-filter #{"node"}
+    (-> (cljs-main
+          "-co" "{:npm-deps {:left-pad \"1.3.0\"} :install-deps true}"
+          "-d" "out"
+          "-e" "(require 'left-pad)"
+          "-e" "(left-pad 3 10 0)")
+      (output-is "nil\n\"0000000003\""))))
