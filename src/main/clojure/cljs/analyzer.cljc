@@ -2928,7 +2928,8 @@
                             (vary-meta (normalize-js-tag target-tag)
                               update-in [:prefix] (fnil conj '[Object]) prop))
                        nil)]
-    (when (not (string/starts-with? (str prop) "cljs$"))
+    (when (and (not= 'constructor prop)
+               (not (string/starts-with? (str prop) "cljs$")))
       ;; Adding to Object
       (when (= 'Object (first (-> tag meta :prefix)))
         (warning :infer-warning env
