@@ -2193,10 +2193,11 @@
 
 (defn check-main [{:keys [main] :as opts}]
   (when main
-    (assert (symbol? main)
-      (format ":main must be a symbol, got %s instead" main))
-    (assert (not (string/starts-with? (str main) "'"))
-      (format ":main must be an unquoted symbol, got %s instead" main))))
+    (assert (or (symbol? main) (string? main))
+      (format ":main must be a symbol or string, got %s instead" main))
+    (when (symbol? main)
+      (assert (not (string/starts-with? (str main) "'"))
+        (format ":main must be an unquoted symbol, got %s instead" main)))))
 
 (defn check-preloads [{:keys [preloads optimizations] :as opts}]
   (when (and (some? preloads)
