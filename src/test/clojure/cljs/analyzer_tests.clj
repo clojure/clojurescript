@@ -1076,3 +1076,23 @@
                :warnings ws
                :warn false})]
     (is (= (unsplit-lines ["Object.Component;"]) res))))
+
+(deftest test-cljs-2767-deftype-defrecord
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:forms '[(ns cjls-2767.core)
+                        (defrecord Foo [])]
+               :externs ["src/test/externs/test.js"]
+               :warnings ws
+               :with-core? true})]
+    (is (empty? @ws))
+    (is (not (string/includes? res "cljs.core"))))
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:forms '[(ns cjls-2767.core)
+                        (deftype Foo [])]
+               :externs ["src/test/externs/test.js"]
+               :warnings ws
+               :with-core? true})]
+    (is (empty? @ws))
+    (is (not (string/includes? res "cljs.core")))))

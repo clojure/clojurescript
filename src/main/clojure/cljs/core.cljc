@@ -1819,7 +1819,7 @@
                                                (.. ~other ~(to-property field))))
                                          base-fields)
                                   (= (.-__extmap ~this)
-                                     (.-__extmap ~other)))))
+                                     (.-__extmap ~(with-meta other {:tag tagname}))))))
                         'IMeta
                         `(~'-meta [this#] ~'__meta)
                         'IWithMeta

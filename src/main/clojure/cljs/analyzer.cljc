@@ -1038,7 +1038,9 @@
          (when (contains? locals (-> sym name symbol))
            (warning :js-shadowed-by-local env {:name sym}))
          (let [pre (->> (string/split (name sym) #"\.") (map symbol) vec)]
-           (when-not (has-extern? pre)
+           (when (and (not (has-extern? pre))
+                      ;; ignore exists? usage
+                      (not (-> sym meta ::no-resolve)))
              (swap! env/*compiler* update-in
                (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))
            (merge
@@ -2928,7 +2930,8 @@
                             (vary-meta (normalize-js-tag target-tag)
                               update-in [:prefix] (fnil conj '[Object]) prop))
                        nil)]
-    (when (not (string/starts-with? (str prop) "cljs$"))
+    (when (and (not= 'constructor prop)
+               (not (string/starts-with? (str prop) "cljs$")))
       ;; Adding to Object
       (when (= 'Object (first (-> tag meta :prefix)))
         (warning :infer-warning env
