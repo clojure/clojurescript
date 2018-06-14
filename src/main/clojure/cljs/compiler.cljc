@@ -1179,7 +1179,7 @@
       (let [{:keys [global-exports]} (get js-dependency-index (name lib))]
         (emitln (munge ns-name) "."
           (ana/munge-global-export lib)
-          " = goog.global." (get global-exports (symbol lib)) ";")))
+          " = goog.global[\"" (get global-exports (symbol lib)) "\"];")))
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 
