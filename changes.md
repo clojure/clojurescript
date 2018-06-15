@@ -1,3 +1,58 @@
+## 1.10.312
+
+### Enhancements
+* CLJS-1871: A declare with :arglists should generate static function calls
+* CLJS-2688 cljs.main: Accumulate all meaningful repeated inits modules using global-exports
+* CLJS-2681: Accepting multiple paths to the --watch option for cljs.main
+* CLJS-2706: Better error messages when missing namespaces contain dashes
+
+### Changes
+* CLJS-2777: Bump Closure-compiler
+* validate :main
+* CLJS-2771: Elide "use strict"1 from final output
+
+### Fixes
+* CLJS-2278 & CLJS-2279
+* goog.global lookup must be a string
+* CLJS-2775: cljs.main: Node modules not installed if -re node
+* CLJS-2767: Externs inference warnings for defrecord and deftype
+* CLJS-2754: Broken cli tests
+* CLJS-2769: Eliminate goog.structs.AvlTree.Node in self-parity test
+* CLJS-2766: Revisions to exists? fails in self-host
+* CLJS-2764: exists? is not nil safe
+* CLJS-2760 Make browser repl web-severs mime-type case-insensitive
+* CLJS-2755: Can't generate uri instances
+* CLJS-1677: Requiring [goog] breaks an :advanced build, but the compiler exits successfully
+* Recompile cljs.loader in REPL
+* CLJS-2733: Throw error message if too few or too many args to throw
+* CLJS-2751: script/bootstrap --closure-library-head misses goog/text
+* CLJS-2480: Periods at end of analyzer warnings
+* CLJS-2618 Fix docstring for `remove-tap`
+* CLJS-2743 Fix docstring misspelling
+* CLJS-2724: Native Node modules Node (like "fs") cannot be required
+* CLJS-2702: Accomodate new Closure Library dependency loading strategy
+* CLJS-2741: Function invoke errors report arity off by 1
+* CLJS-2745: Add GraalVM to the set of JavaScript engines we can test against
+* CLJS-2739: Optimize node_modules indexing
+* CLJS-2619: clojure.reflect needs exclude for macroexpand
+* CLJS-2713: test-reader fails on Windows
+* CLJS-2715: Have goog-define return the var at the REPL
+* CLJS-2727: cljs.repl/err-out visible from cljs
+* CLJS-2734: Add :arglists to defmulti
+* CLJS-2721: test-cljs-2580 failing in windows CI
+* CLJS-2726: test-cljs-2678-global-exports-infer failing on Windows
+* CLJS-2678: Infer-externs doesn't work for JS modules using global-exports
+* CLJS-2718: Setting *warn-on-infer* in REPL throws a SyntaxError
+* CLJS-2385: cljs.analyzer/infer-type pass infers tag with incorrect priority
+* CLJS-1918: case needs a type hint for keywords case when using *warn-on-infer*
+* CLJS-1970: Cannot infer target type for list/vector expressions
+* CLJS-2669: Use simple dummy package for test-cljs-2580
+* CLJS-2716: Add ChakraCore to Windows CI (AppVeyor)
+* CLJS-2147: apply test suit
+* CLJS-2711: System newline breaking some tests on Windows
+* CLJS-2712: Make Windows CI fail if a test fails
+* CLJS-2708: Windows. ClojureScript fails to compile when node.js module is `require`d
+
 ## 1.10.238
 
 ### Enhancements
