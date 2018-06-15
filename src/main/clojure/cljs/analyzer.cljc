@@ -181,7 +181,9 @@
     "synchronized" "this" "throw" "throws"
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"
-    "null" "constructor"})
+    "null" "constructor"
+    "com" ;; for Rhino
+    })
 
 (def es5-allowed
   #{"default"})
@@ -2600,8 +2602,10 @@
     (let [segments (string/split (clojure.core/name name) #"\.")]
       (when (= 1 (count segments))
         (warning :single-segment-namespace env {:name name}))
-      (when (some? (some js-reserved segments))
-        (warning :munged-namespace env {:name name}))
+      (let [segment (some js-reserved segments)]
+        ;; don't complain about "com", for Rhino
+        (when (and (some? segment) (not= "com" segment))
+          (warning :munged-namespace env {:name name})))
       (find-def-clash env name segments)
       #?(:clj
          (when (some (complement util/valid-js-id-start?) segments)
@@ -2613,7 +2617,6 @@
           mdocstr      (-> name meta :doc)
           args         (if (some? docstring) (next args) args)
           metadata     (when (map? (first args)) (first args))
-          form-meta    (meta form)
           args         (desugar-ns-specs
                          #?(:clj  (rewrite-cljs-aliases
                                     (if metadata (next args) args))
