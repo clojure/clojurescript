@@ -351,7 +351,7 @@
             (spit target
               (build/build
                 '[(require '[clojure.browser.repl.preload])]
-                (merge (select-keys opts cljsc/known-opts)
+                (merge (dissoc (select-keys opts cljsc/known-opts) :modules)
                   {:opts-cache "brepl_opts.edn"})))))
         (server/start repl-env)
         (let [base-url (str "http://" (:host repl-env) ":" (:port repl-env))]
