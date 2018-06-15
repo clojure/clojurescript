@@ -8,7 +8,7 @@
 
 (ns cljs.collections-test
   (:refer-clojure :exclude [iter])
-  (:require [cljs.test :refer-macros [deftest testing is are]]
+  (:require [cljs.test :refer-macros [deftest testing is are run-tests]]
             [clojure.string :as s]
             [clojure.set :as set]))
 
@@ -998,3 +998,13 @@
     (is (not (realized? xs)))
     (is (not (realized? ys)))
     (is (= () xs ys))))
+
+(deftest test-cljs-2736
+  (let [s #{(with-meta [:a] {:n 42})}]
+    (is (= {:n 42} (meta (s [:a]))))))
+
+(comment
+
+  (run-tests)
+
+  )

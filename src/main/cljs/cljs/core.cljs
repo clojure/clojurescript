@@ -9102,8 +9102,8 @@ reduces them without incurring seq initialization"
   (-lookup [coll v]
     (-lookup coll v nil))
   (-lookup [coll v not-found]
-    (if (-contains-key? hash-map v)
-      v
+    (if-let [entry (-find hash-map v)]
+      (key entry)
       not-found))
 
   ISet
