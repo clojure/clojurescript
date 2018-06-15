@@ -396,7 +396,7 @@
       (ana/with-warning-handlers [(collecting-warning-handler ws)]
         (build/build (build/inputs (io/file inputs "emit_global_requires_test/core.cljs")) opts cenv))
       (is (.exists (io/file out "emit_global_requires_test/core.js")))
-      (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$react_dom\$server = goog\.global\.ReactDOMServer;"
+      (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$react_dom\$server = goog\.global\[\"ReactDOMServer\"\];"
                             (slurp (io/file out "emit_global_requires_test/core.js"))))))
       (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$react_dom\$server\.renderToString"
                             (slurp (io/file out "emit_global_requires_test/core.js"))))))

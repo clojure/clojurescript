@@ -1088,7 +1088,7 @@
          :eval node-eval}
         (fn [{:keys [error value] :as m}]
           (is (nil? error))
-          (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global.Calculator;" value)))
+          (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global\[\"Calculator\"\];" value)))
           (inc! l)))
       (cljs/eval-str
         (atom @st)
@@ -1166,7 +1166,7 @@
            :load calculator-load
            :eval identity}
           (fn [{{:keys [source]} :value}]
-            (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global.Calculator;\snull;" source)))
+            (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global\[\"Calculator\"\];\snull;" source)))
             (inc! l)))))))
 
 (deftest test-cljs-2261
