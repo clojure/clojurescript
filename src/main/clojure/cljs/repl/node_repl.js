@@ -66,7 +66,7 @@ var server = net.createServer(function (socket) {
 
                 if(":cljs/quit" == data) {
                     server.close();
-                    socket.destroy();
+                    socket.unref();
                     return;
                 } else {
                     try {

@@ -115,3 +115,12 @@
           "-e" "(require 'left-pad)"
           "-e" "(left-pad 3 10 0)")
       (output-is "nil\n\"0000000003\""))))
+
+(deftest test-cljs-2780
+  (with-repl-env-filter #{"node" "nashorn"}
+    (-> (cljs-main
+          "-e" "(do (js/setTimeout #(prn :end) 500) nil)"
+          "-e" ":begin")
+      (output-is
+        :begin
+        :end))))

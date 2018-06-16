@@ -240,17 +240,17 @@
     (load-javascript this provides url))
   (-tear-down [this]
     (swap! state update :listeners dec)
-    (let [tname (thread-name)]
-      (.remove results tname)
-      (.remove outs tname)
-      (.remove errs tname))
     (locking lock
       (when (zero? (:listeners @state))
         (let [sock @socket]
           (when-not (.isClosed (:socket sock))
             (write (:out sock) ":cljs/quit")
             (while (alive? @proc) (Thread/sleep 50))
-            (close-socket sock)))))))
+            (close-socket sock)))))
+    (let [tname (thread-name)]
+      (.remove results tname)
+      (.remove outs tname)
+      (.remove errs tname))))
 
 (defn repl-env* [options]
   (let [{:keys [host port path debug-port]}
