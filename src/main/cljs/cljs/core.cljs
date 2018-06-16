@@ -5098,7 +5098,7 @@ reduces them without incurring seq initialization"
 
 (defn filter
   "Returns a lazy sequence of the items in coll for which
-  (pred item) returns true. pred must be free of side-effects.
+  (pred item) returns logical true. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   ([pred]
     (fn [rf]
@@ -5127,7 +5127,7 @@ reduces them without incurring seq initialization"
 
 (defn remove
   "Returns a lazy sequence of the items in coll for which
-  (pred item) returns false. pred must be free of side-effects.
+  (pred item) returns logical false. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   ([pred] (filter (complement pred)))
   ([pred coll]
@@ -5190,7 +5190,7 @@ reduces them without incurring seq initialization"
 
 (defn filterv
   "Returns a vector of the items in coll for which
-  (pred item) returns true. pred must be free of side-effects."
+  (pred item) returns logical true. pred must be free of side-effects."
   [pred coll]
   (-> (reduce (fn [v o] (if (pred o) (conj! v o) v))
               (transient [])
@@ -9470,7 +9470,7 @@ reduces them without incurring seq initialization"
 
 (defn take-while
   "Returns a lazy sequence of successive items from coll while
-  (pred item) returns true. pred must be free of side-effects.
+  (pred item) returns logical true. pred must be free of side-effects.
   Returns a transducer when no collection is provided."
   ([pred]
      (fn [rf]
