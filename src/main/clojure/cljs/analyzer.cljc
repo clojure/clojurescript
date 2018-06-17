@@ -181,9 +181,7 @@
     "synchronized" "this" "throw" "throws"
     "transient" "try" "typeof" "var" "void"
     "volatile" "while" "with" "yield" "methods"
-    "null" "constructor"
-    "com" ;; for Rhino
-    })
+    "null" "constructor"})
 
 (def es5-allowed
   #{"default"})
@@ -2603,8 +2601,7 @@
       (when (= 1 (count segments))
         (warning :single-segment-namespace env {:name name}))
       (let [segment (some js-reserved segments)]
-        ;; don't complain about "com", for Rhino
-        (when (and (some? segment) (not= "com" segment))
+        (when (some? segment)
           (warning :munged-namespace env {:name name})))
       (find-def-clash env name segments)
       #?(:clj
