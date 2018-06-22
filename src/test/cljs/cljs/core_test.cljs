@@ -1592,4 +1592,4 @@
 (deftest test-cljs-2787
   (let [x (map->CLJS-2787 {1 2})
         y (map->CLJS-2787 x)]
-    (= x y)))
+    (is (= x y))))
