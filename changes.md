@@ -1,3 +1,21 @@
+## 1.10.328
+
+### Changes
+* add :val to :const node
+* rename ast op :constant -> :const
+
+### Fixes
+* CLJS-2787: Record comparison is broken when instance is constructed from another record instance via map factory
+* CLJS-2780: Async tests prematurely terminate in Node
+* CLJS-2783: with-out-str conflicts with :infer-externs
+* CLJS-2730: Fix docstrings in filter, filtev, remove, and take-while
+* CLJS-2703: module name substitution test fails if hypen in directory path
+* CLJS-2731: Failure comparing sorted sets
+* CLJS-2746: Missing provides for JS modules
+* CLJS-2772: Trying to run `cljs.main` repl with `:modules` results in `brepl_deps.js` being `clojure.lang.LazySeq`
+* CLJS-2736: Elements returned from sets as functions are not the actual elements in the set
+* CLJS-2298: REPLs should automatically load user.(cljs|cljc) files at root of Java classpath
+
 ## 1.10.312
 
 ### Enhancements
