@@ -1586,3 +1586,10 @@
     (is (uri? (goog.Uri. "")))
     (is (uri? (goog.Uri. "http://clojurescript.org")))
     (is (uri? (goog.Uri. "some string")))))
+
+(defrecord CLJS-2787 [])
+
+(deftest test-cljs-2787
+  (let [x (map->CLJS-2787 {1 2})
+        y (map->CLJS-2787 x)]
+    (= x y)))

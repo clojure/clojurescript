@@ -1887,7 +1887,9 @@
              ks (map keyword fields)
              getters (map (core/fn [k] `(~k ~ms)) ks)]
     `(defn ~fn-name ~docstring [~ms]
-       (new ~rname ~@getters nil (not-empty (dissoc ~ms ~@ks)) nil))))
+       (let [extmap# (cond->> (dissoc ~ms ~@ks)
+                        (record? ~ms) (into {}))]
+         (new ~rname ~@getters nil (not-empty extmap#) nil)))))
 
 (core/defmacro defrecord
   "(defrecord name [fields*]  options* specs*)
