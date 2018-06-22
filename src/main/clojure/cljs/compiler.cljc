@@ -398,7 +398,7 @@
 
                 (emits info)))))))))
 
-(defmethod emit* :var-special
+(defmethod emit* :the-var
   [{:keys [env var sym meta] :as arg}]
   {:pre [(ana/ast? sym) (ana/ast? meta)]}
   (let [{:keys [name]} (:info var)]
@@ -705,7 +705,7 @@
      (when (:def-emits-var env)
        (emitln "; return (")
        (emits (merge
-                {:op  :var-special
+                {:op  :the-var
                  :env (assoc env :context :expr)}
                 var-ast))
        (emitln ");})()"))

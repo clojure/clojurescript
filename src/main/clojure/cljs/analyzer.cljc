@@ -1364,7 +1364,7 @@
   [op env [_ sym :as form] _ _]
   (merge
     {:env env
-     :op :var-special
+     :op :the-var
      :form form}
     (var-ast env sym)))
 
