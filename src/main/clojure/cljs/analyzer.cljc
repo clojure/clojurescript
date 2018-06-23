@@ -1644,6 +1644,7 @@
         {:env env
          :op :def
          :form form
+         :ns ns-name
          :name var-name
          :var (assoc
                 (analyze
