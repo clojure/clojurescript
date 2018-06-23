@@ -1215,7 +1215,8 @@
 (defn- const-expr-form
   "Returns the :const-expr form for `sym` from `compiler-state`."
   [compiler-state sym]
-  (get-in compiler-state [::ana/namespaces (symbol (namespace sym)) :defs (symbol (name sym)) :const-expr :form]))
+  (let [const-expr (get-in compiler-state [::ana/namespaces (symbol (namespace sym)) :defs (symbol (name sym)) :const-expr])]
+    (some-> const-expr ana/const-expr->constant-value)))
 
 (defn compile-loader
   "Special compilation pass for cljs.loader namespace. cljs.loader must be

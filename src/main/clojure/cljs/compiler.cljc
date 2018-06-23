@@ -30,7 +30,8 @@
                      [cljs.analyzer :as ana]
                      [cljs.source-map :as sm]))
   #?(:clj (:import java.lang.StringBuilder
-                   java.io.File)
+                   java.io.File
+                   [cljs.tagged_literals JSValue])
      :cljs (:import [goog.string StringBuffer])))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -227,28 +228,54 @@
   (with-out-str (emit expr)))
 
 #?(:clj
-   (defmulti emit-constant class)
+   (defmulti emit-constant* class)
    :cljs
-   (defmulti emit-constant type))
+   (defmulti emit-constant* type))
 
-(defmethod emit-constant :default
+(declare emit-map emit-list emit-vector emit-set emit-js-object emit-js-array
+         emit-with-meta emit-constants-comma-sep emit-constant)
+
+#?(:clj
+   (defn emit-constant-no-meta [x]
+     (cond
+       (seq? x) (emit-list x emit-constants-comma-sep)
+       (map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep #(apply distinct? %))
+       (vector? x) (emit-vector x emit-constants-comma-sep)
+       (set? x) (emit-set x emit-constants-comma-sep)
+       :else (emit-constant* x)))
+   :cljs
+   (defn emit-constant-no-meta [x]
+     (cond
+       (ana/cljs-seq? x) (emit-list x emit-constants-comma-sep)
+       (ana/cljs-map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep #(apply distinct? %))
+       (ana/cljs-vector? x) (emit-vector x emit-constants-comma-sep)
+       (ana/cljs-set? x) (emit-set x emit-constants-comma-sep)
+       :else (emit-constant* x))))
+
+(defn emit-constant [v]
+  (let [m (ana/elide-irrelevant-meta (meta v))]
+    (if (some? (seq m))
+      (emit-with-meta #(emit-constant-no-meta v) #(emit-constant-no-meta m))
+      (emit-constant-no-meta v))))
+
+(defmethod emit-constant* :default
   [x]
   (throw
     (ex-info (str "failed compiling constant: " x "; "
-               (type x) " is not a valid ClojureScript constant.")
+               (pr-str (type x)) " is not a valid ClojureScript constant.")
       {:constant x
        :type (type x)})))
 
-(defmethod emit-constant nil [x] (emits "null"))
+(defmethod emit-constant* nil [x] (emits "null"))
 
 #?(:clj
-   (defmethod emit-constant Long [x] (emits "(" x ")")))
+   (defmethod emit-constant* Long [x] (emits "(" x ")")))
 
 #?(:clj
-   (defmethod emit-constant Integer [x] (emits x))) ; reader puts Integers in metadata
+   (defmethod emit-constant* Integer [x] (emits x))) ; reader puts Integers in metadata
 
 #?(:clj
-   (defmethod emit-constant Double [x]
+   (defmethod emit-constant* Double [x]
      (let [x (double x)]
        (cond (Double/isNaN x)
              (emits "NaN")
@@ -258,7 +285,7 @@
 
              :else (emits x))))
    :cljs
-   (defmethod emit-constant js/Number [x]
+   (defmethod emit-constant* js/Number [x]
      (cond (js/isNaN x)
            (emits "NaN")
 
@@ -268,21 +295,21 @@
            :else (emits "(" x ")"))))
 
 #?(:clj
-   (defmethod emit-constant BigDecimal [x] (emits (.doubleValue ^BigDecimal x))))
+   (defmethod emit-constant* BigDecimal [x] (emits (.doubleValue ^BigDecimal x))))
 
 #?(:clj
-   (defmethod emit-constant clojure.lang.BigInt [x] (emits (.doubleValue ^clojure.lang.BigInt x))))
+   (defmethod emit-constant* clojure.lang.BigInt [x] (emits (.doubleValue ^clojure.lang.BigInt x))))
 
-(defmethod emit-constant #?(:clj String :cljs js/String) [x]
+(defmethod emit-constant* #?(:clj String :cljs js/String) [x]
   (emits (wrap-in-double-quotes (escape-string x))))
 
-(defmethod emit-constant #?(:clj Boolean :cljs js/Boolean) [x] (emits (if x "true" "false")))
+(defmethod emit-constant* #?(:clj Boolean :cljs js/Boolean) [x] (emits (if x "true" "false")))
 
 #?(:clj
-   (defmethod emit-constant Character [x]
+   (defmethod emit-constant* Character [x]
      (emits (wrap-in-double-quotes (escape-char x)))))
 
-(defmethod emit-constant #?(:clj java.util.regex.Pattern :cljs js/RegExp) [x]
+(defmethod emit-constant* #?(:clj java.util.regex.Pattern :cljs js/RegExp) [x]
   (if (= "" (str x))
     (emits "(new RegExp(\"\"))")
     (let [[_ flags pattern] (re-find #"^(?:\(\?([idmsux]*)\))?(.*)" (str x))]
@@ -324,26 +351,43 @@
     (emit-constant nil)
     (emits ")")))
 
-(defmethod emit-constant #?(:clj clojure.lang.Keyword :cljs Keyword) [x]
+(defmethod emit-constant* #?(:clj clojure.lang.Keyword :cljs Keyword) [x]
   (if-let [value (and (-> @env/*compiler* :options :emit-constants)
                       (-> @env/*compiler* ::ana/constant-table x))]
     (emits "cljs.core." value)
     (emits-keyword x)))
 
-(defmethod emit-constant #?(:clj clojure.lang.Symbol :cljs Symbol) [x]
+(defmethod emit-constant* #?(:clj clojure.lang.Symbol :cljs Symbol) [x]
   (if-let [value (and (-> @env/*compiler* :options :emit-constants)
                       (-> @env/*compiler* ::ana/constant-table x))]
     (emits "cljs.core." value)
     (emits-symbol x)))
 
+(defn emit-constants-comma-sep [cs]
+  (fn []
+    (doall
+      (map-indexed (fn [i m]
+                     (if (even? i)
+                       (emit-constant m)
+                       (emits m)))
+                   (comma-sep cs)))))
+
+(def ^:private array-map-threshold 8)
+
 ;; tagged literal support
 
-(defmethod emit-constant #?(:clj java.util.Date :cljs js/Date) [^java.util.Date date]
+(defmethod emit-constant* #?(:clj java.util.Date :cljs js/Date) [^java.util.Date date]
   (emits "new Date(" (.getTime date) ")"))
 
-(defmethod emit-constant #?(:clj java.util.UUID :cljs UUID) [^java.util.UUID uuid]
+(defmethod emit-constant* #?(:clj java.util.UUID :cljs UUID) [^java.util.UUID uuid]
   (let [uuid-str (.toString uuid)]
     (emits "new cljs.core.UUID(\"" uuid-str "\", " (hash uuid-str) ")")))
+
+(defmethod emit-constant* #?(:clj JSValue :cljs cljs.tagged-literals/JSValue) [^JSValue v]
+  (let [items (.-val v)]
+    (if (map? items)
+      (emit-js-object items #(fn [] (emit-constant %)))
+      (emit-js-array items emit-constants-comma-sep))))
 
 #?(:clj
    (defmacro emit-wrap [env & body]
@@ -406,61 +450,79 @@
       (emits "new cljs.core.Var(function(){return " (munge name) ";},"
         sym "," meta ")"))))
 
+(defn emit-with-meta [expr meta]
+  (emits "cljs.core.with_meta(" expr "," meta ")"))
+
 (defmethod emit* :with-meta
   [{:keys [expr meta env]}]
   (emit-wrap env
-    (emits "cljs.core.with_meta(" expr "," meta ")")))
-
-(def ^:private array-map-threshold 8)
+    (emit-with-meta expr meta)))
 
 (defn distinct-keys? [keys]
-  (and (every? #(= (:op %) :const) keys)
-       (= (count (into #{} keys)) (count keys))))
+  (let [keys (map ana/unwrap-quote keys)]
+    (and (every? #(= (:op %) :const) keys)
+         (= (count (into #{} keys)) (count keys)))))
+
+(defn emit-map [keys vals comma-sep distinct-keys?]
+  (cond
+    (zero? (count keys))
+    (emits "cljs.core.PersistentArrayMap.EMPTY")
+
+    (<= (count keys) array-map-threshold)
+    (if (distinct-keys? keys)
+      (emits "new cljs.core.PersistentArrayMap(null, " (count keys) ", ["
+        (comma-sep (interleave keys vals))
+        "], null)")
+      (emits "cljs.core.PersistentArrayMap.createAsIfByAssoc(["
+        (comma-sep (interleave keys vals))
+        "])"))
+
+    :else
+    (emits "cljs.core.PersistentHashMap.fromArrays(["
+      (comma-sep keys)
+      "],["
+      (comma-sep vals)
+      "])")))
 
 (defmethod emit* :map
   [{:keys [env keys vals]}]
   (emit-wrap env
-    (cond
-      (zero? (count keys))
-      (emits "cljs.core.PersistentArrayMap.EMPTY")
+    (emit-map keys vals comma-sep distinct-keys?)))
 
-      (<= (count keys) array-map-threshold)
-      (if (distinct-keys? keys)
-        (emits "new cljs.core.PersistentArrayMap(null, " (count keys) ", ["
-          (comma-sep (interleave keys vals))
-          "], null)")
-        (emits "cljs.core.PersistentArrayMap.createAsIfByAssoc(["
-          (comma-sep (interleave keys vals))
-          "])"))
+(defn emit-list [items comma-sep]
+  (if (empty? items)
+    (emits "cljs.core.List.EMPTY")
+    (emits "cljs.core.list(" (comma-sep items) ")")))
 
-      :else
-      (emits "cljs.core.PersistentHashMap.fromArrays(["
-        (comma-sep keys)
-        "],["
-        (comma-sep vals)
-        "])"))))
-
-(defmethod emit* :list
-  [{:keys [items env]}]
-  (emit-wrap env
-    (if (empty? items)
-      (emits "cljs.core.List.EMPTY")
-      (emits "cljs.core.list(" (comma-sep items) ")"))))
+(defn emit-vector [items comma-sep]
+  (if (empty? items)
+    (emits "cljs.core.PersistentVector.EMPTY")
+    (let [cnt (count items)]
+      (if (< cnt 32)
+        (emits "new cljs.core.PersistentVector(null, " cnt
+          ", 5, cljs.core.PersistentVector.EMPTY_NODE, ["  (comma-sep items) "], null)")
+        (emits "cljs.core.PersistentVector.fromArray([" (comma-sep items) "], true)")))))
 
 (defmethod emit* :vector
   [{:keys [items env]}]
   (emit-wrap env
-    (if (empty? items)
-      (emits "cljs.core.PersistentVector.EMPTY")
-      (let [cnt (count items)]
-        (if (< cnt 32)
-          (emits "new cljs.core.PersistentVector(null, " cnt
-            ", 5, cljs.core.PersistentVector.EMPTY_NODE, ["  (comma-sep items) "], null)")
-          (emits "cljs.core.PersistentVector.fromArray([" (comma-sep items) "], true)"))))))
+    (emit-vector items comma-sep)))
 
 (defn distinct-constants? [items]
-  (and (every? #(= (:op %) :const) items)
-       (= (count (into #{} items)) (count items))))
+  (let [items (map ana/unwrap-quote items)]
+    (and (every? #(= (:op %) :const) items)
+         (= (count (into #{} items)) (count items)))))
+
+(defn emit-set [items comma-sep]
+  (cond
+    (empty? items)
+    (emits "cljs.core.PersistentHashSet.EMPTY")
+
+    (distinct-constants? items)
+    (emits "new cljs.core.PersistentHashSet(null, new cljs.core.PersistentArrayMap(null, " (count items) ", ["
+      (comma-sep (interleave items (repeat "null"))) "], null), null)")
+
+    :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "])")))
 
 (defmethod emit* :set
   [{:keys [items env]}]
@@ -475,51 +537,57 @@
 
       :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "])"))))
 
-(defn emit-js-object [items]
+(defn emit-js-object [items emit-js-object-val]
   (emits "({")
   (when-let [items (seq items)]
     (let [[[k v] & r] items]
-      (emits "\"" (name k) "\": " v)
+      (emits "\"" (name k) "\": " (emit-js-object-val v))
       (doseq [[k v] r]
-        (emits ", \"" (name k) "\": " v))))
+        (emits ", \"" (name k) "\": " (emit-js-object-val v)))))
   (emits "})"))
 
-(defn emit-js-array [items]
+(defn emit-js-array [items comma-sep]
   (emits "[" (comma-sep items) "]"))
 
 (defmethod emit* :js-object 
   [{:keys [keys vals env]}]
   (emit-wrap env
-    (emit-js-object (map vector keys vals))))
+    (emit-js-object (map vector keys vals) identity)))
 
 (defmethod emit* :js-array 
   [{:keys [items env]}]
   (emit-wrap env
-    (emit-js-array items)))
+    (emit-js-array items comma-sep)))
 
 (defmethod emit* :record-value
   [{:keys [items ns name items env]}]
   (emit-wrap env
     (emits ns ".map__GT_" name "(" items ")")))
 
+(defmethod emit* :quote
+  [{:keys [expr]}]
+  (emit expr))
+
 (defmethod emit* :const
   [{:keys [form env]}]
   (when-not (= :statement (:context env))
     (emit-wrap env (emit-constant form))))
 
-(defn truthy-constant? [{:keys [op form const-expr]}]
-  (or (and (= op :const)
-           form
-           (not (or (and (string? form) (= form ""))
-                    (and (number? form) (zero? form)))))
-      (and (some? const-expr)
-           (truthy-constant? const-expr))))
+(defn truthy-constant? [expr]
+  (let [{:keys [op form const-expr]} (ana/unwrap-quote expr)]
+    (or (and (= op :const)
+             form
+             (not (or (and (string? form) (= form ""))
+                      (and (number? form) (zero? form)))))
+        (and (some? const-expr)
+             (truthy-constant? const-expr)))))
 
-(defn falsey-constant? [{:keys [op form const-expr]}]
-  (or (and (= op :const)
-           (or (false? form) (nil? form)))
-      (and (some? const-expr)
-           (falsey-constant? const-expr))))
+(defn falsey-constant? [expr]
+  (let [{:keys [op form const-expr]} (ana/unwrap-quote expr)]
+    (or (and (= op :const)
+             (or (false? form) (nil? form)))
+        (and (some? const-expr)
+             (falsey-constant? const-expr)))))
 
 (defn safe-test? [env e]
   (let [tag (ana/infer-tag env e)]
@@ -951,7 +1019,7 @@
         (when name
           (emits "catch (" (munge name) "){" catch "}"))
         (when finally
-          (assert (not= :const (:op finally)) "finally block cannot contain constant")
+          (assert (not= :const (:op (ana/unwrap-quote finally))) "finally block cannot contain constant")
           (emits "finally {" finally "}"))
         (when (= :expr context)
           (emits "})()")))
@@ -1042,8 +1110,9 @@
                     (not (contains? (::ana/namespaces @env/*compiler*) ns))))
 
         keyword? (or (= 'cljs.core/Keyword (ana/infer-tag env f))
-                     (and (= (-> f :op) :const)
-                          (keyword? (-> f :form))))
+                     (let [f (ana/unwrap-quote f)]
+                       (and (= (-> f :op) :const)
+                            (keyword? (-> f :form)))))
         [f variadic-invoke]
         (if fn?
           (let [arity (count args)

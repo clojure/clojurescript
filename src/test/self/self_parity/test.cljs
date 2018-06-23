@@ -183,6 +183,7 @@
        'goog.array
        'cljs.core
        'cljs.env
+       'cljs.tagged-literals
        'cljs.tools.reader
        'clojure.walk}) name))
 

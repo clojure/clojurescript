@@ -742,7 +742,9 @@
          :context :expr}
         (fn [{:keys [error value]}]
           (is (nil? error))
-          (is (= '.x (:form value)))
+          (is (= :quote (:op value)))
+          (is (= ''.x (:form value)))
+          (is (= '.x (-> value :expr :form)))
           (inc! l)))
       (cljs/compile-str st
         "`.x"

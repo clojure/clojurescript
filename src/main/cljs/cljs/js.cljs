@@ -1229,11 +1229,11 @@
 (defn- emit-fn [f]
   (print "cljs.js.get_fn(" (put-fn f) ")"))
 
-(defmethod comp/emit-constant js/Function
+(defmethod comp/emit-constant* js/Function
   [f]
   (emit-fn f))
 
-(defmethod comp/emit-constant cljs.core/Var
+(defmethod comp/emit-constant* cljs.core/Var
   [f]
   (emit-fn f))
 
