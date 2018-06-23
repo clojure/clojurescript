@@ -2845,7 +2845,7 @@
 
 (defmethod parse 'deftype*
   [_ env form _ _]
-  (parse-type :deftype* env form))
+  (parse-type :deftype env form))
 
 (defmethod parse 'defrecord*
   [_ env form _ _]

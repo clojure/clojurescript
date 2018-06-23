@@ -1200,7 +1200,7 @@
   (load-libs requires nil (:require reloads) deps name)
   (load-libs uses requires (:use reloads) deps name))
 
-(defmethod emit* :deftype*
+(defmethod emit* :deftype
   [{:keys [t fields pmasks body protocols]}]
   (let [fields (map munge fields)]
     (emitln "")
