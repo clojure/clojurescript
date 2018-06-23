@@ -1413,7 +1413,7 @@
       (error env "Too many arguments to throw, throw expects a single Error instance")))
   (let [throw-expr (disallowing-recur (analyze (assoc env :context :expr) throw-form))]
     {:env env :op :throw :form form
-     :throw throw-expr
+     :exception throw-expr
      :children [throw-expr]}))
 
 (defmethod parse 'try

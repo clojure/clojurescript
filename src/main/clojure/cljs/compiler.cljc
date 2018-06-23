@@ -559,7 +559,7 @@
       (emitln "return " gs ";})()"))))
 
 (defmethod emit* :throw
-  [{:keys [throw env]}]
+  [{throw :exception :keys [env]}]
   (if (= :expr (:context env))
     (emits "(function(){throw " throw "})()")
     (emitln "throw " throw ";")))
