@@ -2822,7 +2822,7 @@
                                  :volatile-mutable (-> fld meta :volatile-mutable)
                                  :tag (-> fld meta :tag)
                                  :shadow (m fld)}))
-                       {} (if (= :defrecord* op)
+                       {} (if (= :defrecord op)
                             (concat fields '[__meta __extmap ^:mutable __hash])
                             fields))
         protocols (-> tsym meta :protocols)]
@@ -2833,7 +2833,7 @@
                        :tag 'function
                        :type true
                        :num-fields (count fields)
-                       :record (= :defrecord* op))]
+                       :record (= :defrecord op))]
                (merge m
                       (dissoc (meta tsym) :protocols)
                       {:protocols protocols}
@@ -2849,7 +2849,7 @@
 
 (defmethod parse 'defrecord*
   [_ env form _ _]
-  (parse-type :defrecord* env form) )
+  (parse-type :defrecord env form) )
 
 ;; dot accessor code
 

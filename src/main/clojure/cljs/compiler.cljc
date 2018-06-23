@@ -1217,7 +1217,7 @@
     (emitln "});")
     (emit body)))
 
-(defmethod emit* :defrecord*
+(defmethod emit* :defrecord
   [{:keys [t fields pmasks body protocols]}]
   (let [fields (concat (map munge fields) '[__meta __extmap __hash])]
     (emitln "")
