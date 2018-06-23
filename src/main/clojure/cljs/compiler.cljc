@@ -990,7 +990,7 @@
     (emitln "continue;")))
 
 (defmethod emit* :letfn
-  [{:keys [bindings expr env]}]
+  [{expr :body :keys [bindings env]}]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
     (doseq [{:keys [init] :as binding} bindings]
