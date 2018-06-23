@@ -1303,8 +1303,8 @@
       (case (:op e)
         :recur    IGNORE_SYM
         :throw    IGNORE_SYM
-        :let      (infer-tag env (:expr e))
-        :loop     (infer-tag env (:expr e))
+        :let      (infer-tag env (:body e))
+        :loop     (infer-tag env (:body e))
         :do       (infer-tag env (:ret e))
         :method   (infer-tag env (:expr e))
         :def      (infer-tag env (:init e))
@@ -1983,7 +1983,7 @@
     {:op op
      :env encl-env
      :bindings bes
-     :expr expr
+     :body expr
      :form form
      :children children}))
 

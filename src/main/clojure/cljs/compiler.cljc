@@ -950,7 +950,7 @@
       (emits try))))
 
 (defn emit-let
-  [{:keys [bindings expr env]} is-loop]
+  [{expr :body :keys [bindings env]} is-loop]
   (let [context (:context env)]
     (when (= :expr context) (emits "(function (){"))
     (binding [*lexical-renames*
