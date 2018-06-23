@@ -933,7 +933,7 @@
     (when (and statements (= :expr context)) (emitln "})()"))))
 
 (defmethod emit* :try
-  [{:keys [env try catch name finally]}]
+  [{try :body :keys [env catch name finally]}]
   (let [context (:context env)]
     (if (or name finally)
       (do

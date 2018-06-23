@@ -1471,7 +1471,7 @@
         try (disallowing-recur (analyze (if (or e finally) catchenv env) `(do ~@body)))]
 
     {:env env :op :try :form form
-     :try try
+     :body try
      :finally finally
      :name e
      :catch catch
