@@ -406,7 +406,7 @@
       (emits "new cljs.core.Var(function(){return " (munge name) ";},"
         sym "," meta ")"))))
 
-(defmethod emit* :meta
+(defmethod emit* :with-meta
   [{:keys [expr meta env]}]
   (emit-wrap env
     (emits "cljs.core.with_meta(" expr "," meta ")")))

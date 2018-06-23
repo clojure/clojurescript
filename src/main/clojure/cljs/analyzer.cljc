@@ -3486,7 +3486,7 @@
       (let [env (:env expr) ; take on expr's context ourselves
             expr (assoc-in expr [:env :context] :expr) ; change expr to :expr
             meta-expr (analyze-map (:env expr) m)]
-        {:op :meta :env env :form form
+        {:op :with-meta :env env :form form
          :meta meta-expr :expr expr :children [meta-expr expr]})
       expr)))
 
