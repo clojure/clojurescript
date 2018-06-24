@@ -1282,7 +1282,7 @@
               (into then-tag else-tag))))))))
 
 (defn infer-invoke [env e]
-  (let [{info :info :as f} (:f e)]
+  (let [{info :info :as f} (:fn e)]
     (if-some [ret-tag (if (or (true? (:fn-var info))
                               (true? (:js-fn-var info)))
                         (:ret-tag info)
@@ -3187,7 +3187,7 @@
                ~@(if bind-args? arg-syms args)))))
       (let [ana-expr #(analyze enve %)
             argexprs (map ana-expr args)]
-        {:env env :op :invoke :form form :f fexpr :args (vec argexprs)
+        {:env env :op :invoke :form form :fn fexpr :args (vec argexprs)
          :children (into [fexpr] argexprs)}))))
 
 (defn parse-invoke
@@ -3563,7 +3563,7 @@
   (when (and (not (analyzed? ast))
              #?(:clj  (= :invoke op)
                 :cljs (keyword-identical? :invoke op)))
-    (when-some [[name {:keys [valid? warning-type]}] (find invoke-arg-type-validators (-> ast :f :info :name))]
+    (when-some [[name {:keys [valid? warning-type]}] (find invoke-arg-type-validators (-> ast :fn :info :name))]
       (let [types (mapv :tag (:args ast))]
         (when-not (valid? types)
           (warning warning-type env

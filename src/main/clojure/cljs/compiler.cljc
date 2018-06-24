@@ -1005,7 +1005,7 @@
             "$")))
 
 (defmethod emit* :invoke
-  [{:keys [f args env] :as expr}]
+  [{f :fn :keys [args env] :as expr}]
   (let [info (:info f)
         fn? (and ana/*cljs-static-fns*
                  (not (:dynamic info))
