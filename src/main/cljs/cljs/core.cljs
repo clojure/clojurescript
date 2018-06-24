@@ -5644,12 +5644,23 @@ reduces them without incurring seq initialization"
 
 (es6-iterable PersistentVector)
 
+(declare map-entry?)
+
 (defn vec
   "Creates a new vector containing the contents of coll. JavaScript arrays
   will be aliased and should not be modified."
   [coll]
-  (if (array? coll)
+  (cond
+    (map-entry? coll)
+    [(key coll) (val coll)]
+
+    (vector? coll)
+    (with-meta coll nil)
+
+    (array? coll)
     (.fromArray PersistentVector coll true)
+
+    :else
     (-persistent!
       (reduce -conj!
         (-as-transient (.-EMPTY PersistentVector))
@@ -9304,19 +9315,21 @@ reduces them without incurring seq initialization"
 (defn set
   "Returns a set of the distinct elements of coll."
   [coll]
-  (let [in (seq coll)]
-    (cond
-      (nil? in) #{}
+  (if (set? coll)
+    (with-meta coll nil)
+    (let [in (seq coll)]
+      (cond
+        (nil? in) #{}
 
-      (and (instance? IndexedSeq in) (zero? (.-i in)))
-      (.createAsIfByAssoc PersistentHashSet (.-arr in))
+        (and (instance? IndexedSeq in) (zero? (.-i in)))
+        (.createAsIfByAssoc PersistentHashSet (.-arr in))
 
-      :else
-      (loop [^not-native in in
-             ^not-native out (-as-transient #{})]
-        (if-not (nil? in)
-          (recur (next in) (-conj! out (-first in)))
-          (persistent! out))))))
+        :else
+        (loop [^not-native in  in
+               ^not-native out (-as-transient #{})]
+          (if-not (nil? in)
+            (recur (next in) (-conj! out (-first in)))
+            (persistent! out)))))))
 
 (defn hash-set
   "Returns a new hash set with supplied keys.  Any equal keys are
