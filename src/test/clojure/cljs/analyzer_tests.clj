@@ -1096,3 +1096,14 @@
                :with-core? true})]
     (is (empty? @ws))
     (is (not (string/includes? res "cljs.core")))))
+
+(deftest test-cljs-2790-defrecord-fields
+  (let [ws  (atom [])
+        res (infer-test-helper
+              {:forms '[(ns cjls-2790.core)
+                        (defrecord Foo [a b])]
+               :externs ["src/test/externs/test.js"]
+               :warnings ws
+               :with-core? true})]
+    (is (empty? @ws))
+    (is (not (string/includes? res "cljs.core")))))

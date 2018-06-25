@@ -1816,7 +1816,7 @@
                                               (.-constructor ~other))
                                   ~@(map (core/fn [field]
                                            `(= (.. ~this ~(to-property field))
-                                               (.. ~other ~(to-property field))))
+                                               (.. ~(with-meta other {:tag tagname}) ~(to-property field))))
                                          base-fields)
                                   (= (.-__extmap ~this)
                                      (.-__extmap ~(with-meta other {:tag tagname}))))))
