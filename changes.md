@@ -1,3 +1,8 @@
+## 1.10.335
+
+### Changes
+* Bump transit-clj to 0.8.309
+
 ## 1.10.329
 
 ### Changes
