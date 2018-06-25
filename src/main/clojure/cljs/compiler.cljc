@@ -475,19 +475,27 @@
 
       :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "])"))))
 
-(defmethod emit* :js-value
-  [{:keys [items js-type env]}]
+(defn emit-js-object [items]
+  (emits "({")
+  (when-let [items (seq items)]
+    (let [[[k v] & r] items]
+      (emits "\"" (name k) "\": " v)
+      (doseq [[k v] r]
+        (emits ", \"" (name k) "\": " v))))
+  (emits "})"))
+
+(defn emit-js-array [items]
+  (emits "[" (comma-sep items) "]"))
+
+(defmethod emit* :js-object 
+  [{:keys [keys vals env]}]
   (emit-wrap env
-    (if (= js-type :object)
-      (do
-        (emits "({")
-        (when-let [items (seq items)]
-          (let [[[k v] & r] items]
-            (emits "\"" (name k) "\": " v)
-            (doseq [[k v] r]
-              (emits ", \"" (name k) "\": " v))))
-        (emits "})"))
-      (emits "[" (comma-sep items) "]"))))
+    (emit-js-object (map vector keys vals))))
+
+(defmethod emit* :js-array 
+  [{:keys [items env]}]
+  (emit-wrap env
+    (emit-js-array items)))
 
 (defmethod emit* :record-value
   [{:keys [items ns name items env]}]
@@ -534,16 +542,16 @@
           (emitln then "} else {")
           (emitln else "}"))))))
 
-(defmethod emit* :case*
-  [{:keys [v tests thens default env]}]
+(defmethod emit* :case
+  [{v :test :keys [nodes default env]}]
   (when (= (:context env) :expr)
     (emitln "(function(){"))
   (let [gs (gensym "caseval__")]
     (when (= :expr (:context env))
       (emitln "var " gs ";"))
     (emitln "switch (" v ") {")
-    (doseq [[ts then] (partition 2 (interleave tests thens))]
-      (doseq [test ts]
+    (doseq [{ts :tests {:keys [then]} :then} nodes]
+      (doseq [test (map :test ts)]
         (emitln "case " test ":"))
       (if (= :expr (:context env))
         (emitln gs "=" then)
@@ -765,7 +773,7 @@
       (emits ","))))
 
 (defn emit-fn-method
-  [{:keys [type name variadic params expr env recurs max-fixed-arity]}]
+  [{expr :body :keys [type name params env recurs]}]
   (emit-wrap env
     (emits "(function " (munge name) "(")
     (emit-fn-params params)
@@ -794,7 +802,7 @@
     a))
 
 (defn emit-variadic-fn-method
-  [{:keys [type name variadic params expr env recurs max-fixed-arity] :as f}]
+  [{expr :body max-fixed-arity :fixed-arity variadic :variadic? :keys [type name params env recurs] :as f}]
   (emit-wrap env
     (let [name (or name (gensym))
           mname (munge name)
@@ -844,7 +852,7 @@
       (emitln "})()"))))
 
 (defmethod emit* :fn
-  [{:keys [name env methods max-fixed-arity variadic recur-frames loop-lets]}]
+  [{variadic :variadic? :keys [name env methods max-fixed-arity recur-frames loop-lets]}]
   ;;fn statements get erased, serve no purpose and can pollute scope if named
   (when-not (= :statement (:context env))
     (let [loop-locals (->> (concat (mapcat :params (filter #(and % @(:flag %)) recur-frames))
@@ -876,7 +884,7 @@
           (emitln "var " mname " = null;")
           (doseq [[n meth] ms]
             (emits "var " n " = ")
-            (if (:variadic meth)
+            (if (:variadic? meth)
               (emit-variadic-fn-method meth)
               (emit-fn-method meth))
             (emitln ";"))
@@ -889,7 +897,7 @@
             (emitln " = var_args;"))
           (emitln "switch(arguments.length){")
           (doseq [[n meth] ms]
-            (if (:variadic meth)
+            (if (:variadic? meth)
               (do (emitln "default:")
                   (let [restarg (munge (gensym))]
                     (emitln "var " restarg " = null;")
@@ -913,10 +921,10 @@
           (emitln "};")
           (when variadic
             (emitln mname ".cljs$lang$maxFixedArity = " max-fixed-arity ";")
-            (emitln mname ".cljs$lang$applyTo = " (some #(let [[n m] %] (when (:variadic m) n)) ms) ".cljs$lang$applyTo;"))
+            (emitln mname ".cljs$lang$applyTo = " (some #(let [[n m] %] (when (:variadic? m) n)) ms) ".cljs$lang$applyTo;"))
           (doseq [[n meth] ms]
             (let [c (count (:params meth))]
-              (if (:variadic meth)
+              (if (:variadic? meth)
                 (emitln mname ".cljs$core$IFn$_invoke$arity$variadic = " n ".cljs$core$IFn$_invoke$arity$variadic;")
                 (emitln mname ".cljs$core$IFn$_invoke$arity$" c " = " n ";"))))
           (emitln "return " mname ";")
@@ -1039,7 +1047,7 @@
         [f variadic-invoke]
         (if fn?
           (let [arity (count args)
-                variadic? (:variadic info)
+                variadic? (:variadic? info)
                 mps (:method-params info)
                 mfa (:max-fixed-arity info)]
             (cond
@@ -1234,7 +1242,7 @@
     (emitln "});")
     (emit body)))
 
-(defmethod emit* :dot
+(defn emit-dot
   [{:keys [target field method args env]}]
   (emit-wrap env
     (if field
@@ -1242,6 +1250,9 @@
       (emits target "." (munge method #{}) "("
         (comma-sep args)
         ")"))))
+
+(defmethod emit* :host-field [ast] (emit-dot ast))
+(defmethod emit* :host-call [ast] (emit-dot ast))
 
 (defmethod emit* :js
   [{:keys [op env code segs args]}]

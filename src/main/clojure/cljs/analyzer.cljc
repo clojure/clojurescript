@@ -1224,8 +1224,8 @@
         c       (count params)]
     (some
       (fn [m]
-        (and (or (== (:max-fixed-arity m) c)
-                 (:variadic m))
+        (and (or (== (:fixed-arity m) c)
+                 (:variadic? m))
              m))
       methods)))
 
@@ -1289,7 +1289,7 @@
                         (when (= 'js (:ns info)) 'js))]
       ret-tag
       (let [args (:args e)
-            me (assoc (find-matching-method f args) :op :method)]
+            me (assoc (find-matching-method f args) :op :fn-method)]
         (if-some [ret-tag (infer-tag env me)]
           ret-tag
           ANY_SYM)))))
@@ -1306,7 +1306,7 @@
         :let      (infer-tag env (:body e))
         :loop     (infer-tag env (:body e))
         :do       (infer-tag env (:ret e))
-        :method   (infer-tag env (:expr e))
+        :fn-method (infer-tag env (:body e))
         :def      (infer-tag env (:init e))
         :invoke   (infer-invoke env e)
         :if       (infer-if env e)
@@ -1317,7 +1317,7 @@
         :var      (if-some [init (:init e)]
                     (infer-tag env init)
                     (infer-tag env (:info e)))
-        :dot      ANY_SYM
+        (:host-field :host-call)      ANY_SYM
         :js       ANY_SYM
         nil)))
 
@@ -1390,6 +1390,25 @@
         v        (disallowing-recur (analyze expr-env sym))
         tests    (mapv #(mapv (fn [t] (analyze expr-env t)) %) tests)
         thens    (mapv #(analyze env %) thens)
+        nodes    (mapv (fn [tests then]
+                         {:op :case-node
+                          ;synthetic node, no :form
+                          :env env
+                          :tests (mapv (fn [test]
+                                         {:op :case-test
+                                          :form (:form test)
+                                          :env expr-env
+                                          :test test
+                                          :children [test]})
+                                       tests)
+                          :then {:op :case-then
+                                 :form (:form then)
+                                 :env env
+                                 :then then
+                                 :children [then]}
+                          :children (conj tests then)})
+                       tests
+                       thens)
         default  (analyze env default)]
     (assert (every? (fn [t]
                       (or
@@ -1398,9 +1417,9 @@
                              ((some-fn number? string? char?) (:form t)))))
               (apply concat tests))
       "case* tests must be numbers, strings, or constants")
-    {:env env :op :case* :form form
-     :v v :tests tests :thens thens :default default
-     :children (vec (concat [v] tests thens (if default [default])))}))
+    {:env env :op :case :form form
+     :test v :nodes nodes :default default
+     :children (vec (concat [v] nodes [default]))}))
 
 (defmethod parse 'throw
   [op env [_ throw-form :as form] name _]
@@ -1627,7 +1646,7 @@
                    :protocol-inline (:protocol-inline init-expr)}
                   (if-some [top-fn-meta (:top-fn sym-meta)]
                     top-fn-meta
-                    {:variadic (:variadic init-expr)
+                    {:variadic? (:variadic? init-expr)
                      :max-fixed-arity (:max-fixed-arity init-expr)
                      :method-params params
                      :arglists (:arglists sym-meta)
@@ -1720,12 +1739,13 @@
                           (analyze-fn-method-body body-env body-form recur-frames))
         recurs          @(:flag recur-frame)]
     {:env env
-     :variadic variadic
+     :op :fn-method
+     :variadic? variadic
      :params params
-     :max-fixed-arity fixed-arity
+     :fixed-arity fixed-arity
      :type type
      :form form
-     :expr expr
+     :body expr
      :recurs recurs}))
 
 (declare analyze-wrap-meta)
@@ -1783,13 +1803,13 @@
                        {:protocol-impl proto-impl
                         :protocol-inline proto-inline})
         methods      (map #(disallowing-ns* (analyze-fn-method menv locals % type (nil? name))) meths)
-        mfa          (apply max (map :max-fixed-arity methods))
-        variadic     (boolean (some :variadic methods))
+        mfa          (apply max (map :fixed-arity methods))
+        variadic     (boolean (some :variadic? methods))
         locals       (if named-fn?
                        (update-in locals [name] assoc
                          ;; TODO: can we simplify? - David
                          :fn-var true
-                         :variadic variadic
+                         :variadic? variadic
                          :max-fixed-arity mfa
                          :method-params (map :params methods))
                        locals)
@@ -1801,13 +1821,13 @@
         form         (vary-meta form dissoc ::protocol-impl ::protocol-inline ::type)
         js-doc       (when (true? variadic)
                        "@param {...*} var_args")
-        children     (mapv :expr methods)
+        children     (mapv :body methods)
         ast          {:op :fn
                       :env env
                       :form form
                       :name name-var
                       :methods methods
-                      :variadic variadic
+                      :variadic? variadic
                       :tag 'function
                       :recur-frames *recur-frames*
                       :loop-lets *loop-lets*
@@ -1816,7 +1836,7 @@
                       :protocol-impl proto-impl
                       :protocol-inline proto-inline
                       :children children}]
-    (let [variadic-methods (filter :variadic methods)
+    (let [variadic-methods (filter :variadic? methods)
           variadic-params  (count (:params (first variadic-methods)))
           param-counts     (map (comp count :params) methods)]
       (when (< 1 (count variadic-methods))
@@ -1846,7 +1866,7 @@
                               :column (get-col n env)
                               :local true
                               :shadow (locals n)
-                              :variadic (:variadic fexpr)
+                              :variadic? (:variadic? fexpr)
                               :max-fixed-arity (:max-fixed-arity fexpr)
                               :method-params (map :params (:methods fexpr))}
                              ret-tag (assoc :ret-tag ret-tag))]
@@ -1861,7 +1881,7 @@
                         fexpr (analyze env (n->fexpr name))
                         be' (assoc be
                               :init fexpr
-                              :variadic (:variadic fexpr)
+                              :variadic? (:variadic? fexpr)
                               :max-fixed-arity (:max-fixed-arity fexpr)
                               :method-params (map :params (:methods fexpr)))]
                     [(assoc-in env [:locals name] be')
@@ -1943,7 +1963,7 @@
                      ;; TODO: can we simplify - David
                      (merge be
                        {:fn-var true
-                        :variadic (:variadic init-expr)
+                        :variadic? (:variadic? init-expr)
                         :max-fixed-arity (:max-fixed-arity init-expr)
                         :method-params (map :params (:methods init-expr))})
                      be)]
@@ -2958,7 +2978,7 @@
             (into [::namespaces (-> env :ns :name) :externs] pre) merge {}))))
     (case dot-action
       ::access (let [children [targetexpr]]
-                 {:op :dot
+                 {:op :host-field
                   :env env
                   :form form
                   :target targetexpr
@@ -2969,7 +2989,7 @@
                          tag)})
       ::call   (let [argexprs (map #(analyze enve %) args)
                      children (into [targetexpr] argexprs)]
-                 {:op :dot
+                 {:op :host-call
                   :env env
                   :form form
                   :target targetexpr
@@ -3155,7 +3175,7 @@
         bind-args? (and HO-invoke?
                         (not (all-values? args)))]
     (when ^boolean fn-var?
-      (let [{:keys [^boolean variadic max-fixed-arity method-params name ns macro]} (:info fexpr)]
+      (let [{^boolean variadic :variadic? :keys [max-fixed-arity method-params name ns macro]} (:info fexpr)]
         ;; don't warn about invalid arity when when compiling a macros namespace
         ;; that requires itself, as that code is not meant to be executed in the
         ;; `$macros` ns - António Monteiro
@@ -3442,18 +3462,26 @@
 (defn analyze-js-value
   [env ^JSValue form]
   (let [val (.-val form)
-        expr-env (assoc env :context :expr)
-        items (if (map? val)
-                (zipmap (keys val)
-                        (disallowing-recur (doall (map #(analyze expr-env %) (vals val)))))
-                (disallowing-recur (doall (map #(analyze expr-env %) val))))]
-    {:op :js-value
-     :js-type (if (map? val) :object :array)
-     :env env
-     :form form
-     :items items
-     :children items
-     :tag (if (map? val) 'object 'array)}))
+        expr-env (assoc env :context :expr)]
+    (if (map? val)
+      (let [keys (vec (keys val))
+            vals (disallowing-recur
+                   (mapv #(analyze expr-env %) (vals val)))]
+        {:op :js-object
+         :env env
+         :form form
+         :keys keys
+         :vals vals
+         :children vals
+         :tag 'object})
+      (let [items (disallowing-recur
+                    (mapv #(analyze expr-env %) val))]
+        {:op :js-array
+         :env env
+         :form form
+         :items items
+         :children items
+         :tag 'array}))))
 
 (defn analyze-record
   [env x]
