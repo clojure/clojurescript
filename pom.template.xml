@@ -55,7 +55,7 @@
         <dependency>
             <groupId>com.cognitect</groupId>
             <artifactId>transit-clj</artifactId>
-            <version>0.8.300</version>
+            <version>0.8.309</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.clojure</groupId>
