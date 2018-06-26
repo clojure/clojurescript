@@ -10595,15 +10595,17 @@ reduces them without incurring seq initialization"
                 (MapEntry. (thisfn (key x)) (thisfn (val x)) nil)
 
                 (coll? x)
-                (into (empty x) (map thisfn x))
+                (into (empty x) (map thisfn) x)
 
                 (array? x)
-                (vec (map thisfn x))
+                (persistent!
+                 (reduce #(conj! %1 (thisfn %2))
+                         (transient []) x))
 
                 (identical? (type x) js/Object)
-                (into {} (for [k (js-keys x)]
-                           [(keyfn k) (thisfn (unchecked-get x k))]))
-
+                (persistent!
+                 (reduce (fn [r k] (assoc! r (keyfn k) (thisfn (gobject/get x k))))
+                         (transient {}) (js-keys x)))
                 :else x))]
       (f x))))
 
