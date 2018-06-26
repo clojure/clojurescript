@@ -621,6 +621,16 @@
   (is (= (meta (with-meta (reify IFoo (foo [this] :foo)) {:foo :bar}))
             {:foo :bar})))
 
+
+(defprotocol Slashy (/ [_]))
+
+(extend-type string
+       Slashy
+       (/ [_] "result"))
+
+(deftest test-protocol-with-slash
+  (is (=  "result" (/ ""))))
+
 (let [x "original"]
   (defn original-closure-stmt [] x))
 

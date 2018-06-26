@@ -1497,7 +1497,7 @@
       (ifn-invoke-methods type type-sym form))))
 
 (core/defn- add-proto-methods* [pprefix type type-sym [f & meths :as form]]
-  (core/let [pf (core/str pprefix (name f))]
+  (core/let [pf (core/str pprefix (munge (name f)))]
     (if (vector? (first meths))
       ;; single method case
       (core/let [meth meths]
@@ -2063,7 +2063,7 @@
                                        (cljs.analyzer/warning
                                         :protocol-with-variadic-method
                                         &env {:protocol psym :name fname}))
-                                 slot (symbol (core/str prefix (name fname)))
+                                 slot (symbol (core/str prefix (munge (name fname))))
                                  fname (vary-meta fname assoc
                                          :protocol p
                                          :doc doc)]
