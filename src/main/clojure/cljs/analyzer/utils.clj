@@ -13,7 +13,7 @@
   (let [env (:env ast)
         ast (if (= op :fn)
               (assoc ast :methods
-                (map #(simplify-env nil %) (:methods ast)))
+                (mapv #(simplify-env nil %) (:methods ast)))
               ast)]
     (assoc (dissoc ast :env)
       :env {:context (:context env)})))
