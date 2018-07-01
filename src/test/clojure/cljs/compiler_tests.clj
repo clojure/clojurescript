@@ -89,7 +89,9 @@
            :ns   cljs.core}
          (ana/no-warn
            (env/with-compiler-env cenv
-             (ana/resolve-var {:ns {:name 'cljs.core}} '..))))))
+             (select-keys
+               (ana/resolve-var {:ns {:name 'cljs.core}} '..)
+               [:name :ns]))))))
 
 (deftest test-cljs-428
   (letfn [(check-docs [docs]

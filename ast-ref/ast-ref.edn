@@ -1,0 +1,313 @@
+{:all-keys
+
+ [[:op "The node op"]
+  [:form "The ClojureScript form from which the node originated"]
+  [:env "The environment map"]
+  [:context "Either :expr, :return or :statement."]
+  ^:optional
+  [:children "A vector of keywords, representing the children nodes of this node, in order of evaluation"]
+;  ^:optional
+;  [:raw-forms "If this node's :form has been macroexpanded, a sequence of all the intermediate forms from the original form to the macroexpanded form"]
+  ;^:optional
+  ;[:top-level "`true` if this is the root node"]
+  [:tag "The tag this expression is required to have"]
+;  [:o-tag "The tag of this expression, based on the node's children"]
+;  ^:optional
+;  [:ignore-tag "`true` if this node returns a statement rather than an expression"]
+ ; ^:optional
+ ; [:loops "A set of the loop-ids that might cause this node to recur"]
+  ]
+
+ :node-keys
+ [{:op   :binding
+   :doc  "Node for a binding symbol"
+   :keys [[:form "The binding symbol"]
+          [:name "The binding symbol"]
+          [:local "One of :arg, :catch, :fn, :let, :letfn, :loop or :field"]
+          ^:optional
+          [:variadic? "When :local is :arg, a boolean indicating whether this parameter binds to a variable number of arguments"]
+          ^:optional ^:children
+          [:init "When :local is :let, :letfn or :loop, an AST node representing the bound value"]
+          ^:optional ;^:children
+          [:shadow "When this binding shadows another local binding, an AST node representing the shadowed local"]
+          ]}
+  {:op   :case
+   :doc  "Node for a case* special-form expression"
+   :keys [[:form "`(case* expr shift maks default case-map switch-type test-type skip-check?)`"]
+          ^:children
+          [:test "The AST node for the expression to test against"]
+          ^:children
+          [:nodes "A vector of :case-node AST nodes representing the test/then clauses of the case* expression"]
+          ^:children
+          [:default "An AST node representing the default value of the case expression"]
+          ]}
+  {:op   :case-node
+   :doc  "Grouping node for tests/then expressions in a case* expression"
+   :keys [^:children
+          [:tests "A vector of :case-test AST nodes representing the test values"]
+          ^:children
+          [:then "A :case-then AST node representing the value the case expression will evaluate to when one of the :tests expressions matches the :case :test value"]]}
+  {:op   :case-test
+   :doc  "Node for a test value in a case* expression"
+   :keys [^:children
+          [:test "A :const AST node representing the test value"]
+          #_[:hash]]}
+  {:op   :case-then
+   :doc  "Node for a then expression in a case* expression"
+   :keys [^:children
+          [:then "An AST node representing the expression the case will evaluate to when the :test expression matches this node's corresponding :case-test value"]
+          #_[:hash]]}
+  {:op   :const
+   :doc   "Node for a constant literal or a quoted collection literal"
+   :keys [[:form "A constant literal or a quoted collection literal"]
+          [:literal? "`true`"]
+          [:type "one of :nil, :bool, :keyword, :symbol, :string, :number, :type, :record, :map, :vector, :set, :seq, :char, :regex, :class, :var, or :unknown"]
+          [:val "The value of the constant node"]
+          ;^:optional ^:children
+          ;; FIXME
+          ;[:meta "An AST node representing the metadata of the constant value, if present. The node will be either a :map node or a :const node with :type :map"]
+          ;
+          ;^:optional
+          ;[:id "A numeric id for the constant value, will be the same for every instance of this constant inside the same compilation unit, not present if :type is :nil or :bool"]
+          ]}
+  {:op   :def
+   :doc  "Node for a def special-form expression"
+   :keys [[:form "`(def name docstring? init?)`"]
+          [:name "The var symbol to define in the current namespace"]
+          ;[:var "The Var object created (or found, if it already existed) named by the symbol :name in the current namespace"]
+          ;^:optional ^:children
+          ;[:meta "An AST node representing the metadata attached to :name, if present. The node will be either a :map node or a :const node with :type :map"]
+          ^:optional ^:children
+          [:init "An AST node representing the initial value of the var"]
+          ^:children
+          [:the-var "A :the-var AST node representing the return of this :def."]
+          ;^:optional
+          ;[:doc "The docstring for this var"]
+          ]}
+  {:op   :defrecord
+   :doc  "Node for a defrecord* special-form expression"
+   :keys [[:form "`(deftype* name class.name [arg*] :implements [interface*] method*)`"]
+          ;[:interfaces "A set of the interfaces implemented by the type"]
+          [:t "The symbol name of the defrecord."]
+          ^:children
+          [:body "An AST node containing method implementations for this record."]
+          ;^:children
+          ;[:fields "A vector of :binding AST nodes with :local :field representing the deftype fields"]
+          ]}
+  {:op   :deftype
+   :doc  "Node for a deftype* special-form expression"
+   :keys [[:form "`(deftype* name class.name [arg*] :implements [interface*] method*)`"]
+          ;[:interfaces "A set of the interfaces implemented by the type"]
+          [:t "The symbol name of the deftype"]
+          ;[:class-name "A class for the deftype, should *never* be instantiated or used on instance? checks as this will not be the same class the deftype will evaluate to after compilation"]
+          ^:children
+          [:body "An AST node containing method implemented for this type."]
+          ;^:children
+          ;[:fields "A vector of :binding AST nodes with :local :field representing the deftype fields"]
+          ]}
+  {:op   :do
+   :doc  "Node for a do special-form expression or for another special-form's body"
+   :keys [[:form "`(do statement* ret)`"]
+          ^:children
+          [:statements "A vector of AST nodes representing all but the last expression in the do body"]
+          ^:children
+          [:ret "An AST node representing the last expression in the do body (the block's return value)"]
+          ^:optional
+          [:body? "`true` if this node is a synthetic body"]]}
+  {:op   :fn
+   :doc  "Node for a fn* special-form expression"
+   :keys [[:form "`(fn* name? [arg*] body*)` or `(fn* name? method*)`"]
+          [:variadic? "`true` if this function contains a variadic arity method"]
+          [:max-fixed-arity "The number of arguments taken by the fixed-arity method taking the most arguments"]
+          ^:optional ^:children
+          [:local "A :binding AST node with :local :fn representing the function's local name, if one is supplied"]
+          ^:children
+          [:methods "A vector of :fn-method AST nodes representing the fn method arities"]
+          ]}
+  {:op   :fn-method
+   :doc  "Node for an arity method in a fn* expression"
+   :keys [[:form "`([arg*] body*)`"]
+          [:variadic? "`true` if this fn-method takes a variable number of arguments"]
+          ^:children
+          [:params "A vector of :binding AST nodes with :local :arg representing this fn-method args"]
+          [:fixed-arity "The number of non-variadic args this fn-method takes"]
+          ^:children
+          [:body "Synthetic :do node (with :body? `true`) representing the body of this fn-method"]]}
+  {:op   :host-call
+   :doc  "Node for a host interop call"
+   :keys [[:form "`(.method target arg*)`"]
+          [:method "Symbol naming the method to call"]
+          ^:children
+          [:target "An AST node representing the target object"]
+          ^:children
+          [:args "A vector of AST nodes representing the args passed to the method call"]]}
+  {:op   :host-field
+   :doc  "Node for a host interop field access"
+   :keys [[:form "`(.-field target)`"]
+          [:field "Symbol naming the field to access"]
+          ^:children
+          [:target "An AST node representing the target object"]]}
+  {:op   :if
+   :doc  "Node for an if special-form expression"
+   :keys [[:form "`(if test then else?)`"]
+          ^:children
+          [:test "An AST node representing the test expression"]
+          ^:children
+          [:then "An AST node representing the expression's return value if :test evaluated to a truthy value"]
+          ^:children
+          [:else "An AST node representing the expression's return value if :test evaluated to a falsey value, if not supplied it will default to a :const node representing nil"]]}
+  {:op   :invoke
+   :doc  "Node for an invoke expression"
+   :keys [[:form "`(f arg*)`"]
+          ^:children
+          [:fn "An AST node representing the function to invoke"]
+          ^:children
+          [:args "A vector of AST nodes representing the args to the function"]
+          ;FIXME
+          ;^:optional
+          ;[:meta "Map of metadata attached to the invoke :form"]
+          ]}
+  {:op   :js
+   :doc  "Node for a js* special-form expression"
+   :keys [[:form "`(js* js-string arg*)`"]
+          [:segs "A vector of js strings that delimit the compiled args"]
+          ^:children
+          [:args "A vector of AST nodes representing the cljs expressions that will be interposed with the strings in segs"]]}
+  {:op   :js-array
+   :doc  "Node for a js array literal"
+   :keys [[:form "`#js [item*]`"]
+          ^:children
+          [:items "A vector of AST nodes representing the items of the js array"]]}
+  {:op   :js-object
+   :doc  "Node for a js object literal"
+   :keys [[:form "`#js {[key value]*}`"]
+          [:keys "A vector of values representing the keys of the js object"]
+          ^:children
+          [:vals "A vector of AST nodes representing the vals of the js object"]]}
+  {:op   :js-var
+   :doc  "Node for a js-var symbol"
+   :keys [[:form "A symbol naming the js-var in the form: `js/foo`, `js-ns/foo` or `js-var`"]
+          [:ns "The namespace symbol for this js-var."]
+          [:name "The fully qualified symbol naming this js-var."]
+          ]}
+  {:op   :let
+   :doc  "Node for a let* special-form expression"
+   :keys  [[:form "`(let* [binding*] body*)`"]
+           ^:children
+           [:bindings "A vector of :binding AST nodes with :local :let"]
+           ^:children
+           [:body "Synthetic :do node (with :body? `true`) representing the body of the let expression"]]}
+  {:op   :letfn
+   :doc  "Node for a letfn* special-form expression"
+   :keys  [[:form "`(letfn* [binding*] body*)`"]
+           ^:children
+           [:bindings "A vector of :binding AST nodes with :local :letfn"]
+           ^:children
+           [:body "Synthetic :do node (with :body? `true`) representing the body of the letfn expression"]]}
+  {:op   :local
+   :doc  "Node for a local symbol"
+   :keys [[:form "The local symbol"]
+          [:name "The uniquified local symbol"]
+          [:local "One of :arg, :catch, :fn, :let, :letfn, :loop, :field or :this"]
+          ]}
+  {:op   :loop
+   :doc  "Node a loop* special-form expression"
+   :keys [[:form "`(loop* [binding*] body*)`"]
+          ^:children
+          [:bindings "A vector of :binding AST nodes with :local :loop"]
+          ^:children
+          [:body "Synthetic :do node (with :body? `true`) representing the body of the loop expression"]]}
+  {:op   :map
+   :doc  "Node for a map literal with attached metadata and/or non literal elements"
+   :keys [[:form "`{[key val]*}`"]
+          ^:children
+          [:keys "A vector of AST nodes representing the keys of the map"]
+          ^:children
+          [:vals "A vector of AST nodes representing the vals of the map"]]}
+  {:op   :new
+   :doc  "Node for a new special-form expression"
+   :keys [[:form "`(new Class arg*)`"]
+          ^:children
+          [:class "A :const AST node with :type :class representing the Class to instantiate"]
+          ^:children
+          [:args "A vector of AST nodes representing the arguments passed to the Class constructor"]
+          ]}
+  {:op   :no-op
+   :doc  "Node for a no-op"
+   :keys [
+          ]}
+  {:op   :ns
+   :doc  "Node for a clojure.core/ns form."
+   :keys [
+          ]}
+  {:op   :ns*
+   :doc  "Node for a special file-loading form."
+   :keys [
+          ]}
+  {:op   :quote
+   :doc  "Node for a quote special-form expression"
+   :keys [[:form "`(quote expr)`"]
+          ^:children
+          [:expr "A :const AST node representing the quoted value"]
+          [:literal? "`true`"]]}
+  {:op   :recur
+   :doc  "Node for a recur special-form expression"
+   :keys [[:form "`(recur expr*)`"]
+          ^:children
+          [:exprs "A vector of AST nodes representing the new bound values for the loop binding on the next loop iteration"]]}
+  {:op   :set
+   :doc  "Node for a set literal with attached metadata and/or non literal elements"
+   :keys [[:form "`#{item*}`"]
+          ^:children
+          [:items "A vector of AST nodes representing the items of the set"]]}
+  {:op   :set!
+   :doc  "Node for a set! special-form expression"
+   :keys [[:form "`(set! target val)`"]
+          ^:children
+          [:target "An AST node representing the target of the set! expression, must be :assignable?"]
+          ^:children
+          [:val "An AST node representing the new value for the target"]]}
+  {:op   :the-var
+   :doc  "Node for a var special-form expression"
+   :keys [[:form "`(var var-name)`"]
+          ^:children
+          [:var "A :var AST node that this expression refers to"]
+          ^:children
+          [:sym "An AST node for the quoted fully qualified name of this var."]
+          ^:children
+          [:meta "A :map AST node of this var's metadata."]
+          ]}
+  {:op   :throw
+   :doc  "Node for a throw special-form statement"
+   :keys [[:form "`(throw exception)`"]
+          ^:children
+          [:exception "An AST node representing the exception to throw"]]}
+  {:op   :try
+   :doc  "Node for a try special-form expression"
+   :keys  [[:form "`(try body* catch* finally?)`"]
+           ^:children
+           [:body "Synthetic :do AST node (with :body? `true`) representing the body of this try expression"]
+           ^:optional
+           [:name "A binding in scope in :catch. (symbol)"]
+           ^:optional ^:children
+           [:catch "An AST node representing an unconditional JavaScript catch."]
+           ^:optional ^:children
+           [:finally "Synthetic :do AST node (with :body? `true`) representing the final clause of this try expression"]]}
+  {:op   :var
+   :doc  "Node for a var symbol"
+   :keys [[:form "A symbol naming the var"]
+          [:ns "The namespace symbol this var is defined in."]
+          [:name "The fully qualified symbol naming this var."]
+          ]}
+  {:op   :vector
+   :doc  "Node for a vector literal with attached metadata and/or non literal elements"
+   :keys [[:form "`[item*]`"]
+          ^:children
+          [:items "A vector of AST nodes representing the items of the vector"]]}
+  {:op   :with-meta
+   :doc  "Node for a non quoted collection literal or fn/reify expression with attached metadata"
+   :keys [[:form "Non quoted collection literal or fn/reify expression with attached metadata"]
+          ^:children
+          [:meta "An AST node representing the metadata of expression. The node will be either a :map node or a :const node with :type :map"]
+          ^:children
+          [:expr "The expression this metadata is attached to, :op is one of :vector, :map, :set, :fn or :reify"]]}]}

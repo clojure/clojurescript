@@ -1611,3 +1611,11 @@
 (deftest test-cljs-2807
   (testing "Quoted sets should work"
     (is (macroexpand '(fn [x] #{(into [] x)})))))
+
+(deftest var-desugar-test
+  (testing "dotted variable in return position"
+    (= cljs.core.PersistentQueue.EMPTY
+       ((fn [] cljs.core.PersistentQueue.EMPTY)))
+    (= 1
+       (let [a #js {:b 1}]
+         ((fn [] a.b))))))
