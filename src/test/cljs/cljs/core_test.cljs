@@ -1599,6 +1599,23 @@
   ;; Make sure we didn't delete the alpha? fn
   (is (some? alpha-2585?)))
 
+(deftest test-cljs-2693
+  (is (chunked-seq? (range 5)))
+  (is (satisfies? IChunk (chunk-first (range 5))))
+  (is (nil? (chunk-next (range 32))))
+  (is (satisfies? IChunk (chunk-first (chunk-next (range 33)))))
+  (is (satisfies? IChunk (chunk-first (chunk-rest (range 33)))))
+  (is (not (chunked-seq? (range 2 -2 0))))
+  (is (chunked-seq? (range)))
+  (is (= 5 (count (chunk-first (range 5)))))
+  (is (= 32 (count (chunk-first (range)))))
+  (is (= 17 (nth (chunk-first (range 100)) 17)))
+  (is (= ::not-found (nth (chunk-first (range 100)) 35 ::not-found)))
+  (is (= 0 (first (range 5))))
+  (is (= 1 (second (range 5))))
+  (is (= (range 1 5) (rest (range 5))))
+  (is (= (range 1 5) (next (range 5)))))
+
 (defn fn-2741* ([x]) ([x y]))
 (def fn-2741 fn-2741*)
 

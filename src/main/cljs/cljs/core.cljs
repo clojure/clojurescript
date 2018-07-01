@@ -9547,6 +9547,27 @@ reduces them without incurring seq initialization"
        (take-while (mk-bound-fn sc start-test start-key)
                    (if ((mk-bound-fn sc end-test end-key) e) s (next s))))))
 
+(deftype RangeChunk [start step count]
+  ICounted
+  (-count [coll] count)
+
+  ISeq
+  (-first [coll] start)
+
+  IIndexed
+  (-nth [coll i]
+    (+ start (* i step)))
+  (-nth [coll i not-found]
+    (if (and (>= i 0) (< i count))
+      (+ start (* i step))
+      not-found))
+
+  IChunk
+  (-drop-first [coll]
+    (if (<= count 1)
+      (throw (js/Error. "-drop-first of empty chunk"))
+      (RangeChunk. (+ start step) step (dec count)))))
+
 (deftype RangeIterator [^:mutable i end step]
   Object
   (hasNext [_]
@@ -9558,7 +9579,7 @@ reduces them without incurring seq initialization"
       (set! i (+ i step))
       ret)))
 
-(deftype Range [meta start end step ^:mutable __hash]
+(deftype Range [meta start end step ^:mutable chunk ^:mutable chunk-next ^:mutable __hash]
   Object
   (toString [coll]
     (pr-str* coll))
@@ -9572,30 +9593,34 @@ reduces them without incurring seq initialization"
     (-lastIndexOf coll x (count coll)))
   (lastIndexOf [coll x start]
     (-lastIndexOf coll x start))
+  (forceChunk [coll]
+    (when (nil? chunk)
+      (let [count (-count coll)]
+        (if (> count 32)
+          (do
+            (set! chunk-next (Range. nil (+ start (* step 32)) end step nil nil nil))
+            (set! chunk (RangeChunk. start step 32)))
+          (set! chunk (RangeChunk. start step count))))))
 
   ICloneable
-  (-clone [_] (Range. meta start end step __hash))
+  (-clone [_] (Range. meta start end step chunk chunk-next __hash))
 
   IWithMeta
-  (-with-meta [rng meta] (Range. meta start end step __hash))
+  (-with-meta [rng meta] (Range. meta start end step chunk chunk-next __hash))
 
   IMeta
   (-meta [rng] meta)
 
   ISeqable
-  (-seq [rng]
-    (cond
-      (pos? step) (when (< start end) rng)
-      (neg? step) (when (> start end) rng)
-      :else       (when-not (== start end) rng)))
+  (-seq [rng] rng)
 
   ISeq
-  (-first [rng]
-    (when-not (nil? (-seq rng)) start))
+  (-first [rng] start)
   (-rest [rng]
-    (if-not (nil? (-seq rng))
-      (Range. meta (+ start step) end step nil)
-      ()))
+    (let [s (-next rng)]
+      (if (nil? s)
+        ()
+        s)))
 
   IIterable
   (-iterator [_]
@@ -9605,9 +9630,23 @@ reduces them without incurring seq initialization"
   (-next [rng]
     (if (pos? step)
       (when (< (+ start step) end)
-        (Range. meta (+ start step) end step nil))
+        (Range. meta (+ start step) end step nil nil nil))
       (when (> (+ start step) end)
-        (Range. meta (+ start step) end step nil))))
+        (Range. meta (+ start step) end step nil nil nil))))
+
+  IChunkedSeq
+  (-chunked-first [rng]
+    (.forceChunk rng)
+    chunk)
+  (-chunked-rest [rng]
+    (.forceChunk rng)
+    (if (nil? chunk-next)
+      ()
+      chunk-next))
+
+  IChunkedNext
+  (-chunked-next [rng]
+    (seq (-chunked-rest rng)))
 
   ICollection
   (-conj [rng o] (cons o rng))
@@ -9624,9 +9663,7 @@ reduces them without incurring seq initialization"
 
   ICounted
   (-count [rng]
-    (if-not (-seq rng)
-      0
-      (Math/ceil (/ (- end start) step))))
+    (Math/ceil (/ (- end start) step)))
 
   IIndexed
   (-nth [rng n]
@@ -9662,7 +9699,22 @@ reduces them without incurring seq initialization"
   ([] (range 0 (.-MAX_VALUE js/Number) 1))
   ([end] (range 0 end 1))
   ([start end] (range start end 1))
-  ([start end step] (Range. nil start end step nil)))
+  ([start end step]
+   (cond
+     (pos? step)
+     (if (<= end start)
+       ()
+       (Range. nil start end step nil nil nil))
+
+     (neg? step)
+     (if (>= end start)
+       ()
+       (Range. nil start end step nil nil nil))
+
+     :else
+     (if (== end start)
+       ()
+       (repeat start)))))
 
 (defn take-nth
   "Returns a lazy seq of every nth item in coll.  Returns a stateful
