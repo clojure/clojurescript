@@ -3553,9 +3553,8 @@ reduces them without incurring seq initialization"
   (-next [coll]
     (if (> (-count chunk) 1)
       (ChunkedCons. (-drop-first chunk) more meta nil)
-      (let [more (-seq more)]
-        (when-not (nil? more)
-          more))))
+      (when-not (nil? more)
+        (-seq more))))
 
   IChunkedSeq
   (-chunked-first [coll] chunk)

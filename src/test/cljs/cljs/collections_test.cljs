@@ -1019,6 +1019,11 @@
       (is (not (map-entry? coll)))
       (is (= [:a 1] coll)))))
 
+(deftest test-cljs-2798
+  (is (nil? (let [b (chunk-buffer 1)]
+              (chunk-append b 0)
+              (next (chunk-cons (chunk b) nil))))))
+
 (comment
 
   (run-tests)
