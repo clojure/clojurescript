@@ -1566,6 +1566,10 @@
   (is (thrown-with-msg? js/Error #".*Invalid arity: 0" ({})))
   (is (thrown-with-msg? js/Error #".*Invalid arity: 3" ({} 1 2 3))))
 
+(deftest test-cljs-2799
+  (is (thrown? js/Error (nth (repeat :x) -1)))
+  (is (= ::not-found (nth (repeat :x) -1 ::not-found))))
+
 (comment
   ;; ObjMap
   ;; (let [ks (map (partial str "foo") (range 500))
