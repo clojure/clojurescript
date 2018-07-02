@@ -1603,7 +1603,7 @@
                           (analyze (assoc env :context :expr) (:init args) sym))))
           fn-var? (and (some? init-expr) (= (:op init-expr) :fn))
           tag (if fn-var?
-                (or (:ret-tag init-expr) tag)
+                (or (:ret-tag init-expr) tag (:inferred-ret-tag init-expr))
                 (or tag (:tag init-expr)))
           export-as (when-let [export-val (-> sym meta :export)]
                       (if (= true export-val) var-name export-val))
@@ -1844,6 +1844,9 @@
         children     (if (some? name-var)
                        [:local :methods]
                        [:methods])
+        inferred-ret-tag (let [inferred-tags (map (partial infer-tag env) (map :body methods))]
+                           (when (apply = inferred-tags)
+                             (first inferred-tags)))
         ast   (merge {:op :fn
                       :env env
                       :form form
@@ -1851,6 +1854,7 @@
                       :methods methods
                       :variadic? variadic
                       :tag 'function
+                      :inferred-ret-tag inferred-ret-tag
                       :recur-frames *recur-frames*
                       :loop-lets *loop-lets*
                       :jsdoc [js-doc]
