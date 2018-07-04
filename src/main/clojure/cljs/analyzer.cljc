@@ -3572,23 +3572,24 @@
          :children [:items]
          :tag 'array}))))
 
+(defn record-ns+name [x]
+  (map symbol
+       #?(:clj
+          ((juxt (comp #(string/join "." %) butlast) last)
+           (string/split (.getName ^Class (type x)) #"\."))
+          :cljs
+          (string/split (pr-str (type x)) #"/"))))
+
 (defn analyze-record
   [env x]
-  (let [items     (disallowing-recur
+  (let [;; register constansts
+        _items_   (disallowing-recur
                     (analyze (assoc env :context :expr) (into {} x)))
-        [ns name] (map symbol
-                    #?(:clj
-                       ((juxt (comp #(string/join "." %) butlast) last)
-                         (string/split (.getName ^Class (type x)) #"\."))
-                       :cljs
-                       (string/split (pr-str (type x)) #"/")))]
-    {:op :record-value
-     :ns ns
-     :name name
+        [ns name] (record-ns+name x)]
+    {:op :const
+     :val x
      :env env
      :form x
-     :items items
-     :children [:items]
      :tag (symbol (str ns) (str name))}))
 
 (defn elide-reader-meta [m]

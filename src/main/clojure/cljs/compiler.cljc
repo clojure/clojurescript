@@ -233,7 +233,7 @@
    (defmulti emit-constant* type))
 
 (declare emit-map emit-list emit-vector emit-set emit-js-object emit-js-array
-         emit-with-meta emit-constants-comma-sep emit-constant)
+         emit-with-meta emit-constants-comma-sep emit-constant emit-record-value)
 
 (defn all-distinct? [xs]
   (apply distinct? xs))
@@ -242,6 +242,8 @@
    (defn emit-constant-no-meta [x]
      (cond
        (seq? x) (emit-list x emit-constants-comma-sep)
+       (record? x) (let [[ns name] (ana/record-ns+name x)]
+                     (emit-record-value ns name #(emit-constant (into {} x))))
        (map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep all-distinct?)
        (vector? x) (emit-vector x emit-constants-comma-sep)
        (set? x) (emit-set x emit-constants-comma-sep all-distinct?)
@@ -250,6 +252,8 @@
    (defn emit-constant-no-meta [x]
      (cond
        (ana/cljs-seq? x) (emit-list x emit-constants-comma-sep)
+       (record? x) (let [[ns name] (ana/record-ns+name x)]
+                     (emit-record-value ns name #(emit-constant (into {} x))))
        (ana/cljs-map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep all-distinct?)
        (ana/cljs-vector? x) (emit-vector x emit-constants-comma-sep)
        (ana/cljs-set? x) (emit-set x emit-constants-comma-sep all-distinct?)
@@ -554,10 +558,9 @@
   (emit-wrap env
     (emit-js-array items comma-sep)))
 
-(defmethod emit* :record-value
-  [{:keys [items ns name items env]}]
-  (emit-wrap env
-    (emits ns ".map__GT_" name "(" items ")")))
+(defn emit-record-value
+  [ns name items]
+  (emits ns ".map__GT_" name "(" items ")"))
 
 (defmethod emit* :quote
   [{:keys [expr]}]
