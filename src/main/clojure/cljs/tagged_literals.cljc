@@ -56,7 +56,7 @@
      (when-not (string? form)
        (throw (js/Error. "Instance literal expects a string for its timestamp.")))
      (try
-       (reader/read-date form)
+       (#'reader/read-date form)
        (catch :default e
          (throw (js/Error. (. e -message)))))))
 

@@ -38,7 +38,7 @@
     (when (and (nil? (:const v))
                #?(:cljs (nil? (:macro v))))
       (swap! instrumented-vars conj (:name v))
-      `(let [checked# (instrument-1* '~s (var ~s) ~opts)]
+      `(let [checked# (#'instrument-1* '~s (var ~s) ~opts)]
          (when checked# (set! ~s checked#))
          '~(:name v)))))
 
@@ -47,7 +47,7 @@
   (when-let [v (ana-api/resolve &env s)]
     (when (@instrumented-vars (:name v))
       (swap! instrumented-vars disj (:name v))
-      `(let [raw# (unstrument-1* ~s (var ~s))]
+      `(let [raw# (#'unstrument-1* '~s (var ~s))]
          (when raw# (set! ~s raw#))
          '~(:name v)))))
 
@@ -165,8 +165,8 @@ Returns a collection of syms naming the vars unstrumented."
             :sym     s# :spec spec#}
 
            (:args spec#)
-           (let [tcret# (quick-check f# spec# opts#)]
-             (make-check-result s# spec# tcret#))
+           (let [tcret# (#'quick-check f# spec# opts#)]
+             (#'make-check-result s# spec# tcret#))
 
            :default
            {:failure (ex-info "No :args spec" {::s/failure :no-args-spec})
@@ -189,7 +189,7 @@ Returns a collection of syms naming the vars unstrumented."
     (checkable-syms* nil))
   ([opts]
    (reduce into #{}
-     [(filter fn-spec-name? (keys @s/registry-ref))
+     [(filter fn-spec-name? (keys @@#'s/registry-ref))
       (keys (:spec opts))])))
 
 (defmacro checkable-syms
@@ -201,7 +201,7 @@ can be checked."
    `(let [opts# ~opts]
       (validate-check-opts opts#)
       (reduce conj #{}
-        '[~@(filter fn-spec-name? (keys @s/registry-ref))
+        '[~@(filter fn-spec-name? (keys @@#'s/registry-ref))
           ~@(keys (:spec opts))]))))
 
 (defmacro check

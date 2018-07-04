@@ -1864,7 +1864,7 @@
 
                         'IPrintWithWriter
                         `(~'-pr-writer [this# writer# opts#]
-                           (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# pr-writer "" " " "" opts# keyval#))]
+                           (let [pr-pair# (fn [keyval#] (pr-sequential-writer writer# @#'pr-writer "" " " "" opts# keyval#))]
                              (pr-sequential-writer
                                writer# pr-pair# ~pr-open ", " "}" opts#
                                (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
@@ -2689,7 +2689,7 @@
                prefer-table# (atom {})
                method-cache# (atom {})
                cached-hierarchy# (atom {})
-               hierarchy# (cljs.core/get ~options :hierarchy (cljs.core/get-global-hierarchy))]
+               hierarchy# (cljs.core/get ~options :hierarchy (#'cljs.core/get-global-hierarchy))]
            (cljs.core/MultiFn. (cljs.core/symbol ~mm-ns ~(name mm-name)) ~dispatch-fn ~default hierarchy#
              method-table# prefer-table# method-cache# cached-hierarchy#))))))
 
