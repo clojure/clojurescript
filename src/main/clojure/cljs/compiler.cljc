@@ -235,21 +235,24 @@
 (declare emit-map emit-list emit-vector emit-set emit-js-object emit-js-array
          emit-with-meta emit-constants-comma-sep emit-constant)
 
+(defn all-distinct? [xs]
+  (apply distinct? xs))
+
 #?(:clj
    (defn emit-constant-no-meta [x]
      (cond
        (seq? x) (emit-list x emit-constants-comma-sep)
-       (map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep #(apply distinct? %))
+       (map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep all-distinct?)
        (vector? x) (emit-vector x emit-constants-comma-sep)
-       (set? x) (emit-set x emit-constants-comma-sep)
+       (set? x) (emit-set x emit-constants-comma-sep all-distinct?)
        :else (emit-constant* x)))
    :cljs
    (defn emit-constant-no-meta [x]
      (cond
        (ana/cljs-seq? x) (emit-list x emit-constants-comma-sep)
-       (ana/cljs-map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep #(apply distinct? %))
+       (ana/cljs-map? x) (emit-map (keys x) (vals x) emit-constants-comma-sep all-distinct?)
        (ana/cljs-vector? x) (emit-vector x emit-constants-comma-sep)
-       (ana/cljs-set? x) (emit-set x emit-constants-comma-sep)
+       (ana/cljs-set? x) (emit-set x emit-constants-comma-sep all-distinct?)
        :else (emit-constant* x))))
 
 (defn emit-constant [v]
@@ -513,7 +516,7 @@
     (and (every? #(= (:op %) :const) items)
          (= (count (into #{} items)) (count items)))))
 
-(defn emit-set [items comma-sep]
+(defn emit-set [items comma-sep distinct-constants?]
   (cond
     (empty? items)
     (emits "cljs.core.PersistentHashSet.EMPTY")
@@ -527,15 +530,7 @@
 (defmethod emit* :set
   [{:keys [items env]}]
   (emit-wrap env
-    (cond
-      (empty? items)
-      (emits "cljs.core.PersistentHashSet.EMPTY")
-
-      (distinct-constants? items)
-      (emits "new cljs.core.PersistentHashSet(null, new cljs.core.PersistentArrayMap(null, " (count items) ", ["
-        (comma-sep (interleave items (repeat "null"))) "], null), null)")
-
-      :else (emits "cljs.core.PersistentHashSet.createAsIfByAssoc([" (comma-sep items) "])"))))
+    (emit-set items comma-sep distinct-constants?)))
 
 (defn emit-js-object [items emit-js-object-val]
   (emits "({")

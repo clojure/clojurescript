@@ -1607,3 +1607,7 @@
   (let [x (map->CLJS-2787 {1 2})
         y (map->CLJS-2787 x)]
     (is (= x y))))
+
+(deftest test-cljs-2807
+  (testing "Quoted sets should work"
+    (is (macroexpand '(fn [x] #{(into [] x)})))))

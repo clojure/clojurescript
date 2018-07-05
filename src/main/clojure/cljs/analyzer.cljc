@@ -3543,7 +3543,7 @@
     (analyze-wrap-meta {:op :vector :env env :form form :items items :children [:items] :tag 'cljs.core/IVector})))
 
 (defn analyze-set
-  [env form ]
+  [env form]
   (let [expr-env (assoc env :context :expr)
         items (disallowing-recur (mapv #(analyze expr-env %) form))]
     (analyze-wrap-meta {:op :set :env env :form form :items items :children [:items] :tag 'cljs.core/ISet})))
