@@ -179,8 +179,9 @@
          :output-to out})
       (is false)
       (catch Throwable e
-        (is (re-find  #"Circular dependency detected, circular-deps.a -> circular-deps.b -> circular-deps.a"
-              (.getMessage (.getCause e))))))))
+        (let [cause-message (.getMessage (.getCause e))]
+          (is (or (re-find #"Circular dependency detected, circular-deps.a -> circular-deps.b -> circular-deps.a" cause-message)
+                  (re-find #"Circular dependency detected, circular-deps.b -> circular-deps.a -> circular-deps.b" cause-message))))))))
 
 (defn loader-test-project [output-dir]
   {:inputs (str (io/file "src" "test" "cljs_build" "loader_test"))
