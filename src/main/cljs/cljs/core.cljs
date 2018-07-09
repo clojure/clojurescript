@@ -9941,8 +9941,8 @@ reduces them without incurring seq initialization"
         (.cljs$lang$ctorPrWriter obj obj writer opts)
 
         ; Use the new, more efficient, IPrintWithWriter interface when possible.
-        (implements? IPrintWithWriter obj)
-        (-pr-writer ^not-native obj writer opts)
+        (satisfies? IPrintWithWriter obj)
+        (-pr-writer obj writer opts)
 
         (or (true? obj) (false? obj))
         (-write writer (str obj))

@@ -311,7 +311,7 @@
                  [static.core-test]
                  [cljs.recur-test]
                  [cljs.array-access-test]
-                 [cljs.extend-to-object-test]))
+                 [cljs.extend-to-native-test]))
     (fn [{:keys [value error]}]
       (if error
         (handle-error error (:source-maps @st))
@@ -354,7 +354,7 @@
              'static.core-test
              'cljs.recur-test
              'cljs.array-access-test
-             'cljs.extend-to-object-test)
+             'cljs.extend-to-native-test)
           (fn [{:keys [value error]}]
             (when error
               (handle-error error (:source-maps @st)))))))))
