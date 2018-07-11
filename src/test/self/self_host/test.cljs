@@ -1171,6 +1171,11 @@
             (is (some? (re-find #"foo\.core\.global\$module\$calculator = goog.global\[\"Calculator\"\];\snull;" source)))
             (inc! l)))))))
 
+(deftest test-cljs-2814
+  (is (= "global$module$react" (ana/munge-global-export 'react)))
+  (is (= "global$module$_CIRCA_material_ui$core$styles" (ana/munge-global-export "@material-ui/core/styles")))
+  (is (= "node$module$_CIRCA_material_ui$core$styles" (ana/munge-node-lib "@material-ui/core/styles"))))
+
 (deftest test-cljs-2261
   (async done
     (let [st (cljs/empty-state)

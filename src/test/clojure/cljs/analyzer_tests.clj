@@ -1732,3 +1732,8 @@
   (testing "analyze should be robust to :locals mapping to symbols"
     (is (= [:local 'a] (-> (a/analyze (assoc-in test-env [:locals 'a] 'foo) 'a)
                            ((juxt :op :name)))))))
+
+(deftest test-cljs-2814
+  (is (= "global$module$react" (a/munge-global-export 'react)))
+  (is (= "global$module$_CIRCA_material_ui$core$styles" (a/munge-global-export "@material-ui/core/styles")))
+  (is (= "node$module$_CIRCA_material_ui$core$styles" (ana/munge-node-lib "@material-ui/core/styles"))))

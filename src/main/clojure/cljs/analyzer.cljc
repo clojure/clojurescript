@@ -949,10 +949,12 @@
                   (not ^boolean (goog.string/contains s ".."))))))
 
 (defn munge-node-lib [name]
-  (str "node$module$" (munge (string/replace (str name) #"[.\/]" "\\$"))))
+  (str "node$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
+                                                                    :cljs "$$")))))
 
 (defn munge-global-export [name]
-  (str "global$module$" (munge (string/replace (str name) #"[.\/]" "\\$"))))
+  (str "global$module$" (munge (string/replace (str name) #"[.\/]" #?(:clj "\\$"
+                                                                      :cljs "$$")))))
 
 (defn resolve-alias
   "Takes a namespace and an unqualified symbol and potentially returns a new
