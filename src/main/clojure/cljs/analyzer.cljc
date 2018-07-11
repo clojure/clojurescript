@@ -785,9 +785,9 @@
 
 (defn dep-has-global-exports?
   [module]
-  (contains?
-    (get-in @env/*compiler* [:js-dependency-index (str module) :global-exports])
-    (symbol module)))
+  (let [global-exports (get-in @env/*compiler* [:js-dependency-index (str module) :global-exports])]
+    (or (contains? global-exports (symbol module))
+        (contains? global-exports (name module)))))
 
 (defn confirm-var-exists
   ([env prefix suffix]

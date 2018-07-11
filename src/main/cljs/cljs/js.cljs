@@ -659,7 +659,8 @@
           (with-out-str
             (comp/emitln (munge ns-name) "."
               (ana/munge-global-export dep)
-              " = goog.global[\"" (get global-exports (symbol dep)) "\"];")))))
+              " = goog.global[\"" (or (get global-exports (symbol dep))
+                                      (get global-exports (str dep))) "\"];")))))
     (when (and (seq deps) emit-nil-result?)
       (.append sb "null;"))))
 

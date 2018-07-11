@@ -1176,6 +1176,26 @@
   (is (= "global$module$_CIRCA_material_ui$core$styles" (ana/munge-global-export "@material-ui/core/styles")))
   (is (= "node$module$_CIRCA_material_ui$core$styles" (ana/munge-node-lib "@material-ui/core/styles"))))
 
+(deftest test-cljs-2815
+  (async done
+    (let [st (cljs/empty-state)
+          l (latch 1 done)]
+      (let [x-load (fn [_ cb]
+                     (cb {:lang   :js
+                          :source "global.X = {};"}))]
+        (swap! st assoc :js-dependency-index {"@material-ui/core/styles" {:global-exports {"@material-ui/core/styles" "X"}}})
+        (cljs/eval-str
+          (atom @st)
+          "(ns foo.core (:require [\"@material-ui/core/styles\" :as mui-styles])) (mui-styles/createMuiTheme)"
+          nil
+          {:context :expr
+           :def-emits-var true
+           :load x-load
+           :eval identity}
+          (fn [{{:keys [source]} :value}]
+            (is (some? (re-find #"foo\.core\.global\$module\$_CIRCA_material_ui\$core\$styles = goog.global\[\"X\"\];\snull;" source)))
+            (inc! l)))))))
+
 (deftest test-cljs-2261
   (async done
     (let [st (cljs/empty-state)
