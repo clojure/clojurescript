@@ -1183,17 +1183,26 @@
       (let [x-load (fn [_ cb]
                      (cb {:lang   :js
                           :source "global.X = {};"}))]
-        (swap! st assoc :js-dependency-index {"@material-ui/core/styles" {:global-exports {"@material-ui/core/styles" "X"}}})
+        (swap! st assoc :js-dependency-index {"@material-ui/core/styles" {:global-exports {"@material-ui/core/styles" "X"}}
+                                              "@material-ui/core/styles/a" {:global-exports {"@material-ui/core/styles/a" "X.a"}}})
         (cljs/eval-str
           (atom @st)
-          "(ns foo.core (:require [\"@material-ui/core/styles\" :as mui-styles])) (mui-styles/createMuiTheme)"
+"(ns foo.core
+  (:require [\"@material-ui/core/styles\" :as mui-styles]
+            [\"@material-ui/core/styles/a\" :as mui-styles-a]))
+
+(mui-styles/createMuiTheme)
+(mui-styles-a/foo)"
           nil
           {:context :expr
            :def-emits-var true
            :load x-load
            :eval identity}
           (fn [{{:keys [source]} :value}]
-            (is (some? (re-find #"foo\.core\.global\$module\$_CIRCA_material_ui\$core\$styles = goog.global\[\"X\"\];\snull;" source)))
+            (testing "global exports using string key"
+              (is (some? (re-find #"foo\.core\.global\$module\$_CIRCA_material_ui\$core\$styles = goog.global\[\"X\"\];\s" source))))
+            (testing "global exports points to a sub property"
+              (is (some? (re-find #"foo\.core\.global\$module\$_CIRCA_material_ui\$core\$styles\$a = goog.global\[\"X\"\]\[\"a\"\];\s" source))))
             (inc! l)))))))
 
 (deftest test-cljs-2261

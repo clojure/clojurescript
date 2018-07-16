@@ -1199,6 +1199,19 @@
   [{:keys [target val env]}]
   (emit-wrap env (emits target " = " val)))
 
+(defn emit-global-export [ns-name global-exports lib]
+  (emitln (munge ns-name) "."
+          (ana/munge-global-export lib)
+          " = goog.global"
+          ;; Convert object dot access to bracket access
+          (->> (string/split (name (or (get global-exports (symbol lib))
+                                       (get global-exports (name lib))))
+                             #"\.")
+               (map (fn [prop]
+                      (str "[\"" prop "\"]")))
+               (apply str))
+          ";"))
+
 (defn load-libs
   [libs seen reloads deps ns-name]
   (let [{:keys [options js-dependency-index]} @env/*compiler*
@@ -1257,10 +1270,7 @@
         " = require('" lib "');"))
     (doseq [lib global-exports-libs]
       (let [{:keys [global-exports]} (get js-dependency-index (name lib))]
-        (emitln (munge ns-name) "."
-          (ana/munge-global-export lib)
-          " = goog.global[\"" (or (get global-exports (symbol lib))
-                                  (get global-exports (name lib))) "\"];")))
+        (emit-global-export ns-name global-exports lib)))
     (when (-> libs meta :reload-all)
       (emitln "if(!COMPILED) " loaded-libs " = cljs.core.into(" loaded-libs-temp ", " loaded-libs ");"))))
 

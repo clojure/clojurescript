@@ -393,9 +393,11 @@
                                                         :requires ["react-dom"]
                                                         :global-exports '{react-dom/server ReactDOMServer}}
                                                        {:file "src/test/cljs_build/thirdparty/add.js"
-                                                        :provides ["@material-ui/core/styles"]
+                                                        :provides ["@material-ui/core/styles"
+                                                                   "@material-ui/core/styles/a"]
                                                         ;; Key str because contains multiple /, value shouldn't matter
-                                                        :global-exports {"@material-ui/core/styles" "MaterialUIStyles"}}]}}
+                                                        :global-exports {"@material-ui/core/styles" "MaterialUIStyles"
+                                                                         "@material-ui/core/styles/a" "MaterialUIStyles.a"}}]}}
           cenv (env/default-compiler-env)]
       (test/delete-out-files out)
       (ana/with-warning-handlers [(collecting-warning-handler ws)]
@@ -405,10 +407,16 @@
                             (slurp (io/file out "emit_global_requires_test/core.js"))))))
       (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$react_dom\$server\.renderToString"
                             (slurp (io/file out "emit_global_requires_test/core.js"))))))
-      (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$_CIRCA_material_ui\$core\$styles = goog\.global\[\"MaterialUIStyles\"\];"
-                            (slurp (io/file out "emit_global_requires_test/core.js"))))))
-      (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$_CIRCA_material_ui\$core\$styles\.createMuiTheme"
-                            (slurp (io/file out "emit_global_requires_test/core.js"))))))
+      (testing "global exports using string key"
+        (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$_CIRCA_material_ui\$core\$styles = goog\.global\[\"MaterialUIStyles\"\];"
+                                     (slurp (io/file out "emit_global_requires_test/core.js"))))))
+        (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$_CIRCA_material_ui\$core\$styles\.createMuiTheme"
+                                     (slurp (io/file out "emit_global_requires_test/core.js")))))))
+      (testing "global exports points to a sub property"
+        (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$_CIRCA_material_ui\$core\$styles\$a = goog\.global\[\"MaterialUIStyles\"\]\[\"a\"\];"
+                                     (slurp (io/file out "emit_global_requires_test/core.js"))))))
+        (is (true? (boolean (re-find #"emit_global_requires_test\.core\.global\$module\$_CIRCA_material_ui\$core\$styles\$a\.foo"
+                                     (slurp (io/file out "emit_global_requires_test/core.js")))))))
       (is (empty? @ws)))))
 
 (deftest test-data-readers

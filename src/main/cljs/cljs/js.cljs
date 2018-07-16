@@ -657,10 +657,7 @@
       (let [{:keys [global-exports]} (get js-dependency-index (name dep))]
         (.append sb
           (with-out-str
-            (comp/emitln (munge ns-name) "."
-              (ana/munge-global-export dep)
-              " = goog.global[\"" (or (get global-exports (symbol dep))
-                                      (get global-exports (str dep))) "\"];")))))
+            (comp/emit-global-export ns-name global-exports dep)))))
     (when (and (seq deps) emit-nil-result?)
       (.append sb "null;"))))
 
