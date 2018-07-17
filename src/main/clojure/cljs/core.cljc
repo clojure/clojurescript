@@ -93,7 +93,6 @@
    (import-macros clojure.core
      [-> ->> .. assert comment cond
       declare defn-
-      doto
       extend-protocol fn for
       if-let if-not letfn
       memfn
@@ -176,22 +175,21 @@
      "defs the supplied var names with no bindings, useful for making forward declarations."
      [& names] `(do ~@(map #(core/list 'def (vary-meta % assoc :declared true)) names))))
 
-#?(:cljs
-   (core/defmacro doto
-     "Evaluates x then calls all of the methods and functions with the
-     value of x supplied at the front of the given arguments.  The forms
-     are evaluated in order.  Returns x.
+(core/defmacro doto
+  "Evaluates x then calls all of the methods and functions with the
+  value of x supplied at the front of the given arguments.  The forms
+  are evaluated in order.  Returns x.
 
-     (doto (new java.util.HashMap) (.put \"a\" 1) (.put \"b\" 2))"
-     [x & forms]
-     (core/let [gx (gensym)]
-       `(let [~gx ~x]
-          ~@(map (core/fn [f]
-                   (if (seq? f)
-                     `(~(first f) ~gx ~@(next f))
-                     `(~f ~gx)))
-              forms)
-          ~gx))))
+  (doto (new js/Map) (.set \"a\" 1) (.set \"b\" 2))"
+  [x & forms]
+  (core/let [gx (gensym)]
+    `(let [~gx ~x]
+       ~@(map (core/fn [f]
+                (if (seq? f)
+                  `(~(first f) ~gx ~@(next f))
+                  `(~f ~gx)))
+           forms)
+       ~gx)))
 
 #?(:cljs
    (core/defn- parse-impls [specs]
