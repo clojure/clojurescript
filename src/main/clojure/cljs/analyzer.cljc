@@ -153,6 +153,7 @@
    :single-segment-namespace true
    :munged-namespace true
    :ns-var-clash true
+   :non-dynamic-earmuffed-var true
    :extend-type-invalid-method-shape true
    :unsupported-js-module-type true
    :unsupported-preprocess-value true
@@ -466,6 +467,11 @@
 (defmethod error-message :ns-var-clash
   [warning-type {:keys [ns var] :as info}]
   (str "Namespace " ns " clashes with var " var))
+
+(defmethod error-message :non-dynamic-earmuffed-var
+  [warning-type {:keys [var] :as info}]
+  (str var " not declared dynamic and thus is not dynamically rebindable, but its name "
+    "suggests otherwise. Please either indicate ^:dynamic " var " or change the name"))
 
 (defmethod error-message :extend-type-invalid-method-shape
   [warning-type {:keys [protocol method] :as info}]
@@ -1602,6 +1608,18 @@
     :set    (into #{} (map const-expr->constant-value (:items e)))
     :vector (into [] (map const-expr->constant-value (:items e)))))
 
+(defn- earmuffed? [sym]
+  (let [s (name sym)]
+    (and (> (count s) 2)
+         (string/starts-with? s "*")
+         (string/ends-with? s "*"))))
+
+(defn- core-ns? [ns-sym]
+  (let [s (name ns-sym)]
+    (and (not= 'cljs.user ns-sym)
+         (or (string/starts-with? s "cljs.")
+             (string/starts-with? s "clojure.")))))
+
 (defmethod parse 'def
   [op env form _ _]
   (when (> (count form) 4)
@@ -1639,6 +1657,11 @@
     (when-some [doc (:doc args)]
       (when-not (string? doc)
         (throw (error env "Too many arguments to def"))))
+    (when (and (not dynamic)
+               (earmuffed? sym)
+               (not (core-ns? ns-name)))
+      (warning :non-dynamic-earmuffed-var env
+        {:var (str sym)}))
     (when-some [v (get-in @env/*compiler* [::namespaces ns-name :defs sym])]
       (when (and (not *allow-redef*)
                  (not (:declared v))

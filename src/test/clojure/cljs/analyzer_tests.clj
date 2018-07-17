@@ -1737,3 +1737,10 @@
   (is (= "global$module$react" (a/munge-global-export 'react)))
   (is (= "global$module$_CIRCA_material_ui$core$styles" (a/munge-global-export "@material-ui/core/styles")))
   (is (= "node$module$_CIRCA_material_ui$core$styles" (ana/munge-node-lib "@material-ui/core/styles"))))
+
+(deftest test-cljs-2819
+  (let [ws (atom [])]
+    (a/with-warning-handlers [(collecting-warning-handler ws)]
+      (a/analyze ns-env
+        '(def *foo* 1)))
+    (is (string/starts-with? (first @ws) "*foo* not declared dynamic and thus"))))
