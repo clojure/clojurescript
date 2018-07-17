@@ -56,7 +56,8 @@
   "Qualify symbol s by resolving it or using the current *ns*."
   [env s]
   (if (namespace s)
-    (->sym (ana/resolve-var env s))
+    (->sym (binding [ana/*private-var-access-nowarn* true]
+             (ana/resolve-var env s)))
     (symbol (str ana/*cljs-ns*) (str s))))
 
 (defmacro def
