@@ -11,7 +11,7 @@ TRANSIT_RELEASE="0.8.309"
 GCLOSURE_LIB_RELEASE="0.0-20170809-b9c14c6b"
 RHINO_RELEASE="1_7R5"
 TREADER_RELEASE="1.3.0"
-TEST_CHECK_RELEASE="0.10.0-alpha2"
+TEST_CHECK_RELEASE="0.10.0-alpha3"
 
 # check dependencies
 curl -V >/dev/null  || { echo "cURL is missing, or not on your system path."; exit 1; }

@@ -10,7 +10,7 @@ if [ ! -f lib/clojure.jar ]; then
   exit 1
 fi
 jar xvf lib/clojure.jar clojure/template.clj > /dev/null
-jar xvf lib/test.check.jar clojure/test/check.cljc clojure/test/check/results.cljc clojure/test/check/clojure_test.cljc clojure/test/check/impl.cljc clojure/test/check/properties.cljc clojure/test/check/generators.cljc clojure/test/check/random.clj clojure/test/check/random/doubles.cljs clojure/test/check/random/longs/bit_count_impl.cljs clojure/test/check/random/longs.cljs clojure/test/check/random.cljs clojure/test/check/rose_tree.cljc > /dev/null
+unzip lib/test.check.jar 'clojure/*' > /dev/null
 mkdir -p builds/out-self-parity/clojure/test
 mv clojure/template.clj builds/out-self-parity/clojure
 mv clojure/test builds/out-self-parity/clojure

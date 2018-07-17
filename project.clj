@@ -13,7 +13,7 @@
                  [org.clojure/core.specs.alpha "0.1.24"]
                  [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.reader "1.3.0"]
-                 [org.clojure/test.check "0.10.0-alpha2" :scope "test"]
+                 [org.clojure/test.check "0.10.0-alpha3" :scope "test"]
                  [com.cognitect/transit-clj "0.8.309"]
                  [org.clojure/google-closure-library "0.0-20170809-b9c14c6b"]
                  [com.google.javascript/closure-compiler-unshaded "v20180610"]
