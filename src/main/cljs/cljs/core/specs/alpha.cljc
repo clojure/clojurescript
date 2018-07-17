@@ -49,7 +49,7 @@
 (s/def ::map-bindings
   (s/every (s/or :mb ::map-binding
                  :nsk ::ns-keys
-                 :msb (s/tuple #{:as :or :keys :syms :strs} any?)) :into {}))
+                 :msb (s/tuple #{:as :or :keys :syms :strs} any?)) :kind map?))
 
 (s/def ::map-binding-form (s/merge ::map-bindings ::map-special-binding))
 
