@@ -115,10 +115,15 @@
       (output-is "\"0000000003\""))))
 
 (deftest test-cljs-2780
-  (with-repl-env-filter #{"node" "nashorn"}
+  (with-repl-env-filter #{"node" "nashorn" "graaljs"}
     (-> (cljs-main
           "-e" "(do (js/setTimeout #(prn :end) 500) nil)"
           "-e" ":begin")
       (output-is
         :begin
         :end))))
+
+(deftest test-graaljs-polyglot
+  (with-repl-env-filter #{"graaljs"}
+    (-> (cljs-main "-e" "(.eval js/Polyglot \"js\" \"1+1\")")
+      (output-is 2))))

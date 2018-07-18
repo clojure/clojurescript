@@ -1635,7 +1635,7 @@
                        (util/output-directory opts))
         closure-defines (json/write-str (:closure-defines opts))]
     (case (:target opts)
-      :nashorn
+      (:nashorn :graaljs)
       (output-one-file
         (merge opts
           (when module
@@ -1645,7 +1645,7 @@
                  (str "var CLJS_OUTPUT_DIR = \"" asset-path "\";\n"
                       "load((new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"), \"base.js\")).getPath());\n"
                       "load((new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"), \"deps.js\")).getPath());\n"
-                      "load((new java.io.File(new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"),\"bootstrap\"),\"nashorn.js\")).getPath());\n"
+                      "load((new java.io.File(new java.io.File(new java.io.File(\"" asset-path "\",\"goog\"),\"bootstrap\"),\"" (name (:target opts)) ".js\")).getPath());\n"
                       "load((new java.io.File(\"" asset-path "\",\"cljs_deps.js\")).getPath());\n"
                       "goog.global.CLOSURE_UNCOMPILED_DEFINES = " closure-defines ";\n"
                    (apply str (preloads (:preloads opts)))))
@@ -2794,7 +2794,7 @@
     opts))
 
 (defn output-bootstrap [{:keys [target] :as opts}]
-  (when (and (#{:nodejs :nashorn} target)
+  (when (and (#{:nodejs :nashorn :graaljs} target)
              (not= (:optimizations opts) :whitespace))
     (let [target-str (name target)
           outfile    (io/file (util/output-directory opts)

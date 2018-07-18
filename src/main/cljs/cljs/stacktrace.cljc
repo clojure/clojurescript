@@ -471,6 +471,30 @@ goog.events.getProxy/f<@http://localhost:9000/out/goog/events/events.js:276:16"
       (remove nil?)
       vec)))
 
+;; -----------------------------------------------------------------------------
+;; Graal.JS Stacktrace
+
+(defmethod parse-stacktrace :graaljs
+  [repl-env st err {:keys [output-dir] :as opts}]
+  (letfn [(process-frame [frame-str]
+            (when-not (string/blank? frame-str)
+              (let [[function file-and-line] (string/split frame-str #"\(")
+                    [file-part line-part]    (string/split file-and-line #":")]
+                {:file     (string/replace file-part
+                             (str output-dir
+                               #?(:clj File/separator :cljs "/"))
+                             "")
+                 :function function
+                 :line     (when (and line-part (not (string/blank? line-part)))
+                             (parse-int
+                               (.substring line-part 0
+                                 (dec (count line-part)))))
+                 :column   0})))]
+    (->> (string/split st #"\n")
+      (map process-frame)
+      (remove nil?)
+      vec)))
+
 (comment
   (parse-stacktrace {}
     "Error: 1 is not ISeqable

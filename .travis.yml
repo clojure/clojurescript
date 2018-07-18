@@ -14,8 +14,8 @@ before_install:
   - sudo apt-get install -y libjavascriptcoregtk-3.0-bin
   - wget https://aka.ms/chakracore/cc_linux_x64_1_8_1 -O chakra-core.tar.gz
   - tar xvzf chakra-core.tar.gz
-  - wget https://github.com/oracle/graal/releases/download/vm-1.0.0-rc1/graalvm-ce-1.0.0-rc1-linux-amd64.tar.gz
-  - tar xzf graalvm-ce-1.0.0-rc1-linux-amd64.tar.gz
+  - wget https://github.com/oracle/graal/releases/download/vm-1.0.0-rc4/graalvm-ce-1.0.0-rc4-linux-amd64.tar.gz
+  - tar xzf graalvm-ce-1.0.0-rc4-linux-amd64.tar.gz
 
 before_script:
   - script/bootstrap
@@ -55,7 +55,7 @@ script:
   - grep '0 failures, 0 errors.' test-out.txt
   - ./ChakraCoreFiles/bin/ch builds/out-adv/core-advanced-test.js | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
-  - ./graalvm-1.0.0-rc1/bin/js builds/out-adv/core-advanced-test.js | tee test-out.txt
+  - ./graalvm-ce-1.0.0-rc4/bin/js builds/out-adv/core-advanced-test.js | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - script/test-self-host | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
@@ -66,4 +66,6 @@ script:
   - script/test-cli nashorn | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt
   - script/test-cli rhino | tee test-out.txt
+  - grep '0 failures, 0 errors.' test-out.txt
+  - PATH=`pwd`/graalvm-ce-1.0.0-rc4/bin:$PATH script/test-cli graaljs | tee test-out.txt
   - grep '0 failures, 0 errors.' test-out.txt

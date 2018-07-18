@@ -11525,7 +11525,8 @@ reduces them without incurring seq initialization"
     (exists? js/console)
     (enable-console-print!)
 
-    (identical? *target* "nashorn")
+    (or (identical? *target* "nashorn")
+        (identical? *target* "graaljs"))
     (let [system (.type js/Java "java.lang.System")]
       (set! *print-newline* false)
       (set-print-fn!

@@ -530,7 +530,7 @@ present"
                               {["-re" "--repl-env"]
                                {:arg "env"
                                 :doc (str "The REPL environment to use. Built-in "
-                                          "supported values: nashorn, node, browser, "
+                                          "supported values: nashorn, graaljs, node, browser, "
                                           "rhino. Defaults to browser")}}}
               ::main {:desc "init options only for --main and --repl"}
               ::compile {:desc "init options only for --compile"}}
@@ -569,7 +569,7 @@ present"
                                 :doc
                                 (str "The JavaScript target. Configures environment bootstrap and "
                                      "defaults to browser. Supported values: node or nodejs, nashorn, "
-                                     "webworker, none") }
+                                     "graaljs, webworker, none") }
       ["-ro" "--repl-opts"]    {:group ::main&compile :fn repl-env-opts-opt
                                 :arg "edn"
                                 :doc (str "Options to configure the repl-env, can be an EDN string or "
