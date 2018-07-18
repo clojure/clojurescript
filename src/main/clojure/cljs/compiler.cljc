@@ -1157,7 +1157,7 @@
     (emit-wrap env
       (cond
        opt-not?
-       (emits "!(" (first args) ")")
+       (emits "(!(" (first args) "))")
 
        proto?
        (let [pimpl (str (munge (protocol-prefix protocol))

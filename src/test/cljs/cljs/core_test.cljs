@@ -1619,3 +1619,9 @@
     (= 1
        (let [a #js {:b 1}]
          ((fn [] a.b))))))
+
+(deftest test-cljs-2832
+  (is (true? ((comp not empty?) "foo")))
+  (is (false? ((comp not empty?) "")))
+  (is (thrown? js/Error ((not empty?) "foo")))
+  (is (thrown? js/Error ((not empty?) ""))))
