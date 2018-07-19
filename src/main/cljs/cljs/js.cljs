@@ -184,10 +184,10 @@
                                                     (.fromCharCode js/String (str "0x" match))))
                 (base64/encodeString))))))
 
-(defn- current-alias-map
-  []
-  (->> (merge (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :requires])
-         (get-in @env/*compiler* [::ana/namespaces ana/*cljs-ns* :require-macros]))
+(defn- alias-map
+  [compiler cljs-ns]
+  (->> (merge (get-in compiler [::ana/namespaces cljs-ns :requires])
+         (get-in compiler [::ana/namespaces cljs-ns :require-macros]))
     (remove (fn [[k v]] (symbol-identical? k v)))
     (into {})))
 
@@ -685,7 +685,7 @@
                  ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
                  ana/*passes*           (:*passes* bound-vars)
-                 r/*alias-map*          (current-alias-map)
+                 r/*alias-map*          (alias-map @(:*compiler* bound-vars) ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)
@@ -801,7 +801,7 @@
               ana/*cljs-static-fns*  (:static-fns opts)
               ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
               *ns*                   (create-ns (:*cljs-ns* bound-vars))
-              r/*alias-map*          (current-alias-map)
+              r/*alias-map*          (alias-map @(:*compiler* bound-vars) (:*cljs-ns* bound-vars))
               r/*data-readers*       (:*data-readers* bound-vars)
               r/resolve-symbol       resolve-symbol
               comp/*source-map-data* (:*sm-data* bound-vars)]
@@ -916,7 +916,7 @@
                  ana/*cljs-static-fns*  (:static-fns opts)
                  ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
-                 r/*alias-map*          (current-alias-map)
+                 r/*alias-map*          (alias-map @(:*compiler* bound-vars) ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)]
@@ -1051,7 +1051,7 @@
                  ana/*cljs-static-fns*  (:static-fns opts)
                  ana/*fn-invoke-direct* (and (:static-fns opts) (:fn-invoke-direct opts))
                  *ns*                   (create-ns ns)
-                 r/*alias-map*          (current-alias-map)
+                 r/*alias-map*          (alias-map @(:*compiler* bound-vars) ns)
                  r/*data-readers*       (:*data-readers* bound-vars)
                  r/resolve-symbol       resolve-symbol
                  comp/*source-map-data* (:*sm-data* bound-vars)

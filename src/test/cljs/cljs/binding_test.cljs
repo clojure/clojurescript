@@ -19,3 +19,19 @@
   (is (with-redefs [o/bar 2]
         (= o/bar 2)))
   (is (= o/bar 10)))
+
+(def ^:dynamic *a* 1)
+(def ^:dynamic *b* nil)
+
+(deftest test-binding-parallel
+  (is (= 2 (binding [*a* 10
+                     *b* (inc *a*)]
+             *b*))))
+
+(def a 1)
+(def b nil)
+
+(deftest test-redefs-parallel
+  (is (= 2 (with-redefs [a 10
+                         b (inc a)]
+             b))))

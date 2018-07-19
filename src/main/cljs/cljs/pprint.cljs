@@ -3304,22 +3304,21 @@ type-map {"core$future_call" "Future",
    in ks. If ks are not specified, use the keys of the first item in rows."
   {:added "1.3"}
   ([ks rows]
-   (binding [*print-newline*]
-     (when (seq rows)
-       (let [widths (map
-                      (fn [k]
-                        (apply max (count (str k)) (map #(count (str (get % k))) rows)))
-                      ks)
-             spacers (map #(apply str (repeat % "-")) widths)
-             fmt-row (fn [leader divider trailer row]
-                       (str leader
-                            (apply str (interpose divider
-                                                  (for [[col width] (map vector (map #(get row %) ks) widths)]
-                                                    (add-padding width (str col)))))
-                            trailer))]
-         (cljs.core/println)
-         (cljs.core/println (fmt-row "| " " | " " |" (zipmap ks ks)))
-         (cljs.core/println (fmt-row "|-" "-+-" "-|" (zipmap ks spacers)))
-         (doseq [row rows]
-           (cljs.core/println (fmt-row "| " " | " " |" row)))))))
+   (when (seq rows)
+     (let [widths  (map
+                     (fn [k]
+                       (apply max (count (str k)) (map #(count (str (get % k))) rows)))
+                     ks)
+           spacers (map #(apply str (repeat % "-")) widths)
+           fmt-row (fn [leader divider trailer row]
+                     (str leader
+                       (apply str (interpose divider
+                                    (for [[col width] (map vector (map #(get row %) ks) widths)]
+                                      (add-padding width (str col)))))
+                       trailer))]
+       (cljs.core/println)
+       (cljs.core/println (fmt-row "| " " | " " |" (zipmap ks ks)))
+       (cljs.core/println (fmt-row "|-" "-+-" "-|" (zipmap ks spacers)))
+       (doseq [row rows]
+         (cljs.core/println (fmt-row "| " " | " " |" row))))))
   ([rows] (print-table (keys (first rows)) rows)))
