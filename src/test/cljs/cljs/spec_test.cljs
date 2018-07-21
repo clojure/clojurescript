@@ -204,7 +204,7 @@
 
       opt nil nil nil
       opt [] nil nil
-      opt :k ::s/invalid '[{:pred (cljs.spec.alpha/? cljs.core/keyword?), :val :k}]
+      opt :k ::s/invalid '[{:pred (cljs.core/fn [%] (cljs.core/or (cljs.core/nil? %) (cljs.core/sequential? %))), :val :k}]
       opt [:k] :k nil
       opt [:k1 :k2] ::s/invalid '[{:reason "Extra input", :pred (cljs.spec.alpha/? cljs.core/keyword?), :val (:k2)}]
       opt [:k1 :k2 "x"] ::s/invalid '[{:reason "Extra input", :pred (cljs.spec.alpha/? cljs.core/keyword?), :val (:k2 "x")}]
@@ -212,7 +212,7 @@
 
       andre nil nil nil
       andre [] nil nil
-      andre :k ::s/invalid '[{:pred (cljs.spec.alpha/& (cljs.spec.alpha/* cljs.core/keyword?) cljs.spec-test/even-count?), :val :k}]
+      andre :k ::s/invalid '[{:pred (cljs.core/fn [%] (cljs.core/or (cljs.core/nil? %) (cljs.core/sequential? %))), :val :k}]
       andre [:k] ::s/invalid '[{:pred cljs.spec-test/even-count?, :val [:k]}]
       andre [:j :k] [:j :k] nil
 

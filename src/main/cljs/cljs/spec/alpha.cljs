@@ -1248,14 +1248,14 @@
 
     Spec
     (conform* [_ x]
-      (if (c/or (nil? x) (coll? x))
+      (if (c/or (nil? x) (sequential? x))
         (re-conform re (seq x))
         ::invalid))
     (unform* [_ x] (op-unform re x))
     (explain* [_ path via in x]
-      (if (c/or (nil? x) (coll? x))
+      (if (c/or (nil? x) (sequential? x))
         (re-explain path via in re (seq x))
-        [{:path path :pred (op-describe re) :val x :via via :in in}]))
+        [{:path path :pred `(fn [~'%] (c/or (nil? ~'%) (sequential? ~'%))) :val x :via via :in in}]))
     (gen* [_ overrides path rmap]
       (if gfn
         (gfn)
