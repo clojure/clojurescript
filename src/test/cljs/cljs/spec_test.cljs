@@ -298,6 +298,12 @@
     [{10 10 20 "x"}]
     [{10 10 20 "x"}]))
 
+(deftest &-explain-pred
+  (are [val expected]
+    (= expected (-> (s/explain-data (s/& int? even?) val) ::s/problems first :pred))
+    [] 'cljs.core/int?
+    [0 2] '(cljs.spec.alpha/& cljs.core/int? cljs.core/even?)))
+
 (s/fdef foo.bar/cljs-2275
   :args (s/cat :k keyword?)
   :ret  string?)

@@ -963,8 +963,8 @@
 
 (defn ^:skip-wiki amp-impl
   "Do not call this directly, use '&'"
-  [re preds pred-forms]
-  {::op ::amp :p1 re :ps preds :forms pred-forms})
+  [re re-form preds pred-forms]
+  {::op ::amp :p1 re :amp re-form :ps preds :forms pred-forms})
 
 (defn- filter-alt [ps ks forms f]
   (if (c/or ks forms)
@@ -1071,7 +1071,7 @@
 
 (defn- deriv
   [p x]
-  (let [{[p0 & pr :as ps] :ps, [k0 & kr :as ks] :ks, :keys [::op p1 p2 ret splice forms] :as p} (reg-resolve! p)]
+  (let [{[p0 & pr :as ps] :ps, [k0 & kr :as ks] :ks, :keys [::op p1 p2 ret splice forms amp] :as p} (reg-resolve! p)]
     (when p
       (case op
         ::accept nil
@@ -1082,7 +1082,7 @@
                   (let [ret (-> (preturn p1) (and-preds ps (next forms)))]
                     (when-not (invalid? ret)
                       (accept ret)))
-                  (amp-impl p1 ps forms)))
+                  (amp-impl p1 amp ps forms)))
         ::pcat (alt2 (pcat* {:ps (cons (deriv p0 x) pr), :ks ks, :forms forms, :ret ret})
                      (when (accept-nil? p0) (deriv (pcat* {:ps pr, :ks kr, :forms (next forms), :ret (add-ret p0 ret k0)}) x)))
         ::alt (alt* (map #(deriv % x) ps) ks forms)
@@ -1090,13 +1090,13 @@
                     (when (accept-nil? p1) (deriv (rep* p2 p2 (add-ret p1 ret nil) splice forms) x)))))))
 
 (defn- op-describe [p]
-  (let [{:keys [::op ps ks forms splice p1 rep+ maybe] :as p} (reg-resolve! p)]
+  (let [{:keys [::op ps ks forms splice p1 rep+ maybe amp] :as p} (reg-resolve! p)]
     ;;(prn {:op op :ks ks :forms forms :p p})
     (when p
       (case op
         ::accept nil
         nil p
-        ::amp (list* 'cljs.spec.alpha/& (op-describe p1) forms)
+        ::amp (list* 'cljs.spec.alpha/& amp forms)
         ::pcat (if rep+
                  (list `+ rep+)
                  (cons `cat (mapcat vector (c/or (seq ks) (repeat :_)) forms)))
@@ -1126,10 +1126,10 @@
         ::amp (if (empty? input)
                 (if (accept-nil? p1)
                   (explain-pred-list forms ps path via in (preturn p1))
-                  (insufficient path (op-describe p1)))
+                  (insufficient path (:amp p)))
                 (if-let [p1 (deriv p1 x)]
                   (explain-pred-list forms ps path via in (preturn p1))
-                  (op-explain (op-describe p1) p1 path via in input)))
+                  (op-explain (:amp p) p1 path via in input)))
         ::pcat (let [pkfs (map vector
                                ps
                                (c/or (seq ks) (repeat nil))
