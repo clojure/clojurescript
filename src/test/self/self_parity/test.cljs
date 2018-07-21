@@ -311,6 +311,7 @@
                  [static.core-test]
                  [cljs.recur-test]
                  [cljs.array-access-test]
+                 [cljs.inference-test]
                  [cljs.extend-to-native-test]))
     (fn [{:keys [value error]}]
       (if error
@@ -354,6 +355,7 @@
              'static.core-test
              'cljs.recur-test
              'cljs.array-access-test
+             'cljs.inference-test
              'cljs.extend-to-native-test)
           (fn [{:keys [value error]}]
             (when error

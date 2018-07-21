@@ -243,7 +243,7 @@
   [x]
   (cljs.core/number? x))
 
-(defn ^boolean not
+(defn not
   "Returns true if x is logical false, false otherwise."
   [x]
   (cond
@@ -255,7 +255,7 @@
   "Returns true if x is not nil, false otherwise."
   [x] (not (nil? x)))
 
-(defn ^boolean object?
+(defn object?
   "Returns true if x's constructor is Object"
   [x]
   (if-not (nil? x)
@@ -267,17 +267,17 @@
   [x]
   (goog/isString x))
 
-(defn ^boolean char?
+(defn char?
   "Returns true if x is a JavaScript string of length one."
   [x]
   (and (string? x) (== 1 (.-length x))))
 
-(defn ^boolean any?
+(defn any?
   "Returns true if given any argument."
   [x] true)
 
 (set! *unchecked-if* true)
-(defn ^boolean native-satisfies?
+(defn native-satisfies?
   "Internal - do not use!"
   [p x]
   (let [x (if (nil? x) nil x)]
@@ -1175,7 +1175,7 @@
   (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
     (apply (val) a b c d e f g h i j k l m n o p q r s t rest)))
 
-(defn ^boolean var?
+(defn var?
   "Returns true if v is of type cljs.core.Var"
   [v]
   (instance? cljs.core.Var v))
@@ -1184,7 +1184,7 @@
 
 (declare array-seq prim-seq IndexedSeq)
 
-(defn ^boolean iterable?
+(defn iterable?
   "Return true if x implements IIterable protocol."
   [x]
   (satisfies? IIterable x))
@@ -1194,7 +1194,7 @@
   [value]
   (-clone value))
 
-(defn ^boolean cloneable?
+(defn cloneable?
   "Return true if x implements ICloneable protocol."
   [value]
   (satisfies? ICloneable value))
@@ -1386,7 +1386,7 @@
   [inst]
   (inst-ms* inst))
 
-(defn ^boolean inst?
+(defn inst?
   "Return true if x satisfies Inst"
   [x]
   (satisfies? Inst x))
@@ -1423,7 +1423,7 @@
   [x]
   (Reduced. x))
 
-(defn ^boolean reduced?
+(defn reduced?
   "Returns true if x is the result of a call to reduced"
   [r]
   (instance? Reduced r))
@@ -1514,11 +1514,11 @@ reduces them without incurring seq initialization"
 
 (declare hash-coll cons drop count nth RSeq List)
 
-(defn ^boolean counted?
+(defn counted?
   "Returns true if coll implements count in constant time"
   [x] (satisfies? ICounted x))
 
-(defn ^boolean indexed?
+(defn indexed?
   "Returns true if coll implements nth in constant time"
   [x] (satisfies? IIndexed x))
 
@@ -1991,7 +1991,7 @@ reduces them without incurring seq initialization"
           (recur ret (first ks) (next ks))
           ret)))))
 
-(defn ^boolean fn?
+(defn fn?
   "Return true if f is a JavaScript function or satisfies the Fn protocol."
   [f]
   (or ^boolean (goog/isFunction f) (satisfies? Fn f)))
@@ -2094,65 +2094,65 @@ reduces them without incurring seq initialization"
           (recur ret (first ks) (next ks))
           ret)))))
 
-(defn ^boolean empty?
+(defn empty?
   "Returns true if coll has no items - same as (not (seq coll)).
   Please use the idiom (seq x) rather than (not (empty? x))"
   [coll] (or (nil? coll)
              (not (seq coll))))
 
-(defn ^boolean coll?
+(defn coll?
   "Returns true if x satisfies ICollection"
   [x]
   (if (nil? x)
     false
     (satisfies? ICollection x)))
 
-(defn ^boolean set?
+(defn set?
   "Returns true if x satisfies ISet"
   [x]
   (if (nil? x)
     false
     (satisfies? ISet x)))
 
-(defn ^boolean associative?
+(defn associative?
  "Returns true if coll implements IAssociative"
   [x] (satisfies? IAssociative x))
 
-(defn ^boolean ifind?
+(defn ifind?
  "Returns true if coll implements IFind"
   [x] (satisfies? IFind x))
 
-(defn ^boolean sequential?
+(defn sequential?
   "Returns true if coll satisfies ISequential"
   [x] (satisfies? ISequential x))
 
-(defn ^boolean sorted?
+(defn sorted?
   "Returns true if coll satisfies ISorted"
   [x] (satisfies? ISorted x))
 
-(defn ^boolean reduceable?
+(defn reduceable?
   "Returns true if coll satisfies IReduce"
   [x] (satisfies? IReduce x))
 
-(defn ^boolean map?
+(defn map?
   "Return true if x satisfies IMap"
   [x]
   (if (nil? x)
     false
     (satisfies? IMap x)))
 
-(defn ^boolean record?
+(defn record?
   "Return true if x satisfies IRecord"
   [x]
   (satisfies? IRecord x))
 
-(defn ^boolean vector?
+(defn vector?
   "Return true if x satisfies IVector"
   [x] (satisfies? IVector x))
 
 (declare ChunkedCons ChunkedSeq)
 
-(defn ^boolean chunked-seq?
+(defn chunked-seq?
   "Return true if x is satisfies IChunkedSeq."
   [x] (implements? IChunkedSeq x))
 
@@ -2204,7 +2204,7 @@ reduces them without incurring seq initialization"
   "Returns true if x is the value true, false otherwise."
   [x] (cljs.core/true? x))
 
-(defn ^boolean boolean?
+(defn boolean?
   "Return true if x is a Boolean"
   [x] (or (cljs.core/true? x) (cljs.core/false? x)))
 
@@ -2213,14 +2213,14 @@ reduces them without incurring seq initialization"
   [x]
   (cljs.core/undefined? x))
 
-(defn ^boolean seq?
+(defn seq?
   "Return true if s satisfies ISeq"
   [s]
   (if (nil? s)
     false
     (satisfies? ISeq s)))
 
-(defn ^boolean seqable?
+(defn seqable?
   "Return true if the seq function is supported for s"
   [s]
   (or
@@ -2229,7 +2229,7 @@ reduces them without incurring seq initialization"
    (array? s)
    (string? s)))
 
-(defn ^boolean boolean
+(defn boolean
   "Coerce to boolean"
   [x]
   (cond
@@ -2237,12 +2237,12 @@ reduces them without incurring seq initialization"
     (false? x) false
     :else true))
 
-(defn ^boolean ifn?
+(defn ifn?
   "Returns true if f returns true for fn? or satisfies IFn."
   [f]
   (or (fn? f) (satisfies? IFn f)))
 
-(defn ^boolean integer?
+(defn integer?
   "Returns true if n is a JavaScript number with no decimal part."
   [n]
   (and (number? n)
@@ -2250,7 +2250,7 @@ reduces them without incurring seq initialization"
        (not (identical? n js/Infinity))
        (== (js/parseFloat n) (js/parseInt n 10))))
 
-(defn ^boolean int?
+(defn int?
   "Return true if x satisfies integer? or is an instance of goog.math.Integer
    or goog.math.Long."
   [x]
@@ -2258,7 +2258,7 @@ reduces them without incurring seq initialization"
       (instance? goog.math.Integer x)
       (instance? goog.math.Long x)))
 
-(defn ^boolean pos-int?
+(defn pos-int?
   "Return true if x satisfies int? and is positive."
   [x]
   (cond
@@ -2288,7 +2288,7 @@ reduces them without incurring seq initialization"
 
     :else false))
 
-(defn ^boolean nat-int?
+(defn nat-int?
   "Return true if x satisfies int? and is a natural integer value."
   [x]
   (cond
@@ -2303,23 +2303,23 @@ reduces them without incurring seq initialization"
 
     :else false))
 
-(defn ^boolean float?
+(defn float?
   "Returns true for JavaScript numbers, false otherwise."
   [x]
   (number? x))
 
-(defn ^boolean double?
+(defn double?
   "Returns true for JavaScript numbers, false otherwise."
   [x]
   (number? x))
 
-(defn ^boolean infinite?
+(defn infinite?
   "Returns true for Infinity and -Infinity values."
   [x]
   (or (identical? x js/Number.POSITIVE_INFINITY)
       (identical? x js/Number.NEGATIVE_INFINITY)))
 
-(defn ^boolean contains?
+(defn contains?
   "Returns true if key is present in the given collection, otherwise
   returns false.  Note that for numerically indexed collections like
   vectors and arrays, this tests if the numeric key is within the
@@ -3086,7 +3086,7 @@ reduces them without incurring seq initialization"
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
 
-(defn ^boolean list?
+(defn list?
   "Returns true if x implements IList"
   [x]
   (satisfies? IList x))
@@ -3161,7 +3161,7 @@ reduces them without incurring seq initialization"
 
 (es6-iterable EmptyList)
 
-(defn ^boolean reversible?
+(defn reversible?
   "Returns true if coll satisfies? IReversible."
   [coll]
   (satisfies? IReversible coll))
@@ -3304,12 +3304,12 @@ reduces them without incurring seq initialization"
   IPrintWithWriter
   (-pr-writer [o writer _] (-write writer (str ":" fqn))))
 
-(defn ^boolean keyword?
+(defn keyword?
   "Return true if x is a Keyword"
   [x]
   (instance? Keyword x))
 
-(defn ^boolean keyword-identical?
+(defn keyword-identical?
   "Efficient test to determine that two keywords are identical."
   [x y]
   (if (identical? x y)
@@ -3318,7 +3318,7 @@ reduces them without incurring seq initialization"
       (identical? (.-fqn x) (.-fqn y))
       false)))
 
-(defn ^boolean symbol-identical?
+(defn symbol-identical?
   "Efficient test to determine that two symbols are identical."
   [x y]
   (if (identical? x y)
@@ -3334,31 +3334,31 @@ reduces them without incurring seq initialization"
     (-namespace ^not-native x)
     (throw (js/Error. (str "Doesn't support namespace: " x)))))
 
-(defn ^boolean ident?
+(defn ident?
   "Return true if x is a symbol or keyword"
   [x] (or (keyword? x) (symbol? x)))
 
-(defn ^boolean simple-ident?
+(defn simple-ident?
   "Return true if x is a symbol or keyword without a namespace"
   [x] (and (ident? x) (nil? (namespace x))))
 
-(defn ^boolean qualified-ident?
+(defn qualified-ident?
   "Return true if x is a symbol or keyword with a namespace"
   [x] (boolean (and (ident? x) (namespace x) true)))
 
-(defn ^boolean simple-symbol?
+(defn simple-symbol?
   "Return true if x is a symbol without a namespace"
   [x] (and (symbol? x) (nil? (namespace x))))
 
-(defn ^boolean qualified-symbol?
+(defn qualified-symbol?
   "Return true if x is a symbol with a namespace"
   [x] (boolean (and (symbol? x) (namespace x) true)))
 
-(defn ^boolean simple-keyword?
+(defn simple-keyword?
   "Return true if x is a keyword without a namespace"
   [x] (and (keyword? x) (nil? (namespace x))))
 
-(defn ^boolean qualified-keyword?
+(defn qualified-keyword?
   "Return true if x is a keyword with a namespace"
   [x] (boolean (and (keyword? x) (namespace x) true)))
 
@@ -4179,7 +4179,7 @@ reduces them without incurring seq initialization"
          (.createMulti TransformerIterator xform (map iter (cons coll colls))))
        ())))
 
-(defn ^boolean every?
+(defn every?
   "Returns true if (pred x) is logical true for every x in coll, else
   false."
   [pred coll]
@@ -4188,7 +4188,7 @@ reduces them without incurring seq initialization"
    (pred (first coll)) (recur pred (next coll))
    :else false))
 
-(defn ^boolean not-every?
+(defn not-every?
   "Returns false if (pred x) is logical true for every x in
   coll, else true."
   [pred coll] (not (every? pred coll)))
@@ -4202,18 +4202,18 @@ reduces them without incurring seq initialization"
     (when (seq coll)
       (or (pred (first coll)) (recur pred (next coll)))))
 
-(defn ^boolean not-any?
+(defn not-any?
   "Returns false if (pred x) is logical true for any x in coll,
   else true."
   [pred coll] (not (some pred coll)))
 
-(defn ^boolean even?
+(defn even?
   "Returns true if n is even, throws an exception if n is not an integer"
    [n] (if (integer? n)
         (zero? (bit-and n 1))
         (throw (js/Error. (str "Argument must be an integer: " n)))))
 
-(defn ^boolean odd?
+(defn odd?
   "Returns true if n is odd, throws an exception if n is not an integer"
   [n] (not (even? n)))
 
@@ -4532,7 +4532,7 @@ reduces them without incurring seq initialization"
   [val]
   (Volatile. val))
 
-(defn ^boolean volatile?
+(defn volatile?
   "Returns true if x is a volatile."
   [x] (instance? Volatile x))
 
@@ -6267,7 +6267,7 @@ reduces them without incurring seq initialization"
 
 (def ^:private never-equiv (NeverEquiv.))
 
-(defn ^boolean equiv-map
+(defn equiv-map
   "Test map equivalence. Returns true if x equals y, otherwise returns false."
   [x y]
   (boolean
@@ -6662,7 +6662,7 @@ reduces them without incurring seq initialization"
   (-invoke [node k not-found]
     (-nth node k not-found)))
 
-(defn ^boolean map-entry?
+(defn map-entry?
   "Returns true if x satisfies IMapEntry"
   [x]
   (implements? IMapEntry x))
@@ -7060,7 +7060,7 @@ reduces them without incurring seq initialization"
 
 (declare create-inode-seq create-array-node-seq reset! create-node atom deref)
 
-(defn ^boolean key-test [key other]
+(defn key-test [key other]
   (cond
     (identical? key other) true
     (keyword-identical? key other) true
@@ -9814,7 +9814,7 @@ reduces them without incurring seq initialization"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;; Regular Expressions ;;;;;;;;;;
 
-(defn ^boolean regexp?
+(defn regexp?
   "Returns true if x is a JavaScript RegExp instance."
   [x]
   (instance? js/RegExp x))
@@ -9931,7 +9931,7 @@ reduces them without incurring seq initialization"
 
 (declare print-map)
 
-(defn ^boolean print-meta? [opts obj]
+(defn print-meta? [opts obj]
   (and (boolean (get opts :meta))
        (implements? IMeta obj)
        (not (nil? (meta obj)))))
@@ -10413,7 +10413,7 @@ reduces them without incurring seq initialization"
     (pr-writer {:status (if (nil? f) :ready :pending), :val value} writer opts)
     (-write writer "]")))
 
-(defn ^boolean delay?
+(defn delay?
   "returns true if x is a Delay created with delay"
   [x] (instance? Delay x))
 
@@ -11143,7 +11143,7 @@ reduces them without incurring seq initialization"
              (hex) (hex) (hex) (hex)
              (hex) (hex) (hex) (hex))))))
 
-(defn ^boolean uuid?
+(defn uuid?
   [x] (implements? IUUID x))
 
 ;;; ExceptionInfo
@@ -11271,7 +11271,7 @@ reduces them without incurring seq initialization"
     (-write writer (str "#" tag " "))
     (pr-writer form writer opts)))
 
-(defn ^boolean tagged-literal?
+(defn tagged-literal?
   "Return true if the value is the data representation of a tagged literal"
   [value]
   (instance? TaggedLiteral value))

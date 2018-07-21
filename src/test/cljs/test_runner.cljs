@@ -46,6 +46,7 @@
             [static.core-test]
             [cljs.recur-test]
             [cljs.array-access-test]
+            [cljs.inference-test]
             [cljs.extend-to-native-test]))
 
 (set! *print-newline* false)
@@ -90,4 +91,5 @@
   'static.core-test
   'cljs.recur-test
   'cljs.array-access-test
+  'cljs.inference-test
   'cljs.extend-to-native-test)
