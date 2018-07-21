@@ -228,7 +228,7 @@
 
   Takes several kwargs options that further constrain the collection:
 
-  :kind - a pred/spec that the collection type must satisfy, e.g. vector?
+  :kind - a pred that the collection type must satisfy, e.g. vector?
           (default nil) Note that if :kind is specified and :into is
           not, this pred must generate in order for every to generate.
   :count - specifies coll has exactly this count (default nil)
