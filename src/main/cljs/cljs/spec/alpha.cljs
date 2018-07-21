@@ -1012,9 +1012,8 @@
       ::accept true
       nil nil
       ::amp (c/and (accept-nil? p1)
-                   (c/or (noret? p1 (preturn p1))
-                         (let [ret (-> (preturn p1) (and-preds ps (next forms)))]
-                           (not (invalid? ret)))))
+                   (let [ret (-> (preturn p1) (and-preds ps (next forms)))]
+                     (not (invalid? ret))))
       ::rep (c/or (identical? p1 p2) (accept-nil? p1))
       ::pcat (every? accept-nil? ps)
       ::alt (c/some accept-nil? ps))))

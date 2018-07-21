@@ -126,6 +126,7 @@
         plus (s/+ keyword?)
         opt (s/? keyword?)
         andre (s/& (s/* keyword?) even-count?)
+        andre2 (s/& (s/* keyword?) #{[:a]})
         m (s/map-of keyword? string?)
         mkeys (s/map-of (s/and keyword? (s/conformer name)) any?)
         mkeys2 (s/map-of (s/and keyword? (s/conformer name)) any? :conform-keys true)
@@ -215,6 +216,10 @@
       andre :k ::s/invalid '[{:pred (cljs.core/fn [%] (cljs.core/or (cljs.core/nil? %) (cljs.core/sequential? %))), :val :k}]
       andre [:k] ::s/invalid '[{:pred cljs.spec-test/even-count?, :val [:k]}]
       andre [:j :k] [:j :k] nil
+
+      andre2 nil ::s/invalid [{:pred #{[:a]}, :val []}]
+      andre2 [] ::s/invalid [{:pred #{[:a]}, :val []}]
+      andre2 [:a] [:a] nil
 
       m nil ::s/invalid '[{:pred cljs.core/map?, :val nil}]
       m {} {} nil
