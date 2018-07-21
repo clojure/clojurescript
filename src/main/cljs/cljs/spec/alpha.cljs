@@ -294,11 +294,13 @@
   "Do not call this directly, use 'def'"
   [k form spec]
   (assert (c/and (ident? k) (namespace k)) "k must be namespaced keyword or resolveable symbol")
-  (let [spec (if (c/or (spec? spec) (regex? spec) (get @registry-ref spec))
-               spec
-               (spec-impl form spec nil nil))]
-    (swap! registry-ref assoc k (with-name spec k))
-    k))
+  (if (nil? spec)
+    (swap! registry-ref dissoc k)
+    (let [spec (if (c/or (spec? spec) (regex? spec) (get @registry-ref spec))
+                 spec
+                 (spec-impl form spec nil nil))]
+      (swap! registry-ref assoc k (with-name spec k))))
+  k)
 
 (defn registry
   "returns the registry map, prefer 'get-spec' to lookup a spec by name"

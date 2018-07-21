@@ -307,6 +307,11 @@
 (deftest keys-explain-pred
   (is (= 'cljs.core/map? (-> (s/explain-data (s/keys :req [::x]) :a) ::s/problems first :pred))))
 
+(deftest remove-def
+  (is (= ::ABC (s/def ::ABC string?)))
+  (is (= ::ABC (s/def ::ABC nil)))
+  (is (nil? (s/get-spec ::ABC))))
+
 (s/fdef foo.bar/cljs-2275
   :args (s/cat :k keyword?)
   :ret  string?)

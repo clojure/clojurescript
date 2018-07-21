@@ -61,9 +61,10 @@
     (symbol (str ana/*cljs-ns*) (str s))))
 
 (defmacro def
-  "Given a namespace-qualified keyword or resolveable symbol k, and a spec,
-   spec-name, predicate or regex-op makes an entry in the registry mapping k to
-   the spec"
+  "Given a namespace-qualified keyword or resolveable symbol k, and a
+  spec, spec-name, predicate or regex-op makes an entry in the
+  registry mapping k to the spec. Use nil to remove an entry in
+  the registry for k."
   [k spec-form]
   (let [k    (if (symbol? k) (ns-qualify &env k) k)
         form (res &env spec-form)]
