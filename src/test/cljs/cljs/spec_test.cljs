@@ -304,6 +304,9 @@
     [] 'cljs.core/int?
     [0 2] '(cljs.spec.alpha/& cljs.core/int? cljs.core/even?)))
 
+(deftest keys-explain-pred
+  (is (= 'cljs.core/map? (-> (s/explain-data (s/keys :req [::x]) :a) ::s/problems first :pred))))
+
 (s/fdef foo.bar/cljs-2275
   :args (s/cat :k keyword?)
   :ret  string?)

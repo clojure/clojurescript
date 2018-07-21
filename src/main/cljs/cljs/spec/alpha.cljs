@@ -417,7 +417,7 @@
               ret))))
       (explain* [_ path via in x]
         (if-not (map? x)
-          [{:path path :pred 'map? :val x :via via :in in}]
+          [{:path path :pred `map? :val x :via via :in in}]
           (let [reg (registry)]
             (apply concat
                    (when-let [probs (->> (map (fn [pred form] (when-not (pred x) form))
