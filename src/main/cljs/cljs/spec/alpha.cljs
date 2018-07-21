@@ -378,6 +378,35 @@
       (explain* pred path (if-let [name (spec-name pred)] (conj via name) via) in v)
       [{:path path :pred form :val v :via via :in in}])))
 
+(declare ^{:arglists '([s] [min-count s])} or-k-gen
+         ^{:arglists '([s])} and-k-gen)
+
+(defn- k-gen
+  "returns a generator for form f, which can be a keyword or a list
+  starting with 'or or 'and."
+  [f]
+  (cond
+    (keyword? f)       (gen/return f)
+    (= 'or  (first f)) (or-k-gen 1 (rest f))
+    (= 'and (first f)) (and-k-gen (rest f))))
+
+(defn- or-k-gen
+  "returns a tuple generator made up of generators for a random subset
+  of min-count (default 0) to all elements in s."
+  ([s] (or-k-gen 0 s))
+  ([min-count s]
+   (gen/bind (gen/tuple
+               (gen/choose min-count (count s))
+               (gen/shuffle (map k-gen s)))
+     (fn [[n gens]]
+       (apply gen/tuple (take n gens))))))
+
+(defn- and-k-gen
+  "returns a tuple generator made up of generators for every element
+  in s."
+  [s]
+  (apply gen/tuple (map k-gen s)))
+
 (defn ^:skip-wiki map-spec-impl
   "Do not call this directly, use 'spec' with a map argument"
   [{:keys [req-un opt-un keys-pred pred-exprs opt-keys req-specs req req-keys opt-specs pred-forms opt gfn]
@@ -438,21 +467,26 @@
         (if gfn
           (gfn)
           (let [rmap (inck rmap id)
-                gen (fn [k s] (gensub s overrides (conj path k) rmap k))
+                rgen (fn [k s] [k (gensub s overrides (conj path k) rmap k)])
                 ogen (fn [k s]
                        (when-not (recur-limit? rmap id path k)
                          [k (gen/delay (gensub s overrides (conj path k) rmap k))]))
-                req-gens (map gen req-keys req-specs)
-                opt-gens (remove nil? (map ogen opt-keys opt-specs))]
-            (when (every? identity (concat req-gens opt-gens))
-              (let [reqs (zipmap req-keys req-gens)
-                    opts (into {} opt-gens)]
-                (gen/bind (gen/choose 0 (count opts))
-                          #(let [args (concat (seq reqs) (when (seq opts) (shuffle (seq opts))))]
-                            (->> args
-                                 (take (c/+ % (count reqs)))
-                                 (apply concat)
-                                 (apply gen/hash-map)))))))))
+                reqs (map rgen req-keys req-specs)
+                opts (remove nil? (map ogen opt-keys opt-specs))]
+            (when (every? identity (concat (map second reqs) (map second opts)))
+              (gen/bind
+                (gen/tuple
+                  (and-k-gen req)
+                  (or-k-gen opt)
+                  (and-k-gen req-un)
+                  (or-k-gen opt-un))
+                (fn [[req-ks opt-ks req-un-ks opt-un-ks]]
+                  (let [qks (flatten (concat req-ks opt-ks))
+                        unqks (map (comp keyword name) (flatten (concat req-un-ks opt-un-ks)))]
+                    (->> (into reqs opts)
+                      (filter #((set (concat qks unqks)) (first %)))
+                      (apply concat)
+                      (apply gen/hash-map)))))))))
       (with-gen* [_ gfn] (map-spec-impl (assoc argm :gfn gfn)))
       (describe* [_] (cons `keys
                            (cond-> []

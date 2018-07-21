@@ -312,6 +312,52 @@
   (is (= ::ABC (s/def ::ABC nil)))
   (is (nil? (s/get-spec ::ABC))))
 
+;; TODO replace this with a generative test once we have specs for s/keys
+(deftest map-spec-generators
+  (s/def ::a nat-int?)
+  (s/def ::b boolean?)
+  (s/def ::c keyword?)
+  (s/def ::d double?)
+  (s/def ::e inst?)
+
+  (is (= #{[::a]
+           [::a ::b]
+           [::a ::b ::c]
+           [::a ::c]}
+        (->> (s/exercise (s/keys :req [::a] :opt [::b ::c]) 100)
+          (map (comp sort keys first))
+          (into #{}))))
+
+  (is (= #{[:a]
+           [:a :b]
+           [:a :b :c]
+           [:a :c]}
+        (->> (s/exercise (s/keys :req-un [::a] :opt-un [::b ::c]) 100)
+          (map (comp sort keys first))
+          (into #{}))))
+
+  (is (= #{[::a ::b]
+           [::a ::b ::c ::d]
+           [::a ::b ::c ::d ::e]
+           [::a ::b ::c ::e]
+           [::a ::c ::d]
+           [::a ::c ::d ::e]
+           [::a ::c ::e]}
+        (->> (s/exercise (s/keys :req [::a (or ::b (and ::c (or ::d ::e)))]) 200)
+          (map (comp vec sort keys first))
+          (into #{}))))
+
+  (is (= #{[:a :b]
+           [:a :b :c :d]
+           [:a :b :c :d :e]
+           [:a :b :c :e]
+           [:a :c :d]
+           [:a :c :d :e]
+           [:a :c :e]}
+        (->> (s/exercise (s/keys :req-un [::a (or ::b (and ::c (or ::d ::e)))]) 200)
+          (map (comp vec sort keys first))
+          (into #{})))))
+
 (s/fdef foo.bar/cljs-2275
   :args (s/cat :k keyword?)
   :ret  string?)

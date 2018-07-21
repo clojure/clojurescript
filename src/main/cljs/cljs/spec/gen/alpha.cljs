@@ -8,7 +8,7 @@
 
 (ns cljs.spec.gen.alpha
   (:refer-clojure :exclude [boolean cat hash-map list map not-empty set vector
-                            char double int keyword symbol string uuid delay])
+                            char double int keyword symbol string uuid delay shuffle])
   (:require-macros [cljs.core :as c]
                    [cljs.spec.gen.alpha :as gen :refer [dynaload lazy-combinators lazy-prims]])
   (:require [cljs.core :as c])
@@ -69,7 +69,7 @@
 
 (lazy-combinators hash-map list map not-empty set vector vector-distinct fmap elements
   bind choose one-of such-that tuple sample return
-  large-integer* double* frequency)
+  large-integer* double* frequency shuffle)
 
 (lazy-prims any any-printable boolean char char-alpha char-alphanumeric char-ascii double
   int keyword keyword-ns large-integer ratio simple-type simple-type-printable
@@ -160,7 +160,7 @@ gen-builtins
               :b (gen-for-pred keyword?)}
         opts {:c (gen-for-pred string?)}]
     (generate (bind (choose 0 (count opts))
-                #(let [args (concat (seq reqs) (shuffle (seq opts)))]
+                #(let [args (concat (seq reqs) (c/shuffle (seq opts)))]
                   (->> args
                     (take (+ % (count reqs)))
                     (mapcat identity)
