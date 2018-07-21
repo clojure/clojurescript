@@ -358,6 +358,12 @@
           (map (comp vec sort keys first))
           (into #{})))))
 
+(deftest tuple-explain-pred
+  (are [val expected]
+    (= expected (-> (s/explain-data (s/tuple int?) val) ::s/problems first :pred))
+    :a 'cljs.core/vector?
+    [] '(cljs.core/= (cljs.core/count %) 1)))
+
 (s/fdef foo.bar/cljs-2275
   :args (s/cat :k keyword?)
   :ret  string?)

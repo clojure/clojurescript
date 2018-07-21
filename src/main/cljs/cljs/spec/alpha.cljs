@@ -617,7 +617,7 @@
        (explain* [_ path via in x]
          (cond
            (not (vector? x))
-           [{:path path :pred 'vector? :val x :via via :in in}]
+           [{:path path :pred `vector? :val x :via via :in in}]
 
            (not= (count x) (count preds))
            [{:path path :pred `(= (count ~'%) ~(count preds)) :val x :via via :in in}]
