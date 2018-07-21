@@ -238,12 +238,7 @@
               (when-not (#{:path :pred :val :reason :via :in} k)
                 (print "\n\t" (pr-str k) " ")
                 (pr v)))
-            (newline))
-          (doseq [[k v] ed]
-            (when-not (#{::problems} k)
-              (print (pr-str k) " ")
-              (pr v)
-              (newline))))))
+            (newline)))))
     (println "Success!")))
 
 (def ^:dynamic *explain-out* explain-printer)
