@@ -22,6 +22,23 @@
     (list x)
     x))
 
+(defn- enumerate-namespace* [sym-or-syms]
+  (into #{}
+    (mapcat
+      (fn [sym]
+        (->> (vals (ana-api/ns-interns sym))
+          (map :name)
+          (map
+            (fn [name-sym]
+              (symbol (name sym) (name name-sym)))))))
+    (collectionize sym-or-syms)))
+
+(defmacro enumerate-namespace
+  "Given a symbol naming an ns, or a collection of such symbols,
+returns the set of all symbols naming vars in those nses."
+  [ns-sym-or-syms]
+  `'~(enumerate-namespace* (eval ns-sym-or-syms)))
+
 (defn- fn-spec-name?
   [s]
   (symbol? s))

@@ -2,7 +2,9 @@
   (:require-macros [cljs.spec.test.test-macros])
   (:require [cljs.test :as test :refer-macros [deftest is are run-tests]]
             [cljs.spec.alpha :as s]
-            [cljs.spec.test.alpha :as stest]))
+            [cljs.spec.test.alpha :as stest]
+            [cljs.spec.test.test-ns1]
+            [cljs.spec.test.test-ns2]))
 
 (s/fdef clojure.core/symbol
   :args (s/alt :separate (s/cat :ns string? :n string?)
@@ -85,3 +87,13 @@
 
 (deftest test-2755
   (is (uri? (ffirst (s/exercise uri? 1)))))
+
+(deftest test-cljs-2665
+  (is (= '#{cljs.spec.test.test-ns1/x cljs.spec.test.test-ns1/y cljs.spec.test.test-ns2/z}
+        (stest/enumerate-namespace '[cljs.spec.test.test-ns1 cljs.spec.test.test-ns2])))
+  (is (= '#{cljs.spec.test.test-ns1/x cljs.spec.test.test-ns1/y cljs.spec.test.test-ns2/z}
+        (stest/enumerate-namespace ['cljs.spec.test.test-ns1 'cljs.spec.test.test-ns2])))
+  (is (= '#{cljs.spec.test.test-ns1/x cljs.spec.test.test-ns1/y}
+        (stest/enumerate-namespace 'cljs.spec.test.test-ns1)))
+  (is (= '#{cljs.spec.test.test-ns2/z}
+        (stest/enumerate-namespace 'cljs.spec.test.test-ns2))))
