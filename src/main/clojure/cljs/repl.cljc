@@ -1231,7 +1231,8 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
     :repl-special-function true))
 
 (defmacro doc
-  "Prints documentation for a var or special form given its name"
+  "Prints documentation for a var or special form given its name,
+  or for a spec if given a keyword"
   [name]
   `(print
      (binding [cljs.core/*print-newline* true]
@@ -1244,6 +1245,9 @@ itself (not its value) is returned. The reader macro #'x expands to (var x)."}})
 
               (repl-special-doc-map name)
               `(cljs.repl/print-doc (quote ~(repl-special-doc name)))
+
+              (keyword? name)
+              `(cljs.repl/print-doc {:spec ~name :doc (cljs.spec.alpha/describe ~name)})
 
               (ana-api/find-ns name)
               `(cljs.repl/print-doc

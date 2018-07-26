@@ -12,7 +12,7 @@
 
 (defn print-doc [{n :ns nm :name :as m}]
   (println "-------------------------")
-  (println (str (when-let [ns (:ns m)] (str ns "/")) (:name m)))
+  (println (or (:spec m) (str (when-let [ns (:ns m)] (str ns "/")) (:name m))))
   (when (:protocol m)
     (println "Protocol"))
   (cond
@@ -38,6 +38,8 @@
     (do
       (when (:macro m)
         (println "Macro"))
+      (when (:spec m)
+        (println "Spec"))
       (when (:repl-special-function m)
         (println "REPL Special Function"))
       (println " " (:doc m))
