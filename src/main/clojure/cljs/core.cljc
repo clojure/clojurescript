@@ -3056,6 +3056,13 @@
          (.push ~dest (unchecked-get (js-arguments) i#))
          (recur (inc i#))))))
 
+(core/defn- elide-implicit-macro-args [arglists]
+  (core/map (core/fn [arglist]
+              (if (core/vector? arglist)
+                (core/subvec arglist 2)
+                (core/drop 2 arglist)))
+    arglists))
+
 (core/defn- variadic-fn [name meta [[arglist & body :as method] :as fdecl] emit-var?]
   (core/letfn [(dest-args [c]
                  (map (core/fn [n] `(unchecked-get (js-arguments) ~n))
@@ -3063,12 +3070,13 @@
     (core/let [rname (symbol (core/str ana/*cljs-ns*) (core/str name))
                sig   (remove '#{&} arglist)
                c-1   (core/dec (count sig))
+               macro? (:macro meta)
                meta  (assoc meta
                        :top-fn
                        {:variadic? true
-                        :max-fixed-arity c-1
-                        :method-params [sig]
-                        :arglists (core/list arglist)
+                        :max-fixed-arity (core/cond-> c-1 macro? (core/- 2))
+                        :method-params (core/cond-> [sig] macro? elide-implicit-macro-args)
+                        :arglists (core/cond-> (core/list arglist) macro? elide-implicit-macro-args)
                         :arglists-meta (doall (map meta [arglist]))})]
       `(do
          (def ~(with-meta name meta)
@@ -3117,12 +3125,13 @@
                           (concat
                             (map count sigs)
                             [(core/- (count (first (filter varsig? arglists))) 2)]))
+               macro?   (:macro meta)
                meta     (assoc meta
                           :top-fn
                           {:variadic? variadic
-                           :max-fixed-arity maxfa
-                           :method-params sigs
-                           :arglists arglists
+                           :max-fixed-arity (core/cond-> maxfa macro? (core/- 2))
+                           :method-params (core/cond-> sigs macro? elide-implicit-macro-args)
+                           :arglists (core/cond-> arglists macro? elide-implicit-macro-args)
                            :arglists-meta (doall (map meta arglists))})
                args-sym (gensym "args")
                param-counts (map count arglists)]
