@@ -95,7 +95,6 @@
           "-e" "(require 'cljs.js)"
           "-e" "(cljs.js/eval-str (cljs.js/empty-state) \"(+ 1 2)\" nil {:eval cljs.js/js-eval :context :expr} prn)")
       (output-is
-        nil
         "{:ns cljs.user, :value 3}"))))
 
 (deftest test-cljs-2724
@@ -104,7 +103,6 @@
           "-e" "(require 'fs)"
           "-e" "fs/R_OK")
       (output-is
-        nil
         4))))
 
 (deftest test-cljs-2775
@@ -114,7 +112,7 @@
           "-d" "out"
           "-e" "(require 'left-pad)"
           "-e" "(left-pad 3 10 0)")
-      (output-is "nil\n\"0000000003\""))))
+      (output-is "\"0000000003\""))))
 
 (deftest test-cljs-2780
   (with-repl-env-filter #{"node" "nashorn"}

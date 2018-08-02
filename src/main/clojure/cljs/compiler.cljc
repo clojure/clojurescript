@@ -1279,7 +1279,7 @@
   (load-libs requires nil (:require reloads) deps name)
   (load-libs uses requires (:use reloads) deps name)
   (when (:repl-env env)
-    (emitln "null;")))
+    (emitln "'nil';")))
 
 (defmethod emit* :ns
   [{:keys [name requires uses require-macros reloads env deps]}]
