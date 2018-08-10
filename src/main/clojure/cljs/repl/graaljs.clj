@@ -21,14 +21,24 @@
             [cljs.stacktrace :as st])
   (:import [javax.script ScriptEngine ScriptException]))
 
-(defn create-engine []
+(defn- js-opt-key? [k]
+  (and (string? k)
+       (string/starts-with? k "js.")))
+
+(defn- form-js-opts [opts]
+  (for [[k v] opts
+        :when (js-opt-key? k)]
+    `(.option ~k ~v)))
+
+(defn create-engine [opts]
   ;; In order to support AOT compilation by JVMs that don't have
   ;; GraalVM available, we load and execute engine creation code
   ;; here at runtime.
   (import '(com.oracle.truffle.js.scriptengine GraalJSScriptEngine))
   (import '(org.graalvm.polyglot Context))
-  (let [engine  (eval '(GraalJSScriptEngine/create nil
+  (let [engine  (eval `(GraalJSScriptEngine/create nil
                          (-> (Context/newBuilder (make-array String 0))
+                           ~@(form-js-opts opts)
                            (.allowHostAccess true)
                            (.allowCreateThread true)
                            (.allowNativeAccess true))))
@@ -172,8 +182,12 @@
       (fn [st]
         (string/join "\n" (drop 1 (string/split st #"\n")))))))
 
+(def ^:private default-js-opts
+  {"js.precise-time" "true"})
+
 (defn repl-env* [{:keys [debug] :as opts}]
-  (let [engine (create-engine)]
+  (let [opts (merge default-js-opts opts)
+        engine (create-engine opts)]
     (merge
       (GraalJSEnv. engine debug)
       opts)))
