@@ -11,6 +11,12 @@
   (:require [cljs.test :as test :refer [deftest is]]
             [cljs.array-access.alpha :as alpha]))
 
+(deftest cljs-2861-test
+  ;; With cljs-2718, a typo led to (set! *unchecked-arrays* true) as
+  ;; not being treated as a no-op generating intrisic, which we can
+  ;; detect here when this test is run in JVM ClojureScript.
+  (is (false? *unchecked-arrays*)))
+
 (deftest unchecked-arrays-file-scope-test
   (is (not (alpha/unchecked-arrays?))))
 

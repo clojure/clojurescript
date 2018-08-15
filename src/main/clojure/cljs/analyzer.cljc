@@ -2267,7 +2267,7 @@
             (throw (error env "set! target must be a field or a symbol naming a var")))
           (cond
             (and (not (:def-emits-var env))                 ;; non-REPL context
-                 (some? ('#{*unchecked-if* *unchecked-array* *warn-on-infer*} target)))
+                 (some? ('#{*unchecked-if* *unchecked-arrays* *warn-on-infer*} target)))
             {:env env :op :no-op}
 
             :else
