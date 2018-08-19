@@ -9960,7 +9960,7 @@ reduces them without incurring seq initialization"
 
         ; Use the new, more efficient, IPrintWithWriter interface when possible.
         (satisfies? IPrintWithWriter obj)
-        (-pr-writer obj writer opts)
+        (-pr-writer ^any obj writer opts)
 
         (or (true? obj) (false? obj))
         (-write writer (str obj))

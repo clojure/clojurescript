@@ -68,6 +68,11 @@
   "The namespace of the constants table as a symbol."
   'cljs.core.constants)
 
+(def ^:private identity-counter (atom 0))
+
+(defn- add-identity [m]
+  (assoc m :identity (swap! identity-counter inc)))
+
 #?(:clj
    (def transit-read-opts
      (try
@@ -1440,6 +1445,114 @@
      :form form}
     (var-ast env sym)))
 
+(def ^:private predicate->tag
+  '{
+    ;; Base values
+    cljs.core/nil?            clj-nil
+    cljs.core/undefined?      clj-nil
+    cljs.core/false?          boolean
+    cljs.core/true?           boolean
+    cljs.core/zero?           number
+    cljs.core/infinite?       number
+
+    ;; Base types
+    cljs.core/boolean?        boolean
+    cljs.core/string?         string
+    cljs.core/char?           string
+    cljs.core/number?         number
+    cljs.core/integer?        number
+    cljs.core/float?          number
+    cljs.core/double?         number
+    cljs.core/array?          array
+    cljs.core/seq?            seq
+
+    ;; JavaScript types
+    cljs.core/regexp?         js/RegExp
+
+    ;; Types
+    cljs.core/keyword?        cljs.core/Keyword
+    cljs.core/var?            cljs.core/Var
+    cljs.core/symbol?         cljs.core/Symbol
+    cljs.core/volatile?       cljs.core/Volatile
+    cljs.core/delay?          cljs.core/Delay
+    cljs.core/reduced?        cljs.core/Reduced
+
+    ;; Protocols
+    cljs.core/map-entry?      cljs.core/IMapEntry
+    cljs.core/reversible?     cljs.core/IReversible
+    cljs.core/uuid?           cljs.core/IUUID
+    cljs.core/tagged-literal? cljs.core/ITaggedLiteral
+    cljs.core/iterable?       cljs.core/IIterable
+    cljs.core/cloneable?      cljs.core/ICloneable
+    cljs.core/inst?           cljs.core/Inst
+    cljs.core/counted?        cljs.core/ICounted
+    cljs.core/indexed?        cljs.core/IIndexed
+    cljs.core/coll?           cljs.core/ICollection
+    cljs.core/set?            cljs.core/ISet
+    cljs.core/associative?    cljs.core/IAssociative
+    cljs.core/ifind?          cljs.core/IFind
+    cljs.core/sequential?     cljs.core/ISequential
+    cljs.core/sorted?         cljs.core/ISorted
+    cljs.core/reduceable      cljs.core/IReduce
+    cljs.core/map?            cljs.core/IMap
+    cljs.core/list?           cljs.core/IList
+    cljs.core/record?         cljs.core/IRecord
+    cljs.core/vector?         cljs.core/IVector
+    cljs.core/chunked-seq?    cljs.core/IChunkedSeq
+    cljs.core/ifn?            cljs.core/IFn
+
+    ;; Composites
+    cljs.core/seqable?        #{cljs.core/ISeqable array string}
+    cljs.core/ident?          #{cljs.core/Keyword cljs.core/Symbol}
+    })
+
+(defn- simple-predicate-induced-tag
+  "Look for a predicate-induced tag when the test expression is a simple
+   application of a predicate to a local, as in (string? x)."
+  [env test]
+  (when (and (list? test)
+             (== 2 (count test))
+             (every? symbol? test))
+    (let [analyzed-fn (no-warn (analyze (assoc env :context :expr) (first test)))]
+      (when (= :var (:op analyzed-fn))
+        (when-let [tag (predicate->tag (:name analyzed-fn))]
+          (let [sym (last test)]
+            (when (and (nil? (namespace sym))
+                       (get-in env [:locals sym]))
+              [sym tag])))))))
+
+(defn- type-check-induced-tag
+  "Look for a type-check-induced tag when the test expression is the use of
+   satisfies? or instance? on a local, as in (satisfies? ICounted x)."
+  [env test]
+  (when (and (list? test)
+             (== 3 (count test))
+             (every? symbol? test))
+    (let [analyzed-fn (no-warn (analyze (assoc env :context :expr) (first test)))]
+      (when (= :var (:op analyzed-fn))
+        (when ('#{cljs.core/satisfies? cljs.core/instance?} (:name analyzed-fn))
+          (let [analyzed-type (no-warn (analyze (assoc env :context :expr) (second test)))
+                tag (:name analyzed-type)
+                sym (last test)]
+            (when (and (= :var (:op analyzed-type))
+                       (nil? (namespace sym))
+                       (get-in env [:locals sym]))
+              [sym tag])))))))
+
+(defn- add-predicate-induced-tags
+  "Looks at the test and adds any tags which are induced by virtue
+  of the predicate being satisfied. For exmaple in (if (string? x) x :bar)
+  the local x in the then branch must be of string type."
+  [env test]
+  (let [[local tag] (or (simple-predicate-induced-tag env test)
+                        (type-check-induced-tag env test))]
+    (cond-> env
+      local (update-in [:locals local :tag] (fn [prev-tag]
+                                              (if (or (nil? prev-tag)
+                                                      (= 'any prev-tag))
+                                                tag
+                                                prev-tag))))))
+
 (defmethod parse 'if
   [op env [_ test then else :as form] name _]
   (when (< (count form) 3)
@@ -1447,7 +1560,7 @@
   (when (> (count form) 4)
    (throw (error env "Too many arguments to if")))
   (let [test-expr (disallowing-recur (analyze (assoc env :context :expr) test))
-        then-expr (allowing-redef (analyze env then))
+        then-expr (allowing-redef (analyze (add-predicate-induced-tags env test) then))
         else-expr (allowing-redef (analyze env else))]
     {:env env :op :if :form form
      :test test-expr :then then-expr :else else-expr
@@ -2105,7 +2218,8 @@
                         :variadic? (:variadic? init-expr)
                         :max-fixed-arity (:max-fixed-arity init-expr)
                         :method-params (map :params (:methods init-expr))})
-                     be)]
+                     be)
+                be (add-identity be)]
             (recur (conj bes be)
               (assoc-in env [:locals name] be)
               (next bindings))))

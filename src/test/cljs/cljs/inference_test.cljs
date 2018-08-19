@@ -8,7 +8,7 @@
 
 (ns cljs.inference-test
   (:require-macros [cljs.inference-util])
-  (:require [cljs.test :refer [deftest]]
+  (:require [cljs.test :refer [deftest is]]
             [cljs.pprint]))
 
 (deftest test-cljs-2825
@@ -78,3 +78,13 @@
     (uuid? nil)
     (tagged-literal? nil)
     (cljs.pprint/float? nil)))
+
+(deftest cljs-2866-test
+  ;; Here we are testing that in the JavaScript emitted,
+  ;; the gensym generated for curr is being passed to dec
+  (is (zero? ((fn [x]
+                (while (pos? @x)
+                  (let [curr @x]
+                    (when (number? curr)
+                      (reset! x (dec curr)))))
+                @x) (atom 1)))))

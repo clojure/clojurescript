@@ -86,7 +86,7 @@
         :else d))))
 
 (defn hash-scope [s]
-  #?(:clj (System/identityHashCode s)
+  #?(:clj  (or (:identity s) (System/identityHashCode s))
      :cljs (hash-combine (-hash ^not-native (:name s))
              (shadow-depth s))))
 

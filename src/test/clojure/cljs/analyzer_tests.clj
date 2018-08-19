@@ -231,6 +231,44 @@
              (:tag (analyze test-env '(if x "foo" 1)))))
          '#{number string})))
 
+(deftest if-induced-inference
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (nil? x) x :kw))))))
+        '#{clj-nil cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (boolean? x) x :kw))))))
+        '#{boolean cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (number? x) x :kw))))))
+        '#{number cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (double? x) x :kw))))))
+        '#{number cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (float? x) x :kw))))))
+        '#{number cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (integer? x) x :kw))))))
+        '#{number cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (seq? x) x :kw))))))
+        '#{seq cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (array? x) x :kw))))))
+        '#{array cljs.core/Keyword}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (a/analyze test-env '(let [x ^any []] (if (seqable? x) x :kw))))))
+        '#{cljs.core/ISeqable array string cljs.core/Keyword})))
+
 (deftest method-inference
   (is (= (e/with-compiler-env test-cenv
            (:tag (analyze test-env '(.foo js/bar))))
