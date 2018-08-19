@@ -1637,6 +1637,15 @@
   (is (= "xyzzy" (str "x" "y" "z" "z" "y")))
   (is (= "a1b2c3" (str "a" 1 "b" 2 "c" 3))))
 
+(defn str-fn-2865 []
+  "hello")
+
+(deftest test-cljs-2865
+  (is (= "ab" (str "a" (let [x true] (when x "b")))))
+  (is (= "ab" (str "a" js/undefined "b")))
+  (is (= "ab" (str "a" nil "b")))
+  (is (= "ahellob" (str "a" (str-fn-2865) "b"))))
+
 (deftest test-cljs-2934
   (let [x (delay 1)]
     (is (= "#object[cljs.core.Delay {:status :pending, :val nil}]" (pr-str x)))

@@ -827,22 +827,35 @@
       (core/quot c 32)
       (core/inc (core/quot c 32)))))
 
+(core/defn- compatible? [inferred-tag allowed-tags]
+  (if (set? inferred-tag)
+    (clojure.set/subset? inferred-tag allowed-tags)
+    (contains? allowed-tags inferred-tag)))
+
+(core/defn- typed-expr? [env form allowed-tags]
+  (compatible? (cljs.analyzer/infer-tag env
+                 (cljs.analyzer/no-warn (cljs.analyzer/analyze env form)))
+    allowed-tags))
+
+(core/defn- string-expr [e]
+  (vary-meta e assoc :tag 'string))
+
 (core/defmacro str
   ([] "")
   ([x]
-   (if (core/string? x)
+   (if (typed-expr? &env x '#{string})
      x
-     (core/list 'js* "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x)))
+     (string-expr (core/list 'js* "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x))))
   ([x & ys]
    (core/let [interpolate (core/fn [x]
-                            (if (core/string? x)
+                            (if (typed-expr? &env x '#{string clj-nil})
                               "~{}"
                               "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
               strs        (core/->> (core/list* x ys)
                             (map interpolate)
                             (interpose ",")
                             (apply core/str))]
-     (list* 'js* (core/str "[" strs "].join('')") x ys))))
+     (string-expr (list* 'js* (core/str "[" strs "].join('')") x ys)))))
 
 (core/defn- bool-expr [e]
   (vary-meta e assoc :tag 'boolean))
