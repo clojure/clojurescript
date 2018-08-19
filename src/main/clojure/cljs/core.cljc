@@ -827,16 +827,22 @@
       (core/quot c 32)
       (core/inc (core/quot c 32)))))
 
-(core/defmacro str [& xs]
-  (core/let [interpolate (core/fn [x]
-                           (if (core/string? x)
-                             "~{}"
-                             "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
-             strs (core/->> xs
-                    (map interpolate)
-                    (interpose ",")
-                    (apply core/str))]
-    (list* 'js* (core/str "[" strs "].join('')") xs)))
+(core/defmacro str
+  ([] "")
+  ([x]
+   (if (core/string? x)
+     x
+     (core/list 'js* "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})" x)))
+  ([x & ys]
+   (core/let [interpolate (core/fn [x]
+                            (if (core/string? x)
+                              "~{}"
+                              "cljs.core.str.cljs$core$IFn$_invoke$arity$1(~{})"))
+              strs        (core/->> (core/list* x ys)
+                            (map interpolate)
+                            (interpose ",")
+                            (apply core/str))]
+     (list* 'js* (core/str "[" strs "].join('')") x ys))))
 
 (core/defn- bool-expr [e]
   (vary-meta e assoc :tag 'boolean))

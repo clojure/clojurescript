@@ -1626,6 +1626,13 @@
   (is (thrown? js/Error ((not empty?) "foo")))
   (is (thrown? js/Error ((not empty?) ""))))
 
+(deftest test-cljs-2864
+  (is (= "" (str)))
+  (is (= "a" (str "a")))
+  (is (= "1" (str 1)))
+  (is (= "xyzzy" (str "x" "y" "z" "z" "y")))
+  (is (= "a1b2c3" (str "a" 1 "b" 2 "c" 3))))
+
 (deftest test-cljs-2943
   (let [m1 {:a 2, :b 3, :c 5}
         m2 {:a 7, :b 11, :d 13, :e 17}
