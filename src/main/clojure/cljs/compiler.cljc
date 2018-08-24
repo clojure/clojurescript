@@ -205,7 +205,8 @@
      #?(:clj (map? x) :cljs (ana/cljs-map? x)) (emit x)
      #?(:clj (seq? x) :cljs (ana/cljs-seq? x)) (apply emits x)
      #?(:clj (fn? x) :cljs ^boolean (goog/isFunction x)) (x)
-     :else (let [s (print-str x)]
+     :else (let [s (cond-> x
+                     (not (string? x)) print-str)]
              (when-not (nil? *source-map-data*)
                (swap! *source-map-data*
                  update-in [:gen-col] #(+ % (count s))))

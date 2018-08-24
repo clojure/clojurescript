@@ -1600,7 +1600,7 @@
            (every? constant-value? (ast-children ast)))))
 
 (defn const-expr->constant-value [{:keys [op] :as e}]
-  (case op 
+  (case op
     :quote  (const-expr->constant-value (:expr e))
     :const  (:val e)
     :map    (zipmap (map const-expr->constant-value (:keys e))
@@ -1926,7 +1926,7 @@
                        {:protocol-impl proto-impl
                         :protocol-inline proto-inline})
         methods      (map #(disallowing-ns* (analyze-fn-method menv locals % type (nil? name))) meths)
-        mfa          (apply max (map :fixed-arity methods))
+        mfa          (transduce (map :fixed-arity) max 0 methods)
         variadic     (boolean (some :variadic? methods))
         locals       (if named-fn?
                        (update-in locals [name] assoc
