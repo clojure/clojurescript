@@ -1,4 +1,5 @@
 {:optimizations :advanced
+ :output-to "builds/out-adv/core-advanced-test.js"
  :main test-runner
  :output-wrapper true
  :verbose true
