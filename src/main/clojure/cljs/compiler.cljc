@@ -30,7 +30,7 @@
                      [cljs.analyzer :as ana]
                      [cljs.source-map :as sm]))
   #?(:clj (:import java.lang.StringBuilder
-                   java.io.File
+                   [java.io File Writer]
                    [cljs.tagged_literals JSValue])
      :cljs (:import [goog.string StringBuffer])))
 
@@ -205,12 +205,11 @@
      #?(:clj (map? x) :cljs (ana/cljs-map? x)) (emit x)
      #?(:clj (seq? x) :cljs (ana/cljs-seq? x)) (apply emits x)
      #?(:clj (fn? x) :cljs ^boolean (goog/isFunction x)) (x)
-     :else (let [s (cond-> x
-                     (not (string? x)) print-str)]
+     :else (let [^String s (cond-> x (not (string? x)) print-str)]
              (when-not (nil? *source-map-data*)
                (swap! *source-map-data*
                  update-in [:gen-col] #(+ % (count s))))
-             (print s))))
+             (.write ^Writer *out* s))))
   nil)
 
 (defn emitln [& xs]
