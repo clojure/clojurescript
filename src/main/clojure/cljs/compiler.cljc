@@ -209,7 +209,8 @@
              (when-not (nil? *source-map-data*)
                (swap! *source-map-data*
                  update-in [:gen-col] #(+ % (count s))))
-             (.write ^Writer *out* s))))
+             #?(:clj  (.write ^Writer *out* s)
+                :cljs (print s)))))
   nil)
 
 (defn emitln [& xs]
