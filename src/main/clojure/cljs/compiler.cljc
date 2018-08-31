@@ -199,13 +199,13 @@
     (emit* ast)))
 
 (defn emits [& xs]
-  (doseq [x xs]
+  (doseq [^Object x xs]
     (cond
      (nil? x) nil
      #?(:clj (map? x) :cljs (ana/cljs-map? x)) (emit x)
      #?(:clj (seq? x) :cljs (ana/cljs-seq? x)) (apply emits x)
      #?(:clj (fn? x) :cljs ^boolean (goog/isFunction x)) (x)
-     :else (let [^String s (cond-> x (not (string? x)) print-str)]
+     :else (let [^String s (cond-> x (not (string? x)) .toString)]
              (when-not (nil? *source-map-data*)
                (swap! *source-map-data*
                  update-in [:gen-col] #(+ % (count s))))
