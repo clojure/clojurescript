@@ -18,6 +18,14 @@
             [clojure.string :as str])
   (:import [java.io File]))
 
+(defn analyze
+  ([env form]
+   (env/ensure (ana/analyze env form)))
+  ([env form name]
+   (env/ensure (ana/analyze env form name)))
+  ([env form name opts]
+   (env/ensure (ana/analyze env form name opts))))
+
 (def aenv (assoc-in (ana/empty-env) [:ns :name] 'cljs.user))
 (def cenv (env/default-compiler-env))
 
@@ -39,21 +47,21 @@
 (deftest fn-scope-munge
   (is (= (comp/munge
            (get-in
-             (ana/analyze aenv
+             (analyze aenv
                '(defn foo []
                   (fn bar [])))
              [:init :name]))
          'cljs$user$foo))
   (is (= (comp/munge
            (get-in
-             (ana/analyze aenv
+             (analyze aenv
                '(defn foo []
                   (fn bar [])))
              [:init :methods 0 :body :ret :local]))
           'cljs$user$foo_$_bar))
   (is (= (comp/munge
            (get-in
-             (ana/analyze aenv
+             (analyze aenv
                '(fn []
                   (fn console [])))
              [:methods 0 :body :ret :local]))
@@ -62,14 +70,14 @@
 (deftest test-js-negative-infinity
   (is (= (with-out-str
            (comp/emit
-             (ana/analyze (assoc aenv :context :expr) 'js/-Infinity)))
+             (analyze (assoc aenv :context :expr) 'js/-Infinity)))
           "-Infinity")))
 
 (deftest test-cljs-2352
   (are [form result]
       (= (with-out-str
            (comp/emit
-             (ana/analyze (assoc aenv :context :expr) form)))
+             (analyze (assoc aenv :context :expr) form)))
          result)
     Double/NaN "NaN"
     Double/POSITIVE_INFINITY "Infinity"
@@ -82,7 +90,7 @@
          (ana/no-warn
            (env/with-compiler-env cenv
              (comp/munge
-               (:info (ana/analyze {:ns {:name 'cljs.core}} 'cljs.core/..))))))))
+               (:info (analyze {:ns {:name 'cljs.core}} 'cljs.core/..))))))))
 
 (deftest test-resolve-dotdot
   (is (= '{:name cljs.core/..
@@ -101,13 +109,13 @@
                     (comp/emit-comment "/* multiline comments */" nil))))
     (check-docs (with-out-str
                   (comp/emit
-                    (ana/analyze aenv
+                    (analyze aenv
                       '(defn foo "foo is */ like this /*/" [] (+ 1 1))))))))
 
 (comment
   (env/with-compiler-env cenv
     (comp/emit
-      (ana/analyze aenv
+      (analyze aenv
         '(defn foo ([a]) ([a b])))))
   )
 
@@ -134,7 +142,7 @@
         (let [warnings (-> (capture-warnings
                              (with-out-str
                                (comp/emit
-                                 (ana/analyze aenv
+                                 (analyze aenv
                                    '(let [{:keys [a] :or {b 2}} {:a 1}] [a b]))))))]
           (is (= (ffirst warnings) :undeclared-var))
           (is (.startsWith (-> warnings first second)
@@ -156,7 +164,7 @@
           (env/with-compiler-env (atom cenv-with-foo)
             (with-out-str
               (comp/emit
-               (ana/analyze aenv-with-foo form))))))
+               (analyze aenv-with-foo form))))))
 
         '(cljs.user/foo nil)
         '(cljs.user/foo 0)
@@ -217,7 +225,7 @@
                       (comp/emit
                         (comp/with-core-cljs
                           opts
-                          (fn [] (ana/analyze aenv test-cljs-1925-code nil opts)))))))))))
+                          (fn [] (analyze aenv test-cljs-1925-code nil opts)))))))))))
   (let [opts {:static-fns true}
         cenv (env/default-compiler-env opts)]
     (is (= [] (binding [ana/*unchecked-if* false
@@ -228,7 +236,7 @@
                       (comp/emit
                         (comp/with-core-cljs
                           opts
-                          (fn [] (ana/analyze aenv specify-test-code nil opts))))))))))))
+                          (fn [] (analyze aenv specify-test-code nil opts))))))))))))
 
 
 (deftest test-optimized-invoke-emit
@@ -279,7 +287,7 @@
   (binding [ana/*cljs-static-fns* true]
     (env/with-compiler-env cenv
       (comp/emit
-        (ana/analyze aenv
+        (analyze aenv
           '(defn incme []
              (let [incme (fn [a queue & args])]
                (println (incme 1 [1] 1 1))))))))
@@ -291,7 +299,7 @@
   (binding [ana/*cljs-static-fns* true]
     (env/with-compiler-env cenv
       (comp/emit
-        (ana/analyze aenv
+        (analyze aenv
           '(defn foo [x]
              (if ^boolean (goog.array/isEmpty x)
                true

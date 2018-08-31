@@ -8,7 +8,8 @@
 
   ;; ~900ms
   (dotimes [_ 20]
-    (time (ana/analyze-file (io/resource "cljs/core.cljs"))))
+    (time
+      (ana/analyze-file (io/resource "cljs/core.cljs"))))
 
   ;; ~2700ms
   ;; after change ~2500

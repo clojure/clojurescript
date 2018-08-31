@@ -1967,9 +1967,13 @@
                       :children children}
                      (when (some? name-var)
                        {:local name-var}))]
-    (let [variadic-methods (filter :variadic? methods)
-          variadic-params  (count (:params (first variadic-methods)))
-          param-counts     (map (comp count :params) methods)]
+    (let [variadic-methods (into []
+                             (comp (filter :variadic?) (take 1))
+                             methods)
+          variadic-params  (if (pos? (count variadic-methods))
+                             (count (:params (nth variadic-methods 0)))
+                             0)
+          param-counts     (into [] (map (comp count :params)) methods)]
       (when (< 1 (count variadic-methods))
         (warning :multiple-variadic-overloads env {:name name-var}))
       (when (not (or (zero? variadic-params) (== variadic-params (+ 1 mfa))))
@@ -3581,7 +3585,7 @@
   "Given a env, an analysis environment, and form, a ClojureScript form,
    macroexpand the form once."
   [env form]
-  (ensure (wrapping-errors env (macroexpand-1* env form))))
+  (wrapping-errors env (macroexpand-1* env form)))
 
 (declare analyze-list)
 
@@ -3865,12 +3869,10 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([env form name opts]
-   (ensure
-     (wrapping-errors env
-       (binding [reader/*alias-map* (or reader/*alias-map* {})]
-         (if (analyzed? form)
-           (no-warn (analyze* env form name opts))
-           (analyze* env form name opts)))))))
+   (wrapping-errors env
+     (if (analyzed? form)
+       (no-warn (analyze* env form name opts))
+       (analyze* env form name opts)))))
 
 (defn add-consts
   "Given a compiler state and a map from fully qualified symbols to constant
