@@ -626,7 +626,7 @@
    analysis environment."
   ([ns] (intern-macros ns false))
   ([ns reload]
-    (when (or (nil? (get-in @env/*compiler* [::namespaces ns :macros]))
+    (when (or (nil? (gets @env/*compiler* ::namespaces ns :macros))
               reload)
       (swap! env/*compiler* assoc-in [::namespaces ns :macros]
         (->> #?(:clj (ns-interns ns) :cljs (ns-interns* ns))
