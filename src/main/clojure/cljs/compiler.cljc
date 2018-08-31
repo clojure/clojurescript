@@ -65,7 +65,7 @@
       ns
       (subs ns 0 idx))))
 
-(defn find-ns-starts-with [needle]
+(defn ^:dynamic find-ns-starts-with [needle]
   (reduce-kv
     (fn [xs ns _]
       (when (= needle (get-first-ns-segment ns))
@@ -1473,7 +1473,8 @@
                                          (atom
                                            {:source-map (sorted-map)
                                             :gen-col 0
-                                            :gen-line 0}))]
+                                            :gen-line 0}))
+                 find-ns-starts-with   (memoize find-ns-starts-with)]
          (emitln (compiled-by-string opts))
          (with-open [rdr (io/reader src)]
            (let [env (ana/empty-env)]

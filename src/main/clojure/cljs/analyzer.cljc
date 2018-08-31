@@ -3296,13 +3296,18 @@
   "Mark a form as being analyzed. Assumes x satisfies IMeta. Useful to suppress
   warnings that will have been caught by a first compiler pass."
   [x]
-  (vary-meta x assoc ::analyzed true))
+  (cond
+    (map? x) (assoc x ::analyzed true)
+    :else (vary-meta x assoc ::analyzed true)))
 
 (defn analyzed?
   "Returns boolean if the form has already been marked as analyzed."
   #?(:cljs {:tag boolean})
   [x]
-  (boolean (::analyzed (meta x))))
+  (boolean
+    (cond
+      (map? x) (::analyzed x)
+      :else (::analyzed (meta x)))))
 
 (defn- all-values?
   #?(:cljs {:tag boolean})
