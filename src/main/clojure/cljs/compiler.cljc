@@ -177,26 +177,25 @@
 (defmulti emit* :op)
 
 (defn emit [ast]
-  (ensure
-    (when *source-map-data*
-      (let [{:keys [env]} ast]
-        (when (:line env)
-          (let [{:keys [line column]} env]
-            (swap! *source-map-data*
-              (fn [m]
-                (let [minfo (cond-> {:gcol (:gen-col m)
-                                     :gline (:gen-line m)}
-                              (#{:var :local :js-var} (:op ast))
-                              (assoc :name (str (-> ast :info :name))))]
-                  ; Dec the line/column numbers for 0-indexing.
-                  ; tools.reader uses 1-indexed sources, chrome
-                  ; expects 0-indexed source maps.
-                  (update-in m [:source-map (dec line)]
-                    (fnil (fn [line]
-                            (update-in line [(if column (dec column) 0)]
-                              (fnil (fn [column] (conj column minfo)) [])))
-                      (sorted-map))))))))))
-    (emit* ast)))
+  (when *source-map-data*
+    (let [{:keys [env]} ast]
+      (when (:line env)
+        (let [{:keys [line column]} env]
+          (swap! *source-map-data*
+            (fn [m]
+              (let [minfo (cond-> {:gcol (:gen-col m)
+                                   :gline (:gen-line m)}
+                            (#{:var :local :js-var} (:op ast))
+                            (assoc :name (str (-> ast :info :name))))]
+                ; Dec the line/column numbers for 0-indexing.
+                ; tools.reader uses 1-indexed sources, chrome
+                ; expects 0-indexed source maps.
+                (update-in m [:source-map (dec line)]
+                  (fnil (fn [line]
+                          (update-in line [(if column (dec column) 0)]
+                            (fnil (fn [column] (conj column minfo)) [])))
+                    (sorted-map))))))))))
+  (emit* ast))
 
 (defn emits [& xs]
   (doseq [^Object x xs]
