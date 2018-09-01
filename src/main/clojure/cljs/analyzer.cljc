@@ -3804,7 +3804,6 @@
 
 #?(:clj
    (defn analyze-form [env form name opts]
-     (load-core)
      (cond
        (symbol? form) (analyze-symbol env form)
        (and (seq? form) (seq form)) (analyze-seq env form name opts)

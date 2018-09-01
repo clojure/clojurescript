@@ -197,25 +197,35 @@
                     (sorted-map))))))))))
   (emit* ast))
 
-(defn emits [& xs]
-  (doseq [^Object x xs]
-    (cond
-     (nil? x) nil
-     #?(:clj (map? x) :cljs (ana/cljs-map? x)) (emit x)
-     #?(:clj (seq? x) :cljs (ana/cljs-seq? x)) (apply emits x)
-     #?(:clj (fn? x) :cljs ^boolean (goog/isFunction x)) (x)
-     :else (let [^String s (cond-> x (not (string? x)) .toString)]
+(defn emits 
+  ([])
+  ([^Object a]
+   (cond
+     (nil? a) nil
+     #?(:clj (map? a) :cljs (ana/cljs-map? a)) (emit a)
+     #?(:clj (seq? a) :cljs (ana/cljs-seq? a)) (apply emits a)
+     #?(:clj (fn? a) :cljs ^boolean (goog/isFunction a)) (a)
+     :else (let [^String s (cond-> a (not (string? a)) .toString)]
              (when-not (nil? *source-map-data*)
                (swap! *source-map-data*
                  update-in [:gen-col] #(+ % (count s))))
              #?(:clj  (.write ^Writer *out* s)
-                :cljs (print s)))))
-  nil)
+                :cljs (print s))))
+    nil)
+  ([a b]
+   (emits a) (emits b))
+  ([a b c]
+   (emits a) (emits b) (emits c))
+  ([a b c d]
+   (emits a) (emits b) (emits c) (emits d))
+  ([a b c d e]
+   (emits a) (emits b) (emits c) (emits d) (emits e))
+  ([a b c d e & xs]
+   (emits a) (emits b) (emits c) (emits d) (emits e)
+   (doseq [x xs] (emits x))))
 
-(defn emitln [& xs]
-  (apply emits xs)
-  (binding [*flush-on-newline* false]
-    (println))
+(defn ^:private _emitln []
+  (newline)
   (when *source-map-data*
     (swap! *source-map-data*
       (fn [{:keys [gen-line] :as m}]
@@ -223,6 +233,23 @@
           :gen-line (inc gen-line)
           :gen-col 0))))
   nil)
+
+(defn emitln
+  ([] (_emitln))
+  ([a]
+   (emits a) (_emitln))
+  ([a b]
+   (emits a) (emits b) (_emitln))
+  ([a b c]
+   (emits a) (emits b) (emits c) (_emitln))
+  ([a b c d]
+   (emits a) (emits b) (emits c) (emits d) (_emitln))
+  ([a b c d e]
+   (emits a) (emits b) (emits c) (emits d) (emits e) (_emitln))
+  ([a b c d e & xs]
+   (emits a) (emits b) (emits c) (emits d) (emits e)
+   (doseq [x xs] (emits x))
+   (_emitln)))
 
 (defn ^String emit-str [expr]
   (with-out-str (emit expr)))
