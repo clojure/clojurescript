@@ -7,7 +7,7 @@
   org.clojure/core.specs.alpha {:mvn/version "0.1.24"}
   org.clojure/data.json {:mvn/version "0.2.6"}
   com.cognitect/transit-clj {:mvn/version "0.8.309"}
-  com.google.javascript/closure-compiler-unshaded {:mvn/version "v20180716"}
+  com.google.javascript/closure-compiler-unshaded {:mvn/version "v20180805"}
   org.clojure/google-closure-library {:mvn/version "0.0-20170809-b9c14c6b"}
   org.mozilla/rhino {:mvn/version "1.7R5"}}
  :aliases
