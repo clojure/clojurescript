@@ -32,7 +32,7 @@
                      [cljs.tools.reader :as reader]
                      [cljs.tools.reader.reader-types :as readers]
                      [cljs.reader :as edn]))
-  #?(:clj (:import [java.io File Reader PushbackReader FileOutputStream FileInputStream]
+  #?(:clj (:import [java.io File Reader PushbackReader]
                    [java.util.regex Pattern]
                    [java.net URL]
                    [java.lang Throwable]
@@ -4520,10 +4520,8 @@
                    (str ";; Analyzed by ClojureScript " (util/clojurescript-version) "\n"
                      (pr-str analysis)))
           "json" (when-let [{:keys [writer write]} @transit]
-                   (write
-                     (writer (FileOutputStream. cache-file) :json
-                       transit-write-opts)
-                     analysis))))
+                   (with-open [os (io/output-stream cache-file)]
+                     (write (writer os :json transit-write-opts) analysis)))))
       (when src
         (.setLastModified ^File cache-file (util/last-modified src))))))
 
