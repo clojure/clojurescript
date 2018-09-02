@@ -11,7 +11,7 @@
   (:require-macros
     [cljs.pprint-test :refer [simple-tests code-block]])
   (:require
-    [cljs.test :as t :refer-macros [deftest is]]
+    [cljs.test :as t :refer-macros [deftest is are]]
     [cljs.pprint :refer [pprint cl-format get-pretty-writer prn print-table
                          *print-pprint-dispatch* simple-dispatch
                          *print-right-margin* *print-miser-width*
@@ -1087,3 +1087,14 @@ Usage: *hello*
 "
   )
 
+(deftest test-cljs-2881
+  (are [expected ch]
+    (= expected (with-out-str (cl-format true "~@c" ch)))
+    "\\newline" \newline
+    "\\space" \space
+    "\\tab" \tab
+    "\\backspace" \backspace
+    "\\return" \return
+    "\\formfeed" \formfeed
+    "\\\"" \"
+    "\\\\" \\))

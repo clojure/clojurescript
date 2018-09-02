@@ -32,6 +32,7 @@
 (defn- print-char [c]
   (-write *out* (condp = c
                   \backspace "\\backspace"
+                  \space "\\space"
                   \tab "\\tab"
                   \newline "\\newline"
                   \formfeed "\\formfeed"
