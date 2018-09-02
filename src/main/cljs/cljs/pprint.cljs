@@ -1362,8 +1362,8 @@ http://www.lispworks.com/documentation/HyperSpec/Body/22_c.htm"
 (defn- readable-character [params navigator offsets]
   (let [[c navigator] (next-arg navigator)]
     (condp = (:char-format params)
-      \o (cl-format true "\\o~3, '0o" (char-code c))
-      \u (cl-format true "\\u~4, '0x" (char-code c))
+      \o (cl-format true "\\o~3,'0o" (char-code c))
+      \u (cl-format true "\\u~4,'0x" (char-code c))
       nil (print-char c))
     navigator))
 

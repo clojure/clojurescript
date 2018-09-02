@@ -1087,6 +1087,13 @@ Usage: *hello*
 "
   )
 
+(deftest test-cljs-2880
+  (are [expected format]
+    (= expected (with-out-str (cl-format true format \a)))
+    "\\a" "~@c"
+    "\\o141" "~'o@c"
+    "\\u0061" "~'u@c"))
+
 (deftest test-cljs-2881
   (are [expected ch]
     (= expected (with-out-str (cl-format true "~@c" ch)))
