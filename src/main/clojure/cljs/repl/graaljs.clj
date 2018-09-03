@@ -39,8 +39,7 @@
   (let [engine  (eval `(GraalJSScriptEngine/create nil
                          (-> (Context/newBuilder (make-array String 0))
                            ~@(form-js-opts opts)
-                           (.allowHostAccess true)
-                           (.allowCreateThread true)
+                           (.allowAllAccess true)
                            (.allowNativeAccess true))))
         context (.getContext engine)]
     (.setWriter context *out*)
@@ -183,7 +182,7 @@
         (string/join "\n" (drop 1 (string/split st #"\n")))))))
 
 (def ^:private default-js-opts
-  {"js.precise-time" "true"})
+  {"js.timer-resolution" "1"})
 
 (defn repl-env* [{:keys [debug] :as opts}]
   (let [opts (merge default-js-opts opts)
