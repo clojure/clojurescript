@@ -217,7 +217,9 @@
   "Default printer for explain-data. nil indicates a successful validation."
   [ed]
   (if ed
-    (let [problems (sort-by #(- (count (:path %))) (::problems ed))]
+    (let [problems (->> (::problems ed)
+                     (sort-by #(- (count (:in %))))
+                     (sort-by #(- (count (:path %)))))]
       (print
         (with-out-str
           ;;(prn {:ed ed})
