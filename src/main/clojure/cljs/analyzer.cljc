@@ -891,6 +891,41 @@
                  'prototype)})
     x))
 
+(defn ->type-set
+  "Ensures that a type tag is a set."
+  [t]
+  (if #?(:clj  (set? t)
+         :cljs (cljs-set? t))
+    t
+    #{t}))
+
+(defn canonicalize-type [t]
+  "Ensures that a type tag is either nil, a type symbol, or a non-singleton
+  set of type symbols, absorbing clj-nil into seq and all types into any."
+  (cond
+    (symbol? t) t
+    (empty? t) nil
+    (== 1 (count t)) (first t)
+    (contains? t 'any) 'any
+    (contains? t 'seq) (let [res (disj t 'clj-nil)]
+                         (if (== 1 (count res))
+                           'seq
+                           res))
+    :else t))
+
+(defn add-types
+  "Produces a union of types."
+  ([] 'any)
+  ([t1] t1)
+  ([t1 t2]
+   (if (or (nil? t1)
+           (nil? t2))
+     'any
+     (-> (set/union (->type-set t1) (->type-set t2))
+       canonicalize-type)))
+  ([t1 t2 & ts]
+   (apply add-types (add-types t1 t2) ts)))
+
 (def alias->type
   '{object   Object
     string   String
@@ -1953,7 +1988,8 @@
         fixed-arity     (count params')
         recur-frame     {:protocol-impl (:protocol-impl env)
                          :params        params
-                         :flag          (atom nil)}
+                         :flag          (atom nil)
+                         :tags          (atom [])}
         recur-frames    (cons recur-frame *recur-frames*)
         body-env        (assoc env :context :return :locals locals)
         body-form       `(do ~@body)
@@ -2230,14 +2266,23 @@
     (analyze-let-body* env context exprs)))
 
 (defn analyze-let
-  [encl-env [_ bindings & exprs :as form] is-loop]
+  [encl-env [_ bindings & exprs :as form] is-loop widened-tags]
   (when-not (and (vector? bindings) (even? (count bindings)))
     (throw (error encl-env "bindings must be vector of even number of elements")))
   (let [context      (:context encl-env)
         op           (if (true? is-loop) :loop :let)
+        bindings     (if widened-tags
+                       (vec (mapcat
+                              (fn [[name init] widened-tag]
+                                [(vary-meta name assoc :tag widened-tag) init])
+                              (partition 2 bindings)
+                              widened-tags))
+                       bindings)
         [bes env]    (analyze-let-bindings encl-env bindings op)
         recur-frame  (when (true? is-loop)
-                       {:params bes :flag (atom nil)})
+                       {:params bes
+                        :flag (atom nil)
+                        :tags (atom (mapv :tag bes))})
         recur-frames (if recur-frame
                        (cons recur-frame *recur-frames*)
                        *recur-frames*)
@@ -2245,21 +2290,27 @@
                        (true? is-loop) *loop-lets*
                        (some? *loop-lets*) (cons {:params bes} *loop-lets*))
         expr         (analyze-let-body env context exprs recur-frames loop-lets)
-        children     [:bindings :body]]
-    {:op op
-     :env encl-env
-     :bindings bes
-     :body (assoc expr :body? true)
-     :form form
-     :children children}))
+        children     [:bindings :body]
+        nil->any     (fnil identity 'any)]
+    (if (and is-loop
+             (not widened-tags)
+             (not= (mapv nil->any @(:tags recur-frame))
+                   (mapv (comp nil->any :tag) bes)))
+      (recur encl-env form is-loop @(:tags recur-frame))
+      {:op       op
+       :env      encl-env
+       :bindings bes
+       :body     (assoc expr :body? true)
+       :form     form
+       :children children})))
 
 (defmethod parse 'let*
   [op encl-env form _ _]
-  (analyze-let encl-env form false))
+  (analyze-let encl-env form false nil))
 
 (defmethod parse 'loop*
   [op encl-env form _ _]
-  (analyze-let encl-env form true))
+  (analyze-let encl-env form true nil))
 
 (defmethod parse 'recur
   [op env [_ & exprs :as form] _ _]
@@ -2279,6 +2330,10 @@
                (not add-implicit-target-object?))
       (warning :protocol-impl-recur-with-target env {:form (:form (first exprs))}))
     (reset! (:flag frame) true)
+    (swap! (:tags frame) (fn [tags]
+                           (mapv (fn [tag expr]
+                                   (add-types tag (:tag expr)))
+                             tags exprs)))
     (assoc {:env env :op :recur :form form}
       :frame frame
       :exprs exprs

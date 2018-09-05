@@ -269,6 +269,37 @@
              (:tag (a/analyze test-env '(let [x ^any []] (if (seqable? x) x :kw))))))
         '#{cljs.core/ISeqable array string cljs.core/Keyword})))
 
+(deftest loop-recur-inference
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (analyze test-env '(loop [x "a"] x)))))
+        'string))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (analyze test-env '(loop [x 10]
+                                        (if (pos? x)
+                                          (dec x)
+                                          x))))))
+        'number))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (analyze test-env '((fn [p?]
+                                         (loop [x nil]
+                                           (if (p? x)
+                                             x
+                                             (recur (str x)))))
+                                       11)))))
+        '#{string clj-nil}))
+  (is (= (a/no-warn
+           (e/with-compiler-env test-cenv
+             (:tag (analyze test-env '((fn [^string x]
+                                         (loop [y x]
+                                           (if (= "x" y)
+                                             y
+                                             (recur 1))))
+                                       "a")))))
+        '#{number string})))
+
 (deftest method-inference
   (is (= (e/with-compiler-env test-cenv
            (:tag (analyze test-env '(.foo js/bar))))
