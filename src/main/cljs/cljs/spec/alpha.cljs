@@ -323,10 +323,10 @@
         (let [ed (assoc (explain-data* arg-spec [:args]
                           (if-let [name (spec-name arg-spec)] [name] []) [] args)
                    ::args args)]
-          (throw (js/Error.
+          (throw (ex-info
                    (str
-                     "Call to " (->sym v) " did not conform to spec:\n"
-                     (with-out-str (explain-out ed))))))))))
+                     "Call to " (->sym v) " did not conform to spec.")
+                   ed)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; impl ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn- recur-limit? [rmap id path k]

@@ -102,7 +102,7 @@
                                   (when caller
                                     {::caller caller}))]
                          (throw (ex-info
-                                  (str "Call to " v " did not conform to spec:\n" (with-out-str (s/explain-out ed)))
+                                  (str "Call to " v " did not conform to spec." )
                                   ed)))
                        conformed)))]
     (doto (fn [& args]
