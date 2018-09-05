@@ -320,7 +320,7 @@
   (let [specs (get-spec v)]
     (when-let [arg-spec (:args specs)]
       (when (invalid? (conform arg-spec args))
-        (let [ed (assoc (explain-data* arg-spec [:args]
+        (let [ed (assoc (explain-data* arg-spec []
                           (if-let [name (spec-name arg-spec)] [name] []) [] args)
                    ::args args)]
           (throw (ex-info

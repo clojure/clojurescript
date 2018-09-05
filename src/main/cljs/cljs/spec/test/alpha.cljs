@@ -95,7 +95,7 @@
                                         (get-host-port)
                                         (.-stack (js/Error.))
                                         (get-env) nil))
-                             ed (merge (assoc (s/explain-data* spec [role] [] [] data)
+                             ed (merge (assoc (s/explain-data* spec [] [] [] data)
                                          ::s/fn (->sym v)
                                          ::s/args args
                                          ::s/failure :instrument)
