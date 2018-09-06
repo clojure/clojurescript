@@ -840,7 +840,7 @@
   "Protocol for adding a name."
   (^string -name [x]
     "Returns the name String of x.")
-  (^string -namespace [x]
+  ( ^{:tag #{string clj-nil}}-namespace [x]
     "Returns the namespace String of x."))
 
 (defprotocol IAtom
