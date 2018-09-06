@@ -27,6 +27,7 @@
   (:import [java.io File PushbackReader FileWriter PrintWriter]
            [java.net URL]
            [java.util Base64]
+           [java.util.concurrent.atomic AtomicLong]
            [clojure.lang IExceptionInfo]
            [java.util.regex Pattern]
            [com.google.common.base Throwables]))
@@ -530,8 +531,8 @@
            (if (:source-map repl-env)
              (binding [comp/*source-map-data*
                        (atom {:source-map (sorted-map)
-                              :gen-col 0
-                              :gen-line 0})]
+                              :gen-line 0})
+                       comp/*source-map-data-gen-col* (AtomicLong.)]
                (let [js (comp/emit-str ast)
                      t (System/currentTimeMillis)]
                  (str js

@@ -31,6 +31,7 @@
                      [cljs.source-map :as sm]))
   #?(:clj (:import java.lang.StringBuilder
                    [java.io File Writer]
+                   [java.util.concurrent.atomic AtomicLong]
                    [cljs.tagged_literals JSValue])
      :cljs (:import [goog.string StringBuffer])))
 
@@ -50,6 +51,7 @@
 (def ^:dynamic *recompiled* nil)
 (def ^:dynamic *inputs* nil)
 (def ^:dynamic *source-map-data* nil)
+(def ^:dynamic *source-map-data-gen-col* nil)
 (def ^:dynamic *lexical-renames* {})
 
 (def cljs-reserved-file-names #{"deps.cljs"})
@@ -183,7 +185,8 @@
         (let [{:keys [line column]} env]
           (swap! *source-map-data*
             (fn [m]
-              (let [minfo (cond-> {:gcol (:gen-col m)
+              (let [minfo (cond-> {:gcol  #?(:clj  (.get ^AtomicLong *source-map-data-gen-col*)
+                                             :cljs (:gen-col m))
                                    :gline (:gen-line m)}
                             (#{:var :local :js-var} (:op ast))
                             (assoc :name (str (-> ast :info :name))))]
@@ -206,9 +209,10 @@
      #?(:clj (seq? a) :cljs (ana/cljs-seq? a)) (apply emits a)
      #?(:clj (fn? a) :cljs ^boolean (goog/isFunction a)) (a)
      :else (let [^String s (cond-> a (not (string? a)) .toString)]
-             (when-not (nil? *source-map-data*)
-               (swap! *source-map-data*
-                 update-in [:gen-col] #(+ % (count s))))
+             #?(:clj  (when-some [^AtomicLong gen-col *source-map-data-gen-col*]
+                        (.addAndGet gen-col (.length s)))
+                :cljs (when-some [sm-data *source-map-data*]
+                        (swap! sm-data update :gen-col #(+ % (.-length s)))))
              #?(:clj  (.write ^Writer *out* s)
                 :cljs (print s))))
     nil)
@@ -227,11 +231,12 @@
 (defn ^:private _emitln []
   (newline)
   (when *source-map-data*
+    #?(:clj (.set ^AtomicLong *source-map-data-gen-col* 0))
     (swap! *source-map-data*
       (fn [{:keys [gen-line] :as m}]
         (assoc m
           :gen-line (inc gen-line)
-          :gen-col 0))))
+          #?@(:cljs [:gen-col 0])))))
   nil)
 
 (defn emitln
@@ -1498,8 +1503,8 @@
                  *source-map-data*     (when (:source-map opts)
                                          (atom
                                            {:source-map (sorted-map)
-                                            :gen-col 0
                                             :gen-line 0}))
+                 *source-map-data-gen-col* (AtomicLong.)
                  find-ns-starts-with   (memoize find-ns-starts-with)]
          (emitln (compiled-by-string opts))
          (with-open [rdr (io/reader src)]
@@ -1538,7 +1543,8 @@
                                 :name ns-name}))
                        (emit ast)
                        (recur (rest forms) ns-name deps))))
-                 (let [sm-data (when *source-map-data* @*source-map-data*)
+                 (let [sm-data (when *source-map-data* (assoc @*source-map-data*
+                                                         :gen-col (.get ^AtomicLong *source-map-data-gen-col*)))
                        ret (merge
                              {:ns         (or ns-name 'cljs.user)
                               :macros-ns  (:macros-ns opts)
