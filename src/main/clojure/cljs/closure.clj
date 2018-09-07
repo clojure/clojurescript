@@ -1047,7 +1047,7 @@
   (module-graph/validate-inputs inputs)
   (let [deque     (LinkedBlockingDeque. inputs)
         input-set (atom (into #{} (comp (remove nil?) (map :ns)) inputs))
-        cnt       (+ 2 (.. Runtime getRuntime availableProcessors))
+        cnt       (+ 2 (int (* 0.6 (.. Runtime getRuntime availableProcessors))))
         latch     (CountDownLatch. cnt)
         es        (Executors/newFixedThreadPool cnt)
         compiled  (atom [])

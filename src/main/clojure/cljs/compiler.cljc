@@ -31,6 +31,7 @@
                      [cljs.source-map :as sm]))
   #?(:clj (:import java.lang.StringBuilder
                    [java.io File Writer]
+                   [java.util.concurrent Executors ExecutorService TimeUnit]
                    [java.util.concurrent.atomic AtomicLong]
                    [cljs.tagged_literals JSValue])
      :cljs (:import [goog.string StringBuffer])))
@@ -1508,7 +1509,12 @@
                  find-ns-starts-with   (memoize find-ns-starts-with)]
          (emitln (compiled-by-string opts))
          (with-open [rdr (io/reader src)]
-           (let [env (ana/empty-env)]
+           (let [env (ana/empty-env)
+                 emitter (when (:parallel-build opts)
+                           (Executors/newSingleThreadExecutor))
+                 emit (if emitter
+                        #(.execute emitter ^Runnable (bound-fn [] (emit %)))
+                        emit)]
              (loop [forms       (ana/forms-seq* rdr (util/path src))
                     ns-name     nil
                     deps        nil]
@@ -1543,7 +1549,10 @@
                                 :name ns-name}))
                        (emit ast)
                        (recur (rest forms) ns-name deps))))
-                 (let [sm-data (when *source-map-data* (assoc @*source-map-data*
+                 (let [_ (when emitter
+                           (.shutdown emitter)
+                           (.awaitTermination emitter 1000 TimeUnit/HOURS))
+                       sm-data (when *source-map-data* (assoc @*source-map-data*
                                                          :gen-col (.get ^AtomicLong *source-map-data-gen-col*)))
                        ret (merge
                              {:ns         (or ns-name 'cljs.user)
