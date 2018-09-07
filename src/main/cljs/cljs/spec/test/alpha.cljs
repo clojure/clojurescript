@@ -19,7 +19,7 @@
     [clojure.test.check :as stc]
     [clojure.test.check.properties]))
 
-(defn distinct-by
+(defn ^:private distinct-by
   ([f coll]
    (let [step (fn step [xs seen]
                 (lazy-seq
@@ -42,13 +42,13 @@
   "if false, instrumented fns call straight through"
   true)
 
-(defn get-host-port []
+(defn ^:private get-host-port []
   (if (not= "browser" *target*)
     {}
     {:host (.. js/window -location -host)
      :port (.. js/window -location -port)}))
 
-(defn get-ua-product []
+(defn ^:private get-ua-product []
   (if (not= "browser" *target*)
     (keyword *target*)
     (cond
@@ -57,7 +57,7 @@
       product/FIREFOX :firefox
       product/IE :ie)))
 
-(defn get-env []
+(defn ^:private get-env []
   {:ua-product (get-ua-product)})
 
 (defn- fn-spec?
@@ -359,8 +359,3 @@ key with a count for each different :type of result."
 
   (m/check `ranged-rand)
   )
-
-
-
-
-
