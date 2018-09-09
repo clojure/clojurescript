@@ -853,13 +853,19 @@
           (cljsc/maybe-install-node-deps! opts)
           installed?)))))
 
+(defn initial-prompt [quit-prompt prompt]
+  (quit-prompt)
+  (prompt)
+  (flush))
+
 (defn repl*
   [repl-env {:keys [init inits need-prompt quit-prompt prompt flush read eval print caught reader
-                    print-no-newline source-map-inline wrap repl-requires
+                    print-no-newline source-map-inline wrap repl-requires ::fast-initial-prompt?
                     compiler-env bind-err]
              :or {need-prompt #(if (readers/indexing-reader? *in*)
                                 (== (readers/get-column-number *in*) 1)
                                 (identity true))
+                  fast-initial-prompt? false
                   quit-prompt repl-title
                   prompt repl-prompt
                   flush flush
@@ -879,6 +885,8 @@
   (doseq [[unknown-opt suggested-opt] (util/unknown-opts (set (keys opts)) (set/union known-repl-opts cljsc/known-opts))]
     (when suggested-opt
       (println (str "WARNING: Unknown option '" unknown-opt "'. Did you mean '" suggested-opt "'?"))))
+  (when fast-initial-prompt?
+    (initial-prompt quit-prompt prompt))
   (let [repl-opts (-repl-options repl-env)
         repl-requires (into repl-requires (:repl-requires repl-opts))
         {:keys [analyze-path repl-verbose warn-on-undeclared special-fns
@@ -1010,9 +1018,8 @@
                  (binding [*in* (if (true? (:source-map-inline opts))
                                   *in*
                                   (reader))]
-                   (quit-prompt)
-                   (prompt)
-                   (flush)
+                   (when-not fast-initial-prompt?
+                     (initial-prompt quit-prompt prompt))
                    (loop []
                      (when-not
                        (try

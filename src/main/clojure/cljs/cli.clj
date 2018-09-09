@@ -289,6 +289,13 @@ is trying load some arbitrary ns."
     (util/mkdirs f)
     (util/path f)))
 
+(defn- repl-name [repl-env]
+  (subs (-> repl-env meta :ns str) (count "cljs.repl.")))
+
+(defn- fast-initial-prompt? [repl-env inits]
+  (and (empty? inits)
+       (contains? #{"node" "nashorn" "graaljs" "rhino"} (repl-name repl-env))))
+
 (defn- repl-opt
   "Start a repl with args and inits. Print greeting if no eval options were
 present"
@@ -304,6 +311,7 @@ present"
         renv   (apply repl-env (mapcat identity reopts))]
     (repl/repl* renv
       (assoc (dissoc-entry-point-opts opts)
+        ::repl/fast-initial-prompt? (fast-initial-prompt? repl-env inits)
         :inits
         (into
           [{:type :init-forms
