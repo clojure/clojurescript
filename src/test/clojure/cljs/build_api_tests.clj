@@ -469,6 +469,7 @@
         {:keys [inputs opts]} {:inputs (str (io/file "src" "test" "cljs_build"))
                                :opts {:main 'node-modules-opt-test.core
                                       :output-dir out
+                                      :npm-deps true
                                       :optimizations :none
                                       :closure-warnings {:check-types :off}}}
         cenv (env/default-compiler-env opts)]
