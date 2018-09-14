@@ -301,9 +301,11 @@ is trying load some arbitrary ns."
     (when (string/starts-with? repl-ns "cljs.repl.")
       (subs repl-ns (count "cljs.repl.")))))
 
-(defn- fast-initial-prompt? [repl-env inits]
+(defn- fast-initial-prompt? [repl-env options inits]
   (boolean
     (and (empty? inits)
+         (not (:verbose options))
+         (not (:repl-verbose options))
          (contains? #{"node"} (repl-name repl-env)))))
 
 (defn- repl-opt
@@ -322,7 +324,7 @@ present"
     (repl/repl* renv
       (assoc (dissoc-entry-point-opts opts)
         ::repl/fast-initial-prompt?
-        (or (fast-initial-prompt? repl-env inits)
+        (or (fast-initial-prompt? repl-env options inits)
             (::repl/fast-initial-prompt? (repl/repl-options renv)))
 
         :quit-prompt
