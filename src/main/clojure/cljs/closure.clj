@@ -202,7 +202,7 @@
     :fn-invoke-direct :checked-arrays :closure-module-roots :rewrite-polyfills :use-only-custom-externs
     :watch :watch-error-fn :watch-fn :install-deps :process-shim :rename-prefix :rename-prefix-namespace
     :closure-variable-map-in :closure-property-map-in :closure-variable-map-out :closure-property-map-out
-    :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict})
+    :stable-names :ignore-js-module-exts :opts-cache :aot-cache :elide-strict :fingerprint})
 
 (def string->charset
   {"iso-8859-1" StandardCharsets/ISO_8859_1
@@ -1595,7 +1595,7 @@
   (cond-> js
     (not (false? elide-strict)) (string/replace #"(?m)^['\"]use strict['\"]" "            ")))
 
-(defn output-one-file [{:keys [output-to] :as opts} js]
+(defn output-one-file [{:keys [output-to fingerprint] :as opts} js]
   (let [js (elide-strict js opts)]
     (cond
       (nil? output-to) js
@@ -1604,7 +1604,20 @@
           (util/file? output-to))
       (let [f (io/file output-to)]
         (util/mkdirs f)
-        (spit f js))
+        (spit f js)
+        (when fingerprint
+          (let [dir  (.getParent (io/file output-to))
+                mf   (io/file dir "manifest.edn")
+                fn   (.getName f)
+                idx  (.lastIndexOf fn ".")
+                ext  (subs fn (inc idx))
+                name (subs fn 0 idx)
+                g    (io/file dir
+                       (str name "-"
+                         (string/lower-case
+                           (util/content-sha js 7)) "." ext))]
+            (.renameTo f g)
+            (spit mf (pr-str {(.toString f) (.toString g)})))))
 
       :else (println js))))
 
