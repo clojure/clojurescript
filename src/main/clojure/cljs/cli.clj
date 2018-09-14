@@ -290,7 +290,9 @@ is trying load some arbitrary ns."
     (util/path f)))
 
 (defn- repl-name [repl-env]
-  (subs (-> repl-env meta :ns str) (count "cljs.repl.")))
+  (let [repl-ns (-> repl-env meta :ns str)]
+    (when (string/starts-with? repl-ns "cljs.repl.")
+      (subs repl-ns (count "cljs.repl.")))))
 
 (defn- fast-initial-prompt? [repl-env inits]
   (and (empty? inits)
