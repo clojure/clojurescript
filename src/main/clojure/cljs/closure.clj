@@ -2370,6 +2370,9 @@
       (not (contains? opts :aot-cache))
       (assoc :aot-cache false)
 
+      (not (contains? opts :npm-deps))
+      (assoc :npm-deps false)
+
       (contains? opts :modules)
       (ensure-module-opts)
 
