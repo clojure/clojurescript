@@ -44,7 +44,8 @@ the sorting function."}
   [inner outer form]
   (cond
     (list? form)      (outer (apply list (map inner form)))
-    (map-entry? form) (outer (vec (map inner form)))
+    (map-entry? form)
+    (outer (MapEntry. (inner (key form)) (inner (val form)) nil))
     (seq? form)       (outer (doall (map inner form)))
     (record? form)    (outer (reduce (fn [r x] (conj r (inner x))) form form))
     (coll? form)      (outer (into (empty form) (map inner form)))

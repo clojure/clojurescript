@@ -47,6 +47,7 @@
             [cljs.recur-test]
             [cljs.array-access-test]
             [cljs.inference-test]
+            [cljs.walk-test]
             [cljs.extend-to-native-test]))
 
 (set! *print-newline* false)
@@ -92,4 +93,5 @@
   'cljs.recur-test
   'cljs.array-access-test
   'cljs.inference-test
+  'cljs.walk-test
   'cljs.extend-to-native-test)
