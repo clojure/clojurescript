@@ -4206,8 +4206,8 @@ reduces them without incurring seq initialization"
   this will return :fred if :fred is in the sequence, otherwise nil:
   (some #{:fred} coll)"
   [pred coll]
-    (when (seq coll)
-      (or (pred (first coll)) (recur pred (next coll)))))
+  (when-let [s (seq coll)]
+    (or (pred (first s)) (recur pred (next s)))))
 
 (defn not-any?
   "Returns false if (pred x) is logical true for any x in coll,
