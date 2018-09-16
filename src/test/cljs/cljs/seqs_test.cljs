@@ -216,3 +216,7 @@
 (deftest test-cljs-2482
   (testing "seq on defrecord returns map entries"
     (is (every? map-entry? (seq (->Foo 1 2))))))
+
+(deftest test-cljs-2911
+  (testing "partition-by works correclty with infinite seqs"
+    (is (= (first (second (partition-by zero? (range)))) 1))))
