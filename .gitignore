@@ -30,3 +30,6 @@ src/main/cljs/cljs/core.aot.js
 src/main/cljs/cljs/core.aot.js.map
 src/main/cljs/cljs/core.cljs.cache.aot.edn
 src/main/cljs/cljs/core.cljs.cache.aot.json
+package.json
+package-lock.json
+yarn.lock
