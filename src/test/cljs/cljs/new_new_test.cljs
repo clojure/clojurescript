@@ -80,6 +80,8 @@
             (map->Person {:firstname "Fred" :lastname "Mertz" :wife :ethel})))
       (is (= (dissoc ethel :husband)
             (map->Person {:firstname "Ethel" :lastname "Mertz"})))
+      (is (= (reduce-kv assoc {:age 30} fred)
+            {:age 30 :firstname "Fred" :lastname "Mertz"}))
       (is (= {:foo 'bar} (meta (with-meta (A.) {:foo 'bar}))))
       (is (= 'bar (:foo (assoc (A.) :foo 'bar))))
       (is (= (set (keys letters)) #{:a :b :c}))

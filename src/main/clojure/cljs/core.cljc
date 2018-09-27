@@ -1867,6 +1867,9 @@
                                writer# pr-pair# ~pr-open ", " "}" opts#
                                (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
                                  ~'__extmap))))
+                        'IKVReduce
+                        `(~'-kv-reduce [this# f# init#]
+                           (reduce (fn [ret# [k# v#]] (f# ret# k# v#)) init# this#))
                         ])
                [fpps pmasks] (prepare-protocol-masks env impls)
                protocols (collect-protocols impls env)
