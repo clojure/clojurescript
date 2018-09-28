@@ -3523,11 +3523,12 @@
 
 (defn- do-macroexpand-check
   [form mac-var]
-  (let [mchk #?(:clj (some-> (find-ns 'clojure.spec.alpha)
+  (when (not (-> @env/*compiler* :options :spec-skip-macros))
+    (let [mchk #?(:clj (some-> (find-ns 'clojure.spec.alpha)
                        (ns-resolve 'macroexpand-check))
                 :cljs (get-macroexpand-check-var))]
     (when (some? mchk)
-      (mchk mac-var (next form)))))
+      (mchk mac-var (next form))))))
 
 (defn macroexpand-1*
   [env form]
