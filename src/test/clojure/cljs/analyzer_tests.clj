@@ -1752,3 +1752,12 @@
       (analyze ns-env
         '(def *foo* 1)))
     (is (string/starts-with? (first @ws) "*foo* not declared dynamic and thus"))))
+
+(deftest test-cljs-2923
+  (is (thrown-with-msg? Exception
+                        #"Malformed assignment, expecting \(set! target val\)"
+                        (analyze test-env '(set! *warn-on-reflection*))))
+  (is (analyze test-env '(set! *warn-on-reflection* true)))
+  (is (thrown-with-msg? Exception
+                        #"Malformed assignment, expecting \(set! target val\)"
+                        (analyze test-env '(set! *warn-on-reflection* true false)))))
