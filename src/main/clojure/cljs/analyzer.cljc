@@ -2228,6 +2228,8 @@
 
 (defmethod parse 'set!
   [_ env [_ target val alt :as form] _ _]
+  (when (not (== (count form) 3))
+    (throw (error env "Malformed assignment, expecting (set! target val)")))
   (let [[target val] (if alt
                        ;; (set! o -prop val)
                        [`(. ~target ~val) alt]
