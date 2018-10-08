@@ -867,6 +867,13 @@
   (-iterator [coll]
     "Returns an iterator for coll."))
 
+(defprotocol IDatafiable
+  (-datafy [o] "return a representation of o as data (default identity)"))
+
+(defprotocol INavigable
+  (-nav [coll k v] "return (possibly transformed) v in the context of coll and k (a key/index or nil),
+defaults to returning v."))
+
 ;; Printing support
 
 (deftype StringBufferWriter [sb]
@@ -1356,7 +1363,10 @@
 
 (extend-type nil
   ICounted
-  (-count [_] 0))
+  (-count [_] 0)
+
+  IDatafiable
+  (-datafy [_] nil))
 
 ;; TODO: we should remove this and handle date equality checking
 ;; by some other means, probably by adding a new primitive type
@@ -1405,7 +1415,13 @@
 (extend-type default
   IHash
   (-hash [o]
-    (goog/getUid o)))
+    (goog/getUid o))
+
+  IDatafiable
+  (-datafy [o] o)
+
+  INavigable
+  (-nav [_ _ x] x))
 
 ;;this is primitive because & emits call to array-seq
 (defn inc
