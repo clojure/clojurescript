@@ -3611,10 +3611,10 @@ reduces them without incurring seq initialization"
 ;;;;;;;;;;;;;;;;
 
 (defn to-array
-  "Naive impl of to-array as a start."
-  [s]
+  "Returns an array containing the contents of coll."
+  [coll]
   (let [ary (array)]
-    (loop [s (seq s)]
+    (loop [s (seq coll)]
       (if-not (nil? s)
         (do (. ary push (first s))
             (recur (next s)))
