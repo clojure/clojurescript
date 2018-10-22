@@ -9018,7 +9018,7 @@ reduces them without incurring seq initialization"
   [f & maps]
   (when (some identity maps)
     (let [merge-entry (fn [m e]
-                        (let [k (first e) v (second e)]
+                        (let [k (key e) v (val e)]
                           (if (contains? m k)
                             (assoc m k (f (get m k) v))
                             (assoc m k v))))

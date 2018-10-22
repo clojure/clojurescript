@@ -1625,3 +1625,15 @@
   (is (false? ((comp not empty?) "")))
   (is (thrown? js/Error ((not empty?) "foo")))
   (is (thrown? js/Error ((not empty?) ""))))
+
+(deftest test-cljs-2943
+  (let [m1 {:a 2, :b 3, :c 5}
+        m2 {:a 7, :b 11, :d 13, :e 17}
+        m3 {:a 19, :d 23, :f 29}
+        m4 {:a 28, :b 14, :c 5, :d 36, :e 17, :f 29}
+        sorted (fn [m] (into (sorted-map) m))]
+    (is (= m4 (merge-with + m1 m2 m3)))
+    (is (= m4 (merge-with + (sorted m1) m2 m3)))
+    (is (= m4 (merge-with + (sorted m1) (sorted m2) m3)))
+    (is (= m4 (merge-with + m1 (sorted m2) m3)))
+    (is (= m4 (merge-with + m1 (sorted m2) (sorted m3))))))
