@@ -1595,6 +1595,18 @@
   (cond-> js
     (not (false? elide-strict)) (string/replace #"(?m)^['\"]use strict['\"]" "            ")))
 
+(defn ^File fingerprint-out-file
+  [content ^File out-file]
+  (let [dir  (.getParent out-file)
+        fn   (.getName out-file)
+        idx  (.lastIndexOf fn ".")
+        ext  (subs fn (inc idx))
+        name (subs fn 0 idx)]
+    (io/file dir
+      (str name "-"
+        (string/lower-case
+          (util/content-sha content 7)) "." ext))))
+
 (defn output-one-file [{:keys [output-to fingerprint] :as opts} js]
   (let [js (elide-strict js opts)]
     (cond
@@ -1606,16 +1618,9 @@
         (util/mkdirs f)
         (spit f js)
         (when fingerprint
-          (let [dir  (.getParent (io/file output-to))
+          (let [dir  (.getParent f)
                 mf   (io/file dir "manifest.edn")
-                fn   (.getName f)
-                idx  (.lastIndexOf fn ".")
-                ext  (subs fn (inc idx))
-                name (subs fn 0 idx)
-                g    (io/file dir
-                       (str name "-"
-                         (string/lower-case
-                           (util/content-sha js 7)) "." ext))]
+                g    (fingerprint-out-file js f)]
             (.renameTo f g)
             (spit mf (pr-str {(.toString f) (.toString g)})))))
 
@@ -1735,56 +1740,95 @@
                 (when-let [main (:main opts)]
                   [main])))))))))
 
+(defn fingerprinted-modules-uris [module-uris manifest]
+  )
+
 (defn output-modules
   "Given compiler options, original IJavaScript sources and a sequence of
    module name and module description tuples output module sources to disk.
    Modules description must define :output-to and supply :source entry with
    the JavaScript source to write to disk."
   [opts js-sources modules]
-  (doseq [[name {:keys [output-to source foreign-deps] :as module-desc}] modules]
-    (assert (not (nil? output-to))
-      (str "Module " name " does not define :output-to"))
-    (assert (not (nil? source))
-      (str "Module " name " did not supply :source"))
-    (let [fdeps-str (when-not (empty? foreign-deps)
-                      (foreign-deps-str opts foreign-deps))
-          sm-name (when (:source-map opts)
-                    (str output-to ".map"))
-          out-file (io/file output-to)]
-      (util/mkdirs out-file)
-      (spit out-file
-        (as-> source source
-          (if (= name :cljs-base)
-            (add-header opts source)
-            source)
-          (if fdeps-str
-            (str fdeps-str "\n" source)
-            source)
-          (elide-strict source opts)
-          (if sm-name
-            (add-source-map-link
-              (assoc opts
-                :output-to output-to
-                :source-map sm-name)
-              source)
-            source)))
-      (when (:source-map opts)
-        (let [sm-json-str (:source-map-json module-desc)
-              sm-json     (json/read-str sm-json-str :key-fn keyword)]
-          (when (true? (:closure-source-map opts))
-            (spit (io/file (:source-map-name module-desc)) sm-json-str))
-          (emit-optimized-source-map sm-json js-sources sm-name
-            (merge opts
-              {:source-map sm-name
-               :preamble-line-count
-               (if (= name :cljs-base)
-                 (+ (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
-                    (if (:output-wrapper opts) 1 0))
-                 0)
-               :foreign-deps-line-count
-               (if fdeps-str
-                 (- (count (.split #"\r?\n" fdeps-str -1)) 1)
-                 0)})))))))
+  (let [fingerprint-info (atom {:manifest {} :cljs-base {:output-to nil :source nil}})]
+    (doseq [[name {:keys [output-to source foreign-deps] :as module-desc}] modules]
+      (assert (not (nil? output-to))
+        (str "Module " name " does not define :output-to"))
+      (assert (not (nil? source))
+        (str "Module " name " did not supply :source"))
+      (let [fdeps-str (when-not (empty? foreign-deps)
+                        (foreign-deps-str opts foreign-deps))
+            sm-name   (when (:source-map opts)
+                        (str output-to ".map"))
+            out-file  (io/file output-to)
+            _         (util/mkdirs out-file)
+            js        (as-> source source
+                        (if (= name :cljs-base)
+                          (add-header opts source)
+                          source)
+                        (if fdeps-str
+                          (str fdeps-str "\n" source)
+                          source)
+                        (elide-strict source opts)
+                        (if sm-name
+                          (add-source-map-link
+                            (assoc opts
+                              :output-to output-to
+                              :source-map sm-name)
+                            source)
+                          source))]
+        (if (and (:fingerprint opts) (= :cljs-base name))
+          (do
+            (swap! fingerprint-info
+              (fn [fi]
+                (let [output-to' (.toString (fingerprint-out-file js out-file))]
+                  (-> fi
+                   (update :cljs-base merge
+                     {:output-to output-to
+                      :output-to-fingerprint output-to'
+                      :source js})
+                   (update :manifest assoc output-to output-to'))))))
+          (do
+            (spit out-file js)
+            (when (:fingerprint opts)
+              (let [out-file' (fingerprint-out-file js out-file)]
+                (.renameTo out-file out-file')
+                (swap! fingerprint-info update :manifest
+                  assoc name
+                  {:output-to output-to
+                   :output-to-fingerprint (.toString out-file')})))))
+        (when (:source-map opts)
+          (let [sm-json-str (:source-map-json module-desc)
+                sm-json (json/read-str sm-json-str :key-fn keyword)]
+            (when (true? (:closure-source-map opts))
+              (spit (io/file (:source-map-name module-desc)) sm-json-str))
+            (emit-optimized-source-map sm-json js-sources sm-name
+              (merge opts
+                {:source-map sm-name
+                 :preamble-line-count
+                 (if (= name :cljs-base)
+                   (+ (- (count (.split #"\r?\n" (make-preamble opts) -1)) 1)
+                     (if (:output-wrapper opts) 1 0)
+                     (if (:fingerprint opts) 1 0))
+                   0)
+                 :foreign-deps-line-count
+                 (if fdeps-str
+                   (- (count (.split #"\r?\n" fdeps-str -1)) 1)
+                   0)}))))))
+    (when (:fingerprint opts)
+      (let [fi  @fingerprint-info
+            g   (get-in fi [:cljs-base :output-to-fingerprint])
+            out (io/file g)
+            dir (.getParent out)
+            mnf (io/file dir "manifest.edn")]
+        (spit mnf (pr-str m))
+        ;; TODO: module uris needs to be map of module name to vector uris
+        (spit out
+          (str "var COMPILED_MODULES_URIS = "
+            (json/write-str
+              (into {} (fn [[k v]] (-> k name munge) v)
+                (assoc (:manifest fi)
+                  (get-in fi [:cljs-base :output-to]) g))) ";\n"
+            (get-in fi [:cljs-base :source])))))))
 
 (defn lib-rel-path [{:keys [lib-path url provides] :as ijs}]
   (if (nil? lib-path)
