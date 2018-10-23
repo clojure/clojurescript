@@ -2224,6 +2224,7 @@ reduces them without incurring seq initialization"
   "Return true if the seq function is supported for s"
   [s]
   (or
+   (nil? s)
    (satisfies? ISeqable s)
    (array? s)
    (string? s)))

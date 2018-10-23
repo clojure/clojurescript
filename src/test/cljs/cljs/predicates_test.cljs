@@ -19,7 +19,7 @@
      [1.0           false    false    false    false  false    false  false         false            false          false             false           false]
      [true          true     false    false    false  false    false  false         false            false          false             false           false]
      [[]            false    true     true     false  false    false  false         false            false          false             false           false]
-     [nil           false    false    false    false  false    false  false         false            false          false             false           false]
+     [nil           false    false    true     false  false    false  false         false            false          false             false           false]
      [{}            false    false    true     false  false    false  false         false            false          false             false           false]
      [:foo          false    false    false    true   false    false  true          false            false          false             true            false]
      [::foo         false    false    false    true   false    false  false         true             false          false             false           true]
