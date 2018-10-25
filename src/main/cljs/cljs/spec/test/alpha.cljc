@@ -279,3 +279,17 @@ spec itself will have an ::s/failure value in ex-data:
              (map
                (fn [sym]
                  (do `(check-1 '~sym nil nil ~opts-sym)))))]))))
+
+(defmacro ^:private maybe-setup-static-dispatch [f ret arity]
+  (let [arity-accessor (symbol (str ".-cljs$core$IFn$_invoke$arity$" arity))
+        argv (mapv #(symbol (str "arg" %)) (range arity))]
+    `(when (some? (~arity-accessor ~f))
+       (set! (~arity-accessor ~ret)
+         (fn ~argv
+           (apply ~ret ~argv))))))
+
+(defmacro ^:private setup-static-dispatches [f ret max-arity]
+  `(do
+     ~@(mapv (fn [arity]
+               `(maybe-setup-static-dispatch ~f ~ret ~arity))
+         (range (inc max-arity)))))

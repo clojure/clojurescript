@@ -368,6 +368,51 @@
   :args (s/cat :k keyword?)
   :ret  string?)
 
+(defn foo-2793 [m & args]
+  {:m m, :args args})
+
+(defn bar-2793
+  ([x] {:x x})
+  ([x y] {:x x, :y y})
+  ([x y & m] {:x x, :y y, :m m}))
+
+(defn baz-2793 [x & ys])
+
+(defn quux-2793 [& numbers])
+
+(s/fdef foo-2793)
+(s/fdef bar-2793)
+(s/fdef baz-2793 :args (s/cat :x number? :ys (s/* number?)))
+
+(st/instrument `foo-2793)
+(st/instrument `bar-2793)
+(st/instrument `baz-2793)
+
+(deftest cljs-2793-test
+  (is (= {:m {:x 1 :y 2}
+          :args nil}
+        (foo-2793 {:x 1 :y 2})))
+  (is (= {:m {:x 1 :y 2}
+          :args [1]}
+        (foo-2793 {:x 1 :y 2} 1)))
+  (is (= {:m {:x 1 :y 2}
+          :args [1 2]}
+        (foo-2793 {:x 1 :y 2} 1 2)))
+  (is (= {:x 1}
+        (bar-2793 1)))
+  (is (= {:x 1
+          :y 2}
+        (bar-2793 1 2)))
+  (is (= {:x 1
+          :y 2
+          :m [3]}
+        (bar-2793 1 2 3)))
+  (is (= {:x 1
+          :y 2
+          :m [3 4]}
+        (bar-2793 1 2 3 4)))
+  (is (nil? (baz-2793 1))))
+
 (comment
 
   (run-tests)
