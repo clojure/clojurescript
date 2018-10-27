@@ -12,7 +12,10 @@
            [goog.module ModuleManager]))
 
 (def module-infos MODULE_INFOS) ;; set by compiler
-(def module-uris MODULE_URIS) ;; set by compiler
+(def module-uris
+  (if (exists? js/COMPILED_MODULE_URIS)
+    js/COMPILED_MODULE_URIS
+    MODULE_URIS)) ;; set by compiler
 
 (defn deps-for [x graph]
   (let [depends-on (get graph x)]
@@ -39,7 +42,8 @@
 (defonce ^:dynamic *module-manager* (create-module-manager))
 
 (.setAllModuleInfo *module-manager* (to-js module-infos))
-(.setModuleUris *module-manager* (to-js module-uris))
+(.setModuleUris *module-manager*
+  (cond-> module-uris (map? module-uris) to-js))
 
 (defn loaded?
   "Return true if modules is loaded. module-name should be a keyword matching

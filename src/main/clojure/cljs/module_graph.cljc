@@ -362,6 +362,9 @@
         (:advanced :simple :whitespace)
         (reduce-kv
           (fn [ret k {:keys [output-to]}]
+            ;; TODO: move validation
+            (assert output-to
+              (str "Module " k " does not specify :output-to"))
             (assoc ret k [(-> output-to get-rel-path get-uri)]))
           {:cljs-base [(-> (or (get-in modules [:cljs-base :output-to])
                                (io/file output-dir "cljs_base.js"))
