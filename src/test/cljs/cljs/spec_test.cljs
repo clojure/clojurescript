@@ -387,6 +387,7 @@
 (st/instrument `foo-2793)
 (st/instrument `bar-2793)
 (st/instrument `baz-2793)
+(st/instrument `quux-2793)
 
 (deftest cljs-2793-test
   (is (= {:m {:x 1 :y 2}
@@ -411,7 +412,8 @@
           :y 2
           :m [3 4]}
         (bar-2793 1 2 3 4)))
-  (is (nil? (baz-2793 1))))
+  (is (nil? (baz-2793 1)))
+  (is (nil? (quux-2793))))
 
 (comment
 

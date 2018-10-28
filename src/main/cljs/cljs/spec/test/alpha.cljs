@@ -105,15 +105,21 @@
                                   (str "Call to " v " did not conform to spec." )
                                   ed)))
                        conformed)))
+        pure-variadic? (and (-> (meta v) :top-fn :variadic?)
+                            (zero? (-> (meta v) :top-fn :max-fixed-arity)))
+        apply' (fn [f args]
+                 (if (and (nil? args)
+                          pure-variadic?)
+                   (.cljs$core$IFn$_invoke$arity$variadic f)
+                   (apply f args)))
         ret (fn [& args]
               (if *instrument-enabled*
                 (with-instrument-disabled
                   (when (:args fn-spec) (conform! v :args (:args fn-spec) args args))
                   (binding [*instrument-enabled* true]
-                    (apply f args)))
-                (apply f args)))]
-    (when-not (and (-> (meta v) :top-fn :variadic?)
-                   (zero? (-> (meta v) :top-fn :max-fixed-arity)))
+                    (apply' f args)))
+                (apply' f args)))]
+    (when-not pure-variadic?
       (setup-static-dispatches f ret 20)
       (when-some [variadic (.-cljs$core$IFn$_invoke$arity$variadic f)]
         (set! (.-cljs$core$IFn$_invoke$arity$variadic ret)
