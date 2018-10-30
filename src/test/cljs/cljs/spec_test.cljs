@@ -136,6 +136,19 @@
         lrange (s/int-in 7 42)
         drange (s/double-in :infinite? false :NaN? false :min 3.1 :max 3.2)
         irange (s/inst-in #inst "1939" #inst "1946")]
+
+    (when-not js/COMPILED
+      ;; CLJS-2483: these won't work with both :advanced and :none optimization settings
+      (are [spec x conformed ed]
+        (let [co (s/conform spec x)
+              e  (::s/problems (s/explain-data spec x))]
+          (when (not= conformed co) (println "conform fail\n\texpect=" conformed "\n\tactual=" co))
+          (when (not (every? true? (map submap? ed e)))
+            (println "explain failures\n\texpect=" ed "\n\tactual failures=" e "\n\tsubmap?=" (map submap? ed e)))
+          (and (= conformed co) (every? true? (map submap? ed e))))
+        keyword? nil ::s/invalid [{:pred `keyword? :val nil}]
+        keyword? "abc" ::s/invalid [{:pred `keyword? :val "abc"}]))
+
     (are [spec x conformed ed]
       (let [co (s/conform spec x)
             e  (::s/problems (s/explain-data spec x))]
@@ -160,8 +173,6 @@
       ;; drange Double/NaN ::s/invalid {[] {:pred '(not (isNaN %)), :val Double/NaN}}
 
       keyword? :k :k nil
-      keyword? nil ::s/invalid [{:pred ::s/unknown :val nil}]
-      keyword? "abc" ::s/invalid [{:pred ::s/unknown :val "abc"}]
 
       a 6 6 nil
       a 3 ::s/invalid '[{:pred (cljs.core/fn [%] (cljs.core/> % 5)), :val 3}]
@@ -419,6 +430,16 @@
   (is (nil? (quux-2793))))
 
 (s/def ::cljs-2940-foo (s/cat :bar (s/nilable ::cljs-2940-foo)))
+
+(deftest describing-evaled-specs
+  (let [sp #{1 2}]
+    (is (= (s/describe sp) (s/form sp) sp)))
+  ;; won't work under advanced
+  (when-not js/COMPILED
+    (is (= (s/describe odd?) 'odd?))
+    (is (= (s/form odd?) 'cljs.core/odd?)))
+  (is (= (s/describe #(odd? %)) ::s/unknown))
+  (is (= (s/form #(odd? %)) ::s/unknown)))
 
 (comment
 

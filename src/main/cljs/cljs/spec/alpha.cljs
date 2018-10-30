@@ -120,6 +120,14 @@
         (when (ident? spec-or-k)
           (throw (js/Error. (str "Unable to resolve spec: " spec-or-k))))))
 
+(defn fn-sym [f-n]
+  (when-not (str/blank? f-n)
+    (let [xs (map demunge (str/split f-n "$"))]
+      (when (c/and (<= 2 (count xs))
+                   (every? #(not (str/blank? %)) xs))
+        (let [[xs y] ((juxt butlast last) xs)]
+          (symbol (str (str/join "." xs) "/" y)))))))
+
 (defprotocol Specize
   (specize* [_] [_ form]))
 
@@ -132,9 +140,20 @@
   (specize* ([s] (specize* (reg-resolve! s)))
             ([s _] (specize* (reg-resolve! s))))
 
+  PersistentHashSet
+  (specize* ([s] (spec-impl s s nil nil))
+            ([s form] (spec-impl form s nil nil)))
+
+  PersistentTreeSet
+  (specize* ([s] (spec-impl s s nil nil))
+            ([s form] (spec-impl form s nil nil)))
+
   default
   (specize*
-    ([o] (spec-impl ::unknown o nil nil))
+    ([o]
+     (if-let [f-n (c/and (fn? o) (fn-sym (.-name o)))]
+       (spec-impl f-n o nil nil)
+       (spec-impl ::unknown o nil nil)))
     ([o form] (spec-impl form o nil nil))))
 
 (defn- specize
