@@ -1368,37 +1368,37 @@
   "takes a spec and returns a spec that has the same properties except
   'conform' returns the original (not the conformed) value. Note, will specize regex ops."
   [spec]
-  (let [spec (specize spec)]
+  (let [spec (delay (specize spec))]
     (reify
      Specize
      (specize* [s] s)
      (specize* [s _] s)
 
      Spec
-     (conform* [_ x] (let [ret (conform* spec x)]
+     (conform* [_ x] (let [ret (conform* @spec x)]
                        (if (invalid? ret)
                          ::invalid
                          x)))
-     (unform* [_ x] (unform* spec x))
-     (explain* [_ path via in x] (explain* spec path via in x))
-     (gen* [_ overrides path rmap] (gen* spec overrides path rmap))
-     (with-gen* [_ gfn] (nonconforming (with-gen* spec gfn)))
-     (describe* [_] `(nonconforming ~(describe* spec))))))
+     (unform* [_ x] (unform* @spec x))
+     (explain* [_ path via in x] (explain* @spec path via in x))
+     (gen* [_ overrides path rmap] (gen* @spec overrides path rmap))
+     (with-gen* [_ gfn] (nonconforming (with-gen* @spec gfn)))
+     (describe* [_] `(nonconforming ~(describe* @spec))))))
 
 (defn ^:skip-wiki nilable-impl
   "Do not call this directly, use 'nilable'"
   [form pred gfn]
-  (let [spec (specize pred form)]
+  (let [spec (delay (specize pred form))]
     (reify
       Specize
       (specize* [s] s)
       (specize* [s _] s)
 
       Spec
-      (conform* [_ x] (if (nil? x) nil (conform* spec x)))
-      (unform* [_ x] (if (nil? x) nil (unform* spec x)))
+      (conform* [_ x] (if (nil? x) nil (conform* @spec x)))
+      (unform* [_ x] (if (nil? x) nil (unform* @spec x)))
       (explain* [_ path via in x]
-        (when-not (c/or (pvalid? spec x) (nil? x))
+        (when-not (c/or (pvalid? @spec x) (nil? x))
           (conj
             (explain-1 form pred (conj path ::pred) via in x)
             {:path (conj path ::nil) :pred 'nil? :val x :via via :in in})))

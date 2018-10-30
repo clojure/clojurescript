@@ -415,6 +415,8 @@
   (is (nil? (baz-2793 1)))
   (is (nil? (quux-2793))))
 
+(s/def ::cljs-2940-foo (s/cat :bar (s/nilable ::cljs-2940-foo)))
+
 (comment
 
   (run-tests)
