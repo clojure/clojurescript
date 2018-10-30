@@ -319,6 +319,7 @@
   (s/def ::c keyword?)
   (s/def ::d double?)
   (s/def ::e inst?)
+  (s/def ::f some?)
 
   (is (= #{[::a]
            [::a ::b]
@@ -356,7 +357,9 @@
            [:a :c :e]}
         (->> (s/exercise (s/keys :req-un [::a (or ::b (and ::c (or ::d ::e)))]) 200)
           (map (comp vec sort keys first))
-          (into #{})))))
+          (into #{}))))
+
+  (is (every? some? (map #(-> % first) (s/exercise ::f 10)))))
 
 (deftest tuple-explain-pred
   (are [val expected]
