@@ -3558,6 +3558,23 @@
   [argc method-params]
   (boolean (some #{argc} (map count method-params))))
 
+(defn- record-tag?
+  [tag]
+  (boolean (and (symbol? tag)
+                (some? (namespace tag))
+                (get-in @env/*compiler* [::namespaces (symbol (namespace tag)) :defs (symbol (name tag)) :record]))))
+
+(defn- record-basis
+  [tag]
+  (let [positional-factory (symbol (str "->" (name tag)))
+        fields             (first (get-in @env/*compiler* [::namespaces (symbol (namespace tag)) :defs positional-factory :method-params]))]
+    (into #{} fields)))
+
+(defn- record-with-field?
+  [tag field]
+  (and (record-tag? tag)
+       (contains? (record-basis tag) field)))
+
 (defn parse-invoke*
   [env [f & args :as form]]
   (let [enve    (assoc env :context :expr)
@@ -3611,8 +3628,14 @@
                ~@(if bind-args? arg-syms args)))))
       (let [ana-expr #(analyze enve %)
             argexprs (mapv ana-expr args)]
-        {:env env :op :invoke :form form :fn fexpr :args argexprs
-         :children [:fn :args]}))))
+        (if (and (and (keyword? f)
+                      (nil? (namespace f)))
+                 (== 1 (count args))
+                 (record-with-field? (:tag (first argexprs)) (symbol (name f))))
+          (let [field-access-form (list* (symbol (str ".-" (name f))) args)]
+            (analyze env field-access-form))
+          {:env      env :op :invoke :form form :fn fexpr :args argexprs
+           :children [:fn :args]})))))
 
 (defn parse-invoke
   [env form]

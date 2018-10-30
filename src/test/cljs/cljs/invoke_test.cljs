@@ -34,3 +34,9 @@
 (declare ^{:arglists '([a b])} declared-fn)
 
 (declared-fn 1 2)
+
+(defrecord Foo [foo-field-a foo-field-b])
+
+(def foo-record (->Foo 1 2))
+
+(:foo-field-a foo-record)

@@ -281,7 +281,9 @@
       (is (re-find #"(?m)^.*var .*=.*inv_arg1.cljs.core.IFn._invoke.arity.0 \?.*$"
                    content))
       ;; CLJS-1871: A declare hinted with :arglists meta should result in static dispatch
-      (is (str/includes? content "cljs.invoke_test.declared_fn(")))))
+      (is (str/includes? content "cljs.invoke_test.declared_fn("))
+      ;; CLJS-2950: Direct field access for keyword lookup on records
+      (is (str/includes? content "cljs.invoke_test.foo_record.foo_field_a;")))))
 #_(test-vars [#'test-optimized-invoke-emit])
 
 ;; CLJS-1225
