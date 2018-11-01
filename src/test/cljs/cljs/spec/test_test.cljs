@@ -97,3 +97,15 @@
         (stest/enumerate-namespace 'cljs.spec.test.test-ns1)))
   (is (= '#{cljs.spec.test.test-ns2/z}
         (stest/enumerate-namespace 'cljs.spec.test.test-ns2))))
+
+(defn fn-2953 [x] ::ret-val)
+
+(s/fdef fn-2953 :args (s/cat :x int?))
+
+(deftest test-cljs-2953
+  (stest/instrument `fn-2953)
+  (is @#'stest/*instrument-enabled*)
+  (is (= ::ret-val (stest/with-instrument-disabled
+                     (is (nil? @#'stest/*instrument-enabled*))
+                     (fn-2953 "abc"))))
+  (is @#'stest/*instrument-enabled*))

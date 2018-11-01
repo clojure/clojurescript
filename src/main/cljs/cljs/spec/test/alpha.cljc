@@ -46,8 +46,12 @@ returns the set of all symbols naming vars in those nses."
 (defmacro with-instrument-disabled
   "Disables instrument's checking of calls, within a scope."
   [& body]
-  `(binding [*instrument-enabled* nil]
-     ~@body))
+  `(let [orig# @#'*instrument-enabled*]
+     (set! *instrument-enabled* nil)
+     (try
+       ~@body
+       (finally
+         (set! *instrument-enabled* orig#)))))
 
 (defmacro instrument-1
   [[quote s] opts]
