@@ -224,12 +224,16 @@ Returns a collection of syms naming the vars unstrumented."
       (validate-check-opts opts#)
       (check-1 nil ~f ~spec opts#))))
 
+(defn- registry-ref []
+  #?(:clj  @#'s/registry-ref
+     :cljs cljs.spec.alpha$macros/registry-ref))
+
 (defn checkable-syms*
   ([]
     (checkable-syms* nil))
   ([opts]
    (reduce into #{}
-     [(filter fn-spec-name? (keys @@#'s/registry-ref))
+     [(filter fn-spec-name? (keys @(registry-ref)))
       (keys (:spec opts))])))
 
 (defmacro checkable-syms
@@ -241,7 +245,7 @@ can be checked."
    `(let [opts# ~opts]
       (validate-check-opts opts#)
       (reduce conj #{}
-        '[~@(filter fn-spec-name? (keys @@#'s/registry-ref))
+        '[~@(filter fn-spec-name? (keys @(registry-ref)))
           ~@(keys (:spec opts))]))))
 
 (defmacro check

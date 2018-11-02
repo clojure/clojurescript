@@ -113,6 +113,15 @@
 
 (s/fdef cljs.core/= :args (s/+ any?))
 
+(defn foo-2955 [n] "ret")
+
+(s/fdef foo-2955
+  :args (s/cat :n number?)
+  :ret string?)
+
+(deftest test-cljs-2955
+  (is (seq (stest/check `foo-2955))))
+
 (deftest test-cljs-2956
   (stest/instrument 'cljs.core/=)
   (is (true? (= 1)))
