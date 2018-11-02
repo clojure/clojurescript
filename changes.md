@@ -1,3 +1,82 @@
+## 1.10.439
+
+### Changes
+* CLJS-2904: Default :npm-deps to false
+* CLJS-2878: Update Closure Compiler to v20180805
+* CLJS-2827: Avoid var special in core macros for private var access
+* CLJS-2819: Warn on non-dynamic earmuffed vars
+* CLJS-2806: Bump test.check to 0.10.0-alpha3
+* CLJS-2815: Support string keys in :global-exports
+* CLJS-2812: Support for overriding object printing
+* CLJS-2805: Bump tools.reader to 1.3.0
+* CLJS-1702: Warning when using private vars
+* Align ClojureScript AST to tools.analyzer
+
+### Enhancements
+* CLJS-2903: Support fingerprinting
+* CLJS-2897: cljs.main: Display initial REPL prompt sooner
+* CLJS-2884: Support for GraalJS RC6
+* CLJS-2859: Graal.JS: Enable high-res timers by default, allow user-configuration
+* CLJS-2831: Add a graaljs REPL environment
+* CLJS-1997: Outward function type hint propagation
+* CLJS-844: Optimize js->clj by switching to transients
+* CLJS-2442: `set` and `vec` performance enhancements
+
+### Fixes
+* CLJS-2953: stest/with-instrument-disabled prints warning of private use
+* CLJS-2728: Ability to disable macro spec checks
+* CLJS-2843: s/explain of evaluated predicate yields :s/unknown
+* CLJS-2951: Add a spec generator for some?
+* CLJS-2940: Can't define nilable spec on undefined pred
+* CLJS-2948: Stack overflow calling instrumented variadic fn with zero args
+* CLJS-2793: Instrumenting breaks function with varargs
+* CLJS-2934: Enhanced delay printing
+* CLJS-2864: Optimize str macro for single arity case
+* CLJS-1297: defrecord does not emit IKVReduce protocol
+* CLJS-2937: docstring for to-array
+* CLJS-2943: Update merge-with to use key / val
+* CLJS-2941: seqable? should return true for nil
+* CLJS-2915: Tests fail if directory has a period (.) in the path
+* CLJS-2782: lein test fails if directory has hyphens
+* CLJS-2911: Avoid infinite loop on infinite partitions
+* CLJS-2906: cljs.main: Crash when with default REPL
+* CLJS-2883: Instrumentation fails compilation with a large number of spec'd functions
+* CLJS-2896: Allow parallel analysis and compilation
+* CLJS-2893: seq: use .-length instead of alength for strings
+* CLJS-2890: fspec role in problem path is not useful
+* CLJS-2887: Improve names in core macro specs
+* CLJS-2891: stop including data in ex-info message
+* CLJS-2888: Printing of spec problems buries the failing predicate which should be more prominent
+* CLJS-2861: Self-host: :checked-arrays not working
+* CLJS-2852: Clojure imparity: ns-publics returns different arglists for macros
+* CLJS-2725: Doc on spec keywords
+* CLJS-2665: Port clojure.spec.test.alpha/enumerate-namespace
+* CLJS-2848: Default explain printer prints root val and spec
+* CLJS-2846: [spec] s/tuple explain-data :pred problem
+* CLJS-2847: s/coll-of and s/every gen is very slow if :kind specified without :into
+* CLJS-2841: [spec] instrument exception doesn't contain function name in ex-data
+* CLJS-2842: [spec] Clarify s/every docstring for :kind
+* CLJS-2845: [spec] generate random subsets of or'd required keys in map specs
+* CLJS-2844: [spec] Add support for undefining a spec
+* CLJS-2840: [spec] s/keys explain-data :pred problem
+* CLJS-2839: [spec] s/& explain-data :pred problem
+* CLJS-2838: [spec] s/& does not check preds if regex matches empty collection
+* CLJS-2837: [spec] `cat` specs should verify value is sequential
+* CLJS-2541: binding not made in parallel
+* CLJS-2832: Bad code gen for `((not empty?) "foo")` when compiled with no optimizations
+* CLJS-2855: Browser REPL prints empty string after require
+* CLJS-2821: Update doto docstring to not use Java example
+* CLJS-2817: Suppress private var warnings for specs on private vars
+* CLJS-2822: cljs.core.specs.alpha: Map bindings should be `:kind map?`
+* CLJS-2829: Fix deep object property access for :global-exports
+* CLJS-2816: Skip non-string package.json browser entry values
+* CLJS-2814: Fix munge-node-lib/global-export on self-host
+* CLJS-2811: cljs-1537-circular-deps fail on Windows
+* CLJS-2807: Macroexpand failure with set literal
+* CLJS-2799: Handle nth on seqables with negative indexes
+* CLJS-2798: ChunkCons -next doesn't handle nil more
+* CLJS-2589: allow / as a protocol method name in cljs
+
 ## 1.10.339
 
 ### Changes
