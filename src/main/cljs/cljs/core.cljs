@@ -2457,7 +2457,7 @@ reduces them without incurring seq initialization"
      (let [a (to-array coll)]
        ;; matching Clojure's stable sort, though docs don't promise it
        (garray/stableSort a (fn->comparator comp))
-       (seq a))
+       (with-meta (seq a) (meta coll)))
      ())))
 
 (defn sort-by

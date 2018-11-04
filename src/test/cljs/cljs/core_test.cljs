@@ -1738,6 +1738,10 @@
   (is (= (symbol (->Var nil 'bar/foo nil)) 'bar/foo))
   (is (thrown? js/Error (symbol 1))))
 
+(deftest test-cljs-2959
+  (is (= {:a true} (meta (sort (with-meta (range 10) {:a true})))))
+  (is (= {:a true} (meta (sort-by :a (with-meta (seq [{:a 5} {:a 2} {:a 3}]) {:a true}))))))
+
 (deftest test-cljs-2991
   (let [o (js-obj)]
     (is (object? o))
