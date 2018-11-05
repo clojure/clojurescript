@@ -1098,16 +1098,24 @@ defaults to returning v."))
   IPrintWithWriter
   (-pr-writer [o writer _] (-write writer str)))
 
+(defn var?
+  "Returns true if v is of type cljs.core.Var"
+  [v]
+  (instance? cljs.core.Var v))
+
 (defn symbol
-  "Returns a Symbol with the given namespace and name."
+  "Returns a Symbol with the given namespace and name. Arity-1 works
+  on strings, keywords, and vars."
   ([name]
-   (if (symbol? name)
-     name
-     (let [idx (.indexOf name "/")]
-       (if (< idx 1)
-         (symbol nil name)
-         (symbol (.substring name 0 idx)
-                 (.substring name (inc idx) (. name -length)))))))
+   (cond (symbol? name) name
+         (string? name) (let [idx (.indexOf name "/")]
+                          (if (< idx 1)
+                            (symbol nil name)
+                            (symbol (.substring name 0 idx)
+                                    (.substring name (inc idx) (. name -length)))))
+         (var? name) (.-sym name)
+         (keyword? name) (recur (.-fqn name))
+         :else (throw (new js/Error "no conversion to symbol"))))
   ([ns name]
    (let [sym-str (if-not (nil? ns)
                    (str ns "/" name)
@@ -1181,11 +1189,6 @@ defaults to returning v."))
     ((val) a b c d e f g h i j k l m n o p q r s t))
   (-invoke [_ a b c d e f g h i j k l m n o p q r s t rest]
     (apply (val) a b c d e f g h i j k l m n o p q r s t rest)))
-
-(defn var?
-  "Returns true if v is of type cljs.core.Var"
-  [v]
-  (instance? cljs.core.Var v))
 
 ;;;;;;;;;;;;;;;;;;; fundamentals ;;;;;;;;;;;;;;;
 

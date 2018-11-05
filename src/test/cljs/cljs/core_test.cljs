@@ -1725,6 +1725,11 @@
   (is (= "#object[cljs.core.Atom {:val 1}]" (pr-str (atom 1))))
   (is (= "#object[cljs.core.Volatile {:val 2}]" (pr-str (volatile! 2)))))
 
+(deftest test-cljs-2944
+  (is (= (symbol :foo/bar) 'foo/bar))
+  (is (= (symbol (->Var nil 'bar/foo nil)) 'bar/foo))
+  (is (thrown? js/Error (symbol 1))))
+
 (deftest test-cljs-2991
   (let [o (js-obj)]
     (is (object? o))
