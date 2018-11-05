@@ -10280,13 +10280,13 @@ reduces them without incurring seq initialization"
 
   Atom
   (-pr-writer [a writer opts]
-    (-write writer "#object [cljs.core.Atom ")
+    (-write writer "#object[cljs.core.Atom ")
     (pr-writer {:val (.-state a)} writer opts)
     (-write writer "]"))
 
   Volatile
   (-pr-writer [a writer opts]
-    (-write writer "#object [cljs.core.Volatile ")
+    (-write writer "#object[cljs.core.Volatile ")
     (pr-writer {:val (.-state a)} writer opts)
     (-write writer "]"))
 

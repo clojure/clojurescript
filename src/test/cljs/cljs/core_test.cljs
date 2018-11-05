@@ -1663,3 +1663,7 @@
     (is (= m4 (merge-with + (sorted m1) (sorted m2) m3)))
     (is (= m4 (merge-with + m1 (sorted m2) m3)))
     (is (= m4 (merge-with + m1 (sorted m2) (sorted m3))))))
+
+(deftest test-cljs-2933
+  (is (= "#object[cljs.core.Atom {:val 1}]" (pr-str (atom 1))))
+  (is (= "#object[cljs.core.Volatile {:val 2}]" (pr-str (volatile! 2)))))
