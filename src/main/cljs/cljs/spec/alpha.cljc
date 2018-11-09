@@ -400,7 +400,7 @@
   (clojure.core/assert (not (empty? preds)))
   `(tuple-impl '~(mapv #(res &env %) preds) ~(vec preds)))
 
-(def ^:private _speced_vars (atom #{}))
+(defonce ^:private _speced_vars (atom #{}))
 
 (defn speced-vars []
   @_speced_vars)
