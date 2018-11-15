@@ -86,7 +86,11 @@
       (testing "queue"
         (is (identical? (type e-queue) PersistentQueue))
         (is (empty? e-queue))
-        (is (= {:b :c} (meta e-queue)))))))
+        (is (= {:b :c} (meta e-queue)))))
+    (testing "non-emptyable"
+      (is (nil? (empty 1)))
+      (is (nil? (empty "abc")))
+      (is (nil? (empty #js [1 2 3]))))))
 
 (deftest test-distinct
   (testing "Testing distinct? & distinct"

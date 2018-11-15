@@ -1789,7 +1789,14 @@ reduces them without incurring seq initialization"
   "Returns an empty collection of the same category as coll, or nil"
   [coll]
   (when-not (nil? coll)
-    (-empty coll)))
+    (cond
+      (implements? IEmptyableCollection coll)
+      (-empty ^not-native coll)
+
+      (satisfies? IEmptyableCollection coll)
+      (-empty coll)
+
+      :else nil)))
 
 (defn- accumulating-seq-count [coll]
   (loop [s (seq coll) acc 0]

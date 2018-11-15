@@ -62,3 +62,11 @@
     string
     (-pr-writer [obj writer _]
       (write-all writer obj))))
+
+(deftest test-cljs-2974
+  (extend-protocol IEmptyableCollection
+    array
+    (-empty [_] #js []))
+  (let [empty-array (empty #js [1 2 3])]
+    (is (and (array? empty-array)
+             (empty? empty-array)))))
