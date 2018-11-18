@@ -957,6 +957,10 @@
       (is (every? #(= :failed (try (re-find #"nomatch" %)
                                    (catch js/TypeError _ :failed))) not-strings))
       (is (every? #(= :failed (try (re-matches #"nomatch" %)
+                                   (catch js/TypeError _ :failed))) not-strings))
+      (is (every? #(= :failed (try (re-seq #"." %)
+                                   (catch js/TypeError _ :failed))) not-strings))
+      (is (every? #(= :failed (try (re-seq #"nomatch" %)
                                    (catch js/TypeError _ :failed))) not-strings)))))
 
 (deftest test-853

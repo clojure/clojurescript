@@ -9845,15 +9845,25 @@ reduces them without incurring seq initialization"
           (vec matches))))
     (throw (js/TypeError. "re-find must match against a string."))))
 
+(defn- re-seq* [re s]
+  (when-some [matches (.exec re s)]
+    (let [match-str (aget matches 0)
+          match-vals (if (== (.-length matches) 1)
+                       match-str
+                       (vec matches))]
+      (cons match-vals
+            (lazy-seq
+             (let [post-idx (+ (.-index matches)
+                               (max 1 (.-length match-str)))]
+               (when (<= post-idx (.-length s))
+                 (re-seq* re (subs s post-idx)))))))))
+
 (defn re-seq
   "Returns a lazy sequence of successive matches of re in s."
   [re s]
-  (let [match-data (re-find re s)
-        match-idx (.search s re)
-        match-str (if (coll? match-data) (first match-data) match-data)
-        post-idx (+ match-idx (max 1 (count match-str)))
-        post-match (subs s post-idx)]
-    (when match-data (lazy-seq (cons match-data (when (<= post-idx (count s)) (re-seq re post-match)))))))
+  (if (string? s)
+    (re-seq* re s)
+    (throw (js/TypeError. "re-seq must match against a string."))))
 
 (defn re-pattern
   "Returns an instance of RegExp which has compiled the provided string."
