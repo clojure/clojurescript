@@ -12,22 +12,15 @@
             [clojure.string :as string]))
 
 (defmacro dynaload [[quote s]]
-  (let [xs     (string/split (namespace s) #"\.")
-        cnt    (count xs)
-        checks (map
-                 (fn [n xs]
-                   `(c/exists? ~(symbol (string/join "." (take n xs)))))
-                 (range 2 cnt)
-                 (repeat xs))]
-    `(cljs.spec.gen.alpha/LazyVar.
-       (fn []
-         (if (and ~@checks (c/exists? ~s))
-           ~(vary-meta s assoc :cljs.analyzer/no-resolve true)
-           (throw
-             (js/Error.
-               (str "Var " '~s " does not exist, "
-                    (namespace '~s) " never required")))))
-       nil)))
+  `(cljs.spec.gen.alpha/LazyVar.
+     (fn []
+       (if (c/exists? ~s)
+         ~(vary-meta s assoc :cljs.analyzer/no-resolve true)
+         (throw
+           (js/Error.
+             (str "Var " '~s " does not exist, "
+                  (namespace '~s) " never required")))))
+     nil))
 
 (defmacro delay
   "given body that returns a generator, returns a
