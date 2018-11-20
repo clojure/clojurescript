@@ -1857,7 +1857,7 @@
                                                    (not-empty (dissoc ~'__extmap k#))
                                                    nil)))
                         'ISeqable
-                        `(~'-seq [this#] (seq (concat [~@(map #(core/list 'cljs.core.MapEntry. (keyword %) % nil) base-fields)]
+                        `(~'-seq [this#] (seq (concat [~@(map #(core/list 'cljs.core/MapEntry. (keyword %) % nil) base-fields)]
                                                 ~'__extmap)))
 
                         'IIterable
