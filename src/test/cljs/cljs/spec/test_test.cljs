@@ -1,6 +1,7 @@
 (ns cljs.spec.test-test
   (:require-macros [cljs.spec.test.test-macros])
-  (:require [cljs.test :as test :refer-macros [deftest is are run-tests]]
+  (:require [cljs.test :as test :refer-macros [deftest testing
+                                               is are run-tests]]
             [cljs.spec.alpha :as s]
             [cljs.spec.test.alpha :as stest]
             [cljs.spec.test.test-ns1]
@@ -109,3 +110,10 @@
                      (is (nil? @#'stest/*instrument-enabled*))
                      (fn-2953 "abc"))))
   (is @#'stest/*instrument-enabled*))
+
+(defn fn-2975 [x])
+
+(deftest test-2975
+  (testing "instrument and unstrument return empty coll when no fdef exists"
+    (is (empty? (stest/instrument `fn-2975)))
+    (is (empty? (stest/unstrument `fn-2975)))))
