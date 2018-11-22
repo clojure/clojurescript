@@ -1346,16 +1346,15 @@
                              else-tag #{else-tag})]
               (into then-tag else-tag))))))))
 
-(defn infer-invoke [env e]
-  (let [{info :info :as f} (:fn e)]
-    (if-some [ret-tag (if (or (true? (:fn-var info))
-                              (true? (:js-fn-var info)))
-                        (:ret-tag info)
-                        (when (= 'js (:ns info)) 'js))]
+(defn infer-invoke [env {f :fn :keys [args] :as e}]
+  (let [me (assoc (find-matching-method f args) :op :fn-method)]
+    (if-some [ret-tag (infer-tag env me)]
       ret-tag
-      (let [args (:args e)
-            me (assoc (find-matching-method f args) :op :fn-method)]
-        (if-some [ret-tag (infer-tag env me)]
+      (let [{:keys [info]} f]
+        (if-some [ret-tag (if (or (true? (:fn-var info))
+                                  (true? (:js-fn-var info)))
+                            (:ret-tag info)
+                            (when (= 'js (:ns info)) 'js))]
           ret-tag
           ANY_SYM)))))
 
@@ -2101,6 +2100,8 @@
                      ;; TODO: can we simplify - David
                      (merge be
                        {:fn-var true
+                        ;; copy over the :fn-method information we need for invoke type inference
+                        :methods (into [] (map #(select-keys % [:tag :fixed-arity :variadic?]) (:methods init-expr)))
                         :variadic? (:variadic? init-expr)
                         :max-fixed-arity (:max-fixed-arity init-expr)
                         :method-params (map :params (:methods init-expr))})
@@ -2267,6 +2268,20 @@
                           (when (:field texpr)
                             texpr))))
               vexpr (analyze enve val)]
+          ;; as top level fns are decomposed for Closure cross-module code motion, we need to
+          ;; restore their :methods information
+          (when (seq? target)
+            (let [sym  (some-> target second)
+                  meta (meta sym)]
+              (when-let [info (and (= :fn (:op vexpr)) (:top-fn meta))]
+                (swap! env/*compiler* update-in
+                  [::namespaces (-> env :ns :name) :defs sym :methods]
+                  (fnil conj [])
+                  ;; just use original fn meta, as the fn method is already desugared
+                  ;; only get tag from analysis
+                  (merge
+                    (select-keys info [:fixed-arity :variadic?])
+                    (select-keys (-> vexpr :methods first) [:tag]))))))
           (when-not texpr
             (throw (error env "set! target must be a field or a symbol naming a var")))
           (cond
@@ -3723,12 +3738,18 @@
          :meta meta-expr :expr expr :children [:meta :expr]})
       expr)))
 
-(defn infer-type [env ast _]
-    (if (nil? (:tag ast))
+(defn infer-type [env {:keys [tag] :as ast} _]
+  (if (or (nil? tag) (= 'function tag))
+    ;; infer-type won't get a chance to process :methods
+    ;; so treat :fn as a special case for now, could probably
+    ;; fix up to use :children to walk child nodes
+    (if (= :fn (:op ast))
+      (update ast :methods
+        (fn [ms] (into [] (map #(infer-type env % _)) ms)))
       (if-some [tag (infer-tag env ast)]
-          (assoc ast :tag tag)
-          ast)
-      ast))
+        (assoc ast :tag tag)
+        ast))
+    ast))
 
 (defn- repl-self-require? [env deps]
   (and (:repl-env env) (some #{*cljs-ns*} deps)))
@@ -4305,6 +4326,8 @@
      (when env/*compiler*
        (:options @env/*compiler*))))
   ([forms opts]
+   (analyze-form-seq forms opts false))
+  ([forms opts return-last?]
    (let [env (assoc (empty-env) :build-options opts)]
      (binding [*file-defs* nil
                #?@(:clj [*unchecked-if* false
@@ -4312,15 +4335,17 @@
                *cljs-ns* 'cljs.user
                *cljs-file* nil
                reader/*alias-map* (or reader/*alias-map* {})]
-       (loop [ns nil forms forms]
+       (loop [ns nil forms forms last-ast nil]
          (if (some? forms)
            (let [form (first forms)
                  env  (assoc env :ns (get-namespace *cljs-ns*))
                  ast  (analyze env form nil opts)]
              (if (= (:op ast) :ns)
-               (recur (:name ast) (next forms))
-               (recur ns (next forms))))
-           ns))))))
+               (recur (:name ast) (next forms) ast)
+               (recur ns (next forms) ast)))
+           (if return-last?
+             last-ast
+             ns)))))))
 
 (defn ensure-defs
   "Ensures that a non-nil defs map exists in the compiler state for a given
