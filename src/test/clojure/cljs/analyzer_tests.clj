@@ -236,58 +236,191 @@
            (:tag (analyze test-env '(.foo js/bar))))
          'js)))
 
+(deftest fn-method-inference
+  ;; should always infer 'function as tag
+  (is (= 'function
+         (:tag
+           (e/with-compiler-env test-cenv
+             (analyze test-env
+               '(fn ([a] 1) ([a b] "foo") ([a b & r] ())))))))
+  (is (nil?
+        (:ret-tag
+          (e/with-compiler-env test-cenv
+            (analyze test-env
+              '(fn ([a] 1) ([a b] "foo") ([a b & r] ())))))) )
+  ;; methods should have inferred types
+  (is (= '(number string cljs.core/IList)
+         (map :tag
+           (:methods
+             (e/with-compiler-env test-cenv
+               (analyze test-env
+                 '(fn ([a] 1) ([a b] "foo") ([a b & r] ())))))))))
+
 (deftest fn-inference
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env
-  ;                 '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
-  ;                    (x :one)))))
-  ;      'number))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env
-  ;                 '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
-  ;                    (x :one :two)))))
-  ;      'string))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env
-  ;                 '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
-  ;                    (x :one :two :three)))))
-  ;      'cljs.core/IList))
+  (is (= 'number
+          (e/with-compiler-env test-cenv
+            (:tag (analyze test-env
+                    '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
+                       (x :one)))))))
+  (is (= 'string
+         (e/with-compiler-env test-cenv
+           (:tag (analyze test-env
+                   '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
+                      (x :one :two)))))))
+  (is (= 'cljs.core/IList
+         (e/with-compiler-env test-cenv
+           (:tag (analyze test-env
+                   '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
+                      (x :one :two :three)))))))
+  (is (= 'cljs.core/IList
+         (e/with-compiler-env test-cenv
+           (:tag (analyze test-env
+                   '(let [x (fn ([a] 1) ([a b] "foo") ([a b & r] ()))]
+                      (x :one :two :three :four))))))))
+
+(deftest top-fn-inference
+  (e/with-compiler-env test-cenv
+    (a/analyze-form-seq
+      '[(ns test.cljs-2901)
+        (defn foo
+          ([a] 1)
+          ([a b] "foo")
+          ([a b & r] ()))
+        (foo :one)]))
+  (is (= '[number string cljs.core/IList]
+         (map :tag
+           (get-in @test-cenv [::a/namespaces 'test.cljs-2901 :defs 'foo :methods]))))
+  (is (= 'number
+         (:tag
+           (e/with-compiler-env test-cenv
+             (a/analyze-form-seq
+               '[(ns test.cljs-2901)
+                 (defn foo
+                   ([a] 1)
+                   ([a b] "foo")
+                   ([a b & r] ()))
+                 (foo :one)]
+               nil true)))))
+  (is (= 'string
+         (:tag
+           (e/with-compiler-env test-cenv
+             (a/analyze-form-seq
+               '[(ns test.cljs-2901)
+                 (defn foo
+                   ([a] 1)
+                   ([a b] "foo")
+                   ([a b & r] ()))
+                 (foo :one :two)]
+               nil true)))))
+  (is (= 'cljs.core/IList
+         (:tag
+           (e/with-compiler-env test-cenv
+             (a/analyze-form-seq
+               '[(ns test.cljs-2901)
+                 (defn foo
+                   ([a] 1)
+                   ([a b] "foo")
+                   ([a b & r] ()))
+                 (foo :one :two :three)]
+               nil true))))))
+
+(deftest variadic-fn-inference
+  (is (= '(cljs.core/IList)
+         (map :tag
+           (:methods
+             (e/with-compiler-env test-cenv
+               (analyze test-env
+                 '(fn ([a b & r] ()))))))))
+  (is (= 'cljs.core/IList
+         (e/with-compiler-env test-cenv
+           (:tag (analyze test-env
+                   '(let [x (fn ([a b & r] ()))]
+                      (x :one :two)))))))
+
+  (is (= 'cljs.core/IList
+         (e/with-compiler-env test-cenv
+           (:tag (analyze test-env
+                   '(let [x (fn ([a b & r] ()))]
+                      (x :one :two :three)))))))
+
+  (is (= 'cljs.core/IList
+         (e/with-compiler-env test-cenv
+           (:tag (analyze test-env
+                   '(let [x (fn ([a b & r] ()))]
+                      (x :one :two :three :four)))))))
   )
+
+(deftest top-variadic-fn-inference
+  (e/with-compiler-env test-cenv
+    (a/analyze-form-seq
+      '[(ns test.cljs-2901-b)
+        (defn foo ([a b & r] ()))
+        (foo :one :two :three :four)]
+      nil false))
+  (is (= '[cljs.core/IList]
+         (map :tag
+           (get-in @test-cenv
+             [::a/namespaces 'test.cljs-2901-b :defs 'foo :methods]))))
+  (is (= 'cljs.core/IList
+        (:tag
+          (e/with-compiler-env test-cenv
+            (a/analyze-form-seq
+              '[(ns test.cljs-2901-b)
+                (defn foo ([a b & r] ()))
+                (foo :one :two)]
+              nil true)))))
+  (is (= 'cljs.core/IList
+         (:tag
+           (e/with-compiler-env test-cenv
+             (a/analyze-form-seq
+               '[(ns test.cljs-2901-b)
+                 (defn foo ([a b & r] ()))
+                 (foo :one :two :three)]
+               nil true)))))
+  (is (= 'cljs.core/IList
+         (:tag
+           (e/with-compiler-env test-cenv
+             (a/analyze-form-seq
+               '[(ns test.cljs-2901-b)
+                 (defn foo ([a b & r] ()))
+                 (foo :one :two :three :four)]
+               nil true))))))
 
 (deftest lib-inference
   (is (= (e/with-compiler-env test-cenv
            (:tag (analyze test-env '(+ 1 2))))
          'number))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(alength (array)))))
-  ;       'number))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(aclone (array)))))
-  ;       'array))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(-count [1 2 3]))))
-  ;      'number))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(count [1 2 3]))))
-  ;       'number))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(into-array [1 2 3]))))
-  ;       'array))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(js-obj))))
-  ;       'object))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(-conj [] 1))))
-  ;       'clj))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(conj [] 1))))
-  ;       'clj))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(alength (array)))))
+         'number))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(aclone (array)))))
+         'array))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(-count [1 2 3]))))
+        'number))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(count [1 2 3]))))
+         'number))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(into-array [1 2 3]))))
+         'array))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(js-obj))))
+         'object))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(-conj [] 1))))
+         'clj))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(conj [] 1))))
+         'clj))
+  (is (= (e/with-compiler-env test-cenv
+           (:tag (analyze test-env '(dissoc {:foo :bar} :foo))))
+         '#{clj clj-nil}))
+  ;; has changed, why does this return #{clj any} ?
   ;(is (= (e/with-compiler-env test-cenv
   ;         (:tag (analyze test-env '(assoc nil :foo :bar))))
-  ;       'clj))
-  ;(is (= (e/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(dissoc {:foo :bar} :foo))))
-  ;       '#{clj clj-nil}))
+  ;      'clj))
   )
 
 (deftest test-always-true-if
@@ -297,40 +430,40 @@
 
 ;; will only work if the previous test works
 (deftest test-count
-  ;(is (= (cljs.env/with-compiler-env test-cenv
-  ;         (:tag (analyze test-env '(count []))))
-  ;       'number))
+  (is (= (cljs.env/with-compiler-env test-cenv
+           (:tag (analyze test-env '(count []))))
+         'number))
   )
 
 (deftest test-numeric
-  ;(is (= (a/no-warn
-  ;         (cljs.env/with-compiler-env test-cenv
-  ;           (:tag (analyze test-env '(dec x)))))
-  ;       'number))
-  ;(is (= (a/no-warn
-  ;         (cljs.env/with-compiler-env test-cenv
-  ;           (:tag (analyze test-env '(int x)))))
-  ;       'number))
-  ;(is (= (a/no-warn
-  ;         (cljs.env/with-compiler-env test-cenv
-  ;           (:tag (analyze test-env '(unchecked-int x)))))
-  ;       'number))
-  ;(is (= (a/no-warn
-  ;         (cljs.env/with-compiler-env test-cenv
-  ;           (:tag (analyze test-env '(mod x y)))))
-  ;       'number))
-  ;(is (= (a/no-warn
-  ;         (cljs.env/with-compiler-env test-cenv
-  ;           (:tag (analyze test-env '(quot x y)))))
-  ;       'number))
-  ;(is (= (a/no-warn
-  ;         (cljs.env/with-compiler-env test-cenv
-  ;           (:tag (analyze test-env '(rem x y)))))
-  ;       'number))
-  ;(is (= (a/no-warn
-  ;         (cljs.env/with-compiler-env test-cenv
-  ;           (:tag (analyze test-env '(bit-count n)))))
-  ;       'number))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(dec x)))))
+         'number))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(int x)))))
+         'number))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(unchecked-int x)))))
+         'number))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(mod x y)))))
+         'number))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(quot x y)))))
+         'number))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(rem x y)))))
+         'number))
+  (is (= (a/no-warn
+           (cljs.env/with-compiler-env test-cenv
+             (:tag (analyze test-env '(bit-count n)))))
+         'number))
   )
 
 ;; =============================================================================

@@ -1817,7 +1817,7 @@ reduces them without incurring seq initialization"
       (alength coll)
     
       (string? coll)
-      (.-length coll)
+      ^number (.-length coll)
 
       (implements? ISeqable coll)
       (accumulating-seq-count coll)

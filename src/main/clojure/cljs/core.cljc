@@ -3055,7 +3055,8 @@
               `[(set! (. ~sym ~'-cljs$lang$maxFixedArity)
                   ~(core/dec (count sig)))])
           (js-inline-comment " @this {Function} ")
-          (set! (. ~sym ~'-cljs$lang$applyTo)
+          ;; dissoc :top-fn so this helper gets ignored in cljs.analyzer/parse 'set!
+          (set! (. ~(vary-meta sym dissoc :top-fn) ~'-cljs$lang$applyTo)
             ~(apply-to)))))))
 
 (core/defmacro copy-arguments [dest]
@@ -3080,15 +3081,18 @@
                sig   (remove '#{&} arglist)
                c-1   (core/dec (count sig))
                macro? (:macro meta)
+               mfa   (core/cond-> c-1 macro? (core/- 2))
                meta  (assoc meta
                        :top-fn
                        {:variadic? true
-                        :max-fixed-arity (core/cond-> c-1 macro? (core/- 2))
+                        :fixed-arity mfa
+                        :max-fixed-arity mfa
                         :method-params (core/cond-> [sig] macro? elide-implicit-macro-args)
                         :arglists (core/cond-> (core/list arglist) macro? elide-implicit-macro-args)
-                        :arglists-meta (doall (map meta [arglist]))})]
+                        :arglists-meta (doall (map meta [arglist]))})
+               name  (with-meta name meta)]
       `(do
-         (def ~(with-meta name meta)
+         (def ~name
            (fn [~'var_args]
              (let [args# (array)]
                (copy-arguments args#)
@@ -3096,7 +3100,7 @@
                                (new ^::ana/no-resolve cljs.core/IndexedSeq
                                  (.slice args# ~c-1) 0 nil))]
                  (. ~rname (~'cljs$core$IFn$_invoke$arity$variadic ~@(dest-args c-1) argseq#))))))
-         ~(variadic-fn* rname method)
+         ~(variadic-fn* name method)
          ~(core/when emit-var? `(var ~name))))))
 
 (core/comment
@@ -3117,11 +3121,14 @@
                          (~(symbol
                              (core/str "cljs$core$IFn$_invoke$arity$" c))
                            ~@(dest-args c)))]))
-               (fn-method [[sig & body :as method]]
+               (fn-method [name [sig & body :as method]]
                  (if (some '#{&} sig)
                    (variadic-fn* name method false)
+                   ;; fix up individual :fn-method meta for
+                   ;; cljs.analyzer/parse 'set! :top-fn handling
                    `(set!
-                      (. ~name
+                      (. ~(vary-meta name update :top-fn merge
+                            {:variadic? false :fixed-arity (count sig)})
                         ~(symbol (core/str "-cljs$core$IFn$_invoke$arity$"
                                    (count sig))))
                       (fn ~method))))]
@@ -3135,19 +3142,22 @@
                             (map count sigs)
                             [(core/- (count (first (filter varsig? arglists))) 2)]))
                macro?   (:macro meta)
+               mfa      (core/cond-> maxfa macro? (core/- 2))
                meta     (assoc meta
                           :top-fn
                           {:variadic? variadic
-                           :max-fixed-arity (core/cond-> maxfa macro? (core/- 2))
+                           :fixed-arity mfa
+                           :max-fixed-arity mfa
                            :method-params (core/cond-> sigs macro? elide-implicit-macro-args)
                            :arglists (core/cond-> arglists macro? elide-implicit-macro-args)
                            :arglists-meta (doall (map meta arglists))})
                args-sym (gensym "args")
-               param-counts (map count arglists)]
+               param-counts (map count arglists)
+               name     (with-meta name meta)]
       (core/when (not= (distinct param-counts) param-counts)
         (ana/warning :overload-arity {} {:name name}))
       `(do
-         (def ~(with-meta name meta)
+         (def ~name
            (fn [~'var_args]
              (case (alength (js-arguments))
                ~@(mapcat #(fixed-arity rname %) sigs)
@@ -3165,7 +3175,7 @@
                              (str "Invalid arity: " (- (alength (js-arguments)) 2))))
                     `(throw (js/Error.
                              (str "Invalid arity: " (alength (js-arguments))))))))))
-         ~@(map fn-method fdecl)
+         ~@(map #(fn-method name %) fdecl)
          ;; optimization properties
          (set! (. ~name ~'-cljs$lang$maxFixedArity) ~maxfa)
          ~(core/when emit-var? `(var ~name))))))
