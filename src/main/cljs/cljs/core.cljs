@@ -1207,7 +1207,7 @@
   (when-not (nil? coll)
     (cond
       (implements? ISeqable coll)
-      (-seq ^not-native coll)
+      (-seq coll)
 
       (array? coll)
       (when-not (zero? (alength coll))
@@ -1228,7 +1228,7 @@
   [coll]
   (when-not (nil? coll)
     (if (implements? ISeq coll)
-      (-first ^not-native coll)
+      (-first coll)
       (let [s (seq coll)]
         (when-not (nil? s)
           (-first s))))))
@@ -1239,7 +1239,7 @@
   [coll]
   (if-not (nil? coll)
     (if (implements? ISeq coll)
-      (-rest ^not-native coll)
+      (-rest coll)
       (let [s (seq coll)]
         (if s
           (-rest ^not-native s)
@@ -1252,7 +1252,7 @@
   [coll]
   (when-not (nil? coll)
     (if (implements? INext coll)
-      (-next ^not-native coll)
+      (-next coll)
       (seq (rest coll)))))
 
 (defn ^boolean =
@@ -1791,7 +1791,7 @@ reduces them without incurring seq initialization"
   (when-not (nil? coll)
     (cond
       (implements? IEmptyableCollection coll)
-      (-empty ^not-native coll)
+      (-empty coll)
 
       (satisfies? IEmptyableCollection coll)
       (-empty coll)
@@ -1811,7 +1811,7 @@ reduces them without incurring seq initialization"
   (if-not (nil? coll)
     (cond
       (implements? ICounted coll)
-      (-count ^not-native coll)
+      (-count coll)
 
       (array? coll)
       (alength coll)
@@ -1859,7 +1859,7 @@ reduces them without incurring seq initialization"
       coll
 
       (implements? IIndexed coll)
-      (-nth ^not-native coll n)
+      (-nth coll n)
 
       (array? coll)
       (if (and (>= n 0) (< n (.-length coll)))
@@ -1892,7 +1892,7 @@ reduces them without incurring seq initialization"
       not-found
 
       (implements? IIndexed coll)
-      (-nth ^not-native coll n not-found)
+      (-nth coll n not-found)
 
       (array? coll)
       (if (and (>= n 0) (< n (.-length coll)))
@@ -1931,7 +1931,7 @@ reduces them without incurring seq initialization"
     (when-not (nil? o)
       (cond
         (implements? ILookup o)
-        (-lookup ^not-native o k)
+        (-lookup o k)
 
         (array? o)
         (when (and (some? k) (< k (.-length o)))
@@ -1949,7 +1949,7 @@ reduces them without incurring seq initialization"
     (if-not (nil? o)
       (cond
         (implements? ILookup o)
-        (-lookup ^not-native o k not-found)
+        (-lookup o k not-found)
 
         (array? o)
         (if (and (some? k) (>= k 0) (< k (.-length o)))
@@ -2507,7 +2507,7 @@ reduces them without incurring seq initialization"
   ([f coll]
      (cond
        (implements? IReduce coll)
-       (-reduce ^not-native coll f)
+       (-reduce coll f)
 
        (array? coll)
        (array-reduce coll f)
@@ -2526,7 +2526,7 @@ reduces them without incurring seq initialization"
   ([f val coll]
      (cond
        (implements? IReduce coll)
-       (-reduce ^not-native coll f val)
+       (-reduce coll f val)
 
        (array? coll)
        (array-reduce coll f val)
@@ -3338,7 +3338,7 @@ reduces them without incurring seq initialization"
   "Returns the namespace String of a symbol or keyword, or nil if not present."
   [x]
   (if (implements? INamed x)
-    (-namespace ^not-native x)
+    (-namespace x)
     (throw (js/Error. (str "Doesn't support namespace: " x)))))
 
 (defn ident?
@@ -9415,7 +9415,7 @@ reduces them without incurring seq initialization"
   "Returns the name String of a string, symbol or keyword."
   [x]
   (if (implements? INamed x)
-    (-name ^not-native x)
+    (-name x)
     (if (string? x)
       x
       (throw (js/Error. (str "Doesn't support name: " x))))))
