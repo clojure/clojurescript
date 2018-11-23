@@ -990,7 +990,7 @@
   [o]
   (cond
     (implements? IHash o)
-    (bit-xor (-hash ^not-native o) 0)
+    (bit-xor (-hash o) 0)
 
     (number? o)
     (if (js/isFinite o)
@@ -3198,7 +3198,7 @@ reduces them without incurring seq initialization"
                       (.push arr (-first xs))
                       (recur (-next xs)))
                     arr))))]
-    (loop [i (alength arr) ^not-native r ()]
+    (loop [i (alength arr) r ()]
       (if (> i 0)
         (recur (dec i) (-conj r (aget arr (dec i))))
         r))))
