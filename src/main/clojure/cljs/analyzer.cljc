@@ -1523,14 +1523,14 @@
 
 (defn- type-check-induced-tag
   "Look for a type-check-induced tag when the test expression is the use of
-   satisfies? or instance? on a local, as in (satisfies? ICounted x)."
+   instance? on a local, as in (instance? ICounted x)."
   [env test]
   (when (and (list? test)
              (== 3 (count test))
              (every? symbol? test))
     (let [analyzed-fn (no-warn (analyze (assoc env :context :expr) (first test)))]
       (when (= :var (:op analyzed-fn))
-        (when ('#{cljs.core/satisfies? cljs.core/instance?} (:name analyzed-fn))
+        (when ('#{cljs.core/instance?} (:name analyzed-fn))
           (let [analyzed-type (no-warn (analyze (assoc env :context :expr) (second test)))
                 tag (:name analyzed-type)
                 sym (last test)]
@@ -1541,7 +1541,7 @@
 
 (defn- add-predicate-induced-tags
   "Looks at the test and adds any tags which are induced by virtue
-  of the predicate being satisfied. For exmaple in (if (string? x) x :bar)
+  of the predicate being satisfied. For example in (if (string? x) x :bar)
   the local x in the then branch must be of string type."
   [env test]
   (let [[local tag] (or (simple-predicate-induced-tag env test)
