@@ -117,7 +117,7 @@
   (SourceFile/fromPath (.toPath source) StandardCharsets/UTF_8))
 
 (defmethod js-source-file URL [_ ^URL source]
-  (js-source-file (io/file (.getPath source))))
+  (js-source-file _ (io/file (.getPath source))))
 
 (defmethod js-source-file BufferedInputStream [^String name ^BufferedInputStream source]
   (SourceFile/fromInputStream name source))
