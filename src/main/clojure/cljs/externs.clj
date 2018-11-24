@@ -8,7 +8,9 @@
 
 (ns cljs.externs
   (:require [clojure.string :as string]
-            [cljs.util :as util])
+            [cljs.util :as util]
+            [clojure.java.io :as io]
+            [cljs.js-deps :as js-deps])
   (:import [java.util.logging Level]
            [com.google.javascript.jscomp
             CompilerOptions SourceFile JsAst CommandLineRunner]
@@ -153,6 +155,27 @@
        defaults sources))))
 
 (comment
+  (require '[clojure.java.io :as io]
+           '[cljs.closure :as closure]
+           '[clojure.pprint :refer [pprint]]
+           '[cljs.js-deps :as js-deps])
+
+  (get (js-deps/js-dependency-index {}) "goog.string")
+
+  ;; {:tag Function :ret-tag boolean}
+  (->
+    (nth
+      (parse-externs
+        (closure/js-source-file "goog/string/string.js"
+          (io/input-stream (io/resource "goog/string/string.js"))))
+      2)
+    last meta)
+
+  (externs-map
+    [(closure/js-source-file "goog/string/string.js"
+       (io/input-stream (io/resource "goog/string/string.js")))]
+    {})
+
   (externs-map)
 
   (-> (externs-map)
