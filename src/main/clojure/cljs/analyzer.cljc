@@ -1477,29 +1477,22 @@
     cljs.core/delay?          cljs.core/Delay
     cljs.core/reduced?        cljs.core/Reduced
 
+    ;;; Note: For non-marker protocol entries below, we
+    ;;; omit predicates that are based on satisfies? because
+    ;;; we cannot safely apply the fast-path optimization
+    ;;; which is enabled when the protocol type is inferred.
+    ;;; If adding a non-marker entry here, also add a test to
+    ;;; cljs.extend-to-native-test/test-extend-to-protocols.
+
     ;; Protocols
     cljs.core/map-entry?      cljs.core/IMapEntry
-    cljs.core/reversible?     cljs.core/IReversible
     cljs.core/uuid?           cljs.core/IUUID
     cljs.core/tagged-literal? cljs.core/ITaggedLiteral
-    cljs.core/iterable?       cljs.core/IIterable
-    cljs.core/cloneable?      cljs.core/ICloneable
     cljs.core/inst?           cljs.core/Inst
-    cljs.core/counted?        cljs.core/ICounted
-    cljs.core/indexed?        cljs.core/IIndexed
-    cljs.core/coll?           cljs.core/ICollection
-    cljs.core/set?            cljs.core/ISet
-    cljs.core/associative?    cljs.core/IAssociative
-    cljs.core/ifind?          cljs.core/IFind
     cljs.core/sequential?     cljs.core/ISequential
-    cljs.core/sorted?         cljs.core/ISorted
-    cljs.core/reduceable      cljs.core/IReduce
-    cljs.core/map?            cljs.core/IMap
     cljs.core/list?           cljs.core/IList
     cljs.core/record?         cljs.core/IRecord
-    cljs.core/vector?         cljs.core/IVector
     cljs.core/chunked-seq?    cljs.core/IChunkedSeq
-    cljs.core/ifn?            cljs.core/IFn
 
     ;; Composites
     cljs.core/seqable?        #{cljs.core/ISeqable array string}
