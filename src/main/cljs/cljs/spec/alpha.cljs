@@ -120,7 +120,7 @@
         (when (ident? spec-or-k)
           (throw (js/Error. (str "Unable to resolve spec: " spec-or-k))))))
 
-(defn fn-sym [f-n]
+(defn- fn-sym [f-n]
   (when-not (str/blank? f-n)
     (let [xs (map demunge (str/split f-n "$"))]
       (when (c/and (<= 2 (count xs))
