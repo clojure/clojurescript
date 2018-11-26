@@ -418,10 +418,10 @@
 
   Qualifies fn-sym with resolve, or using *ns* if no resolution found.
   Registers an fspec in the global registry, where it can be retrieved
-  by calling get-spec with the var or full-qualified symbol.
+  by calling get-spec with the var or fully-qualified symbol.
 
   Once registered, function specs are included in doc, checked by
-  instrument, tested by the runner cljs.spec.test.alpha/run-tests, and (if
+  instrument, tested by the runner cljs.spec.test.alpha/check, and (if
   a macro) used to explain errors during macroexpansion.
 
   Note that :fn specs require the presence of :args and :ret specs to
