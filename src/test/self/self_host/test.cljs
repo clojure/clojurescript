@@ -1484,6 +1484,21 @@
                 (is (some cljs-timestamp? (keys sms)))
                 (inc! l)))))))))
 
+(deftest test-cljs-2991
+  (async done
+    (let [l (latch 1 done)]
+      (let [st (cljs/empty-state)]
+        (cljs/eval-str st
+          "(js-obj)"
+          nil
+          {:ns         'cljs.user
+           :target     :nodejs
+           :eval       node-eval}
+          (fn [{:keys [value]}]
+            (is (object? value))
+            (is (empty? (js-keys value)))
+            (inc! l)))))))
+
 (defn -main [& args]
   (run-tests))
 

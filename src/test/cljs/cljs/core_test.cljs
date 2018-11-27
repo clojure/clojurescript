@@ -1707,3 +1707,18 @@
 (deftest test-cljs-2933
   (is (= "#object[cljs.core.Atom {:val 1}]" (pr-str (atom 1))))
   (is (= "#object[cljs.core.Volatile {:val 2}]" (pr-str (volatile! 2)))))
+
+(deftest test-cljs-2991
+  (let [o (js-obj)]
+    (is (object? o))
+    (is (empty? (js-keys o))))
+  (let [o (js-obj "a" 17)]
+    (is (object? o))
+    (is (== 1 (count (js-keys o))))
+    (is (= "a" (aget (js-keys o) 0)))
+    (is (== 17 (gobject/get o "a"))))
+  (let [o (js-obj "a" 17 "b" 27)]
+    (is (object? o))
+    (is (== 2 (count (js-keys o))))
+    (is (== 17 (gobject/get o "a")))
+    (is (== 27 (gobject/get o "b")))))

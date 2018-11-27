@@ -2588,7 +2588,7 @@
                        (interpose ",")
                        (apply core/str))]
     (vary-meta
-      (list* 'js* (core/str "{" kvs-str "}") (apply concat kvs))
+      (list* 'js* (core/str "({" kvs-str "})") (apply concat kvs))
       assoc :tag 'object)))
 
 (core/defmacro js-obj [& rest]
