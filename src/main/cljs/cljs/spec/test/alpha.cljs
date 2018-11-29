@@ -87,6 +87,7 @@
 (defn- spec-checking-fn
   [v f fn-spec]
   (let [fn-spec (@#'s/maybe-spec fn-spec)
+        args-spec (:args fn-spec)
         conform! (fn [v role spec data args]
                    (let [conformed (s/conform spec data)]
                      (if (= ::s/invalid conformed)
@@ -112,15 +113,18 @@
                           pure-variadic?)
                    (.cljs$core$IFn$_invoke$arity$variadic f)
                    (apply f args)))
-        ret (fn [& args]
-              (if *instrument-enabled*
-                (with-instrument-disabled
-                  (when (:args fn-spec) (conform! v :args (:args fn-spec) args args))
-                  (binding [*instrument-enabled* true]
-                    (apply' f args)))
-                (apply' f args)))]
-    (when-not pure-variadic?
-      (setup-static-dispatches f ret 20)
+        conform!* #(conform! v :args args-spec % %)
+        ret (if args-spec
+              (fn [& args]
+                (if *instrument-enabled*
+                  (with-instrument-disabled
+                    (conform!* args)
+                    (binding [*instrument-enabled* true]
+                      (apply' f args)))
+                  (apply' f args)))
+              f)]
+    (when (and (not pure-variadic?) args-spec)
+      (setup-static-dispatches f ret conform!* 20)
       (when-some [variadic (.-cljs$core$IFn$_invoke$arity$variadic f)]
         (set! (.-cljs$core$IFn$_invoke$arity$variadic ret)
           (fn [& args]

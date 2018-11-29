@@ -117,3 +117,20 @@
   (testing "instrument and unstrument return empty coll when no fdef exists"
     (is (empty? (stest/instrument `fn-2975)))
     (is (empty? (stest/unstrument `fn-2975)))))
+
+(defn fn-2995
+  ([] (fn-2995 0))
+  ([a] (fn-2995 a 1))
+  ([a b] [a b]))
+
+(s/fdef fn-2995
+  :args (s/cat :a (s/? number?)
+               :b (s/? number?)))
+
+(deftest test-2995
+  (stest/instrument `fn-2995)
+  (testing "instrumented self-calling multi-arity function works"
+    (is (= [0 1] (fn-2995 0 1)))
+    (is (= [0 1] (fn-2995 0)))
+    (is (= [0 1] (fn-2995 0)))
+    (is (thrown? js/Error (fn-2995 "not a number")))))
