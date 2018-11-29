@@ -189,7 +189,7 @@
               (let [minfo (cond-> {:gcol  #?(:clj  (.get ^AtomicLong *source-map-data-gen-col*)
                                              :cljs (:gen-col m))
                                    :gline (:gen-line m)}
-                            (#{:var :local :js-var} (:op ast))
+                            (#{:var :local :js-var :binding} (:op ast))
                             (assoc :name (str (-> ast :info :name))))]
                 ; Dec the line/column numbers for 0-indexing.
                 ; tools.reader uses 1-indexed sources, chrome
