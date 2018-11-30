@@ -248,7 +248,7 @@ with explain-data + ::s/failure."
     (when-let [shrunk (-> test-check-ret :shrunk)]
       {:failure (:result shrunk)})))
 
-(defn- validate-check-opts
+(defn validate-check-opts
   [opts]
   (assert (every? ident? (keys (:gen opts))) "check :gen expects ident keys"))
 
