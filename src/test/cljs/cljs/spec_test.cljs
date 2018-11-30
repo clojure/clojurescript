@@ -441,6 +441,20 @@
   (is (= (s/describe #(odd? %)) ::s/unknown))
   (is (= (s/form #(odd? %)) ::s/unknown)))
 
+(defn defk [key & [doc]]
+  key)
+
+(s/fdef defk
+  :args (s/cat :key keyword?
+               :doc (s/? string?)))
+
+(st/instrument `defk)
+
+(deftest cljs-2977-variadic-fn
+  (is (thrown? js/Error (defk 1 1)))
+  (is (thrown? js/Error (defk :foo 1)))
+  (is (= :foo (defk :foo "bar"))))
+
 (comment
 
   (run-tests)

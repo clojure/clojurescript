@@ -128,7 +128,12 @@
       (when-some [variadic (.-cljs$core$IFn$_invoke$arity$variadic f)]
         (set! (.-cljs$core$IFn$_invoke$arity$variadic ret)
           (fn [& args]
-            (apply variadic args)))))
+            (if *instrument-enabled*
+              (with-instrument-disabled
+                (conform!* args)
+                (binding [*instrument-enabled* true]
+                  (apply' variadic args)))
+              (apply' variadic args))))))
     ret))
 
 (defn- no-fspec
