@@ -16,6 +16,7 @@
             [cljs.env :as env]
             [cljs.js-deps :as deps]
             [clojure.java.io :as io]
+            [clojure.reflect]
             [clojure.set :as set]
             [clojure.string :as string]
             [clojure.data.json :as json]
@@ -1961,6 +1962,13 @@
   (= (package-json-entries {:target :nodejs :package-json-resolution :webpack}) ["browser" "module" "main"])
   (= (package-json-entries {:target :nodejs :package-json-resolution ["foo" "bar"]}) ["foo" "bar"]))
 
+(defn- sorting-dependency-options []
+  (try
+    (util/compile-if (contains? (:flags (clojure.reflect/reflect DependencyOptions)) :abstract)
+      (DependencyOptions/sortOnly)
+      (doto (DependencyOptions.)
+        (.setDependencySorting true)))))
+
 (defn convert-js-modules
   "Takes a list JavaScript modules as an IJavaScript and rewrites them into a Google
   Closure-compatible form. Returns list IJavaScript with the converted module
@@ -1972,8 +1980,7 @@
                                    (.setProcessCommonJSModules true)
                                    (.setLanguageIn (lang-key->lang-mode :ecmascript6))
                                    (.setLanguageOut (lang-key->lang-mode (:language-out opts :ecmascript3)))
-                                   (.setDependencyOptions (doto (DependencyOptions.)
-                                                            (.setDependencySorting true)))
+                                   (.setDependencyOptions (sorting-dependency-options))
                                    (.setPackageJsonEntryNames ^List (package-json-entries opts)))
         closure-compiler (doto (make-closure-compiler)
                            (.init externs source-files options))
