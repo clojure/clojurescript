@@ -1006,12 +1006,12 @@
 (deftest test-cljs-2442
   (testing "set ctor"
     (let [coll #{1 2}]
-      (is (not (identical? coll (set coll)))))
+      (is (identical? coll (set coll))))
     (is (= #{1 2} (set #{1 2})))
     (is (nil? (meta (set ^:a #{1 2})))))
   (testing "vec ctor"
     (let [coll [1 2]]
-      (is (not (identical? coll (vec coll)))))
+      (is (identical? coll (vec coll))))
     (is (= [1 2] (vec [1 2])))
     (is (nil? (meta (vec ^:a [1 2]))))
     (let [coll (vec (first {:a 1}))]
