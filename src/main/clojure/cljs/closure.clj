@@ -1964,8 +1964,10 @@
 
 (defn- sorting-dependency-options []
   (try
-    (util/compile-if (contains? (:flags (clojure.reflect/reflect DependencyOptions)) :abstract)
-      (DependencyOptions/sortOnly)
+    (if (contains? (:flags (clojure.reflect/reflect DependencyOptions)) :abstract)
+      (eval '(do
+               (import '(com.google.javascript.jscomp DependencyOptions))
+               (DependencyOptions/sortOnly)))
       (doto (DependencyOptions.)
         (.setDependencySorting true)))))
 
